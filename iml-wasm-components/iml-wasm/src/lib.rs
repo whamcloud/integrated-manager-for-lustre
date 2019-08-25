@@ -2,6 +2,24 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-pub use iml_action_dropdown::{
-    action_dropdown_component, hsm_dropdown::hsm_action_dropdown_component,
-};
+use cfg_if::cfg_if;
+
+pub mod deferred_action_dropdown;
+pub mod hsm_dropdown;
+pub mod multi_action_dropdown;
+
+pub use iml_fs::{fs_detail_page, fs_page};
+
+cfg_if! {
+    if #[cfg(feature = "console_log")] {
+        fn init_log() {
+            use log::Level;
+
+            if let Err(e) = console_log::init_with_level(Level::Trace) {
+                log::info!("Error initializing logger (it may have already been initialized): {:?}", e)
+            }
+        }
+    } else {
+        fn init_log() {}
+    }
+}

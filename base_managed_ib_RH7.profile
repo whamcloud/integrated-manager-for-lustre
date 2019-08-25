@@ -1,5 +1,5 @@
 {
-  "ui_name": "Managed Storage Server (Mellanox OFED)",
+  "ui_name": "Managed Storage Server (MLNX)",
   "managed": true,
   "worker": false,
   "name": "base_managed_ib_rh7",

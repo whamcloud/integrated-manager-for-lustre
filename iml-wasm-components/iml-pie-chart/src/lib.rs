@@ -6,9 +6,13 @@ use seed::{attrs, circle, path, prelude::*, style, svg};
 use std::f64::consts::PI;
 
 /// Create a pie chart to display used / total as percentages
-pub fn pie_chart<T>(used: f64, total: f64, total_color: &str, used_color: &str) -> El<T> {
-    let percent = used / total;
-    let radians = 2.0 * PI * percent;
+pub fn pie_chart<T>(used: f64, total: f64, total_color: &str, used_color: &str) -> Node<T> {
+    let (percent, radians) = if total == 0.0 {
+        (0.0, 0.0)
+    } else {
+        let percent = used / total;
+        (percent, 2.0 * PI * percent)
+    };
 
     let end_x = radians.cos();
     let end_y = radians.sin();

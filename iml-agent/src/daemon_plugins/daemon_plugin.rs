@@ -9,6 +9,7 @@ use crate::{
 use futures::{future, Future};
 use iml_wire_types::{AgentResult, PluginName};
 use std::collections::HashMap;
+use tracing::info;
 
 pub type OutputValue = serde_json::Value;
 pub type Output = Option<OutputValue>;
@@ -26,7 +27,7 @@ pub fn as_output(x: impl serde::Serialize + Send + 'static) -> Result<Output> {
 /// to the `plugin_registry` below.
 pub trait DaemonPlugin: std::fmt::Debug {
     /// Returns full listing of information upon session esablishment
-    fn start_session(&self) -> Box<Future<Item = Output, Error = ImlAgentError> + Send> {
+    fn start_session(&self) -> Box<dyn Future<Item = Output, Error = ImlAgentError> + Send> {
         Box::new(future::ok(None))
     }
     /// Return information needed to maintain a manager-agent session, i.e. what
@@ -37,7 +38,7 @@ pub trait DaemonPlugin: std::fmt::Debug {
     ///
     /// This will never be called concurrently with respect to start_session, or
     /// before start_session.
-    fn update_session(&self) -> Box<Future<Item = Output, Error = ImlAgentError> + Send> {
+    fn update_session(&self) -> Box<dyn Future<Item = Output, Error = ImlAgentError> + Send> {
         self.start_session()
     }
     /// Handle a message sent from the manager (may be called concurrently with respect to
@@ -45,7 +46,7 @@ pub trait DaemonPlugin: std::fmt::Debug {
     fn on_message(
         &self,
         _body: serde_json::Value,
-    ) -> Box<Future<Item = AgentResult, Error = ImlAgentError> + Send> {
+    ) -> Box<dyn Future<Item = AgentResult, Error = ImlAgentError> + Send> {
         Box::new(future::ok(Ok(serde_json::Value::Null)))
     }
     fn teardown(&mut self) -> Result<()> {
@@ -53,9 +54,9 @@ pub trait DaemonPlugin: std::fmt::Debug {
     }
 }
 
-pub type DaemonBox = Box<DaemonPlugin + Send + Sync>;
+pub type DaemonBox = Box<dyn DaemonPlugin + Send + Sync>;
 
-type Callback = Box<Fn() -> DaemonBox + Send + Sync>;
+type Callback = Box<dyn Fn() -> DaemonBox + Send + Sync>;
 
 fn mk_callback<D: 'static>(f: &'static (impl Fn() -> D + Sync)) -> Callback
 where
@@ -75,10 +76,10 @@ pub fn plugin_registry() -> DaemonPlugins {
     .into_iter()
     .collect();
 
-    log::info!("Loaded the following DaemonPlugins:");
+    info!("Loaded the following DaemonPlugins:");
 
     for PluginName(key) in hm.keys() {
-        log::info!("{}", key)
+        info!("{}", key)
     }
 
     hm

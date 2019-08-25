@@ -1,15 +1,21 @@
 [workspace]
 members = [
+    'bootstrap-components',
     'iml-action-dropdown',
     'iml-alert-indicator',
     'iml-duration-picker',
     'iml-environment',
+    'iml-fs',
+    'iml-lock-indicator',
+    'iml-paging',
     'iml-pie-chart',
-    'iml-popover',
+    'iml-grafana-chart',
     'iml-sleep',
+    'iml-stratagem',
+    'iml-toggle',
     'iml-tooltip',
     'iml-utils',
-    'iml-wasm'
+    'iml-wasm',
 ]
 
 [profile.release]

@@ -182,7 +182,7 @@ class UpdateScan(object):
 
         # Loop over all mountables we expected on this host, whether they
         # were actually seen in the results or not.
-        mounted_uuids = dict([(m["fs_uuid"], m) for m in self.host_data["mounts"]])
+        mounted_uuids = dict([(str(m["fs_uuid"]), m) for m in self.host_data["mounts"]])
         for target_mount in ManagedTargetMount.objects.filter(host=self.host):
 
             # Mounted-ness

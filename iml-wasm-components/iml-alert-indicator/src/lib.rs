@@ -2,11 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_popover::{popover, popover_content, popover_title};
+use bootstrap_components::popover;
 use iml_tooltip::{tooltip, TooltipPlacement, TooltipSize};
+use iml_utils::WatchState;
 use iml_wire_types::Alert;
 use seed::{class, events::mouse_ev, i, li, prelude::*, span, style, ul};
-use std::mem;
 
 fn get_message(alerts: &[&Alert]) -> String {
     if alerts.is_empty() {
@@ -18,41 +18,6 @@ fn get_message(alerts: &[&Alert]) -> String {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
-pub enum WatchState {
-    Watching,
-    Open,
-    Close,
-}
-
-impl WatchState {
-    pub fn is_open(self) -> bool {
-        match self {
-            WatchState::Open => true,
-            _ => false,
-        }
-    }
-    pub fn is_watching(self) -> bool {
-        match self {
-            WatchState::Watching => true,
-            _ => false,
-        }
-    }
-    pub fn update(&mut self) {
-        match self {
-            WatchState::Close => {
-                mem::replace(self, WatchState::Watching);
-            }
-            WatchState::Watching => {
-                mem::replace(self, WatchState::Open);
-            }
-            WatchState::Open => {
-                mem::replace(self, WatchState::Close);
-            }
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct AlertIndicatorPopoverState(pub (u32, WatchState));
 
@@ -61,9 +26,7 @@ pub fn alert_indicator(
     id: u32,
     resource_uri: &str,
     open: bool,
-) -> El<AlertIndicatorPopoverState> {
-    log::debug!("Alerts {:#?}", alerts);
-
+) -> Node<AlertIndicatorPopoverState> {
     let alerts: Vec<&Alert> = alerts
         .iter()
         .filter_map(|x| match &x.affected {
@@ -81,22 +44,24 @@ pub fn alert_indicator(
             if alerts.is_empty() {
                 vec![i![class!["fa", "fa-check-circle"]]]
             } else {
-                let mut i = i![class!["fa", "activate-popover", "fa-exclamation-circle"]];
+                let i = i![class!["fa", "activate-popover", "fa-exclamation-circle"]];
 
-                if !open {
-                    i.listeners.push(mouse_ev(Ev::Click, move |_| {
+                let i = if !open {
+                    i.add_listener(mouse_ev(Ev::Click, move |_| {
                         AlertIndicatorPopoverState((id, WatchState::Watching))
-                    }));
-                }
+                    }))
+                } else {
+                    i
+                };
 
                 vec![
                     i,
-                    popover(
+                    popover::wrapper(
                         open,
-                        &iml_popover::Placement::Bottom,
+                        &bootstrap_components::BOTTOM,
                         vec![
-                            popover_title(El::new_text("Alerts")),
-                            popover_content(ul![alerts.iter().map(|x| { li![x.message] })]),
+                            popover::title(Node::new_text("Alerts")),
+                            popover::content(ul![alerts.iter().map(|x| { li![x.message] })]),
                         ],
                     ),
                 ]

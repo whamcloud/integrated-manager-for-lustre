@@ -9,6 +9,9 @@ use crate::{
 };
 use futures::{Future, IntoFuture, Stream};
 use hyper::{header::HeaderValue, Body, Method, Request, StatusCode};
+use iml_fs::read_lines;
+use std::io::{Error, ErrorKind};
+use tracing::debug;
 
 /// Streams the given data to the manager mailbox.
 pub fn send(
@@ -19,7 +22,7 @@ pub fn send(
     let mut req = Request::new(body);
     *req.method_mut() = Method::POST;
 
-    log::debug!("Sending mailbox message to {}", message_name);
+    debug!("Sending mailbox message to {}", message_name);
 
     hyper_client::build_https_client(&env::PFX)
         .into_future()
@@ -37,7 +40,7 @@ pub fn send(
             if resp.status() != StatusCode::CREATED {
                 Err(ImlAgentError::UnexpectedStatusError)
             } else {
-                log::debug!("Mailbox message sent");
+                debug!("Mailbox message sent");
                 Ok(())
             }
         })
@@ -58,7 +61,7 @@ pub fn get(message_name: String) -> impl Stream<Item = String, Error = ImlAgentE
             Ok((client, message_endpoint))
         })
         .map(move |(client, message_endpoint)| {
-            stream_lines::strings(crypto_client::get_stream(&client, message_endpoint, &q))
+            read_lines(crypto_client::get_stream(&client, message_endpoint, &q)).from_err()
         })
         .flatten_stream()
 }

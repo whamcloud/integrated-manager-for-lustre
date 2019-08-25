@@ -3,8 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output_success, http_comms::mailbox_client};
-use futures::{future, Future, IntoFuture, Stream as _};
-use iml_fs::{read_file_to_end, stream_dir, write_tempfile};
+use futures::{future, stream, Future, IntoFuture, Stream as _};
+use iml_fs::{read_file_to_end, stream_dir_lines, write_tempfile};
 use std::{convert::Into, path::PathBuf};
 use uuid::Uuid;
 
@@ -34,12 +34,14 @@ pub struct StratagemRule {
     pub action: String,
     pub expression: String,
     pub argument: String,
+    pub counter_name: Option<String>,
 }
 
 /// The top-level config
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct StratagemConfig {
-    pub dump_flist: bool,
+    pub flist_type: String,
+    pub summarize_size: bool,
     pub groups: Vec<StratagemGroup>,
     pub device: StratagemDevice,
 }
@@ -55,14 +57,16 @@ impl StratagemConfig {
 pub struct StratagemCounter {
     pub name: String,
     pub count: u64,
-    pub have_flist: bool,
+    pub size: u64,
+    pub blocks: u64,
+    pub flist_type: String,
 }
 
 /// A result for a `LAT_ATTR_CLASSIFY` rule.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct StratagemClassifyResult {
     pub attr_type: String,
-    pub have_flist: bool,
+    pub flist_type: String,
     pub counters: Vec<StratagemCounter>,
 }
 
@@ -73,7 +77,9 @@ pub struct StratagemClassifyResult {
 pub struct StratagemClassifyCounter {
     pub name: String,
     pub count: u64,
-    pub have_flist: bool,
+    pub size: u64,
+    pub blocks: u64,
+    pub flist_type: String,
     pub expression: String,
     pub classify: StratagemClassifyResult,
 }
@@ -107,6 +113,7 @@ pub struct StratagemResult {
 pub trait Counter {
     fn name(&self) -> &str;
     fn count(&self) -> u64;
+    fn size(&self) -> u64;
     fn have_flist(&self) -> bool;
 }
 
@@ -117,8 +124,11 @@ impl Counter for &StratagemCounter {
     fn count(&self) -> u64 {
         self.count
     }
+    fn size(&self) -> u64 {
+        self.size
+    }
     fn have_flist(&self) -> bool {
-        self.have_flist
+        self.flist_type != "none"
     }
 }
 
@@ -129,19 +139,22 @@ impl Counter for &StratagemClassifyCounter {
     fn count(&self) -> u64 {
         self.count
     }
+    fn size(&self) -> u64 {
+        self.size
+    }
     fn have_flist(&self) -> bool {
-        self.have_flist
+        self.flist_type != "none"
     }
 }
 
 impl Counter for &StratagemCounters {
     fn have_flist(&self) -> bool {
         match self {
-            StratagemCounters::StratagemCounter(StratagemCounter { have_flist, .. })
+            StratagemCounters::StratagemCounter(StratagemCounter { flist_type, .. })
             | StratagemCounters::StratagemClassifyCounter(StratagemClassifyCounter {
-                have_flist,
+                flist_type,
                 ..
-            }) => *have_flist,
+            }) => flist_type != "none",
         }
     }
     fn name(&self) -> &str {
@@ -160,6 +173,14 @@ impl Counter for &StratagemCounters {
             }) => *count,
         }
     }
+    fn size(&self) -> u64 {
+        match self {
+            StratagemCounters::StratagemCounter(StratagemCounter { size, .. })
+            | StratagemCounters::StratagemClassifyCounter(StratagemClassifyCounter {
+                size, ..
+            }) => *size,
+        }
+    }
 }
 
 /// Pre-cooked config. This is a V1
@@ -167,7 +188,8 @@ impl Counter for &StratagemCounters {
 /// expose the whole config to the user.
 pub fn generate_cooked_config(path: String, rd: Option<u64>, pd: Option<u64>) -> StratagemConfig {
     let mut conf = StratagemConfig {
-        dump_flist: false,
+        flist_type: "none".into(),
+        summarize_size: true,
         device: StratagemDevice {
             path,
             groups: vec!["size_distribution".into(), "user_distribution".into()],
@@ -177,23 +199,27 @@ pub fn generate_cooked_config(path: String, rd: Option<u64>, pd: Option<u64>) ->
                 rules: vec![
                     StratagemRule {
                         action: "LAT_COUNTER_INC".into(),
-                        expression: "< size 1048576".into(),
+                        expression: "&& < size 1048576 != type S_IFDIR".into(),
                         argument: "SIZE_<_1M".into(),
+                        counter_name: None,
                     },
                     StratagemRule {
                         action: "LAT_COUNTER_INC".into(),
-                        expression: "&& >= size 1048576 < size 1048576000".into(),
-                        argument: "1M_<=_SIZE_<_1G".into(),
-                    },
-                    StratagemRule {
-                        action: "LAT_COUNTER_INC".into(),
-                        expression: ">= size 1048576000".into(),
-                        argument: "SIZE_>=_1G".into(),
-                    },
-                    StratagemRule {
-                        action: "LAT_COUNTER_INC".into(),
-                        expression: ">= size 1048576000000".into(),
+                        expression: "&& >= size 1048576000000 != type S_IFDIR".into(),
                         argument: "SIZE_>=_1T".into(),
+                        counter_name: None,
+                    },
+                    StratagemRule {
+                        action: "LAT_COUNTER_INC".into(),
+                        expression: "&& >= size 1048576000 != type S_IFDIR".into(),
+                        argument: "SIZE_>=_1G".into(),
+                        counter_name: None,
+                    },
+                    StratagemRule {
+                        action: "LAT_COUNTER_INC".into(),
+                        expression: "&& >= size 1048576 != type S_IFDIR".into(),
+                        argument: "1M_<=_SIZE_<_1G".into(),
+                        counter_name: None,
                     },
                 ],
                 name: "size_distribution".into(),
@@ -201,15 +227,16 @@ pub fn generate_cooked_config(path: String, rd: Option<u64>, pd: Option<u64>) ->
             StratagemGroup {
                 rules: vec![StratagemRule {
                     action: "LAT_ATTR_CLASSIFY".into(),
-                    expression: "1".into(),
+                    expression: "!= type S_IFDIR".into(),
                     argument: "uid".into(),
+                    counter_name: Some("top_inode_users".into()),
                 }],
                 name: "user_distribution".into(),
             },
         ],
     };
 
-    if let Some(rd) = rd {
+    if let Some(pd) = pd {
         let name = "purge_fids";
 
         conf.device.groups.push(name.into());
@@ -218,23 +245,34 @@ pub fn generate_cooked_config(path: String, rd: Option<u64>, pd: Option<u64>) ->
             name: name.into(),
             rules: vec![StratagemRule {
                 action: "LAT_SHELL_CMD_FID".into(),
-                expression: format!("< atime - sys_time {}", rd),
+                expression: format!("&& != type S_IFDIR < atime - sys_time {}", pd),
                 argument: "fids_expired".into(),
+                counter_name: Some("fids_expired".into()),
             }],
         });
     }
 
-    if let Some(pd) = pd {
+    if let Some(rd) = rd {
         let name = "warn_fids";
 
         conf.device.groups.push(name.into());
+
+        let expression = if let Some(pd) = pd {
+            format!(
+                "&& != type S_IFDIR && < atime - sys_time {} > atime - sys_time {}",
+                rd, pd
+            )
+        } else {
+            format!("&& != type S_IFDIR < atime - sys_time {}", rd)
+        };
 
         conf.groups.push(StratagemGroup {
             name: name.into(),
             rules: vec![StratagemRule {
                 action: "LAT_SHELL_CMD_FID".into(),
-                expression: format!("< atime - sys_time {}", pd),
+                expression,
                 argument: "fids_expiring_soon".into(),
+                counter_name: Some("fids_expiring_soon".into()),
             }],
         });
     }
@@ -327,9 +365,17 @@ pub fn trigger_scan(
 pub fn stream_fidlists(
     mailbox_files: MailboxFiles,
 ) -> impl Future<Item = (), Error = ImlAgentError> {
-    let mailbox_files = mailbox_files
-        .into_iter()
-        .map(|(file, address)| mailbox_client::send(address, stream_dir(file).from_err()));
+    let mailbox_files = mailbox_files.into_iter().map(|(file, address)| {
+        stream_dir_lines(file)
+            .from_err()
+            .chunks(5000)
+            .for_each(move |xs| {
+                mailbox_client::send(
+                    address.clone(),
+                    stream::iter_ok(xs.into_iter().map(|x| format!("{}\n", x)).map(|x| x.into())),
+                )
+            })
+    });
 
     future::join_all(mailbox_files).map(|_| ())
 }
@@ -341,7 +387,8 @@ mod tests {
     #[test]
     fn test_get_fid_dirs() {
         let stratagem_data = StratagemConfig {
-            dump_flist: false,
+            flist_type: "none".into(),
+            summarize_size: true,
             device: StratagemDevice {
                 path: "/dev/mapper/mpathb".into(),
                 groups: vec!["size_distribution".into(), "warn_purge_times".into()],
@@ -353,21 +400,25 @@ mod tests {
                             action: "LAT_COUNTER_INC".into(),
                             expression: "< size 1048576".into(),
                             argument: "SIZE_<_1M".into(),
+                            counter_name: None,
                         },
                         StratagemRule {
                             action: "LAT_COUNTER_INC".into(),
                             expression: "&& >= size 1048576 < size 1048576000".into(),
                             argument: "1M_<=_SIZE_<_1G".into(),
+                            counter_name: None,
                         },
                         StratagemRule {
                             action: "LAT_COUNTER_INC".into(),
                             expression: ">= size 1048576000".into(),
                             argument: "SIZE_>=_1G".into(),
+                            counter_name: None,
                         },
                         StratagemRule {
                             action: "LAT_COUNTER_INC".into(),
                             expression: ">= size 1048576000000".into(),
                             argument: "SIZE_>=_1T".into(),
+                            counter_name: None,
                         },
                     ],
                     name: "size_distribution".into(),
@@ -378,11 +429,13 @@ mod tests {
                             action: "LAT_SHELL_CMD_FID".into(),
                             expression: "< atime - sys_time 18000000".into(),
                             argument: "fids_expiring_soon".into(),
+                            counter_name: Some("fids_expiring_soon".into()),
                         },
                         StratagemRule {
                             action: "LAT_SHELL_CMD_FID".into(),
                             expression: "< atime - sys_time 5184000000".into(),
                             argument: "fids_expired".into(),
+                            counter_name: Some("fids_expired".into()),
                         },
                     ],
                     name: "warn_purge_times".into(),
@@ -397,27 +450,37 @@ mod tests {
                     counters: vec![
                         StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 1,
-                            have_flist: false,
+                            blocks: 0,
+                            size: 0,
+                            flist_type: "none".into(),
                             name: "Other".into(),
                         }),
                         StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
-                            have_flist: false,
+                            blocks: 0,
+                            size: 0,
+                            flist_type: "none".into(),
                             name: "smaller_than_1M".into(),
                         }),
                         StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
-                            have_flist: false,
+                            blocks: 0,
+                            size: 0,
+                            flist_type: "none".into(),
                             name: "not_smaller_than_1M_and_smaller_than_1G".into(),
                         }),
                         StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 1,
-                            have_flist: false,
+                            blocks: 0,
+                            size: 0,
+                            flist_type: "none".into(),
                             name: "not_smaller_than_1G".into(),
                         }),
                         StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
-                            have_flist: false,
+                            blocks: 0,
+                            size: 0,
+                            flist_type: "none".into(),
                             name: "not_smaller_than_1T".into(),
                         }),
                     ],
@@ -427,17 +490,23 @@ mod tests {
                     counters: vec![
                         StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 2,
-                            have_flist: false,
+                            blocks: 0,
+                            size: 0,
+                            flist_type: "none".into(),
                             name: "Other".into(),
                         }),
                         StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
-                            have_flist: true,
+                            blocks: 0,
+                            size: 0,
+                            flist_type: "fid".into(),
                             name: "shell_cmd_of_rule_0".into(),
                         }),
                         StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
-                            have_flist: true,
+                            blocks: 0,
+                            size: 0,
+                            flist_type: "fid".into(),
                             name: "shell_cmd_of_rule_1".into(),
                         }),
                     ],

@@ -15,6 +15,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio_timer::clock;
+use tracing::{info, warn};
 
 /// Takes a `Duration` and figures out the next duration
 /// for a bounded linear backoff.
@@ -64,7 +65,7 @@ impl State {
         if let State::Empty(_) = self {
             std::mem::replace(self, State::Pending);
         } else {
-            log::warn!("Session was not in Empty state");
+            warn!("Session was not in Empty state");
         }
     }
 }
@@ -114,7 +115,7 @@ impl Sessions {
         if let Some(State::Active(active)) = self.0.read().get(name) {
             Some(active.session.message(body))
         } else {
-            log::warn!("Received a message for unknown session {}", name);
+            warn!("Received a message for unknown session {}", name);
 
             None
         }
@@ -125,7 +126,7 @@ impl Sessions {
                 s.teardown()?;
             }
             None => {
-                log::warn!("Plugin {:?} not found in sessions", name);
+                warn!("Plugin {:?} not found in sessions", name);
             }
         };
 
@@ -133,7 +134,7 @@ impl Sessions {
     }
     /// Terminates all held sessions.
     pub fn terminate_all_sessions(&mut self) -> Result<()> {
-        log::info!("Terminating all sessions");
+        info!("Terminating all sessions");
 
         self.0
             .write()
@@ -171,7 +172,7 @@ pub struct Session {
 
 impl Session {
     pub fn new(name: PluginName, id: Id, plugin: DaemonBox) -> Self {
-        log::info!("Created new session {:?}/{:?}", name, id);
+        info!("Created new session {:?}/{:?}", name, id);
 
         Self {
             info: Arc::new(Mutex::new(SessionInfo {
@@ -213,7 +214,7 @@ impl Session {
     pub fn teardown(&mut self) -> Result<()> {
         let info = self.info.lock();
 
-        log::info!("Terminating session {:?}/{:?}", info.name, info.id);
+        info!("Terminating session {:?}/{:?}", info.name, info.id);
 
         self.plugin.teardown()
     }

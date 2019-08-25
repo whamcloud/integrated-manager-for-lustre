@@ -3,10 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use futures::{Future, IntoFuture as _, Stream as _};
-use reqwest::{
-    header,
-    r#async::{Chunk, Client, Decoder, Response},
-    Url,
+use reqwest::{header, r#async::Decoder, Url};
+pub use reqwest::{
+    r#async::{Chunk, Client, Response},
+    StatusCode,
 };
 use serde::de::DeserializeOwned;
 use std::{fmt::Debug, mem, time::Duration};
@@ -89,36 +89,62 @@ pub fn get_client() -> Result<Client, ImlManagerClientError> {
 
 /// Given a path, constructs a full API url
 fn create_api_url(path: &str) -> Result<Url, ImlManagerClientError> {
-    let path = if !path.ends_with('/') {
-        format!("{}/", path)
-    } else {
-        path.to_string()
+    let mut path = path.to_string();
+
+    if !path.ends_with('/') {
+        path.push('/');
+    }
+
+    if path.starts_with('/') {
+        path = path[1..].into();
     };
 
-    let mut url = Url::parse(&iml_manager_env::get_manager_url())?
+    let url = Url::parse(&iml_manager_env::get_manager_url())?
         .join("/api/")?
         .join(&path)?;
 
-    url.set_query(Some("limit=0"));
-
     Ok(url)
+}
+
+/// Handles an incoming response. Returns a future of the buffered body
+///
+/// # Arguments
+///
+/// * - `resp` - The Response to handle
+fn handle_resp(resp: Response) -> impl Future<Item = Chunk, Error = ImlManagerClientError> {
+    resp.error_for_status()
+        .into_future()
+        .from_err()
+        .and_then(|mut res| {
+            let body = mem::replace(res.body_mut(), Decoder::empty());
+            body.concat2().from_err()
+        })
 }
 
 /// Performs a GET to the given API path
 pub fn get<T: DeserializeOwned + Debug>(
     client: Client,
     path: &str,
+    query: impl serde::Serialize,
 ) -> impl Future<Item = T, Error = ImlManagerClientError> {
     log::debug!("GET to {:?}", path);
 
     create_api_url(path).into_future().and_then(move |url| {
         client
             .get(url)
+            .query(&query)
             .send()
             .from_err()
-            .and_then(|mut res| res.json())
-            .from_err()
+            .and_then(handle_resp)
+            .and_then(|x| {
+                serde_json::from_slice(&x).map_err(|e| {
+                    log::error!("Could not serialize {:?}", x);
+
+                    e.into()
+                })
+            })
             .inspect(|x| log::debug!("Resp: {:?}", x))
+            .from_err()
     })
 }
 
@@ -143,4 +169,26 @@ pub fn post(
     create_api_url(path)
         .into_future()
         .and_then(move |url| client.post(url).json(&body).send().from_err())
+}
+
+/// Performs a PUT to the given API path
+pub fn put(
+    client: Client,
+    path: &str,
+    body: impl serde::Serialize,
+) -> impl Future<Item = Response, Error = ImlManagerClientError> {
+    create_api_url(path)
+        .into_future()
+        .and_then(move |url| client.put(url).json(&body).send().from_err())
+}
+
+/// Performs a DELETE to the given API path
+pub fn delete(
+    client: Client,
+    path: &str,
+    body: impl serde::Serialize,
+) -> impl Future<Item = Response, Error = ImlManagerClientError> {
+    create_api_url(path)
+        .into_future()
+        .and_then(move |url| client.delete(url).json(&body).send().from_err())
 }

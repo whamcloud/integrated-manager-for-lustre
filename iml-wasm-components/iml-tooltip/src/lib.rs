@@ -2,16 +2,17 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use seed::{class, div, prelude::*, span};
+use seed::{class, div, prelude::*, span, style};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Model {
     pub placement: TooltipPlacement,
     pub size: TooltipSize,
     pub error_tooltip: bool,
+    pub open: bool,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum TooltipPlacement {
     Left,
@@ -70,11 +71,19 @@ pub fn tooltip<T>(
         placement,
         size,
         error_tooltip,
+        open,
     }: &Model,
-) -> El<T> {
+) -> Node<T> {
     let class = if *error_tooltip { "error-tooltip" } else { "" };
 
+    let style = if *open {
+        style! { "display" => "block"; "opacity" => "0.9" }
+    } else {
+        style! {}
+    };
+
     div![
+        style,
         class!["tooltip inferno-tt", placement.into(), size.into(), class],
         div![class!["tooltip-arrow"]],
         div![class!["tooltip-inner"], span![El::from_html(&message)]]

@@ -12,11 +12,14 @@ use iml_agent::{
     http_comms::{agent_client::AgentClient, crypto_client, session},
     poller, reader,
 };
+use tracing::{error, info, span, Level};
+use tracing_futures::Instrument;
 
 fn main() -> Result<()> {
-    env_logger::builder().default_format_timestamp(false).init();
+    let subscriber = tracing_fmt::FmtSubscriber::builder().finish();
+    tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    log::info!("Starting Rust agent_daemon");
+    info!("Starting Rust agent_daemon");
 
     let message_endpoint = MANAGER_URL.join("/agent2/message/")?;
 
@@ -34,14 +37,18 @@ fn main() -> Result<()> {
 
     tokio::run(lazy(move || {
         tokio::spawn(
-            reader::create_reader(sessions.clone(), agent_client.clone(), registry).map_err(|e| {
-                log::error!("{}", e);
-            }),
+            reader::create_reader(sessions.clone(), agent_client.clone(), registry)
+                .map_err(|e| {
+                    error!("{}", e);
+                })
+                .instrument(span!(Level::INFO, "reader")),
         );
 
-        poller::create_poller(agent_client, sessions).map_err(|e| {
-            log::error!("{}", e);
-        })
+        poller::create_poller(agent_client, sessions)
+            .map_err(|e| {
+                error!("{}", e);
+            })
+            .instrument(span!(Level::INFO, "poller"))
     }));
 
     Ok(())

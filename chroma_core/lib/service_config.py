@@ -81,7 +81,7 @@ class ServiceConfig(CommandLine):
         try:
             hostname = socket.gethostname()
         except socket.error:
-            log.error("Error: Unable to get the servers hostname. " "Please correct the hostname esolution.")
+            log.error("Error: Unable to get the servers hostname. " "Please correct the hostname resolution.")
             return False
 
         if hostname == "localhost":
@@ -130,7 +130,7 @@ class ServiceConfig(CommandLine):
             return False
 
     def print_usage_message(self):
-        rc, out, err = self.try_shell(["man", "-P", "cat", "chroma-config"])
+        _, out, _ = self.try_shell(["man", "-P", "cat", "chroma-config"])
 
         return out
 
@@ -317,18 +317,11 @@ class ServiceConfig(CommandLine):
             expected_exception_classes=[CommandError],
         )
 
-        log.info("Creating InfluxDB databse...")
+        log.info("Creating InfluxDB database...")
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_IML_DB)])
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_STRATAGEM_SCAN_DB)])
 
     def _setup_grafana(self):
-        cfg_file = "/etc/sysconfig/grafana-server"
-        if os.path.exists("%s.dist" % cfg_file):
-            return
-        shutil.copy2(cfg_file, "%s.dist" % cfg_file)
-        with open(cfg_file, "a") as fn:
-            fn.write("CONF_FILE=/etc/grafana/grafana-iml.ini")
-
         # grafana needs daemon-reload before enable and start
         ServiceControlEL7.daemon_reload()
         service = ServiceControl.create("grafana-server")
@@ -336,6 +329,8 @@ class ServiceConfig(CommandLine):
         if error:
             log.error(error)
             raise RuntimeError(error)
+        if service.running:
+            service.stop()
         error = service.start()
         if error:
             log.error(error)
@@ -404,7 +399,7 @@ class ServiceConfig(CommandLine):
         "iml-view-server.service",
         "iml-realtime.service",
         "iml-warp-drive.service",
-        "device-aggregator.socket",
+        "device-aggregator.service",
         "iml-srcmap-reverse.socket",
         "iml-mailbox.service",
         "iml-action-runner.service",
@@ -718,11 +713,12 @@ class ServiceConfig(CommandLine):
             "REALTIME_PROXY_PASS",
             "VIEW_SERVER_PROXY_PASS",
             "WARP_DRIVE_PROXY_PASS",
+            "MAILBOX_PATH",
             "MAILBOX_PROXY_PASS",
             "SSL_PATH",
             "DEVICE_AGGREGATOR_PORT",
-            "UPDATE_HANDLER_PROXY_PASS",
             "DEVICE_AGGREGATOR_PROXY_PASS",
+            "UPDATE_HANDLER_PROXY_PASS",
             "SRCMAP_REVERSE_PROXY_PASS",
         ]
 
@@ -984,8 +980,18 @@ def register_profile(profile_file):
         kwargs["name"] = data["name"]
         profile = ServerProfile.objects.create(**kwargs)
 
+    # Remove absent repos
+    for repo in profile.repolist.all():
+        if repo.repo_name not in data["repolist"]:
+            profile.repolist.remove(repo)
+
     for name in data["repolist"]:
         profile.repolist.add(Repo.objects.get(repo_name=name))
+
+    # Remove absent packages
+    for package_name in profile.packages:
+        if package_name not in data["packages"]:
+            ServerProfilePackage.objects.filter(server_profile=profile, package_name=package_name).delete()
 
     for package_name in data["packages"]:
         ServerProfilePackage.objects.get_or_create(server_profile=profile, package_name=package_name)
@@ -1117,6 +1123,7 @@ def chroma_config():
         else:
             log.info("\nContainer setup complete.")
             sys.exit(0)
+
     elif command == "dbsetup":
         if "--no-dbspace-check" in sys.argv:
             check_db_space = False
@@ -1125,6 +1132,7 @@ def chroma_config():
             check_db_space = True
 
         service_config._setup_database(check_db_space)
+
     elif command == "validate":
         errors = service_config.validate()
         print_errors(errors)
@@ -1132,41 +1140,77 @@ def chroma_config():
             sys.exit(1)
         else:
             sys.exit(0)
+
     elif command == "stop":
         service_config.stop()
+
     elif command == "start":
         service_config.start()
+
     elif command == "restart":
         service_config.stop()
         service_config.start()
+
     elif command == "repos":
+
+        def repos_usage():
+            print("usage: repos [scan|help|register REPOFILE|delete REPONAME|install REPONAME TARBALL]")
+            sys.exit(0)
+
+        if len(sys.argv) < 3:
+            repos_usage()
+
         operation = sys.argv[2]
-        if operation == "scan":
+        if operation == "help":
+            repos_usage()
+
+        elif operation == "scan":
             service_config.scan_repos()
+
         elif operation == "register":
             register_repo(sys.argv[3])
+
         elif operation == "delete":
             service_config.delete_repo(sys.argv[3])
+
         elif operation == "install":
             service_config.install_repo(sys.argv[3], sys.argv[4])
+
         else:
             raise NotImplementedError(operation)
+
     elif command == "profile":
+
+        def profile_usage():
+            print("usage: profile [register|delete|default] PROFILE")
+            sys.exit(0)
+
+        if len(sys.argv) < 3:
+            profile_usage()
+
         operation = sys.argv[2]
-        if operation == "register":
+        if operation == "help":
+            profile_usage()
+
+        elif operation == "register":
             try:
                 register_profile(open(sys.argv[3]))
             except IOError:
-                print("Error opening %s" % sys.argv[3])
+                log.error("Error opening %s" % sys.argv[3])
                 sys.exit(-1)
+
         elif operation == "delete":
             delete_profile(sys.argv[3])
+
         elif operation == "default":
             default_profile(sys.argv[3])
+
         else:
             raise NotImplementedError(operation)
+
     elif command == "clearsessions":
         service_config.clear_sessions()
+
     else:
         log.error("Invalid command '%s'" % command)
         sys.exit(-1)

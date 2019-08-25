@@ -17,9 +17,15 @@ pub enum RunStratagemCommandResult {
     FilesystemDoesNotExist,
     FilesystemUnavailable,
     InvalidArgument,
+    PurgeDurationTooBig,
+    ReportDurationTooBig,
+    PurgeDurationTooSmall,
+    ReportDurationTooSmall,
     Mdt0NotFound,
     Mdt0NotMounted,
     StratagemServerProfileNotInstalled,
+    StratagemClientProfileNotInstalled,
+    RequiredFieldsMissing,
     ServerError,
     UnknownError,
 }
@@ -54,6 +60,7 @@ pub enum ImlManagerCliError {
     ParseDurationError(DurationParseError),
     RunStratagemValidationError(RunStratagemValidationError),
     SerdeJsonError(serde_json::error::Error),
+    DoesNotExist(&'static str),
 }
 
 impl std::fmt::Display for ImlManagerCliError {
@@ -65,6 +72,7 @@ impl std::fmt::Display for ImlManagerCliError {
             ImlManagerCliError::ParseDurationError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::RunStratagemValidationError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::SerdeJsonError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::DoesNotExist(ref err) => write!(f, "{} does not exist", err),
         }
     }
 }
@@ -84,6 +92,7 @@ impl std::error::Error for ImlManagerCliError {
             ImlManagerCliError::ParseDurationError(ref err) => Some(err),
             ImlManagerCliError::RunStratagemValidationError(ref err) => Some(err),
             ImlManagerCliError::SerdeJsonError(ref err) => Some(err),
+            ImlManagerCliError::DoesNotExist(_) => None,
         }
     }
 }

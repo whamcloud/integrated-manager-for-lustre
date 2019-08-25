@@ -17,12 +17,13 @@ use futures::{
 use iml_wire_types::ManagerMessage;
 use std::time::{Duration, Instant};
 use tokio::timer::Delay;
+use tracing::{debug, error, warn};
 
 fn send_if_data(
     agent_client: AgentClient,
 ) -> impl FnOnce(
     Option<(SessionInfo, OutputValue)>,
-) -> Box<Future<Item = (), Error = ImlAgentError> + Send> {
+) -> Box<dyn Future<Item = (), Error = ImlAgentError> + Send> {
     move |x| match x {
         Some((info, output)) => Box::new(agent_client.send_data(info, output)),
         None => Box::new(future::ok(())),
@@ -51,7 +52,7 @@ pub fn create_reader(
                 .map(stream::iter_ok)
                 .flatten_stream()
                 .and_then(move |x| {
-                    log::debug!("--> Delivery from manager {:?}", x);
+                    debug!("--> Delivery from manager {:?}", x);
 
                     match x {
                         ManagerMessage::SessionCreateResponse {
@@ -67,12 +68,10 @@ pub fn create_reader(
                             tokio::spawn(
                                 fut.and_then(send_if_data(agent_client2.clone()))
                                     .or_else(move |e| {
-                                        log::warn!("Error during session start {:?}", e);
+                                        warn!("Error during session start {:?}", e);
                                         sessions3.terminate_session(&plugin)
                                     })
-                                    .map_err(|e| {
-                                        log::error!("Got an error adding session {:?}", e)
-                                    }),
+                                    .map_err(|e| error!("Got an error adding session {:?}", e)),
                             );
 
                             Ok(())
@@ -90,7 +89,7 @@ pub fn create_reader(
 
                                 tokio::spawn(
                                     fut.and_then(move |(info, x)| agent_client3.send_data(info, x))
-                                        .map_err(|e| log::error!("{}", e)),
+                                        .map_err(|e| error!("{}", e)),
                                 );
                             };
 
@@ -108,7 +107,7 @@ pub fn create_reader(
                 })
                 .collect()
                 .then(
-                    |r| -> Box<Future<Item = LoopState, Error = ImlAgentError> + Send> {
+                    |r| -> Box<dyn Future<Item = LoopState, Error = ImlAgentError> + Send> {
                         match r {
                             Ok(_) => Box::new(future::ok(Loop::Continue((
                                 agent_client,
@@ -116,10 +115,7 @@ pub fn create_reader(
                                 registry,
                             )))),
                             Err(ImlAgentError::Reqwest(e)) => {
-                                log::warn!(
-                                    "Got a manager read Error {:?}. Will retry in 5 seconds.",
-                                    e
-                                );
+                                warn!("Got a manager read Error {:?}. Will retry in 5 seconds.", e);
 
                                 if let Err(e) = sessions.terminate_all_sessions() {
                                     return Box::new(future::err(e));

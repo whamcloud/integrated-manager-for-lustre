@@ -46,7 +46,7 @@ fi
 
 
 # first fetch and install IML 4.0.x
-IML_PREVIOUS_VERSION="4.0.10.1"
+IML_PREVIOUS_VERSION="4.0.10.2"
 IML_PREVIOUS_URL="https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/v${IML_PREVIOUS_VERSION}/iml-${IML_PREVIOUS_VERSION}.tar.gz"
 IML_TARBALL="iml-${IML_PREVIOUS_VERSION}.tar.gz"
 EXPECT_SCRIPT=install-4.x.exp

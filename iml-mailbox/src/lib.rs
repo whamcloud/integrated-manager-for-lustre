@@ -8,24 +8,24 @@ use std::{collections::HashMap, path::PathBuf};
 use tokio::{fs::OpenOptions, io};
 use warp::{body::BodyStream, filters::BoxedFilter, Filter};
 
-pub trait LineStream: Stream<Item = Vec<u8>, Error = warp::Rejection> {}
-impl<T: Stream<Item = Vec<u8>, Error = warp::Rejection>> LineStream for T {}
+pub trait LineStream: Stream<Item = String, Error = warp::Rejection> {}
+impl<T: Stream<Item = String, Error = warp::Rejection>> LineStream for T {}
 
-fn streamer(s: BodyStream) -> Box<LineStream + Send> {
-    let s = s.map(Vec::from_buf).map_err(warp::reject::custom);
+fn streamer(s: BodyStream) -> Box<dyn LineStream + Send> {
+    let s = s.map(Vec::from_buf);
 
-    let ls = stream_lines::Lines::<_, _, warp::Rejection>::new(s, Ok);
+    let ls = iml_fs::read_lines(s).map_err(warp::reject::custom);
 
-    Box::new(ls) as Box<LineStream + Send>
+    Box::new(ls) as Box<dyn LineStream + Send>
 }
 
 /// Warp Filter that streams a newline delimited body
-pub fn line_stream() -> BoxedFilter<(Box<LineStream + Send>,)> {
+pub fn line_stream() -> BoxedFilter<(Box<dyn LineStream + Send>,)> {
     warp::body::stream().map(streamer).boxed()
 }
 
 /// Holds all active streams that are currently writing to an address.
-pub struct MailboxSenders(HashMap<PathBuf, mpsc::UnboundedSender<Vec<u8>>>);
+pub struct MailboxSenders(HashMap<PathBuf, mpsc::UnboundedSender<String>>);
 
 impl Default for MailboxSenders {
     fn default() -> Self {
@@ -35,7 +35,7 @@ impl Default for MailboxSenders {
 
 impl MailboxSenders {
     /// Adds a new address and tx handle to write lines with
-    pub fn insert(&mut self, address: PathBuf, tx: mpsc::UnboundedSender<Vec<u8>>) {
+    pub fn insert(&mut self, address: PathBuf, tx: mpsc::UnboundedSender<String>) {
         self.0.insert(address, tx);
     }
     /// Removes an address.
@@ -45,7 +45,7 @@ impl MailboxSenders {
         self.0.remove(address);
     }
     /// Returns a cloned reference to a tx handle matching the provided address, if one exists.
-    pub fn get(&mut self, address: &PathBuf) -> Option<mpsc::UnboundedSender<Vec<u8>>> {
+    pub fn get(&mut self, address: &PathBuf) -> Option<mpsc::UnboundedSender<String>> {
         self.0.get(address).cloned()
     }
     /// Creates a new sender entry.
@@ -58,7 +58,7 @@ impl MailboxSenders {
         &mut self,
         address: PathBuf,
     ) -> (
-        mpsc::UnboundedSender<Vec<u8>>,
+        mpsc::UnboundedSender<String>,
         impl Future<Item = (), Error = std::io::Error>,
     ) {
         let (tx, rx) = mpsc::unbounded();
@@ -76,7 +76,7 @@ impl MailboxSenders {
 /// to that file.
 pub fn ingest_data(
     address: PathBuf,
-    rx: mpsc::UnboundedReceiver<Vec<u8>>,
+    rx: mpsc::UnboundedReceiver<String>,
 ) -> impl Future<Item = (), Error = std::io::Error> {
     log::debug!("Starting ingest for {:?}", address);
     OpenOptions::new()
@@ -86,8 +86,8 @@ pub fn ingest_data(
         .and_then(|f| {
             rx.map_err(|_| unreachable!("mpsc::Receiver should never return Err"))
                 .map(|mut line| {
-                    if !line.ends_with(&[b'\n']) {
-                        line.extend([b'\n'].iter());
+                    if !line.ends_with('\n') {
+                        line.extend(['\n'].iter());
                     }
 
                     log::debug!("handling line {:?}", line);
@@ -128,14 +128,14 @@ mod tests {
 
         let (tx, fut) = mailbox_sender.create(address.clone());
 
-        tx.unbounded_send(b"foo\n".to_vec()).unwrap();
+        tx.unbounded_send("foo\n".into()).unwrap();
         mailbox_sender
             .get(&address)
             .unwrap()
-            .unbounded_send(b"bar".to_vec())
+            .unbounded_send("bar".into())
             .unwrap();
 
-        tx.unbounded_send(b"baz\n".to_vec()).unwrap();
+        tx.unbounded_send("baz\n".into()).unwrap();
 
         mailbox_sender.remove(&address);
 

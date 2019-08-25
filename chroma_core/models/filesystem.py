@@ -11,6 +11,7 @@ from chroma_core.models import NoNidsPresent
 from chroma_core.models import StatefulObject, StateChangeJob, StateLock, Job
 from chroma_core.models import DeletableDowncastableMetaclass, MeasuredEntity
 from chroma_core.lib.cache import ObjectCache
+from chroma_core.lib.util import target_label_split
 from django.db.models import Q
 from chroma_help.help import help_text
 
@@ -277,6 +278,10 @@ class StartStoppedFilesystemJob(FilesystemJob, StateChangeJob):
         deps = []
 
         for t in ObjectCache.get_targets_by_filesystem(self.filesystem_id):
+            # Report filesystem available if MDTs other than 0 are unmounted
+            (_, label, index) = target_label_split(t.get_label())
+            if label == "MDT" and index != 0:
+                continue
             deps.append(DependOn(t, "mounted", fix_state="unavailable"))
         return DependAll(deps)
 
@@ -299,6 +304,10 @@ class StartUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
     def get_deps(self):
         deps = []
         for t in ObjectCache.get_targets_by_filesystem(self.filesystem_id):
+            # Report filesystem available if MDTs other than 0 are unmounted
+            (_, label, index) = target_label_split(t.get_label())
+            if label == "MDT" and index != 0:
+                continue
             deps.append(DependOn(t, "mounted", fix_state="unavailable"))
         return DependAll(deps)
 

@@ -5,25 +5,12 @@
 use seed::{
     attrs, button, class, div,
     dom_types::{At, El, UpdateEl},
-    events::{mouse_ev, Ev},
     i, li,
-    prelude::IndexMap,
+    prelude::*,
     style, ul,
 };
 
-#[derive(Clone)]
-pub enum Msg {
-    Open(bool),
-}
-
-pub enum State {
-    Populated(bool, Vec<El<Msg>>),
-    Disabled,
-    Empty,
-    Waiting,
-}
-
-pub fn dropdown_header<T>(label: &str) -> El<T> {
+pub fn dropdown_header<T>(label: &str) -> Node<T> {
     li![
         class!["dropdown-header"],
         style! {"user-select" => "none"},
@@ -31,42 +18,47 @@ pub fn dropdown_header<T>(label: &str) -> El<T> {
     ]
 }
 
-pub fn action_dropdown(state: State) -> El<Msg> {
-    const BTN_CLASSES: &str = "btn btn-primary btn-sm dropdown-toggle";
+pub fn dropdown<T>(
+    btn_classes: &[&'static str],
+    btn_name: &str,
+    open: bool,
+    children: Vec<Node<T>>,
+) -> Node<T> {
+    let open_class = if open { "open" } else { "" };
 
-    let disabled_attrs = attrs! {At::Disabled => true; At::Class => BTN_CLASSES};
+    let btn: Node<_> = button![
+        class!["btn", "dropdown-toggle"],
+        btn_name,
+        i![class!["fa", "fa-fw", "fa-caret-down", "icon-caret-down"]]
+    ];
 
-    let open_class = if let State::Populated(true, _) = state {
-        "open"
-    } else {
-        ""
-    };
-
-    let els = match state {
-        State::Empty => vec![button![&disabled_attrs, "No Actions"]],
-        State::Disabled => vec![button![&disabled_attrs, "Disabled"]],
-        State::Waiting => vec![button![
-            &disabled_attrs,
-            "Waiting",
-            i![class!["fa", "fa-spinner", "fa-spin"]]
-        ]],
-        State::Populated(is_open, lis) => vec![
-            button![
-                attrs! {At::Class => BTN_CLASSES},
-                mouse_ev(Ev::Click, move |ev| {
-                    ev.stop_propagation();
-                    ev.prevent_default();
-                    Msg::Open(!is_open)
-                }),
-                "Actions",
-                i![class!["fa", "fa-caret-down", "icon-caret-down"]]
-            ],
-            ul![class!["dropdown-menu", &open_class], lis],
-        ],
-    };
+    let btn = btn_classes
+        .into_iter()
+        .fold(btn, |btn, &x| btn.add_class(x));
 
     div![
-        class!["action-dropdown"],
-        div![class!["btn-group dropdown", &open_class], els]
+        class!["btn-group", "dropdown", open_class],
+        btn,
+        ul![class!["dropdown-menu", &open_class], children],
     ]
+}
+
+pub fn action_dropdown<T>(open: bool, is_locked: bool, children: Vec<Node<T>>) -> Node<T> {
+    let btn_classes = "btn btn-primary btn-sm";
+
+    let el = if is_locked {
+        button![
+            attrs! {At::Disabled => true, At::Class => btn_classes },
+            "Disabled"
+        ]
+    } else if children.is_empty() {
+        button![
+            attrs! {At::Disabled => true, At::Class => btn_classes },
+            "No Actions"
+        ]
+    } else {
+        dropdown(&[btn_classes], "Actions", open, children)
+    };
+
+    div![class!["action-dropdown"], el]
 }

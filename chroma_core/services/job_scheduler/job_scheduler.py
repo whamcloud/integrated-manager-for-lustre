@@ -27,6 +27,7 @@ from django.db.models import Q, FieldDoesNotExist, ManyToManyField
 import django.utils.timezone
 
 from chroma_core.lib.cache import ObjectCache
+from chroma_core.lib.util import target_label_split
 from chroma_core.models.server_profile import ServerProfile
 from chroma_core.models import Command
 from chroma_core.models import StateLock
@@ -50,7 +51,12 @@ from chroma_core.models import Corosync2Configuration
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import ConfigureHostFencingJob
 from chroma_core.models import TriggerPluginUpdatesJob
-from chroma_core.models import ConfigureStratagemJob, StratagemConfiguration
+from chroma_core.models import (
+    ConfigureStratagemJob,
+    UnconfigureStratagemJob,
+    RemoveStratagemJob,
+    StratagemConfiguration,
+)
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache, lock_change_receiver, to_lock_json
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -687,13 +693,16 @@ class JobScheduler(object):
                         ["stopped", "unavailable"],
                     )
                 if changed_item.state == "unmounted" and filesystem.state == "available" and states != set(["mounted"]):
-                    self._notify(
-                        ContentType.objects.get_for_model(filesystem).natural_key(),
-                        filesystem.id,
-                        now,
-                        {"state": "unavailable"},
-                        ["available"],
-                    )
+                    # Do not alter filesystem-state available->unavailable for non-zero MDT
+                    (_, label, index) = target_label_split(changed_item.get_label())
+                    if label != "MDT" or index == 0:
+                        self._notify(
+                            ContentType.objects.get_for_model(filesystem).natural_key(),
+                            filesystem.id,
+                            now,
+                            {"state": "unavailable"},
+                            ["available"],
+                        )
 
         if isinstance(changed_item, ManagedHost):
             # Sometimes we have been removed and yet some stray messages are hanging about, I don't think this should be
@@ -1756,29 +1765,35 @@ class JobScheduler(object):
     def CommandPlan(self):
         return CommandPlan(self._lock_cache, self._job_collection)
 
+    def _get_stratagem_configuration(self, stratagem_data):
+        configuration_data = {
+            "state": "unconfigured",
+            "interval": stratagem_data.get("interval"),
+            "report_duration": stratagem_data.get("report_duration"),
+            "purge_duration": stratagem_data.get("purge_duration"),
+        }
+
+        # The filesystem_id may come in as the fs name or the fs id. In terms of storing information in the database, the fs id should always be used.
+        fs_identifier = str(stratagem_data.get("filesystem"))
+        fs_id = get_fs_id_from_identifier(fs_identifier)
+
+        if not fs_id:
+            raise Exception("No matching filesystem for {}".format(fs_identifier))
+
+        managed_filesystem = ManagedFilesystem.objects.get(id=fs_id)
+        configuration_data["filesystem"] = managed_filesystem
+
+        matches = StratagemConfiguration.objects.filter(filesystem=managed_filesystem)
+
+        return (configuration_data, managed_filesystem, matches)
+
     def configure_stratagem(self, stratagem_data):
         with self._lock:
-            configuration_data = {
-                "state": "unconfigured",
-                "filesystem_id": stratagem_data.get("filesystem"),
-                "interval": stratagem_data.get("interval"),
-                "report_duration": stratagem_data.get("report_duration"),
-                "purge_duration": stratagem_data.get("purge_duration"),
-            }
+            (configuration_data, managed_filesystem, matches) = self._get_stratagem_configuration(stratagem_data)
 
-            # The filesystem_id may come in as the fs name or the fs id. In terms of storing information in the database, the fs id should always be used.
-            fs_identifier = str(configuration_data.get("filesystem_id"))
-            fs_id = get_fs_id_from_identifier(fs_identifier)
-
-            if not fs_id:
-                raise Exception("No matching filesystem for {}".format(fs_identifier))
-
-            configuration_data["filesystem_id"] = fs_id
-
-            matches = StratagemConfiguration.objects.filter(filesystem_id=fs_id)
             if len(matches) == 1:
                 matches.update(**configuration_data)
-                stratagem_configuration = StratagemConfiguration.objects.get(filesystem_id=fs_id)
+                stratagem_configuration = StratagemConfiguration.objects.get(filesystem=managed_filesystem)
             else:
                 stratagem_configuration = StratagemConfiguration.objects.create(**configuration_data)
 
@@ -1792,12 +1807,14 @@ class JobScheduler(object):
                     "configured",
                 )
             ],
-            "Configuring Stratagem",
+            "Configuring Stratagem scan interval",
             True,
         )
 
-    def run_stratagem(self, mdts, stratagem_data):
+    def run_stratagem(self, mdts, fs_id, stratagem_data):
         unique_id = uuid.uuid4()
+        filesystem = ManagedFilesystem.objects.get(id=fs_id)
+
         run_stratagem_list = map(
             lambda mdt_id: {
                 "class_name": "RunStratagemJob",
@@ -1806,24 +1823,27 @@ class JobScheduler(object):
                     "uuid": unique_id,
                     "report_duration": stratagem_data.get("report_duration"),
                     "purge_duration": stratagem_data.get("purge_duration"),
+                    "filesystem": filesystem,
                 },
             },
             mdts,
         )
 
         run_stratagem_list.append(
-            {"class_name": "AggregateStratagemResultsJob", "args": {"depends_on_job_range": range(len(mdts))}}
+            {
+                "class_name": "AggregateStratagemResultsJob",
+                "args": {"depends_on_job_range": range(len(mdts)), "fs_name": filesystem.name},
+            }
         )
 
         client_host = ManagedHost.objects.get(server_profile_id="stratagem_client")
         client_mount_exists = LustreClientMount.objects.filter(host_id=client_host.id).exists()
-        filesystem = ManagedFilesystem.objects.get(id=ManagedMdt.objects.get(id=mdts[0]).filesystem_id)
         mountpoint = "/mnt/{}".format(filesystem.name)
 
         if not client_mount_exists:
             self._create_client_mount(client_host, filesystem, mountpoint)
 
-        client_mount = LustreClientMount.objects.get(host_id=client_host.id)
+        client_mount = LustreClientMount.objects.get(host_id=client_host.id, filesystem_id=fs_id)
         client_mount.state = "unmounted"
         client_mount.mountpoint = mountpoint
         client_mount.filesystem_id = filesystem.id
@@ -1855,3 +1875,27 @@ class JobScheduler(object):
         command = self.run_jobs(run_stratagem_list, help_text["run_stratagem_for_all"])
 
         return command
+
+    def update_stratagem(self, stratagem_data):
+        with self._lock:
+            (configuration_data, managed_filesystem, matches) = self._get_stratagem_configuration(stratagem_data)
+
+            if len(matches) == 1:
+                matches.update(**configuration_data)
+                stratagem_configuration = StratagemConfiguration.objects.get(filesystem=managed_filesystem)
+            else:
+                raise Exception("Not matching filesystem for stratagem configuration.")
+
+            ObjectCache.update(stratagem_configuration)
+
+        return self.set_state(
+            [
+                (
+                    ContentType.objects.get_for_model(stratagem_configuration).natural_key(),
+                    stratagem_configuration.id,
+                    "configured",
+                )
+            ],
+            "Updating Stratagem",
+            True,
+        )

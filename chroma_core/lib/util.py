@@ -50,6 +50,17 @@ def sizeof_fmt_detailed(num):
     return int(num)
 
 
+def target_label_split(label):
+    """
+    Split a target label into a tuple of it's parts: (fsname, target type, index)
+    """
+    a = label.rsplit("-", 1)
+    if len(a) == 1:
+        # MGS
+        return (None, a[0][0:3], None)
+    return (a[0], a[1][0:3], int(a[1][3:], 16))
+
+
 class timeit(object):
     def __init__(self, logger):
         self.logger = logger

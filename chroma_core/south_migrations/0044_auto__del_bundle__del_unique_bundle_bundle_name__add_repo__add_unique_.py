@@ -11,9 +11,6 @@ class Migration(SchemaMigration):
         # Removing unique constraint on 'ServerProfilePackage', fields ['bundle', 'server_profile', 'package_name']
         db.delete_unique(u'chroma_core_serverprofilepackage', ['bundle_id', 'server_profile_id', 'package_name'])
 
-        # Removing unique constraint on 'Bundle', fields ['bundle_name']
-        db.delete_unique(u'chroma_core_bundle', ['bundle_name'])
-
         # Deleting model 'Bundle'
         db.delete_table(u'chroma_core_bundle')
 

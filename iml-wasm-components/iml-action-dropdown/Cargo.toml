@@ -5,24 +5,16 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-seed = "=0.3.7"
+seed = "=0.4.0"
 serde = { version = "1", features = ['derive'] }
 serde_json = "1.0"
 futures = "0.1"
-wasm-bindgen = { version = "0.2", features = ["serde-serialize"]}
-web-sys = { version = "0.3", features = ["CustomEvent", "CustomEventInit", "Event", "EventTarget", "Element"]}
-js-sys = "0.3"
-cfg-if = "0.1"
 log = "0.4"
-iml-tooltip = { path = "../iml-tooltip", version = "0.1.0" }
-iml-sleep = { path = "../iml-sleep", version = "0.1.0" }
-iml-wire-types = "0.1.5"
-console_log = { version = "0.1", optional = true }
-
+iml-tooltip = { path = "../iml-tooltip", version = "0.1" }
+iml-sleep = { path = "../iml-sleep", version = "0.1" }
+iml-utils = { path = "../iml-utils", version = "0.1" }
+iml-wire-types = "0.1"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"
-insta = "0.8.1"
-
-[features]
-default = ["console_log"]
+insta = "0.10.1"

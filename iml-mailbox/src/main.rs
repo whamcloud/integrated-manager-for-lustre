@@ -11,8 +11,6 @@
 //! concurrently
 
 use futures::{Future as _, Stream as _};
-use http::Response;
-use hyper::Body;
 use iml_mailbox::{LineStream, MailboxSenders};
 use parking_lot::Mutex;
 use std::{fs, path::PathBuf, sync::Arc};
@@ -33,19 +31,6 @@ fn main() {
 
     let mailbox = warp::path("mailbox");
 
-    let mailbox_path2 = mailbox_path.clone();
-
-    let get = warp::get2()
-        .and(mailbox)
-        .and(warp::path::param().map(move |x| [&mailbox_path2, &x].iter().collect()))
-        .map(|address: PathBuf| {
-            let stream = iml_fs::stream_file(address);
-
-            let body = Body::wrap_stream(stream);
-
-            Response::new(body)
-        });
-
     let post = warp::post2()
         .and(mailbox)
         .and(shared_senders_filter)
@@ -55,7 +40,9 @@ fn main() {
         )
         .and(iml_mailbox::line_stream())
         .and_then(
-            |mailbox_senders: SharedMailboxSenders, address: PathBuf, s: Box<LineStream + Send>| {
+            |mailbox_senders: SharedMailboxSenders,
+             address: PathBuf,
+             s: Box<dyn LineStream + Send>| {
                 let tx = { mailbox_senders.lock().get(&address) };
                 let tx = tx.unwrap_or_else(|| {
                     let (tx, fut) = { mailbox_senders.lock().create(address.clone()) };
@@ -85,9 +72,9 @@ fn main() {
         )
         .map(|_| warp::reply::with_status(warp::reply(), warp::http::StatusCode::CREATED));
 
-    let routes = get.or(post).with(warp::log("mailbox"));
+    let route = post.with(warp::log("mailbox"));
 
     log::info!("Starting on {:?}", addr);
 
-    warp::serve(routes).run(addr);
+    warp::serve(route).run(addr);
 }

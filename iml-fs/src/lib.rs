@@ -2,14 +2,29 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use bytes::IntoBuf;
 use futures::{future::poll_fn, stream, Future, Stream};
 use std::{
     io::{self, Write},
-    path::Path,
+    path::{Path, PathBuf},
 };
 use tempfile::NamedTempFile;
-use tokio::codec::{BytesCodec, Framed};
+use tokio::codec::{BytesCodec, FramedRead, FramedWrite, LinesCodec};
 use tokio_threadpool::blocking;
+
+/// Given a `Stream` of items that implement `IntoBuf`, returns a stream
+/// that reads line by line.
+pub fn read_lines<S>(s: S) -> impl Stream<Item = String, Error = io::Error>
+where
+    S: Stream,
+    S::Error: std::error::Error + Send + Sync + 'static,
+    S::Item: IntoBuf,
+{
+    FramedRead::new(
+        rw_stream_sink::RwStreamSink::new(s.map_err(|e| io::Error::new(io::ErrorKind::Other, e))),
+        LinesCodec::new(),
+    )
+}
 
 /// Given a path, attempts to do an async read to the end of the file.
 ///
@@ -35,10 +50,42 @@ where
     P: AsRef<Path> + Send + 'static,
 {
     tokio::fs::File::open(p)
-        .map(|file| Framed::new(file, BytesCodec::new()))
+        .map(|file| FramedRead::new(file, BytesCodec::new()))
         .flatten_stream()
         .map(bytes::BytesMut::freeze)
         .from_err()
+}
+
+/// Given a path, streams the file line by line till EOF
+///
+/// # Arguments
+///
+/// * `p` - The `Path` to a file.
+pub fn stream_file_lines<P>(p: P) -> impl Stream<Item = String, Error = std::io::Error>
+where
+    P: AsRef<Path> + Send + 'static,
+{
+    tokio::fs::File::open(p)
+        .map(|file| FramedRead::new(file, LinesCodec::new()))
+        .flatten_stream()
+        .from_err()
+}
+
+/// Given a directory of files,
+/// stream each file line by line one at a time till EOF
+///
+/// # Arguments
+///
+/// * `p` - The `Path` to a directory.
+pub fn stream_dir_lines<P>(p: P) -> impl Stream<Item = String, Error = std::io::Error>
+where
+    P: AsRef<Path> + Send + 'static,
+{
+    tokio::fs::read_dir(p)
+        .flatten_stream()
+        .map(|d| d.path())
+        .map(stream_file_lines)
+        .flatten()
 }
 
 /// Given a directory of files,
@@ -88,6 +135,14 @@ pub fn write_tempfile(contents: Vec<u8>) -> impl Future<Item = NamedTempFile, Er
         .map_err(|_| panic!("the threadpool shut down"))
     })
     .and_then(|x| x)
+}
+
+/// Given a `PathBuf`, creates a new file that can have
+/// arbitrary `Bytes` written to it.
+pub fn file_write_bytes(
+    path: PathBuf,
+) -> impl Future<Item = FramedWrite<tokio::fs::File, BytesCodec>, Error = io::Error> {
+    tokio::fs::File::create(path).map(|file| FramedWrite::new(file, BytesCodec::new()))
 }
 
 #[cfg(test)]

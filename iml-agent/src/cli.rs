@@ -75,7 +75,7 @@ pub struct FidInput {
     fsname: String,
 
     #[structopt(name = "FIDS")]
-    /// Optional list of FIDs to purge
+    /// List of FIDs to purge
     fidlist: Vec<String>,
 }
 
@@ -130,7 +130,7 @@ fn run_cmd<R: Send + 'static, E: Send + 'static>(
     tokio::runtime::Runtime::new().unwrap().block_on_all(fut)
 }
 
-fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<Iterator<Item = String>> {
+fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<dyn Iterator<Item = String>> {
     match input {
         None => {
             if fidlist.is_empty() {
@@ -144,7 +144,7 @@ fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<Iterator<It
             }
         }
         Some(name) => {
-            let buf: Box<BufRead> = match name.as_ref() {
+            let buf: Box<dyn BufRead> = match name.as_ref() {
                 "-" => Box::new(BufReader::new(io::stdin())),
                 _ => {
                     let f = match File::open(&name) {
@@ -178,10 +178,14 @@ fn print_counters(xs: Vec<StratagemCounters>) {
     log::info!("Looking at: {:?}", xs);
 
     let mut table = Table::new();
-    table.add_row(row!["Name", "Count"]);
+    table.add_row(row!["Name", "Count", "Used"]);
 
     let mut h = v_hist::init();
     h.max_width = 50;
+
+    if xs.is_empty() {
+        return;
+    }
 
     for x in xs {
         add_counter_entry(&x, &mut table, &mut h);
@@ -206,14 +210,12 @@ fn print_counters(xs: Vec<StratagemCounters>) {
 
 fn add_counter_entry(x: impl Counter, t: &mut Table, h: &mut v_hist::Histogram) {
     let name = humanize(&x.name());
-    let count: usize = x
-        .count()
-        .try_into()
-        .expect("Conversion to usize for counter failed");
 
-    t.add_row(row![name.clone(), count]);
+    let b = byte_unit::Byte::from_bytes(x.size().into()).get_appropriate_unit(true);
 
-    h.add_entry(name, count);
+    t.add_row(row![name.clone(), x.count(), b.to_string()]);
+
+    h.add_entry(name, x.count().try_into().unwrap());
 }
 
 fn main() {
@@ -225,9 +227,8 @@ fn main() {
         App::StratagemClient { command: cmd } => match cmd {
             StratagemClientCommand::Purge { fidopts: opt } => {
                 let device = opt.fsname;
-                let input = input_to_iter(opt.input, opt.fidlist);
 
-                if action_purge::purge_files(&device, input).is_err() {
+                if action_purge::purge_files(&device, opt.fidlist).is_err() {
                     exit(exitcode::OSERR);
                 }
             }

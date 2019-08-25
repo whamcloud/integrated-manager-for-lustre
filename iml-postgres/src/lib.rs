@@ -7,8 +7,8 @@ use iml_manager_env::{get_db_host, get_db_name, get_db_password, get_db_user};
 
 use parking_lot::Mutex;
 use std::sync::Arc;
-pub use tokio_postgres::AsyncMessage;
-use tokio_postgres::{tls::NoTlsStream, Client, Connection, NoTls, Socket};
+pub use tokio_postgres::{row::Row, types::Type, AsyncMessage, Client, Error};
+use tokio_postgres::{tls::NoTlsStream, Connection, NoTls, Socket};
 
 /// Gets a connection string from the IML env
 fn get_conn_string() -> String {
@@ -45,8 +45,10 @@ pub fn connect() -> tokio_postgres::impls::Connect<tokio_postgres::tls::NoTls> {
     tokio_postgres::connect(&get_conn_string(), NoTls)
 }
 
+pub type SharedClient = Arc<Mutex<Client>>;
+
 /// Allows for the client to be shared across threads.
-pub fn shared_client(client: Client) -> Arc<Mutex<Client>> {
+pub fn shared_client(client: Client) -> SharedClient {
     Arc::new(Mutex::new(client))
 }
 
