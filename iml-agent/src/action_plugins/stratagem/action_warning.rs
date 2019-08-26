@@ -10,7 +10,7 @@ use futures::{
 use liblustreapi::LlapiFid;
 use std::{io, path::PathBuf};
 use tokio_threadpool::blocking;
-use tracing::{debug, error, info, span, Level};
+use tracing::{debug, error, span, Level};
 use tracing_futures::Instrument;
 
 /// Runs `fid2path` on the incoming `String`.

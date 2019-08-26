@@ -10,7 +10,6 @@ use crate::{
 use futures::{Future, IntoFuture, Stream};
 use hyper::{header::HeaderValue, Body, Method, Request, StatusCode};
 use iml_fs::read_lines;
-use std::io::{Error, ErrorKind};
 use tracing::debug;
 
 /// Streams the given data to the manager mailbox.
