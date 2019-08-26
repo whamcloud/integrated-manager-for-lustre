@@ -935,6 +935,11 @@ class RealRemoteOperations(RemoteOperations):
                 logger.info("{} does not appear to have pacemaker - skipping any removal of targets.".format(address))
                 continue
 
+            # @@ DEBUG
+            result = self._ssh_address(address, "ip ad; ip r; ss -tp sport = :ssh")
+            logger.debug("CMD OUTPUT\n%s" % result.stdout)
+            logger.debug("CMD ERR(%d)\n%s" % (result.rc, result.stderr))
+
             firewall = RemoteFirewallControl.create(address, self._ssh_address_no_check)
 
             clear_ha_script_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "clear_ha_el7.sh")
