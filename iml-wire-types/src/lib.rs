@@ -297,6 +297,7 @@ pub enum LockAction {
 /// A change to be applied to `Locks`
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct LockChange {
+    pub uuid: String,
     pub job_id: u64,
     pub content_type_id: u32,
     pub item_id: u32,
