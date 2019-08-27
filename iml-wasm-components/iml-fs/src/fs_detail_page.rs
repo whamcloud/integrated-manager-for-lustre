@@ -91,16 +91,22 @@ impl Model {
             return false;
         }
 
-        let active_hosts: Vec<_> = self
+        let server_resources: Vec<_> = self
             .mdts
             .iter()
-            .filter_map(|x| x.active_host.as_ref())
+            .map(move |x| {
+                vec![x.failover_servers.clone(), vec![x.primary_server.clone()]]
+                    .into_iter()
+                    .flatten()
+                    .collect::<Vec<String>>()
+            })
+            .flatten()
             .collect();
 
         let filtered_hosts: Vec<&Host> = self
             .hosts
             .values()
-            .filter(|x| active_hosts.contains(&&x.resource_uri))
+            .filter(|x| server_resources.contains(&&x.resource_uri))
             .collect();
 
         if filtered_hosts.len() > 0 {
@@ -110,6 +116,14 @@ impl Model {
         } else {
             false
         }
+    }
+
+    fn can_scan_stratagem(&self) -> bool {
+        let mdt0: Option<&Target<TargetConfParam>> =
+            self.mdts.iter().find(|x| x.name.contains("MDT0000"));
+
+        mdt0.map_or(false, |x: &Target<TargetConfParam>| x.state == "mounted")
+            && self.stratagem_ready()
     }
 }
 
@@ -200,8 +214,8 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             }
         }
         Msg::CloseCommandModal => {
-            model.stratagem.disabled = false;
-            model.scan_now.disabled = false;
+            model.stratagem.disabled = !model.stratagem_ready();
+            model.scan_now.disabled = !model.can_scan_stratagem();
         }
         Msg::Filesystem(fs) => {
             if let Some(fs) = &fs {
@@ -214,6 +228,8 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 model.stratagem.inode_table.fs_name = fs.name.to_string();
 
                 model.stratagem_ready = model.stratagem_ready();
+
+                model.scan_now.disabled = !model.can_scan_stratagem();
             };
 
             model.fs = fs;
@@ -561,7 +577,7 @@ fn view(model: &Model) -> Node<Msg> {
                 &model.locks,
             ),
             mnt_info_btn,
-            if model.stratagem_ready {
+            if model.stratagem_ready() {
                 iml_stratagem::scan_now::view(fs.id, &model.scan_now).map_message(Msg::ScanNow)
             } else {
                 vec![]
@@ -691,7 +707,9 @@ pub fn render_fs_detail_page(el: Element) -> FsDetailPageCallbacks {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use iml_wire_types::{FilesystemConfParams, ServerProfile, VolumeOrResourceUri};
+    use iml_wire_types::{
+        FilesystemConfParams, FilesystemShort, ServerProfile, VolumeOrResourceUri,
+    };
 
     pub fn create_host() -> Host {
         Host {
@@ -783,12 +801,21 @@ mod tests {
             active_host_name: "mds1.local".into(),
             conf_params: None,
             content_type_id: 16,
-            failover_server_name: "---".into(),
-            failover_servers: vec![],
+            failover_server_name: "mds2.local".into(),
+            failover_servers: vec!["/api/host/2/".into()],
             filesystem: Some("/api/filesystem/1/".into()),
             filesystem_id: Some(1),
             filesystem_name: Some("fs".into()),
-            filesystems: None,
+            filesystems: Some(vec![
+                FilesystemShort {
+                    id: 1,
+                    name: "fs".into(),
+                },
+                FilesystemShort {
+                    id: 2,
+                    name: "fs2".into(),
+                },
+            ]),
             ha_label: Some("fs-MDT0000_166e6".into()),
             id: 10,
             immutable_state: false,
@@ -875,7 +902,7 @@ mod tests {
         m.hosts.insert(1, host);
 
         let mut mdt = create_mdt();
-        mdt.active_host = Some("/api/target/999/".into());
+        mdt.primary_server = "/api/target/999/".into();
         m.mdts.push(mdt);
 
         assert_eq!(m.stratagem_ready(), false);
@@ -894,5 +921,87 @@ mod tests {
         m.mdts.push(create_mdt());
 
         assert_eq!(m.stratagem_ready(), false);
+    }
+
+    #[test]
+    pub fn test_stratagem_ready_with_unmounted_targets() {
+        let mut m = Model::default();
+        m.fs = Some(create_fs());
+
+        m.hosts = HashMap::new();
+        let mut host = create_host();
+        host.server_profile.name = "stratagem_server".into();
+        m.hosts.insert(1, host);
+
+        let mut mdt = create_mdt();
+        mdt.active_host = None;
+        mdt.active_host_name = "---".into();
+        mdt.filesystem = None;
+        mdt.filesystem_id = None;
+        mdt.filesystem_name = None;
+        mdt.ha_label = None;
+        mdt.index = None;
+        mdt.inode_count = None;
+        mdt.inode_size = None;
+        mdt.state = "unmounted".into();
+
+        m.mdts.push(mdt);
+
+        assert_eq!(m.stratagem_ready(), true);
+    }
+
+    #[test]
+    pub fn test_can_scan_now_if_mdt0_unmounted() {
+        let mut m = Model::default();
+        m.fs = Some(create_fs());
+
+        m.hosts = HashMap::new();
+        let mut host = create_host();
+        host.server_profile.name = "stratagem_server".into();
+        m.hosts.insert(1, host);
+
+        let mut mdt = create_mdt();
+        mdt.active_host = None;
+        mdt.active_host_name = "---".into();
+        mdt.filesystem = None;
+        mdt.filesystem_id = None;
+        mdt.filesystem_name = None;
+        mdt.ha_label = None;
+        mdt.index = None;
+        mdt.inode_count = None;
+        mdt.inode_size = None;
+        mdt.state = "unmounted".into();
+
+        m.mdts.push(mdt);
+
+        assert_eq!(m.can_scan_stratagem(), false);
+    }
+
+    #[test]
+    pub fn test_can_scan_now_if_mdt0_mounted() {
+        let mut m = Model::default();
+        m.fs = Some(create_fs());
+
+        m.hosts = HashMap::new();
+        let mut host = create_host();
+        host.server_profile.name = "stratagem_server".into();
+        m.hosts.insert(1, host);
+
+        m.mdts.push(create_mdt());
+
+        assert_eq!(m.can_scan_stratagem(), true);
+    }
+
+    #[test]
+    pub fn test_can_scan_now_if_mdt0_mounted_but_non_stratagem_profile() {
+        let mut m = Model::default();
+        m.fs = Some(create_fs());
+
+        m.hosts = HashMap::new();
+        m.hosts.insert(1, create_host());
+
+        m.mdts.push(create_mdt());
+
+        assert_eq!(m.can_scan_stratagem(), false);
     }
 }
