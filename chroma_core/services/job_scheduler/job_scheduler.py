@@ -1843,7 +1843,9 @@ class JobScheduler(object):
         if not client_mount_exists:
             self._create_client_mount(client_host, filesystem, mountpoint)
 
-        client_mount = ObjectCache.get_one(LustreClientMount, lambda mnt: mnt.host_id == client_host.id and mnt.filesystem_id == fs_id)
+        client_mount = ObjectCache.get_one(
+            LustreClientMount, lambda mnt: mnt.host_id == client_host.id and mnt.filesystem_id == fs_id
+        )
         client_mount.state = "unmounted"
         client_mount.mountpoint = mountpoint
         client_mount.filesystem_id = filesystem.id
