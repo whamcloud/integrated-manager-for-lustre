@@ -935,33 +935,27 @@ class RealRemoteOperations(RemoteOperations):
                 logger.info("{} does not appear to have pacemaker - skipping any removal of targets.".format(address))
                 continue
 
-            # @@ DEBUG
-            result = self._ssh_address(address, "ip ad; ip r; ss -tp sport = :ssh")
-            logger.debug("CMD OUTPUT\n%s" % result.stdout)
-            logger.debug("CMD ERR(%d)\n%s" % (result.rc, result.stderr))
-
             firewall = RemoteFirewallControl.create(address, self._ssh_address_no_check)
 
-            clear_ha_script_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "clear_ha_el7.sh")
+            # clear_ha_el7.sh
+            result = self._ssh_address(address, "pcs status && pcs cluster stop --all")
+            logger.debug("CMD OUTPUT:\n%s" % result.stdout)
+            logger.debug("CMD ERR(%d) %s" % (result.rc, result.stderr))
 
-            with open(clear_ha_script_file, "r") as clear_ha_script:
-                result = self._ssh_address(
-                    address, "ring0_iface=%s\n%s" % (server["corosync_config"]["ring1_iface"], clear_ha_script.read())
-                )
-                logger.info(
-                    "clear_ha script on %s results... exit code %s.  stdout:\n%s\nstderr:\n%s"
-                    % (server["nodename"], result.rc, result.stdout, result.stderr)
-                )
+            result = self._ssh_address(address, "pcs cluster destroy")
+            logger.debug("CMD OUTPUT:\n%s" % result.stdout)
+            logger.debug("CMD ERR(%d) %s" % (result.rc, result.stderr))
 
-                if result.rc != 0:
-                    logger.info(
-                        "clear_ha script on %s failed with exit code %s.  stdout:\n%s\nstderr:\n%s"
-                        % (server["nodename"], result.rc, result.stdout, result.stderr)
-                    )
-                    raise RuntimeError(
-                        "Failed clear_ha script on '%s'!\nrc: %s\nstdout: %s\nstderr: %s"
-                        % (server, result.rc, result.stdout, result.stderr)
-                    )
+            result = self._ssh_address(address, "systemctl disable --now pcsd pacemaker corosync")
+            logger.debug("CMD OUTPUT:\n%s" % result.stdout)
+            logger.debug("CMD ERR(%d) %s" % (result.rc, result.stderr))
+
+            self._ssh_address(address, "ifconfig %s 0.0.0.0 down" % (server["corosync_config"]["ring1_iface"]))
+            self._ssh_address(
+                address,
+                "rm -f /etc/sysconfig/network-scripts/ifcfg-%s /etc/corosync/corosync.conf /var/lib/pacemaker/cib/* /var/lib/corosync/*"
+                % (server["corosync_config"]["ring1_iface"]),
+            )
 
             self._ssh_address(address, firewall.remote_add_port_cmd(22, "tcp"))
             self._ssh_address(address, firewall.remote_add_port_cmd(988, "tcp"))
