@@ -87,28 +87,26 @@ struct Model {
 
 impl Model {
     fn stratagem_ready(&self) -> bool {
-        if !self.mdts.is_empty() && !self.hosts.is_empty() && self.fs.is_some() {
-            let filtered_hosts: Vec<&Host> = self
-                .hosts
-                .values()
-                .filter(|x| {
-                    self.mdts.iter().any(|mdt| {
-                        if let Some(active_host) = mdt.clone().active_host {
-                            active_host == x.resource_uri
-                        } else {
-                            false
-                        }
-                    })
-                })
-                .collect();
+        if self.mdts.is_empty() || self.hosts.is_empty() || self.fs.is_none() {
+            return false;
+        }
 
-            if filtered_hosts.len() > 0 {
-                filtered_hosts
-                    .iter()
-                    .all(|x| x.server_profile.name == "stratagem_server")
-            } else {
-                false
-            }
+        let active_hosts: Vec<_> = self
+            .mdts
+            .iter()
+            .filter_map(|x| x.active_host.as_ref())
+            .collect();
+
+        let filtered_hosts: Vec<&Host> = self
+            .hosts
+            .values()
+            .filter(|x| active_hosts.contains(&&x.resource_uri))
+            .collect();
+
+        if filtered_hosts.len() > 0 {
+            filtered_hosts
+                .iter()
+                .all(|x| x.server_profile.name == "stratagem_server")
         } else {
             false
         }
