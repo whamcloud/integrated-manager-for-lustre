@@ -938,7 +938,7 @@ class RealRemoteOperations(RemoteOperations):
             firewall = RemoteFirewallControl.create(address, self._ssh_address_no_check)
 
             # clear_ha_el7.sh
-            result = self._ssh_address(address, "pcs status && pcs cluster stop --all")
+            result = self._ssh_address(address, "if pcs status; then pcs cluster stop --all; fi")
             logger.debug("CMD OUTPUT:\n%s" % result.stdout)
             logger.debug("CMD ERR(%d) %s" % (result.rc, result.stderr))
 
