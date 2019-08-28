@@ -938,17 +938,16 @@ class RealRemoteOperations(RemoteOperations):
             firewall = RemoteFirewallControl.create(address, self._ssh_address_no_check)
 
             # clear_ha_el7.sh
-            result = self._ssh_address(address, "if pcs status; then pcs cluster stop --all; fi")
+            result = self._ssh_address(address, "if crm_mon -b1; then crm_resource -l|xargs pcs resource disable; fi")
             logger.debug("CMD OUTPUT:\n%s" % result.stdout)
-            logger.debug("CMD ERR(%d) %s" % (result.rc, result.stderr))
+
+            result = self._ssh_address(address, "if crm_mon -b1; then pcs cluster stop --all; fi")
+            logger.debug("CMD OUTPUT:\n%s" % result.stdout)
 
             result = self._ssh_address(address, "pcs cluster destroy")
             logger.debug("CMD OUTPUT:\n%s" % result.stdout)
-            logger.debug("CMD ERR(%d) %s" % (result.rc, result.stderr))
 
-            result = self._ssh_address(address, "systemctl disable --now pcsd pacemaker corosync")
-            logger.debug("CMD OUTPUT:\n%s" % result.stdout)
-            logger.debug("CMD ERR(%d) %s" % (result.rc, result.stderr))
+            self._ssh_address(address, "systemctl disable --now pcsd pacemaker corosync")
 
             self._ssh_address(address, "ifconfig %s 0.0.0.0 down" % (server["corosync_config"]["ring1_iface"]))
             self._ssh_address(
