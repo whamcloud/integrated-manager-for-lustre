@@ -294,6 +294,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.osts = osts;
 
             model.stratagem_ready = model.stratagem_ready();
+            model.scan_now.disabled = !model.can_scan_stratagem();
         }
         Msg::OstPaging(msg) => update_paging(msg, &mut model.ost_paging),
         Msg::MdtPaging(msg) => update_paging(msg, &mut model.mdt_paging),
@@ -301,6 +302,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.hosts = hosts;
 
             model.stratagem_ready = model.stratagem_ready();
+            model.scan_now.disabled = !model.can_scan_stratagem();
         }
         Msg::Alerts(alerts) => {
             model.alerts = alerts;
@@ -352,6 +354,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
         Msg::StratagemInit(msg) => {
             model.stratagem_ready = model.stratagem_ready();
+            model.scan_now.disabled = !model.can_scan_stratagem();
 
             orders.send_msg(Msg::StratagemComponent(msg));
         }
