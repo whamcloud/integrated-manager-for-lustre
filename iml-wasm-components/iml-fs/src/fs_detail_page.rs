@@ -94,7 +94,11 @@ impl Model {
         let server_resources: Vec<_> = self
             .mdts
             .iter()
-            .flat_map(|x| x.failover_servers.as_ref().chain(vec![&x.primary_server]))
+            .flat_map(|x| {
+                x.failover_servers
+                    .iter()
+                    .chain(std::iter::once(&x.primary_server))
+            })
             .collect();
 
         let filtered_hosts: Vec<&Host> = self
