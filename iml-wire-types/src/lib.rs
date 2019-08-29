@@ -297,6 +297,7 @@ pub enum LockAction {
 /// A change to be applied to `Locks`
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct LockChange {
+    pub uuid: String,
     pub job_id: u64,
     pub content_type_id: u32,
     pub item_id: u32,
@@ -676,7 +677,7 @@ pub struct Filesystem {
     pub content_type_id: u32,
     pub files_free: Option<f64>,
     pub files_total: Option<f64>,
-    pub hsm_control_params: Vec<HsmControlParam>,
+    pub hsm_control_params: Option<Vec<HsmControlParam>>,
     pub id: u32,
     pub immutable_state: bool,
     pub label: String,

@@ -1837,17 +1837,20 @@ class JobScheduler(object):
         )
 
         client_host = ManagedHost.objects.get(server_profile_id="stratagem_client")
-        client_mount_exists = LustreClientMount.objects.filter(host_id=client_host.id).exists()
-        mountpoint = "/mnt/{}".format(filesystem.name)
+        client_mount_exists = LustreClientMount.objects.filter(host_id=client_host.id, filesystem_id=fs_id).exists()
 
+        mountpoint = "/mnt/{}".format(filesystem.name)
         if not client_mount_exists:
             self._create_client_mount(client_host, filesystem, mountpoint)
 
-        client_mount = LustreClientMount.objects.get(host_id=client_host.id, filesystem_id=fs_id)
+        client_mount = ObjectCache.get_one(
+            LustreClientMount, lambda mnt: mnt.host_id == client_host.id and mnt.filesystem_id == fs_id
+        )
         client_mount.state = "unmounted"
         client_mount.mountpoint = mountpoint
         client_mount.filesystem_id = filesystem.id
         client_mount.save()
+        ObjectCache.update(client_mount)
 
         run_stratagem_list.append(
             {
@@ -1868,6 +1871,7 @@ class JobScheduler(object):
                     "uuid": unique_id,
                     "report_duration": stratagem_data.get("report_duration"),
                     "purge_duration": stratagem_data.get("purge_duration"),
+                    "filesystem": filesystem,
                 },
             }
         )

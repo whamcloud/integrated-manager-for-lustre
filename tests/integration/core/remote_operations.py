@@ -190,7 +190,9 @@ class RealRemoteOperations(RemoteOperations):
                 # (vagrant always quotes IdentityFile)
                 args["key_filename"] = args["key_filename"].strip('"')
 
-        logger.info("SSH address = %s, args = %s" % (address, args))
+        logger.info(
+            "SSH address = %s, timeout = %d, write len = %d, args = %s" % (address, timeout, len(buffer or ""), args)
+        )
 
         # Create ssh connection
         try:
@@ -214,8 +216,9 @@ class RealRemoteOperations(RemoteOperations):
         if buffer:
             stdin = channel.makefile("wb")
             stdin.write(buffer)
-            stdin.flush()
-            stdin.channel.shutdown_write()
+            stdin.close()
+        # Always shutdown write to ensure executable does not wait on input
+        channel.shutdown_write()
 
         # Store results. This needs to happen in this order. If recv_exit_status is
         # read first, it can block indefinitely due to paramiko bug #448. The read on
@@ -934,26 +937,24 @@ class RealRemoteOperations(RemoteOperations):
 
             firewall = RemoteFirewallControl.create(address, self._ssh_address_no_check)
 
-            clear_ha_script_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "clear_ha_el7.sh")
+            # clear_ha_el7.sh
+            result = self._ssh_address(address, "if crm_mon -b1; then crm_resource -l|xargs pcs resource disable; fi")
+            logger.debug("CMD OUTPUT:\n%s" % result.stdout)
 
-            with open(clear_ha_script_file, "r") as clear_ha_script:
-                result = self._ssh_address(
-                    address, "ring0_iface=%s\n%s" % (server["corosync_config"]["ring1_iface"], clear_ha_script.read())
-                )
-                logger.info(
-                    "clear_ha script on %s results... exit code %s.  stdout:\n%s\nstderr:\n%s"
-                    % (server["nodename"], result.rc, result.stdout, result.stderr)
-                )
+            result = self._ssh_address(address, "if crm_mon -b1; then pcs cluster stop --all; fi")
+            logger.debug("CMD OUTPUT:\n%s" % result.stdout)
 
-                if result.rc != 0:
-                    logger.info(
-                        "clear_ha script on %s failed with exit code %s.  stdout:\n%s\nstderr:\n%s"
-                        % (server["nodename"], result.rc, result.stdout, result.stderr)
-                    )
-                    raise RuntimeError(
-                        "Failed clear_ha script on '%s'!\nrc: %s\nstdout: %s\nstderr: %s"
-                        % (server, result.rc, result.stdout, result.stderr)
-                    )
+            result = self._ssh_address(address, "pcs cluster destroy")
+            logger.debug("CMD OUTPUT:\n%s" % result.stdout)
+
+            self._ssh_address(address, "systemctl disable --now pcsd pacemaker corosync")
+
+            self._ssh_address(address, "ifconfig %s 0.0.0.0 down" % (server["corosync_config"]["ring1_iface"]))
+            self._ssh_address(
+                address,
+                "rm -f /etc/sysconfig/network-scripts/ifcfg-%s /etc/corosync/corosync.conf /var/lib/pacemaker/cib/* /var/lib/corosync/*"
+                % (server["corosync_config"]["ring1_iface"]),
+            )
 
             self._ssh_address(address, firewall.remote_add_port_cmd(22, "tcp"))
             self._ssh_address(address, firewall.remote_add_port_cmd(988, "tcp"))
