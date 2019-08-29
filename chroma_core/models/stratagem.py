@@ -560,6 +560,7 @@ class SendResultsToClientStep(Step):
 
 
 class SendStratagemResultsToClientJob(Job):
+    filesystem = models.ForeignKey("ManagedFilesystem", null=False)
     uuid = models.CharField(max_length=64, null=False, default="")
     report_duration = models.BigIntegerField(null=True)
     purge_duration = models.BigIntegerField(null=True)
@@ -577,7 +578,7 @@ class SendStratagemResultsToClientJob(Job):
 
     def get_steps(self):
         client_host = ManagedHost.objects.get(server_profile_id="stratagem_client")
-        client_mount = LustreClientMount.objects.get(host_id=client_host.id)
+        client_mount = LustreClientMount.objects.get(host_id=client_host.id, filesystem_id=self.filesystem.id)
 
         return [
             (

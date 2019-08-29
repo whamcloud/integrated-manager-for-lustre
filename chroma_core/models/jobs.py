@@ -3,6 +3,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+import uuid
 
 from collections import defaultdict, namedtuple
 
@@ -281,6 +282,7 @@ class DeletableStatefulObject(StatefulObject):
 
 class StateLock(object):
     def __init__(self, job, locked_item, write, begin_state=None, end_state=None):
+        self.uuid = str(uuid.uuid4())
         self.job = job
         self.locked_item = locked_item
         self.write = write
@@ -297,7 +299,7 @@ class StateLock(object):
             return "Job %s writelock on %s %s->%s" % (self.job.id, self.locked_item, self.begin_state, self.end_state)
 
     def to_dict(self):
-        d = dict([(k, getattr(self, k)) for k in ["write", "begin_state", "end_state"]])
+        d = dict([(k, getattr(self, k)) for k in ["uuid", "write", "begin_state", "end_state"]])
         d["locked_item_id"] = self.locked_item.id
         d["locked_item_type_id"] = ContentType.objects.get_for_model(self.locked_item).id
         return d

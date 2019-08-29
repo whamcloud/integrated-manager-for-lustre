@@ -132,6 +132,7 @@ def to_lock_json(lock, add_remove=LockCache.LOCK_ADD):
         "job_id": lock.job.id,
         "content_type_id": ContentType.objects.get_for_model(item).id,
         "item_id": lock.locked_item.id,
+        "uuid": lock.uuid,
         "description": lock.job.description(),
         "lock_type": "write" if lock.write else "read",
         "action": "add" if add_remove == LockCache.LOCK_ADD else "remove",
