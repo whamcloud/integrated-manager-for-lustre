@@ -938,11 +938,21 @@ class RealRemoteOperations(RemoteOperations):
             firewall = RemoteFirewallControl.create(address, self._ssh_address_no_check)
 
             # clear_ha_el7.sh
-            result = self._ssh_address(address, "if crm_mon -b1; then crm_resource -l|xargs pcs resource disable; fi")
-            logger.debug("CMD OUTPUT:\n%s" % result.stdout)
+            result = self._ssh_address(address, "crm_mon -b1", expected_return_code=None)
+            if result == 0:
+                result = self._ssh_address(address, "crm_resource -l|xargs pcs resource disable")
+                logger.debug("CMD OUTPUT:\n%s" % result.stdout)
 
-            result = self._ssh_address(address, "if crm_mon -b1; then pcs cluster stop --all; fi")
-            logger.debug("CMD OUTPUT:\n%s" % result.stdout)
+                # Give resources a chance to stopped without hanging in ssh
+                timeout = TEST_TIMEOUT
+                while timeout > 0:
+                    result = self._ssh_address(address, "crm_resource |grep Stopped", expected_return_code=None)
+                    if result.rc == 0:
+                        break
+                    timeout -= 1
+
+                result = self._ssh_address(address, "pcs cluster stop --all")
+                logger.debug("CMD OUTPUT:\n%s" % result.stdout)
 
             result = self._ssh_address(address, "pcs cluster destroy")
             logger.debug("CMD OUTPUT:\n%s" % result.stdout)
