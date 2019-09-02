@@ -6,6 +6,7 @@ use crate::{agent_error::ImlAgentError, cmd::cmd_output_success, http_comms::mai
 use futures::{future, stream, Future, IntoFuture, Stream as _};
 use iml_fs::{read_file_to_end, stream_dir_lines, write_tempfile};
 use std::{convert::Into, path::PathBuf};
+use tokio::fs::remove_dir;
 use uuid::Uuid;
 
 /// The device that is scanned for matching rules.
@@ -362,8 +363,14 @@ pub fn trigger_scan(
 /// Streams output for all given mailbox files
 ///
 /// This fn will stream all files in parallel and return once they have all finished.
+///
+/// Issues:
+/// * mailbox_files - actually directories
+/// * Parent dir and files - should be one contract (or struct in Rust terms).
+///     This directory used only for listed files and should not used anyone else.
+/// * Used one tuple param (instead two params) to meet mk_callback() reqs.
 pub fn stream_fidlists(
-    mailbox_files: MailboxFiles,
+    (parent_dir, mailbox_files): (String, MailboxFiles),
 ) -> impl Future<Item = (), Error = ImlAgentError> {
     let mailbox_files = mailbox_files.into_iter().map(|(file, address)| {
         stream_dir_lines(file)
@@ -377,7 +384,9 @@ pub fn stream_fidlists(
             })
     });
 
-    future::join_all(mailbox_files).map(|_| ())
+    future::join_all(mailbox_files)
+        .and_then(|_| remove_dir(parent_dir).from_err())
+        .map(drop)
 }
 
 #[cfg(test)]
