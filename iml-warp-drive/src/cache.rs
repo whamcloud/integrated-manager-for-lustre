@@ -2,17 +2,16 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{
-    db_record::{self, Name},
-    listen::MessageType,
-    AlertStateRecord, DbRecord, FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord,
-    ManagedTargetMountRecord, ManagedTargetRecord, NotDeleted, StratagemConfiguration,
-    VolumeNodeRecord, VolumeRecord,
-};
+use crate::{listen::MessageType, DbRecord};
 use futures::{future, Future, Stream as _};
 use iml_manager_client::{get, get_client, Client, ImlManagerClientError};
 use iml_postgres::SharedClient;
 use iml_wire_types::{
+    db::{
+        AlertStateRecord, FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord,
+        ManagedTargetMountRecord, ManagedTargetRecord, Name, NotDeleted, StratagemConfiguration,
+        VolumeNodeRecord, VolumeRecord,
+    },
     Alert, ApiList, EndpointName, Filesystem, Host, Target, TargetConfParam, Volume, VolumeNode,
 };
 use parking_lot::Mutex;
@@ -86,7 +85,7 @@ pub trait ToApiRecord: std::fmt::Debug + Id {
     fn to_api_record<T: 'static>(
         &self,
         client: Client,
-    ) -> Box<Future<Item = T, Error = ImlManagerClientError> + Send>
+    ) -> Box<dyn Future<Item = T, Error = ImlManagerClientError> + Send>
     where
         T: Debug + serde::de::DeserializeOwned + EndpointName + ApiQuery + Send,
     {
@@ -161,7 +160,7 @@ pub enum RecordChange {
     Delete(RecordId),
 }
 
-type BoxedFuture = Box<Future<Item = RecordChange, Error = ImlManagerClientError> + Send>;
+type BoxedFuture = Box<dyn Future<Item = RecordChange, Error = ImlManagerClientError> + Send>;
 
 fn converter<T>(
     client: Client,
@@ -339,7 +338,7 @@ fn fetch_from_db<T>(
     query: &str,
 ) -> impl Future<Item = HashMap<u32, T>, Error = iml_postgres::Error>
 where
-    T: From<iml_postgres::Row> + db_record::Name + db_record::Id,
+    T: From<iml_postgres::Row> + Name + Id,
 {
     {
         let c = Arc::clone(&client);

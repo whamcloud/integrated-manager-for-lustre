@@ -2,7 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{db_record, DbRecord, TableName};
+use crate::{db_record, DbRecord};
+use iml_wire_types::db::TableName;
 use std::convert::TryFrom;
 
 #[derive(serde::Deserialize, Debug)]
