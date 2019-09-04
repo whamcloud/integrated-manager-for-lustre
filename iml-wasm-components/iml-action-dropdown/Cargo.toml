@@ -17,4 +17,4 @@ iml-wire-types = "0.1"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"
-insta = "0.10.1"
+insta = "0.11"

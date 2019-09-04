@@ -125,7 +125,7 @@ mod tests {
     use super::*;
     use crate::model::Record;
     use iml_wire_types::{ActionArgs, LockAction};
-    use insta::assert_debug_snapshot_matches;
+    use insta::assert_debug_snapshot;
     use std::collections::HashMap;
 
     #[test]
@@ -133,6 +133,7 @@ mod tests {
         let lock1 = LockChange {
             job_id: 53,
             content_type_id: 61,
+            uuid: "a-b-c".into(),
             item_id: 1,
             description:
                 "Shut down the LNet networking layer and stop any targets running on this server."
@@ -145,6 +146,7 @@ mod tests {
             job_id: 54,
             content_type_id: 49,
             item_id: 2,
+            uuid: "d-e-f".into(),
             description: "Stop Pacemaker on mds2.local".into(),
             lock_type: LockType::Write,
             action: LockAction::Add,
@@ -169,7 +171,7 @@ mod tests {
 
         let xs: Vec<&LockChange> = lock_list(&locks, &records).collect();
 
-        assert_debug_snapshot_matches!("locks_list", xs);
+        assert_debug_snapshot!("locks_list", xs);
     }
 
     #[test]
@@ -270,12 +272,12 @@ mod tests {
             .map(|(k, xs)| (k, sort_actions(xs)))
             .collect();
 
-        assert_debug_snapshot_matches!(
+        assert_debug_snapshot!(
             "group_actions_by_label_1",
             groups.get(&"Label1".to_string())
         );
 
-        assert_debug_snapshot_matches!(
+        assert_debug_snapshot!(
             "group_actions_by_label_2",
             groups.get(&"Label2".to_string())
         );
