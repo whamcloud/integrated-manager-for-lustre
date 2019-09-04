@@ -363,12 +363,6 @@ pub fn trigger_scan(
 /// Streams output for all given mailbox files
 ///
 /// This fn will stream all files in parallel and return once they have all finished.
-///
-/// Issues:
-/// * mailbox_files - actually directories
-/// * Parent dir and files - should be one contract (or struct in Rust terms).
-///     This directory used only for listed files and should not used anyone else.
-/// * Used one tuple param (instead two params) to meet mk_callback() reqs.
 pub fn stream_fidlists(
     (parent_dir, mailbox_files): (String, MailboxFiles),
 ) -> impl Future<Item = (), Error = ImlAgentError> {
