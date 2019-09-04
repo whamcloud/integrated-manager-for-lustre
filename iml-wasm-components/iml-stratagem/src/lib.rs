@@ -17,19 +17,8 @@ use iml_grafana_chart::{
     grafana_chart, GrafanaChartData, GRAFANA_DASHBOARD_ID, GRAFANA_DASHBOARD_NAME,
 };
 use iml_utils::dispatch_custom_event;
+use iml_wire_types::db::StratagemConfiguration;
 use seed::{attrs, class, div, dom_types::At, fetch, h4, input, p, prelude::*, style};
-
-/// Record from the `chroma_core_stratagemconfiguration` table
-#[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
-pub struct StratagemConfiguration {
-    pub id: u32,
-    pub filesystem_id: u32,
-    pub interval: u64,
-    pub report_duration: Option<u64>,
-    pub purge_duration: Option<u64>,
-    pub immutable_state: bool,
-    pub state: String,
-}
 
 #[derive(Debug, Default, Clone, serde::Serialize)]
 pub struct StratagemEnable {

@@ -11,4 +11,4 @@ wasm-bindgen = { version = "0.2", features = ["serde-serialize"]}
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"
-insta = "0.10.1"
+insta = "0.11"

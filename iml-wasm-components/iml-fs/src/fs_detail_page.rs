@@ -780,7 +780,7 @@ mod tests {
             content_type_id: 2,
             files_free: None,
             files_total: None,
-            hsm_control_params: vec![],
+            hsm_control_params: Some(vec![]),
             id: 1,
             immutable_state: true,
             label: "fs".into(),

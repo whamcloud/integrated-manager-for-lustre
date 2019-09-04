@@ -2,10 +2,18 @@
 name = "iml-wire-types"
 description = "Shared types for the IML project"
 license = "MIT"
-version = "0.1.10"
+version = "0.1.11"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
+
+[lib]
+path = "wire-types.rs"
+
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
+tokio-postgres = { version = "0.4.0-rc.3", optional = true }
+
+[features]
+postgres-interop = ["tokio-postgres"]

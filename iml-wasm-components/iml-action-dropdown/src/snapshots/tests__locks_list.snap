@@ -1,11 +1,10 @@
 ---
-created: "2019-05-29T12:46:13.582337Z"
-creator: insta@0.8.1
-source: iml-action-dropdown/src/api_transforms.rs
+source: iml-action-dropdown/src/model.rs
 expression: xs
 ---
 [
     LockChange {
+        uuid: "a-b-c",
         job_id: 53,
         content_type_id: 61,
         item_id: 1,
