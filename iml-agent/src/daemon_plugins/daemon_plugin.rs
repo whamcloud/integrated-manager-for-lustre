@@ -4,7 +4,7 @@
 
 use crate::{
     agent_error::{NoPluginError, Result},
-    daemon_plugins::{action_runner, stratagem},
+    daemon_plugins::{action_runner, devices, stratagem},
 };
 use futures::{future, Future, FutureExt};
 use iml_wire_types::{AgentResult, PluginName};
@@ -68,6 +68,7 @@ pub fn plugin_registry() -> DaemonPlugins {
     let hm: DaemonPlugins = vec![
         ("action_runner".into(), mk_callback(action_runner::create)),
         ("stratagem".into(), mk_callback(stratagem::create)),
+        ("device".into(), mk_callback(devices::create)),
     ]
     .into_iter()
     .collect();

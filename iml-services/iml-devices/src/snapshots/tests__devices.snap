@@ -1,0 +1,1310 @@
+---
+source: iml-services/src/services/devices/db.rs
+expression: ds
+---
+Devices(
+    {
+        Id(
+            "dataset_14058142534232748000",
+        ): Device {
+            id: Id(
+                "dataset_14058142534232748000",
+            ),
+            size: 0,
+            usable_for_lustre: true,
+            device_type: Dataset,
+            parents: {},
+            children: {},
+            fs_type: Some(
+                "lustre",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "dataset_15799967299178152000",
+        ): Device {
+            id: Id(
+                "dataset_15799967299178152000",
+            ),
+            size: 0,
+            usable_for_lustre: true,
+            device_type: Dataset,
+            parents: {},
+            children: {},
+            fs_type: Some(
+                "lustre",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "dataset_16113689415528647000",
+        ): Device {
+            id: Id(
+                "dataset_16113689415528647000",
+            ),
+            size: 0,
+            usable_for_lustre: true,
+            device_type: Dataset,
+            parents: {},
+            children: {},
+            fs_type: Some(
+                "lustre",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "dataset_17832669426331950000",
+        ): Device {
+            id: Id(
+                "dataset_17832669426331950000",
+            ),
+            size: 0,
+            usable_for_lustre: true,
+            device_type: Dataset,
+            parents: {},
+            children: {},
+            fs_type: Some(
+                "lustre",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "dataset_546326277712140300",
+        ): Device {
+            id: Id(
+                "dataset_546326277712140300",
+            ),
+            size: 0,
+            usable_for_lustre: true,
+            device_type: Dataset,
+            parents: {},
+            children: {},
+            fs_type: Some(
+                "lustre",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "dataset_5733272054209430000",
+        ): Device {
+            id: Id(
+                "dataset_5733272054209430000",
+            ),
+            size: 0,
+            usable_for_lustre: true,
+            device_type: Dataset,
+            parents: {},
+            children: {},
+            fs_type: Some(
+                "lustre",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "dataset_6040026289001357000",
+        ): Device {
+            id: Id(
+                "dataset_6040026289001357000",
+            ),
+            size: 0,
+            usable_for_lustre: true,
+            device_type: Dataset,
+            parents: {},
+            children: {},
+            fs_type: Some(
+                "lustre",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "dataset_673547581259299800",
+        ): Device {
+            id: Id(
+                "dataset_673547581259299800",
+            ),
+            size: 0,
+            usable_for_lustre: true,
+            device_type: Dataset,
+            parents: {},
+            children: {},
+            fs_type: Some(
+                "lustre",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "dataset_6933372219775899000",
+        ): Device {
+            id: Id(
+                "dataset_6933372219775899000",
+            ),
+            size: 0,
+            usable_for_lustre: true,
+            device_type: Dataset,
+            parents: {},
+            children: {},
+            fs_type: Some(
+                "lustre",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "dataset_9506230558717944000",
+        ): Device {
+            id: Id(
+                "dataset_9506230558717944000",
+            ),
+            size: 0,
+            usable_for_lustre: true,
+            device_type: Dataset,
+            parents: {},
+            children: {},
+            fs_type: Some(
+                "lustre",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_360014050ed572fdf3a54e31bedcae861",
+        ): Device {
+            id: Id(
+                "mpath_360014050ed572fdf3a54e31bedcae861",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_360014050ed572fdf3a54e31bedcae861",
+                ),
+            },
+            children: {
+                Id(
+                    "zpool_3897016046943655400",
+                ),
+            },
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_3600140518a1f3b780ad4cd091a43bff8",
+        ): Device {
+            id: Id(
+                "mpath_3600140518a1f3b780ad4cd091a43bff8",
+            ),
+            size: 5368709120,
+            usable_for_lustre: true,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_3600140518a1f3b780ad4cd091a43bff8",
+                ),
+            },
+            children: {},
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_360014051ab54e05af6848e8a9a01274f",
+        ): Device {
+            id: Id(
+                "mpath_360014051ab54e05af6848e8a9a01274f",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_360014051ab54e05af6848e8a9a01274f",
+                ),
+            },
+            children: {
+                Id(
+                    "zpool_2957248016653106000",
+                ),
+            },
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_360014051b427e6b1e184581b48b0885b",
+        ): Device {
+            id: Id(
+                "mpath_360014051b427e6b1e184581b48b0885b",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_360014051b427e6b1e184581b48b0885b",
+                ),
+            },
+            children: {
+                Id(
+                    "zpool_13289720406207140000",
+                ),
+            },
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_360014051bde360ae3cb4b75a56bf4c88",
+        ): Device {
+            id: Id(
+                "mpath_360014051bde360ae3cb4b75a56bf4c88",
+            ),
+            size: 5368709120,
+            usable_for_lustre: true,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_360014051bde360ae3cb4b75a56bf4c88",
+                ),
+            },
+            children: {},
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_3600140529cc0e6c1dff4017a6bde4a07",
+        ): Device {
+            id: Id(
+                "mpath_3600140529cc0e6c1dff4017a6bde4a07",
+            ),
+            size: 5368709120,
+            usable_for_lustre: true,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_3600140529cc0e6c1dff4017a6bde4a07",
+                ),
+            },
+            children: {},
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_36001405371822eb788947d6ac331285f",
+        ): Device {
+            id: Id(
+                "mpath_36001405371822eb788947d6ac331285f",
+            ),
+            size: 5368709120,
+            usable_for_lustre: true,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_36001405371822eb788947d6ac331285f",
+                ),
+            },
+            children: {},
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_360014053f4429267572462bbd33b7cfb",
+        ): Device {
+            id: Id(
+                "mpath_360014053f4429267572462bbd33b7cfb",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_360014053f4429267572462bbd33b7cfb",
+                ),
+            },
+            children: {
+                Id(
+                    "zpool_160900275567926530",
+                ),
+            },
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_3600140542f7d97a92f54741b85ad0b99",
+        ): Device {
+            id: Id(
+                "mpath_3600140542f7d97a92f54741b85ad0b99",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_3600140542f7d97a92f54741b85ad0b99",
+                ),
+            },
+            children: {
+                Id(
+                    "zpool_18069017291544870000",
+                ),
+            },
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_3600140561357b809f7641b7a42110c1f",
+        ): Device {
+            id: Id(
+                "mpath_3600140561357b809f7641b7a42110c1f",
+            ),
+            size: 5368709120,
+            usable_for_lustre: true,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_3600140561357b809f7641b7a42110c1f",
+                ),
+            },
+            children: {},
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_360014057672ba4d59674840a5a5409ae",
+        ): Device {
+            id: Id(
+                "mpath_360014057672ba4d59674840a5a5409ae",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_360014057672ba4d59674840a5a5409ae",
+                ),
+            },
+            children: {
+                Id(
+                    "zpool_18427740215538354000",
+                ),
+            },
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_3600140579ff981effbd4c50a6e771d75",
+        ): Device {
+            id: Id(
+                "mpath_3600140579ff981effbd4c50a6e771d75",
+            ),
+            size: 5368709120,
+            usable_for_lustre: true,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_3600140579ff981effbd4c50a6e771d75",
+                ),
+            },
+            children: {},
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_3600140593876bad79284c7ba8439d55b",
+        ): Device {
+            id: Id(
+                "mpath_3600140593876bad79284c7ba8439d55b",
+            ),
+            size: 5368709120,
+            usable_for_lustre: true,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_3600140593876bad79284c7ba8439d55b",
+                ),
+            },
+            children: {},
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_360014059a0f2d0094114424a76d07a20",
+        ): Device {
+            id: Id(
+                "mpath_360014059a0f2d0094114424a76d07a20",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_360014059a0f2d0094114424a76d07a20",
+                ),
+            },
+            children: {
+                Id(
+                    "zpool_16191343403350233000",
+                ),
+            },
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_360014059a9e3c3393fe41c1aef4a1946",
+        ): Device {
+            id: Id(
+                "mpath_360014059a9e3c3393fe41c1aef4a1946",
+            ),
+            size: 5368709120,
+            usable_for_lustre: true,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_360014059a9e3c3393fe41c1aef4a1946",
+                ),
+            },
+            children: {},
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_36001405a1ce936ce4034972a9346c9a8",
+        ): Device {
+            id: Id(
+                "mpath_36001405a1ce936ce4034972a9346c9a8",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_36001405a1ce936ce4034972a9346c9a8",
+                ),
+            },
+            children: {
+                Id(
+                    "zpool_11404755598234436000",
+                ),
+            },
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_36001405c4e0b8dfac2c4838a269f8387",
+        ): Device {
+            id: Id(
+                "mpath_36001405c4e0b8dfac2c4838a269f8387",
+            ),
+            size: 5368709120,
+            usable_for_lustre: true,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_36001405c4e0b8dfac2c4838a269f8387",
+                ),
+            },
+            children: {},
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_36001405e7558cf8239542d3b38ab9e93",
+        ): Device {
+            id: Id(
+                "mpath_36001405e7558cf8239542d3b38ab9e93",
+            ),
+            size: 5368709120,
+            usable_for_lustre: true,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_36001405e7558cf8239542d3b38ab9e93",
+                ),
+            },
+            children: {},
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_36001405ea8d6822c1d349b9bf2460e8d",
+        ): Device {
+            id: Id(
+                "mpath_36001405ea8d6822c1d349b9bf2460e8d",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_36001405ea8d6822c1d349b9bf2460e8d",
+                ),
+            },
+            children: {
+                Id(
+                    "zpool_18108742345939087000",
+                ),
+            },
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "mpath_36001405f73d7e74d12745e581d8ae7d0",
+        ): Device {
+            id: Id(
+                "mpath_36001405f73d7e74d12745e581d8ae7d0",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: Mpath,
+            parents: {
+                Id(
+                    "scsi_36001405f73d7e74d12745e581d8ae7d0",
+                ),
+            },
+            children: {
+                Id(
+                    "zpool_7075211415692163000",
+                ),
+            },
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "partition1_1ATA     VBOX HARDDISK                           VB37dcb049-54698a06",
+        ): Device {
+            id: Id(
+                "partition1_1ATA     VBOX HARDDISK                           VB37dcb049-54698a06",
+            ),
+            size: 42948624384,
+            usable_for_lustre: false,
+            device_type: Partition,
+            parents: {
+                Id(
+                    "scsi_1ATA     VBOX HARDDISK                           VB37dcb049-54698a06",
+                ),
+            },
+            children: {},
+            fs_type: Some(
+                "xfs",
+            ),
+            fs_label: None,
+            fs_uuid: Some(
+                "8ac075e3-1124-4bb6-bef7-a6811bf8b870",
+            ),
+        },
+        Id(
+            "scsi_1ATA     VBOX HARDDISK                           VB37dcb049-54698a06",
+        ): Device {
+            id: Id(
+                "scsi_1ATA     VBOX HARDDISK                           VB37dcb049-54698a06",
+            ),
+            size: 42949672960,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "partition1_1ATA     VBOX HARDDISK                           VB37dcb049-54698a06",
+                ),
+            },
+            fs_type: None,
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_360014050ed572fdf3a54e31bedcae861",
+        ): Device {
+            id: Id(
+                "scsi_360014050ed572fdf3a54e31bedcae861",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_360014050ed572fdf3a54e31bedcae861",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_3600140518a1f3b780ad4cd091a43bff8",
+        ): Device {
+            id: Id(
+                "scsi_3600140518a1f3b780ad4cd091a43bff8",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_3600140518a1f3b780ad4cd091a43bff8",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_360014051ab54e05af6848e8a9a01274f",
+        ): Device {
+            id: Id(
+                "scsi_360014051ab54e05af6848e8a9a01274f",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_360014051ab54e05af6848e8a9a01274f",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_360014051b427e6b1e184581b48b0885b",
+        ): Device {
+            id: Id(
+                "scsi_360014051b427e6b1e184581b48b0885b",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_360014051b427e6b1e184581b48b0885b",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_360014051bde360ae3cb4b75a56bf4c88",
+        ): Device {
+            id: Id(
+                "scsi_360014051bde360ae3cb4b75a56bf4c88",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_360014051bde360ae3cb4b75a56bf4c88",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_3600140529cc0e6c1dff4017a6bde4a07",
+        ): Device {
+            id: Id(
+                "scsi_3600140529cc0e6c1dff4017a6bde4a07",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_3600140529cc0e6c1dff4017a6bde4a07",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_36001405371822eb788947d6ac331285f",
+        ): Device {
+            id: Id(
+                "scsi_36001405371822eb788947d6ac331285f",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_36001405371822eb788947d6ac331285f",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_360014053f4429267572462bbd33b7cfb",
+        ): Device {
+            id: Id(
+                "scsi_360014053f4429267572462bbd33b7cfb",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_360014053f4429267572462bbd33b7cfb",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_3600140542f7d97a92f54741b85ad0b99",
+        ): Device {
+            id: Id(
+                "scsi_3600140542f7d97a92f54741b85ad0b99",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_3600140542f7d97a92f54741b85ad0b99",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_3600140561357b809f7641b7a42110c1f",
+        ): Device {
+            id: Id(
+                "scsi_3600140561357b809f7641b7a42110c1f",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_3600140561357b809f7641b7a42110c1f",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_360014057672ba4d59674840a5a5409ae",
+        ): Device {
+            id: Id(
+                "scsi_360014057672ba4d59674840a5a5409ae",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_360014057672ba4d59674840a5a5409ae",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_3600140579ff981effbd4c50a6e771d75",
+        ): Device {
+            id: Id(
+                "scsi_3600140579ff981effbd4c50a6e771d75",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_3600140579ff981effbd4c50a6e771d75",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_3600140593876bad79284c7ba8439d55b",
+        ): Device {
+            id: Id(
+                "scsi_3600140593876bad79284c7ba8439d55b",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_3600140593876bad79284c7ba8439d55b",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_360014059a0f2d0094114424a76d07a20",
+        ): Device {
+            id: Id(
+                "scsi_360014059a0f2d0094114424a76d07a20",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_360014059a0f2d0094114424a76d07a20",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_360014059a9e3c3393fe41c1aef4a1946",
+        ): Device {
+            id: Id(
+                "scsi_360014059a9e3c3393fe41c1aef4a1946",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_360014059a9e3c3393fe41c1aef4a1946",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_36001405a1ce936ce4034972a9346c9a8",
+        ): Device {
+            id: Id(
+                "scsi_36001405a1ce936ce4034972a9346c9a8",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_36001405a1ce936ce4034972a9346c9a8",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_36001405c4e0b8dfac2c4838a269f8387",
+        ): Device {
+            id: Id(
+                "scsi_36001405c4e0b8dfac2c4838a269f8387",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_36001405c4e0b8dfac2c4838a269f8387",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_36001405e7558cf8239542d3b38ab9e93",
+        ): Device {
+            id: Id(
+                "scsi_36001405e7558cf8239542d3b38ab9e93",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_36001405e7558cf8239542d3b38ab9e93",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_36001405ea8d6822c1d349b9bf2460e8d",
+        ): Device {
+            id: Id(
+                "scsi_36001405ea8d6822c1d349b9bf2460e8d",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_36001405ea8d6822c1d349b9bf2460e8d",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "scsi_36001405f73d7e74d12745e581d8ae7d0",
+        ): Device {
+            id: Id(
+                "scsi_36001405f73d7e74d12745e581d8ae7d0",
+            ),
+            size: 5368709120,
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: {},
+            children: {
+                Id(
+                    "mpath_36001405f73d7e74d12745e581d8ae7d0",
+                ),
+            },
+            fs_type: Some(
+                "mpath_member",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "zpool_11404755598234436000",
+        ): Device {
+            id: Id(
+                "zpool_11404755598234436000",
+            ),
+            size: 5335154688,
+            usable_for_lustre: true,
+            device_type: Zpool,
+            parents: {
+                Id(
+                    "mpath_36001405a1ce936ce4034972a9346c9a8",
+                ),
+            },
+            children: {
+                Id(
+                    "dataset_15799967299178152000",
+                ),
+            },
+            fs_type: Some(
+                "zfs",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "zpool_13289720406207140000",
+        ): Device {
+            id: Id(
+                "zpool_13289720406207140000",
+            ),
+            size: 5335154688,
+            usable_for_lustre: true,
+            device_type: Zpool,
+            parents: {
+                Id(
+                    "mpath_360014051b427e6b1e184581b48b0885b",
+                ),
+            },
+            children: {
+                Id(
+                    "dataset_5733272054209430000",
+                ),
+            },
+            fs_type: Some(
+                "zfs",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "zpool_160900275567926530",
+        ): Device {
+            id: Id(
+                "zpool_160900275567926530",
+            ),
+            size: 5335154688,
+            usable_for_lustre: true,
+            device_type: Zpool,
+            parents: {
+                Id(
+                    "mpath_360014053f4429267572462bbd33b7cfb",
+                ),
+            },
+            children: {
+                Id(
+                    "dataset_673547581259299800",
+                ),
+            },
+            fs_type: Some(
+                "zfs",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "zpool_16191343403350233000",
+        ): Device {
+            id: Id(
+                "zpool_16191343403350233000",
+            ),
+            size: 5335154688,
+            usable_for_lustre: true,
+            device_type: Zpool,
+            parents: {
+                Id(
+                    "mpath_360014059a0f2d0094114424a76d07a20",
+                ),
+            },
+            children: {
+                Id(
+                    "dataset_546326277712140300",
+                ),
+            },
+            fs_type: Some(
+                "zfs",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "zpool_18069017291544870000",
+        ): Device {
+            id: Id(
+                "zpool_18069017291544870000",
+            ),
+            size: 5335154688,
+            usable_for_lustre: true,
+            device_type: Zpool,
+            parents: {
+                Id(
+                    "mpath_3600140542f7d97a92f54741b85ad0b99",
+                ),
+            },
+            children: {
+                Id(
+                    "dataset_6040026289001357000",
+                ),
+            },
+            fs_type: Some(
+                "zfs",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "zpool_18108742345939087000",
+        ): Device {
+            id: Id(
+                "zpool_18108742345939087000",
+            ),
+            size: 5335154688,
+            usable_for_lustre: true,
+            device_type: Zpool,
+            parents: {
+                Id(
+                    "mpath_36001405ea8d6822c1d349b9bf2460e8d",
+                ),
+            },
+            children: {
+                Id(
+                    "dataset_17832669426331950000",
+                ),
+            },
+            fs_type: Some(
+                "zfs",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "zpool_18427740215538354000",
+        ): Device {
+            id: Id(
+                "zpool_18427740215538354000",
+            ),
+            size: 5335154688,
+            usable_for_lustre: true,
+            device_type: Zpool,
+            parents: {
+                Id(
+                    "mpath_360014057672ba4d59674840a5a5409ae",
+                ),
+            },
+            children: {
+                Id(
+                    "dataset_9506230558717944000",
+                ),
+            },
+            fs_type: Some(
+                "zfs",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "zpool_2957248016653106000",
+        ): Device {
+            id: Id(
+                "zpool_2957248016653106000",
+            ),
+            size: 5335154688,
+            usable_for_lustre: true,
+            device_type: Zpool,
+            parents: {
+                Id(
+                    "mpath_360014051ab54e05af6848e8a9a01274f",
+                ),
+            },
+            children: {
+                Id(
+                    "dataset_14058142534232748000",
+                ),
+            },
+            fs_type: Some(
+                "zfs",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "zpool_3897016046943655400",
+        ): Device {
+            id: Id(
+                "zpool_3897016046943655400",
+            ),
+            size: 5335154688,
+            usable_for_lustre: true,
+            device_type: Zpool,
+            parents: {
+                Id(
+                    "mpath_360014050ed572fdf3a54e31bedcae861",
+                ),
+            },
+            children: {
+                Id(
+                    "dataset_16113689415528647000",
+                ),
+            },
+            fs_type: Some(
+                "zfs",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+        Id(
+            "zpool_7075211415692163000",
+        ): Device {
+            id: Id(
+                "zpool_7075211415692163000",
+            ),
+            size: 5335154688,
+            usable_for_lustre: true,
+            device_type: Zpool,
+            parents: {
+                Id(
+                    "mpath_36001405f73d7e74d12745e581d8ae7d0",
+                ),
+            },
+            children: {
+                Id(
+                    "dataset_6933372219775899000",
+                ),
+            },
+            fs_type: Some(
+                "zfs",
+            ),
+            fs_label: None,
+            fs_uuid: None,
+        },
+    },
+)

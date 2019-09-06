@@ -38,19 +38,6 @@ class LogicalDriveOccupier(BaseStorageResource):
     pass
 
 
-class VirtualMachine(BaseStorageResource):
-    """A Linux* host provided by a plugin.  This resource has a special behaviour when
-    created: the manager server will add this (by the ``address`` attribute) as a Lustre server and
-    attempt to configure the ``chroma-agent`` service on it.  The ``host_id`` attribute is used internally
-    by the manager server and must not be assigned to by plugins."""
-
-    # NB address is used to cue the creation of a ManagedHost, once that is set up
-    # this address is not used.
-    address = attributes.String()
-
-    host_id = attributes.Integer(optional=True)
-
-
 class DeviceNode(BaseStorageResource):
     host_id = attributes.Integer()
     path = attributes.PosixPath()

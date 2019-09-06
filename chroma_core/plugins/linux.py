@@ -264,7 +264,7 @@ class Linux(Plugin):
 
             special_block_devices = lv_block_devices | mpath_block_devices
 
-            for uuid, md_info in devices["mds"].items():
+            for _, md_info in devices["mds"].items():
                 special_block_devices.add(md_info["block_device"])
 
             def add_zfs(zfs_info):
@@ -278,7 +278,7 @@ class Linux(Plugin):
                 dev["serial_83"] = None
                 dev["filesystem_type"] = "zfs" if bdid.startswith("zfsset") else None
 
-            for uuid, zfs_info in merge(devices["zfspools"], devices["zfsdatasets"]).items():
+            for _, zfs_info in merge(devices["zfspools"], devices["zfsdatasets"]).items():
                 add_zfs(zfs_info)
 
             def preferred_serial(bdev):

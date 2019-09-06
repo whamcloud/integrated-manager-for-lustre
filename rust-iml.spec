@@ -31,12 +31,14 @@ cp iml %{buildroot}%{_bindir}
 cp iml-agent %{buildroot}%{_bindir}
 cp iml-agent-daemon %{buildroot}%{_bindir}
 cp iml-stratagem %{buildroot}%{_bindir}
+cp iml-devices %{buildroot}%{_bindir}
 cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-action-runner %{buildroot}%{_bindir}
 cp iml-warp-drive %{buildroot}%{_bindir}
 cp iml-mailbox %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp iml-stratagem.service %{buildroot}%{_unitdir}
+cp iml-devices.service %{buildroot}%{_unitdir}
 cp iml-agent-comms.service %{buildroot}%{_unitdir}
 cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
 cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
@@ -126,6 +128,28 @@ systemctl preset iml-stratagem.service
 %files stratagem
 %{_bindir}/iml-stratagem
 %attr(0644,root,root)%{_unitdir}/iml-stratagem.service
+
+%package devices
+Summary: Consumer of IML Agent devices push queue
+License: MIT
+Group: System Environment/Libraries
+Requires: rust-iml-agent-comms
+
+%description devices
+%{summary}
+
+%post devices
+systemctl preset iml-devices.service
+
+%preun devices
+%systemd_preun iml-devices.service
+
+%postun devices
+%systemd_postun_with_restart iml-devices.service
+
+%files devices
+%{_bindir}/iml-devices
+%attr(0644,root,root)%{_unitdir}/iml-devices.service
 
 %package action-runner
 Summary: Dispatches and tracks RPCs to agents

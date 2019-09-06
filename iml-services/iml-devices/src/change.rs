@@ -1,0 +1,89 @@
+// Copyright (c) 2019 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
+use iml_wire_types::db::DeviceId;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    ops::Deref,
+};
+
+pub enum Change<T> {
+    Add(T),
+    Update(T),
+    Remove(T),
+}
+
+impl<T> Deref for Change<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Change::Add(x) | Change::Update(x) | Change::Remove(x) => x,
+        }
+    }
+}
+
+impl<T> Change<T> {
+    pub fn map<R, F: Fn(&T) -> R>(&self, f: F) -> Change<R> {
+        match self {
+            Change::Add(x) => Change::Add(f(x)),
+            Change::Update(x) => Change::Update(f(x)),
+            Change::Remove(x) => Change::Remove(f(x)),
+        }
+    }
+    pub fn is_add(&self) -> bool {
+        match self {
+            Change::Add(_) => true,
+            _ => false,
+        }
+    }
+}
+
+pub fn get_changes_values<'a, 'b, V: std::cmp::Eq + std::fmt::Debug>(
+    old: &'b BTreeMap<&'a DeviceId, V>,
+    new: &'b BTreeMap<&'a DeviceId, V>,
+) -> Vec<Change<&'b V>> {
+    let old_ids: BTreeSet<_> = old.keys().collect();
+    let new_ids: BTreeSet<_> = new.keys().collect();
+
+    let to_change = new_ids
+        .intersection(&old_ids)
+        .filter(|&&k| old.get(k) != new.get(k))
+        .inspect(|&&k| tracing::debug!("not equal. old: {:?}, new {:?}", old.get(k), new.get(k)))
+        .map(|&k| Change::Update(new.get(k).unwrap()));
+
+    let to_remove = old_ids
+        .difference(&new_ids)
+        .map(|&k| Change::Remove(old.get(k).unwrap()));
+
+    let to_add = new_ids
+        .difference(&old_ids)
+        .map(|&k| Change::Add(new.get(k).unwrap()));
+
+    to_change.chain(to_remove).chain(to_add).collect()
+}
+
+pub fn get_changes<'a, 'b, V: std::cmp::Eq + std::fmt::Debug>(
+    old: &'b BTreeMap<&'a DeviceId, V>,
+    new: &'b BTreeMap<&'a DeviceId, V>,
+) -> Vec<Change<DeviceId>> {
+    let old_ids: BTreeSet<_> = old.keys().collect();
+    let new_ids: BTreeSet<_> = new.keys().collect();
+
+    let to_change = new_ids
+        .intersection(&old_ids)
+        .filter(|&&k| old.get(k) != new.get(k))
+        .inspect(|&&k| tracing::debug!("not equal. old: {:?}, new {:?}", old.get(k), new.get(k)))
+        .map(|&&k| Change::Update(k.clone()));
+
+    let to_remove = old_ids
+        .difference(&new_ids)
+        .map(|&&k| Change::Remove(k.clone()));
+
+    let to_add = new_ids
+        .difference(&old_ids)
+        .map(|&&k| Change::Add(k.clone()));
+
+    to_change.chain(to_remove).chain(to_add).collect()
+}

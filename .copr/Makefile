@@ -38,10 +38,11 @@ srpm:
 	mkdir -p ${TMPDIR}/release/rust-iml
 	rm -rf ${BUILDROOT}/_topdir
 	cargo build --release
-	cp target/release/iml-{action-runner,agent,agent-comms,mailbox,agent-daemon,stratagem,warp-drive} \
+	cp target/release/iml-{action-runner,agent,agent-comms,mailbox,agent-daemon,stratagem,warp-drive,devices} \
 		iml-agent-comms.service \
 		iml-mailbox.service \
 		iml-stratagem.service \
+		iml-devices.service \
 		iml-action-runner.service \
 		iml-action-runner.socket \
 		iml-agent/systemd-units/* \

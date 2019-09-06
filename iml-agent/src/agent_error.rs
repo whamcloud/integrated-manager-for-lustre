@@ -5,6 +5,7 @@
 use iml_fs::ImlFsError;
 use iml_wire_types::PluginName;
 use std::{fmt, process::Output};
+use tokio_util::codec::LinesCodecError;
 
 pub type Result<T> = std::result::Result<T, ImlAgentError>;
 
@@ -86,6 +87,7 @@ pub enum ImlAgentError {
     RequiredError(RequiredError),
     OneshotCanceled(futures::channel::oneshot::Canceled),
     LiblustreError(liblustreapi::error::LiblustreError),
+    LinesCodecError(LinesCodecError),
     CmdOutputError(Output),
     SendError,
     InvalidUriParts(http::uri::InvalidUriParts),
@@ -117,7 +119,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::RequiredError(ref err) => write!(f, "{}", err),
             ImlAgentError::OneshotCanceled(ref err) => write!(f, "{}", err),
             ImlAgentError::LiblustreError(ref err) => write!(f, "{}", err),
-
+            ImlAgentError::LinesCodecError(ref err) => write!(f, "{}", err),
             ImlAgentError::CmdOutputError(ref err) => write!(
                 f,
                 "{}, stdout: {}, stderr: {}",
@@ -157,7 +159,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::RequiredError(ref err) => Some(err),
             ImlAgentError::OneshotCanceled(ref err) => Some(err),
             ImlAgentError::LiblustreError(ref err) => Some(err),
-
+            ImlAgentError::LinesCodecError(ref err) => Some(err),
             ImlAgentError::CmdOutputError(_) => None,
             ImlAgentError::SendError => None,
             ImlAgentError::InvalidUriParts(ref err) => Some(err),
@@ -259,6 +261,12 @@ impl From<NoPluginError> for ImlAgentError {
 impl From<liblustreapi::error::LiblustreError> for ImlAgentError {
     fn from(err: liblustreapi::error::LiblustreError) -> Self {
         ImlAgentError::LiblustreError(err)
+    }
+}
+
+impl From<LinesCodecError> for ImlAgentError {
+    fn from(err: LinesCodecError) -> Self {
+        ImlAgentError::LinesCodecError(err)
     }
 }
 
