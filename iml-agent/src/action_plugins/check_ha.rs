@@ -79,9 +79,9 @@ pub fn check_ha(_: ()) -> impl Future<Item = Vec<AgentInfo>, Error = ImlAgentErr
             Ok(elem) => future::ok(
                 elem.find_all("group")
                     .flat_map(|g| {
-                        let name = g.get_attr("id").unwrap();
+                        let name = g.get_attr("id").unwrap().to_string();
                         g.find_all("primitive")
-                            .map(move |p| AgentInfo::new(p, Some(name.clone().to_string())))
+                            .map(move |p| AgentInfo::new(p, Some(name.clone())))
                     })
                     .chain(elem.find_all("primitive").map(|p| AgentInfo::new(p, None)))
                     .collect(),
