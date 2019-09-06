@@ -3,15 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use crate::error::ActionRunnerError;
-use futures::{
-    future::{loop_fn, Loop},
-    sync::oneshot,
-};
+use futures::{channel::oneshot, lock::Mutex};
 use iml_wire_types::{Action, ActionId, Fqdn, Id, ManagerMessage, PluginName};
-use parking_lot::Mutex;
 use std::{collections::HashMap, sync::Arc, time::Duration};
-use tokio::prelude::*;
-use tokio_timer::{clock, Delay};
+use tokio_timer::{clock, delay};
 
 pub type Shared<T> = Arc<Mutex<T>>;
 pub type Sessions = HashMap<Fqdn, Id>;
@@ -42,42 +37,32 @@ impl ActionInFlight {
 /// returned.
 ///
 /// If a session does not appear within the duration an Error is raised.
-pub fn await_session(
+pub async fn await_session(
     fqdn: Fqdn,
     sessions: Shared<Sessions>,
     timeout: Duration,
-) -> impl Future<Item = Id, Error = ActionRunnerError> {
+) -> Result<Id, ActionRunnerError> {
     let until = clock::now() + timeout;
 
-    loop_fn(
-        sessions,
-        move |sessions| -> Box<
-            dyn Future<Item = Loop<Id, Shared<Sessions>>, Error = ActionRunnerError> + Send,
-        > {
-            if clock::now() >= until {
-                log::info!(
-                    "Could not find a session for {} after {:?} seconds",
-                    fqdn,
-                    timeout.as_secs()
-                );
+    loop {
+        if clock::now() >= until {
+            tracing::info!(
+                "Could not find a session for {} after {:?} seconds",
+                fqdn,
+                timeout.as_secs()
+            );
 
-                return Box::new(future::err(ActionRunnerError::AwaitSession(fqdn.clone())));
-            }
+            return Err(ActionRunnerError::AwaitSession(fqdn.clone()));
+        }
 
-            match Arc::clone(&sessions).lock().get(&fqdn) {
-                Some(id) => Box::new(future::ok(Loop::Break(id.clone()))),
-                None => {
-                    let when = clock::now() + Duration::from_millis(500);
+        if let Some(id) = sessions.lock().await.get(&fqdn) {
+            return Ok(id.clone());
+        }
 
-                    Box::new(
-                        Delay::new(when)
-                            .from_err()
-                            .map(move |_| Loop::Continue(sessions)),
-                    )
-                }
-            }
-        },
-    )
+        let when = clock::now() + Duration::from_millis(500);
+
+        delay(when).await;
+    }
 }
 
 pub fn insert_action_in_flight(
@@ -137,76 +122,50 @@ pub fn create_data_message(
 mod tests {
     use super::{await_session, get_action_in_flight, insert_action_in_flight, ActionInFlight};
     use crate::error::ActionRunnerError;
-    use futures::sync::oneshot;
+    use futures::{channel::oneshot, lock::Mutex};
     use iml_wire_types::{Action, ActionId, Fqdn, Id};
-    use parking_lot::Mutex;
-    use std::collections::HashMap;
-    use std::sync::Arc;
-    use std::time::{Duration, Instant};
-    use tokio::runtime;
-    use tokio_timer::clock::{Clock, Now};
-
-    struct MockNow(Instant);
-
-    impl Now for MockNow {
-        fn now(&self) -> Instant {
-            self.0
-        }
-    }
+    use std::{collections::HashMap, sync::Arc, time::Duration};
+    use tokio_test::{assert_pending, assert_ready_err, clock::MockClock, task};
 
     #[test]
     fn test_await_session_will_error_after_timeout() {
-        let when = Instant::now() + Duration::from_secs(30);
-        let clock = Clock::new_with_now(MockNow(when));
-
         let sessions = Arc::new(Mutex::new(HashMap::new()));
 
-        let fut = await_session(Fqdn("host1".to_string()), sessions, Duration::from_secs(25));
+        let mut mock = MockClock::new();
 
-        let actual = runtime::Builder::new()
-            .clock(clock)
-            .build()
-            .unwrap()
-            .block_on_all(fut);
+        mock.enter(|handle| {
+            let mut task = task::spawn(async {
+                await_session(Fqdn("host1".to_string()), sessions, Duration::from_secs(25)).await
+            });
 
-        match actual {
-            Ok(_) => panic!("await_session should have returned an error"),
-            Err(ActionRunnerError::AwaitSession(fqdn)) => {
-                assert_eq!(fqdn, Fqdn("host1".to_string()))
-            }
-            _ => panic!(
-                "await_session should have returned a AwaitSession error, got a different one"
-            ),
-        }
+            assert_pending!(task.poll());
+
+            handle.advance(Duration::from_secs(26));
+
+            assert_ready_err!(task.poll());
+        });
     }
 
-    #[test]
-    fn test_await_session_will_return_id() {
-        let when = Instant::now() + Duration::from_secs(25);
-        let clock = Clock::new_with_now(MockNow(when));
-
+    #[tokio::test]
+    async fn test_await_session_will_return_id() -> Result<(), ActionRunnerError> {
         let fqdn = Fqdn("host1".to_string());
         let id = Id("eee-weww".to_string());
 
         let hm = vec![(fqdn, id.clone())].into_iter().collect();
         let sessions = Arc::new(Mutex::new(hm));
 
-        let fut = await_session(
+        let actual = await_session(
             Fqdn("host1".to_string()),
             Arc::clone(&sessions),
             Duration::from_secs(30),
-        );
-
-        let actual = runtime::Builder::new()
-            .clock(clock)
-            .build()
-            .unwrap()
-            .block_on_all(fut)
-            .unwrap();
+        )
+        .await?;
 
         assert_eq!(id, actual);
 
         assert!(sessions.try_lock().is_some());
+
+        Ok(())
     }
 
     #[test]
@@ -244,6 +203,7 @@ mod tests {
         let rpcs = vec![(action_id.clone(), action_in_flight)]
             .into_iter()
             .collect();
+
         let session_to_rpcs = vec![(id.clone(), rpcs)].into_iter().collect();
 
         let actual = get_action_in_flight(&id, &action_id, &session_to_rpcs).unwrap();

@@ -2,176 +2,200 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use failure::Error;
 use futures::{
-    future::{self, Either, Future},
-    stream::Stream as _,
-    sync::{mpsc, oneshot},
+    channel::{mpsc, oneshot},
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{self, Future},
+    stream::{Stream, StreamExt},
 };
 use iml_manager_env;
 use iml_wire_types::ToBytes;
-use lapin_futures::{
-    channel::{
-        BasicConsumeOptions, BasicProperties, BasicPublishOptions, Channel, ExchangeDeclareOptions,
-        QueueBindOptions, QueueDeclareOptions, QueuePurgeOptions,
+pub use lapin_futures::{
+    message,
+    options::{
+        BasicConsumeOptions, BasicPublishOptions, ExchangeDeclareOptions, QueueBindOptions,
+        QueueDeclareOptions, QueuePurgeOptions,
     },
-    client::{Client, ConnectionOptions, Heartbeat},
-    consumer::Consumer,
-    error::Error as LapinError,
-    queue::Queue,
     types::FieldTable,
+    BasicProperties, Channel, Client, ConnectionProperties, Consumer, Error as LapinError,
+    ExchangeKind, Queue,
 };
-use std::net::SocketAddr;
-use tokio::net::TcpStream;
 
-pub type TcpClient = Client<TcpStream>;
-pub type TcpChannel = Channel<TcpStream>;
-pub type TcpStreamConsumer = Consumer<TcpStream>;
-
-pub trait TcpClientFuture: Future<Item = TcpClient, Error = failure::Error> {}
-impl<T: Future<Item = TcpClient, Error = failure::Error>> TcpClientFuture for T {}
-
-pub trait TcpChannelFuture: Future<Item = TcpChannel, Error = failure::Error> {}
-impl<T: Future<Item = TcpChannel, Error = failure::Error>> TcpChannelFuture for T {}
-
-pub trait TcpStreamConsumerFuture:
-    Future<Item = TcpStreamConsumer, Error = failure::Error>
-{
+#[derive(Debug)]
+pub enum ImlRabbitError {
+    LapinError(LapinError),
+    SerdeJsonError(serde_json::error::Error),
+    Utf8Error(std::str::Utf8Error),
 }
 
-impl<T: Future<Item = TcpStreamConsumer, Error = failure::Error>> TcpStreamConsumerFuture for T {}
+impl std::fmt::Display for ImlRabbitError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match *self {
+            ImlRabbitError::LapinError(ref err) => write!(f, "{}", err),
+            ImlRabbitError::SerdeJsonError(ref err) => write!(f, "{}", err),
+            ImlRabbitError::Utf8Error(ref err) => write!(f, "{}", err),
+        }
+    }
+}
 
-/// Connects over TCP to an AMQP server
+impl std::error::Error for ImlRabbitError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match *self {
+            ImlRabbitError::LapinError(ref err) => Some(err),
+            ImlRabbitError::SerdeJsonError(ref err) => Some(err),
+            ImlRabbitError::Utf8Error(ref err) => Some(err),
+        }
+    }
+}
+
+impl From<LapinError> for ImlRabbitError {
+    fn from(err: LapinError) -> Self {
+        ImlRabbitError::LapinError(err)
+    }
+}
+
+impl From<serde_json::error::Error> for ImlRabbitError {
+    fn from(err: serde_json::error::Error) -> Self {
+        ImlRabbitError::SerdeJsonError(err)
+    }
+}
+
+impl From<std::str::Utf8Error> for ImlRabbitError {
+    fn from(err: std::str::Utf8Error) -> Self {
+        ImlRabbitError::Utf8Error(err)
+    }
+}
+
+/// Connects to an AMQP server
 ///
 /// # Arguments
 ///
-/// * `addr` - A `SocketAddr` to connect to
-/// * `opts` - `ConnectionOptions` to configure the connection
-pub fn connect(
-    addr: &SocketAddr,
-    opts: ConnectionOptions,
-) -> impl Future<
-    Item = (
-        TcpClient,
-        Heartbeat<impl Future<Item = (), Error = LapinError>>,
-    ),
-    Error = Error,
-> {
-    log::info!("creating client");
-
-    TcpStream::connect(addr)
-        .from_err()
-        .and_then(|stream| Client::connect(stream, opts).from_err())
+/// * `addr` - An address to connect to
+/// * `opts` - `ConnectionProperties` to configure the connection
+pub async fn connect(addr: &str, options: ConnectionProperties) -> Result<Client, ImlRabbitError> {
+    Client::connect(addr, options)
+        .compat()
+        .await
+        .map_err(ImlRabbitError::from)
 }
+
+pub trait ChannelFuture: Future<Output = Result<lapin_futures::Channel, LapinError>> {}
+impl<T: Future<Output = Result<lapin_futures::Channel, LapinError>>> ChannelFuture for T {}
 
 /// Creates a channel for the passed in client
 ///
 /// # Arguments
 ///
-/// * `client` - A `TcpClient` to create a channel on
-pub fn create_channel(client: TcpClient) -> impl TcpChannelFuture {
-    client
-        .create_channel()
-        .inspect(|channel| log::debug!("created channel with id: {}", channel.id))
-        .from_err()
+/// * `client` - A `Client` to create a channel on
+pub async fn create_channel(client: Client) -> Result<lapin_futures::Channel, ImlRabbitError> {
+    let chan = client.create_channel().compat().await?;
+
+    tracing::debug!("created channel with id: {}", chan.id());
+
+    Ok(chan)
 }
 
 /// Closes the channel
 ///
 /// # Arguments
 ///
-/// * `channel` - The `TcpChannel` to use
-pub fn close_channel(channel: TcpChannel) -> impl Future<Item = (), Error = failure::Error> {
-    let id = channel.id;
+/// * `channel` - The `Channel` to use
+pub async fn close_channel(channel: Channel) -> Result<(), ImlRabbitError> {
+    let id = channel.id();
 
-    channel
-        .close(200, "OK")
-        .map(move |_| log::debug!("closed channel with id: {}", id))
-        .from_err()
+    channel.close(200, "OK").compat().await?;
+
+    tracing::debug!("closed channel with id: {}", id);
+
+    Ok(())
 }
 
 /// Declares an exhange if it does not already exist.
 ///
 /// # Arguments
 ///
-/// * `channel` - The `TcpChannel` to use
+/// * `channel` - The `Channel` to use
 /// * `name` - The name of the exchange
-/// * `exchange_type` - The type of the exchange
+/// * `exchange_kind` - The type of the exchange
 /// * `options` - An `Option<ExchangeDeclareOptions>` of additional options to pass in. If not supplied, `ExchangeDeclareOptions::default()` is used
-pub fn declare_exchange(
-    channel: TcpChannel,
+pub async fn declare_exchange(
+    channel: lapin_futures::Channel,
     name: impl Into<String>,
-    exchange_type: impl Into<String>,
+    exchange_kind: ExchangeKind,
     options: Option<ExchangeDeclareOptions>,
-) -> impl TcpChannelFuture {
+) -> Result<lapin_futures::Channel, ImlRabbitError> {
     let name = name.into();
-    let exchange_type = exchange_type.into();
     let options = options.unwrap_or_default();
 
-    log::info!("declaring exchange: {}, type: {}", name, exchange_type);
+    tracing::info!("declaring exchange: {}, type: {:?}", name, exchange_kind);
 
     channel
-        .exchange_declare(&name, &exchange_type, options, FieldTable::new())
-        .map(|_| channel)
-        .from_err()
+        .exchange_declare(&name, exchange_kind, options, FieldTable::default())
+        .compat()
+        .await?;
+
+    Ok(channel)
 }
 
 /// Declares a transient exhange if it does not already exist.
 ///
 /// # Arguments
 ///
-/// * `channel` - The `TcpChannel` to use
+/// * `channel` - The `Channel` to use
 /// * `name` - The name of the exchange
-/// * `exchange_type` - The type of the exchange
-pub fn declare_transient_exchange(
-    channel: TcpChannel,
+/// * `exchange_kind` - The type of the exchange
+pub async fn declare_transient_exchange(
+    channel: lapin_futures::Channel,
     name: impl Into<String>,
-    exchange_type: impl Into<String>,
-) -> impl TcpChannelFuture {
+    exchange_kind: ExchangeKind,
+) -> Result<lapin_futures::Channel, ImlRabbitError> {
     declare_exchange(
         channel,
         name,
-        exchange_type,
+        exchange_kind,
         Some(ExchangeDeclareOptions {
             durable: false,
             ..ExchangeDeclareOptions::default()
         }),
     )
+    .await
 }
 
 /// Declares a queue if it does not already exist.
 ///
 /// # Arguments
 ///
-/// * `channel` - The `TcpChannel` to use
+/// * `channel` - The `Channel` to use
 /// * `name` - The name of the queue
 /// * `options` - An `Option<QueueDeclareOptions>` of additional options to pass in. If not supplied, `QueueDeclareOptions::default()` is used
-pub fn declare_queue(
-    channel: TcpChannel,
+pub async fn declare_queue(
+    channel: Channel,
     name: impl Into<String>,
     options: Option<QueueDeclareOptions>,
-) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> {
+) -> Result<(Channel, Queue), ImlRabbitError> {
     let name = name.into();
     let options = options.unwrap_or_default();
 
-    log::debug!("declaring queue {}", name);
+    tracing::debug!("declaring queue {}", name);
 
-    channel
-        .queue_declare(&name, options, FieldTable::new())
-        .map(|queue| (channel, queue))
-        .from_err()
+    let queue = channel
+        .queue_declare(&name, options, FieldTable::default())
+        .compat()
+        .await?;
+
+    Ok((channel, queue))
 }
 
 /// Declares a transient queue if it does not already exist.
 ///
 /// # Arguments
 ///
-/// * `channel` - The `TcpChannel` to use
+/// * `channel` - The `Channel` to use
 /// * `name` - The name of the queue
-pub fn declare_transient_queue(
-    channel: TcpChannel,
+pub async fn declare_transient_queue(
+    channel: Channel,
     name: impl Into<String>,
-) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> {
+) -> Result<(Channel, Queue), ImlRabbitError> {
     declare_queue(
         channel,
         name,
@@ -180,73 +204,90 @@ pub fn declare_transient_queue(
             ..QueueDeclareOptions::default()
         }),
     )
+    .await
 }
 
 /// Binds a queue to an exchange
 ///
 /// # Arguments
 ///
-/// * `channel` - The `TcpChannel` to use
+/// * `channel` - The `Channel` to use
 /// * `exchange_name` - The name of the exchange
 /// * `queue_name` - The name of the queue
 /// * `routing_key` - The routing key
-pub fn bind_queue(
-    channel: TcpChannel,
+pub async fn bind_queue(
+    channel: Channel,
     exchange_name: impl Into<String>,
     queue_name: impl Into<String>,
     routing_key: impl Into<String>,
-) -> impl TcpChannelFuture {
+) -> Result<Channel, ImlRabbitError> {
     channel
         .queue_bind(
             &queue_name.into(),
             &exchange_name.into(),
             &routing_key.into(),
             QueueBindOptions::default(),
-            FieldTable::new(),
+            FieldTable::default(),
         )
-        .map(|_| channel)
-        .from_err()
+        .compat()
+        .await?;
+
+    Ok(channel)
 }
 
-pub fn connect_to_queue(
+pub async fn connect_to_queue(
     name: impl Into<String>,
-    client: TcpClient,
-) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> {
-    create_channel(client).and_then(move |ch| declare_transient_queue(ch, name))
+    client: Client,
+) -> Result<(Channel, Queue), ImlRabbitError> {
+    let ch = create_channel(client).await?;
+
+    declare_transient_queue(ch, name).await
 }
 
 /// Purges contents of a queue
 ///
 /// # Arguments
 ///
-/// * `channel` - The `TcpChannel` to use
+/// * `channel` - The `Channel` to use
 /// * `queue_name` - The name of the queue
-pub fn purge_queue(channel: TcpChannel, queue_name: impl Into<String>) -> impl TcpChannelFuture {
+pub async fn purge_queue(
+    channel: Channel,
+    queue_name: impl Into<String>,
+) -> Result<Channel, ImlRabbitError> {
+    let name = queue_name.into();
+
     channel
-        .queue_purge(&queue_name.into(), QueuePurgeOptions::default())
-        .map(|_| channel)
-        .from_err()
+        .queue_purge(&name, QueuePurgeOptions::default())
+        .compat()
+        .await?;
+
+    tracing::info!("purged queue {}", &name);
+
+    Ok(channel)
 }
 
 /// Starts consuming from a queue
 ///
 /// # Arguments
 ///
-/// * `channel` - The `TcpChannel` to use
+/// * `channel` - The `Channel` to use
 /// * `queue` - The queue to use
 /// * `consumer_tag` - The tag for the consumer
 /// * `options` - An `Option<BasicConsumeOptions>` of additional options to pass in. If not supplied, `BasicConsumeOptions::default()` is used
-pub fn basic_consume(
-    channel: TcpChannel,
+pub async fn basic_consume(
+    channel: Channel,
     queue: Queue,
     consumer_tag: impl Into<String>,
     options: Option<BasicConsumeOptions>,
-) -> impl TcpStreamConsumerFuture {
+) -> Result<impl Stream<Item = Result<message::Delivery, ImlRabbitError>>, ImlRabbitError> {
     let options = options.unwrap_or_default();
 
     channel
-        .basic_consume(&queue, &consumer_tag.into(), options, FieldTable::new())
-        .from_err()
+        .basic_consume(&queue, &consumer_tag.into(), options, FieldTable::default())
+        .compat()
+        .await
+        .map(|s| s.compat().map(|x| x.map_err(|e| e.into())))
+        .map_err(ImlRabbitError::from)
 }
 
 /// Publish a message to a given exchange
@@ -257,46 +298,49 @@ pub fn basic_consume(
 /// * `routing_key` - Where to route the message
 /// * `channel` - The channel to use for publishing
 /// * `msg` - The message to publish. Must implement `ToBytes + std::fmt::Debug`
-pub fn basic_publish<T: ToBytes + std::fmt::Debug>(
-    channel: TcpChannel,
+pub async fn basic_publish<T: ToBytes + std::fmt::Debug>(
+    channel: Channel,
     exchange: impl Into<String>,
     routing_key: impl Into<String>,
     msg: T,
-) -> impl TcpChannelFuture {
-    log::debug!("publishing Message: {:?}", msg);
+) -> Result<Channel, ImlRabbitError> {
+    tracing::debug!("publishing Message: {:?}", msg);
 
-    match msg.to_bytes() {
-        Ok(bytes) => Either::A(
-            channel
-                .basic_publish(
-                    &exchange.into(),
-                    &routing_key.into(),
-                    bytes,
-                    BasicPublishOptions::default(),
-                    BasicProperties::default()
-                        .with_content_type("application/json".into())
-                        .with_content_encoding("utf-8".into())
-                        .with_priority(0),
-                )
-                .map(|confirmation| log::debug!("publish got confirmation: {:?}", confirmation))
-                .map(|_| channel)
-                .from_err(),
-        ),
-        Err(e) => Either::B(future::err(e.into())),
-    }
+    let bytes = msg.to_bytes()?;
+
+    channel
+        .basic_publish(
+            &exchange.into(),
+            &routing_key.into(),
+            bytes,
+            BasicPublishOptions::default(),
+            BasicProperties::default()
+                .with_content_type("application/json".into())
+                .with_content_encoding("utf-8".into())
+                .with_priority(0),
+        )
+        .compat()
+        .await?;
+
+    Ok(channel)
 }
 
 /// Sends a JSON encoded message to the given exchange / queue
-pub fn send_message<T: ToBytes + std::fmt::Debug>(
-    client: TcpClient,
+pub async fn send_message<T: ToBytes + std::fmt::Debug>(
+    client: Client,
     exchange_name: impl Into<String>,
     queue_name: impl Into<String>,
     msg: T,
-) -> impl Future<Item = (), Error = failure::Error> {
-    create_channel(client.clone())
-        .and_then(|ch| declare_transient_queue(ch, queue_name))
-        .and_then(move |(c, q)| basic_publish(c, exchange_name, q.name(), msg))
-        .and_then(close_channel)
+) -> Result<(), ImlRabbitError> {
+    let ch = create_channel(client.clone()).await?;
+
+    let name = queue_name.into();
+
+    let (ch, _) = declare_transient_queue(ch, &name).await?;
+
+    let ch = basic_publish(ch, exchange_name, name, msg).await?;
+
+    close_channel(ch).await
 }
 
 /// Connect to the rabbitmq instance running on the IML manager
@@ -304,29 +348,17 @@ pub fn send_message<T: ToBytes + std::fmt::Debug>(
 /// This fn is useful for production code as it reads in env vars
 /// to make a connection.
 ///
-pub fn connect_to_rabbit() -> impl TcpClientFuture {
+pub async fn connect_to_rabbit() -> Result<Client, ImlRabbitError> {
     connect(
-        &iml_manager_env::get_addr(),
-        ConnectionOptions {
-            username: iml_manager_env::get_user(),
-            password: iml_manager_env::get_password(),
-            vhost: iml_manager_env::get_vhost(),
-            heartbeat: 0, // Turn off heartbeat due to https://github.com/sozu-proxy/lapin/issues/152
-            ..ConnectionOptions::default()
-        },
+        &iml_manager_env::get_amqp_broker_url(),
+        ConnectionProperties::default(),
     )
-    .map(|(client, mut heartbeat)| {
-        let handle = heartbeat.handle().unwrap();
-
-        handle.stop();
-
-        client
-    })
+    .await
 }
 
-type ClientSender = oneshot::Sender<TcpClient>;
+type ClientSender = oneshot::Sender<Client>;
 
-/// Given a `TcpClientFuture`, this fn will
+/// Given a `Client`, this fn will
 /// return a `(UnboundedSender, Future)` pair.
 ///
 /// The future can be spawned on a runtime,
@@ -336,22 +368,20 @@ type ClientSender = oneshot::Sender<TcpClient>;
 /// This is useful for multiplexing channels over a
 /// single connection.
 pub fn get_cloned_conns(
-    conn_fut: impl TcpClientFuture,
+    client: Client,
 ) -> (
     mpsc::UnboundedSender<ClientSender>,
-    impl Future<Item = (), Error = ()>,
+    impl Future<Output = ()>,
 ) {
     let (tx, rx) = mpsc::unbounded();
 
-    let fut = conn_fut
-        .map_err(|e| log::error!("There was an error connecting to rabbit: {:?}", e))
-        .and_then(|conn| {
-            rx.for_each(move |sender: ClientSender| {
-                sender.send(conn.clone()).map_err(|_| {
-                    log::info!("channel recv dropped before we could hand out a connection")
-                })
-            })
+    let fut = rx.for_each(move |sender: ClientSender| {
+        let _ = sender.send(client.clone()).map_err(|_| {
+            tracing::info!("channel recv dropped before we could hand out a connection")
         });
+
+        future::ready(())
+    });
 
     (tx, fut)
 }
@@ -360,61 +390,65 @@ pub fn get_cloned_conns(
 mod tests {
     use super::{
         basic_publish, bind_queue, connect, create_channel, declare_transient_exchange,
-        declare_transient_queue, get_cloned_conns, TcpClientFuture,
+        declare_transient_queue, get_cloned_conns, ImlRabbitError,
     };
-    use futures::{future::Future, sync::oneshot};
+    use futures::{channel::oneshot, compat::Future01CompatExt, TryFutureExt};
     use lapin_futures::{
-        channel::BasicGetOptions, client::ConnectionOptions, message::BasicGetMessage,
+        message::BasicGetMessage, options::BasicGetOptions, Client, ConnectionProperties,
+        ExchangeKind,
     };
-    use tokio::runtime::Runtime;
 
-    fn read_message(
+    async fn read_message(
         exchange_name: &'static str,
         queue_name: &'static str,
-    ) -> impl Future<Item = BasicGetMessage, Error = failure::Error> {
-        create_test_connection()
-            .and_then(create_channel)
-            .and_then(move |ch| declare_transient_exchange(ch, exchange_name, "direct"))
-            .and_then(move |ch| declare_transient_queue(ch, queue_name.to_string()))
-            .and_then(move |(c, _)| bind_queue(c, exchange_name, queue_name, ""))
-            .and_then(move |channel| {
-                channel
-                    .basic_get(
-                        queue_name,
-                        BasicGetOptions {
-                            no_ack: true,
-                            ..BasicGetOptions::default()
-                        },
-                    )
-                    .map_err(failure::Error::from)
-            })
+    ) -> Result<Option<BasicGetMessage>, ImlRabbitError> {
+        let client = create_test_connection().await?;
+
+        let ch = create_channel(client).await?;
+
+        let ch = declare_transient_exchange(ch, exchange_name, ExchangeKind::Direct).await?;
+
+        let (ch, _) = declare_transient_queue(ch, queue_name.to_string()).await?;
+
+        let ch = bind_queue(ch, exchange_name, queue_name, "").await?;
+
+        Ok(ch
+            .basic_get(
+                queue_name,
+                BasicGetOptions {
+                    no_ack: true,
+                    ..BasicGetOptions::default()
+                },
+            )
+            .compat()
+            .await?)
     }
 
-    fn create_test_connection() -> impl TcpClientFuture {
-        let addr = "127.0.0.1:5672".to_string().parse().unwrap();
+    async fn create_test_connection() -> Result<Client, ImlRabbitError> {
+        let addr = "amqp://127.0.0.1:5672//";
 
-        connect(&addr, ConnectionOptions::default()).map(|(client, mut heartbeat)| {
-            let handle = heartbeat.handle().unwrap();
-
-            handle.stop();
-
-            client
-        })
+        connect(&addr, ConnectionProperties::default()).await
     }
 
     #[test]
-    fn test_connect() -> Result<(), failure::Error> {
-        let msg = Runtime::new()?.block_on_all(
-            create_test_connection()
-                .and_then(|client| {
-                    create_channel(client)
-                        .and_then(|ch| declare_transient_exchange(ch, "foo", "direct"))
-                        .and_then(|ch| declare_transient_queue(ch, "fooQ"))
-                        .and_then(move |(c, _)| bind_queue(c, "foo", "fooQ", "fooQ"))
-                        .and_then(|ch| basic_publish(ch, "foo", "fooQ", "bar"))
-                })
-                .and_then(|_| read_message("foo", "fooQ")),
-        )?;
+    fn test_connect() -> Result<(), ImlRabbitError> {
+        let msg = futures::executor::block_on(async {
+            let client = create_test_connection().await?;
+
+            let ch = create_channel(client).await?;
+
+            let ch = declare_transient_exchange(ch, "foo", ExchangeKind::Direct).await?;
+
+            let (ch, _) = declare_transient_queue(ch, "fooQ").await?;
+
+            let ch = bind_queue(ch, "foo", "fooQ", "fooQ").await?;
+
+            basic_publish(ch, "foo", "fooQ", "bar").await?;
+
+            read_message("foo", "fooQ").await
+        })?;
+
+        let msg = msg.unwrap();
 
         let actual = std::str::from_utf8(&msg.delivery.data)?;
 
@@ -423,28 +457,29 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_get_cloned_conns() -> Result<(), failure::Error> {
-        let mut rt = Runtime::new()?;
+    #[tokio::test]
+    async fn test_get_cloned_conns() -> Result<(), ImlRabbitError> {
+        let conn = create_test_connection().await?;
 
-        let (tx, fut) = get_cloned_conns(create_test_connection());
-
-        rt.spawn(fut);
+        let (tx, fut) = get_cloned_conns(conn);
 
         let (tx2, rx2) = oneshot::channel();
 
-        tx.unbounded_send(tx2)?;
+        tokio::spawn(fut);
 
-        let client = rt.block_on(rx2)?;
+        tx.unbounded_send(tx2).unwrap();
 
-        let msg = rt.block_on(
-            create_channel(client)
-                .and_then(|ch| declare_transient_exchange(ch, "foo2", "direct"))
-                .and_then(|ch| declare_transient_queue(ch, "fooQ2"))
-                .and_then(move |(c, _)| bind_queue(c, "foo2", "fooQ2", "fooQ2"))
-                .and_then(|ch| basic_publish(ch, "foo2", "fooQ2", "bar"))
-                .and_then(|_| read_message("foo2", "fooQ2")),
-        )?;
+        let client = rx2.await.unwrap();
+
+        let msg = create_channel(client)
+            .and_then(|ch| declare_transient_exchange(ch, "foo2", ExchangeKind::Direct))
+            .and_then(|ch| declare_transient_queue(ch, "fooQ2"))
+            .and_then(move |(c, _)| bind_queue(c, "foo2", "fooQ2", "fooQ2"))
+            .and_then(|ch| basic_publish(ch, "foo2", "fooQ2", "bar"))
+            .and_then(|_| read_message("foo2", "fooQ2"))
+            .await?;
+
+        let msg = msg.unwrap();
 
         let actual = std::str::from_utf8(&msg.delivery.data)?;
 
@@ -452,15 +487,16 @@ mod tests {
 
         let (tx2, rx2) = oneshot::channel();
 
-        tx.unbounded_send(tx2)?;
+        tx.unbounded_send(tx2).unwrap();
 
-        let client = rt.block_on(rx2)?;
+        let client = rx2.await.unwrap();
 
-        let msg = rt.block_on(
-            create_channel(client)
-                .and_then(|ch| basic_publish(ch, "foo2", "fooQ2", "baz"))
-                .and_then(|_| read_message("foo2", "fooQ2")),
-        )?;
+        let msg = create_channel(client)
+            .and_then(|ch| basic_publish(ch, "foo2", "fooQ2", "baz"))
+            .and_then(|_| read_message("foo2", "fooQ2"))
+            .await?;
+
+        let msg = msg.unwrap();
 
         let actual = std::str::from_utf8(&msg.delivery.data)?;
 

@@ -3,9 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::session::SharedSessions;
-use futures::sync::oneshot;
+use futures::{channel::oneshot, lock::Mutex};
 use iml_wire_types::Fqdn;
-use parking_lot::Mutex;
 use std::{
     collections::{HashMap, VecDeque},
     sync::Arc,
@@ -49,7 +48,7 @@ pub fn shared_hosts() -> SharedHosts {
 /// Gets or inserts a new host cooresponding to the given fqdn
 pub fn get_or_insert(hosts: &mut Hosts, fqdn: Fqdn, client_start_time: String) -> &mut Host {
     hosts.entry(fqdn.clone()).or_insert_with(|| {
-        log::info!("Adding new host {}", fqdn);
+        tracing::info!("Adding new host {}", fqdn);
 
         Host::new(fqdn, client_start_time)
     })

@@ -184,7 +184,7 @@ impl Session {
         }
     }
     pub fn start(
-        &self,
+        &mut self,
     ) -> impl Future<Item = Option<(SessionInfo, OutputValue)>, Error = ImlAgentError> {
         let info = Arc::clone(&self.info);
 
@@ -252,7 +252,7 @@ mod tests {
 
     #[test]
     fn test_session_start() -> Result<()> {
-        let session = create_session();
+        let mut session = create_session();
 
         let session_info = SessionInfo {
             name: "test_plugin".into(),
@@ -269,7 +269,7 @@ mod tests {
 
     #[test]
     fn test_session_update() -> Result<()> {
-        let session = create_session();
+        let mut session = create_session();
 
         run(Clock::new(), session.start())?;
 
@@ -288,7 +288,7 @@ mod tests {
 
     #[test]
     fn test_session_message() -> Result<()> {
-        let session = create_session();
+        let mut session = create_session();
 
         run(Clock::new(), session.start())?;
 

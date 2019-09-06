@@ -53,7 +53,7 @@ impl AgentInfo {
                 elem.get_attr("provider").map(|s| s.to_string()),
                 elem.get_attr("type").unwrap_or("").to_string(),
             ),
-            group: group,
+            group,
             id: elem.get_attr("id").unwrap_or("").to_string(),
             args: match elem.find("instance_attributes") {
                 None => HashMap::new(),

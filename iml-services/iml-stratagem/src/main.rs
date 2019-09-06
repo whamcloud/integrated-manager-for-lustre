@@ -2,28 +2,23 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::lazy;
-use iml_rabbit::connect_to_rabbit;
-use iml_service_queue::service_queue::{consume_service_queue, data_only, into_deserialized};
-use iml_wire_types::Fqdn;
-use tokio::prelude::*;
+use futures::TryStreamExt;
+use iml_service_queue::service_queue::consume_data;
+use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
-fn main() {
-    env_logger::init();
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let subscriber = Subscriber::builder()
+        .with_env_filter(EnvFilter::from_default_env())
+        .finish();
 
-    tokio::run(lazy(move || {
-        connect_to_rabbit()
-            .map(|client| consume_service_queue(client, "rust_agent_stratagem_rx"))
-            .flatten_stream()
-            .filter_map(data_only)
-            .and_then(into_deserialized)
-            .for_each(|m: (Fqdn, String)| {
-                log::info!("Got some stratagem data: {:?}", m.1);
+    tracing::subscriber::set_global_default(subscriber).unwrap();
 
-                Ok(())
-            })
-            .map_err(|e| {
-                log::error!("An error occured: {:?}", e);
-            })
-    }));
+    let mut s = consume_data::<String>("rust_agent_stratagem_rx");
+
+    while let Some((fqdn, s)) = s.try_next().await? {
+        tracing::info!("Got some stratagem data from {:?}: {:?}", fqdn, s);
+    }
+
+    Ok(())
 }

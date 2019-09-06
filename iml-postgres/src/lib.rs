@@ -2,12 +2,15 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{Poll, Stream};
+use futures::{lock::Mutex, task::Context, Poll, Stream};
 use iml_manager_env::{get_db_host, get_db_name, get_db_password, get_db_user};
-
-use parking_lot::Mutex;
-use std::sync::Arc;
-pub use tokio_postgres::{row::Row, types::Type, AsyncMessage, Client, Error};
+use std::{pin::Pin, sync::Arc};
+pub use tokio_postgres::{
+    error::DbError,
+    row::Row,
+    types::{self, FromSql, IsNull, ToSql, Type},
+    AsyncMessage, Client, Error, Transaction,
+};
 use tokio_postgres::{tls::NoTlsStream, Connection, NoTls, Socket};
 
 /// Gets a connection string from the IML env
@@ -31,7 +34,7 @@ fn get_conn_string() -> String {
 
     let s = xs.join(" ");
 
-    log::debug!("conn: {}", s);
+    tracing::debug!("conn: {}", s);
 
     s
 }
@@ -41,8 +44,8 @@ fn get_conn_string() -> String {
 /// This fn is useful for production code as it reads in env vars
 /// to make a connection.
 ///
-pub fn connect() -> tokio_postgres::impls::Connect<tokio_postgres::tls::NoTls> {
-    tokio_postgres::connect(&get_conn_string(), NoTls)
+pub async fn connect() -> Result<(Client, Connection<Socket, NoTlsStream>), Error> {
+    tokio_postgres::connect(&get_conn_string(), NoTls).await
 }
 
 pub type SharedClient = Arc<Mutex<Client>>;
@@ -57,10 +60,23 @@ pub fn shared_client(client: Client) -> SharedClient {
 pub struct NotifyStream(pub Connection<Socket, NoTlsStream>);
 
 impl Stream for NotifyStream {
-    type Item = AsyncMessage;
-    type Error = tokio_postgres::Error;
+    type Item = Result<AsyncMessage, Error>;
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        self.0.poll_message()
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        self.0.poll_message(cx)
     }
+}
+
+pub async fn select_all<'a, I>(
+    client: &mut Client,
+    query: &str,
+    params: I,
+) -> Result<impl Stream<Item = Result<Row, Error>>, Error>
+where
+    I: IntoIterator<Item = &'a dyn ToSql>,
+    I::IntoIter: ExactSizeIterator,
+{
+    let s = client.prepare(&query).await?;
+
+    client.query_raw(&s, params).await
 }

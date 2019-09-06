@@ -57,6 +57,7 @@ class Command(BaseCommand):
                 ("AMQP_BROKER_VHOST", settings.AMQP_BROKER_VHOST),
                 ("AMQP_BROKER_HOST", settings.AMQP_BROKER_HOST),
                 ("AMQP_BROKER_PORT", settings.AMQP_BROKER_PORT),
+                ("AMQP_BROKER_URL", settings.BROKER_URL),
             ],
         )
 

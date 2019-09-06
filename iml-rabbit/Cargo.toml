@@ -5,10 +5,12 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-lapin-futures = "0.18.0"
-tokio = "0.1"
-failure = "0.1.5"
-futures = "0.1"
-log = "0.4"
-iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
+futures-preview = { version = "0.3.0-alpha.19", features = ["compat"] }
 iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
+iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
+lapin-futures = "0.28.0"
+serde_json = "1"
+tracing = "0.1"
+
+[dev-dependencies]
+tokio = "0.2.0-alpha.6"

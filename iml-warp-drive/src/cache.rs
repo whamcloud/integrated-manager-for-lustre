@@ -3,9 +3,9 @@
 // license that can be found in the LICENSE file.
 
 use crate::{listen::MessageType, DbRecord};
-use futures::{future, Future, Stream as _};
+use futures::{future, lock::Mutex, Future, FutureExt, Stream, TryFutureExt, TryStreamExt};
 use iml_manager_client::{get, get_client, Client, ImlManagerClientError};
-use iml_postgres::SharedClient;
+use iml_postgres::Client as PgClient;
 use iml_wire_types::{
     db::{
         AlertStateRecord, FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord,
@@ -14,8 +14,7 @@ use iml_wire_types::{
     },
     Alert, ApiList, EndpointName, Filesystem, Host, Target, TargetConfParam, Volume, VolumeNode,
 };
-use parking_lot::Mutex;
-use std::{collections::HashMap, fmt::Debug, sync::Arc};
+use std::{collections::HashMap, fmt::Debug, iter, pin::Pin, sync::Arc};
 
 pub type SharedCache = Arc<Mutex<Cache>>;
 
@@ -85,15 +84,18 @@ pub trait ToApiRecord: std::fmt::Debug + Id {
     fn to_api_record<T: 'static>(
         &self,
         client: Client,
-    ) -> Box<dyn Future<Item = T, Error = ImlManagerClientError> + Send>
+    ) -> Pin<Box<dyn Future<Output = Result<T, ImlManagerClientError>> + Send>>
     where
         T: Debug + serde::de::DeserializeOwned + EndpointName + ApiQuery + Send,
     {
-        Box::new(get(
+        let id = self.id();
+
+        get(
             client,
-            &format!("{}/{}/", T::endpoint_name(), self.id()),
+            format!("{}/{}/", T::endpoint_name(), id),
             T::query(),
-        ))
+        )
+        .boxed()
     }
 }
 
@@ -160,15 +162,13 @@ pub enum RecordChange {
     Delete(RecordId),
 }
 
-type BoxedFuture = Box<dyn Future<Item = RecordChange, Error = ImlManagerClientError> + Send>;
-
-fn converter<T>(
+async fn converter<T>(
     client: Client,
     msg_type: MessageType,
     x: impl ToApiRecord + NotDeleted,
     record_fn: fn(T) -> Record,
     record_id_fn: fn(u32) -> RecordId,
-) -> BoxedFuture
+) -> Result<RecordChange, ImlManagerClientError>
 where
     T: std::fmt::Debug
         + serde::de::DeserializeOwned
@@ -179,24 +179,22 @@ where
         + ApiQuery,
 {
     match (msg_type, &x) {
-        (MessageType::Delete, _) => {
-            Box::new(future::ok(RecordChange::Delete(record_id_fn(x.id()))))
-        }
-        (_, x) if x.deleted() => Box::new(future::ok(RecordChange::Delete(record_id_fn(x.id())))),
+        (MessageType::Delete, _) => Ok(RecordChange::Delete(record_id_fn(x.id()))),
+        (_, x) if x.deleted() => Ok(RecordChange::Delete(record_id_fn(x.id()))),
         (MessageType::Insert, x) | (MessageType::Update, x) => {
             let id = x.id();
 
-            Box::new(
-                ToApiRecord::to_api_record(x, client).then(move |r| match r {
-                    Ok(x) => Ok(x).map(record_fn).map(RecordChange::Update),
-                    Err(ImlManagerClientError::Reqwest(ref e))
-                        if e.status() == Some(iml_manager_client::StatusCode::NOT_FOUND) =>
-                    {
-                        Ok(id).map(record_id_fn).map(RecordChange::Delete)
-                    }
-                    Err(e) => Err(e),
-                }),
-            )
+            let r = ToApiRecord::to_api_record(x, client).await;
+
+            match r {
+                Ok(x) => Ok(x).map(record_fn).map(RecordChange::Update),
+                Err(ImlManagerClientError::Reqwest(ref e))
+                    if e.status() == Some(iml_manager_client::StatusCode::NOT_FOUND) =>
+                {
+                    Ok(id).map(record_id_fn).map(RecordChange::Delete)
+                }
+                Err(e) => Err(e),
+            }
         }
     }
 }
@@ -208,78 +206,76 @@ impl ToApiRecord for VolumeRecord {}
 impl ToApiRecord for VolumeNodeRecord {}
 impl ToApiRecord for AlertStateRecord {}
 
-pub fn db_record_to_change_record(
+pub async fn db_record_to_change_record(
     (msg_type, record): (MessageType, DbRecord),
     client: Client,
-) -> BoxedFuture {
+) -> Result<RecordChange, ImlManagerClientError> {
     match record {
-        DbRecord::ManagedHost(x) => converter(client, msg_type, x, Record::Host, RecordId::Host),
-        DbRecord::ManagedFilesystem(x) => converter(
-            client,
-            msg_type,
-            x,
-            Record::Filesystem,
-            RecordId::Filesystem,
-        ),
+        DbRecord::ManagedHost(x) => {
+            converter(client, msg_type, x, Record::Host, RecordId::Host).await
+        }
+        DbRecord::ManagedFilesystem(x) => {
+            converter(
+                client,
+                msg_type,
+                x,
+                Record::Filesystem,
+                RecordId::Filesystem,
+            )
+            .await
+        }
         DbRecord::ManagedTarget(x) => {
-            converter(client, msg_type, x, Record::Target, RecordId::Target)
+            converter(client, msg_type, x, Record::Target, RecordId::Target).await
         }
         DbRecord::AlertState(x) => match (msg_type, &x) {
-            (MessageType::Delete, x) => Box::new(future::ok(RecordChange::Delete(
-                RecordId::ActiveAlert(x.id()),
-            ))) as BoxedFuture,
-            (_, x) if !x.is_active() => Box::new(future::ok(RecordChange::Delete(
-                RecordId::ActiveAlert(x.id()),
-            ))) as BoxedFuture,
-            (MessageType::Insert, x) | (MessageType::Update, x) => Box::new(
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::ActiveAlert(x.id()))),
+            (_, x) if !x.is_active() => Ok(RecordChange::Delete(RecordId::ActiveAlert(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
                 ToApiRecord::to_api_record(x, client)
-                    .map(Record::ActiveAlert)
-                    .map(RecordChange::Update),
-            ),
+                    .map_ok(Record::ActiveAlert)
+                    .map_ok(RecordChange::Update)
+                    .await
+            }
         },
         DbRecord::StratagemConfiguration(x) => match (msg_type, x) {
-            (MessageType::Delete, x) => Box::new(future::ok(RecordChange::Delete(
-                RecordId::StratagemConfig(x.id()),
-            ))) as BoxedFuture,
-            (_, ref x) if x.deleted() => Box::new(future::ok(RecordChange::Delete(
-                RecordId::StratagemConfig(x.id()),
-            ))),
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::StratagemConfig(x.id()))),
+            (_, ref x) if x.deleted() => {
+                Ok(RecordChange::Delete(RecordId::StratagemConfig(x.id())))
+            }
             (MessageType::Insert, x) | (MessageType::Update, x) => {
-                Box::new(future::ok(RecordChange::Update(Record::StratagemConfig(x))))
+                Ok(RecordChange::Update(Record::StratagemConfig(x)))
             }
         },
         DbRecord::LnetConfiguration(x) => match (msg_type, x) {
-            (MessageType::Delete, x) => Box::new(future::ok(RecordChange::Delete(
-                RecordId::LnetConfiguration(x.id()),
-            ))) as BoxedFuture,
-            (_, ref x) if x.deleted() => Box::new(future::ok(RecordChange::Delete(
-                RecordId::LnetConfiguration(x.id()),
-            ))),
-            (MessageType::Insert, x) | (MessageType::Update, x) => Box::new(future::ok(
-                RecordChange::Update(Record::LnetConfiguration(x)),
-            )),
+            (MessageType::Delete, x) => {
+                Ok(RecordChange::Delete(RecordId::LnetConfiguration(x.id())))
+            }
+            (_, ref x) if x.deleted() => {
+                Ok(RecordChange::Delete(RecordId::LnetConfiguration(x.id())))
+            }
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::LnetConfiguration(x)))
+            }
         },
         DbRecord::ManagedTargetMount(x) => match (msg_type, x) {
-            (MessageType::Delete, x) => Box::new(future::ok(RecordChange::Delete(
-                RecordId::ManagedTargetMount(x.id()),
-            ))) as BoxedFuture,
-            (_, ref x) if x.deleted() => Box::new(future::ok(RecordChange::Delete(
-                RecordId::ManagedTargetMount(x.id()),
-            ))),
-            (MessageType::Insert, x) | (MessageType::Update, x) => Box::new(future::ok(
-                RecordChange::Update(Record::ManagedTargetMount(x)),
-            )),
-        },
-        DbRecord::Volume(x) => converter(client, msg_type, x, Record::Volume, RecordId::Volume),
-        DbRecord::VolumeNode(x) => match (msg_type, x) {
-            (MessageType::Delete, x) => Box::new(future::ok(RecordChange::Delete(
-                RecordId::VolumeNode(x.id()),
-            ))) as BoxedFuture,
-            (_, ref x) if x.deleted() => Box::new(future::ok(RecordChange::Delete(
-                RecordId::VolumeNode(x.id()),
-            ))),
+            (MessageType::Delete, x) => {
+                Ok(RecordChange::Delete(RecordId::ManagedTargetMount(x.id())))
+            }
+            (_, ref x) if x.deleted() => {
+                Ok(RecordChange::Delete(RecordId::ManagedTargetMount(x.id())))
+            }
             (MessageType::Insert, x) | (MessageType::Update, x) => {
-                Box::new(future::ok(RecordChange::Update(Record::VolumeNode(x))))
+                Ok(RecordChange::Update(Record::ManagedTargetMount(x)))
+            }
+        },
+        DbRecord::Volume(x) => {
+            converter(client, msg_type, x, Record::Volume, RecordId::Volume).await
+        }
+        DbRecord::VolumeNode(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::VolumeNode(x.id()))),
+            (_, ref x) if x.deleted() => Ok(RecordChange::Delete(RecordId::VolumeNode(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::VolumeNode(x)))
             }
         },
     }
@@ -287,9 +283,7 @@ pub fn db_record_to_change_record(
 
 /// Given a `Cache`, this fn populates it
 /// with data from the API.
-pub fn populate_from_api(
-    shared_api_cache: SharedCache,
-) -> impl Future<Item = (), Error = ImlManagerClientError> {
+pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlManagerClientError> {
     let client = get_client().unwrap();
 
     let fs_fut = get(
@@ -297,121 +291,107 @@ pub fn populate_from_api(
         Filesystem::endpoint_name(),
         Filesystem::query(),
     )
-    .map(|fs: ApiList<Filesystem>| fs.objects)
-    .map(|fs| fs.into_iter().map(|f| (f.id, f)).collect());
+    .map_ok(|fs: ApiList<Filesystem>| fs.objects)
+    .map_ok(|fs| fs.into_iter().map(|f| (f.id, f)).collect());
 
     let target_fut = get(
         client.clone(),
         <Target<TargetConfParam>>::endpoint_name(),
         <Target<TargetConfParam>>::query(),
     )
-    .map(|x: ApiList<Target<TargetConfParam>>| x.objects)
-    .map(|x| x.into_iter().map(|x| (x.id, x)).collect());
+    .map_ok(|x: ApiList<Target<TargetConfParam>>| x.objects)
+    .map_ok(|x| x.into_iter().map(|x| (x.id, x)).collect());
 
     let active_alert_fut = get(client.clone(), Alert::endpoint_name(), Alert::query())
-        .map(|x: ApiList<Alert>| x.objects)
-        .map(|x| x.into_iter().map(|x| (x.id, x)).collect());
+        .map_ok(|x: ApiList<Alert>| x.objects)
+        .map_ok(|x| x.into_iter().map(|x| (x.id, x)).collect());
 
     let host_fut = get(client.clone(), Host::endpoint_name(), Host::query())
-        .map(|x: ApiList<Host>| x.objects)
-        .map(|x| x.into_iter().map(|x| (x.id, x)).collect());
+        .map_ok(|x: ApiList<Host>| x.objects)
+        .map_ok(|x| x.into_iter().map(|x| (x.id, x)).collect());
 
     let volume_fut = get(client, Volume::endpoint_name(), Volume::query())
-        .map(|x: ApiList<Volume>| x.objects)
-        .map(|x| x.into_iter().map(|x| (x.id, x)).collect());
+        .map_ok(|x: ApiList<Volume>| x.objects)
+        .map_ok(|x| x.into_iter().map(|x| (x.id, x)).collect());
 
-    fs_fut
-        .join5(target_fut, active_alert_fut, host_fut, volume_fut)
-        .map(move |(filesystem, target, alert, host, volume)| {
-            let mut api_cache = shared_api_cache.lock();
+    let (filesystem, target, alert, host, volume) =
+        future::try_join5(fs_fut, target_fut, active_alert_fut, host_fut, volume_fut).await?;
 
-            api_cache.filesystem = filesystem;
-            api_cache.target = target;
-            api_cache.active_alert = alert;
-            api_cache.host = host;
-            api_cache.volume = volume;
-        })
+    let mut api_cache = shared_api_cache.lock().await;
+
+    api_cache.filesystem = filesystem;
+    api_cache.target = target;
+    api_cache.active_alert = alert;
+    api_cache.host = host;
+    api_cache.volume = volume;
+
+    tracing::debug!("Populated from api");
+
+    Ok(())
 }
 
-fn fetch_from_db<T>(
-    client: SharedClient,
-    query: &str,
-) -> impl Future<Item = HashMap<u32, T>, Error = iml_postgres::Error>
+async fn into_row<T>(
+    s: impl Stream<Item = Result<iml_postgres::Row, iml_postgres::Error>>,
+) -> Result<HashMap<u32, T>, iml_postgres::Error>
 where
     T: From<iml_postgres::Row> + Name + Id,
 {
-    {
-        let c = Arc::clone(&client);
-
-        let mut c = c.lock();
-
-        c.prepare(query)
-    }
-    .map(move |statement| (client, statement))
-    .map(|(client, statement)| client.lock().query(&statement, &[]))
-    .flatten_stream()
-    .fold(HashMap::new(), |mut hm, row| {
-        let record = T::from(row);
-
-        hm.insert(record.id(), record);
-
-        Ok(hm)
-    })
+    s.map_ok(T::from)
+        .map_ok(|record| (record.id(), record))
+        .try_collect::<HashMap<u32, T>>()
+        .await
 }
 
 /// Given a `Cache`, this fn populates it
 /// with data from the DB.
-pub fn populate_from_db(
+pub async fn populate_from_db(
     shared_api_cache: SharedCache,
-    client: SharedClient,
-) -> impl Future<Item = (), Error = iml_postgres::Error> {
-    let target_mount_fut = fetch_from_db(
-        Arc::clone(&client),
-        &format!(
-            "select * from {} where not_deleted = 't'",
-            ManagedTargetMountRecord::table_name()
-        ),
-    );
-
-    let stratagem_config_fut = fetch_from_db(
-        Arc::clone(&client),
-        &format!(
-            "select * from {} where not_deleted = 't'",
-            StratagemConfiguration::table_name()
-        ),
-    );
-
-    let lnet_config_fut = fetch_from_db(
-        Arc::clone(&client),
-        &format!(
-            "select * from {} where not_deleted = 't'",
-            LnetConfigurationRecord::table_name()
-        ),
-    );
-
-    let volume_node_fut = fetch_from_db(
-        Arc::clone(&client),
-        &format!(
-            "select * from {} where not_deleted = 't'",
-            VolumeNodeRecord::table_name()
-        ),
-    );
-
-    target_mount_fut
-        .join4(volume_node_fut, stratagem_config_fut, lnet_config_fut)
-        .map(
-            move |(
-                managed_target_mount,
-                volume_node_fut,
-                stratagem_configuration,
-                lnet_configuration,
-            )| {
-                let mut cache = shared_api_cache.lock();
-
-                cache.managed_target_mount = managed_target_mount;
-                cache.volume_node = volume_node_fut;
-                cache.stratagem_config = stratagem_configuration;
-                cache.lnet_configuration = lnet_configuration;
-            },
+    client: &mut PgClient,
+) -> Result<(), iml_postgres::Error> {
+    // The following could be more DRY. However, it allows us to avoid locking
+    // the client and enables the use of pipelined requests.
+    let (target_mount_stmt, stratagem_config_stmt, lnet_config_stmt, volume_node_stmt) =
+        future::try_join4(
+            client.prepare(&format!(
+                "select * from {} where not_deleted = 't'",
+                ManagedTargetMountRecord::table_name()
+            )),
+            client.prepare(&format!(
+                "select * from {} where not_deleted = 't'",
+                StratagemConfiguration::table_name()
+            )),
+            client.prepare(&format!(
+                "select * from {} where not_deleted = 't'",
+                LnetConfigurationRecord::table_name()
+            )),
+            client.prepare(&format!(
+                "select * from {} where not_deleted = 't'",
+                VolumeNodeRecord::table_name()
+            )),
         )
+        .await?;
+
+    let (managed_target_mount, stratagem_configuration, lnet_configuration, volume_node) =
+        future::try_join4(
+            into_row(client.query_raw(&target_mount_stmt, iter::empty()).await?),
+            into_row(
+                client
+                    .query_raw(&stratagem_config_stmt, iter::empty())
+                    .await?,
+            ),
+            into_row(client.query_raw(&lnet_config_stmt, iter::empty()).await?),
+            into_row(client.query_raw(&volume_node_stmt, iter::empty()).await?),
+        )
+        .await?;
+
+    let mut cache = shared_api_cache.lock().await;
+
+    cache.managed_target_mount = managed_target_mount;
+    cache.stratagem_config = stratagem_configuration;
+    cache.lnet_configuration = lnet_configuration;
+    cache.volume_node = volume_node;
+
+    tracing::debug!("Populated from db");
+
+    Ok(())
 }

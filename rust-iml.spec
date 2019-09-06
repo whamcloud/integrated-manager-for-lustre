@@ -62,6 +62,7 @@ Group: System Environment/Libraries
 Summary: IML Agent Daemon and CLI
 License: MIT
 Group: System Environment/Libraries
+Requires: iml-device-scanner >= 3.0
 
 %description agent
 %{summary}
