@@ -4,11 +4,11 @@
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output_success};
 use elementtree::Element;
-use futures::{Future, future};
-use tracing::{span, Level};
-use tracing_futures::Instrument;
+use futures::{future, Future};
 use std::collections::HashMap;
 use std::fmt;
+use tracing::{span, Level};
+use tracing_futures::Instrument;
 
 /// standard:provider:ocftype (e.g. ocf:heartbeat:ZFS, or stonith:fence_ipmilan)
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
@@ -85,9 +85,13 @@ pub fn check_ha(_: ()) -> impl Future<Item = Vec<AgentInfo>, Error = ImlAgentErr
                             g.find_all("primitive")
                                 .map(move |p| AgentInfo::create(p, Some(name.clone())))
                         })
-                        .chain(elem.find_all("primitive").map(|p| AgentInfo::create(p, None)))
+                        .chain(
+                            elem.find_all("primitive")
+                                .map(|p| AgentInfo::create(p, None)),
+                        )
                         .collect(),
                 ),
             }
-        }).from_err()
+        })
+        .from_err()
 }
