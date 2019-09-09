@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use futures::Future;
+use iml_agent::action_plugins::check_ha;
 use iml_agent::action_plugins::stratagem::{
     action_purge, action_warning,
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
@@ -117,6 +118,9 @@ pub enum App {
         #[structopt(subcommand)]
         command: StratagemClientCommand,
     },
+
+    #[structopt(name = "check_ha")]
+    CheckHA,
 }
 
 /// Takes an asynchronous computation (Future), runs it to completion
@@ -304,6 +308,14 @@ fn main() {
                     }
                 };
             }
+        },
+        App::CheckHA => match check_ha::check_ha(()).wait() {
+            Ok(v) => {
+                for e in v {
+                    println!("{}", serde_json::to_string(&e).unwrap())
+                }
+            }
+            Err(e) => println!("{:?}", e),
         },
     }
 }

@@ -75,6 +75,7 @@ pub enum ImlAgentError {
     InvalidHeaderValue(http::header::InvalidHeaderValue),
     HyperError(hyper::error::Error),
     NativeTls(native_tls::Error),
+    XmlError(elementtree::Error),
     UnexpectedStatusError,
 }
 
@@ -109,6 +110,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::InvalidHeaderValue(ref err) => write!(f, "{}", err),
             ImlAgentError::HyperError(ref err) => write!(f, "{}", err),
             ImlAgentError::NativeTls(ref err) => write!(f, "{}", err),
+            ImlAgentError::XmlError(ref err) => write!(f, "{}", err),
             ImlAgentError::UnexpectedStatusError => write!(f, "Unexpected status code"),
         }
     }
@@ -139,6 +141,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::InvalidHeaderValue(ref err) => Some(err),
             ImlAgentError::HyperError(ref err) => Some(err),
             ImlAgentError::NativeTls(ref err) => Some(err),
+            ImlAgentError::XmlError(ref err) => Some(err),
             ImlAgentError::UnexpectedStatusError => None,
         }
     }
@@ -267,6 +270,12 @@ impl From<hyper::error::Error> for ImlAgentError {
 impl From<native_tls::Error> for ImlAgentError {
     fn from(err: native_tls::Error) -> Self {
         ImlAgentError::NativeTls(err)
+    }
+}
+
+impl From<elementtree::Error> for ImlAgentError {
+    fn from(err: elementtree::Error) -> Self {
+        ImlAgentError::XmlError(err)
     }
 }
 

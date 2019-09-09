@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
+    action_plugins::check_ha,
     action_plugins::stratagem::{action_purge, action_warning, server},
     agent_error::ImlAgentError,
 };
@@ -73,6 +74,8 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
         "action_purge_stratagem".into(),
         mk_callback(action_purge::read_mailbox),
     );
+
+    map.insert("action_check_ha".into(), mk_callback(check_ha::check_ha));
 
     info!("Loaded the following ActionPlugins:");
 
