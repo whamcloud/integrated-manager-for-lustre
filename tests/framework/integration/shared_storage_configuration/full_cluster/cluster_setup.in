@@ -52,6 +52,16 @@ scp $CHROMA_DIR/chroma_support.repo $STORAGE_SERVER_REPO $(ls $ARCHIVE_PATH/$ARC
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 
+# add any repos needed by the test
+if [ -n \"$CHROMA_SUPPORT_REPOS\" ]; then
+    for repo in $CHROMA_SUPPORT_REPOS; do
+        {
+            echo
+            curl \"\$repo\"
+       } >> /tmp/chroma_support.repo
+    done
+fi
+
 mv /tmp/chroma_support.repo /etc/yum.repos.d/
 
 yum -y install expect
