@@ -91,6 +91,16 @@ set -ex
 
 yum -y install expect pdsh
 
+# add any repos needed by the test
+if [ -n \"$CHROMA_SUPPORT_REPOS\" ]; then
+    for repo in $CHROMA_SUPPORT_REPOS; do
+        {
+            echo
+            curl \"\$repo\"
+       } >> /tmp/chroma_support.repo
+    done
+fi
+
 mv /tmp/chroma_support.repo /etc/yum.repos.d/
 
 # Install from the installation package

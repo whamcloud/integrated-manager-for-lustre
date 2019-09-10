@@ -44,6 +44,11 @@ check_for_autopass() {
         export STORAGE_SERVER_REPOS="$copr_modules $STORAGE_SERVER_REPOS"
     fi
 
+    copr_modules_manager=$(echo "$commit_message" | sed -ne '/^ *COPR Module Manager: */s/^ *COPR Module Manager: *\(.*\)\/\(.*\)/https:\/\/copr.fedorainfracloud.org\/coprs\/\1\/\2\/repo\/epel-7\/\1-\2-epel-7.repo/gp')
+    if [ -n "$copr_modules_manager" ]; then
+        export CHROMA_SUPPORT_REPOS="$copr_modules_manager $CHROMA_SUPPORT_REPOS"
+    fi
+
     local t
     for t in $tests_to_skip; do
         if [[ $JOB_NAME == "$t" || $JOB_NAME == "$t/*" ]]; then

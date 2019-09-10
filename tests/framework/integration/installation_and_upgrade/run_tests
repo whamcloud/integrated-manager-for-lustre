@@ -163,6 +163,16 @@ ssh root@"$CHROMA_MANAGER" "#don't do this, it hangs the ssh up, when used with 
 set -ex
 existing_IML_version=\$(rpm -q --qf \"%{VERSION}-%{RELEASE}\n\" chroma-manager)
 
+# add any repos needed by the test
+if [ -n \"$CHROMA_SUPPORT_REPOS\" ]; then
+    for repo in $CHROMA_SUPPORT_REPOS; do
+        {
+            echo
+            curl \"\$repo\"
+       } >> /tmp/chroma_support.repo
+    done
+fi
+
 cd /tmp
 
 # Wipe out the old support repo with our new one.
