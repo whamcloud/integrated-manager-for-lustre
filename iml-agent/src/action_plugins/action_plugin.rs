@@ -3,8 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    action_plugins::check_ha,
     action_plugins::stratagem::{action_purge, action_warning, server},
+    action_plugins::{check_ha, check_stonith},
     agent_error::ImlAgentError,
 };
 use futures::{future::IntoFuture, Future};
@@ -76,6 +76,11 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
     );
 
     map.insert("action_check_ha".into(), mk_callback(check_ha::check_ha));
+
+    map.insert(
+        "action_check_stonith".into(),
+        mk_callback(check_stonith::check_stonith),
+    );
 
     info!("Loaded the following ActionPlugins:");
 
