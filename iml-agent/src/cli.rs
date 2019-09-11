@@ -3,11 +3,11 @@
 // license that can be found in the LICENSE file.
 
 use futures01::Future;
-use iml_agent::action_plugins::check_ha;
 use iml_agent::action_plugins::stratagem::{
     action_purge, action_warning,
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
+use iml_agent::action_plugins::{check_ha, check_stonith};
 use prettytable::{cell, row, Table};
 use spinners::{Spinner, Spinners};
 use std::{
@@ -121,6 +121,9 @@ pub enum App {
 
     #[structopt(name = "check_ha")]
     CheckHA,
+
+    #[structopt(name = "check_stonith")]
+    CheckStonith,
 }
 
 /// Takes an asynchronous computation (Future), runs it to completion
@@ -314,6 +317,12 @@ fn main() {
                 for e in v {
                     println!("{}", serde_json::to_string(&e).unwrap())
                 }
+            }
+            Err(e) => println!("{:?}", e),
+        },
+        App::CheckStonith => match check_stonith::check_stonith(()).wait() {
+            Ok((b, t)) => {
+                println!("{}: {}", if b { "Configured" } else { "Unconfigured" }, t);
             }
             Err(e) => println!("{:?}", e),
         },
