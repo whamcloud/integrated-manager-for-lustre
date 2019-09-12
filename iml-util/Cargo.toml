@@ -1,0 +1,10 @@
+[package]
+name = "iml-util"
+description = "IML Util Library"
+license = "MIT"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[lib]
+path = "util.rs"
