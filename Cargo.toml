@@ -14,5 +14,6 @@ members = [
     'iml-manager-cli',
     'iml-manager-client',
     'iml-fs',
+    'iml-util',
     'iml-postgres'
 ]
