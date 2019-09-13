@@ -1,7 +1,6 @@
 use futures::{
     Async,
     Poll as FeaturePoll,
-    future::Future as FeaturesFuture,
 };
 use std::{
     fs,
