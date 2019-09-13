@@ -4,9 +4,8 @@
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output_success, http_comms::mailbox_client};
 use futures::{future, stream, Future, IntoFuture, Stream as _};
-use iml_fs::{read_file_to_end, stream_dir_lines, write_tempfile};
+use iml_fs::{read_file_to_end, remove_dir_all, stream_dir_lines, write_tempfile};
 use std::{convert::Into, path::PathBuf};
-use tokio::fs::remove_dir;
 use uuid::Uuid;
 
 /// The device that is scanned for matching rules.
@@ -379,7 +378,7 @@ pub fn stream_fidlists(
     });
 
     future::join_all(mailbox_files)
-        .and_then(|_| remove_dir(parent_dir).from_err())
+        .and_then(|_| remove_dir_all(parent_dir).from_err())
         .map(drop)
 }
 

@@ -2,6 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+mod remove_dir_all;
+
+pub use crate::remove_dir_all::{remove_dir_all, RemoveDirAllFuture};
+
 use bytes::IntoBuf;
 use futures::{future::poll_fn, stream, Future, Stream};
 use std::{
