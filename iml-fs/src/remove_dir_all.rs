@@ -1,16 +1,6 @@
-use futures::{
-    Async,
-    Poll,
-    future::Future,
-};
-use std::{
-    fs,
-    io,
-    path::Path,
-    pin::Pin,
-};
+use futures::{future::Future, Async, Poll};
+use std::{fs, io, path::Path, pin::Pin};
 use tokio_threadpool::blocking;
-
 
 /// tokio-fs.remove_dir_all
 
