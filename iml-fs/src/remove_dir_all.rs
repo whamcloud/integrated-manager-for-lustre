@@ -5,11 +5,9 @@ use futures::{
 };
 use std::{
     fs,
-    future::Future as stdFuture,
     io,
     path::Path,
     pin::Pin,
-    task::{Context, Poll as StdPoll},
 };
 use tokio_threadpool::blocking;
 
