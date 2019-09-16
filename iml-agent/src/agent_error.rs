@@ -57,7 +57,7 @@ pub struct CibError(pub String);
 
 impl fmt::Display for CibError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self.0)
+        write!(f, "{}", self.0)
     }
 }
 
