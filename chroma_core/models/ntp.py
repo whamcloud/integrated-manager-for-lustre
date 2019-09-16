@@ -45,7 +45,11 @@ class ConfigureNTPStep(Step):
         else:
             ntp_server = socket.getfqdn()
 
-        self.invoke_agent_expect_result(kwargs["ntp_configuration"].host, "configure_ntp", {"ntp_server": ntp_server})
+        result = self.invoke_rust_agent_expect_result(
+            kwargs["ntp_configuration"].host.fqdn, "action_configure_ntp", ntp_server
+        )
+
+        return result
 
 
 class ConfigureNTPJob(StateChangeJob):
@@ -89,7 +93,11 @@ class UnconfigureNTPStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs["ntp_configuration"].host, "unconfigure_ntp")
+        result = self.invoke_rust_agent_expect_result(
+            kwargs["ntp_configuration"].host.fqdn, "action_configure_ntp", None
+        )
+
+        return result
 
 
 class UnconfigureNTPJob(StateChangeJob):

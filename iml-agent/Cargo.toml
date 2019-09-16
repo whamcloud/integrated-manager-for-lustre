@@ -44,6 +44,7 @@ iml-fs = { path = "../iml-fs", version = "0.1.0" }
 [dev-dependencies]
 mockito = "0.21.0"
 pretty_assertions = "0.6.1"
+insta = "0.11"
 
 [[bin]]
 name = "iml-agent-daemon"

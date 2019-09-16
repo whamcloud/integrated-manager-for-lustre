@@ -3,8 +3,11 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    action_plugins::stratagem::{action_purge, action_warning, server},
     action_plugins::{check_ha, check_stonith},
+    action_plugins::{
+        ntp::action_configure,
+        stratagem::{action_purge, action_warning, server},
+    },
     agent_error::ImlAgentError,
 };
 use futures::{Future, FutureExt};
@@ -67,6 +70,10 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
     map.insert(
         "action_purge_stratagem".into(),
         mk_callback(action_purge::read_mailbox),
+    );
+    map.insert(
+        "action_configure_ntp".into(),
+        mk_callback(action_configure::update_and_write_new_config),
     );
 
     map.insert("action_check_ha".into(), mk_callback(check_ha::check_ha));
