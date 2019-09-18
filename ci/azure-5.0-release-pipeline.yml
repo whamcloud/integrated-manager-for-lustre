@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - master
+      - b5.1
     exclude:
       - refs/pulls
   tags:
@@ -18,7 +18,7 @@ jobs:
       package: rust-iml
       spec: rust-iml.spec
       release: true
-      branchref: refs/tags/v*r5.1
+      branchref: refs/tags/v0.1.1rust-r5.1
       image: imlteam/copr-lustre
 
   # Wasm-Components Continuous Release to Prod Copr
@@ -31,5 +31,5 @@ jobs:
       spec: iml-wasm-components.spec
       crate: iml-wasm-components
       release: true
-      branchref: refs/tags/v*r5.1
+      branchref: refs/tags/v0.1.1rust-r5.1
       image: imlteam/copr-wasm
