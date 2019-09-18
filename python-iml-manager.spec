@@ -53,6 +53,7 @@ Requires:       python-psycopg2
 Requires:       python-setuptools
 Requires:       python-requests >= 2.6.0
 Requires:       python-uuid
+Requires:       python-dateutil >= 1.5
 Requires:       python2-django-tastypie = 0.12.2
 Requires:       python2-jsonschema >= 2.5.1
 Requires:       python2-kombu >= 3.0.19
@@ -68,29 +69,28 @@ Requires:       nodejs >= 1:6.16.0
 Requires(post): selinux-policy-targeted
 # IML Repo
 Requires:       django-picklefield >= 0.1.9
-Requires:       iml-device-scanner-aggregator >= 2.2.1
-Requires:       iml-gui >= 6.5.1
-Requires:       iml-old-gui >= 3.1.2
-Requires:       iml-online-help >= 2.5.5
-Requires:       iml-realtime >= 7.0.1-3
+Requires:       iml-device-scanner-aggregator >= 3.0.0
+Requires:       iml-gui >= 6.6.0
+Requires:       iml-old-gui >= 3.1.3
+Requires:       iml-online-help >= 2.6.0
+Requires:       iml-realtime >= 7.0.2
 Requires:       iml_sos_plugin >= 2.3
 Requires:       iml-socket-worker >= 4.0.3
 Requires:       iml-srcmap-reverse >= 3.0.8
-Requires:       iml-update-handler >= 1.0.2, iml-update-handler < 2
+Requires:       iml-update-handler >= 1.0.3, iml-update-handler < 2
 Requires:       iml-view-server >= 8.0.4
-Requires:       iml-wasm-components >= 0.1.0
-Requires:       python-dateutil >= 1.5
+Requires:       iml-wasm-components >= 0.1.1
 Requires:       python2-gevent >= 1.0.1
 Requires:       python2-httpagentparser >= 1.5
 Requires:       python2-iml-manager-cli = %{version}-%{release}
 Requires:       python2-requests-unixsocket >= 0.1.5
 Requires:       python2-massiviu >= 0.1.0-2
-Requires:       rust-iml-action-runner
-Requires:       rust-iml-agent-comms
-Requires:       rust-iml-mailbox
-Requires:       rust-iml-stratagem
-Requires:       rust-iml-warp-drive
-Requires:       rust-iml-cli
+Requires:       rust-iml-action-runner >= 0.1.1
+Requires:       rust-iml-agent-comms >= 0.1.1
+Requires:       rust-iml-mailbox >= 0.1.1
+Requires:       rust-iml-stratagem >= 0.1.1
+Requires:       rust-iml-warp-drive >= 0.1.1
+Requires:       rust-iml-cli >= 0.1.1
 # Other Repos
 Requires:       influxdb
 Requires:       grafana

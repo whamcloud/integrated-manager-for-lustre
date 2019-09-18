@@ -1,7 +1,7 @@
 %define managerdir /iml-manager/
 
 Name:       iml-wasm-components
-Version:    0.1.0
+Version:    0.1.1
 # Release Start
 Release:    1%{?dist}
 # Release End
