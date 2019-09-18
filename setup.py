@@ -13,7 +13,7 @@ excludes = []
 
 setup(
     name="iml-manager",
-    version="5.0.1",
+    version="5.1.0",
     author="whamCloud",
     author_email="iml@whamcloud.com",
     url="https://pypi.python.org/pypi/iml-manager",

@@ -96,11 +96,11 @@ jobs:
         - docker push imlteam/manager-nginx
         - docker-compose build
         - docker-compose push
-    - stage: deploy-copr-r5.0
-      name: "Copr 5.0 deploy"
+    - stage: deploy-copr-r5.1
+      name: "Copr 5.1 deploy"
       script:
         - export OWNER=managerforlustre
-        - export PROJECT=manager-for-lustre-5.0
+        - export PROJECT=manager-for-lustre-5.1
         - export PACKAGE=python-iml-manager
         - export SPEC=python-iml-manager.spec
         - export SRPM_TASK=iml-srpm
@@ -111,5 +111,5 @@ stages:
     if: branch = master AND type = push AND fork = false
   - name: docker-publish
     if: env(DOCKER_BUILD) IS present AND branch = master
-  - name: deploy-copr-r5.0
-    if: branch =~ ^v\d+\.\d+\.\d+-.+-r5\.0$
+  - name: deploy-copr-r5.1
+    if: branch =~ ^b5\.1\.\d+-iml$
