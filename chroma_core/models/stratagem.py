@@ -407,6 +407,27 @@ class StreamFidlistStep(Step):
         return result
 
 
+class ClearOldStratagemDataJob(Job):
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def long_description(self):
+        return "Removing old Stratagem data"
+
+    def description(self):
+        return "Removing old Stratagem data"
+
+    def get_steps(self):
+        return [(ClearOldStratagemDataStep, {})]
+
+
+class ClearOldStratagemDataStep(Step):
+    def run(self, kwargs):
+        clear_scan_results("DROP MEASUREMENT temp_stratagem_scan")
+
+
 class RunStratagemJob(Job):
     filesystem = models.ForeignKey("ManagedFilesystem", null=False)
     mdt_id = models.IntegerField()
@@ -461,7 +482,6 @@ class RunStratagemJob(Job):
         else:
             path = self.device_path
 
-        clear_scan_results("DROP MEASUREMENT temp_stratagem_scan")
         return [
             (
                 RunStratagemStep,
