@@ -3,7 +3,6 @@
 # license that can be found in the LICENSE file.
 
 import logging
-import json
 import os
 
 from os import path
@@ -451,7 +450,7 @@ class RunStratagemJob(Job):
 
     def create_locks(self):
         locks = super(RunStratagemJob, self).create_locks()
-        locks.append(StateLock(job=self, locked_item=self.filesystem, write=True))
+        locks.append(StateLock(job=self, locked_item=self.filesystem, write=False))
 
         return locks
 
