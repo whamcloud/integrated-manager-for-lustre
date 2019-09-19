@@ -80,6 +80,12 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal('chroma_core', ['ConfigureStratagemJob'])
 
+        # Adding model 'ClearOldStratagemDataJob'
+        db.create_table(u'chroma_core_clearoldstratagemdatajob', (
+            (u'job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+        ))
+        db.send_create_signal('chroma_core', ['ClearOldStratagemDataJob'])
+
         # Adding model 'AggregateStratagemResultsJob'
         db.create_table(u'chroma_core_aggregatestratagemresultsjob', (
             (u'job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
@@ -109,6 +115,9 @@ class Migration(SchemaMigration):
 
         # Deleting model 'ConfigureStratagemJob'
         db.delete_table(u'chroma_core_configurestratagemjob')
+
+        # Deleting model 'ClearOldStratagemDataJob'
+        db.delete_table(u'chroma_core_clearoldstratagemdatajob')
 
         # Deleting model 'AggregateStratagemResultsJob'
         db.delete_table(u'chroma_core_aggregatestratagemresultsjob')
@@ -208,6 +217,10 @@ class Migration(SchemaMigration):
             'corosync_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.CorosyncConfiguration']"}),
             u'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
+        },
+        'chroma_core.clearoldstratagemdatajob': {
+            'Meta': {'ordering': "['id']", 'object_name': 'ClearOldStratagemDataJob', '_ormbases': ['chroma_core.Job']},
+            u'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.clientcertificate': {
             'Meta': {'object_name': 'ClientCertificate'},
@@ -988,10 +1001,10 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 8, 23, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 9, 19, 0, 0)'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'profile': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ServerProfile']", 'null': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'87EF65603C3EAA86E1B01BA70350D8A4'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'D313B4E6DC0D1A030CD8CFB77C07699E'", 'max_length': '32'})
         },
         'chroma_core.removeconfiguredtargetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RemoveConfiguredTargetJob'},

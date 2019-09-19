@@ -1815,7 +1815,9 @@ class JobScheduler(object):
         unique_id = uuid.uuid4()
         filesystem = ManagedFilesystem.objects.get(id=fs_id)
 
-        run_stratagem_list = map(
+        run_stratagem_list = [{"class_name": "ClearOldStratagemDataJob", "args": {}}]
+
+        run_stratagem_list += map(
             lambda mdt_id: {
                 "class_name": "RunStratagemJob",
                 "args": {
@@ -1824,6 +1826,7 @@ class JobScheduler(object):
                     "report_duration": stratagem_data.get("report_duration"),
                     "purge_duration": stratagem_data.get("purge_duration"),
                     "filesystem": filesystem,
+                    "depends_on_job_range": [0],
                 },
             },
             mdts,
@@ -1832,7 +1835,7 @@ class JobScheduler(object):
         run_stratagem_list.append(
             {
                 "class_name": "AggregateStratagemResultsJob",
-                "args": {"depends_on_job_range": range(len(mdts)), "fs_name": filesystem.name},
+                "args": {"depends_on_job_range": range(1, len(run_stratagem_list)), "fs_name": filesystem.name},
             }
         )
 
