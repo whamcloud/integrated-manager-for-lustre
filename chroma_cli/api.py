@@ -78,8 +78,7 @@ class ChromaSessionClient(object):
             raise RuntimeError("No session (status: %s, text: %s)" % (r.status_code, r.content))
 
         self.session.headers["X-CSRFToken"] = r.cookies["csrftoken"]
-        self.session.cookies["csrftoken"] = r.cookies["csrftoken"]
-        self.session.cookies["sessionid"] = r.cookies["sessionid"]
+        self.session.cookies.set("csrftoken", r.cookies["csrftoken"])
 
     def login(self, **credentials):
         if not self.is_authenticated:
@@ -87,9 +86,12 @@ class ChromaSessionClient(object):
                 self.start_session()
 
             r = self.post(self.session_uri, data=json.dumps(credentials))
+
             if not 200 <= r.status_code < 300:
                 raise AuthenticationFailure()
             else:
+                self.session.headers["X-CSRFToken"] = r.cookies["csrftoken"]
+                self.session.cookies.set("sessionid", r.cookies["sessionid"])
                 self.is_authenticated = True
 
         return self.is_authenticated

@@ -46,7 +46,11 @@ class CsrfAuthentication(Authentication):
             return True
 
         request_csrf_token = request.META.get("HTTP_X_CSRFTOKEN", "")
-        csrf_token = request.META["CSRF_COOKIE"]
+
+        csrf_token = request.META.get("CSRF_COOKIE")
+
+        if csrf_token is None:
+            return False
 
         if not constant_time_compare(csrf_token, request_csrf_token):
             return False
