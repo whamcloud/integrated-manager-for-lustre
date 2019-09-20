@@ -371,6 +371,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         # Count how many of the reported Luns are ready for our test
         # (i.e. they have both a primary and a failover node)
         ha_volumes = self.wait_for_shared_volumes(4, 4)
+        self.wait_for_items_length(lambda: self.get_list("/api/ha_cluster/"), 2)
 
         # Set primary and failover mounts explicitly and check they are respected
         self.set_volume_mounts(ha_volumes[0], hosts[0]["id"], hosts[1]["id"])
