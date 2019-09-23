@@ -4,12 +4,12 @@
 
 
 from django.contrib.contenttypes.models import ContentType
-from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 from tastypie.resources import Resource
 from tastypie import fields
+from tastypie.bundle import Bundle
 
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.validation_utils import validate
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
@@ -88,11 +88,21 @@ class ActionResource(Resource):
     class Meta:
         allowed_methods = None
         authentication = AnonymousAuthentication()
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         validation = ActionValidation()
         object_class = Action
         resource_name = "action"
         list_allowed_methods = ["get"]
+
+    def detail_uri_kwargs(self, bundle_or_obj):
+        kwargs = {}
+
+        if isinstance(bundle_or_obj, Bundle):
+            kwargs["pk"] = bundle_or_obj.obj.composite_id
+        else:
+            kwargs["pk"] = bundle_or_obj.composite_id
+
+        return kwargs
 
     # Create our array of custom data
     def get_object_list(self, request):

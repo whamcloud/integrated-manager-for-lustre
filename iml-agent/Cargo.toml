@@ -13,9 +13,9 @@ byte-unit = "=2.1"
 chrono = "0.4"
 dns-lookup = "1"
 elementtree = "0.5"
-env_logger = "0.6"
+env_logger = "0.7"
 exitcode = "1.1"
-futures = "0.1.28"
+futures = "0.1.29"
 lazy_static = "1.3.0"
 termion = "1"
 spinners = "1.0.0"
@@ -41,7 +41,7 @@ url = "1.7"
 v_hist = "0.1.1"
 uuid = { version = "0.7", features = ["v4"] }
 parking_lot = "0.9"
-iml-wire-types = { path = "../iml-wire-types", version = "0.1" }
+iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
 liblustreapi = { path = "../liblustreapi", version = "0.1" }
 iml-fs = { path = "../iml-fs", version = "0.1.0" }
 

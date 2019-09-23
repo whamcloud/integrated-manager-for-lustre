@@ -3,13 +3,15 @@
 # license that can be found in the LICENSE file.
 
 
-from chroma_core.models import PowerControlType, PowerControlDevice, PowerControlDeviceOutlet
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_core.models import PowerControlType, PowerControlDevice, PowerControlDeviceOutlet, validate_inet_address
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.utils import CustomModelResource
 
 from django.forms import ModelForm, ModelChoiceField
+from django.forms.models import model_to_dict
+from django.forms.fields import GenericIPAddressField
+from django.db.models.fields.related import RelatedField
 
-from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import FormValidation
 from tastypie import fields
 
@@ -22,7 +24,7 @@ class ResolvingFormValidation(FormValidation):
     """
 
     def _resolve_uri_to_pk(self, uri):
-        from django.core.urlresolvers import resolve
+        from django.urls import resolve
 
         if not uri:
             return None
@@ -51,38 +53,42 @@ class ResolvingFormValidation(FormValidation):
 
         return data
 
-    # This is pretty much a straight copy of FormValidation's is_valid().
-    # It's unfortunate that there's not a cleaner place to hook into the
-    # validation processing for subclasses.
-    def is_valid(self, bundle, request=None):
+    def form_args(self, bundle):
         """
-        Performs a check on ``bundle.data``to ensure it is valid.
-
-        If the form is valid, an empty list (all valid) will be returned. If
-        not, a list of errors will be returned.
+        Use the model data to generate the form arguments to be used for
+        validation.  In the case of fields that had to be hydrated (such as
+        FK relationships), be sure to use the hydrated value (comes from
+        model_to_dict()) rather than the value in bundle.data, since the latter
+        would likely not validate as the form won't expect a URI.
         """
         data = bundle.data
-
-        if not bundle.request:
-            raise RuntimeError("Must be used with an incoming request")
 
         # Ensure we get a bound Form, regardless of the state of the bundle.
         if data is None:
             data = {}
 
-        # FormValidation doesn't understand URIs in bundle fields --
-        # we need to resolve them into primary keys for the validation
-        # to work properly.
         data = self._resolve_relation_uris(data)
 
-        form = self.form_class(data)
+        kwargs = {"data": {}}
+        if hasattr(bundle.obj, "pk"):
+            if issubclass(self.form_class, ModelForm):
+                kwargs["instance"] = bundle.obj
 
-        if form.is_valid():
-            return {}
+            kwargs["data"] = model_to_dict(bundle.obj)
+            kwargs["data"].update(data)
+            # iterate over the fields in the object and find those that are
+            # related fields - FK, M2M, O2M, etc.  In those cases, we need
+            # to *not* use the data in the bundle, since it is a URI to a
+            # resource.  Instead, use the output of model_to_dict for
+            # validation, since that is already properly hydrated.
+            for field in bundle.obj._meta.fields:
+                if field.name in bundle.data:
+                    if not isinstance(field, RelatedField):
+                        kwargs["data"][field.name] = bundle.data[field.name]
+        else:
+            kwargs["data"].update(data)
 
-        # The data is invalid. Let's collect all the error messages & return
-        # them.
-        return form.errors
+        return kwargs
 
 
 class DeleteablePowerObjectResource(CustomModelResource):
@@ -138,7 +144,7 @@ class PowerControlTypeResource(DeleteablePowerObjectResource):
     class Meta:
         queryset = PowerControlType.objects.all()
         resource_name = "power_control_type"
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         validation = ResolvingFormValidation(form_class=PowerControlTypeForm)
         ordering = ["name", "make", "model"]
@@ -150,23 +156,18 @@ class PowerControlTypeResource(DeleteablePowerObjectResource):
         always_return_data = True
 
 
+class ValidatedGenericIPAddressField(GenericIPAddressField):
+    def to_python(self, value):
+        value = validate_inet_address(value)
+
+        return super(ValidatedGenericIPAddressField, self).to_python(value)
+
+
 class PowerControlDeviceForm(ModelForm):
     class Meta:
         model = PowerControlDevice
         exclude = ()
-
-    def _clean_fields(self):
-        super(PowerControlDeviceForm, self)._clean_fields()
-
-        # Django, we need to talk. If you tell me I'll have the chance to
-        # do custom validation and modify attributes in my model's clean(),
-        # then WHY DO YOU DELETE THE VALUE BEFORE I'VE HAD A CHANCE TO FIX IT?!?
-        if "address" in self._errors:
-            del self._errors["address"]
-            field = self.fields["address"]
-            self.cleaned_data["address"] = field.widget.value_from_datadict(
-                self.data, self.files, self.add_prefix("address")
-            )
+        field_classes = {"address": ValidatedGenericIPAddressField}
 
 
 class PowerControlDeviceResource(DeleteablePowerObjectResource):
@@ -194,7 +195,7 @@ class PowerControlDeviceResource(DeleteablePowerObjectResource):
     class Meta:
         queryset = PowerControlDevice.objects.all()
         resource_name = "power_control_device"
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         validation = ResolvingFormValidation(form_class=PowerControlDeviceForm)
         ordering = ["name"]
@@ -224,7 +225,7 @@ class PowerControlDeviceOutletResource(DeleteablePowerObjectResource):
     class Meta:
         queryset = PowerControlDeviceOutlet.objects.all()
         resource_name = "power_control_device_outlet"
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         validation = ResolvingFormValidation(form_class=PowerControlDeviceOutletForm)
         list_allowed_methods = ["get", "post"]

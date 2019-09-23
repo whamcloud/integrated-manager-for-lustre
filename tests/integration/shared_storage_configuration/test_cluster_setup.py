@@ -1,6 +1,6 @@
 import re
 
-from django.utils.unittest import TestCase
+from unittest import TestCase
 
 from testconfig import config
 from tests.integration.core.remote_operations import RealRemoteOperations

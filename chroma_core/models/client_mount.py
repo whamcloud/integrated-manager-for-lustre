@@ -4,7 +4,7 @@
 
 
 from django.db import models
-
+from django.db.models import CASCADE
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.utils import CHARFIELD_MAX_LENGTH
 from chroma_core.models.host import ManagedHost, HostOfflineAlert, HostContactAlert
@@ -17,8 +17,8 @@ from chroma_help.help import help_text
 
 
 class LustreClientMount(DeletableStatefulObject):
-    host = models.ForeignKey("ManagedHost", help_text="Mount host", related_name="client_mounts")
-    filesystem = models.ForeignKey("ManagedFilesystem", help_text="Mounted filesystem")
+    host = models.ForeignKey("ManagedHost", help_text="Mount host", related_name="client_mounts", on_delete=CASCADE)
+    filesystem = models.ForeignKey("ManagedFilesystem", help_text="Mounted filesystem", on_delete=CASCADE)
     mountpoint = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, help_text="Filesystem mountpoint on host", null=True, blank=True
     )
@@ -135,7 +135,7 @@ class MountLustreClientJob(StateChangeJob):
 
     state_transition = StateChangeJob.StateTransition(LustreClientMount, "unmounted", "mounted")
     stateful_object = "lustre_client_mount"
-    lustre_client_mount = models.ForeignKey(LustreClientMount)
+    lustre_client_mount = models.ForeignKey(LustreClientMount, on_delete=CASCADE)
     state_verb = None
 
     @classmethod
@@ -175,7 +175,7 @@ class UnmountLustreClientMountJob(StateChangeJob):
 
     state_transition = StateChangeJob.StateTransition(LustreClientMount, "mounted", "unmounted")
     stateful_object = "lustre_client_mount"
-    lustre_client_mount = models.ForeignKey(LustreClientMount)
+    lustre_client_mount = models.ForeignKey(LustreClientMount, on_delete=CASCADE)
     state_verb = None
 
     @classmethod
@@ -212,7 +212,7 @@ class RemoveLustreClientJob(StateChangeJob):
 
     state_transition = StateChangeJob.StateTransition(LustreClientMount, "unmounted", "removed")
     stateful_object = "lustre_client_mount"
-    lustre_client_mount = models.ForeignKey(LustreClientMount)
+    lustre_client_mount = models.ForeignKey(LustreClientMount, on_delete=CASCADE)
     state_verb = None
 
     @classmethod
@@ -246,7 +246,7 @@ class MountLustreFilesystemsJob(AdvertisedJob):
     a filesystem.
     """
 
-    host = models.ForeignKey(ManagedHost)
+    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
     classes = ["ManagedHost"]
     verb = "Mount Filesystem(s)"
 
@@ -306,7 +306,7 @@ class UnmountLustreFilesystemsJob(AdvertisedJob):
     a filesystem.
     """
 
-    host = models.ForeignKey(ManagedHost)
+    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
     classes = ["ManagedHost"]
     verb = "Unmount Filesystem(s)"
 

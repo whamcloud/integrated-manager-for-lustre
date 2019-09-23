@@ -11,6 +11,7 @@ from collections import namedtuple
 from chroma_core.lib.cache import ObjectCache
 
 from django.db import models, transaction
+from django.db.models import CASCADE
 from chroma_core.lib.job import DependOn, DependAny, DependAll, Step, job_log
 from chroma_core.models import AlertEvent
 from chroma_core.models import AlertStateBase
@@ -36,7 +37,7 @@ class FilesystemMember(models.Model):
     """A Mountable for a particular filesystem, such as
        MDT, OST or Client"""
 
-    filesystem = models.ForeignKey("ManagedFilesystem")
+    filesystem = models.ForeignKey("ManagedFilesystem", on_delete=CASCADE)
     index = models.IntegerField()
 
     # Use of abstract base classes to avoid django bug #12002
@@ -91,7 +92,7 @@ class ManagedTarget(StatefulObject):
         max_length=64, null=True, blank=True, help_text="Label used for HA layer; human readable but unique"
     )
 
-    volume = models.ForeignKey("Volume")
+    volume = models.ForeignKey("Volume", on_delete=CASCADE)
 
     inode_size = models.IntegerField(null=True, blank=True, help_text="Size in bytes per inode")
     bytes_per_inode = models.IntegerField(
@@ -230,7 +231,7 @@ class ManagedTarget(StatefulObject):
     # Additional states needed for 'deactivated'?
     states = ["unformatted", "formatted", "registered", "unmounted", "mounted", "removed", "forgotten"]
     initial_state = "unformatted"
-    active_mount = models.ForeignKey("ManagedTargetMount", blank=True, null=True)
+    active_mount = models.ForeignKey("ManagedTargetMount", blank=True, null=True, on_delete=CASCADE)
 
     def set_state(self, state, intentional=False):
         job_log.debug("mt.set_state %s %s" % (state, intentional))
@@ -321,6 +322,7 @@ class ManagedTarget(StatefulObject):
     }
 
     @classmethod
+    @transaction.atomic
     def create_for_volume(cls_, volume_id, create_target_mounts=True, **kwargs):
         # Local imports to avoid inter-model import dependencies
         volume = Volume.objects.get(pk=volume_id)
@@ -567,7 +569,7 @@ class TargetRecoveryInfo(models.Model):
     #: JSON-encoded dict parsed from /sys
     recovery_status = models.TextField()
 
-    target = models.ForeignKey("chroma_core.ManagedTarget")
+    target = models.ForeignKey("chroma_core.ManagedTarget", on_delete=CASCADE)
 
     class Meta:
         app_label = "chroma_core"
@@ -608,7 +610,7 @@ class RemoveConfiguredTargetJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(ManagedTarget, "unmounted", "removed")
     stateful_object = "target"
     state_verb = "Remove"
-    target = models.ForeignKey(ManagedTarget)
+    target = models.ForeignKey(ManagedTarget, on_delete=CASCADE)
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -677,7 +679,7 @@ class RemoveTargetJob(StateChangeJob):
     )
     stateful_object = "target"
     state_verb = "Remove"
-    target = models.ForeignKey(ManagedTarget)
+    target = models.ForeignKey(ManagedTarget, on_delete=CASCADE)
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -758,7 +760,7 @@ class ForgetTargetJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(ManagedTarget, ["unmounted", "mounted"], "forgotten")
     stateful_object = "target"
     state_verb = "Forget"
-    target = models.ForeignKey(ManagedTarget)
+    target = models.ForeignKey(ManagedTarget, on_delete=CASCADE)
 
 
 class RegisterTargetStep(Step):
@@ -1034,7 +1036,7 @@ class ConfigureTargetJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(ManagedTarget, "registered", "unmounted")
     stateful_object = "target"
     state_verb = "Configure mount points"
-    target = models.ForeignKey(ManagedTarget)
+    target = models.ForeignKey(ManagedTarget, on_delete=CASCADE)
 
     class Meta:
         app_label = "chroma_core"
@@ -1108,7 +1110,7 @@ class RegisterTargetJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(ManagedTarget, "formatted", "registered")
     stateful_object = "target"
     state_verb = "Register"
-    target = models.ForeignKey(ManagedTarget)
+    target = models.ForeignKey(ManagedTarget, on_delete=CASCADE)
 
     class Meta:
         app_label = "chroma_core"
@@ -1202,7 +1204,7 @@ class StartTargetJob(StateChangeJob):
     stateful_object = "target"
     state_transition = StateChangeJob.StateTransition(ManagedTarget, "unmounted", "mounted")
     state_verb = "Start"
-    target = models.ForeignKey(ManagedTarget)
+    target = models.ForeignKey(ManagedTarget, on_delete=CASCADE)
 
     class Meta:
         app_label = "chroma_core"
@@ -1274,7 +1276,7 @@ class StopTargetJob(StateChangeJob):
     stateful_object = "target"
     state_transition = StateChangeJob.StateTransition(ManagedTarget, "mounted", "unmounted")
     state_verb = "Stop"
-    target = models.ForeignKey(ManagedTarget)
+    target = models.ForeignKey(ManagedTarget, on_delete=CASCADE)
 
     def get_requires_confirmation(self):
         return True
@@ -1466,7 +1468,7 @@ class UpdateManagedTargetMount(Step):
 
 class FormatTargetJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(ManagedTarget, "unformatted", "formatted")
-    target = models.ForeignKey(ManagedTarget)
+    target = models.ForeignKey(ManagedTarget, on_delete=CASCADE)
     stateful_object = "target"
     state_verb = "Format"
     cancellable = False
@@ -1588,7 +1590,7 @@ class FormatTargetJob(StateChangeJob):
 
 
 class MigrateTargetJob(AdvertisedJob):
-    target = models.ForeignKey(ManagedTarget)
+    target = models.ForeignKey(ManagedTarget, on_delete=CASCADE)
 
     requires_confirmation = True
 
@@ -1757,11 +1759,11 @@ class ManagedTargetMount(models.Model):
     __metaclass__ = DeletableMetaclass
 
     # FIXME: both VolumeNode and TargetMount refer to the host
-    host = models.ForeignKey("ManagedHost")
+    host = models.ForeignKey("ManagedHost", on_delete=CASCADE)
     mount_point = models.CharField(max_length=512, null=True, blank=True)
-    volume_node = models.ForeignKey("VolumeNode")
+    volume_node = models.ForeignKey("VolumeNode", on_delete=CASCADE)
     primary = models.BooleanField(default=False)
-    target = models.ForeignKey("ManagedTarget")
+    target = models.ForeignKey("ManagedTarget", on_delete=CASCADE)
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         # If primary is true, then target must be unique
@@ -1817,7 +1819,7 @@ class TargetOfflineAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     def end_event(self):
         return AlertEvent(
@@ -1841,7 +1843,7 @@ class TargetFailoverAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     def end_event(self):
         return AlertEvent(
@@ -1866,7 +1868,7 @@ class TargetRecoveryAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     def end_event(self):
         return AlertEvent(

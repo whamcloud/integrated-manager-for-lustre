@@ -1,4 +1,4 @@
-# Copyright (c) 2018 DDN. All rights reserved.
+# Copyright (c) 2019 DDN. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
@@ -7,7 +7,7 @@ import os
 import datetime
 
 from django.db import models
-
+from django.db.models import CASCADE
 from chroma_core.models.server_profile import ServerProfile
 from iml_common.lib.date_time import IMLDateTime
 
@@ -22,6 +22,14 @@ def _tzaware_future_offset(offset):
     return now + datetime.timedelta(seconds=offset)
 
 
+def _default_secret():
+    return "".join(["%.2X" % ord(b) for b in os.urandom(SECRET_LENGTH)])
+
+
+def _default_expiry():
+    return _tzaware_future_offset(DEFAULT_EXPIRY_SECONDS)
+
+
 class RegistrationToken(models.Model):
     """
     Authorization tokens handed out to servers to grant them
@@ -29,7 +37,7 @@ class RegistrationToken(models.Model):
     """
 
     expiry = models.DateTimeField(
-        default=lambda: _tzaware_future_offset(DEFAULT_EXPIRY_SECONDS),
+        default=_default_expiry,
         help_text="DateTime, at which time this token will expire.  Defaults to %s seconds in the future."
         % DEFAULT_EXPIRY_SECONDS,
     )
@@ -40,7 +48,7 @@ class RegistrationToken(models.Model):
     )
     secret = models.CharField(
         max_length=SECRET_LENGTH * 2,
-        default=lambda: "".join(["%.2X" % ord(b) for b in os.urandom(SECRET_LENGTH)]),
+        default=_default_secret,
         help_text="String, the secret used by servers to authenticate themselves (%d characters alphanumeric)"
         % SECRET_LENGTH
         * 2,
@@ -51,7 +59,7 @@ class RegistrationToken(models.Model):
         % DEFAULT_CREDITS,
     )
 
-    profile = models.ForeignKey(ServerProfile, null=True)
+    profile = models.ForeignKey(ServerProfile, null=True, on_delete=CASCADE)
 
     def save(self, *args, **kwargs):
         assert self.profile

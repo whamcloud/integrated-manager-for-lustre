@@ -9,7 +9,7 @@ from os import path
 from toolz.functoolz import pipe, partial, flip
 from settings import MAILBOX_PATH
 from django.db import models
-
+from django.db.models import CASCADE
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.models.utils import DeletableMetaclass
@@ -42,7 +42,7 @@ from chroma_core.models import (
 
 
 class StratagemConfiguration(StatefulObject):
-    filesystem = models.ForeignKey("ManagedFilesystem", null=False)
+    filesystem = models.ForeignKey("ManagedFilesystem", null=False, on_delete=CASCADE)
     interval = models.BigIntegerField(
         help_text="Interval value in milliseconds between each stratagem execution", null=False
     )
@@ -178,14 +178,14 @@ class ForgetStratagemConfigurationJob(StateChangeJob):
 
     state_transition = StateChangeJob.StateTransition(StratagemConfiguration, "unconfigured", "removed")
     stateful_object = "stratagem_configuration"
-    stratagem_configuration = models.ForeignKey(StratagemConfiguration)
+    stratagem_configuration = models.ForeignKey(StratagemConfiguration, on_delete=CASCADE)
     state_verb = "Forget"
 
 
 class ConfigureStratagemJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(StratagemConfiguration, "unconfigured", "configured")
     stateful_object = "stratagem_configuration"
-    stratagem_configuration = models.ForeignKey(StratagemConfiguration)
+    stratagem_configuration = models.ForeignKey(StratagemConfiguration, on_delete=CASCADE)
 
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 10
@@ -216,7 +216,7 @@ class ConfigureStratagemJob(StateChangeJob):
 class UnconfigureStratagemJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(StratagemConfiguration, "configured", "unconfigured")
     stateful_object = "stratagem_configuration"
-    stratagem_configuration = models.ForeignKey(StratagemConfiguration)
+    stratagem_configuration = models.ForeignKey(StratagemConfiguration, on_delete=CASCADE)
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 10
 
@@ -253,7 +253,7 @@ class DeleteStratagemStep(Step):
 class RemoveStratagemJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(StratagemConfiguration, "unconfigured", "removed")
     stateful_object = "stratagem_configuration"
-    stratagem_configuration = models.ForeignKey(StratagemConfiguration)
+    stratagem_configuration = models.ForeignKey(StratagemConfiguration, on_delete=CASCADE)
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 10
 
@@ -429,7 +429,7 @@ class ClearOldStratagemDataStep(Step):
 
 
 class RunStratagemJob(Job):
-    filesystem = models.ForeignKey("ManagedFilesystem", null=False)
+    filesystem = models.ForeignKey("ManagedFilesystem", null=False, on_delete=CASCADE)
     mdt_id = models.IntegerField()
     uuid = models.CharField(max_length=64, null=False, default="")
     report_duration = models.BigIntegerField(null=True)
@@ -579,7 +579,7 @@ class SendResultsToClientStep(Step):
 
 
 class SendStratagemResultsToClientJob(Job):
-    filesystem = models.ForeignKey("ManagedFilesystem", null=False)
+    filesystem = models.ForeignKey("ManagedFilesystem", null=False, on_delete=CASCADE)
     uuid = models.CharField(max_length=64, null=False, default="")
     report_duration = models.BigIntegerField(null=True)
     purge_duration = models.BigIntegerField(null=True)

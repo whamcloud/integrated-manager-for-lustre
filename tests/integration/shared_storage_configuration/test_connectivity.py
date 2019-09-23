@@ -1,6 +1,6 @@
 import time
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
-from django.utils.unittest import skip
+from unittest import skip
 from testconfig import config
 
 

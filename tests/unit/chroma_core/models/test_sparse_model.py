@@ -3,7 +3,7 @@
 from django.db import models
 from django.test import TestCase
 from django.db import connection
-from django.utils.unittest import skip
+from unittest import skip
 
 
 from chroma_core.models import SparseModel

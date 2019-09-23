@@ -25,7 +25,7 @@ class Session:
         if settings.ALLOW_ANONYMOUS_READ:
             self.read_enabled = True
         else:
-            self.read_enabled = user != None
+            self.read_enabled = user is not None
 
 
 class SessionValidation(Validation):

@@ -288,7 +288,9 @@ class TestHostResource(ChromaApiTestCase):
 
         for profile in ServerProfile.objects.all():
             for validation in validations:
-                profile.serverprofilevalidation_set.add(ServerProfileValidation(**validation))
+                x = ServerProfileValidation(**validation)
+                profile.serverprofilevalidation_set.add(x, bulk=False)
+                x.save()
 
         response = self.api_client.post(
             self.RESOURCE_PATH,
@@ -402,13 +404,12 @@ class TestHostResource(ChromaApiTestCase):
         # Place the host into the unconfigured state, this is typical of where it will be at this point.
         ManagedHost.objects.filter(id=hosts[0].id).update(state="unconfigured")
 
-        with contextlib.nested(
-            mock.patch(
-                "chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.set_host_profile",
-                new=mock.Mock(side_effect=_mock_jsc_set_host_profile),
-            ),
-            mock.patch("chroma_core.models.Command.set_state", new=mock.Mock(side_effect=_mock_command_set_state)),
-        ) as (shp, ccs):
+        with mock.patch(
+            "chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.set_host_profile",
+            new=mock.Mock(side_effect=_mock_jsc_set_host_profile),
+        ) as shp, mock.patch(
+            "chroma_core.models.Command.set_state", new=mock.Mock(side_effect=_mock_command_set_state)
+        ) as ccs:
 
             response = self.api_client.put(
                 "/api/host_profile/{0}/".format(hosts[0].id), data={"profile": "test_profile"}

@@ -3,15 +3,14 @@
 # license that can be found in the LICENSE file.
 
 
-from django.conf.urls import patterns
+from django.conf.urls import url
 import chroma_agent_comms.views as views
 from django.views.decorators.csrf import csrf_exempt
 
-urlpatterns = patterns(
-    "",
-    (r"^message/$", csrf_exempt(views.MessageView.as_view())),
-    (r"^copytool_event/$", csrf_exempt(views.CopytoolEventView.as_view())),
-    (r"^register/(\w+)/$", views.register),
-    (r"^setup/(\w+)/$", views.setup),
-    (r"^reregister/$", views.reregister),
-)
+urlpatterns = [
+    url(r"^message/$", csrf_exempt(views.MessageView.as_view())),
+    url(r"^copytool_event/$", csrf_exempt(views.CopytoolEventView.as_view())),
+    url(r"^register/(\w+)/$", views.register),
+    url(r"^setup/(\w+)/$", views.setup),
+    url(r"^reregister/$", views.reregister),
+]

@@ -34,7 +34,7 @@ impl SharedOneshotSender {
 }
 
 fn main() {
-    env_logger::builder().default_format_timestamp(false).init();
+    env_logger::builder().format_timestamp(None).init();
 
     // Keep track of all connected users, key is `usize`, value
     // is a event stream sender.

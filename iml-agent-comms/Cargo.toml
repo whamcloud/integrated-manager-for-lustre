@@ -5,10 +5,10 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-env_logger = "0.6"
+env_logger = "0.7"
 failure = "0.1.5"
-futures = "0.1.28"
-iml-wire-types = { path = "../iml-wire-types", version = "0.1" }
+futures = "0.1"
+iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
 iml-rabbit = { path = "../iml-rabbit", version = "0.1.0" }
 iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
 lapin-futures = "0.18.0"

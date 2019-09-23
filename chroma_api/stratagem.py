@@ -8,9 +8,8 @@ import re
 
 from tastypie import fields
 from tastypie.resources import Resource
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 from chroma_api.validation_utils import validate
 from chroma_api.utils import custom_response, dehydrate_command, StatefulModelResource
@@ -250,7 +249,7 @@ class StratagemConfigurationResource(StatefulModelResource):
     class Meta:
         resource_name = "stratagem_configuration"
         queryset = StratagemConfiguration.objects.all()
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         list_allowed_methods = ["get", "post"]
         detail_allowed_methods = ["get", "put", "delete"]
@@ -295,7 +294,7 @@ class RunStratagemResource(Resource):
         list_allowed_methods = ["post"]
         detail_allowed_methods = []
         resource_name = "run_stratagem"
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         object_class = dict
         validation = RunStratagemValidation()

@@ -14,16 +14,24 @@ class LearnEvent(AlertStateBase):
             "learned_item_type",
             int,
             None,
-            lambda self_, value: self_.set_variant("learned_item_type", int, value.id),
+            lambda self_, value: self_.set_variant("learned_item_type", int, value),
             None,
         ),
     ]
 
-    learned_item = VariantGenericForeignKey("learned_item_type", "learned_item_id")
+    @property
+    def learned_item(self):
+        return self.__learned_item
+
+    @learned_item.setter
+    def learned_item(self, x):
+        self.__learned_item = x
+
+    __learned_item = VariantGenericForeignKey("learned_item_type", "learned_item_id")
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     @staticmethod
     def type_name():
@@ -45,7 +53,7 @@ class LearnEvent(AlertStateBase):
 class AlertEvent(AlertStateBase):
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     variant_fields = [
         VariantDescriptor("message_str", str, None, None, ""),
@@ -71,7 +79,7 @@ class SyslogEvent(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     @staticmethod
     def type_name():
@@ -84,7 +92,7 @@ class SyslogEvent(AlertStateBase):
 class ClientConnectEvent(AlertStateBase):
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     variant_fields = [VariantDescriptor("message_str", str, None, None, "")]
 

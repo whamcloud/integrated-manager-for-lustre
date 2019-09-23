@@ -1,5 +1,5 @@
 from testconfig import config
-from django.utils.unittest import skipIf
+from unittest import skipIf
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 

@@ -6,7 +6,7 @@
 import logging
 
 from django.db import models
-
+from django.db.models import CASCADE
 from chroma_core.models import AlertStateBase
 from chroma_core.models import AlertEvent
 from chroma_core.models import DeletableStatefulObject
@@ -22,7 +22,7 @@ class PacemakerConfiguration(DeletableStatefulObject):
     states = ["unconfigured", "stopped", "started"]
     initial_state = "unconfigured"
 
-    host = models.OneToOneField("ManagedHost", related_name="_pacemaker_configuration")
+    host = models.OneToOneField("ManagedHost", related_name="_pacemaker_configuration", on_delete=CASCADE)
 
     def __str__(self):
         return "%s Pacemaker configuration" % self.host
@@ -69,7 +69,7 @@ class StonithNotEnabledAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     def alert_message(self):
         return help_text["stonith_not_enabled"] % self.alert_item
@@ -102,7 +102,7 @@ class PacemakerStoppedAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     def end_event(self):
         return AlertEvent(
@@ -131,7 +131,7 @@ class ConfigurePacemakerStep(Step):
 class ConfigurePacemakerJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(PacemakerConfiguration, "unconfigured", "stopped")
     stateful_object = "pacemaker_configuration"
-    pacemaker_configuration = models.ForeignKey(PacemakerConfiguration)
+    pacemaker_configuration = models.ForeignKey(PacemakerConfiguration, on_delete=CASCADE)
     state_verb = "Configure Pacemaker"
 
     display_group = Job.JOB_GROUPS.COMMON
@@ -186,7 +186,7 @@ class UnconfigurePacemakerStep(Step):
 class UnconfigurePacemakerJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(PacemakerConfiguration, "stopped", "unconfigured")
     stateful_object = "pacemaker_configuration"
-    pacemaker_configuration = models.ForeignKey(PacemakerConfiguration)
+    pacemaker_configuration = models.ForeignKey(PacemakerConfiguration, on_delete=CASCADE)
     state_verb = "Unconfigure Pacemaker"
 
     display_group = Job.JOB_GROUPS.COMMON
@@ -263,7 +263,7 @@ class StartPacemakerStep(Step):
 class StartPacemakerJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(PacemakerConfiguration, "stopped", "started")
     stateful_object = "pacemaker_configuration"
-    pacemaker_configuration = models.ForeignKey(PacemakerConfiguration)
+    pacemaker_configuration = models.ForeignKey(PacemakerConfiguration, on_delete=CASCADE)
     state_verb = "Start Pacemaker"
 
     display_group = Job.JOB_GROUPS.COMMON
@@ -301,7 +301,7 @@ class StopPacemakerStep(Step):
 class StopPacemakerJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(PacemakerConfiguration, "started", "stopped")
     stateful_object = "pacemaker_configuration"
-    pacemaker_configuration = models.ForeignKey(PacemakerConfiguration)
+    pacemaker_configuration = models.ForeignKey(PacemakerConfiguration, on_delete=CASCADE)
     state_verb = "Stop Pacemaker"
 
     display_group = Job.JOB_GROUPS.RARE
@@ -345,7 +345,7 @@ class GetPacemakerStateStep(Step):
 
 
 class GetPacemakerStateJob(Job):
-    pacemaker_configuration = models.ForeignKey(PacemakerConfiguration)
+    pacemaker_configuration = models.ForeignKey(PacemakerConfiguration, on_delete=CASCADE)
     requires_confirmation = False
     verb = "Get Pacemaker state"
 
@@ -372,7 +372,7 @@ class GetPacemakerStateJob(Job):
 
 
 class ConfigureHostFencingJob(Job):
-    host = models.ForeignKey("ManagedHost")
+    host = models.ForeignKey("ManagedHost", on_delete=CASCADE)
     requires_confirmation = False
     verb = "Configure Host Fencing"
 

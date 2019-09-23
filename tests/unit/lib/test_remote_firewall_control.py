@@ -1,4 +1,4 @@
-from django.utils import unittest
+import unittest
 import mock
 
 from tests.utils.remote_firewall_control import RemoteFirewallControl

@@ -11,7 +11,7 @@
       "outlet_query_template":
         "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o status -n %(identifier)s",
       "default_username": "@VMHOST_ACCOUNT@",
-      "default_password": "",
+      "default_password": "lustre",
       "model": "Virtual PDU",
       "powercycle_template":
         "%(agent)s %(options)s  -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o reboot -n %(identifier)s",

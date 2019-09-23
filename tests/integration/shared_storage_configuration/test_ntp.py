@@ -2,7 +2,7 @@ import datetime
 
 
 from testconfig import config
-from django.utils.unittest.case import skip
+from unittest.case import skip
 
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 

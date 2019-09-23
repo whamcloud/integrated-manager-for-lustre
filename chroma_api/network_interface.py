@@ -3,12 +3,11 @@
 # license that can be found in the LICENSE file.
 
 from tastypie import fields
-from tastypie.authorization import DjangoAuthorization
 from tastypie.constants import ALL_WITH_RELATIONS
 
 from chroma_core.models import NetworkInterface
 from chroma_core.services import log_register
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.chroma_model_resource import ChromaModelResource
 
 log = log_register(__name__)
@@ -34,7 +33,7 @@ class NetworkInterfaceResource(ChromaModelResource):
 
     class Meta:
         queryset = NetworkInterface.objects.select_related("host", "nid").all()
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         resource_name = "network_interface"
         list_allowed_methods = ["get"]

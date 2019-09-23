@@ -2,6 +2,10 @@ from chroma_core.lib.util import chroma_settings
 
 settings = chroma_settings()
 
+import django
+
+django.setup()
+
 import time
 
 from collections import namedtuple

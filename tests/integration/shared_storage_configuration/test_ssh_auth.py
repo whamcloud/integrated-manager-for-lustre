@@ -1,5 +1,5 @@
 import logging
-from django.utils.unittest import skipIf
+from unittest import skipIf
 
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase

@@ -41,7 +41,7 @@ pub enum App {
 }
 
 fn main() {
-    env_logger::builder().default_format_timestamp(false).init();
+    env_logger::builder().format_timestamp(None).init();
 
     dotenv::from_path("/var/lib/chroma/iml-settings.conf").expect("Could not load cli env");
 

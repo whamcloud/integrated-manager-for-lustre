@@ -11,8 +11,7 @@ from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
 
-from tastypie.authorization import DjangoAuthorization
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from tastypie import fields
 from chroma_core.lib.storage_plugin.query import ResourceQuery
 from chroma_api.utils import MetricResource
@@ -278,7 +277,7 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
         queryset = StorageResourceRecord.objects.filter(resource_class__id__in=filter_class_ids())
         resource_name = "storage_resource"
         filtering = {"class_name": ["exact"], "plugin_name": ["exact"]}
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         always_return_data = True
         validation = StorageResourceValidation()
