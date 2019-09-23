@@ -30,8 +30,7 @@ class TestTransitionsWithCommands(JobTestCaseWithHost):
 
         # This tests a state transition which is done by a single job
         command_id = JobSchedulerClient.command_run_jobs(
-            [{"class_name": "UpdateDevicesJob", "args": {"hosts": [api.get_resource_uri(self.host)]}}],
-            "Test single job action",
+            [{"class_name": "UpdateDevicesJob", "args": {}}], "Test single job action"
         )
         self.drain_progress()
 

@@ -6,15 +6,14 @@
 import django.contrib.auth.models
 from django.contrib.contenttypes.models import ContentType
 import django.contrib.auth as auth
-from south.signals import post_migrate
 
 import chroma_core.models
 
 import settings
 
 
-def setup_groups(app, **kwargs):
-    if app != "chroma_core":
+def setup_groups(sender, **kwargs):
+    if sender.name != "chroma_core":
         return
 
     if auth.models.Group.objects.count() == 0:
@@ -68,5 +67,3 @@ def setup_groups(app, **kwargs):
 # before our hook, so that Permission objects will be there
 # by the time we are called.
 import django.contrib.auth.management
-
-post_migrate.connect(setup_groups)

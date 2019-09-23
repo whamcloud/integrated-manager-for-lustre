@@ -7,7 +7,7 @@ import json
 import logging
 
 from django.db import models
-
+from django.db.models import CASCADE
 from django.core.exceptions import ObjectDoesNotExist
 
 from chroma_core.models import AlertStateBase
@@ -26,7 +26,7 @@ class LNetConfiguration(DeletableStatefulObject):
     states = ["unconfigured", "lnet_unloaded", "lnet_down", "lnet_up"]
     initial_state = "unconfigured"
 
-    host = models.OneToOneField("ManagedHost", related_name="lnet_configuration")
+    host = models.OneToOneField("ManagedHost", related_name="lnet_configuration", on_delete=CASCADE)
 
     def get_nids(self):
         return [n.nid_string for n in self.nid_set.all()]
@@ -85,7 +85,7 @@ class LNetOfflineAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     def end_event(self):
         return AlertEvent(
@@ -115,7 +115,7 @@ class LNetNidsChangedAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     def end_event(self):
         return AlertEvent(
@@ -203,7 +203,7 @@ class ConfigureLNetStep(Step):
 
 
 class ConfigureLNetJob(Job):
-    lnet_configuration = models.ForeignKey(LNetConfiguration)
+    lnet_configuration = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     config_changes = models.CharField(max_length=4096, help_text="A json string describing the configuration changes")
     requires_confirmation = False
     state_verb = "Configure LNet"
@@ -254,7 +254,7 @@ class UnconfigureLNetStep(Step):
 
 
 class UnconfigureLNetJob(NullStateChangeJob):
-    target_object = models.ForeignKey(LNetConfiguration)
+    target_object = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, "lnet_unloaded", "unconfigured")
 
     class Meta:
@@ -276,7 +276,7 @@ class UnconfigureLNetJob(NullStateChangeJob):
 
 
 class EnableLNetJob(NullStateChangeJob):
-    target_object = models.ForeignKey(LNetConfiguration)
+    target_object = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, "unconfigured", "lnet_unloaded")
 
     class Meta:
@@ -317,7 +317,7 @@ class LoadLNetStep(Step):
 class LoadLNetJob(LNetStateChangeJob):
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, "lnet_unloaded", "lnet_down")
     stateful_object = "lnet_configuration"
-    lnet_configuration = models.ForeignKey(LNetConfiguration)
+    lnet_configuration = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     state_verb = "Load LNet"
 
     display_group = Job.JOB_GROUPS.COMMON
@@ -356,7 +356,7 @@ class StartLNetStep(Step):
 class StartLNetJob(LNetStateChangeJob):
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, "lnet_down", "lnet_up")
     stateful_object = "lnet_configuration"
-    lnet_configuration = models.ForeignKey(LNetConfiguration)
+    lnet_configuration = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     state_verb = "Start LNet"
 
     display_group = Job.JOB_GROUPS.COMMON
@@ -395,7 +395,7 @@ class StopLNetStep(Step):
 class StopLNetJob(LNetStateChangeJob):
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, "lnet_up", "lnet_down")
     stateful_object = "lnet_configuration"
-    lnet_configuration = models.ForeignKey(LNetConfiguration)
+    lnet_configuration = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     state_verb = "Stop LNet"
 
     display_group = Job.JOB_GROUPS.RARE
@@ -434,7 +434,7 @@ class UnloadLNetStep(Step):
 class UnloadLNetJob(LNetStateChangeJob):
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, "lnet_down", "lnet_unloaded")
     stateful_object = "lnet_configuration"
-    lnet_configuration = models.ForeignKey(LNetConfiguration)
+    lnet_configuration = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     state_verb = "Unload LNet"
 
     display_group = Job.JOB_GROUPS.RARE
@@ -490,7 +490,7 @@ class GetLNetStateJob(Job):
     for something else.
     """
 
-    host = models.ForeignKey("ManagedHost")
+    host = models.ForeignKey("ManagedHost", on_delete=CASCADE)
 
     class Meta:
         app_label = "chroma_core"

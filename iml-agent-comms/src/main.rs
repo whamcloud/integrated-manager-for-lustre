@@ -140,7 +140,7 @@ pub fn create_client_filter() -> (
 }
 
 fn main() {
-    env_logger::builder().default_format_timestamp(false).init();
+    env_logger::builder().format_timestamp(None).init();
 
     // Handle an error in locks by shutting down
     let (tx, rx) = oneshot::channel();

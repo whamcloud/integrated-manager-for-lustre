@@ -10,8 +10,9 @@ import operator
 import functools
 from datetime import datetime, timedelta
 from django.db import models
+from django.db.models import CASCADE
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes import generic
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.utils.timezone import utc
 from chroma_core.lib.util import chroma_settings
 
@@ -93,11 +94,11 @@ class Series(models.Model):
 
     DATA_TYPES = "Gauge", "Counter", "Derive"
     JOB_TYPES = "SLURM_JOB_ID", "JOB_ID", "LSB_JOBID", "LOADL_STEP_ID", "PBS_JOBID", "procname_uid"
-    content_type = models.ForeignKey(ContentType)
+    content_type = models.ForeignKey(ContentType, on_delete=CASCADE)
     object_id = models.PositiveIntegerField()
     name = models.CharField(max_length=255)
     type = models.CharField(max_length=30)
-    content_object = generic.GenericForeignKey("content_type", "object_id")
+    content_object = GenericForeignKey("content_type", "object_id")
 
     class Meta:
         app_label = "chroma_core"
@@ -190,10 +191,9 @@ class Sample(models.Model):
 
     @classmethod
     def delete(cls, **filters):
-        "Delete points in bulk."
+        "Delete points using minimal SQL statements"
         query = cls.objects.filter(**filters)
-        # QuerySet.delete doesn't delete in bulk, documentation notwithstanding
-        models.sql.DeleteQuery(cls).do_query(cls._meta.db_table, query.query.where, query.db)
+        models.sql.DeleteQuery(cls).delete_qs(query, query.db)
 
     @classmethod
     def expire(cls, ids):

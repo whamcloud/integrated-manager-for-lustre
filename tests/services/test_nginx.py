@@ -44,8 +44,8 @@ class TestInsecureUrls(NginxTestCase):
     def test_missing_slash(self):
         """Test rewriting of HTTP redirects is happening (ProxyPassReverse)"""
 
-        without_slash = "https://localhost/api/session"
-        response = requests.get(without_slash, verify=False, allow_redirects=False)
+        without_slash = "/api/session"
+        response = requests.get("https://localhost{}".format(without_slash), verify=False, allow_redirects=False)
         self.assertEqual(response.status_code, 301)
         self.assertEqual(response.headers["location"], without_slash + "/")
 

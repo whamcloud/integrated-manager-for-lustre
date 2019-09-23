@@ -33,8 +33,7 @@ from chroma_api.utils import (
     dehydrate_command,
     BulkResourceOperation,
 )
-from tastypie.authorization import DjangoAuthorization
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.authentication import PermissionAuthorization
 from iml_common.lib.evaluator import safe_eval
 from chroma_api.utils import filter_fields_to_type
@@ -123,7 +122,7 @@ class ServerProfileResource(ChromaModelResource):
         queryset = ServerProfile.objects.all()
         resource_name = "server_profile"
         authentication = AnonymousAuthentication()
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         ordering = ["managed", "default"]
         list_allowed_methods = ["get"]
         readonly = ["ui_name", "repolist"]
@@ -147,7 +146,7 @@ class ClientMountResource(ChromaModelResource):
         queryset = LustreClientMount.objects.all()
         resource_name = "client_mount"
         authentication = AnonymousAuthentication()
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         list_allowed_methods = ["get", "post"]
 
         filtering = {"host": ["exact"], "filesystem": ["exact"]}
@@ -222,7 +221,7 @@ class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation)
         resource_name = "host"
         excludes = ["not_deleted"]
         authentication = AnonymousAuthentication()
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         ordering = ["fqdn"]
         list_allowed_methods = ["get", "post", "put"]
         detail_allowed_methods = ["get", "put", "delete"]
@@ -432,7 +431,7 @@ class HostProfileResource(Resource, BulkResourceOperation):
         detail_allowed_methods = ["get", "put"]
         resource_name = "host_profile"
         authentication = AnonymousAuthentication()
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         object_class = dict
 
     def get_resource_uri(self, bundle_or_obj=None):

@@ -25,9 +25,7 @@ class TestRelated(TestCase):
         dehydrate_related(self.mock_related_field, self.mock_bundle, self.mock_related_resource)
 
         self.mock_related_resource.build_bundle.assert_called_once_with(
-            obj=self.mock_related_resource.instance,
-            request=self.mock_bundle.request,
-            objects_saved=self.mock_bundle.objects_saved,
+            obj=self.mock_bundle.obj, request=self.mock_bundle.request, objects_saved=self.mock_bundle.objects_saved
         )
         self.mock_related_resource.full_dehydrate.assert_called_once_with(self.mock_related_bundle)
         self.assertEqual(self.mock_related_resource.get_resource_uri.call_count, 0)
@@ -44,9 +42,7 @@ class TestRelated(TestCase):
         dehydrate_related(self.mock_related_field, self.mock_bundle, self.mock_related_resource)
 
         self.mock_related_resource.build_bundle.assert_called_once_with(
-            obj=self.mock_related_resource.instance,
-            request=self.mock_bundle.request,
-            objects_saved=self.mock_bundle.objects_saved,
+            obj=self.mock_bundle.obj, request=self.mock_bundle.request, objects_saved=self.mock_bundle.objects_saved
         )
         self.mock_related_resource.full_dehydrate.assert_called_once_with(self.mock_related_bundle)
         self.assertEqual(self.mock_related_resource.get_resource_uri.call_count, 0)

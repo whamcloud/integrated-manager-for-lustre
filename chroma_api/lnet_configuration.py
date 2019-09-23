@@ -5,7 +5,6 @@
 from django.core.exceptions import ObjectDoesNotExist
 import tastypie.http as http
 from tastypie import fields
-from tastypie.authorization import DjangoAuthorization
 from tastypie.constants import ALL_WITH_RELATIONS
 
 from chroma_core.models import LNetConfiguration
@@ -16,7 +15,7 @@ from chroma_core.services import log_register
 from chroma_api.utils import dehydrate_command
 from chroma_api.utils import custom_response, StatefulModelResource
 from chroma_api.validation_utils import validate
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_core.models import Command
 
 log = log_register(__name__)
@@ -44,7 +43,7 @@ class LNetConfigurationResource(StatefulModelResource):
 
     class Meta:
         queryset = LNetConfiguration.objects.all()
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         resource_name = "lnet_configuration"
         list_allowed_methods = ["get", "put"]

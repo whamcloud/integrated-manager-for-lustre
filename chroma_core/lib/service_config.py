@@ -28,6 +28,10 @@ from chroma_core.lib.util import chroma_settings
 
 settings = chroma_settings()
 
+import django
+
+django.setup()
+
 from django.contrib.auth.models import User, Group
 from django.core.management import ManagementUtility
 from django.contrib.sessions.models import Session
@@ -141,10 +145,12 @@ class ServiceConfig(CommandLine):
         if not self._db_accessible():
             return False
         try:
-            from south.models import MigrationHistory
+            from django.db import connection
+            from django.db.migrations.loader import MigrationLoader
 
-            MigrationHistory.objects.count()
-            return True
+            loader = MigrationLoader(connection, ignore_no_migrations=True)
+            loader.build_graph()
+            return len(loader.applied_migrations) > 0
         except DatabaseError:
             from django.db import connection
 
@@ -157,18 +163,12 @@ class ServiceConfig(CommandLine):
         if not self._db_populated():
             return False
 
-        from south.models import MigrationHistory
+        from django.db import connection
+        from django.db.migrations.executor import MigrationExecutor
 
-        applied_migrations = MigrationHistory.objects.all().values("app_name", "migration")
-        applied_migrations = [(mh["app_name"], mh["migration"]) for mh in applied_migrations]
-
-        from south import migration
-
-        for app_migrations in list(migration.all_migrations()):
-            for m in app_migrations:
-                if (m.app_label(), m.name()) not in applied_migrations:
-                    return False
-        return True
+        executor = MigrationExecutor(connection)
+        targets = executor.loader.graph.leaf_nodes()
+        return not executor.migration_plan(targets)
 
     def _users_exist(self):
         """Discover whether any users exist in the database"""
@@ -566,7 +566,7 @@ class ServiceConfig(CommandLine):
     def _syncdb(self):
         if not self._db_current():
             log.info("Creating database tables...")
-            args = ["", "syncdb", "--noinput", "--migrate"]
+            args = ["", "migrate", "--noinput"]
             if not self.verbose:
                 args = args + ["--verbosity", "0"]
             ManagementUtility(args).execute()
@@ -929,7 +929,9 @@ def register_profile(profile_file):
 
     profile.serverprofilevalidation_set.all().delete()
     for validation in data["validation"]:
-        profile.serverprofilevalidation_set.add(ServerProfileValidation(**validation))
+        profile_validation = ServerProfileValidation(**validation)
+        profile.serverprofilevalidation_set.add(profile_validation, bulk=False)
+        profile_validation.save()
 
 
 def delete_profile(name):

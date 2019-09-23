@@ -7,17 +7,16 @@ from collections import defaultdict
 import copy
 import re
 
-from django.core.urlresolvers import resolve
+from django.urls import resolve
 from tastypie import fields
 import tastypie.http as http
 from tastypie.validation import Validation
-from tastypie.authorization import DjangoAuthorization
 
 from chroma_core.models import Copytool, CopytoolOperation, ManagedHost, ManagedFilesystem
 from chroma_core.models.copytool import resolve_key
 from chroma_api.utils import StatefulModelResource, MetricResource, custom_response
 from chroma_api.validation_utils import validate
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.host import HostResource
 from chroma_api.filesystem import FilesystemResource
 from chroma_core.services import log_register
@@ -57,7 +56,7 @@ class CopytoolOperationResource(ChromaModelResource):
     def dehydrate_type(self, bundle):
         return resolve_key("type", bundle.obj.type)
 
-    def build_filters(self, filters=None):
+    def build_filters(self, filters=None, **kwargs):
         if filters is None:
             filters = {}
 
@@ -75,7 +74,7 @@ class CopytoolOperationResource(ChromaModelResource):
         queryset = CopytoolOperation.objects.select_related().all()
         resource_name = "copytool_operation"
         excludes = ["not_deleted"]
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         list_allowed_methods = ["get"]
         detail_allowed_methods = ["get"]
@@ -171,7 +170,7 @@ class CopytoolResource(StatefulModelResource, MetricResource):
         queryset = Copytool.objects.select_related().all()
         resource_name = "copytool"
         excludes = ["not_deleted"]
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         validation = CopytoolValidation()
         list_allowed_methods = ["get", "post"]

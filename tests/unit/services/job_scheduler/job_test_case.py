@@ -86,6 +86,10 @@ class JobTestCase(IMLUnitTestCase):
                 continue
             self.job_scheduler.progress._handle(msg)
 
+    @classmethod
+    def setUpTestData(cls):
+        load_default_profile()
+
     def setUp(self):
         super(JobTestCase, self).setUp()
 
@@ -231,8 +235,6 @@ class JobTestCase(IMLUnitTestCase):
 
         AgentDaemonRpcInterface.remove_host_resources = mock.Mock(side_effect=fake_remove_host_resources)
 
-        load_default_profile()
-
     def tearDown(self):
         import chroma_core.services.job_scheduler.agent_rpc
 
@@ -270,13 +272,20 @@ class JobTestCaseWithHost(JobTestCase):
         }
     }
 
+    @classmethod
+    def setUpTestData(cls):
+        super(JobTestCaseWithHost, cls).setUpTestData()
+
+        cls.hosts = []
+        for address, info in cls.mock_servers.items():
+            host = synthetic_host(address=address, fqdn=info["fqdn"], nids=info["nids"], nodename=info["nodename"])
+            cls.hosts.append(host)
+
     def setUp(self):
         super(JobTestCaseWithHost, self).setUp()
 
-        self.hosts = []
-        for address, info in self.mock_servers.items():
-            host = synthetic_host(address=address, fqdn=info["fqdn"], nids=info["nids"], nodename=info["nodename"])
-            self.hosts.append(host)
+        for host in self.hosts:
+            host.refresh_from_db()
 
         # Handy if you're only using one
         self.host = self.hosts[0]

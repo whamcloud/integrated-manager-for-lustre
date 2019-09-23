@@ -821,7 +821,7 @@ mod tests {
             id: 10,
             immutable_state: false,
             index: Some(0),
-            inode_count: Some("2621440".into()),
+            inode_count: Some(2621440),
             inode_size: Some(9999999),
             kind: "MDT".into(),
             label: "fs-MDT0000".into(),

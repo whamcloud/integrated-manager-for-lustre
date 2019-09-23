@@ -17,7 +17,7 @@ use std::{fs, path::PathBuf, sync::Arc};
 use warp::Filter as _;
 
 fn main() {
-    env_logger::builder().default_format_timestamp(false).init();
+    env_logger::builder().format_timestamp(None).init();
 
     let addr = iml_manager_env::get_mailbox_addr();
     let mailbox_path = iml_manager_env::get_mailbox_path();

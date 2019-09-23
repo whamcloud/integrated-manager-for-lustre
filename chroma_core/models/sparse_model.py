@@ -6,8 +6,7 @@
 import json
 
 from django.db import models
-from django.contrib.contenttypes.generic import GenericForeignKey
-
+from django.contrib.contenttypes.fields import GenericForeignKey
 import chroma_core.models
 
 

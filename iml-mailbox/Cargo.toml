@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 bytes = "0.4"
-env_logger = "0.6"
+env_logger = "0.7"
 futures = "0.1"
 log = "0.4"
 iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }

@@ -31,8 +31,8 @@ class Service(ChromaService):
     def insert(self, samples):
         try:
             outdated = Stats.insert((id, dateparse.parse_datetime(dt), value) for id, dt, value in samples)
-        except db.IntegrityError:
-            log.error("Duplicate stats insert: " + db.connection.queries[-1]["sql"])
+        except db.IntegrityError as e:
+            log.error("Duplicate stats insert: " + db.connection.queries[-1]["sql"] + " " + e.message)
             db.transaction.rollback()  # allow future stats to still work
         except:
             log.error("Error handling stats insert: " + traceback.format_exc())

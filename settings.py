@@ -17,7 +17,6 @@ if sys.version_info < (2, 6, 5):
     raise EnvironmentError("Python >= 2.6.5 is required")
 
 DEBUG = False
-TEMPLATE_DEBUG = DEBUG
 
 APP_PATH = "/usr/share/chroma-manager"
 
@@ -150,20 +149,24 @@ STATICFILES_FINDERS = (
 # Make this unique, and don't share it with anybody.
 SECRET_KEY = "(rpb*-5f69cv=zc#$-bed7^_&8f)ve4dt4chacg$r^89)+%2i*"
 
-# List of callables that know how to import templates from various sources.
-TEMPLATE_LOADERS = ("django.template.loaders.filesystem.Loader", "django.template.loaders.app_directories.Loader")
-
-from django.conf import global_settings
-
-TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + ("django.core.context_processors.request",)
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "debug": DEBUG,
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.template.context_processors.tz",
+            ],
+        },
+    }
+]
 
 ROOT_URLCONF = "urls"
-
-TEMPLATE_DIRS = (
-    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
-)
 
 AMQP_BROKER_USER = "chroma"
 AMQP_BROKER_PASSWORD = "chroma123"
@@ -181,14 +184,13 @@ INSTALLED_APPS = (
     "django.contrib.sessions",
     "django.contrib.sites",
     "django.contrib.staticfiles",
-    "south",
     "tastypie",
-    "chroma_core",
+    "chroma_core.app.ChromaCoreAppConfig",
     "chroma_api",
     "chroma_help",
 )
 
-OPTIONAL_APPS = ["django_extensions", "django_coverage", "django_nose", "benchmark"]
+OPTIONAL_APPS = ["django_coverage", "django_nose"]
 for app in OPTIONAL_APPS:
     import imp
 
@@ -200,27 +202,17 @@ for app in OPTIONAL_APPS:
 
 if "django_nose" in INSTALLED_APPS:
     TEST_RUNNER = "django_nose.NoseTestSuiteRunner"
-    NOSE_ARGS = ["--logging-filter=-south"]
+    NOSE_ARGS = []
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-)
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
 
-
-# A sample logging configuration. The only tangible logging
-# performed by this configuration is to send an email to
-# the site admins on every HTTP 500 error.
-# See http://docs.djangoproject.com/en/dev/topics/logging for
-# more details on how to customize your logging configuration.
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {"mail_admins": {"level": "ERROR", "class": "django.utils.log.AdminEmailHandler"}},
-    "loggers": {"django.request": {"handlers": ["mail_admins"], "level": "ERROR", "propagate": True}},
-}
 
 # Periods given in seconds
 PLUGIN_DEFAULT_UPDATE_PERIOD = 5
@@ -239,6 +231,32 @@ LUSTRE_MKFS_OPTIONS_MGS = None
 JOURNAL_SIZE = "2048"
 
 LOG_PATH = os.getenv("LOG_PATH", "/var/log/chroma")
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "require_debug_false": {"()": "django.utils.log.RequireDebugFalse"},
+        "require_debug_true": {"()": "django.utils.log.RequireDebugTrue"},
+    },
+    "formatters": {
+        "django.server": {"()": "django.utils.log.ServerFormatter", "format": "[%(server_time)s] %(message)s"}
+    },
+    "handlers": {
+        "console": {"level": "INFO", "filters": ["require_debug_true"], "class": "logging.StreamHandler"},
+        "console_debug_false": {"level": "ERROR", "filters": ["require_debug_false"], "class": "logging.StreamHandler"},
+        "django.server": {"level": "INFO", "class": "logging.StreamHandler", "formatter": "django.server"},
+        "mail_admins": {
+            "level": "ERROR",
+            "filters": ["require_debug_false"],
+            "class": "django.utils.log.AdminEmailHandler",
+        },
+    },
+    "loggers": {
+        "django": {"handlers": ["console", "console_debug_false", "mail_admins"], "level": "INFO"},
+        "django.server": {"handlers": ["django.server"], "level": "INFO", "propagate": False},
+    },
+}
 
 CRYPTO_FOLDER = "/var/lib/chroma"
 
@@ -337,6 +355,9 @@ AGENT_RESTART_TIMEOUT = 30
 SSH_CONFIG = None
 
 TASTYPIE_DEFAULT_FORMATS = ["json"]
+
+SILENCED_SYSTEM_CHECKS = ["contenttypes.E001", "contenttypes.E002"]
+
 
 LOCAL_SETTINGS_FILE = "local_settings.py"
 

@@ -1,4 +1,4 @@
-from django.utils.unittest import TestCase
+from unittest import TestCase
 import os
 import tempfile
 import shutil

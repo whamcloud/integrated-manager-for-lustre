@@ -62,7 +62,11 @@ def patch_test_host_contact_task(context, result_attrs={}):
 def before_all(context):
     chroma_settings()
 
-    ### Take a TestRunner hostage.
+    import django
+
+    django.setup()
+
+    # Take a TestRunner hostage.
     # Use django_nose's runner so that we can take advantage of REUSE_DB=1.
     from django_nose import NoseTestSuiteRunner
 
@@ -70,12 +74,6 @@ def before_all(context):
     # of setting up and tearing down the test environment, including
     # test databases.
     context.runner = NoseTestSuiteRunner()
-
-    # If you use South for migrations, uncomment this to monkeypatch
-    # syncdb to get migrations to run.
-    from south.management.commands import patch_for_test_db_setup
-
-    patch_for_test_db_setup()
 
 
 def before_feature(context, feature):
@@ -196,15 +194,6 @@ def after_feature(context, feature):
 
     context.runner.teardown_databases(context.old_db_config)
     context.runner.teardown_test_environment()
-
-    # As of Django 1.4, teardown_databases() no longer restores the
-    # original db name in the connection's settings dict.  The reasoning
-    # is documented in https://code.djangoproject.com/ticket/10868, and
-    # their concerns are understandable.  In our case, however, we're not
-    # going on to do anything here which might affect the production DB.
-    # Therefore, the following hack restores pre-1.4 behavior:
-    for connection, old_name, destroy in context.old_db_config[0]:
-        connection.settings_dict["NAME"] = old_name
 
     from chroma_cli.api import ApiHandle
 

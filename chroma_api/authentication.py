@@ -8,7 +8,8 @@ import settings
 from tastypie.http import HttpUnauthorized
 
 from tastypie.authentication import Authentication, ApiKeyAuthentication
-from tastypie.authorization import Authorization
+from tastypie.authorization import Authorization, DjangoAuthorization
+from tastypie.exceptions import Unauthorized
 from django.utils.crypto import constant_time_compare
 
 
@@ -90,3 +91,32 @@ class PermissionAuthorization(Authorization):
 
     def is_authorized(self, request, object=None):
         return request.user.has_perm(self.perm_name)
+
+
+# Django makes the strange assumption in 1.x to only have three default permissions,
+# add, change, delete
+# of note, there is no view permission, so users can only
+# edit / read, or nothing.
+# We could add a view permission, but it's already present in 2.0 and
+# would likely cause upgrade isssues. Instead, we will patch
+# the DjangoAuthorization to work like it did in tastypie 0.12.x.
+# When we upgrade to django 2 and a compatible tastypie, we can remove this
+# patched auth and revert back to the base version.
+class PatchedDjangoAuthorization(DjangoAuthorization):
+    def read_list(self, object_list, bundle):
+        klass = self.base_checks(bundle.request, object_list.model)
+
+        if klass is False:
+            return []
+
+        # GET-style methods are always allowed.
+        return object_list
+
+    def read_detail(self, object_list, bundle):
+        klass = self.base_checks(bundle.request, bundle.obj.__class__)
+
+        if klass is False:
+            raise Unauthorized("You are not allowed to access that resource.")
+
+        # GET-style methods are always allowed.
+        return True

@@ -3,7 +3,7 @@ import packaging.version
 
 from testconfig import config
 
-from django.utils.unittest import skip
+from unittest import skip
 
 from tests.integration.core.constants import UPDATE_TEST_TIMEOUT
 from tests.integration.installation_and_upgrade.test_installation_and_upgrade import TestInstallationAndUpgrade

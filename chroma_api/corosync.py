@@ -4,10 +4,9 @@
 
 
 from tastypie import fields
-from tastypie.authorization import DjangoAuthorization
 from tastypie.constants import ALL_WITH_RELATIONS
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from django.core.urlresolvers import resolve
+from django.urls import resolve
 
 
 from chroma_core.models import CorosyncConfiguration
@@ -16,7 +15,7 @@ from chroma_api.utils import StatefulModelResource
 from chroma_api.utils import BulkResourceOperation
 from chroma_api.utils import dehydrate_command
 from chroma_api.validation_utils import validate
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 
 log = log_register(__name__)
 
@@ -46,7 +45,7 @@ class CorosyncConfigurationResource(StatefulModelResource, BulkResourceOperation
 
     class Meta:
         queryset = CorosyncConfiguration.objects.all()
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         resource_name = "corosync_configuration"
         list_allowed_methods = ["get", "put"]

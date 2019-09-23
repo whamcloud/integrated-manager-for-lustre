@@ -8,6 +8,7 @@ import uuid
 from collections import namedtuple
 
 from django.db import models
+from django.db.models import CASCADE
 from django.utils.timezone import now as tznow
 
 from chroma_core.services import log_register
@@ -70,7 +71,7 @@ class CopytoolOperation(models.Model):
     )
     state = models.SmallIntegerField(choices=STATE_CHOICES, default=OP_STATES.UNKNOWN)
     type = models.SmallIntegerField(choices=TYPE_CHOICES, default=OP_TYPES.UNKNOWN)
-    copytool = models.ForeignKey("Copytool", related_name="operations")
+    copytool = models.ForeignKey("Copytool", related_name="operations", on_delete=CASCADE)
     started_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
@@ -150,13 +151,13 @@ class Copytool(StatefulObject, MeasuredEntity):
     # ulimit -s size, and hence os.sysconf('SC_ARG_MAX') is always viable.
     HSM_ARGUMENT_MAX_SIZE_FOR_COPYTOOL = 131072  # characters
 
-    host = models.ForeignKey("ManagedHost", related_name="copytools")
+    host = models.ForeignKey("ManagedHost", related_name="copytools", on_delete=CASCADE)
     index = models.IntegerField(
         default=0, help_text="Instance index, used to uniquely identify per-host path-filesystem-archive instances"
     )
     bin_path = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="Path to copytool binary on HSM worker node")
     archive = models.IntegerField(default=1, help_text="HSM archive number")
-    filesystem = models.ForeignKey("ManagedFilesystem")
+    filesystem = models.ForeignKey("ManagedFilesystem", on_delete=CASCADE)
     mountpoint = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, help_text="Lustre mountpoint on HSM worker node", default="/mnt/lustre"
     )
@@ -168,7 +169,9 @@ class Copytool(StatefulObject, MeasuredEntity):
         max_length=len("%s" % uuid.uuid4()), null=True, blank=True, help_text="UUID as assigned by cdt"
     )
     pid = models.IntegerField(null=True, blank=True, help_text="Current PID, if known")
-    client_mount = models.ForeignKey("LustreClientMount", null=True, blank=True, related_name="copytools")
+    client_mount = models.ForeignKey(
+        "LustreClientMount", null=True, blank=True, related_name="copytools", on_delete=CASCADE
+    )
 
     states = ["unconfigured", "stopped", "started", "removed"]
     initial_state = "unconfigured"
@@ -251,7 +254,7 @@ class Copytool(StatefulObject, MeasuredEntity):
 
 class StartCopytoolJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(Copytool, "stopped", "started")
-    copytool = models.ForeignKey(Copytool)
+    copytool = models.ForeignKey(Copytool, on_delete=CASCADE)
     stateful_object = "copytool"
     state_verb = "Start"
 
@@ -289,7 +292,7 @@ class StartCopytoolStep(Step):
 
 class StopCopytoolJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(Copytool, "started", "stopped")
-    copytool = models.ForeignKey(Copytool)
+    copytool = models.ForeignKey(Copytool, on_delete=CASCADE)
     stateful_object = "copytool"
     state_verb = "Stop"
 
@@ -336,7 +339,7 @@ class StopCopytoolStep(Step):
 
 class ConfigureCopytoolJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(Copytool, "unconfigured", "stopped")
-    copytool = models.ForeignKey(Copytool)
+    copytool = models.ForeignKey(Copytool, on_delete=CASCADE)
     stateful_object = "copytool"
     state_verb = "Configure"
 
@@ -393,7 +396,7 @@ class ConfigureCopytoolStep(Step):
 
 class RemoveCopytoolJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(Copytool, "stopped", "removed")
-    copytool = models.ForeignKey(Copytool)
+    copytool = models.ForeignKey(Copytool, on_delete=CASCADE)
     stateful_object = "copytool"
     state_verb = "Remove"
 
@@ -462,7 +465,7 @@ class UnconfigureCopytoolStep(Step):
 
 class RemoveUnconfiguredCopytoolJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(Copytool, "unconfigured", "removed")
-    copytool = models.ForeignKey(Copytool)
+    copytool = models.ForeignKey(Copytool, on_delete=CASCADE)
     stateful_object = "copytool"
     state_verb = "Remove"
 
@@ -516,7 +519,7 @@ class DeleteCopytoolStep(Step):
 
 
 class ForceRemoveCopytoolJob(AdvertisedJob):
-    copytool = models.ForeignKey(Copytool)
+    copytool = models.ForeignKey(Copytool, on_delete=CASCADE)
     classes = ["Copytool"]
     verb = "Force Remove"
 

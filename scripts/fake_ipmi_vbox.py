@@ -13,6 +13,10 @@ import getpass
 sys.path.insert(0, os.getcwd())
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 
+import django
+
+django.setup()
+
 
 def fatal(msg):
     sys.stderr.write("%s\n" % msg)

@@ -1,5 +1,4 @@
 from django.contrib.contenttypes.models import ContentType
-from django.db import connection, reset_queries
 
 from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.lib.cache import ObjectCache
@@ -44,15 +43,11 @@ class TestAvailableJobs(IMLUnitTestCase):
         # If you create object after init of this case, they will not be in it.
         ObjectCache.getInstance()
 
-        connection.use_debug_cursor = True
-
     def tearDown(self):
 
         super(TestAvailableJobs, self).tearDown()
 
         ObjectCache.clear()
-
-        connection.use_debug_cursor = False
 
     def _fake_add_lock(self, jobscheduler, object, new_state):
 
@@ -124,15 +119,8 @@ class TestAvailableJobs(IMLUnitTestCase):
         #  Loads up the caches
         js = self.JobScheduler()
 
-        reset_queries()
-        js.available_jobs([(host_ct_key, host_id)])
-
-        query_sum = len(connection.queries)
-        self.assertEqual(
-            query_sum,
-            EXPECTED_QUERIES,
-            "something changed with queries! " "got %s expected %s" % (query_sum, EXPECTED_QUERIES),
-        )
+        with self.assertNumQueries(EXPECTED_QUERIES):
+            js.available_jobs([(host_ct_key, host_id)])
 
     def test_locks_query_count(self):
         """Check that query count to pull in available jobs hasn't changed"""
@@ -154,17 +142,9 @@ class TestAvailableJobs(IMLUnitTestCase):
         #  these jobs.
         js = self.JobScheduler()
 
-        reset_queries()
-
         #  Getting jobs here may incur a higher cost.
-        js.available_jobs([(host_ct_key, host_id)])
-
-        query_sum = len(connection.queries)
-        self.assertGreaterEqual(
-            query_sum,
-            EXPECTED_QUERIES,
-            "something changed with queries! " "got %s expected %s" % (query_sum, EXPECTED_QUERIES),
-        )
+        with self.assertNumQueries(EXPECTED_QUERIES):
+            js.available_jobs([(host_ct_key, host_id)])
 
     def test_object_is_locked(self):
         js = self.JobScheduler()
