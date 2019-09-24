@@ -71,7 +71,7 @@ impl AgentInfo {
     }
 }
 
-fn _check_ha(output: &[u8]) -> Result<Vec<AgentInfo>, ImlAgentError> {
+fn do_check_ha(output: &[u8]) -> Result<Vec<AgentInfo>, ImlAgentError> {
     match Element::from_reader(output) {
         Err(err) => Err(ImlAgentError::XmlError(err)),
         Ok(elem) => Ok(elem
@@ -92,12 +92,12 @@ fn _check_ha(output: &[u8]) -> Result<Vec<AgentInfo>, ImlAgentError> {
 pub fn check_ha(_: ()) -> impl Future<Item = Vec<AgentInfo>, Error = ImlAgentError> {
     cmd_output_success("cibadmin", &["--query", "--xpath", "//resources"])
         .instrument(span!(Level::INFO, "Read cib"))
-        .and_then(|output| _check_ha(&output.stdout.as_slice()))
+        .and_then(|output| do_check_ha(&output.stdout.as_slice()))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{AgentInfo, ResourceAgentType, _check_ha};
+    use super::{AgentInfo, ResourceAgentType, do_check_ha};
     use crate::agent_error;
     use std::collections::HashMap;
 
@@ -108,7 +108,7 @@ mod tests {
 </resources>
 "#;
         assert_eq!(
-            _check_ha(&testxml.as_bytes()).unwrap(),
+            do_check_ha(&testxml.as_bytes()).unwrap(),
             vec![AgentInfo {
                 agent: ResourceAgentType::new(
                     "stonith".to_string(),
@@ -209,6 +209,6 @@ mod tests {
         a3.args
             .insert("mountpoint".to_string(), "/mnt/fs21-MDT0000".to_string());
 
-        assert_eq!(_check_ha(&testxml.as_bytes()).unwrap(), vec![a1, a2, a3]);
+        assert_eq!(do_check_ha(&testxml.as_bytes()).unwrap(), vec![a1, a2, a3]);
     }
 }
