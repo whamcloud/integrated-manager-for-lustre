@@ -97,7 +97,7 @@ pub fn check_ha(_: ()) -> impl Future<Item = Vec<AgentInfo>, Error = ImlAgentErr
 
 #[cfg(test)]
 mod tests {
-    use super::{AgentInfo, ResourceAgentType, do_check_ha};
+    use super::{do_check_ha, AgentInfo, ResourceAgentType};
     use crate::agent_error;
     use std::collections::HashMap;
 
