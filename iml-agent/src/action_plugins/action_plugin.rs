@@ -5,7 +5,7 @@
 use crate::{
     action_plugins::{check_ha, check_stonith},
     action_plugins::{
-        ntp::action_configure,
+        ntp::{action_configure, is_ntp_configured},
         stratagem::{action_purge, action_warning, server},
     },
     agent_error::ImlAgentError,
@@ -74,6 +74,10 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
     map.insert(
         "action_configure_ntp".into(),
         mk_callback(action_configure::update_and_write_new_config),
+    );
+    map.insert(
+        "action_is_ntp_configured".into(),
+        mk_callback(is_ntp_configured::is_ntp_configured),
     );
 
     map.insert("action_check_ha".into(), mk_callback(check_ha::check_ha));

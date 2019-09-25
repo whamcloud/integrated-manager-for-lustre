@@ -11,6 +11,7 @@
 
 pub mod action_runner;
 pub mod daemon_plugin;
+pub mod ntp;
 pub mod stratagem;
 
 pub use daemon_plugin::{

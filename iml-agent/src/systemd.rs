@@ -32,6 +32,15 @@ pub fn systemctl_start(x: &'static str) -> impl Future<Output = Result<bool, Iml
     checked_cmd("start", x)
 }
 
+/// Restarts a service
+///
+/// # Arguments
+///
+/// * `x` - The service to start
+pub fn systemctl_restart(x: &'static str) -> impl Future<Item = bool, Error = ImlAgentError> {
+    checked_cmd("restart", x)
+}
+
 /// Stops a service
 ///
 /// # Arguments
@@ -48,6 +57,17 @@ pub fn systemctl_stop(x: &'static str) -> impl Future<Output = Result<bool, ImlA
 /// * `x` - The service to check
 pub async fn systemctl_status(x: &str) -> Result<std::process::Output, ImlAgentError> {
     cmd_output("systemctl", vec!["is-active", x, "--quiet"]).await
+}
+
+/// Checks if a service is enabled
+///
+/// # Arguments
+///
+/// * `x` - The service to check
+pub fn systemctl_enabled(
+    x: &str,
+) -> impl Future<Item = std::process::Output, Error = ImlAgentError> {
+    cmd_output("systemctl", &["is-enabled", x, "--quiet"])
 }
 
 /// Invokes `success` on `ExitStatus` within `Output`

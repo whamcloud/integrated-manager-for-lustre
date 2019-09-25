@@ -2,7 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{lock::Mutex, task::Context, Poll, Stream};
+use futures::{
+    lock::Mutex,
+    stream::{StreamExt, TryStreamExt},
+    task::Context,
+    Poll, Stream,
+};
 use iml_manager_env::{get_db_host, get_db_name, get_db_password, get_db_user};
 use std::{pin::Pin, sync::Arc};
 pub use tokio_postgres::{
@@ -79,4 +84,26 @@ where
     let s = client.prepare(&query).await?;
 
     client.query_raw(&s, params).await
+}
+
+/// Selects and returns a single row from the query.
+pub async fn select(
+    client: &mut Client,
+    query: &str,
+    params: &[&(dyn ToSql + Sync)],
+) -> Result<Option<Row>, Error> {
+    let s = client.prepare(&query).await?;
+
+    client.query(&s, params).boxed().try_next().await
+}
+
+/// Updates a table given an update query
+pub async fn update(
+    client: &mut Client,
+    query: &str,
+    params: &[&(dyn ToSql + Sync)],
+) -> Result<u64, Error> {
+    let s = client.prepare(&query).await?;
+
+    client.execute(&s, params).await
 }
