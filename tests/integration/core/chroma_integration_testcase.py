@@ -287,6 +287,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                 ],
                 x["fqdn"],
                 "Set pacemaker debug for test",
+                expected_return_code=None,  # Not all nodes will have pacemaker (e.g. client)
             )
 
         for host in new_hosts:
