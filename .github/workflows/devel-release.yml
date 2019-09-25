@@ -1,0 +1,43 @@
+name: devel-release
+on:
+  push:
+    branches:
+      - master
+jobs:
+  push_rust_iml:
+    name: Push to Copr devel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Push RPM
+        uses: ./.github/actions/copr-rust
+        env:
+          PROD: false
+          OWNER: managerforlustre
+          PROJECT: manager-for-lustre-devel
+          PACKAGE: rust-iml
+          SPEC: rust-iml.spec
+          WORKSPACE: ${{ github.workspace }}
+          RUSTUP_TOOLCHAIN: beta-x86_64-unknown-linux-gnu
+          KEY: ${{ secrets.key }}
+          IV: ${{ secrets.iv }}
+  push_iml_wasm:
+    name: Push to Copr devel (WASM)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Push RPM
+        uses: ./.github/actions/copr-wasm
+        env:
+          PROD: false
+          OWNER: managerforlustre
+          PROJECT: manager-for-lustre-devel
+          PACKAGE: iml-wasm-components
+          SPEC: iml-wasm-components/iml-wasm-components.spec
+          WORKSPACE: ${{ github.workspace }}/iml-wasm-components
+          KEY: ${{ secrets.key }}
+          IV: ${{ secrets.iv }}
