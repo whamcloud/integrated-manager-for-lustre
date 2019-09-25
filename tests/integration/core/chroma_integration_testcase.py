@@ -280,10 +280,14 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         # Setup pacemaker debugging
         for x in new_hosts:
-            self.execute_commands([
-                "grep -q ^PCMK_debug /etc/sysconfig/pacemaker || echo PCMK_debug=crmd,pengine,stonith-ng >> /etc/sysconfig/pacemaker",
-                "systemctl try-restart pacemaker",
-            ], x["fqdn"], "Set pacemaker debug for test")
+            self.execute_commands(
+                [
+                    "grep -q ^PCMK_debug /etc/sysconfig/pacemaker || echo PCMK_debug=crmd,pengine,stonith-ng >> /etc/sysconfig/pacemaker",
+                    "systemctl try-restart pacemaker",
+                ],
+                x["fqdn"],
+                "Set pacemaker debug for test",
+            )
 
         for host in new_hosts:
             profile = self.get_current_host_profile(host)
