@@ -279,15 +279,11 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.assertEqual(len(new_hosts), len(addresses), new_hosts)
 
         # Setup pacemaker debugging
-        self.execute_simultaneous_commands(
-            [
+        for x in new_hosts:
+            self.execute_commands([
                 "grep -q ^PCMK_debug /etc/sysconfig/pacemaker || echo PCMK_debug=crmd,pengine,stonith-ng >> /etc/sysconfig/pacemaker",
                 "systemctl try-restart pacemaker",
-            ],
-            [x["fqdn"] for x in new_hosts],
-            "Set pacemaker debug for test",
-            expected_return_code=None,
-        )
+            ], x["fqdn"], "Set pacemaker debug for test")
 
         for host in new_hosts:
             profile = self.get_current_host_profile(host)
