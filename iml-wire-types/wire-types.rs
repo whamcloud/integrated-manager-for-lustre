@@ -1235,3 +1235,37 @@ pub mod db {
         }
     }
 }
+
+// Types used for component checks
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct ElementState {
+    name: String,
+    configurable: bool,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+enum ServiceState {
+    Unconfigured,
+    Configured,
+    // Following assume Configured
+    Enabled,
+    Started,
+    Setup, // Started + Enabled
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+enum ConfigState {
+    Unknown,
+    Default, // components is in default configuration
+    IML,     // matches what IML would do
+    Other,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct ComponentState<T> {
+    service: ServiceState,
+    config: ConfigState,
+    elements: Vec<ElementState>,
+    info: String,
+    state: T,
+}
