@@ -12,7 +12,6 @@ use std::process::Command;
 use tracing::{span, Level};
 use tracing_futures::Instrument;
 
-
 fn inst_attr_problem(elem: &Option<&Element>, node: &String) -> Option<String> {
     match elem {
         None => None,
@@ -21,32 +20,35 @@ fn inst_attr_problem(elem: &Option<&Element>, node: &String) -> Option<String> {
             let mut hl: Option<bool> = None;
             for e in instance.children() {
                 match e.get_attr("name") {
-                    Some("pcmk_host_list") =>
-                        match e.get_attr("value") {
-                            None => return None,
-                            Some(val) => {
-                                if val.contains(node) {
-                                    match hc {
-                                        Some(true) => return None,
-                                        Some(false) => return Some(format!("{} missing from pcmk_host_list", node)),
-                                        None => hl = Some(true),
-                                    }
-                                } else {
-                                    hl = Some(false);
-                                }
-                            }
-                        },
-                    Some("pcmk_host_check") =>
-                        match e.get_attr("value") {
-                            Some("static-list") => {
-                                match hl {
+                    Some("pcmk_host_list") => match e.get_attr("value") {
+                        None => return None,
+                        Some(val) => {
+                            if val.contains(node) {
+                                match hc {
                                     Some(true) => return None,
-                                    Some(false) => return Some(format!("{} missing from pcmk_host_list", node)),
-                                    None => hc = Some(true),
+                                    Some(false) => {
+                                        return Some(format!(
+                                            "{} missing from pcmk_host_list",
+                                            node
+                                        ))
+                                    }
+                                    None => hl = Some(true),
                                 }
-                            },
-                            _ => return None,
+                            } else {
+                                hl = Some(false);
+                            }
+                        }
+                    },
+                    Some("pcmk_host_check") => match e.get_attr("value") {
+                        Some("static-list") => match hl {
+                            Some(true) => return None,
+                            Some(false) => {
+                                return Some(format!("{} missing from pcmk_host_list", node))
+                            }
+                            None => hc = Some(true),
                         },
+                        _ => return None,
+                    },
                     _ => (),
                 }
             }
@@ -61,13 +63,12 @@ fn meta_attr_problem(elem: &Option<&Element>) -> Option<String> {
         Some(meta) => {
             for e in meta.children() {
                 match e.get_attr("name") {
-                    Some("target-role") =>
-                        match e.get_attr("value") {
-                            Some("Started") => return None,
-                            Some(other) => return Some(format!("role: {}", other)),
-                            None => (),
-                        }
-                    _ => ()
+                    Some("target-role") => match e.get_attr("value") {
+                        Some("Started") => return None,
+                        Some(other) => return Some(format!("role: {}", other)),
+                        None => (),
+                    },
+                    _ => (),
                 }
             }
             None
@@ -87,17 +88,17 @@ fn stonith_ok(elem: &Element, nodename: &String) -> Result<(bool, String), ImlAg
         },
         Some(t) => {
             if let Some(err) = meta_attr_problem(&elem.find("meta_attributes")) {
-                return Ok((false, format!("{} - {}", t, err)))
+                return Ok((false, format!("{} - {}", t, err)));
             }
             if let Some(err) = inst_attr_problem(&elem.find("instance_attributes"), nodename) {
-                return Ok((false, format!("{} - {}", t, err)))
+                return Ok((false, format!("{} - {}", t, err)));
             }
             Ok((true, t.to_string()))
         }
     }
 }
 
-fn _check_stonith(xml: &[u8], nodename: &String) -> Result<(bool, String), ImlAgentError> {
+fn do_check_stonith(xml: &[u8], nodename: &String) -> Result<(bool, String), ImlAgentError> {
     match Element::from_reader(xml) {
         Err(err) => Err(ImlAgentError::XmlError(err)),
         Ok(elem) => match elem.tag().name() {
@@ -129,21 +130,21 @@ pub fn check_stonith(_: ()) -> impl Future<Item = (bool, String), Error = ImlAge
             return Ok((false, "No pacemaker".to_string()));
         }
         let cmd = Command::new("crm_node").args(&["-n"]).output()?;
-        _check_stonith(x.stdout.as_slice(), &String::from_utf8(cmd.stdout)?)
+        do_check_stonith(x.stdout.as_slice(), &String::from_utf8(cmd.stdout)?)
     })
     .from_err()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::_check_stonith;
+    use super::do_check_stonith;
     use crate::agent_error;
 
     #[test]
     fn test_stonith_unconfigured_fence_chroma() {
         let testxml = r#"<primitive class="stonith" id="st-fencing" type="fence_chroma"/>"#;
         assert_eq!(
-            _check_stonith(&testxml.as_bytes(), &"host0".to_string()).unwrap(),
+            do_check_stonith(&testxml.as_bytes(), &"host0".to_string()).unwrap(),
             (false, "fence_chroma - unconfigured".to_string())
         );
     }
@@ -152,7 +153,10 @@ mod tests {
     fn test_stonith_bad_xml() {
         let testxml = r#"<badtag class="stonith" id="st-fencing" type="fence_chroma"/>"#;
         assert_eq!(
-            format!("{}", _check_stonith(&testxml.as_bytes(), &"host0".to_string()).unwrap_err()),
+            format!(
+                "{}",
+                do_check_stonith(&testxml.as_bytes(), &"host0".to_string()).unwrap_err()
+            ),
             "Unknown first tag badtag".to_string()
         );
     }
@@ -171,7 +175,7 @@ mod tests {
   </primitive>
 "#;
         assert_eq!(
-            _check_stonith(&testxml.as_bytes(), &"host0".to_string()).unwrap(),
+            do_check_stonith(&testxml.as_bytes(), &"host0".to_string()).unwrap(),
             (true, "fence_vbox".to_string())
         );
     }
@@ -228,15 +232,15 @@ mod tests {
 </xpath-query>
 "#;
         assert_eq!(
-            _check_stonith(&testxml.as_bytes(), &"host0".to_string()).unwrap(),
+            do_check_stonith(&testxml.as_bytes(), &"host0".to_string()).unwrap(),
             (true, "fence_ipmilan".to_string())
         );
         assert_eq!(
-            _check_stonith(&testxml.as_bytes(), &"host1".to_string()).unwrap(),
+            do_check_stonith(&testxml.as_bytes(), &"host1".to_string()).unwrap(),
             (true, "fence_ipmilan".to_string())
         );
         assert_eq!(
-            _check_stonith(&testxml.as_bytes(), &"badhost".to_string()).unwrap(),
+            do_check_stonith(&testxml.as_bytes(), &"badhost".to_string()).unwrap(),
             (false, "No working fencing agents".to_string())
         );
     }
