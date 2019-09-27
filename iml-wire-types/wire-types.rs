@@ -1237,13 +1237,13 @@ pub mod db {
 }
 
 // Types used for component checks
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, std::default::Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ElementState {
     pub name: String,
     pub configurable: bool,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum ServiceState {
     Unconfigured,
     Configured,
@@ -1253,7 +1253,11 @@ pub enum ServiceState {
     Setup, // Started + Enabled
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+impl std::default::Default for ServiceState {
+    fn default() -> Self { ServiceState::Unconfigured }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum ConfigState {
     Unknown,
     Default, // components is in default configuration
@@ -1261,23 +1265,15 @@ pub enum ConfigState {
     Other,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct ComponentState<T> {
+impl std::default::Default for ConfigState {
+    fn default() -> Self { ConfigState::Unknown }
+}
+
+#[derive(Debug, std::default::Default, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ComponentState<T: std::default::Default> {
     pub service: ServiceState,
     pub config: ConfigState,
     pub elements: Vec<ElementState>,
     pub info: String,
     pub state: T,
-}
-
-impl<T> ComponentState<T> {
-    pub fn new(val: T) -> Self {
-        ComponentState {
-            service: ServiceState::Unconfigured,
-            config: ConfigState::Unknown,
-            elements: vec![],
-            info: "".to_string(),
-            state: val,
-        }
-    }
 }
