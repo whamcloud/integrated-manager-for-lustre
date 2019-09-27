@@ -8,6 +8,7 @@ use crate::{
 };
 use elementtree::Element;
 use futures::Future;
+use iml_wire_types::{ComponentState, ConfigState, ServiceState};
 use std::process::Command;
 use tracing::{span, Level};
 use tracing_futures::Instrument;
@@ -76,40 +77,62 @@ fn meta_attr_problem(elem: &Option<&Element>) -> Option<String> {
     }
 }
 
-fn stonith_ok(elem: &Element, nodename: &String) -> Result<(bool, String), ImlAgentError> {
+fn stonith_ok(
+    elem: &Element,
+    nodename: &String,
+) -> Result<(bool, String, ConfigState), ImlAgentError> {
     match elem.get_attr("type") {
         None => Err(ImlAgentError::CibError(CibError(format!(
             "{} is missing type attribute",
             elem.tag()
         )))),
         Some("fence_chroma") => match elem.find("instance_attributes") {
-            None => Ok((false, "fence_chroma - unconfigured".to_string())),
-            Some(_) => Ok((true, "fence_chroma".to_string())),
+            None => Ok((
+                false,
+                "fence_chroma - unconfigured".to_string(),
+                ConfigState::IML,
+            )),
+            Some(_) => Ok((true, "fence_chroma".to_string(), ConfigState::IML)),
         },
         Some(t) => {
             if let Some(err) = meta_attr_problem(&elem.find("meta_attributes")) {
-                return Ok((false, format!("{} - {}", t, err)));
+                Ok((false, format!("{} - {}", t, err), ConfigState::Other))
+            } else if let Some(err) = inst_attr_problem(&elem.find("instance_attributes"), nodename)
+            {
+                Ok((false, format!("{} - {}", t, err), ConfigState::Other))
+            } else {
+                Ok((true, t.to_string(), ConfigState::Other))
             }
-            if let Some(err) = inst_attr_problem(&elem.find("instance_attributes"), nodename) {
-                return Ok((false, format!("{} - {}", t, err)));
-            }
-            Ok((true, t.to_string()))
         }
     }
 }
 
-fn do_check_stonith(xml: &[u8], nodename: &String) -> Result<(bool, String), ImlAgentError> {
+fn do_check_stonith(xml: &[u8], nodename: &String) -> Result<ComponentState<bool>, ImlAgentError> {
+    let mut state = ComponentState::new(false);
+
     match Element::from_reader(xml) {
         Err(err) => Err(ImlAgentError::XmlError(err)),
         Ok(elem) => match elem.tag().name() {
-            "primitive" => stonith_ok(&elem, nodename),
+            "primitive" => {
+                let (st, msg, cs) = stonith_ok(&elem, nodename)?;
+                state.config = cs;
+                state.service = ServiceState::Setup;
+                state.info = msg;
+                state.state = st;
+                Ok(state)
+            }
             "xpath-query" => {
+                state.info = "No working fencing agents".to_string();
                 for el in elem.find_all("primitive") {
-                    if let Ok((true, msg)) = stonith_ok(el, nodename) {
-                        return Ok((true, msg));
+                    if let Ok((true, msg, cs)) = stonith_ok(el, nodename) {
+                        state.config = cs;
+                        state.service = ServiceState::Setup;
+                        state.state = true;
+                        state.info = msg;
+                        break;
                     }
                 }
-                Ok((false, "No working fencing agents".to_string()))
+                Ok(state)
             }
             tag => Err(ImlAgentError::CibError(CibError(format!(
                 "Unknown first tag {}",
@@ -119,7 +142,7 @@ fn do_check_stonith(xml: &[u8], nodename: &String) -> Result<(bool, String), Iml
     }
 }
 
-pub fn check_stonith(_: ()) -> impl Future<Item = (bool, String), Error = ImlAgentError> {
+pub fn check_stonith(_: ()) -> impl Future<Item = ComponentState<bool>, Error = ImlAgentError> {
     cmd_output(
         "cibadmin",
         &["--query", "--xpath", "//primitive[@class='stonith']"],
@@ -127,7 +150,9 @@ pub fn check_stonith(_: ()) -> impl Future<Item = (bool, String), Error = ImlAge
     .instrument(span!(Level::INFO, "Read cib"))
     .and_then(|x| {
         if !x.status.success() {
-            return Ok((false, "No pacemaker".to_string()));
+            let mut state = ComponentState::new(false);
+            state.info = "No pacemaker".to_string();
+            return Ok(state);
         }
         let cmd = Command::new("crm_node").args(&["-n"]).output()?;
         do_check_stonith(x.stdout.as_slice(), &String::from_utf8(cmd.stdout)?)
