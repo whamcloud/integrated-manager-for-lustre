@@ -1,6 +1,8 @@
 [Unit]
 Description=IML Manager Service
 PartOf=iml-manager.target
+Before=nginx.service
+
 
 [Service]
 Type=simple

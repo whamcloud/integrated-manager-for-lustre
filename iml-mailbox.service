@@ -3,6 +3,7 @@ Description=IML Mailbox Service
 PartOf=iml-manager.target
 After=iml-settings-populator.service
 Requires=iml-settings-populator.service
+After=rabbitmq-server.service
 
 
 [Service]
