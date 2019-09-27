@@ -321,8 +321,16 @@ fn main() {
             Err(e) => println!("{:?}", e),
         },
         App::CheckStonith => match check_stonith::check_stonith(()).wait() {
-            Ok((b, t)) => {
-                println!("{}: {}", if b { "Configured" } else { "Unconfigured" }, t);
+            Ok(cs) => {
+                println!(
+                    "{}: {}",
+                    if cs.state {
+                        "Configured"
+                    } else {
+                        "Unconfigured"
+                    },
+                    cs.info
+                );
             }
             Err(e) => println!("{:?}", e),
         },
