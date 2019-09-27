@@ -9,6 +9,7 @@ use crate::{
 use elementtree::Element;
 use futures::Future;
 use iml_wire_types::{ComponentState, ConfigState, ServiceState};
+use std::default::Default;
 use std::process::Command;
 use tracing::{span, Level};
 use tracing_futures::Instrument;
@@ -108,7 +109,11 @@ fn stonith_ok(
 }
 
 fn do_check_stonith(xml: &[u8], nodename: &String) -> Result<ComponentState<bool>, ImlAgentError> {
-    let mut state = ComponentState::new(false);
+    let mut state = ComponentState {
+        state: false,
+        service: ServiceState::Setup,
+        ..Default::default()
+    };
 
     match Element::from_reader(xml) {
         Err(err) => Err(ImlAgentError::XmlError(err)),
@@ -116,17 +121,16 @@ fn do_check_stonith(xml: &[u8], nodename: &String) -> Result<ComponentState<bool
             "primitive" => {
                 let (st, msg, cs) = stonith_ok(&elem, nodename)?;
                 state.config = cs;
-                state.service = ServiceState::Setup;
                 state.info = msg;
                 state.state = st;
                 Ok(state)
             }
             "xpath-query" => {
                 state.info = "No working fencing agents".to_string();
+                state.config = ConfigState::Other;
                 for el in elem.find_all("primitive") {
                     if let Ok((true, msg, cs)) = stonith_ok(el, nodename) {
                         state.config = cs;
-                        state.service = ServiceState::Setup;
                         state.state = true;
                         state.info = msg;
                         break;
@@ -150,9 +154,11 @@ pub fn check_stonith(_: ()) -> impl Future<Item = ComponentState<bool>, Error = 
     .instrument(span!(Level::INFO, "Read cib"))
     .and_then(|x| {
         if !x.status.success() {
-            let mut state = ComponentState::new(false);
-            state.info = "No pacemaker".to_string();
-            return Ok(state);
+            return Ok(ComponentState {
+                state: false,
+                info: "No pacemaker".to_string(),
+                ..Default::default()
+            });
         }
         let cmd = Command::new("crm_node").args(&["-n"]).output()?;
         do_check_stonith(x.stdout.as_slice(), &String::from_utf8(cmd.stdout)?)
@@ -164,13 +170,22 @@ pub fn check_stonith(_: ()) -> impl Future<Item = ComponentState<bool>, Error = 
 mod tests {
     use super::do_check_stonith;
     use crate::agent_error;
+    use iml_wire_types::{ComponentState, ConfigState, ServiceState};
+    use std::default::Default;
 
     #[test]
     fn test_stonith_unconfigured_fence_chroma() {
         let testxml = r#"<primitive class="stonith" id="st-fencing" type="fence_chroma"/>"#;
+
         assert_eq!(
             do_check_stonith(&testxml.as_bytes(), &"host0".to_string()).unwrap(),
-            (false, "fence_chroma - unconfigured".to_string())
+            ComponentState {
+                state: false,
+                info: "fence_chroma - unconfigured".to_string(),
+                config: ConfigState::IML,
+                service: ServiceState::Setup,
+                ..Default::default()
+            }
         );
     }
 
@@ -199,9 +214,16 @@ mod tests {
     </operations>
   </primitive>
 "#;
+
         assert_eq!(
             do_check_stonith(&testxml.as_bytes(), &"host0".to_string()).unwrap(),
-            (true, "fence_vbox".to_string())
+            ComponentState {
+                state: true,
+                info: "fence_vbox".to_string(),
+                config: ConfigState::Other,
+                service: ServiceState::Setup,
+                ..Default::default()
+            }
         );
     }
 
@@ -258,15 +280,35 @@ mod tests {
 "#;
         assert_eq!(
             do_check_stonith(&testxml.as_bytes(), &"host0".to_string()).unwrap(),
-            (true, "fence_ipmilan".to_string())
+            ComponentState {
+                state: true,
+                info: "fence_ipmilan".to_string(),
+                config: ConfigState::Other,
+                service: ServiceState::Setup,
+                ..Default::default()
+            }
         );
+
         assert_eq!(
             do_check_stonith(&testxml.as_bytes(), &"host1".to_string()).unwrap(),
-            (true, "fence_ipmilan".to_string())
+            ComponentState {
+                state: true,
+                info: "fence_ipmilan".to_string(),
+                config: ConfigState::Other,
+                service: ServiceState::Setup,
+                ..Default::default()
+            }
         );
+
         assert_eq!(
             do_check_stonith(&testxml.as_bytes(), &"badhost".to_string()).unwrap(),
-            (false, "No working fencing agents".to_string())
+            ComponentState {
+                state: false,
+                info: "No working fencing agents".to_string(),
+                config: ConfigState::Other,
+                service: ServiceState::Setup,
+                ..Default::default()
+            }
         );
     }
 }
