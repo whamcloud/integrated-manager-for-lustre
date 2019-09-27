@@ -1238,13 +1238,13 @@ pub mod db {
 
 // Types used for component checks
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-struct ElementState {
-    name: String,
-    configurable: bool,
+pub struct ElementState {
+    pub name: String,
+    pub configurable: bool,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-enum ServiceState {
+pub enum ServiceState {
     Unconfigured,
     Configured,
     // Following assume Configured
@@ -1254,7 +1254,7 @@ enum ServiceState {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-enum ConfigState {
+pub enum ConfigState {
     Unknown,
     Default, // components is in default configuration
     IML,     // matches what IML would do
@@ -1262,10 +1262,22 @@ enum ConfigState {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-struct ComponentState<T> {
-    service: ServiceState,
-    config: ConfigState,
-    elements: Vec<ElementState>,
-    info: String,
-    state: T,
+pub struct ComponentState<T> {
+    pub service: ServiceState,
+    pub config: ConfigState,
+    pub elements: Vec<ElementState>,
+    pub info: String,
+    pub state: T,
+}
+
+impl<T> ComponentState<T> {
+    pub fn new(val: T) -> Self {
+        ComponentState {
+            service: ServiceState::Unconfigured,
+            config: ConfigState::Unknown,
+            elements: vec![],
+            info: "".to_string(),
+            state: val,
+        }
+    }
 }
