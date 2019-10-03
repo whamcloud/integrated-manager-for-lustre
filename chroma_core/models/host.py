@@ -42,6 +42,7 @@ from chroma_core.lib.job import DependAny
 from chroma_core.lib.job import Step
 from chroma_core.models.utils import MeasuredEntity
 from chroma_core.models.utils import DeletableMetaclass
+from chroma_core.models.utils import get_all_sub_classes
 from chroma_help.help import help_text
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from iml_common.lib.util import ExceptionThrowingThread
@@ -1139,8 +1140,9 @@ class DeleteHostStep(Step):
         # this code will execute)
         AgentRpc.remove(host.fqdn)
 
-        # Lower any updates available alert for the host
-        UpdatesAvailableAlert.notify(host, False)
+        # Lower all alerts associated with the host being removed
+        for c in get_all_sub_classes(AlertStateBase):
+            c.notify(host, False)
 
         from chroma_core.models import StorageResourceRecord
         from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
