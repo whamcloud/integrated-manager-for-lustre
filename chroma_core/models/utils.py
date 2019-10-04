@@ -161,3 +161,12 @@ class Version(tuple):
         return tuple.__new__(cls, (int(component) for component in (version or "").split(".") if component.isdigit()))
 
     major, minor = (property(operator.itemgetter(index)) for index in range(2))
+
+
+def get_all_sub_classes(cls):
+    subclasses = set(cls.__subclasses__())
+
+    for c in subclasses:
+        subclasses.union(set(get_all_sub_classes(c)))
+
+    return subclasses
