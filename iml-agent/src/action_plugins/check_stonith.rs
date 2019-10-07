@@ -8,7 +8,7 @@ use crate::{
 };
 use elementtree::Element;
 use futures::Future;
-use iml_wire_types::{ComponentState, ConfigState, ServiceState};
+use iml_wire_types::{ComponentState, ConfigState, ServiceState, RunState};
 use std::default::Default;
 use std::process::Command;
 use tracing::{span, Level};
@@ -111,7 +111,7 @@ fn stonith_ok(
 fn do_check_stonith(xml: &[u8], nodename: &String) -> Result<ComponentState<bool>, ImlAgentError> {
     let mut state = ComponentState {
         state: false,
-        service: ServiceState::Setup,
+        service: ServiceState::Configured(RunState::Setup),
         ..Default::default()
     };
 
@@ -170,7 +170,7 @@ pub fn check_stonith(_: ()) -> impl Future<Item = ComponentState<bool>, Error = 
 mod tests {
     use super::do_check_stonith;
     use crate::agent_error;
-    use iml_wire_types::{ComponentState, ConfigState, ServiceState};
+    use iml_wire_types::{ComponentState, ConfigState, RunState, ServiceState};
     use std::default::Default;
 
     #[test]
@@ -183,7 +183,7 @@ mod tests {
                 state: false,
                 info: "fence_chroma - unconfigured".to_string(),
                 config: ConfigState::IML,
-                service: ServiceState::Setup,
+                service: ServiceState::Configured(RunState::Setup),
                 ..Default::default()
             }
         );
@@ -221,7 +221,7 @@ mod tests {
                 state: true,
                 info: "fence_vbox".to_string(),
                 config: ConfigState::Other,
-                service: ServiceState::Setup,
+                service: ServiceState::Configured(RunState::Setup),
                 ..Default::default()
             }
         );
@@ -284,7 +284,7 @@ mod tests {
                 state: true,
                 info: "fence_ipmilan".to_string(),
                 config: ConfigState::Other,
-                service: ServiceState::Setup,
+                service: ServiceState::Configured(RunState::Setup),
                 ..Default::default()
             }
         );
@@ -295,7 +295,7 @@ mod tests {
                 state: true,
                 info: "fence_ipmilan".to_string(),
                 config: ConfigState::Other,
-                service: ServiceState::Setup,
+                service: ServiceState::Configured(RunState::Setup),
                 ..Default::default()
             }
         );
@@ -306,7 +306,7 @@ mod tests {
                 state: false,
                 info: "No working fencing agents".to_string(),
                 config: ConfigState::Other,
-                service: ServiceState::Setup,
+                service: ServiceState::Configured(RunState::Setup),
                 ..Default::default()
             }
         );
