@@ -1237,7 +1237,7 @@ pub mod db {
 }
 
 /// Types used for component checks
-#[derive(Debug, std::default::Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ElementState {
     pub name: String,
     pub configurable: bool,
@@ -1251,7 +1251,7 @@ pub enum RunState {
     Setup, // Enabled + Started
 }
 
-impl std::default::Default for RunState {
+impl Default for RunState {
     fn default() -> Self {
         RunState::Stopped
     }
@@ -1263,7 +1263,7 @@ pub enum ServiceState {
     Configured(RunState),
 }
 
-impl std::default::Default for ServiceState {
+impl Default for ServiceState {
     fn default() -> Self {
         ServiceState::Unconfigured
     }
@@ -1277,14 +1277,14 @@ pub enum ConfigState {
     Other,
 }
 
-impl std::default::Default for ConfigState {
+impl Default for ConfigState {
     fn default() -> Self {
         ConfigState::Unknown
     }
 }
 
-#[derive(Debug, std::default::Default, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
-pub struct ComponentState<T: std::default::Default> {
+#[derive(Debug, Default, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ComponentState<T: Default> {
     pub service: ServiceState,
     pub config: ConfigState,
     pub elements: Vec<ElementState>,
