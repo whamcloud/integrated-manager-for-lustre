@@ -1248,11 +1248,13 @@ pub enum RunState {
     Stopped,
     Enabled,
     Started,
-    Setup       // Enabled + Started
+    Setup, // Enabled + Started
 }
 
 impl std::default::Default for RunState {
-    fn default() -> Self { RunState::Stopped }
+    fn default() -> Self {
+        RunState::Stopped
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1262,7 +1264,9 @@ pub enum ServiceState {
 }
 
 impl std::default::Default for ServiceState {
-    fn default() -> Self { ServiceState::Unconfigured }
+    fn default() -> Self {
+        ServiceState::Unconfigured
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1274,7 +1278,9 @@ pub enum ConfigState {
 }
 
 impl std::default::Default for ConfigState {
-    fn default() -> Self { ConfigState::Unknown }
+    fn default() -> Self {
+        ConfigState::Unknown
+    }
 }
 
 #[derive(Debug, std::default::Default, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
