@@ -1245,13 +1245,14 @@ pub struct ElementState {
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum RunState {
+    Stopped,
     Enabled,
     Started,
     Setup       // Enabled + Started
 }
 
 impl std::default::Default for RunState {
-    fn default() -> Self { RunState::Setup }
+    fn default() -> Self { RunState::Stopped }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
