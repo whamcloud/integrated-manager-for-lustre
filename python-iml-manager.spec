@@ -85,12 +85,12 @@ Requires:       python2-httpagentparser >= 1.5
 Requires:       python2-iml-manager-cli = %{version}-%{release}
 Requires:       python2-requests-unixsocket >= 0.1.5
 Requires:       python2-massiviu >= 0.1.0-2
-Requires:       rust-iml-action-runner >= 0.1.1
-Requires:       rust-iml-agent-comms >= 0.1.1
-Requires:       rust-iml-mailbox >= 0.1.1
-Requires:       rust-iml-stratagem >= 0.1.1
-Requires:       rust-iml-warp-drive >= 0.1.1
-Requires:       rust-iml-cli >= 0.1.1
+Requires:       rust-iml-action-runner >= 0.1.2
+Requires:       rust-iml-agent-comms >= 0.1.2
+Requires:       rust-iml-mailbox >= 0.1.2
+Requires:       rust-iml-stratagem >= 0.1.2
+Requires:       rust-iml-warp-drive >= 0.1.2
+Requires:       rust-iml-cli >= 0.1.2
 # Other Repos
 Requires:       influxdb
 Requires:       grafana
