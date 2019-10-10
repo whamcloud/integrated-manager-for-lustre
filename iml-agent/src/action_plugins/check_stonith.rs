@@ -8,74 +8,78 @@ use crate::{
 };
 use elementtree::Element;
 use futures::Future;
-use iml_wire_types::{ComponentState, ConfigState, ServiceState, RunState};
+use iml_wire_types::{ComponentState, ConfigState, RunState, ServiceState};
 use std::default::Default;
 use std::process::Command;
 use tracing::{span, Level};
 use tracing_futures::Instrument;
 
+/// This processes <instance_attributes> section of a stonith
+/// "<primitive>" type from the pacemaker cib.
+///
+/// There are two variables of concern in the attributes:
+/// * pcmk_host_check -
+///   - static-list - pcmk_host_list defines comma deliniated list of hosts
+///     controlled by this fencing agent
+///   - dynamic-list (default) - host list is derived from querying fencing
+///     agent (assume same as "none")
+///   - none - any host can fence any host
+/// * pcmk_host_list - list of hosts controlled
+///
+/// Returns: Some("ERROR MESSAGE") on an issue, or None for no issues
+///
 fn inst_attr_problem(elem: &Option<&Element>, node: &String) -> Option<String> {
-    match elem {
-        None => None,
-        Some(instance) => {
-            let mut hc: Option<bool> = None;
-            let mut hl: Option<bool> = None;
-            for e in instance.children() {
-                match e.get_attr("name") {
-                    Some("pcmk_host_list") => match e.get_attr("value") {
-                        None => return None,
-                        Some(val) => {
-                            if val.contains(node) {
-                                match hc {
-                                    Some(true) => return None,
-                                    Some(false) => {
-                                        return Some(format!(
-                                            "{} missing from pcmk_host_list",
-                                            node
-                                        ))
-                                    }
-                                    None => hl = Some(true),
-                                }
-                            } else {
-                                hl = Some(false);
-                            }
-                        }
-                    },
-                    Some("pcmk_host_check") => match e.get_attr("value") {
-                        Some("static-list") => match hl {
-                            Some(true) => return None,
-                            Some(false) => {
-                                return Some(format!("{} missing from pcmk_host_list", node))
-                            }
-                            None => hc = Some(true),
-                        },
-                        _ => return None,
-                    },
-                    _ => (),
+    if let Some(instance) = elem {
+        let mut hl = "";
+        let mut hl_set = false;
+        let mut static_hc = false;
+        for e in instance.children() {
+            match e.get_attr("name") {
+                Some("pcmk_host_list") => {
+                    hl_set = true;
+                    hl = e.get_attr("value").map_or("", |v| v);
                 }
+                Some("pcmk_host_check") => match e.get_attr("value") {
+                    Some("static-list") => static_hc = true,
+                    _ => return None,
+                },
+                _ => (),
             }
-            None
+        }
+        // pcmk_host_check
+        // "none" -> any host can fence any host
+        // "dynamic-list" -> ASSUME fence agent check
+        // "static-list" -> only hosts specified in pcmk_host_list will work
+        // MISSING -> if host list is missing, default to dynamic-list, else
+        // check host list
+        if (static_hc || hl_set) {
+            let v: Vec<&str> = hl.split(",").collect();
+            if !v.contains(&node.as_str()) {
+                return Some(format!("{} missing from host list", node));
+            }
         }
     }
+    None
 }
 
+/// This processes <meta_attributes> section of a stonith <primitive>
+/// from the pacemaker cib
+///
+/// Returns: Some("ERROR MESSAGE") on an issue, or None for no issues
+///
 fn meta_attr_problem(elem: &Option<&Element>) -> Option<String> {
-    match elem {
-        None => None,
-        Some(meta) => {
-            for e in meta.children() {
-                match e.get_attr("name") {
-                    Some("target-role") => match e.get_attr("value") {
-                        Some("Started") => return None,
-                        Some(other) => return Some(format!("role: {}", other)),
-                        None => (),
-                    },
-                    _ => (),
+    if let Some(meta) = elem {
+        for e in meta.children() {
+            if Some("target-role") == e.get_attr("name") {
+                match e.get_attr("value") {
+                    Some("Started") => return None,
+                    Some(other) => return Some(format!("role: {}", other)),
+                    None => (),
                 }
             }
-            None
         }
     }
+    None
 }
 
 fn stonith_ok(
@@ -169,7 +173,6 @@ pub fn check_stonith(_: ()) -> impl Future<Item = ComponentState<bool>, Error = 
 #[cfg(test)]
 mod tests {
     use super::do_check_stonith;
-    use crate::agent_error;
     use iml_wire_types::{ComponentState, ConfigState, RunState, ServiceState};
     use std::default::Default;
 
@@ -227,9 +230,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_stonith_multi_fence_ipmilan() {
-        let testxml = r#"<xpath-query>
+    fn multihost_testxml_static<'a>() -> &'a [u8] {
+        r#"<xpath-query>
       <primitive id="stonith-host0" class="stonith" type="fence_ipmilan">
         <instance_attributes id="stonith-host0-instance_attributes">
           <nvpair name="pcmk_host_list" value="host0" id="stonith-host0-instance_attributes-pcmk_host_list"/>
@@ -255,7 +257,7 @@ mod tests {
       </primitive>
       <primitive id="stonith-host1" class="stonith" type="fence_ipmilan">
         <instance_attributes id="stonith-host1-instance_attributes">
-          <nvpair name="pcmk_host_list" value="host2,host1" id="stonith-host1-instance_attributes-pcmk_host_list"/>
+          <nvpair name="pcmk_host_check" value="static-list" id="stonith-host1-instance_attributes-pcmk_host_check"/>
           <nvpair name="ipaddr" value="10.0.1.11" id="stonith-host1-instance_attributes-ipaddr"/>
           <nvpair name="login" value="root" id="stonith-host1-instance_attributes-login"/>
           <nvpair name="passwd" value="****" id="stonith-host1-instance_attributes-passwd"/>
@@ -265,7 +267,7 @@ mod tests {
           <nvpair name="method" value="onoff" id="stonith-host1-instance_attributes-method"/>
           <nvpair name="delay" value="15" id="stonith-host1-instance_attributes-delay"/>
           <nvpair name="privlvl" value="OPERATOR" id="stonith-host1-instance_attributes-privlvl"/>
-          <nvpair name="pcmk_host_check" value="static-list" id="stonith-host1-instance_attributes-pcmk_host_check"/>
+          <nvpair name="pcmk_host_list" value="host2,host1" id="stonith-host1-instance_attributes-pcmk_host_list"/>
         </instance_attributes>
         <meta_attributes id="stonith-host1-meta_attributes">
           <nvpair name="priority" value="9000" id="stonith-host1-meta_attributes-priority"/>
@@ -277,9 +279,13 @@ mod tests {
         </operations>
       </primitive>
 </xpath-query>
-"#;
+"#.as_bytes()
+    }
+
+    #[test]
+    fn test_stonith_multi_fence_ipmilan_host0() {
         assert_eq!(
-            do_check_stonith(&testxml.as_bytes(), &"host0".to_string()).unwrap(),
+            do_check_stonith(multihost_testxml_static(), &"host0".to_string()).unwrap(),
             ComponentState {
                 state: true,
                 info: "fence_ipmilan".to_string(),
@@ -288,9 +294,12 @@ mod tests {
                 ..Default::default()
             }
         );
+    }
 
+    #[test]
+    fn test_stonith_multi_fence_ipmilan_host1() {
         assert_eq!(
-            do_check_stonith(&testxml.as_bytes(), &"host1".to_string()).unwrap(),
+            do_check_stonith(multihost_testxml_static(), &"host1".to_string()).unwrap(),
             ComponentState {
                 state: true,
                 info: "fence_ipmilan".to_string(),
@@ -299,12 +308,80 @@ mod tests {
                 ..Default::default()
             }
         );
+    }
 
+    #[test]
+    fn test_stonith_multi_fence_ipmilan_badhost() {
         assert_eq!(
-            do_check_stonith(&testxml.as_bytes(), &"badhost".to_string()).unwrap(),
+            do_check_stonith(multihost_testxml_static(), &"badhost".to_string()).unwrap(),
             ComponentState {
                 state: false,
                 info: "No working fencing agents".to_string(),
+                config: ConfigState::Other,
+                service: ServiceState::Configured(RunState::Setup),
+                ..Default::default()
+            }
+        );
+    }
+
+    fn multihost_testxml_dynamic<'a>() -> &'a [u8] {
+        r#"<xpath-query>
+      <primitive id="stonith-host0" class="stonith" type="fence_ipmilan">
+        <instance_attributes id="stonith-host0-instance_attributes">
+          <nvpair name="pcmk_host_list" value="host0" id="stonith-host0-instance_attributes-pcmk_host_list"/>
+          <nvpair name="ipaddr" value="10.0.1.10" id="stonith-host0-instance_attributes-ipaddr"/>
+          <nvpair name="login" value="root" id="stonith-host0-instance_attributes-login"/>
+          <nvpair name="passwd" value="****" id="stonith-host0-instance_attributes-passwd"/>
+          <nvpair name="lanplus" value="true" id="stonith-host0-instance_attributes-lanplus"/>
+          <nvpair name="auth" value="md5" id="stonith-host0-instance_attributes-auth"/>
+          <nvpair name="power_wait" value="5" id="stonith-host0-instance_attributes-power_wait"/>
+          <nvpair name="method" value="onoff" id="stonith-host0-instance_attributes-method"/>
+          <nvpair name="delay" value="15" id="stonith-host0-instance_attributes-delay"/>
+          <nvpair name="privlvl" value="OPERATOR" id="stonith-host0-instance_attributes-privlvl"/>
+          <nvpair name="pcmk_host_check" value="static-list" id="stonith-host0-instance_attributes-pcmk_host_check"/>
+        </instance_attributes>
+        <meta_attributes id="stonith-host0-meta_attributes">
+          <nvpair name="priority" value="9000" id="stonith-host0-meta_attributes-priority"/>
+          <nvpair name="failure-timeout" value="20" id="stonith-host0-meta_attributes-failure-timeout"/>
+          <nvpair id="stonith-host0-meta_attributes-target-role" name="target-role" value="Started"/>
+        </meta_attributes>
+        <operations>
+          <op name="monitor" interval="20" timeout="240" id="stonith-host0-monitor-20"/>
+        </operations>
+      </primitive>
+      <primitive id="stonith-dynamic" class="stonith" type="fence_ipmilan">
+        <instance_attributes id="stonith-dynamic-instance_attributes">
+          <nvpair name="pcmk_host_check" value="dynamic-list" id="stonith-dynamic-instance_attributes-pcmk_host_check"/>
+          <nvpair name="ipaddr" value="10.0.1.12" id="stonith-dynamic-instance_attributes-ipaddr"/>
+          <nvpair name="login" value="root" id="stonith-dynamic-instance_attributes-login"/>
+          <nvpair name="passwd" value="****" id="stonith-dynamic-instance_attributes-passwd"/>
+          <nvpair name="lanplus" value="true" id="stonith-dynamic-instance_attributes-lanplus"/>
+          <nvpair name="auth" value="md5" id="stonith-dynamic-instance_attributes-auth"/>
+          <nvpair name="power_wait" value="5" id="stonith-dynamic-instance_attributes-power_wait"/>
+          <nvpair name="method" value="onoff" id="stonith-dynamic-instance_attributes-method"/>
+          <nvpair name="delay" value="15" id="stonith-dynamic-instance_attributes-delay"/>
+          <nvpair name="privlvl" value="OPERATOR" id="stonith-dynamic-instance_attributes-privlvl"/>
+        </instance_attributes>
+        <meta_attributes id="stonith-dynamic-meta_attributes">
+          <nvpair name="priority" value="9000" id="stonith-dynamic-meta_attributes-priority"/>
+          <nvpair name="failure-timeout" value="20" id="stonith-dynamic-meta_attributes-failure-timeout"/>
+          <nvpair id="stonith-dynamic-meta_attributes-target-role" name="target-role" value="Started"/>
+        </meta_attributes>
+        <operations>
+          <op name="monitor" interval="20" timeout="240" id="stonith-dynamic-monitor-20"/>
+        </operations>
+      </primitive>
+</xpath-query>
+"#.as_bytes()
+    }
+
+    #[test]
+    fn test_stonith_multi_fence_ipmilan_host_dynamic() {
+        assert_eq!(
+            do_check_stonith(multihost_testxml_dynamic(), &"host2".to_string()).unwrap(),
+            ComponentState {
+                state: true,
+                info: "fence_ipmilan".to_string(),
                 config: ConfigState::Other,
                 service: ServiceState::Configured(RunState::Setup),
                 ..Default::default()
