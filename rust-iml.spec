@@ -195,7 +195,7 @@ systemctl preset iml-mailbox.service
 %attr(0644,root,root)%{_tmpfilesdir}/iml-mailbox.conf
 
 %changelog
-* Thur Oct 10 2019 Will Johnson <wjohnson@whamcloud.com> - 0.1.2-1
+* Thu Oct 10 2019 Will Johnson <wjohnson@whamcloud.com> - 0.1.2-1
 - Updates for 5.1 release
 * Wed Mar 6 2019 Joe Grund <jgrund@whamcloud.com> - 0.1.0-1
 - Initial package
