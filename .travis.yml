@@ -4,12 +4,6 @@ sudo: required
 services:
   - docker
   - postgresql
-addons:
-  postgresql: "9.2"
-  apt:
-    update: true
-    packages:
-      - postgresql-server-dev-9.2
 jobs:
   include:
     - stage: test
