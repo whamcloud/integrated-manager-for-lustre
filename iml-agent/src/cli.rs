@@ -6,7 +6,7 @@ use iml_agent::action_plugins::stratagem::{
     action_purge, action_warning,
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
-use iml_agent::action_plugins::{check_ha, check_kernel, check_stonith};
+use iml_agent::action_plugins::{check_ha, check_kernel, check_stonith, ostpool};
 use prettytable::{cell, row, Table};
 use spinners::{Spinner, Spinners};
 use std::{
@@ -32,6 +32,53 @@ pub enum StratagemCommand {
         /// The purge duration
         #[structopt(short = "p", long = "purge", parse(try_from_str = "parse_duration"))]
         pd: Option<u64>,
+    },
+}
+
+#[derive(Debug, StructOpt)]
+pub struct FsPool {
+    #[structopt(name = "FILESYSTEM")]
+    filesystem: String,
+
+    #[structopt(name = "POOL")]
+    pool: String,
+}
+
+#[derive(Debug, StructOpt)]
+pub struct FsPoolOst {
+    #[structopt(flatten)]
+    fspool: FsPool,
+
+    #[structopt(name = "OST")]
+    ost: String,
+}
+
+#[derive(Debug, StructOpt)]
+pub enum PoolCommand {
+    #[structopt(name = "create")]
+    Create {
+        #[structopt(flatten)]
+        cmd: FsPool,
+    },
+    #[structopt(name = "destroy")]
+    Destroy {
+        #[structopt(flatten)]
+        cmd: FsPool,
+    },
+    #[structopt(name = "add")]
+    Add {
+        #[structopt(flatten)]
+        cmd: FsPoolOst,
+    },
+    #[structopt(name = "remove")]
+    Remove {
+        #[structopt(flatten)]
+        cmd: FsPoolOst,
+    },
+    #[structopt(name = "list")]
+    List {
+        #[structopt(name = "FILESYSTEM")]
+        filesystem: String,
     },
 }
 
@@ -117,6 +164,12 @@ pub enum App {
     StratagemClient {
         #[structopt(subcommand)]
         command: StratagemClientCommand,
+    },
+
+    #[structopt(name = "pool")]
+    Pool {
+        #[structopt(subcommand)]
+        command: PoolCommand,
     },
 
     #[structopt(name = "check_ha")]
@@ -336,6 +389,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(s) => println!("{}", s),
             Err(e) => println!("{:?}", e),
         },
+        App::Pool { command } => {
+            if let Err(e) = match command {
+                PoolCommand::Create { cmd } => {
+                    ostpool::pool_create(cmd.filesystem, cmd.pool).wait()
+                }
+                PoolCommand::Destroy { cmd } => {
+                    ostpool::pool_destroy(cmd.filesystem, cmd.pool).wait()
+                }
+                PoolCommand::Add { cmd } => {
+                    ostpool::pool_add(cmd.fspool.filesystem, cmd.fspool.pool, cmd.ost).wait()
+                }
+                PoolCommand::Remove { cmd } => {
+                    ostpool::pool_remove(cmd.fspool.filesystem, cmd.fspool.pool, cmd.ost).wait()
+                }
+                PoolCommand::List { filesystem } => ostpool::pools(filesystem)
+                    .map(|list| {
+                        for pool in list {
+                            println!("{}", pool)
+                        }
+                    })
+                    .wait(),
+            } {
+                println!("{:?}", e);
+                exit(exitcode::SOFTWARE);
+            }
+        }
     };
 
     Ok(())

@@ -44,3 +44,8 @@ where
         Err(ImlAgentError::CmdOutputError(x))
     }
 }
+
+/// Runs lctl with given arguments
+pub fn lctl(args: &[&str]) -> impl Future<Item = std::process::Output, Error = ImlAgentError> {
+    cmd_output_success("/usr/sbin/lctl", args)
+}

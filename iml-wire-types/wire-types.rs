@@ -1787,6 +1787,25 @@ pub struct ComponentState<T: Default> {
     pub state: T,
 }
 
+#[derive(Debug, Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct OstPool {
+    pub name: String,
+    pub filesystem: String,
+    pub osts: Vec<String>,
+}
+
+impl std::fmt::Display for OstPool {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}.{} [{}]",
+            self.filesystem,
+            self.name,
+            self.osts.join(", ")
+        )
+    }
+}
+
 pub mod warp_drive {
     use crate::{
         db::{
