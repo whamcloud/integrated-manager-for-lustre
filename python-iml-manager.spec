@@ -294,6 +294,9 @@ fi
 mkdir -p %{_localstatedir}/lib/rpm-state/%{name}/
 cp -r /var/lib/chroma/* %{_localstatedir}/lib/rpm-state/%{name}/
 
+%posttrans -n python2-%{pypi_name}-libs
+rmdir %{python_sitelib}/iml_manager-5.0.*.egg-info 2> /dev/null || :
+
 %preun -n python2-%{pypi_name}
 %systemd_preun iml-manager.target
 %systemd_preun iml-corosync.service
@@ -347,7 +350,7 @@ fi
 %attr(0755,root,root)%{manager_root}/manage.py
 %{manager_root}/agent-bootstrap-script.template
 %{manager_root}/chroma-manager.conf.template
-%{manager_root}/chroma_core/fixtures/*
+%{manager_root}/chroma_core/fixtures/
 %{manager_root}/polymorphic/COPYING
 %config(noreplace) %{manager_root}/*.repo
 %{manager_root}/*.profile
@@ -361,7 +364,7 @@ fi
 %doc licenses/*
 
 %files -n python2-%{pypi_name}-libs
-%{python_sitelib}/*.egg-info/*
+%{python_sitelib}/*.egg-info/
 
 %files -f cli.files -n python2-%{pypi_name}-cli
 %defattr(-,root,root)
