@@ -829,6 +829,7 @@ proxy=_none_
         self._setup_ntp(ntp_server)
         self._setup_crypto()
 
+        self._stop_services()
         self._setup_rabbitmq_service()
 
         self._setup_rabbitmq_credentials()
