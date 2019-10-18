@@ -1,6 +1,6 @@
 [lustre-client]
 name=Lustre Client
-baseurl=https://build.whamcloud.com/view/lustre/job/lustre-b2_12/52/arch=x86_64,build_type=client,distro=el7.7,ib_stack=inkernel/artifact/artifacts/
+baseurl=https://build.whamcloud.com/view/lustre/job/lustre-b2_12/52/arch%3Dx86_64%2Cbuild_type%3Dclient%2Cdistro%3Del7.7%2Cib_stack%3Dinkernel/artifact/artifacts/
 enabled=1
 gpgcheck=0
 repo_gpgcheck=0
