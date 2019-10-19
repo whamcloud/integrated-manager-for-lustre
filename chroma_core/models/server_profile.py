@@ -39,6 +39,14 @@ class ServerProfile(models.Model):
             yield package["package_name"]
 
     @property
+    def base_packages(self):
+        """
+        Obtaining an iterable list of the base packages always installed on a host
+        """
+        for package in ["python2-iml-agent", "rust-iml-agent"]:
+            yield package
+
+    @property
     def repos(self):
         """
         Convenience for obtaining an iterable of repo names from the ServerProfilePackage model
