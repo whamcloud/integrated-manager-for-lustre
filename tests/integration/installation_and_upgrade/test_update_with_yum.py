@@ -13,6 +13,8 @@ class TestYumUpdate(TestInstallationAndUpgrade):
     def test_yum_update(self):
         """ Test for lustre kernel is set to boot after yum update"""
 
+        from remote_pdb import RemotePdb
+        RemotePdb('127.0.0.1', 4444).set_trace()
         self.assertGreaterEqual(len(config["lustre_servers"]), 4)
 
         # get a list of hosts
@@ -48,6 +50,10 @@ class TestYumUpdate(TestInstallationAndUpgrade):
         # situations where the O/S upgrade results in an IML that can no
         # longer function with the upgraded O/S.
 
+        # Run a yum upgrade while excluding python2 packages
+        for server in self.config_servers:
+            self.remote_operations.yum_upgrade_exclude_python2_iml(server)
+
         # With the list of hosts, start the upgrade as a single command
         command = self.chroma_manager.post(
             "/api/command/",
@@ -64,11 +70,11 @@ class TestYumUpdate(TestInstallationAndUpgrade):
         self.wait_for_command(self.chroma_manager, command["id"], timeout=UPDATE_TEST_TIMEOUT)
         self.wait_for_assert(lambda: self.assertNoAlerts(host["resource_uri"], of_type="UpdatesAvailableAlert"))
 
-        # Fully update all installed packages on the server
         for server in self.config_servers:
-            self.remote_operations.yum_update(server)
             kernel = self.remote_operations.default_boot_kernel_path(server)
             self.assertGreaterEqual(kernel.find("_lustre"), 7)
+            available_updates = yum_check_update(server)
+            print "Available updates: {}".format(available_updates)
 
         # Update corosync on the storage servers
         # N.B. This will also start the FS
