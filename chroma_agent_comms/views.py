@@ -388,8 +388,8 @@ def setup(request, key):
     crypto = Crypto()
     cert_str = open(crypto.AUTHORITY_CERT_FILE).read()
 
-    repo_packages = "python2-iml-agent rust-iml-agent"
     server_profile = ServerProfile.objects.get(name=request.REQUEST["profile_name"])
+    repo_packages = " ".join(server_profile.base_packages)
 
     repos = server_profile.repo_contents
 
