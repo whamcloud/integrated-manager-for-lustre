@@ -1,6 +1,6 @@
 [lustre]
 name=Lustre Server
-baseurl=https://build.whamcloud.com/view/Non-Reviews/job/lustre-b2_12-patchless/arch=x86_64%2Cbuild_type=server%2Cdistro=el7.7%2Cib_stack=inkernel/46/artifact/artifacts/
+baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.12.3/el7/patchless-ldiskfs-server/
 enabled=1
 gpgcheck=0
 repo_gpgcheck=0

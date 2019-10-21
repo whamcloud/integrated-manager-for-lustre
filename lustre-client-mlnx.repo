@@ -1,6 +1,6 @@
 [lustre-client-mlnx]
 name=Lustre Client with Mellanox Support
-baseurl=https://build.whamcloud.com/view/lustre/job/lustre-b2_12-ib/62/arch%3Dx86_64%2Cbuild_type%3Dclient%2Cdistro%3Del7.7%2Cib_stack%3Dmlx/artifact/artifacts/
+baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.12.3-ib/MOFED-4.7-1.0.0.1/el7/client/
 enabled=1
 gpgcheck=0
 repo_gpgcheck=0
