@@ -246,9 +246,6 @@ class StratagemConfigurationResource(StatefulModelResource):
 
         return long(x)
 
-    def dehydrate_interval(self, bundle):
-        return long(bundle.data.get("interval"))
-
     def get_resource_uri(self, bundle=None, url_name=None):
         return Resource.get_resource_uri(self)
 
