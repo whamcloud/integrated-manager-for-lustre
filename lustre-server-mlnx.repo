@@ -1,6 +1,6 @@
 [lustre]
 name=Lustre Server
-baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.12.2-ib/MOFED-4.6-1.0.1.1/el7/server/
+baseurl=https://build.whamcloud.com/view/lustre/job/lustre-b2_12-ib/62/arch%3Dx86_64%2Cbuild_type%3Dserver%2Cdistro%3Del7.7%2Cib_stack%3Dmlx/artifact/artifacts/
 enabled=1
 gpgcheck=0
 repo_gpgcheck=0
