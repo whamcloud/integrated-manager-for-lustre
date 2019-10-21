@@ -12,9 +12,6 @@ from tests.integration.installation_and_upgrade.test_installation_and_upgrade im
 class TestYumUpdate(TestInstallationAndUpgrade):
     def test_yum_update(self):
         """ Test for lustre kernel is set to boot after yum update"""
-
-        from remote_pdb import RemotePdb
-        RemotePdb('127.0.0.1', 4444).set_trace()
         self.assertGreaterEqual(len(config["lustre_servers"]), 4)
 
         # get a list of hosts
@@ -73,6 +70,7 @@ class TestYumUpdate(TestInstallationAndUpgrade):
         for server in self.config_servers:
             kernel = self.remote_operations.default_boot_kernel_path(server)
             self.assertGreaterEqual(kernel.find("_lustre"), 7)
+            print "About to check for updates on {}".format(server)
             available_updates = yum_check_update(server)
             print "Available updates: {}".format(available_updates)
 
