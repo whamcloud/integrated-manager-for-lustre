@@ -71,7 +71,7 @@ class TestYumUpdate(TestInstallationAndUpgrade):
             kernel = self.remote_operations.default_boot_kernel_path(server)
             self.assertGreaterEqual(kernel.find("_lustre"), 7)
             print "About to check for updates on {}".format(server)
-            available_updates = yum_check_update(server)
+            available_updates = self.remote_operations.yum_check_update(server)
             print "Available updates: {}".format(available_updates)
 
         # Update corosync on the storage servers
