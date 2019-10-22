@@ -15,6 +15,8 @@ vars = {
     "DEVICE_AGGREGATOR_PROXY_PASS": "http://device-aggregator:8083",
     "UPDATE_HANDLER_PROXY_PASS": "http://update-handler:8080",
     "WARP_DRIVE_PROXY_PASS": "http://iml-warp-drive:8890",
+    "MAILBOX_PATH": "/var/spool/iml/mailbox",
+    "MAILBOX_PROXY_PASS": "http://mailbox:8891",
 }
 
 conf_template = "./chroma-manager.conf.template"
