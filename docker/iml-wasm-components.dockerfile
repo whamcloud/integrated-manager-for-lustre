@@ -5,7 +5,7 @@ RUN rustup target add wasm32-unknown-unknown && \
   cargo install wasm-bindgen-cli && \
   cargo build --target wasm32-unknown-unknown --release && \
   mkdir package && \
-  wasm-bindgen target/wasm32-unknown-unknown/release/iml_action_dropdown.wasm --no-modules --out-dir ./package --out-name package && \
+  wasm-bindgen target/wasm32-unknown-unknown/release/package.wasm --no-modules --out-dir ./package --out-name package && \
   rm /build/package/*.ts;
 
 FROM rust:1.36
