@@ -16,7 +16,7 @@ pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APP
 yum clean all
 
 # Do upgrade because vagrant doesn't have el7.7 IML#1277
-$PROXY yum upgrade -y
+$PROXY yum upgrade -y --exclude=python2-iml*
 
 $PROXY yum install -y omping
 if $MEASURE_COVERAGE && [ -f /etc/yum.repos.d/autotest.repo ]; then
