@@ -24,8 +24,6 @@ from chroma_core.models import (
     get_fs_id_from_identifier,
 )
 
-from chroma_api.chroma_model_resource import ChromaModelResource
-
 get_bundle_int_val = compose(partial(flip, int, 10), str)
 
 # Postgres can store numbers up to 8 bytes (+9,223,372,036,854,775,807). These values will ultimately be passed back to the web
@@ -245,9 +243,6 @@ class StratagemConfigurationResource(StatefulModelResource):
             return x
 
         return long(x)
-
-    def dehydrate_interval(self, bundle):
-        return long(bundle.data.get("interval"))
 
     def get_resource_uri(self, bundle=None, url_name=None):
         return Resource.get_resource_uri(self)
