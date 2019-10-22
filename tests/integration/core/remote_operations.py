@@ -1031,7 +1031,9 @@ class RealRemoteOperations(RemoteOperations):
         self._ssh_address(server["address"], "yum -y upgrade --exclude=python2-iml*")
 
     def yum_check_update(self, server):
-        self._ssh_address(server["address"], "yum check-update | xargs -n3 | column -t | awk '{print$2}'")
+        logger.debug("Checking for updates")
+        result = self._ssh_address(server["address"], "yum check-update | xargs -n3 | column -t | awk '{print$2}'")
+        logger.debug("yum_check_update results: {}".format(result))
 
     def default_boot_kernel_path(self, server):
         r = self._ssh_address(server["address"], "grubby --default-kernel")
