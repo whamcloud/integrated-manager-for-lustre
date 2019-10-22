@@ -70,9 +70,9 @@ class TestYumUpdate(TestInstallationAndUpgrade):
         for server in self.config_servers:
             kernel = self.remote_operations.default_boot_kernel_path(server)
             self.assertGreaterEqual(kernel.find("_lustre"), 7)
-            print "About to check for updates on {}".format(server)
             available_updates = self.remote_operations.yum_check_update(server)
-            print "Available updates: {}".format(available_updates)
+            available_updates = filter(lambda x: "iml-" in x, available_updates)
+            self.assertEqual(len(available_updates), 0)
 
         # Update corosync on the storage servers
         # N.B. This will also start the FS
