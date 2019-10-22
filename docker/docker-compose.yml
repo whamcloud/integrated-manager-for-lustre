@@ -98,6 +98,8 @@ services:
     deploy: *default-deploy
     environment:
       - AGGREGATOR_PORT=8083
+    volumes:
+      - "manager-config:/var/lib/chroma"
   corosync:
     image: "imlteam/manager-corosync"
     hostname: "corosync"
