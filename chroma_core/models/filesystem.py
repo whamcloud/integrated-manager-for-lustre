@@ -462,7 +462,7 @@ class DestroyOstPoolJob(AdvertisedJob):
         return {"pool_id": pool.id}
 
     def description(self):
-        return "Initiate a reboot on host %s" % self.host
+        return "Destroy OST Pool"
 
     def get_steps(self):
         return [(DestroyOstPoolStep, {"pool": self.pool})]

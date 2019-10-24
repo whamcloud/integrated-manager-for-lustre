@@ -46,10 +46,35 @@ pub fn pool_destroy(
     lctl(&["pool_destroy", format!("{}.{}", filesystem, name).as_str()]).map(drop)
 }
 
+fn pool_list(
+    filesystem: &String,
+    pool: &String,
+) -> impl Future<Item = Vec<String>, Error = ImlAgentError> {
+    lctl(&["pool_list", format!("{}.{}", filesystem, pool).as_str()])
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .to_string()
+                .lines()
+                .skip(1)
+                .map(|s| s.rsplit('.').next().unwrap().to_string())
+                .collect()
+        })
+        .or_else(|e| {
+            if let ImlAgentError::CmdOutputError(cerr) = e {
+                if cerr.status.code() == Some(2) {
+                    Ok(vec![])
+                } else {
+                    Err(ImlAgentError::CmdOutputError(cerr))
+                }
+            } else {
+                Err(e)
+            }
+        })
+}
+
 pub fn pools(filesystem: String) -> impl Future<Item = Vec<OstPool>, Error = ImlAgentError> {
     lctl(&["pool_list", filesystem.as_str()])
         .map(|o| {
-            // o.status.code() == 2 (ENOENT) is OKAY => vec![]
             String::from_utf8_lossy(&o.stdout)
                 .to_string()
                 .lines()

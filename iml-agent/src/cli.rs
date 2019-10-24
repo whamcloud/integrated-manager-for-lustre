@@ -7,6 +7,7 @@ use iml_agent::action_plugins::stratagem::{
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
 use iml_agent::action_plugins::{check_ha, check_kernel, check_stonith, ostpool};
+use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
 use spinners::{Spinner, Spinners};
 use std::{
@@ -37,7 +38,7 @@ pub enum StratagemCommand {
 
 #[derive(Debug, StructOpt)]
 pub struct FsPool {
-    #[structopt(name = "FILESYSTEM")]
+    #[structopt(name = "FILESYSTEM", parse(try_from_str = "is_valid_fsname"))]
     filesystem: String,
 
     #[structopt(name = "POOL")]
@@ -77,7 +78,7 @@ pub enum PoolCommand {
     },
     #[structopt(name = "list")]
     List {
-        #[structopt(name = "FILESYSTEM")]
+        #[structopt(name = "FILESYSTEM", parse(try_from_str = "is_valid_fsname"))]
         filesystem: String,
     },
 }
@@ -112,13 +113,37 @@ fn parse_duration(src: &str) -> Result<u64, io::Error> {
     }
 }
 
+/// Use with structop parse to validate lustre filesystem name
+fn is_valid_fsname(src: &str) -> Result<String, io::Error> {
+    // c.f. lustre-release/lustre/utils/mkfs_lustre.c::parse_opts for
+    // 'L' (fsname) option
+    if src.len() < 1 {
+        return Err(invalid_input_err("FSName too short (min length 1)"));
+    }
+    if src.len() > llapi::MAXFSNAME {
+        return Err(invalid_input_err(&format!(
+            "FSName too long (max length {})",
+            llapi::MAXFSNAME
+        )));
+    }
+    for c in src.chars() {
+        if !c.is_ascii_alphanumeric() && c != '-' && c != '_' {
+            return Err(invalid_input_err(&format!(
+                "Invalid character in fsname ({})",
+                c
+            )));
+        }
+    }
+    Ok(src.to_string())
+}
+
 #[derive(Debug, StructOpt)]
 pub struct FidInput {
     #[structopt(short = "i")]
     /// File to read from, "-" for stdin, or unspecified for on cli
     input: Option<String>,
 
-    #[structopt(name = "FSNAME")]
+    #[structopt(name = "FSNAME", parse(try_from_str = "is_valid_fsname"))]
     /// Lustre filesystem name, or mountpoint
     fsname: String,
 
