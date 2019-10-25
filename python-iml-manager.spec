@@ -219,7 +219,6 @@ mkdir -p $RPM_BUILD_ROOT%{_unitdir}/grafana-server.service.d/
 mv $RPM_BUILD_ROOT%{manager_root}/grafana/dropin-iml.conf $RPM_BUILD_ROOT%{_unitdir}/grafana-server.service.d/90-iml.conf
 cp iml-manager-redirect.conf $RPM_BUILD_ROOT%{_sysconfdir}/nginx/default.d/iml-manager-redirect.conf
 cp rabbitmq-env.conf $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq/rabbitmq-env.conf
-cp chroma-host-discover-init.sh $RPM_BUILD_ROOT%{_sysconfdir}/init.d/chroma-host-discover
 mkdir -p $RPM_BUILD_ROOT%{_mandir}/man1
 install chroma-config.1.gz $RPM_BUILD_ROOT%{_mandir}/man1
 install -m 644 logrotate.cfg $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/chroma-manager
@@ -330,7 +329,6 @@ fi
 
 %files -f manager.files -n python2-%{pypi_name}
 %defattr(-,root,root)
-%{_bindir}/chroma-host-discover
 %attr(0700,root,root)%{_bindir}/chroma-config
 %dir %attr(0755,nginx,nginx)%{manager_root}
 %dir %attr(0755,nginx,nginx)/var/log/chroma
@@ -339,7 +337,6 @@ fi
 %{_sysconfdir}/rabbitmq/rabbitmq-env.conf
 %{_sysconfdir}/grafana/grafana-iml.ini
 %{_unitdir}/grafana-server.service.d/90-iml.conf
-%attr(0755,root,root)%{_sysconfdir}/init.d/chroma-host-discover
 %attr(0755,root,root)%{_mandir}/man1/chroma-config.1.gz
 %attr(0644,root,root)%{_sysconfdir}/logrotate.d/chroma-manager
 %attr(0644,root,grafana)%{_sysconfdir}/grafana/provisioning/dashboards/iml-dashboards.yaml

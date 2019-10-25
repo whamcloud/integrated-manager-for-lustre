@@ -26,7 +26,7 @@ setup(
         "polymorphic": ["COPYING"],
         "tests": ["integration/run_tests", "integration/*/*.json", "sample_data/*", "integration/core/clear_ha_el?.sh"],
     },
-    scripts=["chroma-host-discover"],
+    scripts=[],
     entry_points={
         "console_scripts": [
             "chroma-config = chroma_core.lib.service_config:chroma_config",
