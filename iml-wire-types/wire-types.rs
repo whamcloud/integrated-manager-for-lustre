@@ -2036,6 +2036,15 @@ impl Default for ServiceState {
     }
 }
 
+impl fmt::Display for ServiceState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ServiceState::Unconfigured => f.pad(&format!("{:?}", self)),
+            ServiceState::Configured(r) => f.pad(&format!("{:?}", r)),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum ConfigState {
     Unknown,
@@ -2047,6 +2056,12 @@ pub enum ConfigState {
 impl Default for ConfigState {
     fn default() -> Self {
         ConfigState::Unknown
+    }
+}
+
+impl fmt::Display for ConfigState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.pad(&format!("{:?}", self))
     }
 }
 
