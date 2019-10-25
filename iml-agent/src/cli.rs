@@ -248,6 +248,9 @@ pub enum App {
     #[structopt(name = "check_ha")]
     CheckHA,
 
+    #[structopt(name = "ha_list")]
+    HAResources,
+
     #[structopt(name = "check_stonith")]
     CheckStonith,
 
@@ -470,6 +473,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
         App::CheckHA => match check_ha::check_ha(()).await {
+            Ok((cs, pm, pc)) => {
+                let mut table = Table::new();
+                table.add_row(row!["Name", "Config", "Service"]);
+                table.add_row(row!["corosync", cs.config, cs.service]);
+                table.add_row(row!["pacemaker", pm.config, pm.service]);
+                table.add_row(row!["pcsd", pc.config, pc.service]);
+                table.printstd();
+            }
+            Err(e) => println!("{:?}", e),
+        },
+        App::HAResources => match check_ha::get_ha_resource_list(()).await {
             Ok(v) => {
                 for e in v {
                     println!("{}", serde_json::to_string(&e).unwrap())
