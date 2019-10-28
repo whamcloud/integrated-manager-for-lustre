@@ -42,7 +42,7 @@ impl DaemonPlugin for ActionRunner {
     fn on_message(
         &self,
         v: serde_json::Value,
-    ) -> Box<Future<Item = AgentResult, Error = ImlAgentError> + Send> {
+    ) -> Box<dyn Future<Item = AgentResult, Error = ImlAgentError> + Send> {
         let action: Action = match serde_json::from_value(v) {
             Ok(x) => x,
             Err(e) => return Box::new(future::err(ImlAgentError::Serde(e))),
@@ -100,7 +100,7 @@ impl DaemonPlugin for ActionRunner {
 
                 if let Some(tx) = tx {
                     // We don't care what the result is here.
-                    tx.send(()).is_ok();
+                    let _ = tx.send(()).is_ok();
                 }
 
                 Box::new(future::ok(
@@ -116,7 +116,7 @@ impl DaemonPlugin for ActionRunner {
     fn teardown(&mut self) -> Result<()> {
         for (_, tx) in self.ids.lock().drain() {
             // We don't care what the result is here.
-            tx.send(()).is_ok();
+            let _ = tx.send(()).is_ok();
         }
 
         Ok(())

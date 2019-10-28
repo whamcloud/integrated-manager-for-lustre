@@ -17,5 +17,5 @@ members = [
     'iml-postgres',
     'iml-services/iml-service-queue',
     'iml-services/iml-action-runner',
-    'iml-services/iml-stratagem'
+    'iml-services/iml-stratagem',
 ]

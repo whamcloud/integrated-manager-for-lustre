@@ -27,7 +27,9 @@ impl fmt::Display for PluginName {
     }
 }
 
-#[derive(Eq, PartialEq, Hash, Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Clone, serde::Serialize, serde::Deserialize,
+)]
 #[serde(transparent)]
 pub struct Fqdn(pub String);
 
@@ -811,7 +813,15 @@ impl EndpointName for StratagemConfiguration {
 }
 
 pub mod db {
-    use std::fmt;
+    use crate::Fqdn;
+    use std::{collections::BTreeSet, fmt, ops::Deref, path::PathBuf};
+
+    #[cfg(feature = "postgres-interop")]
+    use bytes::BytesMut;
+    #[cfg(feature = "postgres-interop")]
+    use postgres_types::{to_sql_checked, FromSql, IsNull, ToSql, Type};
+    #[cfg(feature = "postgres-interop")]
+    use std::io;
     #[cfg(feature = "postgres-interop")]
     use tokio_postgres::Row;
 
@@ -836,7 +846,7 @@ pub mod db {
     /// The name of a `chroma` table
     #[derive(serde::Deserialize, Debug, PartialEq, Eq)]
     #[serde(transparent)]
-    pub struct TableName<'a>(&'a str);
+    pub struct TableName<'a>(pub &'a str);
 
     impl fmt::Display for TableName<'_> {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -1232,6 +1242,360 @@ pub mod db {
     impl Name for LnetConfigurationRecord {
         fn table_name() -> TableName<'static> {
             LNET_CONFIGURATION_TABLE_NAME
+        }
+    }
+
+    #[derive(
+        Debug, serde::Serialize, serde::Deserialize, Eq, PartialEq, Ord, PartialOrd, Clone, Hash,
+    )]
+    pub struct DeviceId(String);
+
+    #[cfg(feature = "postgres-interop")]
+    impl ToSql for DeviceId {
+        fn to_sql(
+            &self,
+            ty: &Type,
+            w: &mut BytesMut,
+        ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
+            <&str as ToSql>::to_sql(&&*self.0, ty, w)
+        }
+
+        fn accepts(ty: &Type) -> bool {
+            <&str as ToSql>::accepts(ty)
+        }
+
+        to_sql_checked!();
+    }
+
+    #[cfg(feature = "postgres-interop")]
+    impl<'a> FromSql<'a> for DeviceId {
+        fn from_sql(
+            ty: &Type,
+            raw: &'a [u8],
+        ) -> Result<DeviceId, Box<dyn std::error::Error + Sync + Send>> {
+            FromSql::from_sql(ty, raw).map(DeviceId)
+        }
+
+        fn accepts(ty: &Type) -> bool {
+            <String as FromSql>::accepts(ty)
+        }
+    }
+
+    impl Deref for DeviceId {
+        type Target = String;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    #[derive(Debug, Default, PartialEq, Eq)]
+    pub struct DeviceIds(pub BTreeSet<DeviceId>);
+
+    impl Deref for DeviceIds {
+        type Target = BTreeSet<DeviceId>;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    #[cfg(feature = "postgres-interop")]
+    impl ToSql for DeviceIds {
+        fn to_sql(
+            &self,
+            ty: &Type,
+            w: &mut BytesMut,
+        ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
+            let xs = self.0.iter().collect::<Vec<_>>();
+            <&[&DeviceId] as ToSql>::to_sql(&&*xs, ty, w)
+        }
+
+        fn accepts(ty: &Type) -> bool {
+            <&[&DeviceId] as ToSql>::accepts(ty)
+        }
+
+        to_sql_checked!();
+    }
+
+    #[cfg(feature = "postgres-interop")]
+    impl<'a> FromSql<'a> for DeviceIds {
+        fn from_sql(
+            ty: &Type,
+            raw: &'a [u8],
+        ) -> Result<DeviceIds, Box<dyn std::error::Error + Sync + Send>> {
+            <Vec<DeviceId> as FromSql>::from_sql(ty, raw)
+                .map(|xs| DeviceIds(xs.into_iter().collect()))
+        }
+
+        fn accepts(ty: &Type) -> bool {
+            <Vec<DeviceId> as FromSql>::accepts(ty)
+        }
+    }
+
+    #[derive(Debug, PartialEq, Eq)]
+    pub struct Size(pub u64);
+
+    #[cfg(feature = "postgres-interop")]
+    impl ToSql for Size {
+        fn to_sql(
+            &self,
+            ty: &Type,
+            w: &mut BytesMut,
+        ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
+            <&str as ToSql>::to_sql(&&*self.0.to_string(), ty, w)
+        }
+
+        fn accepts(ty: &Type) -> bool {
+            <&str as ToSql>::accepts(ty)
+        }
+
+        to_sql_checked!();
+    }
+
+    #[cfg(feature = "postgres-interop")]
+    impl<'a> FromSql<'a> for Size {
+        fn from_sql(
+            ty: &Type,
+            raw: &'a [u8],
+        ) -> Result<Size, Box<dyn std::error::Error + Sync + Send>> {
+            <String as FromSql>::from_sql(ty, raw).and_then(|x| {
+                x.parse::<u64>()
+                    .map(Size)
+                    .map_err(|e| -> Box<dyn std::error::Error + Sync + Send> { Box::new(e) })
+            })
+        }
+
+        fn accepts(ty: &Type) -> bool {
+            <String as FromSql>::accepts(ty)
+        }
+    }
+
+    /// The current type of Devices we support
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+    pub enum DeviceType {
+        ScsiDevice,
+        Partition,
+        MdRaid,
+        Mpath,
+        VolumeGroup,
+        LogicalVolume,
+        Zpool,
+        Dataset,
+    }
+
+    impl std::fmt::Display for DeviceType {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            match self {
+                DeviceType::ScsiDevice => write!(f, "scsi"),
+                DeviceType::Partition => write!(f, "partition"),
+                DeviceType::MdRaid => write!(f, "mdraid"),
+                DeviceType::Mpath => write!(f, "mpath"),
+                DeviceType::VolumeGroup => write!(f, "vg"),
+                DeviceType::LogicalVolume => write!(f, "lv"),
+                DeviceType::Zpool => write!(f, "zpool"),
+                DeviceType::Dataset => write!(f, "dataset"),
+            }
+        }
+    }
+
+    #[cfg(feature = "postgres-interop")]
+    impl ToSql for DeviceType {
+        fn to_sql(
+            &self,
+            ty: &Type,
+            w: &mut BytesMut,
+        ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
+            <String as ToSql>::to_sql(&format!("{}", self), ty, w)
+        }
+
+        fn accepts(ty: &Type) -> bool {
+            <String as ToSql>::accepts(ty)
+        }
+
+        to_sql_checked!();
+    }
+
+    #[cfg(feature = "postgres-interop")]
+    impl<'a> FromSql<'a> for DeviceType {
+        fn from_sql(
+            ty: &Type,
+            raw: &'a [u8],
+        ) -> Result<DeviceType, Box<dyn std::error::Error + Sync + Send>> {
+            FromSql::from_sql(ty, raw).and_then(|x| match x {
+                "scsi" => Ok(DeviceType::ScsiDevice),
+                "partition" => Ok(DeviceType::Partition),
+                "mdraid" => Ok(DeviceType::MdRaid),
+                "mpath" => Ok(DeviceType::Mpath),
+                "vg" => Ok(DeviceType::VolumeGroup),
+                "lv" => Ok(DeviceType::LogicalVolume),
+                "zpool" => Ok(DeviceType::Zpool),
+                "dataset" => Ok(DeviceType::Dataset),
+                _ => {
+                    let e: Box<dyn std::error::Error + Sync + Send> = Box::new(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "Unknown DeviceType variant",
+                    ));
+
+                    Err(e)
+                }
+            })
+        }
+
+        fn accepts(ty: &Type) -> bool {
+            <String as FromSql>::accepts(ty)
+        }
+    }
+
+    /// A device (Block or Virtual).
+    /// These should be unique per cluster
+    #[derive(Debug, PartialEq, Eq)]
+    pub struct Device {
+        pub id: DeviceId,
+        pub size: Size,
+        pub usable_for_lustre: bool,
+        pub device_type: DeviceType,
+        pub parents: DeviceIds,
+        pub children: DeviceIds,
+    }
+
+    pub const DEVICE_TABLE_NAME: TableName = TableName("chroma_core_device");
+
+    impl Name for Device {
+        fn table_name() -> TableName<'static> {
+            DEVICE_TABLE_NAME
+        }
+    }
+
+    #[cfg(feature = "postgres-interop")]
+    impl From<Row> for Device {
+        fn from(row: Row) -> Self {
+            Device {
+                id: row.get("id"),
+                size: row.get("size"),
+                usable_for_lustre: row.get("usable_for_lustre"),
+                device_type: row.get("device_type"),
+                parents: row.get("parents"),
+                children: row.get("children"),
+            }
+        }
+    }
+
+    #[derive(Debug, PartialEq, Eq)]
+    pub struct Paths(pub BTreeSet<PathBuf>);
+
+    impl Deref for Paths {
+        type Target = BTreeSet<PathBuf>;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    #[cfg(feature = "postgres-interop")]
+    impl ToSql for Paths {
+        fn to_sql(
+            &self,
+            ty: &Type,
+            w: &mut BytesMut,
+        ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
+            let xs = self.iter().map(|x| x.to_string_lossy()).collect::<Vec<_>>();
+            <&[std::borrow::Cow<'_, str>] as ToSql>::to_sql(&&*xs, ty, w)
+        }
+
+        fn accepts(ty: &Type) -> bool {
+            <&[std::borrow::Cow<'_, str>] as ToSql>::accepts(ty)
+        }
+
+        to_sql_checked!();
+    }
+
+    #[cfg(feature = "postgres-interop")]
+    impl<'a> FromSql<'a> for Paths {
+        fn from_sql(
+            ty: &Type,
+            raw: &'a [u8],
+        ) -> Result<Paths, Box<dyn std::error::Error + Sync + Send>> {
+            <Vec<String> as FromSql>::from_sql(ty, raw)
+                .map(|xs| Paths(xs.into_iter().map(PathBuf::from).collect()))
+        }
+
+        fn accepts(ty: &Type) -> bool {
+            <Vec<String> as FromSql>::accepts(ty)
+        }
+    }
+
+    #[derive(Debug, PartialEq, Eq)]
+    pub struct MountPath(pub Option<PathBuf>);
+
+    #[cfg(feature = "postgres-interop")]
+    impl ToSql for MountPath {
+        fn to_sql(
+            &self,
+            ty: &Type,
+            w: &mut BytesMut,
+        ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
+            <&Option<String> as ToSql>::to_sql(
+                &&self.0.clone().map(|x| x.to_string_lossy().into_owned()),
+                ty,
+                w,
+            )
+        }
+
+        fn accepts(ty: &Type) -> bool {
+            <&Option<String> as ToSql>::accepts(ty)
+        }
+
+        to_sql_checked!();
+    }
+
+    #[cfg(feature = "postgres-interop")]
+    impl Deref for MountPath {
+        type Target = Option<PathBuf>;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    /// A pointer to a `Device` present on a host.
+    /// Stores mount_path and paths to reach the pointed to `Device`.
+    #[derive(Debug, PartialEq, Eq)]
+    pub struct DeviceHost {
+        pub device_id: DeviceId,
+        pub fqdn: Fqdn,
+        pub local: bool,
+        pub paths: Paths,
+        pub mount_path: MountPath,
+        pub fs_type: Option<String>,
+        pub fs_label: Option<String>,
+        pub fs_uuid: Option<String>,
+    }
+
+    pub const DEVICE_HOST_TABLE_NAME: TableName = TableName("chroma_core_devicehost");
+
+    impl Name for DeviceHost {
+        fn table_name() -> TableName<'static> {
+            DEVICE_HOST_TABLE_NAME
+        }
+    }
+
+    #[cfg(feature = "postgres-interop")]
+    impl From<Row> for DeviceHost {
+        fn from(row: Row) -> Self {
+            DeviceHost {
+                device_id: row.get("device_id"),
+                fqdn: Fqdn(row.get::<_, String>("fqdn")),
+                local: row.get("local"),
+                paths: row.get("paths"),
+                mount_path: MountPath(
+                    row.get::<_, Option<String>>("mount_path")
+                        .map(PathBuf::from),
+                ),
+                fs_type: row.get::<_, Option<String>>("fs_type"),
+                fs_label: row.get::<_, Option<String>>("fs_label"),
+                fs_uuid: row.get::<_, Option<String>>("fs_uuid"),
+            }
         }
     }
 }

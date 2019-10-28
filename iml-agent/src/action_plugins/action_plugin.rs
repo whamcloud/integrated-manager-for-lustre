@@ -18,7 +18,7 @@ type BoxedFuture = Box<
         + Send,
 >;
 
-type Callback = Box<Fn(serde_json::value::Value) -> BoxedFuture + Send + Sync>;
+type Callback = Box<dyn Fn(serde_json::value::Value) -> BoxedFuture + Send + Sync>;
 
 fn mk_boxed_future<T, R, Fut>(v: serde_json::value::Value, f: fn(T) -> Fut) -> BoxedFuture
 where
@@ -70,6 +70,7 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
         "action_warning_stratagem".into(),
         mk_callback(action_warning::read_mailbox),
     );
+
     map.insert(
         "action_purge_stratagem".into(),
         mk_callback(action_purge::read_mailbox),

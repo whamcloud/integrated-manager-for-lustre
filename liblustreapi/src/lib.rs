@@ -337,6 +337,7 @@ impl Llapi {
                 log::error!("Bad fid format: {}", fidstr);
             }
         }
+
         unsafe {
             fids[0].hdr.nr = fids.len() as u32 - 1;
         }

@@ -13,7 +13,9 @@ path = "wire-types.rs"
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
-tokio-postgres = { version = "0.4.0-rc.3", optional = true }
+tokio-postgres = { version = "0.5.0-alpha.1", optional = true }
+postgres-types = { version = "0.1.0-alpha.1", optional = true }
+bytes = { version = "0.4", optional = true }
 
 [features]
-postgres-interop = ["tokio-postgres"]
+postgres-interop = ["tokio-postgres", "postgres-types", "bytes"]

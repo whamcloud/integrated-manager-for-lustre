@@ -14,7 +14,7 @@ use tracing::info;
 pub type OutputValue = serde_json::Value;
 pub type Output = Option<OutputValue>;
 
-pub fn as_output(x: impl serde::Serialize + Send + 'static) -> Result<Output> {
+pub fn as_output(x: impl serde::Serialize + Send) -> Result<Output> {
     Ok(Some(serde_json::to_value(x)?))
 }
 
@@ -27,7 +27,7 @@ pub fn as_output(x: impl serde::Serialize + Send + 'static) -> Result<Output> {
 /// to the `plugin_registry` below.
 pub trait DaemonPlugin: std::fmt::Debug {
     /// Returns full listing of information upon session esablishment
-    fn start_session(&self) -> Box<dyn Future<Item = Output, Error = ImlAgentError> + Send> {
+    fn start_session(&mut self) -> Box<dyn Future<Item = Output, Error = ImlAgentError> + Send> {
         Box::new(future::ok(None))
     }
     /// Return information needed to maintain a manager-agent session, i.e. what
@@ -39,7 +39,7 @@ pub trait DaemonPlugin: std::fmt::Debug {
     /// This will never be called concurrently with respect to start_session, or
     /// before start_session.
     fn update_session(&self) -> Box<dyn Future<Item = Output, Error = ImlAgentError> + Send> {
-        self.start_session()
+        Box::new(future::ok(None))
     }
     /// Handle a message sent from the manager (may be called concurrently with respect to
     /// start_session and update_session).
@@ -116,16 +116,18 @@ pub mod test_plugin {
     }
 
     impl DaemonPlugin for TestDaemonPlugin {
-        fn start_session(&self) -> Box<Future<Item = Output, Error = ImlAgentError> + Send> {
+        fn start_session(
+            &mut self,
+        ) -> Box<dyn Future<Item = Output, Error = ImlAgentError> + Send> {
             Box::new(future::ok(self.0.fetch_add(1, Ordering::Relaxed)).and_then(as_output))
         }
-        fn update_session(&self) -> Box<Future<Item = Output, Error = ImlAgentError> + Send> {
-            self.start_session()
+        fn update_session(&self) -> Box<dyn Future<Item = Output, Error = ImlAgentError> + Send> {
+            Box::new(future::ok(self.0.fetch_add(1, Ordering::Relaxed)).and_then(as_output))
         }
         fn on_message(
             &self,
             body: serde_json::Value,
-        ) -> Box<Future<Item = AgentResult, Error = ImlAgentError> + Send> {
+        ) -> Box<dyn Future<Item = AgentResult, Error = ImlAgentError> + Send> {
             Box::new(future::ok(Ok(body)))
         }
         fn teardown(&mut self) -> Result<()> {
@@ -201,7 +203,7 @@ mod tests {
         .into_iter()
         .collect();
 
-        let p1 = get_plugin(&"test_daemon_plugin".into(), &registry)?;
+        let mut p1 = get_plugin(&"test_daemon_plugin".into(), &registry)?;
 
         let actual = run(p1.start_session())?;
 
@@ -211,7 +213,7 @@ mod tests {
 
         assert_eq!(actual, Some(json!(1)));
 
-        let p2 = get_plugin(&"test_daemon_plugin".into(), &registry)?;
+        let mut p2 = get_plugin(&"test_daemon_plugin".into(), &registry)?;
 
         let actual = run(p2.start_session())?;
 
