@@ -9,14 +9,14 @@ use futures::{
     sync::oneshot,
     Future,
 };
-use iml_agent_comms::messaging::consume_agent_tx_queue;
-use iml_services::services::action_runner::{
+use iml_action_runner::{
     data::{
         has_action_in_flight, remove_action_in_flight, ActionInFlight, SessionToRpcs, Sessions,
         Shared,
     },
     sender::sender,
 };
+use iml_agent_comms::messaging::consume_agent_tx_queue;
 use iml_wire_types::{Action, ActionId, ActionName, Fqdn, Id};
 use lapin_futures::client::ConnectionOptions;
 use parking_lot::Mutex;

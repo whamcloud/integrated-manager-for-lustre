@@ -4,7 +4,7 @@
 
 use futures::lazy;
 use iml_rabbit::connect_to_rabbit;
-use iml_services::service_queue::{consume_service_queue, data_only, into_deserialized};
+use iml_service_queue::service_queue::{consume_service_queue, data_only, into_deserialized};
 use iml_wire_types::Fqdn;
 use tokio::prelude::*;
 

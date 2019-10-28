@@ -2,9 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::services::action_runner::data::{
-    create_data_message, remove_action_in_flight, SessionToRpcs, Sessions, Shared,
-};
+use crate::data::{create_data_message, remove_action_in_flight, SessionToRpcs, Sessions, Shared};
 use futures::Future as _;
 use iml_rabbit::{send_message, TcpClient};
 use iml_wire_types::{ActionResult, Fqdn, PluginMessage};

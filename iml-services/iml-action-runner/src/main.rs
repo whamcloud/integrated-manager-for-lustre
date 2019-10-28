@@ -3,14 +3,12 @@
 // license that can be found in the LICENSE file.
 
 use futures::{future::Future, lazy, stream::Stream};
-use iml_services::{
-    service_queue::consume_service_queue,
-    services::action_runner::{
-        data::{SessionToRpcs, Sessions, Shared},
-        receiver::handle_agent_data,
-        sender::{create_client_filter, sender},
-    },
+use iml_action_runner::{
+    data::{SessionToRpcs, Sessions, Shared},
+    receiver::handle_agent_data,
+    sender::{create_client_filter, sender},
 };
+use iml_service_queue::service_queue::consume_service_queue;
 use iml_wire_types::PluginMessage;
 use parking_lot::Mutex;
 use std::{

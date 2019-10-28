@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::services::action_runner::data::{
+use crate::data::{
     await_session, create_data_message, has_action_in_flight, insert_action_in_flight,
     remove_action_in_flight, ActionInFlight, SessionToRpcs, Sessions, Shared,
 };

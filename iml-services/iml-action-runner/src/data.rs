@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::services::action_runner::error::ActionRunnerError;
+use crate::error::ActionRunnerError;
 use futures::{
     future::{loop_fn, Loop},
     sync::oneshot,
@@ -52,7 +52,7 @@ pub fn await_session(
     loop_fn(
         sessions,
         move |sessions| -> Box<
-            Future<Item = Loop<Id, Shared<Sessions>>, Error = ActionRunnerError> + Send,
+            dyn Future<Item = Loop<Id, Shared<Sessions>>, Error = ActionRunnerError> + Send,
         > {
             if clock::now() >= until {
                 log::info!(
@@ -136,7 +136,7 @@ pub fn create_data_message(
 #[cfg(test)]
 mod tests {
     use super::{await_session, get_action_in_flight, insert_action_in_flight, ActionInFlight};
-    use crate::services::action_runner::error::ActionRunnerError;
+    use crate::error::ActionRunnerError;
     use futures::sync::oneshot;
     use iml_wire_types::{Action, ActionId, Fqdn, Id};
     use parking_lot::Mutex;
