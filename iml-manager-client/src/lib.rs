@@ -110,11 +110,18 @@ pub async fn get<T: DeserializeOwned + Debug>(
 
     let uri = create_api_url(path)?;
 
-    let resp = client.get(uri).query(&query).send().await?.json().await?;
+    let resp = client
+        .get(uri)
+        .query(&query)
+        .send()
+        .await?
+        .error_for_status()?;
 
-    tracing::debug!("Resp: {:?}", resp);
+    let json = resp.json().await?;
 
-    Ok(resp)
+    tracing::debug!("Resp: {:?}", json);
+
+    Ok(json)
 }
 
 /// Performs a POST to the given API path
@@ -125,7 +132,16 @@ pub async fn post(
 ) -> Result<Response, ImlManagerClientError> {
     let uri = create_api_url(path)?;
 
-    Ok(client.post(uri).json(&body).send().await?)
+    let resp = client
+        .post(uri)
+        .json(&body)
+        .send()
+        .await?
+        .error_for_status()?;
+
+    tracing::debug!("Resp: {:?}", resp);
+
+    Ok(resp)
 }
 
 /// Performs a PUT to the given API path
@@ -136,7 +152,12 @@ pub async fn put(
 ) -> Result<Response, ImlManagerClientError> {
     let uri = create_api_url(path)?;
 
-    Ok(client.put(uri).json(&body).send().await?)
+    Ok(client
+        .put(uri)
+        .json(&body)
+        .send()
+        .await?
+        .error_for_status()?)
 }
 
 /// Performs a DELETE to the given API path
@@ -147,5 +168,10 @@ pub async fn delete(
 ) -> Result<Response, ImlManagerClientError> {
     let uri = create_api_url(path)?;
 
-    Ok(client.delete(uri).json(&body).send().await?)
+    Ok(client
+        .delete(uri)
+        .json(&body)
+        .send()
+        .await?
+        .error_for_status()?)
 }

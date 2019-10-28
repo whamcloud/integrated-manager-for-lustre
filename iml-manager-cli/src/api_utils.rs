@@ -4,7 +4,7 @@
 
 use crate::{display_utils, error::ImlManagerCliError};
 use futures::{future, TryFutureExt};
-use iml_wire_types::{ApiList, Command, EndpointName};
+use iml_wire_types::{ApiList, Command, EndpointName, Host};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::{
     collections::HashMap,
@@ -17,6 +17,32 @@ use tokio_executor::blocking::run;
 #[derive(serde::Deserialize, Debug)]
 pub struct CmdWrapper {
     pub command: Command,
+}
+
+#[derive(serde::Serialize)]
+pub struct SendJob<T> {
+    pub class_name: String,
+    pub args: T,
+}
+
+#[derive(serde::Serialize)]
+pub struct SendCmd<T> {
+    pub jobs: Vec<SendJob<T>>,
+    pub message: String,
+}
+
+pub async fn create_command<T: serde::Serialize>(
+    cmd_body: SendCmd<T>,
+) -> Result<Command, ImlManagerCliError> {
+    let resp = post(Command::endpoint_name(), cmd_body).await?;
+
+    let cmd = resp
+        .json()
+        .await?;
+
+    tracing::debug!("Resp JSON is {:?}", cmd);
+
+    Ok(cmd)
 }
 
 fn cmd_finished(cmd: &Command) -> bool {
@@ -128,11 +154,11 @@ pub async fn get<T: serde::de::DeserializeOwned + std::fmt::Debug>(
 /// Wrapper for a `POST` to the Api.
 pub async fn post(
     endpoint: &str,
-    query: impl serde::Serialize,
+    body: impl serde::Serialize,
 ) -> Result<iml_manager_client::Response, ImlManagerCliError> {
     let client = iml_manager_client::get_client()?;
 
-    iml_manager_client::post(client, endpoint, query)
+    iml_manager_client::post(client, endpoint, body)
         .await
         .map_err(|e| e.into())
 }
@@ -140,10 +166,10 @@ pub async fn post(
 /// Wrapper for a `PUT` to the Api.
 pub async fn put(
     endpoint: &str,
-    query: impl serde::Serialize,
+    body: impl serde::Serialize,
 ) -> Result<iml_manager_client::Response, ImlManagerCliError> {
     let client = iml_manager_client::get_client()?;
-    iml_manager_client::put(client, endpoint, query)
+    iml_manager_client::put(client, endpoint, body)
         .await
         .map_err(|e| e.into())
 }
@@ -157,4 +183,8 @@ pub async fn delete(
     iml_manager_client::delete(client, endpoint, query)
         .await
         .map_err(|e| e.into())
+}
+
+pub async fn get_hosts() -> Result<ApiList<Host>, ImlManagerCliError> {
+    get(Host::endpoint_name(), serde_json::json!({"limit": 0})).await
 }

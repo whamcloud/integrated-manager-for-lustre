@@ -1478,6 +1478,28 @@ class RemovePackagesStep(Step):
         self.invoke_agent_expect_result(kwargs["host"], "remove_packages", {"packages": kwargs["packages"]})
 
 
+class UpdateYumFileJob(Job):
+    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
+
+    class Meta:
+        app_label = "chroma_core"
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return "Update Agent repo file on {}".format(stateful_object.host.fqdn)
+
+    def description(self):
+        return "Update Agent Repo file on {}".format(self.host.fqdn)
+
+    def get_steps(self):
+        # the minimum repos needed on a storage server now
+        repo_file_contents = self.host.server_profile.repo_contents
+
+        return [
+            (UpdateYumFileStep, {"host": self.host, "filename": REPO_FILENAME, "file_contents": repo_file_contents})
+        ]
+
+
 class UpdateJob(Job):
     host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
 
@@ -1494,9 +1516,6 @@ class UpdateJob(Job):
 
         # the minimum repos needed on a storage server now
         repo_file_contents = self.host.server_profile.repo_contents
-
-        # The base url of the repo.
-        base_repo_url = os.path.join(str(settings.SERVER_HTTP_URL), "repo")
 
         return [
             (UpdateYumFileStep, {"host": self.host, "filename": REPO_FILENAME, "file_contents": repo_file_contents}),
