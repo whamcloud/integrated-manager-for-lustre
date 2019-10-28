@@ -384,67 +384,14 @@ class ServiceConfig(CommandLine):
         # The server_cert attribute is created on read
         crypto.server_cert
 
-    CONTROLLED_SERVICES = ["iml-manager.target", "nginx"]
-
-    MANAGER_SERVICES = [
-        "iml-corosync.service",
-        "iml-gunicorn.service",
-        "iml-http-agent.service",
-        "iml-job-scheduler.service",
-        "iml-lustre-audit.service",
-        "iml-plugin-runner.service",
-        "iml-power-control.service",
-        "iml-syslog.service",
-        "iml-stats.service",
-        "iml-view-server.service",
-        "iml-realtime.service",
-        "iml-warp-drive.service",
-        "device-aggregator.service",
-        "iml-srcmap-reverse.socket",
-        "iml-mailbox.service",
-        "iml-action-runner.service",
-        "iml-agent-comms.service",
-        "iml-stratagem.service",
-    ]
-
-    def _enable_services(self):
-        log.info("Enabling daemons")
-
-        xs = self.CONTROLLED_SERVICES + self.MANAGER_SERVICES
-
-        for service in xs:
-            controller = ServiceControl.create(service)
-
-            error = controller.enable()
-            if error:
-                log.error(error)
-                raise RuntimeError(error)
-
-    def _start_services(self):
-        log.info("Starting daemons")
-        for service in self.CONTROLLED_SERVICES:
-            controller = ServiceControl.create(service)
-
-            if controller.running:
-                if service.endswith(".target"):
-                    error = False
-                else:
-                    error = controller.reload()
-            else:
-                error = controller.start(validate_time=0.5)
-            if error:
-                log.error(error)
-                raise RuntimeError(error)
-
     def _stop_services(self):
-        log.info("Stopping daemons")
-        for service in self.CONTROLLED_SERVICES:
-            controller = ServiceControl.create(service)
+        log.info("Stopping iml manager")
+        controller = ServiceControl.create("iml-manager.target")
 
-            error = controller.stop(validate_time=0.5)
-            if error:
-                log.error(error)
-                raise RuntimeError(error)
+        error = controller.stop(validate_time=0.5)
+        if error:
+            log.error(error)
+            raise RuntimeError(error)
 
     def _init_pgsql(self, database):
         rc, out, err = self.shell(["service", "postgresql", "initdb"])
@@ -835,8 +782,9 @@ proxy=_none_
 
         self._setup_grafana()
 
-        self._enable_services()
-        self._start_services()
+        log.info("Enabling + Starting IML manager...")
+
+        self.try_shell(["systemctl", "enable", "--now", "iml-manager.target"])
 
         return self.validate()
 
@@ -844,23 +792,14 @@ proxy=_none_
         if not self._db_current():
             log.error("Cannot start, database not configured")
             return
-        self._start_services()
+
+        rc, _, err = self.try_shell(["systemctl", "start", "iml-manager.target"])
+
+        if rc != 0:
+            log.warn("Problem starting iml-manager.target: {}".format(err))
 
     def stop(self):
         self._stop_services()
-
-    @staticmethod
-    def _service_config(interesting_services=None):
-        """Interrogate the current status of services
-        """
-        log.info("Checking service configuration...")
-
-        services = {}
-        for service_name in interesting_services:
-            controller = ServiceControl.create(service_name)
-            services[service_name] = {"enabled": controller.enabled, "running": controller.running}
-
-        return services
 
     def validate(self):
         errors = []
@@ -871,23 +810,15 @@ proxy=_none_
         elif not self._users_exist():
             errors.append("No user accounts exist")
 
-        # Check services are active
-        interesting_services = (
-            self.MANAGER_SERVICES
-            + self.CONTROLLED_SERVICES
-            + ["postgresql", "rabbitmq-server", "influxdb", "grafana-server"]
-        )
+        controller = ServiceControl.create("iml-manager.target")
 
-        service_config = self._service_config(interesting_services)
-        for s in interesting_services:
-            try:
-                service_status = service_config[s]
-                if not service_status["enabled"]:
-                    errors.append("Service %s not set to start at boot" % s)
-                if not service_status["running"]:
-                    errors.append("Service %s is not running" % s)
-            except KeyError:
-                errors.append("Service %s not found" % s)
+        try:
+            if not controller.enabled:
+                errors.append("iml-manager.target not set to start at boot")
+            if not controller.running:
+                errors.append("iml-manager.target is not running")
+        except KeyError:
+            errors.append("iml-manager.target not found")
 
         return errors
 
