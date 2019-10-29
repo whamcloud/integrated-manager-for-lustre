@@ -6,12 +6,13 @@ use iml_manager_cli::{
     display_utils::display_error,
     server::{self, server_cli},
     stratagem::{self, stratagem_cli},
+    update_repo_file::{self, update_repo_file_cli},
 };
 use std::process::exit;
 use structopt::StructOpt;
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
-#[derive(StructOpt, Debug)]
+#[derive(Debug, StructOpt)]
 #[structopt(name = "iml")]
 #[structopt(raw(setting = "structopt::clap::AppSettings::ColoredHelp"))]
 /// The Integrated Manager for Lustre Agent CLI
@@ -28,6 +29,9 @@ pub enum App {
         #[structopt(subcommand)]
         command: server::ServerCommand,
     },
+    #[structopt(name = "update_repo")]
+    ///  Update Agent repo files
+    UpdateRepoFile(update_repo_file::UpdateRepoFileHosts),
 }
 
 #[tokio::main]
@@ -47,6 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let r = match matches {
         App::Stratagem { command } => stratagem_cli(command).await,
         App::Server { command } => server_cli(command).await,
+        App::UpdateRepoFile(config) => update_repo_file_cli(config).await,
     };
 
     if let Err(e) = r {

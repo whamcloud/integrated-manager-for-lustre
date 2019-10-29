@@ -2,10 +2,20 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use futures::{Future, FutureExt};
 use iml_wire_types::Command;
+use indicatif::ProgressBar;
 use prettytable::{Row, Table};
 use spinners::{Spinner, Spinners};
 use std::fmt::Display;
+
+pub fn wrap_fut<T>(msg: &str, fut: impl Future<Output = T>) -> impl Future<Output = T> {
+    let pb = ProgressBar::new_spinner();
+    pb.enable_steady_tick(100);
+    pb.set_message(msg);
+
+    fut.inspect(move |_| pb.finish_and_clear())
+}
 
 pub fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) -> () {
     let grey = termion::color::Fg(termion::color::LightBlack);

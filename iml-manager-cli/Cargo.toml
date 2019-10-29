@@ -5,13 +5,16 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
+combine = "4.0.0-beta.1"
 console = "0.9"
 dotenv = "0.15"
 futures-preview = "0.3.0-alpha.19"
+hostlist-parser = "0.1"
 iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
 iml-manager-client = { path = "../iml-manager-client", version = "0.1.0" }
 indicatif = "0.12"
 prettytable-rs = "0.8"
+reqwest = { version = "0.10.0-alpha.1", features = ["default-tls", "tls", "json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 spinners = "1.0.0"
