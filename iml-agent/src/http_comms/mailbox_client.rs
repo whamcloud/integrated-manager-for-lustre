@@ -7,7 +7,7 @@ use crate::{
     env,
     http_comms::{crypto_client, hyper_client},
 };
-use futures::{Future, IntoFuture, Stream};
+use futures01::{Future, IntoFuture, Stream};
 use hyper::{header::HeaderValue, Body, Method, Request, StatusCode};
 use iml_fs::read_lines;
 use tracing::debug;

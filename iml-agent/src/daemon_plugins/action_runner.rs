@@ -7,7 +7,7 @@ use crate::{
     agent_error::{ImlAgentError, RequiredError, Result},
     daemon_plugins::DaemonPlugin,
 };
-use futures::{
+use futures01::{
     future::{self, Either},
     sync::oneshot,
     Future,

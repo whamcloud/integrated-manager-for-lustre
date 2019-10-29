@@ -7,7 +7,7 @@ use crate::{
     action_plugins::stratagem::{action_purge, action_warning, server},
     agent_error::ImlAgentError,
 };
-use futures::{future::IntoFuture, Future};
+use futures01::{future::IntoFuture, Future};
 use iml_wire_types::{ActionName, ToJsonValue};
 use std::collections::HashMap;
 use tracing::info;

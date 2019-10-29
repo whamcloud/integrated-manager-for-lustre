@@ -10,7 +10,7 @@ use crate::{
         session::{SessionInfo, Sessions, State},
     },
 };
-use futures::{future, Future, Stream};
+use futures01::{future, Future, Stream};
 use iml_wire_types::PluginName;
 use std::time::{Duration, Instant};
 use tracing::{error, info, trace};

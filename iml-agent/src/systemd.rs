@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output};
-use futures::{
+use futures01::{
     future::{self, loop_fn, Either, Loop},
     Future,
 };

@@ -66,7 +66,7 @@ pub enum ImlAgentError {
     NoSessionError(NoSessionError),
     NoPluginError(NoPluginError),
     RequiredError(RequiredError),
-    OneshotCanceled(futures::sync::oneshot::Canceled),
+    OneshotCanceled(futures01::sync::oneshot::Canceled),
     LiblustreError(liblustreapi::error::LiblustreError),
     CmdOutputError(Output),
     SendError,
@@ -237,14 +237,14 @@ impl From<RequiredError> for ImlAgentError {
     }
 }
 
-impl From<futures::sync::oneshot::Canceled> for ImlAgentError {
-    fn from(err: futures::sync::oneshot::Canceled) -> Self {
+impl From<futures01::sync::oneshot::Canceled> for ImlAgentError {
+    fn from(err: futures01::sync::oneshot::Canceled) -> Self {
         ImlAgentError::OneshotCanceled(err)
     }
 }
 
-impl<T> From<futures::sync::mpsc::SendError<T>> for ImlAgentError {
-    fn from(_: futures::sync::mpsc::SendError<T>) -> Self {
+impl<T> From<futures01::sync::mpsc::SendError<T>> for ImlAgentError {
+    fn from(_: futures01::sync::mpsc::SendError<T>) -> Self {
         ImlAgentError::SendError
     }
 }

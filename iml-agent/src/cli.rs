@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::Future;
+use futures01::Future;
 use iml_agent::action_plugins::check_ha;
 use iml_agent::action_plugins::stratagem::{
     action_purge, action_warning,
@@ -241,7 +241,7 @@ fn main() {
                 fidopts: opt,
             } => {
                 let device = opt.fsname;
-                let output: Box<io::Write> = match out {
+                let output: Box<dyn io::Write> = match out {
                     Some(file) => Box::new(File::create(file).expect("Failed to create file")),
                     None => Box::new(io::stdout()),
                 };

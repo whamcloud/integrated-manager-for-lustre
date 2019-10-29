@@ -7,7 +7,7 @@ use crate::{
     http_comms::{crypto_client, session},
     server_properties,
 };
-use futures::{future::Either, Future, IntoFuture};
+use futures01::{future::Either, Future, IntoFuture};
 use iml_wire_types;
 use reqwest::r#async::{Chunk, Client};
 use std::convert::Into;

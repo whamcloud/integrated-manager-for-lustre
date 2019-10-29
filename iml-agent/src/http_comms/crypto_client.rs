@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::agent_error::{ImlAgentError, Result};
-use futures::{future::Future, IntoFuture, Stream};
+use futures01::{future::Future, IntoFuture, Stream};
 use reqwest::{
     r#async::{Chunk, Client, Decoder, Response},
     Identity, IntoUrl,
@@ -79,7 +79,11 @@ pub fn get_stream(
     query: &(impl serde::Serialize + ?Sized),
 ) -> impl Stream<Item = Chunk, Error = ImlAgentError> {
     get(client, url, query)
-        .and_then(|s| s.error_for_status().map_err(ImlAgentError::Reqwest))
+        .and_then(|x| {
+            tracing::debug!("Get stream headers: {:?}", x.headers());
+
+            x.error_for_status().map_err(ImlAgentError::Reqwest)
+        })
         .map(|s| s.into_body().from_err())
         .flatten_stream()
 }
@@ -114,6 +118,8 @@ fn handle_resp(resp: Response) -> impl Future<Item = Chunk, Error = ImlAgentErro
         .into_future()
         .map_err(ImlAgentError::Reqwest)
         .and_then(|mut res| {
+            tracing::debug!("resp headers: {:?}", res.headers());
+
             let body = mem::replace(res.body_mut(), Decoder::empty());
             body.concat2().map_err(ImlAgentError::Reqwest)
         })
@@ -123,7 +129,7 @@ fn handle_resp(resp: Response) -> impl Future<Item = Chunk, Error = ImlAgentErro
 mod tests {
     use super::{get_buffered, get_stream, post};
     use crate::agent_error::Result;
-    use futures::stream::Stream as _;
+    use futures01::stream::Stream as _;
     use iml_fs::read_lines;
     use mockito::mock;
     use pretty_assertions::assert_eq;
