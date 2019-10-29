@@ -6,7 +6,7 @@ use crate::{
     agent_error::{ImlAgentError, NoPluginError, Result},
     daemon_plugins::{action_runner, stratagem},
 };
-use futures::{future, Future};
+use futures01::{future, Future};
 use iml_wire_types::{AgentResult, PluginName};
 use std::collections::HashMap;
 use tracing::info;
@@ -102,7 +102,7 @@ pub fn get_plugin(name: &PluginName, registry: &DaemonPlugins) -> Result<DaemonB
 pub mod test_plugin {
     use super::{as_output, DaemonPlugin, Output};
     use crate::agent_error::{ImlAgentError, Result};
-    use futures::{future, Future};
+    use futures01::{future, Future};
     use iml_wire_types::AgentResult;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -144,7 +144,7 @@ mod tests {
         get_plugin, mk_callback, test_plugin::TestDaemonPlugin, DaemonPlugin, DaemonPlugins,
     };
     use crate::agent_error::Result;
-    use futures::Future;
+    use futures01::Future;
     use serde_json::json;
 
     fn run<R: Send + 'static, E: Send + 'static>(

@@ -5,7 +5,7 @@
 #![recursion_limit = "128"]
 
 use env::{MANAGER_URL, PFX};
-use futures::{future::lazy, Future};
+use futures01::{future::lazy, Future};
 use iml_agent::{
     agent_error::Result,
     daemon_plugins, env,
@@ -14,9 +14,13 @@ use iml_agent::{
 };
 use tracing::{error, info, span, Level};
 use tracing_futures::Instrument;
+use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 fn main() -> Result<()> {
-    let subscriber = tracing_fmt::FmtSubscriber::builder().finish();
+    let subscriber = Subscriber::builder()
+        .with_env_filter(EnvFilter::from_default_env())
+        .finish();
+
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
     info!("Starting Rust agent_daemon");

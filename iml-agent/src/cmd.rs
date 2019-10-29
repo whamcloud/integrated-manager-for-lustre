@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::agent_error::ImlAgentError;
-use futures::Future;
+use futures01::Future;
 use std::{ffi::OsStr, process::Command};
 use tokio_process::CommandExt;
 

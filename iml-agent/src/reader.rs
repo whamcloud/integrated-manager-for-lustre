@@ -10,7 +10,7 @@ use crate::{
         session::{Session, SessionInfo, Sessions},
     },
 };
-use futures::{
+use futures01::{
     future::{self, loop_fn, Future, Loop},
     stream::{self, Stream},
 };

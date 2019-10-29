@@ -52,7 +52,7 @@ impl Connect for HttpsConnector {
 
     fn connect(&self, dst: Destination) -> Self::Future {
         if dst.scheme() != "https" {
-            return Box::new(futures::future::err(io::Error::new(
+            return Box::new(futures01::future::err(io::Error::new(
                 io::ErrorKind::Other,
                 "only works with https",
             )));

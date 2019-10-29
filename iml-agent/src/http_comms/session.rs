@@ -6,7 +6,7 @@ use crate::{
     agent_error::{ImlAgentError, Result},
     daemon_plugins::{DaemonBox, OutputValue},
 };
-use futures::Future;
+use futures01::Future;
 use iml_wire_types::{AgentResult, Id, PluginName, Seq};
 use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::{
@@ -226,7 +226,7 @@ mod tests {
     use crate::{
         agent_error::Result, daemon_plugins::daemon_plugin::test_plugin::TestDaemonPlugin,
     };
-    use futures::Future;
+    use futures01::Future;
     use serde_json::json;
 
     use tokio_timer::clock::{self, Clock};

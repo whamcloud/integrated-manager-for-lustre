@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output_success, http_comms::mailbox_client};
-use futures::{future, stream, Future, IntoFuture, Stream as _};
+use futures01::{future, stream, Future, IntoFuture, Stream as _};
 use iml_fs::{read_file_to_end, stream_dir_lines, write_tempfile};
 use std::{convert::Into, path::PathBuf};
 use uuid::Uuid;

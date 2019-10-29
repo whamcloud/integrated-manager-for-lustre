@@ -4,7 +4,7 @@
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output_success};
 use elementtree::Element;
-use futures::{future, Future};
+use futures01::{future, Future};
 use std::collections::HashMap;
 use std::fmt;
 use tracing::{span, Level};

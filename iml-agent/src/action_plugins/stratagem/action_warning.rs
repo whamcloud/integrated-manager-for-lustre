@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{agent_error::ImlAgentError, env, fidlist, http_comms::mailbox_client};
-use futures::{
+use futures01::{
     future::{self, join_all, poll_fn},
     Future, Sink, Stream,
 };
@@ -105,11 +105,10 @@ pub fn read_mailbox(
                     }
 
                     x.freeze()
-                })
-                .instrument(span!(Level::INFO, "Fid writer"));
+                });
 
             f.sink_from_err().send_all(s2).map(drop)
         })
         .map(move |_| txt_path)
-        .instrument(span!(Level::INFO, "Finished writing"))
+        .instrument(span!(Level::INFO, "Fid writer",))
 }
