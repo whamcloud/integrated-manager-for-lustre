@@ -2,10 +2,17 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::error::ImlManagerCliError;
+use crate::{display_utils, error::ImlManagerCliError};
+use futures::{future, TryFutureExt};
 use iml_wire_types::{ApiList, Command, EndpointName};
-use std::time::{Duration, Instant};
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use std::{
+    collections::HashMap,
+    iter,
+    time::{Duration, Instant},
+};
 use tokio::timer::delay;
+use tokio_executor::blocking::run;
 
 #[derive(serde::Deserialize, Debug)]
 pub struct CmdWrapper {
@@ -39,6 +46,63 @@ pub async fn wait_for_cmd(cmd: Command) -> Result<Command, ImlManagerCliError> {
             return Ok(cmd);
         }
     }
+}
+
+pub async fn wait_for_cmds(cmds: Vec<Command>) -> Result<Vec<Command>, ImlManagerCliError> {
+    let m = MultiProgress::new();
+
+    let num_cmds = cmds.len() as u64;
+
+    let spinner_style = ProgressStyle::default_spinner()
+        .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ")
+        .template("{prefix:.bold.dim} {spinner} {wide_msg}");
+
+    let mut cmd_spinners = HashMap::new();
+
+    for (idx, cmd) in cmds.iter().enumerate() {
+        let pb = m.add(ProgressBar::new(100000));
+        pb.set_style(spinner_style.clone());
+        pb.set_prefix(&format!("[{}/{}]", idx + 1, num_cmds));
+        pb.set_message(&format!("{}", cmd.message));
+        cmd_spinners.insert(cmd.id, pb);
+    }
+
+    let fut = run(move || m.join());
+
+    let fut2 = async {
+        loop {
+            if cmd_spinners.len() == 0 {
+                tracing::debug!("All commands complete. Returning");
+                return Ok::<_, ImlManagerCliError>(());
+            }
+
+            let when = Instant::now() + Duration::from_millis(1000);
+
+            delay(when).await;
+
+            let query: Vec<_> = cmd_spinners
+                .keys()
+                .map(|x| ["id__in".into(), x.to_string()])
+                .chain(iter::once(["limit".into(), "0".into()]))
+                .collect();
+
+            let cmds: ApiList<Command> = get(Command::endpoint_name(), query).await?;
+
+            for cmd in cmds.objects {
+                if cmd_finished(&cmd) {
+                    let pb = cmd_spinners.remove(&cmd.id).unwrap();
+                    pb.finish_with_message(&display_utils::format_cmd_state(&cmd));
+                } else {
+                    let pb = cmd_spinners.get(&cmd.id).unwrap();
+                    pb.inc(1);
+                }
+            }
+        }
+    };
+
+    future::try_join(fut.err_into(), fut2).await?;
+
+    Ok(cmds)
 }
 
 /// Given an `ApiList`, this fn returns the first item or errors.

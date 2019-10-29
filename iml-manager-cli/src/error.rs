@@ -61,6 +61,7 @@ pub enum ImlManagerCliError {
     RunStratagemValidationError(RunStratagemValidationError),
     SerdeJsonError(serde_json::error::Error),
     DoesNotExist(&'static str),
+    IoError(std::io::Error),
 }
 
 impl std::fmt::Display for ImlManagerCliError {
@@ -73,6 +74,7 @@ impl std::fmt::Display for ImlManagerCliError {
             ImlManagerCliError::RunStratagemValidationError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::SerdeJsonError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::DoesNotExist(ref err) => write!(f, "{} does not exist", err),
+            ImlManagerCliError::IoError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -93,6 +95,7 @@ impl std::error::Error for ImlManagerCliError {
             ImlManagerCliError::RunStratagemValidationError(ref err) => Some(err),
             ImlManagerCliError::SerdeJsonError(ref err) => Some(err),
             ImlManagerCliError::DoesNotExist(_) => None,
+            ImlManagerCliError::IoError(ref err) => Some(err),
         }
     }
 }
@@ -136,5 +139,11 @@ impl From<RunStratagemValidationError> for ImlManagerCliError {
 impl From<serde_json::error::Error> for ImlManagerCliError {
     fn from(err: serde_json::error::Error) -> Self {
         ImlManagerCliError::SerdeJsonError(err)
+    }
+}
+
+impl From<std::io::Error> for ImlManagerCliError {
+    fn from(err: std::io::Error) -> Self {
+        ImlManagerCliError::IoError(err)
     }
 }
