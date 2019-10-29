@@ -3,7 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::{listen::MessageType, DbRecord};
-use futures::{future, Future, Stream as _};
+use futures::future::{FutureExt, TryFutureExt};
+use futures01::{future, Future, Stream as _};
 use iml_manager_client::{get, get_client, Client, ImlManagerClientError};
 use iml_postgres::SharedClient;
 use iml_wire_types::{
@@ -89,34 +90,48 @@ pub trait ToApiRecord: std::fmt::Debug + Id {
     where
         T: Debug + serde::de::DeserializeOwned + EndpointName + ApiQuery + Send,
     {
-        Box::new(get(
-            client,
-            &format!("{}/{}/", T::endpoint_name(), self.id()),
-            T::query(),
-        ))
+        let endpoint_info = format!("{}/{}/", T::endpoint_name(), self.id());
+        log::debug!(
+            "getting endpoint {}; query: {:#?}",
+            endpoint_info,
+            T::query()
+        );
+        Box::new(
+            get(
+                client,
+                format!("{}/{}/", T::endpoint_name(), self.id()),
+                T::query(),
+            )
+            .boxed()
+            .compat(),
+        )
     }
 }
 
 pub trait ApiQuery {
     fn query() -> Vec<(&'static str, &'static str)> {
+        log::debug!("API query");
         vec![("limit", "0")]
     }
 }
 
 impl ApiQuery for Filesystem {
     fn query() -> Vec<(&'static str, &'static str)> {
+        log::debug!("API query");
         vec![("limit", "0"), ("dehydrate__mgt", "false")]
     }
 }
 
 impl<T> ApiQuery for Target<T> {
     fn query() -> Vec<(&'static str, &'static str)> {
+        log::debug!("API query");
         vec![("limit", "0"), ("dehydrate__volume", "false")]
     }
 }
 
 impl ApiQuery for Alert {
     fn query() -> Vec<(&'static str, &'static str)> {
+        log::debug!("API query");
         vec![("limit", "0"), ("active", "true")]
     }
 }
@@ -178,6 +193,7 @@ where
         + EndpointName
         + ApiQuery,
 {
+    log::debug!("converter");
     match (msg_type, &x) {
         (MessageType::Delete, _) => {
             Box::new(future::ok(RecordChange::Delete(record_id_fn(x.id()))))
@@ -212,6 +228,7 @@ pub fn db_record_to_change_record(
     (msg_type, record): (MessageType, DbRecord),
     client: Client,
 ) -> BoxedFuture {
+    log::debug!("db_record_to_change_record");
     match record {
         DbRecord::ManagedHost(x) => converter(client, msg_type, x, Record::Host, RecordId::Host),
         DbRecord::ManagedFilesystem(x) => converter(
@@ -288,41 +305,62 @@ pub fn db_record_to_change_record(
 /// Given a `Cache`, this fn populates it
 /// with data from the API.
 pub fn populate_from_api(
+    client: Client,
     shared_api_cache: SharedCache,
 ) -> impl Future<Item = (), Error = ImlManagerClientError> {
-    let client = get_client().unwrap();
+    log::debug!("populate from api");
 
+    log::info!("got client");
     let fs_fut = get(
         client.clone(),
         Filesystem::endpoint_name(),
         Filesystem::query(),
     )
-    .map(|fs: ApiList<Filesystem>| fs.objects)
+    .boxed()
+    .compat()
+    .map(|fs: ApiList<Filesystem>| {
+        log::info!("got fs objects!: {:#?}", fs.objects);
+        fs.objects
+    })
     .map(|fs| fs.into_iter().map(|f| (f.id, f)).collect());
 
+    log::info!("after fs_fut");
     let target_fut = get(
         client.clone(),
         <Target<TargetConfParam>>::endpoint_name(),
         <Target<TargetConfParam>>::query(),
     )
+    .boxed()
+    .compat()
     .map(|x: ApiList<Target<TargetConfParam>>| x.objects)
     .map(|x| x.into_iter().map(|x| (x.id, x)).collect());
 
+    log::info!("after target_fut");
     let active_alert_fut = get(client.clone(), Alert::endpoint_name(), Alert::query())
+        .boxed()
+        .compat()
         .map(|x: ApiList<Alert>| x.objects)
         .map(|x| x.into_iter().map(|x| (x.id, x)).collect());
 
+    log::info!("after active_alert_fut");
     let host_fut = get(client.clone(), Host::endpoint_name(), Host::query())
+        .boxed()
+        .compat()
         .map(|x: ApiList<Host>| x.objects)
         .map(|x| x.into_iter().map(|x| (x.id, x)).collect());
 
+    log::info!("after host_fut");
     let volume_fut = get(client, Volume::endpoint_name(), Volume::query())
+        .boxed()
+        .compat()
         .map(|x: ApiList<Volume>| x.objects)
         .map(|x| x.into_iter().map(|x| (x.id, x)).collect());
 
+    log::info!("after volume_fut_fut");
     fs_fut
         .join5(target_fut, active_alert_fut, host_fut, volume_fut)
         .map(move |(filesystem, target, alert, host, volume)| {
+            log::info!("got data!!!");
             let mut api_cache = shared_api_cache.lock();
 
             api_cache.filesystem = filesystem;
@@ -340,6 +378,7 @@ fn fetch_from_db<T>(
 where
     T: From<iml_postgres::Row> + Name + Id,
 {
+    log::debug!("fetch_from_db");
     {
         let c = Arc::clone(&client);
 
@@ -365,6 +404,7 @@ pub fn populate_from_db(
     shared_api_cache: SharedCache,
     client: SharedClient,
 ) -> impl Future<Item = (), Error = iml_postgres::Error> {
+    log::debug!("populate from db");
     let target_mount_fut = fetch_from_db(
         Arc::clone(&client),
         &format!(

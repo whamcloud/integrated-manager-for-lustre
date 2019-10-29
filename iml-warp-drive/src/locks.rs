@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::request::Request;
-use futures::future::Future;
+use futures01::future::Future;
 use iml_rabbit::{
     basic_consume, basic_publish, bind_queue, create_channel, declare_transient_exchange,
     declare_transient_queue, purge_queue, TcpChannel, TcpChannelFuture, TcpClient,

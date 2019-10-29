@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{cache::Cache, locks::Locks, Message};
-use futures::{
+use futures01::{
     future::{poll_fn, Future},
     sync::{mpsc, oneshot},
     Stream,

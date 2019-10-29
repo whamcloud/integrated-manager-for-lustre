@@ -2,14 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{Future, IntoFuture as _, Stream as _};
-use reqwest::{header, r#async::Decoder, Url};
-pub use reqwest::{
-    r#async::{Chunk, Client, Response},
-    StatusCode,
-};
+pub use reqwest::{header, Client, Response, StatusCode, Url};
 use serde::de::DeserializeOwned;
-use std::{fmt::Debug, mem, time::Duration};
+use std::{fmt::Debug, time::Duration};
+use futures::{future::{FutureExt, TryFutureExt}, compat::Future01CompatExt};
+use futures01::{future, Future, Stream as _};
 
 #[derive(Debug)]
 pub enum ImlManagerClientError {
@@ -67,28 +64,33 @@ impl From<serde_json::error::Error> for ImlManagerClientError {
 
 /// Get a client that is able to make authenticated requests
 /// against the API
-pub fn get_client() -> Result<Client, ImlManagerClientError> {
+pub fn get_client(executor: Option<impl tokio::executor::Executor + Sync + Send + 'static>) -> Result<Client, ImlManagerClientError> {
     let header_value = header::HeaderValue::from_str(&format!(
         "ApiKey {}:{}",
         iml_manager_env::get_api_user(),
         iml_manager_env::get_api_key()
     ))?;
 
-    let headers = [(header::AUTHORIZATION, header_value)]
-        .iter()
-        .cloned()
+    let headers = vec![(header::AUTHORIZATION, header_value)]
+        .into_iter()
         .collect();
 
-    Client::builder()
+    let mut builder = Client::builder()
         .timeout(Duration::from_secs(60))
         .default_headers(headers)
-        .danger_accept_invalid_certs(true)
+        .danger_accept_invalid_certs(true);
+
+    if let Some(executor) = executor {
+        builder.executor(executor);
+    }
+    
+    builder
         .build()
         .map_err(ImlManagerClientError::Reqwest)
 }
 
 /// Given a path, constructs a full API url
-fn create_api_url(path: &str) -> Result<Url, ImlManagerClientError> {
+fn create_api_url(path: impl ToString) -> Result<Url, ImlManagerClientError> {
     let mut path = path.to_string();
 
     if !path.ends_with('/') {
@@ -106,89 +108,80 @@ fn create_api_url(path: &str) -> Result<Url, ImlManagerClientError> {
     Ok(url)
 }
 
-/// Handles an incoming response. Returns a future of the buffered body
-///
-/// # Arguments
-///
-/// * - `resp` - The Response to handle
-fn handle_resp(resp: Response) -> impl Future<Item = Chunk, Error = ImlManagerClientError> {
-    resp.error_for_status()
-        .into_future()
-        .from_err()
-        .and_then(|mut res| {
-            let body = mem::replace(res.body_mut(), Decoder::empty());
-            body.concat2().from_err()
-        })
-}
-
 /// Performs a GET to the given API path
-pub fn get<T: DeserializeOwned + Debug>(
+pub async fn get<T: DeserializeOwned + Debug>(
     client: Client,
-    path: &str,
+    path: impl ToString,
     query: impl serde::Serialize,
-) -> impl Future<Item = T, Error = ImlManagerClientError> {
-    log::debug!("GET to {:?}", path);
+) -> Result<T, ImlManagerClientError> {
+    tracing::debug!("GET to {}", path.to_string());
 
-    create_api_url(path).into_future().and_then(move |url| {
-        client
-            .get(url)
-            .query(&query)
-            .send()
-            .from_err()
-            .and_then(handle_resp)
-            .and_then(|x| {
-                serde_json::from_slice(&x).map_err(|e| {
-                    log::error!("Could not serialize {:?}", x);
+    let uri = create_api_url(path)?;
+    tracing::info!("uri: {}", uri);
 
-                    e.into()
-                })
-            })
-            .inspect(|x| log::debug!("Resp: {:?}", x))
-            .from_err()
-    })
-}
+    let resp = client
+        .get(uri)
+        .query(&query)
+        .send()
+        .await?
+        .error_for_status()?;
+    tracing::info!("resp: {:#?}", resp);
 
-/// Handles an incoming response. Returns a future of the buffered body
-///
-/// # Arguments
-///
-/// * - `resp` - The Response to handle
-pub fn concat_body(
-    mut resp: Response,
-) -> impl Future<Item = (Response, Chunk), Error = ImlManagerClientError> {
-    let body = mem::replace(resp.body_mut(), Decoder::empty());
-    body.concat2().map(move |chunk| (resp, chunk)).from_err()
+    let json = resp.json().await?;
+
+    tracing::debug!("Resp: {:?}", json);
+
+    Ok(json)
 }
 
 /// Performs a POST to the given API path
-pub fn post(
+pub async fn post(
     client: Client,
     path: &str,
     body: impl serde::Serialize,
-) -> impl Future<Item = Response, Error = ImlManagerClientError> {
-    create_api_url(path)
-        .into_future()
-        .and_then(move |url| client.post(url).json(&body).send().from_err())
+) -> Result<Response, ImlManagerClientError> {
+    let uri = create_api_url(path)?;
+
+    let resp = client
+        .post(uri)
+        .json(&body)
+        .send()
+        .await?
+        .error_for_status()?;
+
+    tracing::debug!("Resp: {:?}", resp);
+
+    Ok(resp)
 }
 
 /// Performs a PUT to the given API path
-pub fn put(
+pub async fn put(
     client: Client,
     path: &str,
     body: impl serde::Serialize,
-) -> impl Future<Item = Response, Error = ImlManagerClientError> {
-    create_api_url(path)
-        .into_future()
-        .and_then(move |url| client.put(url).json(&body).send().from_err())
+) -> Result<Response, ImlManagerClientError> {
+    let uri = create_api_url(path)?;
+
+    Ok(client
+        .put(uri)
+        .json(&body)
+        .send()
+        .await?
+        .error_for_status()?)
 }
 
 /// Performs a DELETE to the given API path
-pub fn delete(
+pub async fn delete(
     client: Client,
     path: &str,
     body: impl serde::Serialize,
-) -> impl Future<Item = Response, Error = ImlManagerClientError> {
-    create_api_url(path)
-        .into_future()
-        .and_then(move |url| client.delete(url).json(&body).send().from_err())
+) -> Result<Response, ImlManagerClientError> {
+    let uri = create_api_url(path)?;
+
+    Ok(client
+        .delete(uri)
+        .json(&body)
+        .send()
+        .await?
+        .error_for_status()?)
 }

@@ -61,6 +61,9 @@ pub enum ImlManagerCliError {
     RunStratagemValidationError(RunStratagemValidationError),
     SerdeJsonError(serde_json::error::Error),
     DoesNotExist(&'static str),
+    IoError(std::io::Error),
+    CombineEasyError(combine::stream::easy::Errors<char, &'static str, usize>),
+    ReqwestError(reqwest::Error),
 }
 
 impl std::fmt::Display for ImlManagerCliError {
@@ -73,6 +76,9 @@ impl std::fmt::Display for ImlManagerCliError {
             ImlManagerCliError::RunStratagemValidationError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::SerdeJsonError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::DoesNotExist(ref err) => write!(f, "{} does not exist", err),
+            ImlManagerCliError::IoError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::CombineEasyError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::ReqwestError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -93,6 +99,9 @@ impl std::error::Error for ImlManagerCliError {
             ImlManagerCliError::RunStratagemValidationError(ref err) => Some(err),
             ImlManagerCliError::SerdeJsonError(ref err) => Some(err),
             ImlManagerCliError::DoesNotExist(_) => None,
+            ImlManagerCliError::IoError(ref err) => Some(err),
+            ImlManagerCliError::CombineEasyError(ref err) => Some(err),
+            ImlManagerCliError::ReqwestError(ref err) => Some(err),
         }
     }
 }
@@ -136,5 +145,23 @@ impl From<RunStratagemValidationError> for ImlManagerCliError {
 impl From<serde_json::error::Error> for ImlManagerCliError {
     fn from(err: serde_json::error::Error) -> Self {
         ImlManagerCliError::SerdeJsonError(err)
+    }
+}
+
+impl From<std::io::Error> for ImlManagerCliError {
+    fn from(err: std::io::Error) -> Self {
+        ImlManagerCliError::IoError(err)
+    }
+}
+
+impl From<combine::stream::easy::Errors<char, &str, usize>> for ImlManagerCliError {
+    fn from(err: combine::stream::easy::Errors<char, &str, usize>) -> Self {
+        ImlManagerCliError::CombineEasyError(err.map_range(|_| ""))
+    }
+}
+
+impl From<reqwest::Error> for ImlManagerCliError {
+    fn from(err: reqwest::Error) -> Self {
+        ImlManagerCliError::ReqwestError(err)
     }
 }

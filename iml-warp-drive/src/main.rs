@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{
+use futures01::{
     future::{self, lazy, Future, IntoFuture},
     sync::oneshot,
     Stream,
@@ -67,7 +67,33 @@ fn main() {
 
     let api_cache_state3 = Arc::clone(&api_cache_state);
 
-    let api_client = get_client().unwrap();
+    struct DefaultExecutor(tokio::executor::DefaultExecutor);
+
+    impl tokio02::executor::Executor for DefaultExecutor {
+        fn spawn(
+            &mut self,
+            future: Pin<Box<dyn Future<Output = ()> + Send>>,
+        ) -> Result<(), tokio02::executor::SpawnError> {
+            Ok(self.0.spawn(future))
+        }
+
+        fn status(&self) -> Result<(), tokio02::executor::SpawnError> {
+            self.0.status()
+        }
+    }
+
+    impl tokio02::executor::Executor for &DefaultExecutor {
+        fn spawn(
+            &mut self,
+            future: Pin<Box<dyn Future<Output = ()> + Send>>,
+        ) -> Result<(), tokio02::executor::SpawnError> {
+            Ok(self.0.spawn(future))
+        }
+
+        fn status(&self) -> Result<(), tokio02::executor::SpawnError> {
+            self.0.status()
+        }
+    }
 
     // GET -> messages stream
     let routes = warp::get2()
@@ -93,10 +119,19 @@ fn main() {
     let (_, fut) =
         warp::serve(routes).bind_with_graceful_shutdown(iml_manager_env::get_warp_drive_addr(), rx);
 
+    log::info!("Created future");
     tokio::run(lazy(move || {
-        warp::spawn(
-            populate_from_api(Arc::clone(&api_cache_state))
-                .map_err(|e| -> failure::Error { e.into() })
+        log::info!("Inside tokio::run");
+        let executor = Some(DefaultExecutor(tokio::executor::DefaultExecutor::current()));
+        let api_client = get_client(executor).unwrap();
+
+        warp::spawn(lazy(move || {
+            log::info!("Inside warp::spawn");
+            populate_from_api(api_client, Arc::clone(&api_cache_state))
+                .map_err(|e| -> failure::Error {
+                    log::info!("error from calling populate_from_api: {:#?}", e);
+                    e.into()
+                })
                 .and_then(|_| iml_postgres::connect().from_err())
                 .map(|(client, conn)| {
                     (
@@ -209,8 +244,8 @@ fn main() {
                     exit2.trigger();
                     tx3.trigger();
                     log::error!("Unhandled error {}", e)
-                }),
-        );
+                })
+        }));
 
         iml_rabbit::connect_to_rabbit()
             .and_then(create_locks_consumer)

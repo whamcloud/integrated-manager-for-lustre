@@ -5,20 +5,25 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-dotenv = "0.14"
-env_logger = "0.6"
-futures = "0.1"
+combine = "4.0.0-beta.1"
+console = "0.9"
+dotenv = "0.15"
+futures-preview = "0.3.0-alpha.19"
+hostlist-parser = "0.1"
 iml-wire-types = { path = "../iml-wire-types", version = "0.1" }
 iml-manager-client = { path = "../iml-manager-client", version = "0.1.0" }
-log = "0.4"
+indicatif = "0.12"
 prettytable-rs = "0.8"
+reqwest = { git = "https://github.com/jgrund/reqwest.git", branch = "executor0.3", features = ["default-tls", "tls", "json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 spinners = "1.0.0"
 structopt = "0.2"
 termion = "1"
-tokio = "0.1"
-exitcode = "1.1"
+tokio = "0.2.0-alpha.6"
+tokio-executor = "0.2.0-alpha.6"
+tracing = "0.1"
+tracing-subscriber = "0.1"
 
 [[bin]]
 name = "iml"
