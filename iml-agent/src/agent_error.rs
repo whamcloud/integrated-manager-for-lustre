@@ -53,6 +53,21 @@ impl std::error::Error for RequiredError {
 }
 
 #[derive(Debug)]
+pub struct CibError(pub String);
+
+impl fmt::Display for CibError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::error::Error for CibError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+}
+
+#[derive(Debug)]
 pub enum ImlAgentError {
     Io(std::io::Error),
     Serde(serde_json::Error),
@@ -76,6 +91,7 @@ pub enum ImlAgentError {
     HyperError(hyper::error::Error),
     NativeTls(native_tls::Error),
     XmlError(elementtree::Error),
+    CibError(CibError),
     UnexpectedStatusError,
 }
 
@@ -111,6 +127,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::HyperError(ref err) => write!(f, "{}", err),
             ImlAgentError::NativeTls(ref err) => write!(f, "{}", err),
             ImlAgentError::XmlError(ref err) => write!(f, "{}", err),
+            ImlAgentError::CibError(ref err) => write!(f, "{}", err),
             ImlAgentError::UnexpectedStatusError => write!(f, "Unexpected status code"),
         }
     }
@@ -142,6 +159,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::HyperError(ref err) => Some(err),
             ImlAgentError::NativeTls(ref err) => Some(err),
             ImlAgentError::XmlError(ref err) => Some(err),
+            ImlAgentError::CibError(ref err) => Some(err),
             ImlAgentError::UnexpectedStatusError => None,
         }
     }
@@ -282,6 +300,12 @@ impl From<elementtree::Error> for ImlAgentError {
 impl From<http::header::InvalidHeaderValue> for ImlAgentError {
     fn from(err: http::header::InvalidHeaderValue) -> Self {
         ImlAgentError::InvalidHeaderValue(err)
+    }
+}
+
+impl From<CibError> for ImlAgentError {
+    fn from(err: CibError) -> Self {
+        ImlAgentError::CibError(err)
     }
 }
 
