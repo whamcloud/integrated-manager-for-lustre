@@ -250,14 +250,11 @@ class ServiceConfig(CommandLine):
             log.error(error)
             raise RuntimeError(error)
 
-        error = rabbit_service._stop()
-        if error:
+        try:
+            self.try_shell(["systemctl", "restart", "rabbitmq-server"])
+        except CommandError as error:
             log.error(error)
-            raise RuntimeError(error)
-        error = rabbit_service._start()
-        if error:
-            log.error(error)
-            raise RuntimeError(error)
+            raise error
 
     def _setup_rabbitmq_credentials(self):
         # Enable use from dev_setup as a nonroot user on linux
