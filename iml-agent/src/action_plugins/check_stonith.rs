@@ -7,12 +7,13 @@ use crate::{
     cmd::cmd_output,
 };
 use elementtree::Element;
-use futures::Future;
+use futures::{
+    compat::Future01CompatExt,
+    future::{FutureExt, TryFutureExt},
+};
+use futures01::Future;
 use iml_wire_types::{ComponentState, ConfigState, RunState, ServiceState};
 use std::default::Default;
-use std::process::Command;
-use tracing::{span, Level};
-use tracing_futures::Instrument;
 
 /// This processes <instance_attributes> section of a stonith
 /// "<primitive>" type from the pacemaker cib.
@@ -50,7 +51,7 @@ fn check_instance_attr(elem: &Option<&Element>, node: &String) -> Result<(), Str
         // "static-list" -> only hosts specified in pcmk_host_list will work
         // MISSING -> if host list is missing, default to dynamic-list, else
         // check host list
-        if (static_hc || hl_set) {
+        if static_hc || hl_set {
             let v: Vec<&str> = hl.split(",").collect();
             if !v.contains(&node.as_str()) {
                 return Err(format!("{} missing from host list", node));
@@ -147,24 +148,26 @@ fn do_check_stonith(xml: &[u8], nodename: &String) -> Result<ComponentState<bool
     }
 }
 
-pub fn check_stonith(_: ()) -> impl Future<Item = ComponentState<bool>, Error = ImlAgentError> {
-    cmd_output(
+pub async fn check_stonith_async(_: ()) -> Result<ComponentState<bool>, ImlAgentError> {
+    let stonith = cmd_output(
         "cibadmin",
         &["--query", "--xpath", "//primitive[@class='stonith']"],
     )
-    .instrument(span!(Level::INFO, "Read cib"))
-    .and_then(|x| {
-        if !x.status.success() {
-            return Ok(ComponentState {
-                state: false,
-                info: "No pacemaker".to_string(),
-                ..Default::default()
-            });
-        }
-        let cmd = Command::new("crm_node").args(&["-n"]).output()?;
-        do_check_stonith(x.stdout.as_slice(), &String::from_utf8(cmd.stdout)?)
-    })
-    .from_err()
+    .compat()
+    .await?;
+    if !stonith.status.success() {
+        return Ok(ComponentState {
+            state: false,
+            info: "No pacemaker".to_string(),
+            ..Default::default()
+        });
+    }
+    let node = cmd_output("crm_node", &["-n"]).compat().await?;
+    do_check_stonith(stonith.stdout.as_slice(), &String::from_utf8(node.stdout)?)
+}
+
+pub fn check_stonith(_: ()) -> impl Future<Item = ComponentState<bool>, Error = ImlAgentError> {
+    check_stonith_async(()).boxed().compat()
 }
 
 #[cfg(test)]
