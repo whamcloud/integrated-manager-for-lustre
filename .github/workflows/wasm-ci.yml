@@ -42,7 +42,7 @@ jobs:
 
       - name: Run clippy
         working-directory: ./iml-wasm-components
-        run: cargo clippy --all -- --check
+        run: cargo clippy -- -W warnings
 
   rustfmt:
     name: Format
