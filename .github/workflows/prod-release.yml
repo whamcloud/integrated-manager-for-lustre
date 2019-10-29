@@ -2,9 +2,7 @@ name: prod-release
 on:
   push:
     tags:
-      - v*r5.1
-    branches:
-      - master
+      - v*rust-r5.1
 jobs:
   push_rust_iml:
     name: Push to Copr prod
