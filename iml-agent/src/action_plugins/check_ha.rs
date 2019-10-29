@@ -10,7 +10,7 @@ use std::{collections::HashMap, fmt, str};
 use tokio::fs::File;
 
 /// standard:provider:ocftype (e.g. ocf:heartbeat:ZFS, or stonith:fence_ipmilan)
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct ResourceAgentType {
     pub standard: String,         // e.g. ocf, lsb, stonith, etc..
     pub provider: Option<String>, // e.g. heartbeat, lustre, chroma
@@ -36,7 +36,19 @@ impl fmt::Display for ResourceAgentType {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+impl PartialEq<String> for ResourceAgentType {
+    fn eq(&self, other: &String) -> bool {
+        self.to_string() == *other
+    }
+}
+
+impl PartialEq<&str> for ResourceAgentType {
+    fn eq(&self, other: &&str) -> bool {
+        self.to_string() == *other
+    }
+}
+
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct AgentInfo {
     pub agent: ResourceAgentType,
     pub group: Option<String>,
@@ -70,12 +82,10 @@ impl AgentInfo {
     }
 }
 
-pub async fn get_ha_resource_list(_: ()) -> Result<Vec<AgentInfo>, ImlAgentError> {
-    let output = cmd_output_success("cibadmin", vec!["--query", "--xpath", "//resources"]).await?;
+fn process_resource_list(output: &[u8]) -> Result<Vec<AgentInfo>, ImlAgentError> {
+    let element = Element::from_reader(output)?;
 
-    // This cannot split between map/map_err because Element does not implement Send
-    let elem = Element::from_reader(output.stdout.as_slice())?;
-    Ok(elem
+    Ok(element
         .find_all("group")
         .flat_map(|g| {
             let name = g.get_attr("id").unwrap_or("").to_string();
@@ -83,10 +93,18 @@ pub async fn get_ha_resource_list(_: ()) -> Result<Vec<AgentInfo>, ImlAgentError
                 .map(move |p| AgentInfo::create(p, Some(name.clone())))
         })
         .chain(
-            elem.find_all("primitive")
+            element
+                .find_all("primitive")
                 .map(|p| AgentInfo::create(p, None)),
         )
         .collect())
+}
+
+pub async fn get_ha_resource_list(_: ()) -> Result<Vec<AgentInfo>, ImlAgentError> {
+    let resources =
+        cmd_output_success("cibadmin", vec!["--query", "--xpath", "//resources"]).await?;
+
+    process_resource_list(resources.stdout.as_slice())
 }
 
 async fn systemd_unit_servicestate(name: &str) -> Result<ServiceState, ImlAgentError> {
@@ -104,7 +122,7 @@ async fn file_exists(path: &str) -> bool {
     let f = File::open(path.to_string()).await;
     tracing::debug!("Checking file {} : {:?}", path, f);
     match f {
-        Ok(_) => o.status.success(),
+        Ok(_) => true,
         Err(_) => false,
     }
 }
@@ -131,6 +149,7 @@ totem.interface.1.mcastaddr (str) = 226.94.1.1
             ConfigState::Unknown
         };
         corosync.service = systemd_unit_servicestate("corosync").await?;
+        // @@ check corosync setup
     }
 
     Ok(corosync)
@@ -188,4 +207,124 @@ pub async fn check_ha(
     let pcs = check_pcs();
 
     try_join!(corosync, pacemaker, pcs)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{process_resource_list, AgentInfo, ResourceAgentType};
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_ha_only_fence_chroma() {
+        let testxml = r#"<resources>
+  <primitive class="stonith" id="st-fencing" type="fence_chroma"/>
+</resources>
+"#;
+        assert_eq!(
+            process_resource_list(&testxml.as_bytes()).unwrap(),
+            vec![AgentInfo {
+                agent: ResourceAgentType::new(
+                    "stonith".to_string(),
+                    None,
+                    "fence_chroma".to_string()
+                ),
+                group: None,
+                id: "st-fencing".to_string(),
+                args: HashMap::new()
+            }]
+        );
+    }
+
+    #[test]
+    fn test_ha_mixed_mode() {
+        let testxml = r#"<resources>
+  <group id="group-MGS_695ee8">
+    <primitive class="ocf" id="MGS_695ee8-zfs" provider="chroma" type="ZFS">
+      <instance_attributes id="MGS_695ee8-zfs-instance_attributes">
+        <nvpair id="MGS_695ee8-zfs-instance_attributes-instance_attributes-pool" name="pool" value="MGS"/>
+      </instance_attributes>
+      <operations>
+        <op id="MGS_695ee8-zfs-start-interval-0s" interval="0s" name="start" timeout="60s"/>
+        <op id="MGS_695ee8-zfs-stop-interval-0s" interval="0s" name="stop" timeout="60s"/>
+        <op id="MGS_695ee8-zfs-monitor-interval-5s" interval="5s" name="monitor" timeout="30s"/>
+      </operations>
+    </primitive>
+    <primitive class="ocf" id="MGS_695ee8" provider="lustre" type="Lustre">
+      <instance_attributes id="MGS_695ee8-instance_attributes">
+        <nvpair id="MGS_695ee8-instance_attributes-instance_attributes-mountpoint" name="mountpoint" value="/mnt/MGS"/>
+        <nvpair id="MGS_695ee8-instance_attributes-instance_attributes-target" name="target" value="MGS/MGS"/>
+      </instance_attributes>
+      <operations>
+        <op id="MGS_695ee8-start-interval-0s" interval="0s" name="start" timeout="300s"/>
+        <op id="MGS_695ee8-stop-interval-0s" interval="0s" name="stop" timeout="300s"/>
+        <op id="MGS_695ee8-monitor-interval-20s" interval="20s" name="monitor" timeout="300s"/>
+      </operations>
+    </primitive>
+    <meta_attributes id="group-MGS_695ee8-meta_attributes">
+      <nvpair id="group-MGS_695ee8-meta_attributes-meta_attributes-target_role" name="target_role" value="Stopped"/>
+    </meta_attributes>
+  </group>
+  <primitive class="ocf" id="fs21-MDT0000_f61385" provider="lustre" type="Lustre">
+    <instance_attributes id="fs21-MDT0000_f61385-instance_attributes">
+      <nvpair id="fs21-MDT0000_f61385-instance_attributes-instance_attributes-mountpoint" name="mountpoint" value="/mnt/fs21-MDT0000"/>
+      <nvpair id="fs21-MDT0000_f61385-instance_attributes-instance_attributes-target" name="target" value="/dev/disk/by-id/scsi-36001405da302b267f944aeaaadb95af9"/>
+    </instance_attributes>
+    <operations>
+      <op id="fs21-MDT0000_f61385-start-interval-0s" interval="0s" name="start" timeout="300s"/>
+      <op id="fs21-MDT0000_f61385-stop-interval-0s" interval="0s" name="stop" timeout="300s"/>
+      <op id="fs21-MDT0000_f61385-monitor-interval-20s" interval="20s" name="monitor" timeout="300s"/>
+    </operations>
+    <meta_attributes id="fs21-MDT0000_f61385-meta_attributes">
+      <nvpair id="fs21-MDT0000_f61385-meta_attributes-meta_attributes-target_role" name="target_role" value="Stopped"/>
+    </meta_attributes>
+  </primitive>
+</resources>
+"#;
+
+        let mut a1 = AgentInfo {
+            agent: ResourceAgentType::new(
+                "ocf".to_string(),
+                Some("chroma".to_string()),
+                "ZFS".to_string(),
+            ),
+            group: Some("group-MGS_695ee8".to_string()),
+            id: "MGS_695ee8-zfs".to_string(),
+            args: HashMap::new(),
+        };
+        a1.args.insert("pool".to_string(), "MGS".to_string());
+        let mut a2 = AgentInfo {
+            agent: ResourceAgentType::new(
+                "ocf".to_string(),
+                Some("lustre".to_string()),
+                "Lustre".to_string(),
+            ),
+            group: Some("group-MGS_695ee8".to_string()),
+            id: "MGS_695ee8".to_string(),
+            args: HashMap::new(),
+        };
+        a2.args.insert("target".to_string(), "MGS/MGS".to_string());
+        a2.args
+            .insert("mountpoint".to_string(), "/mnt/MGS".to_string());
+        let mut a3 = AgentInfo {
+            agent: ResourceAgentType::new(
+                "ocf".to_string(),
+                Some("lustre".to_string()),
+                "Lustre".to_string(),
+            ),
+            group: None,
+            id: "fs21-MDT0000_f61385".to_string(),
+            args: HashMap::new(),
+        };
+        a3.args.insert(
+            "target".to_string(),
+            "/dev/disk/by-id/scsi-36001405da302b267f944aeaaadb95af9".to_string(),
+        );
+        a3.args
+            .insert("mountpoint".to_string(), "/mnt/fs21-MDT0000".to_string());
+
+        assert_eq!(
+            process_resource_list(&testxml.as_bytes()).unwrap(),
+            vec![a1, a2, a3]
+        );
+    }
 }
