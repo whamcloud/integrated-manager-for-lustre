@@ -71,7 +71,6 @@ pub async fn update_repo_file_cli(config: UpdateRepoFileHosts) -> Result<(), Iml
         message: "Update IML Agent Repo files".into(),
     };
 
-
     let cmd = wrap_fut("Updating Repo files...", create_command(cmd)).await?;
 
     wait_for_cmds(vec![cmd]).await?;

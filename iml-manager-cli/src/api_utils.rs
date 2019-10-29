@@ -36,9 +36,7 @@ pub async fn create_command<T: serde::Serialize>(
 ) -> Result<Command, ImlManagerCliError> {
     let resp = post(Command::endpoint_name(), cmd_body).await?;
 
-    let cmd = resp
-        .json()
-        .await?;
+    let cmd = resp.json().await?;
 
     tracing::debug!("Resp JSON is {:?}", cmd);
 

@@ -39,10 +39,10 @@ jobs:
           toolchain: beta
           override: true
       - run: rustup component add clippy
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -W warnings
+
+      - name: Run clippy
+        working-directory: ./iml-wasm-components
+        run: cargo clippy -- -W warnings
 
   rustfmt:
     name: Format
@@ -54,10 +54,10 @@ jobs:
           toolchain: beta
           override: true
       - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+
+      - name: Run cargo fmt
+        working-directory: ./iml-wasm-components
+        run: cargo fmt --all -- --check
 
   test:
     name: Test Suite
