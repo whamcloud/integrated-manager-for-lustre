@@ -121,11 +121,11 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     # The fields below are how the agent was installed or how it was attempted to install in the case of a failed install
     INSTALL_MANUAL = (
-        "manual"
-    )  # The agent was installed manually by the user logging into the server and running a command
+        "manual"  # The agent was installed manually by the user logging into the server and running a command
+    )
     INSTALL_SSHPSW = (
-        "id_password_root"
-    )  # The user provided a password for the server so that ssh could be used for agent install
+        "id_password_root"  # The user provided a password for the server so that ssh could be used for agent install
+    )
     INSTALL_SSHPKY = "private_key_choice"  # The user provided a private key with password the agent install
     INSTALL_SSHSKY = "existing_keys_choice"  # The server can be contacted via a shared key for the agent install
 

@@ -85,7 +85,7 @@ class TestSeries(IMLUnitTestCase):
         stats = self.store.fetch(names, epoch, epoch + timedelta(seconds=40))
         for delta in (0, 10, 20):
             start = epoch + timedelta(seconds=delta)
-            (dt, data), = self.store.fetch(names, start, start + timedelta(seconds=25)).items()
+            ((dt, data),) = self.store.fetch(names, start, start + timedelta(seconds=25)).items()
             self.assertEqual(stats.pop(dt), data)
         self.assertEqual(stats, {})
 

@@ -90,14 +90,14 @@ class TestTargetResource(ChromaApiTestCase):
         self.create_simple_filesystem(self.host)
         fake_log_message("192.168.0.1@tcp testfs-MDT0000")
         response = self.api_client.get("/api/log/")
-        event, = self.deserialize(response)["objects"]
+        (event,) = self.deserialize(response)["objects"]
         self.assertEqual(len(event["substitutions"]), 2)
         self.host.state = "removed"
         self.host.save()
         self.mdt.not_deleted = False
         self.mdt.save()
         response = self.api_client.get("/api/log/")
-        event, = self.deserialize(response)["objects"]
+        (event,) = self.deserialize(response)["objects"]
         self.assertEqual(len(event["substitutions"]), 0)
 
     def _target_hosts(self, paths):
@@ -106,7 +106,7 @@ class TestTargetResource(ChromaApiTestCase):
             response = self.api_client.get(path)
             self.assertHttpOK(response)
             content = json.loads(response.content)
-            volume_node, = content["volume"]["volume_nodes"]
+            (volume_node,) = content["volume"]["volume_nodes"]
             yield volume_node["host_label"]
 
     @create_targets_patch

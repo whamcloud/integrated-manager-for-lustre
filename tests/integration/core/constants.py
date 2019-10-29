@@ -9,8 +9,6 @@ UNATTENDED_BOOT_TIMEOUT = 60
 # As we increase the number of dkms packages this number will increase.
 # It is also twice as long as we expect because we do HA pairs sequentially.
 UPDATE_TEST_TIMEOUT = 7200
-INSTALL_TIMEOUT = (
-    5400
-)  # an extra long timeout for installing IML. Can take a while to install all those packages, and is slower on RHEL since then it connects to the external RHN repos. Storage server pairs being installed in serial makes 2x longer as well.
+INSTALL_TIMEOUT = 5400  # an extra long timeout for installing IML. Can take a while to install all those packages, and is slower on RHEL since then it connects to the external RHN repos. Storage server pairs being installed in serial makes 2x longer as well.
 
 MEGABYTES = 1024 * 1024
