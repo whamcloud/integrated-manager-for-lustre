@@ -23,7 +23,7 @@ pyparsing==1.5.6
 python-daemon==1.6
 python-dateutil==1.5
 pytz==2014.4
-requests==2.12.5
+requests==2.20.0
 requests_unixsocket==0.1.5
 tablib==0.9.11
 toolz
