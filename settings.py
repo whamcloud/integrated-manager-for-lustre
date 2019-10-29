@@ -282,8 +282,8 @@ STORAGE_PLUGIN_ENABLE_STATS = True
 
 # Control of the statistics storage
 STATS_SIMPLE_WIPE = (
-    True
-)  # True means we simple delete everything that is older than the expiration, data not rolled up is lost.
+    True  # True means we simple delete everything that is older than the expiration, data not rolled up is lost.
+)
 STATS_10_SECOND_EXPIRATION = {"days": 1}  # Expiration must be multiple of 10 seconds.
 STATS_1_MINUTE_EXPIRATION = {"days": 3}  # Expiration must be multiple of 1 minute.
 STATS_5_MINUTE_EXPIRATION = {"days": 7}  # Expiration must be multiple of 5 minute.
