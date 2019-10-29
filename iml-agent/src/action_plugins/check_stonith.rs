@@ -26,9 +26,7 @@ use tracing_futures::Instrument;
 ///   - none - any host can fence any host
 /// * pcmk_host_list - list of hosts controlled
 ///
-/// Returns: Some("ERROR MESSAGE") on an issue, or None for no issues
-///
-fn inst_attr_problem(elem: &Option<&Element>, node: &String) -> Option<String> {
+fn check_instance_attr(elem: &Option<&Element>, node: &String) -> Result<(), String> {
     if let Some(instance) = elem {
         let mut hl = "";
         let mut hl_set = false;
@@ -41,7 +39,7 @@ fn inst_attr_problem(elem: &Option<&Element>, node: &String) -> Option<String> {
                 }
                 Some("pcmk_host_check") => match e.get_attr("value") {
                     Some("static-list") => static_hc = true,
-                    _ => return None,
+                    _ => return Ok(()),
                 },
                 _ => (),
             }
@@ -55,31 +53,29 @@ fn inst_attr_problem(elem: &Option<&Element>, node: &String) -> Option<String> {
         if (static_hc || hl_set) {
             let v: Vec<&str> = hl.split(",").collect();
             if !v.contains(&node.as_str()) {
-                return Some(format!("{} missing from host list", node));
+                return Err(format!("{} missing from host list", node));
             }
         }
     }
-    None
+    Ok(())
 }
 
 /// This processes <meta_attributes> section of a stonith <primitive>
 /// from the pacemaker cib
 ///
-/// Returns: Some("ERROR MESSAGE") on an issue, or None for no issues
-///
-fn meta_attr_problem(elem: &Option<&Element>) -> Option<String> {
+fn check_meta_attr(elem: &Option<&Element>) -> Result<(), String> {
     if let Some(meta) = elem {
         for e in meta.children() {
             if Some("target-role") == e.get_attr("name") {
                 match e.get_attr("value") {
-                    Some("Started") => return None,
-                    Some(other) => return Some(format!("role: {}", other)),
+                    Some("Started") => return Ok(()),
+                    Some(other) => return Err(format!("role: {}", other)),
                     None => (),
                 }
             }
         }
     }
-    None
+    Ok(())
 }
 
 fn stonith_ok(
@@ -100,9 +96,10 @@ fn stonith_ok(
             Some(_) => Ok((true, "fence_chroma".to_string(), ConfigState::IML)),
         },
         Some(t) => {
-            if let Some(err) = meta_attr_problem(&elem.find("meta_attributes")) {
+            if let Err(err) = check_meta_attr(&elem.find("meta_attributes")) {
                 Ok((false, format!("{} - {}", t, err), ConfigState::Other))
-            } else if let Some(err) = inst_attr_problem(&elem.find("instance_attributes"), nodename)
+            } else if let Err(err) =
+                check_instance_attr(&elem.find("instance_attributes"), nodename)
             {
                 Ok((false, format!("{} - {}", t, err), ConfigState::Other))
             } else {
