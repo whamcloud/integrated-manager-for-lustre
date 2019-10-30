@@ -4,14 +4,12 @@
 
 use crate::{agent_error::ImlAgentError, http_comms::mailbox_client};
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, FutureExt, TryFutureExt},
+    future::{self, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
-use futures01::{future::poll_fn, Future as Future01};
 use liblustreapi::{error::LiblustreError, LlapiFid};
 use std::convert::Into;
-use tokio_threadpool::blocking;
+use tokio_executor::blocking::run;
 use tracing::{debug, error, warn};
 
 pub fn purge_files(device: &str, fids: Vec<String>) -> Result<(), ImlAgentError> {
@@ -20,30 +18,18 @@ pub fn purge_files(device: &str, fids: Vec<String>) -> Result<(), ImlAgentError>
         e
     })?;
 
-    llapi.rmfids(fids.clone()).map_err(Into::into)
-}
-
-async fn poller<T>(f: impl FnMut() -> futures01::Poll<T, tokio_threadpool::BlockingError>) -> T {
-    poll_fn(f)
-        .compat()
-        .map_err(|_| panic!("the threadpool shut down"))
-        .await
-        .unwrap()
+    llapi.rmfids(fids).map_err(Into::into)
 }
 
 async fn search_rootpath(device: String) -> Result<LlapiFid, LiblustreError> {
-    poller(|| blocking(|| LlapiFid::create(&device))).await
+    run(move || LlapiFid::create(&device)).await
 }
 
 async fn rm_fids(llapi: LlapiFid, fids: Vec<String>) -> Result<(), LiblustreError> {
-    poller(|| blocking(|| llapi.clone().rmfids(fids.clone()))).await
+    run(move || llapi.clone().rmfids(fids)).await
 }
 
-pub fn read_mailbox(x: (String, String)) -> impl Future01<Item = (), Error = ImlAgentError> {
-    read_mailbox_async(x).boxed().compat()
-}
-
-pub async fn read_mailbox_async(
+pub async fn read_mailbox(
     (fsname_or_mntpath, mailbox): (String, String),
 ) -> Result<(), ImlAgentError> {
     let llapi = search_rootpath(fsname_or_mntpath).await?;
@@ -51,7 +37,6 @@ pub async fn read_mailbox_async(
     let rmfids_size = llapi.rmfids_size();
 
     mailbox_client::get(mailbox)
-        .compat()
         .map_ok(|x| {
             x.trim()
                 .split(' ')

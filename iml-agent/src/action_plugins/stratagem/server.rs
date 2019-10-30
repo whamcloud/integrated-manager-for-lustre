@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output_success, http_comms::mailbox_client};
-use futures01::{future, stream, Future, IntoFuture, Stream as _};
+use futures::{future, stream, StreamExt, TryStreamExt};
 use iml_fs::{read_file_to_end, stream_dir_lines, write_tempfile};
 use std::{convert::Into, path::PathBuf};
 use uuid::Uuid;
@@ -324,60 +324,62 @@ pub fn get_mailbox_files(
 /// This will only trigger a scan and return a triple of `(String, StratagemResult, MailboxFiles)`
 ///
 /// It will *not* stream data for processing
-pub fn trigger_scan(
+pub async fn trigger_scan(
     data: StratagemConfig,
-) -> impl Future<Item = (String, StratagemResult, MailboxFiles), Error = ImlAgentError> {
+) -> Result<(String, StratagemResult, MailboxFiles), ImlAgentError> {
     let id = Uuid::new_v4().to_hyphenated().to_string();
 
     let tmp_dir = format!("/tmp/{}/", id);
-    let tmp_dir2 = tmp_dir.clone();
 
     let result_file = format!("{}result.json", tmp_dir);
 
-    serde_json::to_vec(&data)
-        .into_future()
-        .from_err()
-        .and_then(|x| write_tempfile(x).from_err())
-        .and_then(move |f| {
-            cmd_output_success(
-                "/usr/bin/lipe_scan",
-                &[
-                    "-c",
-                    &f.path().to_str().unwrap(),
-                    "-W",
-                    &format!("/tmp/{}", id),
-                ],
-            )
-            .map(|x| (x, f))
-        })
-        .map(|(output, _f)| String::from_utf8_lossy(&output.stdout).into_owned())
-        .and_then(move |_| read_file_to_end(result_file).from_err())
-        .and_then(|xs| serde_json::from_slice(&xs).map_err(Into::into))
-        .map(move |x| {
-            let mailbox_files = get_mailbox_files(&tmp_dir2, &data, &x);
-            (tmp_dir2, x, mailbox_files)
-        })
+    let xs = serde_json::to_vec(&data)?;
+
+    let f = write_tempfile(xs).await?;
+
+    let output = cmd_output_success(
+        "/usr/bin/lipe_scan",
+        vec!["-c", &f.path().to_str().unwrap(), "-W", &tmp_dir],
+    )
+    .await?;
+
+    tracing::debug!(
+        "Scan result: {}",
+        String::from_utf8_lossy(&output.stdout).into_owned()
+    );
+
+    let xs = read_file_to_end(result_file).await?;
+
+    let x = serde_json::from_slice(&xs)?;
+
+    let mailbox_files = get_mailbox_files(&tmp_dir, &data, &x);
+
+    Ok((tmp_dir, x, mailbox_files))
 }
 
 /// Streams output for all given mailbox files
 ///
 /// This fn will stream all files in parallel and return once they have all finished.
-pub fn stream_fidlists(
-    mailbox_files: MailboxFiles,
-) -> impl Future<Item = (), Error = ImlAgentError> {
+pub async fn stream_fidlists(mailbox_files: MailboxFiles) -> Result<(), ImlAgentError> {
     let mailbox_files = mailbox_files.into_iter().map(|(file, address)| {
         stream_dir_lines(file)
-            .from_err()
+            .err_into::<ImlAgentError>()
             .chunks(5000)
-            .for_each(move |xs| {
-                mailbox_client::send(
-                    address.clone(),
-                    stream::iter_ok(xs.into_iter().map(|x| format!("{}\n", x)).map(|x| x.into())),
-                )
+            .map(Ok)
+            .try_for_each(move |xs| {
+                let xs = xs.into_iter().map(|x| {
+                    let x = x?;
+
+                    Ok(format!("{}\n", x).into())
+                });
+
+                mailbox_client::send(address.clone(), stream::iter(xs))
             })
     });
 
-    future::join_all(mailbox_files).map(|_| ())
+    future::join_all(mailbox_files).await;
+
+    Ok(())
 }
 
 #[cfg(test)]

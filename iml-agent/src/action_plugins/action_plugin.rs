@@ -7,46 +7,39 @@ use crate::{
     action_plugins::{check_ha, check_stonith},
     agent_error::ImlAgentError,
 };
-use futures01::{future::IntoFuture, Future};
+use futures::{Future, FutureExt};
 use iml_wire_types::{ActionName, ToJsonValue};
-use std::collections::HashMap;
+use std::{collections::HashMap, pin::Pin};
 use tracing::info;
 
-type BoxedFuture = Box<
-    dyn Future<Item = std::result::Result<serde_json::value::Value, String>, Error = ()>
-        + 'static
-        + Send,
->;
+type BoxedFuture =
+    Pin<Box<dyn Future<Output = Result<serde_json::value::Value, String>> + 'static + Send>>;
 
 type Callback = Box<dyn Fn(serde_json::value::Value) -> BoxedFuture + Send + Sync>;
 
-fn mk_boxed_future<T, R, Fut>(v: serde_json::value::Value, f: fn(T) -> Fut) -> BoxedFuture
+async fn mk_boxed_future<T, R, Fut>(
+    v: serde_json::value::Value,
+    f: fn(T) -> Fut,
+) -> Result<serde_json::value::Value, String>
 where
     T: serde::de::DeserializeOwned + Send + 'static,
     R: serde::Serialize + 'static + Send,
-    Fut: Future<Item = R, Error = ImlAgentError> + Send + 'static,
+    Fut: Future<Output = Result<R, ImlAgentError>> + Send + 'static,
 {
-    Box::new(
-        serde_json::from_value(v)
-            .into_future()
-            .from_err()
-            .and_then(f)
-            .then(|x| {
-                Ok(match x {
-                    Ok(x) => x.to_json_value(),
-                    Err(e) => Err(format!("{}", e)),
-                })
-            }),
-    ) as BoxedFuture
+    let x = serde_json::from_value(v).map_err(|e| format!("{}", e))?;
+
+    let x = f(x).await.map_err(|e| format!("{}", e))?;
+
+    x.to_json_value()
 }
 
 fn mk_callback<Fut, T, R>(f: fn(T) -> Fut) -> Callback
 where
-    Fut: Future<Item = R, Error = ImlAgentError> + Send + 'static,
+    Fut: Future<Output = Result<R, ImlAgentError>> + Send + 'static,
     T: serde::de::DeserializeOwned + Send + 'static,
     R: serde::Serialize + Send + 'static,
 {
-    Box::new(move |v| mk_boxed_future(v, f))
+    Box::new(move |v| mk_boxed_future(v, f).boxed())
 }
 
 pub type Actions = HashMap<ActionName, Callback>;

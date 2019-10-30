@@ -3,20 +3,16 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    agent_error::{ImlAgentError, NoPluginError, Result},
+    agent_error::{NoPluginError, Result},
     daemon_plugins::{action_runner, stratagem},
 };
-use futures01::{future, Future};
+use futures::{future, Future, FutureExt};
 use iml_wire_types::{AgentResult, PluginName};
-use std::collections::HashMap;
+use std::{collections::HashMap, pin::Pin};
 use tracing::info;
 
 pub type OutputValue = serde_json::Value;
 pub type Output = Option<OutputValue>;
-
-pub fn as_output(x: impl serde::Serialize + Send) -> Result<Output> {
-    Ok(Some(serde_json::to_value(x)?))
-}
 
 /// Plugin interface for extensible behavior
 /// between the agent and manager.
@@ -27,8 +23,8 @@ pub fn as_output(x: impl serde::Serialize + Send) -> Result<Output> {
 /// to the `plugin_registry` below.
 pub trait DaemonPlugin: std::fmt::Debug {
     /// Returns full listing of information upon session esablishment
-    fn start_session(&mut self) -> Box<dyn Future<Item = Output, Error = ImlAgentError> + Send> {
-        Box::new(future::ok(None))
+    fn start_session(&mut self) -> Pin<Box<dyn Future<Output = Result<Output>> + Send>> {
+        future::ok(None).boxed()
     }
     /// Return information needed to maintain a manager-agent session, i.e. what
     /// has changed since the start of the session or since the last update.
@@ -38,16 +34,16 @@ pub trait DaemonPlugin: std::fmt::Debug {
     ///
     /// This will never be called concurrently with respect to start_session, or
     /// before start_session.
-    fn update_session(&self) -> Box<dyn Future<Item = Output, Error = ImlAgentError> + Send> {
-        Box::new(future::ok(None))
+    fn update_session(&self) -> Pin<Box<dyn Future<Output = Result<Output>> + Send>> {
+        future::ok(None).boxed()
     }
     /// Handle a message sent from the manager (may be called concurrently with respect to
     /// start_session and update_session).
     fn on_message(
         &self,
         _body: serde_json::Value,
-    ) -> Box<dyn Future<Item = AgentResult, Error = ImlAgentError> + Send> {
-        Box::new(future::ok(Ok(serde_json::Value::Null)))
+    ) -> Pin<Box<dyn Future<Output = Result<AgentResult>> + Send>> {
+        future::ok(Ok(serde_json::Value::Null)).boxed()
     }
     fn teardown(&mut self) -> Result<()> {
         Ok(())
@@ -100,11 +96,18 @@ pub fn get_plugin(name: &PluginName, registry: &DaemonPlugins) -> Result<DaemonB
 
 #[cfg(test)]
 pub mod test_plugin {
-    use super::{as_output, DaemonPlugin, Output};
-    use crate::agent_error::{ImlAgentError, Result};
-    use futures01::{future, Future};
+    use super::{DaemonPlugin, Output};
+    use crate::agent_error::Result;
+    use futures::{future, Future, TryFutureExt};
     use iml_wire_types::AgentResult;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::{
+        pin::Pin,
+        sync::atomic::{AtomicUsize, Ordering},
+    };
+
+    async fn as_output(x: impl serde::Serialize + Send) -> Result<Output> {
+        Ok(Some(serde_json::to_value(x)?))
+    }
 
     #[derive(Debug)]
     pub struct TestDaemonPlugin(pub AtomicUsize);
@@ -116,19 +119,17 @@ pub mod test_plugin {
     }
 
     impl DaemonPlugin for TestDaemonPlugin {
-        fn start_session(
-            &mut self,
-        ) -> Box<dyn Future<Item = Output, Error = ImlAgentError> + Send> {
-            Box::new(future::ok(self.0.fetch_add(1, Ordering::Relaxed)).and_then(as_output))
+        fn start_session(&mut self) -> Pin<Box<dyn Future<Output = Result<Output>> + Send>> {
+            Box::pin(future::ok(self.0.fetch_add(1, Ordering::Relaxed)).and_then(as_output))
         }
-        fn update_session(&self) -> Box<dyn Future<Item = Output, Error = ImlAgentError> + Send> {
-            Box::new(future::ok(self.0.fetch_add(1, Ordering::Relaxed)).and_then(as_output))
+        fn update_session(&self) -> Pin<Box<dyn Future<Output = Result<Output>> + Send>> {
+            Box::pin(future::ok(self.0.fetch_add(1, Ordering::Relaxed)).and_then(as_output))
         }
         fn on_message(
             &self,
             body: serde_json::Value,
-        ) -> Box<dyn Future<Item = AgentResult, Error = ImlAgentError> + Send> {
-            Box::new(future::ok(Ok(body)))
+        ) -> Pin<Box<dyn Future<Output = Result<AgentResult>> + Send>> {
+            Box::pin(future::ok(Ok(body)))
         }
         fn teardown(&mut self) -> Result<()> {
             self.0.store(0, Ordering::Relaxed);
@@ -144,22 +145,13 @@ mod tests {
         get_plugin, mk_callback, test_plugin::TestDaemonPlugin, DaemonPlugin, DaemonPlugins,
     };
     use crate::agent_error::Result;
-    use futures01::Future;
     use serde_json::json;
 
-    fn run<R: Send + 'static, E: Send + 'static>(
-        fut: impl Future<Item = R, Error = E> + Send + 'static,
-    ) -> std::result::Result<R, E> {
-        tokio::runtime::Runtime::new().unwrap().block_on_all(fut)
-    }
-
-    #[test]
-    fn test_daemon_plugin_start_session() -> Result<()> {
+    #[tokio::test]
+    async fn test_daemon_plugin_start_session() -> Result<()> {
         let mut x = TestDaemonPlugin::default();
 
-        let actual = run(x.start_session())?;
-
-        // dbg!(actual);
+        let actual = x.start_session().await?;
 
         assert_eq!(actual, Some(json!(0)));
 
@@ -168,12 +160,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_daemon_plugin_update_session() -> Result<()> {
+    #[tokio::test]
+    async fn test_daemon_plugin_update_session() -> Result<()> {
         let mut x = TestDaemonPlugin::default();
 
-        run(x.start_session())?;
-        let actual = run(x.update_session())?;
+        x.start_session().await?;
+        let actual = x.update_session().await?;
 
         assert_eq!(actual, Some(json!(1)));
 
@@ -182,11 +174,11 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_daemon_plugin_teardown_session() -> Result<()> {
+    #[tokio::test]
+    async fn test_daemon_plugin_teardown_session() -> Result<()> {
         let mut x = TestDaemonPlugin::default();
 
-        run(x.start_session())?;
+        x.start_session().await?;
         x.teardown()?;
 
         assert_eq!(x.0.get_mut(), &mut 0);
@@ -194,8 +186,8 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_daemon_plugin_get_from_registry() -> Result<()> {
+    #[tokio::test]
+    async fn test_daemon_plugin_get_from_registry() -> Result<()> {
         let registry: DaemonPlugins = vec![(
             "test_daemon_plugin".into(),
             mk_callback(&TestDaemonPlugin::default),
@@ -205,17 +197,17 @@ mod tests {
 
         let mut p1 = get_plugin(&"test_daemon_plugin".into(), &registry)?;
 
-        let actual = run(p1.start_session())?;
+        let actual = p1.start_session().await?;
 
         assert_eq!(actual, Some(json!(0)));
 
-        let actual = run(p1.update_session())?;
+        let actual = p1.update_session().await?;
 
         assert_eq!(actual, Some(json!(1)));
 
         let mut p2 = get_plugin(&"test_daemon_plugin".into(), &registry)?;
 
-        let actual = run(p2.start_session())?;
+        let actual = p2.start_session().await?;
 
         assert_eq!(actual, Some(json!(0)));
 

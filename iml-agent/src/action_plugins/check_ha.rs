@@ -4,11 +4,8 @@
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output_success};
 use elementtree::Element;
-use futures01::{future, Future};
-use std::collections::HashMap;
-use std::fmt;
-use tracing::{span, Level};
-use tracing_futures::Instrument;
+use futures::{future, Future, TryFutureExt};
+use std::{collections::HashMap, fmt};
 
 /// standard:provider:ocftype (e.g. ocf:heartbeat:ZFS, or stonith:fence_ipmilan)
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
@@ -71,9 +68,8 @@ impl AgentInfo {
     }
 }
 
-pub fn check_ha(_: ()) -> impl Future<Item = Vec<AgentInfo>, Error = ImlAgentError> {
-    cmd_output_success("cibadmin", &["--query", "--xpath", "//resources"])
-        .instrument(span!(Level::INFO, "Read cib"))
+pub fn check_ha(_: ()) -> impl Future<Output = Result<Vec<AgentInfo>, ImlAgentError>> {
+    cmd_output_success("cibadmin", vec!["--query", "--xpath", "//resources"])
         .and_then(|output| {
             // This cannot split between map/map_err because Element does not implement Send
             match Element::from_reader(output.stdout.as_slice()) {
@@ -93,5 +89,5 @@ pub fn check_ha(_: ()) -> impl Future<Item = Vec<AgentInfo>, Error = ImlAgentErr
                 ),
             }
         })
-        .from_err()
+        .err_into()
 }

@@ -297,7 +297,7 @@ impl Llapi {
         buf2string(page)
     }
 
-    fn llapi_rmfid(&self, mntpt: &str, fidlist: &Vec<String>) -> Result<(), LiblustreError> {
+    fn llapi_rmfid(&self, mntpt: &str, fidlist: &[String]) -> Result<(), LiblustreError> {
         let func: lib::Symbol<extern "C" fn(*const libc::c_char, *const RmfidsArg) -> libc::c_int> =
             unsafe { self.lib.get(b"llapi_rmfid\0") }
                 .map_err(|e| LoadError::new(format!("Failed to load llapi_rmfid {}", e)))?;
