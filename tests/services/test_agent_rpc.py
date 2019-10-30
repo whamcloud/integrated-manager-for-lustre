@@ -64,7 +64,7 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
         self.assertResponseOk(response)
 
         # Read from the TX channel
-        create_response, = self._receive_messages()
+        (create_response,) = self._receive_messages()
         self.assertEqual(create_response["type"], "SESSION_CREATE_RESPONSE")
         self.assertEqual(create_response["plugin"], self.PLUGIN)
         self.assertEqual(create_response["session_seq"], None)
@@ -158,7 +158,7 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
 
     def _handle_action_receive(self, session_id, action):
         # Listen and wait for the action
-        action_rpc_request, = self._receive_messages()
+        (action_rpc_request,) = self._receive_messages()
         msg = "elapsed {0}".format(time.time() - self.last_action)
         self.assertEqual(action_rpc_request["type"], "DATA", msg)
         self.assertEqual(action_rpc_request["plugin"], self.PLUGIN)

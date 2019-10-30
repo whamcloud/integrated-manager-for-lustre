@@ -49,7 +49,7 @@ argparse._SubParsersAction.add_parser = _add_aliased_parser
 class ChromaHelpFormatter(HelpFormatter):
     def _format_action_invocation(self, action):
         if not action.option_strings:
-            metavar, = self._metavar_formatter(action, action.dest)(1)
+            (metavar,) = self._metavar_formatter(action, action.dest)(1)
             return metavar
 
         else:

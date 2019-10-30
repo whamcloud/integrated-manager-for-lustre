@@ -200,7 +200,7 @@ class TestModels(IMLUnitTestCase):
             self.assertEqual(sum(point.len for point in selection), 6)
 
         self.assertEqual(selection[0].len, 0)
-        point, = Stats.select(id, now, now + timedelta(seconds=5), fixed=1)
+        (point,) = Stats.select(id, now, now + timedelta(seconds=5), fixed=1)
         with assertQueries(*["DELETE"] * 5):
             Stats.delete(id)
         for model in Stats:
