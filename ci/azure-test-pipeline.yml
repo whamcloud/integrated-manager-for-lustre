@@ -34,7 +34,7 @@ jobs:
       name: test_rpm_build
       displayName: Test rpm building
       spec: rust-iml.spec
-      image: imlteam/copr
+      image: imlteam/copr-lustre
 
   # Check formatting
   - template: template/azure-rustfmt.yml
