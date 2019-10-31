@@ -91,17 +91,12 @@ fn main() {
     let (_, fut) =
         warp::serve(routes).bind_with_graceful_shutdown(iml_manager_env::get_warp_drive_addr(), rx);
 
-    log::info!("Created future");
     tokio::run(lazy(move || {
         let api_client = get_client().unwrap();
 
         warp::spawn(lazy(move || {
-            log::info!("Inside warp::spawn");
             populate_from_api(api_client.clone(), Arc::clone(&api_cache_state))
-                .map_err(|e| -> failure::Error {
-                    log::info!("error from calling populate_from_api: {:#?}", e);
-                    e.into()
-                })
+                .map_err(|e| -> failure::Error { e.into() })
                 .and_then(|_| iml_postgres::connect().from_err())
                 .map(|(client, conn)| {
                     (
