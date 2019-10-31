@@ -2,11 +2,14 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::future::{FutureExt, TryFutureExt};
-pub use reqwest::{header, Client, Response, StatusCode, Url};
+use futures::{Future, IntoFuture as _, Stream as _};
+use reqwest::{header, r#async::Decoder, Url};
+pub use reqwest::{
+    r#async::{Chunk, Client, Response},
+    StatusCode,
+};
 use serde::de::DeserializeOwned;
-use std::{fmt::Debug, pin::Pin, time::Duration};
-use tokio01::executor::Executor;
+use std::{fmt::Debug, mem, time::Duration};
 
 #[derive(Debug)]
 pub enum ImlManagerClientError {
@@ -62,91 +65,30 @@ impl From<serde_json::error::Error> for ImlManagerClientError {
     }
 }
 
-pub struct DefaultExecutor(pub tokio01::executor::DefaultExecutor);
-
-impl tokio::executor::Executor for DefaultExecutor {
-    fn spawn(
-        &mut self,
-        future: Pin<Box<dyn futures::Future<Output = ()> + Send>>,
-    ) -> Result<(), tokio::executor::SpawnError> {
-        self.0
-            .spawn(Box::new(future.unit_error().boxed().compat()))
-            .map_err(|e: tokio01::executor::SpawnError| {
-                if e.is_shutdown() {
-                    tokio::executor::SpawnError::shutdown()
-                } else {
-                    tokio::executor::SpawnError::at_capacity()
-                }
-            })
-    }
-
-    fn status(&self) -> Result<(), tokio::executor::SpawnError> {
-        self.0.status().map_err(|e: tokio01::executor::SpawnError| {
-            if e.is_shutdown() {
-                tokio::executor::SpawnError::shutdown()
-            } else {
-                tokio::executor::SpawnError::at_capacity()
-            }
-        })
-    }
-}
-
-impl tokio::executor::Executor for &DefaultExecutor {
-    fn spawn(
-        &mut self,
-        future: Pin<Box<dyn futures::Future<Output = ()> + Send>>,
-    ) -> Result<(), tokio::executor::SpawnError> {
-        tokio01::executor::DefaultExecutor::current()
-            .spawn(Box::new(future.unit_error().boxed().compat()))
-            .map_err(|e: tokio01::executor::SpawnError| {
-                if e.is_shutdown() {
-                    tokio::executor::SpawnError::shutdown()
-                } else {
-                    tokio::executor::SpawnError::at_capacity()
-                }
-            })
-    }
-
-    fn status(&self) -> Result<(), tokio::executor::SpawnError> {
-        self.0.status().map_err(|e: tokio01::executor::SpawnError| {
-            if e.is_shutdown() {
-                tokio::executor::SpawnError::shutdown()
-            } else {
-                tokio::executor::SpawnError::at_capacity()
-            }
-        })
-    }
-}
-
 /// Get a client that is able to make authenticated requests
 /// against the API
-pub fn get_client(executor: Option<DefaultExecutor>) -> Result<Client, ImlManagerClientError> {
+pub fn get_client() -> Result<Client, ImlManagerClientError> {
     let header_value = header::HeaderValue::from_str(&format!(
         "ApiKey {}:{}",
         iml_manager_env::get_api_user(),
         iml_manager_env::get_api_key()
     ))?;
 
-    let headers = vec![(header::AUTHORIZATION, header_value)]
-        .into_iter()
+    let headers = [(header::AUTHORIZATION, header_value)]
+        .iter()
+        .cloned()
         .collect();
 
-    let builder = Client::builder()
-        .http2_prior_knowledge()
+    Client::builder()
+        .timeout(Duration::from_secs(60))
         .default_headers(headers)
-        .danger_accept_invalid_certs(true);
-
-    let builder = if let Some(executor) = executor {
-        builder.executor(executor)
-    } else {
-        builder
-    };
-
-    builder.build().map_err(ImlManagerClientError::Reqwest)
+        .danger_accept_invalid_certs(true)
+        .build()
+        .map_err(ImlManagerClientError::Reqwest)
 }
 
 /// Given a path, constructs a full API url
-fn create_api_url(path: impl ToString) -> Result<Url, ImlManagerClientError> {
+fn create_api_url(path: &str) -> Result<Url, ImlManagerClientError> {
     let mut path = path.to_string();
 
     if !path.ends_with('/') {
@@ -164,80 +106,89 @@ fn create_api_url(path: impl ToString) -> Result<Url, ImlManagerClientError> {
     Ok(url)
 }
 
+/// Handles an incoming response. Returns a future of the buffered body
+///
+/// # Arguments
+///
+/// * - `resp` - The Response to handle
+fn handle_resp(resp: Response) -> impl Future<Item = Chunk, Error = ImlManagerClientError> {
+    resp.error_for_status()
+        .into_future()
+        .from_err()
+        .and_then(|mut res| {
+            let body = mem::replace(res.body_mut(), Decoder::empty());
+            body.concat2().from_err()
+        })
+}
+
 /// Performs a GET to the given API path
-pub async fn get<T: DeserializeOwned + Debug>(
+pub fn get<T: DeserializeOwned + Debug>(
     client: Client,
-    path: impl ToString,
+    path: &str,
     query: impl serde::Serialize,
-) -> Result<T, ImlManagerClientError> {
-    tracing::debug!("GET to {}", path.to_string());
+) -> impl Future<Item = T, Error = ImlManagerClientError> {
+    log::debug!("GET to {:?}", path);
 
-    let uri = create_api_url(path)?;
-    tracing::info!("uri: {}", uri);
+    create_api_url(path).into_future().and_then(move |url| {
+        client
+            .get(url)
+            .query(&query)
+            .send()
+            .from_err()
+            .and_then(handle_resp)
+            .and_then(|x| {
+                serde_json::from_slice(&x).map_err(|e| {
+                    log::error!("Could not serialize {:?}", x);
 
-    let resp = client
-        .get(uri)
-        .query(&query)
-        .send()
-        .await?
-        .error_for_status()?;
-    tracing::info!("resp: {:#?}", resp);
+                    e.into()
+                })
+            })
+            .inspect(|x| log::debug!("Resp: {:?}", x))
+            .from_err()
+    })
+}
 
-    let json = resp.json().await?;
-
-    tracing::debug!("Resp: {:?}", json);
-
-    Ok(json)
+/// Handles an incoming response. Returns a future of the buffered body
+///
+/// # Arguments
+///
+/// * - `resp` - The Response to handle
+pub fn concat_body(
+    mut resp: Response,
+) -> impl Future<Item = (Response, Chunk), Error = ImlManagerClientError> {
+    let body = mem::replace(resp.body_mut(), Decoder::empty());
+    body.concat2().map(move |chunk| (resp, chunk)).from_err()
 }
 
 /// Performs a POST to the given API path
-pub async fn post(
+pub fn post(
     client: Client,
     path: &str,
     body: impl serde::Serialize,
-) -> Result<Response, ImlManagerClientError> {
-    let uri = create_api_url(path)?;
-
-    let resp = client
-        .post(uri)
-        .json(&body)
-        .send()
-        .await?
-        .error_for_status()?;
-
-    tracing::debug!("Resp: {:?}", resp);
-
-    Ok(resp)
+) -> impl Future<Item = Response, Error = ImlManagerClientError> {
+    create_api_url(path)
+        .into_future()
+        .and_then(move |url| client.post(url).json(&body).send().from_err())
 }
 
 /// Performs a PUT to the given API path
-pub async fn put(
+pub fn put(
     client: Client,
     path: &str,
     body: impl serde::Serialize,
-) -> Result<Response, ImlManagerClientError> {
-    let uri = create_api_url(path)?;
-
-    Ok(client
-        .put(uri)
-        .json(&body)
-        .send()
-        .await?
-        .error_for_status()?)
+) -> impl Future<Item = Response, Error = ImlManagerClientError> {
+    create_api_url(path)
+        .into_future()
+        .and_then(move |url| client.put(url).json(&body).send().from_err())
 }
 
 /// Performs a DELETE to the given API path
-pub async fn delete(
+pub fn delete(
     client: Client,
     path: &str,
     body: impl serde::Serialize,
-) -> Result<Response, ImlManagerClientError> {
-    let uri = create_api_url(path)?;
-
-    Ok(client
-        .delete(uri)
-        .json(&body)
-        .send()
-        .await?
-        .error_for_status()?)
+) -> impl Future<Item = Response, Error = ImlManagerClientError> {
+    create_api_url(path)
+        .into_future()
+        .and_then(move |url| client.delete(url).json(&body).send().from_err())
 }

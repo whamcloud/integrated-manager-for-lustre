@@ -7,7 +7,7 @@ use futures01::{
     sync::oneshot,
     Stream,
 };
-use iml_manager_client::{get_client, DefaultExecutor};
+use iml_manager_client_1::get_client;
 use iml_manager_env;
 use iml_warp_drive::{
     cache::{self, populate_from_api, populate_from_db, Cache, SharedCache},
@@ -93,9 +93,7 @@ fn main() {
 
     log::info!("Created future");
     tokio::run(lazy(move || {
-        log::info!("Inside tokio::run");
-        let executor = Some(DefaultExecutor(tokio::executor::DefaultExecutor::current()));
-        let api_client = get_client(executor).unwrap();
+        let api_client = get_client().unwrap();
 
         warp::spawn(lazy(move || {
             log::info!("Inside warp::spawn");

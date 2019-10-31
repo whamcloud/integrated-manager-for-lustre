@@ -21,5 +21,5 @@ iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
 iml-rabbit = { path = "../iml-rabbit", version = "0.1.0" }
 iml-postgres = { path = "../iml-postgres", version = "0.1.0" }
 iml-wire-types = { path = "../iml-wire-types", version = "0.1", features = ["postgres-interop"] }
-iml-manager-client = { path = "../iml-manager-client", version = "0.1" }
+iml-manager-client-1 = { path = "../iml-manager-client-1", version = "0.1" }
 tokio-runtime-shutdown = { path = "../tokio-runtime-shutdown", version = "0.1" }

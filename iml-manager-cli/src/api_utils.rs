@@ -57,9 +57,9 @@ pub async fn wait_for_cmd(cmd: Command) -> Result<Command, ImlManagerCliError> {
 
         delay(when).await;
 
-        let client = iml_manager_client::get_client(None)?;
+        let client = iml_manager_client_2::get_client()?;
 
-        let cmd = iml_manager_client::get(
+        let cmd = iml_manager_client_2::get(
             client,
             &format!("command/{}", cmd.id),
             Vec::<(String, String)>::new(),
@@ -142,9 +142,9 @@ pub async fn get<T: serde::de::DeserializeOwned + std::fmt::Debug>(
     endpoint: &str,
     query: impl serde::Serialize,
 ) -> Result<T, ImlManagerCliError> {
-    let client = iml_manager_client::get_client(None)?;
+    let client = iml_manager_client_2::get_client()?;
 
-    iml_manager_client::get(client, endpoint, query)
+    iml_manager_client_2::get(client, endpoint, query)
         .await
         .map_err(|e| e.into())
 }
@@ -153,10 +153,10 @@ pub async fn get<T: serde::de::DeserializeOwned + std::fmt::Debug>(
 pub async fn post(
     endpoint: &str,
     body: impl serde::Serialize,
-) -> Result<iml_manager_client::Response, ImlManagerCliError> {
-    let client = iml_manager_client::get_client(None)?;
+) -> Result<iml_manager_client_2::Response, ImlManagerCliError> {
+    let client = iml_manager_client_2::get_client()?;
 
-    iml_manager_client::post(client, endpoint, body)
+    iml_manager_client_2::post(client, endpoint, body)
         .await
         .map_err(|e| e.into())
 }
@@ -165,9 +165,9 @@ pub async fn post(
 pub async fn put(
     endpoint: &str,
     body: impl serde::Serialize,
-) -> Result<iml_manager_client::Response, ImlManagerCliError> {
-    let client = iml_manager_client::get_client(None)?;
-    iml_manager_client::put(client, endpoint, body)
+) -> Result<iml_manager_client_2::Response, ImlManagerCliError> {
+    let client = iml_manager_client_2::get_client()?;
+    iml_manager_client_2::put(client, endpoint, body)
         .await
         .map_err(|e| e.into())
 }
@@ -176,9 +176,9 @@ pub async fn put(
 pub async fn delete(
     endpoint: &str,
     query: impl serde::Serialize,
-) -> Result<iml_manager_client::Response, ImlManagerCliError> {
-    let client = iml_manager_client::get_client(None).expect("Could not create API client");
-    iml_manager_client::delete(client, endpoint, query)
+) -> Result<iml_manager_client_2::Response, ImlManagerCliError> {
+    let client = iml_manager_client_2::get_client().expect("Could not create API client");
+    iml_manager_client_2::delete(client, endpoint, query)
         .await
         .map_err(|e| e.into())
 }

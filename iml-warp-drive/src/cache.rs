@@ -3,9 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::{listen::MessageType, DbRecord};
-use futures::future::{FutureExt, TryFutureExt};
 use futures01::{future, Future, Stream as _};
-use iml_manager_client::{get, get_client, Client, ImlManagerClientError};
+use iml_manager_client_1::{get, get_client, Client, ImlManagerClientError};
 use iml_postgres::SharedClient;
 use iml_wire_types::{
     db::{
@@ -96,15 +95,11 @@ pub trait ToApiRecord: std::fmt::Debug + Id {
             endpoint_info,
             T::query()
         );
-        Box::new(
-            get(
-                client,
-                format!("{}/{}/", T::endpoint_name(), self.id()),
-                T::query(),
-            )
-            .boxed()
-            .compat(),
-        )
+        Box::new(get(
+            client,
+            &format!("{}/{}/", T::endpoint_name(), self.id()),
+            T::query(),
+        ))
     }
 }
 
@@ -206,7 +201,7 @@ where
                 ToApiRecord::to_api_record(x, client).then(move |r| match r {
                     Ok(x) => Ok(x).map(record_fn).map(RecordChange::Update),
                     Err(ImlManagerClientError::Reqwest(ref e))
-                        if e.status() == Some(iml_manager_client::StatusCode::NOT_FOUND) =>
+                        if e.status() == Some(iml_manager_client_1::StatusCode::NOT_FOUND) =>
                     {
                         Ok(id).map(record_id_fn).map(RecordChange::Delete)
                     }
@@ -316,8 +311,6 @@ pub fn populate_from_api(
         Filesystem::endpoint_name(),
         Filesystem::query(),
     )
-    .boxed()
-    .compat()
     .map(|fs: ApiList<Filesystem>| {
         log::info!("got fs objects!: {:#?}", fs.objects);
         fs.objects
@@ -330,29 +323,21 @@ pub fn populate_from_api(
         <Target<TargetConfParam>>::endpoint_name(),
         <Target<TargetConfParam>>::query(),
     )
-    .boxed()
-    .compat()
     .map(|x: ApiList<Target<TargetConfParam>>| x.objects)
     .map(|x| x.into_iter().map(|x| (x.id, x)).collect());
 
     log::info!("after target_fut");
     let active_alert_fut = get(client.clone(), Alert::endpoint_name(), Alert::query())
-        .boxed()
-        .compat()
         .map(|x: ApiList<Alert>| x.objects)
         .map(|x| x.into_iter().map(|x| (x.id, x)).collect());
 
     log::info!("after active_alert_fut");
     let host_fut = get(client.clone(), Host::endpoint_name(), Host::query())
-        .boxed()
-        .compat()
         .map(|x: ApiList<Host>| x.objects)
         .map(|x| x.into_iter().map(|x| (x.id, x)).collect());
 
     log::info!("after host_fut");
     let volume_fut = get(client, Volume::endpoint_name(), Volume::query())
-        .boxed()
-        .compat()
         .map(|x: ApiList<Volume>| x.objects)
         .map(|x| x.into_iter().map(|x| (x.id, x)).collect());
 
