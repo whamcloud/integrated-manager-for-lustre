@@ -7,7 +7,7 @@ use futures01::{
     sync::oneshot,
     Stream,
 };
-use iml_manager_client::get_client;
+use iml_manager_client::{get_client, DefaultExecutor};
 use iml_manager_env;
 use iml_warp_drive::{
     cache::{self, populate_from_api, populate_from_db, Cache, SharedCache},
@@ -67,34 +67,6 @@ fn main() {
 
     let api_cache_state3 = Arc::clone(&api_cache_state);
 
-    struct DefaultExecutor(tokio::executor::DefaultExecutor);
-
-    impl tokio02::executor::Executor for DefaultExecutor {
-        fn spawn(
-            &mut self,
-            future: Pin<Box<dyn Future<Output = ()> + Send>>,
-        ) -> Result<(), tokio02::executor::SpawnError> {
-            Ok(self.0.spawn(future))
-        }
-
-        fn status(&self) -> Result<(), tokio02::executor::SpawnError> {
-            self.0.status()
-        }
-    }
-
-    impl tokio02::executor::Executor for &DefaultExecutor {
-        fn spawn(
-            &mut self,
-            future: Pin<Box<dyn Future<Output = ()> + Send>>,
-        ) -> Result<(), tokio02::executor::SpawnError> {
-            Ok(self.0.spawn(future))
-        }
-
-        fn status(&self) -> Result<(), tokio02::executor::SpawnError> {
-            self.0.status()
-        }
-    }
-
     // GET -> messages stream
     let routes = warp::get2()
         .and(warp::sse())
@@ -127,7 +99,7 @@ fn main() {
 
         warp::spawn(lazy(move || {
             log::info!("Inside warp::spawn");
-            populate_from_api(api_client, Arc::clone(&api_cache_state))
+            populate_from_api(api_client.clone(), Arc::clone(&api_cache_state))
                 .map_err(|e| -> failure::Error {
                     log::info!("error from calling populate_from_api: {:#?}", e);
                     e.into()

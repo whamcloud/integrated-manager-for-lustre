@@ -1,0 +1,18 @@
+[package]
+name = "iml-manager-client"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+futures01 = { package = "futures", version = "0.1" }
+futures-preview = { version = "=0.3.0-alpha.19", features = ["compat"]}
+iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
+reqwest = { git = "https://github.com/jgrund/reqwest.git", branch = "executor0.3", features = ["default-tls", "tls", "json"] }
+tokio = "0.2.0-alpha.6"
+tokio-executor = "0.2.0-alpha.6"
+tokio01 = { package = "tokio", version = "0.1" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+url = "2.1"

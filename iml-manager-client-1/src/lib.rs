@@ -2,11 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use futures::future::{FutureExt, TryFutureExt};
 pub use reqwest::{header, Client, Response, StatusCode, Url};
 use serde::de::DeserializeOwned;
-use std::{fmt::Debug, time::Duration};
-use futures::{future::{FutureExt, TryFutureExt}, compat::Future01CompatExt};
-use futures01::{future, Future, Stream as _};
+use std::{fmt::Debug, pin::Pin, time::Duration};
+use tokio01::executor::Executor;
 
 #[derive(Debug)]
 pub enum ImlManagerClientError {
@@ -62,9 +62,65 @@ impl From<serde_json::error::Error> for ImlManagerClientError {
     }
 }
 
+pub struct DefaultExecutor(pub tokio01::executor::DefaultExecutor);
+
+impl tokio::executor::Executor for DefaultExecutor {
+    fn spawn(
+        &mut self,
+        future: Pin<Box<dyn futures::Future<Output = ()> + Send>>,
+    ) -> Result<(), tokio::executor::SpawnError> {
+        self.0
+            .spawn(Box::new(future.unit_error().boxed().compat()))
+            .map_err(|e: tokio01::executor::SpawnError| {
+                if e.is_shutdown() {
+                    tokio::executor::SpawnError::shutdown()
+                } else {
+                    tokio::executor::SpawnError::at_capacity()
+                }
+            })
+    }
+
+    fn status(&self) -> Result<(), tokio::executor::SpawnError> {
+        self.0.status().map_err(|e: tokio01::executor::SpawnError| {
+            if e.is_shutdown() {
+                tokio::executor::SpawnError::shutdown()
+            } else {
+                tokio::executor::SpawnError::at_capacity()
+            }
+        })
+    }
+}
+
+impl tokio::executor::Executor for &DefaultExecutor {
+    fn spawn(
+        &mut self,
+        future: Pin<Box<dyn futures::Future<Output = ()> + Send>>,
+    ) -> Result<(), tokio::executor::SpawnError> {
+        tokio01::executor::DefaultExecutor::current()
+            .spawn(Box::new(future.unit_error().boxed().compat()))
+            .map_err(|e: tokio01::executor::SpawnError| {
+                if e.is_shutdown() {
+                    tokio::executor::SpawnError::shutdown()
+                } else {
+                    tokio::executor::SpawnError::at_capacity()
+                }
+            })
+    }
+
+    fn status(&self) -> Result<(), tokio::executor::SpawnError> {
+        self.0.status().map_err(|e: tokio01::executor::SpawnError| {
+            if e.is_shutdown() {
+                tokio::executor::SpawnError::shutdown()
+            } else {
+                tokio::executor::SpawnError::at_capacity()
+            }
+        })
+    }
+}
+
 /// Get a client that is able to make authenticated requests
 /// against the API
-pub fn get_client(executor: Option<impl tokio::executor::Executor + Sync + Send + 'static>) -> Result<Client, ImlManagerClientError> {
+pub fn get_client(executor: Option<DefaultExecutor>) -> Result<Client, ImlManagerClientError> {
     let header_value = header::HeaderValue::from_str(&format!(
         "ApiKey {}:{}",
         iml_manager_env::get_api_user(),
@@ -75,18 +131,18 @@ pub fn get_client(executor: Option<impl tokio::executor::Executor + Sync + Send 
         .into_iter()
         .collect();
 
-    let mut builder = Client::builder()
-        .timeout(Duration::from_secs(60))
+    let builder = Client::builder()
+        .http2_prior_knowledge()
         .default_headers(headers)
         .danger_accept_invalid_certs(true);
 
-    if let Some(executor) = executor {
-        builder.executor(executor);
-    }
-    
-    builder
-        .build()
-        .map_err(ImlManagerClientError::Reqwest)
+    let builder = if let Some(executor) = executor {
+        builder.executor(executor)
+    } else {
+        builder
+    };
+
+    builder.build().map_err(ImlManagerClientError::Reqwest)
 }
 
 /// Given a path, constructs a full API url
