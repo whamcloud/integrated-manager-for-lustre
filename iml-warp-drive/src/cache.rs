@@ -4,7 +4,7 @@
 
 use crate::{listen::MessageType, DbRecord};
 use futures01::{future, Future, Stream as _};
-use iml_manager_client_1::{get, get_client, Client, ImlManagerClientError};
+use iml_manager_client_1::{get, Client, ImlManagerClientError};
 use iml_postgres::SharedClient;
 use iml_wire_types::{
     db::{
