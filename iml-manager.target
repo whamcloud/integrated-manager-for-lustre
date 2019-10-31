@@ -52,9 +52,6 @@ After=iml-action-runner.service
 Requires=iml-update-handler.socket
 After=iml-update-handler.socket
 
-Requires=iml-srcmap-reverse.socket
-After=iml-srcmap-reverse.socket
-
 Requires=iml-warp-drive.service
 After=iml-warp-drive.service
 
@@ -96,7 +93,6 @@ Also=iml-stratagem.service
 Also=iml-mailbox.service
 Also=iml-action-runner.service
 Also=iml-update-handler.socket
-Also=iml-srcmap-reverse.socket
 Also=iml-warp-drive.service
 Also=device-aggregator.service
 Also=nginx.service

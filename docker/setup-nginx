@@ -12,7 +12,6 @@ vars = {
     "HTTP_AGENT2_PROXY_PASS": "http://http-agent:8003",
     "DEVICE_AGGREGATOR_PORT": "8008",
     "REPO_PATH": "/var/lib/chroma/repo",
-    "SRCMAP_REVERSE_PROXY_PASS": "http://srcmap-reverse:8082",
     "DEVICE_AGGREGATOR_PROXY_PASS": "http://device-aggregator:8083",
     "UPDATE_HANDLER_PROXY_PASS": "http://update-handler:8080",
     "WARP_DRIVE_PROXY_PASS": "http://iml-warp-drive:8890",
