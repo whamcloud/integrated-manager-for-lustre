@@ -12,11 +12,11 @@ use crate::{
 use console::{style, Term};
 use futures::future;
 use iml_wire_types::{
-    ApiList, Command, EndpointName, Host, HostProfile, HostProfileWrapper, ServerProfile,
-    TestHostJob,
+    ApiList, Command, EndpointName, Host, HostProfile, HostProfileWrapper, ProfileTest,
+    ServerProfile, TestHostJob,
 };
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeSet, HashMap},
     iter,
     time::{Duration, Instant},
 };
@@ -108,15 +108,17 @@ async fn wait_till_agent_starts(
     hosts: &Vec<Host>,
     profile_name: &str,
 ) -> Result<(), ImlManagerCliError> {
-    loop {
-        let host_ids: Vec<_> = hosts
-            .iter()
-            .map(|x| ["id__in".into(), x.id.to_string()])
-            .chain(iter::once(["limit".into(), "0".into()]))
-            .collect();
+    let host_ids: Vec<_> = hosts
+        .iter()
+        .map(|x| ["id__in".into(), x.id.to_string()])
+        .chain(iter::once(["limit".into(), "0".into()]))
+        .collect();
 
+    let upper: u32 = 120;
+
+    for cnt in 1..=upper {
         let ApiList { mut objects, .. }: ApiList<HostProfileWrapper> =
-            get(HostProfile::endpoint_name(), host_ids).await?;
+            get(HostProfile::endpoint_name(), &host_ids).await?;
 
         tracing::debug!("Host Profiles {:?}", objects);
 
@@ -126,26 +128,55 @@ async fn wait_till_agent_starts(
             ));
         };
 
-        let profile_checks: Vec<bool> = objects
+        let profile_checks: HashMap<u32, Vec<ProfileTest>> = objects
             .iter_mut()
             .filter_map(|x| x.host_profiles.take())
-            .map(|x| {
-                x.profiles
-                    .get(profile_name)
-                    .map(|checks| checks.iter().all(|y| y.pass))
-                    .ok_or(ImlManagerCliError::ApiError(format!(
+            .map(|mut x| {
+                x.profiles.remove(profile_name).map(|y| (x.host, y)).ok_or(
+                    ImlManagerCliError::ApiError(format!(
                         "Profile {} not found for host {} while booting",
                         profile_name, x.host
-                    )))
+                    )),
+                )
             })
-            .collect::<Result<Vec<bool>, ImlManagerCliError>>()?;
+            .collect::<Result<HashMap<u32, Vec<ProfileTest>>, ImlManagerCliError>>()?;
 
-        if profile_checks.into_iter().all(std::convert::identity) {
+        let all_passed = profile_checks
+            .values()
+            .all(|checks| checks.iter().all(|y| y.pass));
+
+        if all_passed {
             return Ok(());
+        } else if cnt == 120 {
+            let failed_checks = profile_checks
+                .iter()
+                .filter(|(_, xs)| xs.iter().any(|y| !y.pass))
+                .fold(vec![], |mut acc, (k, v)| {
+                    let host = hosts.iter().find(|x| &x.id == k).unwrap();
+
+                    let failed = v
+                        .into_iter()
+                        .filter(|y| !y.pass)
+                        .map(|ProfileTest { description, .. }| description.to_string())
+                        .collect::<Vec<String>>()
+                        .join(",");
+
+                    acc.push(format!(
+                        "host {} has failed checks. Reasons: {}",
+                        host.address, failed
+                    ));
+
+                    acc
+                })
+                .join("\n");
+
+            return Err(ImlManagerCliError::ApiError(failed_checks));
         }
 
         delay(Instant::now() + Duration::from_millis(500)).await;
     }
+
+    Ok(())
 }
 
 pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError> {
