@@ -110,6 +110,10 @@ pub async fn get_kernel_async(modules: Vec<String>) -> Result<String, ImlAgentEr
     let mut newest = Version::from("");
 
     for kver in std::str::from_utf8(output.stdout.as_slice())?.lines() {
+        let contender = Version::from(kver);
+        if contender <= newest {
+            continue;
+        }
         let mut okay = true;
         for module in modules.iter() {
             if !check_kver_module(&module, kver).await? {
@@ -118,7 +122,7 @@ pub async fn get_kernel_async(modules: Vec<String>) -> Result<String, ImlAgentEr
             }
         }
         if okay {
-            newest = newest.max(Version::from(kver));
+            newest = contender;
         }
     }
     Ok(newest.version)
