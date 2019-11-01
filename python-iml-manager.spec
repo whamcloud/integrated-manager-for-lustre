@@ -63,6 +63,7 @@ Requires:       rabbitmq-server >= 3.3.5-34
 Requires:       Django >= 1.11, Django < 1.12
 Requires:       policycoreutils-python
 Requires:       system-config-firewall-base
+Requires:       systemd-python
 Requires:       nginx >= 1:1.12.2
 Requires:       nodejs >= 1:6.16.0
 Requires(post): selinux-policy-targeted

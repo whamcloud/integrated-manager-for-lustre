@@ -109,6 +109,15 @@ def get_app():
     return get_wsgi_application()
 
 
+def when_ready(server):
+    try:
+        from systemd.daemon import notify
+
+        notify('READY=1')
+    except ImportError:
+        pass
+
+
 def post_fork(server, worker):
     from chroma_core.services.log import log_set_filename, log_enable_stdout
 
