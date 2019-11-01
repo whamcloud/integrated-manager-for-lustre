@@ -416,25 +416,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
         App::Pool { command } => {
             if let Err(e) = match command {
-                PoolCommand::Create { cmd } => {
-                    ostpool::pool_create(cmd.filesystem, cmd.pool).wait()
-                }
+                PoolCommand::Create { cmd } => ostpool::pool_create(cmd.filesystem, cmd.pool).await,
                 PoolCommand::Destroy { cmd } => {
-                    ostpool::pool_destroy(cmd.filesystem, cmd.pool).wait()
+                    ostpool::pool_destroy(cmd.filesystem, cmd.pool).await
                 }
                 PoolCommand::Add { cmd } => {
-                    ostpool::pool_add(cmd.fspool.filesystem, cmd.fspool.pool, cmd.ost).wait()
+                    ostpool::pool_add(cmd.fspool.filesystem, cmd.fspool.pool, cmd.ost).await
                 }
                 PoolCommand::Remove { cmd } => {
-                    ostpool::pool_remove(cmd.fspool.filesystem, cmd.fspool.pool, cmd.ost).wait()
+                    ostpool::pool_remove(cmd.fspool.filesystem, cmd.fspool.pool, cmd.ost).await
                 }
-                PoolCommand::List { filesystem } => ostpool::pools(filesystem)
-                    .map(|list| {
-                        for pool in list {
-                            println!("{}", pool)
-                        }
-                    })
-                    .wait(),
+                PoolCommand::List { filesystem } => ostpool::pools(filesystem).await.map(|list| {
+                    for pool in list {
+                        println!("{}", pool)
+                    }
+                }),
             } {
                 println!("{:?}", e);
                 exit(exitcode::SOFTWARE);

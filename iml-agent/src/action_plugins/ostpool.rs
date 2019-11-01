@@ -3,66 +3,59 @@
 // license that can be found in the LICENSE file.
 
 use crate::{agent_error::ImlAgentError, cmd::lctl};
-use futures::{
-    compat::Future01CompatExt,
-    future::try_join_all,
-    future::{FutureExt, TryFutureExt},
-};
-use futures01::Future;
+use futures::future::try_join_all;
 use iml_wire_types::OstPool;
 
-pub fn pool_create(
-    filesystem: String,
-    name: String,
-) -> impl Future<Item = (), Error = ImlAgentError> {
-    lctl(&["pool_new", format!("{}.{}", filesystem, name).as_str()]).map(drop)
+pub async fn pool_create(filesystem: String, name: String) -> Result<(), ImlAgentError> {
+    lctl(vec![
+        "pool_new",
+        format!("{}.{}", filesystem, name).as_str(),
+    ])
+    .await
+    .map(drop)
 }
 
-pub fn pool_add(
-    filesystem: String,
-    name: String,
-    ost: String,
-) -> impl Future<Item = (), Error = ImlAgentError> {
-    lctl(&[
+pub async fn pool_add(filesystem: String, name: String, ost: String) -> Result<(), ImlAgentError> {
+    lctl(vec![
         "pool_add",
         format!("{}.{}", filesystem, name).as_str(),
         ost.as_str(),
     ])
+    .await
     .map(drop)
 }
 
-pub fn pool_remove(
+pub async fn pool_remove(
     filesystem: String,
     name: String,
     ost: String,
-) -> impl Future<Item = (), Error = ImlAgentError> {
-    lctl(&[
+) -> Result<(), ImlAgentError> {
+    lctl(vec![
         "pool_remove",
         format!("{}.{}", filesystem, name).as_str(),
         ost.as_str(),
     ])
+    .await
     .map(drop)
 }
 
-pub fn pool_destroy(
-    filesystem: String,
-    name: String,
-) -> impl Future<Item = (), Error = ImlAgentError> {
-    lctl(&["pool_destroy", format!("{}.{}", filesystem, name).as_str()]).map(drop)
+pub async fn pool_destroy(filesystem: String, name: String) -> Result<(), ImlAgentError> {
+    lctl(vec![
+        "pool_destroy",
+        format!("{}.{}", filesystem, name).as_str(),
+    ])
+    .await
+    .map(drop)
 }
 
 async fn pool_list(filesystem: &str) -> Result<Vec<String>, ImlAgentError> {
-    lctl(&["pool_list", &filesystem])
-        .compat()
-        .await
-        .map(|o| {
-            String::from_utf8_lossy(&o.stdout)
-                .lines()
-                .skip(1)
-                .map(|s| s.rsplit('.').next().unwrap().to_string())
-                .collect()
-        })
-        .or_else(|e| {
+    match lctl(vec!["pool_list", &filesystem]).await {
+        Ok(o) => Ok(String::from_utf8_lossy(&o.stdout)
+            .lines()
+            .skip(1)
+            .map(|s| s.rsplit('.').next().unwrap().to_string())
+            .collect()),
+        Err(e) => {
             if let ImlAgentError::CmdOutputError(cerr) = e {
                 if cerr.status.code() == Some(2) {
                     Ok(vec![])
@@ -72,10 +65,11 @@ async fn pool_list(filesystem: &str) -> Result<Vec<String>, ImlAgentError> {
             } else {
                 Err(e)
             }
-        })
+        }
+    }
 }
 
-pub async fn pools_async(filesystem: String) -> Result<Vec<OstPool>, ImlAgentError> {
+pub async fn pools(filesystem: String) -> Result<Vec<OstPool>, ImlAgentError> {
     let xs = pool_list(&filesystem).await?;
 
     let xs = xs.into_iter().map(|pool| {
@@ -84,9 +78,7 @@ pub async fn pools_async(filesystem: String) -> Result<Vec<OstPool>, ImlAgentErr
         async move {
             let p = format!("{}.{}", filesystem, pool);
 
-            let osts = {
-                pool_list(&p)
-            };
+            let osts = { pool_list(&p) };
 
             Ok::<_, ImlAgentError>(OstPool {
                 name: pool.to_string(),
@@ -99,8 +91,4 @@ pub async fn pools_async(filesystem: String) -> Result<Vec<OstPool>, ImlAgentErr
     let xs = try_join_all(xs).await?;
 
     Ok(xs)
-}
-
-pub fn pools(x: String) -> impl Future<Item = Vec<OstPool>, Error = ImlAgentError> {
-    pools_async(x).boxed().compat()
 }

@@ -46,6 +46,6 @@ where
 }
 
 /// Runs lctl with given arguments
-pub fn lctl(args: &[&str]) -> impl Future<Item = std::process::Output, Error = ImlAgentError> {
-    cmd_output_success("/usr/sbin/lctl", args)
+pub async fn lctl(args: Vec<&str>) -> Result<std::process::Output, ImlAgentError> {
+    cmd_output_success("/usr/sbin/lctl", args).await
 }
