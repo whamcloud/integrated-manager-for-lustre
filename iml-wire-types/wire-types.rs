@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use serde_json;
-use std::fmt;
+use std::{collections::HashMap, fmt};
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
@@ -429,6 +429,36 @@ impl EndpointName for ServerProfile {
     }
 }
 
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct HostProfileWrapper {
+    pub host_profiles: Option<HostProfile>,
+    pub error: Option<String>,
+    pub traceback: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct HostProfile {
+    pub address: String,
+    pub host: u32,
+    pub profiles: HashMap<String, Vec<ProfileTest>>,
+    pub profiles_valid: bool,
+    pub resource_uri: String,
+}
+
+impl EndpointName for HostProfile {
+    fn endpoint_name() -> &'static str {
+        "host_profile"
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ProfileTest {
+    pub description: String,
+    pub error: String,
+    pub pass: bool,
+    pub test: String,
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Command {
     pub cancelled: bool,
@@ -445,6 +475,61 @@ pub struct Command {
 impl EndpointName for Command {
     fn endpoint_name() -> &'static str {
         "command"
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct JobLock {
+    pub locked_item_content_type_id: u32,
+    pub locked_item_id: u32,
+    pub locked_item_uri: String,
+    pub resource_uri: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct AvailableTransition {
+    pub label: String,
+    pub state: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Job<T> {
+    pub available_transitions: Vec<AvailableTransition>,
+    pub cancelled: bool,
+    pub class_name: String,
+    pub commands: Vec<String>,
+    pub created_at: String,
+    pub description: String,
+    pub errored: bool,
+    pub id: u32,
+    pub modified_at: String,
+    pub read_locks: Vec<JobLock>,
+    pub resource_uri: String,
+    pub state: String,
+    pub step_results: HashMap<String, T>,
+    pub steps: Vec<String>,
+    pub wait_for: Vec<String>,
+    pub write_locks: Vec<JobLock>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Check {
+    pub name: String,
+    pub value: bool,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct HostValididity {
+    pub address: String,
+    pub status: Vec<Check>,
+    pub valid: bool,
+}
+
+pub type TestHostJob = Job<HostValididity>;
+
+impl<T> EndpointName for Job<T> {
+    fn endpoint_name() -> &'static str {
+        "job"
     }
 }
 
