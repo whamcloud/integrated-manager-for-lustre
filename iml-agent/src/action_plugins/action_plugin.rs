@@ -17,7 +17,7 @@ type BoxedFuture =
 
 type Callback = Box<dyn Fn(serde_json::value::Value) -> BoxedFuture + Send + Sync>;
 
-async fn mk_boxed_future<T, R, Fut>(
+async fn run_plugin<T, R, Fut>(
     v: serde_json::value::Value,
     f: fn(T) -> Fut,
 ) -> Result<serde_json::value::Value, String>
@@ -39,7 +39,7 @@ where
     T: serde::de::DeserializeOwned + Send + 'static,
     R: serde::Serialize + Send + 'static,
 {
-    Box::new(move |v| mk_boxed_future(v, f).boxed())
+    Box::new(move |v| run_plugin(v, f).boxed())
 }
 
 pub type Actions = HashMap<ActionName, Callback>;

@@ -100,7 +100,6 @@ pub async fn ingest_data(
 #[cfg(test)]
 mod tests {
     use super::*;
-    // use futures::Async;
     use std::fs;
     use tempdir::TempDir;
 
