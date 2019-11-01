@@ -13,7 +13,7 @@ members = [
     'iml-mailbox',
     'iml-manager-cli',
     'iml-manager-client-1',
-    'iml-manager-client-2',
+    'iml-manager-client-3',
     'iml-fs',
     'iml-util',
     'iml-postgres'

@@ -10,7 +10,7 @@ use crate::{
         RunStratagemValidationError,
     },
 };
-use iml_manager_client_2::ImlManagerClientError;
+use iml_manager_client_3::ImlManagerClientError;
 use iml_wire_types::{ApiList, EndpointName, Filesystem, StratagemConfiguration};
 use structopt::StructOpt;
 
@@ -118,7 +118,7 @@ async fn get_stratagem_config_by_fs_name(
 }
 
 async fn handle_cmd_resp(
-    resp: iml_manager_client_2::Response,
+    resp: iml_manager_client_3::Response,
 ) -> Result<CmdWrapper, ImlManagerCliError> {
     let status = resp.status();
 

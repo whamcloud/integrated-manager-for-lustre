@@ -11,7 +11,7 @@ dotenv = "0.15"
 futures-preview = "0.3.0-alpha.19"
 hostlist-parser = "0.1"
 iml-wire-types = { path = "../iml-wire-types", version = "0.1" }
-iml-manager-client-2 = { path = "../iml-manager-client-2", version = "0.1.0" }
+iml-manager-client-3 = { path = "../iml-manager-client-3", version = "0.1.0" }
 indicatif = "0.12"
 prettytable-rs = "0.8"
 reqwest = { version = "0.10.0-alpha.1", features = ["default-tls", "tls", "json"] }

@@ -243,7 +243,7 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
                 .await?
                 .json()
                 .await
-                .map_err(iml_manager_client::ImlManagerClientError::Reqwest)?;
+                .map_err(iml_manager_client_3::ImlManagerClientError::Reqwest)?;
 
             let cmds = objects
                 .into_iter()
@@ -318,7 +318,7 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
                     .await?
                     .json()
                     .await
-                    .map_err(iml_manager_client::ImlManagerClientError::Reqwest)?;
+                    .map_err(iml_manager_client_3::ImlManagerClientError::Reqwest)?;
 
             tracing::debug!("command and hosts {:?}", objects);
 
@@ -359,7 +359,7 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
                 .await?
                 .json()
                 .await
-                .map_err(iml_manager_client::ImlManagerClientError::Reqwest)?;
+                .map_err(iml_manager_client_3::ImlManagerClientError::Reqwest)?;
 
             tracing::debug!("Host Profile resp {:?}", objects);
 

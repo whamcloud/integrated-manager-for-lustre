@@ -1266,7 +1266,7 @@ dependencies = [
  "dotenv 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "hostlist-parser 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "iml-manager-client-2 0.1.0",
+ "iml-manager-client-3 0.1.0",
  "iml-wire-types 0.1.11",
  "indicatif 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prettytable-rs 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1297,7 +1297,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "iml-manager-client-2"
+name = "iml-manager-client-3"
 version = "0.1.0"
 dependencies = [
  "iml-manager-env 0.1.0",
