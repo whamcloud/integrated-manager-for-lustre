@@ -524,6 +524,10 @@ class HostProfileResource(Resource, BulkResourceOperation):
 
     def obj_get_list(self, bundle):
         ids = bundle.request.GET.getlist("id__in")
+
+        if isinstance(ids, str):
+            ids = ids.split(",")
+
         filters = {"id__in": ids} if ids else {}
 
         result = []
