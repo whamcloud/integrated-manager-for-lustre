@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::agent_error::ImlAgentError;
-use futures::{future, Future, Stream};
+use futures::{future, Future, Stream, TryFutureExt, TryStreamExt};
 use std::path::Path;
 
 static NTP_CONFIG_FILE: &'static str = "/etc/ntp.conf";
@@ -12,27 +12,27 @@ static REMOVE_MARKER: &'static str = "#REMOVE_MARKER#";
 static PREFIX: &'static str = "server";
 
 /// Gets a stream to the ntp config
-fn get_ntp_config_stream() -> impl Stream<Item = String, Error = ImlAgentError> {
-    iml_fs::stream_file_lines(Path::new(NTP_CONFIG_FILE)).from_err()
+fn get_ntp_config_stream() -> impl Stream<Item = Result<String, ImlAgentError>> {
+    iml_fs::stream_file_lines(Path::new(NTP_CONFIG_FILE)).err_into()
 }
 
 /// Writes the new config data to the config file
 pub fn update_and_write_new_config(
     server: Option<String>,
-) -> impl Future<Item = (), Error = ImlAgentError> {
+) -> impl Future<Output = Result<(), ImlAgentError>> {
     let s = get_ntp_config_stream();
     configure_ntp(server, s)
-        .and_then(|updated_config| tokio::fs::write(NTP_CONFIG_FILE, updated_config).from_err())
-        .map(drop)
+        .and_then(|updated_config| tokio::fs::write(NTP_CONFIG_FILE, updated_config).err_into())
+        .map_ok(drop)
 }
 
 fn configure_ntp(
     server: Option<String>,
-    s: impl Stream<Item = String, Error = ImlAgentError>,
-) -> impl Future<Item = String, Error = ImlAgentError> {
-    s.map(reset_config)
-        .filter(filter_out_remove_markers)
-        .fold(
+    s: impl Stream<Item = Result<String, ImlAgentError>>,
+) -> impl Future<Output = Result<String, ImlAgentError>> {
+    s.map_ok(reset_config)
+        .try_filter(|x| future::ready(filter_out_remove_markers(x)))
+        .try_fold(
             ("".to_string(), false),
             move |(mut acc, prefix_found), line| {
                 let (x, prefix_found) = if let Some(server_name) = &server {
@@ -45,8 +45,8 @@ fn configure_ntp(
                 future::ok::<_, ImlAgentError>((acc, prefix_found))
             },
         )
-        .map(|(x, _)| x)
-        .from_err()
+        .map_ok(|(x, _)| x)
+        .err_into()
 }
 
 fn transform_config(server: String, line: String, prefix_found: bool) -> (String, bool) {
@@ -85,14 +85,14 @@ fn reset_config(line: String) -> String {
     }
 }
 
-fn filter_out_remove_markers(line: &String) -> bool {
+fn filter_out_remove_markers(line: &str) -> bool {
     line.find(REMOVE_MARKER).is_none()
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use futures::Stream;
+    use futures::{stream, Stream};
     use insta::assert_debug_snapshot;
 
     static ORIGINAL_CONFIG: &'static str =
@@ -281,84 +281,95 @@ disable monitor
 
     fn get_config_stream(
         config: &'static str,
-    ) -> impl Stream<Item = String, Error = ImlAgentError> {
-        futures::stream::iter_ok(config.lines().map(|l| l.to_string()))
+    ) -> impl Stream<Item = Result<String, ImlAgentError>> {
+        stream::iter(config.lines().map(|l| l.to_string()).map(Ok))
     }
 
-    #[test]
-    fn test_configure_ntp_with_server_as_localhost() {
+    #[tokio::test]
+    async fn test_configure_ntp_with_server_as_localhost() -> Result<(), ImlAgentError> {
         let s = get_config_stream(ORIGINAL_CONFIG);
 
-        let result = configure_ntp(Some("localhost".into()), s).wait().unwrap();
+        let result = configure_ntp(Some("localhost".into()), s).await?;
 
         assert_debug_snapshot!(result);
+
+        Ok(())
     }
 
-    #[test]
-    fn test_configure_ntp_with_server_as_adm() {
+    #[tokio::test]
+    async fn test_configure_ntp_with_server_as_adm() -> Result<(), ImlAgentError> {
         let s = get_config_stream(ORIGINAL_CONFIG);
-        let result = configure_ntp(Some("adm.local".into()), s).wait().unwrap();
+        let result = configure_ntp(Some("adm.local".into()), s).await?;
 
         assert_debug_snapshot!(result);
+
+        Ok(())
     }
 
-    #[test]
-    fn test_configure_ntp_with_no_server_specified() {
+    #[tokio::test]
+    async fn test_configure_ntp_with_no_server_specified() -> Result<(), ImlAgentError> {
         let s = get_config_stream(ORIGINAL_CONFIG);
-        let result = configure_ntp(None, s).wait().unwrap();
+        let result = configure_ntp(None, s).await?;
 
         assert_debug_snapshot!(result);
+
+        Ok(())
     }
 
-    #[test]
-    fn test_configure_ntp_with_modified_config() {
+    #[tokio::test]
+    async fn test_configure_ntp_with_modified_config() -> Result<(), ImlAgentError> {
         let s = get_config_stream(SERVER_CONFIG);
-        let result = configure_ntp(Some("localhost".into()), s).wait().unwrap();
+        let result = configure_ntp(Some("localhost".into()), s).await?;
 
         assert_debug_snapshot!(result);
+
+        Ok(())
     }
 
-    #[test]
-    fn test_reset_config_with_server_markers() {
+    #[tokio::test]
+    async fn test_reset_config_with_server_markers() -> Result<(), ImlAgentError> {
         let s = get_config_stream(SERVER_CONFIG);
         let result = s
-            .map(reset_config)
-            .filter(filter_out_remove_markers)
-            .collect()
-            .wait()
-            .unwrap()
+            .map_ok(reset_config)
+            .try_filter(|x| future::ready(filter_out_remove_markers(x)))
+            .try_collect::<Vec<_>>()
+            .await?
             .join("\n");
 
         assert_debug_snapshot!(result);
+
+        Ok(())
     }
 
-    #[test]
-    fn test_reset_config_with_local_server_markers() {
+    #[tokio::test]
+    async fn test_reset_config_with_local_server_markers() -> Result<(), ImlAgentError> {
         let s = get_config_stream(LOCAL_HOST_CONFIG);
         let result = s
-            .map(|l| l.to_string())
-            .map(reset_config)
-            .filter(filter_out_remove_markers)
-            .collect()
-            .wait()
-            .unwrap()
+            .map_ok(|l| l.to_string())
+            .map_ok(reset_config)
+            .try_filter(|x| future::ready(filter_out_remove_markers(x)))
+            .try_collect::<Vec<_>>()
+            .await?
             .join("\n");
 
         assert_debug_snapshot!(result);
+
+        Ok(())
     }
 
-    #[test]
-    fn test_reset_config_with_no_server_markers() {
+    #[tokio::test]
+    async fn test_reset_config_with_no_server_markers() -> Result<(), ImlAgentError> {
         let s = get_config_stream(ORIGINAL_CONFIG);
         let result = s
-            .map(|l| l.to_string())
-            .map(reset_config)
-            .filter(filter_out_remove_markers)
-            .collect()
-            .wait()
-            .unwrap()
+            .map_ok(|l| l.to_string())
+            .map_ok(reset_config)
+            .try_filter(|x| future::ready(filter_out_remove_markers(x)))
+            .try_collect::<Vec<_>>()
+            .await?
             .join("\n");
 
         assert_debug_snapshot!(result);
+
+        Ok(())
     }
 }
