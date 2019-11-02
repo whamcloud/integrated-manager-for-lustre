@@ -113,7 +113,7 @@ def when_ready(server):
     try:
         from systemd.daemon import notify
 
-        notify('READY=1')
+        notify("READY=1")
     except ImportError:
         pass
 
