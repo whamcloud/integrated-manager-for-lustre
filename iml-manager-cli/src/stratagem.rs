@@ -3,16 +3,15 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{delete, first, get, post, put, run_cmd, wait_for_cmd, CmdWrapper},
-    display_utils::{display_cmd_state, display_error, generate_table, start_spinner},
-    manager_cli_error::{
+    api_utils::{delete, first, get, post, put, wait_for_cmd, CmdWrapper},
+    display_utils::{display_cmd_state, generate_table, start_spinner},
+    error::{
         DurationParseError, ImlManagerCliError, RunStratagemCommandResult,
         RunStratagemValidationError,
     },
 };
-use futures::Future;
+use iml_manager_client::ImlManagerClientError;
 use iml_wire_types::{ApiList, EndpointName, Filesystem, StratagemConfiguration};
-use std::process::exit;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -98,31 +97,39 @@ fn parse_duration(src: &str) -> Result<u64, ImlManagerCliError> {
 }
 
 /// Given some params, does a fetch for the item in the API
-fn fetch_one<T: EndpointName + std::fmt::Debug + serde::de::DeserializeOwned>(
+async fn fetch_one<T: EndpointName + std::fmt::Debug + serde::de::DeserializeOwned>(
     params: impl serde::Serialize,
-) -> impl Future<Item = T, Error = ImlManagerCliError> {
-    get(T::endpoint_name(), params).and_then(first)
+) -> Result<T, ImlManagerCliError> {
+    let x = get(T::endpoint_name(), params).await?;
+
+    first(x)
 }
 
-fn get_stratagem_config_by_fs_name(
+async fn get_stratagem_config_by_fs_name(
     name: &str,
-) -> impl Future<Item = StratagemConfiguration, Error = ImlManagerCliError> {
-    fetch_one(serde_json::json!({
+) -> Result<StratagemConfiguration, ImlManagerCliError> {
+    let fs: Filesystem = fetch_one(serde_json::json!({
         "name": name,
         "dehydrate__mgt": false
     }))
-    .and_then(|fs: Filesystem| fetch_one(serde_json::json!({ "filesystem": fs.id })))
+    .await?;
+
+    fetch_one(serde_json::json!({ "filesystem": fs.id })).await
 }
 
-fn handle_cmd_resp(
-    (resp, body): (iml_manager_client::Response, iml_manager_client::Chunk),
+async fn handle_cmd_resp(
+    resp: iml_manager_client::Response,
 ) -> Result<CmdWrapper, ImlManagerCliError> {
     let status = resp.status();
+
+    let body = resp.text().await.map_err(ImlManagerClientError::from)?;
+
     if status.is_success() {
-        Ok(serde_json::from_slice::<CmdWrapper>(&body)?)
+        Ok(serde_json::from_str::<CmdWrapper>(&body)?)
     } else if status.is_client_error() {
-        log::debug!("body: {:?}", std::str::from_utf8(&body));
-        serde_json::from_slice::<RunStratagemValidationError>(&body)
+        tracing::debug!("body: {:?}", body);
+
+        serde_json::from_str::<RunStratagemValidationError>(&body)
             .map(std::convert::Into::into)
             .map(Err)?
     } else if status.is_server_error() {
@@ -140,167 +147,109 @@ fn handle_cmd_resp(
     }
 }
 
-pub fn stratagem_cli(command: StratagemCommand) {
+pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCliError> {
     match command {
         StratagemCommand::Scan(data) => {
-            let fut = post("run_stratagem", data).and_then(handle_cmd_resp);
+            let r = post("run_stratagem", data).await?;
 
-            let command: Result<CmdWrapper, ImlManagerCliError> = run_cmd(fut);
+            let CmdWrapper { command } = handle_cmd_resp(r).await?;
 
-            match command {
-                Ok(CmdWrapper { command }) => {
-                    let stop_spinner = start_spinner(&command.message);
+            let stop_spinner = start_spinner(&command.message);
 
-                    let command = run_cmd(wait_for_cmd(command)).expect("Could not poll command");
+            let command = wait_for_cmd(command).await?;
 
-                    stop_spinner(None);
+            stop_spinner(None);
 
-                    display_cmd_state(&command);
-
-                    exit(exitcode::OK)
-                }
-                Err(validation_error) => {
-                    display_error(validation_error);
-
-                    exit(exitcode::CANTCREAT)
-                }
-            }
+            display_cmd_state(&command);
         }
         StratagemCommand::StratagemInterval(x) => match x {
             StratagemInterval::List => {
                 let stop_spinner = start_spinner("Finding existing intervals...");
 
-                let fut = get(
+                let r: ApiList<StratagemConfiguration> = get(
                     StratagemConfiguration::endpoint_name(),
                     serde_json::json!({ "limit": 0 }),
-                );
-                let result: Result<ApiList<StratagemConfiguration>, _> = run_cmd(fut);
+                )
+                .await?;
 
                 stop_spinner(None);
 
-                match result {
-                    Ok(r) => {
-                        if r.objects.is_empty() {
-                            return println!("No Stratagem intervals found");
-                        }
-
-                        let table = generate_table(
-                            &["Id", "Filesystem", "State", "Interval", "Purge", "Report"],
-                            r.objects.into_iter().map(|x| {
-                                vec![
-                                    x.id.to_string(),
-                                    x.filesystem,
-                                    x.state,
-                                    x.interval.to_string(),
-                                    x.purge_duration.map(|x| x.to_string()).unwrap_or_default(),
-                                    x.report_duration.map(|x| x.to_string()).unwrap_or_default(),
-                                ]
-                            }),
-                        );
-
-                        table.printstd();
-
-                        exit(exitcode::OK)
-                    }
-                    Err(e) => {
-                        eprintln!("{}", e);
-
-                        exit(exitcode::SOFTWARE);
-                    }
+                if r.objects.is_empty() {
+                    println!("No Stratagem intervals found");
+                    return Ok(());
                 }
+
+                let table = generate_table(
+                    &["Id", "Filesystem", "State", "Interval", "Purge", "Report"],
+                    r.objects.into_iter().map(|x| {
+                        vec![
+                            x.id.to_string(),
+                            x.filesystem,
+                            x.state,
+                            x.interval.to_string(),
+                            x.purge_duration.map(|x| x.to_string()).unwrap_or_default(),
+                            x.report_duration.map(|x| x.to_string()).unwrap_or_default(),
+                        ]
+                    }),
+                );
+
+                table.printstd();
             }
             StratagemInterval::Add(c) => {
-                let fut =
-                    post(StratagemConfiguration::endpoint_name(), c).and_then(handle_cmd_resp);
+                let r = post(StratagemConfiguration::endpoint_name(), c).await?;
 
-                let command: Result<CmdWrapper, ImlManagerCliError> = run_cmd(fut);
+                let CmdWrapper { command } = handle_cmd_resp(r).await?;
 
-                match command {
-                    Ok(CmdWrapper { command }) => {
-                        let stop_spinner = start_spinner(&command.message);
+                let stop_spinner = start_spinner(&command.message);
 
-                        let command =
-                            run_cmd(wait_for_cmd(command)).expect("Could not poll command");
+                let command = wait_for_cmd(command).await?;
 
-                        stop_spinner(None);
+                stop_spinner(None);
 
-                        display_cmd_state(&command);
-
-                        exit(exitcode::OK)
-                    }
-                    Err(validation_error) => {
-                        display_error(validation_error);
-
-                        exit(exitcode::CANTCREAT)
-                    }
-                }
+                display_cmd_state(&command);
             }
             StratagemInterval::Update(c) => {
-                let fut = get_stratagem_config_by_fs_name(&c.filesystem)
-                    .and_then(|x| {
-                        put(
-                            &format!("{}/{}", StratagemConfiguration::endpoint_name(), x.id),
-                            c,
-                        )
-                    })
-                    .and_then(handle_cmd_resp);
+                let x = get_stratagem_config_by_fs_name(&c.filesystem).await?;
 
-                let command: Result<CmdWrapper, ImlManagerCliError> = run_cmd(fut);
+                let r = put(
+                    &format!("{}/{}", StratagemConfiguration::endpoint_name(), x.id),
+                    c,
+                )
+                .await?;
 
-                match command {
-                    Ok(CmdWrapper { command }) => {
-                        let stop_spinner = start_spinner(&command.message);
+                let CmdWrapper { command } = handle_cmd_resp(r).await?;
 
-                        let command =
-                            run_cmd(wait_for_cmd(command)).expect("Could not poll command");
+                let stop_spinner = start_spinner(&command.message);
 
-                        stop_spinner(None);
+                let command = wait_for_cmd(command).await?;
 
-                        display_cmd_state(&command);
+                stop_spinner(None);
 
-                        exit(exitcode::OK)
-                    }
-                    Err(validation_error) => {
-                        display_error(validation_error);
-
-                        exit(exitcode::CANTCREAT)
-                    }
-                }
+                display_cmd_state(&command);
             }
             StratagemInterval::Remove(StratagemRemoveData { name }) => {
-                let fut = get_stratagem_config_by_fs_name(&name)
-                    .and_then(|x: StratagemConfiguration| {
-                        delete(
-                            &format!("{}/{}", StratagemConfiguration::endpoint_name(), x.id),
-                            Vec::<(String, String)>::new(),
-                        )
-                    })
-                    .and_then(handle_cmd_resp);
+                let x = get_stratagem_config_by_fs_name(&name).await?;
 
-                let x: Result<CmdWrapper, ImlManagerCliError> = run_cmd(fut);
+                let r = delete(
+                    &format!("{}/{}", StratagemConfiguration::endpoint_name(), x.id),
+                    Vec::<(String, String)>::new(),
+                )
+                .await?;
 
-                match x {
-                    Ok(CmdWrapper { command }) => {
-                        let stop_spinner = start_spinner(&command.message);
+                let CmdWrapper { command } = handle_cmd_resp(r).await?;
 
-                        let command =
-                            run_cmd(wait_for_cmd(command)).expect("Could not poll command");
+                let stop_spinner = start_spinner(&command.message);
 
-                        stop_spinner(None);
+                let command = wait_for_cmd(command).await?;
 
-                        display_cmd_state(&command);
+                stop_spinner(None);
 
-                        exit(exitcode::OK)
-                    }
-                    Err(validation_error) => {
-                        display_error(validation_error);
-
-                        exit(exitcode::CANTCREAT)
-                    }
-                }
+                display_cmd_state(&command);
             }
         },
-    }
+    };
+
+    Ok(())
 }
 
 #[cfg(test)]

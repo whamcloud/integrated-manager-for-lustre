@@ -37,10 +37,6 @@ srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/release/rust-iml
 	rm -rf ${BUILDROOT}/_topdir
-	if ! rpm -q lustre-client 2> /dev/null && ! rpm -q lustre 2> /dev/null ; then \
-		cp lustre-client.repo /etc/yum.repos.d/; \
-		yum -y -q install lustre-client;\
-	fi
 	cargo build --release
 	cp target/release/iml-{action-runner,agent,agent-comms,mailbox,agent-daemon,stratagem,warp-drive} \
 		iml-agent-comms.service \
