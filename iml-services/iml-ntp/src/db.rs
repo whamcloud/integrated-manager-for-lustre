@@ -2,8 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use iml_postgres::Client;
 use iml_wire_types::db::{AlertStateRecord, ManagedHostRecord, Name};
-use tokio_postgres::Client;
 
 /// This async function will retrieve the managed host id for a given fqdn. A future
 /// containing the managed host id is returned.

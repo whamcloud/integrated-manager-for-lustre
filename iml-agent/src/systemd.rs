@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output};
-use futures::Future;
 use std::time::{Duration, Instant};
 use tokio::timer::delay;
 
@@ -28,8 +27,8 @@ pub async fn checked_cmd(action: &str, service: &'static str) -> Result<bool, Im
 /// # Arguments
 ///
 /// * `x` - The service to start
-pub fn systemctl_start(x: &'static str) -> impl Future<Output = Result<bool, ImlAgentError>> {
-    checked_cmd("start", x)
+pub async fn systemctl_start(x: &'static str) -> Result<bool, ImlAgentError> {
+    checked_cmd("start", x).await
 }
 
 /// Restarts a service
@@ -37,8 +36,8 @@ pub fn systemctl_start(x: &'static str) -> impl Future<Output = Result<bool, Iml
 /// # Arguments
 ///
 /// * `x` - The service to start
-pub fn systemctl_restart(x: &'static str) -> impl Future<Item = bool, Error = ImlAgentError> {
-    checked_cmd("restart", x)
+pub async fn systemctl_restart(x: &'static str) -> Result<bool, ImlAgentError> {
+    checked_cmd("restart", x).await
 }
 
 /// Stops a service
@@ -46,8 +45,8 @@ pub fn systemctl_restart(x: &'static str) -> impl Future<Item = bool, Error = Im
 /// # Arguments
 ///
 /// * `x` - The service to stop
-pub fn systemctl_stop(x: &'static str) -> impl Future<Output = Result<bool, ImlAgentError>> {
-    checked_cmd("stop", x)
+pub async fn systemctl_stop(x: &'static str) -> Result<bool, ImlAgentError> {
+    checked_cmd("stop", x).await
 }
 
 /// Checks if a service is active
@@ -64,10 +63,8 @@ pub async fn systemctl_status(x: &str) -> Result<std::process::Output, ImlAgentE
 /// # Arguments
 ///
 /// * `x` - The service to check
-pub fn systemctl_enabled(
-    x: &str,
-) -> impl Future<Item = std::process::Output, Error = ImlAgentError> {
-    cmd_output("systemctl", &["is-enabled", x, "--quiet"])
+pub async fn systemctl_enabled(x: &str) -> Result<std::process::Output, ImlAgentError> {
+    cmd_output("systemctl", vec!["is-enabled", x, "--quiet"]).await
 }
 
 /// Invokes `success` on `ExitStatus` within `Output`

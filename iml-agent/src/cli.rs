@@ -2,12 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::Future;
-use iml_agent::action_plugins::check_ha;
-use iml_agent::action_plugins::ntp::{action_configure, is_ntp_configured};
-use iml_agent::action_plugins::stratagem::{
-    action_purge, action_warning,
-    server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
+use iml_agent::action_plugins::{
+    check_ha, check_stonith,
+    ntp::{action_configure, is_ntp_configured},
+    stratagem::{
+        action_purge, action_warning,
+        server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
+    },
 };
 use iml_agent::systemd::systemctl_restart;
 use prettytable::{cell, row, Table};
@@ -345,11 +346,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 let msg = get_ntp_message(&server);
-                match run_cmd(action_configure::update_and_write_new_config(server)) {
+                match action_configure::update_and_write_new_config(server).await {
                     Ok(_) => {
                         println!("{}", msg);
                         println!("Restarting ntpd daemon.");
-                        match systemctl_restart("ntpd").wait() {
+                        match systemctl_restart("ntpd").await {
                             Ok(_) => {
                                 println!("ntpd service restarted successfully.");
                             }
@@ -363,7 +364,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             NtpClientCommand::IsConfigured => {
-                match run_cmd(is_ntp_configured::is_ntp_configured(())) {
+                match is_ntp_configured::is_ntp_configured(()).await {
                     Ok(configured) => {
                         if configured == true {
                             println!("Ntp is configured for IML on this server.");

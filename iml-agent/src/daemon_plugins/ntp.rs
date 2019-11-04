@@ -5,15 +5,14 @@
 use crate::{
     agent_error::ImlAgentError,
     cmd::cmd_output,
-    daemon_plugins::{as_output, DaemonPlugin, Output},
+    daemon_plugins::{DaemonPlugin, Output},
     systemd,
 };
-use futures::{future, Future, Stream};
+use futures::{future, Future, StreamExt, TryFutureExt, TryStreamExt};
 use iml_wire_types::ntp::{TimeOffset, TimeStatus, TimeSync};
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::path::Path;
-use std::process;
+use std::pin::Pin;
 use tracing::{debug, info, warn};
 
 static NTP_CONFIG_FILE: &'static str = "/etc/ntp.conf";
@@ -84,49 +83,55 @@ pub fn create() -> impl DaemonPlugin {
     Ntp
 }
 
-fn get_systemd_unit_for_service(
-    service: &str,
-) -> impl Future<Item = SystemdUnit, Error = ImlAgentError> {
-    systemd::systemctl_enabled(service)
-        .join(systemd::systemctl_status(service))
-        .map(
-            |(enabled, active): (std::process::Output, std::process::Output)| SystemdUnit {
-                enabled: enabled.status.success(),
-                active: active.status.success(),
-            },
-        )
+async fn get_systemd_unit_for_service(service: &str) -> Result<SystemdUnit, ImlAgentError> {
+    let (enabled, active) = future::try_join(
+        systemd::systemctl_enabled(service),
+        systemd::systemctl_status(service),
+    )
+    .await?;
+
+    Ok(SystemdUnit {
+        enabled: enabled.status.success(),
+        active: active.status.success(),
+    })
 }
 
-fn is_ntp_configured_by_iml() -> impl Future<Item = bool, Error = ImlAgentError> {
-    iml_fs::stream_file_lines(Path::new(NTP_CONFIG_FILE))
-        .filter(|l| l.find("# IML_EDIT").is_some())
-        .from_err()
-        .into_future()
-        .map(|(x, _)| x.is_some())
-        .map_err(|(e, _)| ImlAgentError::Io(e))
+async fn is_ntp_configured_by_iml() -> Result<bool, ImlAgentError> {
+    let x = iml_fs::stream_file_lines(NTP_CONFIG_FILE)
+        .boxed()
+        .try_filter(|l| future::ready(l.find("# IML_EDIT").is_some()))
+        .try_next()
+        .await?
+        .is_some();
+
+    Ok(x)
 }
 
-fn get_time_sync_services() -> impl Future<Item = TimeSyncServices, Error = ImlAgentError> {
+async fn get_time_sync_services() -> Result<TimeSyncServices, ImlAgentError> {
     let ntpd = get_systemd_unit_for_service("ntpd");
     let chronyd = get_systemd_unit_for_service("chronyd");
 
-    ntpd.join(chronyd)
-        .map(|(ntpd, chronyd): (SystemdUnit, SystemdUnit)| TimeSyncServices { ntpd, chronyd })
+    let (ntpd, chronyd) = future::try_join(ntpd, chronyd).await?;
+
+    Ok(TimeSyncServices { ntpd, chronyd })
 }
 
-fn get_ntpstat_command() -> impl Future<Item = String, Error = ImlAgentError> {
-    cmd_output("ntpstat", &[]).map(|p| std::str::from_utf8(&p.stdout).unwrap_or("").to_string())
+async fn get_ntpstat_command() -> Result<String, ImlAgentError> {
+    let p = cmd_output("ntpstat", vec![]).await?;
+
+    Ok(std::str::from_utf8(&p.stdout).unwrap_or("").to_string())
 }
 
-fn get_chronyc_ntpdata_command() -> impl Future<Item = String, Error = ImlAgentError> {
-    cmd_output("chronyc", &["ntpdata"])
-        .map(|p| std::str::from_utf8(&p.stdout).unwrap_or("").to_string())
+async fn get_chronyc_ntpdata_command() -> Result<String, ImlAgentError> {
+    let p = cmd_output("chronyc", vec!["ntpdata"]).await?;
+
+    Ok(std::str::from_utf8(&p.stdout).unwrap_or("").to_string())
 }
 
-fn is_ntp_synced_command() -> impl Future<Item = String, Error = ImlAgentError> {
-    cmd_output(
+async fn is_ntp_synced_command() -> Result<String, ImlAgentError> {
+    let x = cmd_output(
         "busctl",
-        &[
+        vec![
             "get-property",
             "org.freedesktop.timedate1",
             "/org/freedesktop/timedate1",
@@ -134,19 +139,21 @@ fn is_ntp_synced_command() -> impl Future<Item = String, Error = ImlAgentError> 
             "NTPSynchronized",
         ],
     )
-    .map(|x: process::Output| {
-        std::str::from_utf8(&x.stdout)
-            .unwrap_or("")
-            .trim()
-            .to_string()
-    })
+    .await?;
+
+    Ok(std::str::from_utf8(&x.stdout)
+        .unwrap_or("")
+        .trim()
+        .to_string())
 }
 
-fn ntpd_synced() -> impl Future<Item = TimeStatus, Error = ImlAgentError> {
-    let ntp_synced = is_ntp_synced_command().map(|x| is_ntp_synced(&x));
-    let time_offset = get_ntpstat_command().map(get_ntp_time_offset);
+async fn ntpd_synced() -> Result<TimeStatus, ImlAgentError> {
+    let ntp_synced = is_ntp_synced_command().map_ok(|x| is_ntp_synced(&x));
+    let time_offset = get_ntpstat_command().map_ok(get_ntp_time_offset);
 
-    ntp_synced.join(time_offset).map(create_time_status)
+    future::try_join(ntp_synced, time_offset)
+        .await
+        .map(create_time_status)
 }
 
 // Gets the output of chronyd
@@ -154,62 +161,66 @@ fn ntpd_synced() -> impl Future<Item = TimeStatus, Error = ImlAgentError> {
 // # Arguments
 //
 // * `x` - The service to check
-fn chronyd_synced() -> impl Future<Item = TimeStatus, Error = ImlAgentError> {
-    let ntp_synced = is_ntp_synced_command().map(|x| is_ntp_synced(&x));
-    let time_offset = get_chronyc_ntpdata_command().map(get_chrony_time_offset);
+async fn chronyd_synced() -> Result<TimeStatus, ImlAgentError> {
+    let ntp_synced = is_ntp_synced_command().map_ok(|x| is_ntp_synced(&x));
+    let time_offset = get_chronyc_ntpdata_command().map_ok(get_chrony_time_offset);
 
-    Box::new(ntp_synced.join(time_offset).map(create_time_status))
+    future::try_join(ntp_synced, time_offset)
+        .await
+        .map(create_time_status)
 }
 
-fn time_synced<
-    F1: Future<Item = bool, Error = ImlAgentError>,
-    F2: Future<Item = TimeSyncServices, Error = ImlAgentError>,
-    F3: Future<Item = TimeStatus, Error = ImlAgentError>,
-    F4: Future<Item = TimeStatus, Error = ImlAgentError>,
+async fn time_synced<
+    F1: Future<Output = Result<bool, ImlAgentError>>,
+    F2: Future<Output = Result<TimeSyncServices, ImlAgentError>>,
+    F3: Future<Output = Result<TimeStatus, ImlAgentError>>,
+    F4: Future<Output = Result<TimeStatus, ImlAgentError>>,
 >(
     is_ntp_configured_by_iml: fn() -> F1,
     get_time_sync_services: fn() -> F2,
     ntpd_synced: fn() -> F3,
     chronyd_synced: fn() -> F4,
-) -> impl Future<Item = Output, Error = ImlAgentError> {
-    is_ntp_configured_by_iml()
-        .and_then(move |configured| {
-            debug!("Configured: {:?}", configured);
-            get_time_sync_services().map(move |tss| {
-                debug!("time_sync_service shows: {:?}", tss);
-                (configured, tss)
-            })
-        })
-        .map(|(configured, tss)| {
-            if configured == false || (configured == true && tss.is_ntp_only()) {
-                Some(tss)
-            } else {
-                None
-            }
-        })
-        .and_then(move |tss: Option<TimeSyncServices>| {
-            if let Some(tss) = tss {
-                // Which one is being used?
-                if tss.ntpd.enabled && tss.ntpd.active {
-                    future::Either::A(future::Either::A(ntpd_synced()))
-                } else {
-                    future::Either::A(future::Either::B(chronyd_synced()))
-                }
-            } else {
-                info!("Neither chrony or ntp setup. Setting to unsynced!");
-                future::Either::B(future::ok(TimeStatus {
-                    synced: TimeSync::Unsynced,
-                    offset: None,
-                }))
-            }
-        })
-        .and_then(as_output)
-        .from_err()
+) -> Result<Output, ImlAgentError> {
+    let configured = is_ntp_configured_by_iml().await?;
+
+    debug!("Configured: {:?}", configured);
+
+    let tss = get_time_sync_services().await?;
+
+    debug!("time_sync_service shows: {:?}", tss);
+
+    let tss = if configured == false || (configured == true && tss.is_ntp_only()) {
+        Some(tss)
+    } else {
+        None
+    };
+
+    let x = if let Some(tss) = tss {
+        // Which one is being used?
+        if tss.ntpd.enabled && tss.ntpd.active {
+            ntpd_synced().await?
+        } else {
+            chronyd_synced().await?
+        }
+    } else {
+        info!("Neither chrony or ntp setup. Setting to unsynced!");
+
+        TimeStatus {
+            synced: TimeSync::Unsynced,
+            offset: None,
+        }
+    };
+
+    let x = serde_json::to_value(x).map(Some)?;
+
+    Ok(x)
 }
 
 impl DaemonPlugin for Ntp {
-    fn start_session(&mut self) -> Box<dyn Future<Item = Output, Error = ImlAgentError> + Send> {
-        Box::new(time_synced(
+    fn start_session(
+        &mut self,
+    ) -> Pin<Box<dyn Future<Output = Result<Output, ImlAgentError>> + Send>> {
+        Box::pin(time_synced(
             is_ntp_configured_by_iml,
             get_time_sync_services,
             ntpd_synced,
@@ -217,8 +228,10 @@ impl DaemonPlugin for Ntp {
         ))
     }
 
-    fn update_session(&self) -> Box<dyn Future<Item = Output, Error = ImlAgentError> + Send> {
-        Box::new(time_synced(
+    fn update_session(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<Output, ImlAgentError>> + Send>> {
+        Box::pin(time_synced(
             is_ntp_configured_by_iml,
             get_time_sync_services,
             ntpd_synced,
@@ -293,17 +306,17 @@ Total valid RX  : 1129"#
         );
     }
 
-    #[test]
-    fn test_session_with_ntp_configured_by_iml() {
-        fn is_ntp_configured_by_iml() -> Box<dyn Future<Item = bool, Error = ImlAgentError> + Send>
-        {
+    #[tokio::test]
+    async fn test_session_with_ntp_configured_by_iml() -> Result<(), ImlAgentError> {
+        fn is_ntp_configured_by_iml(
+        ) -> Pin<Box<dyn Future<Output = Result<bool, ImlAgentError>> + Send>> {
             println!("TestSideEffect: is ntp configured by iml");
-            Box::new(future::ok::<bool, ImlAgentError>(true))
+            Box::pin(future::ok::<bool, ImlAgentError>(true))
         }
 
         fn get_time_sync_services(
-        ) -> Box<dyn Future<Item = TimeSyncServices, Error = ImlAgentError> + Send> {
-            Box::new(future::ok::<TimeSyncServices, ImlAgentError>(
+        ) -> Pin<Box<dyn Future<Output = Result<TimeSyncServices, ImlAgentError>> + Send>> {
+            Box::pin(future::ok::<TimeSyncServices, ImlAgentError>(
                 TimeSyncServices {
                     ntpd: SystemdUnit {
                         enabled: true,
@@ -317,14 +330,16 @@ Total valid RX  : 1129"#
             ))
         }
 
-        fn ntpd_synced() -> Box<dyn Future<Item = TimeStatus, Error = ImlAgentError> + Send> {
-            Box::new(future::ok::<TimeStatus, ImlAgentError>(create_time_status(
+        fn ntpd_synced() -> Pin<Box<dyn Future<Output = Result<TimeStatus, ImlAgentError>> + Send>>
+        {
+            Box::pin(future::ok::<TimeStatus, ImlAgentError>(create_time_status(
                 (TimeSync::Synced, Some("949 ms".to_string().into())),
             )))
         }
 
-        fn chronyd_synced() -> Box<dyn Future<Item = TimeStatus, Error = ImlAgentError> + Send> {
-            Box::new(future::ok::<TimeStatus, ImlAgentError>(create_time_status(
+        fn chronyd_synced(
+        ) -> Pin<Box<dyn Future<Output = Result<TimeStatus, ImlAgentError>> + Send>> {
+            Box::pin(future::ok::<TimeStatus, ImlAgentError>(create_time_status(
                 (TimeSync::Unsynced, None),
             )))
         }
@@ -335,8 +350,7 @@ Total valid RX  : 1129"#
             ntpd_synced,
             chronyd_synced,
         )
-        .wait()
-        .unwrap();
+        .await?;
 
         assert_eq!(
             r,
@@ -346,5 +360,7 @@ Total valid RX  : 1129"#
             })
             .ok()
         );
+
+        Ok(())
     }
 }

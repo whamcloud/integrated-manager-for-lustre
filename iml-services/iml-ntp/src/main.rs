@@ -2,11 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use futures::stream::TryStreamExt;
 use iml_ntp::db::{
     add_alert, get_active_alert_for_fqdn, get_managed_host_items, set_alert_inactive,
 };
-
-use futures::stream::{StreamExt, TryStreamExt};
 use iml_postgres::connect;
 use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::ntp::{TimeStatus, TimeSync};

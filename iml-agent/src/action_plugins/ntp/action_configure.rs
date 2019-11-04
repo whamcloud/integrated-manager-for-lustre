@@ -9,13 +9,13 @@ use crate::agent_error::ImlAgentError;
 use futures::{future, Future, Stream, TryFutureExt, TryStreamExt};
 
 /// Writes the new config data to the config file
-pub fn update_and_write_new_config(
-    server: Option<String>,
-) -> impl Future<Output = Result<(), ImlAgentError>> {
+pub async fn update_and_write_new_config(server: Option<String>) -> Result<(), ImlAgentError> {
     let s = get_ntp_config_stream();
-    configure_ntp(server, s)
-        .and_then(|updated_config| tokio::fs::write(NTP_CONFIG_FILE, updated_config).err_into())
-        .map_ok(drop)
+    let updated_config = configure_ntp(server, s).await?;
+
+    tokio::fs::write(NTP_CONFIG_FILE, updated_config).await?;
+
+    Ok(())
 }
 
 fn configure_ntp(

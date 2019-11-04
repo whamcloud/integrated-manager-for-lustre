@@ -4,18 +4,18 @@
 
 use crate::action_plugins::ntp::common::{get_ntp_config_stream, MARKER};
 use crate::agent_error::ImlAgentError;
-use futures::{future, stream::Stream, Future};
+use futures::{future, stream::Stream, Future, TryFutureExt, TryStreamExt};
 
 fn has_marker(
-    s: impl Stream<Item = String, Error = ImlAgentError>,
-) -> impl Future<Item = bool, Error = ImlAgentError> {
-    s.fold(false, |acc, x: String| {
+    s: impl Stream<Item = Result<String, ImlAgentError>>,
+) -> impl Future<Output = Result<bool, ImlAgentError>> {
+    s.try_fold(false, |acc, x: String| {
         future::ok::<_, ImlAgentError>(acc || x.find(MARKER).is_some())
     })
-    .from_err()
+    .err_into()
 }
 
-pub fn is_ntp_configured(_: ()) -> impl Future<Item = bool, Error = ImlAgentError> {
+pub fn is_ntp_configured(_: ()) -> impl Future<Output = Result<bool, ImlAgentError>> {
     let s = get_ntp_config_stream();
     has_marker(s)
 }
@@ -149,19 +149,23 @@ disable monitor
 
     fn get_config_stream(
         config: &'static str,
-    ) -> impl Stream<Item = String, Error = ImlAgentError> {
-        futures::stream::iter_ok(config.lines().map(|l| l.to_string()))
+    ) -> impl Stream<Item = Result<String, ImlAgentError>> {
+        futures::stream::iter(config.lines().map(|l| Ok(l.to_string())))
     }
 
-    #[test]
-    fn test_config_without_marker_is_not_configured() {
+    #[tokio::test]
+    async fn test_config_without_marker_is_not_configured() -> Result<(), ImlAgentError> {
         let s = get_config_stream(ORIGINAL_CONFIG);
-        assert_eq!(false, has_marker(s).wait().unwrap());
+        assert_eq!(false, has_marker(s).await?);
+
+        Ok(())
     }
 
-    #[test]
-    fn test_config_with_marker_is_configured() {
+    #[tokio::test]
+    async fn test_config_with_marker_is_configured() -> Result<(), ImlAgentError> {
         let s = get_config_stream(CONFIGURED_CONFIG);
-        assert_eq!(true, has_marker(s).wait().unwrap());
+        assert_eq!(true, has_marker(s).await?);
+
+        Ok(())
     }
 }
