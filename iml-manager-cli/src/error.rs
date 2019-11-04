@@ -54,7 +54,7 @@ impl std::error::Error for DurationParseError {}
 
 #[derive(Debug)]
 pub enum ImlManagerCliError {
-    ClientRequestError(iml_manager_client_3::ImlManagerClientError),
+    ClientRequestError(iml_manager_client::ImlManagerClientError),
     TokioTimerError(tokio::timer::Error),
     IntParseError(std::num::ParseIntError),
     ParseDurationError(DurationParseError),
@@ -133,8 +133,8 @@ impl From<tokio::timer::Error> for ImlManagerCliError {
     }
 }
 
-impl From<iml_manager_client_3::ImlManagerClientError> for ImlManagerCliError {
-    fn from(err: iml_manager_client_3::ImlManagerClientError) -> Self {
+impl From<iml_manager_client::ImlManagerClientError> for ImlManagerCliError {
+    fn from(err: iml_manager_client::ImlManagerClientError) -> Self {
         ImlManagerCliError::ClientRequestError(err)
     }
 }
