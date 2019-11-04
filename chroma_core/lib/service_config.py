@@ -397,7 +397,6 @@ class ServiceConfig(CommandLine):
         "iml-realtime.service",
         "iml-warp-drive.service",
         "device-aggregator.service",
-        "iml-srcmap-reverse.socket",
         "iml-mailbox.service",
         "iml-action-runner.service",
         "iml-agent-comms.service",
@@ -716,7 +715,6 @@ class ServiceConfig(CommandLine):
             "DEVICE_AGGREGATOR_PORT",
             "DEVICE_AGGREGATOR_PROXY_PASS",
             "UPDATE_HANDLER_PROXY_PASS",
-            "SRCMAP_REVERSE_PROXY_PASS",
         ]
 
         with open(conf_template, "r") as f:

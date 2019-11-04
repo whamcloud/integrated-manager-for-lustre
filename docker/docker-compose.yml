@@ -84,16 +84,6 @@ services:
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
-  srcmap-reverse:
-    image: "imlteam/srcmap-reverse"
-    hostname: "srcmap-reverse"
-    deploy: *default-deploy
-    volumes:
-      - static-config1:/usr/lib/iml-manager/
-    environment:
-      - NODE_ENV=production
-      - SOURCE_MAP_PATH=/usr/lib/iml-manager/iml-gui/main.*.js.map
-      - SRCMAP_REVERSE_PORT=8082
   view-server:
     image: "imlteam/view-server"
     hostname: "view-server"

@@ -327,10 +327,6 @@ server {
         alias {{REPO_PATH}}/lustre-client/;
     }
 
-    location /iml-srcmap-reverse {
-        proxy_pass {{SRCMAP_REVERSE_PROXY_PASS}};
-    }
-
     location /iml-device-aggregator {
         if ($ssl_client_verify != SUCCESS) {
             return 401;
