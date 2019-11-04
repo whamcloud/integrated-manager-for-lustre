@@ -8,7 +8,7 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
 
-    dependencies = [("chroma_core", "0006_device_devicehost")]
+    dependencies = [("chroma_core", "0006_updateyumfilejob")]
 
     operations = [
         migrations.CreateModel(

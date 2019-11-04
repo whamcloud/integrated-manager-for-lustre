@@ -29,7 +29,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     while let Some((fqdn, time_status)) = s.try_next().await? {
         tracing::debug!("fqdn: {:?} time_status: {:?}", fqdn, time_status);
+
         let (mut client, conn) = connect().await?;
+
         tokio::spawn(async move {
             conn.await
                 .unwrap_or_else(|e| tracing::error!("DB connection error {}", e));
@@ -44,6 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     alert_id,
                     fqdn.0
                 );
+
                 set_alert_inactive(alert_id, &mut client).await?;
             }
         } else if time_status.synced == TimeSync::Unsynced {
@@ -55,9 +58,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if let Some((content_type_id, managed_host_id, managed_host_state)) = host_info {
                 let is_valid_state = valid_state(managed_host_state);
+
                 tracing::debug!("is valid state: {:?}", is_valid_state);
 
-                if is_valid_state {
+                if is_valid_state && alert_id.is_none() {
                     tracing::info!("Creating new NtpOutOfSync entry for {}", fqdn.0);
                     add_alert(&fqdn.0, content_type_id, managed_host_id, &mut client).await?;
                 }

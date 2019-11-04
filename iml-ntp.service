@@ -2,6 +2,7 @@
 Description=IML Ntp Service
 PartOf=iml-manager.target
 After=rabbitmq-server.service
+After=postgresql.service
 After=iml-settings-populator.service
 Requires=iml-settings-populator.service
 

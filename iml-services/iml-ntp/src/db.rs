@@ -23,8 +23,8 @@ pub async fn get_managed_host_items(
     .map(|row| {
         row.map(|r| {
             (
-                r.get::<_, i32>("id"),
                 r.get::<_, i32>("content_type_id"),
+                r.get::<_, i32>("id"),
                 r.get::<_, String>("state"),
             )
         })
@@ -38,9 +38,9 @@ pub async fn get_active_alert_for_fqdn(
     iml_postgres::select(
         client,
         &format!(
-            r#"SELECT S.id FROM {} AS S LEFT JOIN {} AS MH 
+            r#"SELECT S.id FROM {} AS S INNER JOIN {} AS MH 
 ON S.alert_item_id = MH.id WHERE S.record_type='NtpOutOfSyncAlert' AND 
-S.active = True AND MH.fqdn=$1 AND MH.not_deleted=True;"#,
+S.active = True AND MH.fqdn=$1 AND MH.not_deleted = True;"#,
             AlertStateRecord::table_name(),
             ManagedHostRecord::table_name(),
         ),
