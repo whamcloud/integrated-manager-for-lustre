@@ -22,7 +22,7 @@ pub fn enable_stratagem<T: serde::de::DeserializeOwned + 'static>(
 }
 
 pub fn view(is_valid: bool, disabled: bool) -> Node<Command> {
-    let btn = bs_button::btn(
+    let mut btn = bs_button::btn(
         class![bs_button::BTN_PRIMARY],
         vec![
             Node::new_text("Enable Scan Interval"),
@@ -31,8 +31,10 @@ pub fn view(is_valid: bool, disabled: bool) -> Node<Command> {
     );
 
     if is_valid && !disabled {
-        btn.add_listener(simple_ev(Ev::Click, Command::Enable))
+        btn.add_listener(simple_ev(Ev::Click, Command::Enable));
     } else {
-        btn.add_attr(At::Disabled.as_str(), "disabled")
+        btn.add_attr(At::Disabled.as_str(), "disabled");
     }
+
+    btn
 }

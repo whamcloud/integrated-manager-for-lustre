@@ -193,8 +193,21 @@ fn fs_rows(model: &Model) -> Vec<Node<Msg>> {
         .values()
         .map(|x| {
             let fs = &x.fs;
-
             let mgt = model.get_mgt(&fs);
+            let mut lck = lock_indicator(
+                fs.id,
+                x.lock_indicator.is_open(),
+                fs.composite_id(),
+                &model.locks,
+            );
+            lck.add_style("margin-right", px(5));
+
+            let alr = alert_indicator(
+                &model.alerts,
+                fs.id,
+                &fs.resource_uri,
+                x.alert_indicator.is_open(),
+            );
 
             tr![
                 td![ui_link(
@@ -202,21 +215,8 @@ fn fs_rows(model: &Model) -> Vec<Node<Msg>> {
                     &fs.name
                 )],
                 td![
-                    lock_indicator(
-                        fs.id,
-                        x.lock_indicator.is_open(),
-                        fs.composite_id(),
-                        &model.locks
-                    )
-                    .add_style("margin-right", px(5))
-                    .map_message(Msg::FsRowLockIndicatorState),
-                    alert_indicator(
-                        &model.alerts,
-                        fs.id,
-                        &fs.resource_uri,
-                        x.alert_indicator.is_open()
-                    )
-                    .map_message(Msg::FsRowPopoverState)
+                    lck.map_message(Msg::FsRowLockIndicatorState),
+                    alr.map_message(Msg::FsRowPopoverState)
                 ],
                 td![mgt_link(mgt)],
                 td![fs.mdts.len().to_string()],

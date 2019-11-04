@@ -129,6 +129,7 @@ pub fn view(model: &Model) -> Node<Msg> {
         Msg::ActionClicked,
     );
 
-    action_dropdown(model.watching.is_open(), model.is_locked, record_els)
-        .add_listener(simple_ev(Ev::Click, Msg::WatchChange))
+    let mut el = action_dropdown(model.watching.is_open(), model.is_locked, record_els);
+    el.add_listener(simple_ev(Ev::Click, Msg::WatchChange));
+    el
 }

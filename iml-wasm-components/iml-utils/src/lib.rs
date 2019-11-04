@@ -35,17 +35,15 @@ impl IntoSerdeOpt for JsValue {
 }
 
 pub trait AddAttrs {
-    fn add_attrs(self, attrs: Attrs) -> Self;
+    fn add_attrs(&mut self, attrs: Attrs) -> &mut Self;
 }
 
 impl<T> AddAttrs for Node<T> {
-    fn add_attrs(self, attrs: Attrs) -> Self {
-        if let Node::Element(mut el) = self {
+    fn add_attrs(&mut self, attrs: Attrs) -> &mut Self {
+        if let Node::Element(el) = self {
             el.attrs.merge(attrs);
-            Node::Element(el)
-        } else {
-            self
         }
+        self
     }
 }
 

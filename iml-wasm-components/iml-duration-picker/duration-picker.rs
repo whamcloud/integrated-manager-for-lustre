@@ -163,7 +163,7 @@ pub fn duration_picker(model: &Model, mut input: Node<Msg>) -> Vec<Node<Msg>> {
         )
         .collect();
 
-    input = input
+    input
         .add_class("form-control")
         .add_attrs(attrs! {
             At::Type => "number",
@@ -171,15 +171,14 @@ pub fn duration_picker(model: &Model, mut input: Node<Msg>) -> Vec<Node<Msg>> {
             At::Max => MAX_SAFE_INTEGER
         })
         .add_listener(raw_ev(Ev::Input, Msg::InputChange));
-
     if let Some(x) = model.value {
-        input = input.add_attr(At::Value.as_str(), x);
+        input.add_attr(At::Value.as_str(), x);
     } else {
-        input = input.add_attr(At::Value.as_str(), "");
+        input.add_attr(At::Value.as_str(), "");
     }
 
     if model.disabled {
-        input = input.add_attr(At::Disabled.as_str(), true);
+        input.add_attr(At::Disabled.as_str(), true);
     }
 
     let validation_message = &model.validation_message;
@@ -209,21 +208,17 @@ pub fn duration_picker(model: &Model, mut input: Node<Msg>) -> Vec<Node<Msg>> {
 
     let open = model.watching.is_open();
 
-    let btn = bs_dropdown::btn(model.unit.to_string()).add_attrs(attrs);
+    let mut btn = bs_dropdown::btn(model.unit.to_string());
+    btn.add_attrs(attrs);
 
-    let mut dropdown = bs_dropdown::wrapper(
-        class![bs_input::INPUT_GROUP_BTN],
-        open,
-        vec![
-            btn,
-            bs_dropdown::menu(items).add_class(bs_dropdown::DROPDOWN_MENU_RIGHT),
-        ],
-    );
+    let mut menu = bs_dropdown::menu(items);
+    menu.add_class(bs_dropdown::DROPDOWN_MENU_RIGHT);
 
-    dropdown = if !open && !model.disabled {
-        dropdown.add_listener(mouse_ev(Ev::Click, move |_| Msg::WatchChange))
-    } else {
-        dropdown
+    let mut dropdown =
+        bs_dropdown::wrapper(class![bs_input::INPUT_GROUP_BTN], open, vec![btn, menu]);
+
+    if !open && !model.disabled {
+        dropdown.add_listener(mouse_ev(Ev::Click, move |_| Msg::WatchChange));
     };
 
     vec![input, el, dropdown]

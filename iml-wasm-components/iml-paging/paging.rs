@@ -60,18 +60,19 @@ pub enum PagingMsg {
 }
 
 pub fn page_selection(open: bool, rows: usize) -> Node<PagingMsg> {
-    let btn = bs_button::btn(
+    let mut btn = bs_button::btn(
         class![bs_dropdown::DROPDOWN_TOGGLE, bs_button::EXTRASMALL],
         vec![
             Node::new_text(rows.to_string()),
             i![class!["fa", "fa-fw", "fa-caret-up", "icon-caret-up"]],
         ],
-    )
-    .add_listener(mouse_ev(Ev::Click, |_| {
+    );
+
+    btn.add_listener(mouse_ev(Ev::Click, |_| {
         PagingMsg::Dropdown(WatchState::Watching)
     }));
 
-    bs_dropdown::wrapper(
+    let mut drdw = bs_dropdown::wrapper(
         class!["dropup"],
         open,
         vec![
@@ -88,8 +89,9 @@ pub fn page_selection(open: bool, rows: usize) -> Node<PagingMsg> {
                     .collect(),
             ),
         ],
-    )
-    .add_style("display", "inline-block")
+    );
+    drdw.add_style("display", "inline-block");
+    drdw
 }
 
 pub fn update_paging(msg: PagingMsg, p: &mut Paging) {

@@ -26,15 +26,15 @@ pub fn dropdown<T>(
 ) -> Node<T> {
     let open_class = if open { "open" } else { "" };
 
-    let btn: Node<_> = button![
+    let mut btn: Node<_> = button![
         class!["btn", "dropdown-toggle"],
         btn_name,
         i![class!["fa", "fa-fw", "fa-caret-down", "icon-caret-down"]]
     ];
 
-    let btn = btn_classes
-        .into_iter()
-        .fold(btn, |btn, &x| btn.add_class(x));
+    for &c in btn_classes {
+        btn.add_class(c);
+    }
 
     div![
         class!["btn-group", "dropdown", open_class],
