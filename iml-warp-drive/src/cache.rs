@@ -3,8 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::{listen::MessageType, DbRecord};
-use futures01::{future, Future, Stream as _};
-use iml_manager_client_1::{get, Client, ImlManagerClientError};
+use futures::{future, Future, Stream as _};
+use iml_manager_client::{get, get_client, Client, ImlManagerClientError};
 use iml_postgres::SharedClient;
 use iml_wire_types::{
     db::{
@@ -190,7 +190,7 @@ where
                 ToApiRecord::to_api_record(x, client).then(move |r| match r {
                     Ok(x) => Ok(x).map(record_fn).map(RecordChange::Update),
                     Err(ImlManagerClientError::Reqwest(ref e))
-                        if e.status() == Some(iml_manager_client_1::StatusCode::NOT_FOUND) =>
+                        if e.status() == Some(iml_manager_client::StatusCode::NOT_FOUND) =>
                     {
                         Ok(id).map(record_id_fn).map(RecordChange::Delete)
                     }
@@ -288,9 +288,10 @@ pub fn db_record_to_change_record(
 /// Given a `Cache`, this fn populates it
 /// with data from the API.
 pub fn populate_from_api(
-    client: Client,
     shared_api_cache: SharedCache,
 ) -> impl Future<Item = (), Error = ImlManagerClientError> {
+    let client = get_client().unwrap();
+
     let fs_fut = get(
         client.clone(),
         Filesystem::endpoint_name(),

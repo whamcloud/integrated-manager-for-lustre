@@ -2,12 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures01::{
+use futures::{
     future::{self, lazy, Future, IntoFuture},
     sync::oneshot,
     Stream,
 };
-use iml_manager_client_1::get_client;
+use iml_manager_client::get_client;
 use iml_manager_env;
 use iml_warp_drive::{
     cache::{self, populate_from_api, populate_from_db, Cache, SharedCache},
@@ -67,6 +67,8 @@ fn main() {
 
     let api_cache_state3 = Arc::clone(&api_cache_state);
 
+    let api_client = get_client().unwrap();
+
     // GET -> messages stream
     let routes = warp::get2()
         .and(warp::sse())
@@ -92,10 +94,8 @@ fn main() {
         warp::serve(routes).bind_with_graceful_shutdown(iml_manager_env::get_warp_drive_addr(), rx);
 
     tokio::run(lazy(move || {
-        let api_client = get_client().unwrap();
-
-        warp::spawn(lazy(move || {
-            populate_from_api(api_client.clone(), Arc::clone(&api_cache_state))
+        warp::spawn(
+            populate_from_api(Arc::clone(&api_cache_state))
                 .map_err(|e| -> failure::Error { e.into() })
                 .and_then(|_| iml_postgres::connect().from_err())
                 .map(|(client, conn)| {
@@ -209,8 +209,8 @@ fn main() {
                     exit2.trigger();
                     tx3.trigger();
                     log::error!("Unhandled error {}", e)
-                })
-        }));
+                }),
+        );
 
         iml_rabbit::connect_to_rabbit()
             .and_then(create_locks_consumer)
