@@ -70,8 +70,6 @@ DEVICE_AGGREGATOR_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, DEVICE_AGGREGAT
 
 UPDATE_HANDLER_PROXY_PASS = "http://unix:/var/run/iml-update-handler.sock"
 
-SRCMAP_REVERSE_PROXY_PASS = "http://unix:/var/run/iml-srcmap-reverse.sock"
-
 ALLOWED_HOSTS = ["*"]
 
 ADMINS = (

@@ -663,7 +663,6 @@ class ServiceConfig(CommandLine):
             "DEVICE_AGGREGATOR_PORT",
             "DEVICE_AGGREGATOR_PROXY_PASS",
             "UPDATE_HANDLER_PROXY_PASS",
-            "SRCMAP_REVERSE_PROXY_PASS",
         ]
 
         with open(conf_template, "r") as f:
