@@ -10,13 +10,14 @@ from django.db.models import Q
 from chroma_core.models import ManagedFilesystem, ManagedTarget
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs
 from chroma_core.models import Volume, VolumeNode
-from chroma_core.models import Command
+from chroma_core.models import Command, OstPool
 from chroma_core.models.filesystem import HSM_CONTROL_KEY, HSM_CONTROL_PARAMS
 
 import tastypie.http as http
 from tastypie import fields
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
+from chroma_api.chroma_model_resource import ChromaModelResource
 from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
 from chroma_api.validation_utils import validate
 from chroma_core.lib import conf_param
@@ -432,3 +433,23 @@ class FilesystemResource(MetricResource, ConfParamResource):
         raise custom_response(
             self, request, http.HttpAccepted, {"command": dehydrate_command(command), "filesystem": filesystem_data}
         )
+
+
+class OstPoolResource(ChromaModelResource):
+    osts = fields.ToManyField(
+        "chroma_api.target.TargetResource",
+        null=True,
+        attribute=lambda bundle: ManagedOst.objects.filter(filesystem=bundle.obj),
+        help_text="List of OSTs in this Pool",
+    )
+
+    class Meta:
+        queryset = OstPool.objects.all()
+        resource_name = "ostpool"
+        authentication = AnonymousAuthentication()
+        authorization = PatchedDjangoAuthorization()
+        excludes = ["not_deleted"]
+        ordering = ["filesystem", "name"]
+        list_allowed_methods = ["get", "post"]
+        detail_allowed_methods = ["get", "delete", "put"]
+        filtering = {"filesystem": ["exact"]}
