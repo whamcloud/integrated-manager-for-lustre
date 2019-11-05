@@ -697,6 +697,10 @@ impl FsDetailPageCallbacks {
     pub fn command_modal_closed(&self) {
         self.app.update(Msg::CloseCommandModal);
     }
+    pub fn set_polled_metrics(&self, polled_metrics: JsValue) {
+        let polled_metrics: HashMap<String, PolledMetric> = polled_metrics.into_serde().unwrap();
+        self.app.update(Msg::UpdateMetrics(polled_metrics));
+    }
 }
 
 fn init(_: Url, _orders: &mut impl Orders<Msg>) -> Model {

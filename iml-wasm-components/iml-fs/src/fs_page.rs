@@ -64,6 +64,7 @@ enum Msg {
     Destroy,
     WindowClick,
     Filesystems(HashMap<u32, Filesystem>),
+    UpdateMetrics(HashMap<String, PolledMetric>),
     FsRowPopoverState(AlertIndicatorPopoverState),
     FsRowLockIndicatorState(LockIndicatorState),
     Targets(HashMap<u32, Target<TargetConfParam>>),
@@ -133,6 +134,33 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 let mut r = model.rows.get_mut(&x).unwrap();
 
                 r.fs = filesystems.remove(&x).unwrap();
+            }
+        }
+        Msg::UpdateMetrics(polled_metrics) => {
+            let fs_ids = polled_metrics
+                .keys()
+                .cloned()
+                .into_iter()
+                .map(|x| {
+                    x.parse::<u32>()
+                        .expect(&format!("Filesystem id, {}, should be a number.", x))
+                })
+                .collect::<HashSet<u32>>();
+
+            for fs_id in fs_ids {
+                let metric_data = polled_metrics.get(&fs_id.to_string()).expect(&format!(
+                    "Couldn't retrieve metric data for fs_id {}",
+                    fs_id
+                ));
+                let r = model.rows.get_mut(&fs_id);
+
+                if let Some(row) = r {
+                    row.fs.bytes_free = metric_data.bytes_free;
+                    row.fs.bytes_total = metric_data.bytes_total;
+                    row.fs.files_free = metric_data.files_free;
+                    row.fs.files_total = metric_data.files_total;
+                    row.fs.client_count = metric_data.client_count;
+                }
             }
         }
         Msg::Targets(targets) => {
@@ -299,6 +327,10 @@ impl FsPageCallbacks {
     pub fn set_locks(&self, locks: JsValue) {
         let locks: Locks = locks.into_serde().unwrap();
         self.app.update(Msg::SetLocks(locks));
+    }
+    pub fn set_polled_metrics(&self, polled_metrics: JsValue) {
+        let polled_metrics: HashMap<String, PolledMetric> = polled_metrics.into_serde().unwrap();
+        self.app.update(Msg::UpdateMetrics(polled_metrics));
     }
 }
 
