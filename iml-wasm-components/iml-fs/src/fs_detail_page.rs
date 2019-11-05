@@ -250,7 +250,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                     fs.bytes_total = metric_data.bytes_total;
                     fs.files_free = metric_data.files_free;
                     fs.files_total = metric_data.files_total;
-                    fs.client_count = metric_data.client_count;
+
+                    let mdts_length = fs.mdts.len() as f64;
+                    fs.client_count = metric_data.client_count.map(move |x| x / mdts_length);
                 }
             }
         }

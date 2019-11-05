@@ -168,7 +168,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                     row.fs.bytes_total = metric_data.bytes_total;
                     row.fs.files_free = metric_data.files_free;
                     row.fs.files_total = metric_data.files_total;
-                    row.fs.client_count = metric_data.client_count;
+
+                    let mdts_length = row.fs.mdts.len() as f64;
+                    row.fs.client_count = metric_data.client_count.map(move |x| x / mdts_length);
                 }
             }
         }
