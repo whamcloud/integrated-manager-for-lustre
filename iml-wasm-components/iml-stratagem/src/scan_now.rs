@@ -116,13 +116,14 @@ pub fn view(fs_id: u32, model: &Model) -> Vec<Node<Msg>> {
             Node::new_text("Scan Filesystem Now"),
             i![class!["far", "fa-chart-bar"]],
         ],
-    )
-    .add_style("margin-left", px(15));
+    );
+
+    scan_now_button.add_style("margin-left", px(15));
 
     if !model.disabled && !model.is_locked {
-        scan_now_button = scan_now_button.add_listener(simple_ev(Ev::Click, Msg::OpenModal));
+        scan_now_button.add_listener(simple_ev(Ev::Click, Msg::OpenModal));
     } else {
-        scan_now_button = scan_now_button.add_attr(At::Disabled.as_str(), "disabled");
+        scan_now_button.add_attr(At::Disabled.as_str(), "disabled");
     }
 
     let mut xs = vec![scan_now_button];
@@ -144,12 +145,22 @@ fn scan_modal(fs_id: u32, model: &Model) -> Vec<Node<Msg>> {
         } else {
             Node::new_text("Scan Now")
         }],
-    )
-    .add_listener(mouse_ev(Ev::Click, move |_| Msg::ScanStratagem(fs_id)));
+    );
+
+    scan_button.add_listener(mouse_ev(Ev::Click, move |_| Msg::ScanStratagem(fs_id)));
 
     if model.disabled || model.is_locked {
-        scan_button = scan_button.add_attr("disabled", true);
+        scan_button.add_attr("disabled", true);
     }
+
+    let mut close_button = bs_button::btn(
+        class![bs_button::BTN_DEFAULT],
+        vec![
+            Node::new_text("Close"),
+            i![class!["far", "fa-times-circle"]],
+        ],
+    );
+    close_button.add_listener(simple_ev(Ev::Click, Msg::CloseModal));
 
     vec![
         bs_modal::backdrop(),
@@ -184,17 +195,7 @@ fn scan_modal(fs_id: u32, model: &Model) -> Vec<Node<Msg>> {
                     ],
                 ],
             ]]),
-            bs_modal::footer(vec![
-                scan_button,
-                bs_button::btn(
-                    class![bs_button::BTN_DEFAULT],
-                    vec![
-                        Node::new_text("Close"),
-                        i![class!["far", "fa-times-circle"]],
-                    ],
-                )
-                .add_listener(simple_ev(Ev::Click, Msg::CloseModal)),
-            ]),
+            bs_modal::footer(vec![scan_button, close_button]),
         ]),
     ]
 }

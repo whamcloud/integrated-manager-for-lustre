@@ -44,14 +44,12 @@ pub fn alert_indicator(
             if alerts.is_empty() {
                 vec![i![class!["fa", "fa-check-circle"]]]
             } else {
-                let i = i![class!["fa", "activate-popover", "fa-exclamation-circle"]];
+                let mut i = i![class!["fa", "activate-popover", "fa-exclamation-circle"]];
 
-                let i = if !open {
+                if !open {
                     i.add_listener(mouse_ev(Ev::Click, move |_| {
                         AlertIndicatorPopoverState((id, WatchState::Watching))
-                    }))
-                } else {
-                    i
+                    }));
                 };
 
                 vec![

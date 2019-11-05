@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 bootstrap-components = { path = "../bootstrap-components", version = "0.1" }
 iml-utils = { path = "../iml-utils", version = "0.1" }
-seed = "=0.4.0"
+seed = "=0.4.1"
 
 
 [lib]

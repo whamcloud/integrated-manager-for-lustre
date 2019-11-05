@@ -385,10 +385,11 @@ fn detail_header<T>(header: &str) -> Node<T> {
 }
 
 fn detail_panel<T>(children: Vec<Node<T>>) -> Node<T> {
-    well(children)
-        .add_style("display", "grid")
+    let mut p = well(children);
+    p.add_style("display", "grid")
         .add_style("grid-template-columns", "50% 50%")
-        .add_style("grid-row-gap", px(20))
+        .add_style("grid-row-gap", px(20));
+    p
 }
 
 fn detail_label<T>(content: &str) -> Node<T> {
@@ -405,6 +406,24 @@ fn filesystem(
     mgt_el: Node<Msg>,
     locks: &Locks,
 ) -> Node<Msg> {
+    let mut lock_ind = lock_indicator(
+        fs.id,
+        fs_detail.lock_indicator.is_open(),
+        fs.composite_id(),
+        &locks,
+    );
+    lock_ind.add_style("padding-right", px(10));
+
+    let alert_ind = alert_indicator(
+        &alerts,
+        0,
+        &fs.resource_uri,
+        fs_detail.alert_indicator.is_open(),
+    );
+
+    let mut dad = dad::render(fs.id, &fs_detail.dropdown, fs);
+    dad.add_style("grid-column", "1 / span 2");
+
     detail_panel(vec![
         detail_header(&format!("{} Details", fs.name)),
         detail_label("Space Usage"),
@@ -429,41 +448,27 @@ fn filesystem(
         div![client_count(fs.client_count)],
         detail_label("Alerts"),
         div![
-            span![lock_indicator(
-                fs.id,
-                fs_detail.lock_indicator.is_open(),
-                fs.composite_id(),
-                &locks
-            )
-            .add_style("padding-right", px(10))]
-            .map_message(Msg::FsDetailPopoverLockState),
-            span![alert_indicator(
-                &alerts,
-                0,
-                &fs.resource_uri,
-                fs_detail.alert_indicator.is_open()
-            )]
-            .map_message(Msg::FsDetailPopoverState),
+            span![lock_ind].map_message(Msg::FsDetailPopoverLockState),
+            span![alert_ind].map_message(Msg::FsDetailPopoverState),
         ],
         div![
             class!["full-width"],
             style! { "grid-column" => "1 / span 2" },
-            dad::render(fs.id, &fs_detail.dropdown, fs)
-                .map_message(Msg::FsDetailDropdown)
-                .add_style("grid-column", "1 / span 2")
+            dad.map_message(Msg::FsDetailDropdown)
         ],
     ])
 }
 
 fn client_mount_details(fs_name: &str, details: impl Into<Cow<'static, str>>) -> Vec<Node<Msg>> {
-    let close_btn = bs_button::btn(
+    let mut close_btn = bs_button::btn(
         class![bs_button::BTN_DEFAULT],
         vec![
             Node::new_text("Close"),
             i![class!["far", "fa-times-circle"]],
         ],
-    )
-    .add_listener(simple_ev(Ev::Click, Msg::CloseMountModal));
+    );
+
+    close_btn.add_listener(simple_ev(Ev::Click, Msg::CloseMountModal));
 
     vec![
         bs_modal::backdrop(),
@@ -503,70 +508,76 @@ fn target_table(
                 th!["Status"],
                 th!["Actions"],
             ]],
-            tbody![xs.iter().map(|x| tr![
-                td![
-                    class!["col-sm-1", "col-xs-2"],
-                    style! {"word-break" => "break-all"},
-                    ui_link(&format!("target/{}", x.id), &x.name)
-                ],
-                td![
-                    class!["col-sm-3", "col-xs-2"],
-                    style! {"word-break" => "break-all"},
-                    x.volume_name
-                ],
-                td![
-                    class!["hidden-xs"],
-                    server_link(&x.primary_server, &x.primary_server_name)
-                ],
-                td![
-                    class!["hidden-xs"],
-                    server_link(
-                        &x.failover_servers.first().unwrap_or(&"".into()),
-                        &x.failover_server_name
-                    )
-                ],
-                td![server_link(
-                    x.active_host.as_ref().unwrap_or(&"".into()),
-                    &x.active_host_name
-                )],
-                match table_rows.get(&x.id) {
-                    Some(row) => vec![
-                        td![
-                            class!["col-sm-3"],
-                            lock_indicator(
+            tbody![
+                xs.iter().map(|x| tr![
+                    td![
+                        class!["col-sm-1", "col-xs-2"],
+                        style! {"word-break" => "break-all"},
+                        ui_link(&format!("target/{}", x.id), &x.name)
+                    ],
+                    td![
+                        class!["col-sm-3", "col-xs-2"],
+                        style! {"word-break" => "break-all"},
+                        x.volume_name
+                    ],
+                    td![
+                        class!["hidden-xs"],
+                        server_link(&x.primary_server, &x.primary_server_name)
+                    ],
+                    td![
+                        class!["hidden-xs"],
+                        server_link(
+                            &x.failover_servers.first().unwrap_or(&"".into()),
+                            &x.failover_server_name
+                        )
+                    ],
+                    td![server_link(
+                        x.active_host.as_ref().unwrap_or(&"".into()),
+                        &x.active_host_name
+                    )],
+                    match table_rows.get(&x.id) {
+                        Some(row) => {
+                            let mut lck = lock_indicator(
                                 x.id,
                                 row.lock_indicator.is_open(),
                                 x.composite_id(),
-                                &locks
-                            )
-                            .add_style("margin-right", px(5))
-                            .map_message(Msg::FsRowLockIndicatorState),
-                            alert_indicator(
+                                &locks,
+                            );
+                            lck.add_style("margin-right", px(5));
+                            let alr = alert_indicator(
                                 &alerts,
                                 x.id,
                                 &x.resource_uri,
-                                row.alert_indicator.is_open()
-                            )
-                            .map_message(Msg::FsRowIndicatorState)
-                        ],
-                        td![dad::render(x.id, &row.dropdown, x).map_message(Msg::FsRowDropdown)]
-                    ],
-                    None => vec![td![], td![]],
-                }
-            ])],
+                                row.alert_indicator.is_open(),
+                            );
+                            vec![
+                                td![
+                                    class!["col-sm-3"],
+                                    lck.map_message(Msg::FsRowLockIndicatorState),
+                                    alr.map_message(Msg::FsRowIndicatorState)
+                                ],
+                                td![dad::render(x.id, &row.dropdown, x)
+                                    .map_message(Msg::FsRowDropdown)],
+                            ]
+                        }
+                        None => vec![td![], td![]],
+                    }
+                ])
+            ],
         ],
     )
 }
 
 fn view(model: &Model) -> Node<Msg> {
-    let mnt_info_btn = bs_button::btn(
+    let mut mnt_info_btn = bs_button::btn(
         class![bs_button::BTN_DEFAULT],
         vec![
             Node::new_text("View Client Mount Information"),
             i![class!["fas", "fa-info-circle"]],
         ],
-    )
-    .add_listener(simple_ev(Ev::Click, Msg::OpenMountModal));
+    );
+
+    mnt_info_btn.add_listener(simple_ev(Ev::Click, Msg::OpenMountModal));
 
     match &model.fs {
         Some(fs) => div![
@@ -619,6 +630,8 @@ fn view(model: &Model) -> Node<Msg> {
             if model.osts.is_empty() {
                 vec![]
             } else {
+                let mut pg = paging(&model.ost_paging);
+                pg.add_style("margin-bottom", px(50));
                 vec![
                     h5![class!["section-header"], "Object Storage Targets"],
                     target_table(
@@ -627,9 +640,7 @@ fn view(model: &Model) -> Node<Msg> {
                         &model.locks,
                         &model.table_rows,
                     ),
-                    paging(&model.ost_paging)
-                        .add_style("margin-bottom", px(50))
-                        .map_message(Msg::OstPaging),
+                    pg.map_message(Msg::OstPaging),
                 ]
             }
         ],

@@ -180,10 +180,11 @@ fn get_inode_elements<T>(inodes: &Vec<INodeCount>) -> Vec<Node<T>> {
 }
 
 fn detail_panel<T>(children: Vec<Node<T>>) -> Node<T> {
-    div!(children)
-        .add_style("display", "grid")
+    let mut div = div!(children);
+    div.add_style("display", "grid")
         .add_style("grid-template-columns", "50% 50%")
-        .add_style("grid-row-gap", px(20))
+        .add_style("grid-row-gap", px(20));
+    div
 }
 
 fn get_date_time(timestamp: i64) -> String {
