@@ -1740,3 +1740,12 @@ pub struct ComponentState<T: Default> {
     pub info: String,
     pub state: T,
 }
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct PolledMetric {
+    bytes_free: Option<f64>,
+    bytes_total: Option<f64>,
+    client_count: Option<f64>,
+    files_free: Option<f64>,
+    files_total: Option<f64>,
+}
