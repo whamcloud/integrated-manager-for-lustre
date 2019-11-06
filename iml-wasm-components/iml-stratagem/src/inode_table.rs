@@ -3,7 +3,7 @@ use bootstrap_components::bs_table;
 use chrono::offset::{TimeZone, Utc};
 use futures::Future;
 use iml_environment::influx_root;
-use iml_utils::format_bytes;
+use number_formatter::format_bytes;
 use seed::{
     class, div,
     dom_types::Attrs,

@@ -194,6 +194,12 @@ pub async fn get_all<T: EndpointName + Debug + serde::de::DeserializeOwned>(
     get(T::endpoint_name(), serde_json::json!({"limit": 0})).await
 }
 
+pub async fn get_one<T: EndpointName + Debug + serde::de::DeserializeOwned>(
+    query: impl serde::Serialize,
+) -> Result<T, ImlManagerCliError> {
+    first(get(T::endpoint_name(), query).await?)
+}
+
 pub fn extract_api_id(s: &str) -> Option<&str> {
     let re = Regex::new(r"^/?api/[^/]+/(\d+)/?$").unwrap();
 

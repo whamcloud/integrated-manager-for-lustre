@@ -24,6 +24,7 @@ tokio = "0.2.0-alpha.6"
 tokio-executor = "0.2.0-alpha.6"
 tracing = "0.1"
 tracing-subscriber = "0.1"
+number-formatter = { path = "../number-formatter", version = "0.1" }
 
 [dependencies.regex]
 version = "1.3"

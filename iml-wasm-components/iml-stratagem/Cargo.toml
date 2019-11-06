@@ -24,6 +24,7 @@ seed = "=0.4.1"
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"]}
 web-sys = "0.3"
 chrono = "0.4.9"
+number-formatter = { path = "../../number-formatter", version = "0.1" }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"

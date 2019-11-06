@@ -4,6 +4,7 @@
 
 use iml_manager_cli::{
     display_utils::display_error,
+    filesystem::{self, filesystem_cli},
     server::{self, server_cli},
     stratagem::{self, stratagem_cli},
     update_repo_file::{self, update_repo_file_cli},
@@ -29,6 +30,12 @@ pub enum App {
         #[structopt(subcommand)]
         command: server::ServerCommand,
     },
+    #[structopt(name = "filesystem")]
+    /// Work with Storage Servers
+    Filesystem {
+        #[structopt(subcommand)]
+        command: filesystem::FilesystemCommand,
+    },
     #[structopt(name = "update_repo")]
     ///  Update Agent repo files
     UpdateRepoFile(update_repo_file::UpdateRepoFileHosts),
@@ -52,6 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         App::Stratagem { command } => stratagem_cli(command).await,
         App::Server { command } => server_cli(command).await,
         App::UpdateRepoFile(config) => update_repo_file_cli(config).await,
+        App::Filesystem { command } => filesystem_cli(command).await,
     };
 
     if let Err(e) = r {

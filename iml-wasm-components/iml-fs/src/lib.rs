@@ -4,7 +4,7 @@ pub mod fs_page;
 use iml_environment::ui_root;
 use iml_pie_chart::pie_chart;
 use iml_utils::extract_api;
-use iml_utils::{format_bytes, format_number};
+use number_formatter::{format_bytes, format_number};
 use iml_wire_types::{Target, TargetConfParam};
 use seed::{a, attrs, div, prelude::*};
 

@@ -734,6 +734,8 @@ impl<T> EndpointName for Target<T> {
 
 type Mdt = Target<MdtConfParams>;
 
+type Mgt = Target<Option<MdtConfParams>>;
+
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct HsmControlParamMdt {
     pub id: String,
@@ -769,7 +771,7 @@ pub struct Filesystem {
     pub immutable_state: bool,
     pub label: String,
     pub mdts: Vec<Mdt>,
-    pub mgt: String,
+    pub mgt: Mgt,
     pub mount_command: String,
     pub mount_path: String,
     pub name: String,
