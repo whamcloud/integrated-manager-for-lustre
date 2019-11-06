@@ -132,11 +132,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             Ok(())
         }
-        .map_err(exit.trigger_fn())
-        .map(|r: Result<(), error::ImlWarpDriveError>| match r {
-            Ok(_) => tracing::info!("Rabbit client stream exited"),
-            Err(e) => tracing::error!("Unhandled error {}", e),
-        }),
+            .map_err(exit.trigger_fn())
+            .map(|r: Result<(), error::ImlWarpDriveError>| match r {
+                Ok(_) => tracing::info!("Rabbit client stream exited"),
+                Err(e) => tracing::error!("Unhandled error {}", e),
+            }),
     );
 
     // GET -> messages stream
@@ -165,7 +165,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         sse.reply(warp::sse::keep_alive().stream(stream)),
                     )
                 }
-                .map_err(warp::reject::custom)
+                    .map_err(warp::reject::custom)
             },
         )
         .with(warp::log("iml-warp-drive::api"));

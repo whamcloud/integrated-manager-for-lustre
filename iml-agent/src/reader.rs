@@ -49,15 +49,15 @@ async fn get_delivery(
 
                         Ok(())
                     }
-                    .map(move |r: Result<(), ImlAgentError>| match r {
-                        Ok(_) => (),
-                        Err(e) => {
-                            tracing::warn!("Error during session start {:?}", e);
-                            sessions2.terminate_session(&plugin).unwrap_or_else(|e| {
-                                tracing::warn!("Error terminating session, {}", e)
-                            });
-                        }
-                    }),
+                        .map(move |r: Result<(), ImlAgentError>| match r {
+                            Ok(_) => (),
+                            Err(e) => {
+                                tracing::warn!("Error during session start {:?}", e);
+                                sessions2.terminate_session(&plugin).unwrap_or_else(|e| {
+                                    tracing::warn!("Error terminating session, {}", e)
+                                });
+                            }
+                        }),
                 );
             }
             ManagerMessage::Data {
@@ -79,8 +79,8 @@ async fn get_delivery(
 
                             Ok(())
                         }
-                        .map_err(|e: ImlAgentError| error!("{}", e))
-                        .map(drop),
+                            .map_err(|e: ImlAgentError| error!("{}", e))
+                            .map(drop),
                     );
                 };
             }
