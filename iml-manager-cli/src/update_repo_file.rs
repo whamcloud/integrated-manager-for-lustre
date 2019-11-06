@@ -20,7 +20,7 @@ pub struct UpdateRepoFileHosts {
 
 fn filter_known_hosts<'a, 'b>(
     hostlist: &'b BTreeSet<String>,
-    api_hosts: &'a Vec<Host>,
+    api_hosts: &'a [Host],
 ) -> Vec<&'a Host> {
     api_hosts
         .iter()
@@ -28,10 +28,10 @@ fn filter_known_hosts<'a, 'b>(
         .collect()
 }
 
-fn has_host(api_hosts: &Vec<&Host>, host: &String) -> bool {
+fn has_host(api_hosts: &[&Host], host: &str) -> bool {
     api_hosts
         .iter()
-        .any(|y| &y.fqdn == host || &y.nodename == host)
+        .any(|y| y.fqdn == host || y.nodename == host)
 }
 
 #[derive(serde::Serialize)]

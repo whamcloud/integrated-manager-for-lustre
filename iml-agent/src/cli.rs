@@ -2,7 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures01::Future;
 use iml_agent::action_plugins::stratagem::{
     action_purge, action_warning,
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
@@ -17,6 +16,7 @@ use std::{
     process::exit,
 };
 use structopt::StructOpt;
+use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 #[derive(Debug, StructOpt)]
 pub enum StratagemCommand {
@@ -58,7 +58,7 @@ fn parse_duration(src: &str) -> Result<u64, io::Error> {
         Some('d') => Ok(val * 86_400_000),
         Some('m') => Ok(val * 60_000),
         Some('s') => Ok(val * 1_000),
-        Some('1'...'9') => Err(invalid_input_err("No unit specified.")),
+        Some('1'..='9') => Err(invalid_input_err("No unit specified.")),
         _ => Err(invalid_input_err(
             "Invalid unit. Valid units include 'h' and 'd'.",
         )),
@@ -126,17 +126,6 @@ pub enum App {
     CheckStonith,
 }
 
-/// Takes an asynchronous computation (Future), runs it to completion
-/// and returns the result.
-///
-/// Even though the action is asynchronous, this fn will block until
-/// the future resolves.
-fn run_cmd<R: Send + 'static, E: Send + 'static>(
-    fut: impl Future<Item = R, Error = E> + Send + 'static,
-) -> std::result::Result<R, E> {
-    tokio::runtime::Runtime::new().unwrap().block_on_all(fut)
-}
-
 fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<dyn Iterator<Item = String>> {
     match input {
         None => {
@@ -157,7 +146,7 @@ fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<dyn Iterato
                     let f = match File::open(&name) {
                         Ok(x) => x,
                         Err(e) => {
-                            log::error!("Failed to open {}: {}", &name, e);
+                            tracing::error!("Failed to open {}: {}", &name, e);
                             exit(exitcode::CANTCREAT);
                         }
                     };
@@ -182,7 +171,7 @@ fn humanize(s: &str) -> String {
 /// If a `StratagemClassifyCounter` is encountered, this
 /// fn will recurse and print the nested counter before the parent.
 fn print_counters(xs: Vec<StratagemCounters>) {
-    log::info!("Looking at: {:?}", xs);
+    tracing::info!("Looking at: {:?}", xs);
 
     let mut table = Table::new();
     table.add_row(row!["Name", "Count", "Used"]);
@@ -225,8 +214,13 @@ fn add_counter_entry(x: impl Counter, t: &mut Table, h: &mut v_hist::Histogram) 
     h.add_entry(name, x.count().try_into().unwrap());
 }
 
-fn main() {
-    env_logger::init();
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let subscriber = Subscriber::builder()
+        .with_env_filter(EnvFilter::from_default_env())
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber).unwrap();
 
     let matches = App::from_args();
 
@@ -279,7 +273,7 @@ fn main() {
 
                 let data = generate_cooked_config(device_path, rd, pd);
 
-                let result = run_cmd(trigger_scan(data));
+                let result = trigger_scan(data).await;
 
                 sp.stop();
                 println!("{}", termion::clear::CurrentLine);
@@ -312,7 +306,7 @@ fn main() {
                 };
             }
         },
-        App::CheckHA => match check_ha::check_ha(()).wait() {
+        App::CheckHA => match check_ha::check_ha(()).await {
             Ok(v) => {
                 for e in v {
                     println!("{}", serde_json::to_string(&e).unwrap())
@@ -320,7 +314,7 @@ fn main() {
             }
             Err(e) => println!("{:?}", e),
         },
-        App::CheckStonith => match check_stonith::check_stonith(()).wait() {
+        App::CheckStonith => match check_stonith::check_stonith(()).await {
             Ok(cs) => {
                 println!(
                     "{}: {}",
@@ -334,5 +328,7 @@ fn main() {
             }
             Err(e) => println!("{:?}", e),
         },
-    }
+    };
+
+    Ok(())
 }

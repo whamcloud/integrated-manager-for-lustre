@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use iml_fs::ImlFsError;
 use iml_wire_types::PluginName;
 use std::{fmt, process::Output};
 
@@ -69,6 +70,7 @@ impl std::error::Error for CibError {
 
 #[derive(Debug)]
 pub enum ImlAgentError {
+    ImlFsError(ImlFsError),
     Io(std::io::Error),
     Serde(serde_json::Error),
     Reqwest(reqwest::Error),
@@ -81,14 +83,13 @@ pub enum ImlAgentError {
     NoSessionError(NoSessionError),
     NoPluginError(NoPluginError),
     RequiredError(RequiredError),
-    OneshotCanceled(futures01::sync::oneshot::Canceled),
+    OneshotCanceled(futures::channel::oneshot::Canceled),
     LiblustreError(liblustreapi::error::LiblustreError),
     CmdOutputError(Output),
     SendError,
     InvalidUriParts(http::uri::InvalidUriParts),
     InvalidUri(http::uri::InvalidUri),
     InvalidHeaderValue(http::header::InvalidHeaderValue),
-    HyperError(hyper::error::Error),
     NativeTls(native_tls::Error),
     XmlError(elementtree::Error),
     CibError(CibError),
@@ -98,6 +99,7 @@ pub enum ImlAgentError {
 impl std::fmt::Display for ImlAgentError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
+            ImlAgentError::ImlFsError(ref err) => write!(f, "{}", err),
             ImlAgentError::Io(ref err) => write!(f, "{}", err),
             ImlAgentError::Serde(ref err) => write!(f, "{}", err),
             ImlAgentError::Reqwest(ref err) => write!(f, "{}", err),
@@ -124,7 +126,6 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::InvalidUriParts(ref err) => write!(f, "{}", err),
             ImlAgentError::InvalidUri(ref err) => write!(f, "{}", err),
             ImlAgentError::InvalidHeaderValue(ref err) => write!(f, "{}", err),
-            ImlAgentError::HyperError(ref err) => write!(f, "{}", err),
             ImlAgentError::NativeTls(ref err) => write!(f, "{}", err),
             ImlAgentError::XmlError(ref err) => write!(f, "{}", err),
             ImlAgentError::CibError(ref err) => write!(f, "{}", err),
@@ -136,6 +137,7 @@ impl std::fmt::Display for ImlAgentError {
 impl std::error::Error for ImlAgentError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
+            ImlAgentError::ImlFsError(ref err) => Some(err),
             ImlAgentError::Io(ref err) => Some(err),
             ImlAgentError::Serde(ref err) => Some(err),
             ImlAgentError::Reqwest(ref err) => Some(err),
@@ -156,12 +158,17 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::InvalidUriParts(ref err) => Some(err),
             ImlAgentError::InvalidUri(ref err) => Some(err),
             ImlAgentError::InvalidHeaderValue(ref err) => Some(err),
-            ImlAgentError::HyperError(ref err) => Some(err),
             ImlAgentError::NativeTls(ref err) => Some(err),
             ImlAgentError::XmlError(ref err) => Some(err),
             ImlAgentError::CibError(ref err) => Some(err),
             ImlAgentError::UnexpectedStatusError => None,
         }
+    }
+}
+
+impl From<ImlFsError> for ImlAgentError {
+    fn from(err: ImlFsError) -> Self {
+        ImlAgentError::ImlFsError(err)
     }
 }
 
@@ -255,14 +262,14 @@ impl From<RequiredError> for ImlAgentError {
     }
 }
 
-impl From<futures01::sync::oneshot::Canceled> for ImlAgentError {
-    fn from(err: futures01::sync::oneshot::Canceled) -> Self {
+impl From<futures::channel::oneshot::Canceled> for ImlAgentError {
+    fn from(err: futures::channel::oneshot::Canceled) -> Self {
         ImlAgentError::OneshotCanceled(err)
     }
 }
 
-impl<T> From<futures01::sync::mpsc::SendError<T>> for ImlAgentError {
-    fn from(_: futures01::sync::mpsc::SendError<T>) -> Self {
+impl From<futures::channel::mpsc::SendError> for ImlAgentError {
+    fn from(_: futures::channel::mpsc::SendError) -> Self {
         ImlAgentError::SendError
     }
 }
@@ -276,12 +283,6 @@ impl From<http::uri::InvalidUriParts> for ImlAgentError {
 impl From<http::uri::InvalidUri> for ImlAgentError {
     fn from(err: http::uri::InvalidUri) -> Self {
         ImlAgentError::InvalidUri(err)
-    }
-}
-
-impl From<hyper::error::Error> for ImlAgentError {
-    fn from(err: hyper::error::Error) -> Self {
-        ImlAgentError::HyperError(err)
     }
 }
 

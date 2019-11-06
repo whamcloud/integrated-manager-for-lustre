@@ -86,10 +86,10 @@ pub async fn wait_for_cmds(cmds: Vec<Command>) -> Result<Vec<Command>, ImlManage
     let mut cmd_spinners = HashMap::new();
 
     for (idx, cmd) in cmds.iter().enumerate() {
-        let pb = m.add(ProgressBar::new(100000));
+        let pb = m.add(ProgressBar::new(100_000));
         pb.set_style(spinner_style.clone());
         pb.set_prefix(&format!("[{}/{}]", idx + 1, num_cmds));
-        pb.set_message(&format!("{}", cmd.message));
+        pb.set_message(&cmd.message);
         cmd_spinners.insert(cmd.id, pb);
     }
 
@@ -97,7 +97,7 @@ pub async fn wait_for_cmds(cmds: Vec<Command>) -> Result<Vec<Command>, ImlManage
 
     let fut2 = async {
         loop {
-            if cmd_spinners.len() == 0 {
+            if cmd_spinners.is_empty() {
                 tracing::debug!("All commands complete. Returning");
                 return Ok::<_, ImlManagerCliError>(());
             }

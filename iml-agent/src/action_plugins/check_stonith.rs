@@ -7,11 +7,6 @@ use crate::{
     cmd::cmd_output,
 };
 use elementtree::Element;
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt, TryFutureExt},
-};
-use futures01::Future;
 use iml_wire_types::{ComponentState, ConfigState, RunState, ServiceState};
 use std::default::Default;
 
@@ -27,7 +22,7 @@ use std::default::Default;
 ///   - none - any host can fence any host
 /// * pcmk_host_list - list of hosts controlled
 ///
-fn check_instance_attr(elem: &Option<&Element>, node: &String) -> Result<(), String> {
+fn check_instance_attr(elem: Option<&Element>, node: &str) -> Result<(), String> {
     if let Some(instance) = elem {
         let mut hl = "";
         let mut hl_set = false;
@@ -52,8 +47,8 @@ fn check_instance_attr(elem: &Option<&Element>, node: &String) -> Result<(), Str
         // MISSING -> if host list is missing, default to dynamic-list, else
         // check host list
         if static_hc || hl_set {
-            let v: Vec<&str> = hl.split(",").collect();
-            if !v.contains(&node.as_str()) {
+            let v: Vec<&str> = hl.split(',').collect();
+            if !v.contains(&node) {
                 return Err(format!("{} missing from host list", node));
             }
         }
@@ -64,7 +59,7 @@ fn check_instance_attr(elem: &Option<&Element>, node: &String) -> Result<(), Str
 /// This processes <meta_attributes> section of a stonith <primitive>
 /// from the pacemaker cib
 ///
-fn check_meta_attr(elem: &Option<&Element>) -> Result<(), String> {
+fn check_meta_attr(elem: Option<&Element>) -> Result<(), String> {
     if let Some(meta) = elem {
         for e in meta.children() {
             if Some("target-role") == e.get_attr("name") {
@@ -81,7 +76,7 @@ fn check_meta_attr(elem: &Option<&Element>) -> Result<(), String> {
 
 fn stonith_ok(
     elem: &Element,
-    nodename: &String,
+    nodename: &str,
 ) -> Result<(bool, String, ConfigState), ImlAgentError> {
     match elem.get_attr("type") {
         None => Err(ImlAgentError::CibError(CibError(format!(
@@ -97,10 +92,9 @@ fn stonith_ok(
             Some(_) => Ok((true, "fence_chroma".to_string(), ConfigState::IML)),
         },
         Some(t) => {
-            if let Err(err) = check_meta_attr(&elem.find("meta_attributes")) {
+            if let Err(err) = check_meta_attr(elem.find("meta_attributes")) {
                 Ok((false, format!("{} - {}", t, err), ConfigState::Other))
-            } else if let Err(err) =
-                check_instance_attr(&elem.find("instance_attributes"), nodename)
+            } else if let Err(err) = check_instance_attr(elem.find("instance_attributes"), nodename)
             {
                 Ok((false, format!("{} - {}", t, err), ConfigState::Other))
             } else {
@@ -110,7 +104,7 @@ fn stonith_ok(
     }
 }
 
-fn do_check_stonith(xml: &[u8], nodename: &String) -> Result<ComponentState<bool>, ImlAgentError> {
+fn do_check_stonith(xml: &[u8], nodename: &str) -> Result<ComponentState<bool>, ImlAgentError> {
     let mut state = ComponentState {
         state: false,
         service: ServiceState::Configured(RunState::Setup),
@@ -148,13 +142,13 @@ fn do_check_stonith(xml: &[u8], nodename: &String) -> Result<ComponentState<bool
     }
 }
 
-pub async fn check_stonith_async(_: ()) -> Result<ComponentState<bool>, ImlAgentError> {
+pub async fn check_stonith(_: ()) -> Result<ComponentState<bool>, ImlAgentError> {
     let stonith = cmd_output(
         "cibadmin",
-        &["--query", "--xpath", "//primitive[@class='stonith']"],
+        vec!["--query", "--xpath", "//primitive[@class='stonith']"],
     )
-    .compat()
     .await?;
+
     if !stonith.status.success() {
         return Ok(ComponentState {
             state: false,
@@ -162,12 +156,8 @@ pub async fn check_stonith_async(_: ()) -> Result<ComponentState<bool>, ImlAgent
             ..Default::default()
         });
     }
-    let node = cmd_output("crm_node", &["-n"]).compat().await?;
+    let node = cmd_output("crm_node", vec!["-n"]).await?;
     do_check_stonith(stonith.stdout.as_slice(), &String::from_utf8(node.stdout)?)
-}
-
-pub fn check_stonith(_: ()) -> impl Future<Item = ComponentState<bool>, Error = ImlAgentError> {
-    check_stonith_async(()).boxed().compat()
 }
 
 #[cfg(test)]
