@@ -15,7 +15,7 @@ pub fn toggle(active: bool) -> Node<Active> {
         cfg.merge(class!["active"]);
     }
 
-    bs_button::btn(
+    let mut btn = bs_button::btn(
         cfg,
         if active {
             vec![i![class!["fa", "fa-check"]], Node::new_text("Enabled")]
@@ -25,6 +25,7 @@ pub fn toggle(active: bool) -> Node<Active> {
                 Node::new_text("Disabled"),
             ]
         },
-    )
-    .add_listener(mouse_ev(Ev::Click, move |_| Active(!active)))
+    );
+    btn.add_listener(mouse_ev(Ev::Click, move |_| Active(!active)));
+    btn
 }

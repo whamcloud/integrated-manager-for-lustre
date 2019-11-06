@@ -18,9 +18,8 @@ from tastypie import fields
 from tastypie.api import url
 from tastypie import http
 from tastypie.exceptions import ImmediateHttpResponse
-from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_core.models.lnet_configuration import LNetOfflineAlert
 from chroma_core.models.host import UpdatesAvailableAlert, ManagedHost
 from chroma_api.chroma_model_resource import ChromaModelResource
@@ -48,7 +47,7 @@ class AlertSubscriptionValidation(Validation):
         return errors
 
 
-class AlertSubscriptionAuthorization(DjangoAuthorization):
+class AlertSubscriptionAuthorization(PatchedDjangoAuthorization):
     def read_list(self, object_list, bundle):
         request = bundle.request
         if request.method is None:
@@ -136,7 +135,7 @@ class AlertTypeResource(Resource):
 
     class Meta:
         resource_name = "alert_type"
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         list_allowed_methods = ["get"]
         detail_allowed_methods = ["get"]
@@ -231,7 +230,7 @@ class AlertResource(SeverityResource):
 
         return [api.get_resource_uri(ao) for ao in set(affected_objects)]
 
-    def build_filters(self, filters=None):
+    def build_filters(self, filters=None, **kwargs):
 
         filters = super(AlertResource, self).build_filters(filters)
 
@@ -263,7 +262,7 @@ class AlertResource(SeverityResource):
 
         ordering = ["begin", "end", "active"]
         serializer = DateSerializer()
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         list_allowed_methods = ["get"]
         detail_allowed_methods = ["get", "patch", "put"]
@@ -320,7 +319,7 @@ class UpdatesAvailableAlertResource(Resource):
 
     class Meta:
         resource_name = "updates_available"
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         validation = UpdatesAvailableAlertValidation()
         list_allowed_methods = ["post"]

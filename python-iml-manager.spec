@@ -49,26 +49,26 @@ Requires:       python-networkx
 Requires:       python-ordereddict
 Requires:       python-paramiko
 Requires:       python-prettytable
-Requires:       python-psycopg2
+Requires:       python-psycopg2 >= 2.7.7
 Requires:       python-setuptools
 Requires:       python-requests >= 2.6.0
 Requires:       python-uuid
 Requires:       python-dateutil >= 1.5
-Requires:       python2-django-tastypie = 0.12.2
+Requires:       python2-django-tastypie = 0.14.1
 Requires:       python2-jsonschema >= 2.5.1
-Requires:       python2-kombu >= 3.0.19
+Requires:       python2-kombu >= 4.2.2
 Requires:       python2-mimeparse
 Requires:       python2-toolz
 Requires:       rabbitmq-server >= 3.3.5-34
-Requires:       Django >= 1.6, Django < 1.7
-Requires:       Django-south >= 1.0.2
+Requires:       Django >= 1.11, Django < 1.12
 Requires:       policycoreutils-python
 Requires:       system-config-firewall-base
+Requires:       systemd-python
 Requires:       nginx >= 1:1.12.2
 Requires:       nodejs >= 1:6.16.0
 Requires(post): selinux-policy-targeted
 # IML Repo
-Requires:       django-picklefield >= 0.1.9
+Requires:       python2-django-picklefield >= 1.0.0
 Requires:       iml-device-scanner-aggregator >= 3.0.0
 Requires:       iml-gui >= 6.6.0
 Requires:       iml-old-gui >= 3.1.3
@@ -76,67 +76,33 @@ Requires:       iml-online-help >= 2.6.0
 Requires:       iml-realtime >= 7.0.2
 Requires:       iml_sos_plugin >= 2.3
 Requires:       iml-socket-worker >= 4.0.3
-Requires:       iml-srcmap-reverse >= 3.0.8
 Requires:       iml-update-handler >= 1.0.3, iml-update-handler < 2
 Requires:       iml-view-server >= 8.0.5
-Requires:       iml-wasm-components >= 0.1.1
+Requires:       iml-wasm-components >= 0.1.2
 Requires:       python2-gevent >= 1.0.1
 Requires:       python2-httpagentparser >= 1.5
 Requires:       python2-iml-manager-cli = %{version}-%{release}
 Requires:       python2-requests-unixsocket >= 0.1.5
 Requires:       python2-massiviu >= 0.1.0-2
-Requires:       rust-iml-action-runner >= 0.1.1
-Requires:       rust-iml-agent-comms >= 0.1.1
-Requires:       rust-iml-mailbox >= 0.1.1
-Requires:       rust-iml-stratagem >= 0.1.1
-Requires:       rust-iml-warp-drive >= 0.1.1
-Requires:       rust-iml-cli >= 0.1.1
+Requires:       rust-iml-action-runner >= 0.1.2
+Requires:       rust-iml-agent-comms >= 0.1.2
+Requires:       rust-iml-mailbox >= 0.1.2
+Requires:       rust-iml-stratagem >= 0.1.2
+Requires:       rust-iml-warp-drive >= 0.1.2
+Requires:       rust-iml-cli >= 0.1.2
 # Other Repos
 Requires:       influxdb
 Requires:       grafana
 
-Conflicts:      chroma-agent
+Conflicts:       chroma-agent
 Obsoletes:      chroma-manager
 Provides:       chroma-manager
-Obsoletes:      nodejs-active-x-obfuscator
-Obsoletes:      nodejs-bunyan
-Obsoletes:      nodejs-commander
-Obsoletes:      nodejs-nan
-Obsoletes:      nodejs-primus
-Obsoletes:      nodejs-primus-emitter
-Obsoletes:      nodejs-primus-multiplex
-Obsoletes:      nodejs-request
-Obsoletes:      nodejs-socket.io
-Obsoletes:      nodejs-socket.io-client
-Obsoletes:      nodejs-ws
-Obsoletes:      nodejs-tinycolor
-Obsoletes:      nodejs-extendable
-Obsoletes:      nodejs-xmlhttprequest
-Obsoletes:      nodejs-dotty
-Obsoletes:      nodejs-tough-cookie
-Obsoletes:      nodejs-options
-Obsoletes:      nodejs-punycode
-Obsoletes:      nodejs-load
-Obsoletes:      nodejs-json-stringify-safe
-Obsoletes:      nodejs-lodash
-Obsoletes:      nodejs-moment
-Obsoletes:      nodejs-q
-Obsoletes:      nodejs-qs
-Obsoletes:      nodejs-node-uuid
-Obsoletes:      nodejs-mime
-Obsoletes:      nodejs-base64id
-Obsoletes:      nodejs-policyfile
-Obsoletes:      nodejs-uritemplate
-Obsoletes:      nodejs-forever-agent
-Obsoletes:      nodejs-uglify-js
-Obsoletes:      nodejs-di
-Obsoletes:      nodejs-mv
-Obsoletes:      nodejs-json-mask
-Obsoletes:      nodejs-zeparser
-Obsoletes:      django-celery
-Obsoletes:      django-tastypie
-Obsoletes:      python2-dse
 Obsoletes:      Django-south
+Obsoletes:      django-celery
+Obsoletes:      django-picklefield
+Obsoletes:      django-tastypie
+Obsoletes:      python2-django16
+Obsoletes:      python2-dse
 
 %{?python_provide:%python_provide python2-%{pypi_name}}
 
@@ -168,7 +134,7 @@ or on a separate node.
 Summary: Integrated Manager for Lustre Integration Tests
 Group: Development/Tools
 Requires: python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-ordereddict python2-iml-common1.4 python-packaging
-Requires: Django >= 1.6, Django < 1.7
+Requires: Django >= 1.11, Django < 1.12
 %description -n     python2-%{pypi_name}-integration-tests
 This package contains the Integrated Manager for Lustre integration tests and scripts and is intended
 to be used by the Chroma test framework.
@@ -219,7 +185,6 @@ mkdir -p $RPM_BUILD_ROOT%{_unitdir}/grafana-server.service.d/
 mv $RPM_BUILD_ROOT%{manager_root}/grafana/dropin-iml.conf $RPM_BUILD_ROOT%{_unitdir}/grafana-server.service.d/90-iml.conf
 cp iml-manager-redirect.conf $RPM_BUILD_ROOT%{_sysconfdir}/nginx/default.d/iml-manager-redirect.conf
 cp rabbitmq-env.conf $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq/rabbitmq-env.conf
-cp chroma-host-discover-init.sh $RPM_BUILD_ROOT%{_sysconfdir}/init.d/chroma-host-discover
 mkdir -p $RPM_BUILD_ROOT%{_mandir}/man1
 install chroma-config.1.gz $RPM_BUILD_ROOT%{_mandir}/man1
 install -m 644 logrotate.cfg $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/chroma-manager
@@ -325,7 +290,6 @@ fi
 
 %files -f manager.files -n python2-%{pypi_name}
 %defattr(-,root,root)
-%{_bindir}/chroma-host-discover
 %attr(0700,root,root)%{_bindir}/chroma-config
 %dir %attr(0755,nginx,nginx)%{manager_root}
 %dir %attr(0755,nginx,nginx)/var/log/chroma
@@ -334,7 +298,6 @@ fi
 %{_sysconfdir}/rabbitmq/rabbitmq-env.conf
 %{_sysconfdir}/grafana/grafana-iml.ini
 %{_unitdir}/grafana-server.service.d/90-iml.conf
-%attr(0755,root,root)%{_sysconfdir}/init.d/chroma-host-discover
 %attr(0755,root,root)%{_mandir}/man1/chroma-config.1.gz
 %attr(0644,root,root)%{_sysconfdir}/logrotate.d/chroma-manager
 %attr(0644,root,grafana)%{_sysconfdir}/grafana/provisioning/dashboards/iml-dashboards.yaml

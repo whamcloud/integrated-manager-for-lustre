@@ -57,9 +57,17 @@ class RegistrationTokenValidation(Validation):
                 errors["profile"] = ["Mandatory"]
         elif request.method == "PATCH":
             READONLY_ATTRIBUTES = ["secret", "expiry", "credits"]
+
+            token_id = bundle.data.get("id")
+
+            if not token_id:
+                return {"id": "Id field is missing"}
+
+            rt = RegistrationToken.objects.get(id=token_id)
+
             for attr in bundle.data.keys():
                 if attr in READONLY_ATTRIBUTES:
-                    if bundle.data[attr] != getattr(bundle.obj, attr):
+                    if bundle.data[attr] != getattr(rt, attr):
                         errors[attr] = ["May not be modified after creation"]
 
         return errors

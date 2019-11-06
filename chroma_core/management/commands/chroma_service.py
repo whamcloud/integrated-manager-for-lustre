@@ -9,7 +9,6 @@ import signal
 import linecache
 from chroma_core.services import ServiceThread
 import os
-from optparse import make_option
 
 # PIDLockFile was split out of daemon into it's own package in daemon-1.6
 try:
@@ -33,16 +32,17 @@ log = log_register(__name__.split(".")[-1])
 class Command(BaseCommand):
     requires_model_validation = False
     help = """Run a single ChromaService in a new plugin."""
-    option_list = BaseCommand.option_list + (
-        make_option("--gevent", action="store_true", dest="gevent", default=False),
-        make_option("--lightweight-rpc", action="store_true", dest="lightweight_rpc", default=False),
-        make_option("--verbose", action="store_true", dest="verbose", default=False),
-        make_option("--console", action="store_true", dest="console", default=False),
-        make_option("--name", dest="name", default="chroma_service"),
-        make_option("--daemon", dest="daemon", action="store_true", default=None),
-        make_option("--trace", dest="trace", action="store_true", default=None),
-        make_option("--pid-file", dest="pid-file", default=None),
-    )
+
+    def add_arguments(self, parser):
+        parser.add_argument("services", nargs="+", type=str)
+        parser.add_argument("--gevent", action="store_true", dest="gevent", default=False)
+        parser.add_argument("--lightweight-rpc", action="store_true", dest="lightweight_rpc", default=False)
+        parser.add_argument("--verbose", action="store_true", dest="verbose", default=False)
+        parser.add_argument("--console", action="store_true", dest="console", default=False)
+        parser.add_argument("--name", dest="name", default="chroma_service")
+        parser.add_argument("--daemon", dest="daemon", action="store_true", default=None)
+        parser.add_argument("--trace", dest="trace", action="store_true", default=None)
+        parser.add_argument("--pid-file", dest="pid-file", default=None)
 
     def execute(self, *args, **options):
         if options["daemon"]:
@@ -168,7 +168,7 @@ class Command(BaseCommand):
             signal.signal(signal.SIGTERM, signal_handler)
 
         service_mains = []
-        for service_name in args:
+        for service_name in options["services"]:
             module_path = "chroma_core.services.%s" % service_name
 
             # Load the module

@@ -11,9 +11,8 @@ from tastypie.validation import Validation
 from tastypie.utils import trailing_slash
 from tastypie.api import url
 from tastypie import fields, http
-from tastypie.authorization import DjangoAuthorization
 
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.utils import custom_response
 from chroma_api.host import HostResource
 from chroma_api.chroma_model_resource import ChromaModelResource
@@ -91,7 +90,7 @@ class CommandResource(ChromaModelResource):
             "created_at": ["gte", "lte", "gt", "lt"],
             "cancelled": ["exact"],
         }
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         validation = CommandValidation()
         always_return_data = True

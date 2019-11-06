@@ -6,12 +6,12 @@ edition = "2018"
 
 [dependencies]
 regex = "1"
-iml-wire-types = "0.1"
+iml-wire-types = "0.2"
 serde = { version = "1", features = ['derive'] }
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"]}
 web-sys = { version = "0.3", features = ["CustomEvent", "CustomEventInit", "Event", "EventTarget"]}
 serde_json = "1.0"
-seed = "=0.4.0"
+seed = "=0.4.1"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"

@@ -8,8 +8,7 @@ from chroma_core.lib.storage_plugin.api import attributes
 from chroma_core.models import StorageResourceClass
 
 from tastypie import fields
-from tastypie.authorization import DjangoAuthorization
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 
 from chroma_api.chroma_model_resource import ChromaModelResource
 
@@ -90,7 +89,7 @@ class StorageResourceClassResource(ChromaModelResource):
             "user_creatable": ["exact"],
             "plugin_internal": ["exact"],
         }
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         list_allowed_methods = ["get"]
         detail_allowed_methods = ["get"]

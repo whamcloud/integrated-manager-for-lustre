@@ -4,17 +4,17 @@
 # license that can be found in the LICENSE file.
 
 from django.db import models
-
+from django.db.models import CASCADE
 from chroma_core.models import Nid
 
 
 class NetworkInterface(models.Model):
-    host = models.ForeignKey("ManagedHost")
+    host = models.ForeignKey("ManagedHost", on_delete=CASCADE)
 
     name = models.CharField(max_length=32)
     inet4_address = models.CharField(max_length=128)
     inet4_prefix = models.IntegerField()
-    corosync_configuration = models.ForeignKey("CorosyncConfiguration", null=True)
+    corosync_configuration = models.ForeignKey("CorosyncConfiguration", null=True, on_delete=CASCADE)
     type = models.CharField(max_length=32)  # tcp, o2ib, ... (best stick to lnet types!)
     state_up = models.BooleanField(default=False)
 

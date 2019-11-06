@@ -16,8 +16,7 @@ from chroma_core.models.filesystem import HSM_CONTROL_KEY, HSM_CONTROL_PARAMS
 import tastypie.http as http
 from tastypie import fields
 from tastypie.validation import Validation
-from tastypie.authorization import DjangoAuthorization
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
 from chroma_api.validation_utils import validate
 from chroma_core.lib import conf_param
@@ -401,7 +400,7 @@ class FilesystemResource(MetricResource, ConfParamResource):
     class Meta:
         queryset = ManagedFilesystem.objects.all()
         resource_name = "filesystem"
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         excludes = ["not_deleted", "ost_next_index", "mdt_next_index"]
         ordering = ["name"]

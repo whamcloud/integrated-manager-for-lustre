@@ -227,10 +227,11 @@ pub fn render_with_action<'a, T: 'static + ActionRecord>(
     model: &Model,
     actions: ActionMap<'a, T>,
 ) -> Node<IdMsg<T>> {
+    let mut el;
     if model.destroyed {
-        seed::empty()
+        el = seed::empty();
     } else if model.first_fetch_activated {
-        div![
+        el = div![
             class!["action-dropdown"],
             button![
                 attrs! {At::Disabled => true},
@@ -238,14 +239,14 @@ pub fn render_with_action<'a, T: 'static + ActionRecord>(
                 "Waiting",
                 i![class!["fa", "fa-spinner", "fa-fw", "fa-spin"]]
             ]
-        ]
+        ];
     } else if !model.activated {
-        action_dropdown(model.watching.is_open(), model.is_locked, vec![span![]])
-            .add_listener(simple_ev(Ev::MouseMove, IdMsg(id, Msg::StartFetch)))
+        el = action_dropdown(model.watching.is_open(), model.is_locked, vec![span![]]);
+        el.add_listener(simple_ev(Ev::MouseMove, IdMsg(id, Msg::StartFetch)));
     } else {
         let record_els = get_record_els(id, actions, &model.flag, &model.tooltip);
-
-        action_dropdown(model.watching.is_open(), model.is_locked, record_els)
-            .add_listener(simple_ev(Ev::Click, IdMsg(id, Msg::WatchChange)))
+        el = action_dropdown(model.watching.is_open(), model.is_locked, record_els);
+        el.add_listener(simple_ev(Ev::Click, IdMsg(id, Msg::WatchChange)));
     }
+    el
 }

@@ -13,10 +13,10 @@ import datetime
 from django.db import models
 from django.db import transaction
 from django.db import IntegrityError
+from django.db.models import CASCADE
 from django.utils.timezone import now as tznow
 
 from django.db.models.aggregates import Aggregate, Count
-from django.db.models.sql import aggregates as sql_aggregates
 
 from django.db.models.query_utils import Q
 
@@ -47,31 +47,12 @@ from chroma_help.help import help_text
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from iml_common.lib.util import ExceptionThrowingThread
 from chroma_core.models.sparse_model import VariantDescriptor
+from django.contrib.postgres.aggregates import BoolOr
 
 import settings
 
 REPO_PATH = "/etc/yum.repos.d/"
 REPO_FILENAME = "Intel-Lustre-Agent.repo"
-
-
-# Max() worked on mysql's NullBooleanField because the DB value is stored
-# in a TINYINT.  pgsql uses an actual boolean field type, so Max() won't
-# work.  bool_or() seems to be the moral equivalent.
-# http://www.postgresql.org/docs/8.4/static/functions-aggregate.html
-class BoolOr(Aggregate):
-    name = "BoolOr"
-
-    def _default_alias(self):
-        return "%s__bool_or" % self.lookup
-
-
-# Unfortunately, we have to do a bit of monkey-patching to make this
-# work cleanly.
-class SqlBoolOr(sql_aggregates.Aggregate):
-    sql_function = "BOOL_OR"
-
-
-sql_aggregates.BoolOr = SqlBoolOr
 
 
 # FIXME: HYD-1367: Chroma 1.0 Job objects aren't amenable to using m2m
@@ -117,13 +98,11 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     boot_time = models.DateTimeField(null=True, blank=True)
 
     # Recursive relationship to keep track of cluster peers
-    ha_cluster_peers = models.ManyToManyField(
-        "self", null=True, blank=True, help_text="List of peers in this host's HA cluster"
-    )
+    ha_cluster_peers = models.ManyToManyField("self", blank=True, help_text="List of peers in this host's HA cluster")
 
     # Profile of the server specifying some configured characteristics
     # FIXME: nullable to allow migration, but really shouldn't be
-    server_profile = models.ForeignKey("ServerProfile", null=True, blank=True)
+    server_profile = models.ForeignKey("ServerProfile", null=True, blank=True, on_delete=CASCADE)
 
     needs_update = models.BooleanField(
         default=False, help_text="True if there are package updates available for this server"
@@ -142,11 +121,11 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     # The fields below are how the agent was installed or how it was attempted to install in the case of a failed install
     INSTALL_MANUAL = (
-        "manual"
-    )  # The agent was installed manually by the user logging into the server and running a command
+        "manual"  # The agent was installed manually by the user logging into the server and running a command
+    )
     INSTALL_SSHPSW = (
-        "id_password_root"
-    )  # The user provided a password for the server so that ssh could be used for agent install
+        "id_password_root"  # The user provided a password for the server so that ssh could be used for agent install
+    )
     INSTALL_SSHPKY = "private_key_choice"  # The user provided a private key with password the agent install
     INSTALL_SSHSKY = "existing_keys_choice"  # The server can be contacted via a shared key for the agent install
 
@@ -343,7 +322,7 @@ class Volume(models.Model):
     size = models.BigIntegerField(
         blank=True,
         null=True,
-        help_text="Integer number of bytes.  "
+        help_text="Integer number of bytes. "
         "Can be null if this device "
         "was manually created, rather "
         "than detected.",
@@ -470,13 +449,13 @@ class Volume(models.Model):
 
 
 class VolumeNode(models.Model):
-    volume = models.ForeignKey(Volume)
-    host = models.ForeignKey(ManagedHost)
+    volume = models.ForeignKey(Volume, on_delete=CASCADE)
+    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
     path = models.CharField(max_length=512, help_text="Device node path, e.g. '/dev/sda/'")
 
     __metaclass__ = DeletableMetaclass
 
-    storage_resource = models.ForeignKey("StorageResourceRecord", blank=True, null=True)
+    storage_resource = models.ForeignKey("StorageResourceRecord", blank=True, null=True, on_delete=CASCADE)
 
     primary = models.BooleanField(
         default=False,
@@ -656,7 +635,7 @@ class DeployHostJob(StateChangeJob):
 
     state_transition = StateChangeJob.StateTransition(ManagedHost, "undeployed", "unconfigured")
     stateful_object = "managed_host"
-    managed_host = models.ForeignKey(ManagedHost)
+    managed_host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
     state_verb = "Deploy agent"
     auth_args = {}
 
@@ -749,7 +728,7 @@ class InstallPackagesStep(Step):
 class InstallHostPackagesJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(ManagedHost, "unconfigured", "packages_installed")
     stateful_object = "managed_host"
-    managed_host = models.ForeignKey(ManagedHost)
+    managed_host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
     state_verb = help_text["continue_server_configuration"]
 
     display_group = Job.JOB_GROUPS.COMMON
@@ -813,7 +792,7 @@ class InstallHostPackagesJob(StateChangeJob):
 
 
 class BaseSetupHostJob(NullStateChangeJob):
-    target_object = models.ForeignKey(ManagedHost)
+    target_object = models.ForeignKey(ManagedHost, on_delete=CASCADE)
 
     class Meta:
         abstract = True
@@ -1038,8 +1017,8 @@ class SetHostProfileStep(Step):
 
 
 class SetHostProfileJob(Job):
-    host = models.ForeignKey(ManagedHost)
-    server_profile = models.ForeignKey(ServerProfile)
+    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
+    server_profile = models.ForeignKey(ServerProfile, on_delete=CASCADE)
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -1182,7 +1161,7 @@ class DeleteHostStep(Step):
 class CommonRemoveHostJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(None, None, None)
     stateful_object = "host"
-    host = models.ForeignKey(ManagedHost)
+    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
     state_verb = "Remove"
 
     requires_confirmation = True
@@ -1242,7 +1221,7 @@ class RemoveManagedHostJob(CommonRemoveHostJob):
 
 
 class ForceRemoveHostJob(AdvertisedJob):
-    host = models.ForeignKey(ManagedHost)
+    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
 
     requires_confirmation = True
 
@@ -1305,7 +1284,7 @@ successfully deployed using Integrated Manager for Lustre software."""
 
 
 class RebootHostJob(AdvertisedJob):
-    host = models.ForeignKey(ManagedHost)
+    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
 
     requires_confirmation = True
 
@@ -1360,7 +1339,7 @@ class RebootHostStep(Step):
 
 
 class ShutdownHostJob(AdvertisedJob):
-    host = models.ForeignKey(ManagedHost)
+    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
 
     requires_confirmation = True
 
@@ -1417,7 +1396,7 @@ class ShutdownHostStep(Step):
 class RemoveUnconfiguredHostJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(ManagedHost, "unconfigured", "removed")
     stateful_object = "host"
-    host = models.ForeignKey(ManagedHost)
+    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
     state_verb = "Remove"
 
     requires_confirmation = True
@@ -1499,8 +1478,30 @@ class RemovePackagesStep(Step):
         self.invoke_agent_expect_result(kwargs["host"], "remove_packages", {"packages": kwargs["packages"]})
 
 
+class UpdateYumFileJob(Job):
+    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
+
+    class Meta:
+        app_label = "chroma_core"
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return "Update Agent repo file on {}".format(stateful_object.host.fqdn)
+
+    def description(self):
+        return "Update Agent Repo file on {}".format(self.host.fqdn)
+
+    def get_steps(self):
+        # the minimum repos needed on a storage server now
+        repo_file_contents = self.host.server_profile.repo_contents
+
+        return [
+            (UpdateYumFileStep, {"host": self.host, "filename": REPO_FILENAME, "file_contents": repo_file_contents})
+        ]
+
+
 class UpdateJob(Job):
-    host = models.ForeignKey(ManagedHost)
+    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -1515,9 +1516,6 @@ class UpdateJob(Job):
 
         # the minimum repos needed on a storage server now
         repo_file_contents = self.host.server_profile.repo_contents
-
-        # The base url of the repo.
-        base_repo_url = os.path.join(str(settings.SERVER_HTTP_URL), "repo")
 
         return [
             (UpdateYumFileStep, {"host": self.host, "filename": REPO_FILENAME, "file_contents": repo_file_contents}),
@@ -1720,7 +1718,7 @@ class HostContactAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     def alert_message(self):
         return "Lost contact with host %s" % self.alert_item
@@ -1757,7 +1755,7 @@ class HostOfflineAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     def alert_message(self):
         return "Host is offline %s" % self.alert_item
@@ -1784,7 +1782,7 @@ class HostRebootEvent(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     @staticmethod
     def type_name():
@@ -1801,7 +1799,7 @@ class UpdatesAvailableAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     def alert_message(self):
         return "Updates are ready for server %s" % self.alert_item

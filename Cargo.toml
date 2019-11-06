@@ -5,7 +5,6 @@ members = [
     'iml-rabbit',
     'iml-manager-env',
     'iml-agent',
-    'iml-services',
     'liblustreapi-types',
     'liblustreapi',
     'tokio-runtime-shutdown',
@@ -15,5 +14,8 @@ members = [
     'iml-manager-client',
     'iml-fs',
     'iml-util',
-    'iml-postgres'
+    'iml-postgres',
+    'iml-services/iml-service-queue',
+    'iml-services/iml-action-runner',
+    'iml-services/iml-stratagem',
 ]

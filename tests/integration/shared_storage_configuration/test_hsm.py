@@ -1,7 +1,7 @@
 import os
 from mock import patch, Mock
-from django.utils.unittest import skipUnless
-from django.utils.unittest import skip
+from unittest import skipUnless
+from unittest import skip
 
 from testconfig import config
 import logging

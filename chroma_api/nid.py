@@ -8,7 +8,6 @@ from tastypie.exceptions import NotFound
 from django.core.exceptions import ObjectDoesNotExist
 import tastypie.http as http
 from tastypie import fields
-from tastypie.authorization import DjangoAuthorization
 from tastypie.constants import ALL_WITH_RELATIONS
 
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
@@ -17,7 +16,7 @@ from chroma_api.utils import dehydrate_command
 from chroma_api.utils import custom_response
 from chroma_api.network_interface import NetworkInterfaceResource
 from chroma_api.lnet_configuration import LNetConfigurationResource
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_core.models import Command
 from chroma_core.models import Nid
 from chroma_api.validation_utils import ChromaValidation, validate
@@ -110,7 +109,7 @@ class NidResource(ChromaModelResource):
     class Meta:
         queryset = Nid.objects.select_related("network_interface", "lnet_configuration").all()
 
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         validation = NidValidation()
         resource_name = "nid"

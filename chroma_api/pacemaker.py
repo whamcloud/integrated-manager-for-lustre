@@ -4,14 +4,13 @@
 
 
 from tastypie import fields
-from tastypie.authorization import DjangoAuthorization
 from tastypie.constants import ALL_WITH_RELATIONS
 
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.services import log_register
 from chroma_api.utils import StatefulModelResource
 from chroma_api.utils import BulkResourceOperation
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 
 log = log_register(__name__)
 
@@ -37,7 +36,7 @@ class PacemakerConfigurationResource(StatefulModelResource, BulkResourceOperatio
 
     class Meta:
         queryset = PacemakerConfiguration.objects.all()
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         resource_name = "pacemaker_configuration"
         list_allowed_methods = ["get", "put"]

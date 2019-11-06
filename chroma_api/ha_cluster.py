@@ -5,8 +5,7 @@
 
 from tastypie import fields
 from tastypie.resources import Resource
-from tastypie.authorization import DjangoAuthorization
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.host import HostResource
 from chroma_core.models import HaCluster
 
@@ -26,7 +25,7 @@ class HaClusterResource(Resource):
 
     class Meta:
         resource_name = "ha_cluster"
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         list_allowed_methods = ["get"]
         detail_allowed_methods = []

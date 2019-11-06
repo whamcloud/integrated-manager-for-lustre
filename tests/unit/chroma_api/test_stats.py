@@ -156,7 +156,7 @@ class TestStats(ChromaApiTestCase):
 
         # target detail and list, with job stats
         for name in ("read_bytes", "write_bytes", "read_iops", "write_iops", "metadata_iops"):
-            content, = self.fetch(
+            (content,) = self.fetch(
                 "target/{0}/metric/".format(self.osts[0].id),
                 job="id",
                 metrics=name,
@@ -175,7 +175,7 @@ class TestStats(ChromaApiTestCase):
                     kind="OST",
                 )
                 self.assertEqual(content[str(self.osts[1].id)], [])
-                item, = content[str(self.osts[0].id)]
+                (item,) = content[str(self.osts[0].id)]
                 self.assertEqual(item["data"], dict.fromkeys(keys, 0.0))
 
         # fixed number of points
@@ -187,7 +187,7 @@ class TestStats(ChromaApiTestCase):
             end="2013-04-19T20:34:00Z",
             role="OSS",
         )
-        data, = content.values()
+        (data,) = content.values()
         self.assertEqual(
             map(operator.itemgetter("ts"), data), ["2013-04-19T20:33:00+00:00", "2013-04-19T20:33:30+00:00"]
         )
@@ -205,7 +205,7 @@ class TestStats(ChromaApiTestCase):
         self.assertHttpBadRequest(response)
 
         # discover available metrics
-        content, = self.fetch("target/{0}/metric/".format(self.osts[0].id), latest="true")
+        (content,) = self.fetch("target/{0}/metric/".format(self.osts[0].id), latest="true")
         prefixes = set(name.split("_")[0] for name in content["data"])
         for total, count in [("stats_read_bytes", "stats_read_iops"), ("stats_write_bytes", "stats_write_iops")]:
             self.assertGreater(content["data"][total], content["data"][count])

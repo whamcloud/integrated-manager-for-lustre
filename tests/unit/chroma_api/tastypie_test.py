@@ -328,7 +328,12 @@ class ResourceTestCase(IMLUnitTestCase):
 
         It returns a Python datastructure (typically a ``dict``) of the serialized data.
         """
-        return self.serializer.deserialize(resp.content, format=resp["Content-Type"])
+        format = resp["Content-Type"].split(";")[0]
+
+        if format != "text/html":
+            return self.serializer.deserialize(resp.content, format=format)
+        else:
+            return resp.content
 
     def serialize(self, data, format="application/json"):
         """

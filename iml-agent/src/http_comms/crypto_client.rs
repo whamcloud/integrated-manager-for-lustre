@@ -2,20 +2,18 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::agent_error::{ImlAgentError, Result};
-use futures::{future::Future, IntoFuture, Stream};
-use reqwest::{
-    r#async::{Chunk, Client, Decoder, Response},
-    Identity, IntoUrl,
-};
-use std::{mem, time::Duration};
+use crate::agent_error::ImlAgentError;
+use bytes::Bytes;
+use futures::{stream, Future, Stream, TryFutureExt, TryStreamExt};
+use reqwest::{Client, Identity, IntoUrl, Response};
+use std::time::Duration;
 
 /// Creates an `Identity` from the given pfx buffer
 ///
 /// # Arguments
 ///
 /// * `pfx` - The incoming pfx buffer
-pub fn get_id(pfx: &[u8]) -> Result<Identity> {
+pub fn get_id(pfx: &[u8]) -> Result<Identity, ImlAgentError> {
     Identity::from_pkcs12_der(pfx, "").map_err(ImlAgentError::Reqwest)
 }
 
@@ -25,7 +23,7 @@ pub fn get_id(pfx: &[u8]) -> Result<Identity> {
 /// # Arguments
 ///
 /// * `id` - The client identity to use
-pub fn create_client(id: Identity) -> Result<Client> {
+pub fn create_client(id: Identity) -> Result<Client, ImlAgentError> {
     Client::builder()
         .danger_accept_invalid_certs(true)
         .identity(id)
@@ -45,8 +43,8 @@ pub fn get(
     client: &Client,
     url: impl IntoUrl,
     query: &(impl serde::Serialize + ?Sized),
-) -> impl Future<Item = Response, Error = ImlAgentError> {
-    client.get(url).query(query).send().from_err()
+) -> impl Future<Output = Result<Response, ImlAgentError>> {
+    client.get(url).query(query).send().err_into()
 }
 
 /// Performs a GET with the given `client`, to the given `url`.
@@ -61,7 +59,7 @@ pub fn get_buffered(
     client: &Client,
     url: impl IntoUrl,
     query: &(impl serde::Serialize + ?Sized),
-) -> impl Future<Item = Chunk, Error = ImlAgentError> {
+) -> impl Future<Output = Result<String, ImlAgentError>> {
     get(client, url, query).and_then(handle_resp)
 }
 
@@ -77,11 +75,25 @@ pub fn get_stream(
     client: &Client,
     url: impl IntoUrl,
     query: &(impl serde::Serialize + ?Sized),
-) -> impl Stream<Item = Chunk, Error = ImlAgentError> {
+) -> impl Stream<Item = Result<Bytes, ImlAgentError>> {
     get(client, url, query)
-        .and_then(|s| s.error_for_status().map_err(ImlAgentError::Reqwest))
-        .map(|s| s.into_body().from_err())
-        .flatten_stream()
+        .inspect_ok(|resp| tracing::debug!("Get stream headers: {:?}", resp.headers()))
+        .and_then(|resp| async { resp.error_for_status().map_err(|e| e.into()) })
+        .map_ok(|resp| {
+            stream::unfold(resp, |mut resp| {
+                async move {
+                    let result = resp.chunk().await;
+
+                    match result {
+                        Ok(Some(chunk)) => Some((Ok(chunk), resp)),
+                        Ok(None) => None,
+                        Err(err) => Some((Err(err), resp)),
+                    }
+                }
+            })
+            .err_into()
+        })
+        .try_flatten_stream()
 }
 
 /// Performs a POST with the given `client`, to the given `url`.
@@ -95,7 +107,7 @@ pub fn post<T: serde::Serialize + Sized>(
     client: &Client,
     url: impl IntoUrl,
     json: &T,
-) -> impl Future<Item = Chunk, Error = ImlAgentError> {
+) -> impl Future<Output = Result<String, ImlAgentError>> {
     client
         .post(url)
         .json(json)
@@ -109,35 +121,34 @@ pub fn post<T: serde::Serialize + Sized>(
 /// # Arguments
 ///
 /// * - `resp` - The Response to handle
-fn handle_resp(resp: Response) -> impl Future<Item = Chunk, Error = ImlAgentError> {
-    resp.error_for_status()
-        .into_future()
-        .map_err(ImlAgentError::Reqwest)
-        .and_then(|mut res| {
-            let body = mem::replace(res.body_mut(), Decoder::empty());
-            body.concat2().map_err(ImlAgentError::Reqwest)
-        })
+async fn handle_resp(resp: Response) -> Result<String, ImlAgentError> {
+    let resp = resp.error_for_status()?;
+
+    tracing::debug!("resp headers: {:?}", resp.headers());
+
+    let text = resp.text().await?;
+
+    Ok(text)
 }
 
 #[cfg(test)]
 mod tests {
     use super::{get_buffered, get_stream, post};
-    use crate::agent_error::Result;
-    use futures::stream::Stream as _;
+    use crate::agent_error::ImlAgentError;
+    use futures::TryStreamExt;
     use iml_fs::read_lines;
     use mockito::mock;
     use pretty_assertions::assert_eq;
-    use reqwest::r#async::Client;
+    use reqwest::Client;
     use std::str;
-    use tokio::runtime::Runtime;
     use url::Url;
 
-    fn create_url() -> Result<Url> {
+    fn create_url() -> Result<Url, ImlAgentError> {
         Ok(Url::parse(&mockito::server_url())?.join("/agent/message")?)
     }
 
-    #[test]
-    fn test_get_buffered() -> Result<()> {
+    #[tokio::test]
+    async fn test_get_buffered() -> Result<(), ImlAgentError> {
         let m = mock("GET", "/agent/message?server_boot_time=2019-02-13T13%3A26%3A28.000000%2B00%3A00Z&client_start_time=2019-02-14T02%3A04%3A33.057646%2B00%3A00Z")
             .with_status(200)
             .with_header("content-type", "text/plain")
@@ -151,9 +162,7 @@ mod tests {
             ("client_start_time", "2019-02-14T02:04:33.057646+00:00Z"),
         ];
 
-        let r = Runtime::new()
-            .unwrap()
-            .block_on_all(get_buffered(&Client::new(), url, query))?;
+        let r = get_buffered(&Client::new(), url, query).await?;
 
         assert_eq!(str::from_utf8(r.as_ref())?, "foo");
 
@@ -162,8 +171,8 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_get_stream() -> Result<()> {
+    #[tokio::test]
+    async fn test_get_stream() -> Result<(), ImlAgentError> {
         let data = "1577893 [0x200000bd1:0x1397:0x0]
 1579139 [0x200000bd1:0x1875:0x0]
 1579140 [0x200000bd1:0x1876:0x0]
@@ -205,9 +214,8 @@ mod tests {
             ("client_start_time", "2019-02-14T02:04:33.057646+00:00Z"),
         ];
 
-        let fut = read_lines(get_stream(&Client::new(), url, query)).collect();
-
-        let r = Runtime::new().unwrap().block_on_all(fut)?;
+        let s = get_stream(&Client::new(), url, query);
+        let r: Vec<_> = read_lines(s).try_collect().await?;
 
         assert_eq!(r, data.split('\n').collect::<Vec<_>>());
 
@@ -216,8 +224,8 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_post() -> Result<()> {
+    #[tokio::test]
+    async fn test_post() -> Result<(), ImlAgentError> {
         #[derive(serde::Serialize)]
         struct Foo {}
 
@@ -229,9 +237,7 @@ mod tests {
 
         let url = create_url()?;
 
-        let r = Runtime::new()
-            .unwrap()
-            .block_on_all(post(&Client::new(), url, &Foo {}))?;
+        let r = post(&Client::new(), url, &Foo {}).await?;
 
         assert_eq!(str::from_utf8(r.as_ref())?, "{}");
 

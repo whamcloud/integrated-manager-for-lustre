@@ -7,7 +7,7 @@
 import socket
 
 from django.db import models
-
+from django.db.models import CASCADE
 from chroma_core.models import DeletableStatefulObject
 from chroma_core.models import StateChangeJob
 from chroma_core.models import Job
@@ -21,7 +21,7 @@ class NTPConfiguration(DeletableStatefulObject):
     states = ["unconfigured", "configured"]
     initial_state = "unconfigured"
 
-    host = models.OneToOneField("ManagedHost", related_name="_ntp_configuration")
+    host = models.OneToOneField("ManagedHost", related_name="_ntp_configuration", on_delete=CASCADE)
 
     def __str__(self):
         return "%s NTP configuration" % self.host
@@ -51,7 +51,7 @@ class ConfigureNTPStep(Step):
 class ConfigureNTPJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(NTPConfiguration, "unconfigured", "configured")
     stateful_object = "ntp_configuration"
-    ntp_configuration = models.ForeignKey(NTPConfiguration)
+    ntp_configuration = models.ForeignKey(NTPConfiguration, on_delete=CASCADE)
     state_verb = "Start Ntp"
 
     display_group = Job.JOB_GROUPS.COMMON
@@ -95,7 +95,7 @@ class UnconfigureNTPStep(Step):
 class UnconfigureNTPJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(NTPConfiguration, "configured", "unconfigured")
     stateful_object = "ntp_configuration"
-    ntp_configuration = models.ForeignKey(NTPConfiguration)
+    ntp_configuration = models.ForeignKey(NTPConfiguration, on_delete=CASCADE)
     state_verb = "Unconfigure NTP"
 
     display_group = Job.JOB_GROUPS.COMMON

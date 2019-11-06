@@ -18,11 +18,10 @@ from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTarget
 
 import tastypie.http as http
 from tastypie import fields
-from tastypie.authorization import DjangoAuthorization
 from tastypie.utils import dict_strip_unicode_keys
 from tastypie.validation import Validation
 from tastypie.resources import BadRequest, ImmediateHttpResponse
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
 from chroma_api.validation_utils import validate
 
@@ -263,7 +262,7 @@ class TargetResource(MetricResource, ConfParamResource):
             "immutable_state": ["exact"],
             "name": ["exact"],
         }
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         ordering = ["volume_name", "name"]
         list_allowed_methods = ["get", "post", "patch"]
@@ -384,7 +383,7 @@ class TargetResource(MetricResource, ConfParamResource):
         else:
             return None
 
-    def build_filters(self, filters=None):
+    def build_filters(self, filters=None, **kwargs):
         """Override this to convert a 'kind' argument into a DB field which exists"""
         custom_filters = {}
         for key, val in filters.items():
@@ -404,14 +403,14 @@ class TargetResource(MetricResource, ConfParamResource):
                 # do a custom query generation for it in apply_filters
                 del filters[key]
 
-        filters = super(TargetResource, self).build_filters(filters)
+        filters = super(TargetResource, self).build_filters(filters, **kwargs)
         filters.update(custom_filters)
         return filters
 
-    def apply_filters(self, request, filters=None):
+    def apply_filters(self, request, filters=None, **kwargs):
         """Override this to build a filesystem filter using Q expressions (not
            possible from build_filters because it only deals with kwargs to filter())"""
-        objects = super(TargetResource, self).apply_filters(request, filters)
+        objects = super(TargetResource, self).apply_filters(request, filters, **kwargs)
         try:
             try:
                 fs = ManagedFilesystem.objects.get(pk=request.GET["filesystem_id"])

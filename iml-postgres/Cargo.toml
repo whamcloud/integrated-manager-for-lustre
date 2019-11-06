@@ -5,9 +5,7 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-tokio-postgres = "0.4.0-rc.3"
-futures = "0.1"
-tokio = "0.1"
-log = "0.4"
-parking_lot = "0.9"
+tokio-postgres = "0.5.0-alpha.1"
+futures-preview = "0.3.0-alpha.19"
+tracing = "0.1"
 iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }

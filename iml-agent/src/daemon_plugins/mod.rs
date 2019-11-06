@@ -14,6 +14,5 @@ pub mod daemon_plugin;
 pub mod stratagem;
 
 pub use daemon_plugin::{
-    as_output, get_plugin, plugin_registry, DaemonBox, DaemonPlugin, DaemonPlugins, Output,
-    OutputValue,
+    get_plugin, plugin_registry, DaemonBox, DaemonPlugin, DaemonPlugins, Output, OutputValue,
 };

@@ -7,14 +7,13 @@ from chroma_core.lib.util import normalize_nid
 from chroma_api.utils import DateSerializer
 
 from tastypie import fields
-from tastypie.authorization import DjangoAuthorization
 
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_core.models.log import LogMessage, MessageClass
 from chroma_api.chroma_model_resource import ChromaModelResource
 
 
-class LogAuthorization(DjangoAuthorization):
+class LogAuthorization(PatchedDjangoAuthorization):
     """
     custom authorization class for log retrieval
 
@@ -79,7 +78,7 @@ class LogResource(ChromaModelResource):
     def dehydrate_message_class(self, bundle):
         return MessageClass.to_string(bundle.obj.message_class)
 
-    def build_filters(self, filters=None):
+    def build_filters(self, filters=None, **kwargs):
         # TODO: make the UI filter on FQDN to avoid the need for this mangling
         host_id = filters.get("host_id", None)
         if host_id is not None:
@@ -90,15 +89,16 @@ class LogResource(ChromaModelResource):
             filters["fqdn"] = host.fqdn
 
         if "message_class__in" in filters:
-            filters.setlist(
-                "message_class__in",
-                [MessageClass.from_string(s).__str__() for s in filters.getlist("message_class__in")],
-            )
+            msg_classes = filters.get("message_class__in")
+            if isinstance(msg_classes, basestring):
+                msg_classes = [msg_classes]
+
+            filters.set("message_class__in", [MessageClass.from_string(s).__str__() for s in msg_classes])
 
         if "message_class" in filters:
             filters["message_class"] = MessageClass.from_string(filters["message_class"])
 
-        return super(LogResource, self).build_filters(filters)
+        return super(LogResource, self).build_filters(filters, **kwargs)
 
     def _substitutions(self, obj):
         message = obj.message

@@ -3,24 +3,23 @@
 // license that can be found in the LICENSE file.
 
 use bytes::buf::FromBuf;
-use futures::{sync::mpsc, Future, Stream};
-use std::{collections::HashMap, path::PathBuf};
-use tokio::{fs::OpenOptions, io};
+use futures::{channel::mpsc, Future, Stream, StreamExt, TryStreamExt};
+use std::{collections::HashMap, path::PathBuf, pin::Pin};
+use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 use warp::{body::BodyStream, filters::BoxedFilter, Filter};
 
-pub trait LineStream: Stream<Item = String, Error = warp::Rejection> {}
-impl<T: Stream<Item = String, Error = warp::Rejection>> LineStream for T {}
+pub trait LineStream: Stream<Item = Result<String, warp::Rejection>> {}
+impl<T: Stream<Item = Result<String, warp::Rejection>>> LineStream for T {}
 
-fn streamer(s: BodyStream) -> Box<dyn LineStream + Send> {
-    let s = s.map(Vec::from_buf);
+fn streamer(s: BodyStream) -> Pin<Box<dyn Stream<Item = Result<String, warp::Rejection>> + Send>> {
+    let s = s.map_ok(Vec::from_buf);
 
-    let ls = iml_fs::read_lines(s).map_err(warp::reject::custom);
-
-    Box::new(ls) as Box<dyn LineStream + Send>
+    iml_fs::read_lines(s).map_err(warp::reject::custom).boxed()
 }
 
 /// Warp Filter that streams a newline delimited body
-pub fn line_stream() -> BoxedFilter<(Box<dyn LineStream + Send>,)> {
+pub fn line_stream(
+) -> BoxedFilter<(Pin<Box<dyn Stream<Item = Result<String, warp::Rejection>> + Send>>,)> {
     warp::body::stream().map(streamer).boxed()
 }
 
@@ -53,19 +52,18 @@ impl MailboxSenders {
     /// Returns a pair of tx handle and a future that will write to a file.
     /// The returned future must be used, and should be spawned as a new task
     /// so it won't block the current task.
-    #[must_use]
     pub fn create(
         &mut self,
         address: PathBuf,
     ) -> (
         mpsc::UnboundedSender<String>,
-        impl Future<Item = (), Error = std::io::Error>,
+        impl Future<Output = Result<(), std::io::Error>>,
     ) {
         let (tx, rx) = mpsc::unbounded();
 
         self.insert(address.clone(), tx.clone());
 
-        (tx, ingest_data(address.clone(), rx))
+        (tx, ingest_data(address, rx))
     }
 }
 
@@ -74,77 +72,65 @@ impl MailboxSenders {
 ///
 /// It will then write any incoming lines from the passed `mpsc::UnboundedReceiver`
 /// to that file.
-pub fn ingest_data(
+pub async fn ingest_data(
     address: PathBuf,
-    rx: mpsc::UnboundedReceiver<String>,
-) -> impl Future<Item = (), Error = std::io::Error> {
-    log::debug!("Starting ingest for {:?}", address);
-    OpenOptions::new()
+    mut rx: mpsc::UnboundedReceiver<String>,
+) -> Result<(), std::io::Error> {
+    tracing::debug!("Starting ingest for {:?}", address);
+
+    let mut file = OpenOptions::new()
         .append(true)
         .create(true)
         .open(address)
-        .and_then(|f| {
-            rx.map_err(|_| unreachable!("mpsc::Receiver should never return Err"))
-                .map(|mut line| {
-                    if !line.ends_with('\n') {
-                        line.extend(['\n'].iter());
-                    }
+        .await?;
 
-                    log::debug!("handling line {:?}", line);
+    while let Some(mut line) = rx.next().await {
+        if !line.ends_with('\n') {
+            line.extend(['\n'].iter());
+        }
 
-                    line
-                })
-                .fold(f, |file, line| io::write_all(file, line).map(|(f, _)| f))
-                .map(|_| {})
-        })
+        tracing::debug!("handling line {:?}", line);
+
+        file.write_all(line.as_bytes()).await?;
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::Async;
     use std::fs;
     use tempdir::TempDir;
 
-    #[test]
-    fn test_line_stream() {
-        let mut stream = warp::test::request()
-            .body("foo\nbar\nbaz")
-            .filter(&line_stream())
-            .unwrap();
-
-        assert_eq!(stream.poll().unwrap(), Async::Ready(Some("foo".into())));
-        assert_eq!(stream.poll().unwrap(), Async::Ready(Some("bar".into())));
-        assert_eq!(stream.poll().unwrap(), Async::Ready(Some("baz".into())));
-        assert_eq!(stream.poll().unwrap(), Async::Ready(None));
-    }
-
-    #[test]
-    fn test_mailbox_senders() {
-        let tmp_dir = TempDir::new("test_mailbox").unwrap();
+    #[tokio::test]
+    async fn test_mailbox_senders() -> Result<(), Box<dyn std::error::Error>> {
+        let tmp_dir = TempDir::new("test_mailbox")?;
         let address = tmp_dir.path().join("test_message_1");
 
         let mut mailbox_sender = MailboxSenders::default();
 
         let (tx, fut) = mailbox_sender.create(address.clone());
 
-        tx.unbounded_send("foo\n".into()).unwrap();
+        tx.unbounded_send("foo\n".into())?;
+
         mailbox_sender
             .get(&address)
             .unwrap()
-            .unbounded_send("bar".into())
-            .unwrap();
+            .unbounded_send("bar".into())?;
 
-        tx.unbounded_send("baz\n".into()).unwrap();
+        tx.unbounded_send("baz\n".into())?;
 
         mailbox_sender.remove(&address);
 
         drop(tx);
 
-        tokio::run(fut.map_err(|e| panic!(e)));
+        fut.await?;
 
         let contents = fs::read_to_string(&address).unwrap();
 
         assert_eq!(contents, "foo\nbar\nbaz\n");
+
+        Ok(())
     }
 }

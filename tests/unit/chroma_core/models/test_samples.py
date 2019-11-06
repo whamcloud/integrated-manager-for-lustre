@@ -7,7 +7,8 @@ from datetime import datetime, timedelta
 import mock
 from django.utils.timezone import utc
 from django.db import connection
-from django.utils.unittest import skipIf
+from django.test.utils import CaptureQueriesContext
+from unittest import skipIf
 
 from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.models import Point, Stats
@@ -36,12 +37,10 @@ points = [Point(now + timedelta(seconds=Stats[0].step * n), float(n), 1) for n i
 epoch = datetime.fromtimestamp(0, utc)
 
 
-@contextlib.contextmanager
-def assertQueries(*prefixes):
+def assertQueries(prefixes, queries):
     "Assert the correct queries are efficiently executed for a block."
-    count = len(connection.queries)
-    yield
-    for prefix, query in itertools.izip_longest(prefixes, connection.queries[count:]):
+
+    for prefix, query in itertools.izip_longest(prefixes, queries):
         assert prefix and query and query["sql"].startswith(prefix), (prefix, query)
         cursor = connection.cursor()
         cursor.execute("EXPLAIN " + query["sql"])
@@ -56,13 +55,11 @@ class TestModels(IMLUnitTestCase):
         super(TestModels, self).setUp()
 
         Stats.delete_all()
-        connection.use_debug_cursor = True
         connection.cursor().execute("SET enable_seqscan = off")
         self.preserve_stats_wipe = settings.STATS_SIMPLE_WIPE
 
     def tearDown(self):
         connection.cursor().execute("SET enable_seqscan = on")
-        connection.use_debug_cursor = False
         Stats.delete_all()
         settings.STATS_SIMPLE_WIPE = self.preserve_stats_wipe
 
@@ -80,10 +77,13 @@ class TestModels(IMLUnitTestCase):
 
     def test_sample_select(self):
         model = Stats[0]
-        with assertQueries("SELECT", "SELECT", "SELECT"):
+
+        with CaptureQueriesContext(connection) as queries:
             point = model.latest(id)
             self.assertEqual(point, model.latest(id))
             start = model.start(id)
+            assertQueries(["SELECT", "SELECT", "SELECT"], queries)
+
         self.assertEqual(point.timestamp, 0)
         self.assertEqual(point.dt - start, model.expiration_time)
 
@@ -93,25 +93,30 @@ class TestModels(IMLUnitTestCase):
 
         model.objects.all().delete()
 
-        with assertQueries("INSERT", "SELECT"):
+        with CaptureQueriesContext(connection) as queries:
             model.insert({id: points})
             point = model.latest(id)
             model.cache.clear()
             self.assertEqual(point, model.latest(id))
+            assertQueries(["INSERT", "SELECT"], queries)
+
         self.assertEqual(point, points[-1])
         floor = model.floor(point.dt)
         self.assertLessEqual(floor, point.dt)
         self.assertEqual(floor.microsecond, 0)
 
-        with assertQueries("SELECT", "DELETE", "SELECT"):
+        with CaptureQueriesContext(connection) as queries:
             model.expire([id])
             self.assertListEqual(list(model.select(id)), points)
+            assertQueries(["SELECT", "DELETE", "SELECT"], queries)
 
         self.assertEqual(len(list(model.reduce(points))), len(points))
         self.assertLess(len(list(Stats[1].reduce(points))), len(points))
 
-        with assertQueries("DELETE"):
+        with CaptureQueriesContext(connection) as queries:
             model.delete(id=id)
+            assertQueries(["DELETE"], queries)
+
         self.assertListEqual(list(model.select(id)), [])
         self.assertTrue(Stats[-1].start(id))
 
@@ -121,11 +126,13 @@ class TestModels(IMLUnitTestCase):
 
         model.objects.all().delete()
 
-        with assertQueries("INSERT", "SELECT"):
+        with CaptureQueriesContext(connection) as queries:
             model.insert({id: points})
             point = model.latest(id)
             model.cache.clear()
             self.assertEqual(point, model.latest(id))
+            assertQueries(["INSERT", "SELECT"], queries)
+
         self.assertEqual(point, points[-1])
         floor = model.floor(point.dt)
         self.assertLessEqual(floor, point.dt)
@@ -133,13 +140,15 @@ class TestModels(IMLUnitTestCase):
 
         # Check it tries to expire something
         model.next_flush_orphans_time = epoch
-        with assertQueries("DELETE", "SELECT"):
+        with CaptureQueriesContext(connection) as queries:
             model.expire([id])
             self.assertListEqual(list(model.select(id)), points)
+            assertQueries(["DELETE", "SELECT"], queries)
 
         # Now it should not expire because time has not passed.
-        with assertQueries():
+        with CaptureQueriesContext(connection) as queries:
             model.expire([id])
+            assertQueries([], queries)
 
         self.assertEqual(len(list(model.reduce(points))), len(points))
         self.assertLess(len(list(Stats[1].reduce(points))), len(points))
@@ -148,20 +157,27 @@ class TestModels(IMLUnitTestCase):
         model.insert({id: [Point(epoch, 1, 1)]})
         model.next_flush_orphans_time = epoch
         self.assertListEqual(list(model.select(id)), [Point(epoch, 1, 1)] + points)
-        with assertQueries("DELETE", "SELECT"):
+
+        with CaptureQueriesContext(connection) as queries:
             model.expire([id])
             self.assertListEqual(list(model.select(id)), points)
+            assertQueries(["DELETE", "SELECT"], queries)
 
-        with assertQueries("DELETE"):
+        with CaptureQueriesContext(connection) as queries:
             model.delete(id=id)
+            assertQueries(["DELETE"], queries)
+
         self.assertListEqual(list(model.select(id)), [])
         self.assertTrue(Stats[-1].start(id))
 
     def test_stats(self):
         outdated = Stats.insert((id, point.dt, point.sum) for point in points)
         self.assertEqual(outdated, [])
-        with assertQueries():
+
+        with CaptureQueriesContext(connection) as queries:
             point = Stats.latest(id)
+            assertQueries([], queries)
+
         sample = id, point.dt, point.sum
         self.assertEqual(Stats.insert([sample]), [sample])
         self.assertEqual(point.timestamp % 10, 0)
@@ -200,9 +216,11 @@ class TestModels(IMLUnitTestCase):
             self.assertEqual(sum(point.len for point in selection), 6)
 
         self.assertEqual(selection[0].len, 0)
-        point, = Stats.select(id, now, now + timedelta(seconds=5), fixed=1)
-        with assertQueries(*["DELETE"] * 5):
+        (point,) = Stats.select(id, now, now + timedelta(seconds=5), fixed=1)
+        with CaptureQueriesContext(connection) as queries:
             Stats.delete(id)
+            assertQueries(["DELETE"] * 5, queries)
+
         for model in Stats:
             self.assertListEqual(list(model.select(id)), [])
 

@@ -3,36 +3,24 @@
 // license that can be found in the LICENSE file.
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output};
-use futures::{
-    future::{self, loop_fn, Either, Loop},
-    Future,
-};
+use futures::Future;
 use std::time::{Duration, Instant};
-use tokio::timer::Delay;
+use tokio::timer::delay;
 
-pub fn checked_cmd(
-    action: &str,
-    service: &'static str,
-) -> impl Future<Item = bool, Error = ImlAgentError> {
-    cmd_output("systemctl", &[action, service]).and_then(move |_| {
-        loop_fn(1, move |cnt| {
-            systemctl_status(service)
-                .map(did_succeed)
-                .and_then(move |started| {
-                    if started {
-                        Either::A(future::ok(Loop::Break(true)))
-                    } else if cnt == 5 {
-                        Either::A(future::ok(Loop::Break(false)))
-                    } else {
-                        Either::B(
-                            Delay::new(Instant::now() + Duration::from_millis(250))
-                                .from_err()
-                                .map(move |_| Loop::Continue(cnt + 1)),
-                        )
-                    }
-                })
-        })
-    })
+pub async fn checked_cmd(action: &str, service: &'static str) -> Result<bool, ImlAgentError> {
+    cmd_output("systemctl", vec![action, service]).await?;
+
+    for _ in 0_u32..5 {
+        let x = systemctl_status(service).await?;
+
+        if did_succeed(x) {
+            return Ok(true);
+        }
+
+        delay(Instant::now() + Duration::from_millis(250)).await;
+    }
+
+    Ok(false)
 }
 
 /// Starts a service
@@ -40,7 +28,7 @@ pub fn checked_cmd(
 /// # Arguments
 ///
 /// * `x` - The service to start
-pub fn systemctl_start(x: &'static str) -> impl Future<Item = bool, Error = ImlAgentError> {
+pub fn systemctl_start(x: &'static str) -> impl Future<Output = Result<bool, ImlAgentError>> {
     checked_cmd("start", x)
 }
 
@@ -49,7 +37,7 @@ pub fn systemctl_start(x: &'static str) -> impl Future<Item = bool, Error = ImlA
 /// # Arguments
 ///
 /// * `x` - The service to stop
-pub fn systemctl_stop(x: &'static str) -> impl Future<Item = bool, Error = ImlAgentError> {
+pub fn systemctl_stop(x: &'static str) -> impl Future<Output = Result<bool, ImlAgentError>> {
     checked_cmd("stop", x)
 }
 
@@ -58,10 +46,8 @@ pub fn systemctl_stop(x: &'static str) -> impl Future<Item = bool, Error = ImlAg
 /// # Arguments
 ///
 /// * `x` - The service to check
-pub fn systemctl_status(
-    x: &str,
-) -> impl Future<Item = std::process::Output, Error = ImlAgentError> {
-    cmd_output("systemctl", &["is-active", x, "--quiet"])
+pub async fn systemctl_status(x: &str) -> Result<std::process::Output, ImlAgentError> {
+    cmd_output("systemctl", vec!["is-active", x, "--quiet"]).await
 }
 
 /// Invokes `success` on `ExitStatus` within `Output`

@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import CASCADE
 from django.db.models.base import ModelBase
 from django.db.models.query import QuerySet
 from django.contrib.contenttypes.models import ContentType
@@ -18,6 +19,7 @@ def nested_commit_on_success(func):
     whoever is managing the active transaction.
     """
     from django.db import transaction
+    from functools import wraps
 
     atomic = transaction.atomic(func)
 
@@ -27,7 +29,7 @@ def nested_commit_on_success(func):
 
         return atomic(*args, **kwds)
 
-    return transaction.wraps(func)(_nested_commit_on_success)
+    return wraps(func)(_nested_commit_on_success)
 
 
 class PolymorphicMetaclass(ModelBase):
@@ -80,7 +82,7 @@ class PolymorphicMetaclass(ModelBase):
             return getattr(self, model.__name__.lower())
 
         if issubclass(dct.get("__metaclass__", type), PolymorphicMetaclass):
-            dct["content_type"] = models.ForeignKey(ContentType, editable=False, null=True)
+            dct["content_type"] = models.ForeignKey(ContentType, editable=False, null=True, on_delete=CASCADE)
             dct["save"] = save
             dct["downcast"] = downcast
             dct["downcast_class"] = downcast_class

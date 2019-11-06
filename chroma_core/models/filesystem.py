@@ -5,6 +5,7 @@
 from toolz.functoolz import pipe, partial, flip
 
 from django.db import models
+from django.db.models import CASCADE
 from chroma_core.lib.job import DependOn, DependAll, Step, job_log
 from chroma_core.models import ManagedMgs, FilesystemMember, ManagedTarget
 from chroma_core.models import NoNidsPresent
@@ -45,7 +46,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         help_text="Lustre filesystem name, up to 8\
             characters",
     )
-    mgs = models.ForeignKey("ManagedMgs")
+    mgs = models.ForeignKey("ManagedMgs", on_delete=CASCADE)
 
     states = ["unavailable", "stopped", "available", "removed", "forgotten"]
     initial_state = "unavailable"
@@ -161,7 +162,7 @@ class RemoveFilesystemJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(ManagedFilesystem, "stopped", "removed")
     stateful_object = "filesystem"
     state_verb = "Remove"
-    filesystem = models.ForeignKey("ManagedFilesystem")
+    filesystem = models.ForeignKey("ManagedFilesystem", on_delete=CASCADE)
 
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 20
@@ -248,7 +249,13 @@ class RemoveFilesystemJob(StateChangeJob):
         super(RemoveFilesystemJob, self).on_success()
 
 
-class FilesystemJob:
+class StartStoppedFilesystemJob(StateChangeJob):
+    state_verb = "Start"
+    state_transition = StateChangeJob.StateTransition(ManagedFilesystem, "stopped", "available")
+    filesystem = models.ForeignKey("ManagedFilesystem", on_delete=CASCADE)
+
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 10
     stateful_object = "filesystem"
 
     class Meta:
@@ -257,15 +264,6 @@ class FilesystemJob:
 
     def get_steps(self):
         return []
-
-
-class StartStoppedFilesystemJob(FilesystemJob, StateChangeJob):
-    state_verb = "Start"
-    state_transition = StateChangeJob.StateTransition(ManagedFilesystem, "stopped", "available")
-    filesystem = models.ForeignKey("ManagedFilesystem")
-
-    display_group = Job.JOB_GROUPS.COMMON
-    display_order = 10
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -286,13 +284,21 @@ class StartStoppedFilesystemJob(FilesystemJob, StateChangeJob):
         return DependAll(deps)
 
 
-class StartUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
+class StartUnavailableFilesystemJob(StateChangeJob):
     state_verb = "Start"
     state_transition = StateChangeJob.StateTransition(ManagedFilesystem, "unavailable", "available")
-    filesystem = models.ForeignKey("ManagedFilesystem")
+    filesystem = models.ForeignKey("ManagedFilesystem", on_delete=CASCADE)
 
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 20
+    stateful_object = "filesystem"
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    def get_steps(self):
+        return []
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -312,13 +318,21 @@ class StartUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
         return DependAll(deps)
 
 
-class StopUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
+class StopUnavailableFilesystemJob(StateChangeJob):
     state_verb = "Stop"
     state_transition = StateChangeJob.StateTransition(ManagedFilesystem, "unavailable", "stopped")
-    filesystem = models.ForeignKey("ManagedFilesystem")
+    filesystem = models.ForeignKey("ManagedFilesystem", on_delete=CASCADE)
 
     display_group = Job.JOB_GROUPS.INFREQUENT
     display_order = 30
+    stateful_object = "filesystem"
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    def get_steps(self):
+        return []
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -336,7 +350,7 @@ class StopUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
         return DependAll(deps)
 
 
-class MakeAvailableFilesystemUnavailable(FilesystemJob, StateChangeJob):
+class MakeAvailableFilesystemUnavailable(StateChangeJob):
     """This Job has no steps, so does nothing other then change the state.
 
     Although the get_available_job code will find this Job as an option when the FS
@@ -348,7 +362,15 @@ class MakeAvailableFilesystemUnavailable(FilesystemJob, StateChangeJob):
 
     state_verb = None
     state_transition = StateChangeJob.StateTransition(ManagedFilesystem, "available", "unavailable")
-    filesystem = models.ForeignKey("ManagedFilesystem")
+    filesystem = models.ForeignKey("ManagedFilesystem", on_delete=CASCADE)
+    stateful_object = "filesystem"
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    def get_steps(self):
+        return []
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -371,7 +393,7 @@ class ForgetFilesystemJob(StateChangeJob):
     )
     stateful_object = "filesystem"
     state_verb = "Forget"
-    filesystem = models.ForeignKey(ManagedFilesystem)
+    filesystem = models.ForeignKey(ManagedFilesystem, on_delete=CASCADE)
     requires_confirmation = True
 
     @classmethod

@@ -6,12 +6,12 @@ import json
 
 from django.contrib.contenttypes.models import ContentType
 from tastypie.resources import Resource
+from tastypie.bundle import Bundle
 from tastypie import fields
-from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 
 from chroma_api.step import StepResource
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_core.models import Job, StateLock
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_api.chroma_model_resource import ChromaModelResource
@@ -42,10 +42,20 @@ class StateLockResource(Resource):
 
         return api.get_resource_uri(locked_item)
 
+    def detail_uri_kwargs(self, bundle_or_obj):
+        kwargs = {}
+
+        if isinstance(bundle_or_obj, Bundle):
+            kwargs["pk"] = bundle_or_obj.obj.locked_item.id
+        else:
+            kwargs["pk"] = bundle_or_obj.locked_item.id
+
+        return kwargs
+
     class Meta:
         object_class = StateLock
         resource_name = "state_lock"
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
 
 
@@ -181,7 +191,7 @@ class JobResource(ChromaModelResource):
     class Meta:
         queryset = Job.objects.all()
         resource_name = "job"
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         excludes = ["task_id", "locks_json", "wait_for_json"]
         ordering = ["created_at"]

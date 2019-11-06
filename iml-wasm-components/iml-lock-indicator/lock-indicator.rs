@@ -59,14 +59,12 @@ pub fn lock_indicator(
 ) -> Node<LockIndicatorState> {
     match get_locks(composite_id, &locks) {
         Some((write_locks, read_locks)) => {
-            let i = i![class!["fa", "fa-lock"]];
+            let mut i = i![class!["fa", "fa-lock"]];
 
-            let i = if !open {
+            if !open {
                 i.add_listener(mouse_ev(Ev::Click, move |_| {
                     LockIndicatorState(id, WatchState::Watching)
-                }))
-            } else {
-                i
+                }));
             };
 
             span![

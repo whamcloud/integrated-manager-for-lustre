@@ -28,7 +28,7 @@ pub fn pie_chart<T>(used: f64, total: f64, total_color: &str, used_color: &str) 
         style! {
             "transform" =>  "rotate(-0.25turn)"
         },
-        circle![attrs! { "r" => "1"}, style! {"fill" => total_color}],
-        path![attrs! { At::D => d}, style! {"fill" => used_color}]
+        circle![attrs! { At::R => "1", At::Fill => total_color}],
+        path![attrs! { At::D => d, At::Fill => used_color}]
     ]
 }

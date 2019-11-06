@@ -117,7 +117,7 @@ class Service(ChromaService):
             log.debug("Incoming peer report from %s:  %s" % (fqdn, peers_str))
 
             # NB: This will ignore any unknown peers in the report.
-            cluster_nodes = ManagedHost.objects.select_related("ha_cluster_peers").filter(
+            cluster_nodes = ManagedHost.objects.prefetch_related("ha_cluster_peers").filter(
                 Q(nodename__in=nodes.keys()) | Q(fqdn__in=nodes.keys())
             )
 

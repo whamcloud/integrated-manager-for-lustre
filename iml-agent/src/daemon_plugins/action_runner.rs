@@ -8,13 +8,13 @@ use crate::{
     daemon_plugins::DaemonPlugin,
 };
 use futures::{
+    channel::oneshot,
     future::{self, Either},
-    sync::oneshot,
-    Future,
+    Future, FutureExt,
 };
 use iml_wire_types::{Action, ActionId, ActionResult, AgentResult, ToJsonValue};
 use parking_lot::Mutex;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, pin::Pin, sync::Arc};
 
 pub struct ActionRunner {
     ids: Arc<Mutex<HashMap<ActionId, oneshot::Sender<()>>>>,
@@ -42,10 +42,10 @@ impl DaemonPlugin for ActionRunner {
     fn on_message(
         &self,
         v: serde_json::Value,
-    ) -> Box<Future<Item = AgentResult, Error = ImlAgentError> + Send> {
+    ) -> Pin<Box<dyn Future<Output = Result<AgentResult>> + Send>> {
         let action: Action = match serde_json::from_value(v) {
             Ok(x) => x,
-            Err(e) => return Box::new(future::err(ImlAgentError::Serde(e))),
+            Err(e) => return Box::pin(future::err(ImlAgentError::Serde(e))),
         };
 
         match action {
@@ -53,16 +53,15 @@ impl DaemonPlugin for ActionRunner {
                 let action_plugin_fn = match self.registry.get(&action) {
                     Some(p) => p,
                     None => {
-                        let err = RequiredError(
-                            format!("Could not find action {} in registry", action).to_string(),
-                        );
+                        let err =
+                            RequiredError(format!("Could not find action {} in registry", action));
 
                         let result = ActionResult {
                             id,
                             result: Err(format!("{:?}", err)),
                         };
 
-                        return Box::new(future::ok(result.to_json_value()));
+                        return Box::pin(future::ok(result.to_json_value()));
                     }
                 };
 
@@ -74,14 +73,14 @@ impl DaemonPlugin for ActionRunner {
 
                 let ids = self.ids.clone();
 
-                Box::new(
-                    fut.select2(rx)
+                Box::pin(
+                    future::select(fut, rx)
                         .map(move |r| match r {
-                            Either::A((result, _)) => {
+                            Either::Left((result, _)) => {
                                 ids.lock().remove(&id);
                                 ActionResult { id, result }
                             }
-                            Either::B((_, z)) => {
+                            Either::Right((_, z)) => {
                                 drop(z);
                                 ActionResult {
                                     id,
@@ -89,10 +88,7 @@ impl DaemonPlugin for ActionRunner {
                                 }
                             }
                         })
-                        .map(|r| r.to_json_value())
-                        .map_err(|e| match e {
-                            _ => unreachable!(),
-                        }),
+                        .map(|r| Ok(r.to_json_value())),
                 )
             }
             Action::ActionCancel { id } => {
@@ -100,10 +96,10 @@ impl DaemonPlugin for ActionRunner {
 
                 if let Some(tx) = tx {
                     // We don't care what the result is here.
-                    tx.send(()).is_ok();
+                    let _ = tx.send(()).is_ok();
                 }
 
-                Box::new(future::ok(
+                Box::pin(future::ok(
                     ActionResult {
                         id,
                         result: ().to_json_value(),
@@ -116,7 +112,7 @@ impl DaemonPlugin for ActionRunner {
     fn teardown(&mut self) -> Result<()> {
         for (_, tx) in self.ids.lock().drain() {
             // We don't care what the result is here.
-            tx.send(()).is_ok();
+            let _ = tx.send(()).is_ok();
         }
 
         Ok(())

@@ -1,0 +1,25 @@
+[package]
+name = "iml-action-runner"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+futures-preview = "0.3.0-alpha.19"
+tokio = "0.2.0-alpha.6"
+tokio-timer = "0.3.0-alpha.6"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
+warp = { git = "https://github.com/seanmonstar/warp.git" }
+iml-wire-types = { path = "../../iml-wire-types", version = "0.2" }
+iml-rabbit = { path = "../../iml-rabbit", version = "0.1.0" }
+iml-manager-env = { path = "../../iml-manager-env", version = "0.1.0" }
+iml-service-queue = { path = "../iml-service-queue", version = "0.1.0" }
+tokio-runtime-shutdown = { path = "../../tokio-runtime-shutdown", version = "0.1.0" }
+tracing = "0.1"
+tracing-subscriber = "0.1"
+
+[dev-dependencies]
+iml-agent-comms = { path = "../../iml-agent-comms", version = "0.1.0"}
+rand = "0.7.2"
+tokio-test = "0.2.0-alpha.6"

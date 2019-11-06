@@ -3,4 +3,8 @@
 // license that can be found in the LICENSE file.
 
 pub mod api_utils;
-pub mod manager_cli_error;
+pub mod display_utils;
+pub mod error;
+pub mod server;
+pub mod stratagem;
+pub mod update_repo_file;

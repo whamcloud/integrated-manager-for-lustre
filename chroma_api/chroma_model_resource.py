@@ -40,25 +40,10 @@ class ChromaModelResource(ModelResource):
 
         return data
 
-    def obj_update(self, bundle, **kwargs):
-        self.is_valid(bundle)
+    def _handle_500(self, request, exception):
+        log.exception(exception)
 
-        if bundle.errors:
-            raise ImmediateHttpResponse(
-                response=self.error_response(bundle.request, bundle.errors[self._meta.resource_name])
-            )
-
-        return ModelResource.obj_update(self, bundle, **kwargs)
-
-    def obj_create(self, bundle, **kwargs):
-        self.is_valid(bundle)
-
-        if bundle.errors:
-            raise ImmediateHttpResponse(
-                response=self.error_response(bundle.request, bundle.errors[self._meta.resource_name])
-            )
-
-        return ModelResource.obj_create(self, bundle, **kwargs)
+        return super(ChromaModelResource, self)._handle_500(request, exception)
 
 
 # Add enumeration type to the fields
@@ -75,6 +60,7 @@ def apifield___init__(
     unique=False,
     help_text=None,
     use_in="all",
+    verbose_name=None,
     enumerations=None,
 ):
 

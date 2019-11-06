@@ -5,15 +5,14 @@
 pub mod error;
 
 use errno;
-use error::LiblustreError;
+use error::{LiblustreError, LoadError};
 use libc;
 use libloading as lib;
 use liblustreapi_types as types;
-use log;
 use std::{
     convert::From,
     ffi::{CStr, CString},
-    fmt,
+    fmt, io,
     num::ParseIntError,
     path::PathBuf,
     str::FromStr,
@@ -174,7 +173,7 @@ impl Llapi {
 
         if dirhandle.is_null() {
             let e = errno::errno();
-            log::error!("Failed top opendir({:?}) -> {}", dircstr, e);
+            tracing::error!("Failed top opendir({:?}) -> {}", dircstr, e);
             return Err(LiblustreError::os_error(e.into()));
         }
 
@@ -182,7 +181,7 @@ impl Llapi {
 
         if fd < 0 {
             let e = errno::errno();
-            log::error!("Failed dirfd({:?}) => {}", dirhandle, e);
+            tracing::error!("Failed dirfd({:?}) => {}", dirhandle, e);
             return Err(LiblustreError::os_error(e.into()));
         }
 
@@ -196,7 +195,7 @@ impl Llapi {
 
         if rc < 0 {
             let e = errno::errno();
-            log::error!("Failed ioctl({:?}) => {}", path, e);
+            tracing::error!("Failed ioctl({:?}) => {}", path, e);
             return Err(LiblustreError::os_error(e.into()));
         }
 
@@ -204,7 +203,7 @@ impl Llapi {
 
         if rc < 0 {
             let e = errno::errno();
-            log::error!("Failed closedir({:?}) => {}", dirhandle, e);
+            tracing::error!("Failed closedir({:?}) => {}", dirhandle, e);
             return Err(LiblustreError::os_error(e.into()));
         }
 
@@ -291,55 +290,32 @@ impl Llapi {
         };
 
         if rc != 0 {
-            log::error!(
-                "Error: llapi_search_rootpath({}) => {}",
-                fsc.into_string()?,
-                rc
-            );
+            tracing::error!("Error: llapi_search_rootpath({}) => {}", fsname, rc);
             return Err(LiblustreError::os_error(rc.abs()));
         }
 
         buf2string(page)
     }
 
-    pub fn rmfid(&self, mntpt: &str, fidstr: &str) -> Result<(), LiblustreError> {
-        use std::fs; // @TODO replace with sys::llapi_rmfid once LU-12090 lands
-        let path = self.fid2path(&mntpt, &fidstr)?;
-        let pb: std::path::PathBuf = [mntpt, &path].iter().collect();
-        if let Err(e) = fs::remove_file(pb) {
-            log::error!("Failed to remove {}: {:?}", fidstr, e);
-        }
-
-        Ok(())
-    }
-
-    fn llapi_rmfid(&self, mntpt: &str, fidlist: &Vec<String>) -> Result<(), ()> {
+    fn llapi_rmfid(&self, mntpt: &str, fidlist: &[String]) -> Result<(), LiblustreError> {
         let func: lib::Symbol<extern "C" fn(*const libc::c_char, *const RmfidsArg) -> libc::c_int> =
-            match unsafe { self.lib.get(b"llapi_rmfid\0") } {
-                Err(e) => {
-                    log::info!("Failed load llapi_rmfid: {:?}", e);
-                    return Err(());
-                }
-                Ok(f) => f,
-            };
+            unsafe { self.lib.get(b"llapi_rmfid\0") }
+                .map_err(|e| LoadError::new(format!("Failed to load llapi_rmfid {}", e)))?;
 
-        let devptr = match CString::new(mntpt) {
-            Ok(c) => c.into_raw(),
-            Err(_) => return Err(()),
-        };
+        let devptr = CString::new(mntpt).map(|c| c.into_raw())?;
 
         let mut fids: Vec<RmfidsArg> = Vec::with_capacity(fidlist.len() + 1);
         fids.push(FidArrayHdr::new(0).into());
+
         for fidstr in fidlist {
             if let Ok(fid) = Fid::from_str(&fidstr) {
                 fids.push(fid.into());
             } else {
-                log::error!("Bad fid format: {}", fidstr);
+                tracing::error!("Bad fid format: {}", fidstr);
             }
         }
-        unsafe {
-            fids[0].hdr.nr = fids.len() as u32 - 1;
-        }
+
+        fids[0].hdr.nr = fids.len() as u32 - 1;
 
         let rc = func(devptr, fids.as_ptr());
 
@@ -347,37 +323,25 @@ impl Llapi {
         unsafe {
             let _ = CString::from_raw(devptr);
         }
+
         if rc == 0 {
             Ok(())
         } else {
-            log::info!(
-                "Call to llapi_rmfids({}, [{}, ...]) failed: {}",
-                &mntpt,
-                unsafe { fids[0].hdr.nr },
-                rc
-            );
-            Err(())
+            Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!(
+                    "Call to llapi_rmfids({}, [{}, ...]) failed: {}",
+                    &mntpt,
+                    unsafe { fids[0].hdr.nr },
+                    rc
+                ),
+            )
+            .into())
         }
     }
 
     pub fn rmfids(&self, mntpt: &str, fidlist: Vec<String>) -> Result<(), LiblustreError> {
-        match self.llapi_rmfid(&mntpt, &fidlist) {
-            Ok(_) => Ok(()),
-            Err(_) => {
-                log::debug!("llapi_rmfid is unavailable, using loop across rmfid");
-                for fidstr in fidlist {
-                    self.rmfid(&mntpt, &fidstr).unwrap_or_else(|x| {
-                        log::error!(
-                            "Couldn't remove fid {} with mountpoint {}: {}.",
-                            fidstr,
-                            mntpt,
-                            x
-                        )
-                    });
-                }
-                Ok(())
-            }
-        }
+        self.llapi_rmfid(&mntpt, &fidlist)
     }
 
     pub fn rmfids_size(&self) -> usize {
@@ -397,10 +361,7 @@ impl LlapiFid {
     pub fn create(fsname_or_mntpt: &str) -> Result<LlapiFid, LiblustreError> {
         let llapi = Llapi::create()?;
         let mntpt = llapi.search_rootpath(fsname_or_mntpt)?;
-        Ok(LlapiFid {
-            llapi: llapi,
-            mntpt: mntpt,
-        })
+        Ok(LlapiFid { llapi, mntpt })
     }
     pub fn mntpt(&self) -> String {
         self.mntpt.clone()
@@ -418,11 +379,6 @@ impl LlapiFid {
         self.mntpt = s.clone();
         Ok(s)
     }
-
-    pub fn rmfid(&self, fidstr: &str) -> Result<(), LiblustreError> {
-        self.llapi.rmfid(&self.mntpt, fidstr)
-    }
-
     pub fn rmfids(&self, fidlist: Vec<String>) -> Result<(), LiblustreError> {
         self.llapi.rmfids(&self.mntpt, fidlist)
     }
@@ -466,7 +422,7 @@ mod tests {
     }
 
     #[test]
-    fn test_layout_RmfidsArg() {
+    fn test_layout_rmfids_arg() {
         assert_eq!(
             ::std::mem::size_of::<RmfidsArg>(),
             16usize,

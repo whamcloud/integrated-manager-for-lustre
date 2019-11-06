@@ -14,8 +14,6 @@ services:
     restart: on-failure
   realtime:
     restart: on-failure
-  srcmap-reverse:
-    restart: on-failure
   view-server:
     restart: on-failure
   device-aggregator:

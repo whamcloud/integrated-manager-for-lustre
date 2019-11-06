@@ -4,6 +4,7 @@
 
 
 from django.db import models
+from django.db.models import CASCADE
 from chroma_core.lib.job import DependOn, Step, DependAll
 from polymorphic.models import DowncastMetaclass
 from chroma_help.help import help_text
@@ -36,7 +37,7 @@ class ConfParamVersionStep(Step):
 
 
 class ApplyConfParams(Job):
-    mgs = models.ForeignKey(ManagedTarget)
+    mgs = models.ForeignKey(ManagedTarget, on_delete=CASCADE)
 
     class Meta:
         app_label = "chroma_core"
@@ -100,7 +101,7 @@ class ApplyConfParams(Job):
 
 class ConfParam(models.Model):
     __metaclass__ = DowncastMetaclass
-    mgs = models.ForeignKey(ManagedMgs)
+    mgs = models.ForeignKey(ManagedMgs, on_delete=CASCADE)
     key = models.CharField(max_length=512)
     # A None value means "lctl conf_param -d", i.e. clear the setting
     value = models.CharField(max_length=512, blank=True, null=True)
@@ -142,7 +143,7 @@ class ConfParam(models.Model):
 
 
 class FilesystemClientConfParam(ConfParam):
-    filesystem = models.ForeignKey(ManagedFilesystem)
+    filesystem = models.ForeignKey(ManagedFilesystem, on_delete=CASCADE)
 
     class Meta:
         app_label = "chroma_core"
@@ -160,7 +161,7 @@ class FilesystemClientConfParam(ConfParam):
 
 
 class FilesystemGlobalConfParam(ConfParam):
-    filesystem = models.ForeignKey(ManagedFilesystem)
+    filesystem = models.ForeignKey(ManagedFilesystem, on_delete=CASCADE)
 
     def __init__(self, *args, **kwargs):
         super(FilesystemGlobalConfParam, self).__init__(*args, **kwargs)
@@ -180,7 +181,7 @@ class FilesystemGlobalConfParam(ConfParam):
 class MdtConfParam(ConfParam):
     # TODO: allow setting MDT to None to allow setting the param for
     # all MDT on an MGS (and set this param for MDT in RegisterTargetJob)
-    mdt = models.ForeignKey(ManagedMdt)
+    mdt = models.ForeignKey(ManagedMdt, on_delete=CASCADE)
 
     def __init__(self, *args, **kwargs):
         super(MdtConfParam, self).__init__(*args, **kwargs)
@@ -200,7 +201,7 @@ class MdtConfParam(ConfParam):
 class OstConfParam(ConfParam):
     # TODO: allow setting OST to None to allow setting the param for
     # all OSTs on an MGS (and set this param for OSTs in RegisterTargetJob)
-    ost = models.ForeignKey(ManagedOst)
+    ost = models.ForeignKey(ManagedOst, on_delete=CASCADE)
 
     def __init__(self, *args, **kwargs):
         super(OstConfParam, self).__init__(*args, **kwargs)
