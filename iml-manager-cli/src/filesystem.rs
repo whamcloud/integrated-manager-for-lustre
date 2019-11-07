@@ -3,11 +3,11 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{get_all, get_one},
+    api_utils::{get, get_all, get_one},
     display_utils::{generate_table, wrap_fut},
     error::ImlManagerCliError,
 };
-use iml_wire_types::{ApiList, Filesystem};
+use iml_wire_types::{ApiList, Filesystem, FlatQuery, Mgt};
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
 use structopt::StructOpt;
@@ -69,13 +69,16 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
             table.printstd();
         }
         FilesystemCommand::Show { fsname } => {
-            let fs: Filesystem = wrap_fut(
-                "Fetching filesystem...",
-                get_one(serde_json::json!({ "name": fsname })),
-            )
-            .await?;
+            let mut query: Vec<(&str, &str)> = vec![("name", &fsname)];
+            query.extend(Filesystem::query().iter().cloned());
+            tracing::debug!("QUERY: {:?}", query);
+            let fs: Filesystem = wrap_fut("Fetching filesystem...", get_one(query)).await?;
 
             tracing::debug!("FS: {:?}", fs);
+
+            let mgt: Mgt = wrap_fut("Fetching MGT...", get(&fs.mgt, Mgt::query())).await?;
+
+            tracing::debug!("MGT: {:?}", mgt);
 
             let mut table = Table::new();
             table.add_row(Row::from(&["Name".to_string(), fs.label]));
@@ -90,7 +93,7 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
             table.add_row(Row::from(&["State".to_string(), fs.state]));
             table.add_row(Row::from(&[
                 "Management Server".to_string(),
-                fs.mgt.active_host_name,
+                mgt.active_host_name,
             ]));
             table.add_row(Row::from(&["MDTs".to_string(), fs.mdts.len().to_string()]));
             table.add_row(Row::from(&["OSTs".to_string(), fs.osts.len().to_string()]));

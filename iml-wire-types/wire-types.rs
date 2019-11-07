@@ -177,6 +177,12 @@ pub enum PluginMessage {
     },
 }
 
+pub trait FlatQuery {
+    fn query() -> Vec<(&'static str, &'static str)> {
+        vec![("limit", "0")]
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash, serde::Deserialize, serde::Serialize)]
 pub struct ActionName(pub String);
 
@@ -388,6 +394,8 @@ pub struct Host {
     pub state_modified_at: String,
 }
 
+impl FlatQuery for Host {}
+
 impl ToCompositeId for Host {
     fn composite_id(&self) -> CompositeId {
         CompositeId(self.content_type_id, self.id)
@@ -424,6 +432,8 @@ pub struct ServerProfile {
     pub user_selectable: bool,
     pub worker: bool,
 }
+
+impl FlatQuery for ServerProfile {}
 
 impl EndpointName for ServerProfile {
     fn endpoint_name() -> &'static str {
@@ -636,6 +646,8 @@ pub struct Volume {
     pub volume_nodes: Vec<VolumeNode>,
 }
 
+impl FlatQuery for Volume {}
+
 impl Label for Volume {
     fn label(&self) -> &str {
         &self.label
@@ -661,6 +673,8 @@ pub struct VolumeNode {
     pub _use: bool,
     pub volume_id: u32,
 }
+
+impl FlatQuery for VolumeNode {}
 
 impl EndpointName for VolumeNode {
     fn endpoint_name() -> &'static str {
@@ -714,6 +728,12 @@ pub struct Target<T> {
     pub volume_name: String,
 }
 
+impl<T> FlatQuery for Target<T> {
+    fn query() -> Vec<(&'static str, &'static str)> {
+        vec![("limit", "0"), ("dehydrate__volume", "false")]
+    }
+}
+
 impl<T> ToCompositeId for Target<T> {
     fn composite_id(&self) -> CompositeId {
         CompositeId(self.content_type_id, self.id)
@@ -732,9 +752,9 @@ impl<T> EndpointName for Target<T> {
     }
 }
 
-type Mdt = Target<MdtConfParams>;
+pub type Mdt = Target<MdtConfParams>;
 
-type Mgt = Target<Option<MdtConfParams>>;
+pub type Mgt = Target<Option<TargetConfParam>>;
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct HsmControlParamMdt {
@@ -771,7 +791,7 @@ pub struct Filesystem {
     pub immutable_state: bool,
     pub label: String,
     pub mdts: Vec<Mdt>,
-    pub mgt: Mgt,
+    pub mgt: String,
     pub mount_command: String,
     pub mount_path: String,
     pub name: String,
@@ -779,6 +799,12 @@ pub struct Filesystem {
     pub resource_uri: String,
     pub state: String,
     pub state_modified_at: String,
+}
+
+impl FlatQuery for Filesystem {
+    fn query() -> Vec<(&'static str, &'static str)> {
+        vec![("limit", "0"), ("dehydrate__mgt", "false")]
+    }
 }
 
 impl ToCompositeId for Filesystem {
@@ -868,6 +894,12 @@ pub struct Alert {
     pub resource_uri: String,
     pub severity: AlertSeverity,
     pub variant: String,
+}
+
+impl FlatQuery for Alert {
+    fn query() -> Vec<(&'static str, &'static str)> {
+        vec![("limit", "0"), ("active", "true")]
+    }
 }
 
 impl EndpointName for Alert {

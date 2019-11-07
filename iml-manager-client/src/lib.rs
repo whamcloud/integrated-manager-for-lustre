@@ -93,6 +93,10 @@ fn create_api_url(path: impl ToString) -> Result<Url, ImlManagerClientError> {
         path = path[1..].into();
     };
 
+    if path.starts_with("api/") {
+        path = path[4..].into();
+    }
+
     let url = Url::parse(&iml_manager_env::get_manager_url())?
         .join("/api/")?
         .join(&path)?;
@@ -106,7 +110,7 @@ pub async fn get<T: DeserializeOwned + Debug>(
     path: impl ToString,
     query: impl serde::Serialize,
 ) -> Result<T, ImlManagerClientError> {
-    tracing::debug!("GET to {}", path.to_string());
+    tracing::debug!("GET to {} {}", path.to_string(), serde_json::json!(query));
 
     let uri = create_api_url(path)?;
 
