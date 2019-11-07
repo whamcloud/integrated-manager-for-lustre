@@ -65,6 +65,15 @@ impl Default for FsDetail {
     }
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct PolledMetric {
+    bytes_free: Option<f64>,
+    bytes_total: Option<f64>,
+    client_count: Option<f64>,
+    files_free: Option<f64>,
+    files_total: Option<f64>,
+}
+
 #[derive(Default)]
 struct Model {
     pub destroyed: bool,
@@ -131,6 +140,7 @@ enum Msg {
     CloseMountModal,
     Destroy,
     Filesystem(Option<Filesystem>),
+    UpdateMetrics(HashMap<String, PolledMetric>),
     FsDetailDropdown(dad::IdMsg<Filesystem>),
     FsDetailPopoverState(AlertIndicatorPopoverState),
     FsDetailPopoverLockState(LockIndicatorState),
@@ -231,6 +241,20 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             };
 
             model.fs = fs;
+        }
+        Msg::UpdateMetrics(polled_metrics) => {
+            if let Some(fs) = &mut model.fs {
+                let metric_data = polled_metrics.get(&fs.id.to_string());
+                if let Some(metric_data) = metric_data {
+                    fs.bytes_free = metric_data.bytes_free;
+                    fs.bytes_total = metric_data.bytes_total;
+                    fs.files_free = metric_data.files_free;
+                    fs.files_total = metric_data.files_total;
+
+                    let mdts_length = fs.mdts.len() as f64;
+                    fs.client_count = metric_data.client_count.map(move |x| x / mdts_length);
+                }
+            }
         }
         Msg::Locks(locks) => {
             if let Some(fs) = &model.fs {
@@ -685,6 +709,10 @@ impl FsDetailPageCallbacks {
     }
     pub fn command_modal_closed(&self) {
         self.app.update(Msg::CloseCommandModal);
+    }
+    pub fn set_polled_metrics(&self, polled_metrics: JsValue) {
+        let polled_metrics: HashMap<String, PolledMetric> = polled_metrics.into_serde().unwrap();
+        self.app.update(Msg::UpdateMetrics(polled_metrics));
     }
 }
 
