@@ -20,7 +20,7 @@ jobs:
           PACKAGE: rust-iml
           SPEC: rust-iml.spec
           WORKSPACE: ${{ github.workspace }}
-          RUSTUP_TOOLCHAIN: beta-x86_64-unknown-linux-gnu
+          RUSTUP_TOOLCHAIN: stable-x86_64-unknown-linux-gnu
           KEY: ${{ secrets.key }}
           IV: ${{ secrets.iv }}
   push_iml_wasm:
