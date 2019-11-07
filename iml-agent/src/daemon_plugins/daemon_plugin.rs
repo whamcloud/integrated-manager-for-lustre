@@ -190,7 +190,7 @@ mod tests {
     async fn test_daemon_plugin_get_from_registry() -> Result<()> {
         let registry: DaemonPlugins = vec![(
             "test_daemon_plugin".into(),
-            mk_callback(&TestDaemonPlugin::default),
+            mk_callback(TestDaemonPlugin::default),
         )]
         .into_iter()
         .collect();
