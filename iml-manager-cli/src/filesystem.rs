@@ -14,10 +14,10 @@ use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 pub enum FilesystemCommand {
-    /// List all configured storage servers
+    /// List all configured filesystems
     #[structopt(name = "list")]
     List,
-    /// Add new servers to IML
+    /// Show filesystem
     #[structopt(name = "show")]
     Show {
         #[structopt(name = "FSNAME")]

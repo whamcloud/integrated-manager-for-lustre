@@ -31,7 +31,7 @@ pub enum App {
         command: server::ServerCommand,
     },
     #[structopt(name = "filesystem")]
-    /// Work with Storage Servers
+    /// Filesystem command
     Filesystem {
         #[structopt(subcommand)]
         command: filesystem::FilesystemCommand,

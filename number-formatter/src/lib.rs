@@ -4,7 +4,7 @@
 
 use std::cmp;
 
-///
+/// Format number given a precision, suffix and either 1000 or 1024 based Kilo
 ///
 pub fn format(num: f64, precision: Option<usize>, suffix: &str, order2: bool) -> String {
     let units = ["", "K", "M", "G", "T", "P", "E", "Z", "Y"];
