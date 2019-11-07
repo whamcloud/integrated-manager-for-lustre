@@ -286,11 +286,6 @@ if [ $1 -lt 1 ]; then
     done
     firewall-cmd --permanent --remove-port=123/udp
     firewall-cmd --remove-port=123/udp
-
-    # clean out /var/lib/chroma
-    if [ -d /var/lib/chroma ]; then
-        rm -rf /var/lib/chroma
-    fi
 fi
 
 %files -f manager.files -n python2-%{pypi_name}
