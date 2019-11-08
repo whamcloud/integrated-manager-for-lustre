@@ -54,9 +54,9 @@ pub type DaemonBox = Box<dyn DaemonPlugin + Send + Sync>;
 
 type Callback = Box<dyn Fn() -> DaemonBox + Send + Sync>;
 
-fn mk_callback<D: 'static>(f: &'static (impl Fn() -> D + Sync)) -> Callback
+fn mk_callback<D>(f: fn() -> D) -> Callback
 where
-    D: DaemonPlugin + Send + Sync,
+    D: DaemonPlugin + Send + Sync + 'static,
 {
     Box::new(move || Box::new(f()) as DaemonBox)
 }
@@ -66,8 +66,8 @@ pub type DaemonPlugins = HashMap<PluginName, Callback>;
 /// Returns a `HashMap` of plugins available for usage.
 pub fn plugin_registry() -> DaemonPlugins {
     let hm: DaemonPlugins = vec![
-        ("action_runner".into(), mk_callback(&action_runner::create)),
-        ("stratagem".into(), mk_callback(&stratagem::create)),
+        ("action_runner".into(), mk_callback(action_runner::create)),
+        ("stratagem".into(), mk_callback(stratagem::create)),
     ]
     .into_iter()
     .collect();
@@ -190,7 +190,7 @@ mod tests {
     async fn test_daemon_plugin_get_from_registry() -> Result<()> {
         let registry: DaemonPlugins = vec![(
             "test_daemon_plugin".into(),
-            mk_callback(&TestDaemonPlugin::default),
+            mk_callback(TestDaemonPlugin::default),
         )]
         .into_iter()
         .collect();

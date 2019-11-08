@@ -4,7 +4,7 @@
 
 use crate::{display_utils, error::ImlManagerCliError};
 use futures::{future, TryFutureExt};
-use iml_wire_types::{ApiList, Command, EndpointName, Host};
+use iml_wire_types::{ApiList, Command, EndpointName, FlatQuery, Host};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use regex::Regex;
 use std::{
@@ -186,12 +186,18 @@ pub async fn delete(
 }
 
 pub async fn get_hosts() -> Result<ApiList<Host>, ImlManagerCliError> {
-    get(Host::endpoint_name(), serde_json::json!({"limit": 0})).await
+    get(Host::endpoint_name(), Host::query()).await
 }
 
-pub async fn get_all<T: EndpointName + Debug + serde::de::DeserializeOwned>(
+pub async fn get_all<T: EndpointName + FlatQuery + Debug + serde::de::DeserializeOwned>(
 ) -> Result<ApiList<T>, ImlManagerCliError> {
-    get(T::endpoint_name(), serde_json::json!({"limit": 0})).await
+    get(T::endpoint_name(), T::query()).await
+}
+
+pub async fn get_one<T: EndpointName + Debug + serde::de::DeserializeOwned>(
+    query: impl serde::Serialize,
+) -> Result<T, ImlManagerCliError> {
+    first(get(T::endpoint_name(), query).await?)
 }
 
 pub fn extract_api_id(s: &str) -> Option<&str> {
