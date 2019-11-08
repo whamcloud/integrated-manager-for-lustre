@@ -332,7 +332,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             Err(e) => println!("{:?}", e),
         },
-        App::GetKernel { modules } => match check_kernel::get_kernel(modules).wait() {
+        App::GetKernel { modules } => match check_kernel::get_kernel(modules).await {
             Ok(s) => println!("{}", s),
             Err(e) => println!("{:?}", e),
         },

@@ -3,11 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output, cmd::cmd_output_success};
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt, TryFutureExt},
-};
-use futures01::Future;
 use std::cmp::Ordering;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -95,16 +90,14 @@ impl PartialEq for Version {
 }
 
 async fn check_kver_module(module: &str, kver: &str) -> Result<bool, ImlAgentError> {
-    let output = cmd_output("modinfo", &["-n", "-k", kver, module])
-        .compat()
+    let output = cmd_output("modinfo", vec!["-n", "-k", kver, module])
         .await?;
 
     Ok(output.status.success())
 }
 
-pub async fn get_kernel_async(modules: Vec<String>) -> Result<String, ImlAgentError> {
-    let output = cmd_output_success("rpm", &["-q", "--qf", "%{V}-%{R}.%{ARCH}\n", "kernel"])
-        .compat()
+pub async fn get_kernel(modules: Vec<String>) -> Result<String, ImlAgentError> {
+    let output = cmd_output_success("rpm", vec!["-q", "--qf", "%{V}-%{R}.%{ARCH}\n", "kernel"])
         .await?;
 
     let mut newest = Version::from("");
@@ -126,8 +119,4 @@ pub async fn get_kernel_async(modules: Vec<String>) -> Result<String, ImlAgentEr
         }
     }
     Ok(newest.version)
-}
-
-pub fn get_kernel(modules: Vec<String>) -> impl Future<Item = String, Error = ImlAgentError> {
-    get_kernel_async(modules).boxed().compat()
 }
