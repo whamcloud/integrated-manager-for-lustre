@@ -140,7 +140,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // GET -> messages stream
-    let routes = warp::get2()
+    let routes = warp::get()
         .and(warp::sse())
         .and(warp::any().map(move || Arc::clone(&user_state2)))
         .and(warp::any().map(move || Arc::clone(&lock_state2)))

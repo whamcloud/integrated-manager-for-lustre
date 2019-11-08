@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mailbox = warp::path("mailbox");
 
-    let post = warp::post2()
+    let post = warp::post()
         .and(mailbox)
         .and(shared_senders_filter)
         .and(

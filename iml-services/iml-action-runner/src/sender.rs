@@ -96,7 +96,7 @@ pub fn sender(
         .and(client_filter)
         .and(queue_name_filter);
 
-    warp::post2().and(deps).and(warp::body::json()).and_then(
+    warp::post().and(deps).and(warp::body::json()).and_then(
         move |shared_sessions: Shared<Sessions>,
               shared_session_to_rpcs: Shared<SessionToRpcs>,
               client: Client,
