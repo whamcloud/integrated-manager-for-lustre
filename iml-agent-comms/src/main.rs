@@ -202,7 +202,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tokio::spawn(fut);
 
-    let receiver = warp::post2()
+    let receiver = warp::post()
         .and(warp::header::<String>("x-ssl-client-name").map(Fqdn))
         .and(hosts_filter)
         .and(client_filter)
@@ -277,7 +277,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let hosts_filter = warp::any().map(move || Arc::clone(&shared_hosts3));
 
-    let sender = warp::get2()
+    let sender = warp::get()
         .and(warp::header::<String>("x-ssl-client-name").map(Fqdn))
         .and(warp::query::<GetArgs>())
         .and(hosts_filter)
