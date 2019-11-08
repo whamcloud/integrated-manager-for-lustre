@@ -1726,6 +1726,18 @@ pub struct ElementState {
     pub configurable: bool,
 }
 
+#[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum UnitFileState {
+    Disabled,
+    Enabled,
+}
+
+#[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum ActiveState {
+    Inactive,
+    Active,
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum RunState {
     Stopped,

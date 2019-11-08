@@ -6,14 +6,14 @@ use crate::{
     action_plugins::stratagem::{action_purge, action_warning, server},
     action_plugins::{check_ha, check_stonith},
     agent_error::ImlAgentError,
+    systemd,
 };
 use futures::{Future, FutureExt};
 use iml_wire_types::{ActionName, ToJsonValue};
 use std::{collections::HashMap, pin::Pin};
 use tracing::info;
 
-type BoxedFuture =
-    Pin<Box<dyn Future<Output = Result<serde_json::value::Value, String>> + 'static + Send>>;
+type BoxedFuture = Pin<Box<dyn Future<Output = Result<serde_json::value::Value, String>> + Send>>;
 
 type Callback = Box<dyn Fn(serde_json::value::Value) -> BoxedFuture + Send + Sync>;
 
@@ -22,9 +22,9 @@ async fn run_plugin<T, R, Fut>(
     f: fn(T) -> Fut,
 ) -> Result<serde_json::value::Value, String>
 where
-    T: serde::de::DeserializeOwned + Send + 'static,
-    R: serde::Serialize + 'static + Send,
-    Fut: Future<Output = Result<R, ImlAgentError>> + Send + 'static,
+    T: serde::de::DeserializeOwned + Send,
+    R: serde::Serialize + Send,
+    Fut: Future<Output = Result<R, ImlAgentError>> + Send,
 {
     let x = serde_json::from_value(v).map_err(|e| format!("{}", e))?;
 
@@ -48,6 +48,19 @@ pub type Actions = HashMap<ActionName, Callback>;
 /// Add new Actions to the fn body as they are created.
 pub fn create_registry() -> HashMap<ActionName, Callback> {
     let mut map = HashMap::new();
+
+    map.insert("start_unit".into(), mk_callback(systemd::start_unit));
+
+    map.insert("stop_unit".into(), mk_callback(systemd::stop_unit));
+
+    map.insert("enable_unit".into(), mk_callback(systemd::enable_unit));
+
+    map.insert("disable_unit".into(), mk_callback(systemd::disable_unit));
+
+    map.insert(
+        "get_unit_run_state".into(),
+        mk_callback(systemd::get_run_state),
+    );
 
     map.insert(
         "start_scan_stratagem".into(),
