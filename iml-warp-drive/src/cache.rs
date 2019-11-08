@@ -12,7 +12,7 @@ use iml_wire_types::{
         ManagedTargetMountRecord, ManagedTargetRecord, Name, NotDeleted, StratagemConfiguration,
         VolumeNodeRecord, VolumeRecord,
     },
-    Alert, ApiList, EndpointName, Filesystem, Host, Target, TargetConfParam, Volume, VolumeNode,
+    Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam, Volume,
 };
 use std::{collections::HashMap, fmt::Debug, iter, pin::Pin, sync::Arc};
 
@@ -86,7 +86,7 @@ pub trait ToApiRecord: std::fmt::Debug + Id {
         client: Client,
     ) -> Pin<Box<dyn Future<Output = Result<T, ImlManagerClientError>> + Send>>
     where
-        T: Debug + serde::de::DeserializeOwned + EndpointName + ApiQuery + Send,
+        T: Debug + serde::de::DeserializeOwned + EndpointName + FlatQuery + Send,
     {
         let id = self.id();
 
@@ -98,34 +98,6 @@ pub trait ToApiRecord: std::fmt::Debug + Id {
         .boxed()
     }
 }
-
-pub trait ApiQuery {
-    fn query() -> Vec<(&'static str, &'static str)> {
-        vec![("limit", "0")]
-    }
-}
-
-impl ApiQuery for Filesystem {
-    fn query() -> Vec<(&'static str, &'static str)> {
-        vec![("limit", "0"), ("dehydrate__mgt", "false")]
-    }
-}
-
-impl<T> ApiQuery for Target<T> {
-    fn query() -> Vec<(&'static str, &'static str)> {
-        vec![("limit", "0"), ("dehydrate__volume", "false")]
-    }
-}
-
-impl ApiQuery for Alert {
-    fn query() -> Vec<(&'static str, &'static str)> {
-        vec![("limit", "0"), ("active", "true")]
-    }
-}
-
-impl ApiQuery for Host {}
-impl ApiQuery for Volume {}
-impl ApiQuery for VolumeNode {}
 
 #[derive(serde::Serialize, Debug, Clone)]
 #[serde(tag = "tag", content = "payload")]
@@ -176,7 +148,7 @@ where
         + Send
         + Sync
         + EndpointName
-        + ApiQuery,
+        + FlatQuery,
 {
     match (msg_type, &x) {
         (MessageType::Delete, _) => Ok(RecordChange::Delete(record_id_fn(x.id()))),
