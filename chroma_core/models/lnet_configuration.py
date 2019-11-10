@@ -153,15 +153,16 @@ class ConfigureLNetStep(Step):
     database = True
 
     def run(self, kwargs):
-        host = kwargs["host"]
+        host_id = kwargs["host_id"]
+        fqdn = kwargs["fqdn"]
         nid_updates = kwargs["config_changes"]["nid_updates"]
         nid_deletes = kwargs["config_changes"]["nid_deletes"]
 
         modprobe_entries = []
         nid_tuples = []
 
-        network_interfaces = NetworkInterface.objects.filter(host=host)
-        lnet_configuration = LNetConfiguration.objects.get(host=host)
+        network_interfaces = NetworkInterface.objects.filter(host__id=host_id)
+        lnet_configuration = LNetConfiguration.objects.get(host__id=host_id)
 
         for network_interface in network_interfaces:
             # See if we have deleted the nid for this network interface or
@@ -190,7 +191,7 @@ class ConfigureLNetStep(Step):
                 nid_tuples.append(nid.to_tuple)
 
         self.invoke_agent_expect_result(
-            host,
+            fqdn,
             "configure_lnet",
             {
                 "lnet_configuration": {
@@ -223,22 +224,22 @@ class ConfigureLNetJob(Job):
         return self.long_description(self.lnet_configuration)
 
     def get_steps(self):
+        host_id = self.lnet_configuration.host.id
+        fqdn = self.lnet_configuration.host.fqdn
+
         # The get_deps means the lnet is always placed into the unloaded state in preparation for the change in
         # configure the next two steps cause lnet to return to the state it was in
         steps = [
-            (
-                ConfigureLNetStep,
-                {"host": self.lnet_configuration.host, "config_changes": json.loads(self.config_changes)},
-            )
+            (ConfigureLNetStep, {"host_id": host_id, "fqdn": fqdn, "config_changes": json.loads(self.config_changes)},)
         ]
 
         if self.lnet_configuration.state != "lnet_unloaded":
-            steps.append((LoadLNetStep, {"host": self.lnet_configuration.host}))
+            steps.append((LoadLNetStep, {"fqdn": fqdn}))
 
         if self.lnet_configuration.state == "lnet_up":
-            steps.append((StartLNetStep, {"host": self.lnet_configuration.host}))
+            steps.append((StartLNetStep, {"fqdn": fqdn}))
 
-        steps.append((GetLNetStateStep, {"host": self.lnet_configuration.host}))
+        steps.append((GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}))
 
         return self.lnet_configuration.filter_steps(steps)
 
@@ -250,7 +251,7 @@ class UnconfigureLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs["host"], "unconfigure_lnet")
+        self.invoke_agent_expect_result(kwargs["fqdn"], "unconfigure_lnet")
 
 
 class UnconfigureLNetJob(NullStateChangeJob):
@@ -272,7 +273,7 @@ class UnconfigureLNetJob(NullStateChangeJob):
             return help_text["Stop monitoring lnet on %s"] % stateful_object.host
 
     def get_steps(self):
-        return self.target_object.filter_steps([(UnconfigureLNetStep, {"host": self.target_object.host})])
+        return self.target_object.filter_steps([(UnconfigureLNetStep, {"fqdn": self.target_object.host.fqdn})])
 
 
 class EnableLNetJob(NullStateChangeJob):
@@ -311,7 +312,7 @@ class LoadLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs["host"], "load_lnet")
+        self.invoke_agent_expect_result(kwargs["fqdn"], "load_lnet")
 
 
 class LoadLNetJob(LNetStateChangeJob):
@@ -338,11 +339,11 @@ class LoadLNetJob(LNetStateChangeJob):
         return self.long_description(self.lnet_configuration)
 
     def get_steps(self):
+        fqdn = self.lnet_configuration.host.fqdn
+        host_id = self.lnet_configuration.host.id
+
         return self.lnet_configuration.filter_steps(
-            [
-                (LoadLNetStep, {"host": self.lnet_configuration.host}),
-                (GetLNetStateStep, {"host": self.lnet_configuration.host}),
-            ]
+            [(LoadLNetStep, {"fqdn": fqdn}), (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),]
         )
 
 
@@ -350,7 +351,7 @@ class StartLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs["host"], "start_lnet")
+        self.invoke_agent_expect_result(kwargs["fqdn"], "start_lnet")
 
 
 class StartLNetJob(LNetStateChangeJob):
@@ -377,11 +378,11 @@ class StartLNetJob(LNetStateChangeJob):
         return self.long_description(self.lnet_configuration)
 
     def get_steps(self):
+        host_id = self.lnet_configuration.host.id
+        fqdn = self.lnet_configuration.fqdn
+
         return self.lnet_configuration.filter_steps(
-            [
-                (StartLNetStep, {"host": self.lnet_configuration.host}),
-                (GetLNetStateStep, {"host": self.lnet_configuration.host}),
-            ]
+            [(StartLNetStep, {"fqdn": fqdn}), (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),]
         )
 
 
@@ -389,7 +390,7 @@ class StopLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs["host"], "stop_lnet")
+        self.invoke_agent_expect_result(kwargs["fqdn"], "stop_lnet")
 
 
 class StopLNetJob(LNetStateChangeJob):
@@ -416,11 +417,11 @@ class StopLNetJob(LNetStateChangeJob):
         return self.long_description(self.lnet_configuration)
 
     def get_steps(self):
+        host_id = self.lnet_configuration.host.id
+        fqdn = self.lnet_configuration.host.fqdn
+
         return self.lnet_configuration.filter_steps(
-            [
-                (StopLNetStep, {"host": self.lnet_configuration.host}),
-                (GetLNetStateStep, {"host": self.lnet_configuration.host}),
-            ]
+            [(StopLNetStep, {"fqdn": fqdn}), (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),]
         )
 
 
@@ -428,7 +429,7 @@ class UnloadLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs["host"], "unload_lnet")
+        self.invoke_agent_expect_result(kwargs["fqdn"], "unload_lnet")
 
 
 class UnloadLNetJob(LNetStateChangeJob):
@@ -455,11 +456,11 @@ class UnloadLNetJob(LNetStateChangeJob):
         return self.long_description(self.lnet_configuration)
 
     def get_steps(self):
+        host_id = self.lnet_configuration.host.id
+        fqdn = self.lnet_configuration.host.fqdn
+
         return self.lnet_configuration.filter_steps(
-            [
-                (UnloadLNetStep, {"host": self.lnet_configuration.host}),
-                (GetLNetStateStep, {"host": self.lnet_configuration.host}),
-            ]
+            [(UnloadLNetStep, {"fqdn": fqdn}), (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),]
         )
 
 
@@ -473,15 +474,18 @@ class GetLNetStateStep(Step):
         from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
 
-        host = kwargs["host"]
+        host_id = kwargs["host_id"]
+        fqdn = kwargs["fqdn"]
 
         try:
-            network_data = self.invoke_agent(host, "device_plugin", {"plugin": "linux_network"})["linux_network"]
-            AgentDaemonRpcInterface().update_host_resources(host.id, {"linux_network": network_data})
+            network_data = self.invoke_agent(fqdn, "device_plugin", {"plugin": "linux_network"})["linux_network"]
+            AgentDaemonRpcInterface().update_host_resources(host_id, {"linux_network": network_data})
         except TypeError:
-            self.log("Data received from old client. Host %s state cannot be updated until agent is updated" % host)
+            self.log(
+                "Data received from old client. Host {} state cannot be updated until agent is updated".format(fqdn)
+            )
         except AgentException as e:
-            self.log("No data for plugin linux_network from host %s due to exception %s" % (host, e))
+            self.log("No data for plugin linux_network from host {} due to exception {}".format(fqdn, e))
 
 
 class GetLNetStateJob(Job):
