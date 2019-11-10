@@ -45,7 +45,7 @@ class ConfigureNTPStep(Step):
         else:
             ntp_server = socket.getfqdn()
 
-        self.invoke_agent_expect_result(kwargs["fqdn"].host, "configure_ntp", {"ntp_server": ntp_server})
+        self.invoke_agent_expect_result(kwargs["fqdn"], "configure_ntp", {"ntp_server": ntp_server})
 
 
 class ConfigureNTPJob(StateChangeJob):
