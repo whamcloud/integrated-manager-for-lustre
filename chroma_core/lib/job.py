@@ -12,6 +12,13 @@ from iml_common.lib.agent_rpc import agent_result
 job_log = log_register("job")
 
 
+def is_string(obj):
+    try:
+        return isinstance(obj, basestring)  # python 2
+    except NameError:
+        return isinstance(obj, str)  # python 3
+
+
 class Dependable(object):
     def all(self):
         if hasattr(self, "objects"):
@@ -179,12 +186,15 @@ class Step(object):
         """
         Wrapper around AgentRpc.call which provides logging
         """
+
+        fqdn = host if is_string(host) else host.fqdn
+
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc, AgentException
 
-        job_log.info("invoke_agent on agent %s %s %s" % (host, command, args))
+        job_log.info("invoke_agent on agent {} {} {}".format(fqdn, command, args))
 
         try:
-            result, action_state = AgentRpc.call(host.fqdn, command, args, self._cancel_event)
+            result, action_state = AgentRpc.call(fqdn, command, args, self._cancel_event)
             self._log_subprocesses(action_state.subprocesses)
             return result
         except AgentException as e:
@@ -222,7 +232,9 @@ class Step(object):
     def invoke_agent_expect_result(self, host, command, args={}):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
 
-        result = self.invoke_agent(host, command, args)
+        fqdn = host if is_string(host) else host.fqdn
+
+        result = self.invoke_agent(fqdn, command, args)
 
         # This case is to deal with upgrades, once every installation is using the new protocol then we should not allow this.
         # Once everything is 3.0 or later we will also have version information in the wrapper header.
@@ -238,12 +250,12 @@ class Step(object):
 
         if type(result) != dict:
             raise AgentException(
-                host.fqdn, command, args, "Expected a dictionary but got a %s when calling %s" % (type(result), command)
+                fqdn, command, args, "Expected a dictionary but got a %s when calling %s" % (type(result), command)
             )
 
         if ("error" not in result) and ("result" not in result):
             raise AgentException(
-                host.fqdn,
+                fqdn,
                 command,
                 args,
                 "Expected a dictionary with 'error' or 'result' in keys but got %s when calling %s" % (result, command),
