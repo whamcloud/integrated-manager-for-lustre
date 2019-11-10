@@ -379,7 +379,7 @@ class StartLNetJob(LNetStateChangeJob):
 
     def get_steps(self):
         host_id = self.lnet_configuration.host.id
-        fqdn = self.lnet_configuration.fqdn
+        fqdn = self.lnet_configuration.host.fqdn
 
         return self.lnet_configuration.filter_steps(
             [(StartLNetStep, {"fqdn": fqdn}), (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),]
