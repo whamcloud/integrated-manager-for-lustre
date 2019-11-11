@@ -8,7 +8,7 @@ use crate::{
     error::ImlManagerCliError,
     ostpool::{ostpool_cli, OstPoolCommand},
 };
-use futures::future::try_join_all;
+use futures::future::{try_join, try_join_all};
 use iml_wire_types::{ApiList, Filesystem, FlatQuery, Mgt, Ost};
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
@@ -84,14 +84,13 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
 
             tracing::debug!("FS: {:?}", fs);
 
-            let mgt: Mgt = wrap_fut("Fetching MGT...", get(&fs.mgt, Mgt::query())).await?;
-            let osts: Vec<Ost> =
-                try_join_all(fs.osts.into_iter().map(|o| {
-                    async move { wrap_fut("Fetching OST...", get(&o, Ost::query())).await }
-                }))
+            let (mgt, osts): (Mgt, Vec<Ost>) =
+                try_join(
+                    wrap_fut("Fetching MGT...", get(&fs.mgt, Mgt::query())),
+                    try_join_all(fs.osts.into_iter().map(|o| {
+                        async move { wrap_fut("Fetching OST...", get(&o, Ost::query())).await }
+                    })))
                 .await?;
-
-            tracing::debug!("MGT: {:?}", mgt);
 
             let mut table = Table::new();
             table.add_row(Row::from(&["Name".to_string(), fs.label]));
