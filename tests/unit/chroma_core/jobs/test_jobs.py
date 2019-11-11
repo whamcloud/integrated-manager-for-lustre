@@ -50,7 +50,7 @@ class TestJobs(IMLUnitTestCase):
 
         assert type(args) is dict, "args list must be dict :%s" % type(args)
 
-        args = InvokeAgentInvoke(host.fqdn, invoke, args, None, None)
+        args = InvokeAgentInvoke(host, invoke, args, None, None)
 
         self._invokes_history.append(args)
 

@@ -45,7 +45,7 @@ class ConfigureNTPStep(Step):
         else:
             ntp_server = socket.getfqdn()
 
-        self.invoke_agent_expect_result(kwargs["ntp_configuration"].host, "configure_ntp", {"ntp_server": ntp_server})
+        self.invoke_agent_expect_result(kwargs["fqdn"], "configure_ntp", {"ntp_server": ntp_server})
 
 
 class ConfigureNTPJob(StateChangeJob):
@@ -66,10 +66,10 @@ class ConfigureNTPJob(StateChangeJob):
         return help_text["configure_ntp"]
 
     def description(self):
-        return "Configure NTP on %s" % self.ntp_configuration.host
+        return "Configure NTP on {}".format(self.ntp_configuration.host)
 
     def get_steps(self):
-        return [(ConfigureNTPStep, {"ntp_configuration": self.ntp_configuration})]
+        return [(ConfigureNTPStep, {"fqdn": self.ntp_configuration.host.fqdn})]
 
     def get_deps(self):
         """
@@ -89,7 +89,7 @@ class UnconfigureNTPStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs["ntp_configuration"].host, "unconfigure_ntp")
+        self.invoke_agent_expect_result(kwargs["fqdn"], "unconfigure_ntp")
 
 
 class UnconfigureNTPJob(StateChangeJob):
@@ -110,7 +110,7 @@ class UnconfigureNTPJob(StateChangeJob):
         return help_text["unconfigure_ntp"]
 
     def description(self):
-        return "Unconfigure Ntp on %s" % self.ntp_configuration.host
+        return "Unconfigure Ntp on {}".format(self.ntp_configuration.host)
 
     def get_steps(self):
-        return [(UnconfigureNTPStep, {"ntp_configuration": self.ntp_configuration})]
+        return [(UnconfigureNTPStep, {"fqdn": self.ntp_configuration.host.fqdn})]
