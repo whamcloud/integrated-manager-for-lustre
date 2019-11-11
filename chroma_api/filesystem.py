@@ -450,6 +450,21 @@ class OstPoolResource(ChromaModelResource):
         authorization = PatchedDjangoAuthorization()
         excludes = ["not_deleted"]
         ordering = ["filesystem", "name"]
-        list_allowed_methods = ["get", "post"]
-        detail_allowed_methods = ["get", "delete", "put"]
+        list_allowed_methods = ["get", "post", "put", "delete"]
+        detail_allowed_methods = ["get", "delete", "put", "post"]
         filtering = {"filesystem": ["exact"]}
+
+    @validate
+    def obj_create(self, bundle, **kwargs):
+        request = bundle.request
+
+        ostpool_id, command_id = JobSchedulerClient.create_ostpool(bundle.data)
+        ostpool = OstPool.objects.get(pk=ostpool_id)
+        command = Command.objects.get(pk=command_id)
+
+        pool_bundle = self.full_dehydrate(self.build_bundle(obj=ostpool))
+        ostpool_data = self.alter_detail_data_to_serialize(request, pool_bundle).data
+
+        raise custom_response(
+            self, request, http.HttpAccepted, {"command": dehydrate_command(command), "ostpool": ostpool_data}
+        )

@@ -1133,9 +1133,21 @@ class JobScheduler(object):
 
         return mount
 
-    def create_copytool(self, copytool_data):
-        from django.db import transaction
+    def create_ostpool(self, ostpool_data):
+        log.debug("Creating ostpool from: %s" % ostpool_data)
+        with self._lock:
+            from django.db import transaction
 
+            fs = ObjectCache.get_one(ManagedFilesystem, lambda mfs: mfs.name == ostpool_data["filesystem"])
+            osts = ObjectCache.get(ManagedOst, lambda tgt: tgt.name in ostpool_data["osts"])
+            with transaction.atomic():
+                ostpool = OstPool.objects.create(name=ostpool_data["name"], filesystem=fs, osts=osts)
+            ObjectCache.add(OstPool, ostpool)
+
+        self.progress.advance()
+        return ostpool.id, command.id
+
+    def create_copytool(self, copytool_data):
         log.debug("Creating copytool from: %s" % copytool_data)
         with self._lock:
             host = ObjectCache.get_by_id(ManagedHost, int(copytool_data["host"]))

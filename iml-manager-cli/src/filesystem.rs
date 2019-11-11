@@ -6,8 +6,10 @@ use crate::{
     api_utils::{get, get_all, get_one},
     display_utils::{generate_table, wrap_fut},
     error::ImlManagerCliError,
+    ostpool::{ostpool_cli, OstPoolCommand},
 };
-use iml_wire_types::{ApiList, Filesystem, FlatQuery, Mgt};
+use futures::future::try_join_all;
+use iml_wire_types::{ApiList, Filesystem, FlatQuery, Mgt, Ost};
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
 use structopt::StructOpt;
@@ -22,6 +24,12 @@ pub enum FilesystemCommand {
     Show {
         #[structopt(name = "FSNAME")]
         fsname: String,
+    },
+    /// Ost Pools
+    #[structopt(name = "pool")]
+    Pool {
+        #[structopt(subcommand)]
+        command: OstPoolCommand,
     },
 }
 
@@ -77,6 +85,11 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
             tracing::debug!("FS: {:?}", fs);
 
             let mgt: Mgt = wrap_fut("Fetching MGT...", get(&fs.mgt, Mgt::query())).await?;
+            let osts: Vec<Ost> =
+                try_join_all(fs.osts.into_iter().map(|o| {
+                    async move { wrap_fut("Fetching OST...", get(&o, Ost::query())).await }
+                }))
+                .await?;
 
             tracing::debug!("MGT: {:?}", mgt);
 
@@ -95,8 +108,13 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
                 "Management Server".to_string(),
                 mgt.active_host_name,
             ]));
-            table.add_row(Row::from(&["MDTs".to_string(), fs.mdts.len().to_string()]));
-            table.add_row(Row::from(&["OSTs".to_string(), fs.osts.len().to_string()]));
+
+            let mdtnames: Vec<String> = fs.mdts.into_iter().map(|m| m.name).collect();
+            table.add_row(Row::from(&["MDTs".to_string(), mdtnames.join("\n")]));
+
+            let ostnames: Vec<String> = osts.into_iter().map(|m| m.name).collect();
+            table.add_row(Row::from(&["OSTs".to_string(), ostnames.join("\n")]));
+
             table.add_row(Row::from(&[
                 "Clients".to_string(),
                 format!("{:0}", fs.client_count.unwrap_or(0.0)),
@@ -104,6 +122,7 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
             table.add_row(Row::from(&["Mount Path".to_string(), fs.mount_path]));
             table.printstd();
         }
+        FilesystemCommand::Pool { command } => ostpool_cli(command).await?,
     };
 
     Ok(())

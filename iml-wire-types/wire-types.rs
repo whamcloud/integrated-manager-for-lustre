@@ -753,8 +753,8 @@ impl<T> EndpointName for Target<T> {
 }
 
 pub type Mdt = Target<MdtConfParams>;
-
 pub type Mgt = Target<Option<TargetConfParam>>;
+pub type Ost = Target<OstConfParams>;
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct HsmControlParamMdt {
@@ -1805,6 +1805,14 @@ impl std::fmt::Display for OstPool {
         )
     }
 }
+
+impl EndpointName for OstPool {
+    fn endpoint_name() -> &'static str {
+        "ostpool"
+    }
+}
+
+impl FlatQuery for OstPool {}
 
 pub mod warp_drive {
     use crate::{

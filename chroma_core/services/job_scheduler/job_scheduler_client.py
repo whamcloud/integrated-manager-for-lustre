@@ -29,6 +29,7 @@ class JobSchedulerRpc(ServiceRpcInterface):
         "create_host_ssh",
         "test_host_contact",
         "create_filesystem",
+        "create_ostpool",
         "create_client_mount",
         "create_copytool",
         "register_copytool",
@@ -171,6 +172,10 @@ class JobSchedulerClient(object):
     @classmethod
     def create_filesystem(cls, fs_data):
         return JobSchedulerRpc().create_filesystem(fs_data)
+
+    @classmethod
+    def create_ostpool(cls, pool_data):
+        return JobSchedulerRpc().create_ostpool(pool_data)
 
     @classmethod
     def update_nids(cls, nid_data):
