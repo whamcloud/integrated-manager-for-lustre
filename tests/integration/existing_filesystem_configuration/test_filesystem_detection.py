@@ -5,6 +5,9 @@ from tests.utils.http_requests import get_actions
 from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
 
+logger = logging.getLogger("test")
+logger.setLevel(logging.DEBUG)
+
 
 class TestFilesystemDetection(StatsTestCaseMixin):
     def setUp(self):
@@ -56,13 +59,22 @@ class TestFilesystemDetection(StatsTestCaseMixin):
             self.assertIn("forgotten", available_states)
             self.assertNotIn("removed", available_states)
 
-            # Wait for active_host_name to get set on all of the targets
-            self.wait_until_true(
-                lambda: (
-                    len([t for t in self.get_list("/api/target/") if not t["active_host"] is None])
-                    == len(config["filesystem"]["targets"])
+            def predicate():
+                api_targets_list = [t for t in self.get_list("/api/target/") if not t["active_host"] is None]
+                logger.debug(
+                    "get api targets list: {} size: {}, filesystem targets: {} size: {}".format(
+                        api_targets_list,
+                        len(api_targets_list),
+                        config["filesystem"]["targets"],
+                        len(config["filesystem"]["targets"]),
+                    )
                 )
-            )
+                return len([t for t in self.get_list("/api/target/") if not t["active_host"] is None]) == len(
+                    config["filesystem"]["targets"]
+                )
+
+            # Wait for active_host_name to get set on all of the targets
+            self.wait_until_true(predicate)
 
     def _forget_filesystem(self):
         filesystem = self._filesystem
