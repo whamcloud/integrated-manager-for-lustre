@@ -184,6 +184,22 @@ pub async fn disable_unit(unit_name: String) -> Result<(), ImlAgentError> {
     .await
 }
 
+/// Restarts a unit
+///
+/// # Arguments
+///
+/// * `unit_name` - The unit to restart
+pub async fn restart_unit(unit_name: String) -> Result<(), ImlAgentError> {
+    let output = cmd_output("systemctl", vec!["restart", &unit_name]).await?;
+
+    tracing::debug!("restart unit result for {}, {:?}", unit_name, output.stdout);
+
+    wait_for_state(30, &unit_name, |(_, active_state)| {
+        active_state == ActiveState::Active
+    })
+    .await
+}
+
 /// Given a `unit_name`, this fn wil return it's current
 /// `RunState` which is computed based on the current `UnitFileState` and `ActiveState`.
 ///

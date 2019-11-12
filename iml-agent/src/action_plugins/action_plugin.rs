@@ -3,8 +3,12 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    action_plugins::stratagem::{action_purge, action_warning, server},
-    action_plugins::{check_ha, check_stonith, ostpool, package_installed},
+    action_plugins::{
+        check_ha, check_stonith,
+        ntp::action_configure,
+        ostpool, package_installed,
+        stratagem::{action_purge, action_warning, server},
+    },
     systemd,
 };
 use iml_util::action_plugins;
@@ -19,6 +23,7 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("stop_unit", systemd::stop_unit)
         .add_plugin("enable_unit", systemd::enable_unit)
         .add_plugin("disable_unit", systemd::disable_unit)
+        .add_plugin("restart_unit", systemd::restart_unit)
         .add_plugin("get_unit_run_state", systemd::get_run_state)
         .add_plugin("package_installed", package_installed::package_installed)
         .add_plugin("start_scan_stratagem", server::trigger_scan)
@@ -31,7 +36,11 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("ostpool_wait", ostpool::action_pool_wait)
         .add_plugin("ostpool_destroy", ostpool::action_pool_destroy)
         .add_plugin("ostpool_add", ostpool::action_pool_add)
-        .add_plugin("ostpool_remove", ostpool::action_pool_remove);
+        .add_plugin("ostpool_remove", ostpool::action_pool_remove)
+        .add_plugin(
+            "configure_ntp",
+            action_configure::update_and_write_new_config,
+        );
 
     info!("Loaded the following ActionPlugins:");
 

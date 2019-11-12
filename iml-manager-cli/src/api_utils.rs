@@ -4,7 +4,7 @@
 
 use crate::{display_utils, error::ImlManagerCliError};
 use futures::{future, TryFutureExt};
-use iml_wire_types::{ApiList, Command, EndpointName, FlatQuery, Host};
+use iml_wire_types::{ApiList, AvailableAction, Command, EndpointName, FlatQuery, Host};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use regex::Regex;
 use std::{
@@ -131,6 +131,23 @@ pub async fn wait_for_cmds(cmds: Vec<Command>) -> Result<Vec<Command>, ImlManage
     future::try_join(fut.err_into(), fut2).await?;
 
     Ok(cmds)
+}
+
+pub async fn get_available_actions(
+    id: u32,
+    content_type_id: u32,
+) -> Result<ApiList<AvailableAction>, ImlManagerCliError> {
+    get(
+        AvailableAction::endpoint_name(),
+        vec![
+            (
+                "composite_ids",
+                format!("{}:{}", content_type_id, id).as_ref(),
+            ),
+            ("limit", "0"),
+        ],
+    )
+    .await
 }
 
 /// Given an `ApiList`, this fn returns the first item or errors.

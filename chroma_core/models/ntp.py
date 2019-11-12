@@ -45,7 +45,35 @@ class ConfigureNTPStep(Step):
         else:
             ntp_server = socket.getfqdn()
 
-        self.invoke_agent_expect_result(kwargs["fqdn"], "configure_ntp", {"ntp_server": ntp_server})
+        return self.invoke_rust_agent_expect_result(kwargs["fqdn"], "configure_ntp", ntp_server)
+
+
+class StopChronyStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        return self.invoke_rust_agent_expect_result(kwargs["fqdn"], "stop_unit", "chronyd.service")
+
+
+class DisableChronyStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        return self.invoke_rust_agent_expect_result(kwargs["fqdn"], "disable_unit", "chronyd.service")
+
+
+class EnableNtpStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        return self.invoke_rust_agent_expect_result(kwargs["fqdn"], "enable_unit", "ntpd.service")
+
+
+class RestartNtpStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        return self.invoke_rust_agent_expect_result(kwargs["fqdn"], "restart_unit", "ntpd.service")
 
 
 class ConfigureNTPJob(StateChangeJob):
@@ -69,7 +97,15 @@ class ConfigureNTPJob(StateChangeJob):
         return "Configure NTP on {}".format(self.ntp_configuration.host)
 
     def get_steps(self):
-        return [(ConfigureNTPStep, {"fqdn": self.ntp_configuration.host.fqdn})]
+        fqdn = self.ntp_configuration.host.fqdn
+
+        return [
+            (ConfigureNTPStep, {"fqdn": fqdn}),
+            (StopChronyStep, {"fqdn": fqdn}),
+            (DisableChronyStep, {"fqdn": fqdn}),
+            (EnableNtpStep, {"fqdn": fqdn}),
+            (RestartNtpStep, {"fqdn": fqdn}),
+        ]
 
     def get_deps(self):
         """
@@ -89,7 +125,7 @@ class UnconfigureNTPStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs["fqdn"], "unconfigure_ntp")
+        return self.invoke_rust_agent_expect_result(kwargs["fqdn"], "configure_ntp", None)
 
 
 class UnconfigureNTPJob(StateChangeJob):
@@ -113,4 +149,6 @@ class UnconfigureNTPJob(StateChangeJob):
         return "Unconfigure Ntp on {}".format(self.ntp_configuration.host)
 
     def get_steps(self):
-        return [(UnconfigureNTPStep, {"fqdn": self.ntp_configuration.host.fqdn})]
+        fqdn = self.ntp_configuration.host.fqdn
+
+        return [(UnconfigureNTPStep, {"fqdn": fqdn}), (RestartNtpStep, {"fqdn": fqdn})]
