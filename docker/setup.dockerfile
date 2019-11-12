@@ -1,4 +1,4 @@
-FROM imlteam/manager-service-base
+FROM local/manager-service-base
 
 RUN python setup.py install
 
