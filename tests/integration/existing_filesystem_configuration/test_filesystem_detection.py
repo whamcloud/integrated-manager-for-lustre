@@ -1,4 +1,5 @@
 import re
+import logging
 
 from testconfig import config
 from tests.utils.http_requests import get_actions
