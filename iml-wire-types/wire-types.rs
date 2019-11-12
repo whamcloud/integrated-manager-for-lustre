@@ -357,6 +357,31 @@ pub struct AvailableAction {
     pub verb: String,
 }
 
+impl EndpointName for AvailableAction {
+    fn endpoint_name() -> &'static str {
+        "action"
+    }
+}
+
+/// A `NtpConfiguration` record from `/api/ntp_configuration/`
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct NtpConfiguration {
+    pub content_type_id: u32,
+    pub id: u32,
+    pub immutable_state: bool,
+    pub label: String,
+    pub not_deleted: Option<bool>,
+    pub resource_uri: String,
+    pub state: String,
+    pub state_modified_at: String,
+}
+
+impl EndpointName for NtpConfiguration {
+    fn endpoint_name() -> &'static str {
+        "ntp_configuration"
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct ClientMount {
     pub filesystem_name: String,

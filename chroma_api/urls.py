@@ -63,6 +63,7 @@ import chroma_api.lnet_configuration
 import chroma_api.pacemaker
 import chroma_api.action
 import chroma_api.stratagem
+import chroma_api.ntp
 
 api.register(chroma_api.host.HostResource())
 api.register(chroma_api.host.ServerProfileResource())
@@ -105,5 +106,6 @@ api.register(chroma_api.pacemaker.PacemakerConfigurationResource())
 api.register(chroma_api.action.ActionResource())
 api.register(chroma_api.stratagem.StratagemConfigurationResource())
 api.register(chroma_api.stratagem.RunStratagemResource())
+api.register(chroma_api.ntp.NtpConfigurationResource())
 
 urlpatterns = [url(r"^", include(api.urls))]

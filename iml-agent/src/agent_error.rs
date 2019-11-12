@@ -94,6 +94,7 @@ pub enum ImlAgentError {
     XmlError(elementtree::Error),
     CibError(CibError),
     UnexpectedStatusError,
+    MarkerNotFound,
 }
 
 impl std::fmt::Display for ImlAgentError {
@@ -130,6 +131,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::XmlError(ref err) => write!(f, "{}", err),
             ImlAgentError::CibError(ref err) => write!(f, "{}", err),
             ImlAgentError::UnexpectedStatusError => write!(f, "Unexpected status code"),
+            ImlAgentError::MarkerNotFound => write!(f, "Marker not found"),
         }
     }
 }
@@ -162,6 +164,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::XmlError(ref err) => Some(err),
             ImlAgentError::CibError(ref err) => Some(err),
             ImlAgentError::UnexpectedStatusError => None,
+            ImlAgentError::MarkerNotFound => None,
         }
     }
 }
