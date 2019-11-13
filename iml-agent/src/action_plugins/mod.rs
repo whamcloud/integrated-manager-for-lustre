@@ -5,5 +5,6 @@
 pub mod action_plugin;
 pub mod check_ha;
 pub mod check_stonith;
+pub mod check_stratagem;
 pub mod stratagem;
 pub use action_plugin::{create_registry, Actions};
