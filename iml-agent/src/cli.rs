@@ -333,14 +333,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
         App::CheckStratagem => match check_stratagem::check_stratagem(()).await {
             Ok(cs) => {
-                println!(
-                    "{}",
-                    if cs {
-                        "Installed"
-                    } else {
-                        "Not Installed"
-                    }
-                );
+                println!("{}", if cs { "Installed" } else { "Not Installed" });
             }
             Err(e) => println!("{:?}", e),
         },

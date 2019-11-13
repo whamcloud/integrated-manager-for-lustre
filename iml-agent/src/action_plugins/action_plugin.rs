@@ -4,7 +4,7 @@
 
 use crate::{
     action_plugins::stratagem::{action_purge, action_warning, server},
-    action_plugins::{check_ha, check_stratagem, check_stonith},
+    action_plugins::{check_ha, check_stonith, check_stratagem},
     agent_error::ImlAgentError,
     systemd,
 };
