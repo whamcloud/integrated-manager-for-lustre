@@ -1,9 +1,11 @@
 [Unit]
 Description=IML Warp Drive Service
 PartOf=iml-manager.target
-After=rabbitmq-server.service
-After=iml-settings-populator.service
 Requires=iml-settings-populator.service
+After=iml-settings-populator.service
+After=rabbitmq-server.service
+After=nginx.service
+After=iml-gunicorn.service
 
 
 [Service]

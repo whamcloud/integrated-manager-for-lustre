@@ -5,6 +5,7 @@
 
 
 import json
+from itertools import chain
 from chroma_core.services import log_register
 
 from django.db import transaction
@@ -106,28 +107,28 @@ class UpdateScan(object):
         updates = False
 
         repos = package_report.keys()
-        for package in self.host.server_profile.serverprofilepackage_set.all():
+        for package_name in set(chain(self.host.server_profile.base_packages, self.host.server_profile.packages)):
             package_data = {}
             for repo in repos:
                 try:
-                    package_data = package_report[repo][package.package_name]
+                    package_data = package_report[repo][package_name]
                 except KeyError:
                     continue
                 break
 
             if not package_data:
-                log.warning("Required Package %s not available for %s" % (package.package_name, self.host))
+                log.warning("Required Package %s not available for %s" % (package_name, self.host))
                 continue
 
             if not package_data["installed"]:
-                log.info("Update available (not installed): %s on %s" % (package.package_name, self.host))
+                log.info("Update available (not installed): %s on %s" % (package_name, self.host))
                 updates = True
                 break
 
             if _updates_available(
                 _version_info_list(package_data["installed"]), _version_info_list(package_data["available"])
             ):
-                log.info("Update needed: %s on %s" % (package.package_name, self.host))
+                log.info("Update needed: %s on %s" % (package_name, self.host))
                 updates = True
                 break
 

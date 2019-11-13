@@ -1,6 +1,7 @@
 from collections import namedtuple
 
 from django.db import connection
+from django.test.utils import CaptureQueriesContext
 
 from chroma_api.filesystem import FilesystemResource
 from chroma_api.host import HostResource
@@ -57,7 +58,6 @@ class TestQueryScaling(ChromaApiTestCase):
 
     def setUp(self):
         super(TestQueryScaling, self).setUp()
-        connection.use_debug_cursor = True
 
         # Reset storage_plugin_manager (needed because of the DB rollback between tests
         # getting its record of resource classes out of sync with the DB)
@@ -69,7 +69,6 @@ class TestQueryScaling(ChromaApiTestCase):
 
     def tearDown(self):
         super(TestQueryScaling, self).tearDown()
-        connection.use_debug_cursor = False
 
     def _measure_scaling(self, create_n, measured_resource, scaled_resource=None):
         """
@@ -84,16 +83,18 @@ class TestQueryScaling(ChromaApiTestCase):
 
         query_counts = {}
         samples = [5, 6, 7, 8]
+
         for n in samples:
             ObjectCache.clear()
             create_n(n)
             # Queries get reset at the start of a request
             self.assertEqual(scaled_resource._meta.queryset.count(), n)
-            response = self.api_client.get("/api/%s/" % measured_resource._meta.resource_name, data={"limit": 0})
-            self.assertEqual(
-                response.status_code, 200, "%s:%s" % (response.content, measured_resource._meta.resource_name)
-            )
-            query_count = len(connection.queries)
+            with CaptureQueriesContext(connection) as queries:
+                response = self.api_client.get("/api/%s/" % measured_resource._meta.resource_name, data={"limit": 0})
+                self.assertEqual(
+                    response.status_code, 200, "%s:%s" % (response.content, measured_resource._meta.resource_name)
+                )
+                query_count = len(queries)
 
             self.assertEqual(len(self.deserialize(response)["objects"]), measured_resource._meta.queryset.count())
             query_counts[n] = query_count

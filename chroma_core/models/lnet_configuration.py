@@ -7,7 +7,7 @@ import json
 import logging
 
 from django.db import models
-
+from django.db.models import CASCADE
 from django.core.exceptions import ObjectDoesNotExist
 
 from chroma_core.models import AlertStateBase
@@ -26,7 +26,7 @@ class LNetConfiguration(DeletableStatefulObject):
     states = ["unconfigured", "lnet_unloaded", "lnet_down", "lnet_up"]
     initial_state = "unconfigured"
 
-    host = models.OneToOneField("ManagedHost", related_name="lnet_configuration")
+    host = models.OneToOneField("ManagedHost", related_name="lnet_configuration", on_delete=CASCADE)
 
     def get_nids(self):
         return [n.nid_string for n in self.nid_set.all()]
@@ -85,7 +85,7 @@ class LNetOfflineAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     def end_event(self):
         return AlertEvent(
@@ -115,7 +115,7 @@ class LNetNidsChangedAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     def end_event(self):
         return AlertEvent(
@@ -153,15 +153,16 @@ class ConfigureLNetStep(Step):
     database = True
 
     def run(self, kwargs):
-        host = kwargs["host"]
+        host_id = kwargs["host_id"]
+        fqdn = kwargs["fqdn"]
         nid_updates = kwargs["config_changes"]["nid_updates"]
         nid_deletes = kwargs["config_changes"]["nid_deletes"]
 
         modprobe_entries = []
         nid_tuples = []
 
-        network_interfaces = NetworkInterface.objects.filter(host=host)
-        lnet_configuration = LNetConfiguration.objects.get(host=host)
+        network_interfaces = NetworkInterface.objects.filter(host__id=host_id)
+        lnet_configuration = LNetConfiguration.objects.get(host__id=host_id)
 
         for network_interface in network_interfaces:
             # See if we have deleted the nid for this network interface or
@@ -190,7 +191,7 @@ class ConfigureLNetStep(Step):
                 nid_tuples.append(nid.to_tuple)
 
         self.invoke_agent_expect_result(
-            host,
+            fqdn,
             "configure_lnet",
             {
                 "lnet_configuration": {
@@ -203,7 +204,7 @@ class ConfigureLNetStep(Step):
 
 
 class ConfigureLNetJob(Job):
-    lnet_configuration = models.ForeignKey(LNetConfiguration)
+    lnet_configuration = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     config_changes = models.CharField(max_length=4096, help_text="A json string describing the configuration changes")
     requires_confirmation = False
     state_verb = "Configure LNet"
@@ -223,22 +224,22 @@ class ConfigureLNetJob(Job):
         return self.long_description(self.lnet_configuration)
 
     def get_steps(self):
+        host_id = self.lnet_configuration.host.id
+        fqdn = self.lnet_configuration.host.fqdn
+
         # The get_deps means the lnet is always placed into the unloaded state in preparation for the change in
         # configure the next two steps cause lnet to return to the state it was in
         steps = [
-            (
-                ConfigureLNetStep,
-                {"host": self.lnet_configuration.host, "config_changes": json.loads(self.config_changes)},
-            )
+            (ConfigureLNetStep, {"host_id": host_id, "fqdn": fqdn, "config_changes": json.loads(self.config_changes)},)
         ]
 
         if self.lnet_configuration.state != "lnet_unloaded":
-            steps.append((LoadLNetStep, {"host": self.lnet_configuration.host}))
+            steps.append((LoadLNetStep, {"fqdn": fqdn}))
 
         if self.lnet_configuration.state == "lnet_up":
-            steps.append((StartLNetStep, {"host": self.lnet_configuration.host}))
+            steps.append((StartLNetStep, {"fqdn": fqdn}))
 
-        steps.append((GetLNetStateStep, {"host": self.lnet_configuration.host}))
+        steps.append((GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}))
 
         return self.lnet_configuration.filter_steps(steps)
 
@@ -250,11 +251,11 @@ class UnconfigureLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs["host"], "unconfigure_lnet")
+        self.invoke_agent_expect_result(kwargs["fqdn"], "unconfigure_lnet")
 
 
 class UnconfigureLNetJob(NullStateChangeJob):
-    target_object = models.ForeignKey(LNetConfiguration)
+    target_object = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, "lnet_unloaded", "unconfigured")
 
     class Meta:
@@ -272,11 +273,11 @@ class UnconfigureLNetJob(NullStateChangeJob):
             return help_text["Stop monitoring lnet on %s"] % stateful_object.host
 
     def get_steps(self):
-        return self.target_object.filter_steps([(UnconfigureLNetStep, {"host": self.target_object.host})])
+        return self.target_object.filter_steps([(UnconfigureLNetStep, {"fqdn": self.target_object.host.fqdn})])
 
 
 class EnableLNetJob(NullStateChangeJob):
-    target_object = models.ForeignKey(LNetConfiguration)
+    target_object = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, "unconfigured", "lnet_unloaded")
 
     class Meta:
@@ -311,13 +312,13 @@ class LoadLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs["host"], "load_lnet")
+        self.invoke_agent_expect_result(kwargs["fqdn"], "load_lnet")
 
 
 class LoadLNetJob(LNetStateChangeJob):
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, "lnet_unloaded", "lnet_down")
     stateful_object = "lnet_configuration"
-    lnet_configuration = models.ForeignKey(LNetConfiguration)
+    lnet_configuration = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     state_verb = "Load LNet"
 
     display_group = Job.JOB_GROUPS.COMMON
@@ -338,11 +339,11 @@ class LoadLNetJob(LNetStateChangeJob):
         return self.long_description(self.lnet_configuration)
 
     def get_steps(self):
+        fqdn = self.lnet_configuration.host.fqdn
+        host_id = self.lnet_configuration.host.id
+
         return self.lnet_configuration.filter_steps(
-            [
-                (LoadLNetStep, {"host": self.lnet_configuration.host}),
-                (GetLNetStateStep, {"host": self.lnet_configuration.host}),
-            ]
+            [(LoadLNetStep, {"fqdn": fqdn}), (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),]
         )
 
 
@@ -350,13 +351,13 @@ class StartLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs["host"], "start_lnet")
+        self.invoke_agent_expect_result(kwargs["fqdn"], "start_lnet")
 
 
 class StartLNetJob(LNetStateChangeJob):
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, "lnet_down", "lnet_up")
     stateful_object = "lnet_configuration"
-    lnet_configuration = models.ForeignKey(LNetConfiguration)
+    lnet_configuration = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     state_verb = "Start LNet"
 
     display_group = Job.JOB_GROUPS.COMMON
@@ -377,11 +378,11 @@ class StartLNetJob(LNetStateChangeJob):
         return self.long_description(self.lnet_configuration)
 
     def get_steps(self):
+        host_id = self.lnet_configuration.host.id
+        fqdn = self.lnet_configuration.host.fqdn
+
         return self.lnet_configuration.filter_steps(
-            [
-                (StartLNetStep, {"host": self.lnet_configuration.host}),
-                (GetLNetStateStep, {"host": self.lnet_configuration.host}),
-            ]
+            [(StartLNetStep, {"fqdn": fqdn}), (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),]
         )
 
 
@@ -389,13 +390,13 @@ class StopLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs["host"], "stop_lnet")
+        self.invoke_agent_expect_result(kwargs["fqdn"], "stop_lnet")
 
 
 class StopLNetJob(LNetStateChangeJob):
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, "lnet_up", "lnet_down")
     stateful_object = "lnet_configuration"
-    lnet_configuration = models.ForeignKey(LNetConfiguration)
+    lnet_configuration = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     state_verb = "Stop LNet"
 
     display_group = Job.JOB_GROUPS.RARE
@@ -416,11 +417,11 @@ class StopLNetJob(LNetStateChangeJob):
         return self.long_description(self.lnet_configuration)
 
     def get_steps(self):
+        host_id = self.lnet_configuration.host.id
+        fqdn = self.lnet_configuration.host.fqdn
+
         return self.lnet_configuration.filter_steps(
-            [
-                (StopLNetStep, {"host": self.lnet_configuration.host}),
-                (GetLNetStateStep, {"host": self.lnet_configuration.host}),
-            ]
+            [(StopLNetStep, {"fqdn": fqdn}), (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),]
         )
 
 
@@ -428,13 +429,13 @@ class UnloadLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs["host"], "unload_lnet")
+        self.invoke_agent_expect_result(kwargs["fqdn"], "unload_lnet")
 
 
 class UnloadLNetJob(LNetStateChangeJob):
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, "lnet_down", "lnet_unloaded")
     stateful_object = "lnet_configuration"
-    lnet_configuration = models.ForeignKey(LNetConfiguration)
+    lnet_configuration = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     state_verb = "Unload LNet"
 
     display_group = Job.JOB_GROUPS.RARE
@@ -455,11 +456,11 @@ class UnloadLNetJob(LNetStateChangeJob):
         return self.long_description(self.lnet_configuration)
 
     def get_steps(self):
+        host_id = self.lnet_configuration.host.id
+        fqdn = self.lnet_configuration.host.fqdn
+
         return self.lnet_configuration.filter_steps(
-            [
-                (UnloadLNetStep, {"host": self.lnet_configuration.host}),
-                (GetLNetStateStep, {"host": self.lnet_configuration.host}),
-            ]
+            [(UnloadLNetStep, {"fqdn": fqdn}), (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),]
         )
 
 
@@ -473,15 +474,18 @@ class GetLNetStateStep(Step):
         from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
 
-        host = kwargs["host"]
+        host_id = kwargs["host_id"]
+        fqdn = kwargs["fqdn"]
 
         try:
-            network_data = self.invoke_agent(host, "device_plugin", {"plugin": "linux_network"})["linux_network"]
-            AgentDaemonRpcInterface().update_host_resources(host.id, {"linux_network": network_data})
+            network_data = self.invoke_agent(fqdn, "device_plugin", {"plugin": "linux_network"})["linux_network"]
+            AgentDaemonRpcInterface().update_host_resources(host_id, {"linux_network": network_data})
         except TypeError:
-            self.log("Data received from old client. Host %s state cannot be updated until agent is updated" % host)
+            self.log(
+                "Data received from old client. Host {} state cannot be updated until agent is updated".format(fqdn)
+            )
         except AgentException as e:
-            self.log("No data for plugin linux_network from host %s due to exception %s" % (host, e))
+            self.log("No data for plugin linux_network from host {} due to exception {}".format(fqdn, e))
 
 
 class GetLNetStateJob(Job):
@@ -490,7 +494,7 @@ class GetLNetStateJob(Job):
     for something else.
     """
 
-    host = models.ForeignKey("ManagedHost")
+    host = models.ForeignKey("ManagedHost", on_delete=CASCADE)
 
     class Meta:
         app_label = "chroma_core"

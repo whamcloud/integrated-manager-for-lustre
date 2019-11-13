@@ -7,7 +7,7 @@
 import socket
 
 from django.db import models
-
+from django.db.models import CASCADE
 from chroma_core.models import DeletableStatefulObject
 from chroma_core.models import StateChangeJob
 from chroma_core.models import Job
@@ -21,7 +21,7 @@ class NTPConfiguration(DeletableStatefulObject):
     states = ["unconfigured", "configured"]
     initial_state = "unconfigured"
 
-    host = models.OneToOneField("ManagedHost", related_name="_ntp_configuration")
+    host = models.OneToOneField("ManagedHost", related_name="_ntp_configuration", on_delete=CASCADE)
 
     def __str__(self):
         return "%s NTP configuration" % self.host
@@ -45,13 +45,13 @@ class ConfigureNTPStep(Step):
         else:
             ntp_server = socket.getfqdn()
 
-        self.invoke_agent_expect_result(kwargs["ntp_configuration"].host, "configure_ntp", {"ntp_server": ntp_server})
+        self.invoke_agent_expect_result(kwargs["fqdn"], "configure_ntp", {"ntp_server": ntp_server})
 
 
 class ConfigureNTPJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(NTPConfiguration, "unconfigured", "configured")
     stateful_object = "ntp_configuration"
-    ntp_configuration = models.ForeignKey(NTPConfiguration)
+    ntp_configuration = models.ForeignKey(NTPConfiguration, on_delete=CASCADE)
     state_verb = "Start Ntp"
 
     display_group = Job.JOB_GROUPS.COMMON
@@ -66,10 +66,10 @@ class ConfigureNTPJob(StateChangeJob):
         return help_text["configure_ntp"]
 
     def description(self):
-        return "Configure NTP on %s" % self.ntp_configuration.host
+        return "Configure NTP on {}".format(self.ntp_configuration.host)
 
     def get_steps(self):
-        return [(ConfigureNTPStep, {"ntp_configuration": self.ntp_configuration})]
+        return [(ConfigureNTPStep, {"fqdn": self.ntp_configuration.host.fqdn})]
 
     def get_deps(self):
         """
@@ -89,13 +89,13 @@ class UnconfigureNTPStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs["ntp_configuration"].host, "unconfigure_ntp")
+        self.invoke_agent_expect_result(kwargs["fqdn"], "unconfigure_ntp")
 
 
 class UnconfigureNTPJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(NTPConfiguration, "configured", "unconfigured")
     stateful_object = "ntp_configuration"
-    ntp_configuration = models.ForeignKey(NTPConfiguration)
+    ntp_configuration = models.ForeignKey(NTPConfiguration, on_delete=CASCADE)
     state_verb = "Unconfigure NTP"
 
     display_group = Job.JOB_GROUPS.COMMON
@@ -110,7 +110,7 @@ class UnconfigureNTPJob(StateChangeJob):
         return help_text["unconfigure_ntp"]
 
     def description(self):
-        return "Unconfigure Ntp on %s" % self.ntp_configuration.host
+        return "Unconfigure Ntp on {}".format(self.ntp_configuration.host)
 
     def get_steps(self):
-        return [(UnconfigureNTPStep, {"ntp_configuration": self.ntp_configuration})]
+        return [(UnconfigureNTPStep, {"fqdn": self.ntp_configuration.host.fqdn})]

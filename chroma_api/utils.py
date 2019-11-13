@@ -13,7 +13,7 @@ from collections import namedtuple
 
 
 from django.contrib.contenttypes.models import ContentType
-from django.http import Http404
+from django.http import Http404, QueryDict
 from django.utils import timezone
 
 from tastypie.resources import ModelDeclarativeMetaclass, Resource, ResourceOptions
@@ -171,6 +171,7 @@ class StatefulModelResource(CustomModelResource):
     label = fields.CharField()
 
     class Meta:
+        abstract = True
         readonly = ["id", "immutable_state", "state", "content_type_id", "label", "state_modified_at"]
 
     def dehydrate_content_type_id(self, bundle):
@@ -509,8 +510,10 @@ class SeverityResource(ChromaModelResource):
             )
         return bundle
 
-    def build_filters(self, filters=None):
+    def build_filters(self, filters=None, **kwargs):
         """FE will send severity strings which are converted to int here"""
+
+        is_query_dict = isinstance(filters, QueryDict)
 
         severity = filters.get("severity", None)
         if severity is not None:
@@ -520,15 +523,26 @@ class SeverityResource(ChromaModelResource):
                 filters["severity"] = conversion_util.STR_TO_SEVERITY[severity]
         else:
             #  Handle list of string reps of severity values (numeric in DB)
-            severity_list = filters.getlist("severity__in", None)
+            if is_query_dict:
+                severity_list = filters.getlist("severity__in", None)
+            else:
+                severity_list = filters.get("severity__in", None)
+
+            if isinstance(severity_list, basestring):
+                severity_list = [severity_list]
+
             if severity_list:
                 del filters["severity__in"]
                 converted_list = []
                 for severity_str in severity_list:
                     converted_list.append(str(conversion_util.STR_TO_SEVERITY[severity_str]))
-                filters.setlist("severity__in", converted_list)
 
-        return super(SeverityResource, self).build_filters(filters)
+                if is_query_dict:
+                    filters.setlist("severity__in", converted_list)
+                else:
+                    filters.set("severity__in", converted_list)
+
+        return super(SeverityResource, self).build_filters(filters, **kwargs)
 
 
 class BulkResourceOperation(object):

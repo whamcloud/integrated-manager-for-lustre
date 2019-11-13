@@ -3,10 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    agent_error::{ImlAgentError, Result},
+    agent_error::Result,
     daemon_plugins::{DaemonBox, OutputValue},
 };
-use futures::Future;
+use futures::{Future, TryFutureExt};
 use iml_wire_types::{AgentResult, Id, PluginName, Seq};
 use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::{
@@ -111,7 +111,7 @@ impl Sessions {
         &self,
         name: &PluginName,
         body: serde_json::Value,
-    ) -> Option<impl Future<Item = (SessionInfo, AgentResult), Error = ImlAgentError>> {
+    ) -> Option<impl Future<Output = Result<(SessionInfo, AgentResult)>>> {
         if let Some(State::Active(active)) = self.0.read().get(name) {
             Some(active.session.message(body))
         } else {
@@ -183,33 +183,29 @@ impl Session {
             plugin,
         }
     }
-    pub fn start(
-        &self,
-    ) -> impl Future<Item = Option<(SessionInfo, OutputValue)>, Error = ImlAgentError> {
+    pub fn start(&mut self) -> impl Future<Output = Result<Option<(SessionInfo, OutputValue)>>> {
         let info = Arc::clone(&self.info);
 
         self.plugin
             .start_session()
-            .map(move |x| x.map(|y| addon_info(&mut info.lock(), y)))
+            .map_ok(move |x| x.map(|y| addon_info(&mut info.lock(), y)))
     }
-    pub fn poll(
-        &self,
-    ) -> impl Future<Item = Option<(SessionInfo, OutputValue)>, Error = ImlAgentError> {
+    pub fn poll(&self) -> impl Future<Output = Result<Option<(SessionInfo, OutputValue)>>> {
         let info = Arc::clone(&self.info);
 
         self.plugin
             .update_session()
-            .map(move |x| x.map(|y| addon_info(&mut info.lock(), y)))
+            .map_ok(move |x| x.map(|y| addon_info(&mut info.lock(), y)))
     }
     pub fn message(
         &self,
         body: serde_json::Value,
-    ) -> impl Future<Item = (SessionInfo, AgentResult), Error = ImlAgentError> {
+    ) -> impl Future<Output = Result<(SessionInfo, AgentResult)>> {
         let info = Arc::clone(&self.info);
 
         self.plugin
             .on_message(body)
-            .map(move |x| addon_info(&mut info.lock(), x))
+            .map_ok(move |x| addon_info(&mut info.lock(), x))
     }
     pub fn teardown(&mut self) -> Result<()> {
         let info = self.info.lock();
@@ -226,21 +222,8 @@ mod tests {
     use crate::{
         agent_error::Result, daemon_plugins::daemon_plugin::test_plugin::TestDaemonPlugin,
     };
-    use futures::Future;
     use serde_json::json;
-
-    use tokio_timer::clock::{self, Clock};
-
-    fn run<R: Send + 'static, E: Send + 'static>(
-        clock: Clock,
-        fut: impl Future<Item = R, Error = E> + Send + 'static,
-    ) -> std::result::Result<R, E> {
-        tokio::runtime::Builder::new()
-            .clock(clock)
-            .build()
-            .unwrap()
-            .block_on_all(fut)
-    }
+    use tokio_timer::clock;
 
     fn create_session() -> Session {
         Session::new(
@@ -250,9 +233,9 @@ mod tests {
         )
     }
 
-    #[test]
-    fn test_session_start() -> Result<()> {
-        let session = create_session();
+    #[tokio::test]
+    async fn test_session_start() -> Result<()> {
+        let mut session = create_session();
 
         let session_info = SessionInfo {
             name: "test_plugin".into(),
@@ -260,20 +243,20 @@ mod tests {
             seq: 1.into(),
         };
 
-        let actual = run(Clock::new(), session.start())?;
+        let actual = session.start().await?;
 
         assert_eq!(actual, Some((session_info, json!(0))));
 
         Ok(())
     }
 
-    #[test]
-    fn test_session_update() -> Result<()> {
-        let session = create_session();
+    #[tokio::test]
+    async fn test_session_update() -> Result<()> {
+        let mut session = create_session();
 
-        run(Clock::new(), session.start())?;
+        session.start().await?;
 
-        let actual = run(Clock::new(), session.poll())?;
+        let actual = session.poll().await?;
 
         let session_info = SessionInfo {
             name: "test_plugin".into(),
@@ -286,13 +269,13 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_session_message() -> Result<()> {
-        let session = create_session();
+    #[tokio::test]
+    async fn test_session_message() -> Result<()> {
+        let mut session = create_session();
 
-        run(Clock::new(), session.start())?;
+        session.start().await?;
 
-        let actual = run(Clock::new(), session.message(json!("hi!")))?;
+        let actual = session.message(json!("hi!")).await?;
 
         let session_info = SessionInfo {
             name: "test_plugin".into(),
@@ -350,8 +333,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_sessions_session_message() -> Result<()> {
+    #[tokio::test]
+    async fn test_sessions_session_message() -> Result<()> {
         let mut sessions = Sessions::new(&["test_plugin".into()]);
 
         let session = create_session();
@@ -365,7 +348,7 @@ mod tests {
         let sessions = sessions.read();
         let state = sessions.get(&"test_plugin".into()).unwrap();
 
-        let actual = run(Clock::new(), fut)?;
+        let actual = fut.await?;
 
         let session_info = SessionInfo {
             name: "test_plugin".into(),

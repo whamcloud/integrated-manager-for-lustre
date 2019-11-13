@@ -5,10 +5,11 @@
 
 
 from django.db import models
+from django.db.models import CASCADE
 
 
 class ClientCertificate(models.Model):
-    host = models.ForeignKey("ManagedHost")
+    host = models.ForeignKey("ManagedHost", on_delete=CASCADE)
     serial = models.CharField(max_length=16)
     revoked = models.BooleanField(default=False)
 

@@ -145,7 +145,7 @@ class CopytoolEventView(ValidatedClientView):
         try:
             return HttpResponse(
                 json.dumps({"active_operations": dict((fid, op.id) for fid, op in active_operations.items())}),
-                mimetype="application/json",
+                content_type="application/json",
             )
         except AttributeError:
             return HttpResponse()
@@ -313,7 +313,7 @@ class MessageView(ValidatedClientView):
                             "Cancelling GET due to barrier %s %s"
                             % (first_message["client_start_time"], request.GET["client_start_time"])
                         )
-                        return HttpResponse(json.dumps({"messages": []}), mimetype="application/json")
+                        return HttpResponse(json.dumps({"messages": []}), content_type="application/json")
                 else:
                     messages.append(first_message)
             except Queue.Empty:
@@ -329,7 +329,7 @@ class MessageView(ValidatedClientView):
                                     "Cancelling GET due to barrier %s %s"
                                     % (message["client_start_time"], request.GET["client_start_time"])
                                 )
-                                return HttpResponse(json.dumps({"messages": []}), mimetype="application/json")
+                                return HttpResponse(json.dumps({"messages": []}), content_type="application/json")
                         else:
                             messages.append(message)
                     except Queue.Empty:
@@ -338,7 +338,7 @@ class MessageView(ValidatedClientView):
         messages = self._filter_valid_messages(fqdn, messages)
 
         log.debug("MessageView.get: responding to %s with %s messages (%s)" % (fqdn, len(messages), client_start_time))
-        return HttpResponse(json.dumps({"messages": messages}), mimetype="application/json")
+        return HttpResponse(json.dumps({"messages": messages}), content_type="application/json")
 
 
 def validate_token(key, credits=1):
@@ -388,8 +388,8 @@ def setup(request, key):
     crypto = Crypto()
     cert_str = open(crypto.AUTHORITY_CERT_FILE).read()
 
-    repo_packages = "python2-iml-agent rust-iml-agent"
-    server_profile = ServerProfile.objects.get(name=request.REQUEST["profile_name"])
+    server_profile = ServerProfile.objects.get(name=request.GET["profile_name"])
+    repo_packages = " ".join(server_profile.base_packages)
 
     repos = server_profile.repo_contents
 
@@ -400,7 +400,7 @@ def setup(request, key):
         if type(e) is KeyError:
             err = "Profile name not specified"
         else:
-            err = "Profile %s not a valid profile" % request.REQUEST["profile_name"]
+            err = "Profile %s not a valid profile" % request.GET["profile_name"]
         log.error(err)
         return HttpResponse(status=400, content=err)
 
@@ -508,7 +508,7 @@ def register(request, key):
     return HttpResponse(
         status=201,
         content=json.dumps({"command_id": command.id, "host_id": host.id, "certificate": certificate_str}),
-        mimetype="application/json",
+        content_type="application/json",
     )
 
 

@@ -24,14 +24,16 @@ pub fn update_stratagem<T: serde::de::DeserializeOwned + 'static>(
 }
 
 pub fn view(is_valid: bool, disabled: bool) -> Node<Command> {
-    let btn = bs_button::btn(
+    let mut btn = bs_button::btn(
         class![bs_button::BTN_SUCCESS, "update-button"],
         vec![Node::new_text("Update"), i![class!["fas fa-check"]]],
     );
 
     if is_valid && !disabled {
-        btn.add_listener(simple_ev(Ev::Click, Command::Update))
+        btn.add_listener(simple_ev(Ev::Click, Command::Update));
     } else {
-        btn.add_attr(At::Disabled.as_str(), "disabled")
+        btn.add_attr(At::Disabled.as_str(), "disabled");
     }
+
+    btn
 }

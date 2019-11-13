@@ -1,9 +1,9 @@
-# Copyright (c) 2018 DDN. All rights reserved.
+# Copyright (c) 2019 DDN. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
 
-from django.conf.urls import patterns, include
+from django.conf.urls import url, include
 from tastypie.api import Api
 
 
@@ -105,4 +105,4 @@ api.register(chroma_api.action.ActionResource())
 api.register(chroma_api.stratagem.StratagemConfigurationResource())
 api.register(chroma_api.stratagem.RunStratagemResource())
 
-urlpatterns = patterns("", (r"^", include(api.urls)))
+urlpatterns = [url(r"^", include(api.urls))]

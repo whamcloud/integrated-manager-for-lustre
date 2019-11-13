@@ -2,14 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::prelude::*;
+use futures::{Future, Stream};
 use iml_rabbit::{
-    basic_consume, declare_transient_queue, TcpChannel, TcpClient, TcpStreamConsumerFuture,
+    basic_consume, declare_transient_queue, BasicConsumeOptions, Channel, Client, ImlRabbitError,
 };
 use iml_wire_types::{Fqdn, Id, ManagerMessage, Message, PluginMessage, PluginName, Seq};
-use lapin_futures::channel::BasicConsumeOptions;
 
-pub static AGENT_TX_RUST: &'static str = "agent_tx_rust";
+pub static AGENT_TX_RUST: &str = "agent_tx_rust";
 
 #[derive(Debug, serde::Serialize)]
 pub struct AgentData {
@@ -78,8 +77,8 @@ pub fn terminate_agent_session(
     plugin: PluginName,
     fqdn: Fqdn,
     session_id: Id,
-    client: TcpClient,
-) -> impl Future<Item = (), Error = failure::Error> {
+    client: Client,
+) -> impl Future<Output = Result<(), ImlRabbitError>> {
     iml_rabbit::send_message(
         client,
         "",
@@ -92,20 +91,22 @@ pub fn terminate_agent_session(
     )
 }
 
-pub fn consume_agent_tx_queue(
-    channel: TcpChannel,
+pub async fn consume_agent_tx_queue(
+    channel: Channel,
     queue_name: impl Into<String>,
-) -> impl TcpStreamConsumerFuture {
-    declare_transient_queue(channel, queue_name).and_then(|(ch, q)| {
-        basic_consume(
-            ch,
-            q,
-            "",
-            Some(BasicConsumeOptions {
-                no_ack: true,
-                exclusive: true,
-                ..BasicConsumeOptions::default()
-            }),
-        )
-    })
+) -> Result<impl Stream<Item = Result<iml_rabbit::message::Delivery, ImlRabbitError>>, ImlRabbitError>
+{
+    let (ch, q) = declare_transient_queue(channel, queue_name).await?;
+
+    basic_consume(
+        ch,
+        q,
+        "",
+        Some(BasicConsumeOptions {
+            no_ack: true,
+            exclusive: true,
+            ..BasicConsumeOptions::default()
+        }),
+    )
+    .await
 }

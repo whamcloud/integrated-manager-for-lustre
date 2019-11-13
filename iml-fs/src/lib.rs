@@ -2,28 +2,64 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use bytes::IntoBuf;
-use futures::{future::poll_fn, stream, Future, Stream};
+use futures::{io::AsyncBufReadExt, stream, Stream, TryFutureExt, TryStreamExt};
 use std::{
     io::{self, Write},
     path::{Path, PathBuf},
 };
 use tempfile::NamedTempFile;
-use tokio::codec::{BytesCodec, FramedRead, FramedWrite, LinesCodec};
-use tokio_threadpool::blocking;
+use tokio::{
+    codec::{BytesCodec, FramedRead, FramedWrite, LinesCodec, LinesCodecError},
+    fs::File,
+    prelude::*,
+};
+use tokio_executor::blocking::run;
 
-/// Given a `Stream` of items that implement `IntoBuf`, returns a stream
+#[derive(Debug)]
+pub enum ImlFsError {
+    LinesCodecError(LinesCodecError),
+    IoError(io::Error),
+}
+
+impl std::fmt::Display for ImlFsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match *self {
+            ImlFsError::LinesCodecError(ref err) => write!(f, "{}", err),
+            ImlFsError::IoError(ref err) => write!(f, "{}", err),
+        }
+    }
+}
+
+impl std::error::Error for ImlFsError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match *self {
+            ImlFsError::LinesCodecError(ref err) => Some(err),
+            ImlFsError::IoError(ref err) => Some(err),
+        }
+    }
+}
+
+impl From<LinesCodecError> for ImlFsError {
+    fn from(err: LinesCodecError) -> Self {
+        ImlFsError::LinesCodecError(err)
+    }
+}
+
+impl From<io::Error> for ImlFsError {
+    fn from(err: io::Error) -> Self {
+        ImlFsError::IoError(err)
+    }
+}
+
+/// Given a `Stream` of items that implement `AsRef<[u8]>`, returns a stream
 /// that reads line by line.
-pub fn read_lines<S>(s: S) -> impl Stream<Item = String, Error = io::Error>
-where
-    S: Stream,
-    S::Error: std::error::Error + Send + Sync + 'static,
-    S::Item: IntoBuf,
-{
-    FramedRead::new(
-        rw_stream_sink::RwStreamSink::new(s.map_err(|e| io::Error::new(io::ErrorKind::Other, e))),
-        LinesCodec::new(),
-    )
+pub fn read_lines<I: AsRef<[u8]>, E: std::error::Error + Send + Sync + 'static>(
+    s: impl Stream<Item = Result<I, E>> + Send + 'static,
+) -> impl Stream<Item = Result<String, io::Error>> {
+    s.boxed()
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+        .into_async_read()
+        .lines()
 }
 
 /// Given a path, attempts to do an async read to the end of the file.
@@ -31,13 +67,17 @@ where
 /// # Arguments
 ///
 /// * `p` - The `Path` to a file.
-pub fn read_file_to_end<P>(p: P) -> impl Future<Item = Vec<u8>, Error = io::Error>
+pub async fn read_file_to_end<P>(p: P) -> Result<Vec<u8>, io::Error>
 where
     P: AsRef<Path> + Send + 'static,
 {
-    tokio::fs::File::open(p)
-        .from_err()
-        .and_then(|file| tokio::io::read_to_end(file, vec![]).map(|(_, d)| d))
+    let mut file = File::open(p).await?;
+
+    let mut contents = vec![];
+
+    file.read_to_end(&mut contents).await?;
+
+    Ok(contents)
 }
 
 /// Given a path, streams the file till EOF
@@ -45,15 +85,16 @@ where
 /// # Arguments
 ///
 /// * `p` - The `Path` to a file.
-pub fn stream_file<P>(p: P) -> impl Stream<Item = bytes::Bytes, Error = std::io::Error>
+pub fn stream_file<P>(p: P) -> impl Stream<Item = Result<bytes::Bytes, ImlFsError>>
 where
     P: AsRef<Path> + Send + 'static,
 {
-    tokio::fs::File::open(p)
-        .map(|file| FramedRead::new(file, BytesCodec::new()))
-        .flatten_stream()
-        .map(bytes::BytesMut::freeze)
-        .from_err()
+    File::open(p)
+        .err_into()
+        .map_ok(|file| FramedRead::new(file, BytesCodec::new()))
+        .try_flatten_stream()
+        .err_into()
+        .map_ok(bytes::BytesMut::freeze)
 }
 
 /// Given a path, streams the file line by line till EOF
@@ -61,14 +102,15 @@ where
 /// # Arguments
 ///
 /// * `p` - The `Path` to a file.
-pub fn stream_file_lines<P>(p: P) -> impl Stream<Item = String, Error = std::io::Error>
+pub fn stream_file_lines<P>(p: P) -> impl Stream<Item = Result<String, ImlFsError>>
 where
     P: AsRef<Path> + Send + 'static,
 {
-    tokio::fs::File::open(p)
-        .map(|file| FramedRead::new(file, LinesCodec::new()))
-        .flatten_stream()
-        .from_err()
+    File::open(p)
+        .err_into()
+        .map_ok(|file| FramedRead::new(file, LinesCodec::new()))
+        .try_flatten_stream()
+        .err_into()
 }
 
 /// Given a directory of files,
@@ -77,15 +119,16 @@ where
 /// # Arguments
 ///
 /// * `p` - The `Path` to a directory.
-pub fn stream_dir_lines<P>(p: P) -> impl Stream<Item = String, Error = std::io::Error>
+pub fn stream_dir_lines<P>(p: P) -> impl Stream<Item = Result<String, ImlFsError>>
 where
     P: AsRef<Path> + Send + 'static,
 {
     tokio::fs::read_dir(p)
-        .flatten_stream()
-        .map(|d| d.path())
-        .map(stream_file_lines)
-        .flatten()
+        .err_into()
+        .try_flatten_stream()
+        .map_ok(|d| d.path())
+        .map_ok(stream_file_lines)
+        .try_flatten()
 }
 
 /// Given a directory of files,
@@ -94,15 +137,16 @@ where
 /// # Arguments
 ///
 /// * `p` - The `Path` to a directory.
-pub fn stream_dir<P>(p: P) -> impl Stream<Item = bytes::Bytes, Error = std::io::Error>
+pub fn stream_dir<P>(p: P) -> impl Stream<Item = Result<bytes::Bytes, ImlFsError>>
 where
     P: AsRef<Path> + Send + 'static,
 {
     tokio::fs::read_dir(p)
-        .flatten_stream()
-        .map(|d| d.path())
-        .map(stream_file)
-        .flatten()
+        .err_into()
+        .try_flatten_stream()
+        .map_ok(|d| d.path())
+        .map_ok(stream_file)
+        .try_flatten()
 }
 
 /// Given an iterator of directory of files,
@@ -113,83 +157,83 @@ where
 /// * `ps` - An `Iterator` of directory `Path`s.
 pub fn stream_dirs<P>(
     ps: impl IntoIterator<Item = P>,
-) -> impl Stream<Item = bytes::Bytes, Error = std::io::Error>
+) -> impl Stream<Item = Result<bytes::Bytes, ImlFsError>>
 where
     P: AsRef<Path> + Send + 'static,
 {
-    stream::iter_ok::<_, std::io::Error>(ps)
-        .map(stream_dir)
-        .flatten()
+    stream::iter(ps).map(stream_dir).flatten()
 }
 
 /// Creates a temporary file and writes some bytes to it.
-pub fn write_tempfile(contents: Vec<u8>) -> impl Future<Item = NamedTempFile, Error = io::Error> {
-    poll_fn(move || {
-        blocking(|| {
-            let mut f = NamedTempFile::new()?;
+pub async fn write_tempfile(contents: Vec<u8>) -> Result<NamedTempFile, io::Error> {
+    let f = run(move || {
+        let mut f = NamedTempFile::new()?;
 
-            f.write_all(contents.as_ref())?;
+        f.write_all(contents.as_ref())?;
 
-            Ok(f)
-        })
-        .map_err(|_| panic!("the threadpool shut down"))
+        Ok::<_, io::Error>(f)
     })
-    .and_then(|x| x)
+    .await?;
+
+    Ok(f)
 }
 
 /// Given a `PathBuf`, creates a new file that can have
 /// arbitrary `Bytes` written to it.
-pub fn file_write_bytes(
-    path: PathBuf,
-) -> impl Future<Item = FramedWrite<tokio::fs::File, BytesCodec>, Error = io::Error> {
-    tokio::fs::File::create(path).map(|file| FramedWrite::new(file, BytesCodec::new()))
+pub async fn file_write_bytes(path: PathBuf) -> Result<FramedWrite<File, BytesCodec>, io::Error> {
+    let file = tokio::fs::File::create(path).await?;
+
+    Ok(FramedWrite::new(file, BytesCodec::new()))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{stream_dir, stream_file, write_tempfile};
+    use super::*;
     use bytes::Bytes;
-    use futures::{Future, Stream as _};
-    use std::{fs::File, io, io::Write as _};
+    use futures::stream;
+    use std::{fs::File, io::Write as _};
     use tempdir::TempDir;
     use tempfile::NamedTempFile;
 
-    fn run<R: Send + 'static, E: Send + 'static>(
-        fut: impl Future<Item = R, Error = E> + Send + 'static,
-    ) -> Result<R, E> {
-        tokio::runtime::Runtime::new().unwrap().block_on_all(fut)
+    #[tokio::test]
+    async fn test_read_lines() -> Result<(), ImlFsError> {
+        let lines: Vec<_> = read_lines(stream::once(async { Ok::<_, io::Error>("foo\nbar\nbaz") }))
+            .try_collect()
+            .await?;
+
+        assert_eq!(lines, vec!["foo", "bar", "baz"]);
+
+        Ok(())
     }
 
-    #[test]
-    fn test_write_tempfile() {
-        let fut = write_tempfile(b"foobar".to_vec());
+    #[tokio::test]
+    async fn test_write_tempfile() -> Result<(), ImlFsError> {
+        let file = write_tempfile(b"foobar".to_vec()).await?;
 
-        let file = run(fut).unwrap();
-
-        let s = std::fs::read_to_string(file.path()).unwrap();
+        let s = std::fs::read_to_string(file.path())?;
 
         assert_eq!(s, "foobar");
+
+        Ok(())
     }
 
-    #[test]
-    fn test_stream_file() -> io::Result<()> {
+    #[tokio::test]
+    async fn test_stream_file() -> Result<(), ImlFsError> {
         let mut f = NamedTempFile::new()?;
 
         f.write_all(b"some\nawesome\nfile")?;
 
         let path = f.path().to_path_buf();
 
-        let fut = stream_file(path).collect();
-
-        let result = run(fut)?;
+        let result: Vec<_> = stream_file(path).try_collect().await?;
 
         assert_eq!(result, vec![Bytes::from(&b"some\nawesome\nfile"[..])]);
 
         Ok(())
     }
 
-    #[test]
-    fn test_stream_dir() -> io::Result<()> {
+    #[tokio::test]
+    async fn test_stream_dir() -> Result<(), ImlFsError> {
         let tmp_dir = TempDir::new("test_stream_dir")?;
 
         for i in 1..=5 {
@@ -198,9 +242,9 @@ mod tests {
             writeln!(tmp_file, "file{}\nwas{}\nhere{}", i, i, i)?;
         }
 
-        let fut = stream_dir(tmp_dir.path().to_path_buf()).collect();
-
-        let mut result = run(fut)?;
+        let mut result: Vec<_> = stream_dir(tmp_dir.path().to_path_buf())
+            .try_collect()
+            .await?;
         result.sort();
 
         assert_eq!(

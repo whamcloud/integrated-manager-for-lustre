@@ -6,9 +6,10 @@
 import logging
 
 from django.db import models
+from django.db.models import CASCADE
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes.generic import GenericForeignKey
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.utils import timezone
 from django.db import IntegrityError
 
@@ -19,15 +20,16 @@ from chroma_core.lib.job import job_log
 
 class AlertStateBase(SparseModel):
     class Meta:
-        abstract = True
         unique_together = ("alert_item_type", "alert_item_id", "alert_type", "active")
         ordering = ["id"]
         app_label = "chroma_core"
+        db_table = "chroma_core_alertstate"
 
     table_name = "chroma_core_alertstate"
+
     """Records a period of time during which a particular
        issue affected a particular element of the system"""
-    alert_item_type = models.ForeignKey(ContentType, null=True)
+    alert_item_type = models.ForeignKey(ContentType, null=True, on_delete=CASCADE)
     alert_item_id = models.PositiveIntegerField(null=True)
     # FIXME: generic foreign key does not automatically set up deletion
     # of this when the alert_item is deleted -- do it manually
@@ -304,14 +306,14 @@ class AlertState(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
 
 class AlertSubscription(models.Model):
     """Represents a user's election to be notified of specific alert classes"""
 
-    user = models.ForeignKey(User, related_name="alert_subscriptions")
-    alert_type = models.ForeignKey(ContentType)
+    user = models.ForeignKey(User, related_name="alert_subscriptions", on_delete=CASCADE)
+    alert_type = models.ForeignKey(ContentType, on_delete=CASCADE)
     # TODO: alert thresholds?
 
     class Meta:

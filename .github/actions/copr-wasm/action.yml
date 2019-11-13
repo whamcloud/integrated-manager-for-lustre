@@ -1,0 +1,5 @@
+name: copr wasm
+description: build in the copr-wasm image
+runs:
+  using: "docker"
+  image: "docker://imlteam/copr-wasm"

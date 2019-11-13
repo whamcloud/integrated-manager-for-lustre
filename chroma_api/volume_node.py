@@ -5,8 +5,7 @@
 
 from chroma_core.models import VolumeNode
 
-from tastypie.authorization import DjangoAuthorization
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.chroma_model_resource import ChromaModelResource
 
 from tastypie import fields
@@ -46,7 +45,7 @@ class VolumeNodeResource(ChromaModelResource):
     class Meta:
         queryset = VolumeNode.objects.all().select_related("host")
         resource_name = "volume_node"
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         excludes = ["not_deleted"]
         list_allowed_methods = ["get"]

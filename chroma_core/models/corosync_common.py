@@ -6,6 +6,7 @@
 import logging
 
 from django.db import models
+from django.db.models import CASCADE
 
 from chroma_core.models import AlertStateBase
 from chroma_core.models import AlertEvent
@@ -40,7 +41,7 @@ class CorosyncUnknownPeersAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     @property
     def affected_objects(self):
@@ -65,7 +66,7 @@ class CorosyncToManyPeersAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     @property
     def affected_objects(self):
@@ -90,7 +91,7 @@ class CorosyncNoPeersAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     @property
     def affected_objects(self):
@@ -112,7 +113,7 @@ class CorosyncStoppedAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     def end_event(self):
         return AlertEvent(
@@ -262,7 +263,7 @@ class GetCorosyncStateStep(Step):
 
 
 class GetCorosyncStateJob(Job):
-    corosync_configuration = models.ForeignKey("CorosyncConfiguration")
+    corosync_configuration = models.ForeignKey("CorosyncConfiguration", on_delete=CASCADE)
 
     requires_confirmation = False
     verb = "Get Corosync state"
@@ -291,8 +292,8 @@ class GetCorosyncStateJob(Job):
 
 class ConfigureCorosyncJob(Job):
     corosync_configuration = StubCorosyncConfiguration()
-    network_interface_0 = models.ForeignKey(NetworkInterface, related_name="+")
-    network_interface_1 = models.ForeignKey(NetworkInterface, related_name="+")
+    network_interface_0 = models.ForeignKey(NetworkInterface, related_name="+", on_delete=CASCADE)
+    network_interface_1 = models.ForeignKey(NetworkInterface, related_name="+", on_delete=CASCADE)
     mcast_port = models.IntegerField(null=True)
 
     class Meta:

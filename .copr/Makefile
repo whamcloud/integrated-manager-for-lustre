@@ -53,7 +53,7 @@ srpm:
 	cp rust-iml.spec ${TMPDIR}/_topdir/SPECS/
 	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-iml.spec
 	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
-	cp -f _topdir/SRPMS/*.rpm $(outdir)
+	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)
 
 iml-deps:
 	if ! rpm -q python-devel python-setuptools ed 2> /dev/null; then \
@@ -78,7 +78,6 @@ iml-srpm: iml-deps substs
 		${BUILDROOT}/iml-manager.target \
 		${BUILDROOT}/chroma-config.1 \
 		${BUILDROOT}/logrotate.cfg \
-		${BUILDROOT}/chroma-host-discover-init.sh \
 		${BUILDROOT}/10-device-aggregator.service.conf \
 		${TMPDIR}/configuration
 

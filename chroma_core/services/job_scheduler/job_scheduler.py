@@ -23,7 +23,8 @@ from chroma_core.services import dbutils
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction, DEFAULT_DB_ALIAS
-from django.db.models import Q, FieldDoesNotExist, ManyToManyField
+from django.db.models import Q, ManyToManyField
+from django.core.exceptions import FieldDoesNotExist
 import django.utils.timezone
 
 from chroma_core.lib.cache import ObjectCache
@@ -833,7 +834,7 @@ class JobScheduler(object):
 
         def is_real_model_field(inst, name):
             try:
-                field = inst._meta.get_field_by_name(name)
+                field = inst._meta.get_field(name)
                 if isinstance(field, ManyToManyField):
                     return True
             except FieldDoesNotExist:
@@ -860,7 +861,7 @@ class JobScheduler(object):
                     setattr(instance, attr, value)
 
                     if is_real_model_field(instance, attr):
-                        instance.save(update_fields=[attr])
+                        instance.save(force_update=True)
 
                     log.info(
                         "_notify: Set %s=%s on %s (%s-%s) and saved"

@@ -2,26 +2,18 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-mod api_utils;
-mod display_utils;
-mod manager_cli_error;
-mod stratagem;
-
-use display_utils::{generate_table, start_spinner};
-use iml_manager_cli::api_utils::{get, run_cmd};
-use iml_wire_types::{ApiList, EndpointName, Host};
+use iml_manager_cli::{
+    display_utils::display_error,
+    filesystem::{self, filesystem_cli},
+    server::{self, server_cli},
+    stratagem::{self, stratagem_cli},
+    update_repo_file::{self, update_repo_file_cli},
+};
 use std::process::exit;
-use stratagem::stratagem_cli;
 use structopt::StructOpt;
+use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 #[derive(Debug, StructOpt)]
-pub enum ServerCommand {
-    /// List all configured storage servers
-    #[structopt(name = "list")]
-    List,
-}
-
-#[derive(StructOpt, Debug)]
 #[structopt(name = "iml")]
 #[structopt(raw(setting = "structopt::clap::AppSettings::ColoredHelp"))]
 /// The Integrated Manager for Lustre Agent CLI
@@ -36,58 +28,44 @@ pub enum App {
     /// Work with Storage Servers
     Server {
         #[structopt(subcommand)]
-        command: ServerCommand,
+        command: server::ServerCommand,
     },
+    #[structopt(name = "filesystem")]
+    /// Filesystem command
+    Filesystem {
+        #[structopt(subcommand)]
+        command: filesystem::FilesystemCommand,
+    },
+    #[structopt(name = "update_repo")]
+    ///  Update Agent repo files
+    UpdateRepoFile(update_repo_file::UpdateRepoFileHosts),
 }
 
-fn main() {
-    env_logger::builder().default_format_timestamp(false).init();
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let subscriber = Subscriber::builder()
+        .with_env_filter(EnvFilter::from_default_env())
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber).unwrap();
 
     dotenv::from_path("/var/lib/chroma/iml-settings.conf").expect("Could not load cli env");
 
     let matches = App::from_args();
 
-    log::debug!("Matching args {:?}", matches);
+    tracing::debug!("Matching args {:?}", matches);
 
-    match matches {
-        App::Stratagem { command } => stratagem_cli(command),
-        App::Server { command } => match command {
-            ServerCommand::List => {
-                let stop_spinner = start_spinner("Running command...");
+    let r = match matches {
+        App::Stratagem { command } => stratagem_cli(command).await,
+        App::Server { command } => server_cli(command).await,
+        App::UpdateRepoFile(config) => update_repo_file_cli(config).await,
+        App::Filesystem { command } => filesystem_cli(command).await,
+    };
 
-                let fut = get(Host::endpoint_name(), serde_json::json!({"limit": 0}));
-
-                let result: Result<ApiList<Host>, _> = run_cmd(fut);
-
-                stop_spinner(None);
-
-                match result {
-                    Ok(hosts) => {
-                        log::debug!("Hosts: {:?}", hosts);
-
-                        let table = generate_table(
-                            &["Id", "FQDN", "State", "Nids"],
-                            hosts.objects.into_iter().map(|h| {
-                                vec![
-                                    h.id.to_string(),
-                                    h.fqdn,
-                                    h.state,
-                                    h.nids.unwrap_or_else(|| vec![]).join(" "),
-                                ]
-                            }),
-                        );
-
-                        table.printstd();
-
-                        exit(exitcode::OK)
-                    }
-                    Err(e) => {
-                        eprintln!("{}", e);
-
-                        exit(exitcode::SOFTWARE);
-                    }
-                }
-            }
-        },
+    if let Err(e) = r {
+        display_error(e);
+        exit(1);
     }
+
+    Ok(())
 }

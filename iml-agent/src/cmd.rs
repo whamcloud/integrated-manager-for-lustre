@@ -3,9 +3,9 @@
 // license that can be found in the LICENSE file.
 
 use crate::agent_error::ImlAgentError;
-use futures::Future;
-use std::{ffi::OsStr, process::Command};
-use tokio_process::CommandExt;
+use futures::TryFutureExt;
+use std::ffi::OsStr;
+use tokio_net::process::Command;
 
 /// Runs an arbitrary command and collects all output
 ///
@@ -13,36 +13,34 @@ use tokio_process::CommandExt;
 ///
 /// * `program` - The program to run
 /// * `xs` - The args to pass to the systemctl call. `xs` Implements `IntoIterator`
-pub fn cmd_output<S>(
-    program: S,
-    xs: &[&str],
-) -> impl Future<Item = std::process::Output, Error = ImlAgentError>
+pub async fn cmd_output<S, I>(program: S, xs: I) -> Result<std::process::Output, ImlAgentError>
 where
+    I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
 {
-    Command::new(program).args(xs).output_async().from_err()
+    Command::new(program).args(xs).output().err_into().await
 }
 
 /// Runs an arbitrary command and collects all output
-///
 /// Returns `Error` if the command did not succeed.
 ///
 /// # Arguments
 ///
 /// * `program` - The program to run
 /// * `xs` - The args to pass to the systemctl call. `xs` Implements `IntoIterator`
-pub fn cmd_output_success<S>(
+pub async fn cmd_output_success<S, I>(
     program: S,
-    xs: &[&str],
-) -> impl Future<Item = std::process::Output, Error = ImlAgentError>
+    xs: I,
+) -> Result<std::process::Output, ImlAgentError>
 where
+    I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
 {
-    cmd_output(program, xs).and_then(|x| {
-        if x.status.success() {
-            Ok(x)
-        } else {
-            Err(ImlAgentError::CmdOutputError(x))
-        }
-    })
+    let x = cmd_output(program, xs).await?;
+
+    if x.status.success() {
+        Ok(x)
+    } else {
+        Err(ImlAgentError::CmdOutputError(x))
+    }
 }

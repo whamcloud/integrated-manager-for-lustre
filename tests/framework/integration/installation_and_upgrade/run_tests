@@ -276,15 +276,4 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-# test that removing the chroma-manager RPM removes /var/lib/chroma
-ssh root@$CHROMA_MANAGER "set -xe
-exec 2>&1
-ls -l /var/lib/chroma
-rpm -e python2-iml-manager-cli python2-iml-manager python2-iml-manager-libs
-if [ -d /var/lib/chroma ]; then
-    echo \"Removing RPMs failed to clean up /var/lib/chroma\"
-    ls -l /var/lib/chroma
-    exit 1
-fi"
-
 exit 0

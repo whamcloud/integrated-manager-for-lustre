@@ -1,9 +1,8 @@
-# Copyright (c) 2018 DDN. All rights reserved.
+# Copyright (c) 2019 DDN. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
 
-from optparse import make_option
 import tarfile
 from chroma_core.lib.util import site_dir
 import os

@@ -4,7 +4,7 @@ BuildRequires: systemd
 %global crate iml
 
 Name: rust-%{crate}
-Version: 0.1.1
+Version: 0.1.2
 # Release Start
 Release: 1%{?dist}
 # Release End
@@ -62,6 +62,7 @@ Group: System Environment/Libraries
 Summary: IML Agent Daemon and CLI
 License: MIT
 Group: System Environment/Libraries
+Requires: iml-device-scanner >= 3.0
 
 %description agent
 %{summary}

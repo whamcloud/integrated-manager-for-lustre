@@ -15,6 +15,47 @@ impl<T> Flatten<T> for Option<Option<T>> {
     }
 }
 
+pub trait Pick<A, B> {
+    fn fst(self) -> A;
+    fn snd(self) -> B;
+}
+
+impl<A, B> Pick<A, B> for (A, B) {
+    fn fst(self) -> A {
+        self.0
+    }
+    fn snd(self) -> B {
+        self.1
+    }
+}
+
+impl<A, B, C> Pick<A, B> for (A, B, C) {
+    fn fst(self) -> A {
+        self.0
+    }
+    fn snd(self) -> B {
+        self.1
+    }
+}
+
+impl<A, B, C, D> Pick<A, B> for (A, B, C, D) {
+    fn fst(self) -> A {
+        self.0
+    }
+    fn snd(self) -> B {
+        self.1
+    }
+}
+
+impl<A, B, C, D, E> Pick<A, B> for (A, B, C, D, E) {
+    fn fst(self) -> A {
+        self.0
+    }
+    fn snd(self) -> B {
+        self.1
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

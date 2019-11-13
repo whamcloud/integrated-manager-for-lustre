@@ -2,24 +2,25 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-#![recursion_limit = "128"]
-
 use env::{MANAGER_URL, PFX};
-use futures::{future::lazy, Future};
+use futures::{FutureExt, TryFutureExt};
 use iml_agent::{
     agent_error::Result,
     daemon_plugins, env,
     http_comms::{agent_client::AgentClient, crypto_client, session},
     poller, reader,
 };
-use tracing::{error, info, span, Level};
-use tracing_futures::Instrument;
+use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
-fn main() -> Result<()> {
-    let subscriber = tracing_fmt::FmtSubscriber::builder().finish();
+#[tokio::main]
+async fn main() -> Result<()> {
+    let subscriber = Subscriber::builder()
+        .with_env_filter(EnvFilter::from_default_env())
+        .finish();
+
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    info!("Starting Rust agent_daemon");
+    tracing::info!("Starting Rust agent_daemon");
 
     let message_endpoint = MANAGER_URL.join("/agent2/message/")?;
 
@@ -35,21 +36,15 @@ fn main() -> Result<()> {
     let registry_keys: Vec<iml_wire_types::PluginName> = registry.keys().cloned().collect();
     let sessions = session::Sessions::new(&registry_keys);
 
-    tokio::run(lazy(move || {
-        tokio::spawn(
-            reader::create_reader(sessions.clone(), agent_client.clone(), registry)
-                .map_err(|e| {
-                    error!("{}", e);
-                })
-                .instrument(span!(Level::INFO, "reader")),
-        );
-
-        poller::create_poller(agent_client, sessions)
+    tokio::spawn(
+        reader::create_reader(sessions.clone(), agent_client.clone(), registry)
             .map_err(|e| {
-                error!("{}", e);
+                tracing::error!("{}", e);
             })
-            .instrument(span!(Level::INFO, "poller"))
-    }));
+            .map(drop),
+    );
+
+    poller::create_poller(agent_client, sessions).await?;
 
     Ok(())
 }

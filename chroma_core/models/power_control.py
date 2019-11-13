@@ -7,8 +7,8 @@ import logging
 
 import settings
 from django.db import models
+from django.db.models import CASCADE
 from django.db.models.signals import post_save, post_delete, pre_delete
-from south.signals import post_migrate
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 from django.template.defaultfilters import pluralize
@@ -26,31 +26,31 @@ from chroma_help.help import help_text
 from chroma_core.lib.job import Step
 
 
+def validate_inet_address(address):
+    # Guard against accidental input of single-digit "addresses" which
+    # apparently gethostbyname will take anyhow. This is an unlikely
+    # problem, but could happen if a BMC identifier field is confused
+    # for a regular PDU identifier field (i.e. an outlet number).
+    try:
+        if int(address):
+            raise ValidationError("{} is not a valid address for a BMC".format(address))
+    except ValueError:
+        pass
+
+    import socket
+
+    try:
+        return socket.gethostbyname(address)
+    except socket.gaierror as e:
+        raise ValidationError("Unable to resolve %s: %s" % (address, e))
+
+
 class DeletablePowerControlModel(models.Model):
     __metaclass__ = DeletableMetaclass
 
     class Meta:
         abstract = True
         app_label = "chroma_core"
-
-    # Stick this here so we can use it with both device and outlet classes
-    def validate_inet_address(self, address):
-        # Guard against accidental input of single-digit "addresses" which
-        # apparently gethostbyname will take anyhow. This is an unlikely
-        # problem, but could happen if a BMC identifier field is confused
-        # for a regular PDU identifier field (i.e. an outlet number).
-        try:
-            if int(address):
-                raise ValidationError("%s is not a valid address for a BMC" % address)
-        except ValueError:
-            pass
-
-        import socket
-
-        try:
-            return socket.gethostbyname(address)
-        except socket.gaierror as e:
-            raise ValidationError("Unable to resolve %s: %s" % (address, e))
 
 
 class PowerControlType(DeletablePowerControlModel):
@@ -134,8 +134,8 @@ class PowerControlType(DeletablePowerControlModel):
         unique_together = ("agent", "make", "model")
 
 
-def create_default_power_types(app, **kwargs):
-    if app != "chroma_core":
+def create_default_power_types(sender, **kwargs):
+    if sender.name != "chroma_core":
         return
 
     import os
@@ -156,9 +156,6 @@ def create_default_power_types(app, **kwargs):
     print("Loaded %d default power device types." % len(default_types))
 
 
-post_migrate.connect(create_default_power_types)
-
-
 @receiver(pre_delete, sender=PowerControlType)
 def delete_power_control_units(sender, instance, **kwargs):
     [d.mark_deleted() for d in instance.instances.all()]
@@ -173,7 +170,7 @@ class PowerControlDeviceUnavailableAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     def alert_message(self):
         return "Unable to monitor power control device %s" % self.alert_item
@@ -196,7 +193,7 @@ class IpmiBmcUnavailableAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     def alert_message(self):
         return "Unable to monitor BMC %s on server %s" % (self.alert_item, self.alert_item.host)
@@ -210,14 +207,21 @@ class IpmiBmcUnavailableAlert(AlertStateBase):
         )
 
 
+class ValidatedGenericIPAddressField(models.GenericIPAddressField):
+    def to_python(self, value):
+        value = validate_inet_address(value)
+
+        return super(ValidatedGenericIPAddressField, self).to_python(value)
+
+
 class PowerControlDevice(DeletablePowerControlModel):
-    device_type = models.ForeignKey("PowerControlType", related_name="instances")
+    device_type = models.ForeignKey("PowerControlType", related_name="instances", on_delete=CASCADE)
     name = models.CharField(
         null=False, blank=True, max_length=50, help_text="Optional human-friendly display name (defaults to address)"
     )
     # We need to work with a stable IP address, not a hostname. STONITH must
     # work even if DNS doesn't!
-    address = models.IPAddressField(null=False, blank=False, help_text="IP address of power control device")
+    address = ValidatedGenericIPAddressField(null=False, blank=False, help_text="IP address of power control device")
     port = models.PositiveIntegerField(
         default=23, blank=True, help_text="Network port used to access power control device"
     )
@@ -239,13 +243,13 @@ class PowerControlDevice(DeletablePowerControlModel):
         # Allow the device_type to set defaults for unsupplied fields.
         type_defaults = ["username", "password", "options", "port"]
         for default in type_defaults:
-            if getattr(self, default) in ["", None]:
-                setattr(self, default, getattr(self.device_type, "default_%s" % default))
+            x = getattr(self, default)
+
+            if x in ["", None]:
+                setattr(self, default, getattr(self.device_type, "default_{}".format(default), x))
 
         if self.address in ["", None]:
             raise ValidationError("Address may not be blank")
-
-        self.address = self.validate_inet_address(self.address)
 
         if self.name in ["", None]:
             self.name = self.address
@@ -338,7 +342,7 @@ def delete_outlets(sender, instance, **kwargs):
 
 
 class PowerControlDeviceOutlet(DeletablePowerControlModel):
-    device = models.ForeignKey("PowerControlDevice", related_name="outlets")
+    device = models.ForeignKey("PowerControlDevice", related_name="outlets", on_delete=CASCADE)
     # http://www.freesoft.org/CIE/RFC/1035/9.htm (max dns name == 255 octets)
     identifier = models.CharField(
         null=False,
@@ -352,6 +356,7 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
         null=True,
         blank=True,
         help_text="Optional association with a ManagedHost instance",
+        on_delete=CASCADE,
     )
     has_power = models.NullBooleanField(help_text="Outlet power status (On, Off, Unknown)")
 
@@ -375,7 +380,7 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
         if self.device.is_ipmi and self.device.device_type.agent not in ["fence_virsh", "fence_vbox"]:
             # Special-case for IPMI "outlets". The identifier is the BMC
             # address.
-            self.identifier = self.validate_inet_address(self.identifier)
+            self.identifier = validate_inet_address(self.identifier)
 
         max_device_outlets = self.device.device_type.max_outlets
         if not is_update and not self.device.is_ipmi:
@@ -436,7 +441,7 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
 
 
 class PoweronHostJob(AdvertisedJob):
-    host = models.ForeignKey(ManagedHost)
+    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
     requires_confirmation = True
     classes = ["ManagedHost"]
     verb = "Power On"
@@ -483,7 +488,7 @@ class PoweronHostJob(AdvertisedJob):
 
 
 class PoweroffHostJob(AdvertisedJob):
-    host = models.ForeignKey(ManagedHost)
+    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
     requires_confirmation = True
     classes = ["ManagedHost"]
     verb = "Power Off"
@@ -530,7 +535,7 @@ class PoweroffHostJob(AdvertisedJob):
 
 
 class PowercycleHostJob(AdvertisedJob):
-    host = models.ForeignKey(ManagedHost)
+    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
     requires_confirmation = True
     classes = ["ManagedHost"]
     verb = "Power cycle"

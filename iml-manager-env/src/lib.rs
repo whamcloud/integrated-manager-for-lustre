@@ -36,6 +36,11 @@ fn empty_str_to_none(x: String) -> Option<String> {
     }
 }
 
+/// Get the broker URL from the env or panic
+pub fn get_amqp_broker_url() -> String {
+    get_var("AMQP_BROKER_URL")
+}
+
 /// Get the broker user from the env or panic
 pub fn get_user() -> String {
     get_var("AMQP_BROKER_USER")

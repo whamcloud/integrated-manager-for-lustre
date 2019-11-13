@@ -65,7 +65,7 @@ Vagrant.configure('2') do |config|
         libvirt.cpu_mode = 'host-passthrough'
         override.vm.box = "centos/7"
         # set to distro version desired for test
-        override.vm.box_version = "> 1804, < 9999"
+        override.vm.box_version = "> 1905, < 9999"
     end
 
     # Number of shared disk devices

@@ -1,4 +1,4 @@
-# Copyright (c) 2018 DDN. All rights reserved.
+# Copyright (c) 2019 DDN. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
@@ -28,9 +28,7 @@ def dehydrate_related(self, bundle, related_resource, for_list=True):
         return related_resource.get_resource_uri(bundle)
 
     # ZOMG extra data and big payloads.
-    bundle = related_resource.build_bundle(
-        obj=related_resource.instance, request=bundle.request, objects_saved=bundle.objects_saved
-    )
+    bundle = related_resource.build_bundle(obj=bundle.obj, request=bundle.request, objects_saved=bundle.objects_saved)
 
     # We have to be careful of recursive expansions caused by users flags, so remove flag
     # before call but replace it afterwards.

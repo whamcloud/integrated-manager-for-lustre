@@ -4,8 +4,7 @@
 
 
 from chroma_core.models.step_result import StepResult
-from tastypie.authorization import DjangoAuthorization
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from tastypie import fields
 
 from chroma_api.chroma_model_resource import ChromaModelResource
@@ -27,7 +26,7 @@ class StepResource(ChromaModelResource):
     class Meta:
         queryset = StepResult.objects.all()
         resource_name = "step"
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         excludes = ["step_klass"]
         filtering = {"job": ["exact"], "id": ["exact", "in"]}

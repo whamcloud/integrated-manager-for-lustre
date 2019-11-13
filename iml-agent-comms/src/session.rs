@@ -2,8 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use futures::lock::Mutex;
 use iml_wire_types::{Fqdn, Id, ManagerMessage, PluginName};
-use parking_lot::Mutex;
 use std::{collections::HashMap, sync::Arc};
 use uuid::Uuid;
 
@@ -59,7 +59,7 @@ pub fn is_session_valid(msg: &ManagerMessage, sessions: &Sessions) -> bool {
     };
 
     if !retain {
-        log::info!(
+        tracing::info!(
             "Dropping message {:?} because it does not match any held session. Sessions: {:?}",
             msg,
             sessions

@@ -5,9 +5,9 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-stream-cancel = "0.4.4"
-parking_lot = "0.9"
-futures = "0.1"
+stream-cancel = "0.5.0-alpha.4"
+futures-preview = "0.3.0-alpha.19"
 
 [dev-dependencies]
-tokio = "0.1"
+tokio-test = "0.2.0-alpha.6"
+tokio = "0.2.0-alpha.6"

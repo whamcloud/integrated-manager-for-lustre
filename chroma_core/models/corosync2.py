@@ -10,6 +10,7 @@ from collections import defaultdict
 
 from django.utils.timezone import now
 from django.db import models
+from django.db.models import CASCADE
 
 from chroma_core.services import log_register
 from chroma_core.models import CorosyncConfiguration
@@ -229,7 +230,7 @@ class AutoConfigureCorosync2Job(corosync_common.AutoConfigureCorosyncJob):
     state_transition = corosync_common.AutoConfigureCorosyncJob.StateTransition(
         Corosync2Configuration, "unconfigured", "stopped"
     )
-    corosync_configuration = models.ForeignKey(Corosync2Configuration)
+    corosync_configuration = models.ForeignKey(Corosync2Configuration, on_delete=CASCADE)
 
     class Meta:
         app_label = "chroma_core"
@@ -257,7 +258,7 @@ class UnconfigureCorosync2Job(corosync_common.UnconfigureCorosyncJob):
     state_transition = corosync_common.UnconfigureCorosyncJob.StateTransition(
         Corosync2Configuration, "stopped", "unconfigured"
     )
-    corosync_configuration = models.ForeignKey(Corosync2Configuration)
+    corosync_configuration = models.ForeignKey(Corosync2Configuration, on_delete=CASCADE)
 
     class Meta:
         app_label = "chroma_core"
@@ -281,7 +282,7 @@ class StartCorosyncStep(Step):
 
 class StartCorosync2Job(corosync_common.StartCorosyncJob):
     state_transition = corosync_common.StartCorosyncJob.StateTransition(Corosync2Configuration, "stopped", "started")
-    corosync_configuration = models.ForeignKey(Corosync2Configuration)
+    corosync_configuration = models.ForeignKey(Corosync2Configuration, on_delete=CASCADE)
 
     class Meta:
         app_label = "chroma_core"
@@ -300,7 +301,7 @@ class StopCorosyncStep(Step):
 
 class StopCorosync2Job(corosync_common.StopCorosyncJob):
     state_transition = corosync_common.StopCorosyncJob.StateTransition(Corosync2Configuration, "started", "stopped")
-    corosync_configuration = models.ForeignKey(Corosync2Configuration)
+    corosync_configuration = models.ForeignKey(Corosync2Configuration, on_delete=CASCADE)
 
     class Meta:
         app_label = "chroma_core"
@@ -327,7 +328,7 @@ class ChangeMcastPortStep(Step):
 
 
 class ConfigureCorosync2Job(corosync_common.ConfigureCorosyncJob):
-    corosync_configuration = models.ForeignKey(Corosync2Configuration)
+    corosync_configuration = models.ForeignKey(Corosync2Configuration, on_delete=CASCADE)
 
     class Meta:
         app_label = "chroma_core"

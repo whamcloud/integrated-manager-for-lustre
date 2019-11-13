@@ -1,9 +1,11 @@
 [Unit]
 Description=IML Manager Service
 PartOf=iml-manager.target
+Before=nginx.service
+
 
 [Service]
-Type=simple
+Type=notify
 WorkingDirectory=/usr/share/chroma-manager
 ExecStart=/bin/gunicorn wsgi:application -c ./wsgi.py
 Restart=on-failure

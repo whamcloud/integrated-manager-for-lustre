@@ -6,8 +6,7 @@
 import chroma_core.lib.conf_param
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedFilesystem
 
-from tastypie.authorization import DjangoAuthorization
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 
 from tastypie.http import HttpBadRequest
 from tastypie.resources import Resource
@@ -34,7 +33,7 @@ class HelpResource(Resource):
         resource_name = "help"
         detail_allowed_methods = []
         list_allowed_methods = []
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
 
     def prepend_urls(self):

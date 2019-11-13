@@ -4,40 +4,31 @@
 
 use crate::{agent_error::ImlAgentError, env, fidlist, http_comms::mailbox_client};
 use futures::{
-    future::{self, join_all, poll_fn},
-    Future, Sink, Stream,
+    future::{self, join_all},
+    sink::SinkExt,
+    StreamExt, TryFutureExt, TryStreamExt,
 };
 use liblustreapi::LlapiFid;
 use std::{io, path::PathBuf};
-use tokio_threadpool::blocking;
-use tracing::{debug, error, span, Level};
-use tracing_futures::Instrument;
+use tokio_executor::blocking::run;
+use tracing::{debug, error};
 
 /// Runs `fid2path` on the incoming `String`.
 /// Any error during `fid2path` is logged but does not return the associated Error
-fn fid2path(
-    llapi: LlapiFid,
-    fid: String,
-) -> impl Future<Item = Option<String>, Error = ImlAgentError> {
-    poll_fn(move || {
-        blocking(|| llapi.fid2path(&fid)).map_err(|_| panic!("the threadpool shut down"))
-    })
-    .and_then(std::convert::identity)
-    .then(|r| match r {
-        Ok(x) => future::ok(Some(x)),
+async fn fid2path(llapi: LlapiFid, fid: String) -> Option<String> {
+    let r = run(move || llapi.fid2path(&fid)).await;
+
+    match r {
+        Ok(x) => Some(x),
         Err(e) => {
             error!("Could not resolve fid: {}", e);
-            future::ok(None)
+            None
         }
-    })
+    }
 }
 
-fn search_rootpath(device: String) -> impl Future<Item = LlapiFid, Error = ImlAgentError> {
-    poll_fn(move || {
-        blocking(|| LlapiFid::create(&device)).map_err(|_| panic!("the threadpool shut down"))
-    })
-    .and_then(std::convert::identity)
-    .from_err()
+async fn search_rootpath(device: String) -> Result<LlapiFid, ImlAgentError> {
+    run(move || LlapiFid::create(&device)).err_into().await
 }
 
 pub fn write_records(
@@ -61,55 +52,57 @@ pub fn write_records(
 }
 
 /// Read mailbox and build a file of files. return pathname of generated file
-pub fn read_mailbox(
+pub async fn read_mailbox(
     (fsname_or_mntpath, mailbox): (String, String),
-) -> impl Future<Item = PathBuf, Error = ImlAgentError> {
+) -> Result<PathBuf, ImlAgentError> {
     let mut txt_path: PathBuf = PathBuf::from(env::get_var_else("REPORT_DIR", "/tmp"));
     txt_path.push(mailbox.to_string());
     txt_path.set_extension("txt");
 
-    let s = mailbox_client::get(mailbox)
-        .filter_map(|x| {
-            x.trim()
-                .split(' ')
-                .filter(|x| x != &"")
-                .last()
-                .map(|x| fidlist::FidListItem::new(x.into()))
+    let f = iml_fs::file_write_bytes(txt_path.clone()).await?;
+
+    let llapi = search_rootpath(fsname_or_mntpath).await?;
+
+    let mntpt = llapi.mntpt();
+
+    mailbox_client::get(mailbox)
+        .try_filter_map(|x| {
+            future::ok(
+                x.trim()
+                    .split(' ')
+                    .filter(|x| x != &"")
+                    .last()
+                    .map(|x| fidlist::FidListItem::new(x.into())),
+            )
         })
         .chunks(1000)
-        .instrument(span!(Level::INFO, "Incoming fids"));
+        .map(|xs| -> Result<Vec<_>, _> { xs.into_iter().collect() })
+        .and_then(|xs| {
+            let llapi2 = llapi.clone();
 
-    iml_fs::file_write_bytes(txt_path.clone())
-        .from_err()
-        .and_then(|f| search_rootpath(fsname_or_mntpath).map(|llapi| (llapi, f)))
-        .and_then(|(llapi, f)| {
-            let mntpt = llapi.mntpt();
+            async move {
+                let xs =
+                    join_all(xs.into_iter().map(move |x| fid2path(llapi2.clone(), x.fid))).await;
 
-            let s2 = s
-                .and_then(move |xs| {
-                    let llapi2 = llapi.clone();
-
-                    join_all(xs.into_iter().map(move |x| fid2path(llapi2.clone(), x.fid)))
-                })
-                .inspect(|_| debug!("Resolved 1000 Fids"))
-                .map(move |xs| {
-                    xs.into_iter()
-                        .filter_map(std::convert::identity)
-                        .map(|x| format!("{}/{}", mntpt, x))
-                        .collect()
-                })
-                .map(|xs: Vec<String>| -> bytes::BytesMut { xs.join("\n").into() })
-                .map(|mut x: bytes::BytesMut| {
-                    if !x.is_empty() {
-                        x.extend_from_slice(b"\n");
-                    }
-
-                    x.freeze()
-                })
-                .instrument(span!(Level::INFO, "Fid writer"));
-
-            f.sink_from_err().send_all(s2).map(drop)
+                Ok(xs)
+            }
         })
-        .map(move |_| txt_path)
-        .instrument(span!(Level::INFO, "Finished writing"))
+        .inspect(|_| debug!("Resolved 1000 Fids"))
+        .map_ok(move |xs| {
+            xs.into_iter()
+                .filter_map(std::convert::identity)
+                .map(|x| format!("{}/{}", mntpt, x))
+                .collect()
+        })
+        .map_ok(|xs: Vec<String>| -> bytes::BytesMut { xs.join("\n").into() })
+        .map_ok(|mut x: bytes::BytesMut| {
+            if !x.is_empty() {
+                x.extend_from_slice(b"\n");
+            }
+            x.freeze()
+        })
+        .forward(f.sink_err_into())
+        .await?;
+
+    Ok(txt_path)
 }

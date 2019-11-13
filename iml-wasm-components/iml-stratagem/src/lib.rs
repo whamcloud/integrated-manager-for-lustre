@@ -263,10 +263,11 @@ fn detail_header<T>(header: &str) -> Node<T> {
 }
 
 fn detail_panel<T>(children: Vec<Node<T>>) -> Node<T> {
-    well(children)
-        .add_style("display", "grid")
+    let mut el = well(children);
+    el.add_style("display", "grid")
         .add_style("grid-template-columns", "repeat(11, 1fr) minmax(90px, 1fr)")
-        .add_style("grid-row-gap", px(20))
+        .add_style("grid-row-gap", px(20));
+    el
 }
 
 fn detail_label<T>(content: &str) -> Node<T> {
@@ -317,29 +318,27 @@ pub fn view(model: &Model) -> Node<Msg> {
     ];
 
     if model.id.is_some() {
-        configuration_component.push(
-            update_stratagem_button::view(model.config_valid(), model.disabled || model.is_locked)
-                .add_style("grid-column", "1 /span 12")
-                .map_message(Msg::SendCommand),
-        );
+        let mut upd_btn =
+            update_stratagem_button::view(model.config_valid(), model.disabled || model.is_locked);
+        upd_btn.add_style("grid-column", "1 /span 12");
+        configuration_component.push(upd_btn.map_message(Msg::SendCommand));
 
-        configuration_component.push(
-            delete_stratagem_button::view(model.config_valid(), model.disabled || model.is_locked)
-                .add_style("grid-column", "1 /span 12")
-                .map_message(Msg::SendCommand),
-        );
+        let mut del_btn =
+            delete_stratagem_button::view(model.config_valid(), model.disabled || model.is_locked);
+        del_btn.add_style("grid-column", "1 /span 12");
+        configuration_component.push(del_btn.map_message(Msg::SendCommand));
     } else {
-        configuration_component.push(
-            enable_stratagem_button::view(model.config_valid(), model.disabled || model.is_locked)
-                .add_style("grid-column", "1 /span 12")
-                .map_message(Msg::SendCommand),
-        )
+        let mut enb_btn =
+            enable_stratagem_button::view(model.config_valid(), model.disabled || model.is_locked);
+        enb_btn.add_style("grid-column", "1 /span 12");
+        configuration_component.push(enb_btn.map_message(Msg::SendCommand));
     }
 
+    let mut in_tbl = inode_table::view(&model.inode_table);
+    in_tbl.add_style("margin-bottom", px(20));
+
     div![
-        inode_table::view(&model.inode_table)
-            .add_style("margin-bottom", px(20))
-            .map_message(Msg::InodeTable),
+        in_tbl.map_message(Msg::InodeTable),
         h4![class!["section-header"], "File Size Distribution"],
         p![
             class!["text-muted"],

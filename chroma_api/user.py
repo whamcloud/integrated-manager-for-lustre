@@ -8,12 +8,11 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 
 from tastypie.bundle import Bundle
-from tastypie.authorization import DjangoAuthorization
 from tastypie import fields
 from tastypie.validation import Validation
 from tastypie.http import HttpBadRequest
 
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.chroma_model_resource import ChromaModelResource
 
 
@@ -32,7 +31,7 @@ class ChromaUserChangeForm(UserChangeForm):
         fields = ("username", "first_name", "last_name", "email")
 
 
-class UserAuthorization(DjangoAuthorization):
+class UserAuthorization(PatchedDjangoAuthorization):
     def read_list(self, object_list, bundle):
         request = bundle.request
         if request.method is None:

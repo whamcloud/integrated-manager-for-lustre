@@ -7,9 +7,9 @@ use crate::{
     http_comms::{crypto_client, session},
     server_properties,
 };
-use futures::{future::Either, Future, IntoFuture};
+use futures::{Future, TryFutureExt};
 use iml_wire_types;
-use reqwest::r#async::{Chunk, Client};
+use reqwest::Client;
 use std::convert::Into;
 use tracing::{debug, info};
 
@@ -39,7 +39,7 @@ impl AgentClient {
     pub fn post(
         &self,
         message: iml_wire_types::Message,
-    ) -> impl Future<Item = Chunk, Error = ImlAgentError> {
+    ) -> impl Future<Output = Result<String, ImlAgentError>> {
         let envelope = iml_wire_types::Envelope::new(
             vec![message],
             self.start_time.clone(),
@@ -56,7 +56,7 @@ impl AgentClient {
     pub fn create_session(
         &self,
         plugin: iml_wire_types::PluginName,
-    ) -> impl Future<Item = (), Error = ImlAgentError> {
+    ) -> impl Future<Output = Result<(), ImlAgentError>> {
         info!("Requesting new session for: {:?}.", plugin);
 
         let m: iml_wire_types::Message = iml_wire_types::Message::SessionCreateRequest {
@@ -64,7 +64,7 @@ impl AgentClient {
             plugin,
         };
 
-        self.post(m).map(|_| ())
+        self.post(m).map_ok(drop)
     }
     /// Send data to the manager
     ///
@@ -75,7 +75,7 @@ impl AgentClient {
         &self,
         info: session::SessionInfo,
         body: impl serde::Serialize + std::fmt::Debug,
-    ) -> impl Future<Item = (), Error = ImlAgentError> {
+    ) -> impl Future<Output = Result<(), ImlAgentError>> + '_ {
         debug!(
             "Sending session data for {:?}({:?}): {:?}",
             info.name, info.id, body
@@ -83,19 +83,21 @@ impl AgentClient {
 
         let value = serde_json::to_value(body);
 
-        if value.is_err() {
-            return Either::A(value.map_err(Into::into).map(|_| ()).into_future());
+        async move {
+            let value = value?;
+
+            let m = iml_wire_types::Message::Data {
+                fqdn: iml_wire_types::Fqdn(server_properties::FQDN.to_string()),
+                plugin: info.name,
+                session_id: info.id,
+                session_seq: info.seq,
+                body: value,
+            };
+
+            self.post(m).await?;
+
+            Ok(())
         }
-
-        let m = iml_wire_types::Message::Data {
-            fqdn: iml_wire_types::Fqdn(server_properties::FQDN.to_string()),
-            plugin: info.name,
-            session_id: info.id,
-            session_seq: info.seq,
-            body: value.unwrap(),
-        };
-
-        Either::B(self.post(m).map(|_| ()))
     }
     /// Get data from the manager
     ///
@@ -103,7 +105,7 @@ impl AgentClient {
     ///
     pub fn get(
         &self,
-    ) -> impl Future<Item = iml_wire_types::ManagerMessages, Error = ImlAgentError> {
+    ) -> impl Future<Output = Result<iml_wire_types::ManagerMessages, ImlAgentError>> {
         let get_params: Vec<(String, String)> = vec![
             (
                 "server_boot_time".into(),
@@ -115,6 +117,6 @@ impl AgentClient {
         debug!("Sending get {:?}", get_params);
 
         crypto_client::get_buffered(&self.client, self.message_endpoint.clone(), &get_params)
-            .and_then(|x| serde_json::from_slice(&x).map_err(Into::into))
+            .and_then(|x| async move { serde_json::from_str(&x).map_err(Into::into) })
     }
 }

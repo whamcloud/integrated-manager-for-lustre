@@ -48,6 +48,15 @@ struct Model {
     pub locks: Locks,
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct PolledMetric {
+    bytes_free: Option<f64>,
+    bytes_total: Option<f64>,
+    client_count: Option<f64>,
+    files_free: Option<f64>,
+    files_total: Option<f64>,
+}
+
 impl Model {
     fn has_fs(&self) -> bool {
         !self.rows.is_empty()
@@ -64,6 +73,7 @@ enum Msg {
     Destroy,
     WindowClick,
     Filesystems(HashMap<u32, Filesystem>),
+    UpdateMetrics(HashMap<String, PolledMetric>),
     FsRowPopoverState(AlertIndicatorPopoverState),
     FsRowLockIndicatorState(LockIndicatorState),
     Targets(HashMap<u32, Target<TargetConfParam>>),
@@ -135,6 +145,35 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 r.fs = filesystems.remove(&x).unwrap();
             }
         }
+        Msg::UpdateMetrics(polled_metrics) => {
+            let fs_ids = polled_metrics
+                .keys()
+                .cloned()
+                .into_iter()
+                .map(|x| {
+                    x.parse::<u32>()
+                        .expect(&format!("Filesystem id, {}, should be a number.", x))
+                })
+                .collect::<HashSet<u32>>();
+
+            for fs_id in fs_ids {
+                let metric_data = polled_metrics.get(&fs_id.to_string()).expect(&format!(
+                    "Couldn't retrieve metric data for fs_id {}",
+                    fs_id
+                ));
+                let r = model.rows.get_mut(&fs_id);
+
+                if let Some(row) = r {
+                    row.fs.bytes_free = metric_data.bytes_free;
+                    row.fs.bytes_total = metric_data.bytes_total;
+                    row.fs.files_free = metric_data.files_free;
+                    row.fs.files_total = metric_data.files_total;
+
+                    let mdts_length = row.fs.mdts.len() as f64;
+                    row.fs.client_count = metric_data.client_count.map(move |x| x / mdts_length);
+                }
+            }
+        }
         Msg::Targets(targets) => {
             model.targets = targets;
         }
@@ -193,8 +232,21 @@ fn fs_rows(model: &Model) -> Vec<Node<Msg>> {
         .values()
         .map(|x| {
             let fs = &x.fs;
-
             let mgt = model.get_mgt(&fs);
+            let mut lck = lock_indicator(
+                fs.id,
+                x.lock_indicator.is_open(),
+                fs.composite_id(),
+                &model.locks,
+            );
+            lck.add_style("margin-right", px(5));
+
+            let alr = alert_indicator(
+                &model.alerts,
+                fs.id,
+                &fs.resource_uri,
+                x.alert_indicator.is_open(),
+            );
 
             tr![
                 td![ui_link(
@@ -202,21 +254,8 @@ fn fs_rows(model: &Model) -> Vec<Node<Msg>> {
                     &fs.name
                 )],
                 td![
-                    lock_indicator(
-                        fs.id,
-                        x.lock_indicator.is_open(),
-                        fs.composite_id(),
-                        &model.locks
-                    )
-                    .add_style("margin-right", px(5))
-                    .map_message(Msg::FsRowLockIndicatorState),
-                    alert_indicator(
-                        &model.alerts,
-                        fs.id,
-                        &fs.resource_uri,
-                        x.alert_indicator.is_open()
-                    )
-                    .map_message(Msg::FsRowPopoverState)
+                    lck.map_message(Msg::FsRowLockIndicatorState),
+                    alr.map_message(Msg::FsRowPopoverState)
                 ],
                 td![mgt_link(mgt)],
                 td![fs.mdts.len().to_string()],
@@ -299,6 +338,10 @@ impl FsPageCallbacks {
     pub fn set_locks(&self, locks: JsValue) {
         let locks: Locks = locks.into_serde().unwrap();
         self.app.update(Msg::SetLocks(locks));
+    }
+    pub fn set_polled_metrics(&self, polled_metrics: JsValue) {
+        let polled_metrics: HashMap<String, PolledMetric> = polled_metrics.into_serde().unwrap();
+        self.app.update(Msg::UpdateMetrics(polled_metrics));
     }
 }
 

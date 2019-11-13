@@ -3,50 +3,43 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    action_plugins::check_ha,
     action_plugins::stratagem::{action_purge, action_warning, server},
+    action_plugins::{check_ha, check_stonith},
     agent_error::ImlAgentError,
+    systemd,
 };
-use futures::{future::IntoFuture, Future};
+use futures::{Future, FutureExt};
 use iml_wire_types::{ActionName, ToJsonValue};
-use std::collections::HashMap;
+use std::{collections::HashMap, pin::Pin};
 use tracing::info;
 
-type BoxedFuture = Box<
-    dyn Future<Item = std::result::Result<serde_json::value::Value, String>, Error = ()>
-        + 'static
-        + Send,
->;
+type BoxedFuture = Pin<Box<dyn Future<Output = Result<serde_json::value::Value, String>> + Send>>;
 
-type Callback = Box<Fn(serde_json::value::Value) -> BoxedFuture + Send + Sync>;
+type Callback = Box<dyn Fn(serde_json::value::Value) -> BoxedFuture + Send + Sync>;
 
-fn mk_boxed_future<T, R, Fut>(v: serde_json::value::Value, f: fn(T) -> Fut) -> BoxedFuture
+async fn run_plugin<T, R, Fut>(
+    v: serde_json::value::Value,
+    f: fn(T) -> Fut,
+) -> Result<serde_json::value::Value, String>
 where
-    T: serde::de::DeserializeOwned + Send + 'static,
-    R: serde::Serialize + 'static + Send,
-    Fut: Future<Item = R, Error = ImlAgentError> + Send + 'static,
+    T: serde::de::DeserializeOwned + Send,
+    R: serde::Serialize + Send,
+    Fut: Future<Output = Result<R, ImlAgentError>> + Send,
 {
-    Box::new(
-        serde_json::from_value(v)
-            .into_future()
-            .from_err()
-            .and_then(f)
-            .then(|x| {
-                Ok(match x {
-                    Ok(x) => x.to_json_value(),
-                    Err(e) => Err(format!("{}", e)),
-                })
-            }),
-    ) as BoxedFuture
+    let x = serde_json::from_value(v).map_err(|e| format!("{}", e))?;
+
+    let x = f(x).await.map_err(|e| format!("{}", e))?;
+
+    x.to_json_value()
 }
 
 fn mk_callback<Fut, T, R>(f: fn(T) -> Fut) -> Callback
 where
-    Fut: Future<Item = R, Error = ImlAgentError> + Send + 'static,
+    Fut: Future<Output = Result<R, ImlAgentError>> + Send + 'static,
     T: serde::de::DeserializeOwned + Send + 'static,
     R: serde::Serialize + Send + 'static,
 {
-    Box::new(move |v| mk_boxed_future(v, f))
+    Box::new(move |v| run_plugin(v, f).boxed())
 }
 
 pub type Actions = HashMap<ActionName, Callback>;
@@ -55,6 +48,19 @@ pub type Actions = HashMap<ActionName, Callback>;
 /// Add new Actions to the fn body as they are created.
 pub fn create_registry() -> HashMap<ActionName, Callback> {
     let mut map = HashMap::new();
+
+    map.insert("start_unit".into(), mk_callback(systemd::start_unit));
+
+    map.insert("stop_unit".into(), mk_callback(systemd::stop_unit));
+
+    map.insert("enable_unit".into(), mk_callback(systemd::enable_unit));
+
+    map.insert("disable_unit".into(), mk_callback(systemd::disable_unit));
+
+    map.insert(
+        "get_unit_run_state".into(),
+        mk_callback(systemd::get_run_state),
+    );
 
     map.insert(
         "start_scan_stratagem".into(),
@@ -70,12 +76,18 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
         "action_warning_stratagem".into(),
         mk_callback(action_warning::read_mailbox),
     );
+
     map.insert(
         "action_purge_stratagem".into(),
         mk_callback(action_purge::read_mailbox),
     );
 
     map.insert("action_check_ha".into(), mk_callback(check_ha::check_ha));
+
+    map.insert(
+        "action_check_stonith".into(),
+        mk_callback(check_stonith::check_stonith),
+    );
 
     info!("Loaded the following ActionPlugins:");
 

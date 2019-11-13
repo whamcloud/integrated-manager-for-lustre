@@ -1,6 +1,6 @@
 import logging
 
-from django.utils.unittest import skip
+from unittest import skip
 
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase

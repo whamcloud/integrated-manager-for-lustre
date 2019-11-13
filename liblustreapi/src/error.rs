@@ -6,7 +6,7 @@ use crate::LIBLUSTRE;
 use libc;
 use std::{error, ffi::IntoStringError, io, io::Error};
 
-/// Error if liblustreapi.so fails to load
+/// Error if liblustreapi.so calls fail to load
 #[derive(Debug, Clone)]
 pub struct LoadError {
     msg: String,

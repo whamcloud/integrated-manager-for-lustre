@@ -10,14 +10,19 @@
 //! Data has the requirement that is line-delimited so writes can be processed
 //! concurrently
 
-use futures::{Future as _, Stream as _};
-use iml_mailbox::{LineStream, MailboxSenders};
-use parking_lot::Mutex;
-use std::{fs, path::PathBuf, sync::Arc};
+use futures::{lock::Mutex, Stream, TryStreamExt};
+use iml_mailbox::MailboxSenders;
+use std::{fs, path::PathBuf, pin::Pin, sync::Arc};
+use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::Filter as _;
 
-fn main() {
-    env_logger::builder().default_format_timestamp(false).init();
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let subscriber = Subscriber::builder()
+        .with_env_filter(EnvFilter::from_default_env())
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber).unwrap();
 
     let addr = iml_manager_env::get_mailbox_addr();
     let mailbox_path = iml_manager_env::get_mailbox_path();
@@ -31,7 +36,7 @@ fn main() {
 
     let mailbox = warp::path("mailbox");
 
-    let post = warp::post2()
+    let post = warp::post()
         .and(mailbox)
         .and(shared_senders_filter)
         .and(
@@ -42,39 +47,61 @@ fn main() {
         .and_then(
             |mailbox_senders: SharedMailboxSenders,
              address: PathBuf,
-             s: Box<dyn LineStream + Send>| {
-                let tx = { mailbox_senders.lock().get(&address) };
-                let tx = tx.unwrap_or_else(|| {
-                    let (tx, fut) = { mailbox_senders.lock().create(address.clone()) };
+             mut s: Pin<Box<dyn Stream<Item = Result<String, warp::Rejection>> + Send>>| {
+                async move {
+                    let tx = {
+                        let mut lock = mailbox_senders.lock().await;
 
-                    let address2 = address.clone();
+                        lock.get(&address)
+                    };
 
-                    tokio::spawn(
-                        fut.map(move |_| mailbox_senders.lock().remove(&address))
-                            .map_err(move |e| {
-                                log::error!(
-                                    "Got an error writing to mailbox address {:?}: {:?}",
-                                    &address2,
-                                    e
-                                )
-                            }),
-                    );
+                    let tx = match tx {
+                        Some(tx) => tx,
+                        None => {
+                            let (tx, fut) = {
+                                let mut lock = mailbox_senders.lock().await;
+                                lock.create(address.clone())
+                            };
 
-                    tx
-                });
+                            let address2 = address.clone();
 
-                s.for_each(move |l| {
-                    log::debug!("Sending line {:?}", l);
+                            tokio::spawn(
+                                async move {
+                                    fut.await.unwrap_or_else(|e| {
+                                        tracing::error!(
+                                            "Got an error writing to mailbox address {:?}: {:?}",
+                                            &address2,
+                                            e
+                                        )
+                                    });
 
-                    tx.unbounded_send(l).map_err(warp::reject::custom)
-                })
+                                    let mut lock = mailbox_senders.lock().await;
+                                    lock.remove(&address);
+                                }
+                            );
+
+                            tx
+                        }
+                    };
+
+
+                    while let Some(l) = s.try_next().await? {
+                        tracing::debug!("Sending line {:?}", l);
+
+                        tx.unbounded_send(l).map_err(warp::reject::custom)?
+                    }
+
+                    Ok::<_, warp::reject::Rejection>(())
+                }
             },
         )
         .map(|_| warp::reply::with_status(warp::reply(), warp::http::StatusCode::CREATED));
 
     let route = post.with(warp::log("mailbox"));
 
-    log::info!("Starting on {:?}", addr);
+    tracing::info!("Starting on {:?}", addr);
 
-    warp::serve(route).run(addr);
+    warp::serve(route).run(addr).await;
+
+    Ok(())
 }

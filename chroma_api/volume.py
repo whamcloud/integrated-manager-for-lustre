@@ -9,47 +9,12 @@ from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.http import HttpBadRequest
 
 from tastypie import fields
-from tastypie.authorization import DjangoAuthorization
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.chroma_model_resource import ChromaModelResource
 from chroma_api.validation_utils import validate
 
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
-
-
-class WrappedAll(object):
-    """Hack to prevent 1 extra query (exact dup) for EVERY volume from executing
-
-    TastyPie will take a callable in as an attribute in a ToManyField.
-    During dehydration  ToManyField.dehydrate is called and this is where
-    TastyPie grabs the callable and tries to get some objects from it.
-    But, in that method, the queryset is forced to a bool, which causes it's
-    query to be executed.  Unfortunately, then it is forced to execute again
-    to iterate through the list of volumenodes.  It seems the first one
-    isn't cached.
-
-    I'm not sure if this is a bug, and if it is one, if it is with TastyPie
-    or with Django's ORM.
-
-    This Hacky class is just a workaround.
-
-    This class returns True, but does NOT execute any queries.  This allows
-    the hydrate to continue.  Then, when all() is called, it will return
-    what it should in that one single select_related query.
-    """
-
-    def __call__(self, bundle):
-        self.bundle = bundle
-        return self
-
-    def all(self):
-        return self.bundle.obj.volumenode_set.all().select_related("host")
-
-    def __bool__(self):
-        return True
-
-    __nonzero__ = __bool__  # for python 2 and 3 compatibility
 
 
 class VolumeResource(ChromaModelResource):
@@ -94,7 +59,7 @@ class VolumeResource(ChromaModelResource):
     # See notes above about how hacking the attribute saves 1 query / volume
     volume_nodes = fields.ToManyField(
         "chroma_api.volume_node.VolumeNodeResource",
-        WrappedAll(),
+        attribute=lambda bundle: bundle.obj.volumenode_set.all().select_related("host"),
         null=True,
         full=True,
         help_text="Device nodes which point to this volume",
@@ -148,7 +113,7 @@ class VolumeResource(ChromaModelResource):
             .prefetch_related("volumenode_set", "volumenode_set__host")
         )
         resource_name = "volume"
-        authorization = DjangoAuthorization()
+        authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         excludes = ["not_deleted"]
         ordering = ["label", "size"]

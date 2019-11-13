@@ -4,8 +4,8 @@ pub mod fs_page;
 use iml_environment::ui_root;
 use iml_pie_chart::pie_chart;
 use iml_utils::extract_api;
-use iml_utils::{format_bytes, format_number};
 use iml_wire_types::{Target, TargetConfParam};
+use number_formatter::{format_bytes, format_number};
 use seed::{a, attrs, div, prelude::*};
 
 fn link<T>(href: &str, content: &str) -> Node<T> {
@@ -43,16 +43,19 @@ fn usage<T>(
     formatter: fn(f64, Option<usize>) -> String,
 ) -> Node<T> {
     div![match (used, total) {
-        (Some(used), Some(total)) => div![
-            pie_chart(used, total, "#aec7e8", "#1f77b4")
-                .add_style("width", px(18))
+        (Some(used), Some(total)) => {
+            let mut pc = pie_chart(used, total, "#aec7e8", "#1f77b4");
+            pc.add_style("width", px(18))
                 .add_style("height", px(18))
                 .add_style("vertical-align", "bottom")
-                .add_style("margin-right", px(3)),
-            formatter(used, Some(1)),
-            " / ",
-            formatter(total, Some(1)),
-        ],
+                .add_style("margin-right", px(3));
+            div![
+                pc,
+                formatter(used, Some(1)),
+                " / ",
+                formatter(total, Some(1)),
+            ]
+        }
         _ => Node::new_text("Calculating..."),
     }]
 }

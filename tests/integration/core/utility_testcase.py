@@ -7,7 +7,7 @@ import time
 import socket
 import threading
 
-from django.utils.unittest import TestCase
+from unittest import TestCase
 from testconfig import config
 
 from tests.integration.core.constants import TEST_TIMEOUT

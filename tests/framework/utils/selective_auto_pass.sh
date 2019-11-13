@@ -46,6 +46,7 @@ check_for_autopass() {
 
     copr_modules_manager=$(echo "$commit_message" | sed -ne '/^ *COPR Module Manager: */s/^ *COPR Module Manager: *\(.*\)\/\(.*\)/https:\/\/copr.fedorainfracloud.org\/coprs\/\1\/\2\/repo\/epel-7\/\1-\2-epel-7.repo/gp')
     if [ -n "$copr_modules_manager" ]; then
+        copr_modules_manager=`echo $copr_modules_manager | sed 's/ *$//g'`
         export CHROMA_SUPPORT_REPOS="$copr_modules_manager $CHROMA_SUPPORT_REPOS"
     fi
 

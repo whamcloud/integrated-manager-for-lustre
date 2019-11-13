@@ -4,6 +4,7 @@
 
 
 from django.db import models
+from django.db.models import CASCADE
 from django.db import IntegrityError
 
 from chroma_core.models.repo import Repo
@@ -37,6 +38,14 @@ class ServerProfile(models.Model):
         """
         for package in self.serverprofilepackage_set.all().values("package_name"):
             yield package["package_name"]
+
+    @property
+    def base_packages(self):
+        """
+        Obtaining an iterable list of the base packages always installed on a host
+        """
+        for package in ["python2-iml-agent", "rust-iml-agent"]:
+            yield package
 
     @property
     def repos(self):
@@ -100,7 +109,7 @@ class ServerProfilePackage(models.Model):
         app_label = "chroma_core"
         unique_together = ("server_profile", "package_name")
 
-    server_profile = models.ForeignKey(ServerProfile)
+    server_profile = models.ForeignKey(ServerProfile, on_delete=CASCADE)
     package_name = models.CharField(max_length=255)
 
 
@@ -121,6 +130,6 @@ class ServerProfileValidation(models.Model):
     class Meta:
         app_label = "chroma_core"
 
-    server_profile = models.ForeignKey(ServerProfile)
+    server_profile = models.ForeignKey(ServerProfile, on_delete=CASCADE)
     test = models.CharField(max_length=256)
     description = models.CharField(max_length=256)

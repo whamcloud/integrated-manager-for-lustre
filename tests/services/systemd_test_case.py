@@ -9,7 +9,7 @@ import os
 
 from ConfigParser import ConfigParser
 from StringIO import StringIO
-from django.utils.unittest import TestCase
+from unittest import TestCase
 import settings
 
 from chroma_core.lib.util import site_dir

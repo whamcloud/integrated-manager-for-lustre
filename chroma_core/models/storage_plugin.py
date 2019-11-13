@@ -7,7 +7,7 @@ import json
 import logging
 
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, CASCADE
 
 from chroma_core.models import AlertEvent
 from chroma_core.models import AlertStateBase
@@ -204,7 +204,7 @@ class StorageResourceRecord(models.Model):
 
 
 class SimpleHistoStoreBin(models.Model):
-    histo_store_time = models.ForeignKey("SimpleHistoStoreTime")
+    histo_store_time = models.ForeignKey("SimpleHistoStoreTime", on_delete=CASCADE)
     bin_idx = models.IntegerField()
     value = models.PositiveIntegerField()
 
@@ -214,7 +214,7 @@ class SimpleHistoStoreBin(models.Model):
 
 
 class SimpleHistoStoreTime(models.Model):
-    storage_resource_statistic = models.ForeignKey("StorageResourceStatistic")
+    storage_resource_statistic = models.ForeignKey("StorageResourceStatistic", on_delete=CASCADE)
     time = models.PositiveIntegerField()
 
     class Meta:
@@ -280,7 +280,7 @@ class StorageResourceAttribute(models.Model):
     def decode(cls, value):
         return value
 
-    resource = models.ForeignKey(StorageResourceRecord)
+    resource = models.ForeignKey(StorageResourceRecord, on_delete=CASCADE)
     # TODO: normalize this field (store a list of attributes
     # with StorageResourceClass, that list would also be useful
     # for comparing against at plugin load time to e.g. complain
@@ -336,7 +336,7 @@ class StorageResourceAttributeReference(StorageResourceAttribute):
 
 
 class StorageResourceClassStatistic(models.Model):
-    resource_class = models.ForeignKey(StorageResourceClass)
+    resource_class = models.ForeignKey(StorageResourceClass, on_delete=CASCADE)
     name = models.CharField(max_length=64)
 
     class Meta:
@@ -354,7 +354,7 @@ class StorageResourceOffline(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     def alert_message(self):
         return "%s not contactable" % self.alert_item.alias_or_name()
@@ -373,7 +373,7 @@ class StorageResourceAlert(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
 
     variant_fields = [
         VariantDescriptor("alert_class", str, None, None, ""),
@@ -412,8 +412,8 @@ class StorageResourceAlert(AlertStateBase):
 
 
 class StorageAlertPropagated(models.Model):
-    storage_resource = models.ForeignKey(StorageResourceRecord)
-    alert_state = models.ForeignKey(StorageResourceAlert)
+    storage_resource = models.ForeignKey(StorageResourceRecord, on_delete=CASCADE)
+    alert_state = models.ForeignKey(StorageResourceAlert, on_delete=CASCADE)
 
     class Meta:
         unique_together = ("storage_resource", "alert_state")
@@ -444,4 +444,4 @@ class StorageResourceLearnEvent(AlertStateBase):
 
     class Meta:
         app_label = "chroma_core"
-        db_table = AlertStateBase.table_name
+        proxy = True
