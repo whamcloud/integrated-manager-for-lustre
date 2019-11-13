@@ -189,4 +189,5 @@ help_text = {
     "continue_as_anonymous": "Click this link to continue as an anonymous user. This user has restricted privileges on how they can use the Integrated Manager for Lustre software.",
     "stonith_not_enabled": "stonith-enabled is false on %s. This can cause device corruption. Target creation is forbidden in this state. Ensure that stonith-enabled is set to true.",
     "stonith_enabled": "stonith-enabled set to true on %s",
+    "creating_ostpool": "Creating OST Pool",
 }

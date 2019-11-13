@@ -437,11 +437,9 @@ class FilesystemResource(MetricResource, ConfParamResource):
 
 class OstPoolResource(ChromaModelResource):
     osts = fields.ToManyField(
-        "chroma_api.target.TargetResource",
-        null=True,
-        attribute=lambda bundle: ManagedOst.objects.filter(filesystem=bundle.obj),
-        help_text="List of OSTs in this Pool",
+        "chroma_api.target.TargetResource", "osts", null=True, help_text="List of OSTs in this Pool",
     )
+    filesystem = fields.ToOneField("chroma_api.filesystem.FilesystemResource", "filesystem")
 
     class Meta:
         queryset = OstPool.objects.all()

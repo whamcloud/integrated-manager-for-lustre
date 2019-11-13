@@ -2,27 +2,63 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, cmd::lctl};
+use crate::{agent_error::{ImlAgentError, RequiredError}, cmd::lctl};
 use futures::future::try_join_all;
 use iml_wire_types::OstPool;
+use std::time::{Duration, Instant};
+use tokio::timer::delay;
+
+/// A list of rules + a name for the group of rules.
+#[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct CmdPool {
+    pub filesystem: String,
+    pub name: String,
+}
+
+/// A list of rules + a name for the group of rules.
+#[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct CmdPoolOst {
+    pub filesystem: String,
+    pub name: String,
+    pub ost: String,
+}
 
 pub async fn pool_create(filesystem: String, name: String) -> Result<(), ImlAgentError> {
-    lctl(vec![
-        "pool_new",
-        format!("{}.{}", filesystem, name).as_str(),
-    ])
-    .await
-    .map(drop)
+    let pn = format!("{}.{}", filesystem, name);
+    lctl(vec!["pool_new", &pn]).await.map(drop)
+}
+
+
+/// This needs to be a seperate action from pool_create() since pool create runs on MGS
+/// and this runs on MDS
+pub async fn action_pool_wait(cmd: CmdPool) -> Result<(), ImlAgentError> {
+    let time_to_wait = 120;
+    // wait up to a 2 minutes
+    for _ in 0_u32..(time_to_wait * 2) {
+        let pl = pool_list(&cmd.filesystem).await?;
+
+        if pl.contains(&cmd.name) {
+            return Ok(());
+        }
+        delay(Instant::now() + Duration::from_millis(500)).await;
+    }
+
+    Err(ImlAgentError::from(RequiredError(format!(
+        "Waiting for pool create {}.{} failed after {} sec",
+        cmd.filesystem, cmd.name, time_to_wait))))
+}
+
+pub async fn action_pool_create(cmd: CmdPool) -> Result<(), ImlAgentError> {
+    pool_create(cmd.filesystem, cmd.name).await
 }
 
 pub async fn pool_add(filesystem: String, name: String, ost: String) -> Result<(), ImlAgentError> {
-    lctl(vec![
-        "pool_add",
-        format!("{}.{}", filesystem, name).as_str(),
-        ost.as_str(),
-    ])
-    .await
-    .map(drop)
+    let pn = format!("{}.{}", filesystem, name);
+    lctl(vec!["pool_add", &pn, ost.as_str()]).await.map(drop)
+}
+
+pub async fn action_pool_add(cmd: CmdPoolOst) -> Result<(), ImlAgentError> {
+    pool_add(cmd.filesystem, cmd.name, cmd.ost).await
 }
 
 pub async fn pool_remove(
@@ -30,22 +66,21 @@ pub async fn pool_remove(
     name: String,
     ost: String,
 ) -> Result<(), ImlAgentError> {
-    lctl(vec![
-        "pool_remove",
-        format!("{}.{}", filesystem, name).as_str(),
-        ost.as_str(),
-    ])
-    .await
-    .map(drop)
+    let pn = format!("{}.{}", filesystem, name);
+    lctl(vec!["pool_remove", &pn, ost.as_str()]).await.map(drop)
+}
+
+pub async fn action_pool_remove(cmd: CmdPoolOst) -> Result<(), ImlAgentError> {
+    pool_remove(cmd.filesystem, cmd.name, cmd.ost).await
 }
 
 pub async fn pool_destroy(filesystem: String, name: String) -> Result<(), ImlAgentError> {
-    lctl(vec![
-        "pool_destroy",
-        format!("{}.{}", filesystem, name).as_str(),
-    ])
-    .await
-    .map(drop)
+    let pn = format!("{}.{}", filesystem, name);
+    lctl(vec!["pool_destroy", &pn]).await.map(drop)
+}
+
+pub async fn action_pool_destroy(cmd: CmdPool) -> Result<(), ImlAgentError> {
+    pool_destroy(cmd.filesystem, cmd.name).await
 }
 
 async fn pool_list(filesystem: &str) -> Result<Vec<String>, ImlAgentError> {

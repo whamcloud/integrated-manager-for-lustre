@@ -42,6 +42,7 @@ from chroma_core.models import (
     ManagedMgs,
     ManagedFilesystem,
     NetworkInterface,
+    OstPool,
     LNetConfiguration,
     get_fs_id_from_identifier,
 )
@@ -1136,16 +1137,29 @@ class JobScheduler(object):
     def create_ostpool(self, ostpool_data):
         log.debug("Creating ostpool from: %s" % ostpool_data)
         with self._lock:
-            from django.db import transaction
-
             fs = ObjectCache.get_one(ManagedFilesystem, lambda mfs: mfs.name == ostpool_data["filesystem"])
-            osts = ObjectCache.get(ManagedOst, lambda tgt: tgt.name in ostpool_data["osts"])
+            ostpool_data["filesystem"] = fs
+            osts = ManagedOst.objects.filter(name__in=ostpool_data["osts"])
+            del ostpool_data["osts"]
+
             with transaction.atomic():
-                ostpool = OstPool.objects.create(name=ostpool_data["name"], filesystem=fs, osts=osts)
-            ObjectCache.add(OstPool, ostpool)
+                ostpool = OstPool.objects.create(**ostpool_data)
+                cmds = [{"class_name": "CreateOstPoolJob", "args": {"pool": ostpool}}]
+
+                for ost in osts:
+                    ostpool.osts.add(ost)
+                    cmds.append(
+                        {
+                            "class_name": "AddOstPoolJob",
+                            "args": {"pool": ostpool, "ost": ost, "depends_on_job_range": [0]},
+                        }
+                    )
+                ostpool.save()
+
+                command_id = self.CommandPlan.command_run_jobs(cmds, help_text["creating_ostpool"],)
 
         self.progress.advance()
-        return ostpool.id, command.id
+        return ostpool.id, command_id
 
     def create_copytool(self, copytool_data):
         log.debug("Creating copytool from: %s" % copytool_data)

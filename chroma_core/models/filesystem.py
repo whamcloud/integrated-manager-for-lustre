@@ -423,16 +423,79 @@ class OstPool(models.Model):
 
     osts = models.ManyToManyField(ManagedOst, help_text="OST list in this Pool")
 
+    class Meta:
+        app_label = "chroma_core"
+        unique_together = ("name", "filesystem")
+        ordering = ["id"]
 
-# Not sure if this is right
+
+class CreateOstPoolJob(AdvertisedJob):
+    pool = models.ForeignKey("OstPool", on_delete=CASCADE)
+
+    requires_confirmation = False
+
+    classes = ["OstPool"]
+
+    verb = "Create"
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return "Create OST Pool"
+
+    @classmethod
+    def can_run(self, instance):
+        mgs = instance.filesystem.mgs
+        return mgs is not None and mgs.active_host is not None
+
+    @classmethod
+    def get_args(cls, pool):
+        return {"pool_id": pool.id}
+
+    def description(self):
+        return "Create OST Pool"
+
+    def get_steps(self):
+        mdt0 = self.pool.filesystem.name + "-MDT0000"
+        return [
+            (
+                CreateOstPoolStep,
+                {
+                    "pool": self.pool.name,
+                    "filesystem": self.pool.filesystem.name,
+                    "mgs": self.pool.filesystem.mgs.active_host.fqdn,
+                },
+            ),
+            (
+                WaitOstPoolStep,
+                {
+                    "pool": self.pool.name,
+                    "filesystem": self.pool.filesystem.name,
+                    "mds": next(t.active_host.fqdn for t in self.pool.filesystem.get_targets() if t.name == mdt0),
+                },
+            ),
+        ]
+
+
 class CreateOstPoolStep(Step):
     def run(self, kwargs):
-        pool = kwargs["pool"]
-        host = pool.filesystem.mgs.active_host
+        pool_name = kwargs["pool"]
+        fs_name = kwargs["filesystem"]
+        host = kwargs["mgs"]
 
-        result = self.invoke_rust_agent_expect_result(host, "pool", "create", pool.filesystem.name, pool.name)
-        self.log(generate_output_from_results(result))
-        return result
+        self.invoke_rust_agent_expect_result(host, "ostpool_create", {"filesystem": fs_name, "name": pool_name})
+
+
+class WaitOstPoolStep(Step):
+    def run(self, kwargs):
+        pool_name = kwargs["pool"]
+        fs_name = kwargs["filesystem"]
+        host = kwargs["mds"]
+
+        self.invoke_rust_agent_expect_result(host, "ostpool_wait", {"filesystem": fs_name, "name": pool_name})
 
 
 class DestroyOstPoolJob(AdvertisedJob):
@@ -465,17 +528,25 @@ class DestroyOstPoolJob(AdvertisedJob):
         return "Destroy OST Pool"
 
     def get_steps(self):
-        return [(DestroyOstPoolStep, {"pool": self.pool})]
+        return [
+            (
+                DestroyOstPoolStep,
+                {
+                    "pool": self.pool.name,
+                    "filesystem": self.pool.filesystem.name,
+                    "mgs": self.pool.filesystem.mgs.active_host.fqdn,
+                },
+            )
+        ]
 
 
 class DestroyPoolStep(Step):
     def run(self, kwargs):
-        pool = kwargs["pool"]
-        host = pool.filesystem.mgs.active_host
+        pool_name = kwargs["pool"]
+        fs_name = kwargs["filesystem"]
+        host = kwargs["mgs"]
 
-        result = self.invoke_rust_agent_expect_result(host, "pool", "destroy", pool.filesystem.name, pool.name)
-        self.log(generate_output_from_results(result))
-        return result
+        self.invoke_rust_agent_expect_result(host, "pool_destroy", {"filesystem": fs_name, "name": pool_name})
 
 
 class AddOstPoolJob(Job):
@@ -503,20 +574,29 @@ class AddOstPoolJob(Job):
         return "Add OST to OST Pool"
 
     def get_steps(self):
-        return [(AddOstPoolStep, {"pool": self.pool, "ost": self.ost})]
+        return [
+            (
+                AddOstPoolStep,
+                {
+                    "pool": self.pool.name,
+                    "filesystem": self.pool.filesystem.name,
+                    "mgs": self.pool.filesystem.mgs.active_host.fqdn,
+                    "ost": self.ost.get_label(),
+                },
+            )
+        ]
 
 
 class AddOstPoolStep(Step):
     def run(self, kwargs):
-        pool = kwargs["pool"]
-        ost = kwargs["ost"]
-        host = pool.filesystem.mgs.active_host
+        pool_name = kwargs["pool"]
+        fs_name = kwargs["filesystem"]
+        host = kwargs["mgs"]
+        ost_label = kwargs["ost"]
 
-        result = self.invoke_rust_agent_expect_result(
-            host, "pool", "add", pool.filesystem.name, pool.name, ost.get_label()
+        self.invoke_rust_agent_expect_result(
+            host, "ostpool_add", {"filesystem": fs_name, "name": pool_name, "ost": ost_label}
         )
-        self.log(generate_output_from_results(result))
-        return result
 
 
 class RemoveOstPoolJob(Job):
@@ -544,20 +624,26 @@ class RemoveOstPoolJob(Job):
         return "Remove OST from OST Pool"
 
     def get_steps(self):
-        return [(RemoveOstPoolStep, {"pool": self.pool, "ost": self.ost})]
+        return [
+            (
+                RemoveOstPoolStep,
+                {
+                    "pool": self.pool.name,
+                    "filesystem": self.pool.filesystem.name,
+                    "mgs": self.pool.filesystem.mgs.active_host.fqdn,
+                    "ost": self.ost.get_label(),
+                },
+            )
+        ]
 
 
 class RemoveOstPoolStep(Step):
     def run(self, kwargs):
-        pool = kwargs["pool"]
-        ost = kwargs["ost"]
+        pool_name = kwargs["pool"]
+        fs_name = kwargs["filesystem"]
+        host = kwargs["mgs"]
+        ost_label = kwargs["ost"]
 
-        host = pool.filesystem.mgs.active_host
-
-        result = self.invoke_rust_agent_expect_result(
-            host, "pool", "remove", pool.filesystem.name, pool.name, ost.get_label()
+        self.invoke_rust_agent_expect_result(
+            host, "ostpool_remove", {"filesystem": fs_name, "name": pool_name, "ost": ost_label}
         )
-
-        self.log(generate_output_from_results(result))
-
-        return result

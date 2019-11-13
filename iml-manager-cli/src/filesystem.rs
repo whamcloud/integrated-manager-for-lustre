@@ -77,20 +77,17 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
             table.printstd();
         }
         FilesystemCommand::Show { fsname } => {
-            let mut query: Vec<(&str, &str)> = vec![("name", &fsname)];
-            query.extend(Filesystem::query().iter().cloned());
-            tracing::debug!("QUERY: {:?}", query);
-            let fs: Filesystem = wrap_fut("Fetching filesystem...", get_one(query)).await?;
+            let fs: Filesystem = wrap_fut("Fetching filesystem...", get_one(vec![("name", &fsname)])).await?;
 
             tracing::debug!("FS: {:?}", fs);
 
-            let (mgt, osts): (Mgt, Vec<Ost>) =
-                try_join(
-                    wrap_fut("Fetching MGT...", get(&fs.mgt, Mgt::query())),
-                    try_join_all(fs.osts.into_iter().map(|o| {
-                        async move { wrap_fut("Fetching OST...", get(&o, Ost::query())).await }
-                    })))
-                .await?;
+            let (mgt, osts): (Mgt, Vec<Ost>) = try_join(
+                wrap_fut("Fetching MGT...", get(&fs.mgt, Mgt::query())),
+                try_join_all(fs.osts.into_iter().map(|o| {
+                    async move { wrap_fut("Fetching OST...", get(&o, Ost::query())).await }
+                })),
+            )
+            .await?;
 
             let mut table = Table::new();
             table.add_row(Row::from(&["Name".to_string(), fs.label]));
