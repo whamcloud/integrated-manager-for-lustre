@@ -4,7 +4,7 @@
 
 use crate::{
     action_plugins::stratagem::{action_purge, action_warning, server},
-    action_plugins::{check_ha, check_stonith},
+    action_plugins::{check_ha, check_stratagem, check_stonith},
     agent_error::ImlAgentError,
     systemd,
 };
@@ -87,6 +87,11 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
     map.insert(
         "action_check_stonith".into(),
         mk_callback(check_stonith::check_stonith),
+    );
+
+    map.insert(
+        "action_check_stratagem".into(),
+        mk_callback(check_stratagem::check_stratagem),
     );
 
     info!("Loaded the following ActionPlugins:");

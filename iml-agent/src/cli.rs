@@ -6,7 +6,7 @@ use iml_agent::action_plugins::stratagem::{
     action_purge, action_warning,
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
-use iml_agent::action_plugins::{check_ha, check_stonith};
+use iml_agent::action_plugins::{check_ha, check_stonith, check_stratagem};
 use prettytable::{cell, row, Table};
 use spinners::{Spinner, Spinners};
 use std::{
@@ -124,6 +124,9 @@ pub enum App {
 
     #[structopt(name = "check_stonith")]
     CheckStonith,
+
+    #[structopt(name = "check_stratagem")]
+    CheckStratagem,
 }
 
 fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<dyn Iterator<Item = String>> {
@@ -324,6 +327,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         "Unconfigured"
                     },
                     cs.info
+                );
+            }
+            Err(e) => println!("{:?}", e),
+        },
+        App::CheckStratagem => match check_stratagem::check_stratagem(()).await {
+            Ok(cs) => {
+                println!(
+                    "{}",
+                    if cs {
+                        "Installed"
+                    } else {
+                        "Not Installed"
+                    }
                 );
             }
             Err(e) => println!("{:?}", e),
