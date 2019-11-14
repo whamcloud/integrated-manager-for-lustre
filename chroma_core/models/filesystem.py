@@ -539,14 +539,20 @@ class DestroyOstPoolJob(AdvertisedJob):
             )
         ]
 
+    def on_success(self):
+        super(DestroyOstPoolJob, self).on_success()
 
-class DestroyPoolStep(Step):
+        self.pool.mark_deleted()
+        self.pool.save()
+
+
+class DestroyOstPoolStep(Step):
     def run(self, kwargs):
         pool_name = kwargs["pool"]
         fs_name = kwargs["filesystem"]
         host = kwargs["mgs"]
 
-        self.invoke_rust_agent_expect_result(host, "pool_destroy", {"filesystem": fs_name, "name": pool_name})
+        self.invoke_rust_agent_expect_result(host, "ostpool_destroy", {"filesystem": fs_name, "name": pool_name})
 
 
 class AddOstPoolJob(Job):
@@ -585,6 +591,11 @@ class AddOstPoolJob(Job):
                 },
             )
         ]
+
+    def on_success(self):
+        super(AddOstPoolJob, self).on_success()
+        self.pool.osts.add(self.ost)
+        self.pool.save()
 
 
 class AddOstPoolStep(Step):
@@ -635,6 +646,11 @@ class RemoveOstPoolJob(Job):
                 },
             )
         ]
+
+    def on_success(self):
+        super(RemoveOstPoolJob, self).on_success()
+        self.pool.osts.remove(self.ost)
+        self.pool.save()
 
 
 class RemoveOstPoolStep(Step):

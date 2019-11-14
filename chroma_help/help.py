@@ -190,4 +190,5 @@ help_text = {
     "stonith_not_enabled": "stonith-enabled is false on %s. This can cause device corruption. Target creation is forbidden in this state. Ensure that stonith-enabled is set to true.",
     "stonith_enabled": "stonith-enabled set to true on %s",
     "creating_ostpool": "Creating OST Pool",
+    "destroying_ostpool": "Destroying OST Pool",
 }

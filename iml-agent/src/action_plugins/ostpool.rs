@@ -2,7 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::{ImlAgentError, RequiredError}, cmd::lctl};
+use crate::{
+    agent_error::{ImlAgentError, RequiredError},
+    cmd::lctl,
+};
 use futures::future::try_join_all;
 use iml_wire_types::OstPool;
 use std::time::{Duration, Instant};
@@ -28,7 +31,6 @@ pub async fn pool_create(filesystem: String, name: String) -> Result<(), ImlAgen
     lctl(vec!["pool_new", &pn]).await.map(drop)
 }
 
-
 /// This needs to be a seperate action from pool_create() since pool create runs on MGS
 /// and this runs on MDS
 pub async fn action_pool_wait(cmd: CmdPool) -> Result<(), ImlAgentError> {
@@ -45,7 +47,8 @@ pub async fn action_pool_wait(cmd: CmdPool) -> Result<(), ImlAgentError> {
 
     Err(ImlAgentError::from(RequiredError(format!(
         "Waiting for pool create {}.{} failed after {} sec",
-        cmd.filesystem, cmd.name, time_to_wait))))
+        cmd.filesystem, cmd.name, time_to_wait
+    ))))
 }
 
 pub async fn action_pool_create(cmd: CmdPool) -> Result<(), ImlAgentError> {
@@ -119,6 +122,7 @@ pub async fn pools(filesystem: String) -> Result<Vec<OstPool>, ImlAgentError> {
                 name: pool.to_string(),
                 filesystem,
                 osts: osts.await?,
+                ..Default::default()
             })
         }
     });

@@ -435,6 +435,12 @@ class FilesystemResource(MetricResource, ConfParamResource):
         )
 
 
+class OstPoolResourceValidation(Validation):
+    def is_valid(self, bundle, request=None):
+        errors = defaultdict(list)
+        return errors
+
+
 class OstPoolResource(ChromaModelResource):
     osts = fields.ToManyField(
         "chroma_api.target.TargetResource", "osts", null=True, help_text="List of OSTs in this Pool",
@@ -446,23 +452,53 @@ class OstPoolResource(ChromaModelResource):
         resource_name = "ostpool"
         authentication = AnonymousAuthentication()
         authorization = PatchedDjangoAuthorization()
+        validation = OstPoolResourceValidation()
         excludes = ["not_deleted"]
         ordering = ["filesystem", "name"]
-        list_allowed_methods = ["get", "post", "put", "delete"]
-        detail_allowed_methods = ["get", "delete", "put", "post"]
-        filtering = {"filesystem": ["exact"]}
+        list_allowed_methods = ["get", "delete", "put", "post"]
+        detail_allowed_methods = ["get", "delete", "post"]
+        filtering = {"filesystem": ["exact"], "name": ["exact"], "id": ["exact"]}
 
     @validate
     def obj_create(self, bundle, **kwargs):
         request = bundle.request
 
         ostpool_id, command_id = JobSchedulerClient.create_ostpool(bundle.data)
-        ostpool = OstPool.objects.get(pk=ostpool_id)
         command = Command.objects.get(pk=command_id)
 
-        pool_bundle = self.full_dehydrate(self.build_bundle(obj=ostpool))
-        ostpool_data = self.alter_detail_data_to_serialize(request, pool_bundle).data
+        raise custom_response(self, request, http.HttpAccepted, {"command": dehydrate_command(command)})
 
-        raise custom_response(
-            self, request, http.HttpAccepted, {"command": dehydrate_command(command), "ostpool": ostpool_data}
-        )
+    # PUT handler
+    @validate
+    def obj_update(self, bundle, **kwargs):
+        try:
+            obj = self.obj_get(bundle, **kwargs)
+        except ObjectDoesNotExist:
+            raise NotFound("A model instance matching the provided arguments could not be found.")
+
+        command_id = JobSchedulerClient.update_ostpool(obj, bundle.data)
+        command = Command.objects.get(pk=command_id)
+
+        raise custom_response(self, bundle.request, http.HttpAccepted, {"command": dehydrate_command(command)})
+
+    def _pool_delete(self, request, obj_list):
+        commands = []
+        for obj in obj_list:
+            command_id = JobSchedulerClient.delete_ostpool(obj.id)
+            command = Command.objects.get(pk=command_id)
+            commands.append(dehydrate_command(command))
+        raise custom_response(self, request, http.HttpAccepted, {"commands": commands})
+
+    def obj_delete(self, bundle, **kwargs):
+        try:
+            obj = self.obj_get(bundle, **kwargs)
+        except ObjectDoesNotExist:
+            raise NotFound("A model instance matching the provided arguments could not be found.")
+        self._pool_delete(bundle.request, [obj])
+
+    def obj_delete_list(self, bundle, **kwargs):
+        try:
+            obj_list = self.obj_get_list(bundle, **kwargs)
+        except ObjectDoesNotExist:
+            raise NotFound("A model instance matching the provided arguments could not be found.")
+        self._pool_delete(bundle.request, obj_list)

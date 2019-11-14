@@ -1787,11 +1787,14 @@ pub struct ComponentState<T: Default> {
     pub state: T,
 }
 
+/// An OST Pool record from `/api/ostpool/`
 #[derive(Debug, Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct OstPool {
     pub name: String,
     pub filesystem: String,
     pub osts: Vec<String>,
+    pub resource_uri: String,
+    pub id: u32,
 }
 
 impl std::fmt::Display for OstPool {

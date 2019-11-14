@@ -1137,29 +1137,56 @@ class JobScheduler(object):
     def create_ostpool(self, ostpool_data):
         log.debug("Creating ostpool from: %s" % ostpool_data)
         with self._lock:
+            pool = {"name": ostpool_data["name"]}
             fs = ObjectCache.get_one(ManagedFilesystem, lambda mfs: mfs.name == ostpool_data["filesystem"])
-            ostpool_data["filesystem"] = fs
+            pool["filesystem"] = fs
             osts = ManagedOst.objects.filter(name__in=ostpool_data["osts"])
-            del ostpool_data["osts"]
 
             with transaction.atomic():
-                ostpool = OstPool.objects.create(**ostpool_data)
+                ostpool = OstPool.objects.create(**pool)
                 cmds = [{"class_name": "CreateOstPoolJob", "args": {"pool": ostpool}}]
 
                 for ost in osts:
-                    ostpool.osts.add(ost)
                     cmds.append(
                         {
                             "class_name": "AddOstPoolJob",
                             "args": {"pool": ostpool, "ost": ost, "depends_on_job_range": [0]},
                         }
                     )
-                ostpool.save()
 
                 command_id = self.CommandPlan.command_run_jobs(cmds, help_text["creating_ostpool"],)
 
         self.progress.advance()
         return ostpool.id, command_id
+
+    def update_ostpool(self, ostpool_id, ostpool_data):
+        log.debug("Updating ostpool {} with: {}".format(ostpool_id, ostpool_data))
+        with self._lock:
+            ostpool = OstPool.objects.get(pk=ostpool_id)
+        # @@
+
+    def delete_ostpool(self, ostpool_id):
+        log.debug("Deleting ostpool {}".format(ostpool_id))
+        with self._lock:
+            ostpool = OstPool.objects.get(pk=ostpool_id)
+            with transaction.atomic():
+                cmds = []
+                for ost in ostpool.osts.all():
+                    cmds.append(
+                        {"class_name": "RemoveOstPoolJob", "args": {"pool": ostpool, "ost": ost},}
+                    )
+
+                cmds.append(
+                    {
+                        "class_name": "DestroyOstPoolJob",
+                        "args": {"pool": ostpool, "depends_on_job_range": range(0, len(cmds))},
+                    }
+                )
+
+                command_id = self.CommandPlan.command_run_jobs(cmds, help_text["destroying_ostpool"])
+
+        self.progress.advance()
+        return command_id
 
     def create_copytool(self, copytool_data):
         log.debug("Creating copytool from: %s" % copytool_data)

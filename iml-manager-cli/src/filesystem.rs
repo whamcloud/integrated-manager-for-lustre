@@ -77,7 +77,8 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
             table.printstd();
         }
         FilesystemCommand::Show { fsname } => {
-            let fs: Filesystem = wrap_fut("Fetching filesystem...", get_one(vec![("name", &fsname)])).await?;
+            let fs: Filesystem =
+                wrap_fut("Fetching filesystem...", get_one(vec![("name", &fsname)])).await?;
 
             tracing::debug!("FS: {:?}", fs);
 
