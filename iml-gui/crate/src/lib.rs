@@ -261,6 +261,13 @@ pub fn view(model: &Model) -> impl View<Msg> {
     let prerendered = true;
 
     div![
+        class![
+            C.fade_in => !prerendered,
+            C.min_h_screen,
+            C.flex,
+            C.flex_col,
+            C.select_none => model.track_slider
+        ],
         // slider overlay
         if model.track_slider {
             div![
@@ -284,13 +291,6 @@ pub fn view(model: &Model) -> impl View<Msg> {
         } else {
             empty![]
         },
-        class![
-            C.fade_in => !prerendered,
-            C.min_h_screen,
-            C.flex,
-            C.flex_col,
-            C.select_none => model.track_slider
-        ],
         page::partial::header::view(model).els(),
         // panel container
         div![
@@ -299,7 +299,7 @@ pub fn view(model: &Model) -> impl View<Msg> {
                 C.flex_wrap,
                 C.flex_col,
                 C.lg__flex_row,
-                C.min_h_screen,
+                C.flex_grow
             ],
             // side panel
             div![
@@ -325,6 +325,8 @@ pub fn view(model: &Model) -> impl View<Msg> {
                     C.hover__bg_teal_400,
                     C.bg_teal_400 => model.track_slider,
                     C.relative,
+                    C.lg__block,
+                    C.hidden
                 ],
                 simple_ev(Ev::MouseDown, Msg::StartSliderTracking),
                 style! {
@@ -350,13 +352,17 @@ pub fn view(model: &Model) -> impl View<Msg> {
                     C.flex_shrink_0,
                     C.bg_gray_200
                 ],
-                style! { "flex-basis" => 0},
-                match model.page {
-                    Page::Home => page::home::view(&model).els(),
-                    Page::Dashboard => page::dashboard::view(&model).els(),
-                    Page::About => page::about::view(&model).els(),
-                    Page::NotFound => page::not_found::view(&model).els(),
-                },
+                style! { St::FlexBasis => 0 },
+                // main content
+                div![
+                    class![C.flex_grow],
+                    match model.page {
+                        Page::Home => page::home::view(&model).els(),
+                        Page::Dashboard => page::dashboard::view(&model).els(),
+                        Page::About => page::about::view(&model).els(),
+                        Page::NotFound => page::not_found::view(&model).els(),
+                    },
+                ],
                 page::partial::footer::view().els(),
             ]
         ],
