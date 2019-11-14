@@ -10,14 +10,15 @@ mod page;
 
 use generated::css_classes::C;
 use seed::{events::Listener, prelude::*, *};
-use std::mem;
+use std::{cmp, mem};
 use web_sys::EventSource;
 use Visibility::*;
 
 const TITLE_SUFFIX: &str = "IML";
 const USER_AGENT_FOR_PRERENDERING: &str = "ReactSnap";
 const STATIC_PATH: &str = "static";
-const IMAGES_PATH: &str = "static/images";
+const SLIDER_WIDTH_PX: u32 = 5;
+const MAX_SIDE_PERCENTAGE: f32 = 35f32;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum Visibility {
@@ -88,6 +89,7 @@ pub struct Model {
     pub in_prerendering: bool,
     pub config_menu_state: WatchState,
     pub track_slider: bool,
+    pub side_width_percentage: f32,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -152,6 +154,7 @@ pub fn init(url: Url, orders: &mut impl Orders<Msg>) -> Init<Model> {
         in_prerendering: is_in_prerendering(),
         config_menu_state: WatchState::default(),
         track_slider: false,
+        side_width_percentage: 20f32,
     })
 }
 
@@ -187,7 +190,7 @@ pub enum Msg {
     HideMenu,
     StartSliderTracking,
     StopSliderTracking,
-    SliderX(i32),
+    SliderX(i32, f64),
     WindowClick,
 }
 
@@ -215,16 +218,24 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
         Msg::StartSliderTracking => {
             model.track_slider = true;
-
-            orders.skip();
         }
         Msg::StopSliderTracking => {
             model.track_slider = false;
-
-            orders.skip();
         }
-        Msg::SliderX(x) => {
-            log(format!("{}", x));
+        Msg::SliderX(x_position, page_width) => {
+            let overlay_width_px = page_width as u32 - SLIDER_WIDTH_PX;
+
+            let x_position = cmp::max(0, x_position) as u32;
+
+            let side_width_percentage: f32 =
+                (x_position as f32 / overlay_width_px as f32) * 100_f32;
+
+            model.side_width_percentage =
+                if MAX_SIDE_PERCENTAGE <= side_width_percentage {
+                    MAX_SIDE_PERCENTAGE
+                } else {
+                    side_width_percentage
+                };
         }
         Msg::WindowClick => {
             if model.config_menu_state.should_update() {
@@ -248,12 +259,37 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 pub fn view(model: &Model) -> impl View<Msg> {
     // @TODO: Setup `prerendered` properly once https://github.com/David-OConnor/seed/issues/223 is resolved
     let prerendered = true;
+
     div![
+        // slider overlay
+        if model.track_slider {
+            div![
+                class![
+                    C.w_full,
+                    C.h_full,
+                    C.fixed,
+                    C.top_0,
+                    C.cursor_ew_resize,
+                ],
+                style! { St::ZIndex => 9999 },
+                mouse_ev(Ev::MouseMove, |ev| {
+                    let target = ev.target().unwrap();
+                    let el = seed::to_html_el(&target);
+
+                    let rect = el.get_bounding_client_rect();
+
+                    Msg::SliderX(ev.client_x(), rect.width())
+                }),
+            ]
+        } else {
+            empty![]
+        },
         class![
             C.fade_in => !prerendered,
             C.min_h_screen,
             C.flex,
-            C.flex_col
+            C.flex_col,
+            C.select_none => model.track_slider
         ],
         page::partial::header::view(model).els(),
         // panel container
@@ -277,7 +313,7 @@ pub fn view(model: &Model) -> impl View<Msg> {
                     C.border_r_2,
                     C.border_gray_800
                 ],
-                style! { St::FlexBasis => percent(20) },
+                style! { St::FlexBasis => percent(model.side_width_percentage) },
             ],
             // slider panel
             div![
@@ -287,11 +323,12 @@ pub fn view(model: &Model) -> impl View<Msg> {
                     C.cursor_ew_resize,
                     C.bg_gray_500
                     C.hover__bg_teal_400,
+                    C.bg_teal_400 => model.track_slider,
                     C.relative,
                 ],
                 simple_ev(Ev::MouseDown, Msg::StartSliderTracking),
                 style! {
-                    St::FlexBasis => px(5),
+                    St::FlexBasis => px(SLIDER_WIDTH_PX),
                 },
                 div![
                     class![C.absolute, C.rounded],
@@ -326,10 +363,6 @@ pub fn view(model: &Model) -> impl View<Msg> {
     ]
 }
 
-pub fn image_src(image: &str) -> String {
-    format!("{}/{}", IMAGES_PATH, image)
-}
-
 pub fn asset_path(asset: &str) -> String {
     format!("{}/{}", STATIC_PATH, asset)
 }
@@ -339,12 +372,9 @@ pub fn asset_path(asset: &str) -> String {
 // ------ ------
 
 pub fn window_events(model: &Model) -> Vec<Listener<Msg>> {
-    log!("calling window_events");
-
     let mut xs = vec![simple_ev(Ev::Click, Msg::WindowClick)];
 
     if model.track_slider {
-        xs.push(mouse_ev(Ev::MouseMove, |ev| Msg::SliderX(ev.client_x())));
         xs.push(simple_ev(Ev::MouseUp, Msg::StopSliderTracking));
     }
 

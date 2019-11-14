@@ -24,7 +24,9 @@ chrono = { version = "0.4", features = ["wasmbind"] }
 version = "^0.3.28"
 features = [
   "Navigator",
-  "EventSource"
+  "EventSource",
+  "DomRect",
+  "Element"
 ]
 
 [profile.release]
