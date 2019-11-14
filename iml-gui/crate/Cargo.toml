@@ -1,0 +1,32 @@
+[package]
+version = "0.1.0"
+name = "iml-gui"
+repository = "https://github.com/whamcloud/integrated-manager-for-lustre"
+authors = ["IML Team <iml@whamcloud.com>"]
+description = "The IML GUI"
+categories = ["wasm", "rust", "tailwindcss", "seed"]
+license = "MIT"
+readme = "./README.md"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dev-dependencies]
+wasm-bindgen-test = "0.2" # sync with `wasm-bindgen`
+
+[dependencies]
+wasm-bindgen = "0.2" # sync with `wasm-bindgen-test`
+seed = { git = "https://github.com/David-OConnor/seed", branch="master" }
+chrono = { version = "0.4", features = ["wasmbind"] }
+
+[dependencies.web-sys]
+version = "^0.3.28"
+features = [
+  "Navigator",
+  "EventSource"
+]
+
+[profile.release]
+lto = true
+opt-level = 's'
