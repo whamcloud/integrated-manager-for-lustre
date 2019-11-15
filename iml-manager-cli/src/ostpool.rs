@@ -9,7 +9,8 @@ use crate::{
 };
 use console::{style, Term};
 use futures::future::try_join_all;
-use iml_wire_types::{ApiList, Command, EndpointName, Filesystem, FlatQuery, OstPool};
+use iml_wire_types::{ApiList, Command, EndpointName, Filesystem, FlatQuery, Ost, OstPool};
+use prettytable::{Row, Table};
 use structopt::StructOpt;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -52,7 +53,7 @@ pub enum OstPoolCommand {
     Grow {
         fsname: String,
         poolname: String,
-        ost: Vec<String>,
+        osts: Vec<String>,
     },
 
     /// Remove OST to Pool
@@ -60,7 +61,7 @@ pub enum OstPoolCommand {
     Shrink {
         fsname: String,
         poolname: String,
-        ost: Vec<String>,
+        osts: Vec<String>,
     },
 
     /// Destroy Pool
@@ -68,7 +69,21 @@ pub enum OstPoolCommand {
     Destroy { fsname: String, poolname: String },
 }
 
+async fn pool_lookup(fsname: &String, pool: &String) -> Result<OstPool, ImlManagerCliError> {
+    let fs: Filesystem =
+        wrap_fut("Fetching Filesystem ...", get_one(vec![("name", &fsname)])).await?;
+    wrap_fut(
+        "Fetching OstPool...",
+        get_one(vec![
+            ("filesystem", fs.id.to_string().as_str()),
+            ("name", &pool),
+        ]),
+    )
+    .await
+}
+
 pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliError> {
+    let term = Term::stdout();
     match command {
         OstPoolCommand::List { fsname } => {
             let xs = match fsname {
@@ -110,12 +125,27 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
             let table = generate_table(&["Filesystem", "Pool Name", "OST Count"], xs);
             table.printstd();
         }
+        OstPoolCommand::Show { fsname, poolname } => {
+            let pool = pool_lookup(&fsname, &poolname).await?;
+
+            let osts: Vec<Ost> =
+                try_join_all(pool.osts.into_iter().map(|o| {
+                    async move { wrap_fut("Fetching OST...", get(&o, Ost::query())).await }
+                }))
+                .await?;
+
+            let mut table = Table::new();
+            table.add_row(Row::from(&["Filesystem".to_string(), fsname]));
+            table.add_row(Row::from(&["Name".to_string(), poolname]));
+            let ostnames: Vec<String> = osts.into_iter().map(|m| m.name).collect();
+            table.add_row(Row::from(&["OSTs".to_string(), ostnames.join("\n")]));
+            table.printstd();
+        }
         OstPoolCommand::Create {
             fsname,
             poolname,
             osts,
         } => {
-            let term = Term::stdout();
             let pool = OstPool {
                 filesystem: fsname,
                 name: poolname,
@@ -129,7 +159,6 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
             wait_for_cmd(objs.command).await?;
         }
         OstPoolCommand::Destroy { fsname, poolname } => {
-            let term = Term::stdout();
             let fs: Filesystem =
                 wrap_fut("Fetching Filesystem ...", get_one(vec![("name", &fsname)])).await?;
             let resp = delete(
