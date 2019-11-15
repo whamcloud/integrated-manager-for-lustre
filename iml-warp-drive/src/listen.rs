@@ -2,9 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{cache, db_record, error, users, DbRecord, Message};
+use crate::{cache, db_record, error, users, DbRecord};
 use futures::{Stream, TryStreamExt};
-use iml_wire_types::db::TableName;
+use iml_wire_types::{
+    db::TableName,
+    warp_drive::{Message, RecordChange},
+};
 use std::{convert::TryFrom, sync::Arc};
 
 #[derive(serde::Deserialize, Debug)]
@@ -48,7 +51,7 @@ pub async fn handle_db_notifications(
                         cache::db_record_to_change_record(r, api_client.clone()).await?;
 
                     match record_change.clone() {
-                        cache::RecordChange::Delete(r) => {
+                        RecordChange::Delete(r) => {
                             tracing::debug!("LISTEN / NOTIFY Delete record: {:?}", r);
 
                             let removed = api_cache_state.lock().await.remove_record(&r);
@@ -61,7 +64,7 @@ pub async fn handle_db_notifications(
                                 .await;
                             }
                         }
-                        cache::RecordChange::Update(r) => {
+                        RecordChange::Update(r) => {
                             tracing::debug!("LISTEN / NOTIFY Update record: {:?}", r);
 
                             api_cache_state.lock().await.insert_record(r);
