@@ -52,7 +52,7 @@ pub enum OstPoolCommand {
     Grow {
         fsname: String,
         poolname: String,
-        ost: String,
+        ost: Vec<String>,
     },
 
     /// Remove OST to Pool
@@ -60,7 +60,7 @@ pub enum OstPoolCommand {
     Shrink {
         fsname: String,
         poolname: String,
-        ost: String,
+        ost: Vec<String>,
     },
 
     /// Destroy Pool
@@ -143,8 +143,6 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
             term.write_line(&format!("{} ost pool...", style("Destroying").green()))?;
             let objs: ObjCommands = resp.json().await?;
             wait_for_cmds(objs.commands).await?;
-            //println!("HEADERS:\n{:?}", resp.headers());
-            //println!("BODY:\n{}", resp.text().await?);
         }
         _ => println!("NYI"),
     };

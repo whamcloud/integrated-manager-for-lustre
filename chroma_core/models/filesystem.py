@@ -98,7 +98,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         return dict(servers)
 
     def get_pools(self):
-        return OstPool.objects.filter(Q(filesystem=self))
+        return OstPool.objects.filter(filesystem=self)
 
     def mgs_spec(self):
         """Return a string which is foo in <foo>:/lustre for client mounts"""
