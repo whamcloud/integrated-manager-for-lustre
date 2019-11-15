@@ -449,7 +449,9 @@ class CreateOstPoolJob(AdvertisedJob):
     @classmethod
     def can_run(self, instance):
         mgs = instance.filesystem.mgs
-        return mgs is not None and mgs.active_host is not None
+        mdt0 = instance.filesystem.name + "-MDT0000"
+        mds0 = next(t.active_host for t in instance.filesystem.get_targets() if t.name == mdt0)
+        return mgs is not None and mgs.active_host is not None and mds0 is not None
 
     @classmethod
     def get_args(cls, pool):
