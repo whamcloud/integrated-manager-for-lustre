@@ -156,6 +156,7 @@ module.exports = {
         "400": "100rem"
       },
       height: {
+        "main-content": "calc(100vh - 6.5rem)",
         "18": "4.5rem",
         "72": "18rem",
         "3px": "3px",

@@ -9,9 +9,12 @@ mod generated;
 mod page;
 
 use generated::css_classes::C;
+use iml_wire_types::warp_drive;
+use js_sys::Function;
 use seed::{events::Listener, prelude::*, *};
-use std::{cmp, mem};
-use web_sys::EventSource;
+use std::{cmp, collections::HashMap, mem};
+use wasm_bindgen::JsCast;
+use web_sys::{EventSource, MessageEvent};
 use Visibility::*;
 
 const TITLE_SUFFIX: &str = "IML";
@@ -90,6 +93,8 @@ pub struct Model {
     pub config_menu_state: WatchState,
     pub track_slider: bool,
     pub side_width_percentage: f32,
+    pub records: warp_drive::Cache,
+    pub locks: warp_drive::Locks,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -133,6 +138,25 @@ impl From<Url> for Page {
     }
 }
 
+pub fn register_eventsource_handle<T, F>(
+    es_cb_setter: fn(&EventSource, Option<&Function>),
+    msg: F,
+    ws: &EventSource,
+    orders: &mut impl Orders<Msg>,
+) where
+    T: wasm_bindgen::convert::FromWasmAbi + 'static,
+    F: Fn(T) -> Msg + 'static,
+{
+    let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
+
+    let closure = Closure::new(move |data| {
+        app.update(msg_mapper(msg(data)));
+    });
+
+    es_cb_setter(ws, Some(closure.as_ref().unchecked_ref()));
+    closure.forget();
+}
+
 // ------ ------
 //     Init
 // ------ ------
@@ -144,7 +168,21 @@ pub fn init(url: Url, orders: &mut impl Orders<Msg>) -> Init<Model> {
         mount_point_element.set_inner_html("");
     }
 
-    let es = EventSource::new("https://localhost:7444/messaging");
+    let es = EventSource::new("https://localhost:7444/messaging").unwrap();
+
+    register_eventsource_handle(
+        EventSource::set_onopen,
+        Msg::EventSourceConnect,
+        &es,
+        orders,
+    );
+
+    register_eventsource_handle(
+        EventSource::set_onmessage,
+        Msg::EventSourceMessage,
+        &es,
+        orders,
+    );
 
     orders.send_msg(Msg::UpdatePageTitle);
 
@@ -155,6 +193,8 @@ pub fn init(url: Url, orders: &mut impl Orders<Msg>) -> Init<Model> {
         config_menu_state: WatchState::default(),
         track_slider: false,
         side_width_percentage: 20f32,
+        records: warp_drive::Cache::default(),
+        locks: HashMap::new(),
     })
 }
 
@@ -191,6 +231,11 @@ pub enum Msg {
     StartSliderTracking,
     StopSliderTracking,
     SliderX(i32, f64),
+    EventSourceConnect(JsValue),
+    EventSourceMessage(MessageEvent),
+    Records(warp_drive::Cache),
+    RecordChange(warp_drive::RecordChange),
+    Locks(warp_drive::Locks),
     WindowClick,
 }
 
@@ -208,6 +253,90 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 Page::NotFound => format!("404 - {}", TITLE_SUFFIX),
             };
             document().set_title(&title);
+        }
+        Msg::EventSourceConnect(_) => {
+            log("here!");
+        }
+        Msg::EventSourceMessage(msg) => {
+            let txt = msg.data().as_string().unwrap();
+
+            let msg: warp_drive::Message = serde_json::from_str(&txt).unwrap();
+
+            let msg = match msg {
+                warp_drive::Message::Locks(locks) => Msg::Locks(locks),
+                warp_drive::Message::Records(records) => Msg::Records(records),
+                warp_drive::Message::RecordChange(record_change) => {
+                    Msg::RecordChange(record_change)
+                }
+            };
+
+            orders.send_msg(msg);
+        }
+        Msg::Records(records) => {
+            model.records = records;
+        }
+        Msg::RecordChange(record_change) => match record_change {
+            warp_drive::RecordChange::Update(record) => match record {
+                warp_drive::Record::ActiveAlert(x) => {
+                    model.records.active_alert.insert(x.id, x);
+                }
+                warp_drive::Record::Filesystem(x) => {
+                    model.records.filesystem.insert(x.id, x);
+                }
+                warp_drive::Record::Host(x) => {
+                    model.records.host.insert(x.id, x);
+                }
+                warp_drive::Record::ManagedTargetMount(x) => {
+                    model.records.managed_target_mount.insert(x.id, x);
+                }
+                warp_drive::Record::StratagemConfig(x) => {
+                    model.records.stratagem_config.insert(x.id, x);
+                }
+                warp_drive::Record::Target(x) => {
+                    model.records.target.insert(x.id, x);
+                }
+                warp_drive::Record::Volume(x) => {
+                    model.records.volume.insert(x.id, x);
+                }
+                warp_drive::Record::VolumeNode(x) => {
+                    model.records.volume_node.insert(x.id, x);
+                }
+                warp_drive::Record::LnetConfiguration(x) => {
+                    model.records.lnet_configuration.insert(x.id, x);
+                }
+            },
+            warp_drive::RecordChange::Delete(record_id) => match record_id {
+                warp_drive::RecordId::ActiveAlert(x) => {
+                    model.records.active_alert.remove(&x);
+                }
+                warp_drive::RecordId::Filesystem(x) => {
+                    model.records.filesystem.remove(&x);
+                }
+                warp_drive::RecordId::Host(x) => {
+                    model.records.host.remove(&x);
+                }
+                warp_drive::RecordId::ManagedTargetMount(x) => {
+                    model.records.managed_target_mount.remove(&x);
+                }
+                warp_drive::RecordId::StratagemConfig(x) => {
+                    model.records.stratagem_config.remove(&x);
+                }
+                warp_drive::RecordId::Target(x) => {
+                    model.records.target.remove(&x);
+                }
+                warp_drive::RecordId::Volume(x) => {
+                    model.records.volume.remove(&x);
+                }
+                warp_drive::RecordId::VolumeNode(x) => {
+                    model.records.volume_node.remove(&x);
+                }
+                warp_drive::RecordId::LnetConfiguration(x) => {
+                    model.records.lnet_configuration.remove(&x);
+                }
+            },
+        },
+        Msg::Locks(locks) => {
+            model.locks = locks;
         }
         Msg::ToggleMenu => model.menu_visibility.toggle(),
         Msg::ConfigMenuState => {
@@ -311,7 +440,8 @@ pub fn view(model: &Model) -> impl View<Msg> {
                     C.whitespace_no_wrap,
                     C.bg_blue_900,
                     C.border_r_2,
-                    C.border_gray_800
+                    C.border_gray_800,
+                    C.lg__h_main_content,
                 ],
                 style! { St::FlexBasis => percent(model.side_width_percentage) },
             ],
@@ -326,6 +456,7 @@ pub fn view(model: &Model) -> impl View<Msg> {
                     C.bg_teal_400 => model.track_slider,
                     C.relative,
                     C.lg__block,
+                    C.lg__h_main_content,
                     C.hidden
                 ],
                 simple_ev(Ev::MouseDown, Msg::StartSliderTracking),
@@ -350,12 +481,18 @@ pub fn view(model: &Model) -> impl View<Msg> {
                     C.flex_col,
                     C.flex_grow,
                     C.flex_shrink_0,
-                    C.bg_gray_200
+                    C.bg_gray_200,
+                    C.lg__w_0,
+                    C.lg__h_main_content,
                 ],
-                style! { St::FlexBasis => 0 },
                 // main content
                 div![
-                    class![C.flex_grow],
+                    class![
+                        C.flex_grow,
+                        C.overflow_x_auto,
+                        C.overflow_y_auto,
+                        C.p_6
+                    ],
                     match model.page {
                         Page::Home => page::home::view(&model).els(),
                         Page::Dashboard => page::dashboard::view(&model).els(),

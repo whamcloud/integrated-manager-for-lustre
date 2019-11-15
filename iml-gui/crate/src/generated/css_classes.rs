@@ -4458,6 +4458,11 @@ pub struct CssClasses<'a> {
     pub h_screen: &'a str,
 
     /**
+        height: calc(100vh - 6.5rem);
+    */
+    pub h_main_content: &'a str,
+
+    /**
         height: 3px;
     */
     pub h_3px: &'a str,
@@ -16419,6 +16424,11 @@ pub struct CssClasses<'a> {
     pub sm__h_screen: &'a str,
 
     /**
+        height: calc(100vh - 6.5rem);    @media (min-width: 569px)
+    */
+    pub sm__h_main_content: &'a str,
+
+    /**
         height: 3px;    @media (min-width: 569px)
     */
     pub sm__h_3px: &'a str,
@@ -28368,6 +28378,11 @@ pub struct CssClasses<'a> {
         height: 100vh;    @media (min-width: 769px)
     */
     pub md__h_screen: &'a str,
+
+    /**
+        height: calc(100vh - 6.5rem);    @media (min-width: 769px)
+    */
+    pub md__h_main_content: &'a str,
 
     /**
         height: 3px;    @media (min-width: 769px)
@@ -40321,6 +40336,11 @@ pub struct CssClasses<'a> {
     pub lg__h_screen: &'a str,
 
     /**
+        height: calc(100vh - 6.5rem);    @media (min-width: 1025px)
+    */
+    pub lg__h_main_content: &'a str,
+
+    /**
         height: 3px;    @media (min-width: 1025px)
     */
     pub lg__h_3px: &'a str,
@@ -52270,6 +52290,11 @@ pub struct CssClasses<'a> {
         height: 100vh;    @media (min-width: 1701px)
     */
     pub xl__h_screen: &'a str,
+
+    /**
+        height: calc(100vh - 6.5rem);    @media (min-width: 1701px)
+    */
+    pub xl__h_main_content: &'a str,
 
     /**
         height: 3px;    @media (min-width: 1701px)
@@ -64235,6 +64260,11 @@ pub static C: CssClasses = CssClasses {
     h_screen: "h-screen",
 
     /**
+        height: calc(100vh - 6.5rem);
+    */
+    h_main_content: "h-main-content",
+
+    /**
         height: 3px;
     */
     h_3px: "h-3px",
@@ -76196,6 +76226,11 @@ pub static C: CssClasses = CssClasses {
     sm__h_screen: "sm:h-screen",
 
     /**
+        height: calc(100vh - 6.5rem);    @media (min-width: 569px)
+    */
+    sm__h_main_content: "sm:h-main-content",
+
+    /**
         height: 3px;    @media (min-width: 569px)
     */
     sm__h_3px: "sm:h-3px",
@@ -88145,6 +88180,11 @@ pub static C: CssClasses = CssClasses {
         height: 100vh;    @media (min-width: 769px)
     */
     md__h_screen: "md:h-screen",
+
+    /**
+        height: calc(100vh - 6.5rem);    @media (min-width: 769px)
+    */
+    md__h_main_content: "md:h-main-content",
 
     /**
         height: 3px;    @media (min-width: 769px)
@@ -100098,6 +100138,11 @@ pub static C: CssClasses = CssClasses {
     lg__h_screen: "lg:h-screen",
 
     /**
+        height: calc(100vh - 6.5rem);    @media (min-width: 1025px)
+    */
+    lg__h_main_content: "lg:h-main-content",
+
+    /**
         height: 3px;    @media (min-width: 1025px)
     */
     lg__h_3px: "lg:h-3px",
@@ -112047,6 +112092,11 @@ pub static C: CssClasses = CssClasses {
         height: 100vh;    @media (min-width: 1701px)
     */
     xl__h_screen: "xl:h-screen",
+
+    /**
+        height: calc(100vh - 6.5rem);    @media (min-width: 1701px)
+    */
+    xl__h_main_content: "xl:h-main-content",
 
     /**
         height: 3px;    @media (min-width: 1701px)
