@@ -184,6 +184,13 @@ pub fn init(url: Url, orders: &mut impl Orders<Msg>) -> Init<Model> {
         orders,
     );
 
+    register_eventsource_handle(
+        EventSource::set_onerror,
+        Msg::EventSourceError,
+        &es,
+        orders,
+    );
+
     orders.send_msg(Msg::UpdatePageTitle);
 
     Init::new(Model {
@@ -233,6 +240,7 @@ pub enum Msg {
     SliderX(i32, f64),
     EventSourceConnect(JsValue),
     EventSourceMessage(MessageEvent),
+    EventSourceError(JsValue),
     Records(warp_drive::Cache),
     RecordChange(warp_drive::RecordChange),
     Locks(warp_drive::Locks),
@@ -255,7 +263,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             document().set_title(&title);
         }
         Msg::EventSourceConnect(_) => {
-            log("here!");
+            log("EventSource connected.");
         }
         Msg::EventSourceMessage(msg) => {
             let txt = msg.data().as_string().unwrap();
@@ -271,6 +279,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             };
 
             orders.send_msg(msg);
+        }
+        Msg::EventSourceError(_) => {
+            log("EventSource error.");
         }
         Msg::Records(records) => {
             model.records = records;
