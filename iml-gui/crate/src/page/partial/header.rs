@@ -91,7 +91,7 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
         a![
             &menu_class,
             attrs! {
-                At::Href => "#responsive-header",
+                At::Href => Page::Jobstats.to_href()
             },
             span![font_awesome("signal"), "Jobstats",]
         ],

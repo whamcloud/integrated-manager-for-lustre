@@ -103,13 +103,15 @@ pub enum Page {
     Home,
     About,
     NotFound,
+    Jobstats,
 }
 
 impl Page {
     pub fn to_href(self) -> &'static str {
         match self {
-            Self::Dashboard => "/dashboard",
             Self::Home => "/",
+            Self::Dashboard => "/dashboard",
+            Self::Jobstats => "/jobstats",
             Self::About => "/about",
             Self::NotFound => "/404",
         }
@@ -123,6 +125,7 @@ impl ToString for Page {
             Self::Home => "Home".into(),
             Self::About => "About".into(),
             Self::NotFound => "404".into(),
+            Self::Jobstats => "Jobstats".into(),
         }
     }
 }
@@ -133,6 +136,7 @@ impl From<Url> for Page {
             None | Some("") => Self::Home,
             Some("dashboard") => Self::Dashboard,
             Some("about") => Self::About,
+            Some("jobstats") => Self::Jobstats,
             _ => Self::NotFound,
         }
     }
@@ -257,6 +261,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             let title = match model.page {
                 Page::Home => TITLE_SUFFIX.to_owned(),
                 Page::Dashboard => format!("Dashboard - {}", TITLE_SUFFIX),
+                Page::Jobstats => format!("Jobstats - {}", TITLE_SUFFIX),
                 Page::About => format!("About - {}", TITLE_SUFFIX),
                 Page::NotFound => format!("404 - {}", TITLE_SUFFIX),
             };
@@ -508,6 +513,7 @@ pub fn view(model: &Model) -> impl View<Msg> {
                         Page::Home => page::home::view(&model).els(),
                         Page::Dashboard => page::dashboard::view(&model).els(),
                         Page::About => page::about::view(&model).els(),
+                        Page::Jobstats => page::jobstats::view(&model).els(),
                         Page::NotFound => page::not_found::view(&model).els(),
                     },
                 ],
