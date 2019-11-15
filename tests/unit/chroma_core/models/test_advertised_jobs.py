@@ -14,6 +14,8 @@ from chroma_core.models import (
     PowercycleHostJob,
     MountLustreFilesystemsJob,
     UnmountLustreFilesystemsJob,
+    CreateOstPoolJob,
+    DestroyOstPoolJob,
 )
 from chroma_core.lib.cache import ObjectCache
 
@@ -39,7 +41,13 @@ class TestAdvertisedJobCoverage(TestAdvertisedCase):
         #
         # Reasonable exceptions are those jobs which can always run,
         # or jobs that are parents for implementing subclasses.
-        EXCEPTIONS = ["ForceRemoveHostJob", "ForceRemoveCopytoolJob", "MigrateTargetJob"]
+        EXCEPTIONS = [
+            "ForceRemoveHostJob",
+            "ForceRemoveCopytoolJob",
+            "MigrateTargetJob",
+            "CreateOstPoolJob",
+            "DestroyOstPoolJob",
+        ]
         IMPORTED_JOBS = [x for x in globals().values() if (inspect.isclass(x) and issubclass(x, AdvertisedJob))]
 
         def _find_children(cls):
