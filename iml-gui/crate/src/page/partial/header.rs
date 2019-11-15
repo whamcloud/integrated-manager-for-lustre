@@ -189,12 +189,34 @@ fn nav(model: &Model) -> Node<Msg> {
                     C.lg__h_16,
                 ],
                 main_menu_items(&model),
-                div![a![
-                    attrs! {
-                        At::Class => "inline-block text-sm px-4 py-2 leading-none hover:text-teal-500 hover:bg-white mt-4 lg:mt-0",
-                    },
-                    "Login",
-                ],],
+                div![
+                    class![
+                        C.text_base,
+                        C.lg__flex,
+                        C.lg__h_16,
+                        C.lg__flex_grow,
+                        C.lg__justify_end
+                    ],
+                    a![
+                        class![
+                            C.block,
+                            C.lg__h_16,
+                            C.lg__inline_block,
+                            C.lg__flex,
+                            C.lg__flex_auto,
+                            C.lg__flex_col,
+                            C.lg__flex_grow_0,
+                            C.lg__justify_center,
+                            C.lg__py_0,
+                            C.p_6,
+                            C.text_gray_300,
+                            C.hover__text_active,
+                            C.border_b_2,
+                            C.border_transparent
+                        ],
+                        "Login",
+                    ],
+                ],
             ]
         } else {
             empty![]
