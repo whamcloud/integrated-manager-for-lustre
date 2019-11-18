@@ -6,7 +6,7 @@ use iml_agent::action_plugins::stratagem::{
     action_purge, action_warning,
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
-use iml_agent::action_plugins::{check_ha, check_stonith};
+use iml_agent::action_plugins::{check_ha, check_kernel, check_stonith};
 use prettytable::{cell, row, Table};
 use spinners::{Spinner, Spinners};
 use std::{
@@ -124,6 +124,10 @@ pub enum App {
 
     #[structopt(name = "check_stonith")]
     CheckStonith,
+
+    #[structopt(name = "get_kernel")]
+    /// Get latest kernel which supports listed modules
+    GetKernel { modules: Vec<String> },
 }
 
 fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<dyn Iterator<Item = String>> {
@@ -326,6 +330,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     cs.info
                 );
             }
+            Err(e) => println!("{:?}", e),
+        },
+        App::GetKernel { modules } => match check_kernel::get_kernel(modules).await {
+            Ok(s) => println!("{}", s),
             Err(e) => println!("{:?}", e),
         },
     };
