@@ -105,7 +105,7 @@ class CommandResource(ChromaModelResource):
         ]
 
     def dismiss_all(self, request, **kwargs):
-        if (request.method != "PUT") or (not request.user.is_authenticated()):
+        if (request.method != "PUT") or (not request.user.is_authenticated):
             return http.HttpUnauthorized()
 
         Command.objects.filter(dismissed=False, complete=True).update(dismissed=True)
