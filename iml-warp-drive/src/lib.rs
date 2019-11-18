@@ -11,12 +11,3 @@ pub mod request;
 pub mod users;
 
 pub use db_record::*;
-
-/// Message variants.
-#[derive(serde::Serialize, Clone, Debug)]
-#[serde(tag = "tag", content = "payload")]
-pub enum Message {
-    Locks(locks::Locks),
-    Records(cache::Cache),
-    RecordChange(cache::RecordChange),
-}

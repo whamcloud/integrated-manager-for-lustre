@@ -12,73 +12,12 @@ use iml_wire_types::{
         ManagedTargetMountRecord, ManagedTargetRecord, Name, NotDeleted, StratagemConfiguration,
         VolumeNodeRecord, VolumeRecord,
     },
+    warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam, Volume,
 };
 use std::{collections::HashMap, fmt::Debug, iter, pin::Pin, sync::Arc};
 
 pub type SharedCache = Arc<Mutex<Cache>>;
-
-#[derive(Default, serde::Serialize, Debug, Clone)]
-pub struct Cache {
-    pub active_alert: HashMap<u32, Alert>,
-    pub filesystem: HashMap<u32, Filesystem>,
-    pub host: HashMap<u32, Host>,
-    pub lnet_configuration: HashMap<u32, LnetConfigurationRecord>,
-    pub managed_target_mount: HashMap<u32, ManagedTargetMountRecord>,
-    pub stratagem_config: HashMap<u32, StratagemConfiguration>,
-    pub target: HashMap<u32, Target<TargetConfParam>>,
-    pub volume: HashMap<u32, Volume>,
-    pub volume_node: HashMap<u32, VolumeNodeRecord>,
-}
-
-impl Cache {
-    /// Removes the record from the cache
-    pub fn remove_record(&mut self, x: &RecordId) -> bool {
-        match x {
-            RecordId::ActiveAlert(id) => self.active_alert.remove(&id).is_some(),
-            RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
-            RecordId::Host(id) => self.host.remove(&id).is_some(),
-            RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
-            RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(&id).is_some(),
-            RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
-            RecordId::Target(id) => self.target.remove(&id).is_some(),
-            RecordId::Volume(id) => self.volume.remove(&id).is_some(),
-            RecordId::VolumeNode(id) => self.volume_node.remove(&id).is_some(),
-        }
-    }
-    /// Inserts the record into the cache
-    pub fn insert_record(&mut self, x: Record) {
-        match x {
-            Record::ActiveAlert(x) => {
-                self.active_alert.insert(x.id, x);
-            }
-            Record::Filesystem(x) => {
-                self.filesystem.insert(x.id, x);
-            }
-            Record::Host(x) => {
-                self.host.insert(x.id, x);
-            }
-            Record::LnetConfiguration(x) => {
-                self.lnet_configuration.insert(x.id(), x);
-            }
-            Record::ManagedTargetMount(x) => {
-                self.managed_target_mount.insert(x.id(), x);
-            }
-            Record::StratagemConfig(x) => {
-                self.stratagem_config.insert(x.id(), x);
-            }
-            Record::Target(x) => {
-                self.target.insert(x.id, x);
-            }
-            Record::Volume(x) => {
-                self.volume.insert(x.id, x);
-            }
-            Record::VolumeNode(x) => {
-                self.volume_node.insert(x.id(), x);
-            }
-        }
-    }
-}
 
 pub trait ToApiRecord: std::fmt::Debug + Id {
     fn to_api_record<T: 'static>(
@@ -97,41 +36,6 @@ pub trait ToApiRecord: std::fmt::Debug + Id {
         )
         .boxed()
     }
-}
-
-#[derive(serde::Serialize, Debug, Clone)]
-#[serde(tag = "tag", content = "payload")]
-pub enum Record {
-    ActiveAlert(Alert),
-    Filesystem(Filesystem),
-    Host(Host),
-    ManagedTargetMount(ManagedTargetMountRecord),
-    StratagemConfig(StratagemConfiguration),
-    Target(Target<TargetConfParam>),
-    Volume(Volume),
-    VolumeNode(VolumeNodeRecord),
-    LnetConfiguration(LnetConfigurationRecord),
-}
-
-#[derive(Debug, serde::Serialize, Clone)]
-#[serde(tag = "tag", content = "payload")]
-pub enum RecordId {
-    ActiveAlert(u32),
-    Filesystem(u32),
-    Host(u32),
-    ManagedTargetMount(u32),
-    StratagemConfig(u32),
-    Target(u32),
-    Volume(u32),
-    VolumeNode(u32),
-    LnetConfiguration(u32),
-}
-
-#[derive(Debug, serde::Serialize, Clone)]
-#[serde(tag = "tag", content = "payload")]
-pub enum RecordChange {
-    Update(Record),
-    Delete(RecordId),
 }
 
 async fn converter<T>(
