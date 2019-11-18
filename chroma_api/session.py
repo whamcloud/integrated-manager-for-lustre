@@ -131,7 +131,7 @@ class SessionResource(Resource):
         request.session.modified = True
 
         user = request.user
-        if not user.is_authenticated:
+        if not user.is_authenticated():
             # Anonymous user
             user = None
         bundle = self.build_bundle(obj=Session(user), request=request)
@@ -176,7 +176,7 @@ class AuthResource(Resource):
         django.middleware.csrf.get_token(request)
 
         user = request.user
-        if not user.is_authenticated:
+        if not user.is_authenticated():
             error = {"__all__": "Authentication Failed."}
             resp = self.create_response(request, error, response_class=http.HttpUnauthorized)
             raise ImmediateHttpResponse(response=resp)

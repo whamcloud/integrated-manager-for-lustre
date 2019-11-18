@@ -39,7 +39,7 @@ class UserAuthorization(PatchedDjangoAuthorization):
             # internal request being done by Resource.get_via_uri()
             # and is therefore safe.
             return object_list
-        elif not request.user.is_authenticated:
+        elif not request.user.is_authenticated():
             # Anonymous sees nothing
             return object_list.none()
         elif request.user.has_perm("add_user"):

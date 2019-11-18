@@ -53,7 +53,7 @@ class AlertSubscriptionAuthorization(PatchedDjangoAuthorization):
         if request.method is None:
             # Internal request, it's all good.
             return object_list
-        elif not request.user.is_authenticated:
+        elif not request.user.is_authenticated():
             # Nothing for Anonymous
             return object_list.none()
         elif "superusers" in [g.name for g in request.user.groups.all()]:
@@ -189,7 +189,7 @@ class AlertResource(SeverityResource):
         ]
 
     def dismiss_all(self, request, **kwargs):
-        if (request.method != "PUT") or (not request.user.is_authenticated):
+        if (request.method != "PUT") or (not request.user.is_authenticated()):
             return http.HttpUnauthorized()
 
         AlertState.objects.filter(dismissed=False).exclude(active=True, severity__in=[40, 30]).update(dismissed=True)

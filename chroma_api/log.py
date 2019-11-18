@@ -24,7 +24,7 @@ class LogAuthorization(PatchedDjangoAuthorization):
     def read_list(self, object_list, bundle):
         request = bundle.request
         if (
-            request.user.is_authenticated
+            request.user.is_authenticated()
             and request.user.groups.filter(name__in=["filesystem_administrators", "superusers"]).exists()
         ):
             return object_list
