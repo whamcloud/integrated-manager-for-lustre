@@ -90,15 +90,14 @@ impl PartialEq for Version {
 }
 
 async fn check_kver_module(module: &str, kver: &str) -> Result<bool, ImlAgentError> {
-    let output = cmd_output("modinfo", vec!["-n", "-k", kver, module])
-        .await?;
+    let output = cmd_output("modinfo", vec!["-n", "-k", kver, module]).await?;
 
     Ok(output.status.success())
 }
 
 pub async fn get_kernel(modules: Vec<String>) -> Result<String, ImlAgentError> {
-    let output = cmd_output_success("rpm", vec!["-q", "--qf", "%{V}-%{R}.%{ARCH}\n", "kernel"])
-        .await?;
+    let output =
+        cmd_output_success("rpm", vec!["-q", "--qf", "%{V}-%{R}.%{ARCH}\n", "kernel"]).await?;
 
     let mut newest = Version::from("");
 
