@@ -6,7 +6,15 @@ use bytes::buf::FromBuf;
 use futures::{channel::mpsc, Future, Stream, StreamExt, TryStreamExt};
 use std::{collections::HashMap, path::PathBuf, pin::Pin};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
-use warp::{body::BodyStream, filters::BoxedFilter, Filter};
+use warp::{body::BodyStream, filters::BoxedFilter, reject, Filter};
+
+#[derive(Debug)]
+pub enum Errors {
+    IoError(std::io::Error),
+    TrySendError(mpsc::TrySendError<String>),
+}
+
+impl reject::Reject for Errors {}
 
 pub trait LineStream: Stream<Item = Result<String, warp::Rejection>> {}
 impl<T: Stream<Item = Result<String, warp::Rejection>>> LineStream for T {}
@@ -14,7 +22,10 @@ impl<T: Stream<Item = Result<String, warp::Rejection>>> LineStream for T {}
 fn streamer(s: BodyStream) -> Pin<Box<dyn Stream<Item = Result<String, warp::Rejection>> + Send>> {
     let s = s.map_ok(Vec::from_buf);
 
-    iml_fs::read_lines(s).map_err(warp::reject::custom).boxed()
+    iml_fs::read_lines(s)
+        .map_err(Errors::IoError)
+        .map_err(reject::custom)
+        .boxed()
 }
 
 /// Warp Filter that streams a newline delimited body

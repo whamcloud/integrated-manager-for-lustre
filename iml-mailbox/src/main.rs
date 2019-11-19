@@ -11,7 +11,7 @@
 //! concurrently
 
 use futures::{lock::Mutex, Stream, TryStreamExt};
-use iml_mailbox::MailboxSenders;
+use iml_mailbox::{Errors, MailboxSenders};
 use std::{fs, path::PathBuf, pin::Pin, sync::Arc};
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::Filter as _;
@@ -88,7 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     while let Some(l) = s.try_next().await? {
                         tracing::debug!("Sending line {:?}", l);
 
-                        tx.unbounded_send(l).map_err(warp::reject::custom)?
+                        tx.unbounded_send(l).map_err(Errors::TrySendError).map_err(warp::reject::custom)?
                     }
 
                     Ok::<_, warp::reject::Rejection>(())
