@@ -61,7 +61,7 @@ services:
     ports:
       - "15672:15672"
   nginx:
-    image: "local/manager-nginx"
+    image: "imlteam/manager-nginx"
     hostname: "nginx"
     deploy: *default-deploy
     volumes:
@@ -71,7 +71,7 @@ services:
     ports:
       - "7443:7443"
   update-handler:
-    image: "local/iml-update-check"
+    image: "imlteam/iml-update-check"
     hostname: "update-handler"
     deploy: *default-deploy
     volumes:
@@ -79,13 +79,13 @@ services:
     environment:
       - "IML_CA_PATH=/var/lib/chroma/authority.crt"
   realtime:
-    image: "local/realtime"
+    image: "imlteam/realtime"
     hostname: "realtime"
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
   view-server:
-    image: "local/view-server"
+    image: "imlteam/view-server"
     hostname: "view-server"
     deploy: *default-deploy
     volumes:
@@ -93,15 +93,16 @@ services:
       - "static-config1:/usr/lib/iml-manager"
       - "static-config2:/usr/lib/node_modules/@iml"
   device-aggregator:
-    image: "local/device-aggregator"
+    image: "imlteam/device-aggregator"
     hostname: "device-aggregator"
     deploy: *default-deploy
     environment:
-      - AGGREGATOR_PORT=8083
+      - DEVICE_AGGREGATOR_PORT=8083
+      - PROXY_HOST=gunicorn
     volumes:
       - "manager-config:/var/lib/chroma"
   corosync:
-    image: "local/manager-corosync"
+    image: "imlteam/manager-corosync"
     hostname: "corosync"
     build:
       context: .
@@ -110,7 +111,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   gunicorn:
-    image: "local/manager-gunicorn"
+    image: "imlteam/manager-gunicorn"
     hostname: "gunicorn"
     build:
       context: .
@@ -122,7 +123,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   http-agent:
-    image: "local/manager-http-agent"
+    image: "imlteam/manager-http-agent"
     volumes:
       - "manager-config:/var/lib/chroma"
     hostname: "http-agent"
@@ -130,8 +131,24 @@ services:
       context: .
       dockerfile: ./http-agent.dockerfile
     deploy: *default-deploy
+    environment:
+      - PROXY_HOST=http-agent
+  iml-agent-comms:
+    image: "imlteam/iml-agent-comms"
+    volumes:
+      - "manager-config:/var/lib/chroma"
+    hostname: "iml-agent-comms"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-agent-comms.dockerfile
+    deploy: *default-deploy
+    environment:
+      - "HTTP_AGENT2_PORT=8003"
+      - "RUST_LOG=debug"
+      - "RUST_BACKTRACE=full"
+      - "PROXY_HOST=iml-agent-comms"
   job-scheduler:
-    image: "local/manager-job-scheduler"
+    image: "imlteam/manager-job-scheduler"
     hostname: "job-scheduler"
     build:
       context: .
@@ -140,7 +157,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   lustre-audit:
-    image: "local/manager-lustre-audit"
+    image: "imlteam/manager-lustre-audit"
     hostname: "lustre-audit"
     build:
       context: .
@@ -149,7 +166,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   plugin-runner:
-    image: "local/manager-plugin-runner"
+    image: "imlteam/manager-plugin-runner"
     hostname: "plugin-runner"
     build:
       context: .
@@ -158,7 +175,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   power-control:
-    image: "local/manager-power-control"
+    image: "imlteam/manager-power-control"
     hostname: "power-control"
     build:
       context: .
@@ -167,7 +184,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   stats:
-    image: "local/manager-stats"
+    image: "imlteam/manager-stats"
     hostname: "stats"
     build:
       context: .
@@ -176,7 +193,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   syslog:
-    image: "local/manager-syslog"
+    image: "imlteam/manager-syslog"
     hostname: "syslog"
     build:
       context: .
@@ -185,7 +202,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   iml-warp-drive:
-    image: "local/iml-warp-drive"
+    image: "imlteam/iml-warp-drive"
     hostname: "iml-warp-drive"
     build:
       context: ../
@@ -196,7 +213,7 @@ services:
     environment:
       - PROXY_HOST=iml-warp-drive
   iml-action-runner:
-    image: "local/iml-action-runner"
+    image: "imlteam/iml-action-runner"
     hostname: "iml-action-runner"
     build:
       context: ../
@@ -204,8 +221,10 @@ services:
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
+    environment:
+      - "PROXY_HOST=iml-action-runner"
   iml-stratagem:
-    image: "local/iml-stratagem"
+    image: "imlteam/iml-stratagem"
     hostname: "iml-stratagem"
     build:
       context: ../
@@ -213,8 +232,10 @@ services:
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
+    environment:
+      - "PROXY_HOST=iml-stratagem"
   setup:
-    image: "local/manager-setup"
+    image: "imlteam/manager-setup"
     command: ["tail", "-f", "/dev/null"]
     build:
       context: .

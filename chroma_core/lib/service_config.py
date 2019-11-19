@@ -652,6 +652,7 @@ class ServiceConfig(CommandLine):
             "HTTP_FRONTEND_PORT",
             "HTTPS_FRONTEND_PORT",
             "HTTP_AGENT_PROXY_PASS",
+            "HTTP_AGENT2_PORT",
             "HTTP_AGENT2_PROXY_PASS",
             "HTTP_API_PROXY_PASS",
             "REALTIME_PROXY_PASS",
