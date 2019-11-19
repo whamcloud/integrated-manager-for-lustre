@@ -138,11 +138,7 @@ pub async fn post(
 ) -> Result<Response, ImlManagerClientError> {
     let uri = create_api_url(path)?;
 
-    let resp = client
-        .post(uri)
-        .json(&body)
-        .send()
-        .await?;
+    let resp = client.post(uri).json(&body).send().await?;
 
     tracing::debug!("Resp: {:?}", resp);
 
