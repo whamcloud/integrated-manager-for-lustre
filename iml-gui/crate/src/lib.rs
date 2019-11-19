@@ -10,7 +10,9 @@ mod generated;
 mod page;
 mod route;
 
-use components::{update_activity_health, ActivityHealth};
+use components::{
+    breadcrumbs::BreadCrumbs, update_activity_health, ActivityHealth,
+};
 use generated::css_classes::C;
 use iml_wire_types::warp_drive;
 use js_sys::Function;
@@ -100,6 +102,7 @@ pub struct Model {
     pub records: warp_drive::Cache,
     pub locks: warp_drive::Locks,
     pub activity_health: ActivityHealth,
+    pub breadcrumbs: BreadCrumbs<Page>,
 }
 
 pub fn register_eventsource_handle<T, F>(
@@ -169,6 +172,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg>) -> AfterMount<Model> {
         records: warp_drive::Cache::default(),
         locks: HashMap::new(),
         activity_health: ActivityHealth::new(),
+        breadcrumbs: BreadCrumbs::default(),
     })
 }
 
@@ -219,6 +223,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::RouteChanged(url) => {
             model.route = url.into();
             orders.send_msg(Msg::UpdatePageTitle);
+            if model.page == Page::Home {
+                model.breadcrumbs.clear();
+            }
+            model.breadcrumbs.push(model.page);
         }
         Msg::UpdatePageTitle => {
             let title =

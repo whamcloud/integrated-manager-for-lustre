@@ -12170,6 +12170,11 @@ pub struct CssClasses<'a> {
     pub rotate: &'a str,
 
     /**
+        direction: rtl;
+    */
+    pub rtl: &'a str,
+
+    /**
         position: absolute;    @media (min-width: 569px)
         width: 1px;    @media (min-width: 569px)
         height: 1px;    @media (min-width: 569px)
@@ -66580,6 +66585,11 @@ pub static C: CssClasses = CssClasses {
         animation: rotate-center 1s linear infinite both;
     */
     rotate: "rotate",
+
+    /**
+        direction: rtl;
+    */
+    rtl: "rtl",
 
     /**
         position: absolute;    @media (min-width: 569px)
