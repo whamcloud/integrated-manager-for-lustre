@@ -1,0 +1,11 @@
+[package]
+name = "iml-input"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+combine = "4.0.0-beta.1"
+iml-tooltip = { path = "../iml-tooltip" }
+seed = "=0.4.1"
+
