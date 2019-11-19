@@ -2,14 +2,14 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use std::fmt::{self, Debug};
-use std::time::Duration;
-use rand::prelude::ThreadRng;
-use rand::distributions::Uniform;
+use crate::{RetryAction, RetryPolicy};
 use rand::distributions::Distribution;
+use rand::distributions::Uniform;
+use rand::prelude::ThreadRng;
 use rand::Rng;
+use std::fmt::{self, Debug};
 use std::marker::PhantomData;
-use crate::{RetryPolicy, RetryAction};
+use std::time::Duration;
 
 ///
 /// Adaptation of [ExponentialBackOff from Google Http Client](https://github.com/googleapis/google-http-java-client/blob/master/google-http-client/src/main/java/com/google/api/client/util/ExponentialBackOff.java)
@@ -55,8 +55,9 @@ pub struct ExponentialBackoffPolicy<E: Debug, R: Rng, F: Fn(&E) -> bool> {
 }
 
 impl<E, F> ExponentialBackoffPolicy<E, ThreadRng, F>
-    where E: Debug,
-          F: Fn(&E) -> bool,
+where
+    E: Debug,
+    F: Fn(&E) -> bool,
 {
     // TODO fix compilation
     //fn new() -> impl RetryPolicy<E> {
@@ -73,14 +74,26 @@ impl<E, F> ExponentialBackoffPolicy<E, ThreadRng, F>
         let random_factor = 0.5;
         let max_count = 16;
         let initial_delay = Duration::from_millis(500);
-        ExponentialBackoffPolicy::with_count_delay_rng(is_fatal_f, max_count, initial_delay, rng, random_factor)
+        ExponentialBackoffPolicy::with_count_delay_rng(
+            is_fatal_f,
+            max_count,
+            initial_delay,
+            rng,
+            random_factor,
+        )
     }
 
     pub fn with_count(is_fatal_f: F, max_count: u32) -> impl RetryPolicy<E> {
         let rng = rand::thread_rng();
         let random_factor = 0.5;
         let initial_delay = Duration::from_millis(500);
-        ExponentialBackoffPolicy::with_count_delay_rng(is_fatal_f, max_count, initial_delay, rng, random_factor)
+        ExponentialBackoffPolicy::with_count_delay_rng(
+            is_fatal_f,
+            max_count,
+            initial_delay,
+            rng,
+            random_factor,
+        )
     }
 
     pub fn with_count_delay_rng<R: Rng>(
@@ -106,17 +119,24 @@ impl<E, F> ExponentialBackoffPolicy<E, ThreadRng, F>
 }
 
 impl<E, R, F> Debug for ExponentialBackoffPolicy<E, R, F>
-    where E: Debug,
-          R: Rng,
-          F: Fn(&E) -> bool,
+where
+    E: Debug,
+    R: Rng,
+    F: Fn(&E) -> bool,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         f.write_str("ExponentialBackoffPolicy {")?;
         f.write_fmt(format_args!("  is_first_call: {:?}", self.is_first_call))?;
         f.write_fmt(format_args!("  current_delay: {:?}", self.current_delay))?;
-        f.write_fmt(format_args!("  randomized_delay: {:?}", self.randomized_delay))?;
+        f.write_fmt(format_args!(
+            "  randomized_delay: {:?}",
+            self.randomized_delay
+        ))?;
         f.write_fmt(format_args!("  max_count: {}", self.max_count))?;
-        f.write_fmt(format_args!("  max_allowed_delay: {:?}", self.max_allowed_delay))?;
+        f.write_fmt(format_args!(
+            "  max_allowed_delay: {:?}",
+            self.max_allowed_delay
+        ))?;
         f.write_fmt(format_args!("  random_factor: {}", self.random_factor))?;
         f.write_fmt(format_args!("  multiplier: {}", self.multiplier))?;
         f.write_str("}")?;
@@ -125,9 +145,10 @@ impl<E, R, F> Debug for ExponentialBackoffPolicy<E, R, F>
 }
 
 impl<E, R, F> RetryPolicy<E> for ExponentialBackoffPolicy<E, R, F>
-    where E: Debug,
-          R: Rng,
-          F: Fn(&E) -> bool,
+where
+    E: Debug,
+    R: Rng,
+    F: Fn(&E) -> bool,
 {
     fn on_err(&mut self, request_no: u32, err: E) -> RetryAction<E> {
         if request_no < self.max_count {
@@ -155,25 +176,38 @@ impl<E, R, F> RetryPolicy<E> for ExponentialBackoffPolicy<E, R, F>
             };
 
             if (self.is_fatal_f)(&err) {
-                tracing::debug!("Request: {}, error:{:?} is fatal, returning it", request_no, err);
+                tracing::debug!(
+                    "Request: {}, error:{:?} is fatal, returning it",
+                    request_no,
+                    err
+                );
                 RetryAction::ReturnError(err)
             } else {
-                tracing::debug!("Request: {}, error:{:?} is not fatal, wait for {:?} before retry", request_no, err, self.current_delay);
+                tracing::debug!(
+                    "Request: {}, error:{:?} is not fatal, wait for {:?} before retry",
+                    request_no,
+                    err,
+                    self.current_delay
+                );
                 RetryAction::WaitFor(self.randomized_delay)
             }
         } else {
-            tracing::debug!("Request: {}, error {:?}, reached maximum attempts {:?}", request_no, self.max_count, err);
+            tracing::debug!(
+                "Request: {}, error {:?}, reached maximum attempts {:?}",
+                request_no,
+                self.max_count,
+                err
+            );
             RetryAction::ReturnError(err)
         }
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand_xorshift::XorShiftRng;
     use rand::SeedableRng;
+    use rand_xorshift::XorShiftRng;
 
     #[derive(Debug, Clone, PartialEq)]
     enum Error {
@@ -191,7 +225,12 @@ mod tests {
     #[test]
     fn exponential_policy_check_intervals() {
         let mut exp_policy = ExponentialBackoffPolicy::with_f(is_fatal);
-        let errors = [Error::NonFatal, Error::NonFatal, Error::NonFatal, Error::NonFatal];
+        let errors = [
+            Error::NonFatal,
+            Error::NonFatal,
+            Error::NonFatal,
+            Error::NonFatal,
+        ];
 
         let mut actions = vec![RetryAction::RetryNow; errors.len()];
         for i in 0..errors.len() {
@@ -221,7 +260,13 @@ mod tests {
         let random_factor = 0.0;
         let max_count = 5;
         let delay = Duration::from_secs(1);
-        let mut exp_policy = ExponentialBackoffPolicy::with_count_delay_rng(is_fatal_closure, max_count, delay, rng, random_factor);
+        let mut exp_policy = ExponentialBackoffPolicy::with_count_delay_rng(
+            is_fatal_closure,
+            max_count,
+            delay,
+            rng,
+            random_factor,
+        );
 
         let r0 = exp_policy.on_err(0, Error::NonFatal);
         let r1 = exp_policy.on_err(1, Error::NonFatal);
@@ -230,7 +275,10 @@ mod tests {
 
         assert_eq!(r0, RetryAction::WaitFor(Duration::from_secs_f32(1.0)));
         assert_eq!(r1, RetryAction::WaitFor(Duration::from_secs_f32(1.5)));
-        assert_eq!(r2, RetryAction::WaitFor(Duration::from_secs_f32(2.249999872)));
+        assert_eq!(
+            r2,
+            RetryAction::WaitFor(Duration::from_secs_f32(2.249999872))
+        );
         assert_eq!(r3, RetryAction::ReturnError(Error::Fatal));
     }
 }

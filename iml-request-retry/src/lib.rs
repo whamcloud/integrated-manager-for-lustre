@@ -4,8 +4,8 @@
 
 use futures::Future;
 
-use std::time::Duration;
 use std::fmt::Debug;
+use std::time::Duration;
 use tokio::timer::delay_for;
 use tracing;
 
@@ -19,19 +19,21 @@ mod policy;
 /// Hence, given a future of type `F` we need to pass the thunk `Fn() -> F`, and the trait
 /// `FutureFactory` is the typed abstraction over such thunks.
 pub trait FutureFactory<T, E, F>
-    where
-        F: Future<Output=Result<T, E>>
+where
+    F: Future<Output = Result<T, E>>,
 {
     fn build_future(&self) -> F;
 }
 
 /// Render a function Fn() -> Future<Output=...> to have FutureFactory
 impl<T, E, F, FF> FutureFactory<T, E, F> for FF
-    where
-        F: Future<Output=Result<T, E>>,
-        FF: Fn() -> F,
+where
+    F: Future<Output = Result<T, E>>,
+    FF: Fn() -> F,
 {
-    fn build_future(&self) -> F { (*self)() }
+    fn build_future(&self) -> F {
+        (*self)()
+    }
 }
 
 /// Retry policy is a function or an object, that for every request tells us, whether
@@ -53,8 +55,8 @@ pub enum RetryAction<E: Debug> {
 
 /// render a function as the error handler
 impl<P, E: Debug> RetryPolicy<E> for P
-    where
-        P: FnMut(u32, E) -> RetryAction<E>,
+where
+    P: FnMut(u32, E) -> RetryAction<E>,
 {
     fn on_err(&mut self, k: u32, e: E) -> RetryAction<E> {
         (*self)(k, e)
@@ -62,10 +64,10 @@ impl<P, E: Debug> RetryPolicy<E> for P
 }
 
 pub async fn retry_future<T, E, F, FF>(factory: FF, policy: &mut dyn RetryPolicy<E>) -> Result<T, E>
-    where
-        E: Debug,
-        F: Future<Output=Result<T, E>>,
-        FF: FutureFactory<T, E, F>,
+where
+    E: Debug,
+    F: Future<Output = Result<T, E>>,
+    FF: FutureFactory<T, E, F>,
 {
     let mut request_no = 0u32;
     loop {
@@ -91,11 +93,11 @@ pub async fn retry_future<T, E, F, FF>(factory: FF, policy: &mut dyn RetryPolicy
 }
 
 pub async fn retry_future_gen<T, E, F, FF, P>(factory: FF, policy: P) -> Result<T, E>
-    where
-        E: Debug,
-        F: Future<Output=Result<T, E>>,
-        P: Fn(u32, E) -> RetryAction<E>,
-        FF: FutureFactory<T, E, F>,
+where
+    E: Debug,
+    F: Future<Output = Result<T, E>>,
+    P: Fn(u32, E) -> RetryAction<E>,
+    FF: FutureFactory<T, E, F>,
 {
     let mut request_no = 0u32;
     loop {
@@ -123,8 +125,8 @@ pub async fn retry_future_gen<T, E, F, FF, P>(factory: FF, policy: P) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::future::{ok, err};
     use futures::executor::block_on;
+    use futures::future::{err, ok};
     use std::cell::Cell;
 
     #[derive(Debug, Clone, PartialEq)]
@@ -140,8 +142,8 @@ mod tests {
     }
 
     impl<T, E, F> FutureFactory<T, E, F> for Futures<F>
-        where
-            F: Future<Output=Result<T, E>> + Clone
+    where
+        F: Future<Output = Result<T, E>> + Clone,
     {
         fn build_future(&self) -> F {
             let i = self.index.get();
@@ -170,6 +172,9 @@ mod tests {
             index: Cell::new(0),
             futures: vec![err(Error::NonFatal), err(Error::Fatal), ok(42)],
         };
-        assert_eq!(Err(Error::Fatal), block_on(retry_future_gen(factory, &policy)));
+        assert_eq!(
+            Err(Error::Fatal),
+            block_on(retry_future_gen(factory, &policy))
+        );
     }
 }
