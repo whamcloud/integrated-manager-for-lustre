@@ -129,6 +129,8 @@ pub async fn get<T: DeserializeOwned + Debug>(
 }
 
 /// Performs a POST to the given API path
+/// This call will *not* treat unsuccessful status codes
+/// as an error.
 pub async fn post(
     client: Client,
     path: &str,
@@ -140,8 +142,7 @@ pub async fn post(
         .post(uri)
         .json(&body)
         .send()
-        .await?
-        .error_for_status()?;
+        .await?;
 
     tracing::debug!("Resp: {:?}", resp);
 

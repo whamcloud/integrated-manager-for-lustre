@@ -36,7 +36,7 @@ pub struct SendCmd<T> {
 pub async fn create_command<T: serde::Serialize>(
     cmd_body: SendCmd<T>,
 ) -> Result<Command, ImlManagerCliError> {
-    let resp = post(Command::endpoint_name(), cmd_body).await?;
+    let resp = post(Command::endpoint_name(), cmd_body).await?.error_for_status()?;
 
     let cmd = resp.json().await?;
 
