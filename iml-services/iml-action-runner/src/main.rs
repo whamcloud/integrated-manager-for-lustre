@@ -11,12 +11,9 @@ use iml_action_runner::{
 use iml_service_queue::service_queue::consume_service_queue;
 use std::{
     collections::HashMap,
-    convert::TryFrom,
-    env,
-    os::unix::{io::FromRawFd, net::UnixListener as NetUnixListener},
     sync::Arc,
 };
-use tokio::net::{TcpListener, UnixListener};
+use iml_util::tokio_utils::get_tcp_or_unix_listener;
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::{self, Filter as _};
 
@@ -50,29 +47,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .map(|x| warp::reply::json(&x))
     .with(log);
 
-    match env::var("LISTEN_PID") {
-        Ok(_) => {
-            let addr = unsafe { NetUnixListener::from_raw_fd(3) };
-            let listener = UnixListener::try_from(addr)?
-                .incoming()
-                .inspect_ok(|_| tracing::debug!("Client connected"));
-
-            tracing::debug!("Listening over socket");
-            tokio::spawn(warp::serve(routes).serve_incoming(listener));
-        }
-        Err(_) => {
-            let port = env::var("ACTION_RUNNER_PORT").expect("ACTION_RUNNER_PORT not defined!");
-
-            tracing::debug!("Listening over tcp port {}", port);
-            let addr = format!("127.0.0.1:{}", port);
-            let listener = TcpListener::bind(&addr)
-                .await?
-                .incoming()
-                .inspect_ok(|_| tracing::debug!("Client connected"));
-
-            tokio::spawn(warp::serve(routes).serve_incoming(listener));
-        }
-    };
+    let listener = get_tcp_or_unix_listener("ACTION_RUNNER_PORT").await?;
+    tokio::spawn(warp::serve(routes).serve_incoming(listener));
 
     let client = iml_rabbit::connect_to_rabbit().await?;
 
