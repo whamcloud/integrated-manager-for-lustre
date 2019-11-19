@@ -40,7 +40,7 @@ fn create_shared_state() -> (Shared<Sessions>, Shared<SessionToRpcs>) {
 
 fn create_client_filter(
 ) -> impl Filter<Extract = (iml_rabbit::Client,), Error = warp::Rejection> + Clone {
-    warp::any().and_then(|| create_test_connection().map_err(warp::reject::custom))
+    warp::any().and_then(|| create_test_connection().map_err(|_| warp::reject::not_found()))
 }
 
 #[tokio::test]
