@@ -9,11 +9,8 @@ use iml_action_runner::{
     sender::{create_client_filter, sender},
 };
 use iml_service_queue::service_queue::consume_service_queue;
-use std::{
-    collections::HashMap,
-    sync::Arc,
-};
 use iml_util::tokio_utils::get_tcp_or_unix_listener;
+use std::{collections::HashMap, sync::Arc};
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::{self, Filter as _};
 
