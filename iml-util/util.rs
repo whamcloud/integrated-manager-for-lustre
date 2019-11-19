@@ -25,17 +25,17 @@ pub mod tokio_utils {
     };
     use tokio::{
         io::{AsyncRead, AsyncWrite},
-    };
         net::{TcpListener, UnixListener},
+    };
 
     pub trait Socket: AsyncRead + AsyncWrite + Send + 'static + Unpin {}
     impl<T: AsyncRead + AsyncWrite + Send + 'static + Unpin> Socket for T {}
-    pub async fn get_tcp_stream(
 
     /// Given an environment variable that resolves to a port,
     /// Return a stream containing `TcpStream`s that have been erased to
     /// `AsyncRead` + `AsyncWrite` traits. This is useful when you won't know which stream
     /// to choose at runtime
+    pub async fn get_tcp_stream(
         port: String,
     ) -> Result<impl Stream<Item = Result<Pin<Box<dyn Socket>>, io::Error>>, io::Error> {
         let addr = format!("127.0.0.1:{}", port);
@@ -47,8 +47,8 @@ pub mod tokio_utils {
             .incoming()
             .map_ok(|x| -> Pin<Box<dyn Socket>> { Box::pin(x) });
 
-    }
         Ok(s)
+    }
 
     /// Returns a stream containing `UnixStream`s that have been erased to
     /// `AsyncRead` + `AsyncWrite` traits. This is useful when you won't know which stream
@@ -79,8 +79,8 @@ pub mod tokio_utils {
         let s = match env::var(port_var) {
             Ok(port) => Either::Left(get_tcp_stream(port).await?),
             Err(_) => Either::Right(get_unix_stream()?),
-
         };
+
         Ok(s)
     }
 }

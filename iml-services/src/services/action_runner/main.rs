@@ -3,6 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use futures::{future::Future, lazy, stream::Stream};
+use futures03::{
+    future::{FutureExt, TryFutureExt},
+    stream::TryStreamExt,
+};
 use iml_services::{
     service_queue::consume_service_queue,
     services::action_runner::{
@@ -11,6 +15,7 @@ use iml_services::{
         sender::{create_client_filter, sender},
     },
 };
+use iml_util::tokio_utils::*;
 use iml_wire_types::PluginMessage;
 use parking_lot::Mutex;
 use std::{
@@ -47,14 +52,15 @@ fn main() {
         .map(|x| warp::reply::json(&x))
         .with(log);
 
-        let addr = unsafe { NetUnixListener::from_raw_fd(3) };
+        let listener = get_tcp_or_unix_listener("ACTION_RUNNER_PORT")
+            .boxed()
+            .compat()
+            .wait()
+            .expect("bla")
+            .compat();
 
-        let listener = UnixListener::from_std(addr, &Handle::default())
-            .expect("Unable to bind Unix Domain Socket fd")
-            .incoming()
-            .inspect(|_| log::debug!("Client connected"));
-
-        tokio::spawn(warp::serve(routes).serve_incoming(valve.wrap(listener)));
+        let x = warp::serve(routes).serve_incoming(listener);
+        tokio::spawn(x);
 
         iml_rabbit::connect_to_rabbit()
             .and_then(move |client| {
