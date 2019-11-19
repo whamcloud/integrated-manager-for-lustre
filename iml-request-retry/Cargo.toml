@@ -1,0 +1,26 @@
+[package]
+name = "iml-request-retry"
+version = "0.1.0"
+description = "IML async request retry Library"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+futures-preview = "0.3.0-alpha.19"
+tokio = "0.2.0-alpha.6"
+tokio-test = "0.2.0-alpha.6"
+rand = "0.7.2"
+tracing = "0.1.10"
+
+[dev-dependencies]
+tokio = "0.2.0-alpha.6"
+tokio-test = "0.2.0-alpha.6"
+http = "0.1.19"
+reqwest = { version = "0.10.0-alpha.1", features = ["json"] }
+url = "2.1.0"
+rand_xorshift = "0.2.0"
+
+[[example]]
+name = "flask-client"
+path = "examples/flask-client.rs"
+
