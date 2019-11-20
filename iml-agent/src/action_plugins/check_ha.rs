@@ -7,7 +7,7 @@ use elementtree::Element;
 use futures::try_join;
 use iml_wire_types::{ComponentState, ConfigState, ServiceState};
 use std::{collections::HashMap, fmt, str};
-use tokio::fs::File;
+use tokio::fs::metadata;
 
 /// standard:provider:ocftype (e.g. ocf:heartbeat:ZFS, or stonith:fence_ipmilan)
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
@@ -119,10 +119,10 @@ async fn systemd_unit_servicestate(name: &str) -> Result<ServiceState, ImlAgentE
 }
 
 async fn file_exists(path: &str) -> bool {
-    let f = File::open(path.to_string()).await;
+    let f = metadata(path).await;
     tracing::debug!("Checking file {} : {:?}", path, f);
     match f {
-        Ok(_) => true,
+        Ok(m) => m.is_file(),
         Err(_) => false,
     }
 }
