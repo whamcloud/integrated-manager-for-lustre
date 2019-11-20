@@ -16,3 +16,4 @@ pub mod reader;
 pub mod rpm;
 pub mod server_properties;
 pub mod systemd;
+pub mod version_utils;
