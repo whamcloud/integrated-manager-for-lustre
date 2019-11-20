@@ -26,7 +26,7 @@ def fail():
 
 @app.route('/fail5')
 def fail5():
-    # method, that fails once in a 5 subsequent calls
+    # method, that succeeds once in a 5 subsequent calls
     if not ('fail5' in counter):
         counter['fail5'] = 0
     counter['fail5'] = counter['fail5'] + 1
