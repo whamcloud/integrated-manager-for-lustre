@@ -44,6 +44,7 @@ use std::time::Duration;
 pub struct ExponentialBackoffPolicy<E: Debug, R: Rng, F: Fn(&E) -> bool> {
     pub rng: R,
     pub is_fatal_f: F,
+    pub is_first_call: bool,
     pub current_delay: Duration,
     pub randomized_delay: Duration,
     pub max_count: u32,
@@ -51,7 +52,50 @@ pub struct ExponentialBackoffPolicy<E: Debug, R: Rng, F: Fn(&E) -> bool> {
     pub random_factor: f32,
     pub multiplier: f32,
     pub _s: PhantomData<E>,
-    pub is_first_call: bool,
+}
+
+impl<E, R, F> ExponentialBackoffPolicy<E, R, F>
+where
+    E: Debug,
+    R: Rng,
+    F: for<'r> Fn(&'r E) -> bool,
+{
+    #[allow[dead_code]]
+    pub fn with_count_delay_rng(
+        is_fatal_f: F,
+        max_count: u32,
+        initial_delay: Duration,
+        rng: R,
+        random_factor: f32,
+    ) -> Self {
+        ExponentialBackoffPolicy {
+            rng,
+            is_fatal_f,
+            is_first_call: true,
+            current_delay: initial_delay,
+            randomized_delay: initial_delay,
+            max_count,
+            max_allowed_delay: Duration::from_secs(900),
+            random_factor,
+            multiplier: 1.5,
+            _s: PhantomData,
+        }
+    }
+
+    /// this is helper to implement `fn on_err(&mut self, request_no: u32, err: E)`
+    /// [`on_err`]: RetryPolicy<E>::on_err
+    /// [`on_err`]: ExponentialBackoffPolicy::on_err
+    fn randomize(&mut self, current_seconds: f32) -> f32 {
+        let delta = self.random_factor * current_seconds;
+        let randomized_seconds = if delta > 0.0 {
+            let range = Uniform::new(current_seconds - delta, current_seconds + delta);
+            let seconds = range.sample(&mut self.rng);
+            seconds
+        } else {
+            current_seconds
+        };
+        randomized_seconds
+    }
 }
 
 impl<E, F> ExponentialBackoffPolicy<E, ThreadRng, F>
@@ -59,17 +103,8 @@ where
     E: Debug,
     F: Fn(&E) -> bool,
 {
-    // TODO fix compilation
-    //fn new() -> impl RetryPolicy<E> {
-    //    let is_fatal_f = |_e: &E| false; // no error is fatal, always retry until max_count
-    //    let rng = rand::thread_rng();
-    //    let random_factor = 0.5;
-    //    let max_count = 16;
-    //    let initial_delay = Duration::from_millis(500);
-    //    ExponentialBackoffPolicy::with_count_delay_rng(is_fatal_f, max_count, initial_delay, rng, random_factor)
-    //}
-
-    pub fn with_f(is_fatal_f: F) -> impl RetryPolicy<E> {
+    #[allow[dead_code]]
+    pub fn with_f(is_fatal_f: F) -> Self {
         let rng = rand::thread_rng();
         let random_factor = 0.5;
         let max_count = 16;
@@ -83,7 +118,8 @@ where
         )
     }
 
-    pub fn with_count(is_fatal_f: F, max_count: u32) -> impl RetryPolicy<E> {
+    #[allow[dead_code]]
+    pub fn with_count(is_fatal_f: F, max_count: u32) -> Self {
         let rng = rand::thread_rng();
         let random_factor = 0.5;
         let initial_delay = Duration::from_millis(500);
@@ -94,27 +130,6 @@ where
             rng,
             random_factor,
         )
-    }
-
-    pub fn with_count_delay_rng<R: Rng>(
-        is_fatal_f: F,
-        max_count: u32,
-        initial_delay: Duration,
-        rng: R,
-        random_factor: f32,
-    ) -> impl RetryPolicy<E> {
-        ExponentialBackoffPolicy {
-            rng,
-            is_fatal_f,
-            is_first_call: true,
-            current_delay: initial_delay,
-            randomized_delay: initial_delay,
-            max_count,
-            max_allowed_delay: Duration::from_secs(900),
-            random_factor,
-            multiplier: 1.5,
-            _s: PhantomData,
-        }
     }
 }
 
@@ -165,15 +180,10 @@ where
                 current_seconds * self.multiplier
             };
 
+            let randomized_seconds =
+                ExponentialBackoffPolicy::<E, R, F>::randomize(self, current_seconds);
             self.current_delay = Duration::from_secs_f32(current_seconds);
-            let delta = self.random_factor * current_seconds;
-            self.randomized_delay = if delta > 0.0 {
-                let range = Uniform::new(current_seconds - delta, current_seconds + delta);
-                let seconds = range.sample(&mut self.rng);
-                Duration::from_secs_f32(seconds)
-            } else {
-                Duration::from_secs_f32(current_seconds)
-            };
+            self.randomized_delay = Duration::from_secs_f32(randomized_seconds);
 
             if (self.is_fatal_f)(&err) {
                 tracing::debug!(
@@ -234,7 +244,7 @@ mod tests {
 
         let mut actions = vec![RetryAction::RetryNow; errors.len()];
         for i in 0..errors.len() {
-            actions[i] = exp_policy.on_err(0, errors[i].clone())
+            actions[i] = exp_policy.on_err(i as u32, errors[i].clone())
         }
 
         let intervals = [(0.25, 0.75), (0.375, 1.125), (0.562, 1.687), (0.8435, 2.53)];
@@ -267,6 +277,16 @@ mod tests {
             rng,
             random_factor,
         );
+        let errors = [
+            Error::NonFatal,
+            Error::NonFatal,
+            Error::NonFatal,
+            Error::Fatal,
+        ];
+        let mut actions = vec![RetryAction::RetryNow; errors.len()];
+        for i in 0..errors.len() {
+            actions[i] = exp_policy.on_err(i as u32, errors[i].clone())
+        }
 
         let r0 = exp_policy.on_err(0, Error::NonFatal);
         let r1 = exp_policy.on_err(1, Error::NonFatal);
@@ -280,5 +300,25 @@ mod tests {
             RetryAction::WaitFor(Duration::from_secs_f32(2.249999872))
         );
         assert_eq!(r3, RetryAction::ReturnError(Error::Fatal));
+    }
+
+    #[test]
+    fn exponential_policy_maximum_reached() {
+        let mut exp_policy = ExponentialBackoffPolicy::with_count(|_| false, 8);
+        // simulate the policy is called 10 times
+        let errors = vec![Error::NonFatal; 10];
+        let mut actions = vec![RetryAction::RetryNow; errors.len()];
+        for i in 0..errors.len() {
+            actions[i] = exp_policy.on_err(i as u32, errors[i].clone())
+        }
+        // first 8 steps waits and then failures
+        for i in 0..actions.len() {
+            match actions[i] {
+                RetryAction::RetryNow => assert!(false),
+                RetryAction::WaitFor(_) => assert!(i <= 7),
+                RetryAction::ReturnError(Error::NonFatal) => assert!(7 < i),
+                _ => assert!(false),
+            }
+        }
     }
 }
