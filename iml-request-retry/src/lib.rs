@@ -9,7 +9,7 @@ use std::time::Duration;
 use tokio::timer::delay_for;
 use tracing;
 
-mod policy;
+pub mod policy;
 
 /// There is one important requirement one needs to take in account when working with Rust futures:
 /// - Once a future has finished, clients should not poll it again.
