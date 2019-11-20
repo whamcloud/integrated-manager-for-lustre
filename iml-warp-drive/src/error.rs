@@ -5,6 +5,7 @@
 use iml_manager_client::ImlManagerClientError;
 use iml_postgres::DbError;
 use iml_rabbit::ImlRabbitError;
+use warp::reject;
 
 #[derive(Debug)]
 pub enum ImlWarpDriveError {
@@ -14,6 +15,8 @@ pub enum ImlWarpDriveError {
     DbError(DbError),
     SerdeJsonError(serde_json::error::Error),
 }
+
+impl reject::Reject for ImlWarpDriveError {}
 
 impl std::fmt::Display for ImlWarpDriveError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {

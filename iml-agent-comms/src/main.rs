@@ -136,7 +136,8 @@ pub async fn create_client_filter() -> Result<
 
         tx.unbounded_send(tx2).unwrap();
 
-        rx2.map_err(warp::reject::custom)
+        rx2.map_err(ImlAgentCommsError::OneshotCanceled)
+            .map_err(warp::reject::custom)
     });
 
     Ok((fut, filter))
