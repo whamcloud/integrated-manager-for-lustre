@@ -458,9 +458,10 @@ class OstPoolResource(ChromaModelResource):
         excludes = ["not_deleted"]
         ordering = ["filesystem", "name"]
         list_allowed_methods = ["get", "delete", "put", "post"]
-        detail_allowed_methods = ["get", "delete", "post"]
+        detail_allowed_methods = ["get", "put", "delete"]
         filtering = {"filesystem": ["exact"], "name": ["exact"], "id": ["exact"]}
 
+    # POST handler
     @validate
     def obj_create(self, bundle, **kwargs):
         request = bundle.request
@@ -478,11 +479,12 @@ class OstPoolResource(ChromaModelResource):
         except ObjectDoesNotExist:
             raise NotFound("A model instance matching the provided arguments could not be found.")
 
-        command_id = JobSchedulerClient.update_ostpool(obj, bundle.data)
+        command_id = JobSchedulerClient.update_ostpool(bundle.data)
         command = Command.objects.get(pk=command_id)
 
         raise custom_response(self, bundle.request, http.HttpAccepted, {"command": dehydrate_command(command)})
 
+    # DELETE handlers
     def _pool_delete(self, request, obj_list):
         commands = []
         for obj in obj_list:

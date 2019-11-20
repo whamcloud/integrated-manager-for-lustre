@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{delete, get, get_all, get_one, post, wait_for_cmd, wait_for_cmds},
+    api_utils::{delete, get, get_all, get_one, post, put, wait_for_cmds},
     display_utils::{generate_table, wrap_fut},
     error::ImlManagerCliError,
 };
@@ -72,14 +72,22 @@ pub enum OstPoolCommand {
 async fn pool_lookup(fsname: &String, pool: &String) -> Result<OstPool, ImlManagerCliError> {
     let fs: Filesystem =
         wrap_fut("Fetching Filesystem ...", get_one(vec![("name", &fsname)])).await?;
-    wrap_fut(
+    let mut pool: OstPool = wrap_fut(
         "Fetching OstPool...",
         get_one(vec![
             ("filesystem", fs.id.to_string().as_str()),
             ("name", &pool),
         ]),
     )
-    .await
+    .await?;
+    let osts: Vec<Ost> = try_join_all(
+        pool.osts
+            .into_iter()
+            .map(|o| async move { wrap_fut("Fetching OST...", get(&o, Ost::query())).await }),
+    )
+    .await?;
+    pool.osts = osts.into_iter().map(|m| m.name).collect();
+    Ok(pool)
 }
 
 pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliError> {
@@ -128,17 +136,10 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
         OstPoolCommand::Show { fsname, poolname } => {
             let pool = pool_lookup(&fsname, &poolname).await?;
 
-            let osts: Vec<Ost> =
-                try_join_all(pool.osts.into_iter().map(|o| {
-                    async move { wrap_fut("Fetching OST...", get(&o, Ost::query())).await }
-                }))
-                .await?;
-
             let mut table = Table::new();
             table.add_row(Row::from(&["Filesystem".to_string(), fsname]));
             table.add_row(Row::from(&["Name".to_string(), poolname]));
-            let ostnames: Vec<String> = osts.into_iter().map(|m| m.name).collect();
-            table.add_row(Row::from(&["OSTs".to_string(), ostnames.join("\n")]));
+            table.add_row(Row::from(&["OSTs".to_string(), pool.osts.join("\n")]));
             table.printstd();
         }
         OstPoolCommand::Create {
@@ -156,7 +157,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
 
             term.write_line(&format!("{} ost pool...", style("Creating").green()))?;
             let objs: ObjCommand = resp.json().await?;
-            wait_for_cmd(objs.command).await?;
+            wait_for_cmds(vec![objs.command]).await?;
         }
         OstPoolCommand::Destroy { fsname, poolname } => {
             let fs: Filesystem =
@@ -173,7 +174,47 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
             let objs: ObjCommands = resp.json().await?;
             wait_for_cmds(objs.commands).await?;
         }
-        _ => println!("NYI"),
+        OstPoolCommand::Grow {
+            fsname,
+            poolname,
+            osts,
+        } => {
+            let mut pool = pool_lookup(&fsname, &poolname).await?;
+            let mut newlist = pool.osts;
+            newlist.extend(osts);
+            newlist.sort();
+            newlist.dedup();
+            pool.osts = newlist;
+
+            tracing::debug!("POOL: {:?}", pool);
+            term.write_line(&format!("{} ost pool...", style("Growing").green()))?;
+            let uri = pool.resource_uri.clone();
+            let resp = put(&uri, pool).await?;
+            let objs: ObjCommand = resp.json().await?;
+            wait_for_cmds(vec![objs.command]).await?;
+        }
+        OstPoolCommand::Shrink {
+            fsname,
+            poolname,
+            osts,
+        } => {
+            let mut pool = pool_lookup(&fsname, &poolname).await?;
+
+            pool.osts = pool
+                .osts
+                .iter()
+                .filter(|o| !osts.contains(o))
+                .map(|o| o.clone())
+                .collect();
+
+            tracing::debug!("POOL: {:?}", pool);
+            term.write_line(&format!("{} ost pool...", style("Shrinking").green()))?;
+            let uri = pool.resource_uri.clone();
+            let resp = put(&uri, pool).await?;
+
+            let objs: ObjCommand = resp.json().await?;
+            wait_for_cmds(vec![objs.command]).await?;
+        }
     };
     Ok(())
 }

@@ -1159,11 +1159,31 @@ class JobScheduler(object):
         self.progress.advance()
         return ostpool.id, command_id
 
-    def update_ostpool(self, ostpool_id, ostpool_data):
-        log.debug("Updating ostpool {} with: {}".format(ostpool_id, ostpool_data))
+    def update_ostpool(self, ostpool_data):
+        log.debug("Updating ostpool with: {}".format(ostpool_data))
         with self._lock:
-            ostpool = OstPool.objects.get(pk=ostpool_id)
-        # @@
+            ostpool = OstPool.objects.get(pk=ostpool_data["id"])
+
+            # list of ost names
+            to_add = ostpool_data["osts"]
+            # list of ost objects
+            to_remove = []
+
+            with transaction.atomic():
+                for o in ostpool.osts.all():
+                    if o.name not in ostpool_data["osts"]:
+                        to_remove.append(o.name)
+                    if o.name in to_add:
+                        to_add.remove(o.name)
+
+                cmds = []
+                for ost in ManagedOst.objects.filter(name__in=to_add):
+                    cmds.append({"class_name": "AddOstPoolJob", "args": {"pool": ostpool, "ost": ost}})
+                for ost in to_remove:
+                    cmds.append({"class_name": "RemoveOstPoolJob", "args": {"pool": ostpool, "ost": ost}})
+                command_id = self.CommandPlan.command_run_jobs(cmds, help_text["updating_ostpool"])
+        self.progress.advance()
+        return command_id
 
     def delete_ostpool(self, ostpool_id):
         log.debug("Deleting ostpool {}".format(ostpool_id))
