@@ -3906,6 +3906,100 @@ pub struct CssClasses<'a> {
     pub hidden: &'a str,
 
     /**
+        display: block;
+        display: inline-block;
+        display: inline;
+        display: flex;
+        display: inline-flex;
+        display: table;
+        display: table-row;
+        display: table-cell;
+        display: none;
+        display: block;    @media (min-width: 569px)
+        display: inline-block;    @media (min-width: 569px)
+        display: inline;    @media (min-width: 569px)
+        display: flex;    @media (min-width: 569px)
+        display: inline-flex;    @media (min-width: 569px)
+        display: table;    @media (min-width: 569px)
+        display: table-row;    @media (min-width: 569px)
+        display: table-cell;    @media (min-width: 569px)
+        display: none;    @media (min-width: 569px)
+        display: block;    @media (min-width: 769px)
+        display: inline-block;    @media (min-width: 769px)
+        display: inline;    @media (min-width: 769px)
+        display: flex;    @media (min-width: 769px)
+        display: inline-flex;    @media (min-width: 769px)
+        display: table;    @media (min-width: 769px)
+        display: table-row;    @media (min-width: 769px)
+        display: table-cell;    @media (min-width: 769px)
+        display: none;    @media (min-width: 769px)
+        display: block;    @media (min-width: 1025px)
+        display: inline-block;    @media (min-width: 1025px)
+        display: inline;    @media (min-width: 1025px)
+        display: flex;    @media (min-width: 1025px)
+        display: inline-flex;    @media (min-width: 1025px)
+        display: table;    @media (min-width: 1025px)
+        display: table-row;    @media (min-width: 1025px)
+        display: table-cell;    @media (min-width: 1025px)
+        display: none;    @media (min-width: 1025px)
+        display: block;    @media (min-width: 1701px)
+        display: inline-block;    @media (min-width: 1701px)
+        display: inline;    @media (min-width: 1701px)
+        display: flex;    @media (min-width: 1701px)
+        display: inline-flex;    @media (min-width: 1701px)
+        display: table;    @media (min-width: 1701px)
+        display: table-row;    @media (min-width: 1701px)
+        display: table-cell;    @media (min-width: 1701px)
+        display: none;    @media (min-width: 1701px)
+    */
+    pub group: &'a str,
+
+    /**
+        display: block;
+    */
+    pub group_hover__block: &'a str,
+
+    /**
+        display: inline-block;
+    */
+    pub group_hover__inline_block: &'a str,
+
+    /**
+        display: inline;
+    */
+    pub group_hover__inline: &'a str,
+
+    /**
+        display: flex;
+    */
+    pub group_hover__flex: &'a str,
+
+    /**
+        display: inline-flex;
+    */
+    pub group_hover__inline_flex: &'a str,
+
+    /**
+        display: table;
+    */
+    pub group_hover__table: &'a str,
+
+    /**
+        display: table-row;
+    */
+    pub group_hover__table_row: &'a str,
+
+    /**
+        display: table-cell;
+    */
+    pub group_hover__table_cell: &'a str,
+
+    /**
+        display: none;
+    */
+    pub group_hover__hidden: &'a str,
+
+    /**
         flex-direction: row;
     */
     pub flex_row: &'a str,
@@ -15872,6 +15966,51 @@ pub struct CssClasses<'a> {
     pub sm__hidden: &'a str,
 
     /**
+        display: block;    @media (min-width: 569px)
+    */
+    pub sm__group_hover__block: &'a str,
+
+    /**
+        display: inline-block;    @media (min-width: 569px)
+    */
+    pub sm__group_hover__inline_block: &'a str,
+
+    /**
+        display: inline;    @media (min-width: 569px)
+    */
+    pub sm__group_hover__inline: &'a str,
+
+    /**
+        display: flex;    @media (min-width: 569px)
+    */
+    pub sm__group_hover__flex: &'a str,
+
+    /**
+        display: inline-flex;    @media (min-width: 569px)
+    */
+    pub sm__group_hover__inline_flex: &'a str,
+
+    /**
+        display: table;    @media (min-width: 569px)
+    */
+    pub sm__group_hover__table: &'a str,
+
+    /**
+        display: table-row;    @media (min-width: 569px)
+    */
+    pub sm__group_hover__table_row: &'a str,
+
+    /**
+        display: table-cell;    @media (min-width: 569px)
+    */
+    pub sm__group_hover__table_cell: &'a str,
+
+    /**
+        display: none;    @media (min-width: 569px)
+    */
+    pub sm__group_hover__hidden: &'a str,
+
+    /**
         flex-direction: row;    @media (min-width: 569px)
     */
     pub sm__flex_row: &'a str,
@@ -27826,6 +27965,51 @@ pub struct CssClasses<'a> {
         display: none;    @media (min-width: 769px)
     */
     pub md__hidden: &'a str,
+
+    /**
+        display: block;    @media (min-width: 769px)
+    */
+    pub md__group_hover__block: &'a str,
+
+    /**
+        display: inline-block;    @media (min-width: 769px)
+    */
+    pub md__group_hover__inline_block: &'a str,
+
+    /**
+        display: inline;    @media (min-width: 769px)
+    */
+    pub md__group_hover__inline: &'a str,
+
+    /**
+        display: flex;    @media (min-width: 769px)
+    */
+    pub md__group_hover__flex: &'a str,
+
+    /**
+        display: inline-flex;    @media (min-width: 769px)
+    */
+    pub md__group_hover__inline_flex: &'a str,
+
+    /**
+        display: table;    @media (min-width: 769px)
+    */
+    pub md__group_hover__table: &'a str,
+
+    /**
+        display: table-row;    @media (min-width: 769px)
+    */
+    pub md__group_hover__table_row: &'a str,
+
+    /**
+        display: table-cell;    @media (min-width: 769px)
+    */
+    pub md__group_hover__table_cell: &'a str,
+
+    /**
+        display: none;    @media (min-width: 769px)
+    */
+    pub md__group_hover__hidden: &'a str,
 
     /**
         flex-direction: row;    @media (min-width: 769px)
@@ -39784,6 +39968,51 @@ pub struct CssClasses<'a> {
     pub lg__hidden: &'a str,
 
     /**
+        display: block;    @media (min-width: 1025px)
+    */
+    pub lg__group_hover__block: &'a str,
+
+    /**
+        display: inline-block;    @media (min-width: 1025px)
+    */
+    pub lg__group_hover__inline_block: &'a str,
+
+    /**
+        display: inline;    @media (min-width: 1025px)
+    */
+    pub lg__group_hover__inline: &'a str,
+
+    /**
+        display: flex;    @media (min-width: 1025px)
+    */
+    pub lg__group_hover__flex: &'a str,
+
+    /**
+        display: inline-flex;    @media (min-width: 1025px)
+    */
+    pub lg__group_hover__inline_flex: &'a str,
+
+    /**
+        display: table;    @media (min-width: 1025px)
+    */
+    pub lg__group_hover__table: &'a str,
+
+    /**
+        display: table-row;    @media (min-width: 1025px)
+    */
+    pub lg__group_hover__table_row: &'a str,
+
+    /**
+        display: table-cell;    @media (min-width: 1025px)
+    */
+    pub lg__group_hover__table_cell: &'a str,
+
+    /**
+        display: none;    @media (min-width: 1025px)
+    */
+    pub lg__group_hover__hidden: &'a str,
+
+    /**
         flex-direction: row;    @media (min-width: 1025px)
     */
     pub lg__flex_row: &'a str,
@@ -51738,6 +51967,51 @@ pub struct CssClasses<'a> {
         display: none;    @media (min-width: 1701px)
     */
     pub xl__hidden: &'a str,
+
+    /**
+        display: block;    @media (min-width: 1701px)
+    */
+    pub xl__group_hover__block: &'a str,
+
+    /**
+        display: inline-block;    @media (min-width: 1701px)
+    */
+    pub xl__group_hover__inline_block: &'a str,
+
+    /**
+        display: inline;    @media (min-width: 1701px)
+    */
+    pub xl__group_hover__inline: &'a str,
+
+    /**
+        display: flex;    @media (min-width: 1701px)
+    */
+    pub xl__group_hover__flex: &'a str,
+
+    /**
+        display: inline-flex;    @media (min-width: 1701px)
+    */
+    pub xl__group_hover__inline_flex: &'a str,
+
+    /**
+        display: table;    @media (min-width: 1701px)
+    */
+    pub xl__group_hover__table: &'a str,
+
+    /**
+        display: table-row;    @media (min-width: 1701px)
+    */
+    pub xl__group_hover__table_row: &'a str,
+
+    /**
+        display: table-cell;    @media (min-width: 1701px)
+    */
+    pub xl__group_hover__table_cell: &'a str,
+
+    /**
+        display: none;    @media (min-width: 1701px)
+    */
+    pub xl__group_hover__hidden: &'a str,
 
     /**
         flex-direction: row;    @media (min-width: 1701px)
@@ -63708,6 +63982,100 @@ pub static C: CssClasses = CssClasses {
     hidden: "hidden",
 
     /**
+        display: block;
+        display: inline-block;
+        display: inline;
+        display: flex;
+        display: inline-flex;
+        display: table;
+        display: table-row;
+        display: table-cell;
+        display: none;
+        display: block;    @media (min-width: 569px)
+        display: inline-block;    @media (min-width: 569px)
+        display: inline;    @media (min-width: 569px)
+        display: flex;    @media (min-width: 569px)
+        display: inline-flex;    @media (min-width: 569px)
+        display: table;    @media (min-width: 569px)
+        display: table-row;    @media (min-width: 569px)
+        display: table-cell;    @media (min-width: 569px)
+        display: none;    @media (min-width: 569px)
+        display: block;    @media (min-width: 769px)
+        display: inline-block;    @media (min-width: 769px)
+        display: inline;    @media (min-width: 769px)
+        display: flex;    @media (min-width: 769px)
+        display: inline-flex;    @media (min-width: 769px)
+        display: table;    @media (min-width: 769px)
+        display: table-row;    @media (min-width: 769px)
+        display: table-cell;    @media (min-width: 769px)
+        display: none;    @media (min-width: 769px)
+        display: block;    @media (min-width: 1025px)
+        display: inline-block;    @media (min-width: 1025px)
+        display: inline;    @media (min-width: 1025px)
+        display: flex;    @media (min-width: 1025px)
+        display: inline-flex;    @media (min-width: 1025px)
+        display: table;    @media (min-width: 1025px)
+        display: table-row;    @media (min-width: 1025px)
+        display: table-cell;    @media (min-width: 1025px)
+        display: none;    @media (min-width: 1025px)
+        display: block;    @media (min-width: 1701px)
+        display: inline-block;    @media (min-width: 1701px)
+        display: inline;    @media (min-width: 1701px)
+        display: flex;    @media (min-width: 1701px)
+        display: inline-flex;    @media (min-width: 1701px)
+        display: table;    @media (min-width: 1701px)
+        display: table-row;    @media (min-width: 1701px)
+        display: table-cell;    @media (min-width: 1701px)
+        display: none;    @media (min-width: 1701px)
+    */
+    group: "group",
+
+    /**
+        display: block;
+    */
+    group_hover__block: "group-hover:block",
+
+    /**
+        display: inline-block;
+    */
+    group_hover__inline_block: "group-hover:inline-block",
+
+    /**
+        display: inline;
+    */
+    group_hover__inline: "group-hover:inline",
+
+    /**
+        display: flex;
+    */
+    group_hover__flex: "group-hover:flex",
+
+    /**
+        display: inline-flex;
+    */
+    group_hover__inline_flex: "group-hover:inline-flex",
+
+    /**
+        display: table;
+    */
+    group_hover__table: "group-hover:table",
+
+    /**
+        display: table-row;
+    */
+    group_hover__table_row: "group-hover:table-row",
+
+    /**
+        display: table-cell;
+    */
+    group_hover__table_cell: "group-hover:table-cell",
+
+    /**
+        display: none;
+    */
+    group_hover__hidden: "group-hover:hidden",
+
+    /**
         flex-direction: row;
     */
     flex_row: "flex-row",
@@ -75674,6 +76042,51 @@ pub static C: CssClasses = CssClasses {
     sm__hidden: "sm:hidden",
 
     /**
+        display: block;    @media (min-width: 569px)
+    */
+    sm__group_hover__block: "sm:group-hover:block",
+
+    /**
+        display: inline-block;    @media (min-width: 569px)
+    */
+    sm__group_hover__inline_block: "sm:group-hover:inline-block",
+
+    /**
+        display: inline;    @media (min-width: 569px)
+    */
+    sm__group_hover__inline: "sm:group-hover:inline",
+
+    /**
+        display: flex;    @media (min-width: 569px)
+    */
+    sm__group_hover__flex: "sm:group-hover:flex",
+
+    /**
+        display: inline-flex;    @media (min-width: 569px)
+    */
+    sm__group_hover__inline_flex: "sm:group-hover:inline-flex",
+
+    /**
+        display: table;    @media (min-width: 569px)
+    */
+    sm__group_hover__table: "sm:group-hover:table",
+
+    /**
+        display: table-row;    @media (min-width: 569px)
+    */
+    sm__group_hover__table_row: "sm:group-hover:table-row",
+
+    /**
+        display: table-cell;    @media (min-width: 569px)
+    */
+    sm__group_hover__table_cell: "sm:group-hover:table-cell",
+
+    /**
+        display: none;    @media (min-width: 569px)
+    */
+    sm__group_hover__hidden: "sm:group-hover:hidden",
+
+    /**
         flex-direction: row;    @media (min-width: 569px)
     */
     sm__flex_row: "sm:flex-row",
@@ -87628,6 +88041,51 @@ pub static C: CssClasses = CssClasses {
         display: none;    @media (min-width: 769px)
     */
     md__hidden: "md:hidden",
+
+    /**
+        display: block;    @media (min-width: 769px)
+    */
+    md__group_hover__block: "md:group-hover:block",
+
+    /**
+        display: inline-block;    @media (min-width: 769px)
+    */
+    md__group_hover__inline_block: "md:group-hover:inline-block",
+
+    /**
+        display: inline;    @media (min-width: 769px)
+    */
+    md__group_hover__inline: "md:group-hover:inline",
+
+    /**
+        display: flex;    @media (min-width: 769px)
+    */
+    md__group_hover__flex: "md:group-hover:flex",
+
+    /**
+        display: inline-flex;    @media (min-width: 769px)
+    */
+    md__group_hover__inline_flex: "md:group-hover:inline-flex",
+
+    /**
+        display: table;    @media (min-width: 769px)
+    */
+    md__group_hover__table: "md:group-hover:table",
+
+    /**
+        display: table-row;    @media (min-width: 769px)
+    */
+    md__group_hover__table_row: "md:group-hover:table-row",
+
+    /**
+        display: table-cell;    @media (min-width: 769px)
+    */
+    md__group_hover__table_cell: "md:group-hover:table-cell",
+
+    /**
+        display: none;    @media (min-width: 769px)
+    */
+    md__group_hover__hidden: "md:group-hover:hidden",
 
     /**
         flex-direction: row;    @media (min-width: 769px)
@@ -99586,6 +100044,51 @@ pub static C: CssClasses = CssClasses {
     lg__hidden: "lg:hidden",
 
     /**
+        display: block;    @media (min-width: 1025px)
+    */
+    lg__group_hover__block: "lg:group-hover:block",
+
+    /**
+        display: inline-block;    @media (min-width: 1025px)
+    */
+    lg__group_hover__inline_block: "lg:group-hover:inline-block",
+
+    /**
+        display: inline;    @media (min-width: 1025px)
+    */
+    lg__group_hover__inline: "lg:group-hover:inline",
+
+    /**
+        display: flex;    @media (min-width: 1025px)
+    */
+    lg__group_hover__flex: "lg:group-hover:flex",
+
+    /**
+        display: inline-flex;    @media (min-width: 1025px)
+    */
+    lg__group_hover__inline_flex: "lg:group-hover:inline-flex",
+
+    /**
+        display: table;    @media (min-width: 1025px)
+    */
+    lg__group_hover__table: "lg:group-hover:table",
+
+    /**
+        display: table-row;    @media (min-width: 1025px)
+    */
+    lg__group_hover__table_row: "lg:group-hover:table-row",
+
+    /**
+        display: table-cell;    @media (min-width: 1025px)
+    */
+    lg__group_hover__table_cell: "lg:group-hover:table-cell",
+
+    /**
+        display: none;    @media (min-width: 1025px)
+    */
+    lg__group_hover__hidden: "lg:group-hover:hidden",
+
+    /**
         flex-direction: row;    @media (min-width: 1025px)
     */
     lg__flex_row: "lg:flex-row",
@@ -111540,6 +112043,51 @@ pub static C: CssClasses = CssClasses {
         display: none;    @media (min-width: 1701px)
     */
     xl__hidden: "xl:hidden",
+
+    /**
+        display: block;    @media (min-width: 1701px)
+    */
+    xl__group_hover__block: "xl:group-hover:block",
+
+    /**
+        display: inline-block;    @media (min-width: 1701px)
+    */
+    xl__group_hover__inline_block: "xl:group-hover:inline-block",
+
+    /**
+        display: inline;    @media (min-width: 1701px)
+    */
+    xl__group_hover__inline: "xl:group-hover:inline",
+
+    /**
+        display: flex;    @media (min-width: 1701px)
+    */
+    xl__group_hover__flex: "xl:group-hover:flex",
+
+    /**
+        display: inline-flex;    @media (min-width: 1701px)
+    */
+    xl__group_hover__inline_flex: "xl:group-hover:inline-flex",
+
+    /**
+        display: table;    @media (min-width: 1701px)
+    */
+    xl__group_hover__table: "xl:group-hover:table",
+
+    /**
+        display: table-row;    @media (min-width: 1701px)
+    */
+    xl__group_hover__table_row: "xl:group-hover:table-row",
+
+    /**
+        display: table-cell;    @media (min-width: 1701px)
+    */
+    xl__group_hover__table_cell: "xl:group-hover:table-cell",
+
+    /**
+        display: none;    @media (min-width: 1701px)
+    */
+    xl__group_hover__hidden: "xl:group-hover:hidden",
 
     /**
         flex-direction: row;    @media (min-width: 1701px)
