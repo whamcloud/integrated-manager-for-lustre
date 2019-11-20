@@ -52,14 +52,10 @@ fn main() {
         .map(|x| warp::reply::json(&x))
         .with(log);
 
-        async {
-            let listener = get_tcp_or_unix_listener("ACTION_RUNNER_PORT")
-                .await
-                .expect("Couldn't get listener stream.")
-                .compat();
+        let listener =
+            get_tcp_or_unix_listener("ACTION_RUNNER_PORT").expect("Could not bind to socket.");
 
-            tokio::spawn(warp::serve(routes).serve_incoming(listener));
-        };
+        tokio::spawn(warp::serve(routes).serve_incoming(valve.wrap(listener)));
 
         iml_rabbit::connect_to_rabbit()
             .and_then(move |client| {

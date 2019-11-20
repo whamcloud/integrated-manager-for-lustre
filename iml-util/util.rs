@@ -42,7 +42,7 @@ pub mod tokio_utils {
     /// to choose at runtime
     pub fn get_tcp_stream(
         port: String,
-    ) -> Result<impl Stream<Item = Result<Pin<Box<dyn Socket>>, io::Error>>, io::Error> {
+    ) -> Result<impl Stream<Item = Box<dyn Socket>, Error = io::Error>, io::Error> {
         let addr = format!("127.0.0.1:{}", port)
             .parse()
             .expect("Couldn't parse socket address.");
@@ -52,7 +52,7 @@ pub mod tokio_utils {
         let listener = TcpListener::bind(&addr)?;
         let s = listener
             .incoming()
-            .map(|socket| -> Result<Pin<Box<dyn Socket>>, _> { Ok(Box::pin(socket)) });
+            .map(|x| -> Box<dyn Socket> { Box::new(x) });
 
         Ok(s)
     }
@@ -61,14 +61,14 @@ pub mod tokio_utils {
     /// `AsyncRead` + `AsyncWrite` traits. This is useful when you won't know which stream
     /// to choose at runtime
     pub fn get_unix_stream(
-    ) -> Result<impl Stream<Item = Result<Pin<Box<dyn Socket>>, io::Error>>, io::Error> {
+    ) -> Result<impl Stream<Item = Box<dyn Socket>, Error = io::Error>, io::Error> {
         let addr = unsafe { NetUnixListener::from_raw_fd(3) };
 
         tracing::debug!("Listening over unix domain socket");
 
         let s = UnixListener::from_std(addr, &Handle::default())?
             .incoming()
-            .map(|socket| -> Result<Pin<Box<dyn Socket>>, _> { Ok(Box::pin(socket)) });
+            .map(|socket| -> Box<dyn Socket> { Box::new(socket) });
 
         Ok(s)
     }
@@ -82,7 +82,7 @@ pub mod tokio_utils {
     /// Otherwise a `UnixStream` will be used.
     pub fn get_tcp_or_unix_listener(
         port_var: &str,
-    ) -> Result<impl Stream<Item = Result<Pin<Box<dyn Socket>>, io::Error>>, io::Error> {
+    ) -> Result<impl Stream<Item = Box<dyn Socket>, Error = io::Error>, io::Error> {
         let s = match env::var(port_var) {
             Ok(port) => Either::A(get_tcp_stream(port)?),
             Err(_) => Either::B(get_unix_stream()?),
