@@ -129,6 +129,8 @@ pub async fn get<T: DeserializeOwned + Debug>(
 }
 
 /// Performs a POST to the given API path
+/// This call will *not* treat unsuccessful status codes
+/// as an error.
 pub async fn post(
     client: Client,
     path: &str,
@@ -136,12 +138,7 @@ pub async fn post(
 ) -> Result<Response, ImlManagerClientError> {
     let uri = create_api_url(path)?;
 
-    let resp = client
-        .post(uri)
-        .json(&body)
-        .send()
-        .await?
-        .error_for_status()?;
+    let resp = client.post(uri).json(&body).send().await?;
 
     tracing::debug!("Resp: {:?}", resp);
 
