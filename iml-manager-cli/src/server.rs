@@ -241,6 +241,7 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
 
             let Objects { objects } = post("test_host", Objects { objects })
                 .await?
+                .error_for_status()?
                 .json()
                 .await
                 .map_err(iml_manager_client::ImlManagerClientError::Reqwest)?;

@@ -6,7 +6,7 @@ BuildRequires: systemd
 Name: rust-%{crate}
 Version: 0.1.2
 # Release Start
-Release: 1%{?dist}
+Release: 2%{?dist}
 # Release End
 Summary: Integrated Manager for Lustre Services
 
@@ -195,6 +195,8 @@ systemctl preset iml-mailbox.service
 %attr(0644,root,root)%{_tmpfilesdir}/iml-mailbox.conf
 
 %changelog
+* Tue Nov 19 2019 Joe Grund <jgrund@whamcloud.com> - 0.1.2-2
+- Remove error_for_status() method call from base post
 * Thu Oct 10 2019 Will Johnson <wjohnson@whamcloud.com> - 0.1.2-1
 - Updates for 5.1 release
 * Wed Mar 6 2019 Joe Grund <jgrund@whamcloud.com> - 0.1.0-1
