@@ -6,7 +6,7 @@ use crate::{RetryAction, RetryPolicy};
 use rand::distributions::Distribution;
 use rand::distributions::Uniform;
 use rand::prelude::ThreadRng;
-use rand::Rng;
+use rand::{thread_rng, Rng};
 use std::fmt::{self, Debug};
 use std::marker::PhantomData;
 use std::time::Duration;
@@ -60,23 +60,16 @@ where
     R: Rng,
     F: for<'r> Fn(&'r E) -> bool,
 {
-    #[allow[dead_code]]
-    pub fn with_count_delay_rng(
-        is_fatal_f: F,
-        max_count: u32,
-        initial_delay: Duration,
-        rng: R,
-        random_factor: f32,
-    ) -> Self {
-        ExponentialBackoffPolicy {
+    pub fn with_f_rng(is_fatal_f: F, rng: R) -> Self {
+        Self {
             rng,
             is_fatal_f,
             is_first_call: true,
-            current_delay: initial_delay,
-            randomized_delay: initial_delay,
-            max_count,
+            current_delay: Duration::from_millis(500),
+            randomized_delay: Duration::from_millis(500),
+            max_count: 16,
             max_allowed_delay: Duration::from_secs(900),
-            random_factor,
+            random_factor: 0.5,
             multiplier: 1.5,
             _s: PhantomData,
         }
@@ -87,49 +80,13 @@ where
     /// [`on_err`]: ExponentialBackoffPolicy::on_err
     fn randomize(&mut self, current_seconds: f32) -> f32 {
         let delta = self.random_factor * current_seconds;
-        let randomized_seconds = if delta > 0.0 {
+        if delta > 0.0 {
             let range = Uniform::new(current_seconds - delta, current_seconds + delta);
-            let seconds = range.sample(&mut self.rng);
-            seconds
+            // return seconds randomized around current_seconds
+            range.sample(&mut self.rng)
         } else {
             current_seconds
-        };
-        randomized_seconds
-    }
-}
-
-impl<E, F> ExponentialBackoffPolicy<E, ThreadRng, F>
-where
-    E: Debug,
-    F: Fn(&E) -> bool,
-{
-    #[allow[dead_code]]
-    pub fn with_f(is_fatal_f: F) -> Self {
-        let rng = rand::thread_rng();
-        let random_factor = 0.5;
-        let max_count = 16;
-        let initial_delay = Duration::from_millis(500);
-        ExponentialBackoffPolicy::with_count_delay_rng(
-            is_fatal_f,
-            max_count,
-            initial_delay,
-            rng,
-            random_factor,
-        )
-    }
-
-    #[allow[dead_code]]
-    pub fn with_count(is_fatal_f: F, max_count: u32) -> Self {
-        let rng = rand::thread_rng();
-        let random_factor = 0.5;
-        let initial_delay = Duration::from_millis(500);
-        ExponentialBackoffPolicy::with_count_delay_rng(
-            is_fatal_f,
-            max_count,
-            initial_delay,
-            rng,
-            random_factor,
-        )
+        }
     }
 }
 
@@ -186,36 +143,135 @@ where
             self.randomized_delay = Duration::from_secs_f32(randomized_seconds);
 
             if (self.is_fatal_f)(&err) {
-                tracing::debug!(
-                    "Request: {}, error:{:?} is fatal, returning it",
-                    request_no,
-                    err
-                );
                 RetryAction::ReturnError(err)
             } else {
-                tracing::debug!(
-                    "Request: {}, error:{:?} is not fatal, wait for {:?} before retry",
-                    request_no,
-                    err,
-                    self.current_delay
-                );
                 RetryAction::WaitFor(self.randomized_delay)
             }
         } else {
-            tracing::debug!(
-                "Request: {}, error {:?}, reached maximum attempts {:?}",
-                request_no,
-                self.max_count,
-                err
-            );
             RetryAction::ReturnError(err)
         }
+    }
+}
+
+/// The builder for `ExponentialBackoffPolicy`. Typical usage:
+///
+/// ```no_run
+/// use iml_request_retry::policy::{ExponentialBackoffPolicyBuilder, exponential_backoff_policy_builder};
+/// use std::time::Duration;
+/// use std::io;
+/// use rand::thread_rng;
+///
+/// let policy = exponential_backoff_policy_builder::<io::Error>()
+///     .max_count(4)
+///     .initial_delay(Duration::from_millis(100))
+///     .random_factor(0.0)
+///     .multiplier(2.0)
+///     .build()
+///     .expect("Something goes wrong");
+///
+/// // or
+///
+/// let rng = thread_rng();
+/// let is_fatal_f = |err: &io::Error| match err.kind() {
+///     io::ErrorKind::Interrupted
+///     | io::ErrorKind::ConnectionReset
+///     | io::ErrorKind::ConnectionAborted
+///     | io::ErrorKind::NotConnected
+///     | io::ErrorKind::BrokenPipe => false,
+///     _ => true, // e.g. io::ErrorKind::PermissionDenied
+/// };
+/// let policy = ExponentialBackoffPolicyBuilder::with_f_rng(is_fatal_f, rng)
+///     .max_count(4)
+///     .initial_delay(Duration::from_millis(100))
+///     .random_factor(0.0)
+///     .multiplier(2.0)
+///     .build()
+///     .expect("Something goes wrong");
+/// ```
+pub struct ExponentialBackoffPolicyBuilder<E: Debug, R: Rng, F: Fn(&E) -> bool> {
+    pub rng: R,
+    pub is_fatal_f: F,
+    pub initial_delay: Option<Duration>,
+    pub max_count: Option<u32>,
+    pub random_factor: Option<f32>,
+    pub multiplier: Option<f32>,
+    pub _s: PhantomData<E>,
+}
+
+pub fn exponential_backoff_policy_builder<E>(
+) -> ExponentialBackoffPolicyBuilder<E, ThreadRng, &'static dyn Fn(&E) -> bool>
+where
+    E: Debug,
+{
+    let rng = thread_rng();
+    let is_fatal_f = &|_: &E| false; // all errors are not fatal, always retry
+    ExponentialBackoffPolicyBuilder {
+        rng,
+        is_fatal_f,
+        initial_delay: None,
+        max_count: None,
+        random_factor: None,
+        multiplier: None,
+        _s: PhantomData,
+    }
+}
+
+impl<E, R, F> ExponentialBackoffPolicyBuilder<E, R, F>
+where
+    E: Debug,
+    R: Rng,
+    F: for<'r> Fn(&'r E) -> bool,
+{
+    pub fn with_f_rng(is_fatal_f: F, rng: R) -> Self {
+        Self {
+            rng,
+            is_fatal_f,
+            initial_delay: None,
+            max_count: None,
+            random_factor: None,
+            multiplier: None,
+            _s: PhantomData,
+        }
+    }
+    pub fn initial_delay(mut self, initial_delay: Duration) -> Self {
+        self.initial_delay = Some(initial_delay);
+        self
+    }
+    pub fn max_count(mut self, max_count: u32) -> Self {
+        self.max_count = Some(max_count);
+        self
+    }
+    pub fn random_factor(mut self, random_factor: f32) -> Self {
+        self.random_factor = Some(random_factor);
+        self
+    }
+    pub fn multiplier(mut self, multiplier: f32) -> Self {
+        self.multiplier = Some(multiplier);
+        self
+    }
+    pub fn build(self) -> Option<ExponentialBackoffPolicy<E, R, F>> {
+        let mut policy = ExponentialBackoffPolicy::with_f_rng(self.is_fatal_f, self.rng);
+        if let Some(initial_delay) = self.initial_delay {
+            policy.current_delay = initial_delay;
+            policy.randomized_delay = initial_delay;
+        }
+        if let Some(max_count) = self.max_count {
+            policy.max_count = max_count;
+        }
+        if let Some(random_factor) = self.random_factor {
+            policy.random_factor = random_factor;
+        }
+        if let Some(multiplier) = self.multiplier {
+            policy.multiplier = multiplier;
+        }
+        Some(policy)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::RetryAction::{RetryNow, ReturnError, WaitFor};
     use rand::SeedableRng;
     use rand_xorshift::XorShiftRng;
 
@@ -234,7 +290,9 @@ mod tests {
 
     #[test]
     fn exponential_policy_check_intervals() {
-        let mut exp_policy = ExponentialBackoffPolicy::with_f(is_fatal);
+        let mut exp_policy = ExponentialBackoffPolicyBuilder::with_f_rng(is_fatal, thread_rng())
+            .build()
+            .expect("Impossible to fail");
         let errors = [
             Error::NonFatal,
             Error::NonFatal,
@@ -242,7 +300,7 @@ mod tests {
             Error::NonFatal,
         ];
 
-        let mut actions = vec![RetryAction::RetryNow; errors.len()];
+        let mut actions = vec![RetryNow; errors.len()];
         for i in 0..errors.len() {
             actions[i] = exp_policy.on_err(i as u32, errors[i].clone())
         }
@@ -250,7 +308,7 @@ mod tests {
         let intervals = [(0.25, 0.75), (0.375, 1.125), (0.562, 1.687), (0.8435, 2.53)];
         for i in 0..intervals.len() {
             let (l, u) = intervals[i];
-            if let RetryAction::WaitFor(duration) = actions[i] {
+            if let WaitFor(duration) = actions[i] {
                 assert!(l <= duration.as_secs_f32());
                 assert!(duration.as_secs_f32() <= u);
             } else {
@@ -267,56 +325,47 @@ mod tests {
         };
         let seed = [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
         let rng = XorShiftRng::from_seed(seed);
-        let random_factor = 0.0;
-        let max_count = 5;
-        let delay = Duration::from_secs(1);
-        let mut exp_policy = ExponentialBackoffPolicy::with_count_delay_rng(
-            is_fatal_closure,
-            max_count,
-            delay,
-            rng,
-            random_factor,
-        );
+        let mut exp_policy = ExponentialBackoffPolicyBuilder::with_f_rng(is_fatal_closure, rng)
+            .max_count(5)
+            .initial_delay(Duration::from_secs(1))
+            .random_factor(0.0)
+            .build()
+            .expect("Impossible to fail");
         let errors = [
             Error::NonFatal,
             Error::NonFatal,
             Error::NonFatal,
             Error::Fatal,
         ];
-        let mut actions = vec![RetryAction::RetryNow; errors.len()];
+        let mut actions = vec![RetryNow; errors.len()];
         for i in 0..errors.len() {
             actions[i] = exp_policy.on_err(i as u32, errors[i].clone())
         }
 
-        let r0 = exp_policy.on_err(0, Error::NonFatal);
-        let r1 = exp_policy.on_err(1, Error::NonFatal);
-        let r2 = exp_policy.on_err(3, Error::NonFatal);
-        let r3 = exp_policy.on_err(2, Error::Fatal);
-
-        assert_eq!(r0, RetryAction::WaitFor(Duration::from_secs_f32(1.0)));
-        assert_eq!(r1, RetryAction::WaitFor(Duration::from_secs_f32(1.5)));
-        assert_eq!(
-            r2,
-            RetryAction::WaitFor(Duration::from_secs_f32(2.249999872))
-        );
-        assert_eq!(r3, RetryAction::ReturnError(Error::Fatal));
+        assert_eq!(actions[0], WaitFor(Duration::from_secs_f32(1.0)));
+        assert_eq!(actions[1], WaitFor(Duration::from_secs_f32(1.5)));
+        assert_eq!(actions[2], WaitFor(Duration::from_secs_f32(2.249999872)));
+        assert_eq!(actions[3], ReturnError(Error::Fatal));
     }
 
     #[test]
     fn exponential_policy_maximum_reached() {
-        let mut exp_policy = ExponentialBackoffPolicy::with_count(|_| false, 8);
+        let mut exp_policy = ExponentialBackoffPolicyBuilder::with_f_rng(|_| false, thread_rng())
+            .max_count(8)
+            .build()
+            .expect("Impossible to fail");
         // simulate the policy is called 10 times
         let errors = vec![Error::NonFatal; 10];
-        let mut actions = vec![RetryAction::RetryNow; errors.len()];
+        let mut actions = vec![RetryNow; errors.len()];
         for i in 0..errors.len() {
             actions[i] = exp_policy.on_err(i as u32, errors[i].clone())
         }
         // first 8 steps waits and then failures
         for i in 0..actions.len() {
             match actions[i] {
-                RetryAction::RetryNow => assert!(false),
-                RetryAction::WaitFor(_) => assert!(i <= 7),
-                RetryAction::ReturnError(Error::NonFatal) => assert!(7 < i),
+                RetryNow => assert!(false),
+                WaitFor(_) => assert!(i <= 7),
+                ReturnError(Error::NonFatal) => assert!(7 < i),
                 _ => assert!(false),
             }
         }
