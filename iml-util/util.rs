@@ -16,16 +16,21 @@ impl<T> Flatten<T> for Option<Option<T>> {
 }
 
 pub mod tokio_utils {
-    use futures::{future::Either, Stream, TryStreamExt};
+    use futures::{
+        future::{Either, Future},
+        Stream,
+    };
     use std::{
         convert::TryFrom,
         env, io,
+        net::SocketAddr,
         os::unix::{io::FromRawFd, net::UnixListener as NetUnixListener},
         pin::Pin,
     };
     use tokio::{
         io::{AsyncRead, AsyncWrite},
-        net::{TcpListener, UnixListener},
+        net::{unix::UnixListener, TcpListener},
+        reactor::Handle,
     };
 
     pub trait Socket: AsyncRead + AsyncWrite + Send + 'static + Unpin {}
@@ -35,17 +40,19 @@ pub mod tokio_utils {
     /// Return a stream containing `TcpStream`s that have been erased to
     /// `AsyncRead` + `AsyncWrite` traits. This is useful when you won't know which stream
     /// to choose at runtime
-    pub async fn get_tcp_stream(
+    pub fn get_tcp_stream(
         port: String,
     ) -> Result<impl Stream<Item = Result<Pin<Box<dyn Socket>>, io::Error>>, io::Error> {
-        let addr = format!("127.0.0.1:{}", port);
+        let addr = format!("127.0.0.1:{}", port)
+            .parse()
+            .expect("Couldn't parse socket address.");
 
         tracing::debug!("Listening over tcp port {}", port);
 
-        let s = TcpListener::bind(&addr)
-            .await?
+        let listener = TcpListener::bind(&addr)?;
+        let s = listener
             .incoming()
-            .map_ok(|x| -> Pin<Box<dyn Socket>> { Box::pin(x) });
+            .map(|socket| -> Result<Pin<Box<dyn Socket>>, _> { Ok(Box::pin(socket)) });
 
         Ok(s)
     }
@@ -59,9 +66,9 @@ pub mod tokio_utils {
 
         tracing::debug!("Listening over unix domain socket");
 
-        let s = UnixListener::try_from(addr)?
+        let s = UnixListener::from_std(addr, &Handle::default())?
             .incoming()
-            .map_ok(|x| -> Pin<Box<dyn Socket>> { Box::pin(x) });
+            .map(|socket| -> Result<Pin<Box<dyn Socket>>, _> { Ok(Box::pin(socket)) });
 
         Ok(s)
     }
@@ -73,12 +80,12 @@ pub mod tokio_utils {
     ///
     /// If the `port_var` resolves to a port, `TcpStream` will be used internally.
     /// Otherwise a `UnixStream` will be used.
-    pub async fn get_tcp_or_unix_listener(
+    pub fn get_tcp_or_unix_listener(
         port_var: &str,
     ) -> Result<impl Stream<Item = Result<Pin<Box<dyn Socket>>, io::Error>>, io::Error> {
         let s = match env::var(port_var) {
-            Ok(port) => Either::Left(get_tcp_stream(port).await?),
-            Err(_) => Either::Right(get_unix_stream()?),
+            Ok(port) => Either::A(get_tcp_stream(port)?),
+            Err(_) => Either::B(get_unix_stream()?),
         };
 
         Ok(s)
