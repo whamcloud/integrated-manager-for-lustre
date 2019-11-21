@@ -6,5 +6,10 @@ version = "0.1.0"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
+[dependencies]
+futures = "0.1"
+tokio = "0.1"
+tracing = "0.1"
+
 [lib]
 path = "util.rs"

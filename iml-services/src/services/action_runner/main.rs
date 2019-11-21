@@ -11,14 +11,10 @@ use iml_services::{
         sender::{create_client_filter, sender},
     },
 };
+use iml_util::tokio_utils::*;
 use iml_wire_types::PluginMessage;
 use parking_lot::Mutex;
-use std::{
-    collections::HashMap,
-    os::unix::{io::FromRawFd, net::UnixListener as NetUnixListener},
-    sync::Arc,
-};
-use tokio::{net::UnixListener, reactor::Handle};
+use std::{collections::HashMap, sync::Arc};
 use warp::{self, Filter as _};
 
 pub static AGENT_TX_RUST: &'static str = "agent_tx_rust";
@@ -47,12 +43,8 @@ fn main() {
         .map(|x| warp::reply::json(&x))
         .with(log);
 
-        let addr = unsafe { NetUnixListener::from_raw_fd(3) };
-
-        let listener = UnixListener::from_std(addr, &Handle::default())
-            .expect("Unable to bind Unix Domain Socket fd")
-            .incoming()
-            .inspect(|_| log::debug!("Client connected"));
+        let listener =
+            get_tcp_or_unix_listener("ACTION_RUNNER_PORT").expect("Could not bind to socket.");
 
         tokio::spawn(warp::serve(routes).serve_incoming(valve.wrap(listener)));
 

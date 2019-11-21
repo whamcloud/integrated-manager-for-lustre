@@ -1346,6 +1346,7 @@ dependencies = [
  "iml-agent-comms 0.1.0",
  "iml-manager-env 0.1.0",
  "iml-rabbit 0.1.0",
+ "iml-util 0.1.0",
  "iml-wire-types 0.1.11",
  "lapin-futures 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1362,6 +1363,11 @@ dependencies = [
 [[package]]
 name = "iml-util"
 version = "0.1.0"
+dependencies = [
+ "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tracing 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "iml-warp-drive"
