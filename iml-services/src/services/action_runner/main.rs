@@ -3,10 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use futures::{future::Future, lazy, stream::Stream};
-use futures03::{
-    future::{FutureExt, TryFutureExt},
-    stream::TryStreamExt,
-};
 use iml_services::{
     service_queue::consume_service_queue,
     services::action_runner::{
@@ -18,12 +14,7 @@ use iml_services::{
 use iml_util::tokio_utils::*;
 use iml_wire_types::PluginMessage;
 use parking_lot::Mutex;
-use std::{
-    collections::HashMap,
-    os::unix::{io::FromRawFd, net::UnixListener as NetUnixListener},
-    sync::Arc,
-};
-use tokio::{net::UnixListener, reactor::Handle};
+use std::{collections::HashMap, sync::Arc};
 use warp::{self, Filter as _};
 
 pub static AGENT_TX_RUST: &'static str = "agent_tx_rust";

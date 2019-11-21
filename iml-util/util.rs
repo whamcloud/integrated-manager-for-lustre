@@ -16,16 +16,10 @@ impl<T> Flatten<T> for Option<Option<T>> {
 }
 
 pub mod tokio_utils {
-    use futures::{
-        future::{Either, Future},
-        Stream,
-    };
+    use futures::{future::Either, Stream};
     use std::{
-        convert::TryFrom,
         env, io,
-        net::SocketAddr,
         os::unix::{io::FromRawFd, net::UnixListener as NetUnixListener},
-        pin::Pin,
     };
     use tokio::{
         io::{AsyncRead, AsyncWrite},
@@ -33,8 +27,8 @@ pub mod tokio_utils {
         reactor::Handle,
     };
 
-    pub trait Socket: AsyncRead + AsyncWrite + Send + 'static + Unpin {}
-    impl<T: AsyncRead + AsyncWrite + Send + 'static + Unpin> Socket for T {}
+    pub trait Socket: AsyncRead + AsyncWrite + Send + 'static {}
+    impl<T: AsyncRead + AsyncWrite + Send + 'static> Socket for T {}
 
     /// Given an environment variable that resolves to a port,
     /// Return a stream containing `TcpStream`s that have been erased to
