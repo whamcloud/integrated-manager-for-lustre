@@ -63,7 +63,14 @@ where
     }
 }
 
-pub async fn retry_future<T, E, F, FF>(factory: FF, policy: &mut dyn RetryPolicy<E>) -> Result<T, E>
+/// *NOTE*: (dyn RetryPolicy<E> + Send) is needed, otherwise we have
+/// error[E0277]: `dyn iml_request_retry::RetryPolicy<reqwest::error::Error>` cannot be sent between threads safely
+/// in the example. See `examples/demo-server-client.rs` and try to compile the example with the signature without `Send`:
+/// `pub async fn retry_future(..., policy: &mut dyn RetryPolicy<E>) ...`
+pub async fn retry_future<T, E, F, FF>(
+    factory: FF,
+    policy: &mut (dyn RetryPolicy<E> + Send),
+) -> Result<T, E>
 where
     E: Debug,
     F: Future<Output = Result<T, E>>,
