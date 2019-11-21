@@ -5,6 +5,7 @@
 use futures::channel::oneshot;
 use iml_wire_types::Fqdn;
 use tokio::timer;
+use warp::reject;
 
 /// Encapsulates any errors that may happen while working with the `ActionRunner` service
 #[derive(Debug)]
@@ -14,6 +15,8 @@ pub enum ActionRunnerError {
     ImlRabbitError(iml_rabbit::ImlRabbitError),
     OneShotCanceledError(oneshot::Canceled),
 }
+
+impl reject::Reject for ActionRunnerError {}
 
 impl std::fmt::Display for ActionRunnerError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {

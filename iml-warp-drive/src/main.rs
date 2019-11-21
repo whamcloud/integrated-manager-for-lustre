@@ -6,11 +6,12 @@ use futures::{lock::Mutex, FutureExt, TryFutureExt, TryStreamExt};
 use iml_manager_client::get_client;
 use iml_manager_env;
 use iml_warp_drive::{
-    cache::{populate_from_api, populate_from_db, Cache, SharedCache},
+    cache::{populate_from_api, populate_from_db, SharedCache},
     error, listen,
     locks::{self, create_locks_consumer, Locks},
-    users, Message,
+    users,
 };
+use iml_wire_types::warp_drive::{Cache, Message};
 use std::{collections::HashMap, sync::Arc};
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::Filter;

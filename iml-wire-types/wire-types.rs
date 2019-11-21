@@ -1048,15 +1048,15 @@ pub mod db {
     /// Record from the `chroma_core_volumenode` table
     #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
     pub struct VolumeNodeRecord {
-        id: u32,
-        volume_id: u32,
-        host_id: u32,
-        path: String,
-        storage_resource_id: Option<u32>,
-        primary: bool,
+        pub id: u32,
+        pub volume_id: u32,
+        pub host_id: u32,
+        pub path: String,
+        pub storage_resource_id: Option<u32>,
+        pub primary: bool,
         #[serde(rename = "use")]
-        _use: bool,
-        not_deleted: Option<bool>,
+        pub _use: bool,
+        pub not_deleted: Option<bool>,
     }
 
     impl Id for VolumeNodeRecord {
@@ -1100,13 +1100,13 @@ pub mod db {
     /// Record from the `chroma_core_managedtargetmount` table
     #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
     pub struct ManagedTargetMountRecord {
-        id: u32,
-        host_id: u32,
-        mount_point: Option<String>,
-        volume_node_id: u32,
-        primary: bool,
-        target_id: u32,
-        not_deleted: Option<bool>,
+        pub id: u32,
+        pub host_id: u32,
+        pub mount_point: Option<String>,
+        pub volume_node_id: u32,
+        pub primary: bool,
+        pub target_id: u32,
+        pub not_deleted: Option<bool>,
     }
 
     impl Id for ManagedTargetMountRecord {
@@ -1320,12 +1320,12 @@ pub mod db {
     /// Record from the `chroma_core_lnetconfiguration` table
     #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
     pub struct LnetConfigurationRecord {
-        id: u32,
-        state: String,
-        host_id: u32,
-        immutable_state: bool,
-        not_deleted: Option<bool>,
-        content_type_id: Option<u32>,
+        pub id: u32,
+        pub state: String,
+        pub host_id: u32,
+        pub immutable_state: bool,
+        pub not_deleted: Option<bool>,
+        pub content_type_id: Option<u32>,
     }
 
     #[cfg(feature = "postgres-interop")]
@@ -1785,4 +1785,124 @@ pub struct ComponentState<T: Default> {
     pub elements: Vec<ElementState>,
     pub info: String,
     pub state: T,
+}
+
+pub mod warp_drive {
+    use crate::{
+        db::{
+            Id, LnetConfigurationRecord, ManagedTargetMountRecord, StratagemConfiguration,
+            VolumeNodeRecord,
+        },
+        Alert, Filesystem, Host, LockChange, Target, TargetConfParam, Volume,
+    };
+    use std::collections::{HashMap, HashSet};
+
+    /// The current state of locks based on data from the locks queue
+    pub type Locks = HashMap<String, HashSet<LockChange>>;
+
+    #[derive(Default, serde::Serialize, serde::Deserialize, Debug, Clone)]
+    pub struct Cache {
+        pub active_alert: HashMap<u32, Alert>,
+        pub filesystem: HashMap<u32, Filesystem>,
+        pub host: HashMap<u32, Host>,
+        pub lnet_configuration: HashMap<u32, LnetConfigurationRecord>,
+        pub managed_target_mount: HashMap<u32, ManagedTargetMountRecord>,
+        pub stratagem_config: HashMap<u32, StratagemConfiguration>,
+        pub target: HashMap<u32, Target<TargetConfParam>>,
+        pub volume: HashMap<u32, Volume>,
+        pub volume_node: HashMap<u32, VolumeNodeRecord>,
+    }
+
+    impl Cache {
+        /// Removes the record from the cache
+        pub fn remove_record(&mut self, x: &RecordId) -> bool {
+            match x {
+                RecordId::ActiveAlert(id) => self.active_alert.remove(&id).is_some(),
+                RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
+                RecordId::Host(id) => self.host.remove(&id).is_some(),
+                RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
+                RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(&id).is_some(),
+                RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
+                RecordId::Target(id) => self.target.remove(&id).is_some(),
+                RecordId::Volume(id) => self.volume.remove(&id).is_some(),
+                RecordId::VolumeNode(id) => self.volume_node.remove(&id).is_some(),
+            }
+        }
+        /// Inserts the record into the cache
+        pub fn insert_record(&mut self, x: Record) {
+            match x {
+                Record::ActiveAlert(x) => {
+                    self.active_alert.insert(x.id, x);
+                }
+                Record::Filesystem(x) => {
+                    self.filesystem.insert(x.id, x);
+                }
+                Record::Host(x) => {
+                    self.host.insert(x.id, x);
+                }
+                Record::LnetConfiguration(x) => {
+                    self.lnet_configuration.insert(x.id(), x);
+                }
+                Record::ManagedTargetMount(x) => {
+                    self.managed_target_mount.insert(x.id(), x);
+                }
+                Record::StratagemConfig(x) => {
+                    self.stratagem_config.insert(x.id(), x);
+                }
+                Record::Target(x) => {
+                    self.target.insert(x.id, x);
+                }
+                Record::Volume(x) => {
+                    self.volume.insert(x.id, x);
+                }
+                Record::VolumeNode(x) => {
+                    self.volume_node.insert(x.id(), x);
+                }
+            }
+        }
+    }
+
+    #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+    #[serde(tag = "tag", content = "payload")]
+    pub enum Record {
+        ActiveAlert(Alert),
+        Filesystem(Filesystem),
+        Host(Host),
+        ManagedTargetMount(ManagedTargetMountRecord),
+        StratagemConfig(StratagemConfiguration),
+        Target(Target<TargetConfParam>),
+        Volume(Volume),
+        VolumeNode(VolumeNodeRecord),
+        LnetConfiguration(LnetConfigurationRecord),
+    }
+
+    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+    #[serde(tag = "tag", content = "payload")]
+    pub enum RecordId {
+        ActiveAlert(u32),
+        Filesystem(u32),
+        Host(u32),
+        ManagedTargetMount(u32),
+        StratagemConfig(u32),
+        Target(u32),
+        Volume(u32),
+        VolumeNode(u32),
+        LnetConfiguration(u32),
+    }
+
+    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+    #[serde(tag = "tag", content = "payload")]
+    pub enum RecordChange {
+        Update(Record),
+        Delete(RecordId),
+    }
+
+    /// Message variants.
+    #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+    #[serde(tag = "tag", content = "payload")]
+    pub enum Message {
+        Locks(Locks),
+        Records(Cache),
+        RecordChange(RecordChange),
+    }
 }

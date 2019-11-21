@@ -4,6 +4,7 @@
 
 use futures::channel::oneshot;
 use iml_rabbit::ImlRabbitError;
+use warp::reject;
 
 #[derive(Debug)]
 pub enum ImlAgentCommsError {
@@ -11,6 +12,8 @@ pub enum ImlAgentCommsError {
     SerdeJsonError(serde_json::error::Error),
     OneshotCanceled(oneshot::Canceled),
 }
+
+impl reject::Reject for ImlAgentCommsError {}
 
 impl std::fmt::Display for ImlAgentCommsError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
