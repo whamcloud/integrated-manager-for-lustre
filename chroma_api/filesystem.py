@@ -10,13 +10,14 @@ from django.db.models import Q
 from chroma_core.models import ManagedFilesystem, ManagedTarget
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs
 from chroma_core.models import Volume, VolumeNode
-from chroma_core.models import Command
+from chroma_core.models import Command, OstPool
 from chroma_core.models.filesystem import HSM_CONTROL_KEY, HSM_CONTROL_PARAMS
 
 import tastypie.http as http
 from tastypie import fields
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
+from chroma_api.chroma_model_resource import ChromaModelResource
 from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
 from chroma_api.validation_utils import validate
 from chroma_core.lib import conf_param
@@ -432,3 +433,72 @@ class FilesystemResource(MetricResource, ConfParamResource):
         raise custom_response(
             self, request, http.HttpAccepted, {"command": dehydrate_command(command), "filesystem": filesystem_data}
         )
+
+
+class OstPoolResourceValidation(Validation):
+    def is_valid(self, bundle, request=None):
+        errors = defaultdict(list)
+        return errors
+
+
+class OstPoolResource(ChromaModelResource):
+    osts = fields.ToManyField(
+        "chroma_api.target.TargetResource", "osts", null=True, help_text="List of OSTs in this Pool",
+    )
+    filesystem = fields.ToOneField("chroma_api.filesystem.FilesystemResource", "filesystem")
+
+    class Meta:
+        queryset = OstPool.objects.all()
+        resource_name = "ostpool"
+        authentication = AnonymousAuthentication()
+        authorization = PatchedDjangoAuthorization()
+        validation = OstPoolResourceValidation()
+        excludes = ["not_deleted"]
+        ordering = ["filesystem", "name"]
+        list_allowed_methods = ["get", "delete", "put", "post"]
+        detail_allowed_methods = ["get", "delete", "post"]
+        filtering = {"filesystem": ["exact"], "name": ["exact"], "id": ["exact"]}
+
+    @validate
+    def obj_create(self, bundle, **kwargs):
+        request = bundle.request
+
+        ostpool_id, command_id = JobSchedulerClient.create_ostpool(bundle.data)
+        command = Command.objects.get(pk=command_id)
+
+        raise custom_response(self, request, http.HttpAccepted, {"command": dehydrate_command(command)})
+
+    # PUT handler
+    @validate
+    def obj_update(self, bundle, **kwargs):
+        try:
+            obj = self.obj_get(bundle, **kwargs)
+        except ObjectDoesNotExist:
+            raise NotFound("A model instance matching the provided arguments could not be found.")
+
+        command_id = JobSchedulerClient.update_ostpool(obj, bundle.data)
+        command = Command.objects.get(pk=command_id)
+
+        raise custom_response(self, bundle.request, http.HttpAccepted, {"command": dehydrate_command(command)})
+
+    def _pool_delete(self, request, obj_list):
+        commands = []
+        for obj in obj_list:
+            command_id = JobSchedulerClient.delete_ostpool(obj.id)
+            command = Command.objects.get(pk=command_id)
+            commands.append(dehydrate_command(command))
+        raise custom_response(self, request, http.HttpAccepted, {"commands": commands})
+
+    def obj_delete(self, bundle, **kwargs):
+        try:
+            obj = self.obj_get(bundle, **kwargs)
+        except ObjectDoesNotExist:
+            raise NotFound("A model instance matching the provided arguments could not be found.")
+        self._pool_delete(bundle.request, [obj])
+
+    def obj_delete_list(self, bundle, **kwargs):
+        try:
+            obj_list = self.obj_get_list(bundle, **kwargs)
+        except ObjectDoesNotExist:
+            raise NotFound("A model instance matching the provided arguments could not be found.")
+        self._pool_delete(bundle.request, obj_list)

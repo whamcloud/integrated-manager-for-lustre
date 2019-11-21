@@ -9,13 +9,8 @@ use iml_action_runner::{
     sender::{create_client_filter, sender},
 };
 use iml_service_queue::service_queue::consume_service_queue;
-use std::{
-    collections::HashMap,
-    convert::TryFrom,
-    os::unix::{io::FromRawFd, net::UnixListener as NetUnixListener},
-    sync::Arc,
-};
-use tokio::net::UnixListener;
+use iml_util::tokio_utils::get_tcp_or_unix_listener;
+use std::{collections::HashMap, sync::Arc};
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::{self, Filter as _};
 
@@ -49,12 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .map(|x| warp::reply::json(&x))
     .with(log);
 
-    let addr = unsafe { NetUnixListener::from_raw_fd(3) };
-
-    let listener = UnixListener::try_from(addr)?
-        .incoming()
-        .inspect_ok(|_| tracing::debug!("Client connected"));
-
+    let listener = get_tcp_or_unix_listener("ACTION_RUNNER_PORT").await?;
     tokio::spawn(warp::serve(routes).serve_incoming(listener));
 
     let client = iml_rabbit::connect_to_rabbit().await?;

@@ -7,9 +7,9 @@ from toolz.functoolz import pipe, partial, flip
 from django.db import models
 from django.db.models import CASCADE
 from chroma_core.lib.job import DependOn, DependAll, Step, job_log
-from chroma_core.models import ManagedMgs, FilesystemMember, ManagedTarget
+from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, FilesystemMember, ManagedTarget
 from chroma_core.models import NoNidsPresent
-from chroma_core.models import StatefulObject, StateChangeJob, StateLock, Job
+from chroma_core.models import StatefulObject, StateChangeJob, StateLock, Job, AdvertisedJob
 from chroma_core.models import DeletableDowncastableMetaclass, MeasuredEntity
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.util import target_label_split
@@ -96,6 +96,9 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         # NB converting to dict because django templates don't place nice with defaultdict
         # (http://stackoverflow.com/questions/4764110/django-template-cant-loop-defaultdict)
         return dict(servers)
+
+    def get_pools(self):
+        return OstPool.objects.filter(filesystem=self)
 
     def mgs_spec(self):
         """Return a string which is foo in <foo>:/lustre for client mounts"""
@@ -406,8 +409,259 @@ class ForgetFilesystemJob(StateChangeJob):
     def on_success(self):
         super(ForgetFilesystemJob, self).on_success()
 
-        from chroma_core.models.target import ManagedMdt, ManagedOst
-
         assert ManagedMdt.objects.filter(filesystem=self.filesystem).count() == 0
         assert ManagedOst.objects.filter(filesystem=self.filesystem).count() == 0
         self.filesystem.mark_deleted()
+
+
+class OstPool(models.Model):
+    __metaclass__ = DeletableDowncastableMetaclass
+
+    name = models.CharField(max_length=15, help_text="OST Pool name, up to 15 characters")
+
+    filesystem = models.ForeignKey("ManagedFilesystem", on_delete=CASCADE)
+
+    osts = models.ManyToManyField(ManagedOst, help_text="OST list in this Pool")
+
+    class Meta:
+        app_label = "chroma_core"
+        unique_together = ("name", "filesystem")
+        ordering = ["id"]
+
+
+class CreateOstPoolJob(AdvertisedJob):
+    pool = models.ForeignKey("OstPool", on_delete=CASCADE)
+
+    requires_confirmation = False
+
+    classes = ["OstPool"]
+
+    verb = "Create"
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return "Create OST Pool"
+
+    @classmethod
+    def can_run(self, instance):
+        mgs = instance.filesystem.mgs
+        mdt0 = instance.filesystem.name + "-MDT0000"
+        mds0 = next(t.active_host for t in instance.filesystem.get_targets() if t.name == mdt0)
+        return mgs is not None and mgs.active_host is not None and mds0 is not None
+
+    @classmethod
+    def get_args(cls, pool):
+        return {"pool_id": pool.id}
+
+    def description(self):
+        return "Create OST Pool"
+
+    def get_steps(self):
+        mdt0 = self.pool.filesystem.name + "-MDT0000"
+        return [
+            (
+                CreateOstPoolStep,
+                {
+                    "pool": self.pool.name,
+                    "filesystem": self.pool.filesystem.name,
+                    "mgs": self.pool.filesystem.mgs.active_host.fqdn,
+                },
+            ),
+            (
+                WaitOstPoolStep,
+                {
+                    "pool": self.pool.name,
+                    "filesystem": self.pool.filesystem.name,
+                    "mds": next(t.active_host.fqdn for t in self.pool.filesystem.get_targets() if t.name == mdt0),
+                },
+            ),
+        ]
+
+
+class CreateOstPoolStep(Step):
+    def run(self, kwargs):
+        pool_name = kwargs["pool"]
+        fs_name = kwargs["filesystem"]
+        host = kwargs["mgs"]
+
+        self.invoke_rust_agent_expect_result(host, "ostpool_create", {"filesystem": fs_name, "name": pool_name})
+
+
+class WaitOstPoolStep(Step):
+    def run(self, kwargs):
+        pool_name = kwargs["pool"]
+        fs_name = kwargs["filesystem"]
+        host = kwargs["mds"]
+
+        self.invoke_rust_agent_expect_result(host, "ostpool_wait", {"filesystem": fs_name, "name": pool_name})
+
+
+class DestroyOstPoolJob(AdvertisedJob):
+    pool = models.ForeignKey("OstPool", on_delete=CASCADE)
+
+    requires_confirmation = True
+
+    classes = ["OstPool"]
+
+    verb = "Destroy"
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return "Destroy OST Pool"
+
+    @classmethod
+    def can_run(self, instance):
+        mgs = instance.filesystem.mgs
+        return mgs is not None and mgs.active_host is not None
+
+    @classmethod
+    def get_args(cls, pool):
+        return {"pool_id": pool.id}
+
+    def description(self):
+        return "Destroy OST Pool"
+
+    def get_steps(self):
+        return [
+            (
+                DestroyOstPoolStep,
+                {
+                    "pool": self.pool.name,
+                    "filesystem": self.pool.filesystem.name,
+                    "mgs": self.pool.filesystem.mgs.active_host.fqdn,
+                },
+            )
+        ]
+
+    def on_success(self):
+        super(DestroyOstPoolJob, self).on_success()
+
+        self.pool.mark_deleted()
+        self.pool.save()
+
+
+class DestroyOstPoolStep(Step):
+    def run(self, kwargs):
+        pool_name = kwargs["pool"]
+        fs_name = kwargs["filesystem"]
+        host = kwargs["mgs"]
+
+        self.invoke_rust_agent_expect_result(host, "ostpool_destroy", {"filesystem": fs_name, "name": pool_name})
+
+
+class AddOstPoolJob(Job):
+    """
+    Add an OST from a Pool
+    """
+
+    pool = models.ForeignKey("OstPool", null=False, on_delete=CASCADE)
+    ost = models.ForeignKey("ManagedOst", null=False, on_delete=CASCADE)
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def can_run(self, instance):
+        mgs = instance.filesystem.mgs
+        return mgs is not None and mgs.active_host is not None
+
+    @classmethod
+    def long_description(self):
+        return "Add OST to OST Pool"
+
+    def description(self):
+        return "Add OST to OST Pool"
+
+    def get_steps(self):
+        return [
+            (
+                AddOstPoolStep,
+                {
+                    "pool": self.pool.name,
+                    "filesystem": self.pool.filesystem.name,
+                    "mgs": self.pool.filesystem.mgs.active_host.fqdn,
+                    "ost": self.ost.get_label(),
+                },
+            )
+        ]
+
+    def on_success(self):
+        super(AddOstPoolJob, self).on_success()
+        self.pool.osts.add(self.ost)
+        self.pool.save()
+
+
+class AddOstPoolStep(Step):
+    def run(self, kwargs):
+        pool_name = kwargs["pool"]
+        fs_name = kwargs["filesystem"]
+        host = kwargs["mgs"]
+        ost_label = kwargs["ost"]
+
+        self.invoke_rust_agent_expect_result(
+            host, "ostpool_add", {"filesystem": fs_name, "name": pool_name, "ost": ost_label}
+        )
+
+
+class RemoveOstPoolJob(Job):
+    """
+    Remove an OST from a Pool
+    """
+
+    pool = models.ForeignKey("OstPool", null=False, on_delete=CASCADE)
+    ost = models.ForeignKey("ManagedOst", null=False, on_delete=CASCADE)
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def can_run(self, instance):
+        mgs = instance.filesystem.mgs
+        return mgs is not None and mgs.active_host is not None
+
+    @classmethod
+    def long_description(self):
+        return "Remove OST from OST Pool"
+
+    def description(self):
+        return "Remove OST from OST Pool"
+
+    def get_steps(self):
+        return [
+            (
+                RemoveOstPoolStep,
+                {
+                    "pool": self.pool.name,
+                    "filesystem": self.pool.filesystem.name,
+                    "mgs": self.pool.filesystem.mgs.active_host.fqdn,
+                    "ost": self.ost.get_label(),
+                },
+            )
+        ]
+
+    def on_success(self):
+        super(RemoveOstPoolJob, self).on_success()
+        self.pool.osts.remove(self.ost)
+        self.pool.save()
+
+
+class RemoveOstPoolStep(Step):
+    def run(self, kwargs):
+        pool_name = kwargs["pool"]
+        fs_name = kwargs["filesystem"]
+        host = kwargs["mgs"]
+        ost_label = kwargs["ost"]
+
+        self.invoke_rust_agent_expect_result(
+            host, "ostpool_remove", {"filesystem": fs_name, "name": pool_name, "ost": ost_label}
+        )
