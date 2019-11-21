@@ -12,17 +12,6 @@ with counters, randomization etc. The example of such policy is
 
 ## Running the example
 
-In one terminal window
-
 ```
-$ virtualenv -p python3 venv
-$ . venv/bin/activate
-$ pip install flask
-$ python server.py
-```
-
-In another terminal window
-
-```
-$ cargo run --example flask-client
+$ cargo run --example demo-server-client
 ```
