@@ -280,11 +280,7 @@ server {
         proxy_pass {{HTTP_AGENT_PROXY_PASS}}/agent/message;
     }
 
-    location /agent2/message {
-        if ($ssl_client_verify != SUCCESS) {
-            return 401;
-        }
-
+    location /agent2/message/ {
         proxy_set_header X-SSL-Client-On $ssl_client_verify;
         proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
         proxy_set_header X-SSL-Client-Serial $ssl_client_serial;
@@ -292,7 +288,7 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass {{HTTP_AGENT2_PROXY_PASS}}/message;
+        proxy_pass {{HTTP_AGENT2_PROXY_PASS}}/;
     }
 
     location /agent/copytool_event {
