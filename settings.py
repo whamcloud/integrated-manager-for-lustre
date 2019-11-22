@@ -66,7 +66,9 @@ SSL_PATH = "/var/lib/chroma"
 
 DEVICE_AGGREGATOR_PORT = 8008
 
-DEVICE_AGGREGATOR_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, DEVICE_AGGREGATOR_PORT)
+DEVICE_AGGREGATOR_PROXY_PASS = os.getenv(
+    "DEVICE_AGGREGATOR_URL", "http://{}:{}".format(PROXY_HOST, DEVICE_AGGREGATOR_PORT)
+)
 
 UPDATE_HANDLER_PROXY_PASS = "http://unix:/var/run/iml-update-handler.sock"
 

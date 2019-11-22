@@ -10,7 +10,6 @@ vars = {
     "REALTIME_PROXY_PASS": "http://realtime:8888",
     "HTTP_AGENT_PROXY_PASS": "http://http-agent:8002",
     "HTTP_AGENT2_PROXY_PASS": "http://iml-agent-comms:8003",
-    "DEVICE_AGGREGATOR_PORT": "8008",
     "REPO_PATH": "/var/lib/chroma/repo",
     "DEVICE_AGGREGATOR_PROXY_PASS": "http://device-aggregator:8008",
     "UPDATE_HANDLER_PROXY_PASS": "http://update-handler:8080",
@@ -27,6 +26,11 @@ with open(conf_template, "r") as f:
     config = re.sub(
         r"proxy_pass {{(.+)}}.*;",
         r"set $proxy_upstream {{\g<1>}};\n        proxy_pass $proxy_upstream$uri$is_args$query_string;",
+        config,
+    )
+    config = re.sub(
+        r"# /agent2/message proxy_pass\n.*set \$proxy_upstream (.+);\n.*proxy_pass.*",
+        r"set $proxy_upstream \g<1>;\n        proxy_pass $proxy_upstream/message/$is_args$query_string;",
         config,
     )
     config = re.sub(
