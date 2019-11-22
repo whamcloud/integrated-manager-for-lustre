@@ -753,8 +753,8 @@ impl<T> EndpointName for Target<T> {
 }
 
 pub type Mdt = Target<MdtConfParams>;
-
 pub type Mgt = Target<Option<TargetConfParam>>;
+pub type Ost = Target<OstConfParams>;
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct HsmControlParamMdt {
@@ -1786,6 +1786,36 @@ pub struct ComponentState<T: Default> {
     pub info: String,
     pub state: T,
 }
+
+/// An OST Pool record from `/api/ostpool/`
+#[derive(Debug, Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct OstPool {
+    pub name: String,
+    pub filesystem: String,
+    pub osts: Vec<String>,
+    pub resource_uri: String,
+    pub id: u32,
+}
+
+impl std::fmt::Display for OstPool {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}.{} [{}]",
+            self.filesystem,
+            self.name,
+            self.osts.join(", ")
+        )
+    }
+}
+
+impl EndpointName for OstPool {
+    fn endpoint_name() -> &'static str {
+        "ostpool"
+    }
+}
+
+impl FlatQuery for OstPool {}
 
 pub mod warp_drive {
     use crate::{

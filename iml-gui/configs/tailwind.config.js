@@ -210,6 +210,8 @@ module.exports = {
       }
     }
   },
-  variants: {},
+  variants: {
+    display: ["group-hover", "responsive"]
+  },
   plugins: []
 };
