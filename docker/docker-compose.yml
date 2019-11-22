@@ -144,8 +144,6 @@ services:
     deploy: *default-deploy
     environment:
       - "HTTP_AGENT2_PORT=8003"
-      - "RUST_LOG=debug"
-      - "RUST_BACKTRACE=full"
       - "PROXY_HOST=iml-agent-comms"
   job-scheduler:
     image: "imlteam/manager-job-scheduler"

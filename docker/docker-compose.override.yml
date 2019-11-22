@@ -24,6 +24,8 @@ services:
     restart: on-failure
   http-agent:
     restart: on-failure
+  iml-agent-comms:
+    restart: on-failure
   job-scheduler:
     restart: on-failure
   lustre-audit:
@@ -39,6 +41,10 @@ services:
   iml-warp-drive:
     restart: on-failure
   setup:
+    restart: on-failure
+  iml-action-runner:
+    restart: on-failure
+  iml-stratagem:
     restart: on-failure
 secrets:
   iml_pw:

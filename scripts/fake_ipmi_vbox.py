@@ -60,11 +60,14 @@ if __name__ == "__main__":
     ipmi.save()
 
     vm_host = raw_input("Enter the IP Address of your VM Host: ")
-    try:
-        # there's always one...
-        vm_host = socket.gethostbyaddr(vm_host)[2][0]
-    except (socket.error, socket.gaierror):
-        fatal("%s does not appear to be a valid address" % vm_host)
+
+    # Validate by default but skip if the "--skip" flag is passed in
+    if "--skip-validation" not in sys.argv:
+        try:
+            # there's always one...
+            vm_host = socket.gethostbyaddr(vm_host)[2][0]
+        except (socket.error, socket.gaierror):
+            fatal("%s does not appear to be a valid address" % vm_host)
 
     user_name = raw_input("Enter the VM Host SSH user: ")
 
