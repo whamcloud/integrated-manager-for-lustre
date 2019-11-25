@@ -126,6 +126,68 @@ pub mod tokio_utils {
     }
 }
 
+pub mod action_plugins {
+    use futures::{Future, FutureExt};
+    use iml_wire_types::{ActionName, ToJsonValue};
+    use std::{collections::HashMap, fmt::Display, pin::Pin};
+
+    type BoxedFuture =
+        Pin<Box<dyn Future<Output = Result<serde_json::value::Value, String>> + Send>>;
+
+    type Callback = Box<dyn Fn(serde_json::value::Value) -> BoxedFuture + Send + Sync>;
+
+    async fn run_plugin<T, R, E: Display, Fut>(
+        v: serde_json::value::Value,
+        f: fn(T) -> Fut,
+    ) -> Result<serde_json::value::Value, String>
+    where
+        T: serde::de::DeserializeOwned + Send,
+        R: serde::Serialize + Send,
+        Fut: Future<Output = Result<R, E>> + Send,
+    {
+        let x = serde_json::from_value(v).map_err(|e| format!("{}", e))?;
+
+        let x = f(x).await.map_err(|e| format!("{}", e))?;
+
+        x.to_json_value()
+    }
+
+    fn mk_callback<Fut, T, R, E>(f: fn(T) -> Fut) -> Callback
+    where
+        Fut: Future<Output = Result<R, E>> + Send + 'static,
+        T: serde::de::DeserializeOwned + Send + 'static,
+        R: serde::Serialize + Send + 'static,
+        E: Display + 'static,
+    {
+        Box::new(move |v| run_plugin(v, f).boxed())
+    }
+
+    pub struct Actions(HashMap<ActionName, Callback>);
+
+    impl Actions {
+        pub fn new() -> Self {
+            Actions(HashMap::new())
+        }
+        pub fn add_plugin<Fut, T, R, E>(mut self, s: impl Into<ActionName>, f: fn(T) -> Fut) -> Self
+        where
+            Fut: Future<Output = Result<R, E>> + Send + 'static,
+            T: serde::de::DeserializeOwned + Send + 'static,
+            R: serde::Serialize + Send + 'static,
+            E: Display + 'static,
+        {
+            self.0.insert(s.into(), mk_callback(f));
+
+            self
+        }
+        pub fn keys(&self) -> impl Iterator<Item = &ActionName> {
+            self.0.keys()
+        }
+        pub fn get(&self, name: &ActionName) -> Option<&Callback> {
+            self.0.get(name)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
