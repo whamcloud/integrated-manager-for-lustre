@@ -206,9 +206,7 @@ pub enum App {
     CheckStonith,
 
     #[structopt(name = "package_installed")]
-    PackageInstalled {
-        package: String,
-    },
+    PackageInstalled { package: String },
 
     #[structopt(name = "get_kernel")]
     /// Get latest kernel which supports listed modules
@@ -417,12 +415,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             Err(e) => println!("{:?}", e),
         },
-        App::PackageInstalled { package } => match package_installed::package_installed(package).await {
-            Ok(cs) => {
-                println!("{}", if cs { "Installed" } else { "Not Installed" });
+        App::PackageInstalled { package } => {
+            match package_installed::package_installed(package).await {
+                Ok(cs) => {
+                    println!("{}", if cs { "Installed" } else { "Not Installed" });
+                }
+                Err(e) => println!("{:?}", e),
             }
-            Err(e) => println!("{:?}", e),
-        },
+        }
         App::GetKernel { modules } => match check_kernel::get_kernel(modules).await {
             Ok(s) => println!("{}", s),
             Err(e) => println!("{:?}", e),
