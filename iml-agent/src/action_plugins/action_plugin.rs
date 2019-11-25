@@ -4,7 +4,7 @@
 
 use crate::{
     action_plugins::stratagem::{action_purge, action_warning, server},
-    action_plugins::{check_ha, check_stonith, check_stratagem, ostpool},
+    action_plugins::{check_ha, check_stonith, ostpool, package_installed},
     agent_error::ImlAgentError,
     systemd,
 };
@@ -91,7 +91,7 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
 
     map.insert(
         "action_check_stratagem".into(),
-        mk_callback(check_stratagem::check_stratagem),
+        mk_callback(package_installed::package_installed),
     );
 
     map.insert(
