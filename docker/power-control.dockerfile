@@ -6,6 +6,8 @@ RUN yum install -y epel-release \
   && yum install -y python-pip \
   && pip uninstall -y urllib3 \
   && yum remove -y python-pip \
-  && yum install -y fence-agents-all fence-agents-vbox
+  && yum install -y fence-agents-all fence-agents-vbox \
+  && rm -f /etc/yum.repos.d/managerforlustre-manager-for-lustre-devel-epel-7.repo \
+  && yum clean all
 
 CMD ["python", "./manage.py", "chroma_service", "--name=power_control", "power_control", "--console"]
