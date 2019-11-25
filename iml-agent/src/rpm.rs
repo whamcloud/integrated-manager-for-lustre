@@ -19,7 +19,7 @@ fn parse(output: Output) -> Result<bool, ImlAgentError> {
     }
 }
 
-pub(crate) async fn query(package_name: &str) -> Result<bool, ImlAgentError> {
+pub(crate) async fn installed(package_name: &str) -> Result<bool, ImlAgentError> {
     let output = cmd_output("rpm", vec!["--query", package_name]).await?;
     parse(output)
 }
