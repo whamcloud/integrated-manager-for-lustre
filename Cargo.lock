@@ -1128,7 +1128,7 @@ dependencies = [
  "tokio 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "tracing 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "tracing-subscriber 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "warp 0.2.0-alpha.0 (git+https://github.com/seanmonstar/warp.git?rev=9bb58102)",
+ "warp 0.2.0-alpha.0 (git+https://github.com/seanmonstar/warp.git)",
 ]
 
 [[package]]
