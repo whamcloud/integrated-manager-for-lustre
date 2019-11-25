@@ -11,7 +11,6 @@ use std::io;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
-use tokio::runtime::Runtime;
 use tokio::timer::delay_for;
 use warp::http::StatusCode;
 use warp::Filter;
@@ -25,29 +24,28 @@ struct Hello {
     counter: Option<usize>,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
 
-    let rt = Runtime::new().unwrap();
-    let executor = rt.executor();
-
     // run server
-    executor.spawn(async move { server(&addr).await });
+    tokio::spawn(async move { server(&addr).await });
 
-    executor.spawn(async move {
+    // run 2 clients
+    tokio::spawn(async move {
         let result = retry_client_obj(&addr, 1).await;
         println!("retry_client_obj received {:?}", result);
     });
-    executor.spawn(async move {
+    tokio::spawn(async move {
         let result = retry_client_fun(&addr, 2).await;
         println!("retry_client_fun received {:?}", result);
     });
 
-    rt.block_on(async {
-        println!("Sleep for 30 seconds");
-        delay_for(Duration::from_secs(30)).await;
-        println!("End of sleep, shutting down");
-    });
+    println!("Sleep for 30 seconds");
+    delay_for(Duration::from_secs(30)).await;
+    println!("End of sleep, shutting down");
+
+    Ok(())
 }
 
 async fn server(addr: &SocketAddr) {
@@ -105,13 +103,7 @@ pub async fn http_call(addr: &SocketAddr, id: u32) -> reqwest::Result<String> {
     let client: Client = reqwest::Client::new();
     let resp: Response = client.post(uri).json(&map).send().await?;
 
-    match resp.error_for_status() {
-        Ok(resp) => {
-            let resp_body = resp.text().await?.to_string();
-            Ok(resp_body)
-        }
-        Err(err) => Err(err),
-    }
+    Ok(resp.error_for_status()?.text().await?.to_string())
 }
 
 #[derive(Debug)]

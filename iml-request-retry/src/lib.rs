@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use futures::Future;
-
 use std::fmt::Debug;
 use std::time::Duration;
 use tokio::timer::delay_for;
@@ -39,7 +38,9 @@ where
 /// Retry policy is a function or an object, that for every request tells us, whether
 /// it is needed to
 /// - perform immediate retry attempt to send the request again
-/// - or wait some
+/// - or wait some time and then retry
+/// - or just return the error to the caller
+/// all the three alternatives are controlled by `RetryAction` type
 pub trait RetryPolicy<E: Debug> {
     fn on_ok(&mut self, _: u32) {}
     fn on_err(&mut self, _: u32, _: E) -> RetryAction<E>;
@@ -63,10 +64,10 @@ where
     }
 }
 
-/// *NOTE*: (dyn RetryPolicy<E> + Send) is needed, otherwise we have
-/// error[E0277]: `dyn iml_request_retry::RetryPolicy<reqwest::error::Error>` cannot be sent between threads safely
-/// in the example. See `examples/demo-server-client.rs` and try to compile the example with the signature without `Send`:
-/// `pub async fn retry_future(..., policy: &mut dyn RetryPolicy<E>) ...`
+/// *NOTE*: the constraint `(dyn RetryPolicy<E> + Send)` (not just `dyn RetryPolicy<E>`) is needed,
+/// otherwise we might have e.g. error
+/// [E0277]: `dyn iml_request_retry::RetryPolicy<reqwest::error::Error>` cannot be sent between threads safely
+/// on the caller side. See `examples/demo-server-client.rs`.
 pub async fn retry_future<T, E, F, FF>(
     factory: FF,
     policy: &mut (dyn RetryPolicy<E> + Send),
