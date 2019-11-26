@@ -134,8 +134,13 @@ pub mod action_plugins {
     type BoxedFuture =
         Pin<Box<dyn Future<Output = Result<serde_json::value::Value, String>> + Send>>;
 
+    /// Wrapper for an action plugin to be used as a trait object for different actions.
+    /// The incoming `Value` is the data to be sent to the plugin. It will be deserialized to the parameter
+    /// type needed by the specific plugin.
     type Callback = Box<dyn Fn(serde_json::value::Value) -> BoxedFuture + Send + Sync>;
 
+    /// Runs a given plugin. First deserializes data to the required type,
+    /// then runs the plugin and serializes the result.
     async fn run_plugin<T, R, E: Display, Fut>(
         v: serde_json::value::Value,
         f: fn(T) -> Fut,
@@ -162,6 +167,9 @@ pub mod action_plugins {
         Box::new(move |v| run_plugin(v, f).boxed())
     }
 
+    /// The registry of available plugins.
+    /// This is modeled internally as a `HashMap` so plugins can be supplied
+    /// in different ways at runtime.
     pub struct Actions(HashMap<ActionName, Callback>);
 
     impl Actions {
