@@ -24,5 +24,5 @@ RUN yum update -y \
   && yum remove -y gcc-c++ python-pip python-devel \
   && yum clean all
 
-COPY docker/wait-for-dependencies.sh /usr/local/bin/
-ENTRYPOINT [ "wait-for-dependencies.sh" ]
+COPY docker/wait-for-dependencies-postgres.sh /usr/local/bin/
+ENTRYPOINT [ "wait-for-dependencies-postgres.sh" ]

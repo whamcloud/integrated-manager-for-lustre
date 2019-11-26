@@ -77,7 +77,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - "IML_CA_PATH=/var/lib/chroma/authority.crt"
+      - IML_CA_PATH=/var/lib/chroma/authority.crt
   realtime:
     image: "imlteam/realtime"
     hostname: "realtime"
@@ -99,6 +99,7 @@ services:
     environment:
       - DEVICE_AGGREGATOR_PORT=8008
       - PROXY_HOST=device-aggregator
+      - RUST_LOG=info
     volumes:
       - "manager-config:/var/lib/chroma"
   corosync:
@@ -143,8 +144,9 @@ services:
       dockerfile: ./docker/iml-agent-comms.dockerfile
     deploy: *default-deploy
     environment:
-      - "HTTP_AGENT2_PORT=8003"
-      - "PROXY_HOST=iml-agent-comms"
+      - HTTP_AGENT2_PORT=8003
+      - PROXY_HOST=iml-agent-comms
+      - RUST_LOG=info
   job-scheduler:
     image: "imlteam/manager-job-scheduler"
     hostname: "job-scheduler"
@@ -173,7 +175,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - "DEVICE_AGGREGATOR_URL=http://device-aggregator:8008"
+      - DEVICE_AGGREGATOR_URL=http://device-aggregator:8008
   power-control:
     image: "imlteam/manager-power-control"
     hostname: "power-control"
@@ -212,6 +214,7 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - PROXY_HOST=iml-warp-drive
+      - RUST_LOG=info
   iml-action-runner:
     image: "imlteam/iml-action-runner"
     hostname: "iml-action-runner"
@@ -222,7 +225,9 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - "PROXY_HOST=iml-action-runner"
+      - PROXY_HOST=iml-action-runner
+      - ACTION_RUNNER_PORT=8009
+      - RUST_LOG=info
   iml-stratagem:
     image: "imlteam/iml-stratagem"
     hostname: "iml-stratagem"
@@ -233,7 +238,20 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - "PROXY_HOST=iml-stratagem"
+      - PROXY_HOST=iml-stratagem
+      - RUST_LOG=info
+  iml-manager-cli:
+    image: "imlteam/iml-manager-cli"
+    hostname: "imlteam/iml-manager-cli"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-manager-cli.dockerfile
+    deploy: *default-deploy
+    volumes:
+      - "manager-config:/var/lib/chroma"
+    environment:
+      - RUST_LOG=info
+      - SERVER_HTTP_URL=gunicorn
   setup:
     image: "imlteam/manager-setup"
     command: ["tail", "-f", "/dev/null"]

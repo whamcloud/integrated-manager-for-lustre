@@ -77,9 +77,10 @@ pub mod tokio_utils {
     /// `AsyncRead` + `AsyncWrite` traits. This is useful when you won't know which stream
     /// to choose at runtime
     pub async fn get_tcp_stream(
-        port: String,
+        port: &str,
     ) -> Result<impl Stream<Item = Result<Pin<Box<dyn Socket>>, io::Error>>, io::Error> {
-        let addr = format!("127.0.0.1:{}", port);
+        let host = env::var("PROXY_HOST").or::<String>(Ok("127.0.0.1".into())).expect("Couldn't parse host.");
+        let addr = format!("{}:{}", host, port);
 
         tracing::debug!("Listening over tcp port {}", port);
 
@@ -118,7 +119,7 @@ pub mod tokio_utils {
         port_var: &str,
     ) -> Result<impl Stream<Item = Result<Pin<Box<dyn Socket>>, io::Error>>, io::Error> {
         let s = match env::var(port_var) {
-            Ok(port) => Either::Left(get_tcp_stream(port).await?),
+            Ok(port) => Either::Left(get_tcp_stream(&port).await?),
             Err(_) => Either::Right(get_unix_stream()?),
         };
 
