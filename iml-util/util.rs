@@ -79,7 +79,9 @@ pub mod tokio_utils {
     pub async fn get_tcp_stream(
         port: &str,
     ) -> Result<impl Stream<Item = Result<Pin<Box<dyn Socket>>, io::Error>>, io::Error> {
-        let host = env::var("PROXY_HOST").or_else::<String, _>(|_| Ok("127.0.0.1".into())).expect("Couldn't parse host.");
+        let host = env::var("PROXY_HOST")
+            .or_else::<String, _>(|_| Ok("127.0.0.1".into()))
+            .expect("Couldn't parse host.");
         let addr = format!("{}:{}", host, port);
 
         tracing::debug!("Listening over tcp port {}", port);
