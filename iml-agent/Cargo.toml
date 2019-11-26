@@ -41,6 +41,11 @@ iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
 liblustreapi = { path = "../liblustreapi", version = "0.1" }
 iml-fs = { path = "../iml-fs", version = "0.1.0" }
 
+[dependencies.regex]
+version = "1.3"
+default-features = false
+features = ["std"]
+
 [dev-dependencies]
 mockito = "0.21.0"
 pretty_assertions = "0.6.1"

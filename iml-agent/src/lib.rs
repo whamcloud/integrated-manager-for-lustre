@@ -13,5 +13,6 @@ pub mod fidlist;
 pub mod http_comms;
 pub mod poller;
 pub mod reader;
+pub mod rpm;
 pub mod server_properties;
 pub mod systemd;
