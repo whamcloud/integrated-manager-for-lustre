@@ -233,7 +233,7 @@ services:
     hostname: "iml-stratagem"
     build:
       context: ../
-      dockerfile: ./docker/iml-action-runner.dockerfile
+      dockerfile: ./docker/iml-stratagem.dockerfile
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
