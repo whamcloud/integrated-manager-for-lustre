@@ -90,7 +90,7 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
     );
 
     map.insert(
-        "action_check_stratagem".into(),
+        "package_installed".into(),
         mk_callback(package_installed::package_installed),
     );
 
