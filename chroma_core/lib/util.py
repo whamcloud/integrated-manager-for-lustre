@@ -242,9 +242,9 @@ def start_action_with_tcp_or_socket(host, command, args, request_id):
 
     if runningInDocker():
         return requests.post("http://{}:{}".format(settings.PROXY_HOST, settings.ACTION_RUNNER_PORT), json=post_data)
-    else:
-        SOCKET_PATH = "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/"
-        return requests_unixsocket.post(SOCKET_PATH, json=post_data)
+
+    SOCKET_PATH = "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/"
+    return requests_unixsocket.post(SOCKET_PATH, json=post_data)
 
 
 def cancel_action_with_tcp_or_socket(host, request_id):
@@ -252,9 +252,9 @@ def cancel_action_with_tcp_or_socket(host, request_id):
 
     if runningInDocker():
         return requests.post("http://{}:{}".format(settings.PROXY_HOST, settings.ACTION_RUNNER_PORT), json=post_data)
-    else:
-        SOCKET_PATH = "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/"
-        return requests_unixsocket.post(SOCKET_PATH, json=post_data)
+
+    SOCKET_PATH = "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/"
+    return requests_unixsocket.post(SOCKET_PATH, json=post_data)
 
 
 class RustAgentCancellation(Exception):
