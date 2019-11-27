@@ -9,4 +9,4 @@ pub mod check_stonith;
 pub mod ostpool;
 pub mod package_installed;
 pub mod stratagem;
-pub use action_plugin::{create_registry, Actions};
+pub use action_plugin::create_registry;

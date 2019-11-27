@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    action_plugins::{create_registry, Actions},
+    action_plugins::create_registry,
     agent_error::{ImlAgentError, RequiredError, Result},
     daemon_plugins::DaemonPlugin,
 };
@@ -12,6 +12,7 @@ use futures::{
     future::{self, Either},
     Future, FutureExt,
 };
+use iml_util::action_plugins::Actions;
 use iml_wire_types::{Action, ActionId, ActionResult, AgentResult, ToJsonValue};
 use parking_lot::Mutex;
 use std::{collections::HashMap, pin::Pin, sync::Arc};
