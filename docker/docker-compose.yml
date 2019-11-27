@@ -156,6 +156,8 @@ services:
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
+    environment:
+      - PROXY_HOST=iml-action-runner
   lustre-audit:
     image: "imlteam/manager-lustre-audit"
     hostname: "lustre-audit"
@@ -227,7 +229,7 @@ services:
     environment:
       - PROXY_HOST=iml-action-runner
       - ACTION_RUNNER_PORT=8009
-      - RUST_LOG=info
+      - RUST_LOG=debug
   iml-stratagem:
     image: "imlteam/iml-stratagem"
     hostname: "iml-stratagem"

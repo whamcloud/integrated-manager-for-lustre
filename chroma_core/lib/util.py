@@ -15,6 +15,8 @@ import requests
 from threading import Thread
 from threading import Event
 
+from chroma_core.services.log import log_register
+
 
 # We use an integer for time and record microseconds.
 SECONDSTOMICROSECONDS = 1000000
@@ -236,20 +238,20 @@ def runningInDocker():
 
 
 def start_action_with_tcp_or_socket(host, command, args, request_id):
-    post_data = (host, {"type": "ACTION_START", "action": command, "args": args, "id": str(request_id)})
+    post_data = [host, {"type": "ACTION_START", "action": command, "args": args, "id": str(request_id)}]
 
     if runningInDocker():
-        return requests.post("http://{}".format(settings.PROXY_HOST), post_data)
+        return requests.post("http://{}:{}".format(settings.PROXY_HOST, settings.ACTION_RUNNER_PORT), json=post_data)
     else:
         SOCKET_PATH = "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/"
         return requests_unixsocket.post(SOCKET_PATH, json=post_data)
 
 
 def cancel_action_with_tcp_or_socket(host, request_id):
-    post_data = (host, {"type": "ACTION_CANCEL", "id": str(request_id)})
+    post_data = [host, {"type": "ACTION_CANCEL", "id": str(request_id)}]
 
     if runningInDocker():
-        return requests.post("http://{}".format(settings.PROXY_HOST), post_data)
+        return requests.post("http://{}:{}".format(settings.PROXY_HOST, settings.ACTION_RUNNER_PORT), json=post_data)
     else:
         SOCKET_PATH = "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/"
         return requests_unixsocket.post(SOCKET_PATH, json=post_data)
@@ -335,7 +337,7 @@ def invoke_rust_agent(host, command, args={}, cancel_event=Event()):
     # check cancel_event
     while True:
         if cancel_event.is_set():
-            cancel_action_with_tcp_or_socket(host, request_id).content
+            cancel_action_with_tcp_or_socket(host, request_id)
             raise RustAgentCancellation()
         else:
             trigger.wait(timeout=1.0)

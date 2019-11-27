@@ -70,6 +70,8 @@ DEVICE_AGGREGATOR_PROXY_PASS = os.getenv(
     "DEVICE_AGGREGATOR_URL", "http://{}:{}".format(PROXY_HOST, DEVICE_AGGREGATOR_PORT)
 )
 
+ACTION_RUNNER_PORT = 8009
+
 UPDATE_HANDLER_PROXY_PASS = "http://unix:/var/run/iml-update-handler.sock"
 
 ALLOWED_HOSTS = ["*"]
