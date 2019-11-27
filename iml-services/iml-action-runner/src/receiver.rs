@@ -2,7 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::data::{create_data_message, remove_action_in_flight, SessionToRpcs, Sessions, Shared};
+use crate::{
+    data::{create_data_message, remove_action_in_flight, SessionToRpcs},
+    Sessions, Shared,
+};
 use iml_rabbit::{send_message, Client};
 use iml_wire_types::{ActionResult, Fqdn, PluginMessage};
 

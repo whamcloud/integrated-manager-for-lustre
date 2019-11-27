@@ -4,9 +4,11 @@
 
 use futures::{lock::Mutex, prelude::*};
 use iml_action_runner::{
-    data::{SessionToRpcs, Sessions, Shared},
+    data::SessionToRpcs,
+    local_actions::SharedLocalActionsInFlight,
     receiver::handle_agent_data,
     sender::{create_client_filter, sender},
+    Sessions, Shared,
 };
 use iml_service_queue::service_queue::consume_service_queue;
 use iml_util::tokio_utils::get_tcp_or_unix_listener;
@@ -28,6 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let sessions: Shared<Sessions> = Arc::new(Mutex::new(HashMap::new()));
     let rpcs: Shared<SessionToRpcs> = Arc::new(Mutex::new(HashMap::new()));
+    let local_actions: SharedLocalActionsInFlight = Arc::new(Mutex::new(HashMap::new()));
 
     let log = warp::log("iml_action_runner::sender");
 
@@ -39,6 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         AGENT_TX_RUST,
         Arc::clone(&sessions),
         Arc::clone(&rpcs),
+        Arc::clone(&local_actions),
         client_filter,
     )
     .map(|x| warp::reply::json(&x))

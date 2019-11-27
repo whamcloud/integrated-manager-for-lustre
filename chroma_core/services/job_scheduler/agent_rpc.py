@@ -377,6 +377,25 @@ class AgentCancellation(Exception):
     pass
 
 
+class LocalActionException(Exception):
+    def __init__(self, action, params, backtrace, subprocesses=[]):
+        self.action = action
+        self.params = params
+        self.backtrace = backtrace
+        self.subprocesses = subprocesses
+
+    def __str__(self):
+        return """LocalActionException
+Action: %s
+Arguments: %s
+Exception: %s
+""" % (
+            self.action,
+            self.params,
+            self.backtrace,
+        )
+
+
 class AgentException(Exception):
     def __init__(self, fqdn, action, params, backtrace, subprocesses=[]):
         self.fqdn = fqdn
