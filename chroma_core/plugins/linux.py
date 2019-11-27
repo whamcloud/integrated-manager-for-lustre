@@ -203,10 +203,14 @@ class Linux(Plugin):
         log.debug("Linux.teardown")
 
     def agent_session_continue(self, host_id, data):
+        log.debug("session continue called for {}".format(host_id))
         # The agent plugin sends us another full report when it thinks something has changed
         self.agent_session_start(host_id, data, initial_scan=False)
 
     def agent_session_start(self, host_id, data, initial_scan=True):
+        if initial_scan:
+            log.debug("session start called for {}".format(host_id))
+
         with transaction.atomic():
             initiate_device_poll = False
             reported_device_node_paths = []
@@ -227,6 +231,8 @@ class Linux(Plugin):
                     devices = get_devices(fqdn, 30.0)
                 else:
                     return None
+
+            log.debug("devices for {}: {}".format(fqdn, devices))
 
             for expected_item in ["vgs", "lvs", "zfspools", "zfsdatasets", "devs", "local_fs", "mds", "mpath"]:
                 if expected_item not in devices.keys():
