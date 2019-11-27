@@ -77,7 +77,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - IML_CA_PATH=/var/lib/chroma/authority.crt
+      - "IML_CA_PATH=/var/lib/chroma/authority.crt"
   realtime:
     image: "imlteam/realtime"
     hostname: "realtime"
@@ -229,7 +229,7 @@ services:
     environment:
       - PROXY_HOST=iml-action-runner
       - ACTION_RUNNER_PORT=8009
-      - RUST_LOG=debug
+      - RUST_LOG=info
   iml-stratagem:
     image: "imlteam/iml-stratagem"
     hostname: "iml-stratagem"
@@ -252,7 +252,6 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - RUST_LOG=info
       - SERVER_HTTP_URL=gunicorn
   setup:
     image: "imlteam/manager-setup"

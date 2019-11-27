@@ -15,8 +15,6 @@ import requests
 from threading import Thread
 from threading import Event
 
-from chroma_core.services.log import log_register
-
 
 # We use an integer for time and record microseconds.
 SECONDSTOMICROSECONDS = 1000000
@@ -337,7 +335,7 @@ def invoke_rust_agent(host, command, args={}, cancel_event=Event()):
     # check cancel_event
     while True:
         if cancel_event.is_set():
-            cancel_action_with_tcp_or_socket(host, request_id)
+            cancel_action_with_tcp_or_socket(host, request_id).content
             raise RustAgentCancellation()
         else:
             trigger.wait(timeout=1.0)

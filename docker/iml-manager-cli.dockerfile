@@ -3,7 +3,7 @@ WORKDIR /build
 COPY . .
 RUN cd iml-manager-cli && cargo build --release
 
-FROM rust:1.39
+FROM alpine
 COPY --from=builder /build/target/release/iml /usr/local/bin
 
 COPY docker/wait-for-dependencies.sh /usr/local/bin/

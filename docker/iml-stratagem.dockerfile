@@ -3,7 +3,7 @@ WORKDIR /build
 COPY . .
 RUN cd iml-services/iml-stratagem && cargo build --release
 
-FROM rust:1.39
+FROM alpine
 COPY --from=builder /build/target/release/iml-stratagem /usr/local/bin
 
 COPY docker/wait-for-dependencies.sh /usr/local/bin/
