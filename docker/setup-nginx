@@ -29,11 +29,6 @@ with open(conf_template, "r") as f:
         config,
     )
     config = re.sub(
-        r"# /agent2/message proxy_pass\n.*set \$proxy_upstream (.+);\n.*proxy_pass.*",
-        r"set $proxy_upstream \g<1>;\n        proxy_pass $proxy_upstream/message/$is_args$query_string;",
-        config,
-    )
-    config = re.sub(
         r"proxy_read_timeout (.+);",
         r"proxy_read_timeout \g<1>;\n    resolver 127.0.0.11 ipv6=off valid=5s;\n    resolver_timeout 5s;",
         config,
@@ -48,6 +43,12 @@ with open(conf_template, "r") as f:
         config = config.replace("{{%s}}" % k, v)
 
     config = re.sub(r"{{(.+)}}", r"{{ .Env.\g<1> }}", config)
+
+    config = re.sub(
+        r".+set \$proxy_upstream http://iml-agent-comms:(\d+);\n.+proxy_pass \$proxy_upstream\$uri\$is_args\$query_string;",
+        r"        set $proxy_upstream http://iml-agent-comms:\g<1>;\n        proxy_pass $proxy_upstream/message/$is_args$query_string;",
+        config,
+    )
 
     with open("iml.template", "w") as f2:
         f2.write(config)
