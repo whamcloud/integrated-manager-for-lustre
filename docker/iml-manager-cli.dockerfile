@@ -3,8 +3,8 @@ WORKDIR /build
 COPY . .
 RUN cd iml-manager-cli && cargo build --release
 
-FROM alpine
+FROM ubuntu
 COPY --from=builder /build/target/release/iml /usr/local/bin
 
 COPY docker/wait-for-dependencies.sh /usr/local/bin/
-ENTRYPOINT [ "/usr/local/bin/wait-for-dependencies.sh" ]
+ENTRYPOINT [ "wait-for-dependencies.sh" ]
