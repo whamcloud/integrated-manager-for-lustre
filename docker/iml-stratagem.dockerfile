@@ -7,5 +7,5 @@ FROM alpine
 COPY --from=builder /build/target/release/iml-stratagem /usr/local/bin
 
 COPY docker/wait-for-dependencies.sh /usr/local/bin/
-ENTRYPOINT [ "wait-for-dependencies.sh" ]
-CMD ["iml-stratagem"]
+ENTRYPOINT [ "/usr/local/bin/wait-for-dependencies.sh" ]
+CMD ["/usr/local/bin/iml-stratagem"]
