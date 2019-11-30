@@ -36,6 +36,7 @@ impl<T> ::std::clone::Clone for __IncompleteArrayField<T> {
         Self::new()
     }
 }
+pub const LUSTRE_MAXFSNAME: u32 = 8;
 pub const OBD_MAX_FIDS_IN_ARRAY: u32 = 4096;
 pub type __u16 = ::std::os::raw::c_ushort;
 pub type __u32 = ::std::os::raw::c_uint;
@@ -123,7 +124,7 @@ fn bindgen_test_layout_lu_fid() {
     );
 }
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 pub struct ost_id {
     pub __bindgen_anon_1: ost_id__bindgen_ty_1,
 }
@@ -187,13 +188,8 @@ fn bindgen_test_layout_ost_id() {
         concat!("Alignment of ", stringify!(ost_id))
     );
 }
-impl Default for ost_id {
-    fn default() -> Self {
-        unsafe { ::std::mem::zeroed() }
-    }
-}
 #[repr(C, packed)]
-#[derive(Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 pub struct lov_user_ost_data_v1 {
     pub l_ost_oi: ost_id,
     pub l_ost_gen: __u32,
@@ -212,12 +208,8 @@ fn bindgen_test_layout_lov_user_ost_data_v1() {
         concat!("Alignment of ", stringify!(lov_user_ost_data_v1))
     );
 }
-impl Default for lov_user_ost_data_v1 {
-    fn default() -> Self {
-        unsafe { ::std::mem::zeroed() }
-    }
-}
 #[repr(C, packed)]
+#[derive(Default)]
 pub struct lov_user_md_v1 {
     pub lmm_magic: __u32,
     pub lmm_pattern: __u32,
@@ -265,11 +257,6 @@ fn bindgen_test_layout_lov_user_md_v1() {
         concat!("Alignment of ", stringify!(lov_user_md_v1))
     );
 }
-impl Default for lov_user_md_v1 {
-    fn default() -> Self {
-        unsafe { ::std::mem::zeroed() }
-    }
-}
 #[repr(C, packed)]
 pub struct lov_user_mds_data_v1 {
     pub lmd_st: lstat_t,
@@ -288,13 +275,8 @@ fn bindgen_test_layout_lov_user_mds_data_v1() {
         concat!("Alignment of ", stringify!(lov_user_mds_data_v1))
     );
 }
-impl Default for lov_user_mds_data_v1 {
-    fn default() -> Self {
-        unsafe { ::std::mem::zeroed() }
-    }
-}
 #[repr(C)]
-#[derive(Debug, Default)]
+#[derive(Default, Clone)]
 pub struct fid_array {
     pub fa_nr: __u32,
     pub fa_padding0: __u32,

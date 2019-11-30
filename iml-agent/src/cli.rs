@@ -6,7 +6,10 @@ use iml_agent::action_plugins::stratagem::{
     action_purge, action_warning,
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
-use iml_agent::action_plugins::{check_ha, check_stonith};
+use iml_agent::action_plugins::{
+    check_ha, check_kernel, check_stonith, ostpool, package_installed,
+};
+use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
 use spinners::{Spinner, Spinners};
 use std::{
@@ -32,6 +35,53 @@ pub enum StratagemCommand {
         /// The purge duration
         #[structopt(short = "p", long = "purge", parse(try_from_str = "parse_duration"))]
         pd: Option<u64>,
+    },
+}
+
+#[derive(Debug, StructOpt)]
+pub struct FsPool {
+    #[structopt(name = "FILESYSTEM", parse(try_from_str = "is_valid_fsname"))]
+    filesystem: String,
+
+    #[structopt(name = "POOL")]
+    pool: String,
+}
+
+#[derive(Debug, StructOpt)]
+pub struct FsPoolOst {
+    #[structopt(flatten)]
+    fspool: FsPool,
+
+    #[structopt(name = "OST")]
+    ost: String,
+}
+
+#[derive(Debug, StructOpt)]
+pub enum PoolCommand {
+    #[structopt(name = "create")]
+    Create {
+        #[structopt(flatten)]
+        cmd: FsPool,
+    },
+    #[structopt(name = "destroy")]
+    Destroy {
+        #[structopt(flatten)]
+        cmd: FsPool,
+    },
+    #[structopt(name = "add")]
+    Add {
+        #[structopt(flatten)]
+        cmd: FsPoolOst,
+    },
+    #[structopt(name = "remove")]
+    Remove {
+        #[structopt(flatten)]
+        cmd: FsPoolOst,
+    },
+    #[structopt(name = "list")]
+    List {
+        #[structopt(name = "FILESYSTEM", parse(try_from_str = "is_valid_fsname"))]
+        filesystem: String,
     },
 }
 
@@ -65,13 +115,37 @@ fn parse_duration(src: &str) -> Result<u64, io::Error> {
     }
 }
 
+/// Use with structop parse to validate lustre filesystem name
+fn is_valid_fsname(src: &str) -> Result<String, io::Error> {
+    // c.f. lustre-release/lustre/utils/mkfs_lustre.c::parse_opts for
+    // 'L' (fsname) option
+    if src.len() < 1 {
+        return Err(invalid_input_err("FSName too short (min length 1)"));
+    }
+    if src.len() > llapi::MAXFSNAME {
+        return Err(invalid_input_err(&format!(
+            "FSName too long (max length {})",
+            llapi::MAXFSNAME
+        )));
+    }
+    for c in src.chars() {
+        if !c.is_ascii_alphanumeric() && c != '-' && c != '_' {
+            return Err(invalid_input_err(&format!(
+                "Invalid character in fsname ({})",
+                c
+            )));
+        }
+    }
+    Ok(src.to_string())
+}
+
 #[derive(Debug, StructOpt)]
 pub struct FidInput {
     #[structopt(short = "i")]
     /// File to read from, "-" for stdin, or unspecified for on cli
     input: Option<String>,
 
-    #[structopt(name = "FSNAME")]
+    #[structopt(name = "FSNAME", parse(try_from_str = "is_valid_fsname"))]
     /// Lustre filesystem name, or mountpoint
     fsname: String,
 
@@ -119,11 +193,24 @@ pub enum App {
         command: StratagemClientCommand,
     },
 
+    #[structopt(name = "pool")]
+    Pool {
+        #[structopt(subcommand)]
+        command: PoolCommand,
+    },
+
     #[structopt(name = "check_ha")]
     CheckHA,
 
     #[structopt(name = "check_stonith")]
     CheckStonith,
+
+    #[structopt(name = "package_installed")]
+    PackageInstalled { package: String },
+
+    #[structopt(name = "get_kernel")]
+    /// Get latest kernel which supports listed modules
+    GetKernel { modules: Vec<String> },
 }
 
 fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<dyn Iterator<Item = String>> {
@@ -328,6 +415,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             Err(e) => println!("{:?}", e),
         },
+        App::PackageInstalled { package } => {
+            match package_installed::package_installed(package).await {
+                Ok(cs) => {
+                    println!("{}", if cs { "Installed" } else { "Not Installed" });
+                }
+                Err(e) => println!("{:?}", e),
+            }
+        }
+        App::GetKernel { modules } => match check_kernel::get_kernel(modules).await {
+            Ok(s) => println!("{}", s),
+            Err(e) => println!("{:?}", e),
+        },
+        App::Pool { command } => {
+            if let Err(e) = match command {
+                PoolCommand::Create { cmd } => ostpool::pool_create(cmd.filesystem, cmd.pool).await,
+                PoolCommand::Destroy { cmd } => {
+                    ostpool::pool_destroy(cmd.filesystem, cmd.pool).await
+                }
+                PoolCommand::Add { cmd } => {
+                    ostpool::pool_add(cmd.fspool.filesystem, cmd.fspool.pool, cmd.ost).await
+                }
+                PoolCommand::Remove { cmd } => {
+                    ostpool::pool_remove(cmd.fspool.filesystem, cmd.fspool.pool, cmd.ost).await
+                }
+                PoolCommand::List { filesystem } => ostpool::pools(filesystem).await.map(|list| {
+                    for pool in list {
+                        println!("{}", pool)
+                    }
+                }),
+            } {
+                println!("{:?}", e);
+                exit(exitcode::SOFTWARE);
+            }
+        }
     };
 
     Ok(())

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{cache::Cache, locks::Locks, Message};
+use crate::locks::Locks;
 use futures::{
     channel::{mpsc, oneshot},
     future::poll_fn,
     lock::Mutex,
     Stream, StreamExt,
 };
+use iml_wire_types::warp_drive::{Cache, Message};
 use std::{
     collections::HashMap,
     sync::{

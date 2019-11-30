@@ -4,6 +4,10 @@
 
 pub mod action_plugin;
 pub mod check_ha;
+pub mod check_kernel;
 pub mod check_stonith;
+pub mod ntp;
+pub mod ostpool;
+pub mod package_installed;
 pub mod stratagem;
-pub use action_plugin::{create_registry, Actions};
+pub use action_plugin::create_registry;

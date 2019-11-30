@@ -4,7 +4,7 @@
 
 use crate::{display_utils, error::ImlManagerCliError};
 use futures::{future, TryFutureExt};
-use iml_wire_types::{ApiList, Command, EndpointName, FlatQuery, Host};
+use iml_wire_types::{ApiList, AvailableAction, Command, EndpointName, FlatQuery, Host};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use regex::Regex;
 use std::{
@@ -36,7 +36,9 @@ pub struct SendCmd<T> {
 pub async fn create_command<T: serde::Serialize>(
     cmd_body: SendCmd<T>,
 ) -> Result<Command, ImlManagerCliError> {
-    let resp = post(Command::endpoint_name(), cmd_body).await?;
+    let resp = post(Command::endpoint_name(), cmd_body)
+        .await?
+        .error_for_status()?;
 
     let cmd = resp.json().await?;
 
@@ -131,6 +133,23 @@ pub async fn wait_for_cmds(cmds: Vec<Command>) -> Result<Vec<Command>, ImlManage
     Ok(cmds)
 }
 
+pub async fn get_available_actions(
+    id: u32,
+    content_type_id: u32,
+) -> Result<ApiList<AvailableAction>, ImlManagerCliError> {
+    get(
+        AvailableAction::endpoint_name(),
+        vec![
+            (
+                "composite_ids",
+                format!("{}:{}", content_type_id, id).as_ref(),
+            ),
+            ("limit", "0"),
+        ],
+    )
+    .await
+}
+
 /// Given an `ApiList`, this fn returns the first item or errors.
 pub fn first<T: EndpointName>(x: ApiList<T>) -> Result<T, ImlManagerCliError> {
     x.objects
@@ -194,10 +213,12 @@ pub async fn get_all<T: EndpointName + FlatQuery + Debug + serde::de::Deserializ
     get(T::endpoint_name(), T::query()).await
 }
 
-pub async fn get_one<T: EndpointName + Debug + serde::de::DeserializeOwned>(
-    query: impl serde::Serialize,
+pub async fn get_one<T: EndpointName + FlatQuery + Debug + serde::de::DeserializeOwned>(
+    query: Vec<(&str, &str)>,
 ) -> Result<T, ImlManagerCliError> {
-    first(get(T::endpoint_name(), query).await?)
+    let mut q = T::query();
+    q.extend(query);
+    first(get(T::endpoint_name(), q).await?)
 }
 
 pub fn extract_api_id(s: &str) -> Option<&str> {

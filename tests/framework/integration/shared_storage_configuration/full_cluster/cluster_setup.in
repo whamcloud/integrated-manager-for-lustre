@@ -18,6 +18,13 @@ yum clean all
 # Do upgrade because vagrant doesn't have el7.7 IML#1277
 $PROXY yum upgrade -y --exclude=python2-iml*
 
+#Set IML agents to debug-mode
+mkdir -p /etc/systemd/system/rust-iml-agent.service.d/
+cat << \"EOF\" >> /etc/systemd/system/rust-iml-agent.service.d/override.conf
+[Service]
+Environment=RUST_LOG=debug
+EOF
+
 $PROXY yum install -y omping
 if $MEASURE_COVERAGE && [ -f /etc/yum.repos.d/autotest.repo ]; then
     cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo
@@ -25,9 +32,6 @@ retries=50
 timeout=180
 EOF
     $PROXY yum install -y python-setuptools python2-coverage
-fi
-if [ -f /etc/yum.repos.d/autotest.repo ]; then
-    rm -f /etc/yum.repos.d/autotest.repo
 fi" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1

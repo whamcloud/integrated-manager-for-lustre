@@ -152,6 +152,8 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
         StratagemCommand::Scan(data) => {
             let r = post("run_stratagem", data).await?;
 
+            tracing::debug!("resp {:?}", r);
+
             let CmdWrapper { command } = handle_cmd_resp(r).await?;
 
             let stop_spinner = start_spinner(&command.message);

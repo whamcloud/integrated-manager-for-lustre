@@ -13,7 +13,7 @@ class TestInvokeRustAgent(unittest.TestCase):
 
         post.assert_called_once_with(
             "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/",
-            json=("mds1.local", {"action": "ls", "args": {}, "type": "ACTION_START", "id": "1-2-3-4"}),
+            json={"REMOTE": ("mds1.local", {"action": "ls", "args": {}, "type": "ACTION_START", "id": "1-2-3-4"})},
         )
 
     def test_get_data(self, post, _):

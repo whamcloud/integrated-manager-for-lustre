@@ -4,7 +4,24 @@
 
 use futures::channel::oneshot;
 use iml_wire_types::Fqdn;
+use std::fmt;
 use tokio::timer;
+use warp::reject;
+
+#[derive(Debug)]
+pub struct RequiredError(pub String);
+
+impl fmt::Display for RequiredError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self.0)
+    }
+}
+
+impl std::error::Error for RequiredError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+}
 
 /// Encapsulates any errors that may happen while working with the `ActionRunner` service
 #[derive(Debug)]
@@ -13,7 +30,10 @@ pub enum ActionRunnerError {
     TokioTimerError(timer::Error),
     ImlRabbitError(iml_rabbit::ImlRabbitError),
     OneShotCanceledError(oneshot::Canceled),
+    RequiredError(RequiredError),
 }
+
+impl reject::Reject for ActionRunnerError {}
 
 impl std::fmt::Display for ActionRunnerError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -24,6 +44,7 @@ impl std::fmt::Display for ActionRunnerError {
             ActionRunnerError::TokioTimerError(ref err) => write!(f, "{}", err),
             ActionRunnerError::ImlRabbitError(ref err) => write!(f, "{}", err),
             ActionRunnerError::OneShotCanceledError(ref err) => write!(f, "{}", err),
+            ActionRunnerError::RequiredError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -35,6 +56,7 @@ impl std::error::Error for ActionRunnerError {
             ActionRunnerError::TokioTimerError(ref err) => Some(err),
             ActionRunnerError::ImlRabbitError(ref err) => Some(err),
             ActionRunnerError::OneShotCanceledError(ref err) => Some(err),
+            ActionRunnerError::RequiredError(ref err) => Some(err),
         }
     }
 }
@@ -54,5 +76,11 @@ impl From<iml_rabbit::ImlRabbitError> for ActionRunnerError {
 impl From<oneshot::Canceled> for ActionRunnerError {
     fn from(err: oneshot::Canceled) -> Self {
         ActionRunnerError::OneShotCanceledError(err)
+    }
+}
+
+impl From<RequiredError> for ActionRunnerError {
+    fn from(err: RequiredError) -> Self {
+        ActionRunnerError::RequiredError(err)
     }
 }

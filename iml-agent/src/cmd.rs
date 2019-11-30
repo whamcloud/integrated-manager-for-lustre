@@ -44,3 +44,8 @@ where
         Err(ImlAgentError::CmdOutputError(x))
     }
 }
+
+/// Runs lctl with given arguments
+pub async fn lctl(args: Vec<&str>) -> Result<std::process::Output, ImlAgentError> {
+    cmd_output_success("/usr/sbin/lctl", args).await
+}

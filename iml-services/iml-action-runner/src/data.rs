@@ -2,18 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::error::ActionRunnerError;
-use futures::{channel::oneshot, lock::Mutex};
+use crate::{error::ActionRunnerError, Sender, Sessions, Shared};
 use iml_wire_types::{Action, ActionId, Fqdn, Id, ManagerMessage, PluginName};
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio_timer::{clock, delay};
 
-pub type Shared<T> = Arc<Mutex<T>>;
-pub type Sessions = HashMap<Fqdn, Id>;
 pub type Rpcs = HashMap<ActionId, ActionInFlight>;
 pub type SessionToRpcs = HashMap<Id, Rpcs>;
-
-type Sender = oneshot::Sender<Result<serde_json::Value, String>>;
 
 pub struct ActionInFlight {
     tx: Sender,
@@ -63,6 +58,44 @@ pub async fn await_session(
 
         delay(when).await;
     }
+}
+
+///  Tries to get the current session for a `Fqdn`.
+pub(crate) async fn get_session(
+    fqdn: Fqdn,
+    sessions: Shared<Sessions>,
+) -> Result<Option<Id>, ActionRunnerError> {
+    let lock = { sessions.lock().await };
+    let session = lock.get(&fqdn);
+
+    Ok(session.cloned())
+}
+
+/// Waits `wait_secs` for a new session to appear that is different from the one provided.
+///
+/// If a new session does not appear within `wait_secs` an Error is raised.
+pub(crate) async fn await_next_session(
+    fqdn: Fqdn,
+    last_session: Id,
+    wait_secs: u32,
+    sessions: Shared<Sessions>,
+) -> Result<Id, ActionRunnerError> {
+    for _ in 0..wait_secs {
+        let session =
+            await_session(fqdn.clone(), Arc::clone(&sessions), Duration::from_secs(30)).await?;
+
+        if last_session != session {
+            return Ok(session);
+        }
+
+        let when = clock::now() + Duration::from_secs(1);
+
+        delay(when).await;
+    }
+
+    tracing::warn!("No new session after {} seconds", wait_secs);
+
+    Err(ActionRunnerError::AwaitSession(fqdn.clone()))
 }
 
 pub fn insert_action_in_flight(

@@ -3,6 +3,7 @@ members = [
     'iml-wire-types',
     'iml-agent-comms',
     'iml-rabbit',
+    'iml-request-retry',
     'iml-manager-env',
     'iml-agent',
     'liblustreapi-types',
@@ -19,4 +20,8 @@ members = [
     'iml-services/iml-action-runner',
     'iml-services/iml-stratagem',
     'number-formatter',
+]
+
+exclude = [
+    'iml-gui/crate'
 ]

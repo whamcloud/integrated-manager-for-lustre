@@ -4,12 +4,11 @@
 
 use futures::{channel::oneshot, lock::Mutex, StreamExt, TryFutureExt, TryStreamExt};
 use iml_action_runner::{
-    data::{
-        has_action_in_flight, remove_action_in_flight, ActionInFlight, SessionToRpcs, Sessions,
-        Shared,
-    },
+    data::{has_action_in_flight, remove_action_in_flight, ActionInFlight, SessionToRpcs},
     error::ActionRunnerError,
+    local_actions::SharedLocalActionsInFlight,
     sender::sender,
+    ActionType, Sessions, Shared,
 };
 use iml_agent_comms::messaging::consume_agent_tx_queue;
 use iml_rabbit::ConnectionProperties;
@@ -31,27 +30,33 @@ async fn create_test_connection() -> Result<iml_rabbit::Client, iml_rabbit::ImlR
     iml_rabbit::connect("amqp://127.0.0.1:5672//", ConnectionProperties::default()).await
 }
 
-fn create_shared_state() -> (Shared<Sessions>, Shared<SessionToRpcs>) {
+fn create_shared_state() -> (
+    Shared<Sessions>,
+    Shared<SessionToRpcs>,
+    SharedLocalActionsInFlight,
+) {
     let sessions: Shared<Sessions> = Arc::new(Mutex::new(HashMap::new()));
     let session_to_rpcs: Shared<SessionToRpcs> = Arc::new(Mutex::new(HashMap::new()));
+    let local_actions: SharedLocalActionsInFlight = Arc::new(Mutex::new(HashMap::new()));
 
-    (sessions, session_to_rpcs)
+    (sessions, session_to_rpcs, local_actions)
 }
 
 fn create_client_filter(
 ) -> impl Filter<Extract = (iml_rabbit::Client,), Error = warp::Rejection> + Clone {
-    warp::any().and_then(|| create_test_connection().map_err(warp::reject::custom))
+    warp::any().and_then(|| create_test_connection().map_err(|_| warp::reject::not_found()))
 }
 
 #[tokio::test]
 async fn test_sender_only_accepts_post() -> Result<(), Box<dyn std::error::Error>> {
-    let (sessions, session_to_rpcs) = create_shared_state();
+    let (sessions, session_to_rpcs, local_actions) = create_shared_state();
     let client_filter = create_client_filter();
 
     let filter = sender(
         "foo",
         Arc::clone(&sessions),
         Arc::clone(&session_to_rpcs),
+        Arc::clone(&local_actions),
         client_filter,
     )
     .map(|x| warp::reply::json(&x));
@@ -67,13 +72,14 @@ async fn test_data_sent_to_active_session() -> Result<(), Box<dyn std::error::Er
     let queue_name = create_random_string();
     let queue_name2 = queue_name.clone();
 
-    let (sessions, session_to_rpcs) = create_shared_state();
+    let (sessions, session_to_rpcs, local_actions) = create_shared_state();
     let client_filter = create_client_filter();
 
     let filter = sender(
         queue_name,
         Arc::clone(&sessions),
         Arc::clone(&session_to_rpcs),
+        Arc::clone(&local_actions),
         client_filter,
     )
     .map(|x| warp::reply::json(&x));
@@ -84,11 +90,14 @@ async fn test_data_sent_to_active_session() -> Result<(), Box<dyn std::error::Er
 
     sessions.lock().await.insert(fqdn.clone(), id.clone());
 
-    let action = Action::ActionStart {
-        action: ActionName("erase".to_string()),
-        args: serde_json::Value::Array(vec![]),
-        id: action_id.clone(),
-    };
+    let action = ActionType::Remote((
+        fqdn,
+        Action::ActionStart {
+            action: ActionName("erase".to_string()),
+            args: serde_json::Value::Array(vec![]),
+            id: action_id.clone(),
+        },
+    ));
 
     tokio::spawn(
         async move {
@@ -125,7 +134,7 @@ async fn test_data_sent_to_active_session() -> Result<(), Box<dyn std::error::Er
 
     let res = warp::test::request()
         .method("POST")
-        .json(&(fqdn, action))
+        .json(&action)
         .reply(&filter)
         .await;
 
@@ -146,13 +155,14 @@ async fn test_cancel_sent_to_active_session() -> Result<(), Box<dyn std::error::
     let queue_name = create_random_string();
     let queue_name2 = queue_name.clone();
 
-    let (sessions, session_to_rpcs) = create_shared_state();
+    let (sessions, session_to_rpcs, local_actions) = create_shared_state();
     let client_filter = create_client_filter();
 
     let filter = sender(
         queue_name,
         Arc::clone(&sessions),
         Arc::clone(&session_to_rpcs),
+        Arc::clone(&local_actions),
         client_filter,
     )
     .map(|x| warp::reply::json(&x));
@@ -177,9 +187,12 @@ async fn test_cancel_sent_to_active_session() -> Result<(), Box<dyn std::error::
     rpcs.insert(action_id.clone(), action_in_flight);
     session_to_rpcs.lock().await.insert(id.clone(), rpcs);
 
-    let cancel_action = Action::ActionCancel {
-        id: action_id.clone(),
-    };
+    let cancel_action = ActionType::Remote((
+        fqdn,
+        Action::ActionCancel {
+            id: action_id.clone(),
+        },
+    ));
 
     tokio::spawn(
         async move {
@@ -199,7 +212,7 @@ async fn test_cancel_sent_to_active_session() -> Result<(), Box<dyn std::error::
 
     let res = warp::test::request()
         .method("POST")
-        .json(&(fqdn, cancel_action))
+        .json(&cancel_action)
         .reply(&filter)
         .await;
 

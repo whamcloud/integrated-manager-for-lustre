@@ -23,6 +23,8 @@ const PATH_BYTES: usize = 4096;
 
 const LIBLUSTRE: &str = "liblustreapi.so.1";
 
+pub const MAXFSNAME: usize = types::LUSTRE_MAXFSNAME as usize;
+
 // FID
 
 #[repr(C)]

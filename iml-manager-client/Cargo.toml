@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
-reqwest = { version = "0.10.0-alpha.1", features = ["default-tls", "tls", "json"] }
+reqwest = { version = "0.10.0-alpha.2", features = ["default-tls", "tls", "json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tracing = "0.1"
