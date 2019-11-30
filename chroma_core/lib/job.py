@@ -6,7 +6,7 @@ import json
 import django.db.models
 
 from chroma_core.services import log_register
-from chroma_core.lib.util import invoke_rust_agent, RustAgentCancellation
+from chroma_core.lib.util import invoke_rust_agent, invoke_rust_local_action, RustAgentCancellation
 from iml_common.lib.agent_rpc import agent_result
 
 job_log = log_register("job")
@@ -200,6 +200,34 @@ class Step(object):
         except AgentException as e:
             self._log_subprocesses(e.subprocesses)
             raise
+
+    def invoke_rust_local_action(self, command, args={}):
+        """
+        Talks to the iml-action-runner service
+        """
+
+        return invoke_rust_local_action(command, args, self._cancel_event)
+
+    def invoke_rust_local_action_expect_result(self, command, args={}):
+        from chroma_core.services.job_scheduler.agent_rpc import LocalActionException
+
+        try:
+            result = self.invoke_rust_local_action(command, args)
+        except RustAgentCancellation as e:
+            raise LocalActionException(command, args, "Cancelled: {}".format(e))
+        except Exception as e:
+            raise LocalActionException(command, args, "Unexpected error: {}".format(e))
+
+        try:
+            result = json.loads(result)
+        except ValueError as e:
+            raise LocalActionException(command, args, "Error parsing json: {}".format(e))
+
+        if "Err" in result:
+            self.log(json.dumps(result["Err"], indent=2))
+            raise LocalActionException(command, args, result["Err"])
+
+        return result["Ok"]
 
     def invoke_rust_agent(self, host, command, args={}):
         """

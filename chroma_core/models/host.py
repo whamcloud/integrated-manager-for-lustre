@@ -627,6 +627,11 @@ class AwaitRebootStep(Step):
     def run(self, kwargs):
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
+        old_rust_session_id = self.invoke_rust_local_action_expect_result("get_session", kwargs["host"].fqdn)
+        self.invoke_rust_local_action_expect_result(
+            "await_next_session", (kwargs["host"].fqdn, old_rust_session_id, kwargs["timeout"])
+        )
+
         AgentRpc.await_restart(kwargs["host"].fqdn, kwargs["timeout"])
 
 
@@ -702,11 +707,16 @@ class RebootIfNeededStep(Step):
         host = kwargs["host"]
 
         if host.is_managed and self._reboot_needed(host):
+            old_rust_session_id = self.invoke_rust_local_action_expect_result("get_session", host.fqdn)
+
             self.invoke_agent(host, "reboot_server")
 
             from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
             AgentRpc.await_restart(host.fqdn, kwargs["timeout"])
+            self.invoke_rust_local_action_expect_result(
+                "await_next_session", (host.fqdn, old_rust_session_id, kwargs["timeout"])
+            )
 
 
 class InstallPackagesStep(Step):
@@ -1007,9 +1017,13 @@ class SetHostProfileStep(Step):
 
         # If we have installed any updates at all, then assume it is necessary to restart the agent, as
         # they could be things the agent uses/imports or API changes, specifically to kernel_status() below
+        old_rust_session_id = self.invoke_rust_local_action_expect_result("get_session", host.fqdn)
         old_session_id = AgentRpc.get_session_id(host.fqdn)
         self.invoke_agent(host, "restart_agent")
         AgentRpc.await_restart(host.fqdn, timeout=settings.AGENT_RESTART_TIMEOUT, old_session_id=old_session_id)
+        self.invoke_rust_local_action_expect_result(
+            "await_next_session", (host.fqdn, old_rust_session_id, settings.AGENT_RESTART_TIMEOUT)
+        )
 
     @classmethod
     def describe(cls, kwargs):
@@ -1429,7 +1443,7 @@ class UpdatePackagesStep(RebootIfNeededStep):
     database = True
 
     def run(self, kwargs):
-        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
+        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc, LocalActionException
 
         host = kwargs["host"]
 
@@ -1439,13 +1453,28 @@ class UpdatePackagesStep(RebootIfNeededStep):
             host, "install_packages", {"repos": kwargs["enablerepos"], "packages": kwargs["packages"]}
         )
 
+        old_session_id = AgentRpc.get_session_id(host.fqdn)
+
+        try:
+            old_rust_session_id = self.invoke_rust_local_action_expect_result("get_session", host.fqdn)
+        except LocalActionException as e:
+            self.log("Error finding session: {}".format(e))
+
+            # Assume if this call fails we are dealing with pre-rust agent
+            old_rust_session_id = None
+
         # If we have installed any updates at all, then assume it is necessary to restart the agent, as
         # they could be things the agent uses/imports or API changes, specifically to kernel_status() below
-        old_session_id = AgentRpc.get_session_id(host.fqdn)
         self.invoke_agent(host, "restart_agent")
+
         AgentRpc.await_restart(
             kwargs["host"].fqdn, timeout=settings.AGENT_RESTART_TIMEOUT, old_session_id=old_session_id
         )
+
+        if old_rust_session_id:
+            self.invoke_rust_local_action_expect_result(
+                "await_next_session", (host.fqdn, old_rust_session_id, settings.AGENT_RESTART_TIMEOUT)
+            )
 
         # Now do some managed things
         if host.is_managed and host.pacemaker_configuration:

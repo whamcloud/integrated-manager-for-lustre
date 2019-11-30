@@ -225,16 +225,17 @@ def normalize_nid(string):
     return string
 
 
+IML_ACTION_RUNNER_SOCKET_PATH = "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/"
+
+
 class RustAgentCancellation(Exception):
     pass
 
 
-def invoke_rust_agent(host, command, args={}, cancel_event=Event()):
+def invoke_rust_local_action(command, args={}, cancel_event=Event()):
     """
     Talks to the iml-action-runner service
     """
-
-    SOCKET_PATH = "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/"
 
     request_id = uuid.uuid4()
 
@@ -247,8 +248,8 @@ def invoke_rust_agent(host, command, args={}, cancel_event=Event()):
     def start_action(ActionResult, trigger):
         try:
             ActionResult.ok = requests_unixsocket.post(
-                SOCKET_PATH,
-                json=(host, {"type": "ACTION_START", "action": command, "args": args, "id": str(request_id)}),
+                IML_ACTION_RUNNER_SOCKET_PATH,
+                json={"LOCAL": {"type": "ACTION_START", "action": command, "args": args, "id": str(request_id)}},
             ).content
         except Exception as e:
             ActionResult.error = e
@@ -263,7 +264,58 @@ def invoke_rust_agent(host, command, args={}, cancel_event=Event()):
     # check cancel_event
     while True:
         if cancel_event.is_set():
-            requests_unixsocket.post(SOCKET_PATH, json=(host, {"type": "ACTION_CANCEL", "id": str(request_id)})).content
+            requests_unixsocket.post(
+                IML_ACTION_RUNNER_SOCKET_PATH, json={"LOCAL": {"type": "ACTION_CANCEL", "id": str(request_id)}}
+            ).content
+            raise RustAgentCancellation()
+        else:
+            trigger.wait(timeout=1.0)
+            if trigger.is_set():
+                break
+
+    if ActionResult.error is not None:
+        raise ActionResult.error
+    else:
+        return ActionResult.ok
+
+
+def invoke_rust_agent(host, command, args={}, cancel_event=Event()):
+    """
+    Talks to the iml-action-runner service
+    """
+
+    request_id = uuid.uuid4()
+
+    trigger = Event()
+
+    class ActionResult:
+        ok = None
+        error = None
+
+    def start_action(ActionResult, trigger):
+        try:
+            ActionResult.ok = requests_unixsocket.post(
+                IML_ACTION_RUNNER_SOCKET_PATH,
+                json={
+                    "REMOTE": (host, {"type": "ACTION_START", "action": command, "args": args, "id": str(request_id)})
+                },
+            ).content
+        except Exception as e:
+            ActionResult.error = e
+        finally:
+            trigger.set()
+
+    t = Thread(target=start_action, args=(ActionResult, trigger))
+
+    t.start()
+
+    # Wait for action completion, waking up every second to
+    # check cancel_event
+    while True:
+        if cancel_event.is_set():
+            requests_unixsocket.post(
+                IML_ACTION_RUNNER_SOCKET_PATH, json={"REMOTE": (host, {"type": "ACTION_CANCEL", "id": str(request_id)})}
+            ).content
             raise RustAgentCancellation()
         else:
             trigger.wait(timeout=1.0)
