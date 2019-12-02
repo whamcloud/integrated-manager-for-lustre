@@ -5,6 +5,7 @@
 #![allow(clippy::non_ascii_literal)]
 #![allow(clippy::enum_glob_use)]
 
+mod components;
 mod generated;
 mod page;
 
@@ -99,21 +100,45 @@ pub struct Model {
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum Page {
-    Dashboard,
-    Home,
     About,
-    NotFound,
+    Activity,
+    Dashboard,
+    Filesystem,
+    FilesystemDetail,
+    Home,
     Jobstats,
+    Login,
+    Logs,
+    Mgt,
+    NotFound,
+    PowerControl,
+    Server,
+    ServerDetail,
+    Target,
+    User,
+    Volume,
 }
 
 impl Page {
     pub fn to_href(self) -> &'static str {
         match self {
-            Self::Home => "/",
-            Self::Dashboard => "/dashboard",
-            Self::Jobstats => "/jobstats",
             Self::About => "/about",
+            Self::Activity => "/activity",
+            Self::Dashboard => "/dashboard",
+            Self::Filesystem => "/filesystem",
+            Self::FilesystemDetail => "/filesystem_detail",
+            Self::Home => "/",
+            Self::Jobstats => "/jobstats",
+            Self::Login => "/login",
+            Self::Logs => "/logs",
+            Self::Mgt => "/mgt",
             Self::NotFound => "/404",
+            Self::PowerControl => "/power_control",
+            Self::Server => "/server",
+            Self::ServerDetail => "/server_detail",
+            Self::Target => "/target",
+            Self::User => "/user",
+            Self::Volume => "/volume",
         }
     }
 }
@@ -121,11 +146,23 @@ impl Page {
 impl ToString for Page {
     fn to_string(&self) -> String {
         match self {
-            Self::Dashboard => "Dashboard".into(),
-            Self::Home => "Home".into(),
             Self::About => "About".into(),
-            Self::NotFound => "404".into(),
+            Self::Activity => "Activity".into(),
+            Self::Dashboard => "Dashboard".into(),
+            Self::Filesystem => "Filesystem".into(),
+            Self::FilesystemDetail => "Filesystem Detail".into(),
+            Self::Home => "Home".into(),
             Self::Jobstats => "Jobstats".into(),
+            Self::Login => "Login".into(),
+            Self::Logs => "Logs".into(),
+            Self::Mgt => "Mgt".into(),
+            Self::NotFound => "404".into(),
+            Self::PowerControl => "Power Control".into(),
+            Self::Server => "Server".into(),
+            Self::ServerDetail => "Server Detail".into(),
+            Self::Target => "Target".into(),
+            Self::User => "User".into(),
+            Self::Volume => "Volume".into(),
         }
     }
 }
@@ -133,10 +170,22 @@ impl ToString for Page {
 impl From<Url> for Page {
     fn from(url: Url) -> Self {
         match url.path.first().map(String::as_str) {
-            None | Some("") => Self::Home,
-            Some("dashboard") => Self::Dashboard,
             Some("about") => Self::About,
+            Some("activity") => Self::Activity,
+            Some("dashboard") => Self::Dashboard,
+            Some("filesystem") => Self::Filesystem,
+            Some("filesystem_detail") => Self::FilesystemDetail,
+            None | Some("") => Self::Home,
             Some("jobstats") => Self::Jobstats,
+            Some("login") => Self::Login,
+            Some("logs") => Self::Logs,
+            Some("mgt") => Self::Mgt,
+            Some("power_control") => Self::PowerControl,
+            Some("server") => Self::Server,
+            Some("server_detail") => Self::ServerDetail,
+            Some("target") => Self::Target,
+            Some("user") => Self::User,
+            Some("volume") => Self::Volume,
             _ => Self::NotFound,
         }
     }
@@ -258,13 +307,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             orders.send_msg(Msg::UpdatePageTitle);
         }
         Msg::UpdatePageTitle => {
-            let title = match model.page {
-                Page::Home => TITLE_SUFFIX.to_owned(),
-                Page::Dashboard => format!("Dashboard - {}", TITLE_SUFFIX),
-                Page::Jobstats => format!("Jobstats - {}", TITLE_SUFFIX),
-                Page::About => format!("About - {}", TITLE_SUFFIX),
-                Page::NotFound => format!("404 - {}", TITLE_SUFFIX),
-            };
+            let title =
+                format!("{} - {}", model.page.to_string(), TITLE_SUFFIX);
+
             document().set_title(&title);
         }
         Msg::EventSourceConnect(_) => {
@@ -510,11 +555,27 @@ pub fn view(model: &Model) -> impl View<Msg> {
                         C.p_6
                     ],
                     match model.page {
-                        Page::Home => page::home::view(&model).els(),
-                        Page::Dashboard => page::dashboard::view(&model).els(),
                         Page::About => page::about::view(&model).els(),
+                        Page::Activity => page::activity::view(&model).els(),
+                        Page::Dashboard => page::dashboard::view(&model).els(),
+                        Page::Filesystem =>
+                            page::filesystem::view(&model).els(),
+                        Page::FilesystemDetail =>
+                            page::filesystem_detail::view(&model).els(),
+                        Page::Home => page::home::view(&model).els(),
                         Page::Jobstats => page::jobstats::view(&model).els(),
+                        Page::Login => page::login::view(&model).els(),
+                        Page::Logs => page::logs::view(&model).els(),
+                        Page::Mgt => page::mgt::view(&model).els(),
                         Page::NotFound => page::not_found::view(&model).els(),
+                        Page::PowerControl =>
+                            page::power_control::view(&model).els(),
+                        Page::Server => page::server::view(&model).els(),
+                        Page::ServerDetail =>
+                            page::server_detail::view(&model).els(),
+                        Page::Target => page::target::view(&model).els(),
+                        Page::User => page::user::view(&model).els(),
+                        Page::Volume => page::volume::view(&model).els(),
                     },
                 ],
                 page::partial::footer::view().els(),

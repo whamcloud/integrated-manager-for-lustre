@@ -1,18 +1,11 @@
 use crate::{
-    generated::css_classes::C,
-    Model, Msg, Page,
-    Visibility::{self, *},
-    WatchState,
+    components::font_awesome, generated::css_classes::C, Model, Msg, Page,
+    Visibility::*,
 };
-use seed::{dom_types::Attrs, prelude::*, *};
+use seed::{prelude::*, *};
 
-fn font_awesome<T>(icon_name: &str) -> Node<T> {
-    svg![
-        class![C.fill_current, C.h_6, C.w_6, C.mr_3, C.inline],
-        r#use![attrs! {
-            At::Href => format!("sprites/solid.svg#{}", icon_name),
-        }]
-    ]
+fn menu_icon<T>(icon_name: &str) -> Node<T> {
+    font_awesome(class![C.h_6, C.w_6, C.mr_3, C.inline], icon_name)
 }
 
 fn nav_configure_dropdown(open: bool) -> Node<Msg> {
@@ -20,26 +13,71 @@ fn nav_configure_dropdown(open: bool) -> Node<Msg> {
         return seed::empty();
     }
 
+    let cls = class![
+        C.my_2,
+        C.px_4,
+        C.py_2,
+        C.bg_menu_active,
+        C.block,
+        C.cursor_pointer,
+        C.hover__text_white,
+    ];
+
     div![
         class![
             C.lg__absolute,
             C.lg__border,
+            C.lg__w_full,
+            C.lg__left_0,
+            C.border_gray_600,
             C.mt_px,
-            C.text_gray_300,
+            C.text_gray_500,
             C.rounded,
-            C.p_6,
-            C.bg_menu
+            C.bg_menu,
+            C.p_4,
+            C.z_20
         ],
         style! { "top" => "110%" },
         ul![
-            li![a!["Servers"]],
-            li![a!["Power Control"]],
-            li![a!["Filesystems"]],
-            li![a!["HSM"]],
-            li![a!["Storage"]],
-            li![a!["Users"]],
-            li![a!["Volumes"]],
-            li![a!["MGTs"]]
+            li![a![
+                &cls,
+                "Servers",
+                attrs! {
+                    At::Href => Page::Server.to_href(),
+                },
+            ]],
+            li![
+                a![&cls, "Power Control"],
+                attrs! {
+                    At::Href => Page::PowerControl.to_href(),
+                },
+            ],
+            li![
+                a![&cls, "Filesystems"],
+                attrs! {
+                    At::Href => Page::Filesystem.to_href(),
+                },
+            ],
+            li![a![&cls, "HSM"]],
+            li![a![&cls, "Storage"]],
+            li![
+                a![&cls, "Users"],
+                attrs! {
+                    At::Href => Page::User.to_href(),
+                },
+            ],
+            li![
+                a![&cls, "Volumes"],
+                attrs! {
+                    At::Href => Page::Volume.to_href(),
+                },
+            ],
+            li![
+                a![&cls, "MGTs"],
+                attrs! {
+                    At::Href => Page::Mgt.to_href(),
+                },
+            ]
         ]
     ]
 }
@@ -54,67 +92,98 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
         C.lg__flex_col,
         C.lg__justify_center,
         C.lg__py_0,
-        C.lg__hover__border_blue_400,
         C.p_6,
-        C.text_gray_300,
-        C.hover__text_active,
+        C.text_gray_500,
         C.hover__bg_menu_active,
         C.border_b_2,
-        C.border_transparent
+        C.border_transparent,
+        C.group,
     ];
 
     div![
         class![C.text_base, C.lg__flex, C.lg__h_16,],
         a![
             &menu_class,
-            if model.page == Page::Dashboard {
-                class![C.text_active, C.bg_menu_active]
-            } else {
-                Attrs::empty()
-            },
+            class![C.bg_menu_active => model.page == Page::Dashboard],
             attrs! {
                 At::Href => Page::Dashboard.to_href()
             },
-            span![font_awesome("tachometer-alt"), "Dashboard",]
+            span![
+                menu_icon("tachometer-alt"),
+                span![
+                    class![C.group_hover__text_active, C.text_active => model.page == Page::Dashboard],
+                    "Dashboard"
+                ],
+            ]
         ],
         a![
             &menu_class,
-            class![C.relative],
+            class![
+                C.lg__border_blue_400 => model.config_menu_state.is_open(),
+                C.relative
+            ],
             simple_ev(Ev::Click, Msg::ConfigMenuState),
             span![
-                font_awesome("cog"),
-                "Configuration",
-                small!["▼", class![C.pl_2]]
+                menu_icon("cog"),
+                span![
+                    class![C.group_hover__text_active],
+                    "Configuration",
+                    font_awesome(
+                        class![C.fill_current, C.h_3, C.w_3, C.ml_1, C.inline],
+                        "chevron-down"
+                    ),
+                ],
             ],
             nav_configure_dropdown(model.config_menu_state.is_open()),
         ],
         a![
             &menu_class,
+            class![C.bg_menu_active => model.page == Page::Jobstats],
             attrs! {
                 At::Href => Page::Jobstats.to_href()
             },
-            span![font_awesome("signal"), "Jobstats",]
+            span![
+                menu_icon("signal"),
+                span![
+                    class![C.group_hover__text_active, C.text_active => model.page == Page::Jobstats],
+                    "Jobstats"
+                ],
+            ]
+        ],
+        a![
+            &menu_class,
+            class![C.bg_menu_active => model.page == Page::Logs],
+            attrs! {
+                At::Href => Page::Logs.to_href()
+            },
+            span![
+                menu_icon("book"),
+                span![
+                    class![C.group_hover__text_active, C.bg_menu_active => model.page == Page::Logs],
+                    "Logs"
+                ]
+            ]
         ],
         a![
             &menu_class,
             attrs! {
                 At::Href => "#responsive-header",
             },
-            span![font_awesome("book"), "Logs",]
+            span![
+                menu_icon("question-circle"),
+                span![class![C.group_hover__text_active], "Help"]
+            ]
         ],
         a![
             &menu_class,
+            class![C.bg_menu_active => model.page == Page::Activity],
             attrs! {
-                At::Href => "#responsive-header",
+                At::Href => Page::Activity.to_href(),
             },
-            span![font_awesome("question-circle"), "Help",]
-        ],
-        a![
-            &menu_class,
-            attrs! {
-                At::Href => "#responsive-header",
-            },
-            span!["Activity",]
+            span![
+                class![C.group_hover__text_active, C.bg_menu_active => model.page == Page::Activity],
+                "Activity",
+            ]
         ],
     ]
 }
@@ -210,10 +279,13 @@ fn nav(model: &Model) -> Node<Msg> {
                             C.lg__py_0,
                             C.p_6,
                             C.text_gray_300,
-                            C.hover__text_active,
+                            C.hover__text_white,
                             C.border_b_2,
                             C.border_transparent
                         ],
+                        attrs! {
+                            At::Href => Page::Login.to_href(),
+                        },
                         "Login",
                     ],
                 ],
