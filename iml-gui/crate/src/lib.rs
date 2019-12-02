@@ -9,8 +9,9 @@ mod components;
 mod generated;
 mod page;
 
+use components::{update_activity_health, ActivityHealth};
 use generated::css_classes::C;
-use iml_wire_types::warp_drive;
+use iml_wire_types::{warp_drive, AlertSeverity};
 use js_sys::Function;
 use seed::{events::Listener, prelude::*, *};
 use std::{cmp, collections::HashMap, mem};
@@ -91,11 +92,12 @@ pub struct Model {
     pub page: Page,
     pub menu_visibility: Visibility,
     pub in_prerendering: bool,
-    pub config_menu_state: WatchState,
+    pub manage_menu_state: WatchState,
     pub track_slider: bool,
     pub side_width_percentage: f32,
     pub records: warp_drive::Cache,
     pub locks: warp_drive::Locks,
+    pub activity_health: ActivityHealth,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -250,11 +252,15 @@ pub fn init(url: Url, orders: &mut impl Orders<Msg>) -> Init<Model> {
         page: url.into(),
         menu_visibility: Visible,
         in_prerendering: is_in_prerendering(),
-        config_menu_state: WatchState::default(),
+        manage_menu_state: WatchState::default(),
         track_slider: false,
         side_width_percentage: 20f32,
         records: warp_drive::Cache::default(),
         locks: HashMap::new(),
+        activity_health: ActivityHealth {
+            count: 0,
+            health: AlertSeverity::INFO,
+        },
     })
 }
 
@@ -286,7 +292,7 @@ pub enum Msg {
     RouteChanged(Url),
     UpdatePageTitle,
     ToggleMenu,
-    ConfigMenuState,
+    ManageMenuState,
     HideMenu,
     StartSliderTracking,
     StopSliderTracking,
@@ -335,11 +341,17 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
         Msg::Records(records) => {
             model.records = records;
+
+            model.activity_health =
+                update_activity_health(&model.records.active_alert);
         }
         Msg::RecordChange(record_change) => match record_change {
             warp_drive::RecordChange::Update(record) => match record {
                 warp_drive::Record::ActiveAlert(x) => {
                     model.records.active_alert.insert(x.id, x);
+
+                    model.activity_health =
+                        update_activity_health(&model.records.active_alert);
                 }
                 warp_drive::Record::Filesystem(x) => {
                     model.records.filesystem.insert(x.id, x);
@@ -400,8 +412,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.locks = locks;
         }
         Msg::ToggleMenu => model.menu_visibility.toggle(),
-        Msg::ConfigMenuState => {
-            model.config_menu_state.update();
+        Msg::ManageMenuState => {
+            model.manage_menu_state.update();
         }
         Msg::HideMenu => {
             model.menu_visibility = Hidden;
@@ -428,8 +440,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 };
         }
         Msg::WindowClick => {
-            if model.config_menu_state.should_update() {
-                model.config_menu_state.update();
+            if model.manage_menu_state.should_update() {
+                model.manage_menu_state.update();
             }
         }
     }

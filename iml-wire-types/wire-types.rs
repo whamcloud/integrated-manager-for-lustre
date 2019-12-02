@@ -890,7 +890,7 @@ pub enum AlertType {
     StratagemUnconfiguredAlert,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum AlertSeverity {
     INFO,
     DEBUG,
