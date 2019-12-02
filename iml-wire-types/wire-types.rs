@@ -1396,6 +1396,34 @@ pub mod db {
         }
     }
 
+    /// Record from the `chroma_core_managedost` table
+    #[derive(serde::Deserialize, Debug)]
+    pub struct ManagedOstRecord {
+        managedtarget_ptr_id: u32,
+        index: u32,
+        filesystem_id: u32,
+    }
+
+    impl Id for ManagedOstRecord {
+        fn id(&self) -> u32 {
+            self.managedtarget_ptr_id
+        }
+    }
+
+    impl NotDeleted for ManagedOstRecord {
+        fn not_deleted(&self) -> bool {
+            true
+        }
+    }
+
+    pub const MANAGED_OST_TABLE_NAME: TableName = TableName("chroma_core_managedost");
+
+    impl Name for ManagedOstRecord {
+        fn table_name() -> TableName<'static> {
+            MANAGED_OST_TABLE_NAME
+        }
+    }
+
     /// Record from the `chroma_core_managedhost` table
     #[derive(serde::Deserialize, Debug)]
     pub struct ManagedHostRecord {
@@ -1928,6 +1956,58 @@ pub mod db {
             }
         }
     }
+
+    pub const OSTPOOL_TABLE_NAME: TableName = TableName("chroma_core_ostpool");
+
+    /// Record from the `chroma_core_ostpool` table
+    #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+    pub struct OstPoolRecord {
+        pub id: u32,
+        pub name: String,
+        pub content_type_id: Option<u32>,
+        pub not_deleted: Option<bool>,
+        pub filesystem_id: u32,
+    }
+
+    impl Name for OstPoolRecord {
+        fn table_name() -> TableName<'static> {
+            OSTPOOL_TABLE_NAME
+        }
+    }
+
+    impl Id for OstPoolRecord {
+        fn id(&self) -> u32 {
+            self.id
+        }
+    }
+
+    impl NotDeleted for OstPoolRecord {
+        fn not_deleted(&self) -> bool {
+            not_deleted(self.not_deleted)
+        }
+    }
+
+    pub const OSTPOOL_OSTS_TABLE_NAME: TableName = TableName("chroma_core_ostpool_osts");
+
+    /// Record from the `chroma_core_ostpool_osts` table
+    #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+    pub struct OstPoolOstsRecord {
+        pub id: u32,
+        pub ostpool_id: u32,
+        pub managedost_id: u32,
+    }
+
+    impl Name for OstPoolOstsRecord {
+        fn table_name() -> TableName<'static> {
+            OSTPOOL_OSTS_TABLE_NAME
+        }
+    }
+
+    impl Id for OstPoolOstsRecord {
+        fn id(&self) -> u32 {
+            self.id
+        }
+    }
 }
 
 /// Types used for component checks
@@ -1998,14 +2078,59 @@ pub struct ComponentState<T: Default> {
     pub state: T,
 }
 
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum OstPoolAction {
+    Initial, // Complete Ost Pool
+    Add,     // new Ost Pool
+    Remove,  // destory Ost Pool
+    Grow,    // Send new osts in OstPool object
+    Shrink,  // Only send osts to remove in OstPool object
+}
+
+impl std::fmt::Display for OstPoolAction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                OstPoolAction::Initial => "init",
+                OstPoolAction::Add => "add",
+                OstPoolAction::Remove => "remove",
+                OstPoolAction::Grow => "grow",
+                OstPoolAction::Shrink => "shrink",
+            }
+        )
+    }
+}
+
 /// An OST Pool record from `/api/ostpool/`
+#[derive(Debug, Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct OstPoolApi {
+    pub id: u32,
+    pub resource_uri: String,
+    #[serde(flatten)]
+    pub ost: OstPool,
+}
+
+impl EndpointName for OstPoolApi {
+    fn endpoint_name() -> &'static str {
+        "ostpool"
+    }
+}
+
+impl FlatQuery for OstPoolApi {}
+
+impl std::fmt::Display for OstPoolApi {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[#{}] {}", self.id, self.ost)
+    }
+}
+
 #[derive(Debug, Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct OstPool {
     pub name: String,
     pub filesystem: String,
     pub osts: Vec<String>,
-    pub resource_uri: String,
-    pub id: u32,
 }
 
 impl std::fmt::Display for OstPool {
@@ -2019,14 +2144,6 @@ impl std::fmt::Display for OstPool {
         )
     }
 }
-
-impl EndpointName for OstPool {
-    fn endpoint_name() -> &'static str {
-        "ostpool"
-    }
-}
-
-impl FlatQuery for OstPool {}
 
 pub mod warp_drive {
     use crate::{

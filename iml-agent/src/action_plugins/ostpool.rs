@@ -86,7 +86,7 @@ pub async fn action_pool_destroy(cmd: CmdPool) -> Result<(), ImlAgentError> {
     pool_destroy(cmd.filesystem, cmd.name).await
 }
 
-async fn pool_list(filesystem: &str) -> Result<Vec<String>, ImlAgentError> {
+pub async fn pool_list(filesystem: &str) -> Result<Vec<String>, ImlAgentError> {
     match lctl(vec!["pool_list", &filesystem]).await {
         Ok(o) => Ok(String::from_utf8_lossy(&o.stdout)
             .lines()
@@ -107,6 +107,11 @@ async fn pool_list(filesystem: &str) -> Result<Vec<String>, ImlAgentError> {
     }
 }
 
+pub async fn ost_list(filesystem: &str, pool: &str) -> Result<Vec<String>, ImlAgentError> {
+    let pn = format!("{}.{}", filesystem, pool);
+    pool_list(&pn).await
+}
+
 pub async fn pools(filesystem: String) -> Result<Vec<OstPool>, ImlAgentError> {
     let xs = pool_list(&filesystem).await?;
 
@@ -114,13 +119,11 @@ pub async fn pools(filesystem: String) -> Result<Vec<OstPool>, ImlAgentError> {
         let filesystem = filesystem.clone();
 
         async move {
-            let p = format!("{}.{}", filesystem, pool);
-
-            let osts = { pool_list(&p) };
+            let osts = ost_list(&filesystem, &pool);
 
             Ok::<_, ImlAgentError>(OstPool {
                 name: pool.to_string(),
-                filesystem,
+                filesystem: filesystem.clone(),
                 osts: osts.await?,
                 ..Default::default()
             })

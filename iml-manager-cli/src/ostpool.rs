@@ -9,7 +9,9 @@ use crate::{
 };
 use console::{style, Term};
 use futures::future::try_join_all;
-use iml_wire_types::{ApiList, Command, EndpointName, Filesystem, FlatQuery, Ost, OstPool};
+use iml_wire_types::{
+    ApiList, Command, EndpointName, Filesystem, FlatQuery, Ost, OstPool, OstPoolApi,
+};
 use prettytable::{Row, Table};
 use structopt::StructOpt;
 
@@ -69,10 +71,10 @@ pub enum OstPoolCommand {
     Destroy { fsname: String, poolname: String },
 }
 
-async fn pool_lookup(fsname: &String, pool: &String) -> Result<OstPool, ImlManagerCliError> {
+async fn pool_lookup(fsname: &String, pool: &String) -> Result<OstPoolApi, ImlManagerCliError> {
     let fs: Filesystem =
         wrap_fut("Fetching Filesystem ...", get_one(vec![("name", &fsname)])).await?;
-    let mut pool: OstPool = wrap_fut(
+    let mut pool: OstPoolApi = wrap_fut(
         "Fetching OstPool...",
         get_one(vec![
             ("filesystem", fs.id.to_string().as_str()),
@@ -81,12 +83,13 @@ async fn pool_lookup(fsname: &String, pool: &String) -> Result<OstPool, ImlManag
     )
     .await?;
     let osts: Vec<Ost> = try_join_all(
-        pool.osts
+        pool.ost
+            .osts
             .into_iter()
             .map(|o| async move { wrap_fut("Fetching OST...", get(&o, Ost::query())).await }),
     )
     .await?;
-    pool.osts = osts.into_iter().map(|m| m.name).collect();
+    pool.ost.osts = osts.into_iter().map(|m| m.name).collect();
     Ok(pool)
 }
 
@@ -99,10 +102,10 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
                     let fs: Filesystem =
                         wrap_fut("Fetching Filesystem ...", get_one(vec![("name", &fsname)]))
                             .await?;
-                    let pools: ApiList<OstPool> = wrap_fut(
+                    let pools: ApiList<OstPoolApi> = wrap_fut(
                         "Fetching OstPools...",
                         get(
-                            OstPool::endpoint_name(),
+                            OstPoolApi::endpoint_name(),
                             vec![("limit", 0), ("filesystem", fs.id)],
                         ),
                     )
@@ -110,18 +113,18 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
                     pools
                         .objects
                         .into_iter()
-                        .map(|p| vec![fsname.clone(), p.name, p.osts.len().to_string()])
+                        .map(|p| vec![fsname.clone(), p.ost.name, p.ost.osts.len().to_string()])
                         .collect()
                 }
                 None => {
-                    let pools: ApiList<OstPool> =
+                    let pools: ApiList<OstPoolApi> =
                         wrap_fut("Fetching OstPools...", get_all()).await?;
                     // @@ "cache" this
                     try_join_all(pools.objects.into_iter().map(|p| {
                         async move {
-                            get(&p.filesystem, Filesystem::query()).await.map(
+                            get(&p.ost.filesystem, Filesystem::query()).await.map(
                                 move |fs: Filesystem| {
-                                    vec![fs.name, p.name, p.osts.len().to_string()]
+                                    vec![fs.name, p.ost.name, p.ost.osts.len().to_string()]
                                 },
                             )
                         }
@@ -139,7 +142,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
             let mut table = Table::new();
             table.add_row(Row::from(&["Filesystem".to_string(), fsname]));
             table.add_row(Row::from(&["Name".to_string(), poolname]));
-            table.add_row(Row::from(&["OSTs".to_string(), pool.osts.join("\n")]));
+            table.add_row(Row::from(&["OSTs".to_string(), pool.ost.osts.join("\n")]));
             table.printstd();
         }
         OstPoolCommand::Create {
@@ -147,13 +150,15 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
             poolname,
             osts,
         } => {
-            let pool = OstPool {
-                filesystem: fsname,
-                name: poolname,
-                osts,
+            let pool = OstPoolApi {
+                ost: OstPool {
+                    filesystem: fsname,
+                    name: poolname,
+                    osts,
+                },
                 ..Default::default()
             };
-            let resp = post(OstPool::endpoint_name(), pool).await?;
+            let resp = post(OstPoolApi::endpoint_name(), pool).await?;
 
             term.write_line(&format!("{} ost pool...", style("Creating").green()))?;
             let objs: ObjCommand = resp.json().await?;
@@ -163,7 +168,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
             let fs: Filesystem =
                 wrap_fut("Fetching Filesystem ...", get_one(vec![("name", &fsname)])).await?;
             let resp = delete(
-                OstPool::endpoint_name(),
+                OstPoolApi::endpoint_name(),
                 vec![
                     ("name", poolname.as_str()),
                     ("filesystem", fs.id.to_string().as_str()),
@@ -180,11 +185,11 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
             osts,
         } => {
             let mut pool = pool_lookup(&fsname, &poolname).await?;
-            let mut newlist = pool.osts;
+            let mut newlist = pool.ost.osts;
             newlist.extend(osts);
             newlist.sort();
             newlist.dedup();
-            pool.osts = newlist;
+            pool.ost.osts = newlist;
 
             tracing::debug!("POOL: {:?}", pool);
             term.write_line(&format!("{} ost pool...", style("Growing").green()))?;
@@ -200,7 +205,8 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
         } => {
             let mut pool = pool_lookup(&fsname, &poolname).await?;
 
-            pool.osts = pool
+            pool.ost.osts = pool
+                .ost
                 .osts
                 .iter()
                 .filter(|o| !osts.contains(o))
