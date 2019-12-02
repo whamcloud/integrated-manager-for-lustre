@@ -1,8 +1,8 @@
-use crate::{generated::css_classes::C, Model, Msg};
+use crate::{generated::css_classes::C, Msg};
 use seed::{dom_types::Attrs, prelude::*, *};
 
 pub fn font_awesome<T>(more_attrs: Attrs, icon_name: &str) -> Node<T> {
-    let mut attrs = class![C.fill_current];
+    let mut attrs = class![C.fill_current, C._my_px];
     attrs.merge(more_attrs);
 
     svg![

@@ -211,7 +211,8 @@ module.exports = {
     }
   },
   variants: {
-    display: ["group-hover", "responsive"]
+    display: ["group-hover", "responsive"],
+    textColor: ["hover", "group-hover"]
   },
   plugins: []
 };
