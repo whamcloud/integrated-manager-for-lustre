@@ -31,12 +31,14 @@ cp iml %{buildroot}%{_bindir}
 cp iml-agent %{buildroot}%{_bindir}
 cp iml-agent-daemon %{buildroot}%{_bindir}
 cp iml-stratagem %{buildroot}%{_bindir}
+cp iml-ostpool %{buildroot}%{_bindir}
 cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-action-runner %{buildroot}%{_bindir}
 cp iml-warp-drive %{buildroot}%{_bindir}
 cp iml-mailbox %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp iml-stratagem.service %{buildroot}%{_unitdir}
+cp iml-ostpool.service %{buildroot}%{_unitdir}
 cp iml-agent-comms.service %{buildroot}%{_unitdir}
 cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
 cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
@@ -151,6 +153,28 @@ systemctl preset iml-action-runner.service
 %{_bindir}/iml-action-runner
 %attr(0644,root,root)%{_unitdir}/iml-action-runner.socket
 %attr(0644,root,root)%{_unitdir}/iml-action-runner.service
+
+%package ostpool
+Summary: Consumer of IML Agent Ostpool push queue
+License: MIT
+Group: System Environment/Libraries
+Requires: rust-iml-agent-comms
+
+%description ostpool
+%{summary}
+
+%post ostpool
+systemctl preset iml-ostpool.service
+
+%preun ostpool
+%systemd_preun iml-ostpool.service
+
+%postun ostpool
+%systemd_postun_with_restart iml-ostpool.service
+
+%files ostpool
+%{_bindir}/iml-ostpool
+%attr(0644,root,root)%{_unitdir}/iml-ostpool.service
 
 %package warp-drive
 Summary: Streaming IML messages with Server-Sent Events
