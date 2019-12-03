@@ -891,14 +891,14 @@ pub enum AlertType {
 }
 
 #[derive(
-    serde::Serialize, serde::Deserialize, Copy, Clone, Debug, Hash, PartialOrd, Ord, PartialEq, Eq,
+    serde::Serialize, serde::Deserialize, Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq,
 )]
 pub enum AlertSeverity {
-    INFO,
     DEBUG,
-    CRITICAL,
+    INFO,
     WARNING,
     ERROR,
+    CRITICAL,
 }
 
 /// An Alert record from /api/alert/
