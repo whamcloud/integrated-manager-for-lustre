@@ -14,7 +14,7 @@ use std::sync::Arc;
 pub struct PoolClient {
     client: Arc<Client>,
     fqdn: String,
-    pool_type_id: u32,
+    pool_type_id: i32,
 }
 
 impl Clone for PoolClient {
@@ -52,8 +52,11 @@ pub async fn connect(fqdn: Fqdn) -> Result<PoolClient, Error> {
 impl PoolClient {
     /// Assume that if there is a single filesystem with a given name,
     /// that it's the correct one
-    pub async fn fs2id(&self, fsname: &str) -> Result<u32, Error> {
-        let query = format!("SELECT id FROM {} WHERE name = $2", FsRecord::table_name());
+    pub async fn fs2id(&self, fsname: &str) -> Result<i32, Error> {
+        let query = format!(
+            "SELECT id FROM {} WHERE name=$1 AND not_deleted=True",
+            FsRecord::table_name()
+        );
         let s = self.client.prepare(&query).await?;
         let vr = self.client.query(&s, &[&fsname]).await?;
 
@@ -67,9 +70,9 @@ impl PoolClient {
         }
     }
 
-    async fn poolid(&self, fsid: u32, pn: &str) -> Result<u32, Error> {
+    async fn poolid(&self, fsid: i32, pn: &str) -> Result<i32, Error> {
         let query = format!(
-            "SELECT id FROM {} WHERE name = $1 AND filesystem_id = $2",
+            "SELECT id FROM {} WHERE name=$1 AND filesystem_id=$2 AND not_deleted=True",
             OstPoolRecord::table_name()
         );
         let s = self.client.prepare(&query).await?;
@@ -77,9 +80,9 @@ impl PoolClient {
         row.try_get(0).map_err(|e| Error::Postgres(e))
     }
 
-    async fn ostid(&self, fsid: u32, ost: &str) -> Result<u32, Error> {
+    async fn ostid(&self, fsid: i32, ost: &str) -> Result<i32, Error> {
         let query = format!(
-            "SELECT managedtarget_ptr_id FROM {} AS MO INNER JOIN {} AS MT ON MO.managedtarget_ptr_id = MT.id WHERE filesystem_id = $1 AND ha_label = $2",
+            "SELECT managedtarget_ptr_id FROM {} AS MO INNER JOIN {} AS MT ON MO.managedtarget_ptr_id = MT.id WHERE filesystem_id = $1 AND ha_label = $2 AND not_deleted=True",
             ManagedOstRecord::table_name(),
             ManagedTargetRecord::table_name());
         let s = self.client.prepare(&query).await?;
@@ -87,9 +90,9 @@ impl PoolClient {
         row.try_get(0).map_err(|e| Error::Postgres(e))
     }
 
-    pub async fn exists(&self, fsid: u32, pn: &str) -> Result<bool, Error> {
+    pub async fn exists(&self, fsid: i32, pn: &str) -> Result<bool, Error> {
         let query = format!(
-            "SELECT id FROM {} WHERE name = $1 AND filesystem_id = $2",
+            "SELECT id FROM {} WHERE name = $1 AND filesystem_id = $2 AND not_deleted=True",
             OstPoolRecord::table_name()
         );
         let s = self.client.prepare(&query).await?;
@@ -97,7 +100,7 @@ impl PoolClient {
         Ok(self.client.query_one(&s, &[&pn, &fsid]).await.is_ok())
     }
 
-    pub async fn create(&self, fsid: u32, pn: &str) -> Result<(), Error> {
+    pub async fn create(&self, fsid: i32, pn: &str) -> Result<(), Error> {
         let query = format!(
             "INSERT INTO {} (name, content_type_id, filesystem_id, not_deleted) VALUES ($1, $2, $3, 't')",
             OstPoolRecord::table_name()
@@ -111,7 +114,7 @@ impl PoolClient {
             .map_err(|e| Error::Postgres(e))
     }
 
-    pub async fn delete(&self, fsid: u32, pn: &str) -> Result<(), Error> {
+    pub async fn delete(&self, fsid: i32, pn: &str) -> Result<(), Error> {
         let query = format!(
             "UPDATE {} SET not_deleted = NULL WHERE filesystem = $1 AND name = $2",
             OstPoolRecord::table_name()
@@ -125,7 +128,7 @@ impl PoolClient {
             .map_err(|e| Error::Postgres(e))
     }
 
-    pub async fn grow(&self, fsid: u32, pn: &str, osts: &Vec<String>) -> Result<(), Error> {
+    pub async fn grow(&self, fsid: i32, pn: &str, osts: &Vec<String>) -> Result<(), Error> {
         let poolid = self.poolid(fsid, pn).await?;
 
         let query = format!(
@@ -149,7 +152,7 @@ impl PoolClient {
         Ok(())
     }
 
-    pub async fn shrink(&self, fsid: u32, pn: &str, osts: &Vec<String>) -> Result<(), Error> {
+    pub async fn shrink(&self, fsid: i32, pn: &str, osts: &Vec<String>) -> Result<(), Error> {
         let poolid = self.poolid(fsid, pn).await?;
         let query = format!(
             "DELETE FROM {} WHERE ostpool_id = $1 AND managedost_id = $2",
