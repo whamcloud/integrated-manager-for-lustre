@@ -1,5 +1,7 @@
 use crate::{
-    components::font_awesome, generated::css_classes::C, Model, Msg, Page,
+    components::{activity_indicator, font_awesome},
+    generated::css_classes::C,
+    Model, Msg, Page,
     Visibility::*,
 };
 use seed::{prelude::*, *};
@@ -8,7 +10,7 @@ fn menu_icon<T>(icon_name: &str) -> Node<T> {
     font_awesome(class![C.h_6, C.w_6, C.mr_3, C.inline], icon_name)
 }
 
-fn nav_configure_dropdown(open: bool) -> Node<Msg> {
+fn nav_manage_dropdown(open: bool) -> Node<Msg> {
     if !open {
         return seed::empty();
     }
@@ -119,22 +121,22 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
         a![
             &menu_class,
             class![
-                C.lg__border_blue_400 => model.config_menu_state.is_open(),
+                C.lg__border_blue_400 => model.manage_menu_state.is_open(),
                 C.relative
             ],
-            simple_ev(Ev::Click, Msg::ConfigMenuState),
+            simple_ev(Ev::Click, Msg::ManageMenuState),
             span![
                 menu_icon("cog"),
                 span![
                     class![C.group_hover__text_active],
-                    "Configuration",
+                    "Management",
                     font_awesome(
                         class![C.fill_current, C.h_3, C.w_3, C.ml_1, C.inline],
                         "chevron-down"
                     ),
                 ],
             ],
-            nav_configure_dropdown(model.config_menu_state.is_open()),
+            nav_manage_dropdown(model.manage_menu_state.is_open()),
         ],
         a![
             &menu_class,
@@ -181,8 +183,11 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                 At::Href => Page::Activity.to_href(),
             },
             span![
-                class![C.group_hover__text_active, C.bg_menu_active => model.page == Page::Activity],
-                "Activity",
+                activity_indicator(&model.activity_health),
+                span![
+                    class![C.group_hover__text_active, C.bg_menu_active => model.page == Page::Activity],
+                    "Activity",
+                ]
             ]
         ],
     ]
