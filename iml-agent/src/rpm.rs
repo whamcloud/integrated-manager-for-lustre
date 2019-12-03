@@ -1,18 +1,33 @@
 use regex::Regex;
 
-use std::process::Output;
-
 use crate::{agent_error::ImlAgentError, cmd::cmd_output};
 
-fn parse(output: Output) -> Result<bool, ImlAgentError> {
+enum PackageState {
+    Installed(Version),
+    NotInstalled,
+}
+
+struct Version(String);
+
+pub enum RpmResult {
+    Ok(String),
+    Err(RpmError),
+}
+
+pub enum RpmError {
+    PackageNotInstalled,
+}
+
+async fn parse(package_name: &str) -> Result<PackageState, ImlAgentError> {
+    let output = cmd_output("rpm", vec!["--query", "--queryformat", "${VERSION}", package_name]).await?;
     if output.status.success() {
-        Ok(true)
+        Ok(PackageState::Installed(Version(String::from_utf8(output.stdout).unwrap())))
     } else {
         let stdout = output.stdout.clone();
         let re = Regex::new(r"^package .*? is not installed\n$").unwrap();
         let s = String::from_utf8(stdout)?;
         if re.is_match(&s) {
-            Ok(false)
+            Ok(PackageState::NotInstalled)
         } else {
             Err(ImlAgentError::CmdOutputError(output))
         }
@@ -20,6 +35,16 @@ fn parse(output: Output) -> Result<bool, ImlAgentError> {
 }
 
 pub(crate) async fn installed(package_name: &str) -> Result<bool, ImlAgentError> {
-    let output = cmd_output("rpm", vec!["--query", package_name]).await?;
-    parse(output)
+    parse(package_name).await.map(|r| match r {
+        PackageState::Installed(_) => true,
+        PackageState::NotInstalled => false,
+    })
+}
+
+pub(crate) async fn version(package_name: &str) -> Result<RpmResult, ImlAgentError> {
+    match parse(package_name).await {
+        Ok(PackageState::Installed(Version(s))) => Ok(RpmResult::Ok(s)),
+        Ok(PackageState::NotInstalled) => Ok(RpmResult::Err(RpmError::PackageNotInstalled)),
+        Err(e) => Err(e),
+    }
 }
