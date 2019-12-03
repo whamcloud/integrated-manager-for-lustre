@@ -6,9 +6,7 @@ use iml_agent::action_plugins::stratagem::{
     action_purge, action_warning,
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
-use iml_agent::action_plugins::{
-    check_ha, check_kernel, check_stonith, ostpool, package,
-};
+use iml_agent::action_plugins::{check_ha, check_kernel, check_stonith, ostpool, package};
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
 use spinners::{Spinner, Spinners};
