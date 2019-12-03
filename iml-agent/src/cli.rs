@@ -443,7 +443,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match package::version(package_name).await {
                     Ok(r) => match r {
                         package::RpmResult::Ok(v) => println!("{}", v),
-                        package::RpmResult::Err(e) => println!("{}", e),
+                        package::RpmResult::Err(e) => {
+                            println!("{}", e);
+                            exit(exitcode::DATAERR)
+                        }
                     },
                     Err(e) => println!("{:?}", e),
                 }
