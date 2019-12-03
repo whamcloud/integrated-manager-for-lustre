@@ -21,7 +21,8 @@ pub enum RpmError {
 }
 
 async fn parse(package_name: &str) -> Result<PackageState, ImlAgentError> {
-    let output = cmd_output("rpm", vec!["--query", "--queryformat", "${VERSION}", package_name]).await?;
+    // XXX: In case there's syntax error in query format, exit code of `rpm` is 0, but there's no data
+    let output = cmd_output("rpm", vec!["--query", "--queryformat", "%{VERSION}", package_name]).await?;
     if output.status.success() {
         Ok(PackageState::Installed(Version(String::from_utf8(output.stdout).unwrap())))
     } else {
