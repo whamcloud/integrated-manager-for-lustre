@@ -1,4 +1,4 @@
-FROM imlteam/manager-service-base
+FROM imlteam/manager-service-base:5.1
 
 RUN yum install -y epel-release \
   && yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre-devel/repo/epel-7/managerforlustre-manager-for-lustre-devel-epel-7.repo \

@@ -61,7 +61,7 @@ services:
     ports:
       - "15672:15672"
   nginx:
-    image: "imlteam/manager-nginx"
+    image: "imlteam/manager-nginx:5.1"
     hostname: "nginx"
     deploy: *default-deploy
     volumes:
@@ -103,7 +103,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   corosync:
-    image: "imlteam/manager-corosync"
+    image: "imlteam/manager-corosync:5.1"
     hostname: "corosync"
     build:
       context: .
@@ -112,7 +112,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   gunicorn:
-    image: "imlteam/manager-gunicorn"
+    image: "imlteam/manager-gunicorn:5.1"
     hostname: "gunicorn"
     build:
       context: .
@@ -124,7 +124,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   http-agent:
-    image: "imlteam/manager-http-agent"
+    image: "imlteam/manager-http-agent:5.1"
     volumes:
       - "manager-config:/var/lib/chroma"
     hostname: "http-agent"
@@ -135,7 +135,7 @@ services:
     environment:
       - PROXY_HOST=http-agent
   iml-agent-comms:
-    image: "imlteam/iml-agent-comms"
+    image: "imlteam/iml-agent-comms:5.1"
     volumes:
       - "manager-config:/var/lib/chroma"
     hostname: "iml-agent-comms"
@@ -148,7 +148,7 @@ services:
       - PROXY_HOST=iml-agent-comms
       - RUST_LOG=info
   job-scheduler:
-    image: "imlteam/manager-job-scheduler"
+    image: "imlteam/manager-job-scheduler:5.1"
     hostname: "job-scheduler"
     build:
       context: .
@@ -159,7 +159,7 @@ services:
     environment:
       - PROXY_HOST=iml-action-runner
   lustre-audit:
-    image: "imlteam/manager-lustre-audit"
+    image: "imlteam/manager-lustre-audit:5.1"
     hostname: "lustre-audit"
     build:
       context: .
@@ -168,7 +168,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   plugin-runner:
-    image: "imlteam/manager-plugin-runner"
+    image: "imlteam/manager-plugin-runner:5.1"
     hostname: "plugin-runner"
     build:
       context: .
@@ -179,7 +179,7 @@ services:
     environment:
       - DEVICE_AGGREGATOR_URL=http://device-aggregator:8008
   power-control:
-    image: "imlteam/manager-power-control"
+    image: "imlteam/manager-power-control:5.1"
     hostname: "power-control"
     build:
       context: .
@@ -188,7 +188,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   stats:
-    image: "imlteam/manager-stats"
+    image: "imlteam/manager-stats:5.1"
     hostname: "stats"
     build:
       context: .
@@ -197,7 +197,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   syslog:
-    image: "imlteam/manager-syslog"
+    image: "imlteam/manager-syslog:5.1"
     hostname: "syslog"
     build:
       context: .
@@ -206,7 +206,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   iml-warp-drive:
-    image: "imlteam/iml-warp-drive"
+    image: "imlteam/iml-warp-drive:5.1"
     hostname: "iml-warp-drive"
     build:
       context: ../
@@ -218,7 +218,7 @@ services:
       - PROXY_HOST=iml-warp-drive
       - RUST_LOG=info
   iml-action-runner:
-    image: "imlteam/iml-action-runner"
+    image: "imlteam/iml-action-runner:5.1"
     hostname: "iml-action-runner"
     build:
       context: ../
@@ -231,7 +231,7 @@ services:
       - ACTION_RUNNER_PORT=8009
       - RUST_LOG=info
   iml-stratagem:
-    image: "imlteam/iml-stratagem"
+    image: "imlteam/iml-stratagem:5.1"
     hostname: "iml-stratagem"
     build:
       context: ../
@@ -243,7 +243,7 @@ services:
       - PROXY_HOST=iml-stratagem
       - RUST_LOG=info
   iml-manager-cli:
-    image: "imlteam/iml-manager-cli"
+    image: "imlteam/iml-manager-cli:5.1"
     hostname: "imlteam/iml-manager-cli"
     build:
       context: ../
@@ -254,7 +254,7 @@ services:
     environment:
       - SERVER_HTTP_URL=gunicorn
   setup:
-    image: "imlteam/manager-setup"
+    image: "imlteam/manager-setup:5.1"
     command: ["tail", "-f", "/dev/null"]
     build:
       context: .
