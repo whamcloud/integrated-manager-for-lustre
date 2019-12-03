@@ -9,11 +9,13 @@ enum PackageState {
 
 struct Version(String);
 
+#[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum RpmResult {
     Ok(String),
     Err(RpmError),
 }
 
+#[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum RpmError {
     PackageNotInstalled,
 }

@@ -8,6 +8,6 @@ pub mod check_kernel;
 pub mod check_stonith;
 pub mod ntp;
 pub mod ostpool;
-pub mod package_installed;
+pub mod package;
 pub mod stratagem;
 pub use action_plugin::create_registry;

@@ -7,7 +7,7 @@ use iml_agent::action_plugins::stratagem::{
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
 use iml_agent::action_plugins::{
-    check_ha, check_kernel, check_stonith, ostpool, package_installed,
+    check_ha, check_kernel, check_stonith, ostpool, package,
 };
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
@@ -82,6 +82,20 @@ pub enum PoolCommand {
     List {
         #[structopt(name = "FILESYSTEM", parse(try_from_str = "is_valid_fsname"))]
         filesystem: String,
+    },
+}
+
+#[derive(Debug, StructOpt)]
+pub enum PackageCommand {
+    #[structopt(name = "installed")]
+    Installed {
+        #[structopt(name = "package_name")]
+        package_name: String,
+    },
+    #[structopt(name = "version")]
+    Version {
+        #[structopt(name = "package_name")]
+        package_name: String,
     },
 }
 
@@ -205,8 +219,11 @@ pub enum App {
     #[structopt(name = "check_stonith")]
     CheckStonith,
 
-    #[structopt(name = "package_installed")]
-    PackageInstalled { package: String },
+    #[structopt(name = "package")]
+    Package {
+        #[structopt(subcommand)]
+        command: PackageCommand,
+    },
 
     #[structopt(name = "get_kernel")]
     /// Get latest kernel which supports listed modules
@@ -415,14 +432,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             Err(e) => println!("{:?}", e),
         },
-        App::PackageInstalled { package } => {
-            match package_installed::package_installed(package).await {
-                Ok(cs) => {
-                    println!("{}", if cs { "Installed" } else { "Not Installed" });
+        App::Package { command } => match command {
+            PackageCommand::Installed { package_name } => {
+                match package::installed(package_name).await {
+                    Ok(cs) => {
+                        println!("{}", if cs { "Installed" } else { "Not Installed" });
+                    }
+                    Err(e) => println!("{:?}", e),
                 }
-                Err(e) => println!("{:?}", e),
             }
-        }
+            PackageCommand::Version { package_name } => {
+                match package::version(package_name).await {
+                    Ok(v) => {
+                        println!("{:?}", v);
+                    }
+                    Err(e) => println!("{:?}", e),
+                }
+            }
+        },
         App::GetKernel { modules } => match check_kernel::get_kernel(modules).await {
             Ok(s) => println!("{}", s),
             Err(e) => println!("{:?}", e),
