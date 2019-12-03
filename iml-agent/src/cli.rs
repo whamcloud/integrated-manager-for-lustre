@@ -441,9 +441,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             PackageCommand::Version { package_name } => {
                 match package::version(package_name).await {
-                    Ok(v) => {
-                        println!("{:?}", v);
-                    }
+                    Ok(r) => match r {
+                        package::RpmResult::Ok(v) => println!("{}", v),
+                        package::RpmResult::Err(e) => println!("{}", e),
+                    },
                     Err(e) => println!("{:?}", e),
                 }
             }

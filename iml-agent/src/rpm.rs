@@ -1,5 +1,6 @@
 use regex::Regex;
 
+use std::fmt;
 use std::process::Output;
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output};
@@ -12,6 +13,12 @@ enum PackageState {
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Version(String);
 
+impl fmt::Display for Version {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum RpmResult {
     Ok(Version),
@@ -21,6 +28,15 @@ pub enum RpmResult {
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum RpmError {
     PackageNotInstalled,
+}
+
+impl fmt::Display for RpmError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Self::PackageNotInstalled => "Package not installed",
+        };
+        write!(f, "{}", s)
+    }
 }
 
 async fn parse(output: Output) -> Result<PackageState, ImlAgentError> {
