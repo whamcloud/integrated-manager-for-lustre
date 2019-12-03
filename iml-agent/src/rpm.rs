@@ -48,7 +48,7 @@ async fn parse(output: Output) -> Result<PackageState, ImlAgentError> {
 async fn run_rpm(package_name: &str) -> Result<Output, ImlAgentError> {
     cmd_output(
         "rpm",
-        vec!["--query", "--queryformat", "${VERSION}", package_name],
+        vec!["--query", "--queryformat", "%{VERSION}", package_name],
     )
     .await
 }
