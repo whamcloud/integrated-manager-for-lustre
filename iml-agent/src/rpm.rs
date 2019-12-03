@@ -9,11 +9,12 @@ enum PackageState {
     NotInstalled,
 }
 
-struct Version(String);
+#[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct Version(String);
 
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum RpmResult {
-    Ok(String),
+    Ok(Version),
     Err(RpmError),
 }
 
@@ -64,7 +65,7 @@ pub(crate) async fn installed(package_name: &str) -> Result<bool, ImlAgentError>
 pub(crate) async fn version(package_name: &str) -> Result<RpmResult, ImlAgentError> {
     let output = run_rpm(package_name).await?;
     match parse(output).await {
-        Ok(PackageState::Installed(Version(s))) => Ok(RpmResult::Ok(s)),
+        Ok(PackageState::Installed(v)) => Ok(RpmResult::Ok(v)),
         Ok(PackageState::NotInstalled) => Ok(RpmResult::Err(RpmError::PackageNotInstalled)),
         Err(e) => Err(e),
     }
