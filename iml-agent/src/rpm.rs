@@ -1,5 +1,7 @@
 use regex::Regex;
 
+use std::process::Output;
+
 use crate::{agent_error::ImlAgentError, cmd::cmd_output};
 
 enum PackageState {
@@ -20,12 +22,7 @@ pub enum RpmError {
     PackageNotInstalled,
 }
 
-async fn parse(package_name: &str) -> Result<PackageState, ImlAgentError> {
-    let output = cmd_output(
-        "rpm",
-        vec!["--query", "--queryformat", "${VERSION}", package_name],
-    )
-    .await?;
+async fn parse(output: Output) -> Result<PackageState, ImlAgentError> {
     if output.status.success() {
         // In case there's syntax error in query format, exit code of `rpm` is 0,
         // but there's no data and an error is on stderr
@@ -48,15 +45,25 @@ async fn parse(package_name: &str) -> Result<PackageState, ImlAgentError> {
     }
 }
 
+async fn run_rpm(package_name: &str) -> Result<Output, ImlAgentError> {
+    cmd_output(
+        "rpm",
+        vec!["--query", "--queryformat", "${VERSION}", package_name],
+    )
+    .await
+}
+
 pub(crate) async fn installed(package_name: &str) -> Result<bool, ImlAgentError> {
-    parse(package_name).await.map(|r| match r {
+    let output = run_rpm(package_name).await?;
+    parse(output).await.map(|r| match r {
         PackageState::Installed(_) => true,
         PackageState::NotInstalled => false,
     })
 }
 
 pub(crate) async fn version(package_name: &str) -> Result<RpmResult, ImlAgentError> {
-    match parse(package_name).await {
+    let output = run_rpm(package_name).await?;
+    match parse(output).await {
         Ok(PackageState::Installed(Version(s))) => Ok(RpmResult::Ok(s)),
         Ok(PackageState::NotInstalled) => Ok(RpmResult::Err(RpmError::PackageNotInstalled)),
         Err(e) => Err(e),
