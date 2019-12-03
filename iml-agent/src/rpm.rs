@@ -2,6 +2,7 @@ use regex::Regex;
 
 use std::fmt;
 use std::process::Output;
+use std::result::Result as StdResult;
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output};
 
@@ -20,17 +21,17 @@ impl fmt::Display for Version {
 }
 
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
-pub enum RpmResult {
+pub enum Result {
     Ok(Version),
-    Err(RpmError),
+    Err(Error),
 }
 
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
-pub enum RpmError {
+pub enum Error {
     PackageNotInstalled,
 }
 
-impl fmt::Display for RpmError {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
             Self::PackageNotInstalled => "Package not installed",
@@ -39,7 +40,7 @@ impl fmt::Display for RpmError {
     }
 }
 
-async fn parse(output: Output) -> Result<PackageState, ImlAgentError> {
+async fn parse(output: Output) -> StdResult<PackageState, ImlAgentError> {
     if output.status.success() {
         // In case there's syntax error in query format, exit code of `rpm` is 0,
         // but there's no data and an error is on stderr
@@ -62,7 +63,7 @@ async fn parse(output: Output) -> Result<PackageState, ImlAgentError> {
     }
 }
 
-async fn run_rpm(package_name: &str) -> Result<Output, ImlAgentError> {
+async fn run_rpm(package_name: &str) -> StdResult<Output, ImlAgentError> {
     cmd_output(
         "rpm",
         vec!["--query", "--queryformat", "%{VERSION}", package_name],
@@ -70,7 +71,7 @@ async fn run_rpm(package_name: &str) -> Result<Output, ImlAgentError> {
     .await
 }
 
-pub(crate) async fn installed(package_name: &str) -> Result<bool, ImlAgentError> {
+pub(crate) async fn installed(package_name: &str) -> StdResult<bool, ImlAgentError> {
     let output = run_rpm(package_name).await?;
     parse(output).await.map(|r| match r {
         PackageState::Installed(_) => true,
@@ -78,11 +79,11 @@ pub(crate) async fn installed(package_name: &str) -> Result<bool, ImlAgentError>
     })
 }
 
-pub(crate) async fn version(package_name: &str) -> Result<RpmResult, ImlAgentError> {
+pub(crate) async fn version(package_name: &str) -> StdResult<Result, ImlAgentError> {
     let output = run_rpm(package_name).await?;
     match parse(output).await {
-        Ok(PackageState::Installed(v)) => Ok(RpmResult::Ok(v)),
-        Ok(PackageState::NotInstalled) => Ok(RpmResult::Err(RpmError::PackageNotInstalled)),
+        Ok(PackageState::Installed(v)) => Ok(Result::Ok(v)),
+        Ok(PackageState::NotInstalled) => Ok(Result::Err(Error::PackageNotInstalled)),
         Err(e) => Err(e),
     }
 }
