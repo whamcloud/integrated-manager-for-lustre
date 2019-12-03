@@ -1,41 +1,36 @@
 use crate::{components::font_awesome, generated::css_classes::C};
 use iml_wire_types::{Alert, AlertSeverity};
 use seed::{prelude::*, *};
-use std::collections::{HashMap, HashSet};
+use std::{
+    cmp::max,
+    collections::{HashMap, HashSet},
+};
 
 pub fn update_activity_health(
     active_alert: &HashMap<u32, Alert>,
 ) -> ActivityHealth {
-    let xs = active_alert
-        .iter()
-        .filter(|(_, x)| match x.severity {
-            AlertSeverity::WARNING | AlertSeverity::ERROR => true,
-            _ => false,
-        })
-        .map(|(_, x)| &x.severity)
-        .collect::<Vec<_>>();
-
-    let count = xs.len();
-
-    let s = xs.into_iter().collect::<HashSet<&AlertSeverity>>();
-
-    let mut health = AlertSeverity::INFO;
-
-    if s.contains(&AlertSeverity::ERROR) {
-        health = AlertSeverity::ERROR
-    } else if s.contains(&AlertSeverity::WARNING) {
-        health = AlertSeverity::WARNING;
-    }
-
-    ActivityHealth {
-        health,
-        count,
-    }
+    active_alert.values().filter(|x| x.severity > AlertSeverity::INFO).fold(
+        ActivityHealth::new(),
+        |mut acc, x| {
+            acc.health = max(acc.health, x.severity);
+            acc.count += 1;
+            acc
+        },
+    )
 }
 
 pub struct ActivityHealth {
     pub count: usize,
-    pub health: iml_wire_types::AlertSeverity,
+    pub health: AlertSeverity,
+}
+
+impl ActivityHealth {
+    pub fn new() -> Self {
+        ActivityHealth {
+            health: AlertSeverity::INFO,
+            count: 0,
+        }
+    }
 }
 
 pub fn activity_indicator<T>(activity_health: &ActivityHealth) -> Node<T> {

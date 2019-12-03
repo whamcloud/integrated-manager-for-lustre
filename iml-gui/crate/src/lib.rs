@@ -257,10 +257,7 @@ pub fn init(url: Url, orders: &mut impl Orders<Msg>) -> Init<Model> {
         side_width_percentage: 20f32,
         records: warp_drive::Cache::default(),
         locks: HashMap::new(),
-        activity_health: ActivityHealth {
-            count: 0,
-            health: AlertSeverity::INFO,
-        },
+        activity_health: ActivityHealth::new(),
     })
 }
 
