@@ -430,28 +430,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             Err(e) => println!("{:?}", e),
         },
-        App::Package { command } => match command {
-            PackageCommand::Installed { package_name } => {
-                match package::installed(package_name).await {
-                    Ok(cs) => {
-                        println!("{}", if cs { "Installed" } else { "Not Installed" });
-                    }
-                    Err(e) => println!("{:?}", e),
-                }
-            }
-            PackageCommand::Version { package_name } => {
-                match package::version(package_name).await {
-                    Ok(r) => match r {
+        App::Package { command } => {
+            if let Err(e) = match command {
+                PackageCommand::Installed { package_name } => package::installed(package_name)
+                    .await
+                    .map(|r| println!("{}", if r { "Installed" } else { "Not Installed" })),
+                PackageCommand::Version { package_name } => {
+                    package::version(package_name).await.map(|r| match r {
                         package::RpmResult::Ok(v) => println!("{}", v),
                         package::RpmResult::Err(e) => {
                             println!("{}", e);
                             exit(exitcode::DATAERR)
                         }
-                    },
-                    Err(e) => println!("{:?}", e),
+                    })
                 }
+            } {
+                println!("{:?}", e);
+                exit(exitcode::SOFTWARE);
             }
-        },
+        }
         App::GetKernel { modules } => match check_kernel::get_kernel(modules).await {
             Ok(s) => println!("{}", s),
             Err(e) => println!("{:?}", e),
