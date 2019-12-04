@@ -2,7 +2,7 @@ use crate::{
     components::{arrow, Placement},
     generated::css_classes::C,
 };
-use seed::{dom_types::Attrs, prelude::*, *};
+use seed::{prelude::*, virtual_dom::Attrs, *};
 
 /// Call this fn within the element wrapping the tooltip
 /// It will add the needed styles so the tooltip will render

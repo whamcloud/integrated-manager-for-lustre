@@ -6,7 +6,7 @@ use crate::{
     Visibility::*,
     CTX_HELP,
 };
-use seed::{dom_types::Attrs, prelude::*, *};
+use seed::{prelude::*, virtual_dom::Attrs, *};
 
 fn menu_icon<T>(icon_name: &str) -> Node<T> {
     font_awesome(class![C.h_6, C.w_6, C.mr_3, C.inline], icon_name)
