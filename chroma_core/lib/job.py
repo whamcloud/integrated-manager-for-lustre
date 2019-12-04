@@ -291,7 +291,7 @@ class Step(object):
 
         if "error" in result:
             self.log(result["error"])
-            raise AgentException(host.fqdn, command, args, result["error"])
+            raise AgentException(fqdn, command, args, result["error"])
 
         return result["result"]
 
