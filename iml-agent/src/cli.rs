@@ -439,13 +439,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     package::version(package_name).await.map(|r| match r {
                         package::RpmResult::Ok(v) => println!("{}", v),
                         package::RpmResult::Err(e) => {
-                            println!("{}", e);
+                            eprintln!("{}", e);
                             exit(exitcode::DATAERR)
                         }
                     })
                 }
             } {
-                println!("{:?}", e);
+                eprintln!("{:?}", e);
                 exit(exitcode::SOFTWARE);
             }
         }
