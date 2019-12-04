@@ -43,19 +43,19 @@ fn nav_manage_dropdown(open: bool) -> Node<Msg> {
         ul![
             li![a![
                 &cls,
-                "Servers",
+                Page::Server.to_string(),
                 attrs! {
                     At::Href => Page::Server.to_href(),
                 },
             ]],
             li![
-                a![&cls, "Power Control"],
+                a![&cls, Page::PowerControl.to_string()],
                 attrs! {
                     At::Href => Page::PowerControl.to_href(),
                 },
             ],
             li![
-                a![&cls, "Filesystems"],
+                a![&cls, Page::Filesystem.to_string()],
                 attrs! {
                     At::Href => Page::Filesystem.to_href(),
                 },
@@ -63,19 +63,19 @@ fn nav_manage_dropdown(open: bool) -> Node<Msg> {
             li![a![&cls, "HSM"]],
             li![a![&cls, "Storage"]],
             li![
-                a![&cls, "Users"],
+                a![&cls, Page::User.to_string()],
                 attrs! {
                     At::Href => Page::User.to_href(),
                 },
             ],
             li![
-                a![&cls, "Volumes"],
+                a![&cls, Page::Volume.to_string()],
                 attrs! {
                     At::Href => Page::Volume.to_href(),
                 },
             ],
             li![
-                a![&cls, "MGTs"],
+                a![&cls, Page::Mgt.to_string()],
                 attrs! {
                     At::Href => Page::Mgt.to_href(),
                 },
@@ -114,7 +114,7 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                 menu_icon("tachometer-alt"),
                 span![
                     class![C.group_hover__text_active, C.text_active => model.page == Page::Dashboard],
-                    "Dashboard"
+                    Page::Dashboard.to_string(),
                 ],
             ]
         ],
@@ -148,7 +148,7 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                 menu_icon("signal"),
                 span![
                     class![C.group_hover__text_active, C.text_active => model.page == Page::Jobstats],
-                    "Jobstats"
+                    Page::Jobstats.to_string(),
                 ],
             ]
         ],
@@ -162,7 +162,7 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                 menu_icon("book"),
                 span![
                     class![C.group_hover__text_active, C.bg_menu_active => model.page == Page::Logs],
-                    "Logs"
+                    Page::Logs.to_string(),
                 ]
             ]
         ],
@@ -186,7 +186,7 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                 activity_indicator(&model.activity_health),
                 span![
                     class![C.group_hover__text_active, C.bg_menu_active => model.page == Page::Activity],
-                    "Activity",
+                    Page::Activity.to_string(),
                 ]
             ]
         ],
@@ -291,7 +291,7 @@ fn nav(model: &Model) -> Node<Msg> {
                         attrs! {
                             At::Href => Page::Login.to_href(),
                         },
-                        "Login",
+                        Page::Login.to_string(),
                     ],
                 ],
             ]
