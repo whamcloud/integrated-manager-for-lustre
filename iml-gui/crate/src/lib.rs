@@ -157,14 +157,14 @@ impl ToString for Page {
             Self::Jobstats => "Jobstats".into(),
             Self::Login => "Login".into(),
             Self::Logs => "Logs".into(),
-            Self::Mgt => "Mgt".into(),
+            Self::Mgt => "MGTs".into(),
             Self::NotFound => "404".into(),
             Self::PowerControl => "Power Control".into(),
             Self::Server => "Servers".into(),
             Self::ServerDetail => "Server Detail".into(),
             Self::Target => "Target".into(),
-            Self::User => "User".into(),
-            Self::Volume => "Volume".into(),
+            Self::User => "Users".into(),
+            Self::Volume => "Volumes".into(),
         }
     }
 }
