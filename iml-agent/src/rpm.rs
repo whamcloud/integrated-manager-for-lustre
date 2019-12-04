@@ -20,11 +20,7 @@ impl fmt::Display for Version {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
-pub enum Result {
-    Ok(Version),
-    Err(Error),
-}
+pub type Result = StdResult<Version, Error>;
 
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Error {
