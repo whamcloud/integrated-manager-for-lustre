@@ -151,7 +151,7 @@ impl ToString for Page {
             Self::About => "About".into(),
             Self::Activity => "Activity".into(),
             Self::Dashboard => "Dashboard".into(),
-            Self::Filesystem => "Filesystem".into(),
+            Self::Filesystem => "Filesystems".into(),
             Self::FilesystemDetail => "Filesystem Detail".into(),
             Self::Home => "Home".into(),
             Self::Jobstats => "Jobstats".into(),
@@ -160,7 +160,7 @@ impl ToString for Page {
             Self::Mgt => "Mgt".into(),
             Self::NotFound => "404".into(),
             Self::PowerControl => "Power Control".into(),
-            Self::Server => "Server".into(),
+            Self::Server => "Servers".into(),
             Self::ServerDetail => "Server Detail".into(),
             Self::Target => "Target".into(),
             Self::User => "User".into(),
@@ -213,16 +213,18 @@ pub fn register_eventsource_handle<T, F>(
 }
 
 // ------ ------
-//     Init
+// Before Mount
 // ------ ------
 
-pub fn init(url: Url, orders: &mut impl Orders<Msg>) -> Init<Model> {
-    // @TODO: Seed can't hydrate prerendered html (yet).
-    // https://github.com/David-OConnor/seed/issues/223
-    if let Some(mount_point_element) = document().get_element_by_id("app") {
-        mount_point_element.set_inner_html("");
-    }
+fn before_mount(_: Url) -> BeforeMount {
+    BeforeMount::new().mount_point("app").mount_type(MountType::Takeover)
+}
 
+// ------ ------
+//  After Mount
+// ------ ------
+
+fn after_mount(url: Url, orders: &mut impl Orders<Msg>) -> AfterMount<Model> {
     let es = EventSource::new("https://localhost:7444/messaging").unwrap();
 
     register_eventsource_handle(
@@ -248,7 +250,7 @@ pub fn init(url: Url, orders: &mut impl Orders<Msg>) -> Init<Model> {
 
     orders.send_msg(Msg::UpdatePageTitle);
 
-    Init::new(Model {
+    AfterMount::new(Model {
         page: url.into(),
         menu_visibility: Visible,
         in_prerendering: is_in_prerendering(),
@@ -619,11 +621,12 @@ pub fn window_events(model: &Model) -> Vec<Listener<Msg>> {
 pub fn run() {
     log!("Starting app...");
 
-    App::build(init, update, view)
+    App::builder(update, view)
+        .before_mount(before_mount)
+        .after_mount(after_mount)
         .routes(routes)
         .window_events(window_events)
-        .finish()
-        .run();
+        .build_and_start();
 
     log!("App started.");
 }
