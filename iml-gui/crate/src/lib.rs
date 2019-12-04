@@ -8,11 +8,13 @@
 mod components;
 mod generated;
 mod page;
+mod route;
 
 use components::{update_activity_health, ActivityHealth};
 use generated::css_classes::C;
-use iml_wire_types::{warp_drive, AlertSeverity};
+use iml_wire_types::warp_drive;
 use js_sys::Function;
+use route::Route;
 use seed::{events::Listener, prelude::*, *};
 use std::{cmp, collections::HashMap, mem};
 use wasm_bindgen::JsCast;
@@ -89,7 +91,7 @@ impl WatchState {
 // ------ ------
 
 pub struct Model {
-    pub page: Page,
+    pub route: Route<'static>,
     pub menu_visibility: Visibility,
     pub in_prerendering: bool,
     pub manage_menu_state: WatchState,
@@ -98,99 +100,6 @@ pub struct Model {
     pub records: warp_drive::Cache,
     pub locks: warp_drive::Locks,
     pub activity_health: ActivityHealth,
-}
-
-#[derive(Clone, Copy, Eq, PartialEq)]
-pub enum Page {
-    About,
-    Activity,
-    Dashboard,
-    Filesystem,
-    FilesystemDetail,
-    Home,
-    Jobstats,
-    Login,
-    Logs,
-    Mgt,
-    NotFound,
-    PowerControl,
-    Server,
-    ServerDetail,
-    Target,
-    User,
-    Volume,
-}
-
-impl Page {
-    pub fn to_href(self) -> &'static str {
-        match self {
-            Self::About => "/about",
-            Self::Activity => "/activity",
-            Self::Dashboard => "/dashboard",
-            Self::Filesystem => "/filesystem",
-            Self::FilesystemDetail => "/filesystem_detail",
-            Self::Home => "/",
-            Self::Jobstats => "/jobstats",
-            Self::Login => "/login",
-            Self::Logs => "/logs",
-            Self::Mgt => "/mgt",
-            Self::NotFound => "/404",
-            Self::PowerControl => "/power_control",
-            Self::Server => "/server",
-            Self::ServerDetail => "/server_detail",
-            Self::Target => "/target",
-            Self::User => "/user",
-            Self::Volume => "/volume",
-        }
-    }
-}
-
-impl ToString for Page {
-    fn to_string(&self) -> String {
-        match self {
-            Self::About => "About".into(),
-            Self::Activity => "Activity".into(),
-            Self::Dashboard => "Dashboard".into(),
-            Self::Filesystem => "Filesystems".into(),
-            Self::FilesystemDetail => "Filesystem Detail".into(),
-            Self::Home => "Home".into(),
-            Self::Jobstats => "Jobstats".into(),
-            Self::Login => "Login".into(),
-            Self::Logs => "Logs".into(),
-            Self::Mgt => "MGTs".into(),
-            Self::NotFound => "404".into(),
-            Self::PowerControl => "Power Control".into(),
-            Self::Server => "Servers".into(),
-            Self::ServerDetail => "Server Detail".into(),
-            Self::Target => "Target".into(),
-            Self::User => "Users".into(),
-            Self::Volume => "Volumes".into(),
-        }
-    }
-}
-
-impl From<Url> for Page {
-    fn from(url: Url) -> Self {
-        match url.path.first().map(String::as_str) {
-            Some("about") => Self::About,
-            Some("activity") => Self::Activity,
-            Some("dashboard") => Self::Dashboard,
-            Some("filesystem") => Self::Filesystem,
-            Some("filesystem_detail") => Self::FilesystemDetail,
-            None | Some("") => Self::Home,
-            Some("jobstats") => Self::Jobstats,
-            Some("login") => Self::Login,
-            Some("logs") => Self::Logs,
-            Some("mgt") => Self::Mgt,
-            Some("power_control") => Self::PowerControl,
-            Some("server") => Self::Server,
-            Some("server_detail") => Self::ServerDetail,
-            Some("target") => Self::Target,
-            Some("user") => Self::User,
-            Some("volume") => Self::Volume,
-            _ => Self::NotFound,
-        }
-    }
 }
 
 pub fn register_eventsource_handle<T, F>(
@@ -251,7 +160,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg>) -> AfterMount<Model> {
     orders.send_msg(Msg::UpdatePageTitle);
 
     AfterMount::new(Model {
-        page: url.into(),
+        route: url.into(),
         menu_visibility: Visible,
         in_prerendering: is_in_prerendering(),
         manage_menu_state: WatchState::default(),
@@ -308,12 +217,12 @@ pub enum Msg {
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::RouteChanged(url) => {
-            model.page = url.into();
+            model.route = url.into();
             orders.send_msg(Msg::UpdatePageTitle);
         }
         Msg::UpdatePageTitle => {
             let title =
-                format!("{} - {}", model.page.to_string(), TITLE_SUFFIX);
+                format!("{} - {}", model.route.to_string(), TITLE_SUFFIX);
 
             document().set_title(&title);
         }
@@ -565,28 +474,28 @@ pub fn view(model: &Model) -> impl View<Msg> {
                         C.overflow_y_auto,
                         C.p_6
                     ],
-                    match model.page {
-                        Page::About => page::about::view(&model).els(),
-                        Page::Activity => page::activity::view(&model).els(),
-                        Page::Dashboard => page::dashboard::view(&model).els(),
-                        Page::Filesystem =>
+                    match &model.route {
+                        Route::About => page::about::view(&model).els(),
+                        Route::Activity => page::activity::view(&model).els(),
+                        Route::Dashboard => page::dashboard::view(&model).els(),
+                        Route::Filesystem =>
                             page::filesystem::view(&model).els(),
-                        Page::FilesystemDetail =>
+                        Route::FilesystemDetail =>
                             page::filesystem_detail::view(&model).els(),
-                        Page::Home => page::home::view(&model).els(),
-                        Page::Jobstats => page::jobstats::view(&model).els(),
-                        Page::Login => page::login::view(&model).els(),
-                        Page::Logs => page::logs::view(&model).els(),
-                        Page::Mgt => page::mgt::view(&model).els(),
-                        Page::NotFound => page::not_found::view(&model).els(),
-                        Page::PowerControl =>
+                        Route::Home => page::home::view(&model).els(),
+                        Route::Jobstats => page::jobstats::view(&model).els(),
+                        Route::Login => page::login::view(&model).els(),
+                        Route::Logs => page::logs::view(&model).els(),
+                        Route::Mgt => page::mgt::view(&model).els(),
+                        Route::NotFound => page::not_found::view(&model).els(),
+                        Route::PowerControl =>
                             page::power_control::view(&model).els(),
-                        Page::Server => page::server::view(&model).els(),
-                        Page::ServerDetail =>
-                            page::server_detail::view(&model).els(),
-                        Page::Target => page::target::view(&model).els(),
-                        Page::User => page::user::view(&model).els(),
-                        Page::Volume => page::volume::view(&model).els(),
+                        Route::Server => page::server::view(&model).els(),
+                        Route::ServerDetail(id) =>
+                            page::server_detail::view(&model, &id).els(),
+                        Route::Target => page::target::view(&model).els(),
+                        Route::User => page::user::view(&model).els(),
+                        Route::Volume => page::volume::view(&model).els(),
                     },
                 ],
                 page::partial::footer::view().els(),
