@@ -7,6 +7,7 @@
 
 mod components;
 mod generated;
+mod notification;
 mod page;
 mod route;
 
@@ -162,6 +163,8 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg>) -> AfterMount<Model> {
 
     orders.send_msg(Msg::UpdatePageTitle);
 
+    notification::request_permission();
+
     AfterMount::new(Model {
         route: url.into(),
         menu_visibility: Visible,
@@ -264,8 +267,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::RecordChange(record_change) => match record_change {
             warp_drive::RecordChange::Update(record) => match record {
                 warp_drive::Record::ActiveAlert(x) => {
+                    notification::display_alert(&x);
                     model.records.active_alert.insert(x.id, x);
-
                     model.activity_health =
                         update_activity_health(&model.records.active_alert);
                 }

@@ -27,11 +27,14 @@ serde_json = "1.0"
 [dependencies.web-sys]
 version = "^0.3"
 features = [
-  "Navigator",
-  "EventSource",
   "DomRect",
   "Element",
-  "MessageEvent"
+  "EventSource",
+  "MessageEvent",
+  "Navigator",
+  "Notification",
+  "NotificationOptions",
+  "NotificationPermission"
 ]
 
 [profile.release]
