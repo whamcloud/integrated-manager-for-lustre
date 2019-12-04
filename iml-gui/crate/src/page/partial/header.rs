@@ -1,7 +1,7 @@
 use crate::{
     components::{activity_indicator, font_awesome},
     generated::css_classes::C,
-    Model, Msg, Page,
+    Model, Msg, Route,
     Visibility::*,
 };
 use seed::{prelude::*, *};
@@ -43,41 +43,41 @@ fn nav_manage_dropdown(open: bool) -> Node<Msg> {
         ul![
             li![a![
                 &cls,
-                Page::Server.to_string(),
+                Route::Server.to_string(),
                 attrs! {
-                    At::Href => Page::Server.to_href(),
+                    At::Href => Route::Server.to_href(),
                 },
             ]],
             li![
-                a![&cls, Page::PowerControl.to_string()],
+                a![&cls, Route::PowerControl.to_string()],
                 attrs! {
-                    At::Href => Page::PowerControl.to_href(),
+                    At::Href => Route::PowerControl.to_href(),
                 },
             ],
             li![
-                a![&cls, Page::Filesystem.to_string()],
+                a![&cls, Route::Filesystem.to_string()],
                 attrs! {
-                    At::Href => Page::Filesystem.to_href(),
+                    At::Href => Route::Filesystem.to_href(),
                 },
             ],
             li![a![&cls, "HSM"]],
             li![a![&cls, "Storage"]],
             li![
-                a![&cls, Page::User.to_string()],
+                a![&cls, Route::User.to_string()],
                 attrs! {
-                    At::Href => Page::User.to_href(),
+                    At::Href => Route::User.to_href(),
                 },
             ],
             li![
-                a![&cls, Page::Volume.to_string()],
+                a![&cls, Route::Volume.to_string()],
                 attrs! {
-                    At::Href => Page::Volume.to_href(),
+                    At::Href => Route::Volume.to_href(),
                 },
             ],
             li![
-                a![&cls, Page::Mgt.to_string()],
+                a![&cls, Route::Mgt.to_string()],
                 attrs! {
-                    At::Href => Page::Mgt.to_href(),
+                    At::Href => Route::Mgt.to_href(),
                 },
             ]
         ]
@@ -106,15 +106,15 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
         class![C.text_base, C.lg__flex, C.lg__h_16,],
         a![
             &menu_class,
-            class![C.bg_menu_active => model.page == Page::Dashboard],
+            class![C.bg_menu_active => model.route == Route::Dashboard],
             attrs! {
-                At::Href => Page::Dashboard.to_href()
+                At::Href => Route::Dashboard.to_href()
             },
             span![
                 menu_icon("tachometer-alt"),
                 span![
-                    class![C.group_hover__text_active, C.text_active => model.page == Page::Dashboard],
-                    Page::Dashboard.to_string(),
+                    class![C.group_hover__text_active, C.text_active => model.route == Route::Dashboard],
+                    Route::Dashboard.to_string(),
                 ],
             ]
         ],
@@ -140,29 +140,29 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
         ],
         a![
             &menu_class,
-            class![C.bg_menu_active => model.page == Page::Jobstats],
+            class![C.bg_menu_active => model.route == Route::Jobstats],
             attrs! {
-                At::Href => Page::Jobstats.to_href()
+                At::Href => Route::Jobstats.to_href()
             },
             span![
                 menu_icon("signal"),
                 span![
-                    class![C.group_hover__text_active, C.text_active => model.page == Page::Jobstats],
-                    Page::Jobstats.to_string(),
+                    class![C.group_hover__text_active, C.text_active => model.route == Route::Jobstats],
+                    Route::Jobstats.to_string(),
                 ],
             ]
         ],
         a![
             &menu_class,
-            class![C.bg_menu_active => model.page == Page::Logs],
+            class![C.bg_menu_active => model.route == Route::Logs],
             attrs! {
-                At::Href => Page::Logs.to_href()
+                At::Href => Route::Logs.to_href()
             },
             span![
                 menu_icon("book"),
                 span![
-                    class![C.group_hover__text_active, C.bg_menu_active => model.page == Page::Logs],
-                    Page::Logs.to_string(),
+                    class![C.group_hover__text_active, C.bg_menu_active => model.route == Route::Logs],
+                    Route::Logs.to_string(),
                 ]
             ]
         ],
@@ -178,15 +178,15 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
         ],
         a![
             &menu_class,
-            class![C.bg_menu_active => model.page == Page::Activity],
+            class![C.bg_menu_active => model.route == Route::Activity],
             attrs! {
-                At::Href => Page::Activity.to_href(),
+                At::Href => Route::Activity.to_href(),
             },
             span![
                 activity_indicator(&model.activity_health),
                 span![
-                    class![C.group_hover__text_active, C.bg_menu_active => model.page == Page::Activity],
-                    Page::Activity.to_string(),
+                    class![C.group_hover__text_active, C.bg_menu_active => model.route == Route::Activity],
+                    Route::Activity.to_string(),
                 ]
             ]
         ],
@@ -289,9 +289,9 @@ fn nav(model: &Model) -> Node<Msg> {
                             C.border_transparent
                         ],
                         attrs! {
-                            At::Href => Page::Login.to_href(),
+                            At::Href => Route::Login.to_href(),
                         },
-                        Page::Login.to_string(),
+                        Route::Login.to_string(),
                     ],
                 ],
             ]
@@ -312,7 +312,7 @@ pub fn view(model: &Model) -> impl View<Msg> {
                 C.text_center,
                 C.py_2
             ],
-            model.page.to_string()
+            model.route.to_string()
         ],
     ]
 }
