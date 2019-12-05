@@ -4,7 +4,7 @@
 
 use crate::{
     action_plugins::{
-        check_ha, check_stonith,
+        check_ha, check_stonith, kernel_module,
         ntp::action_configure,
         ostpool, package_installed,
         stratagem::{action_purge, action_warning, server},
@@ -25,6 +25,7 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("disable_unit", systemd::disable_unit)
         .add_plugin("restart_unit", systemd::restart_unit)
         .add_plugin("get_unit_run_state", systemd::get_run_state)
+        .add_plugin("kernel_module_loaded", kernel_module::loaded)
         .add_plugin("package_installed", package_installed::package_installed)
         .add_plugin("start_scan_stratagem", server::trigger_scan)
         .add_plugin("stream_fidlists_stratagem", server::stream_fidlists)
