@@ -11,3 +11,5 @@ RUN apt-get update \
 
 COPY docker/wait-for-dependencies.sh /usr/local/bin/
 ENTRYPOINT [ "wait-for-dependencies.sh" ]
+
+CMD /bin/sh
