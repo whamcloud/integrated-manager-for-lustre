@@ -1179,7 +1179,7 @@ class JobScheduler(object):
                 cmds = []
                 for ost in ManagedOst.objects.filter(name__in=to_add):
                     cmds.append({"class_name": "AddOstPoolJob", "args": {"pool": ostpool, "ost": ost}})
-                for ost in to_remove:
+                for ost in ManagedOst.objects.filter(name__in=to_remove):
                     cmds.append({"class_name": "RemoveOstPoolJob", "args": {"pool": ostpool, "ost": ost}})
                 command_id = self.CommandPlan.command_run_jobs(cmds, help_text["updating_ostpool"])
         self.progress.advance()
