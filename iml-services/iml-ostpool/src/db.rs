@@ -81,7 +81,7 @@ impl PoolClient {
                     ManagedOstRecord::table_name(),
                 );
                 let query = format!(
-                    "SELECT FS.id FROM {} AS FS INNER JOIN ({}) AS MTFS ON FS.id = MTFS.filesystem_id INNER JOIN {} AS MTM ON MTFS.managedtarget_ptr_id = MTM.target_id INNER JOIN {} AS MH ON MTM.host_id = MH.id WHERE FS.name = $1 AND MH.fqdn = $2",
+                    "SELECT FS.id FROM {} AS FS INNER JOIN ({}) AS MTFS ON FS.id = MTFS.filesystem_id INNER JOIN {} AS MTM ON MTFS.managedtarget_ptr_id = MTM.target_id INNER JOIN {} AS MH ON MTM.host_id = MH.id WHERE FS.name = $1 AND MH.fqdn = $2 AND FS.not_deleted = True AND MTM.not_deleted = True AND MH.not_deleted = True",
                     FsRecord::table_name(),
                     union,
                     ManagedTargetMountRecord::table_name(),
