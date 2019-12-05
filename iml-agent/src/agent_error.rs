@@ -4,6 +4,10 @@
 
 use iml_fs::ImlFsError;
 use iml_wire_types::PluginName;
+use kmod::Error as KmodError;
+
+use error_chain::ChainedError;
+
 use std::{fmt, process::Output};
 
 pub type Result<T> = std::result::Result<T, ImlAgentError>;
@@ -95,6 +99,7 @@ pub enum ImlAgentError {
     CibError(CibError),
     UnexpectedStatusError,
     MarkerNotFound,
+    KmodError(MyKmodError),
 }
 
 impl std::fmt::Display for ImlAgentError {
@@ -132,6 +137,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::CibError(ref err) => write!(f, "{}", err),
             ImlAgentError::UnexpectedStatusError => write!(f, "Unexpected status code"),
             ImlAgentError::MarkerNotFound => write!(f, "Marker not found"),
+            ImlAgentError::KmodError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -165,6 +171,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::CibError(ref err) => Some(err),
             ImlAgentError::UnexpectedStatusError => None,
             ImlAgentError::MarkerNotFound => None,
+            ImlAgentError::KmodError(ref err) => Some(err),
         }
     }
 }
@@ -310,6 +317,37 @@ impl From<http::header::InvalidHeaderValue> for ImlAgentError {
 impl From<CibError> for ImlAgentError {
     fn from(err: CibError) -> Self {
         ImlAgentError::CibError(err)
+    }
+}
+
+impl From<MyKmodError> for ImlAgentError {
+    fn from(err: MyKmodError) -> Self {
+        ImlAgentError::KmodError(err)
+    }
+}
+
+#[derive(Debug)]
+pub struct MyKmodError {
+    kind: <kmod::Error as ChainedError>::ErrorKind,
+}
+
+impl fmt::Display for MyKmodError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "MyKmodError")
+    }
+}
+
+impl std::error::Error for MyKmodError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+}
+
+impl From<KmodError> for MyKmodError {
+    fn from(err: KmodError) -> Self {
+        match err {
+            kmod::Error(e, _) => Self { kind: e },
+        }
     }
 }
 
