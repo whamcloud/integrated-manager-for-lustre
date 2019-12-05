@@ -39,8 +39,6 @@ services:
     deploy: *default-deploy
     volumes:
       - grafana-storage:/var/lib/grafana
-    environment:
-      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-influx-flux-datasource
     ports:
       - 3000:3000
   rabbit:
