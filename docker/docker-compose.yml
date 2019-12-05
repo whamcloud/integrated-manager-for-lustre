@@ -61,8 +61,6 @@ services:
       interval: 5s
       retries: 5
       start_period: 10s
-    ports:
-      - "15672:15672"
   nginx:
     image: "imlteam/manager-nginx:5.1"
     hostname: "nginx"
