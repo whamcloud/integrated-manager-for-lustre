@@ -22,7 +22,7 @@ async fn parse(output: Output) -> StdResult<Option<Version>, ImlAgentError> {
         if output.stderr.len() > 0 {
             Err(ImlAgentError::CmdOutputError(output))
         } else {
-            Ok(Some(Version(String::from_utf8(output.stdout).unwrap())))
+            Ok(Some(Version(String::from_utf8_lossy(&output.stdout).to_string())))
         }
     } else {
         let stdout = output.stdout.clone();
