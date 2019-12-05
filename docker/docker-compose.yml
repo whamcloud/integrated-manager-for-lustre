@@ -8,7 +8,9 @@ services:
   postgres:
     image: "postgres:9.2.23"
     hostname: "postgres"
-    deploy: *default-deploy
+    deploy:
+      <<: *default-deploy
+      endpoint_mode: dnsrr
     volumes:
       - db-data:/var/lib/postgresql/data/
     environment:
