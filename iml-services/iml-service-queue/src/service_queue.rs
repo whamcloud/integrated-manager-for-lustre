@@ -4,7 +4,8 @@
 
 use futures::{future, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use iml_rabbit::{
-    basic_consume, connect_to_queue, connect_to_rabbit, BasicConsumeOptions, Client, ImlRabbitError,
+    basic_consume, connect_to_queue, connect_to_rabbit, purge_queue, BasicConsumeOptions, Client,
+    ImlRabbitError,
 };
 use iml_wire_types::{Fqdn, PluginMessage};
 
@@ -44,18 +45,26 @@ impl From<serde_json::error::Error> for ImlServiceQueueError {
     }
 }
 
-/// Creates a consumer for the locks queue.
-/// This fn will first purge the locks queue
-/// and then make a one-off request to get
-/// all locks currently held in the job-scheduler.
+/// Creates a consumer for an iml-service.
+/// This fn will first purge the queue
+/// and then consume from it.
 ///
 /// This is expected to be called once during startup.
 pub fn consume_service_queue(
     client: Client,
     name: &'static str,
 ) -> impl Stream<Item = Result<PluginMessage, ImlServiceQueueError>> {
+    let name2 = name.clone().to_string();
+
     connect_to_queue(name.to_string(), client)
         .map_err(ImlServiceQueueError::from)
+        .and_then(move |(c, q)| {
+            async {
+                let c = purge_queue(c, name2).await?;
+
+                Ok((c, q))
+            }
+        })
         .and_then(move |(c, q)| {
             basic_consume(
                 c,
@@ -63,7 +72,6 @@ pub fn consume_service_queue(
                 name,
                 Some(BasicConsumeOptions {
                     no_ack: true,
-                    exclusive: true,
                     ..BasicConsumeOptions::default()
                 }),
             )
