@@ -54,7 +54,7 @@ pub fn consume_service_queue(
     client: Client,
     name: &'static str,
 ) -> impl Stream<Item = Result<PluginMessage, ImlServiceQueueError>> {
-    let name2 = name.clone().to_string();
+    let name2 = name.to_string();
 
     connect_to_queue(name.to_string(), client)
         .map_err(ImlServiceQueueError::from)
