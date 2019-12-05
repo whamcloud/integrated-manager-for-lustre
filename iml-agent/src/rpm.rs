@@ -6,11 +6,6 @@ use std::result::Result as StdResult;
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output};
 
-enum PackageState {
-    Installed(Version),
-    NotInstalled,
-}
-
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Version(String);
 
@@ -20,66 +15,36 @@ impl fmt::Display for Version {
     }
 }
 
-pub type Result = StdResult<Version, Error>;
-
-#[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
-pub enum Error {
-    PackageNotInstalled,
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            Self::PackageNotInstalled => "Package not installed",
-        };
-        write!(f, "{}", s)
-    }
-}
-
-async fn parse(output: Output) -> StdResult<PackageState, ImlAgentError> {
+async fn parse(output: Output) -> StdResult<Option<Version>, ImlAgentError> {
     if output.status.success() {
         // In case there's syntax error in query format, exit code of `rpm` is 0,
         // but there's no data and an error is on stderr
         if output.stderr.len() > 0 {
             Err(ImlAgentError::CmdOutputError(output))
         } else {
-            Ok(PackageState::Installed(Version(
-                String::from_utf8(output.stdout).unwrap(),
-            )))
+            Ok(Some(Version(String::from_utf8(output.stdout).unwrap())))
         }
     } else {
         let stdout = output.stdout.clone();
         let re = Regex::new(r"^package .*? is not installed\n$").unwrap();
         let s = String::from_utf8(stdout)?;
         if re.is_match(&s) {
-            Ok(PackageState::NotInstalled)
+            Ok(None)
         } else {
             Err(ImlAgentError::CmdOutputError(output))
         }
     }
 }
 
-async fn run_rpm(package_name: &str) -> StdResult<Output, ImlAgentError> {
-    cmd_output(
+pub(crate) async fn installed(package_name: &str) -> StdResult<bool, ImlAgentError> {
+    version(package_name).await.map(|r| r.is_some())
+}
+
+pub(crate) async fn version(package_name: &str) -> StdResult<Option<Version>, ImlAgentError> {
+    let output = cmd_output(
         "rpm",
         vec!["--query", "--queryformat", "%{VERSION}", package_name],
     )
-    .await
-}
-
-pub(crate) async fn installed(package_name: &str) -> StdResult<bool, ImlAgentError> {
-    let output = run_rpm(package_name).await?;
-    parse(output).await.map(|r| match r {
-        PackageState::Installed(_) => true,
-        PackageState::NotInstalled => false,
-    })
-}
-
-pub(crate) async fn version(package_name: &str) -> StdResult<Result, ImlAgentError> {
-    let output = run_rpm(package_name).await?;
-    match parse(output).await {
-        Ok(PackageState::Installed(v)) => Ok(Result::Ok(v)),
-        Ok(PackageState::NotInstalled) => Ok(Result::Err(Error::PackageNotInstalled)),
-        Err(e) => Err(e),
-    }
+    .await?;
+    parse(output).await
 }

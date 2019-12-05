@@ -437,9 +437,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .map(|r| println!("{}", if r { "Installed" } else { "Not Installed" })),
                 PackageCommand::Version { package_name } => {
                     package::version(package_name).await.map(|r| match r {
-                        package::RpmResult::Ok(v) => println!("{}", v),
-                        package::RpmResult::Err(e) => {
-                            eprintln!("{}", e);
+                        Some(v) => println!("{}", v),
+                        None => {
+                            eprintln!("no version");
                             exit(exitcode::DATAERR)
                         }
                     })
