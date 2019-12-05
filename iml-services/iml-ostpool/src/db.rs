@@ -6,7 +6,10 @@ use crate::error::Error;
 use futures::future::try_join_all;
 use iml_postgres::Client;
 use iml_wire_types::{
-    db::{FsRecord, ManagedOstRecord, ManagedTargetRecord, Name, OstPoolOstsRecord, OstPoolRecord},
+    db::{
+        FsRecord, ManagedHostRecord, ManagedMdtRecord, ManagedOstRecord, ManagedTargetMountRecord,
+        ManagedTargetRecord, Name, OstPoolOstsRecord, OstPoolRecord,
+    },
     Fqdn,
 };
 use std::sync::Arc;
@@ -67,9 +70,35 @@ impl PoolClient {
             0 => Err(Error::NotFound),
             1 => vr[0].try_get(0).map_err(|e| Error::Postgres(e)),
             _ => {
-                tracing::error!("Multiple filesystems named {} found", fsname);
-                // @@ check fqdn managedhost -> managedtargetmount -> managedtarget -> filesystem
-                Err(Error::NotFound)
+                // check fqdn of managedhost (id)->(host_id)
+                // managedtargetmount (target_id)-> (via
+                // managedtarget.id) ->(managedtarget_ptr_id)
+                // managed{ost,mdt} (filesystem_id)->(id) filesystem
+                tracing::debug!("Multiple filesystems named {} found", fsname);
+                let union = format!(
+                    "SELECT managedtarget_ptr_id, filesystem_id FROM {} UNION SELECT managedtarget_ptr_id, filesystem_id FROM {}",
+                    ManagedMdtRecord::table_name(),
+                    ManagedOstRecord::table_name(),
+                );
+                let query = format!(
+                    "SELECT FS.id FROM {} AS FS INNER JOIN ({}) AS MTFS ON FS.id = MTFS.filesystem_id INNER JOIN {} AS MTM ON MTFS.managedtarget_ptr_id = MTM.target_id INNER JOIN {} AS MH ON MTM.host_id = MH.id WHERE FS.name = $1 AND MH.fqdn = $2",
+                    FsRecord::table_name(),
+                    union,
+                    ManagedTargetMountRecord::table_name(),
+                    ManagedHostRecord::table_name());
+                let s = self.client.prepare(&query).await?;
+                match self.client.query_one(&s, &[&fsname, &self.fqdn]).await {
+                    Ok(row) => row.try_get(0).map_err(|e| Error::Postgres(e)),
+                    Err(e) => {
+                        tracing::error!(
+                            "fsid({}) (fqdn:{}) failed to find filesystem: {}",
+                            fsname,
+                            self.fqdn,
+                            e
+                        );
+                        Err(Error::NotFound)
+                    }
+                }
             }
         }
     }

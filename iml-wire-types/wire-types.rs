@@ -1424,6 +1424,34 @@ pub mod db {
         }
     }
 
+    /// Record from the `chroma_core_managedmdt` table
+    #[derive(serde::Deserialize, Debug)]
+    pub struct ManagedMdtRecord {
+        managedtarget_ptr_id: u32,
+        index: u32,
+        filesystem_id: u32,
+    }
+
+    impl Id for ManagedMdtRecord {
+        fn id(&self) -> u32 {
+            self.managedtarget_ptr_id
+        }
+    }
+
+    impl NotDeleted for ManagedMdtRecord {
+        fn not_deleted(&self) -> bool {
+            true
+        }
+    }
+
+    pub const MANAGED_MDT_TABLE_NAME: TableName = TableName("chroma_core_managedmdt");
+
+    impl Name for ManagedMdtRecord {
+        fn table_name() -> TableName<'static> {
+            MANAGED_MDT_TABLE_NAME
+        }
+    }
+
     /// Record from the `chroma_core_managedhost` table
     #[derive(serde::Deserialize, Debug)]
     pub struct ManagedHostRecord {
