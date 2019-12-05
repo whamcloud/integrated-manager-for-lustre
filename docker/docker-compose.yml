@@ -46,7 +46,9 @@ services:
   rabbit:
     image: "rabbitmq:3.6-management"
     hostname: "rabbit"
-    deploy: *default-deploy
+    deploy:
+      <<: *default-deploy
+      endpoint_mode: dnsrr
     environment:
       - RABBITMQ_DEFAULT_USER=chroma
       - RABBITMQ_DEFAULT_PASS=chroma123
