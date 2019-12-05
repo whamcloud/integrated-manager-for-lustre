@@ -104,7 +104,6 @@ pub async fn consume_agent_tx_queue(
         "",
         Some(BasicConsumeOptions {
             no_ack: true,
-            exclusive: true,
             ..BasicConsumeOptions::default()
         }),
     )

@@ -53,7 +53,6 @@ pub async fn create_locks_consumer(
         "locks",
         Some(BasicConsumeOptions {
             no_ack: true,
-            exclusive: true,
             ..BasicConsumeOptions::default()
         }),
     )
