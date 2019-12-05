@@ -147,18 +147,34 @@ impl PoolClient {
             "INSERT INTO {} (ostpool_id, managedost_id) VALUES ($1, $2)",
             OstPoolOstsRecord::table_name()
         );
-        let s = self.client.prepare(&query).await?;
+        let insert = self.client.prepare(&query).await?;
+        let query = format!(
+            "SELECT id FROM {} WHERE ostpool_id = $1 AND managedost_id = $2",
+            OstPoolOstsRecord::table_name()
+        );
+        let select = self.client.prepare(&query).await?;
 
         let xs = osts.iter().map(|o| {
-            let s = s.clone();
+            let insert = insert.clone();
+            let select = select.clone();
             async move {
                 if let Some(ostid) = self.ostid(fsid, &o).await? {
-                    tracing::debug!("Growing ({}).({}): ost:{}({})", fsid, poolid, o, ostid);
-                    self.client
-                        .execute(&s, &[&poolid, &ostid])
+                    if self
+                        .client
+                        .query_one(&select, &[&poolid, &ostid])
                         .await
-                        .map(drop)
-                        .map_err(|e| Error::Postgres(e))
+                        .is_err()
+                    {
+                        tracing::debug!("Growing ({}).({}): ost:{}({})", fsid, poolid, o, ostid);
+                        self.client
+                            .execute(&insert, &[&poolid, &ostid])
+                            .await
+                            .map(drop)
+                            .map_err(|e| Error::Postgres(e))
+                    } else {
+                        tracing::debug!("Grow ({}).({}): ost:{} already exists", fsid, poolid, o);
+                        Ok(())
+                    }
                 } else {
                     tracing::warn!("Failed Grow ({}).({}): ost:{} missing", fsid, poolid, o);
                     Ok(())
