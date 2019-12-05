@@ -26,12 +26,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let client = client.clone();
             async move {
                 tracing::debug!("{} pool {}.{}", state, pool.filesystem, pool.name);
-                let fsid = client.fs2id(&pool.filesystem).await?;
+                let fsid = client.fsid(&pool.filesystem).await?;
                 match state {
                     OstPoolAction::Initial => {
-                        if client.exists(fsid, &pool.name).await? {
-                            tracing::debug!("Pool {}.{} exists", pool.filesystem, pool.name);
-                            // @@
+                        if let Some(poolid) = client.poolid(fsid, &pool.name).await? {
+                            tracing::debug!(
+                                "Pool {}.{} exists: {}",
+                                pool.filesystem,
+                                pool.name,
+                                poolid
+                            );
+                            // @@ - check osts
                             Ok(())
                         } else {
                             tracing::debug!(
@@ -40,22 +45,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 pool.name,
                                 fsid
                             );
-                            client.create(fsid, &pool.name).await?;
-                            client.grow(fsid, &pool.name, &pool.osts).await
+                            let poolid = client.create(fsid, &pool.name).await?;
+                            client.grow(fsid, poolid, &pool.osts).await
                         }
                     }
                     OstPoolAction::Add => {
-                        if client.exists(fsid, &pool.name).await? {
+                        if client.poolid(fsid, &pool.name).await?.is_some() {
                             tracing::debug!("Pool {}.{} exists", pool.filesystem, pool.name);
                             Ok(())
                         } else {
-                            client.create(fsid, &pool.name).await?;
-                            client.grow(fsid, &pool.name, &pool.osts).await
+                            let poolid = client.create(fsid, &pool.name).await?;
+                            client.grow(fsid, poolid, &pool.osts).await
                         }
                     }
                     OstPoolAction::Remove => {
-                        if client.exists(fsid, &pool.name).await? {
-                            client.shrink(fsid, &pool.name, &pool.osts).await?;
+                        if let Some(poolid) = client.poolid(fsid, &pool.name).await? {
+                            client.shrink(fsid, poolid, &pool.osts).await?;
                             client.delete(fsid, &pool.name).await
                         } else {
                             tracing::debug!(
@@ -67,14 +72,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                     OstPoolAction::Grow => {
-                        if client.exists(fsid, &pool.name).await? {
+                        if let Some(poolid) = client.poolid(fsid, &pool.name).await? {
                             tracing::debug!(
                                 "Pool {}.{} growing {} osts",
                                 pool.filesystem,
                                 pool.name,
                                 pool.osts.len()
                             );
-                            client.grow(fsid, &pool.name, &pool.osts).await
+                            client.grow(fsid, poolid, &pool.osts).await
                         } else {
                             tracing::warn!(
                                 "Attempted to grow non-existant pool ({}.{})",
@@ -85,14 +90,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                     OstPoolAction::Shrink => {
-                        if client.exists(fsid, &pool.name).await? {
+                        if let Some(poolid) = client.poolid(fsid, &pool.name).await? {
                             tracing::debug!(
                                 "Pool {}.{} shrinking {} osts",
                                 pool.filesystem,
                                 pool.name,
                                 pool.osts.len()
                             );
-                            client.shrink(fsid, &pool.name, &pool.osts).await
+                            client.shrink(fsid, poolid, &pool.osts).await
                         } else {
                             tracing::warn!(
                                 "Attempted to shrink non-existant pool ({}.{})",

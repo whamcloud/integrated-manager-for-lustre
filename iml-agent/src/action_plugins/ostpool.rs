@@ -109,7 +109,11 @@ pub async fn pool_list(filesystem: &str) -> Result<Vec<String>, ImlAgentError> {
 
 pub async fn ost_list(filesystem: &str, pool: &str) -> Result<Vec<String>, ImlAgentError> {
     let pn = format!("{}.{}", filesystem, pool);
-    pool_list(&pn).await
+    pool_list(&pn).await.map(|l| {
+        l.iter()
+            .map(|s| s.trim_end_matches("_UUID").to_string())
+            .collect()
+    })
 }
 
 pub async fn pools(filesystem: String) -> Result<Vec<OstPool>, ImlAgentError> {
