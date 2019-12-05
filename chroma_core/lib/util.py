@@ -244,12 +244,12 @@ def post_data_to_tcp_or_socket(post_data):
 
 
 def start_action_local_with_tcp_or_socket(command, args, request_id):
-    post_data = ["LOCAL", {"type": "ACTION_START", "action": command, "args": args, "id": str(request_id)}]
+    post_data = {"LOCAL": {"type": "ACTION_START", "action": command, "args": args, "id": str(request_id)}}
     post_data_to_tcp_or_socket(post_data)
 
 
 def cancel_action_local_with_tcp_or_socket(request_id):
-    post_data = ["LOCAL", {"type": "ACTION_CANCEL", "id": str(request_id)}]
+    post_data = {"LOCAL": {"type": "ACTION_CANCEL", "id": str(request_id)}}
     post_data_to_tcp_or_socket(post_data)
 
 

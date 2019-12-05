@@ -52,6 +52,7 @@ services:
       - RABBITMQ_DEFAULT_PASS=chroma123
       - RABBITMQ_DEFAULT_VHOST=chromavhost
       - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit heartbeat 0
+      - RABBITMQ_ERLANG_COOKIE='lustre-secret'
     healthcheck:
       test: ["CMD-SHELL", "rabbitmqctl status"]
       timeout: 5s
@@ -71,7 +72,7 @@ services:
     ports:
       - "7443:7443"
   update-handler:
-    image: "imlteam/iml-update-check"
+    image: "imlteam/iml-update-check:5.1"
     hostname: "update-handler"
     deploy: *default-deploy
     volumes:
@@ -79,13 +80,13 @@ services:
     environment:
       - "IML_CA_PATH=/var/lib/chroma/authority.crt"
   realtime:
-    image: "imlteam/realtime"
+    image: "imlteam/realtime:5.1"
     hostname: "realtime"
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
   view-server:
-    image: "imlteam/view-server"
+    image: "imlteam/view-server:5.1"
     hostname: "view-server"
     deploy: *default-deploy
     volumes:
@@ -93,7 +94,7 @@ services:
       - "static-config1:/usr/lib/iml-manager"
       - "static-config2:/usr/lib/node_modules/@iml"
   device-aggregator:
-    image: "imlteam/device-aggregator"
+    image: "imlteam/device-aggregator:5.1"
     hostname: "device-aggregator"
     deploy: *default-deploy
     environment:

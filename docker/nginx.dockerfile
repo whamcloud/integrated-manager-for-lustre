@@ -13,10 +13,10 @@ RUN apk update && apk upgrade && \
   && tar -C /usr/local/bin -xzvf dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
   && rm dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
   && apk del gettext
-COPY --from=imlteam/gui /home/node/GUI /usr/lib/iml-manager/iml-gui
-COPY --from=imlteam/online-help /root /usr/lib/iml-manager/iml-online-help
-COPY --from=imlteam/old-gui /root /usr/lib/node_modules/@iml/old-gui
-COPY --from=imlteam/socket-worker /root /usr/lib/node_modules/@iml/socket-worker/targetdir
+COPY --from=imlteam/gui:5.1 /home/node/GUI /usr/lib/iml-manager/iml-gui
+COPY --from=imlteam/online-help:5.1 /root /usr/lib/iml-manager/iml-online-help
+COPY --from=imlteam/old-gui:5.1 /root /usr/lib/node_modules/@iml/old-gui
+COPY --from=imlteam/socket-worker:5.1 /root /usr/lib/node_modules/@iml/socket-worker/targetdir
 COPY --from=imlteam/iml-wasm-components:5.1 /usr/share/iml-manager/iml-wasm-components /usr/share/iml-manager/iml-wasm-components
 COPY --from=builder /build/iml.template /etc/nginx/conf.d/iml.template
 CMD dockerize -template /etc/nginx/conf.d/iml.template:/etc/nginx/conf.d/default.conf -stdout /var/log/nginx/access.log -stderr /var/log/nginx/error.log -wait file:///var/lib/chroma/iml-settings.conf -timeout 10m nginx
