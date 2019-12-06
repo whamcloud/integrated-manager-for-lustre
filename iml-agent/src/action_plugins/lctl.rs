@@ -4,7 +4,7 @@
 
 use crate::{
     agent_error::ImlAgentError,
-    cmd::{self},
+    cmd,
 };
 
 /// Runs lctl with given arguments
