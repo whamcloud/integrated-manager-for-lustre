@@ -245,7 +245,8 @@ services:
       - RUST_LOG=info
   iml-manager-cli:
     image: "imlteam/iml-manager-cli:5.1"
-    hostname: "imlteam/iml-manager-cli"
+    stdin_open: true
+    tty: true
     build:
       context: ../
       dockerfile: ./docker/iml-manager-cli.dockerfile
