@@ -2,10 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{
-    agent_error::ImlAgentError,
-    cmd,
-};
+use crate::{agent_error::ImlAgentError, cmd};
 
 /// Runs lctl with given arguments
 pub async fn lctl(args: Vec<String>) -> Result<String, ImlAgentError> {
