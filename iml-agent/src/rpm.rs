@@ -2,7 +2,6 @@ use regex::Regex;
 
 use std::fmt;
 use std::process::Output;
-use std::result::Result as StdResult;
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output};
 
@@ -15,7 +14,7 @@ impl fmt::Display for Version {
     }
 }
 
-async fn parse(output: Output) -> StdResult<Option<Version>, ImlAgentError> {
+async fn parse(output: Output) -> Result<Option<Version>, ImlAgentError> {
     if output.status.success() {
         // In case there's syntax error in query format, exit code of `rpm` is 0,
         // but there's no data and an error is on stderr
@@ -38,11 +37,11 @@ async fn parse(output: Output) -> StdResult<Option<Version>, ImlAgentError> {
     }
 }
 
-pub(crate) async fn installed(package_name: &str) -> StdResult<bool, ImlAgentError> {
+pub(crate) async fn installed(package_name: &str) -> Result<bool, ImlAgentError> {
     version(package_name).await.map(|r| r.is_some())
 }
 
-pub(crate) async fn version(package_name: &str) -> StdResult<Option<Version>, ImlAgentError> {
+pub(crate) async fn version(package_name: &str) -> Result<Option<Version>, ImlAgentError> {
     let output = cmd_output(
         "rpm",
         vec!["--query", "--queryformat", "%{VERSION}", package_name],
