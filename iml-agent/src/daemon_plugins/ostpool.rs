@@ -45,6 +45,71 @@ async fn list_fs() -> Result<Vec<String>, ImlAgentError> {
     }
 }
 
+/// Return vector of changes between exist fs state and list of pools
+/// from current filesystem
+fn diff_state(
+    fs: String,
+    hm: &mut HashMap<String, Vec<String>>,
+    pools: &Vec<OstPool>,
+) -> Result<Vec<(OstPoolAction, OstPool)>, ImlAgentError> {
+    let mut rmlist = hm.clone();
+    let mut changes: Vec<(OstPoolAction, OstPool)> = vec![];
+    for pool in pools.iter() {
+        tracing::debug!("Updating {}.{}", fs, pool.name);
+
+        if let Some(oldosts) = rmlist.remove(&pool.name) {
+            let new: HashSet<_> = pool.osts.iter().cloned().collect();
+            let old: HashSet<_> = oldosts.iter().cloned().collect();
+
+            let addlist: HashSet<_> = new.difference(&old).cloned().collect();
+            if !addlist.is_empty() {
+                hm.insert(pool.name.clone(), old.union(&addlist).cloned().collect());
+                changes.push((
+                    OstPoolAction::Grow,
+                    OstPool {
+                        name: pool.name.clone(),
+                        filesystem: fs.clone(),
+                        osts: addlist.iter().cloned().collect(),
+                    },
+                ));
+            }
+
+            let remlist: Vec<String> = old.difference(&new).cloned().collect();
+            if !remlist.is_empty() {
+                changes.push((
+                    OstPoolAction::Shrink,
+                    OstPool {
+                        name: pool.name.clone(),
+                        filesystem: fs.clone(),
+                        osts: remlist,
+                    },
+                ));
+            }
+            hm.insert(pool.name.clone(), pool.osts.clone());
+        } else {
+            hm.insert(pool.name.clone(), pool.osts.clone());
+            changes.push((OstPoolAction::Add, pool.clone()));
+        }
+    }
+
+    // Removed pools
+    for name in rmlist.keys() {
+        let osts = match hm.remove(&name.clone()) {
+            Some(o) => o.clone(),
+            None => vec![],
+        };
+        changes.push((
+            OstPoolAction::Remove,
+            OstPool {
+                name: name.clone(),
+                filesystem: fs.clone(),
+                osts,
+            },
+        ));
+    }
+    Ok(changes)
+}
+
 impl DaemonPlugin for PoolState {
     fn start_session(
         &mut self,
@@ -132,65 +197,7 @@ impl DaemonPlugin for PoolState {
                     if let Some(hm) = state.lock().await.get_mut(&fs) {
                         let pools = pools(fs.clone()).await?;
 
-                        let mut rmlist = hm.clone();
-                        let mut changes: Vec<(OstPoolAction, OstPool)> = vec![];
-                        for pool in pools.iter() {
-                            tracing::debug!("Updating {}.{}", fs, pool.name);
-
-                            if let Some(oldosts) = rmlist.remove(&pool.name) {
-                                let new: HashSet<_> = pool.osts.iter().cloned().collect();
-                                let old: HashSet<_> = oldosts.iter().cloned().collect();
-
-                                let addlist: HashSet<_> = new.difference(&old).cloned().collect();
-                                if !addlist.is_empty() {
-                                    hm.insert(
-                                        pool.name.clone(),
-                                        old.union(&addlist).cloned().collect(),
-                                    );
-                                    changes.push((
-                                        OstPoolAction::Grow,
-                                        OstPool {
-                                            name: pool.name.clone(),
-                                            filesystem: fs.clone(),
-                                            osts: addlist.iter().cloned().collect(),
-                                        },
-                                    ));
-                                }
-
-                                let remlist: Vec<String> = old.difference(&new).cloned().collect();
-                                if !remlist.is_empty() {
-                                    changes.push((
-                                        OstPoolAction::Shrink,
-                                        OstPool {
-                                            name: pool.name.clone(),
-                                            filesystem: fs.clone(),
-                                            osts: remlist,
-                                        },
-                                    ));
-                                }
-                                hm.insert(pool.name.clone(), pool.osts.clone());
-                            } else {
-                                hm.insert(pool.name.clone(), pool.osts.clone());
-                                changes.push((OstPoolAction::Add, pool.clone()));
-                            }
-                        }
-
-                        // Removed pools
-                        for name in rmlist.keys() {
-                            let osts = match hm.remove(&name.clone()) {
-                                Some(o) => o.clone(),
-                                None => vec![],
-                            };
-                            changes.push((
-                                OstPoolAction::Remove,
-                                OstPool {
-                                    name: name.clone(),
-                                    filesystem: fs.clone(),
-                                    osts,
-                                },
-                            ));
-                        }
-                        Ok(changes)
+                        diff_state(fs, hm, &pools)
                     } else {
                         // Need to create filesystem in self.state
                         let fsmap: HashMap<String, Vec<String>> = HashMap::new();
