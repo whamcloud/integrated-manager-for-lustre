@@ -42,7 +42,6 @@ liblustreapi = { path = "../liblustreapi", version = "0.1" }
 iml-fs = { path = "../iml-fs", version = "0.1.0" }
 iml-util = { path = "../iml-util", version = "0.1.0" }
 kmod = { git = "https://github.com/whamcloud/kmod-rs.git" }
-error-chain = "0.12.1"
 
 [dependencies.regex]
 version = "1.3"
