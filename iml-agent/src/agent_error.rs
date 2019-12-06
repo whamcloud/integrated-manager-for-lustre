@@ -6,8 +6,6 @@ use iml_fs::ImlFsError;
 use iml_wire_types::PluginName;
 use kmod::Error as KmodError;
 
-use error_chain::ChainedError;
-
 use std::{fmt, process::Output};
 
 pub type Result<T> = std::result::Result<T, ImlAgentError>;
@@ -99,7 +97,7 @@ pub enum ImlAgentError {
     CibError(CibError),
     UnexpectedStatusError,
     MarkerNotFound,
-    KmodError(MyKmodError),
+    KmodError(KmodError),
 }
 
 impl std::fmt::Display for ImlAgentError {
@@ -320,34 +318,9 @@ impl From<CibError> for ImlAgentError {
     }
 }
 
-impl From<MyKmodError> for ImlAgentError {
-    fn from(err: MyKmodError) -> Self {
-        ImlAgentError::KmodError(err)
-    }
-}
-
-#[derive(Debug)]
-pub struct MyKmodError {
-    kind: <kmod::Error as ChainedError>::ErrorKind,
-}
-
-impl fmt::Display for MyKmodError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "MyKmodError")
-    }
-}
-
-impl std::error::Error for MyKmodError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        None
-    }
-}
-
-impl From<KmodError> for MyKmodError {
+impl From<KmodError> for ImlAgentError {
     fn from(err: KmodError) -> Self {
-        match err {
-            kmod::Error(e, _) => Self { kind: e },
-        }
+        ImlAgentError::KmodError(err)
     }
 }
 
