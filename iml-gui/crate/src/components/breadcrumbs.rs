@@ -1,4 +1,5 @@
-use crate::{generated::css_classes::C, Msg, Page};
+use crate::route::Route;
+use crate::{generated::css_classes::C, Msg};
 use seed::{prelude::*, *};
 use std::cmp::PartialEq;
 use std::collections::LinkedList;
@@ -42,7 +43,7 @@ impl<Crumb: PartialEq> BreadCrumbs<Crumb> {
     }
 }
 
-pub fn view(bc: &BreadCrumbs<Page>) -> impl View<Msg> {
+pub fn view(bc: &BreadCrumbs<Route>) -> impl View<Msg> {
     let mut ol = ol![class![C.justify_center, C.truncate, C.mx_4, C.rtl]];
 
     // XXX the list has "direction: rtl" to put ellipsis to the left on overflow,
