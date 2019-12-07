@@ -102,7 +102,7 @@ pub struct Model {
     pub records: warp_drive::Cache,
     pub locks: warp_drive::Locks,
     pub activity_health: ActivityHealth,
-    pub breadcrumbs: BreadCrumbs<Page>,
+    pub breadcrumbs: BreadCrumbs<Route<'static>>,
 }
 
 pub fn register_eventsource_handle<T, F>(
@@ -223,10 +223,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::RouteChanged(url) => {
             model.route = url.into();
             orders.send_msg(Msg::UpdatePageTitle);
-            if model.page == Page::Home {
+            if model.route == Route::Home {
                 model.breadcrumbs.clear();
             }
-            model.breadcrumbs.push(model.page);
+            model.breadcrumbs.push(model.route.clone());
         }
         Msg::UpdatePageTitle => {
             let title =
