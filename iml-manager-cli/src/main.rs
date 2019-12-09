@@ -16,7 +16,7 @@ use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 #[derive(Debug, StructOpt)]
 #[structopt(name = "iml")]
 #[structopt(raw(setting = "structopt::clap::AppSettings::ColoredHelp"))]
-/// The Integrated Manager for Lustre Agent CLI
+/// The Integrated Manager for Lustre CLI
 pub enum App {
     #[structopt(name = "stratagem")]
     /// Work with Stratagem server
