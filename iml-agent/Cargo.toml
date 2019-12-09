@@ -41,7 +41,7 @@ iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
 liblustreapi = { path = "../liblustreapi", version = "0.1" }
 iml-fs = { path = "../iml-fs", version = "0.1.0" }
 iml-util = { path = "../iml-util", version = "0.1.0" }
-kmod = { git = "https://github.com/whamcloud/kmod-rs.git" }
+kmod = { git = "https://github.com/whamcloud/kmod-rs.git", version = "0.5" }
 
 [dependencies.regex]
 version = "1.3"
