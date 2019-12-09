@@ -49,6 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .with(log);
 
     let listener = get_tcp_or_unix_listener("ACTION_RUNNER_PORT").await?;
+
     tokio::spawn(warp::serve(routes).serve_incoming(listener));
 
     let client = iml_rabbit::connect_to_rabbit().await?;

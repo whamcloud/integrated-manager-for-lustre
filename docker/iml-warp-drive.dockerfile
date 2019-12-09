@@ -3,11 +3,11 @@ WORKDIR /build
 COPY . .
 RUN cargo build -p iml-warp-drive --release
 
-FROM rust:1.39
+FROM ubuntu
 COPY --from=builder /build/target/release/iml-warp-drive /usr/local/bin
 RUN apt-get update \
-  && apt install -y postgresql-client
+  && apt-get install -y curl postgresql-client
 
-COPY docker/wait-for-dependencies.sh /usr/local/bin/
-ENTRYPOINT [ "wait-for-dependencies.sh" ]
+COPY docker/wait-for-dependencies-postgres.sh /usr/local/bin/
+ENTRYPOINT [ "wait-for-dependencies-postgres.sh" ]
 CMD ["iml-warp-drive"]

@@ -14,7 +14,7 @@ jobs:
         - chmod +x docker-compose
         - sudo mv docker-compose /usr/local/bin
         - cd docker
-        - docker build --rm -t imlteam/manager-service-base -f base.dockerfile ../
+        - docker build --rm -t imlteam/manager-service-base:5.1 -f base.dockerfile ../
         - docker build --rm -t imlteam/manager-nginx -f nginx.dockerfile ../
         - docker-compose build
     - stage: test
@@ -82,12 +82,12 @@ jobs:
         - sudo mv docker-compose /usr/local/bin
         - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
         - cd docker
-        - docker build --rm -t imlteam/manager-service-base -f base.dockerfile ../
-        - docker push imlteam/manager-service-base
-        - docker build --rm -t imlteam/iml-wasm-components -f iml-wasm-components.dockerfile ../
-        - docker push imlteam/iml-wasm-components
-        - docker build --rm -t imlteam/manager-nginx -f nginx.dockerfile ../
-        - docker push imlteam/manager-nginx
+        - docker build --rm -t imlteam/manager-service-base:5.1 -f base.dockerfile ../
+        - docker push imlteam/manager-service-base:5.1
+        - docker build --rm -t imlteam/iml-wasm-components:5.1 -f iml-wasm-components.dockerfile ../
+        - docker push imlteam/iml-wasm-components:5.1
+        - docker build --rm -t imlteam/manager-nginx:5.1 -f nginx.dockerfile ../
+        - docker push imlteam/manager-nginx:5.1
         - docker-compose build
         - docker-compose push
     - stage: deploy-copr-r5.1
