@@ -6,6 +6,7 @@ use regex::Regex;
 
 use std::fmt;
 use std::process::Output;
+use std::str;
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output};
 
@@ -18,7 +19,7 @@ impl fmt::Display for Version {
     }
 }
 
-async fn parse(output: Output) -> Result<Option<Version>, ImlAgentError> {
+fn parse(output: Output) -> Result<Option<Version>, ImlAgentError> {
     if output.status.success() {
         // In case there's syntax error in query format, exit code of `rpm` is 0,
         // but there's no data and an error is on stderr
@@ -30,9 +31,8 @@ async fn parse(output: Output) -> Result<Option<Version>, ImlAgentError> {
             )))
         }
     } else {
-        let stdout = output.stdout.clone();
         let re = Regex::new(r"^package .*? is not installed\n$").unwrap();
-        let s = String::from_utf8(stdout)?;
+        let s = str::from_utf8(&output.stdout)?;
         if re.is_match(&s) {
             Ok(None)
         } else {
@@ -51,5 +51,5 @@ pub(crate) async fn version(package_name: &str) -> Result<Option<Version>, ImlAg
         vec!["--query", "--queryformat", "%{VERSION}", package_name],
     )
     .await?;
-    parse(output).await
+    parse(output)
 }
