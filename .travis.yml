@@ -10,13 +10,14 @@ jobs:
       name: "Docker build Test"
       script:
         - sudo rm /usr/local/bin/docker-compose
-        - curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-Linux-x86_64 > docker-compose
+        - curl -L https://github.com/docker/compose/releases/download/1.25.0/docker-compose-Linux-x86_64 > docker-compose
         - chmod +x docker-compose
         - sudo mv docker-compose /usr/local/bin
         - cd docker
         - docker build --rm -t imlteam/manager-service-base:5.1 -f base.dockerfile ../
-        - docker build --rm -t imlteam/manager-nginx -f nginx.dockerfile ../
-        - docker-compose build
+        - docker build --rm -t imlteam/manager-nginx:5.1 -f nginx.dockerfile ../
+        - docker build --rm -t rust-iml-base -f rust-base.dockerfile ../
+        - docker-compose build --parallel
     - stage: test
       name: "Unit Tests"
       install:
@@ -77,7 +78,7 @@ jobs:
       name: "Continuous Deployment (Docker)"
       script:
         - sudo rm /usr/local/bin/docker-compose
-        - curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-Linux-x86_64 > docker-compose
+        - curl -L https://github.com/docker/compose/releases/download/1.25.0/docker-compose-Linux-x86_64 > docker-compose
         - chmod +x docker-compose
         - sudo mv docker-compose /usr/local/bin
         - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
@@ -87,8 +88,9 @@ jobs:
         - docker build --rm -t imlteam/iml-wasm-components:5.1 -f iml-wasm-components.dockerfile ../
         - docker push imlteam/iml-wasm-components:5.1
         - docker build --rm -t imlteam/manager-nginx:5.1 -f nginx.dockerfile ../
+        - docker build --rm -t rust-iml-base -f rust-base.dockerfile ../
         - docker push imlteam/manager-nginx:5.1
-        - docker-compose build
+        - docker-compose build --parallel
         - docker-compose push
     - stage: deploy-copr-r5.1
       name: "Copr 5.1 deploy"
