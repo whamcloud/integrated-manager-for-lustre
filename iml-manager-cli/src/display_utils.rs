@@ -39,12 +39,12 @@ pub fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) -> () {
 }
 
 pub fn format_cmd_state(cmd: &Command) -> String {
-    if cmd.complete {
-        format_success(format!("{} successful", cmd.message))
-    } else if cmd.errored {
+    if cmd.errored {
         format_error(format!("{} errored", cmd.message))
-    } else {
+    } else if cmd.cancelled {
         format_cancelled(&format!("{} cancelled", cmd.message))
+    } else {
+        format_success(format!("{} successful", cmd.message))
     }
 }
 
