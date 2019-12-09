@@ -312,7 +312,7 @@ COVERAGE_REPORT_HTML_OUTPUT_DIR = "/tmp/test_html"
 
 # If you really want to point the Lustre servers at a specific NTP server
 # NTP_SERVER_HOSTNAME = "myntpserver.mydoman"
-NTP_SERVER_HOSTNAME = None
+NTP_SERVER_HOSTNAME = os.getenv("NTP_SERVER_HOSTNAME", None)
 
 # Maximum latency between server and agent: used to
 # check if clocks are 'reasonably' in sync
