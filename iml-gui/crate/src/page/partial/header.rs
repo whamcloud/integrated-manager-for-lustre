@@ -1,5 +1,5 @@
 use crate::{
-    components::{activity_indicator, font_awesome},
+    components::{activity_indicator, breadcrumbs, font_awesome},
     generated::css_classes::C,
     Model, Msg, Route,
     Visibility::*,
@@ -312,7 +312,7 @@ pub fn view(model: &Model) -> impl View<Msg> {
                 C.text_center,
                 C.py_2
             ],
-            model.route.to_string()
+            breadcrumbs::view(&model.breadcrumbs).els()
         ],
     ]
 }

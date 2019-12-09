@@ -16,7 +16,7 @@ pub use lapin_futures::{
         BasicConsumeOptions, BasicPublishOptions, ExchangeDeclareOptions, QueueBindOptions,
         QueueDeclareOptions, QueuePurgeOptions,
     },
-    types::FieldTable,
+    types::{AMQPValue, FieldTable},
     BasicProperties, Channel, Client, ConnectionProperties, Consumer, Error as LapinError,
     ExchangeKind, Queue,
 };
@@ -172,14 +172,16 @@ pub async fn declare_queue(
     channel: Channel,
     name: impl Into<String>,
     options: Option<QueueDeclareOptions>,
+    field_table: Option<FieldTable>,
 ) -> Result<(Channel, Queue), ImlRabbitError> {
     let name = name.into();
     let options = options.unwrap_or_default();
+    let field_table = field_table.unwrap_or_default();
 
     tracing::debug!("declaring queue {}", name);
 
     let queue = channel
-        .queue_declare(&name, options, FieldTable::default())
+        .queue_declare(&name, options, field_table)
         .compat()
         .await?;
 
@@ -196,6 +198,10 @@ pub async fn declare_transient_queue(
     channel: Channel,
     name: impl Into<String>,
 ) -> Result<(Channel, Queue), ImlRabbitError> {
+    let mut f = FieldTable::default();
+
+    f.insert("x-single-active-consumer".into(), AMQPValue::Boolean(true));
+
     declare_queue(
         channel,
         name,
@@ -203,6 +209,7 @@ pub async fn declare_transient_queue(
             durable: false,
             ..QueueDeclareOptions::default()
         }),
+        Some(f),
     )
     .await
 }

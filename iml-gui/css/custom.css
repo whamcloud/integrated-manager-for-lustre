@@ -49,3 +49,16 @@
     transform: rotate(360deg);
   }
 }
+
+.rtl {
+  direction: rtl;
+}
+
+/*
+ * This is standard conformant and default in Firefox, but not in Chrome.
+ * Set it explicitly to mitigate possible difference.
+ */
+li {
+  unicode-bidi: isolate;
+}
+
