@@ -9,14 +9,13 @@ use futures::{
 };
 use iml_manager_env::{get_db_host, get_db_name, get_db_password, get_db_user};
 use std::{pin::Pin, sync::Arc};
-use tokio_postgres::NoTls;
 pub use tokio_postgres::{
     error::DbError,
     row::Row,
-    tls::NoTlsStream,
     types::{self, FromSql, IsNull, ToSql, Type},
-    AsyncMessage, Client, Connection, Error, Socket, Transaction,
+    AsyncMessage, Client, Error, Transaction,
 };
+use tokio_postgres::{tls::NoTlsStream, Connection, NoTls, Socket};
 
 /// Gets a connection string from the IML env
 fn get_conn_string() -> String {

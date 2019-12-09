@@ -36,8 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 pool.name,
                                 poolid
                             );
-                            // @@ - check osts
-                            Ok(())
+                            client.diff(fsid, poolid, &pool.osts).await
                         } else {
                             tracing::debug!(
                                 "Pool {}.{} creating (fsid: {})",

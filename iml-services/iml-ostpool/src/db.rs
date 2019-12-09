@@ -12,7 +12,7 @@ use iml_wire_types::{
     },
     Fqdn,
 };
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 pub struct PoolClient {
     client: Arc<Client>,
@@ -249,5 +249,61 @@ impl PoolClient {
         });
         try_join_all(xs).await?;
         Ok(())
+    }
+
+    async fn list_osts(&self, poolid: i32) -> Result<HashSet<i32>, Error> {
+        let query = format!(
+            "SELECT managedost_id FROM {} WHERE ostpool_id = $1",
+            OstPoolOstsRecord::table_name()
+        );
+        let select = self.client.prepare(&query).await?;
+
+        Ok(self
+            .client
+            .query(&select, &[&poolid])
+            .await?
+            .iter()
+            .map(|r| r.try_get(0).unwrap())
+            .collect())
+    }
+
+    pub async fn diff(&self, fsid: i32, poolid: i32, osts: &Vec<String>) -> Result<(), Error> {
+        let mut currentosts = self.list_osts(poolid).await?;
+
+        // Add New OSTs
+        let query = format!(
+            "INSERT INTO {} (ostpool_id, managedost_id) VALUES ($1, $2)",
+            OstPoolOstsRecord::table_name()
+        );
+        let insert = self.client.prepare(&query).await?;
+        for ost in osts.iter() {
+            if let Some(ostid) = self.ostid(fsid, &ost).await? {
+                if !currentosts.remove(&ostid) {
+                    self.client
+                        .execute(&insert, &[&poolid, &ostid])
+                        .await
+                        .map(drop)?;
+                }
+            }
+        }
+
+        // Remove OSTs not present
+        let query = format!(
+            "DELETE FROM {} WHERE ostpool_id = $1 AND managedost_id = $2",
+            OstPoolOstsRecord::table_name(),
+        );
+        let s = self.client.prepare(&query).await?;
+
+        let xs = currentosts.iter().map(|o| {
+            let s = s.clone();
+            async move {
+                self.client
+                    .execute(&s, &[&poolid, &o])
+                    .await
+                    .map(drop)
+                    .map_err(|e| Error::Postgres(e))
+            }
+        });
+        try_join_all(xs).await.map(drop)
     }
 }

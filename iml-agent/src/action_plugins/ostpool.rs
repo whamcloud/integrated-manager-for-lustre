@@ -129,7 +129,6 @@ pub async fn pools(filesystem: String) -> Result<Vec<OstPool>, ImlAgentError> {
                 name: pool.to_string(),
                 filesystem: filesystem.clone(),
                 osts: osts.await?,
-                ..Default::default()
             })
         }
     });
