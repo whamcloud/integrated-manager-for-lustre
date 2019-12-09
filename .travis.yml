@@ -15,7 +15,8 @@ jobs:
         - sudo mv docker-compose /usr/local/bin
         - cd docker
         - docker build --rm -t imlteam/manager-service-base:5.1 -f base.dockerfile ../
-        - docker build --rm -t imlteam/manager-nginx -f nginx.dockerfile ../
+        - docker build --rm -t imlteam/manager-nginx:5.1 -f nginx.dockerfile ../
+        - docker build --rm -t rust-iml-base -f rust-base.dockerfile ../
         - docker-compose build --parallel
     - stage: test
       name: "Unit Tests"
@@ -87,6 +88,7 @@ jobs:
         - docker build --rm -t imlteam/iml-wasm-components:5.1 -f iml-wasm-components.dockerfile ../
         - docker push imlteam/iml-wasm-components:5.1
         - docker build --rm -t imlteam/manager-nginx:5.1 -f nginx.dockerfile ../
+        - docker build --rm -t rust-iml-base -f rust-base.dockerfile ../
         - docker push imlteam/manager-nginx:5.1
         - docker-compose build --parallel
         - docker-compose push

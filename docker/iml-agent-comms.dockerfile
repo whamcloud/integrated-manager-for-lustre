@@ -1,7 +1,4 @@
-FROM rust:1.39 as builder
-WORKDIR /build
-COPY . .
-RUN cd iml-agent-comms && cargo build --release
+FROM rust-iml-base as builder
 
 FROM ubuntu
 COPY --from=builder /build/target/release/iml-agent-comms /usr/local/bin
