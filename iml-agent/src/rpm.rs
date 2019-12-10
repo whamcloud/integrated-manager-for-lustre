@@ -10,7 +10,7 @@ use std::str;
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output};
 
-#[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Version(String);
 
 impl fmt::Display for Version {
