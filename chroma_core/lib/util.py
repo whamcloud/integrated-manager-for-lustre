@@ -11,6 +11,7 @@ import settings
 import re
 import uuid
 import requests_unixsocket
+import requests
 from threading import Thread
 from threading import Event
 
@@ -225,7 +226,41 @@ def normalize_nid(string):
     return string
 
 
-IML_ACTION_RUNNER_SOCKET_PATH = "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/"
+def runningInDocker():
+    with open("/proc/self/cgroup", "r") as procfile:
+        for line in procfile:
+            fields = line.strip().split("/")
+            if fields[1] == "docker":
+                return True
+    return False
+
+
+def post_data_to_tcp_or_socket(post_data):
+    if runningInDocker():
+        return requests.post("http://{}:{}".format(settings.PROXY_HOST, settings.ACTION_RUNNER_PORT), json=post_data)
+
+    SOCKET_PATH = "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/"
+    return requests_unixsocket.post(SOCKET_PATH, json=post_data)
+
+
+def start_action_local_with_tcp_or_socket(command, args, request_id):
+    post_data = {"LOCAL": {"type": "ACTION_START", "action": command, "args": args, "id": str(request_id)}}
+    return post_data_to_tcp_or_socket(post_data)
+
+
+def cancel_action_local_with_tcp_or_socket(request_id):
+    post_data = {"LOCAL": {"type": "ACTION_CANCEL", "id": str(request_id)}}
+    return post_data_to_tcp_or_socket(post_data)
+
+
+def start_action_with_tcp_or_socket(host, command, args, request_id):
+    post_data = {"REMOTE": (host, {"type": "ACTION_START", "action": command, "args": args, "id": str(request_id)})}
+    return post_data_to_tcp_or_socket(post_data)
+
+
+def cancel_action_with_tcp_or_socket(host, request_id):
+    post_data = {"REMOTE": (host, {"type": "ACTION_CANCEL", "id": str(request_id)})}
+    return post_data_to_tcp_or_socket(post_data)
 
 
 class RustAgentCancellation(Exception):
@@ -247,10 +282,7 @@ def invoke_rust_local_action(command, args={}, cancel_event=Event()):
 
     def start_action(ActionResult, trigger):
         try:
-            ActionResult.ok = requests_unixsocket.post(
-                IML_ACTION_RUNNER_SOCKET_PATH,
-                json={"LOCAL": {"type": "ACTION_START", "action": command, "args": args, "id": str(request_id)}},
-            ).content
+            ActionResult.ok = start_action_local_with_tcp_or_socket(command, args, request_id).content
         except Exception as e:
             ActionResult.error = e
         finally:
@@ -264,9 +296,7 @@ def invoke_rust_local_action(command, args={}, cancel_event=Event()):
     # check cancel_event
     while True:
         if cancel_event.is_set():
-            requests_unixsocket.post(
-                IML_ACTION_RUNNER_SOCKET_PATH, json={"LOCAL": {"type": "ACTION_CANCEL", "id": str(request_id)}}
-            ).content
+            cancel_action_local_with_tcp_or_socket(request_id).content
             raise RustAgentCancellation()
         else:
             trigger.wait(timeout=1.0)
@@ -294,12 +324,7 @@ def invoke_rust_agent(host, command, args={}, cancel_event=Event()):
 
     def start_action(ActionResult, trigger):
         try:
-            ActionResult.ok = requests_unixsocket.post(
-                IML_ACTION_RUNNER_SOCKET_PATH,
-                json={
-                    "REMOTE": (host, {"type": "ACTION_START", "action": command, "args": args, "id": str(request_id)})
-                },
-            ).content
+            ActionResult.ok = start_action_with_tcp_or_socket(host, command, args, request_id).content
         except Exception as e:
             ActionResult.error = e
         finally:
@@ -313,9 +338,7 @@ def invoke_rust_agent(host, command, args={}, cancel_event=Event()):
     # check cancel_event
     while True:
         if cancel_event.is_set():
-            requests_unixsocket.post(
-                IML_ACTION_RUNNER_SOCKET_PATH, json={"REMOTE": (host, {"type": "ACTION_CANCEL", "id": str(request_id)})}
-            ).content
+            cancel_action_with_tcp_or_socket(host, request_id).content
             raise RustAgentCancellation()
         else:
             trigger.wait(timeout=1.0)

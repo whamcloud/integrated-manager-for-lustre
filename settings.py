@@ -66,7 +66,11 @@ SSL_PATH = "/var/lib/chroma"
 
 DEVICE_AGGREGATOR_PORT = 8008
 
-DEVICE_AGGREGATOR_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, DEVICE_AGGREGATOR_PORT)
+DEVICE_AGGREGATOR_PROXY_PASS = os.getenv(
+    "DEVICE_AGGREGATOR_URL", "http://{}:{}".format(PROXY_HOST, DEVICE_AGGREGATOR_PORT)
+)
+
+ACTION_RUNNER_PORT = 8009
 
 UPDATE_HANDLER_PROXY_PASS = "http://unix:/var/run/iml-update-handler.sock"
 
@@ -308,7 +312,7 @@ COVERAGE_REPORT_HTML_OUTPUT_DIR = "/tmp/test_html"
 
 # If you really want to point the Lustre servers at a specific NTP server
 # NTP_SERVER_HOSTNAME = "myntpserver.mydoman"
-NTP_SERVER_HOSTNAME = None
+NTP_SERVER_HOSTNAME = os.getenv("NTP_SERVER_HOSTNAME", None)
 
 # Maximum latency between server and agent: used to
 # check if clocks are 'reasonably' in sync

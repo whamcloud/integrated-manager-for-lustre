@@ -48,7 +48,7 @@ pub async fn create_command<T: serde::Serialize>(
 }
 
 fn cmd_finished(cmd: &Command) -> bool {
-    cmd.errored || cmd.cancelled || cmd.complete
+    cmd.complete
 }
 
 pub async fn wait_for_cmd(cmd: Command) -> Result<Command, ImlManagerCliError> {
