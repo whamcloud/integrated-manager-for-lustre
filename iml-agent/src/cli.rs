@@ -7,7 +7,7 @@ use iml_agent::action_plugins::stratagem::{
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
 use iml_agent::action_plugins::{
-    check_ha, check_kernel, check_stonith, ostpool, package_installed,
+    check_ha, check_kernel, check_stonith, ltuer, ostpool, package_installed,
 };
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
@@ -211,6 +211,18 @@ pub enum App {
     #[structopt(name = "get_kernel")]
     /// Get latest kernel which supports listed modules
     GetKernel { modules: Vec<String> },
+
+    #[structopt(name = "create_ltuer_conf")]
+    CreateLtuerConf {
+        #[structopt(name = "MAILBOX_PATH")]
+        mailbox_path: String,
+
+        #[structopt(name = "FS_NAME")]
+        fs_name: String,
+
+        #[structopt(name = "COLD_POOL")]
+        cold_pool: String,
+    },
 }
 
 fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<dyn Iterator<Item = String>> {
@@ -446,6 +458,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }),
             } {
                 println!("{:?}", e);
+                exit(exitcode::SOFTWARE);
+            }
+        }
+        App::CreateLtuerConf {
+            mailbox_path,
+            fs_name,
+            cold_pool,
+        } => {
+            if let Err(e) = ltuer::create_ltuer_conf((mailbox_path, fs_name, cold_pool)).await {
+                eprintln!("{:?}", e);
                 exit(exitcode::SOFTWARE);
             }
         }
