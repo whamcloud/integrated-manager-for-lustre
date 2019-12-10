@@ -34,7 +34,7 @@ const SLIDER_WIDTH_PX: u32 = 5;
 const MAX_SIDE_PERCENTAGE: f32 = 35f32;
 
 /// This depends on where and how https://github.com/whamcloud/Online-Help is deployed.
-/// With `nginx` config is like
+/// With `nginx` when config is like
 /// ```
 /// location /help {
 ///     alias /usr/lib/iml-manager/iml-online-help;
