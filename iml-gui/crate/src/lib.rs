@@ -5,10 +5,14 @@
 #![allow(clippy::non_ascii_literal)]
 #![allow(clippy::enum_glob_use)]
 
+#[macro_use]
+extern crate seed;
+
 mod components;
 mod generated;
 mod page;
 mod route;
+mod ctx_help;
 
 use components::{
     breadcrumbs::BreadCrumbs, update_activity_health, ActivityHealth,
@@ -29,7 +33,18 @@ const STATIC_PATH: &str = "static";
 const SLIDER_WIDTH_PX: u32 = 5;
 const MAX_SIDE_PERCENTAGE: f32 = 35f32;
 
-#[derive(Clone, Copy, Eq, PartialEq)]
+/// This depends on where and how https://github.com/whamcloud/Online-Help is deployed.
+/// With `nginx` config is like
+/// ```
+/// location /help {
+///     alias /usr/lib/iml-manager/iml-online-help;
+///     index index.html;
+/// }
+/// ```
+/// help url becomes `https://localhost:8443/help/docs/Graphical_User_Interface_9_0.html`
+const CTX_HELP: &str = "help/docs/Graphical_User_Interface_9_0.html";
+
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum Visibility {
     Visible,
     Hidden,
@@ -92,6 +107,7 @@ impl WatchState {
 //     Model
 // ------ ------
 
+#[derive(Debug)]
 pub struct Model {
     pub route: Route<'static>,
     pub menu_visibility: Visibility,

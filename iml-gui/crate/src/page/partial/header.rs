@@ -3,8 +3,10 @@ use crate::{
     generated::css_classes::C,
     Model, Msg, Route,
     Visibility::*,
+    ctx_help::CtxHelp,
 };
 use seed::{prelude::*, *};
+use seed::dom_types::Attrs;
 
 fn menu_icon<T>(icon_name: &str) -> Node<T> {
     font_awesome(class![C.h_6, C.w_6, C.mr_3, C.inline], icon_name)
@@ -166,16 +168,7 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                 ]
             ]
         ],
-        a![
-            &menu_class,
-            attrs! {
-                At::Href => "#responsive-header",
-            },
-            span![
-                menu_icon("question-circle"),
-                span![class![C.group_hover__text_active], "Help"]
-            ]
-        ],
+        context_sensitive_help_link(&model, &menu_class),
         a![
             &menu_class,
             class![C.bg_menu_active => model.route == Route::Activity],
@@ -190,6 +183,27 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                 ]
             ]
         ],
+    ]
+}
+
+fn context_sensitive_help_link(model: &Model, menu_class: &Attrs) -> Node<Msg> {
+    let attrs = if let Some(help_link) = model.route.help_link() {
+        attrs! {
+                    At::Target => "_blank", // open the link in a new tab
+                    At::Href => help_link,
+                }
+    } else {
+        attrs! {
+                    At::Href => "",
+                }
+    };
+    a![
+            menu_class,
+            attrs,
+            span![
+                menu_icon("question-circle"),
+                span![class![C.group_hover__text_active], "Help"]
+            ]
     ]
 }
 
