@@ -9,10 +9,10 @@
 extern crate seed;
 
 mod components;
+mod ctx_help;
 mod generated;
 mod page;
 mod route;
-mod ctx_help;
 
 use components::{
     breadcrumbs::BreadCrumbs, update_activity_health, ActivityHealth,
