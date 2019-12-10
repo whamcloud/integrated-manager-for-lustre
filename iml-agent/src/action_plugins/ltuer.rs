@@ -14,10 +14,7 @@ pub async fn create_ltuer_conf(
     fs::create_dir_all(CONFIGURATION_DIR).await?;
 
     let contents = format!(
-        "mailbox={}
-fs_name={}
-cold_pool={}
-",
+        "mailbox={}\nfs_name={}\ncold_pool={}\n",
         mailbox_path, fs_name, cold_pool
     );
 
