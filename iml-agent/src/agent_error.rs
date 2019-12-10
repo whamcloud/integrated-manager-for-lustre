@@ -71,6 +71,32 @@ impl std::error::Error for CibError {
 }
 
 #[derive(Debug)]
+pub enum KernelModuleError {
+    NotLoaded,
+    HasNoVersion,
+    HasMultipleVersions,
+    KmodError(KmodError),
+}
+
+impl fmt::Display for KernelModuleError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            Self::NotLoaded => "Module not loaded".into(),
+            Self::HasNoVersion => "Module info has no version field".into(),
+            Self::HasMultipleVersions => "Module info has multiple versions".into(),
+            Self::KmodError(e) => format!("{}", e),
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl std::error::Error for KernelModuleError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+}
+
+#[derive(Debug)]
 pub enum ImlAgentError {
     ImlFsError(ImlFsError),
     Io(std::io::Error),
@@ -97,7 +123,7 @@ pub enum ImlAgentError {
     CibError(CibError),
     UnexpectedStatusError,
     MarkerNotFound,
-    KmodError(KmodError),
+    KernelModuleError(KernelModuleError),
 }
 
 impl std::fmt::Display for ImlAgentError {
@@ -135,7 +161,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::CibError(ref err) => write!(f, "{}", err),
             ImlAgentError::UnexpectedStatusError => write!(f, "Unexpected status code"),
             ImlAgentError::MarkerNotFound => write!(f, "Marker not found"),
-            ImlAgentError::KmodError(ref err) => write!(f, "{}", err),
+            ImlAgentError::KernelModuleError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -169,7 +195,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::CibError(ref err) => Some(err),
             ImlAgentError::UnexpectedStatusError => None,
             ImlAgentError::MarkerNotFound => None,
-            ImlAgentError::KmodError(ref err) => Some(err),
+            ImlAgentError::KernelModuleError(ref err) => Some(err),
         }
     }
 }
@@ -320,7 +346,7 @@ impl From<CibError> for ImlAgentError {
 
 impl From<KmodError> for ImlAgentError {
     fn from(err: KmodError) -> Self {
-        ImlAgentError::KmodError(err)
+        ImlAgentError::KernelModuleError(KernelModuleError::KmodError(err))
     }
 }
 

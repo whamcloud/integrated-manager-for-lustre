@@ -85,6 +85,14 @@ pub enum PoolCommand {
     },
 }
 
+#[derive(Debug, StructOpt)]
+pub enum KernelModuleCommand {
+    #[structopt(name = "is_loaded")]
+    IsLoaded { module: String },
+    #[structopt(name = "version")]
+    Version { module: String },
+}
+
 fn invalid_input_err(msg: &str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidInput, msg)
 }
@@ -213,7 +221,10 @@ pub enum App {
     GetKernel { modules: Vec<String> },
 
     #[structopt(name = "kernel_module")]
-    KernelModule { module: String },
+    KernelModule {
+        #[structopt(subcommand)]
+        command: KernelModuleCommand,
+    },
 }
 
 fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<dyn Iterator<Item = String>> {
@@ -452,15 +463,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 exit(exitcode::SOFTWARE);
             }
         }
-        App::KernelModule { module } => match kernel_module::loaded(module).await {
-            Ok(b) => {
-                println!("{}", if b { "Loaded" } else { "Not Loaded" });
-            }
-            Err(e) => {
+        App::KernelModule { command } => {
+            if let Err(e) = match command {
+                KernelModuleCommand::IsLoaded { module } => {
+                    kernel_module::is_loaded(module).await.map(|b| {
+                        println!("{}", if b { "Loaded" } else { "Not Loaded" });
+                    })
+                }
+                KernelModuleCommand::Version { module } => {
+                    kernel_module::version(module).await.map(|v| {
+                        println!("{}", v);
+                    })
+                }
+            } {
                 eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
             }
-        },
+        }
     };
 
     Ok(())
