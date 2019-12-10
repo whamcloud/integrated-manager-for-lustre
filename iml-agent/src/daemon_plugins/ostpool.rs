@@ -110,6 +110,34 @@ fn diff_state(
     Ok(changes)
 }
 
+async fn init_fsmap(
+    state: Arc<Mutex<HashMap<String, HashMap<String, Vec<String>>>>>,
+    fsname: String,
+) -> Result<(), ImlAgentError> {
+    let fsmap: HashMap<String, Vec<String>> = HashMap::new();
+    state.lock().await.insert(fsname.clone(), fsmap);
+
+    let xs = pool_list(&fsname)
+        .await
+        .unwrap_or(vec![])
+        .into_iter()
+        .map(|pool| {
+            let fsname = &fsname;
+            let state = Arc::clone(&state);
+            async move {
+                let osts = ost_list(&fsname, &pool).await.unwrap_or(vec![]);
+                state
+                    .lock()
+                    .await
+                    .get_mut(fsname)
+                    .and_then(|hm| hm.insert(pool, osts));
+                Ok::<(), ImlAgentError>(())
+            }
+        });
+    try_join_all(xs).await?;
+    Ok(())
+}
+
 impl DaemonPlugin for PoolState {
     fn start_session(
         &mut self,
@@ -120,30 +148,8 @@ impl DaemonPlugin for PoolState {
             let fslist = list_fs().await.unwrap_or(vec![]);
 
             let xs = fslist.into_iter().map(|fsname| {
-                let fsmap: HashMap<String, Vec<String>> = HashMap::new();
                 let state = Arc::clone(&state);
-                async move {
-                    state.lock().await.insert(fsname.clone(), fsmap);
-
-                    let xs = pool_list(&fsname)
-                        .await
-                        .unwrap_or(vec![])
-                        .into_iter()
-                        .map(|pool| {
-                            let fsname = &fsname;
-                            let state = Arc::clone(&state);
-                            async move {
-                                let osts = ost_list(&fsname, &pool).await.unwrap_or(vec![]);
-                                state
-                                    .lock()
-                                    .await
-                                    .get_mut(fsname)
-                                    .and_then(|hm| hm.insert(pool, osts));
-                                Ok::<(), ImlAgentError>(())
-                            }
-                        });
-                    try_join_all(xs).await
-                }
+                async move { init_fsmap(state, fsname).await }
             });
             try_join_all(xs).await?;
             let pools: Vec<(OstPoolAction, OstPool)> = state
@@ -188,32 +194,7 @@ impl DaemonPlugin for PoolState {
 
                         diff_state(fs, hm, &pools)
                     } else {
-                        // Need to create filesystem in self.state
-                        let fsmap: HashMap<String, Vec<String>> = HashMap::new();
-                        state.lock().await.insert(fs.clone(), fsmap);
-
-                        let xs = pool_list(&fs)
-                            .await
-                            .unwrap_or(vec![])
-                            .into_iter()
-                            .map(|pool| {
-                                let fsname = &fs;
-                                let state = Arc::clone(&state);
-                                async move {
-                                    if let Ok(osts) = ost_list(&fsname, &pool)
-                                        .await
-                                        .map_err(|_| Ok::<Vec<String>, ImlAgentError>(vec![]))
-                                    {
-                                        state
-                                            .lock()
-                                            .await
-                                            .get_mut(fsname)
-                                            .and_then(|hm| hm.insert(pool, osts));
-                                    }
-                                    Ok::<(), ImlAgentError>(())
-                                }
-                            });
-                        try_join_all(xs).await?;
+                        init_fsmap(Arc::clone(&state), fs.clone()).await?;
 
                         let l = state.lock().await.get(&fs).map_or(vec![], |phm| {
                             phm.iter()
