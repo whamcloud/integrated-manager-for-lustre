@@ -7,6 +7,7 @@ pub mod check_ha;
 pub mod check_kernel;
 pub mod check_stonith;
 pub mod lctl;
+pub mod ltuer;
 pub mod ntp;
 pub mod ostpool;
 pub mod package_installed;
