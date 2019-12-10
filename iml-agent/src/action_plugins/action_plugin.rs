@@ -4,7 +4,7 @@
 
 use crate::{
     action_plugins::{
-        check_ha, check_stonith, lctl,
+        check_ha, check_stonith, lctl, ltuer,
         ntp::action_configure,
         ostpool, package_installed,
         stratagem::{action_purge, action_warning, server},
@@ -41,7 +41,8 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin(
             "configure_ntp",
             action_configure::update_and_write_new_config,
-        );
+        )
+        .add_plugin("create_ltuer_conf", ltuer::create_ltuer_conf);
 
     info!("Loaded the following ActionPlugins:");
 
