@@ -1164,17 +1164,12 @@ class JobScheduler(object):
         with self._lock:
             ostpool = OstPool.objects.get(pk=ostpool_data["id"])
 
-            # list of ost names
-            to_add = ostpool_data["osts"]
-            # list of ost objects
-            to_remove = []
+            newlist = set(ostpool_data.get("osts", []))
 
             with transaction.atomic():
-                for o in ostpool.osts.all():
-                    if o.name not in ostpool_data["osts"]:
-                        to_remove.append(o.name)
-                    if o.name in to_add:
-                        to_add.remove(o.name)
+                current = set(ostpool.osts.all())
+                to_add = newlist - current
+                to_remove = current - newlist
 
                 cmds = []
                 for ost in ManagedOst.objects.filter(name__in=to_add):

@@ -120,7 +120,7 @@ pub async fn pools(filesystem: String) -> Result<Vec<OstPool>, ImlAgentError> {
     let xs = pool_list(&filesystem).await?;
 
     let xs = xs.into_iter().map(|pool| {
-        let filesystem = filesystem.clone();
+        let filesystem = &filesystem;
 
         async move {
             let osts = ost_list(&filesystem, &pool);

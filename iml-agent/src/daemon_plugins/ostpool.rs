@@ -45,31 +45,31 @@ async fn list_fs() -> Result<Vec<String>, ImlAgentError> {
     }
 }
 
-/// Return vector of changes between exist fs state and list of pools
+/// Return vector of changes between existing fs state and list of pools
 /// from current filesystem
 fn diff_state(
     fs: String,
-    hm: &mut HashMap<String, Vec<String>>,
+    state: &mut HashMap<String, Vec<String>>,
     pools: &Vec<OstPool>,
 ) -> Result<Vec<(OstPoolAction, OstPool)>, ImlAgentError> {
-    let mut rmlist = hm.clone();
+    let mut rmlist = state.clone();
     let mut changes: Vec<(OstPoolAction, OstPool)> = vec![];
     for pool in pools.iter() {
         tracing::debug!("Updating {}.{}", fs, pool.name);
 
         if let Some(oldosts) = rmlist.remove(&pool.name) {
             let new: HashSet<_> = pool.osts.iter().cloned().collect();
-            let old: HashSet<_> = oldosts.iter().cloned().collect();
+            let old: HashSet<_> = oldosts.into_iter().collect();
 
             let addlist: HashSet<_> = new.difference(&old).cloned().collect();
             if !addlist.is_empty() {
-                hm.insert(pool.name.clone(), old.union(&addlist).cloned().collect());
+                state.insert(pool.name.clone(), old.union(&addlist).cloned().collect());
                 changes.push((
                     OstPoolAction::Grow,
                     OstPool {
                         name: pool.name.clone(),
                         filesystem: fs.clone(),
-                        osts: addlist.iter().cloned().collect(),
+                        osts: addlist.into_iter().collect(),
                     },
                 ));
             }
@@ -85,16 +85,16 @@ fn diff_state(
                     },
                 ));
             }
-            hm.insert(pool.name.clone(), pool.osts.clone());
+            state.insert(pool.name.clone(), pool.osts.clone());
         } else {
-            hm.insert(pool.name.clone(), pool.osts.clone());
+            state.insert(pool.name.clone(), pool.osts.clone());
             changes.push((OstPoolAction::Add, pool.clone()));
         }
     }
 
     // Removed pools
     for name in rmlist.keys() {
-        let osts = match hm.remove(&name.clone()) {
+        let osts = match state.remove(&name.clone()) {
             Some(o) => o.clone(),
             None => vec![],
         };
@@ -117,10 +117,7 @@ impl DaemonPlugin for PoolState {
         let state = Arc::clone(&self.state);
 
         async move {
-            let fslist = list_fs()
-                .await
-                .map_err(|_| Ok::<Vec<String>, ImlAgentError>(vec![]))
-                .unwrap();
+            let fslist = list_fs().await.unwrap_or(vec![]);
 
             let xs = fslist.into_iter().map(|fsname| {
                 let fsmap: HashMap<String, Vec<String>> = HashMap::new();
@@ -130,23 +127,18 @@ impl DaemonPlugin for PoolState {
 
                     let xs = pool_list(&fsname)
                         .await
-                        .map_err(|_| Ok::<Vec<String>, ImlAgentError>(vec![]))
-                        .unwrap()
+                        .unwrap_or(vec![])
                         .into_iter()
                         .map(|pool| {
-                            let fsname = fsname.clone();
+                            let fsname = &fsname;
                             let state = Arc::clone(&state);
                             async move {
-                                if let Ok(osts) = ost_list(&fsname, &pool)
+                                let osts = ost_list(&fsname, &pool).await.unwrap_or(vec![]);
+                                state
+                                    .lock()
                                     .await
-                                    .map_err(|_| Ok::<Vec<String>, ImlAgentError>(vec![]))
-                                {
-                                    state
-                                        .lock()
-                                        .await
-                                        .get_mut(&fsname)
-                                        .and_then(|hm| hm.insert(pool, osts));
-                                }
+                                    .get_mut(fsname)
+                                    .and_then(|hm| hm.insert(pool, osts));
                                 Ok::<(), ImlAgentError>(())
                             }
                         });
@@ -185,10 +177,7 @@ impl DaemonPlugin for PoolState {
         let state = Arc::clone(&self.state);
 
         async move {
-            let fslist = list_fs()
-                .await
-                .map_err(|_| Ok::<Vec<String>, ImlAgentError>(vec![]))
-                .unwrap();
+            let fslist = list_fs().await.unwrap_or(vec![]);
 
             let xs = fslist.into_iter().map(|fs| {
                 let state = Arc::clone(&state);
@@ -205,11 +194,10 @@ impl DaemonPlugin for PoolState {
 
                         let xs = pool_list(&fs)
                             .await
-                            .map_err(|_| Ok::<Vec<String>, ImlAgentError>(vec![]))
-                            .unwrap()
+                            .unwrap_or(vec![])
                             .into_iter()
                             .map(|pool| {
-                                let fsname = fs.clone();
+                                let fsname = &fs;
                                 let state = Arc::clone(&state);
                                 async move {
                                     if let Ok(osts) = ost_list(&fsname, &pool)
@@ -219,7 +207,7 @@ impl DaemonPlugin for PoolState {
                                         state
                                             .lock()
                                             .await
-                                            .get_mut(&fsname)
+                                            .get_mut(fsname)
                                             .and_then(|hm| hm.insert(pool, osts));
                                     }
                                     Ok::<(), ImlAgentError>(())
@@ -246,7 +234,7 @@ impl DaemonPlugin for PoolState {
                 }
             });
             let list: Vec<(OstPoolAction, OstPool)> =
-                try_join_all(xs).await?.iter().cloned().flatten().collect();
+                try_join_all(xs).await?.into_iter().flatten().collect();
             if list.is_empty() {
                 Ok(None)
             } else {
