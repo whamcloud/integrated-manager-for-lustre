@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v1
 
       - name: Push RPM
-        uses: ./.github/actions/copr-rust
+        uses: ./.github/actions/copr-kmod
         env:
           PROD: false
           OWNER: managerforlustre
