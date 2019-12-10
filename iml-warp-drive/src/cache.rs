@@ -9,8 +9,8 @@ use iml_postgres::Client as PgClient;
 use iml_wire_types::{
     db::{
         AlertStateRecord, FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord,
-        ManagedTargetMountRecord, ManagedTargetRecord, Name, NotDeleted, StratagemConfiguration,
-        VolumeNodeRecord, VolumeRecord,
+        ManagedTargetMountRecord, ManagedTargetRecord, Name, NotDeleted, OstPoolOstsRecord,
+        OstPoolRecord, StratagemConfiguration, VolumeNodeRecord, VolumeRecord,
     },
     warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam, Volume,
@@ -111,6 +111,19 @@ pub async fn db_record_to_change_record(
                     .map_ok(Record::ActiveAlert)
                     .map_ok(RecordChange::Update)
                     .await
+            }
+        },
+        DbRecord::OstPool(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::OstPool(x.id()))),
+            (_, ref x) if x.deleted() => Ok(RecordChange::Delete(RecordId::OstPool(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::OstPool(x)))
+            }
+        },
+        DbRecord::OstPoolOsts(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::OstPoolOsts(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::OstPoolOsts(x)))
             }
         },
         DbRecord::StratagemConfiguration(x) => match (msg_type, x) {
@@ -226,39 +239,50 @@ pub async fn populate_from_db(
 ) -> Result<(), iml_postgres::Error> {
     // The following could be more DRY. However, it allows us to avoid locking
     // the client and enables the use of pipelined requests.
-    let (target_mount_stmt, stratagem_config_stmt, lnet_config_stmt, volume_node_stmt) =
-        future::try_join4(
-            client.prepare(&format!(
-                "select * from {} where not_deleted = 't'",
-                ManagedTargetMountRecord::table_name()
-            )),
-            client.prepare(&format!(
-                "select * from {} where not_deleted = 't'",
-                StratagemConfiguration::table_name()
-            )),
-            client.prepare(&format!(
-                "select * from {} where not_deleted = 't'",
-                LnetConfigurationRecord::table_name()
-            )),
-            client.prepare(&format!(
-                "select * from {} where not_deleted = 't'",
-                VolumeNodeRecord::table_name()
-            )),
-        )
-        .await?;
+    let stmts = future::try_join_all(vec![
+        client.prepare(&format!(
+            "select * from {} where not_deleted = 't'",
+            ManagedTargetMountRecord::table_name()
+        )),
+        client.prepare(&format!(
+            "select * from {} where not_deleted = 't'",
+            StratagemConfiguration::table_name()
+        )),
+        client.prepare(&format!(
+            "select * from {} where not_deleted = 't'",
+            LnetConfigurationRecord::table_name()
+        )),
+        client.prepare(&format!(
+            "select * from {} where not_deleted = 't'",
+            VolumeNodeRecord::table_name()
+        )),
+        client.prepare(&format!(
+            "select * from {} where not_deleted = 't'",
+            OstPoolRecord::table_name()
+        )),
+        client.prepare(&format!(
+            "select * from {}",
+            OstPoolOstsRecord::table_name()
+        )),
+    ])
+    .await?;
 
-    let (managed_target_mount, stratagem_configuration, lnet_configuration, volume_node) =
-        future::try_join4(
-            into_row(client.query_raw(&target_mount_stmt, iter::empty()).await?),
-            into_row(
-                client
-                    .query_raw(&stratagem_config_stmt, iter::empty())
-                    .await?,
-            ),
-            into_row(client.query_raw(&lnet_config_stmt, iter::empty()).await?),
-            into_row(client.query_raw(&volume_node_stmt, iter::empty()).await?),
-        )
-        .await?;
+    let fut = future::try_join5(
+        into_row(client.query_raw(&stmts[0], iter::empty()).await?),
+        into_row(client.query_raw(&stmts[1], iter::empty()).await?),
+        into_row(client.query_raw(&stmts[2], iter::empty()).await?),
+        into_row(client.query_raw(&stmts[3], iter::empty()).await?),
+        into_row(client.query_raw(&stmts[4], iter::empty()).await?),
+    );
+
+    let (
+        (managed_target_mount, stratagem_configuration, lnet_configuration, volume_node, ost_pool),
+        ost_pool_osts,
+    ) = future::try_join(
+        fut,
+        into_row(client.query_raw(&stmts[5], iter::empty()).await?),
+    )
+    .await?;
 
     let mut cache = shared_api_cache.lock().await;
 
@@ -266,6 +290,8 @@ pub async fn populate_from_db(
     cache.stratagem_config = stratagem_configuration;
     cache.lnet_configuration = lnet_configuration;
     cache.volume_node = volume_node;
+    cache.ost_pool = ost_pool;
+    cache.ost_pool_osts = ost_pool_osts;
 
     tracing::debug!("Populated from db");
 
