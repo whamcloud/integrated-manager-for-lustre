@@ -23,8 +23,6 @@ impl<'a> CtxHelp for Route<'a> {
             Route::ServerDetail(_) => Some("9.3.1.1"),
             _ => None,
         };
-        let link = anchor.map(|anc| format!("{}#{}", CTX_HELP, anc));
-        log!("open help link = {}", link);
-        link
+        anchor.map(|anc| format!("#{}", anc))
     }
 }

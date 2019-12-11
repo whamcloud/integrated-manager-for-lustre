@@ -5,9 +5,6 @@
 #![allow(clippy::non_ascii_literal)]
 #![allow(clippy::enum_glob_use)]
 
-#[macro_use]
-extern crate seed;
-
 mod components;
 mod ctx_help;
 mod generated;

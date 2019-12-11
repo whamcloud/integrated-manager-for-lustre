@@ -4,6 +4,7 @@ use crate::{
     generated::css_classes::C,
     Model, Msg, Route,
     Visibility::*,
+    CTX_HELP,
 };
 use seed::dom_types::Attrs;
 use seed::{prelude::*, *};
@@ -187,11 +188,13 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
 }
 
 fn context_sensitive_help_link(model: &Model, menu_class: &Attrs) -> Node<Msg> {
-    let attrs = if let Some(help_link) = model.route.help_link() {
-        // open the link in a new tab
-        attrs! { At::Target => "_blank", At::Href => help_link }
-    } else {
-        attrs! { At::Href => "" }
+    let attrs = attrs! {
+       At::Target => "_blank", // open the link in a new tab
+       At::Href => format!(
+           "{}{}",
+           CTX_HELP,
+           model.route.help_link().unwrap_or_else(|| "".into())
+       )
     };
     a![
         menu_class,
