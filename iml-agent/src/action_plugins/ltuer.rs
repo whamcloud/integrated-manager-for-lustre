@@ -54,8 +54,8 @@ pub async fn create_ltuer_conf(
 
 #[cfg(test)]
 mod tests {
-    use tempfile::tempdir;
     use super::*;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_create_ltuer_conf() {
