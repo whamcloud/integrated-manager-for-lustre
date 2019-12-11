@@ -7,6 +7,7 @@ from collections import defaultdict
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
 from django.db.models import Q
+from django.core.exceptions import ObjectDoesNotExist
 from chroma_core.models import ManagedFilesystem, ManagedTarget
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs
 from chroma_core.models import Volume, VolumeNode
@@ -15,6 +16,7 @@ from chroma_core.models.filesystem import HSM_CONTROL_KEY, HSM_CONTROL_PARAMS
 
 import tastypie.http as http
 from tastypie import fields
+from tastypie.exceptions import NotFound
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.chroma_model_resource import ChromaModelResource
