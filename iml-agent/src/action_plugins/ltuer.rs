@@ -16,8 +16,6 @@ async fn create_ltuer_conf_internal_<W>(
 where
     W: AsyncWrite + Unpin,
 {
-    fs::create_dir_all(CONFIGURATION_DIR).await?;
-
     let contents = format!(
         "mailbox={}\nfs_name={}\ncold_pool={}\n",
         mailbox_path, fs_name, cold_pool
