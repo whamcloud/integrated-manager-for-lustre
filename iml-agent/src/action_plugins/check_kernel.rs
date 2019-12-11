@@ -2,9 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{
-    agent_error::ImlAgentError, cmd::cmd_output, cmd::cmd_output_success, version_utils::Version,
-};
+use crate::{agent_error::ImlAgentError, cmd::cmd_output, cmd::cmd_output_success};
+use version_utils::Version;
 
 async fn check_kver_module(module: &str, kver: &str) -> Result<bool, ImlAgentError> {
     let output = cmd_output("modinfo", vec!["-n", "-k", kver, module]).await?;

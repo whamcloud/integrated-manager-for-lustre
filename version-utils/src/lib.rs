@@ -72,6 +72,18 @@ impl From<&str> for Version {
     }
 }
 
+impl From<String> for Version {
+    fn from(version: String) -> Self {
+        Version::from(version.as_str())
+    }
+}
+
+impl From<&String> for Version {
+    fn from(version: &String) -> Self {
+        Version::from(version.as_str())
+    }
+}
+
 impl Ord for Version {
     fn cmp(&self, other: &Self) -> Ordering {
         self.v.cmp(&other.v).then(self.r.cmp(&other.r))
@@ -85,7 +97,7 @@ impl PartialOrd for Version {
 
 impl PartialEq for Version {
     fn eq(&self, other: &Self) -> bool {
-        self.version == other.version
+        self.v == other.v && self.r == other.r
     }
 }
 
@@ -115,8 +127,16 @@ mod tests {
     #[test]
     fn test_version_display() {
         let version = "1.3-5.0".to_string();
-        let ver = Version::from(ver);
-        
+        let ver = Version::from(&version);
+
+        assert_eq!(version, format!("{}", ver));
+    }
+
+    #[test]
+    fn test_conversion_string_clone() {
+        let version = "1.3-5.0".to_string();
+        let ver = Version::from(version.clone());
+
         assert_eq!(version, format!("{}", ver));
     }
 }

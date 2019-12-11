@@ -20,6 +20,7 @@ members = [
     'iml-services/iml-action-runner',
     'iml-services/iml-stratagem',
     'number-formatter',
+    'version-utils',
 ]
 
 exclude = [
