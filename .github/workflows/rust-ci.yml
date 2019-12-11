@@ -73,6 +73,9 @@ jobs:
           toolchain: ${{ matrix.rust }}
           override: true
 
+      - name: Install kmod-dev
+        run: sudo apt install libkmod-dev
+
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
