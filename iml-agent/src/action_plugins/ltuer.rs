@@ -4,6 +4,7 @@
 
 use crate::agent_error::ImlAgentError;
 use std::path::PathBuf;
+use tokio::io::{AsyncWrite, AsyncWriteExt};
 use tokio_fs as fs;
 
 #[cfg(not(test))]
@@ -11,9 +12,13 @@ static CONFIGURATION_DIR: &str = "/etc/iml";
 #[cfg(test)]
 static CONFIGURATION_DIR: &str = "/tmp/etc/iml";
 
-pub async fn create_ltuer_conf(
+async fn create_ltuer_conf_internal<W>(
     (mailbox_path, fs_name, cold_pool): (String, String, String),
-) -> Result<(), ImlAgentError> {
+    writer: &mut W,
+) -> Result<(), ImlAgentError>
+where
+    W: AsyncWrite + Unpin,
+{
     fs::create_dir_all(CONFIGURATION_DIR).await?;
 
     let contents = format!(
@@ -21,10 +26,24 @@ pub async fn create_ltuer_conf(
         mailbox_path, fs_name, cold_pool
     );
 
+    writer
+        .write(contents.as_bytes())
+        .await
+        .map(|_| ())
+        .map_err(|e| e.into())
+}
+
+pub async fn create_ltuer_conf(
+    (mailbox_path, fs_name, cold_pool): (String, String, String),
+) -> Result<(), ImlAgentError> {
+    fs::create_dir_all(CONFIGURATION_DIR).await?;
+
     let mut path = PathBuf::from(CONFIGURATION_DIR);
     path.push("ltuer.conf");
 
-    fs::write(path, contents).await.map_err(|e| e.into())
+    let mut file = fs::File::create(path).await?;
+
+    create_ltuer_conf_internal((mailbox_path, fs_name, cold_pool), &mut file).await
 }
 
 // Warning: only one test at a time can be executing,
