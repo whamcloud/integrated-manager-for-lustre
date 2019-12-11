@@ -2,4 +2,4 @@ name: copr kmod
 description: build in the copr-kmod image
 runs:
   using: "docker"
-  image: "docker://imlteam/copr-kmod:stable"
+  image: "docker://imlteam/copr-kmod:latest"
