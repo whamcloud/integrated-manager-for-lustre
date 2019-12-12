@@ -9,7 +9,7 @@ use tokio_fs as fs;
 
 static CONFIGURATION_DIR: &str = "/etc/iml";
 
-async fn create_ltuer_conf_internal<W>(
+async fn write_ltuer_conf<W>(
     (mailbox_path, fs_name, cold_pool): (String, String, String),
     writer: &mut W,
 ) -> Result<(), ImlAgentError>
@@ -28,7 +28,7 @@ where
         .map_err(|e| e.into())
 }
 
-async fn wrap_file_creation<P>(
+async fn create_ltuer_conf_internal<P>(
     (mailbox_path, fs_name, cold_pool): (String, String, String),
     dir_path: P,
 ) -> Result<(), ImlAgentError>
@@ -43,13 +43,13 @@ where
 
     let mut file = fs::File::create(path).await?;
 
-    create_ltuer_conf_internal((mailbox_path, fs_name, cold_pool), &mut file).await
+    write_ltuer_conf((mailbox_path, fs_name, cold_pool), &mut file).await
 }
 
 pub async fn create_ltuer_conf(
     (mailbox_path, fs_name, cold_pool): (String, String, String),
 ) -> Result<(), ImlAgentError> {
-    wrap_file_creation((mailbox_path, fs_name, cold_pool), CONFIGURATION_DIR).await
+    create_ltuer_conf_internal((mailbox_path, fs_name, cold_pool), CONFIGURATION_DIR).await
 }
 
 #[cfg(test)]
@@ -61,7 +61,7 @@ mod tests {
     async fn test_create_ltuer_conf() {
         let dir = tempdir().unwrap();
 
-        wrap_file_creation(("foo".into(), "bar".into(), "baz".into()), dir.path())
+        create_ltuer_conf_internal(("foo".into(), "bar".into(), "baz".into()), dir.path())
             .await
             .unwrap();
 
