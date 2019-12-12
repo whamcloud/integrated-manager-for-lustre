@@ -62,7 +62,7 @@ async fn get_delivery(
             }
             ManagerMessage::Data {
                 plugin,
-                session_id,
+                session_id: _,
                 body,
                 ..
             } => {

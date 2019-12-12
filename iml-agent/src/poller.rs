@@ -83,6 +83,7 @@ pub async fn create_poller(
                         sessions.reset_empty(&name)
                     });
 
+                    #[allow(unused_must_use)]
                     tokio::spawn(async {
                         fut.await;
                     });
@@ -100,6 +101,7 @@ pub async fn create_poller(
                 now,
             );
 
+            #[allow(unused_must_use)]
             tokio::spawn(async move {
                 fut.await.map_err(|e| {
                     error!("{}", e);
