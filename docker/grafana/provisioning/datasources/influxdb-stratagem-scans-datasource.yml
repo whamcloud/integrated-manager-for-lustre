@@ -5,7 +5,7 @@ datasources:
   - type: influxdb
   - access: proxy
   - database: iml_stratagem_scans
-  - url: http://influx:8086
+  - url: http://influxdb:8086
   - jsonData: { httpMode: GET }
 
 version: 1
