@@ -27,14 +27,14 @@ services:
     deploy: *default-deploy
     volumes:
       - influxdb:/var/lib/influxdb/
-    healthcheck:
-      test: ["CMD-SHELL", "influx -execute 'quit'"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      - "./influxdb/setup-influxdb.sh:/docker-entrypoint-initdb.d/setup-influxdb.sh:ro"
     ports:
       - 8086:8086
+    environment:
+      - INFLUXDB_IML_DB=iml
+      - INFLUXDB_STRATAGEM_SCAN_DB=iml_stratagem_scans
+      - INFLUXDB_BIND_ADDRESS=influxdb:8088
+      - INFLUXDB_HTTP_BIND_ADDRESS=influxdb:8086
   grafana:
     image: "imlteam/grafana:5.1"
     build:
@@ -168,6 +168,7 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - PROXY_HOST=iml-action-runner
+      - INFLUXDB_SERVER_FQDN=influxdb
   lustre-audit:
     image: "imlteam/manager-lustre-audit:5.1"
     hostname: "lustre-audit"
