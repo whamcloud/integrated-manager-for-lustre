@@ -36,10 +36,14 @@ services:
     ports:
       - 8086:8086
   grafana:
-    image: "grafana/grafana"
+    image: "imlteam/grafana:5.1"
+    build:
+      context: ../
+      dockerfile: ./docker/grafana.dockerfile
     hostname: "grafana"
     deploy: *default-deploy
     volumes:
+      - "manager-config:/var/lib/chroma"
       - grafana-storage:/var/lib/grafana
     ports:
       - 3000:3000

@@ -16,7 +16,10 @@ vars = {
     "WARP_DRIVE_PROXY_PASS": "http://iml-warp-drive:8890",
     "MAILBOX_PATH": "/var/spool/iml/mailbox",
     "MAILBOX_PROXY_PASS": "http://mailbox:8891",
+    "GRAFANA_PROXY_PASS": "http://grafana:3000",
 }
+
+simple_proxy_list = ["GRAFANA_PROXY_PASS"]
 
 conf_template = "./chroma-manager.conf.template"
 
@@ -25,7 +28,7 @@ with open(conf_template, "r") as f:
 
     config = re.sub(
         r"proxy_pass {{(.+)}}.*;",
-        r"set $proxy_upstream {{\g<1>}};\n        proxy_pass $proxy_upstream$uri$is_args$query_string;",
+        r"set $proxy_upstream {{\g<1>}};\n        proxy_pass $proxy_upstream$prox_path$is_args$query_string;",
         config,
     )
     config = re.sub(
@@ -39,16 +42,16 @@ with open(conf_template, "r") as f:
         config,
     )
 
+    for v in simple_proxy_list:
+        config = config.replace(
+            "set $proxy_upstream {{%s}};\n        proxy_pass $proxy_upstream$prox_path$is_args$query_string;" % v,
+            "proxy_pass {{%s}};" % v,
+        )
+
     for (k, v) in vars.iteritems():
         config = config.replace("{{%s}}" % k, v)
 
     config = re.sub(r"{{(.+)}}", r"{{ .Env.\g<1> }}", config)
-
-    config = re.sub(
-        r".+set \$proxy_upstream http://iml-agent-comms:(\d+);\n.+proxy_pass \$proxy_upstream\$uri\$is_args\$query_string;",
-        r"        set $proxy_upstream http://iml-agent-comms:\g<1>;\n        proxy_pass $proxy_upstream/message/$is_args$query_string;",
-        config,
-    )
 
     with open("iml.template", "w") as f2:
         f2.write(config)
