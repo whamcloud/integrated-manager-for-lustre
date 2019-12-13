@@ -9,9 +9,7 @@ pub async fn loaded(module: String) -> Result<bool, ImlAgentError> {
 
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);
-        let lines: Vec<_> = stdout.lines().collect();
-        println!("{:#?}", lines);
-        let mut modules = lines.into_iter().filter_map(|m| {
+        let mut modules = stdout.lines().into_iter().filter_map(|m| {
             println!("{:?}", m);
             let mut fields = m.split(' ').filter(|s| *s != "");
             let (name, _, refcount) = (fields.next(), fields.next(), fields.next());
