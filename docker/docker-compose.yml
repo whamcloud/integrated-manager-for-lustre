@@ -22,8 +22,11 @@ services:
       retries: 5
       start_period: 10s
   influxdb:
-    image: "influxdb:1.7.6-alpine"
+    image: "imlteam/influxdb:5.1"
     hostname: "influxdb"
+    build:
+      context: ../
+      dockerfile: ./docker/influxdb.dockerfile
     deploy: *default-deploy
     volumes:
       - influxdb:/var/lib/influxdb/
