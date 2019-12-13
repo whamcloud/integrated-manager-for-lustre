@@ -5,13 +5,13 @@ import subprocess
 
 
 def psql_sql(sql):
-    p = subprocess.Popen(["psql", "-h", "postgres", "-U", "chroma", "-tAc %s" % sql], stdout=subprocess.PIPE)
+    p = subprocess.Popen(["psql", "-h", "postgres", "-U", "chroma", "-tAc {}".format(sql)], stdout=subprocess.PIPE)
     return p.stdout.read()
 
 
 out = psql_sql("SELECT datname FROM pg_catalog.pg_database WHERE datname = 'grafana'")
-print("Does grafana database exist?: %s" % ("grafana" in out))
+print("Does grafana database exist?: {}".format("grafana" in out))
 if "grafana" not in out:
-    create_db_out = psql_sql("CREATE DATABASE grafana OWNER %s" % (os.getenv("DB_USER")))
-    print("Database 'grafana' created: %s" % ("CREATE DATABASE" in create_db_out))
+    create_db_out = psql_sql("CREATE DATABASE grafana OWNER {}".format(os.getenv("DB_USER")))
+    print("Database 'grafana' created: {}".format("CREATE DATABASE" in create_db_out))
 
