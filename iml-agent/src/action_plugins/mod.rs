@@ -12,5 +12,4 @@ pub mod ntp;
 pub mod ostpool;
 pub mod package_installed;
 pub mod stratagem;
-
 pub use action_plugin::create_registry;
