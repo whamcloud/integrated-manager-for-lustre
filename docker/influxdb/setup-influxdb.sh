@@ -1,2 +1,2 @@
 #! /bin/sh
-setup-influx && /entrypoint.sh
+setup-influxdb && /entrypoint.sh
