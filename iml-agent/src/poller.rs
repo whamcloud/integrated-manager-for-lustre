@@ -84,7 +84,7 @@ pub async fn create_poller(
                     });
 
                     tokio::spawn(async {
-                        fut.await;
+                        fut.map(drop).await;
                     });
                 }
                 _ => (),
@@ -101,9 +101,9 @@ pub async fn create_poller(
             );
 
             tokio::spawn(async move {
-                fut.await.map_err(|e| {
+                if let Err(e) = fut.await {
                     error!("{}", e);
-                });
+                };
             });
         }
     }
