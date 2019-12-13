@@ -1,2 +1,2 @@
 #! /bin/sh
-setup-influx && influxd
+setup-influx && /entrypoint.sh
