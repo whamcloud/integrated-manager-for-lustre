@@ -4,7 +4,7 @@
 
 use crate::{
     action_plugins::{
-        check_ha, check_kernel, check_stonith, kernel_module, lctl, ltuer,
+        check_ha, check_kernel, check_stonith, kernel_module, lctl, lpurge, ltuer,
         ntp::action_configure,
         ostpool, package,
         stratagem::{action_purge, action_warning, server},
@@ -41,6 +41,7 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("ostpool_destroy", ostpool::action_pool_destroy)
         .add_plugin("ostpool_add", ostpool::action_pool_add)
         .add_plugin("ostpool_remove", ostpool::action_pool_remove)
+        .add_plugin("create_lpurge_conf", lpurge::create_lpurge_conf)
         .add_plugin(
             "configure_ntp",
             action_configure::update_and_write_new_config,
