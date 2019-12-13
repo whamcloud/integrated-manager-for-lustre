@@ -30,6 +30,7 @@ services:
     deploy: *default-deploy
     volumes:
       - influxdb:/var/lib/influxdb/
+      - "manager-config:/var/lib/chroma"
     healthcheck:
       test: ["CMD-SHELL", "influx -execute 'quit'"]
       interval: 5s
