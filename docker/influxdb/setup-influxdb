@@ -10,7 +10,7 @@ def run_cmd(cmd):
 
 
 def create_database(name):
-    run_cmd(["influx", "-execute", "CREATE DATABASE {}".format(name)])
+    run_cmd(["influx", "-host", "influxdb", "-execute", "CREATE DATABASE {}".format(name)])
 
 
 def print_db_created_result(r):
