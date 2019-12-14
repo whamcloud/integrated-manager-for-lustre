@@ -7,4 +7,4 @@ COPY docker/wait-for-dependencies.sh /usr/local/bin
 
 RUN apk add curl python
 ENTRYPOINT ["wait-for-dependencies.sh"]
-CMD /bin/sh
+CMD ["setup-influxdb.sh"]
