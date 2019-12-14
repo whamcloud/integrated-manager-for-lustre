@@ -33,6 +33,9 @@ services:
       - "manager-config:/var/lib/chroma"
     ports:
       - 8086:8086
+    environment:
+      - INFLUXDB_IML_DB=iml
+      - INFLUXDB_STRATAGEM_SCAN_DB=iml_stratagem_scans
   grafana:
     image: "imlteam/grafana:5.1"
     build:
