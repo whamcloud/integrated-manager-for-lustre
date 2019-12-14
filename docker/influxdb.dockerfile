@@ -1,5 +1,6 @@
 FROM influxdb:1.7.6-alpine
 USER root
+COPY docker/influxdb/influxdb.conf /etc/influxdb
 COPY docker/influxdb/setup-influxdb /usr/local/bin
 COPY docker/influxdb/setup-influxdb.sh /usr/local/bin
 COPY docker/wait-for-dependencies.sh /usr/local/bin
