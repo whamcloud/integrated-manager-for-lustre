@@ -10,18 +10,18 @@ def run_cmd(cmd):
 
 
 def create_database(name):
-    run_cmd(["influx", "-host", "influxdb", "-execute", "CREATE DATABASE {}".format(name)])
+    return run_cmd(["influx", "-host", "influxdb", "-execute", "CREATE DATABASE {}".format(name)])
 
 
-def print_db_created_result(r):
-    print("Created database '{}'".format(r))
+def print_db_created_result(name, r):
+    print("Created database '{}: {}'".format(name, r))
 
 
 iml_db = os.getenv("INFLUXDB_IML_DB")
 stratagem_scan_db = os.getenv("INFLUXDB_STRATAGEM_SCAN_DB")
 
 r1 = create_database(iml_db)
-print_db_created_result(r1)
+print_db_created_result(iml_db, r1)
 
 r2 = create_database(stratagem_scan_db)
-print_db_created_result(r2)
+print_db_created_result(stratagem_scan_db, r2)
