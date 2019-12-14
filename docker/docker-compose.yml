@@ -24,8 +24,6 @@ services:
   influxdb:
     image: "imlteam/influxdb:5.1"
     hostname: "influxdb"
-    stdin_open: true
-    tty: true
     build:
       context: ../
       dockerfile: ./docker/influxdb.dockerfile
@@ -33,12 +31,6 @@ services:
     volumes:
       - influxdb:/var/lib/influxdb/
       - "manager-config:/var/lib/chroma"
-    healthcheck:
-      test: ["CMD-SHELL", "influx -execute 'quit'"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
     ports:
       - 8086:8086
   grafana:
