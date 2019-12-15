@@ -28,9 +28,9 @@ services:
     volumes:
       - influxdb:/var/lib/influxdb/
       - "manager-config:/var/lib/chroma"
-      - "docker/influxdb/influxdb.conf:/etc/influxdb/influxdb.conf:ro"
-      - "docker/influxdb/setup-influxdb:/usr/local/bin/setup-influxdb"
-      - "docker/influxdb/setup-influxdb.sh:/docker-entrypoint-initdb.d/setup-influxdb.sh"
+      - "./docker/influxdb/influxdb.conf:/etc/influxdb/influxdb.conf:ro"
+      - "./docker/influxdb/setup-influxdb:/usr/local/bin/setup-influxdb"
+      - "./docker/influxdb/setup-influxdb.sh:/docker-entrypoint-initdb.d/setup-influxdb.sh"
     ports:
       - 8086:8086
     environment:
