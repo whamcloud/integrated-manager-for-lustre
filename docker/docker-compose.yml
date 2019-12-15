@@ -36,7 +36,6 @@ services:
     environment:
       - INFLUXDB_IML_DB=iml
       - INFLUXDB_STRATAGEM_SCAN_DB=iml_stratagem_scans
-      - INFLUXDB_HTTP_BIND_ADDRESS=influxdb:8086
   grafana:
     image: "imlteam/grafana:5.1"
     build:
