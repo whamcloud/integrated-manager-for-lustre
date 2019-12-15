@@ -28,7 +28,6 @@ services:
     volumes:
       - influxdb:/var/lib/influxdb/
       - "./influxdb/influxdb.conf:/etc/influxdb/influxdb.conf:ro"
-      - "./influxdb/setup-influxdb:/usr/local/bin/setup-influxdb"
       - "./influxdb/setup-influxdb.sh:/docker-entrypoint-initdb.d/setup-influxdb.sh"
     ports:
       - 8086:8086
