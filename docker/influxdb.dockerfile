@@ -6,4 +6,4 @@ COPY docker/influxdb/setup-influxdb.sh /docker-entrypoint-initdb.d/
 
 RUN apk add curl python
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["influxd"]
+CMD ["influxd", "-config", "/etc/influxdb/influxdb.conf"]
