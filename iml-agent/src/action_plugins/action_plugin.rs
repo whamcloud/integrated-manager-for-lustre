@@ -32,7 +32,7 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("action_purge_stratagem", action_purge::read_mailbox)
         .add_plugin("action_check_ha", check_ha::check_ha)
         .add_plugin("action_check_stonith", check_stonith::check_stonith)
-        .add_plugin("action_get_kernel", check_kernel::get_kernel)
+        .add_plugin("get_kernel", check_kernel::get_kernel)
         .add_plugin("lctl", lctl::lctl)
         .add_plugin("ostpool_create", ostpool::action_pool_create)
         .add_plugin("ostpool_wait", ostpool::action_pool_wait)
