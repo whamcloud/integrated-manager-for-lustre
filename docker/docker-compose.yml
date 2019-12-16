@@ -255,6 +255,18 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - SERVER_HTTP_URL=gunicorn
+  iml-ostpool:
+    image: "imlteam/iml-ostpool"
+    hostname: "iml-ostpool"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-ostpool.dockerfile
+    deploy: *default-deploy
+    volumes:
+      - "manager-config:/var/lib/chroma"
+    environment:
+      - PROXY_HOST=iml-stratagem
+      - RUST_LOG=info
   setup:
     image: "imlteam/manager-setup:5.1"
     command: ["tail", "-f", "/dev/null"]
