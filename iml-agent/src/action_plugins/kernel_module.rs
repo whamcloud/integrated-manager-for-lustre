@@ -10,10 +10,7 @@ pub async fn loaded(module: String) -> Result<bool, ImlAgentError> {
     run(move || {
         let ctx = kmod::Context::new()?;
 
-        Ok(ctx
-            .modules_loaded()?
-            .find(|m| m.name() == module && m.refcount() > 0)
-            .is_some())
+        Ok(ctx.modules_loaded()?.find(|m| m.name() == module).is_some())
     })
     .await
 }
