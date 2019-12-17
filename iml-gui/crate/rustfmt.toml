@@ -1,5 +1,6 @@
 # https://github.com/rust-lang/rustfmt/blob/master/Configurations.md
 
+edition = "2018"
 newline_style = "Unix"
 use_field_init_shorthand = true
 use_try_shorthand = true
