@@ -1,7 +1,7 @@
 use seed::prelude::*;
 use std::{borrow::Cow, ops::Deref};
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct RouteId<'a>(Cow<'a, str>);
 
 impl<'a> From<u32> for RouteId<'a> {
@@ -24,7 +24,7 @@ impl<'a> Deref for RouteId<'a> {
     }
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Route<'a> {
     About,
     Activity,

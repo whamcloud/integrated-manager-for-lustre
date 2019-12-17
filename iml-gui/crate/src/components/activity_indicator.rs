@@ -19,6 +19,7 @@ pub fn update_activity_health(
     )
 }
 
+#[derive(Debug)]
 pub struct ActivityHealth {
     pub count: usize,
     pub health: AlertSeverity,
