@@ -4,6 +4,7 @@ use seed::{prelude::*, *};
 use std::cmp::PartialEq;
 use std::collections::LinkedList;
 
+#[derive(Debug)]
 pub struct BreadCrumbs<Crumb> {
     crumbs: LinkedList<Crumb>,
 }
