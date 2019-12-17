@@ -6,9 +6,7 @@ use iml_agent::action_plugins::stratagem::{
     action_purge, action_warning,
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
-use iml_agent::action_plugins::{
-    check_ha, check_kernel, check_stonith, ostpool, package_installed,
-};
+use iml_agent::action_plugins::{check_ha, check_kernel, check_stonith, ostpool, package};
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
 use spinners::{Spinner, Spinners};
@@ -82,6 +80,20 @@ pub enum PoolCommand {
     List {
         #[structopt(name = "FILESYSTEM", parse(try_from_str = "is_valid_fsname"))]
         filesystem: String,
+    },
+}
+
+#[derive(Debug, StructOpt)]
+pub enum PackageCommand {
+    #[structopt(name = "installed")]
+    Installed {
+        #[structopt(name = "package_name")]
+        package_name: String,
+    },
+    #[structopt(name = "version")]
+    Version {
+        #[structopt(name = "package_name")]
+        package_name: String,
     },
 }
 
@@ -205,8 +217,11 @@ pub enum App {
     #[structopt(name = "check_stonith")]
     CheckStonith,
 
-    #[structopt(name = "package_installed")]
-    PackageInstalled { package: String },
+    #[structopt(name = "package")]
+    Package {
+        #[structopt(subcommand)]
+        command: PackageCommand,
+    },
 
     #[structopt(name = "get_kernel")]
     /// Get latest kernel which supports listed modules
@@ -415,12 +430,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             Err(e) => println!("{:?}", e),
         },
-        App::PackageInstalled { package } => {
-            match package_installed::package_installed(package).await {
-                Ok(cs) => {
-                    println!("{}", if cs { "Installed" } else { "Not Installed" });
+        App::Package { command } => {
+            if let Err(e) = match command {
+                PackageCommand::Installed { package_name } => package::installed(package_name)
+                    .await
+                    .map(|r| println!("{}", if r { "Installed" } else { "Not Installed" })),
+                PackageCommand::Version { package_name } => {
+                    package::version(package_name).await.map(|r| match r {
+                        Some(v) => println!("{}", v),
+                        None => {
+                            eprintln!("no version");
+                            exit(exitcode::DATAERR)
+                        }
+                    })
                 }
-                Err(e) => println!("{:?}", e),
+            } {
+                eprintln!("{:?}", e);
+                exit(exitcode::SOFTWARE);
             }
         }
         App::GetKernel { modules } => match check_kernel::get_kernel(modules).await {
