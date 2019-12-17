@@ -19,11 +19,7 @@ pub async fn loaded(module: String) -> Result<bool, ImlAgentError> {
             }
         });
 
-        if module.is_some() {
-            Ok(true)
-        } else {
-            Ok(false)
-        }
+        Ok(module.is_some())
     } else {
         Err(ImlAgentError::CmdOutputError(output))
     }
