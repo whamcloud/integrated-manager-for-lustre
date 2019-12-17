@@ -9,17 +9,15 @@ pub async fn loaded(module: String) -> Result<bool, ImlAgentError> {
 
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);
-        let mut modules = stdout.lines().into_iter().filter_map(|m| {
+        let module = stdout.lines().into_iter().find(|m| {
             let mut fields = m.split(' ').filter(|s| *s != "");
             let name = fields.next();
             if let Some(name) = name {
-                Some(name)
+                name == module
             } else {
-                None
+                false
             }
         });
-
-        let module = modules.find(|m| *m == module);
 
         if module.is_some() {
             Ok(true)
