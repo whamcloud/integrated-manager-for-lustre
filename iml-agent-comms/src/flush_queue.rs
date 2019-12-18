@@ -13,7 +13,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use tokio::timer::delay;
+use tokio::time::delay_for;
 
 type State = Arc<Mutex<VecDeque<Vec<u8>>>>;
 
@@ -40,9 +40,7 @@ pub async fn flush(
             };
 
             if drained.is_empty() {
-                let when = Instant::now() + Duration::from_millis(100);
-
-                delay(when).await;
+                delay_for(Duration::from_millis(100)).await;
             } else {
                 tracing::debug!("flush returning {} items", drained.len());
 

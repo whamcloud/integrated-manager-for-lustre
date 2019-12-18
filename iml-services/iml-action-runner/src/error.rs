@@ -5,7 +5,7 @@
 use futures::channel::oneshot;
 use iml_wire_types::Fqdn;
 use std::fmt;
-use tokio::timer;
+use tokio::time;
 use warp::reject;
 
 #[derive(Debug)]
@@ -27,7 +27,7 @@ impl std::error::Error for RequiredError {
 #[derive(Debug)]
 pub enum ActionRunnerError {
     AwaitSession(Fqdn),
-    TokioTimerError(timer::Error),
+    TokioTimerError(time::Error),
     ImlRabbitError(iml_rabbit::ImlRabbitError),
     OneShotCanceledError(oneshot::Canceled),
     RequiredError(RequiredError),
@@ -61,8 +61,8 @@ impl std::error::Error for ActionRunnerError {
     }
 }
 
-impl From<timer::Error> for ActionRunnerError {
-    fn from(err: timer::Error) -> Self {
+impl From<time::Error> for ActionRunnerError {
+    fn from(err: time::Error) -> Self {
         ActionRunnerError::TokioTimerError(err)
     }
 }

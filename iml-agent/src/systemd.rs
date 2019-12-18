@@ -7,11 +7,8 @@ use crate::{
     cmd::{cmd_output, cmd_output_success},
 };
 use iml_wire_types::{ActiveState, RunState, UnitFileState};
-use std::{
-    str,
-    time::{Duration, Instant},
-};
-use tokio::timer::delay;
+use std::{str, time::Duration};
+use tokio::time::delay_for;
 
 /// Waits for a unit to enter a certain state based on a given predicate.
 async fn wait_for_state(
@@ -26,7 +23,7 @@ async fn wait_for_state(
             return Ok(());
         }
 
-        delay(Instant::now() + Duration::from_millis(500)).await;
+        delay_for(Duration::from_millis(500)).await;
     }
 
     let x = get_run_state(unit_name.to_string()).await?;

@@ -5,7 +5,7 @@
 use crate::{error::ActionRunnerError, Sender, Sessions, Shared};
 use iml_wire_types::{Action, ActionId, Fqdn, Id, ManagerMessage, PluginName};
 use std::{collections::HashMap, sync::Arc, time::Duration};
-use tokio_timer::{clock, delay};
+use tokio::time::{delay_until, Instant};
 
 pub type Rpcs = HashMap<ActionId, ActionInFlight>;
 pub type SessionToRpcs = HashMap<Id, Rpcs>;
@@ -37,10 +37,10 @@ pub async fn await_session(
     sessions: Shared<Sessions>,
     timeout: Duration,
 ) -> Result<Id, ActionRunnerError> {
-    let until = clock::now() + timeout;
+    let until = Instant::now() + timeout;
 
     loop {
-        if clock::now() >= until {
+        if Instant::now() >= until {
             tracing::info!(
                 "Could not find a session for {} after {:?} seconds",
                 fqdn,
@@ -54,9 +54,9 @@ pub async fn await_session(
             return Ok(id.clone());
         }
 
-        let when = clock::now() + Duration::from_millis(500);
+        let when = Instant::now() + Duration::from_millis(500);
 
-        delay(when).await;
+        delay_until(when).await;
     }
 }
 
@@ -88,9 +88,9 @@ pub(crate) async fn await_next_session(
             return Ok(session);
         }
 
-        let when = clock::now() + Duration::from_secs(1);
+        let when = Instant::now() + Duration::from_secs(1);
 
-        delay(when).await;
+        delay_until(when).await;
     }
 
     tracing::warn!("No new session after {} seconds", wait_secs);
@@ -157,26 +157,27 @@ mod tests {
     use crate::error::ActionRunnerError;
     use futures::{channel::oneshot, lock::Mutex};
     use iml_wire_types::{Action, ActionId, Fqdn, Id};
-    use std::{collections::HashMap, sync::Arc, time::Duration};
-    use tokio_test::{assert_pending, assert_ready_err, clock::MockClock, task};
+    use std::{collections::HashMap, sync::Arc};
+    use tokio::time::{self, Duration};
+    use tokio_test::{assert_pending, assert_ready_err, task};
 
-    #[test]
-    fn test_await_session_will_error_after_timeout() {
+    #[tokio::test]
+    async fn test_await_session_will_error_after_timeout2() {
+        time::pause();
+
         let sessions = Arc::new(Mutex::new(HashMap::new()));
 
-        let mut mock = MockClock::new();
+        let mut task = task::spawn(await_session(
+            Fqdn("host1".to_string()),
+            sessions,
+            Duration::from_secs(25),
+        ));
 
-        mock.enter(|handle| {
-            let mut task = task::spawn(async {
-                await_session(Fqdn("host1".to_string()), sessions, Duration::from_secs(25)).await
-            });
+        assert_pending!(task.poll());
 
-            assert_pending!(task.poll());
+        time::advance(Duration::from_secs(26)).await;
 
-            handle.advance(Duration::from_secs(26));
-
-            assert_ready_err!(task.poll());
-        });
+        assert_ready_err!(task.poll());
     }
 
     #[tokio::test]

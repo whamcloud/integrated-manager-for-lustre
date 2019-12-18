@@ -14,12 +14,8 @@ use iml_agent_comms::messaging::consume_agent_tx_queue;
 use iml_rabbit::ConnectionProperties;
 use iml_wire_types::{Action, ActionId, ActionName, Fqdn, Id};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
-use std::{
-    collections::HashMap,
-    sync::Arc,
-    time::{Duration, Instant},
-};
-use tokio::timer::delay;
+use std::{collections::HashMap, sync::Arc, time::Duration};
+use tokio::time::delay_for;
 use warp::{self, Filter};
 
 fn create_random_string() -> String {
@@ -119,9 +115,7 @@ async fn test_data_sent_to_active_session() -> Result<(), Box<dyn std::error::Er
                     break x;
                 }
 
-                let when = Instant::now() + Duration::from_millis(10);
-
-                delay(when).await;
+                delay_for(Duration::from_millis(10)).await;
             };
 
             af.complete(Ok(serde_json::Value::String("ALL DONE!!!1!".to_string())))

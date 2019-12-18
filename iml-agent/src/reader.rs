@@ -12,8 +12,8 @@ use crate::{
 };
 use futures::{FutureExt, TryFutureExt};
 use iml_wire_types::ManagerMessage;
-use std::time::{Duration, Instant};
-use tokio::timer::delay;
+use std::time::Duration;
+use tokio::time::delay_for;
 use tracing::{error, warn};
 
 async fn get_delivery(
@@ -112,8 +112,7 @@ pub async fn create_reader(
                     return Err(e);
                 };
 
-                let when = Instant::now() + Duration::from_secs(5);
-                delay(when).await;
+                delay_for(Duration::from_secs(5)).await;
             }
             Err(e) => return Err(e),
         }

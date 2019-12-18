@@ -44,7 +44,7 @@ async fn main() -> Result<()> {
             .map(drop),
     );
 
-    poller::create_poller(agent_client, sessions).await?;
+    poller::create_poller(agent_client, sessions).await;
 
     Ok(())
 }

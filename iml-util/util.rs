@@ -57,7 +57,7 @@ impl<A, B, C, D, E> Pick<A, B> for (A, B, C, D, E) {
 }
 
 pub mod tokio_utils {
-    use futures::{future::Either, Stream, TryStreamExt};
+    use futures::{stream::BoxStream, StreamExt, TryStreamExt};
     use std::{
         convert::TryFrom,
         env, io,
@@ -69,16 +69,40 @@ pub mod tokio_utils {
         net::{TcpListener, UnixListener},
     };
 
-    pub trait Socket: AsyncRead + AsyncWrite + Send + 'static + Unpin {}
-    impl<T: AsyncRead + AsyncWrite + Send + 'static + Unpin> Socket for T {}
+    pub trait Socket: AsyncRead + AsyncWrite + 'static + Send + Unpin {}
+    impl<T: AsyncRead + AsyncWrite + 'static + Send + Unpin> Socket for T {}
+
+    pub trait Incoming: Send {
+        fn incoming<'a>(&'a mut self) -> BoxStream<'a, Result<Pin<Box<dyn Socket>>, io::Error>>;
+    }
+
+    struct TcpIncoming(TcpListener);
+
+    impl Incoming for TcpIncoming {
+        fn incoming<'a>(&'a mut self) -> BoxStream<'a, Result<Pin<Box<dyn Socket>>, io::Error>> {
+            self.0
+                .incoming()
+                .map_ok(|x| -> Pin<Box<dyn Socket>> { Box::pin(x) })
+                .boxed()
+        }
+    }
+
+    struct UnixIncoming(UnixListener);
+
+    impl Incoming for UnixIncoming {
+        fn incoming<'a>(&'a mut self) -> BoxStream<'a, Result<Pin<Box<dyn Socket>>, io::Error>> {
+            self.0
+                .incoming()
+                .map_ok(|x| -> Pin<Box<dyn Socket>> { Box::pin(x) })
+                .boxed()
+        }
+    }
 
     /// Given an environment variable that resolves to a port,
     /// Return a stream containing `TcpStream`s that have been erased to
     /// `AsyncRead` + `AsyncWrite` traits. This is useful when you won't know which stream
     /// to choose at runtime
-    pub async fn get_tcp_stream(
-        port: &str,
-    ) -> Result<impl Stream<Item = Result<Pin<Box<dyn Socket>>, io::Error>>, io::Error> {
+    pub async fn get_tcp_stream(port: &str) -> Result<impl Incoming, io::Error> {
         let host = env::var("PROXY_HOST")
             .or_else::<String, _>(|_| Ok("127.0.0.1".into()))
             .expect("Couldn't parse host.");
@@ -86,28 +110,18 @@ pub mod tokio_utils {
 
         tracing::debug!("Listening over tcp port {}", port);
 
-        let s = TcpListener::bind(&addr)
-            .await?
-            .incoming()
-            .map_ok(|x| -> Pin<Box<dyn Socket>> { Box::pin(x) });
-
-        Ok(s)
+        Ok(TcpIncoming(TcpListener::bind(&addr).await?))
     }
 
     /// Returns a stream containing `UnixStream`s that have been erased to
     /// `AsyncRead` + `AsyncWrite` traits. This is useful when you won't know which stream
     /// to choose at runtime
-    pub fn get_unix_stream(
-    ) -> Result<impl Stream<Item = Result<Pin<Box<dyn Socket>>, io::Error>>, io::Error> {
+    pub fn get_unix_stream() -> Result<impl Incoming, io::Error> {
         let addr = unsafe { NetUnixListener::from_raw_fd(3) };
 
         tracing::debug!("Listening over unix domain socket");
 
-        let s = UnixListener::try_from(addr)?
-            .incoming()
-            .map_ok(|x| -> Pin<Box<dyn Socket>> { Box::pin(x) });
-
-        Ok(s)
+        Ok(UnixIncoming(UnixListener::try_from(addr)?))
     }
 
     /// Given an environment variable that resolves to a port,
@@ -117,15 +131,13 @@ pub mod tokio_utils {
     ///
     /// If the `port_var` resolves to a port, `TcpStream` will be used internally.
     /// Otherwise a `UnixStream` will be used.
-    pub async fn get_tcp_or_unix_listener(
-        port_var: &str,
-    ) -> Result<impl Stream<Item = Result<Pin<Box<dyn Socket>>, io::Error>>, io::Error> {
-        let s = match env::var(port_var) {
-            Ok(port) => Either::Left(get_tcp_stream(&port).await?),
-            Err(_) => Either::Right(get_unix_stream()?),
+    pub async fn get_tcp_or_unix_listener(port_var: &str) -> Result<Box<dyn Incoming>, io::Error> {
+        let x: Box<dyn Incoming> = match env::var(port_var) {
+            Ok(port) => Box::new(get_tcp_stream(&port).await?),
+            Err(_) => Box::new(get_unix_stream()?),
         };
 
-        Ok(s)
+        Ok(x)
     }
 }
 

@@ -2,18 +2,14 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{io::AsyncBufReadExt, stream, Stream, TryFutureExt, TryStreamExt};
+use futures::{io::AsyncBufReadExt, stream, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use std::{
     io::{self, Write},
     path::{Path, PathBuf},
 };
 use tempfile::NamedTempFile;
-use tokio::{
-    codec::{BytesCodec, FramedRead, FramedWrite, LinesCodec, LinesCodecError},
-    fs::File,
-    prelude::*,
-};
-use tokio_executor::blocking::run;
+use tokio::{fs::File, prelude::*, task::spawn_blocking};
+use tokio_util::codec::{BytesCodec, FramedRead, FramedWrite, LinesCodec, LinesCodecError};
 
 #[derive(Debug)]
 pub enum ImlFsError {
@@ -166,7 +162,7 @@ where
 
 /// Creates a temporary file and writes some bytes to it.
 pub async fn write_tempfile(contents: Vec<u8>) -> Result<NamedTempFile, io::Error> {
-    let f = run(move || {
+    let f = spawn_blocking(move || {
         let mut f = NamedTempFile::new()?;
 
         f.write_all(contents.as_ref())?;
@@ -175,7 +171,7 @@ pub async fn write_tempfile(contents: Vec<u8>) -> Result<NamedTempFile, io::Erro
     })
     .await?;
 
-    Ok(f)
+    f
 }
 
 /// Given a `PathBuf`, creates a new file that can have
