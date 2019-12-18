@@ -12,11 +12,7 @@ pub async fn loaded(module: String) -> Result<bool, ImlAgentError> {
         let module = stdout.lines().into_iter().find(|m| {
             let mut fields = m.split(' ').filter(|s| *s != "");
             let name = fields.next();
-            if let Some(name) = name {
-                name == module
-            } else {
-                false
-            }
+            name == Some(&module)
         });
 
         Ok(module.is_some())
