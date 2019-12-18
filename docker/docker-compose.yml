@@ -27,13 +27,14 @@ services:
     deploy: *default-deploy
     volumes:
       - influxdb:/var/lib/influxdb/
-      - "./influxdb/influxdb.conf:/etc/influxdb/influxdb.conf:ro"
-      - "./influxdb/setup-influxdb.sh:/docker-entrypoint-initdb.d/setup-influxdb.sh"
+      - "./influxdb/setup-influxdb.sh:/docker-entrypoint-initdb.d/setup-influxdb.sh:ro"
     ports:
       - 8086:8086
     environment:
       - INFLUXDB_IML_DB=iml
       - INFLUXDB_STRATAGEM_SCAN_DB=iml_stratagem_scans
+      - INFLUXDB_BIND_ADDRESS=influxdb:8088
+      - INFLUXDB_HTTP_BIND_ADDRESS=influxdb:8086
   grafana:
     image: "imlteam/grafana:5.1"
     build:
