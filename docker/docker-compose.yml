@@ -283,6 +283,23 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - RUST_LOG=info
+  iml-mailbox:
+    image: "imlteam/iml-mailbox:dev"
+    hostname: "iml-mailbox"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-mailbox.dockerfile
+    deploy: *default-deploy
+    volumes:
+      - "mailbox:/var/spool/iml/mailbox"
+      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+      - "tmp_vol:/tmp"
+      - "run_vol:/run"
+      - "manager-config:/var/lib/chroma"
+    environment:
+      - "PROXY_HOST=iml-mailbox"
+      - MAILBOX_PORT=8891
+      - "MAILBOX_PATH=/var/spool/iml/mailbox"
   iml-postoffice:
     image: "imlteam/iml-postoffice:5.1"
     hostname: "iml-postoffice"
@@ -312,6 +329,7 @@ volumes:
   grafana-storage:
   static-config1:
   static-config2:
+  mailbox:
 secrets:
   iml_pw:
     external: true
