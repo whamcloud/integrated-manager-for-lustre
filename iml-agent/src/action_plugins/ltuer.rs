@@ -4,8 +4,10 @@
 
 use crate::agent_error::ImlAgentError;
 use std::path::{Path, PathBuf};
-use tokio::io::{AsyncWrite, AsyncWriteExt};
-use tokio_fs as fs;
+use tokio::{
+    fs,
+    io::{AsyncWrite, AsyncWriteExt},
+};
 
 static CONFIGURATION_DIR: &str = "/etc/iml";
 
