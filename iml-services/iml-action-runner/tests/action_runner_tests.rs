@@ -123,7 +123,7 @@ async fn test_data_sent_to_active_session() -> Result<(), Box<dyn std::error::Er
 
             Ok(())
         }
-            .unwrap_or_else(|e: ActionRunnerError| panic!("{}", e)),
+        .unwrap_or_else(|e: ActionRunnerError| panic!("{}", e)),
     );
 
     let res = warp::test::request()
@@ -201,7 +201,7 @@ async fn test_cancel_sent_to_active_session() -> Result<(), Box<dyn std::error::
 
             Ok(())
         }
-            .unwrap_or_else(|e: ActionRunnerError| panic!("{}", e)),
+        .unwrap_or_else(|e: ActionRunnerError| panic!("{}", e)),
     );
 
     let res = warp::test::request()

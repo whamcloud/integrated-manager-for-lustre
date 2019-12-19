@@ -98,8 +98,7 @@ mod test {
     use futures::{stream, Stream};
     use insta::assert_debug_snapshot;
 
-    static ORIGINAL_CONFIG: &'static str =
-        r#"# For more information about this file, see the man pages
+    static ORIGINAL_CONFIG: &'static str = r#"# For more information about this file, see the man pages
 # ntp.conf(5), ntp_acc(5), ntp_auth(5), ntp_clock(5), ntp_misc(5), ntp_mon(5).
 
 driftfile /var/lib/ntp/drift
@@ -159,8 +158,7 @@ keys /etc/ntp/keys
 disable monitor
 "#;
 
-    static LOCAL_HOST_CONFIG: &'static str =
-        r#"# For more information about this file, see the man pages
+    static LOCAL_HOST_CONFIG: &'static str = r#"# For more information about this file, see the man pages
 # ntp.conf(5), ntp_acc(5), ntp_auth(5), ntp_clock(5), ntp_misc(5), ntp_mon(5).
 
 driftfile /var/lib/ntp/drift
@@ -221,8 +219,7 @@ keys /etc/ntp/keys
 disable monitor
 "#;
 
-    static SERVER_CONFIG: &'static str =
-        r#"# For more information about this file, see the man pages
+    static SERVER_CONFIG: &'static str = r#"# For more information about this file, see the man pages
 # ntp.conf(5), ntp_acc(5), ntp_auth(5), ntp_clock(5), ntp_misc(5), ntp_mon(5).
 
 driftfile /var/lib/ntp/drift

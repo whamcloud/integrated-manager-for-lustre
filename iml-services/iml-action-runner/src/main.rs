@@ -73,10 +73,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             Ok(())
         }
-            .map_err(|e: ImlServiceQueueError| {
-                tracing::error!("{}", e);
-            })
-            .map(drop),
+        .map_err(|e: ImlServiceQueueError| {
+            tracing::error!("{}", e);
+        })
+        .map(drop),
     );
 
     warp::serve(routes).run_incoming(incoming).await;

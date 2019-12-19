@@ -191,10 +191,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             Ok(())
         }
-            .unwrap_or_else(|e: ImlAgentCommsError| {
-                tx.send(()).unwrap_or_else(drop);
-                tracing::error!("{:?}", e)
-            }),
+        .unwrap_or_else(|e: ImlAgentCommsError| {
+            tx.send(()).unwrap_or_else(drop);
+            tracing::error!("{:?}", e)
+        }),
     );
 
     let hosts_filter = warp::any().map(move || Arc::clone(&shared_hosts2));
@@ -269,10 +269,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     Ok::<(), ImlAgentCommsError>(())
                 }
-                    .map_err(warp::reject::custom)
-                    .map_ok(|_| {
-                        warp::reply::with_status(warp::reply(), warp::http::StatusCode::ACCEPTED)
-                    })
+                .map_err(warp::reject::custom)
+                .map_ok(|_| {
+                    warp::reply::with_status(warp::reply(), warp::http::StatusCode::ACCEPTED)
+                })
             },
         );
 
@@ -345,7 +345,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 Ok::<_, ImlAgentCommsError>(ManagerMessages { messages: xs })
             }
-                .map_err(warp::reject::custom)
+            .map_err(warp::reject::custom)
         })
         .map(|envelope| warp::reply::json(&envelope));
 
