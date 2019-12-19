@@ -437,12 +437,6 @@ class FilesystemResource(MetricResource, ConfParamResource):
         )
 
 
-class OstPoolResourceValidation(Validation):
-    def is_valid(self, bundle, request=None):
-        errors = defaultdict(list)
-        return errors
-
-
 class OstPoolResource(ChromaModelResource):
     osts = fields.ToManyField(
         "chroma_api.target.TargetResource", "osts", null=True, help_text="List of OSTs in this Pool",
@@ -454,7 +448,6 @@ class OstPoolResource(ChromaModelResource):
         resource_name = "ostpool"
         authentication = AnonymousAuthentication()
         authorization = PatchedDjangoAuthorization()
-        validation = OstPoolResourceValidation()
         excludes = ["not_deleted"]
         ordering = ["filesystem", "name"]
         list_allowed_methods = ["get", "delete", "put", "post"]

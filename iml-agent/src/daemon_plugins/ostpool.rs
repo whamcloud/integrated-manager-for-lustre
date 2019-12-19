@@ -29,20 +29,21 @@ pub fn create() -> impl DaemonPlugin {
 }
 
 async fn list_fs() -> Result<Vec<String>, ImlAgentError> {
-    Ok(lctl(vec!["get_param", "-N", "mdt.*-MDT0000"]).await
-       .map(|o| {
-           String::from_utf8_lossy(&o.stdout)
-               .lines()
-               .filter_map(|line| {
-                   line.split('.')
-                       .skip(1)
-                       .next()
-                       .and_then(|mdt| mdt.split("-MDT").next() )
-               })
-               .map(|s| s.to_string())
-               .collect()
-       })
-       .unwrap_or(vec![]))
+    Ok(lctl(vec!["get_param", "-N", "mdt.*-MDT0000"])
+        .await
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .filter_map(|line| {
+                    line.split('.')
+                        .skip(1)
+                        .next()
+                        .and_then(|mdt| mdt.split("-MDT").next())
+                })
+                .map(|s| s.to_string())
+                .collect()
+        })
+        .unwrap_or(vec![]))
 }
 
 /// Return vector of changes between existing fs state and list of pools
@@ -171,7 +172,7 @@ impl DaemonPlugin for PoolState {
             let x = serde_json::to_value(pools).map(Some)?;
             Ok(x)
         }
-            .boxed()
+        .boxed()
     }
 
     fn update_session(
@@ -220,6 +221,6 @@ impl DaemonPlugin for PoolState {
                 Ok(x)
             }
         }
-            .boxed()
+        .boxed()
     }
 }

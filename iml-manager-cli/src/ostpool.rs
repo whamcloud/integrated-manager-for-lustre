@@ -165,16 +165,8 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
             wait_for_cmds(vec![objs.command]).await?;
         }
         OstPoolCommand::Destroy { fsname, poolname } => {
-            let fs: Filesystem =
-                wrap_fut("Fetching Filesystem ...", get_one(vec![("name", &fsname)])).await?;
-            let resp = delete(
-                OstPoolApi::endpoint_name(),
-                vec![
-                    ("name", poolname.as_str()),
-                    ("filesystem", fs.id.to_string().as_str()),
-                ],
-            )
-            .await?;
+            let pool = pool_lookup(&fsname, &poolname).await?;
+            let resp = delete(&pool.resource_uri, "").await?;
             term.write_line(&format!("{} ost pool...", style("Destroying").green()))?;
             let objs: ObjCommands = resp.json().await?;
             wait_for_cmds(objs.commands).await?;
