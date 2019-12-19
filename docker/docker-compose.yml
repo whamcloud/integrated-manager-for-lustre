@@ -271,6 +271,7 @@ services:
     environment:
       - "PROXY_HOST=iml-mailbox"
       - MAILBOX_PORT=8891
+      - "MAILBOX_PATH=/var/spool/iml/mailbox"
   setup:
     image: "imlteam/manager-setup:5.1"
     command: ["tail", "-f", "/dev/null"]
