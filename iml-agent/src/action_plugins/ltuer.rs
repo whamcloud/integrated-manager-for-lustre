@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::agent_error::ImlAgentError;
+use futures_util::future::TryFutureExt;
 use std::path::{Path, PathBuf};
 use tokio::{
     fs,
@@ -23,11 +24,7 @@ where
         mailbox_path, fs_name, cold_pool
     );
 
-    writer
-        .write(contents.as_bytes())
-        .await
-        .map(|_| ())
-        .map_err(|e| e.into())
+    writer.write(contents.as_bytes()).err_into().await.map(drop)
 }
 
 async fn create_ltuer_conf_internal<P>(
