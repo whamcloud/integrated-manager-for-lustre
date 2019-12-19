@@ -6,7 +6,9 @@ use iml_agent::action_plugins::stratagem::{
     action_purge, action_warning,
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
-use iml_agent::action_plugins::{check_ha, check_kernel, check_stonith, ostpool, package};
+use iml_agent::action_plugins::{
+    check_ha, check_kernel, check_stonith, kernel_module, ostpool, package,
+};
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
 use spinners::{Spinner, Spinners};
@@ -226,6 +228,9 @@ pub enum App {
     #[structopt(name = "get_kernel")]
     /// Get latest kernel which supports listed modules
     GetKernel { modules: Vec<String> },
+
+    #[structopt(name = "kernel_module")]
+    KernelModule { module: String },
 }
 
 fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<dyn Iterator<Item = String>> {
@@ -475,6 +480,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 exit(exitcode::SOFTWARE);
             }
         }
+        App::KernelModule { module } => match kernel_module::loaded(module).await {
+            Ok(b) => {
+                println!("{}", if b { "Loaded" } else { "Not Loaded" });
+            }
+            Err(e) => {
+                eprintln!("{}", e);
+                exit(exitcode::SOFTWARE);
+            }
+        },
     };
 
     Ok(())
