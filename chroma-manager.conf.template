@@ -160,7 +160,6 @@ server {
 
     location /influx {
         limit_except GET { deny all; }
-        auth_request /auth;
         proxy_set_header Host $http_host;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Server $host;
