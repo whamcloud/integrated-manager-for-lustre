@@ -135,9 +135,8 @@ server {
         gzip on;
     }
 
-    location /auth {
+    location = /auth {
         internal;
-        proxy_set_header X-Original-URI $request_uri;
         proxy_pass_request_body off;
         proxy_set_header Content-Length "";
         set $prox_path /api/auth/;
@@ -157,14 +156,14 @@ server {
     }
 
     location /influx {
+        limit_except GET { deny all; }
         auth_request /auth;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        set $prox_path /query;
-        proxy_pass {{INFLUXDB_PROXY_PASS}}/query;
+        proxy_pass https://www.google.com
     }
 
     location /wasm-components {
