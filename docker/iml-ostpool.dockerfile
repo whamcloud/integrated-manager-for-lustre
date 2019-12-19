@@ -1,7 +1,4 @@
-FROM rust:1.39 as builder
-WORKDIR /build
-COPY . .
-RUN cd iml-services/iml-ostpool && cargo build --release
+FROM rust-iml-base as builder
 
 FROM ubuntu
 COPY --from=builder /build/target/release/iml-ostpool /usr/local/bin

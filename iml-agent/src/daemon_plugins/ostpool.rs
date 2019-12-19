@@ -12,6 +12,7 @@ use futures::{future::try_join_all, lock::Mutex, Future, FutureExt};
 use iml_wire_types::{OstPool, OstPoolAction};
 use std::{
     collections::{HashMap, HashSet},
+    iter::FromIterator,
     pin::Pin,
     sync::Arc,
 };
@@ -28,21 +29,20 @@ pub fn create() -> impl DaemonPlugin {
 }
 
 async fn list_fs() -> Result<Vec<String>, ImlAgentError> {
-    match lctl(vec!["get_param", "-N", "mdt.*-MDT0000"]).await {
-        Err(_) => Ok(vec![]),
-        Ok(o) => Ok(String::from_utf8_lossy(&o.stdout)
-            .lines()
-            .filter_map(|line| {
-                let mut parts = line.split('.').skip(1);
-                if let Some(mdt) = parts.next() {
-                    mdt.split("-MDT").next()
-                } else {
-                    None
-                }
-            })
-            .map(|s| s.to_string())
-            .collect()),
-    }
+    Ok(lctl(vec!["get_param", "-N", "mdt.*-MDT0000"]).await
+       .map(|o| {
+           String::from_utf8_lossy(&o.stdout)
+               .lines()
+               .filter_map(|line| {
+                   line.split('.')
+                       .skip(1)
+                       .next()
+                       .and_then(|mdt| mdt.split("-MDT").next() )
+               })
+               .map(|s| s.to_string())
+               .collect()
+       })
+       .unwrap_or(vec![]))
 }
 
 /// Return vector of changes between existing fs state and list of pools
@@ -54,12 +54,12 @@ fn diff_state(
 ) -> Result<Vec<(OstPoolAction, OstPool)>, ImlAgentError> {
     let mut rmlist = state.clone();
     let mut changes: Vec<(OstPoolAction, OstPool)> = vec![];
-    for pool in pools.iter() {
+    for pool in pools {
         tracing::debug!("Updating {}.{}", fs, pool.name);
 
         if let Some(oldosts) = rmlist.remove(&pool.name) {
-            let new: HashSet<_> = pool.osts.iter().cloned().collect();
-            let old: HashSet<_> = oldosts.into_iter().collect();
+            let new = HashSet::from_iter(pool.osts.clone());
+            let old = HashSet::from_iter(oldosts);
 
             let addlist: HashSet<_> = new.difference(&old).cloned().collect();
             if !addlist.is_empty() {
@@ -94,10 +94,7 @@ fn diff_state(
 
     // Removed pools
     for name in rmlist.keys() {
-        let osts = match state.remove(&name.clone()) {
-            Some(o) => o.clone(),
-            None => vec![],
-        };
+        let osts = state.remove(name.as_str()).unwrap_or(vec![]);
         changes.push((
             OstPoolAction::Remove,
             OstPool {

@@ -265,7 +265,6 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - PROXY_HOST=iml-stratagem
       - RUST_LOG=info
   setup:
     image: "imlteam/manager-setup:5.1"

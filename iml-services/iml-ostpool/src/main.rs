@@ -2,7 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{future::try_join_all, stream::TryStreamExt};
+use futures::future::try_join_all;
+use futures_util::stream::TryStreamExt;
 use iml_ostpool::db::{self};
 use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::{OstPool, OstPoolAction};
