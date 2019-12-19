@@ -77,7 +77,8 @@ pub enum ImlAgentError {
     UrlParseError(url::ParseError),
     Utf8Error(std::str::Utf8Error),
     FromUtf8Error(std::string::FromUtf8Error),
-    TokioTimerError(tokio::timer::Error),
+    TokioTimerError(tokio::time::Error),
+    TokioJoinError(tokio::task::JoinError),
     AddrParseError(std::net::AddrParseError),
     ParseIntError(std::num::ParseIntError),
     NoSessionError(NoSessionError),
@@ -108,6 +109,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::Utf8Error(ref err) => write!(f, "{}", err),
             ImlAgentError::FromUtf8Error(ref err) => write!(f, "{}", err),
             ImlAgentError::TokioTimerError(ref err) => write!(f, "{}", err),
+            ImlAgentError::TokioJoinError(ref err) => write!(f, "{}", err),
             ImlAgentError::AddrParseError(ref err) => write!(f, "{}", err),
             ImlAgentError::ParseIntError(ref err) => write!(f, "{}", err),
             ImlAgentError::NoSessionError(ref err) => write!(f, "{}", err),
@@ -147,6 +149,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::Utf8Error(ref err) => Some(err),
             ImlAgentError::FromUtf8Error(ref err) => Some(err),
             ImlAgentError::TokioTimerError(ref err) => Some(err),
+            ImlAgentError::TokioJoinError(ref err) => Some(err),
             ImlAgentError::AddrParseError(ref err) => Some(err),
             ImlAgentError::ParseIntError(ref err) => Some(err),
             ImlAgentError::NoSessionError(ref err) => Some(err),
@@ -211,9 +214,15 @@ impl From<std::string::FromUtf8Error> for ImlAgentError {
     }
 }
 
-impl From<tokio::timer::Error> for ImlAgentError {
-    fn from(err: tokio::timer::Error) -> Self {
+impl From<tokio::time::Error> for ImlAgentError {
+    fn from(err: tokio::time::Error) -> Self {
         ImlAgentError::TokioTimerError(err)
+    }
+}
+
+impl From<tokio::task::JoinError> for ImlAgentError {
+    fn from(err: tokio::task::JoinError) -> Self {
+        ImlAgentError::TokioJoinError(err)
     }
 }
 

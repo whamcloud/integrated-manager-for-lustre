@@ -8,8 +8,8 @@ use crate::{
 };
 use futures::future::try_join_all;
 use iml_wire_types::OstPool;
-use std::time::{Duration, Instant};
-use tokio::timer::delay;
+use std::time::Duration;
+use tokio::time::delay_for;
 
 /// A list of rules + a name for the group of rules.
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -42,7 +42,7 @@ pub async fn action_pool_wait(cmd: CmdPool) -> Result<(), ImlAgentError> {
         if pl.contains(&cmd.name) {
             return Ok(());
         }
-        delay(Instant::now() + Duration::from_millis(500)).await;
+        delay_for(Duration::from_millis(500)).await;
     }
 
     Err(ImlAgentError::from(RequiredError(format!(

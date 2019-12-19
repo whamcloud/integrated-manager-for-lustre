@@ -5,9 +5,8 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-futures-preview = "0.3.0-alpha.19"
-tokio = "0.2.0-alpha.6"
-tokio-timer = "0.3.0-alpha.6"
+futures = "0.3"
+tokio = "0.2.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 warp = { git = "https://github.com/seanmonstar/warp.git" }
@@ -23,4 +22,4 @@ tracing-subscriber = "0.1"
 [dev-dependencies]
 iml-agent-comms = { path = "../../iml-agent-comms", version = "0.1.0"}
 rand = "0.7.2"
-tokio-test = "0.2.0-alpha.6"
+tokio-test = "0.2"

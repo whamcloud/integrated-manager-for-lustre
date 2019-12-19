@@ -5,7 +5,7 @@
 use futures::Future;
 use std::fmt::Debug;
 use std::time::Duration;
-use tokio::timer::delay_for;
+use tokio::time::delay_for;
 use tracing;
 
 pub mod policy;

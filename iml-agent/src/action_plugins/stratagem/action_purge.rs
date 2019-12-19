@@ -7,9 +7,9 @@ use futures::{
     future::{self, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
-use liblustreapi::{error::LiblustreError, LlapiFid};
+use liblustreapi::LlapiFid;
 use std::convert::Into;
-use tokio_executor::blocking::run;
+use tokio::task::spawn_blocking;
 use tracing::{debug, error, warn};
 
 pub fn purge_files(device: &str, fids: Vec<String>) -> Result<(), ImlAgentError> {
@@ -21,12 +21,18 @@ pub fn purge_files(device: &str, fids: Vec<String>) -> Result<(), ImlAgentError>
     llapi.rmfids(fids).map_err(Into::into)
 }
 
-async fn search_rootpath(device: String) -> Result<LlapiFid, LiblustreError> {
-    run(move || LlapiFid::create(&device)).await
+async fn search_rootpath(device: String) -> Result<LlapiFid, ImlAgentError> {
+    spawn_blocking(move || LlapiFid::create(&device).map_err(ImlAgentError::from))
+        .err_into()
+        .await
+        .and_then(std::convert::identity)
 }
 
-async fn rm_fids(llapi: LlapiFid, fids: Vec<String>) -> Result<(), LiblustreError> {
-    run(move || llapi.clone().rmfids(fids)).await
+async fn rm_fids(llapi: LlapiFid, fids: Vec<String>) -> Result<(), ImlAgentError> {
+    spawn_blocking(move || llapi.clone().rmfids(fids).map_err(ImlAgentError::from))
+        .err_into()
+        .await
+        .and_then(std::convert::identity)
 }
 
 pub async fn read_mailbox(

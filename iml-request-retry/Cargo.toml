@@ -6,20 +6,20 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-futures-preview = "0.3.0-alpha.19"
-tokio = "0.2.0-alpha.6"
+futures = "0.3"
+tokio = "0.2.4"
 rand = "0.7.2"
 tracing = "0.1.10"
 
 [dev-dependencies]
-tokio-test = "0.2.0-alpha.6"
-http = "0.1.19"
-reqwest = { version = "0.10.0-alpha.1", features = ["json"] }
+tokio-test = "0.2.0"
+http = "0.2"
+reqwest = { git = "https://github.com/seanmonstar/reqwest", features = ["json"] }
 url = "2.1.0"
 rand_xorshift = "0.2.0"
-warp = { version = "0.2.0-alpha.0", git = "https://github.com/seanmonstar/warp.git", rev = "9bb58102"}
+warp = { git = "https://github.com/seanmonstar/warp.git" }
 serde = { version = "1", features = ['derive'] }
-serde_json = "1.0.41"
+serde_json = "1.0"
 
 [[example]]
 name = "demo-server-client"

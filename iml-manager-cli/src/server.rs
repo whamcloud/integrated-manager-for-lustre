@@ -18,10 +18,10 @@ use iml_wire_types::{
 use std::{
     collections::{BTreeSet, HashMap},
     iter,
-    time::{Duration, Instant},
+    time::Duration,
 };
 use structopt::StructOpt;
-use tokio::timer::delay;
+use tokio::time::delay_for;
 
 #[derive(StructOpt, Debug)]
 pub struct AddHosts {
@@ -173,7 +173,7 @@ async fn wait_till_agent_starts(
             return Err(ImlManagerCliError::ApiError(failed_checks));
         }
 
-        delay(Instant::now() + Duration::from_millis(500)).await;
+        delay_for(Duration::from_millis(500)).await;
     }
 
     Ok(())

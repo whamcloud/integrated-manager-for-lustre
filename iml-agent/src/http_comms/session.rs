@@ -14,7 +14,6 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use tokio_timer::clock;
 use tracing::{info, warn};
 
 /// Takes a `Duration` and figures out the next duration
@@ -49,17 +48,17 @@ impl State {
             a.session.teardown()?;
         }
 
-        std::mem::replace(self, State::Empty(clock::now()));
+        std::mem::replace(self, State::Empty(Instant::now()));
 
         Ok(())
     }
     pub fn reset_active(&mut self) {
         if let State::Active(a) = self {
-            a.instant = clock::now() + Duration::from_secs(10);
+            a.instant = Instant::now() + Duration::from_secs(10);
         }
     }
     pub fn reset_empty(&mut self) {
-        std::mem::replace(self, State::Empty(clock::now() + Duration::from_secs(10)));
+        std::mem::replace(self, State::Empty(Instant::now() + Duration::from_secs(10)));
     }
     pub fn convert_to_pending(&mut self) {
         if let State::Empty(_) = self {
@@ -78,7 +77,7 @@ impl Sessions {
         let hm = plugins
             .iter()
             .cloned()
-            .map(|x| (x, State::Empty(clock::now())))
+            .map(|x| (x, State::Empty(Instant::now())))
             .collect();
 
         Self(Arc::new(RwLock::new(hm)))
@@ -103,7 +102,7 @@ impl Sessions {
             name,
             State::Active(Active {
                 session: s,
-                instant: clock::now() + Duration::from_secs(10),
+                instant: Instant::now() + Duration::from_secs(10),
             }),
         );
     }
@@ -223,7 +222,7 @@ mod tests {
         agent_error::Result, daemon_plugins::daemon_plugin::test_plugin::TestDaemonPlugin,
     };
     use serde_json::json;
-    use tokio_timer::clock;
+    use std::time::Instant;
 
     fn create_session() -> Session {
         Session::new(
@@ -290,7 +289,7 @@ mod tests {
 
     #[test]
     fn test_session_state_pending() -> Result<()> {
-        let mut state = State::Empty(clock::now());
+        let mut state = State::Empty(Instant::now());
 
         state.convert_to_pending();
 

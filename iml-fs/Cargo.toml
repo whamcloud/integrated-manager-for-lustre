@@ -5,11 +5,11 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-futures-preview = "0.3.0-alpha.19"
-tokio = "0.2.0-alpha.6"
+futures = "0.3"
+tokio = "0.2.4"
+tokio-util = "0.2"
 tempfile = "3.1"
-tokio-executor = "0.2.0-alpha.6"
-bytes = "0.4"
+bytes = "0.5"
 
 [dev-dependencies]
 pretty_assertions = "0.6"

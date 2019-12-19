@@ -6,6 +6,7 @@ pub mod action_plugin;
 pub mod check_ha;
 pub mod check_kernel;
 pub mod check_stonith;
+pub mod kernel_module;
 pub mod lctl;
 pub mod ltuer;
 pub mod ntp;

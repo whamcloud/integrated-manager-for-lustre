@@ -5,7 +5,7 @@
 use crate::agent_error::ImlAgentError;
 use futures::TryFutureExt;
 use std::ffi::OsStr;
-use tokio_net::process::Command;
+use tokio::process::Command;
 
 /// Runs an arbitrary command and collects all output
 ///
