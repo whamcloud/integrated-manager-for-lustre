@@ -60,6 +60,8 @@ INFLUXDB_IML_DB = "iml"
 
 INFLUXDB_STRATAGEM_SCAN_DB = "iml_stratagem_scans"
 
+INFLUXDB_SERVER_FQDN = os.getenv("INFLUXDB_SERVER_FQDN", PROXY_HOST)
+
 MAILBOX_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, MAILBOX_PORT)
 
 SSL_PATH = "/var/lib/chroma"

@@ -163,6 +163,7 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - PROXY_HOST=iml-action-runner
+      - INFLUXDB_SERVER_FQDN=influxdb
   lustre-audit:
     image: "imlteam/manager-lustre-audit:5.1"
     hostname: "lustre-audit"
