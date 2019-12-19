@@ -11,7 +11,7 @@ use std::io;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
-use tokio::timer::delay_for;
+use tokio::time::delay_for;
 use warp::http::StatusCode;
 use warp::Filter;
 

@@ -54,7 +54,7 @@ pub async fn user_connected(
     // When `drx` is dropped then `dtx` will be canceled.
     // We can track it to make sure when the user disconnects.
     tokio::spawn(async move {
-        poll_fn(move |cx| dtx.poll_cancel(cx)).await;
+        poll_fn(move |cx| dtx.poll_canceled(cx)).await;
         drx.close();
         user_disconnected(id, &state2).await;
     });

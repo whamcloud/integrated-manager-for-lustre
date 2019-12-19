@@ -15,7 +15,7 @@ use futures::{
 };
 use iml_wire_types::PluginName;
 use std::time::{Duration, Instant};
-use tokio::timer::Interval;
+use tokio::time::interval;
 use tracing::error;
 
 /// Given a `Session` wrapped in some `State`
@@ -59,13 +59,11 @@ fn handle_state(
 ///
 /// A `Session` or other `State` will only be handled if their internal timers have passed the tick of this
 /// internal interval `Stream`.
-pub async fn create_poller(
-    agent_client: AgentClient,
-    sessions: Sessions,
-) -> Result<(), ImlAgentError> {
-    let mut s = Interval::new_interval(Duration::from_secs(1));
+pub async fn create_poller(agent_client: AgentClient, sessions: Sessions) {
+    let mut s = interval(Duration::from_secs(1));
 
-    while let Some(now) = s.next().await {
+    loop {
+        let now = s.tick().await.into_std();
         tracing::trace!("interval triggered for {:?}", now);
 
         for (name, state) in sessions.clone().write().iter_mut() {
@@ -107,6 +105,4 @@ pub async fn create_poller(
             });
         }
     }
-
-    Ok(())
 }

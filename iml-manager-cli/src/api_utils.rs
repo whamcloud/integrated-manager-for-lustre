@@ -3,18 +3,12 @@
 // license that can be found in the LICENSE file.
 
 use crate::{display_utils, error::ImlManagerCliError};
-use futures::{future, TryFutureExt};
+use futures::{future, FutureExt, TryFutureExt};
 use iml_wire_types::{ApiList, AvailableAction, Command, EndpointName, FlatQuery, Host};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use regex::Regex;
-use std::{
-    collections::HashMap,
-    fmt::Debug,
-    iter,
-    time::{Duration, Instant},
-};
-use tokio::timer::delay;
-use tokio_executor::blocking::run;
+use std::{collections::HashMap, fmt::Debug, iter, time::Duration};
+use tokio::{task::spawn_blocking, time::delay_for};
 
 #[derive(serde::Deserialize, Debug)]
 pub struct CmdWrapper {
@@ -57,9 +51,7 @@ pub async fn wait_for_cmd(cmd: Command) -> Result<Command, ImlManagerCliError> {
             return Ok(cmd);
         }
 
-        let when = Instant::now() + Duration::from_millis(1000);
-
-        delay(when).await;
+        delay_for(Duration::from_millis(1000)).await;
 
         let client = iml_manager_client::get_client()?;
 
@@ -95,7 +87,8 @@ pub async fn wait_for_cmds(cmds: Vec<Command>) -> Result<Vec<Command>, ImlManage
         cmd_spinners.insert(cmd.id, pb);
     }
 
-    let fut = run(move || m.join());
+    let fut = spawn_blocking(move || m.join())
+        .map(|x| x.map_err(|e| e.into()).and_then(std::convert::identity));
 
     let fut2 = async {
         loop {
@@ -104,9 +97,7 @@ pub async fn wait_for_cmds(cmds: Vec<Command>) -> Result<Vec<Command>, ImlManage
                 return Ok::<_, ImlManagerCliError>(());
             }
 
-            let when = Instant::now() + Duration::from_millis(1000);
-
-            delay(when).await;
+            delay_for(Duration::from_millis(1000)).await;
 
             let query: Vec<_> = cmd_spinners
                 .keys()

@@ -10,13 +10,16 @@ use futures::{
 };
 use liblustreapi::LlapiFid;
 use std::{io, path::PathBuf};
-use tokio_executor::blocking::run;
+use tokio::task::spawn_blocking;
 use tracing::{debug, error};
 
 /// Runs `fid2path` on the incoming `String`.
 /// Any error during `fid2path` is logged but does not return the associated Error
 async fn fid2path(llapi: LlapiFid, fid: String) -> Option<String> {
-    let r = run(move || llapi.fid2path(&fid)).await;
+    let r = spawn_blocking(move || llapi.fid2path(&fid).map_err(ImlAgentError::from))
+        .err_into()
+        .await
+        .and_then(std::convert::identity);
 
     match r {
         Ok(x) => Some(x),
@@ -28,7 +31,10 @@ async fn fid2path(llapi: LlapiFid, fid: String) -> Option<String> {
 }
 
 async fn search_rootpath(device: String) -> Result<LlapiFid, ImlAgentError> {
-    run(move || LlapiFid::create(&device)).err_into().await
+    spawn_blocking(move || LlapiFid::create(&device).map_err(ImlAgentError::from))
+        .err_into()
+        .await
+        .and_then(std::convert::identity)
 }
 
 pub fn write_records(
@@ -94,7 +100,7 @@ pub async fn read_mailbox(
                 .map(|x| format!("{}/{}", mntpt, x))
                 .collect()
         })
-        .map_ok(|xs: Vec<String>| -> bytes::BytesMut { xs.join("\n").into() })
+        .map_ok(|xs: Vec<String>| bytes::BytesMut::from(xs.join("\n").as_str()))
         .map_ok(|mut x: bytes::BytesMut| {
             if !x.is_empty() {
                 x.extend_from_slice(b"\n");

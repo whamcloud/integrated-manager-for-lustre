@@ -2,6 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+#![type_length_limit = "4372113"]
+
 use futures::{lock::Mutex, prelude::*};
 use iml_action_runner::{
     data::SessionToRpcs,
@@ -10,7 +12,7 @@ use iml_action_runner::{
     sender::{create_client_filter, sender},
     Sessions, Shared,
 };
-use iml_service_queue::service_queue::consume_service_queue;
+use iml_service_queue::service_queue::{consume_service_queue, ImlServiceQueueError};
 use iml_util::tokio_utils::get_tcp_or_unix_listener;
 use std::{collections::HashMap, sync::Arc};
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
@@ -48,9 +50,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .map(|x| warp::reply::json(&x))
     .with(log);
 
-    let listener = get_tcp_or_unix_listener("ACTION_RUNNER_PORT").await?;
+    let mut listener = get_tcp_or_unix_listener("ACTION_RUNNER_PORT").await?;
 
-    tokio::spawn(warp::serve(routes).serve_incoming(listener));
+    let incoming = listener.incoming();
 
     let client = iml_rabbit::connect_to_rabbit().await?;
 
@@ -59,13 +61,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "rust_agent_action_runner_rx",
     )));
 
-    while let Some(m) = s.try_next().await? {
-        tracing::debug!("Incoming message from agent: {:?}", m);
+    tokio::spawn(
+        async move {
+            while let Some(m) = s.try_next().await? {
+                tracing::debug!("Incoming message from agent: {:?}", m);
 
-        handle_agent_data(client.clone(), m, Arc::clone(&sessions), Arc::clone(&rpcs))
-            .await
-            .unwrap_or_else(drop);
-    }
+                handle_agent_data(client.clone(), m, Arc::clone(&sessions), Arc::clone(&rpcs))
+                    .await
+                    .unwrap_or_else(drop);
+            }
+
+            Ok(())
+        }
+            .map_err(|e: ImlServiceQueueError| {
+                tracing::error!("{}", e);
+            })
+            .map(drop),
+    );
+
+    warp::serve(routes).run_incoming(incoming).await;
 
     Ok(())
 }

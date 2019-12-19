@@ -55,7 +55,8 @@ impl std::error::Error for DurationParseError {}
 #[derive(Debug)]
 pub enum ImlManagerCliError {
     ClientRequestError(iml_manager_client::ImlManagerClientError),
-    TokioTimerError(tokio::timer::Error),
+    TokioTimerError(tokio::time::Error),
+    TokioJoinError(tokio::task::JoinError),
     IntParseError(std::num::ParseIntError),
     ParseDurationError(DurationParseError),
     RunStratagemValidationError(RunStratagemValidationError),
@@ -72,6 +73,7 @@ impl std::fmt::Display for ImlManagerCliError {
         match *self {
             ImlManagerCliError::ClientRequestError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::TokioTimerError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::TokioJoinError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::IntParseError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::ParseDurationError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::RunStratagemValidationError(ref err) => write!(f, "{}", err),
@@ -96,6 +98,7 @@ impl std::error::Error for ImlManagerCliError {
         match *self {
             ImlManagerCliError::ClientRequestError(ref err) => Some(err),
             ImlManagerCliError::TokioTimerError(ref err) => Some(err),
+            ImlManagerCliError::TokioJoinError(ref err) => Some(err),
             ImlManagerCliError::IntParseError(ref err) => Some(err),
             ImlManagerCliError::ParseDurationError(ref err) => Some(err),
             ImlManagerCliError::RunStratagemValidationError(ref err) => Some(err),
@@ -127,9 +130,15 @@ impl From<DurationParseError> for ImlManagerCliError {
     }
 }
 
-impl From<tokio::timer::Error> for ImlManagerCliError {
-    fn from(err: tokio::timer::Error) -> Self {
+impl From<tokio::time::Error> for ImlManagerCliError {
+    fn from(err: tokio::time::Error) -> Self {
         ImlManagerCliError::TokioTimerError(err)
+    }
+}
+
+impl From<tokio::task::JoinError> for ImlManagerCliError {
+    fn from(err: tokio::task::JoinError) -> Self {
+        ImlManagerCliError::TokioJoinError(err)
     }
 }
 
