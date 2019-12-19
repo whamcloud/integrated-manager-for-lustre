@@ -127,7 +127,6 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        set $prox_path $uri;
         proxy_pass {{VIEW_SERVER_PROXY_PASS}}/ui;
 
         add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; ";
@@ -139,7 +138,6 @@ server {
         internal;
         proxy_pass_request_body off;
         proxy_set_header Content-Length "";
-        set $prox_path /api/auth/;
         proxy_pass {{HTTP_API_PROXY_PASS}}/api/auth/;
     }
 
@@ -163,8 +161,7 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        set $prox_path /influx;
-        proxy_pass {{INFLUXDB_PROXY_PASS}}/influx;
+        proxy_pass {{INFLUXDB_PROXY_PASS}}/query;
     }
 
     location /wasm-components {
@@ -183,7 +180,6 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        set $prox_path $uri;
         proxy_pass {{HTTP_API_PROXY_PASS}}/api;
     }
 
@@ -191,7 +187,6 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        set $prox_path $uri;
         proxy_pass {{REALTIME_PROXY_PASS}}/socket.io;
 
         proxy_http_version 1.1;
@@ -205,7 +200,6 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_http_version 1.1;
         proxy_set_header Connection '';
-        set $prox_path $uri;
         proxy_pass {{WARP_DRIVE_PROXY_PASS}};
     }
 
@@ -236,7 +230,6 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        set $prox_path $uri;
         proxy_pass {{MAILBOX_PROXY_PASS}}/mailbox;
     }
 
@@ -244,7 +237,6 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        set $prox_path $uri;
         proxy_pass {{HTTP_AGENT_PROXY_PASS}}/agent/register;
     }
 
@@ -252,7 +244,6 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        set $prox_path $uri;
         proxy_pass {{HTTP_AGENT_PROXY_PASS}}/agent/setup;
     }
 
@@ -268,7 +259,6 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        set $prox_path $uri;
         proxy_pass {{HTTP_AGENT_PROXY_PASS}}/agent/reregister;
     }
 
@@ -287,7 +277,6 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        set $prox_path $uri;
         proxy_pass {{HTTP_AGENT_PROXY_PASS}}/agent/message;
     }
 
@@ -303,7 +292,6 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        set $prox_path /message/;
         proxy_pass {{HTTP_AGENT2_PROXY_PASS}}/message;
     }
 
@@ -319,7 +307,6 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        set $prox_path $uri;
         proxy_pass {{HTTP_AGENT_PROXY_PASS}}/agent/copytool_event;
     }
 
@@ -353,7 +340,6 @@ server {
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header Http-Host $http_host;
-        set $prox_path $uri;
         proxy_pass {{DEVICE_AGGREGATOR_PROXY_PASS}};
     }
 
@@ -370,7 +356,6 @@ server {
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header Http-Host $http_host;
-        set $prox_path $uri;
         proxy_pass {{UPDATE_HANDLER_PROXY_PASS}};
     }
 }
