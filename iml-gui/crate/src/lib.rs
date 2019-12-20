@@ -291,6 +291,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 warp_drive::Record::ManagedTargetMount(x) => {
                     model.records.managed_target_mount.insert(x.id, x);
                 }
+                warp_drive::Record::OstPool(x) => {
+                    model.records.ost_pool.insert(x.id, x);
+                }
+                warp_drive::Record::OstPoolOsts(x) => {
+                    model.records.ost_pool_osts.insert(x.id, x);
+                }
                 warp_drive::Record::StratagemConfig(x) => {
                     model.records.stratagem_config.insert(x.id, x);
                 }
@@ -319,6 +325,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 }
                 warp_drive::RecordId::ManagedTargetMount(x) => {
                     model.records.managed_target_mount.remove(&x);
+                }
+                warp_drive::RecordId::OstPool(x) => {
+                    model.records.ost_pool.remove(&x);
+                }
+                warp_drive::RecordId::OstPoolOsts(x) => {
+                    model.records.ost_pool_osts.remove(&x);
                 }
                 warp_drive::RecordId::StratagemConfig(x) => {
                     model.records.stratagem_config.remove(&x);

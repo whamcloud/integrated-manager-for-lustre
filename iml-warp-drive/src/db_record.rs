@@ -4,10 +4,11 @@
 
 use iml_wire_types::db::{
     AlertStateRecord, FsRecord, LnetConfigurationRecord, ManagedHostRecord,
-    ManagedTargetMountRecord, ManagedTargetRecord, StratagemConfiguration, TableName,
-    VolumeNodeRecord, VolumeRecord, ALERT_STATE_TABLE_NAME, LNET_CONFIGURATION_TABLE_NAME,
-    MANAGED_FILESYSTEM_TABLE_NAME, MANAGED_HOST_TABLE_NAME, MANAGED_TARGET_MOUNT_TABLE_NAME,
-    MANAGED_TARGET_TABLE_NAME, STRATAGEM_CONFIGURATION_TABLE_NAME, VOLUME_NODE_TABLE_NAME,
+    ManagedTargetMountRecord, ManagedTargetRecord, OstPoolOstsRecord, OstPoolRecord,
+    StratagemConfiguration, TableName, VolumeNodeRecord, VolumeRecord, ALERT_STATE_TABLE_NAME,
+    LNET_CONFIGURATION_TABLE_NAME, MANAGED_FILESYSTEM_TABLE_NAME, MANAGED_HOST_TABLE_NAME,
+    MANAGED_TARGET_MOUNT_TABLE_NAME, MANAGED_TARGET_TABLE_NAME, OSTPOOL_OSTS_TABLE_NAME,
+    OSTPOOL_TABLE_NAME, STRATAGEM_CONFIGURATION_TABLE_NAME, VOLUME_NODE_TABLE_NAME,
     VOLUME_TABLE_NAME,
 };
 use serde::de::Error;
@@ -16,15 +17,17 @@ use std::convert::TryFrom;
 /// Records from `chroma` database.
 #[derive(Debug)]
 pub enum DbRecord {
+    AlertState(AlertStateRecord),
+    LnetConfiguration(LnetConfigurationRecord),
     ManagedFilesystem(FsRecord),
-    ManagedTargetMount(ManagedTargetMountRecord),
-    ManagedTarget(ManagedTargetRecord),
     ManagedHost(ManagedHostRecord),
+    ManagedTarget(ManagedTargetRecord),
+    ManagedTargetMount(ManagedTargetMountRecord),
+    OstPool(OstPoolRecord),
+    OstPoolOsts(OstPoolOstsRecord),
+    StratagemConfiguration(StratagemConfiguration),
     Volume(VolumeRecord),
     VolumeNode(VolumeNodeRecord),
-    AlertState(AlertStateRecord),
-    StratagemConfiguration(StratagemConfiguration),
-    LnetConfiguration(LnetConfigurationRecord),
 }
 
 impl TryFrom<(TableName<'_>, serde_json::Value)> for DbRecord {
@@ -45,6 +48,8 @@ impl TryFrom<(TableName<'_>, serde_json::Value)> for DbRecord {
             MANAGED_TARGET_TABLE_NAME => serde_json::from_value(x).map(DbRecord::ManagedTarget),
             MANAGED_HOST_TABLE_NAME => serde_json::from_value(x).map(DbRecord::ManagedHost),
             ALERT_STATE_TABLE_NAME => serde_json::from_value(x).map(DbRecord::AlertState),
+            OSTPOOL_TABLE_NAME => serde_json::from_value(x).map(DbRecord::OstPool),
+            OSTPOOL_OSTS_TABLE_NAME => serde_json::from_value(x).map(DbRecord::OstPoolOsts),
             STRATAGEM_CONFIGURATION_TABLE_NAME => {
                 serde_json::from_value(x).map(DbRecord::StratagemConfiguration)
             }

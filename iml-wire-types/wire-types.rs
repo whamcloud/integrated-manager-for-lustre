@@ -1212,6 +1212,84 @@ pub mod db {
         }
     }
 
+    /// Record from the `chroma_core_ostpool` table
+    #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
+    pub struct OstPoolRecord {
+        pub id: u32,
+        pub name: String,
+        pub filesystem_id: u32,
+        pub not_deleted: Option<bool>,
+        pub content_type_id: Option<u32>,
+    }
+
+    impl Id for OstPoolRecord {
+        fn id(&self) -> u32 {
+            self.id
+        }
+    }
+
+    impl NotDeleted for OstPoolRecord {
+        fn not_deleted(&self) -> bool {
+            not_deleted(self.not_deleted)
+        }
+    }
+
+    #[cfg(feature = "postgres-interop")]
+    impl From<Row> for OstPoolRecord {
+        fn from(row: Row) -> Self {
+            OstPoolRecord {
+                id: row.get::<_, i32>("id") as u32,
+                name: row.get("name"),
+                filesystem_id: row.get::<_, i32>("filesystem_id") as u32,
+                not_deleted: row.get("not_deleted"),
+                content_type_id: row
+                    .get::<_, Option<i32>>("content_type_id")
+                    .map(|x| x as u32),
+            }
+        }
+    }
+
+    pub const OSTPOOL_TABLE_NAME: TableName = TableName("chroma_core_ostpool");
+
+    impl Name for OstPoolRecord {
+        fn table_name() -> TableName<'static> {
+            OSTPOOL_TABLE_NAME
+        }
+    }
+
+    /// Record from the `chroma_core_ostpool_osts` table
+    #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
+    pub struct OstPoolOstsRecord {
+        pub id: u32,
+        pub ostpool_id: u32,
+        pub managedost_id: u32,
+    }
+
+    impl Id for OstPoolOstsRecord {
+        fn id(&self) -> u32 {
+            self.id
+        }
+    }
+
+    #[cfg(feature = "postgres-interop")]
+    impl From<Row> for OstPoolOstsRecord {
+        fn from(row: Row) -> Self {
+            OstPoolOstsRecord {
+                id: row.get::<_, i32>("id") as u32,
+                ostpool_id: row.get::<_, i32>("ostpool_id") as u32,
+                managedost_id: row.get::<_, i32>("managedost_id") as u32,
+            }
+        }
+    }
+
+    pub const OSTPOOL_OSTS_TABLE_NAME: TableName = TableName("chroma_core_ostpool_osts");
+
+    impl Name for OstPoolOstsRecord {
+        fn table_name() -> TableName<'static> {
+            OSTPOOL_OSTS_TABLE_NAME
+        }
+    }
+
     /// Record from the `chroma_core_managedhost` table
     #[derive(serde::Deserialize, Debug)]
     pub struct ManagedHostRecord {
@@ -1847,8 +1925,8 @@ impl FlatQuery for OstPool {}
 pub mod warp_drive {
     use crate::{
         db::{
-            Id, LnetConfigurationRecord, ManagedTargetMountRecord, StratagemConfiguration,
-            VolumeNodeRecord,
+            Id, LnetConfigurationRecord, ManagedTargetMountRecord, OstPoolOstsRecord,
+            OstPoolRecord, StratagemConfiguration, VolumeNodeRecord,
         },
         Alert, Filesystem, Host, LockChange, Target, TargetConfParam, Volume,
     };
@@ -1864,6 +1942,8 @@ pub mod warp_drive {
         pub host: HashMap<u32, Host>,
         pub lnet_configuration: HashMap<u32, LnetConfigurationRecord>,
         pub managed_target_mount: HashMap<u32, ManagedTargetMountRecord>,
+        pub ost_pool: HashMap<u32, OstPoolRecord>,
+        pub ost_pool_osts: HashMap<u32, OstPoolOstsRecord>,
         pub stratagem_config: HashMap<u32, StratagemConfiguration>,
         pub target: HashMap<u32, Target<TargetConfParam>>,
         pub volume: HashMap<u32, Volume>,
@@ -1879,6 +1959,8 @@ pub mod warp_drive {
                 RecordId::Host(id) => self.host.remove(&id).is_some(),
                 RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
                 RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(&id).is_some(),
+                RecordId::OstPool(id) => self.ost_pool.remove(&id).is_some(),
+                RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(&id).is_some(),
                 RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
                 RecordId::Target(id) => self.target.remove(&id).is_some(),
                 RecordId::Volume(id) => self.volume.remove(&id).is_some(),
@@ -1903,6 +1985,12 @@ pub mod warp_drive {
                 Record::ManagedTargetMount(x) => {
                     self.managed_target_mount.insert(x.id(), x);
                 }
+                Record::OstPool(x) => {
+                    self.ost_pool.insert(x.id(), x);
+                }
+                Record::OstPoolOsts(x) => {
+                    self.ost_pool_osts.insert(x.id(), x);
+                }
                 Record::StratagemConfig(x) => {
                     self.stratagem_config.insert(x.id(), x);
                 }
@@ -1926,6 +2014,8 @@ pub mod warp_drive {
         Filesystem(Filesystem),
         Host(Host),
         ManagedTargetMount(ManagedTargetMountRecord),
+        OstPool(OstPoolRecord),
+        OstPoolOsts(OstPoolOstsRecord),
         StratagemConfig(StratagemConfiguration),
         Target(Target<TargetConfParam>),
         Volume(Volume),
@@ -1940,6 +2030,8 @@ pub mod warp_drive {
         Filesystem(u32),
         Host(u32),
         ManagedTargetMount(u32),
+        OstPool(u32),
+        OstPoolOsts(u32),
         StratagemConfig(u32),
         Target(u32),
         Volume(u32),
