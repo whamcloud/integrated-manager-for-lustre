@@ -159,7 +159,7 @@ impl PoolClient {
 
     pub async fn delete(&self, fsid: i32, pn: &str) -> Result<(), Error> {
         let query = format!(
-            "UPDATE {} SET not_deleted = NULL WHERE filesystem = $1 AND name = $2",
+            "UPDATE {} SET not_deleted = NULL WHERE filesystem_id = $1 AND name = $2",
             OstPoolRecord::table_name()
         );
         let s = self.client.prepare(&query).await?;
@@ -227,7 +227,7 @@ impl PoolClient {
                 if let Some(ostid) = self.ostid(fsid, &o).await? {
                     tracing::debug!("Shrinking ({}).({}): ost:{}({})", fsid, poolid, o, ostid);
                     self.client
-                        .execute(&s, &[&ostid, &poolid])
+                        .execute(&s, &[&poolid, &ostid])
                         .await
                         .map(drop)
                         .map_err(|e| {

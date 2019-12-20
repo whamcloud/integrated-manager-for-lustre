@@ -8,6 +8,7 @@ use crate::{
 };
 use futures::future::try_join_all;
 use iml_wire_types::OstPool;
+use std::iter::FromIterator;
 use std::time::Duration;
 use tokio::time::delay_for;
 
@@ -107,7 +108,10 @@ pub async fn pool_list(filesystem: &str) -> Result<Vec<String>, ImlAgentError> {
     }
 }
 
-pub async fn ost_list(filesystem: &str, pool: &str) -> Result<Vec<String>, ImlAgentError> {
+pub async fn ost_list<B>(filesystem: &str, pool: &str) -> Result<B, ImlAgentError>
+where
+    B: FromIterator<String>,
+{
     let pn = format!("{}.{}", filesystem, pool);
     pool_list(&pn).await.map(|l| {
         l.iter()
