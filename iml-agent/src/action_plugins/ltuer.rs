@@ -2,15 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::agent_error::ImlAgentError;
+use crate::{agent_error::ImlAgentError, env};
 use futures_util::future::TryFutureExt;
 use std::path::{Path, PathBuf};
 use tokio::{
     fs,
     io::{AsyncWrite, AsyncWriteExt},
 };
-
-static CONFIGURATION_DIR: &str = "/etc/iml";
 
 async fn write_ltuer_conf<W>(
     (mailbox_path, fs_name, cold_pool): (String, String, String),
@@ -29,16 +27,15 @@ where
 
 async fn create_ltuer_conf_internal<P>(
     (mailbox_path, fs_name, cold_pool): (String, String, String),
-    dir_path: P,
+    path: P,
 ) -> Result<(), ImlAgentError>
 where
     P: AsRef<Path>,
     PathBuf: From<P>,
 {
-    fs::create_dir_all(&dir_path).await?;
-
-    let mut path = PathBuf::from(dir_path);
-    path.push("ltuer.conf");
+    if let Some(dir_path) = path.as_ref().parent() {
+        fs::create_dir_all(&dir_path).await?;
+    }
 
     let mut file = fs::File::create(path).await?;
 
@@ -48,7 +45,9 @@ where
 pub async fn create_ltuer_conf(
     (mailbox_path, fs_name, cold_pool): (String, String, String),
 ) -> Result<(), ImlAgentError> {
-    create_ltuer_conf_internal((mailbox_path, fs_name, cold_pool), CONFIGURATION_DIR).await
+    let path = env::get_var("LTUER_CONF_PATH");
+
+    create_ltuer_conf_internal((mailbox_path, fs_name, cold_pool), path).await
 }
 
 #[cfg(test)]
@@ -59,12 +58,11 @@ mod tests {
     #[tokio::test]
     async fn test_create_ltuer_conf() {
         let dir = tempdir().unwrap();
+        let path = dir.path().join("ltuer.conf");
 
-        create_ltuer_conf_internal(("foo".into(), "bar".into(), "baz".into()), dir.path())
+        create_ltuer_conf_internal(("foo".into(), "bar".into(), "baz".into()), &path)
             .await
             .unwrap();
-
-        let path = dir.path().join("ltuer.conf");
 
         let contents = fs::read(path).await.unwrap();
         assert_eq!(
