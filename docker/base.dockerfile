@@ -22,6 +22,7 @@ RUN yum update -y \
   && yum install -y python python-pip python-devel postgresql openssl gcc-c++ \
   && pip install -r requirements.txt \
   && yum autoremove -y gcc-c++ python-pip python-devel \
+  && yum install -y python-setuptools \
   && yum clean all
 
 COPY docker/wait-for-dependencies-postgres.sh /usr/local/bin/
