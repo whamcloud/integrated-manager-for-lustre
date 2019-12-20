@@ -13,4 +13,5 @@ serde_json = "1"
 tracing = "0.1"
 
 [dev-dependencies]
-tokio = "0.2.4"
+tokio = { version = "0.2.4", features = ["macros"] }
+
