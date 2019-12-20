@@ -187,7 +187,7 @@ mod tests {
     use super::*;
     use bytes::Bytes;
     use futures::stream;
-    use std::{fs::File, io::Write as _};
+    use std::fs::File;
     use tempdir::TempDir;
     use tempfile::NamedTempFile;
 
