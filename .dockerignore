@@ -1,4 +1,15 @@
-.github
+**/target
+**/node_modules
+**/.copr
+**/.github
+**/.vscode
+**/.git
+**/.cargo
+**/Cargo.lock
+**/Cargo.toml
+**/README.*
+**/*.dockerfile
+**/grafana/
 benchmark
 example_storage_plugin_package
 tests
@@ -10,5 +21,8 @@ requirements.dev
 logrotate.cfg
 licenses
 docker-compose.yml
-target
-iml-warp-drive/target
+.dockerignore
+.flake8
+.gitignore
+.gitlint
+.travis.yml
