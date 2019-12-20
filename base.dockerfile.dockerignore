@@ -6,7 +6,6 @@
 **/.cargo
 **/Cargo.lock
 **/Cargo.toml
-**/README.*
 **/*.dockerfile
 **/grafana/
 benchmark
