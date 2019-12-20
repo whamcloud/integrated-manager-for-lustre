@@ -1,4 +1,4 @@
-FROM rust:1.39 as builder
+FROM rust:1.40 as builder
 WORKDIR /build
 COPY . .
 RUN cd /build/iml-wasm-components && \ 
