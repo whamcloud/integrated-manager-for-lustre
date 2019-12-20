@@ -433,6 +433,12 @@ impl Label for Host {
     }
 }
 
+impl Label for &Host {
+    fn label(&self) -> &str {
+        &self.label
+    }
+}
+
 impl EndpointName for Host {
     fn endpoint_name() -> &'static str {
         "host"
@@ -771,6 +777,12 @@ impl<T> Label for Target<T> {
     }
 }
 
+impl<T> Label for &Target<T> {
+    fn label(&self) -> &str {
+        &self.label
+    }
+}
+
 impl<T> EndpointName for Target<T> {
     fn endpoint_name() -> &'static str {
         "target"
@@ -839,6 +851,12 @@ impl ToCompositeId for Filesystem {
 }
 
 impl Label for Filesystem {
+    fn label(&self) -> &str {
+        &self.label
+    }
+}
+
+impl Label for &Filesystem {
     fn label(&self) -> &str {
         &self.label
     }
@@ -959,7 +977,7 @@ impl EndpointName for StratagemConfiguration {
 }
 
 pub mod db {
-    use crate::Fqdn;
+    use crate::{Fqdn, Label};
     use std::{collections::BTreeSet, fmt, ops::Deref, path::PathBuf};
 
     #[cfg(feature = "postgres-interop")]
@@ -1095,6 +1113,18 @@ pub mod db {
     impl NotDeleted for VolumeNodeRecord {
         fn not_deleted(&self) -> bool {
             not_deleted(self.not_deleted)
+        }
+    }
+
+    impl Label for VolumeNodeRecord {
+        fn label(&self) -> &str {
+            &self.path
+        }
+    }
+
+    impl Label for &VolumeNodeRecord {
+        fn label(&self) -> &str {
+            &self.path
         }
     }
 
@@ -1254,6 +1284,18 @@ pub mod db {
     impl Name for OstPoolRecord {
         fn table_name() -> TableName<'static> {
             OSTPOOL_TABLE_NAME
+        }
+    }
+
+    impl Label for OstPoolRecord {
+        fn label(&self) -> &str {
+            &self.name
+        }
+    }
+
+    impl Label for &OstPoolRecord {
+        fn label(&self) -> &str {
+            &self.name
         }
     }
 
