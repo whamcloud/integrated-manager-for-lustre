@@ -1,6 +1,8 @@
 from copy import deepcopy
 from itertools import chain
+from mock import call, MagicMock, patch
 import json
+import mock
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
@@ -79,7 +81,10 @@ class TestUpdateNids(NidTestCase):
         },
     }
 
-    def test_mgs_nid_change(self):
+    @mock.patch("chroma_core.lib.job.Step.invoke_rust_agent", return_value=MagicMock())
+    def test_mgs_nid_change(self, invoke):
+        invoke.return_value = """{"Ok": ""}"""
+
         mgs = synthetic_host("mgs")
         mds = synthetic_host("mds")
         oss = synthetic_host("oss")
@@ -93,11 +98,16 @@ class TestUpdateNids(NidTestCase):
             ManagedTargetMount,
         )
 
-        self.mgt, mgt_tms = ManagedMgs.create_for_volume(synthetic_volume_full(mgs).id, name="MGS")
+        mgs_id = synthetic_volume_full(mgs).id
+        self.mgt, mgt_tms = ManagedMgs.create_for_volume(mgs_id, name="MGS")
         self.fs = ManagedFilesystem.objects.create(mgs=self.mgt, name="testfs")
         ObjectCache.add(ManagedFilesystem, self.fs)
-        self.mdt, mdt_tms = ManagedMdt.create_for_volume(synthetic_volume_full(mds).id, filesystem=self.fs)
-        self.ost, ost_tms = ManagedOst.create_for_volume(synthetic_volume_full(oss).id, filesystem=self.fs)
+
+        mds_id = synthetic_volume_full(mds).id
+        self.mdt, mdt_tms = ManagedMdt.create_for_volume(mds_id, filesystem=self.fs)
+
+        oss_id = synthetic_volume_full(oss).id
+        self.ost, ost_tms = ManagedOst.create_for_volume(oss_id, filesystem=self.fs)
         for target in [self.mgt, self.ost, self.mdt]:
             ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
         for tm in chain(mgt_tms, mdt_tms, ost_tms):
@@ -112,11 +122,18 @@ class TestUpdateNids(NidTestCase):
             [{"class_name": "UpdateNidsJob", "args": {"host_ids": json.dumps([mgs.id])}}], "Test update nids"
         )
         self.drain_progress()
-        # The -4 looks past the start/stop that happens after writeconf
-        self.assertEqual(MockAgentRpc.host_calls[mgs.fqdn][-4][0], "writeconf_target")
-        self.assertEqual(MockAgentRpc.host_calls[mds.fqdn][-4][0], "writeconf_target")
-        self.assertEqual(MockAgentRpc.host_calls[oss.fqdn][-4][0], "writeconf_target")
         self.assertState(self.fs, "stopped")
+
+        expected_calls = [
+            call("mgs", "lctl", ["replace_nids", "/fake/path/%d" % mgs_id, "192.168.0.99@tcp0"],),
+            call("mds", "lctl", ["replace_nids", "/fake/path/%d" % mds_id, "192.168.0.99@tcp0"],),
+            call("oss", "lctl", ["replace_nids", "/fake/path/%d" % oss_id, "192.168.0.99@tcp0"],),
+        ]
+
+        # failure is easier to see when comparing separate elements
+        self.assertEqual(expected_calls[0], invoke.call_args_list[0])
+        self.assertEqual(expected_calls[1], invoke.call_args_list[1])
+        self.assertEqual(expected_calls[2], invoke.call_args_list[2])
 
 
 class TestHostAddRemove(JobTestCase):
