@@ -10,4 +10,4 @@ futures = "0.3"
 
 [dev-dependencies]
 tokio-test = "0.2"
-tokio = "0.2.4"
+tokio = "0.2"
