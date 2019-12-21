@@ -142,15 +142,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // GET -> messages stream
     let routes = warp::get()
-        .and(warp::sse())
         .and(warp::any().map(move || Arc::clone(&user_state2)))
         .and(warp::any().map(move || Arc::clone(&lock_state2)))
         .and(warp::any().map(move || Arc::clone(&api_cache_state2)))
         .and_then(
-            |sse: warp::sse::Sse,
-             users: users::SharedUsers,
-             locks: SharedLocks,
-             api_cache: SharedCache| {
+            |users: users::SharedUsers, locks: SharedLocks, api_cache: SharedCache| {
                 tracing::debug!("Inside user route");
 
                 async move {
@@ -162,9 +158,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     )
                     .await;
 
-                    Ok::<_, error::ImlWarpDriveError>(
-                        sse.reply(warp::sse::keep_alive().stream(stream)),
-                    )
+                    Ok::<_, error::ImlWarpDriveError>(warp::sse::reply(
+                        warp::sse::keep_alive().stream(stream),
+                    ))
                 }
                 .map_err(warp::reject::custom)
             },
