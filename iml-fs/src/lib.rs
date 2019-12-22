@@ -49,9 +49,13 @@ impl From<io::Error> for ImlFsError {
 
 /// Given a `Stream` of items that implement `AsRef<[u8]>`, returns a stream
 /// that reads line by line.
-pub fn read_lines<I: AsRef<[u8]>, E: std::error::Error + Send + Sync + 'static>(
-    s: impl Stream<Item = Result<I, E>> + Send + 'static,
-) -> impl Stream<Item = Result<String, io::Error>> {
+pub fn read_lines<
+    'a,
+    I: AsRef<[u8]> + 'a,
+    E: Into<Box<dyn std::error::Error + Send + Sync>> + 'a,
+>(
+    s: impl Stream<Item = Result<I, E>> + Send + 'a,
+) -> impl Stream<Item = Result<String, io::Error>> + 'a {
     s.boxed()
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
         .into_async_read()
