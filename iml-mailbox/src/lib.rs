@@ -4,7 +4,7 @@
 
 use bytes::Buf;
 use futures::{channel::mpsc, stream::BoxStream, Future, Stream, StreamExt, TryStreamExt};
-use std::{collections::HashMap, path::PathBuf, pin::Pin};
+use std::{collections::HashMap, path::PathBuf};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 use warp::{filters::BoxedFilter, reject, Filter};
 
@@ -31,8 +31,7 @@ fn streamer<'a>(
 }
 
 /// Warp Filter that streams a newline delimited body
-pub fn line_stream(
-) -> BoxedFilter<(Pin<Box<dyn Stream<Item = Result<String, warp::Rejection>> + Send>>,)> {
+pub fn line_stream<'a>() -> BoxedFilter<(BoxStream<'a, Result<String, warp::Rejection>>,)> {
     warp::body::stream().map(streamer).boxed()
 }
 
