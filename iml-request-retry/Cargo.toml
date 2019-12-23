@@ -7,7 +7,7 @@ edition = "2018"
 
 [dependencies]
 futures = "0.3"
-tokio = "0.2.4"
+tokio = "0.2"
 rand = "0.7.2"
 tracing = "0.1.10"
 

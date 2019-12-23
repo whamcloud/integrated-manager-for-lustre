@@ -20,12 +20,12 @@ termion = "1"
 spinners = "1.0.0"
 libc = "0.2"
 prettytable-rs = "0.8"
-reqwest = { git = "https://github.com/seanmonstar/reqwest", features = ["default-tls", "tls", "json", "stream"] }
+reqwest = { git = "https://github.com/seanmonstar/reqwest", features = ["default-tls", "native-tls", "json", "stream"] }
 http = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 structopt = "0.2"
-tokio = { version = "0.2.4", features = ["fs", "process", "macros", "net"] }
+tokio = { version = "0.2", features = ["fs", "process", "macros", "net"] }
 tracing = "0.1"
 tracing-subscriber = "0.1"
 native-tls = "0.2"
