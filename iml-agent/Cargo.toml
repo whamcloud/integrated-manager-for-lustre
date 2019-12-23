@@ -15,6 +15,7 @@ dns-lookup = "1"
 elementtree = "0.5"
 exitcode = "1.1"
 futures = "0.3"
+futures-util = "0.3.1"
 lazy_static = "1.4.0"
 termion = "1"
 spinners = "1.0.0"
@@ -47,6 +48,7 @@ features = ["std"]
 mockito = "0.22.0"
 pretty_assertions = "0.6.1"
 insta = "0.12"
+tempfile = "3.1.0"
 
 [[bin]]
 name = "iml-agent-daemon"
