@@ -3,10 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use bytes::Buf;
-use futures::{channel::mpsc, Future, Stream, StreamExt, TryStreamExt};
-use std::{collections::HashMap, path::PathBuf, pin::Pin};
+use futures::{channel::mpsc, stream::BoxStream, Future, Stream, StreamExt, TryStreamExt};
+use std::{collections::HashMap, path::PathBuf};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
-use warp::{body::BodyStream, filters::BoxedFilter, reject, Filter};
+use warp::{filters::BoxedFilter, reject, Filter};
 
 #[derive(Debug)]
 pub enum Errors {
@@ -19,7 +19,9 @@ impl reject::Reject for Errors {}
 pub trait LineStream: Stream<Item = Result<String, warp::Rejection>> {}
 impl<T: Stream<Item = Result<String, warp::Rejection>>> LineStream for T {}
 
-fn streamer(s: BodyStream) -> Pin<Box<dyn Stream<Item = Result<String, warp::Rejection>> + Send>> {
+fn streamer<'a>(
+    s: impl Stream<Item = Result<impl Buf, warp::Error>> + Send + 'a,
+) -> BoxStream<'a, Result<String, warp::Rejection>> {
     let s = s.map_ok(|mut x| x.to_bytes());
 
     iml_fs::read_lines(s)
@@ -29,8 +31,7 @@ fn streamer(s: BodyStream) -> Pin<Box<dyn Stream<Item = Result<String, warp::Rej
 }
 
 /// Warp Filter that streams a newline delimited body
-pub fn line_stream(
-) -> BoxedFilter<(Pin<Box<dyn Stream<Item = Result<String, warp::Rejection>> + Send>>,)> {
+pub fn line_stream<'a>() -> BoxedFilter<(BoxStream<'a, Result<String, warp::Rejection>>,)> {
     warp::body::stream().map(streamer).boxed()
 }
 
@@ -104,6 +105,8 @@ pub async fn ingest_data(
 
         file.write_all(line.as_bytes()).await?;
     }
+
+    file.flush().await?;
 
     Ok(())
 }
