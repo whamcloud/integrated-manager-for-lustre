@@ -5,7 +5,7 @@
 use std::path::PathBuf;
 
 fn main() {
-    if cfg!(target_os = "macos") || cfg!(target_os = "windows") {
+    if !cfg!(target_os = "linux") {
         return;
     }
 
