@@ -4,7 +4,7 @@
 
 use crate::{
     action_plugins::{
-        check_ha, check_kernel, check_stonith, kernel_module, lctl, lpurge, ltuer,
+        check_ha, check_kernel, check_stonith, kernel_module, lamigo, lctl, lpurge, ltuer,
         ntp::action_configure,
         ostpool, package, postoffice,
         stratagem::{action_purge, action_warning, server},
@@ -45,6 +45,7 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("postoffice_add", postoffice::route_add)
         .add_plugin("postoffice_remove", postoffice::route_remove)
         .add_plugin("create_lpurge_conf", lpurge::create_lpurge_conf)
+        .add_plugin("create_lamigo_service", lamigo::create_lamigo_service)
         .add_plugin(
             "configure_ntp",
             action_configure::update_and_write_new_config,
