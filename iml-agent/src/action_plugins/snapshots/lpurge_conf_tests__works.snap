@@ -1,0 +1,12 @@
+---
+source: iml-agent/src/action_plugins/lpurge.rs
+expression: cnt
+---
+device=lima-montevideo
+dryrun=true
+freehi=123
+freelo=60
+listen_socket=/run/lpurge-lima-montevideo-santiago.sock
+max_jobs=0
+pool=lima.santiago
+

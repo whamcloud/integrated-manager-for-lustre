@@ -8,6 +8,7 @@ pub mod check_kernel;
 pub mod check_stonith;
 pub mod kernel_module;
 pub mod lctl;
+pub mod lpurge;
 pub mod ltuer;
 pub mod ntp;
 pub mod ostpool;
