@@ -8,7 +8,7 @@ use iml_agent::action_plugins::stratagem::{
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
 use iml_agent::action_plugins::{
-    check_ha, check_kernel, check_stonith, kernel_module, lpurge, ltuer, ostpool, package,
+    check_ha, check_kernel, check_stonith, kernel_module, lamigo, lpurge, ltuer, ostpool, package,
     postoffice,
 };
 use liblustreapi as llapi;
@@ -287,6 +287,13 @@ pub enum App {
         c: lpurge::Config,
     },
 
+    #[structopt(name = "lamigo")]
+    /// Write lamigo systemd unit
+    LAmigo {
+        #[structopt(flatten)]
+        c: lamigo::Config,
+    },
+
     #[structopt(name = "postoffice")]
     /// Add or Remove PostOffice routes
     PostOffice {
@@ -509,7 +516,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 eprintln!("{:?}", e);
                 exit(exitcode::SOFTWARE);
             }
-        }
+        },
         App::GetKernel { modules } => match check_kernel::get_kernel(modules).await {
             Ok(s) => println!("{}", s),
             Err(e) => println!("{:?}", e),
@@ -544,7 +551,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("{:?}", e);
                 exit(exitcode::SOFTWARE);
             }
-        }
+        },
         App::CreateLtuerConf {
             mailbox_path,
             fs_name,
@@ -554,7 +561,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 eprintln!("{:?}", e);
                 exit(exitcode::SOFTWARE);
             }
-        }
+        },
         App::KernelModule { command } => {
             if let Err(e) = match command {
                 KernelModuleCommand::Loaded { module } => kernel_module::loaded(module)
@@ -573,7 +580,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
             }
-        }
+        },
+        App::LAmigo { c } => {
+            if let Err(e) = lamigo::create_lamigo_service(c).await {
+                eprintln!("{}", e);
+                exit(exitcode::SOFTWARE);
+            }
+        },
     };
 
     Ok(())
