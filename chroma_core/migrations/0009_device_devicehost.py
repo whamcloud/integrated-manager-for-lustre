@@ -8,7 +8,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [("chroma_core", "0006_updateyumfilejob")]
+    dependencies = [("chroma_core", "0008_ostpool_json_notify")]
 
     operations = [
         migrations.CreateModel(

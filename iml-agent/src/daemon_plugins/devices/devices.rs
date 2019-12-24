@@ -34,14 +34,14 @@ fn device_stream() -> impl Stream<Item = Result<String, ImlAgentError>> {
 pub fn create() -> impl DaemonPlugin {
     Devices {
         trigger: None,
-        state: Arc::new(Mutex::new(None)),
+        state: Arc::new(Mutex::new((None, None))),
     }
 }
 
 #[derive(Debug)]
 pub struct Devices {
     trigger: Option<Trigger>,
-    state: Arc<Mutex<Output>>,
+    state: Arc<Mutex<(Output, Output)>>,
 }
 
 impl DaemonPlugin for Devices {
@@ -91,7 +91,8 @@ impl DaemonPlugin for Devices {
                     async move {
                         let mut s = state.lock().await;
 
-                        *s = x;
+                        s.0 = s.1.take();
+                        s.1 = x;
 
                         Ok(())
                     }
@@ -110,7 +111,16 @@ impl DaemonPlugin for Devices {
     ) -> Pin<Box<dyn Future<Output = Result<Output, ImlAgentError>> + Send>> {
         let state = Arc::clone(&self.state);
 
-        async move { Ok(state.lock().await.clone()) }.boxed()
+        async move {
+            let s = state.lock().await.clone();
+
+            if s.0 != s.1 {
+                Ok(s.1)
+            } else {
+                Ok(None)
+            }
+        }
+            .boxed()
     }
     fn teardown(&mut self) -> Result<(), ImlAgentError> {
         self.trigger.take();

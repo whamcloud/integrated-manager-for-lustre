@@ -2,7 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_wire_types::db::DeviceId;
 use std::{
     collections::{BTreeMap, BTreeSet},
     ops::Deref,
@@ -40,9 +39,14 @@ impl<T> Change<T> {
     }
 }
 
-pub fn get_changes_values<'a, 'b, V: std::cmp::Eq + std::fmt::Debug>(
-    old: &'b BTreeMap<&'a DeviceId, V>,
-    new: &'b BTreeMap<&'a DeviceId, V>,
+pub fn get_changes_values<
+    'a,
+    'b,
+    K: std::cmp::Eq + std::cmp::Ord + std::fmt::Debug,
+    V: std::cmp::Eq + std::fmt::Debug,
+>(
+    old: &'b BTreeMap<&'a K, V>,
+    new: &'b BTreeMap<&'a K, V>,
 ) -> Vec<Change<&'b V>> {
     let old_ids: BTreeSet<_> = old.keys().collect();
     let new_ids: BTreeSet<_> = new.keys().collect();
@@ -52,6 +56,8 @@ pub fn get_changes_values<'a, 'b, V: std::cmp::Eq + std::fmt::Debug>(
         .filter(|&&k| old.get(k) != new.get(k))
         .inspect(|&&k| tracing::debug!("not equal. old: {:?}, new {:?}", old.get(k), new.get(k)))
         .map(|&k| Change::Update(new.get(k).unwrap()));
+
+    tracing::trace!("old ids: {:?}. new ids: {:?}", old_ids, new_ids);
 
     let to_remove = old_ids
         .difference(&new_ids)
@@ -63,11 +69,15 @@ pub fn get_changes_values<'a, 'b, V: std::cmp::Eq + std::fmt::Debug>(
 
     to_change.chain(to_remove).chain(to_add).collect()
 }
-
-pub fn get_changes<'a, 'b, V: std::cmp::Eq + std::fmt::Debug>(
-    old: &'b BTreeMap<&'a DeviceId, V>,
-    new: &'b BTreeMap<&'a DeviceId, V>,
-) -> Vec<Change<DeviceId>> {
+pub fn get_changes<
+    'a,
+    'b,
+    K: std::cmp::Eq + std::cmp::Ord + Clone,
+    V: std::cmp::Eq + std::fmt::Debug,
+>(
+    old: &'b BTreeMap<&'a K, V>,
+    new: &'b BTreeMap<&'a K, V>,
+) -> Vec<Change<K>> {
     let old_ids: BTreeSet<_> = old.keys().collect();
     let new_ids: BTreeSet<_> = new.keys().collect();
 
