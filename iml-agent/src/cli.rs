@@ -8,7 +8,7 @@ use iml_agent::action_plugins::stratagem::{
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
 use iml_agent::action_plugins::{
-    check_ha, check_kernel, check_stonith, kernel_module, lpurge, ltuer, ostpool, package,
+    check_ha, check_kernel, check_stonith, kernel_module, lamigo, lpurge, ltuer, ostpool, package,
 };
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
@@ -271,6 +271,13 @@ pub enum App {
         #[structopt(flatten)]
         c: lpurge::Config,
     },
+
+    #[structopt(name = "lamigo")]
+    /// Write lamigo systemd unit
+    LAmigo {
+        #[structopt(flatten)]
+        c: lamigo::Config,
+    },
 }
 
 fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<dyn Iterator<Item = String>> {
@@ -486,7 +493,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 eprintln!("{:?}", e);
                 exit(exitcode::SOFTWARE);
             }
-        }
+        },
         App::GetKernel { modules } => match check_kernel::get_kernel(modules).await {
             Ok(s) => println!("{}", s),
             Err(e) => println!("{:?}", e),
@@ -512,7 +519,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("{:?}", e);
                 exit(exitcode::SOFTWARE);
             }
-        }
+        },
         App::CreateLtuerConf {
             mailbox_path,
             fs_name,
@@ -522,7 +529,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 eprintln!("{:?}", e);
                 exit(exitcode::SOFTWARE);
             }
-        }
+        },
         App::KernelModule { command } => {
             if let Err(e) = match command {
                 KernelModuleCommand::Loaded { module } => kernel_module::loaded(module)
@@ -541,7 +548,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
             }
-        }
+        },
+        App::LPurge { c } => {
+            if let Err(e) = lamigo::create_lamigo_service(c).await {
+                eprintln!("{}", e);
+                exit(exitcode::SOFTWARE);
+            }
+        },
     };
 
     Ok(())
