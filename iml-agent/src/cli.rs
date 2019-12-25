@@ -208,6 +208,7 @@ pub enum StratagemClientCommand {
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "iml-agent")]
+#[structopt(raw(setting = "structopt::clap::AppSettings::ColoredHelp"))]
 /// The Integrated Manager for Lustre Agent CLI
 pub enum App {
     #[structopt(name = "stratagem")]
@@ -549,7 +550,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 exit(exitcode::SOFTWARE);
             }
         },
-        App::LPurge { c } => {
+        App::LAmigo { c } => {
             if let Err(e) = lamigo::create_lamigo_service(c).await {
                 eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
