@@ -72,10 +72,10 @@ class AnonymousAuthentication(CsrfAuthentication):
         if not super(AnonymousAuthentication, self).is_authenticated(request, object):
             return False
 
-        return settings.ALLOW_ANONYMOUS_READ or request.user.is_authenticated()
+        return settings.ALLOW_ANONYMOUS_READ or request.user.is_authenticated
 
     def get_identifier(self, request):
-        if request.user.is_authenticated():
+        if request.user.is_authenticated:
             return request.user.username
         else:
             return "Anonymous user"
