@@ -99,6 +99,20 @@ pub enum PackageCommand {
     },
 }
 
+#[derive(Debug, StructOpt)]
+pub enum KernelModuleCommand {
+    #[structopt(name = "loaded")]
+    Loaded {
+        #[structopt(name = "module")]
+        module: String,
+    },
+    #[structopt(name = "version")]
+    Version {
+        #[structopt(name = "module")]
+        module: String,
+    },
+}
+
 fn invalid_input_err(msg: &str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidInput, msg)
 }
@@ -242,7 +256,10 @@ pub enum App {
     },
 
     #[structopt(name = "kernel_module")]
-    KernelModule { module: String },
+    KernelModule {
+        #[structopt(subcommand)]
+        command: KernelModuleCommand,
+    },
 
     #[structopt(name = "lpurge")]
     /// Write lpurge configuration file
@@ -509,15 +526,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 exit(exitcode::SOFTWARE);
             }
         }
-        App::KernelModule { module } => match kernel_module::loaded(module).await {
-            Ok(b) => {
-                println!("{}", if b { "Loaded" } else { "Not Loaded" });
-            }
-            Err(e) => {
+        App::KernelModule { command } => {
+            if let Err(e) = match command {
+                KernelModuleCommand::Loaded { module } => kernel_module::loaded(module)
+                    .await
+                    .map(|r| println!("{}", if r { "Loaded" } else { "Not Loaded" })),
+                KernelModuleCommand::Version { module } => kernel_module::version(module)
+                    .await
+                    .map(|r| println!("{}", r)),
+            } {
                 eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
             }
-        },
+        }
         App::LPurge { c } => {
             if let Err(e) = lpurge::create_lpurge_conf(c).await {
                 eprintln!("{}", e);

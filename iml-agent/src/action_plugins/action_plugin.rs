@@ -26,6 +26,7 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("restart_unit", systemd::restart_unit)
         .add_plugin("get_unit_run_state", systemd::get_run_state)
         .add_plugin("kernel_module_loaded", kernel_module::loaded)
+        .add_plugin("kernel_module_version", kernel_module::version)
         .add_plugin("package_installed", package::installed)
         .add_plugin("package_version", package::version)
         .add_plugin("start_scan_stratagem", server::trigger_scan)
