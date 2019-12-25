@@ -223,6 +223,7 @@ pub enum StratagemClientCommand {
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "iml-agent")]
+#[structopt(raw(setting = "structopt::clap::AppSettings::ColoredHelp"))]
 /// The Integrated Manager for Lustre Agent CLI
 pub enum App {
     #[structopt(name = "stratagem")]
