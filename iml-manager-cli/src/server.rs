@@ -31,6 +31,12 @@ pub struct AddHosts {
     /// The profile to deploy to each host
     #[structopt(short = "p", long = "profile")]
     profile: String,
+    /// Prompt to continue if command fails
+    #[structopt(long)]
+    prompt: bool,
+    /// Always continue if command fails
+    #[structopt(long)]
+    force: bool,    
 }
 
 #[derive(Debug, StructOpt)]
@@ -93,6 +99,15 @@ fn filter_known_hosts<'a, 'b>(
         .iter()
         .filter(move |x| hostlist.contains(&x.fqdn) || hostlist.contains(&x.nodename))
         .collect()
+}
+
+fn can_continue(config: &AddHosts, err_msg: &str) -> bool {
+    display_error(&err_msg);
+    config.force || (config.prompt && get_confirm())
+}
+
+fn get_confirm() -> bool {
+    clt::confirm("Continue deployment?", true, "> ", true)
 }
 
 fn is_profile_valid(x: &HostProfile, profile_name: &str) -> bool {
@@ -300,9 +315,10 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
                 });
 
             if !all_passed {
-                return Err(ImlManagerCliError::ApiError(
-                    "Preflight checks failed".into(),
-                ));
+                let error_msg = "Preflight checks failed";
+                if !can_continue(&config, &error_msg) {
+                    return Err(ImlManagerCliError::ApiError(error_msg.into()));
+                }
             }
 
             let objects = new_hosts
@@ -349,7 +365,8 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
             let objects: Vec<_> = objects
                 .into_iter()
                 .filter_map(|x| x.host_profiles)
-                .filter(|x| is_profile_valid(&x, &profile.name))
+                .filter(|x| is_profile_valid(&x, &profile.name) ||
+                            can_continue(&config, &format!("Profile {} is invalid", &profile.name)))
                 .map(|x| HostProfileConfig {
                     host: x.host,
                     profile: &profile.name,
