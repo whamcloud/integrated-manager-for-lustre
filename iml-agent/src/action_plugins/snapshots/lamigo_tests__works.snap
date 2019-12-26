@@ -1,0 +1,9 @@
+---
+source: iml-agent/src/action_plugins/lamigo.rs
+expression: content
+---
+[Unit]
+Description=Run lamigo service
+[Service]
+ExecStart=/usr/bin/lamigo -m lu_test-lustre-MDT0000 -u cl1 -s fast_pool -t slow_pool -a 35353 /mnt/lustre
+

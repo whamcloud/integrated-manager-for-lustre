@@ -63,3 +63,7 @@ path = "src/main.rs"
 [[bin]]
 name = "iml-agent"
 path = "src/cli.rs"
+
+[[bin]]
+name = "run"
+path = "src/run.rs"
