@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use console::{style, Term};
 use futures::{Future, FutureExt};
 use iml_wire_types::Command;
 use indicatif::ProgressBar;
@@ -18,13 +19,7 @@ pub fn wrap_fut<T>(msg: &str, fut: impl Future<Output = T>) -> impl Future<Outpu
 }
 
 pub fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) -> () {
-    let grey = termion::color::Fg(termion::color::LightBlack);
-    let reset = termion::color::Fg(termion::color::Reset);
-
-    let s = format!("{}{}{}", grey, reset, msg);
-    let s_len = s.len();
-
-    let sp = Spinner::new(Spinners::Dots9, s);
+    let sp = Spinner::new(Spinners::Dots9, style(msg).dim().to_string());
 
     move |msg_opt| match msg_opt {
         Some(msg) => {
@@ -32,8 +27,9 @@ pub fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) -> () {
         }
         None => {
             sp.stop();
-            print!("{}", termion::clear::CurrentLine);
-            print!("{}", termion::cursor::Left(s_len as u16));
+            if let Err(e) = Term::stdout().clear_line() {
+                tracing::debug!("Could not clear current line {}", e);
+            };
         }
     }
 }
@@ -61,10 +57,7 @@ pub fn display_cancelled(message: impl Display) {
 }
 
 pub fn format_success(message: impl Display) -> String {
-    let green = termion::color::Fg(termion::color::Green);
-    let reset = termion::color::Fg(termion::color::Reset);
-
-    format!("{}✔{} {}", green, reset, message)
+    format!("{} {}", style("✔").green(), message)
 }
 
 pub fn display_success(message: impl Display) {
@@ -72,10 +65,7 @@ pub fn display_success(message: impl Display) {
 }
 
 pub fn format_error(message: impl Display) -> String {
-    let red = termion::color::Fg(termion::color::Red);
-    let reset = termion::color::Fg(termion::color::Reset);
-
-    format!("{}✗{} {}", red, reset, message)
+    format!("{} {}", style("✗").red(), message)
 }
 
 pub fn display_error(message: impl Display) {

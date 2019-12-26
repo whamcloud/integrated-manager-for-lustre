@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use console::{style, Term};
 use iml_agent::action_plugins::stratagem::{
     action_purge, action_warning,
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
@@ -381,19 +382,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 rd,
                 pd,
             } => {
-                let cyan = termion::color::Fg(termion::color::Cyan);
-                let green = termion::color::Fg(termion::color::Green);
-                let reset = termion::color::Fg(termion::color::Reset);
-
                 let s = format!(
-                    "{}Scanning{} {}{}{}...",
-                    cyan,
-                    reset,
-                    termion::style::Bold,
-                    device_path,
-                    reset,
+                    "{} {}...",
+                    style("Scanning").cyan(),
+                    style(&device_path).bold(),
                 );
-                let s_len = s.len();
 
                 let sp = Spinner::new(Spinners::Dots9, s);
 
@@ -402,22 +395,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let result = trigger_scan(data).await;
 
                 sp.stop();
-                println!("{}", termion::clear::CurrentLine);
-                print!("{}", termion::cursor::Left(s_len as u16));
+
+                if let Err(e) = Term::stdout().clear_line() {
+                    tracing::debug!("Could not clear current line {}", e);
+                };
 
                 match result {
                     Ok((results_dir, output, _)) => {
                         println!(
-                            "{}✔ Scan finished{}. Results located in {}",
-                            green, reset, results_dir
+                            "{}. Results located in {}",
+                            style("✔ Scan finished").green(),
+                            results_dir
                         );
 
                         for x in output.group_counters {
                             println!(
-                                "\n\n\n{}{}Group:{} {}\n",
-                                cyan,
-                                termion::style::Bold,
-                                reset,
+                                "\n\n\n{} {}\n",
+                                style("Group:").cyan().bold(),
                                 humanize(&x.name)
                             );
 
