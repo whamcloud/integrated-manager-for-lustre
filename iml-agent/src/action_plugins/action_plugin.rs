@@ -45,7 +45,7 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("postoffice_add", postoffice::route_add)
         .add_plugin("postoffice_remove", postoffice::route_remove)
         .add_plugin("create_lpurge_conf", lpurge::create_lpurge_conf)
-        .add_plugin("create_lamigo_service", lamigo::create_lamigo_service)
+        .add_plugin("create_lamigo_service", lamigo::create_lamigo_service_unit)
         .add_plugin(
             "configure_ntp",
             action_configure::update_and_write_new_config,
