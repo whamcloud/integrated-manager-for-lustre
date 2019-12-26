@@ -551,7 +551,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
         App::LAmigo { c } => {
-            if let Err(e) = lamigo::create_lamigo_service(c).await {
+            if let Err(e) = lamigo::create_lamigo_service_unit(c).await {
                 eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
             }

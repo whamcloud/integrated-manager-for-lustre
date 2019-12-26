@@ -43,7 +43,7 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("ostpool_add", ostpool::action_pool_add)
         .add_plugin("ostpool_remove", ostpool::action_pool_remove)
         .add_plugin("create_lpurge_conf", lpurge::create_lpurge_conf)
-        .add_plugin("create_lamigo_service", lamigo::create_lamigo_service)
+        .add_plugin("create_lamigo_service", lamigo::create_lamigo_service_unit)
         .add_plugin(
             "configure_ntp",
             action_configure::update_and_write_new_config,

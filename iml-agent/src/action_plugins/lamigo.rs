@@ -64,11 +64,15 @@ impl fmt::Display for Config {
     }
 }
 
-pub async fn create_lamigo_service(c: Config) -> Result<(), ImlAgentError> {
-    create_lamigo_service_internal("/etc/systemd/system", &c).err_into().await
+pub async fn create_lamigo_service_unit(c: Config) -> Result<(), ImlAgentError> {
+    create_lamigo_service_unit_internal("/etc/systemd/system", &c).err_into().await
 }
 
-async fn create_lamigo_service_internal<P: AsRef<Path>>(dir: P, c: &Config) -> std::io::Result<()> {
+pub async fn is_point_mounted(mount_point: String) -> std::io::Result<bool> {
+    Ok(true)
+}
+
+async fn create_lamigo_service_unit_internal<P: AsRef<Path>>(dir: P, c: &Config) -> std::io::Result<()> {
     fs::create_dir_all(&dir).await?;
     let file = dir
         .as_ref()
@@ -78,12 +82,13 @@ async fn create_lamigo_service_internal<P: AsRef<Path>>(dir: P, c: &Config) -> s
 }
 
 #[cfg(test)]
-mod tests {
+mod lamigo_tests {
     use super::*;
     use tempfile::tempdir;
+    use insta::assert_display_snapshot;
 
     #[tokio::test]
-    async fn test_create_lamigo_service() {
+    async fn test_works() {
         let config = Config {
             fs: "lu_test".into(),
             mdt: "lustre-MDT0000".into(),
@@ -96,15 +101,10 @@ mod tests {
 
         let dir = tempdir().expect("could not create tmpdir");
         let expected_file = dir.path().join("lamigo-lu_test-lustre-MDT0000.service");
-        create_lamigo_service_internal(&dir, &config).await.expect("could not write ");
+        create_lamigo_service_unit_internal(&dir, &config).await.expect("could not write ");
 
-        let contents = fs::read(expected_file).await.unwrap();
-        assert_eq!(
-            String::from_utf8_lossy(&contents),
-            "[Unit]\n\
-            Description=Run lamigo service\n\
-            [Service]\n\
-            ExecStart=/usr/bin/lamigo -m lu_test-lustre-MDT0000 -u cl1 -s fast_pool -t slow_pool -a 35353 /mnt/lustre\n"
-        );
+        let bytes = fs::read(expected_file).await.unwrap();
+        let content = String::from_utf8_lossy(&bytes);
+        assert_display_snapshot!(content);
     }
 }
