@@ -102,11 +102,13 @@ pub enum PackageCommand {
 #[derive(Debug, StructOpt)]
 pub enum KernelModuleCommand {
     #[structopt(name = "loaded")]
+    /// Is the module loaded?
     Loaded {
         #[structopt(name = "module")]
         module: String,
     },
     #[structopt(name = "version")]
+    /// What is the version of the module?
     Version {
         #[structopt(name = "module")]
         module: String,
@@ -256,6 +258,7 @@ pub enum App {
     },
 
     #[structopt(name = "kernel_module")]
+    /// Get kernel module state and version
     KernelModule {
         #[structopt(subcommand)]
         command: KernelModuleCommand,
