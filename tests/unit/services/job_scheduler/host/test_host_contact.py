@@ -21,12 +21,10 @@ class TestHostAddValidations(JobTestCase):
                 "hostname_valid": True,
                 "fqdn_resolves": True,
                 "fqdn_matches": True,
-                "yum_valid_repos": True,
                 "yum_can_update": True,
                 "openssl": True,
             },
-            "mgr_fqdn": "test-server.company.domain",
-            "self_fqdn": "test-server.company.domain",
+            "fqdn": "test-server.company.domain",
             "nodename": "test-server.company.domain",
             "address": "192.168.1.42",
         }
@@ -88,25 +86,26 @@ class TestHostAddValidations(JobTestCase):
         MockAgentSsh.ssh_should_fail = False
 
         self.expected_result = {
+            u"valid": True,
             u"address": u"test-server",
-            u"resolve": True,
-            u"ping": True,
-            u"auth": True,
-            u"hostname_valid": True,
-            u"fqdn_resolves": True,
-            u"fqdn_matches": True,
-            u"reverse_resolve": True,
-            u"reverse_ping": True,
-            u"yum_valid_repos": True,
-            u"yum_can_update": True,
-            u"openssl": True,
+            "status": [
+                {u"name": u"resolve", u"value": True},
+                {u"name": u"ping", u"value": True},
+                {u"name": u"auth", u"value": True},
+                {u"name": u"hostname_valid", u"value": True},
+                {u"name": u"fqdn_resolves", u"value": True},
+                {u"name": u"fqdn_matches", u"value": True},
+                {u"name": u"reverse_resolve", u"value": True},
+                {u"name": u"reverse_ping", u"value": True},
+                {u"name": u"yum_can_update", u"value": True},
+                {u"name": u"openssl", u"value": True},
+            ],
         }
 
         self.addCleanup(mock.patch.stopall)
 
     def _result_keys(self, excludes=[]):
-        excludes.append("address")
-        return [k for k in self.expected_result.keys() if k not in excludes]
+        return [x["name"] for x in self.expected_result.get("status") if x["name"] not in excludes]
 
     def _inject_failures(self, failed_tests, extra_failures=[]):
         failed_results = failed_tests + extra_failures
@@ -116,7 +115,10 @@ class TestHostAddValidations(JobTestCase):
                 MockAgentSsh.ssh_should_fail = True
 
         for result in failed_results:
-            self.expected_result[unicode(result)] = False
+            x = next(x for x in self.expected_result["status"] if x["name"] == result)
+            x["value"] = False
+
+        self.expected_result["valid"] = False
 
     def test_host_no_problems(self):
         self._test_host_contact()
@@ -158,11 +160,6 @@ class TestHostAddValidations(JobTestCase):
     def test_fqdn_mismatch(self):
         # Expect fqdn_matches to fail
         self._inject_failures(["fqdn_matches"])
-        self._test_host_contact()
-
-    def test_yum_bad_repo_config(self):
-        # Expect yum_valid_repos to fail
-        self._inject_failures(["yum_valid_repos"])
         self._test_host_contact()
 
     def test_yum_update_failure(self):
