@@ -49,11 +49,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    dotenv::from_path("/var/lib/chroma/iml-settings.conf").expect("Could not load cli env");
-
     let matches = App::from_args();
 
     tracing::debug!("Matching args {:?}", matches);
+
+    dotenv::from_path("/var/lib/chroma/iml-settings.conf").expect("Could not load cli env");
 
     let r = match matches {
         App::Stratagem { command } => stratagem_cli(command).await,

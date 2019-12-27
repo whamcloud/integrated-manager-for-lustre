@@ -24,6 +24,13 @@ use structopt::StructOpt;
 use tokio::time::delay_for;
 
 #[derive(StructOpt, Debug)]
+pub struct RemoveHosts {
+    /// The host(s) to remove. Takes a hostlist expression
+    #[structopt(short = "d", long = "delete_hosts")]
+    hosts: String,
+}
+
+#[derive(StructOpt, Debug)]
 pub struct AddHosts {
     /// The host(s) to update. Takes a hostlist expression
     #[structopt(short = "h", long = "hosts")]
@@ -41,6 +48,9 @@ pub enum ServerCommand {
     /// Add new servers to IML
     #[structopt(name = "add")]
     Add(AddHosts),
+    /// Remove servers from IML
+    #[structopt(name = "remove")]
+    Remove(RemoveHosts),
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -54,6 +64,12 @@ struct AgentConfig<'a> {
     address: &'a str,
     auth_type: String,
     server_profile: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct HostRemoverConfig {
+    address: String,
+    verb: String,
 }
 
 #[derive(serde::Serialize)]
@@ -92,6 +108,16 @@ fn filter_known_hosts<'a, 'b>(
     api_hosts
         .iter()
         .filter(move |x| hostlist.contains(&x.fqdn) || hostlist.contains(&x.nodename))
+        .collect()
+}
+
+fn filter_unknown_hosts<'a, 'b>(
+    hostlist: &'b BTreeSet<String>,
+    api_hosts: &'a Vec<Host>,
+) -> Vec<&'a Host> {
+    api_hosts
+        .iter()
+        .filter(move |x| !hostlist.contains(&x.fqdn) && !hostlist.contains(&x.nodename))
         .collect()
 }
 
@@ -372,6 +398,87 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
             term.write_line(&format!("{} host profiles...", style("Setting").green()))?;
 
             wait_for_cmds(cmds).await?;
+        }
+        ServerCommand::Remove(config) => {
+            let term = Term::stdout();
+
+            let remove_hosts = hostlist_parser::parse(&config.hosts)?;
+
+            tracing::debug!("Parsed hosts {:?}", remove_hosts);
+
+            let api_hosts = get_hosts().await?;
+
+            let unknown_hosts = filter_unknown_hosts(&remove_hosts, &api_hosts.objects);
+
+            for unknown_host in unknown_hosts {
+                display_cancelled(format!("Host {} unknown in IML. Please remove first if attempting to complete removement.", unknown_host.fqdn));
+            }
+
+            let objects = remove_hosts
+                .iter()
+                .map(|address| TestHostConfig {
+                    address,
+                    auth_type: "existing_keys_choice".into(),
+                })
+                .collect();
+
+            let Objects { objects } = post("test_host", Objects { objects })
+                .await?
+                .error_for_status()?
+                .json()
+                .await
+                .map_err(iml_manager_client::ImlManagerClientError::Reqwest)?;
+
+            let cmds = objects
+                .into_iter()
+                .map(|CmdWrapper { command }| command)
+                .collect();
+
+            term.write_line(&format!("{} preflight checks...", style("Running").green()))?;
+
+            let cmds = wait_for_cmds(cmds).await?;
+
+            let host_ids = cmds
+                .into_iter()
+                .flat_map(|cmd| cmd.jobs)
+                .filter_map(|job| extract_api_id(&job).map(|x| x.to_string()));
+
+            let objects = host_ids
+                .map(|address| HostRemoverConfig {
+                    address,
+                    verb: "Remove".to_string(),
+                })
+                .collect();
+
+            let Objects { objects }: Objects<CommandAndHostWrapper> =
+                post("/action", Objects { objects })
+                    .await?
+                    .json()
+                    .await
+                    .map_err(iml_manager_client::ImlManagerClientError::Reqwest)?;
+
+            tracing::debug!("command and hosts {:?}", objects);
+
+            let (commands, hosts): (Vec<_>, Vec<_>) = objects
+                .into_iter()
+                .filter_map(|x| x.command_and_host)
+                .map(|x| (x.command, x.host))
+                .unzip();
+
+            term.write_line(&format!("{} servers...", style("Removing").green()))?;
+
+            wait_for_cmds(commands).await?;
+
+            let host_ids: Vec<_> = hosts
+                .iter()
+                .map(|x| ["id__in".into(), x.id.to_string()])
+                .chain(iter::once(["limit".into(), "0".into()]))
+                .collect();
+
+            let ApiList { objects, .. }: ApiList<HostProfileWrapper> =
+                get(HostProfile::endpoint_name(), host_ids).await?;
+
+            tracing::debug!("Host Profiles {:?}", objects);
         }
     };
 
