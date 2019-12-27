@@ -1,5 +1,6 @@
 from copy import deepcopy
 from itertools import chain
+import json
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
@@ -22,7 +23,7 @@ class NidTestCase(JobTestCase):
 
     def assertNidsCorrect(self, host):
         JobSchedulerClient.command_run_jobs(
-            [{"class_name": "UpdateDevicesJob", "args": {"hosts": [api.get_resource_uri(host)]}}], "Test update of nids"
+            [{"class_name": "UpdateDevicesJob", "args": {"host_ids": json.dumps([host.id])}}], "Test update of nids"
         )
         self.drain_progress()
 
