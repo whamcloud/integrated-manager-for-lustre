@@ -10,6 +10,7 @@ use crate::{
     error::ImlManagerCliError,
 };
 use console::{style, Term};
+use dialoguer::Confirmation;
 use futures::future;
 use iml_wire_types::{
     ApiList, Command, EndpointName, Host, HostProfile, HostProfileWrapper, ProfileTest,
@@ -32,11 +33,11 @@ pub struct AddHosts {
     #[structopt(short = "p", long = "profile")]
     profile: String,
     /// Prompt to continue if command fails
-    #[structopt(long)]
+    #[structopt(long, conflicts_with = "force")]
     prompt: bool,
     /// Always continue if command fails
     #[structopt(long)]
-    force: bool,    
+    force: bool,
 }
 
 #[derive(Debug, StructOpt)]
@@ -107,7 +108,16 @@ fn can_continue(config: &AddHosts, err_msg: &str) -> bool {
 }
 
 fn get_confirm() -> bool {
-    clt::confirm("Continue deployment?", true, "> ", true)
+    Confirmation::new()
+        .with_text("Continue deployment?")
+        .default(true)
+        .show_default(true)
+        .interact()
+        .unwrap_or(false)
+}
+
+fn is_profile_exist(x: &HostProfile, profile_name: &str) -> bool {
+    x.profiles.contains_key(profile_name)
 }
 
 fn is_profile_valid(x: &HostProfile, profile_name: &str) -> bool {
@@ -365,8 +375,11 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
             let objects: Vec<_> = objects
                 .into_iter()
                 .filter_map(|x| x.host_profiles)
-                .filter(|x| is_profile_valid(&x, &profile.name) ||
-                            can_continue(&config, &format!("Profile {} is invalid", &profile.name)))
+                .filter(|x| is_profile_exist(&x, &profile.name))
+                .filter(|x| {
+                    is_profile_valid(&x, &profile.name)
+                        || can_continue(&config, &format!("Profile {} is invalid", &profile.name))
+                })
                 .map(|x| HostProfileConfig {
                     host: x.host,
                     profile: &profile.name,
