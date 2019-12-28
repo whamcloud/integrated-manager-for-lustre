@@ -11,13 +11,15 @@ mod generated;
 mod notification;
 mod page;
 mod route;
+#[cfg(test)]
+mod test_utils;
 
-use components::{breadcrumbs::BreadCrumbs, update_activity_health, ActivityHealth};
+use components::{breadcrumbs::BreadCrumbs, tree, update_activity_health, ActivityHealth};
 use generated::css_classes::C;
 use iml_wire_types::warp_drive;
 use js_sys::Function;
 use route::Route;
-use seed::{prelude::*, virtual_dom::Listener, *};
+use seed::{app::MessageMapper, prelude::*, Listener, *};
 use std::{cmp, mem};
 use wasm_bindgen::JsCast;
 use web_sys::{EventSource, MessageEvent};
@@ -55,7 +57,7 @@ impl Visibility {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum WatchState {
     Watching,
     Open,
@@ -118,6 +120,7 @@ pub struct Model {
     pub activity_health: ActivityHealth,
     pub breadcrumbs: BreadCrumbs<Route<'static>>,
     notification: notification::Model,
+    pub tree: tree::Model,
 }
 
 pub fn register_eventsource_handle<T, F>(
@@ -176,6 +179,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg>) -> AfterMount<Model> {
         activity_health: ActivityHealth::default(),
         breadcrumbs: BreadCrumbs::default(),
         notification: notification::Model::default(),
+        tree: tree::Model::default(),
     })
 }
 
@@ -219,6 +223,7 @@ pub enum Msg {
     Locks(warp_drive::Locks),
     WindowClick,
     Notification(notification::Msg),
+    Tree(tree::Msg),
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -260,16 +265,22 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
             let old = model.activity_health;
             model.activity_health = update_activity_health(&model.records.active_alert);
+
             orders
                 .proxy(Msg::Notification)
                 .send_msg(notification::generate(None, &old, &model.activity_health));
+
+            orders.proxy(Msg::Tree).send_msg(tree::Msg::Reset);
         }
         Msg::RecordChange(record_change) => match *record_change {
             warp_drive::RecordChange::Update(record) => match record {
                 warp_drive::Record::ActiveAlert(x) => {
                     let msg = x.message.clone();
+
                     model.records.active_alert.insert(x.id, x);
+
                     let old = model.activity_health;
+
                     model.activity_health = update_activity_health(&model.records.active_alert);
                     orders.proxy(Msg::Notification).send_msg(notification::generate(
                         Some(msg),
@@ -278,10 +289,20 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                     ));
                 }
                 warp_drive::Record::Filesystem(x) => {
-                    model.records.filesystem.insert(x.id, x);
+                    let id = x.id;
+                    if model.records.filesystem.insert(x.id, x).is_none() {
+                        orders
+                            .proxy(Msg::Tree)
+                            .send_msg(tree::Msg::Add(warp_drive::RecordId::Filesystem(id)));
+                    };
                 }
                 warp_drive::Record::Host(x) => {
-                    model.records.host.insert(x.id, x);
+                    let id = x.id;
+                    if model.records.host.insert(x.id, x).is_none() {
+                        orders
+                            .proxy(Msg::Tree)
+                            .send_msg(tree::Msg::Add(warp_drive::RecordId::Host(id)));
+                    };
                 }
                 warp_drive::Record::ManagedTargetMount(x) => {
                     model.records.managed_target_mount.insert(x.id, x);
@@ -290,59 +311,53 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                     model.records.ost_pool.insert(x.id, x);
                 }
                 warp_drive::Record::OstPoolOsts(x) => {
-                    model.records.ost_pool_osts.insert(x.id, x);
+                    let id = x.id;
+                    if model.records.ost_pool_osts.insert(x.id, x).is_none() {
+                        orders
+                            .proxy(Msg::Tree)
+                            .send_msg(tree::Msg::Add(warp_drive::RecordId::OstPoolOsts(id)));
+                    };
                 }
                 warp_drive::Record::StratagemConfig(x) => {
                     model.records.stratagem_config.insert(x.id, x);
                 }
                 warp_drive::Record::Target(x) => {
-                    model.records.target.insert(x.id, x);
+                    let id = x.id;
+                    if model.records.target.insert(x.id, x).is_none() {
+                        orders
+                            .proxy(Msg::Tree)
+                            .send_msg(tree::Msg::Add(warp_drive::RecordId::Target(id)));
+                    };
                 }
                 warp_drive::Record::Volume(x) => {
                     model.records.volume.insert(x.id, x);
                 }
                 warp_drive::Record::VolumeNode(x) => {
-                    model.records.volume_node.insert(x.id, x);
+                    let id = x.id;
+                    if model.records.volume_node.insert(x.id, x).is_none() {
+                        orders
+                            .proxy(Msg::Tree)
+                            .send_msg(tree::Msg::Add(warp_drive::RecordId::VolumeNode(id)));
+                    };
                 }
                 warp_drive::Record::LnetConfiguration(x) => {
                     model.records.lnet_configuration.insert(x.id, x);
                 }
             },
-            warp_drive::RecordChange::Delete(record_id) => match record_id {
-                warp_drive::RecordId::ActiveAlert(x) => {
-                    model.records.active_alert.remove(&x);
-                }
-                warp_drive::RecordId::Filesystem(x) => {
-                    model.records.filesystem.remove(&x);
-                }
-                warp_drive::RecordId::Host(x) => {
-                    model.records.host.remove(&x);
-                }
-                warp_drive::RecordId::ManagedTargetMount(x) => {
-                    model.records.managed_target_mount.remove(&x);
-                }
-                warp_drive::RecordId::OstPool(x) => {
-                    model.records.ost_pool.remove(&x);
-                }
-                warp_drive::RecordId::OstPoolOsts(x) => {
-                    model.records.ost_pool_osts.remove(&x);
-                }
-                warp_drive::RecordId::StratagemConfig(x) => {
-                    model.records.stratagem_config.remove(&x);
-                }
-                warp_drive::RecordId::Target(x) => {
-                    model.records.target.remove(&x);
-                }
-                warp_drive::RecordId::Volume(x) => {
-                    model.records.volume.remove(&x);
-                }
-                warp_drive::RecordId::VolumeNode(x) => {
-                    model.records.volume_node.remove(&x);
-                }
-                warp_drive::RecordId::LnetConfiguration(x) => {
-                    model.records.lnet_configuration.remove(&x);
-                }
-            },
+            warp_drive::RecordChange::Delete(record_id) => {
+                match record_id {
+                    warp_drive::RecordId::Filesystem(_)
+                    | warp_drive::RecordId::VolumeNode(_)
+                    | warp_drive::RecordId::Host(_)
+                    | warp_drive::RecordId::OstPoolOsts(_)
+                    | warp_drive::RecordId::Target(_) => {
+                        orders.proxy(Msg::Tree).send_msg(tree::Msg::Remove(record_id));
+                    }
+                    _ => {}
+                };
+
+                model.records.remove_record(&record_id);
+            }
         },
         Msg::Locks(locks) => {
             model.locks = locks;
@@ -381,19 +396,15 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::Notification(nu) => {
             notification::update(nu, &mut model.notification, &mut orders.proxy(Msg::Notification));
         }
+        Msg::Tree(msg) => {
+            tree::update(&model.records, msg, &mut model.tree, &mut orders.proxy(Msg::Tree));
+        }
     }
 }
 
 // ------ ------
 //     View
 // ------ ------
-
-// Notes:
-// - \u{00A0} is the non-breaking space
-//   - https://codepoints.net/U+00A0
-//
-// - "▶\u{fe0e}" - \u{fe0e} is the variation selector, it prevents ▶ to change to emoji in some browsers
-//   - https://codepoints.net/U+FE0E
 
 pub fn view(model: &Model) -> impl View<Msg> {
     // @TODO: Setup `prerendered` properly once https://github.com/David-OConnor/seed/issues/223 is resolved
@@ -442,6 +453,7 @@ pub fn view(model: &Model) -> impl View<Msg> {
                     C.lg__h_main_content,
                 ],
                 style! { St::FlexBasis => percent(model.side_width_percentage) },
+                tree::view(&model.records, &model.tree).map_msg(Msg::Tree)
             ],
             // slider panel
             div![
@@ -491,19 +503,25 @@ pub fn view(model: &Model) -> impl View<Msg> {
                         Route::Activity => page::activity::view(model).els(),
                         Route::Dashboard => page::dashboard::view(model).els(),
                         Route::Filesystem => page::filesystem::view(model).els(),
-                        Route::FilesystemDetail => page::filesystem_detail::view(model).els(),
+                        Route::FilesystemDetail(id) => page::filesystem_detail::view(model, id).els(),
                         Route::Home => page::home::view(model).els(),
                         Route::Jobstats => page::jobstats::view(model).els(),
                         Route::Login => page::login::view(model).els(),
                         Route::Logs => page::logs::view(model).els(),
                         Route::Mgt => page::mgt::view(model).els(),
                         Route::NotFound => page::not_found::view(model).els(),
+                        Route::OstPool => page::ostpool::view(model).els(),
+                        Route::OstPoolDetail(id) => {
+                            page::ostpool_detail::view(model, id).els()
+                        }
                         Route::PowerControl => page::power_control::view(model).els(),
                         Route::Server => page::server::view(model).els(),
                         Route::ServerDetail(id) => page::server_detail::view(model, id).els(),
                         Route::Target => page::target::view(model).els(),
+                        Route::TargetDetail(id) => page::target_detail::view(model, id).els(),
                         Route::User => page::user::view(model).els(),
                         Route::Volume => page::volume::view(model).els(),
+                        Route::VolumeDetail(id) => page::volume_detail::view(model, id).els(),
                     },
                 ],
                 page::partial::footer::view().els(),

@@ -14,7 +14,7 @@ fn menu_icon<T>(icon_name: &str) -> Node<T> {
 
 fn nav_manage_dropdown(open: bool) -> Node<Msg> {
     if !open {
-        return seed::empty();
+        return empty![];
     }
 
     let cls = class![

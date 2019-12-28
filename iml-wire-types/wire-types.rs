@@ -441,6 +441,18 @@ impl Label for &Host {
     }
 }
 
+impl db::Id for Host {
+    fn id(&self) -> u32 {
+        self.id
+    }
+}
+
+impl db::Id for &Host {
+    fn id(&self) -> u32 {
+        self.id
+    }
+}
+
 impl EndpointName for Host {
     fn endpoint_name() -> &'static str {
         "host"
@@ -687,6 +699,24 @@ impl Label for Volume {
     }
 }
 
+impl Label for &Volume {
+    fn label(&self) -> &str {
+        &self.label
+    }
+}
+
+impl db::Id for Volume {
+    fn id(&self) -> u32 {
+        self.id
+    }
+}
+
+impl db::Id for &Volume {
+    fn id(&self) -> u32 {
+        self.id
+    }
+}
+
 impl EndpointName for Volume {
     fn endpoint_name() -> &'static str {
         "volume"
@@ -729,6 +759,14 @@ pub enum VolumeOrResourceUri {
     Volume(Volume),
 }
 
+#[derive(serde::Deserialize, serde::Serialize, Clone, Copy, Debug, Eq, PartialEq)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum TargetKind {
+    Mgt,
+    Mdt,
+    Ost,
+}
+
 /// A Target record from /api/target/
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct Target<T> {
@@ -748,7 +786,7 @@ pub struct Target<T> {
     pub index: Option<u32>,
     pub inode_count: Option<u64>,
     pub inode_size: Option<u32>,
-    pub kind: String,
+    pub kind: TargetKind,
     pub label: String,
     pub name: String,
     pub primary_server: String,
@@ -861,6 +899,18 @@ impl Label for Filesystem {
 impl Label for &Filesystem {
     fn label(&self) -> &str {
         &self.label
+    }
+}
+
+impl db::Id for Filesystem {
+    fn id(&self) -> u32 {
+        self.id
+    }
+}
+
+impl db::Id for &Filesystem {
+    fn id(&self) -> u32 {
+        self.id
     }
 }
 
@@ -1112,6 +1162,12 @@ pub mod db {
         }
     }
 
+    impl Id for &VolumeNodeRecord {
+        fn id(&self) -> u32 {
+            self.id
+        }
+    }
+
     impl NotDeleted for VolumeNodeRecord {
         fn not_deleted(&self) -> bool {
             not_deleted(self.not_deleted)
@@ -1255,6 +1311,12 @@ pub mod db {
     }
 
     impl Id for OstPoolRecord {
+        fn id(&self) -> u32 {
+            self.id
+        }
+    }
+
+    impl Id for &OstPoolRecord {
         fn id(&self) -> u32 {
             self.id
         }
@@ -1975,6 +2037,7 @@ pub mod warp_drive {
         Alert, Filesystem, Host, LockChange, Target, TargetConfParam, Volume,
     };
     use im::{HashMap, HashSet};
+    use std::ops::Deref;
 
     /// The current state of locks based on data from the locks queue
     pub type Locks = HashMap<String, HashSet<LockChange>>;
@@ -2067,7 +2130,7 @@ pub mod warp_drive {
         LnetConfiguration(LnetConfigurationRecord),
     }
 
-    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+    #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
     #[serde(tag = "tag", content = "payload")]
     pub enum RecordId {
         ActiveAlert(u32),
@@ -2081,6 +2144,26 @@ pub mod warp_drive {
         Volume(u32),
         VolumeNode(u32),
         LnetConfiguration(u32),
+    }
+
+    impl Deref for RecordId {
+        type Target = u32;
+
+        fn deref(&self) -> &u32 {
+            match self {
+                Self::ActiveAlert(x)
+                | Self::Filesystem(x)
+                | Self::Host(x)
+                | Self::ManagedTargetMount(x)
+                | Self::OstPool(x)
+                | Self::OstPoolOsts(x)
+                | Self::StratagemConfig(x)
+                | Self::Target(x)
+                | Self::Volume(x)
+                | Self::VolumeNode(x)
+                | Self::LnetConfiguration(x) => x,
+            }
+        }
     }
 
     #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]

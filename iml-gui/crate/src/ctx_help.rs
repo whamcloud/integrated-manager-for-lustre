@@ -19,7 +19,7 @@ impl<'a> CtxHelp for Route<'a> {
             Route::Jobstats => Some("9.4"),
             Route::Logs => Some("9.5"),
             Route::Activity => Some("9.6"),
-            Route::FilesystemDetail => Some("9.1.1"),
+            Route::FilesystemDetail(_) => Some("9.1.1"),
             Route::ServerDetail(_) => Some("9.3.1.1"),
             _ => None,
         };

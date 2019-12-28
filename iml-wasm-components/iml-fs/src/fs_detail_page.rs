@@ -11,7 +11,7 @@ use iml_environment::ui_root;
 use iml_lock_indicator::{lock_indicator, LockIndicatorState};
 use iml_paging::{paging, update_paging, Paging, PagingMsg};
 use iml_utils::{IntoSerdeOpt as _, Locks, WatchState};
-use iml_wire_types::{Alert, Filesystem, Host, Target, TargetConfParam, ToCompositeId};
+use iml_wire_types::{Alert, Filesystem, Host, Target, TargetConfParam, TargetKind, ToCompositeId};
 use seed::{
     class, div, dom_types::Attrs, h4, h5, i, prelude::*, span, style, tbody, td, th, thead, tr,
 };
@@ -293,11 +293,11 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             let (mgt, mut mdts, mut osts) = targets.drain().map(|(_, v)| v).fold(
                 (vec![], vec![], vec![]),
                 |(mut mgt, mut mdts, mut osts), x| {
-                    if x.kind == "OST" {
+                    if x.kind == TargetKind::Ost {
                         osts.push(x);
-                    } else if x.kind == "MDT" {
+                    } else if x.kind == TargetKind::Mdt {
                         mdts.push(x);
-                    } else if x.kind == "MGT" {
+                    } else if x.kind == TargetKind::Mgt {
                         mgt.push(x);
                     }
 
@@ -862,7 +862,7 @@ mod tests {
             index: Some(0),
             inode_count: Some(2621440),
             inode_size: Some(9999999),
-            kind: "MDT".into(),
+            kind: TargetKind::Mdt,
             label: "fs-MDT0000".into(),
             name: "fs-MDT0000".into(),
             primary_server: "/api/host/6/".into(),
