@@ -274,7 +274,8 @@ pub enum App {
     },
 
     #[structopt(name = "lamigo")]
-    /// Write lamigo systemd unit
+    /// Create `lamigo` systemd unit. By default checks if the `mount_point` is mounted,
+    /// if not, mounts it, and then creates the unit.
     LAmigo {
         #[structopt(flatten)]
         c: lamigo::Config,
