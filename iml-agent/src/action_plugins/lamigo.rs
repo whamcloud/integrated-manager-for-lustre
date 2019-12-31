@@ -80,18 +80,15 @@ impl fmt::Display for Config {
 }
 
 pub async fn create_lamigo_service_unit(c: Config) -> Result<(), ImlAgentError> {
-    if c.force {
-        create_lamigo_service_unit_internal(SYSTEMD_DIR, &c)
-            .err_into()
-            .await
-    } else {
+    if !c.force {
         let is_mounted = is_filesystem_mounted(&c.mount_point).await?;
         if !is_mounted {
             mount_filesystem(&c).await?;
         }
-        create_lamigo_service_unit_internal(SYSTEMD_DIR, &c).await?;
-        Ok(())
     }
+    create_lamigo_service_unit_internal(SYSTEMD_DIR, &c)
+        .err_into()
+        .await
 }
 
 pub async fn mount_filesystem(c: &Config) -> std::io::Result<()> {
