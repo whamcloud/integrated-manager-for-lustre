@@ -10,7 +10,7 @@ use std::{fmt, io};
 use tokio::fs;
 use tokio::process::{Child, Command};
 
-static SYSTEMD_DIR: &str = "/Users/nick/tmp/system";
+static SYSTEMD_DIR: &str = "/etc/systemd/system";
 
 #[derive(serde::Deserialize, structopt::StructOpt, Clone, Debug)]
 pub struct Config {
