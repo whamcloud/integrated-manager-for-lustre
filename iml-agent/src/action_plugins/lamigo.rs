@@ -98,7 +98,8 @@ pub async fn mount_filesystem(c: &Config) -> std::io::Result<()> {
     //     [-o <options> ] \
     //     <MGS NID>[:<MGS NID>]:/<fsname> \
     //     /lustre/<fsname>
-    let process: Child = Command::new("mount")
+    let mut command = Command::new("mount");
+    let process: Child = command
         .arg("-t")
         .arg("lustre")
         .arg(c.lustre_device.clone())
@@ -109,10 +110,7 @@ pub async fn mount_filesystem(c: &Config) -> std::io::Result<()> {
         true => Ok(()),
         false => Err(io::Error::new(
             io::ErrorKind::Other,
-            format!(
-                "Cannot execute command \'mount -t lustre {} {}\'",
-                c.lustre_device, c.mount_point
-            ),
+            format!("Cannot execute command {:?}", command),
         )),
     }
 }
