@@ -4,11 +4,11 @@
 
 use crate::agent_error::ImlAgentError;
 use futures::future::TryFutureExt;
-use std::{fmt, io};
 use std::path::Path;
-use tokio::fs;
-use tokio::process::{Command, Child};
 use std::process::Output;
+use std::{fmt, io};
+use tokio::fs;
+use tokio::process::{Child, Command};
 
 static SYSTEMD_DIR: &str = "/Users/nick/tmp/system";
 
@@ -55,32 +55,35 @@ pub struct Config {
 
 impl fmt::Display for Config {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f,
-               "[Unit]\n\
-               Description=Run lamigo service\n\
-               [Service]\n\
-               ExecStart=/usr/bin/lamigo \
-                    -m {fs}-{mdt} \
-                    -u {user} \
-                    -s {hot_pool} \
-                    -t {cold_pool} \
-                    -a {min_age} \
-                    {mount_point}\n\
-               ",
-               fs = self.fs,
-               mdt = self.mdt,
-               cold_pool = self.cold_pool,
-               hot_pool = self.hot_pool,
-               min_age = self.min_age,
-               user = self.user,
-               mount_point = self.mount_point,
+        write!(
+            f,
+            "[Unit]\n\
+             Description=Run lamigo service\n\
+             [Service]\n\
+             ExecStart=/usr/bin/lamigo \
+             -m {fs}-{mdt} \
+             -u {user} \
+             -s {hot_pool} \
+             -t {cold_pool} \
+             -a {min_age} \
+             {mount_point}\n\
+             ",
+            fs = self.fs,
+            mdt = self.mdt,
+            cold_pool = self.cold_pool,
+            hot_pool = self.hot_pool,
+            min_age = self.min_age,
+            user = self.user,
+            mount_point = self.mount_point,
         )
     }
 }
 
 pub async fn create_lamigo_service_unit(c: Config) -> Result<(), ImlAgentError> {
     if c.force {
-        create_lamigo_service_unit_internal(SYSTEMD_DIR, &c).err_into().await
+        create_lamigo_service_unit_internal(SYSTEMD_DIR, &c)
+            .err_into()
+            .await
     } else {
         let is_mounted = is_filesystem_mounted(&c.mount_point).await?;
         if !is_mounted {
@@ -107,10 +110,13 @@ pub async fn mount_filesystem(c: &Config) -> std::io::Result<()> {
     let output: Output = process.wait_with_output().await?;
     match output.status.success() {
         true => Ok(()),
-        false => Err(io::Error::new(io::ErrorKind::Other,
-                                    format!("Cannot execute command \'mount -t lustre {} {}\'",
-                                            c.lustre_device,
-                                            c.mount_point))),
+        false => Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!(
+                "Cannot execute command \'mount -t lustre {} {}\'",
+                c.lustre_device, c.mount_point
+            ),
+        )),
     }
 }
 
@@ -125,7 +131,10 @@ pub async fn is_filesystem_mounted(mount_point: &str) -> std::io::Result<bool> {
     Ok(output.status.success())
 }
 
-async fn create_lamigo_service_unit_internal<P: AsRef<Path>>(dir: P, c: &Config) -> std::io::Result<()> {
+async fn create_lamigo_service_unit_internal<P: AsRef<Path>>(
+    dir: P,
+    c: &Config,
+) -> std::io::Result<()> {
     fs::create_dir_all(&dir).await?;
     let file = dir
         .as_ref()
@@ -137,8 +146,8 @@ async fn create_lamigo_service_unit_internal<P: AsRef<Path>>(dir: P, c: &Config)
 #[cfg(test)]
 mod lamigo_tests {
     use super::*;
-    use tempfile::tempdir;
     use insta::assert_display_snapshot;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_works() {
@@ -160,7 +169,9 @@ mod lamigo_tests {
 
         let dir = tempdir().expect("could not create tmpdir");
         let expected_file = dir.path().join("lamigo-lu_test-lustre-MDT0000.service");
-        create_lamigo_service_unit_internal(&dir, &config).await.expect("could not write ");
+        create_lamigo_service_unit_internal(&dir, &config)
+            .await
+            .expect("could not write ");
 
         let bytes = fs::read(expected_file).await.unwrap();
         let content = String::from_utf8_lossy(&bytes);
