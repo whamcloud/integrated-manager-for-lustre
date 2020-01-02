@@ -21,9 +21,12 @@ use std::{
     sync::Arc,
 };
 
+type PoolMap = HashMap<String, HashSet<String>>;
+type FsPoolMap = HashMap<String, PoolMap>;
+
 #[derive(Debug)]
 pub struct PoolState {
-    state: Arc<Mutex<HashMap<String, HashMap<String, HashSet<String>>>>>,
+    state: Arc<Mutex<FsPoolMap>>,
 }
 
 pub fn create() -> impl DaemonPlugin {
@@ -32,6 +35,7 @@ pub fn create() -> impl DaemonPlugin {
     }
 }
 
+/// List all Lustre Filesystems with MDT0 on this host
 async fn list_fs() -> Result<Vec<String>, ImlAgentError> {
     Ok(lctl(vec!["get_param", "-N", "mdt.*-MDT0000"])
         .await
@@ -54,7 +58,7 @@ async fn list_fs() -> Result<Vec<String>, ImlAgentError> {
 /// from current filesystem
 fn diff_state(
     fs: String,
-    state: &mut HashMap<String, HashSet<String>>,
+    state: &mut PoolMap,
     pools: &Vec<OstPool>,
 ) -> Result<Vec<(OstPoolAction, OstPool)>, ImlAgentError> {
     let mut rmlist = state.clone();
@@ -127,7 +131,7 @@ async fn get_fsmap(fsname: String) -> Vec<(String, String, HashSet<String>)> {
 }
 
 fn init_pools(
-    state: &mut HashMap<String, HashMap<String, HashSet<String>>>,
+    state: &mut FsPoolMap,
     xs: Vec<(String, String, HashSet<String>)>,
 ) -> Vec<(OstPoolAction, OstPool)> {
     xs.into_iter()
