@@ -1,4 +1,3 @@
-
 table! {
     auth_group (id) {
         id -> Int4,
