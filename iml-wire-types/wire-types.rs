@@ -1984,58 +1984,6 @@ pub mod db {
             }
         }
     }
-
-    pub const OSTPOOL_TABLE_NAME: TableName = TableName("chroma_core_ostpool");
-
-    /// Record from the `chroma_core_ostpool` table
-    #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-    pub struct OstPoolRecord {
-        pub id: u32,
-        pub name: String,
-        pub content_type_id: Option<u32>,
-        pub not_deleted: Option<bool>,
-        pub filesystem_id: u32,
-    }
-
-    impl Name for OstPoolRecord {
-        fn table_name() -> TableName<'static> {
-            OSTPOOL_TABLE_NAME
-        }
-    }
-
-    impl Id for OstPoolRecord {
-        fn id(&self) -> u32 {
-            self.id
-        }
-    }
-
-    impl NotDeleted for OstPoolRecord {
-        fn not_deleted(&self) -> bool {
-            not_deleted(self.not_deleted)
-        }
-    }
-
-    pub const OSTPOOL_OSTS_TABLE_NAME: TableName = TableName("chroma_core_ostpool_osts");
-
-    /// Record from the `chroma_core_ostpool_osts` table
-    #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-    pub struct OstPoolOstsRecord {
-        pub id: u32,
-        pub ostpool_id: u32,
-        pub managedost_id: u32,
-    }
-
-    impl Name for OstPoolOstsRecord {
-        fn table_name() -> TableName<'static> {
-            OSTPOOL_OSTS_TABLE_NAME
-        }
-    }
-
-    impl Id for OstPoolOstsRecord {
-        fn id(&self) -> u32 {
-            self.id
-        }
-    }
 }
 
 /// Types used for component checks

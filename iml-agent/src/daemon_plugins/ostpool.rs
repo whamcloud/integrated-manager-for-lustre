@@ -8,7 +8,11 @@ use crate::{
     cmd::lctl,
     daemon_plugins::{DaemonPlugin, Output},
 };
-use futures::{future::{join_all, try_join_all}, lock::Mutex, Future, FutureExt};
+use futures::{
+    future::{join_all, try_join_all},
+    lock::Mutex,
+    Future, FutureExt,
+};
 use iml_wire_types::{OstPool, OstPoolAction};
 use std::{
     collections::{HashMap, HashSet},
@@ -107,9 +111,7 @@ fn diff_state(
     Ok(changes)
 }
 
-async fn get_fsmap(
-    fsname: String,
-) -> Vec<(String, String, HashSet<String>)> {
+async fn get_fsmap(fsname: String) -> Vec<(String, String, HashSet<String>)> {
     let xs = pool_list(&fsname)
         .await
         .unwrap_or(vec![])
@@ -166,7 +168,7 @@ impl DaemonPlugin for PoolState {
                 .collect();
 
             let mut state = state.lock().await;
-            
+
             let pools: Vec<(OstPoolAction, OstPool)> = init_pools(&mut state, xs);
 
             let x = serde_json::to_value(pools).map(Some)?;
@@ -194,7 +196,7 @@ impl DaemonPlugin for PoolState {
                         diff_state(fs, hm, &pools)
                     } else {
                         let xs = get_fsmap(fs).await;
-                        
+
                         let mut state = state.lock().await;
 
                         let pools: Vec<(OstPoolAction, OstPool)> = init_pools(&mut state, xs);
