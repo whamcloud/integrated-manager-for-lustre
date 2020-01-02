@@ -1,0 +1,19 @@
+[package]
+name = "iml-orm"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+diesel = { version = "1.4", features = ["postgres", "r2d2"], optional = true }
+iml-manager-env = { path = "../iml-manager-env", version = "0.1.0", optional = true }
+ipnetwork = "0.15"
+r2d2 = {version = "0.8", optional = true }
+serde = { version = "1", features = ["derive"] }
+
+[features]
+postgres-interop = ["diesel", "iml-manager-env", "r2d2"]
+wasm = ["chrono/wasmbind"]
