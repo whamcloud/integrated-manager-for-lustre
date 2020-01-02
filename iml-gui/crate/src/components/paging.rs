@@ -33,24 +33,31 @@ impl Model {
             ..Model::default()
         }
     }
-    pub fn has_more(&self) -> bool {
+
+    pub const fn has_more(&self) -> bool {
         self.limit + self.offset < self.total
     }
-    pub fn has_less(&self) -> bool {
+
+    pub const fn has_less(&self) -> bool {
         self.offset != 0
     }
+
     pub fn has_pages(&self) -> bool {
         self.has_more() || self.has_less()
     }
-    pub fn offset(&self) -> usize {
+
+    pub const fn offset(&self) -> usize {
         self.offset
     }
+
     pub fn end(&self) -> usize {
         std::cmp::min(self.offset + self.limit, self.total)
     }
+
     pub fn range(&self) -> Range<usize> {
         self.offset()..self.end()
     }
+
     pub fn prev_page(&mut self) {
         self.offset = if self.limit > self.offset {
             0
@@ -58,6 +65,7 @@ impl Model {
             self.offset - self.limit
         };
     }
+
     pub fn next_page(&mut self) {
         self.offset = std::cmp::min(self.offset + self.limit, self.total - 1);
     }

@@ -7,16 +7,12 @@ use seed::{dom_types::Attrs, prelude::*, *};
 /// Call this fn within the element wrapping the tooltip
 /// It will add the needed styles so the tooltip will render
 /// in the expected position and will render on hover.
-pub fn tooltip_container() -> Attrs {
+pub fn container() -> Attrs {
     class![C.relative, C.group, C.cursor_pointer]
 }
 
 /// Render a tooltip with vaild CSS color string.
-pub(crate) fn color_tooltip<T>(
-    content: &str,
-    placement: &Placement,
-    color: &str,
-) -> Node<T> {
+pub(crate) fn color_view<T>(content: &str, placement: Placement, color: &str) -> Node<T> {
     let tooltip_top_styles = style! {
         St::Transform => "translate(50%, -100%)",
         St::Top => 0,
@@ -62,7 +58,7 @@ pub(crate) fn color_tooltip<T>(
             C.z_20
         ],
         tooltip_style,
-        arrow(&placement, &color),
+        arrow(placement, color),
         div![
             class![
                 C.text_center,
@@ -84,14 +80,11 @@ pub(crate) fn color_tooltip<T>(
 }
 
 /// Render a tooltip.
-pub(crate) fn tooltip<T>(content: &str, direction: &Placement) -> Node<T> {
-    color_tooltip(content, direction, "black")
+pub(crate) fn view<T>(content: &str, direction: Placement) -> Node<T> {
+    color_view(content, direction, "black")
 }
 
 /// Render a tooltip with a red error color.
-pub(crate) fn error_tooltip<T>(
-    content: &str,
-    direction: &Placement,
-) -> Node<T> {
-    color_tooltip(content, direction, "red")
+pub(crate) fn error_view<T>(content: &str, direction: Placement) -> Node<T> {
+    color_view(content, direction, "red")
 }

@@ -1,7 +1,7 @@
 use crate::{generated::css_classes::C, Model, Msg};
 use seed::{prelude::*, *};
 
-pub fn view(model: &Model) -> impl View<Msg> {
+pub fn view(_model: &Model) -> impl View<Msg> {
     div![
         class![
             C.mt_16,

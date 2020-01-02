@@ -11,9 +11,7 @@ mod generated;
 mod page;
 mod route;
 
-use components::{
-    breadcrumbs::BreadCrumbs, update_activity_health, ActivityHealth,
-};
+use components::{breadcrumbs::BreadCrumbs, update_activity_health, ActivityHealth};
 use generated::css_classes::C;
 use iml_wire_types::warp_drive;
 use js_sys::Function;
@@ -28,7 +26,7 @@ const TITLE_SUFFIX: &str = "IML";
 const USER_AGENT_FOR_PRERENDERING: &str = "ReactSnap";
 const STATIC_PATH: &str = "static";
 const SLIDER_WIDTH_PX: u32 = 5;
-const MAX_SIDE_PERCENTAGE: f32 = 35f32;
+const MAX_SIDE_PERCENTAGE: f32 = 35_f32;
 
 /// This depends on where and how https://github.com/whamcloud/Online-Help is deployed.
 /// With `nginx` when config is like
@@ -76,15 +74,18 @@ impl WatchState {
             _ => false,
         }
     }
+
     pub fn is_watching(self) -> bool {
         match self {
             WatchState::Watching => true,
             _ => false,
         }
     }
+
     pub fn should_update(self) -> bool {
         self.is_watching() || self.is_open()
     }
+
     pub fn update(&mut self) {
         match self {
             WatchState::Close => {
@@ -152,26 +153,11 @@ fn before_mount(_: Url) -> BeforeMount {
 fn after_mount(url: Url, orders: &mut impl Orders<Msg>) -> AfterMount<Model> {
     let es = EventSource::new("https://localhost:7444/messaging").unwrap();
 
-    register_eventsource_handle(
-        EventSource::set_onopen,
-        Msg::EventSourceConnect,
-        &es,
-        orders,
-    );
+    register_eventsource_handle(EventSource::set_onopen, Msg::EventSourceConnect, &es, orders);
 
-    register_eventsource_handle(
-        EventSource::set_onmessage,
-        Msg::EventSourceMessage,
-        &es,
-        orders,
-    );
+    register_eventsource_handle(EventSource::set_onmessage, Msg::EventSourceMessage, &es, orders);
 
-    register_eventsource_handle(
-        EventSource::set_onerror,
-        Msg::EventSourceError,
-        &es,
-        orders,
-    );
+    register_eventsource_handle(EventSource::set_onerror, Msg::EventSourceError, &es, orders);
 
     orders.send_msg(Msg::UpdatePageTitle);
 
@@ -181,17 +167,16 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg>) -> AfterMount<Model> {
         in_prerendering: is_in_prerendering(),
         manage_menu_state: WatchState::default(),
         track_slider: false,
-        side_width_percentage: 20f32,
+        side_width_percentage: 20_f32,
         records: warp_drive::Cache::default(),
         locks: HashMap::new(),
-        activity_health: ActivityHealth::new(),
+        activity_health: ActivityHealth::default(),
         breadcrumbs: BreadCrumbs::default(),
     })
 }
 
 fn is_in_prerendering() -> bool {
-    let user_agent =
-        window().navigator().user_agent().expect("cannot get user agent");
+    let user_agent = window().navigator().user_agent().expect("cannot get user agent");
 
     user_agent == USER_AGENT_FOR_PRERENDERING
 }
@@ -225,8 +210,8 @@ pub enum Msg {
     EventSourceConnect(JsValue),
     EventSourceMessage(MessageEvent),
     EventSourceError(JsValue),
-    Records(warp_drive::Cache),
-    RecordChange(warp_drive::RecordChange),
+    Records(Box<warp_drive::Cache>),
+    RecordChange(Box<warp_drive::RecordChange>),
     Locks(warp_drive::Locks),
     WindowClick,
 }
@@ -242,8 +227,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.breadcrumbs.push(model.route.clone());
         }
         Msg::UpdatePageTitle => {
-            let title =
-                format!("{} - {}", model.route.to_string(), TITLE_SUFFIX);
+            let title = format!("{} - {}", model.route.to_string(), TITLE_SUFFIX);
 
             document().set_title(&title);
         }
@@ -257,10 +241,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
             let msg = match msg {
                 warp_drive::Message::Locks(locks) => Msg::Locks(locks),
-                warp_drive::Message::Records(records) => Msg::Records(records),
-                warp_drive::Message::RecordChange(record_change) => {
-                    Msg::RecordChange(record_change)
-                }
+                warp_drive::Message::Records(records) => Msg::Records(Box::new(records)),
+                warp_drive::Message::RecordChange(record_change) => Msg::RecordChange(Box::new(record_change)),
             };
 
             orders.send_msg(msg);
@@ -269,18 +251,16 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             log("EventSource error.");
         }
         Msg::Records(records) => {
-            model.records = records;
+            model.records = *records;
 
-            model.activity_health =
-                update_activity_health(&model.records.active_alert);
+            model.activity_health = update_activity_health(&model.records.active_alert);
         }
-        Msg::RecordChange(record_change) => match record_change {
+        Msg::RecordChange(record_change) => match *record_change {
             warp_drive::RecordChange::Update(record) => match record {
                 warp_drive::Record::ActiveAlert(x) => {
                     model.records.active_alert.insert(x.id, x);
 
-                    model.activity_health =
-                        update_activity_health(&model.records.active_alert);
+                    model.activity_health = update_activity_health(&model.records.active_alert);
                 }
                 warp_drive::Record::Filesystem(x) => {
                     model.records.filesystem.insert(x.id, x);
@@ -370,15 +350,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
             let x_position = cmp::max(0, x_position) as u32;
 
-            let side_width_percentage: f32 =
-                (x_position as f32 / overlay_width_px as f32) * 100_f32;
+            let side_width_percentage: f32 = (x_position as f32 / overlay_width_px as f32) * 100_f32;
 
-            model.side_width_percentage =
-                if MAX_SIDE_PERCENTAGE <= side_width_percentage {
-                    MAX_SIDE_PERCENTAGE
-                } else {
-                    side_width_percentage
-                };
+            model.side_width_percentage = if MAX_SIDE_PERCENTAGE <= side_width_percentage {
+                MAX_SIDE_PERCENTAGE
+            } else {
+                side_width_percentage
+            };
         }
         Msg::WindowClick => {
             if model.manage_menu_state.should_update() {
@@ -414,13 +392,7 @@ pub fn view(model: &Model) -> impl View<Msg> {
         // slider overlay
         if model.track_slider {
             div![
-                class![
-                    C.w_full,
-                    C.h_full,
-                    C.fixed,
-                    C.top_0,
-                    C.cursor_ew_resize,
-                ],
+                class![C.w_full, C.h_full, C.fixed, C.top_0, C.cursor_ew_resize,],
                 style! { St::ZIndex => 9999 },
                 mouse_ev(Ev::MouseMove, |ev| {
                     let target = ev.target().unwrap();
@@ -437,13 +409,7 @@ pub fn view(model: &Model) -> impl View<Msg> {
         page::partial::header::view(model).els(),
         // panel container
         div![
-            class![
-                C.flex,
-                C.flex_wrap,
-                C.flex_col,
-                C.lg__flex_row,
-                C.flex_grow
-            ],
+            class![C.flex, C.flex_wrap, C.flex_col, C.lg__flex_row, C.flex_grow],
             // side panel
             div![
                 class![
@@ -501,34 +467,25 @@ pub fn view(model: &Model) -> impl View<Msg> {
                 ],
                 // main content
                 div![
-                    class![
-                        C.flex_grow,
-                        C.overflow_x_auto,
-                        C.overflow_y_auto,
-                        C.p_6
-                    ],
+                    class![C.flex_grow, C.overflow_x_auto, C.overflow_y_auto, C.p_6],
                     match &model.route {
-                        Route::About => page::about::view(&model).els(),
-                        Route::Activity => page::activity::view(&model).els(),
-                        Route::Dashboard => page::dashboard::view(&model).els(),
-                        Route::Filesystem =>
-                            page::filesystem::view(&model).els(),
-                        Route::FilesystemDetail =>
-                            page::filesystem_detail::view(&model).els(),
-                        Route::Home => page::home::view(&model).els(),
-                        Route::Jobstats => page::jobstats::view(&model).els(),
-                        Route::Login => page::login::view(&model).els(),
-                        Route::Logs => page::logs::view(&model).els(),
-                        Route::Mgt => page::mgt::view(&model).els(),
-                        Route::NotFound => page::not_found::view(&model).els(),
-                        Route::PowerControl =>
-                            page::power_control::view(&model).els(),
-                        Route::Server => page::server::view(&model).els(),
-                        Route::ServerDetail(id) =>
-                            page::server_detail::view(&model, &id).els(),
-                        Route::Target => page::target::view(&model).els(),
-                        Route::User => page::user::view(&model).els(),
-                        Route::Volume => page::volume::view(&model).els(),
+                        Route::About => page::about::view(model).els(),
+                        Route::Activity => page::activity::view(model).els(),
+                        Route::Dashboard => page::dashboard::view(model).els(),
+                        Route::Filesystem => page::filesystem::view(model).els(),
+                        Route::FilesystemDetail => page::filesystem_detail::view(model).els(),
+                        Route::Home => page::home::view(model).els(),
+                        Route::Jobstats => page::jobstats::view(model).els(),
+                        Route::Login => page::login::view(model).els(),
+                        Route::Logs => page::logs::view(model).els(),
+                        Route::Mgt => page::mgt::view(model).els(),
+                        Route::NotFound => page::not_found::view(model).els(),
+                        Route::PowerControl => page::power_control::view(model).els(),
+                        Route::Server => page::server::view(model).els(),
+                        Route::ServerDetail(id) => page::server_detail::view(model, id).els(),
+                        Route::Target => page::target::view(model).els(),
+                        Route::User => page::user::view(model).els(),
+                        Route::Volume => page::volume::view(model).els(),
                     },
                 ],
                 page::partial::footer::view().els(),

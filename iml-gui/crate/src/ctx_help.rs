@@ -1,4 +1,4 @@
-use crate::{route::Route, CTX_HELP};
+use crate::route::Route;
 
 pub(crate) trait CtxHelp {
     fn help_link(&self) -> Option<String>;

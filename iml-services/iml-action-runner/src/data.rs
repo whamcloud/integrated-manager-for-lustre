@@ -4,7 +4,7 @@
 
 use crate::{error::ActionRunnerError, Sender, Sessions, Shared};
 use iml_wire_types::{Action, ActionId, Fqdn, Id, ManagerMessage, PluginName};
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, convert::TryInto, sync::Arc, time::Duration};
 use tokio::time::{delay_until, Instant};
 
 pub type Rpcs = HashMap<ActionId, ActionInFlight>;
@@ -141,13 +141,13 @@ pub fn remove_action_in_flight<'a>(
 pub fn create_data_message(
     session_id: Id,
     fqdn: Fqdn,
-    body: impl Into<serde_json::Value>,
+    body: impl TryInto<serde_json::Value, Error = serde_json::Error>,
 ) -> ManagerMessage {
     ManagerMessage::Data {
         session_id,
         fqdn,
         plugin: PluginName("action_runner".to_string()),
-        body: body.into(),
+        body: body.try_into().unwrap(),
     }
 }
 
