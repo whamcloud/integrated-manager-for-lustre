@@ -62,6 +62,7 @@ pub enum ImlManagerCliError {
     RunStratagemValidationError(RunStratagemValidationError),
     SerdeJsonError(serde_json::error::Error),
     DoesNotExist(&'static str),
+    ProfileDoesNotExist(String),
     ApiError(String),
     IoError(std::io::Error),
     CombineEasyError(combine::stream::easy::Errors<char, &'static str, usize>),
@@ -79,6 +80,9 @@ impl std::fmt::Display for ImlManagerCliError {
             ImlManagerCliError::RunStratagemValidationError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::SerdeJsonError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::DoesNotExist(ref err) => write!(f, "{} does not exist", err),
+            ImlManagerCliError::ProfileDoesNotExist(ref err) => {
+                write!(f, "Profile {} does not exist", err)
+            }
             ImlManagerCliError::ApiError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::IoError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::CombineEasyError(ref err) => write!(f, "{}", err),
@@ -104,6 +108,7 @@ impl std::error::Error for ImlManagerCliError {
             ImlManagerCliError::RunStratagemValidationError(ref err) => Some(err),
             ImlManagerCliError::SerdeJsonError(ref err) => Some(err),
             ImlManagerCliError::DoesNotExist(_) => None,
+            ImlManagerCliError::ProfileDoesNotExist(_) => None,
             ImlManagerCliError::ApiError(_) => None,
             ImlManagerCliError::IoError(ref err) => Some(err),
             ImlManagerCliError::CombineEasyError(ref err) => Some(err),

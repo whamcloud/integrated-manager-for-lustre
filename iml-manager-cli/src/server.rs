@@ -372,36 +372,42 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
 
             tracing::debug!("Host Profiles {:?}", objects);
 
-            let objects: Vec<_> = objects
+            let object = objects
                 .into_iter()
                 .filter_map(|x| x.host_profiles)
-                .filter(|x| is_profile_exist(&x, &profile.name))
-                .filter(|x| {
-                    is_profile_valid(&x, &profile.name)
-                        || can_continue(&config, &format!("Profile {} is invalid", &profile.name))
-                })
-                .map(|x| HostProfileConfig {
-                    host: x.host,
+                .find(|x| is_profile_exist(&x, &profile.name));
+
+            let object = match object {
+                Some(object) => object,
+                None => return Err(ImlManagerCliError::ProfileDoesNotExist(profile.name)),
+            };
+
+            if is_profile_valid(&object, &profile.name)
+                || can_continue(&config, &format!("Profile {} is invalid", &profile.name))
+            {
+                let object = HostProfileConfig {
+                    host: object.host,
                     profile: &profile.name,
-                })
-                .collect();
+                };
 
-            let Objects { objects } = post(HostProfile::endpoint_name(), Objects { objects })
-                .await?
-                .json()
-                .await
-                .map_err(iml_manager_client::ImlManagerClientError::Reqwest)?;
+                let objects = vec![object];
+                let Objects { objects } = post(HostProfile::endpoint_name(), Objects { objects })
+                    .await?
+                    .json()
+                    .await
+                    .map_err(iml_manager_client::ImlManagerClientError::Reqwest)?;
 
-            tracing::debug!("Host Profile resp {:?}", objects);
+                tracing::debug!("Host Profile resp {:?}", objects);
 
-            let cmds = objects
-                .into_iter()
-                .flat_map(|HostProfileCmdWrapper { commands }| commands)
-                .collect();
+                let cmds = objects
+                    .into_iter()
+                    .flat_map(|HostProfileCmdWrapper { commands }| commands)
+                    .collect();
 
-            term.write_line(&format!("{} host profiles...", style("Setting").green()))?;
+                term.write_line(&format!("{} host profiles...", style("Setting").green()))?;
 
-            wait_for_cmds(cmds).await?;
+                wait_for_cmds(cmds).await?;
+            }
         }
     };
 
