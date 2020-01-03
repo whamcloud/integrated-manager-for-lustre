@@ -16,3 +16,12 @@ pub async fn loaded(module: String) -> Result<bool, ImlAgentError> {
 
     Ok(module.is_some())
 }
+
+pub async fn version(module: String) -> Result<String, ImlAgentError> {
+    let output = cmd_output_success("modinfo", vec!["-F", "version", &module]).await?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let version = stdout.trim().to_string();
+
+    Ok(version)
+}

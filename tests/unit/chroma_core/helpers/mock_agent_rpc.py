@@ -106,7 +106,7 @@ class MockAgentRpc(object):
     @classmethod
     def _call(cls, host, cmd, args):
         cls.calls.append((cmd, args))
-        cls.host_calls[host].append((cmd, args))
+        cls.host_calls[host.fqdn].append((cmd, args))
 
         if not cls.succeed:
             cls._fail(host.fqdn)
@@ -208,10 +208,10 @@ class MockAgentRpc(object):
                 0 if mock_server["tests"]["reverse_ping"] else 1
             )
             return result
-        elif "python-fedora-django" in cmd:
-            return 0 if mock_server["tests"]["yum_valid_repos"] else 1
         elif "ElectricFence" in cmd:
             return 0 if mock_server["tests"]["yum_can_update"] else 1
+        elif "openssl version -a" in cmd:
+            return 0 if mock_server["tests"]["openssl"] else 1
         elif "curl -k https" in cmd:
             return json.dumps({"host_id": host.id, "command_id": 0})
         elif cmd in [
@@ -252,6 +252,7 @@ class MockAgentRpc(object):
             "configure_network",
             "open_firewall",
             "close_firewall",
+            "writeconf_target",
         ]:
             return agent_result_ok
         elif cmd == "get_corosync_autoconfig":

@@ -1,5 +1,6 @@
 from copy import deepcopy
 from itertools import chain
+import json
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
@@ -22,7 +23,7 @@ class NidTestCase(JobTestCase):
 
     def assertNidsCorrect(self, host):
         JobSchedulerClient.command_run_jobs(
-            [{"class_name": "UpdateDevicesJob", "args": {"hosts": [api.get_resource_uri(host)]}}], "Test update of nids"
+            [{"class_name": "UpdateDevicesJob", "args": {"host_ids": json.dumps([host.id])}}], "Test update of nids"
         )
         self.drain_progress()
 
@@ -94,9 +95,9 @@ class TestUpdateNids(NidTestCase):
 
         self.mgt, mgt_tms = ManagedMgs.create_for_volume(synthetic_volume_full(mgs).id, name="MGS")
         self.fs = ManagedFilesystem.objects.create(mgs=self.mgt, name="testfs")
+        ObjectCache.add(ManagedFilesystem, self.fs)
         self.mdt, mdt_tms = ManagedMdt.create_for_volume(synthetic_volume_full(mds).id, filesystem=self.fs)
         self.ost, ost_tms = ManagedOst.create_for_volume(synthetic_volume_full(oss).id, filesystem=self.fs)
-        ObjectCache.add(ManagedFilesystem, self.fs)
         for target in [self.mgt, self.ost, self.mdt]:
             ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
         for tm in chain(mgt_tms, mdt_tms, ost_tms):
@@ -108,13 +109,13 @@ class TestUpdateNids(NidTestCase):
         self.assertNidsCorrect(mgs)
 
         JobSchedulerClient.command_run_jobs(
-            [{"class_name": "UpdateNidsJob", "args": {"hosts": [api.get_resource_uri(mgs)]}}], "Test update nids"
+            [{"class_name": "UpdateNidsJob", "args": {"host_ids": json.dumps([mgs.id])}}], "Test update nids"
         )
         self.drain_progress()
-        # The -3 looks past the start/stop that happens after writeconf
-        self.assertEqual(MockAgentRpc.host_calls[mgs][-3][0], "writeconf_target")
-        self.assertEqual(MockAgentRpc.host_calls[mds][-3][0], "writeconf_target")
-        self.assertEqual(MockAgentRpc.host_calls[oss][-3][0], "writeconf_target")
+        # The -4 looks past the start/stop that happens after writeconf
+        self.assertEqual(MockAgentRpc.host_calls[mgs.fqdn][-4][0], "writeconf_target")
+        self.assertEqual(MockAgentRpc.host_calls[mds.fqdn][-4][0], "writeconf_target")
+        self.assertEqual(MockAgentRpc.host_calls[oss.fqdn][-4][0], "writeconf_target")
         self.assertState(self.fs, "stopped")
 
 
