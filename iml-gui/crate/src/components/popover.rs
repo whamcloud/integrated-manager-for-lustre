@@ -4,22 +4,18 @@ use crate::{
 };
 use seed::{prelude::*, *};
 
-pub fn popover_title<T>(content: &str) -> Node<T> {
+pub fn title_view<T>(content: &str) -> Node<T> {
     div![
         class![C.bg_gray_200, C.py_1, C.px_3],
         h4![class![C.font_normal, C.text_lg], content]
     ]
 }
 
-pub fn popover_content<T>(content: impl View<T>) -> Node<T> {
+pub fn content_view<T>(content: impl View<T>) -> Node<T> {
     div![class![C.py_2, C.px_3, C.w_64], content.els()]
 }
 
-pub(crate) fn popover<T>(
-    content: impl View<T>,
-    placement: Placement,
-    visible: bool,
-) -> Node<T> {
+pub(crate) fn view<T>(content: impl View<T>, placement: Placement, visible: bool) -> Node<T> {
     let color = "#e2e8f0";
 
     let popover_top_styles = style! {
@@ -66,7 +62,7 @@ pub(crate) fn popover<T>(
             C.block => visible
         ],
         popover_style,
-        arrow(&placement, &color),
+        arrow(placement, color),
         div![class![C.rounded, C.shadow, C.bg_white,], content.els(),]
     ]
 }

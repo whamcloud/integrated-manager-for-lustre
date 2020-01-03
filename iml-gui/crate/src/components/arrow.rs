@@ -1,7 +1,7 @@
 use crate::{components::Placement, generated::css_classes::C};
 use seed::{prelude::*, *};
 
-pub(crate) fn arrow<T>(direction: &Placement, color: &str) -> Node<T> {
+pub(crate) fn arrow<T>(direction: Placement, color: &str) -> Node<T> {
     let arrow_top_styles = style! {
         St::Top => percent(100),
         St::Left => percent(50),

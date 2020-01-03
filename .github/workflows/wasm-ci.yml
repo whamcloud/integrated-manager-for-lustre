@@ -25,9 +25,10 @@ jobs:
           toolchain: ${{ matrix.rust }}
           override: true
 
-      - name: Check build
-        working-directory: ./iml-wasm-components
-        run: cargo check --all
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --manifest-path iml-wasm-components/Cargo.toml
 
   clippy:
     name: Clippy
@@ -39,10 +40,10 @@ jobs:
           toolchain: stable
           override: true
       - run: rustup component add clippy
-
-      - name: Run clippy
-        working-directory: ./iml-wasm-components
-        run: cargo clippy -- -W warnings
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path iml-wasm-components/Cargo.toml -- -W warnings
 
   rustfmt:
     name: Format
@@ -54,10 +55,10 @@ jobs:
           toolchain: stable
           override: true
       - run: rustup component add rustfmt
-
-      - name: Run cargo fmt
-        working-directory: ./iml-wasm-components
-        run: cargo fmt --all -- --check
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --manifest-path iml-wasm-components/Cargo.toml --all -- --check
 
   test:
     name: Test Suite
@@ -77,8 +78,10 @@ jobs:
           override: true
 
       - name: Run cargo test
-        working-directory: ./iml-wasm-components
-        run: cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path iml-wasm-components/Cargo.toml
 
   check_rpm_build:
     name: Check RPM build

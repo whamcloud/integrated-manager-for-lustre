@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use serde_json;
-use std::{collections::HashMap, fmt};
+use std::{collections::HashMap, convert::TryFrom, fmt};
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
@@ -231,9 +231,11 @@ impl Action {
     }
 }
 
-impl From<Action> for serde_json::Value {
-    fn from(action: Action) -> Self {
-        serde_json::to_value(action).unwrap()
+impl TryFrom<Action> for serde_json::Value {
+    type Error = serde_json::Error;
+
+    fn try_from(action: Action) -> Result<serde_json::Value, serde_json::Error> {
+        serde_json::to_value(action)
     }
 }
 
@@ -1996,17 +1998,17 @@ pub mod warp_drive {
         /// Removes the record from the cache
         pub fn remove_record(&mut self, x: &RecordId) -> bool {
             match x {
-                RecordId::ActiveAlert(id) => self.active_alert.remove(&id).is_some(),
-                RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
-                RecordId::Host(id) => self.host.remove(&id).is_some(),
-                RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
-                RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(&id).is_some(),
-                RecordId::OstPool(id) => self.ost_pool.remove(&id).is_some(),
-                RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(&id).is_some(),
-                RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
-                RecordId::Target(id) => self.target.remove(&id).is_some(),
-                RecordId::Volume(id) => self.volume.remove(&id).is_some(),
-                RecordId::VolumeNode(id) => self.volume_node.remove(&id).is_some(),
+                RecordId::ActiveAlert(id) => self.active_alert.remove(id).is_some(),
+                RecordId::Filesystem(id) => self.filesystem.remove(id).is_some(),
+                RecordId::Host(id) => self.host.remove(id).is_some(),
+                RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(id).is_some(),
+                RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(id).is_some(),
+                RecordId::OstPool(id) => self.ost_pool.remove(id).is_some(),
+                RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(id).is_some(),
+                RecordId::StratagemConfig(id) => self.stratagem_config.remove(id).is_some(),
+                RecordId::Target(id) => self.target.remove(id).is_some(),
+                RecordId::Volume(id) => self.volume.remove(id).is_some(),
+                RecordId::VolumeNode(id) => self.volume_node.remove(id).is_some(),
             }
         }
         /// Inserts the record into the cache

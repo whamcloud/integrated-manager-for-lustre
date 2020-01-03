@@ -1,8 +1,6 @@
-use crate::route::Route;
-use crate::{generated::css_classes::C, Msg};
+use crate::{generated::css_classes::C, route::Route, Msg};
 use seed::{prelude::*, *};
-use std::cmp::PartialEq;
-use std::collections::LinkedList;
+use std::{cmp::PartialEq, collections::LinkedList};
 
 #[derive(Debug)]
 pub struct BreadCrumbs<Crumb> {
@@ -31,11 +29,11 @@ impl<Crumb: PartialEq> BreadCrumbs<Crumb> {
         let mut new_crumbs = LinkedList::new();
 
         while let Some(c) = self.crumbs.pop_front() {
-            if c != n {
-                new_crumbs.push_back(c);
-            } else {
+            if c == n {
                 break;
             }
+
+            new_crumbs.push_back(c);
         }
 
         new_crumbs.push_back(n);
