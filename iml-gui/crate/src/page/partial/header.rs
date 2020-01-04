@@ -6,8 +6,7 @@ use crate::{
     Visibility::*,
     CTX_HELP,
 };
-use seed::dom_types::Attrs;
-use seed::{prelude::*, *};
+use seed::{dom_types::Attrs, prelude::*, *};
 
 fn menu_icon<T>(icon_name: &str) -> Node<T> {
     font_awesome(class![C.h_6, C.w_6, C.mr_3, C.inline], icon_name)
@@ -133,10 +132,7 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                 span![
                     class![C.group_hover__text_active],
                     "Management",
-                    font_awesome(
-                        class![C.fill_current, C.h_3, C.w_3, C.ml_1, C.inline],
-                        "chevron-down"
-                    ),
+                    font_awesome(class![C.fill_current, C.h_3, C.w_3, C.ml_1, C.inline], "chevron-down"),
                 ],
             ],
             nav_manage_dropdown(model.manage_menu_state.is_open()),
@@ -169,7 +165,7 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                 ]
             ]
         ],
-        context_sensitive_help_link(&model, &menu_class),
+        context_sensitive_help_link(model, &menu_class),
         a![
             &menu_class,
             class![C.bg_menu_active => model.route == Route::Activity],
@@ -218,13 +214,7 @@ fn nav(model: &Model) -> Node<Msg> {
             C.flex_wrap
         ],
         div![
-            class![
-                C.flex,
-                C.items_center,
-                C.flex_shrink_0,
-                C.text_white,
-                C.mr_12,
-            ],
+            class![C.flex, C.items_center, C.flex_shrink_0, C.text_white, C.mr_12,],
             svg![
                 class![C.fill_current, C.h_8, C.w_8, C.mr_3,],
                 attrs! {
@@ -258,9 +248,7 @@ fn nav(model: &Model) -> Node<Msg> {
                         At::ViewBox => "0 0 20 20",
                     },
                     title!["Menu",],
-                    path![
-                        attrs! { At::D => "M0 3h20v2H0V3zm0 6h20v2H0V9zm0 6h20v2H0v-2z", },
-                    ],
+                    path![attrs! { At::D => "M0 3h20v2H0V3zm0 6h20v2H0V9zm0 6h20v2H0v-2z", },],
                 ],
             ],
         ],
@@ -275,15 +263,9 @@ fn nav(model: &Model) -> Node<Msg> {
                     C.lg__w_auto,
                     C.lg__h_16,
                 ],
-                main_menu_items(&model),
+                main_menu_items(model),
                 div![
-                    class![
-                        C.text_base,
-                        C.lg__flex,
-                        C.lg__h_16,
-                        C.lg__flex_grow,
-                        C.lg__justify_end
-                    ],
+                    class![C.text_base, C.lg__flex, C.lg__h_16, C.lg__flex_grow, C.lg__justify_end],
                     a![
                         class![
                             C.block,
@@ -316,15 +298,9 @@ fn nav(model: &Model) -> Node<Msg> {
 
 pub fn view(model: &Model) -> impl View<Msg> {
     vec![
-        header![nav(&model)],
+        header![nav(model)],
         div![
-            class![
-                C.bg_menu_active,
-                C.text_gray_300,
-                C.text_base,
-                C.text_center,
-                C.py_2
-            ],
+            class![C.bg_menu_active, C.text_gray_300, C.text_base, C.text_center, C.py_2],
             breadcrumbs::view(&model.breadcrumbs).els()
         ],
     ]

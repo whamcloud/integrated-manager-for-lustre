@@ -61,12 +61,13 @@ impl<'a> Route<'a> {
             Self::NotFound => vec!["404"],
             Self::PowerControl => vec!["power_control"],
             Self::Server => vec!["server"],
-            Self::ServerDetail(id) => vec!["server_detail", &id],
+            Self::ServerDetail(id) => vec!["server_detail", id],
             Self::Target => vec!["target"],
             Self::User => vec!["user"],
             Self::Volume => vec!["volume"],
         }
     }
+
     pub fn to_href(&self) -> String {
         format!("/{}", self.path().join("/"))
     }
