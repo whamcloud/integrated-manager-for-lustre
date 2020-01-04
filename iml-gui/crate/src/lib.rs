@@ -8,6 +8,7 @@
 mod components;
 mod ctx_help;
 mod generated;
+mod notification;
 mod page;
 mod route;
 
@@ -16,7 +17,7 @@ use generated::css_classes::C;
 use iml_wire_types::warp_drive;
 use js_sys::Function;
 use route::Route;
-use seed::{events::Listener, prelude::*, *};
+use seed::{prelude::*, virtual_dom::Listener, *};
 use std::{cmp, collections::HashMap, mem};
 use wasm_bindgen::JsCast;
 use web_sys::{EventSource, MessageEvent};
@@ -105,7 +106,6 @@ impl WatchState {
 //     Model
 // ------ ------
 
-#[derive(Debug)]
 pub struct Model {
     pub route: Route<'static>,
     pub menu_visibility: Visibility,
@@ -117,6 +117,7 @@ pub struct Model {
     pub locks: warp_drive::Locks,
     pub activity_health: ActivityHealth,
     pub breadcrumbs: BreadCrumbs<Route<'static>>,
+    notification: notification::Model,
 }
 
 pub fn register_eventsource_handle<T, F>(
@@ -161,6 +162,8 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg>) -> AfterMount<Model> {
 
     orders.send_msg(Msg::UpdatePageTitle);
 
+    orders.proxy(Msg::Notification).perform_cmd(notification::init());
+
     AfterMount::new(Model {
         route: url.into(),
         menu_visibility: Visible,
@@ -172,6 +175,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg>) -> AfterMount<Model> {
         locks: HashMap::new(),
         activity_health: ActivityHealth::default(),
         breadcrumbs: BreadCrumbs::default(),
+        notification: notification::Model::default(),
     })
 }
 
@@ -214,6 +218,7 @@ pub enum Msg {
     RecordChange(Box<warp_drive::RecordChange>),
     Locks(warp_drive::Locks),
     WindowClick,
+    Notification(notification::Msg),
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -253,14 +258,24 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::Records(records) => {
             model.records = *records;
 
+            let old = model.activity_health;
             model.activity_health = update_activity_health(&model.records.active_alert);
+            orders
+                .proxy(Msg::Notification)
+                .send_msg(notification::generate(None, &old, &model.activity_health));
         }
         Msg::RecordChange(record_change) => match *record_change {
             warp_drive::RecordChange::Update(record) => match record {
                 warp_drive::Record::ActiveAlert(x) => {
+                    let msg = x.message.clone();
                     model.records.active_alert.insert(x.id, x);
-
+                    let old = model.activity_health;
                     model.activity_health = update_activity_health(&model.records.active_alert);
+                    orders.proxy(Msg::Notification).send_msg(notification::generate(
+                        Some(msg),
+                        &old,
+                        &model.activity_health,
+                    ));
                 }
                 warp_drive::Record::Filesystem(x) => {
                     model.records.filesystem.insert(x.id, x);
@@ -362,6 +377,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             if model.manage_menu_state.should_update() {
                 model.manage_menu_state.update();
             }
+        }
+        Msg::Notification(nu) => {
+            notification::update(nu, &mut model.notification, &mut orders.proxy(Msg::Notification));
         }
     }
 }

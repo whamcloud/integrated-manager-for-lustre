@@ -14,10 +14,10 @@ pub fn update_activity_health(active_alert: &HashMap<u32, Alert>) -> ActivityHea
         })
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialOrd, PartialEq)]
 pub struct ActivityHealth {
-    pub count: usize,
     pub health: AlertSeverity,
+    pub count: usize,
 }
 
 impl Default for ActivityHealth {
