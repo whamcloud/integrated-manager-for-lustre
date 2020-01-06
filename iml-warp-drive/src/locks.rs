@@ -4,13 +4,13 @@
 
 use crate::request::Request;
 use futures::Stream as Stream03;
+use im::{HashMap, HashSet};
 use iml_rabbit::{
     basic_consume, basic_publish, bind_queue, create_channel, declare_transient_exchange,
     declare_transient_queue, message::Delivery, purge_queue, BasicConsumeOptions, Channel, Client,
     ExchangeKind, ImlRabbitError, Queue,
 };
 use iml_wire_types::{LockAction, LockChange, ToCompositeId};
-use std::collections::{HashMap, HashSet};
 
 /// Declares the exchange for rpc comms
 async fn declare_rpc_exchange(c: Channel) -> Result<Channel, ImlRabbitError> {
@@ -98,16 +98,26 @@ pub fn remove_lock(locks: &mut Locks, lock_change: &LockChange) {
     locks
         .entry(lock_change.composite_id().to_string())
         .and_modify(|xs: &mut HashSet<LockChange>| xs.retain(|x| x.uuid != lock_change.uuid));
-
-    locks.retain(|_, xs| !xs.is_empty());
-
-    tracing::debug!("(remove) locks is now {:?}", locks);
 }
 
 /// Update `Locks` based on a change. Will either attempt an add or remove.
 pub fn update_locks(locks: &mut Locks, lock_change: LockChange) {
     match lock_change.action {
         LockAction::Add => add_lock(locks, lock_change),
-        LockAction::Remove => remove_lock(locks, &lock_change),
+        LockAction::Remove => {
+            remove_lock(locks, &lock_change);
+
+            let to_remove: Vec<_> = locks
+                .iter()
+                .filter_map(|(k, xs)| if xs.is_empty() { Some(k) } else { None })
+                .cloned()
+                .collect();
+
+            for k in to_remove {
+                locks.remove(&k);
+            }
+
+            tracing::debug!("(remove) locks is now {:?}", locks);
+        }
     };
 }

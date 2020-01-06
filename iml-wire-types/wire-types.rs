@@ -1974,7 +1974,7 @@ pub mod warp_drive {
         },
         Alert, Filesystem, Host, LockChange, Target, TargetConfParam, Volume,
     };
-    use std::collections::{HashMap, HashSet};
+    use im::{HashMap, HashSet};
 
     /// The current state of locks based on data from the locks queue
     pub type Locks = HashMap<String, HashSet<LockChange>>;

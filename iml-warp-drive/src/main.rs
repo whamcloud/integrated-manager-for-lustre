@@ -12,7 +12,7 @@ use iml_warp_drive::{
     users,
 };
 use iml_wire_types::warp_drive::{Cache, Message};
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::Filter;
 
@@ -29,9 +29,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Keep track of all connected users, key is `usize`, value
     // is a event stream sender.
-    let user_state: users::SharedUsers = Arc::new(Mutex::new(HashMap::new()));
+    let user_state: users::SharedUsers = Arc::new(Mutex::new(im::hashmap! {}));
 
-    let lock_state: SharedLocks = Arc::new(Mutex::new(HashMap::new()));
+    let lock_state: SharedLocks = Arc::new(Mutex::new(im::hashmap! {}));
 
     let api_cache_state: SharedCache = Arc::new(Mutex::new(Cache::default()));
 

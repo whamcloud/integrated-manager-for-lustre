@@ -17,6 +17,7 @@ wasm-bindgen-test = "0.2" # sync with `wasm-bindgen`
 
 [dependencies]
 chrono = { version = "0.4", features = ["wasmbind"] }
+im = { version = "14.1", features = ["serde"] }
 iml-wire-types = { path = "../../iml-wire-types", version = "0.2" }
 js-sys = "0.3.33"
 seed = "0.5.1"
