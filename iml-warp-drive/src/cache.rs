@@ -4,6 +4,7 @@
 
 use crate::{listen::MessageType, DbRecord};
 use futures::{future, lock::Mutex, Future, FutureExt, Stream, TryFutureExt, TryStreamExt};
+use im::HashMap;
 use iml_manager_client::{get, get_client, Client, ImlManagerClientError};
 use iml_postgres::Client as PgClient;
 use iml_wire_types::{
@@ -15,7 +16,7 @@ use iml_wire_types::{
     warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam, Volume,
 };
-use std::{collections::HashMap, fmt::Debug, iter, pin::Pin, sync::Arc};
+use std::{fmt::Debug, iter, pin::Pin, sync::Arc};
 
 pub type SharedCache = Arc<Mutex<Cache>>;
 
@@ -223,7 +224,7 @@ async fn into_row<T>(
     s: impl Stream<Item = Result<iml_postgres::Row, iml_postgres::Error>>,
 ) -> Result<HashMap<u32, T>, iml_postgres::Error>
 where
-    T: From<iml_postgres::Row> + Name + Id,
+    T: From<iml_postgres::Row> + Name + Id + Clone,
 {
     s.map_ok(T::from)
         .map_ok(|record| (record.id(), record))

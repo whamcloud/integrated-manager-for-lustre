@@ -1,5 +1,4 @@
 use crate::components::ActivityHealth;
-use iml_wire_types::Alert;
 use seed::prelude::Orders;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;

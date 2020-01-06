@@ -18,7 +18,7 @@ use iml_wire_types::warp_drive;
 use js_sys::Function;
 use route::Route;
 use seed::{prelude::*, virtual_dom::Listener, *};
-use std::{cmp, collections::HashMap, mem};
+use std::{cmp, mem};
 use wasm_bindgen::JsCast;
 use web_sys::{EventSource, MessageEvent};
 use Visibility::*;
@@ -172,7 +172,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg>) -> AfterMount<Model> {
         track_slider: false,
         side_width_percentage: 20_f32,
         records: warp_drive::Cache::default(),
-        locks: HashMap::new(),
+        locks: im::hashmap!(),
         activity_health: ActivityHealth::default(),
         breadcrumbs: BreadCrumbs::default(),
         notification: notification::Model::default(),

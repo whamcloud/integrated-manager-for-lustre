@@ -9,13 +9,11 @@ use futures::{
     lock::Mutex,
     Stream, StreamExt,
 };
+use im::HashMap;
 use iml_wire_types::warp_drive::{Cache, Message};
-use std::{
-    collections::HashMap,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    },
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
 };
 use warp::sse::ServerSentEvent;
 
