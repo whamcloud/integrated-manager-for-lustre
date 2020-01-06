@@ -23,13 +23,13 @@ pub fn format(num: f64, precision: Option<usize>, suffix: &str, order2: bool) ->
 
     let unit = units[pwr as usize];
 
-    if suffix.len() > 0 {
-        if order2 && suffix.len() > 0 && unit.len() > 0 {
+    if !suffix.is_empty() {
+        if order2 && !unit.is_empty() {
             format!("{}{:.*} {}i{}", sign, precision, num, unit, suffix)
         } else {
             format!("{}{:.*} {}{}", sign, precision, num, unit, suffix)
         }
-    } else if unit.len() > 0 {
+    } else if !unit.is_empty() {
         format!("{}{:.*}{}", sign, precision, num, unit)
     } else {
         format!("{}{:.*}", sign, precision, num)
