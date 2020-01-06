@@ -10,6 +10,7 @@ use crate::{
     error::ImlManagerCliError,
 };
 use console::{style, Term};
+use dialoguer::Confirmation;
 use futures::future;
 use iml_wire_types::{
     ApiList, Command, EndpointName, Host, HostProfile, HostProfileWrapper, ProfileTest,
@@ -31,6 +32,12 @@ pub struct AddHosts {
     /// The profile to deploy to each host
     #[structopt(short = "p", long = "profile")]
     profile: String,
+    /// Prompt to continue if command fails
+    #[structopt(long, conflicts_with = "force")]
+    prompt: bool,
+    /// Always continue if command fails
+    #[structopt(long)]
+    force: bool,
 }
 
 #[derive(Debug, StructOpt)]
@@ -95,13 +102,17 @@ fn filter_known_hosts<'a, 'b>(
         .collect()
 }
 
-fn is_profile_valid(x: &HostProfile, profile_name: &str) -> bool {
-    let checks = x.profiles.get(profile_name);
+fn can_continue(config: &AddHosts) -> bool {
+    config.force || (config.prompt && get_confirm())
+}
 
-    match checks {
-        Some(xs) => xs.iter().all(|y| y.pass),
-        None => false,
-    }
+fn get_confirm() -> bool {
+    Confirmation::new()
+        .with_text("Continue deployment?")
+        .default(true)
+        .show_default(true)
+        .interact()
+        .unwrap_or(false)
 }
 
 async fn wait_till_agent_starts(
@@ -141,36 +152,28 @@ async fn wait_till_agent_starts(
             })
             .collect::<Result<HashMap<u32, Vec<ProfileTest>>, ImlManagerCliError>>()?;
 
-        let all_passed = profile_checks
-            .values()
-            .all(|checks| checks.iter().all(|y| y.pass));
+        let waiting_for_agent: Vec<_> = profile_checks
+            .iter()
+            .filter(|(_, checks)| {
+                checks
+                    .iter()
+                    .any(|y| y.error == "Result unavailable while host agent starts")
+            })
+            .map(|(k, _)| hosts.iter().find(|x| &x.id == k).unwrap())
+            .map(|x| {
+                format!(
+                    "No contact with IML agent on {} for 60s (after restart)",
+                    x.address
+                )
+            })
+            .collect();
 
-        if all_passed {
+        if waiting_for_agent.is_empty() {
             return Ok(());
-        } else if cnt == 120 {
-            let failed_checks = profile_checks
-                .iter()
-                .filter(|(_, xs)| xs.iter().any(|y| !y.pass))
-                .fold(vec![], |mut acc, (k, v)| {
-                    let host = hosts.iter().find(|x| &x.id == k).unwrap();
+        }
 
-                    let failed = v
-                        .into_iter()
-                        .filter(|y| !y.pass)
-                        .map(|ProfileTest { description, .. }| description.to_string())
-                        .collect::<Vec<String>>()
-                        .join(",");
-
-                    acc.push(format!(
-                        "host {} has failed checks. Reasons: {}",
-                        host.address, failed
-                    ));
-
-                    acc
-                })
-                .join("\n");
-
-            return Err(ImlManagerCliError::ApiError(failed_checks));
+        if cnt == upper {
+            return Err(ImlManagerCliError::ApiError(waiting_for_agent.join("\n")));
         }
 
         delay_for(Duration::from_millis(500)).await;
@@ -300,9 +303,13 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
                 });
 
             if !all_passed {
-                return Err(ImlManagerCliError::ApiError(
-                    "Preflight checks failed".into(),
-                ));
+                let error_msg = "Preflight checks failed";
+
+                display_error(&error_msg);
+
+                if !can_continue(&config) {
+                    return Err(ImlManagerCliError::ApiError(error_msg.into()));
+                }
             }
 
             let objects = new_hosts
@@ -333,7 +340,11 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
 
             wait_for_cmds(commands).await?;
 
-            wait_till_agent_starts(&hosts, &profile.name).await?;
+            wrap_fut(
+                "Waiting for agents to restart...",
+                wait_till_agent_starts(&hosts, &profile.name),
+            )
+            .await?;
 
             let host_ids: Vec<_> = hosts
                 .iter()
@@ -346,12 +357,47 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
 
             tracing::debug!("Host Profiles {:?}", objects);
 
-            let objects: Vec<_> = objects
+            let objects: Vec<(u32, _)> = objects
                 .into_iter()
                 .filter_map(|x| x.host_profiles)
-                .filter(|x| is_profile_valid(&x, &profile.name))
-                .map(|x| HostProfileConfig {
-                    host: x.host,
+                .filter_map(|mut x| x.profiles.remove(&profile.name).map(|p| (x.host, p)))
+                .collect();
+
+            let invalid: Vec<_> = objects
+                .iter()
+                .map(|(k, tests)| (k, tests.into_iter().filter(|y| !y.pass).collect::<Vec<_>>()))
+                .filter(|(_, tests)| !tests.is_empty())
+                .collect();
+
+            if !invalid.is_empty() {
+                display_error(format!("Profile {} is invalid:\n", profile.name));
+
+                for (host_id, failed_tests) in invalid {
+                    let host = hosts.iter().find(|x| &x.id == host_id).unwrap();
+
+                    display_error(format!("\n\nHost {}\n", host.address));
+
+                    let table = generate_table(
+                        &["Description", "Test", "Error"],
+                        failed_tests
+                            .into_iter()
+                            .map(|x| vec![&x.description, &x.test, &x.error]),
+                    );
+
+                    table.printstd();
+                }
+
+                if !can_continue(&config) {
+                    return Err(ImlManagerCliError::ApiError(
+                        "Did not deploy profile.".into(),
+                    ));
+                }
+            }
+
+            let objects = objects
+                .into_iter()
+                .map(|(host, _)| HostProfileConfig {
+                    host,
                     profile: &profile.name,
                 })
                 .collect();
