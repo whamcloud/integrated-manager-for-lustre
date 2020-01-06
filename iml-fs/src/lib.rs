@@ -166,16 +166,14 @@ where
 
 /// Creates a temporary file and writes some bytes to it.
 pub async fn write_tempfile(contents: Vec<u8>) -> Result<NamedTempFile, io::Error> {
-    let f = spawn_blocking(move || {
+    spawn_blocking(move || {
         let mut f = NamedTempFile::new()?;
 
         f.write_all(contents.as_ref())?;
 
         Ok::<_, io::Error>(f)
     })
-    .await?;
-
-    f
+    .await?
 }
 
 /// Given a `PathBuf`, creates a new file that can have

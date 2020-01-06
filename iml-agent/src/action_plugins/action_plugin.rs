@@ -18,7 +18,7 @@ use tracing::info;
 /// The registry of available actions to the `AgentDaemon`.
 /// Add new Actions to the fn body as they are created.
 pub fn create_registry() -> action_plugins::Actions {
-    let map = action_plugins::Actions::new()
+    let map = action_plugins::Actions::default()
         .add_plugin("start_unit", systemd::start_unit)
         .add_plugin("stop_unit", systemd::stop_unit)
         .add_plugin("enable_unit", systemd::enable_unit)

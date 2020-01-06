@@ -174,10 +174,13 @@ pub mod action_plugins {
     /// in different ways at runtime.
     pub struct Actions(HashMap<ActionName, Callback>);
 
-    impl Actions {
-        pub fn new() -> Self {
+    impl Default for Actions {
+        fn default() -> Self {
             Actions(HashMap::new())
         }
+    }
+
+    impl Actions {
         pub fn add_plugin<Fut, T, R, E>(mut self, s: impl Into<ActionName>, f: fn(T) -> Fut) -> Self
         where
             Fut: Future<Output = Result<R, E>> + Send + 'static,
