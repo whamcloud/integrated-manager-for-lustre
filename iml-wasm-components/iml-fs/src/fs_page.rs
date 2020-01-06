@@ -10,7 +10,7 @@ use iml_alert_indicator::{alert_indicator, AlertIndicatorPopoverState};
 use iml_environment::ui_root;
 use iml_lock_indicator::{lock_indicator, LockIndicatorState};
 use iml_utils::{Locks, WatchState};
-use iml_wire_types::{Alert, Filesystem, Target, TargetConfParam, ToCompositeId};
+use iml_wire_types::{Alert, Filesystem, Target, TargetConfParam, TargetKind, ToCompositeId};
 use seed::{a, attrs, class, div, h1, h4, i, prelude::*, table, tbody, td, th, thead, tr};
 use std::collections::{HashMap, HashSet};
 use wasm_bindgen::JsValue;
@@ -64,7 +64,7 @@ impl Model {
     fn get_mgt(&self, fs: &Filesystem) -> Option<&Target<TargetConfParam>> {
         self.targets
             .values()
-            .find(|x| x.kind == "MGT" && fs.mgt == x.resource_uri)
+            .find(|x| x.kind == TargetKind::Mgt && fs.mgt == x.resource_uri)
     }
 }
 

@@ -30,7 +30,7 @@ pub enum Route<'a> {
     Activity,
     Dashboard,
     Filesystem,
-    FilesystemDetail,
+    FilesystemDetail(RouteId<'a>),
     Home,
     Jobstats,
     Login,
@@ -40,9 +40,13 @@ pub enum Route<'a> {
     PowerControl,
     Server,
     ServerDetail(RouteId<'a>),
+    OstPool,
+    OstPoolDetail(RouteId<'a>),
     Target,
+    TargetDetail(RouteId<'a>),
     User,
     Volume,
+    VolumeDetail(RouteId<'a>),
 }
 
 impl<'a> Route<'a> {
@@ -52,19 +56,23 @@ impl<'a> Route<'a> {
             Self::Activity => vec!["activity"],
             Self::Dashboard => vec!["dashboard"],
             Self::Filesystem => vec!["filesystem"],
-            Self::FilesystemDetail => vec!["filesystem_detail"],
+            Self::FilesystemDetail(id) => vec!["filesystem_detail", id],
             Self::Home => vec![""],
             Self::Jobstats => vec!["jobstats"],
             Self::Login => vec!["login"],
             Self::Logs => vec!["logs"],
             Self::Mgt => vec!["mgt"],
             Self::NotFound => vec!["404"],
+            Self::OstPool => vec!["ost_pool"],
+            Self::OstPoolDetail(id) => vec!["ost_pool_detail", id],
             Self::PowerControl => vec!["power_control"],
             Self::Server => vec!["server"],
             Self::ServerDetail(id) => vec!["server_detail", id],
             Self::Target => vec!["target"],
+            Self::TargetDetail(id) => vec!["target_detail", id],
             Self::User => vec!["user"],
             Self::Volume => vec!["volume"],
+            Self::VolumeDetail(id) => vec!["volume_detail", id],
         }
     }
 
@@ -80,19 +88,23 @@ impl<'a> ToString for Route<'a> {
             Self::Activity => "Activity".into(),
             Self::Dashboard => "Dashboard".into(),
             Self::Filesystem => "Filesystems".into(),
-            Self::FilesystemDetail => "Filesystem Detail".into(),
+            Self::FilesystemDetail(_) => "Filesystem Detail".into(),
             Self::Home => "Home".into(),
             Self::Jobstats => "Jobstats".into(),
             Self::Login => "Login".into(),
             Self::Logs => "Logs".into(),
             Self::Mgt => "MGTs".into(),
             Self::NotFound => "404".into(),
+            Self::OstPool => "OST Pool".into(),
+            Self::OstPoolDetail(_) => "OST Pool Detail".into(),
             Self::PowerControl => "Power Control".into(),
             Self::Server => "Servers".into(),
             Self::ServerDetail(_) => "Server Detail".into(),
             Self::Target => "Target".into(),
+            Self::TargetDetail(_) => "Target Detail".into(),
             Self::User => "Users".into(),
             Self::Volume => "Volumes".into(),
+            Self::VolumeDetail(_) => "Volume Detail".into(),
         }
     }
 }
@@ -106,12 +118,22 @@ impl<'a> From<Url> for Route<'a> {
             Some("activity") => Self::Activity,
             Some("dashboard") => Self::Dashboard,
             Some("filesystem") => Self::Filesystem,
-            Some("filesystem_detail") => Self::FilesystemDetail,
+            Some("filesystem_detail") => path
+                .next()
+                .map(RouteId::from)
+                .map(Self::FilesystemDetail)
+                .unwrap_or(Self::NotFound),
             None | Some("") => Self::Home,
             Some("jobstats") => Self::Jobstats,
             Some("login") => Self::Login,
             Some("logs") => Self::Logs,
             Some("mgt") => Self::Mgt,
+            Some("ost_pool") => Self::OstPool,
+            Some("ost_pool_detail") => path
+                .next()
+                .map(RouteId::from)
+                .map(Self::OstPoolDetail)
+                .unwrap_or(Self::NotFound),
             Some("power_control") => Self::PowerControl,
             Some("server") => Self::Server,
             Some("server_detail") => path
@@ -120,8 +142,18 @@ impl<'a> From<Url> for Route<'a> {
                 .map(Self::ServerDetail)
                 .unwrap_or(Self::NotFound),
             Some("target") => Self::Target,
+            Some("target_detail") => path
+                .next()
+                .map(RouteId::from)
+                .map(Self::TargetDetail)
+                .unwrap_or(Self::NotFound),
             Some("user") => Self::User,
             Some("volume") => Self::Volume,
+            Some("volume_detail") => path
+                .next()
+                .map(RouteId::from)
+                .map(Self::VolumeDetail)
+                .unwrap_or(Self::NotFound),
             _ => Self::NotFound,
         }
     }

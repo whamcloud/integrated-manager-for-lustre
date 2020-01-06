@@ -37,8 +37,7 @@ pub(crate) fn color_view<T>(content: &str, placement: Placement, color: &str) ->
 
     let tooltip_left_styles = style! {
         St::Bottom => percent(50),
-        St::Transform => "translate(-100%,50%)",
-        St::MarginRight => px(8),
+        St::Transform => "translate(calc(-100% - 8px),50%)",
     };
 
     let tooltip_style = match placement {
@@ -51,11 +50,11 @@ pub(crate) fn color_view<T>(content: &str, placement: Placement, color: &str) ->
     div![
         class![
             C.absolute,
-            C.break_words,
             C.hidden,
             C.group_hover__block,
             C.pointer_events_none,
-            C.z_20
+            C.z_20,
+            C.whitespace_normal
         ],
         tooltip_style,
         arrow(placement, color),
@@ -70,8 +69,7 @@ pub(crate) fn color_view<T>(content: &str, placement: Placement, color: &str) ->
                 C.opacity_90,
             ],
             style! {
-                St::MinWidth => px(100),
-                St::MaxWidth => px(200),
+                St::Width => px(150),
                 St::BackgroundColor => color,
             },
             content
