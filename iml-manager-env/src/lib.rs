@@ -158,7 +158,5 @@ pub fn get_db_conn_string() -> String {
         xs.push(format!("password={}", x));
     }
 
-    let s = xs.join(" ");
-
-    s
+    xs.join(" ")
 }
