@@ -10,9 +10,9 @@ use iml_wire_types::{
         FsRecord, ManagedHostRecord, ManagedMdtRecord, ManagedOstRecord, ManagedTargetMountRecord,
         ManagedTargetRecord, Name, OstPoolOstsRecord, OstPoolRecord,
     },
-    Fqdn,
+    Fqdn, OstPool,
 };
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::BTreeSet, sync::Arc};
 
 pub struct PoolClient {
     client: Arc<Client>,
@@ -38,9 +38,7 @@ pub async fn connect(fqdn: Fqdn) -> Result<PoolClient, Error> {
             .unwrap_or_else(|e| tracing::error!("DB connection error {}", e));
     });
 
-    let query = format!(
-        "SELECT id FROM django_content_type WHERE app_label = 'chroma_core' AND model = $1"
-    );
+    let query = "SELECT id FROM django_content_type WHERE app_label = 'chroma_core' AND model = $1";
     let s = client.prepare(&query).await?;
     let row = client.query_one(&s, &[&"ostpool"]).await?;
     let pool_type_id = row.try_get(0)?;
@@ -68,7 +66,7 @@ impl PoolClient {
 
         match vr.len() {
             0 => Err(Error::NotFound),
-            1 => vr[0].try_get(0).map_err(|e| Error::Postgres(e)),
+            1 => vr[0].try_get(0).map_err(Error::Postgres),
             _ => {
                 // check fqdn of managedhost (id)->(host_id)
                 // managedtargetmount (target_id)-> (via
@@ -88,7 +86,7 @@ impl PoolClient {
                     ManagedHostRecord::table_name());
                 let s = self.client.prepare(&query).await?;
                 match self.client.query_one(&s, &[&fsname, &self.fqdn]).await {
-                    Ok(row) => row.try_get(0).map_err(|e| Error::Postgres(e)),
+                    Ok(row) => row.try_get(0).map_err(Error::Postgres),
                     Err(e) => {
                         tracing::error!(
                             "fsid({}) (fqdn:{}) failed to find filesystem: {}",
@@ -119,6 +117,29 @@ impl PoolClient {
                 Ok(None)
             }
         }
+    }
+
+    /// Returns a poolset for a given filesystem, but osts element is always empty
+    pub async fn poolset(&self, fsname: &str, fsid: i32) -> Result<BTreeSet<OstPool>, Error> {
+        let query = format!(
+            "SELECT name FROM {} WHERE not_deleted=True AND filesystem_id=$1",
+            OstPoolRecord::table_name()
+        );
+        let s = self.client.prepare(&query).await?;
+        let vr = self.client.query(&s, &[&fsid]).await?;
+        let bs = vr
+            .into_iter()
+            .map(|row| {
+                let name: String = row.get("name");
+                let filesystem = fsname.to_string();
+                OstPool {
+                    filesystem,
+                    name,
+                    osts: vec![],
+                }
+            })
+            .collect();
+        Ok(bs)
     }
 
     async fn ostid(&self, fsid: i32, ost: &str) -> Result<Option<i32>, Error> {
@@ -152,7 +173,7 @@ impl PoolClient {
             .query_one(&s, &[&pn, &self.pool_type_id, &fsid])
             .await
         {
-            Ok(row) => row.try_get(0).map_err(|e| Error::Postgres(e)),
+            Ok(row) => row.try_get(0).map_err(Error::Postgres),
             Err(e) => Err(Error::Postgres(e)),
         }
     }
@@ -168,10 +189,10 @@ impl PoolClient {
             .execute(&s, &[&fsid, &pn])
             .await
             .map(drop)
-            .map_err(|e| Error::Postgres(e))
+            .map_err(Error::Postgres)
     }
 
-    pub async fn grow(&self, fsid: i32, poolid: i32, osts: &Vec<String>) -> Result<(), Error> {
+    pub async fn grow(&self, fsid: i32, poolid: i32, osts: &[String]) -> Result<(), Error> {
         let query = format!(
             "INSERT INTO {} (ostpool_id, managedost_id) VALUES ($1, $2)",
             OstPoolOstsRecord::table_name()
@@ -199,7 +220,7 @@ impl PoolClient {
                             .execute(&insert, &[&poolid, &ostid])
                             .await
                             .map(drop)
-                            .map_err(|e| Error::Postgres(e))
+                            .map_err(Error::Postgres)
                     } else {
                         tracing::debug!("Grow ({}).({}): ost:{} already exists", fsid, poolid, o);
                         Ok(())
@@ -214,7 +235,7 @@ impl PoolClient {
         Ok(())
     }
 
-    pub async fn shrink(&self, fsid: i32, poolid: i32, osts: &Vec<String>) -> Result<(), Error> {
+    pub async fn shrink(&self, fsid: i32, poolid: i32, osts: &[String]) -> Result<(), Error> {
         let query = format!(
             "DELETE FROM {} WHERE ostpool_id = $1 AND managedost_id = $2",
             OstPoolOstsRecord::table_name(),
@@ -251,7 +272,7 @@ impl PoolClient {
         Ok(())
     }
 
-    async fn list_osts(&self, poolid: i32) -> Result<HashSet<i32>, Error> {
+    async fn list_osts(&self, poolid: i32) -> Result<BTreeSet<i32>, Error> {
         let query = format!(
             "SELECT managedost_id FROM {} WHERE ostpool_id = $1",
             OstPoolOstsRecord::table_name()
@@ -267,7 +288,7 @@ impl PoolClient {
             .collect())
     }
 
-    pub async fn diff(&self, fsid: i32, poolid: i32, osts: &Vec<String>) -> Result<(), Error> {
+    pub async fn diff(&self, fsid: i32, poolid: i32, osts: &[String]) -> Result<(), Error> {
         let mut currentosts = self.list_osts(poolid).await?;
 
         // Add New OSTs
@@ -301,7 +322,7 @@ impl PoolClient {
                     .execute(&s, &[&poolid, &o])
                     .await
                     .map(drop)
-                    .map_err(|e| Error::Postgres(e))
+                    .map_err(Error::Postgres)
             }
         });
         try_join_all(xs).await.map(drop)

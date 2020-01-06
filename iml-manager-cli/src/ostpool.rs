@@ -71,14 +71,14 @@ pub enum OstPoolCommand {
     Destroy { fsname: String, poolname: String },
 }
 
-async fn pool_lookup(fsname: &String, pool: &String) -> Result<OstPoolApi, ImlManagerCliError> {
+async fn pool_lookup(fsname: &str, poolname: &str) -> Result<OstPoolApi, ImlManagerCliError> {
     let fs: Filesystem =
-        wrap_fut("Fetching Filesystem ...", get_one(vec![("name", &fsname)])).await?;
+        wrap_fut("Fetching Filesystem ...", get_one(vec![("name", fsname)])).await?;
     let mut pool: OstPoolApi = wrap_fut(
         "Fetching OstPool...",
         get_one(vec![
             ("filesystem", fs.id.to_string().as_str()),
-            ("name", &pool),
+            ("name", poolname),
         ]),
     )
     .await?;
@@ -202,7 +202,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
                 .osts
                 .iter()
                 .filter(|o| !osts.contains(o))
-                .map(|o| o.clone())
+                .cloned()
                 .collect();
 
             tracing::debug!("POOL: {:?}", pool);

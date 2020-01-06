@@ -3,7 +3,12 @@
 // license that can be found in the LICENSE file.
 
 use serde_json;
-use std::{collections::HashMap, convert::TryFrom, fmt};
+use std::{
+    cmp::{Ord, Ordering},
+    collections::{BTreeMap, BTreeSet, HashMap},
+    convert::TryFrom,
+    fmt,
+};
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
@@ -2054,31 +2059,6 @@ pub struct ComponentState<T: Default> {
     pub state: T,
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub enum OstPoolAction {
-    Initial, // Complete Ost Pool
-    Add,     // new Ost Pool
-    Remove,  // destory Ost Pool
-    Grow,    // Send new osts in OstPool object
-    Shrink,  // Only send osts to remove in OstPool object
-}
-
-impl std::fmt::Display for OstPoolAction {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                OstPoolAction::Initial => "init",
-                OstPoolAction::Add => "add",
-                OstPoolAction::Remove => "remove",
-                OstPoolAction::Grow => "grow",
-                OstPoolAction::Shrink => "shrink",
-            }
-        )
-    }
-}
-
 /// An OST Pool record from `/api/ostpool/`
 #[derive(Debug, Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct OstPoolApi {
@@ -2102,7 +2082,11 @@ impl std::fmt::Display for OstPoolApi {
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+/// Type Sent between ostpool agent daemon and service
+/// FS Name -> Set of OstPools
+pub type FsPoolMap = BTreeMap<String, BTreeSet<OstPool>>;
+
+#[derive(Debug, Default, Clone, Eq, serde::Serialize, serde::Deserialize)]
 pub struct OstPool {
     pub name: String,
     pub filesystem: String,
@@ -2118,6 +2102,28 @@ impl std::fmt::Display for OstPool {
             self.name,
             self.osts.join(", ")
         )
+    }
+}
+
+impl Ord for OstPool {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let x = self.filesystem.cmp(&other.filesystem);
+        if x != Ordering::Equal {
+            return x;
+        }
+        self.name.cmp(&other.name)
+    }
+}
+
+impl PartialOrd for OstPool {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for OstPool {
+    fn eq(&self, other: &Self) -> bool {
+        self.filesystem == other.filesystem && self.name == other.name
     }
 }
 

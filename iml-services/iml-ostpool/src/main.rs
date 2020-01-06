@@ -4,9 +4,13 @@
 
 use futures::future::try_join_all;
 use futures_util::stream::TryStreamExt;
-use iml_ostpool::db::{self};
+use iml_ostpool::{
+    db::{self},
+    error::Error,
+};
 use iml_service_queue::service_queue::consume_data;
-use iml_wire_types::{OstPool, OstPoolAction};
+use iml_wire_types::FsPoolMap;
+use std::collections::BTreeSet;
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 #[tokio::main]
@@ -16,101 +20,72 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .finish();
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    let mut s = consume_data::<Vec<(OstPoolAction, OstPool)>>("rust_agent_ostpool_rx");
+    let mut s = consume_data::<FsPoolMap>("rust_agent_ostpool_rx");
 
-    while let Some((fqdn, pools)) = s.try_next().await? {
-        tracing::debug!("Pools from {}: {:?}", fqdn, pools);
+    while let Some((fqdn, fspools)) = s.try_next().await? {
+        tracing::debug!("Pools from {}: {:?}", fqdn, fspools);
 
         let client = db::connect(fqdn).await?;
 
-        let xs = pools.iter().map(|(state, pool)| {
+        let xs = fspools.iter().map(|(fsname, newpoolset)| {
             let client = client.clone();
+
             async move {
-                tracing::debug!("{} pool {}.{}", state, pool.filesystem, pool.name);
-                let fsid = client.fsid(&pool.filesystem).await?;
-                match state {
-                    OstPoolAction::Initial => {
-                        if let Some(poolid) = client.poolid(fsid, &pool.name).await? {
-                            tracing::debug!(
-                                "Pool {}.{} exists: {}",
-                                pool.filesystem,
-                                pool.name,
-                                poolid
-                            );
-                            client.diff(fsid, poolid, &pool.osts).await
-                        } else {
-                            tracing::debug!(
-                                "Pool {}.{} creating (fsid: {})",
-                                pool.filesystem,
-                                pool.name,
-                                fsid
-                            );
-                            let poolid = client.create(fsid, &pool.name).await?;
-                            client.grow(fsid, poolid, &pool.osts).await
-                        }
+                let fsid = client.fsid(&fsname).await?;
+                tracing::debug!("{}: {:?}", fsname, newpoolset);
+
+                let oldpoolset = client.poolset(fsname, fsid).await?;
+
+                let addset: BTreeSet<_> = newpoolset.difference(&oldpoolset).cloned().collect();
+
+                let xsadd = addset.clone().into_iter().map(|pool| {
+                    let client = client.clone();
+                    async move {
+                        tracing::debug!("Create {}.{}: {:?}", fsname, &pool.name, &pool.osts);
+                        let poolid = client.create(fsid, &pool.name).await?;
+                        client.grow(fsid, poolid, &pool.osts).await
                     }
-                    OstPoolAction::Add => {
-                        if client.poolid(fsid, &pool.name).await?.is_some() {
-                            tracing::debug!("Pool {}.{} exists", pool.filesystem, pool.name);
-                            Ok(())
-                        } else {
-                            let poolid = client.create(fsid, &pool.name).await?;
-                            client.grow(fsid, poolid, &pool.osts).await
-                        }
-                    }
-                    OstPoolAction::Remove => {
+                });
+
+                let xsrm = oldpoolset.difference(&newpoolset).cloned().map(|pool| {
+                    let client = client.clone();
+                    async move {
                         if let Some(poolid) = client.poolid(fsid, &pool.name).await? {
+                            tracing::debug!("Remove {}.{}: {:?}", fsname, &pool.name, &pool.osts);
                             client.shrink(fsid, poolid, &pool.osts).await?;
-                            client.delete(fsid, &pool.name).await
-                        } else {
-                            tracing::debug!(
-                                "Pool {}.{} already removed",
-                                pool.filesystem,
-                                pool.name
-                            );
-                            Ok(())
+                            client.delete(fsid, &pool.name).await?;
+                        }
+                        Ok::<_, Error>(())
+                    }
+                });
+
+                let xsupdate = newpoolset.difference(&addset).cloned().filter_map(|pool| {
+                    if let Some(old) = oldpoolset.get(&pool) {
+                        if old.osts != pool.osts {
+                            let client = client.clone();
+                            return Some(async move {
+                                if let Some(poolid) = client.poolid(fsid, &pool.name).await? {
+                                    tracing::debug!(
+                                        "Diff {}.{}: {:?}",
+                                        fsname,
+                                        &pool.name,
+                                        &pool.osts
+                                    );
+                                    client.diff(fsid, poolid, &pool.osts).await
+                                } else {
+                                    Ok(())
+                                }
+                            });
                         }
                     }
-                    OstPoolAction::Grow => {
-                        if let Some(poolid) = client.poolid(fsid, &pool.name).await? {
-                            tracing::debug!(
-                                "Pool {}.{} growing {} osts",
-                                pool.filesystem,
-                                pool.name,
-                                pool.osts.len()
-                            );
-                            client.grow(fsid, poolid, &pool.osts).await
-                        } else {
-                            tracing::warn!(
-                                "Attempted to grow non-existant pool ({}.{})",
-                                &pool.filesystem,
-                                &pool.name
-                            );
-                            Ok(())
-                        }
-                    }
-                    OstPoolAction::Shrink => {
-                        if let Some(poolid) = client.poolid(fsid, &pool.name).await? {
-                            tracing::debug!(
-                                "Pool {}.{} shrinking {} osts",
-                                pool.filesystem,
-                                pool.name,
-                                pool.osts.len()
-                            );
-                            client.shrink(fsid, poolid, &pool.osts).await
-                        } else {
-                            tracing::warn!(
-                                "Attempted to shrink non-existant pool ({}.{})",
-                                &pool.filesystem,
-                                &pool.name
-                            );
-                            Ok(())
-                        }
-                    }
-                }
+                    None
+                });
+
+                try_join_all(xsadd).await?;
+                try_join_all(xsrm).await?;
+                try_join_all(xsupdate).await
             }
         });
-
         try_join_all(xs).await?;
     }
 
