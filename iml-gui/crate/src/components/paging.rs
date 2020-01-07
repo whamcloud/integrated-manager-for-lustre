@@ -34,7 +34,7 @@ impl Model {
             ..Default::default()
         }
     }
-    pub fn has_more(&self) -> bool {
+    pub const fn has_more(&self) -> bool {
         self.limit + self.offset < self.total()
     }
     pub const fn total(&self) -> usize {
