@@ -2068,7 +2068,7 @@ pub struct ResourceAgentType {
 }
 
 impl ResourceAgentType {
-    pub fn new(standard: String, provider: Option<String>, ocftype: String) -> Self {
+    pub const fn new(standard: String, provider: Option<String>, ocftype: String) -> Self {
         ResourceAgentType {
             standard,
             provider,
