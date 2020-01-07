@@ -58,12 +58,12 @@ impl From<&str> for Version {
         let vr: Vec<&str> = version.splitn(2, '-').collect();
         Version {
             version: version.to_string(),
-            v: if vr.is_empty() {
+            v: if !vr.is_empty() {
                 vr[0].split('.').map(VerPart::from).collect()
             } else {
                 vec![]
             },
-            r: if vr.is_empty() {
+            r: if vr.len() > 1 {
                 vr[1].split('.').map(VerPart::from).collect()
             } else {
                 vec![]
