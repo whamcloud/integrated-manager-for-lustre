@@ -317,6 +317,16 @@ pub trait Label {
     fn label(&self) -> &str;
 }
 
+pub trait ResourceUri {
+    fn resource_uri(&self) -> &str;
+}
+
+impl ResourceUri for String {
+    fn resource_uri(&self) -> &str {
+        self
+    }
+}
+
 pub trait EndpointName {
     fn endpoint_name() -> &'static str;
 }
@@ -504,6 +514,12 @@ impl Label for Host {
 impl Label for &Host {
     fn label(&self) -> &str {
         &self.label
+    }
+}
+
+impl ResourceUri for Host {
+    fn resource_uri(&self) -> &str {
+        &self.resource_uri
     }
 }
 
@@ -877,6 +893,12 @@ impl<T> ToCompositeId for Target<T> {
     }
 }
 
+impl<T> ToCompositeId for &Target<T> {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id, self.id)
+    }
+}
+
 impl<T> Label for Target<T> {
     fn label(&self) -> &str {
         &self.label
@@ -886,6 +908,18 @@ impl<T> Label for Target<T> {
 impl<T> Label for &Target<T> {
     fn label(&self) -> &str {
         &self.label
+    }
+}
+
+impl<T> ResourceUri for Target<T> {
+    fn resource_uri(&self) -> &str {
+        &self.resource_uri
+    }
+}
+
+impl<T> ResourceUri for &Target<T> {
+    fn resource_uri(&self) -> &str {
+        &self.resource_uri
     }
 }
 
@@ -965,6 +999,12 @@ impl ToCompositeId for Filesystem {
 impl Label for Filesystem {
     fn label(&self) -> &str {
         &self.label
+    }
+}
+
+impl ResourceUri for Filesystem {
+    fn resource_uri(&self) -> &str {
+        &self.resource_uri
     }
 }
 
