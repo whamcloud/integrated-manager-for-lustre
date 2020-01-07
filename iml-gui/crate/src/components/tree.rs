@@ -19,6 +19,10 @@ fn sort_by_label(xs: &mut Vec<impl Label>) {
     xs.sort_by(|a, b| natord::compare(a.label(), b.label()));
 }
 
+pub fn slice_page<'a>(paging: &paging::Model, xs: &'a BTreeSet<u32>) -> impl Iterator<Item = &'a u32> {
+    xs.iter().skip(paging.offset()).take(paging.end())
+}
+
 fn sorted_cache<'a>(x: &'a im::HashMap<u32, impl Label + Id>) -> impl Iterator<Item = u32> + 'a {
     let mut xs: Vec<_> = x.values().collect();
 
@@ -143,14 +147,18 @@ impl From<Vec<Step>> for Address {
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct TreeNode {
     open: bool,
-    paging: paging::Model<u32>,
+    items: BTreeSet<u32>,
+    paging: paging::Model,
 }
 
 impl TreeNode {
     fn from_items(xs: impl IntoIterator<Item = u32>) -> Self {
+        let items = BTreeSet::from_iter(xs);
+
         TreeNode {
             open: false,
-            paging: paging::Model::new(xs),
+            paging: paging::Model::new(items.len()),
+            items,
         }
     }
 }
@@ -180,63 +188,140 @@ impl Model {
 
 // Update
 
-#[derive(Clone)]
-pub enum Msg {
-    Add(RecordId),
-    Remove(RecordId),
-    Reset,
-    Toggle(Address, bool),
-    AddEmptyNode(Address),
-    RemoveNode(Address),
-    Page(Address, paging::Msg<u32>),
-}
-
-fn add_item(record_id: RecordId, cache: &Cache, orders: &mut impl Orders<Msg>) -> Option<()> {
+fn add_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut impl Orders<Msg>) -> Option<()> {
     match record_id {
         RecordId::Host(id) => {
             let addr: Address = vec![Step::HostCollection].into();
 
-            let child = addr.extend(Step::Host(id));
+            let tree_node = model.get_mut(&addr)?;
 
-            orders
-                .send_msg(Msg::Page(
-                    addr,
-                    paging::Msg::Sort(|cache, _| sorted_cache(&cache.host).collect()),
-                ))
-                .send_msg(Msg::AddEmptyNode(child));
+            tree_node.items = sorted_cache(&cache.host).collect();
+            tree_node.paging.total = tree_node.items.len();
+
+            orders.send_msg(Msg::AddEmptyNode(addr.extend(Step::Host(id))));
         }
         RecordId::Filesystem(id) => {
             let addr: Address = vec![Step::FsCollection].into();
-            let child = addr.extend(Step::Fs(id));
 
-            orders
-                .send_msg(Msg::Page(
-                    addr,
-                    paging::Msg::Sort(|cache, _| sorted_cache(&cache.filesystem).collect()),
-                ))
-                .send_msg(Msg::AddEmptyNode(child));
+            let tree_node = model.get_mut(&addr)?;
+
+            tree_node.items = sorted_cache(&cache.filesystem).collect();
+            tree_node.paging.total = tree_node.items.len();
+
+            orders.send_msg(Msg::AddEmptyNode(addr.extend(Step::Fs(id))));
         }
         RecordId::VolumeNode(id) => {
             let vn = cache.volume_node.get(&id)?;
 
-            let addr: Address = vec![Step::HostCollection, Step::Host(vn.host_id), Step::VolumeCollection].into();
+            let tree_node =
+                model.get_mut(&vec![Step::HostCollection, Step::Host(vn.host_id), Step::VolumeCollection].into())?;
 
-            orders
-                .send_msg(Msg::Page(addr.clone(), paging::Msg::Add(id)))
-                .send_msg(Msg::Page(
-                    addr,
-                    paging::Msg::Sort(|cache, model| {
-                        let mut xs = cache
-                            .volume_node
-                            .values()
-                            .filter(|y| model.items.contains(&y.id))
-                            .collect();
+            tree_node.items.insert(id);
 
-                        sort_by_label(&mut xs);
+            let mut xs = cache
+                .volume_node
+                .values()
+                .filter(|y| tree_node.items.contains(&y.id))
+                .collect();
 
-                        xs.into_iter().map(|x| x.id).collect()
-                    }),
-                ));
+            sort_by_label(&mut xs);
+
+            tree_node.items = xs.into_iter().map(|x| x.id).collect();
+            tree_node.paging.total = tree_node.items.len();
+        }
+        RecordId::OstPoolOsts(id) => {
+            let ost_pool_ost = cache.ost_pool_osts.get(&id)?;
+            let ost_pool = cache.ost_pool.get(&ost_pool_ost.ostpool_id)?;
+
+            let tree_node = model.get_mut(
+                &vec![
+                    Step::FsCollection,
+                    Step::Fs(ost_pool.filesystem_id),
+                    Step::OstPoolCollection,
+                    Step::OstPool(ost_pool.id),
+                ]
+                .into(),
+            )?;
+
+            tree_node.items.insert(id);
+
+            let mut xs = cache
+                .ost_pool
+                .values()
+                .filter(|y| tree_node.items.contains(&y.id))
+                .collect();
+
+            sort_by_label(&mut xs);
+
+            tree_node.items = xs.into_iter().map(|x| x.id).collect();
+            tree_node.paging.total = tree_node.items.len();
+        }
+        RecordId::Target(id) => {
+            let target = cache.target.get(&id)?;
+
+            let ids = get_target_fs_ids(target);
+
+            let sort_fn = |cache: &Cache, model: &TreeNode| {
+                let mut xs = cache.target.values().filter(|y| model.items.contains(&y.id)).collect();
+
+                sort_by_label(&mut xs);
+
+                xs.into_iter().map(|x| x.id).collect()
+            };
+
+            for fs_id in ids {
+                let base_addr: Address = vec![Step::FsCollection, Step::Fs(fs_id)].into();
+
+                let target_tree_node = model.get_mut(&base_addr.extend(target.kind))?;
+
+                target_tree_node.items.insert(id);
+
+                target_tree_node.items = sort_fn(cache, target_tree_node);
+                target_tree_node.paging.total = target_tree_node.items.len();
+
+                let ostcolletion_node =
+                    model.get_mut(&base_addr.extend(Step::OstPoolCollection).extend(Step::OstCollection))?;
+
+                ostcolletion_node.items.insert(id);
+
+                ostcolletion_node.items = sort_fn(cache, ostcolletion_node);
+                ostcolletion_node.paging.total = ostcolletion_node.items.len();
+            }
+        }
+        _ => {}
+    };
+
+    Some(())
+}
+
+fn remove_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut impl Orders<Msg>) -> Option<()> {
+    match record_id {
+        RecordId::Host(id) => {
+            let addr: Address = vec![Step::HostCollection].into();
+
+            let tree_node = model.get_mut(&addr)?;
+
+            tree_node.items.remove(&id);
+            tree_node.paging.total -= 1;
+
+            orders.send_msg(Msg::RemoveNode(addr.extend(Step::Host(id))));
+        }
+        RecordId::Filesystem(id) => {
+            let addr: Address = vec![Step::FsCollection].into();
+
+            let tree_node = model.get_mut(&addr)?;
+            tree_node.items.remove(&id);
+            tree_node.paging.total -= 1;
+
+            orders.send_msg(Msg::RemoveNode(addr.extend(Step::Fs(id))));
+        }
+        RecordId::VolumeNode(id) => {
+            let vn = cache.volume_node.get(&id)?;
+
+            let tree_node =
+                model.get_mut(&vec![Step::HostCollection, Step::Host(vn.host_id), Step::VolumeCollection].into())?;
+            tree_node.items.remove(&id);
+            tree_node.paging.total -= 1;
         }
         RecordId::OstPoolOsts(id) => {
             let ost_pool_ost = cache.ost_pool_osts.get(&id)?;
@@ -246,105 +331,14 @@ fn add_item(record_id: RecordId, cache: &Cache, orders: &mut impl Orders<Msg>) -
                 Step::FsCollection,
                 Step::Fs(ost_pool.filesystem_id),
                 Step::OstPoolCollection,
-                Step::OstPool(ost_pool.id),
             ]
             .into();
 
-            orders
-                .send_msg(Msg::Page(addr.clone(), paging::Msg::Add(id)))
-                .send_msg(Msg::Page(
-                    addr,
-                    paging::Msg::Sort(|cache, model| {
-                        let mut xs = cache
-                            .ost_pool
-                            .values()
-                            .filter(|y| model.items.contains(&y.id))
-                            .collect();
+            let tree_node = model.get_mut(&addr)?;
+            tree_node.items.remove(&ost_pool.id);
+            tree_node.paging.total -= 1;
 
-                        sort_by_label(&mut xs);
-
-                        xs.into_iter().map(|x| x.id).collect()
-                    }),
-                ));
-        }
-        RecordId::Target(id) => {
-            let target = cache.target.get(&id)?;
-
-            let ids = get_target_fs_ids(target);
-
-            let sort_fn = |cache: &Cache, model: &paging::Model<u32>| {
-                let mut xs = cache.target.values().filter(|y| model.items.contains(&y.id)).collect();
-
-                sort_by_label(&mut xs);
-
-                xs.into_iter().map(|x| x.id).collect()
-            };
-
-            for fs_id in ids {
-                let target_addr: Address = vec![Step::FsCollection, Step::Fs(fs_id), target.kind.into()].into();
-
-                orders
-                    .send_msg(Msg::Page(target_addr.clone(), paging::Msg::Add(id)))
-                    .send_msg(Msg::Page(target_addr, paging::Msg::Sort(sort_fn)));
-
-                let ostcollection_addr: Address = vec![
-                    Step::FsCollection,
-                    Step::Fs(fs_id),
-                    Step::OstPoolCollection,
-                    Step::OstCollection,
-                ]
-                .into();
-
-                orders
-                    .send_msg(Msg::Page(ostcollection_addr.clone(), paging::Msg::Add(id)))
-                    .send_msg(Msg::Page(ostcollection_addr, paging::Msg::Sort(sort_fn)));
-            }
-        }
-        _ => {}
-    };
-
-    Some(())
-}
-
-fn remove_item(record_id: RecordId, cache: &Cache, orders: &mut impl Orders<Msg>) -> Option<()> {
-    match record_id {
-        RecordId::Host(id) => {
-            let addr: Address = vec![Step::HostCollection].into();
-            let child = addr.extend(Step::Host(id));
-
-            orders
-                .send_msg(Msg::Page(vec![Step::HostCollection].into(), paging::Msg::Remove(id)))
-                .send_msg(Msg::RemoveNode(child));
-        }
-        RecordId::Filesystem(id) => {
-            let addr: Address = vec![Step::FsCollection].into();
-            let child = addr.extend(Step::Fs(id));
-
-            orders
-                .send_msg(Msg::Page(vec![Step::FsCollection].into(), paging::Msg::Remove(id)))
-                .send_msg(Msg::RemoveNode(child));
-        }
-        RecordId::VolumeNode(id) => {
-            let vn = cache.volume_node.get(&id)?;
-
-            let addr = vec![Step::HostCollection, Step::Host(vn.host_id), Step::VolumeCollection];
-
-            orders.send_msg(Msg::Page(addr.into(), paging::Msg::Remove(id)));
-        }
-        RecordId::OstPoolOsts(id) => {
-            let ost_pool_ost = cache.ost_pool_osts.get(&id)?;
-            let ost_pool = cache.ost_pool.get(&ost_pool_ost.ostpool_id)?;
-
-            let address: Address = vec![
-                Step::FsCollection,
-                Step::Fs(ost_pool.filesystem_id),
-                Step::OstPoolCollection,
-            ]
-            .into();
-
-            orders
-                .send_msg(Msg::RemoveNode(address.extend(Step::OstPool(ost_pool.id))))
-                .send_msg(Msg::Page(address, paging::Msg::Remove(ost_pool.id)));
+            orders.send_msg(Msg::RemoveNode(addr.extend(Step::OstPool(ost_pool.id))));
         }
         RecordId::Target(id) => {
             let target = cache.target.get(&id)?;
@@ -354,18 +348,30 @@ fn remove_item(record_id: RecordId, cache: &Cache, orders: &mut impl Orders<Msg>
             for fs_id in ids {
                 let addr: Address = vec![Step::FsCollection, Step::Fs(fs_id)].into();
 
-                orders
-                    .send_msg(Msg::Page(addr.extend(target.kind), paging::Msg::Remove(id)))
-                    .send_msg(Msg::Page(
-                        addr.extend(Step::OstPoolCollection).extend(Step::OstCollection),
-                        paging::Msg::Remove(id),
-                    ));
+                let tree_node = model.get_mut(&addr.extend(target.kind))?;
+                tree_node.items.remove(&id);
+                tree_node.paging.total -= 1;
+
+                let tree_node2 = model.get_mut(&addr.extend(Step::OstPoolCollection).extend(Step::OstCollection))?;
+                tree_node2.items.remove(&id);
+                tree_node2.paging.total -= 1;
             }
         }
         _ => {}
     };
 
     Some(())
+}
+
+#[derive(Clone)]
+pub enum Msg {
+    Add(RecordId),
+    Remove(RecordId),
+    Reset,
+    Toggle(Address, bool),
+    AddEmptyNode(Address),
+    RemoveNode(Address),
+    Page(Address, paging::Msg),
 }
 
 pub fn update(cache: &Cache, msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -386,10 +392,10 @@ pub fn update(cache: &Cache, msg: Msg, model: &mut Model, orders: &mut impl Orde
             );
         }
         Msg::Add(id) => {
-            add_item(id, cache, orders);
+            add_item(id, cache, model, orders);
         }
         Msg::Remove(id) => {
-            remove_item(id, cache, orders);
+            remove_item(id, cache, model, orders);
         }
         Msg::Toggle(address, open) => {
             let tree_node = match model.get_mut(&address) {
@@ -399,7 +405,7 @@ pub fn update(cache: &Cache, msg: Msg, model: &mut Model, orders: &mut impl Orde
 
             tree_node.open = open;
 
-            let paging: Vec<_> = tree_node.paging.items.iter().copied().collect();
+            let paging: Vec<_> = tree_node.items.iter().copied().collect();
 
             match address.as_vec().as_slice() {
                 [Step::HostCollection] => {
@@ -415,10 +421,7 @@ pub fn update(cache: &Cache, msg: Msg, model: &mut Model, orders: &mut impl Orde
 
                         sort_by_label(&mut xs);
 
-                        TreeNode {
-                            open: false,
-                            paging: paging::Model::new(xs.into_iter().map(|x| x.id)),
-                        }
+                        TreeNode::from_items(xs.into_iter().map(|x| x.id))
                     });
                 }
                 [Step::FsCollection] => {
@@ -434,10 +437,7 @@ pub fn update(cache: &Cache, msg: Msg, model: &mut Model, orders: &mut impl Orde
 
                         sort_by_label(&mut xs);
 
-                        TreeNode {
-                            open: false,
-                            paging: paging::Model::new(xs.into_iter().map(|x| x.id)),
-                        }
+                        TreeNode::from_items(xs.into_iter().map(|x| x.id))
                     });
 
                     model.entry(address.extend(Step::MdtCollection)).or_insert_with(|| {
@@ -445,10 +445,7 @@ pub fn update(cache: &Cache, msg: Msg, model: &mut Model, orders: &mut impl Orde
 
                         sort_by_label(&mut xs);
 
-                        TreeNode {
-                            open: false,
-                            paging: paging::Model::new(xs.into_iter().map(|x| x.id)),
-                        }
+                        TreeNode::from_items(xs.into_iter().map(|x| x.id))
                     });
 
                     model.entry(address.extend(Step::OstCollection)).or_insert_with(|| {
@@ -456,10 +453,7 @@ pub fn update(cache: &Cache, msg: Msg, model: &mut Model, orders: &mut impl Orde
 
                         sort_by_label(&mut xs);
 
-                        TreeNode {
-                            open: false,
-                            paging: paging::Model::new(xs.into_iter().map(|x| x.id)),
-                        }
+                        TreeNode::from_items(xs.into_iter().map(|x| x.id))
                     });
 
                     model.entry(address.extend(Step::OstPoolCollection)).or_insert_with(|| {
@@ -467,10 +461,7 @@ pub fn update(cache: &Cache, msg: Msg, model: &mut Model, orders: &mut impl Orde
 
                         sort_by_label(&mut xs);
 
-                        TreeNode {
-                            open: false,
-                            paging: paging::Model::new(xs.into_iter().map(|x| x.id)),
-                        }
+                        TreeNode::from_items(xs.into_iter().map(|x| x.id))
                     });
                 }
                 [Step::FsCollection, Step::Fs(_), Step::OstPoolCollection] => {
@@ -487,10 +478,7 @@ pub fn update(cache: &Cache, msg: Msg, model: &mut Model, orders: &mut impl Orde
 
                         sort_by_label(&mut xs);
 
-                        TreeNode {
-                            open: false,
-                            paging: paging::Model::new(xs.into_iter().map(|x| x.id)),
-                        }
+                        TreeNode::from_items(xs.into_iter().map(|x| x.id))
                     });
                 }
                 _ => {}
@@ -504,50 +492,13 @@ pub fn update(cache: &Cache, msg: Msg, model: &mut Model, orders: &mut impl Orde
         }
         Msg::Page(id, msg) => {
             if let Some(x) = model.get_mut(&id) {
-                paging::update(cache, msg, &mut x.paging)
+                paging::update(msg, &mut x.paging)
             }
         }
     }
 }
 
 // View
-
-fn pager_view(paging: &paging::Model<u32>) -> Node<paging::Msg<u32>> {
-    if !paging.has_pages() {
-        return empty![];
-    }
-
-    let cls = class![
-        C.hover__underline,
-        C.select_none,
-        C.hover__text_gray_300,
-        C.cursor_pointer
-    ];
-
-    li![
-        class![C.py_1],
-        a![
-            &cls,
-            class![
-                C.px_5,
-                C.pointer_events_none => !paging.has_less(),
-            ],
-            font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1], "chevron-left",),
-            simple_ev(Ev::Click, paging::Msg::Prev),
-            "prev"
-        ],
-        a![
-            &cls,
-            class![
-                C.pointer_events_none => !paging.has_more(),
-            ],
-            "next",
-            simple_ev(Ev::Click, paging::Msg::Next),
-            font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1], "chevron-right",)
-        ]
-    ]
-}
-
 fn toggle_view(address: Address, is_open: bool) -> Node<Msg> {
     let mut toggle = font_awesome(
         class![
@@ -656,7 +607,10 @@ fn tree_collection_view(
             ul![
                 class![C.px_6, C.mt_2],
                 on_open(x),
-                pager_view(&x.paging).map_msg(move |msg| { Msg::Page(address, msg) })
+                li![
+                    class![C.py_1],
+                    paging::next_prev_view(&x.paging).map_msg(move |msg| { Msg::Page(address, msg) })
+                ]
             ]
         } else {
             empty![]
@@ -678,8 +632,7 @@ fn tree_fs_collection_view(cache: &Cache, model: &Model) -> Node<Msg> {
             )
         },
         |x| {
-            x.paging
-                .slice_page()
+            slice_page(&x.paging, &x.items)
                 .filter_map(|x| cache.filesystem.get(x))
                 .filter_map(|x| tree_fs_item_view(cache, model, x))
                 .collect()
@@ -694,8 +647,7 @@ fn tree_host_collection_view(cache: &Cache, model: &Model) -> Node<Msg> {
         Address::new(vec![Step::HostCollection]),
         |x| item_view("folder", &format!("Servers ({})", x.paging.total()), Route::Server),
         |x| {
-            x.paging
-                .slice_page()
+            slice_page(&x.paging, &x.items)
                 .filter_map(|x| cache.host.get(x))
                 .filter_map(|x| tree_host_item_view(cache, model, x))
                 .collect()
@@ -712,8 +664,7 @@ fn tree_pools_collection_view(cache: &Cache, model: &Model, parent_address: &Add
         addr.clone(),
         |x| item_view("folder", &format!("OST Pools ({})", x.paging.total()), Route::OstPool),
         |x| {
-            x.paging
-                .slice_page()
+            slice_page(&x.paging, &x.items)
                 .filter_map(|x| cache.ost_pool.get(x))
                 .filter_map(|x| tree_pool_item_view(cache, model, &addr, x))
                 .collect()
@@ -728,8 +679,7 @@ fn tree_volume_collection_view(cache: &Cache, model: &Model, parent_address: &Ad
         parent_address.extend(Step::VolumeCollection),
         |x| item_view("folder", &format!("Volumes ({})", x.paging.total()), Route::Volume),
         |x| {
-            x.paging
-                .slice_page()
+            slice_page(&x.paging, &x.items)
                 .filter_map(|x| cache.volume_node.get(x))
                 .map(|x| {
                     let v = cache.volume.values().find(|v| v.id == x.volume_id).unwrap();
@@ -766,8 +716,7 @@ fn tree_target_collection_view(cache: &Cache, model: &Model, parent_address: &Ad
         parent_address.extend(kind),
         |x| item_view("folder", &format!("{} ({})", label, x.paging.total()), Route::Target),
         |x| {
-            x.paging
-                .slice_page()
+            slice_page(&x.paging, &x.items)
                 .filter_map(|x| cache.target.get(x))
                 .map(|x| {
                     li![

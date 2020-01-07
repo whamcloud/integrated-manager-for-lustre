@@ -2,6 +2,7 @@ pub(crate) mod activity_indicator;
 pub(crate) mod alert_indicator;
 pub(crate) mod arrow;
 pub(crate) mod breadcrumbs;
+pub(crate) mod dropdown;
 pub(crate) mod font_awesome;
 pub(crate) mod paging;
 pub(crate) mod popover;

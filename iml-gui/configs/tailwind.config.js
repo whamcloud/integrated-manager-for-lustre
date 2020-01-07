@@ -212,7 +212,7 @@ module.exports = {
   },
   variants: {
     display: ["group-hover", "responsive"],
-    textColor: ["hover", "group-hover"]
+    textColor: ["hover", "group-hover", "focus"]
   },
   plugins: []
 };
