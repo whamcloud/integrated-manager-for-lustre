@@ -37,16 +37,16 @@ impl Model {
     pub fn has_more(&self) -> bool {
         self.limit + self.offset < self.total()
     }
-    pub fn total(&self) -> usize {
+    pub const fn total(&self) -> usize {
         self.total
     }
-    pub fn has_less(&self) -> bool {
+    pub const fn has_less(&self) -> bool {
         self.offset != 0
     }
     pub fn has_pages(&self) -> bool {
         self.has_more() || self.has_less()
     }
-    pub fn offset(&self) -> usize {
+    pub const fn offset(&self) -> usize {
         self.offset
     }
     pub fn end(&self) -> usize {
