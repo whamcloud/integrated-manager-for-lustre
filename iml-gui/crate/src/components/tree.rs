@@ -504,6 +504,7 @@ fn toggle_view(address: Address, is_open: bool) -> Node<Msg> {
             C.h_4,
             C.inline,
             C.mr_1,
+            C._mt_1
         ],
         "chevron-right",
     );
@@ -523,7 +524,7 @@ fn item_view(icon: &str, label: &str, route: Route) -> Node<Msg> {
         attrs! {
             At::Href => route.to_href()
         },
-        font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1], icon),
+        font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], icon),
         label
     ]
 }

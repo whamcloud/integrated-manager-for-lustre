@@ -9,7 +9,7 @@ use crate::{
 use seed::{prelude::*, virtual_dom::Attrs, *};
 
 fn menu_icon<T>(icon_name: &str) -> Node<T> {
-    font_awesome(class![C.h_6, C.w_6, C.mr_3, C.inline], icon_name)
+    font_awesome(class![C.h_6, C.w_6, C.mr_3, C.inline, C._mt_1], icon_name)
 }
 
 fn nav_manage_dropdown(open: bool) -> Node<Msg> {
@@ -132,7 +132,10 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                 span![
                     class![C.group_hover__text_active],
                     "Management",
-                    font_awesome(class![C.fill_current, C.h_3, C.w_3, C.ml_1, C.inline], "chevron-down"),
+                    font_awesome(
+                        class![C.fill_current, C.h_3, C.w_3, C.ml_1, C.inline, C._mt_1],
+                        "chevron-down"
+                    ),
                 ],
             ],
             nav_manage_dropdown(model.manage_menu_state.is_open()),

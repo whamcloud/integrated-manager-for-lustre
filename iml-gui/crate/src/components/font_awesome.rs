@@ -10,7 +10,7 @@ pub fn font_awesome<T>(more_attrs: Attrs, icon_name: &str) -> Node<T> {
 }
 
 fn font_awesome_base<T>(sprite_sheet: &str, more_attrs: Attrs, icon_name: &str) -> Node<T> {
-    let mut attrs = class![C.fill_current, C._mt_1];
+    let mut attrs = class![C.fill_current];
     attrs.merge(more_attrs);
 
     svg![
