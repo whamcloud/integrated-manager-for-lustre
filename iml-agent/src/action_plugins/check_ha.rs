@@ -4,8 +4,8 @@
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output_success};
 use elementtree::Element;
-use std::collections::HashMap;
 use iml_wire_types::{ResourceAgentInfo, ResourceAgentType};
+use std::collections::HashMap;
 
 fn create(elem: &Element, group: Option<String>) -> ResourceAgentInfo {
     ResourceAgentInfo {
@@ -35,19 +35,15 @@ fn process_resources(xml: &[u8]) -> Result<Vec<ResourceAgentInfo>, ImlAgentError
     // This cannot split between map/map_err because Element does not implement Send
     match Element::from_reader(xml) {
         Err(err) => Err(ImlAgentError::XmlError(err)),
-        Ok(elem) => Ok(
-            elem.find_all("group")
-                .flat_map(|g| {
-                    let name = g.get_attr("id").unwrap_or("").to_string();
-                    g.find_all("primitive")
-                        .map(move |p| create(p, Some(name.clone())))
-                })
-                .chain(
-                    elem.find_all("primitive")
-                        .map(|p| create(p, None)),
-                )
-                .collect(),
-        ),
+        Ok(elem) => Ok(elem
+            .find_all("group")
+            .flat_map(|g| {
+                let name = g.get_attr("id").unwrap_or("").to_string();
+                g.find_all("primitive")
+                    .map(move |p| create(p, Some(name.clone())))
+            })
+            .chain(elem.find_all("primitive").map(|p| create(p, None)))
+            .collect()),
     }
 }
 
