@@ -1998,6 +1998,42 @@ pub struct ComponentState<T: Default> {
     pub state: T,
 }
 
+/// standard:provider:ocftype (e.g. ocf:heartbeat:ZFS, or stonith:fence_ipmilan)
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct ResourceAgentType {
+    pub standard: String,         // e.g. ocf, lsb, stonith, etc..
+    pub provider: Option<String>, // e.g. heartbeat, lustre, chroma
+    pub ocftype: String,          // e.g. Lustre, ZFS
+}
+
+impl ResourceAgentType {
+    pub fn new(standard: String, provider: Option<String>, ocftype: String) -> Self {
+        ResourceAgentType {
+            standard,
+            provider,
+            ocftype,
+        }
+    }
+}
+
+impl std::fmt::Display for ResourceAgentType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.provider {
+            Some(provider) => write!(f, "{}:{}:{}", self.standard, provider, self.ocftype),
+            None => write!(f, "{}:{}", self.standard, self.ocftype),
+        }
+    }
+}
+
+/// Information about Pacemake Resource Agent
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct ResourceAgentInfo {
+    pub agent: ResourceAgentType,
+    pub group: Option<String>,
+    pub id: String,
+    pub args: HashMap<String, String>,
+}
+
 /// An OST Pool record from `/api/ostpool/`
 #[derive(Debug, Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct OstPool {
