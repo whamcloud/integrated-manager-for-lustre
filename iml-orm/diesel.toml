@@ -1,0 +1,6 @@
+# For documentation on how to configure this file,
+# see diesel.rs/guides/configuring-diesel-cli
+
+[print_schema]
+file = "src/schema.rs"
+filter = { except_tables = ["chroma_core_sample_10", "chroma_core_sample_60", "chroma_core_sample_300", "chroma_core_sample_3600", "chroma_core_sample_86400"] }

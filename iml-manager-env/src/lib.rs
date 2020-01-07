@@ -138,3 +138,25 @@ pub fn get_db_name() -> Option<String> {
 pub fn get_db_password() -> Option<String> {
     empty_str_to_none(get_var("DB_PASSWORD"))
 }
+
+/// Gets a connection string from the IML env
+pub fn get_db_conn_string() -> String {
+    let mut xs = vec![format!("user={}", get_db_user())];
+
+    let host = match get_db_host() {
+        Some(x) => x,
+        None => "/var/run/postgresql".into(),
+    };
+
+    xs.push(format!("host={}", host));
+
+    if let Some(x) = get_db_name() {
+        xs.push(format!("dbname={}", x));
+    }
+
+    if let Some(x) = get_db_password() {
+        xs.push(format!("password={}", x));
+    }
+
+    xs.join(" ")
+}
