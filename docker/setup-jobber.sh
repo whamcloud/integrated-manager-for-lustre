@@ -1,15 +1,15 @@
 #!/bin/sh
 
 # Start the jobber daemon
-# /usr/libexec/jobberrunner -u /var/jobber/1000/cmd.sock /home/jobberuser/.jobber -D
-# status=$?
-# if [ $status -ne 0 ]; then
-#   echo "Failed to start jobber daemon: $status"
-#   exit $status
-# fi
+/usr/libexec/jobberrunner -u /var/jobber/1000/cmd.sock /home/jobberuser/.jobber &
+status=$?
+if [ $status -ne 0 ]; then
+  echo "Failed to start jobber daemon: $status"
+  exit $status
+fi
 
 # Start the iml-jobber http server
-/usr/local/bin/iml-jobber -D
+/usr/local/bin/iml-jobber &
 status=$?
 if [ $status -ne 0 ]; then
   echo "Failed to start iml-jobber http server: $status"
@@ -29,11 +29,8 @@ while sleep 60; do
   PROCESS_2_STATUS=$?
   # If the greps above find anything, they exit with 0 status
   # If they are not both 0, then something is wrong
-  # if [ $PROCESS_1_STATUS -ne 0 -o $PROCESS_2_STATUS -ne 0 ]; then
-  #   echo "One of the jobber processes exited."
-  #   exit 1
-  # fi
-  if [ $PROCESS_2_STATUS -ne 0 ]; then
+  if [ $PROCESS_1_STATUS -ne 0 -o $PROCESS_2_STATUS -ne 0 ]; then
+    echo "One of the jobber processes exited."
     exit 1
   fi
 done
