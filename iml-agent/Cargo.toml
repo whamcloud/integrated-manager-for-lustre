@@ -38,6 +38,7 @@ iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
 liblustreapi = { path = "../liblustreapi", version = "0.1" }
 iml-fs = { path = "../iml-fs", version = "0.1.0" }
 iml-util = { path = "../iml-util", version = "0.1.0" }
+version-utils = { path = "../version-utils", version = "0.1.0" }
 
 [dependencies.regex]
 version = "1.3"

@@ -57,6 +57,29 @@ jobs:
         rust:
           - stable
     steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path iml-gui/crate/Cargo.toml
+
+  headlesstest:
+    name: Firefox Headless Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+    steps:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
