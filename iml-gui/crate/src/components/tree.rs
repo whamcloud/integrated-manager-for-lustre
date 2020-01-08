@@ -185,7 +185,7 @@ impl Model {
         self.0 = HashMap::new();
     }
     fn remove_item(&mut self, addr: &Address, id: u32) {
-        if let Some(tree_node) = self.get_mut(&addr) {
+        if let Some(tree_node) = self.get_mut(addr) {
             tree_node.items.remove(&id);
             tree_node.paging.total -= 1;
         }
