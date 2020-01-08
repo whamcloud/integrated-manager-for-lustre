@@ -229,7 +229,7 @@ mod tests {
     fn test_paging_less() {
         let mut pager = Model::new(20);
 
-        assert_eq!(pager.has_less(), false);
+        assert!(!pager.has_less());
 
         pager.next_page();
 
