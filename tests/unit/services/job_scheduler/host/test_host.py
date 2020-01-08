@@ -2,7 +2,6 @@ from copy import deepcopy
 from itertools import chain
 from mock import call, MagicMock, patch
 import json
-import mock
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
@@ -81,7 +80,7 @@ class TestUpdateNids(NidTestCase):
         },
     }
 
-    @mock.patch("chroma_core.lib.job.Step.invoke_rust_agent", return_value=MagicMock())
+    @patch("chroma_core.lib.job.Step.invoke_rust_agent", return_value=MagicMock())
     def test_mgs_nid_change(self, invoke):
         invoke.return_value = """{"Ok": ""}"""
 
