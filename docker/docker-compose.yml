@@ -289,6 +289,19 @@ services:
       - "PROXY_HOST=iml-mailbox"
       - MAILBOX_PORT=8891
       - "MAILBOX_PATH=/var/spool/iml/mailbox"
+  iml-timer:
+    image: "imlteam/iml-timer:dev"
+    hostname: "iml-timer"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-timer.dockerfile
+    deploy: *default-deploy
+    volumes:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+      - "tmp_vol:/tmp"
+      - "run_vol:/run"
+      - "timer:/var/lib/systemd/timers"
+      - "manager-config:/var/lib/chroma"
   setup:
     image: "imlteam/manager-setup:dev"
     command: ["tail", "-f", "/dev/null"]
@@ -308,6 +321,15 @@ volumes:
   static-config1:
   static-config2:
   mailbox:
+  timer:
+  tmp_vol:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+  run_vol:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
 secrets:
   iml_pw:
     external: true
