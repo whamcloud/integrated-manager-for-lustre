@@ -7,7 +7,7 @@ use futures::{
     task::{Context, Poll},
     Stream,
 };
-use iml_manager_env::{get_db_host, get_db_name, get_db_password, get_db_user};
+use iml_manager_env::get_db_conn_string;
 use std::{pin::Pin, sync::Arc};
 pub use tokio_postgres::{
     error::DbError,
@@ -17,39 +17,13 @@ pub use tokio_postgres::{
 };
 use tokio_postgres::{tls::NoTlsStream, Connection, NoTls, Socket};
 
-/// Gets a connection string from the IML env
-fn get_conn_string() -> String {
-    let mut xs = vec![format!("user={}", get_db_user())];
-
-    let host = match get_db_host() {
-        Some(x) => x,
-        None => "/var/run/postgresql".into(),
-    };
-
-    xs.push(format!("host={}", host));
-
-    if let Some(x) = get_db_name() {
-        xs.push(format!("dbname={}", x));
-    }
-
-    if let Some(x) = get_db_password() {
-        xs.push(format!("password={}", x));
-    }
-
-    let s = xs.join(" ");
-
-    tracing::debug!("conn: {}", s);
-
-    s
-}
-
 /// Connect to the postgres instance running on the IML manager
 ///
 /// This fn is useful for production code as it reads in env vars
 /// to make a connection.
 ///
 pub async fn connect() -> Result<(Client, Connection<Socket, NoTlsStream>), Error> {
-    tokio_postgres::connect(&get_conn_string(), NoTls).await
+    tokio_postgres::connect(&get_db_conn_string(), NoTls).await
 }
 
 pub type SharedClient = Arc<Mutex<Client>>;
