@@ -184,6 +184,12 @@ impl Model {
     fn reset(&mut self) {
         self.0 = HashMap::new();
     }
+    fn remove_item(&mut self, addr: &Address, id: u32) {
+        if let Some(tree_node) = self.get_mut(&addr) {
+            tree_node.items.remove(&id);
+            tree_node.paging.total -= 1;
+        }
+    }
 }
 
 // Update
@@ -299,29 +305,24 @@ fn remove_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &m
         RecordId::Host(id) => {
             let addr: Address = vec![Step::HostCollection].into();
 
-            let tree_node = model.get_mut(&addr)?;
-
-            tree_node.items.remove(&id);
-            tree_node.paging.total -= 1;
+            model.remove_item(&addr, id);
 
             orders.send_msg(Msg::RemoveNode(addr.extend(Step::Host(id))));
         }
         RecordId::Filesystem(id) => {
             let addr: Address = vec![Step::FsCollection].into();
 
-            let tree_node = model.get_mut(&addr)?;
-            tree_node.items.remove(&id);
-            tree_node.paging.total -= 1;
+            model.remove_item(&addr, id);
 
             orders.send_msg(Msg::RemoveNode(addr.extend(Step::Fs(id))));
         }
         RecordId::VolumeNode(id) => {
             let vn = cache.volume_node.get(&id)?;
 
-            let tree_node =
-                model.get_mut(&vec![Step::HostCollection, Step::Host(vn.host_id), Step::VolumeCollection].into())?;
-            tree_node.items.remove(&id);
-            tree_node.paging.total -= 1;
+            model.remove_item(
+                &vec![Step::HostCollection, Step::Host(vn.host_id), Step::VolumeCollection].into(),
+                id,
+            );
         }
         RecordId::OstPoolOsts(id) => {
             let ost_pool_ost = cache.ost_pool_osts.get(&id)?;
@@ -334,9 +335,7 @@ fn remove_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &m
             ]
             .into();
 
-            let tree_node = model.get_mut(&addr)?;
-            tree_node.items.remove(&ost_pool.id);
-            tree_node.paging.total -= 1;
+            model.remove_item(&addr, ost_pool.id);
 
             orders.send_msg(Msg::RemoveNode(addr.extend(Step::OstPool(ost_pool.id))));
         }
@@ -348,13 +347,9 @@ fn remove_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &m
             for fs_id in ids {
                 let addr: Address = vec![Step::FsCollection, Step::Fs(fs_id)].into();
 
-                let tree_node = model.get_mut(&addr.extend(target.kind))?;
-                tree_node.items.remove(&id);
-                tree_node.paging.total -= 1;
+                model.remove_item(&addr.extend(target.kind), id);
 
-                let tree_node2 = model.get_mut(&addr.extend(Step::OstPoolCollection).extend(Step::OstCollection))?;
-                tree_node2.items.remove(&id);
-                tree_node2.paging.total -= 1;
+                model.remove_item(&addr.extend(Step::OstPoolCollection).extend(Step::OstCollection), id);
             }
         }
         _ => {}
