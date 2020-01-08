@@ -9,3 +9,4 @@ tokio = "0.2.7"
 warp = { git = "https://github.com/seanmonstar/warp.git" }
 tracing = "0.1"
 tracing-subscriber = "0.1"
+iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }

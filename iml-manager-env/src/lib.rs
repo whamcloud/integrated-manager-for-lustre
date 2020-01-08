@@ -104,6 +104,16 @@ pub fn get_mailbox_addr() -> SocketAddr {
     to_socket_addr(&get_server_host(), &get_mailbox_port())
 }
 
+/// Get the jobber port
+pub fn get_jobber_port() -> String {
+    get_var("JOBBER_PORT")
+}
+
+/// Get the jobber address from the env or panic
+pub fn get_jobber_addr() -> SocketAddr {
+    to_socket_addr(&get_server_host(), &get_jobber_port())
+}
+
 /// Get the path to the mailbox from the env or panic
 pub fn get_mailbox_path() -> PathBuf {
     get_var("MAILBOX_PATH").into()

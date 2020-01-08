@@ -80,5 +80,7 @@ async fn main() {
             _ => warp::reply::with_status(warp::reply(), status),
         });
 
-    warp::serve(config_route).run(([127, 0, 0, 1], 8892)).await;
+    warp::serve(config_route)
+        .run(iml_manager_env::get_jobber_addr())
+        .await;
 }
