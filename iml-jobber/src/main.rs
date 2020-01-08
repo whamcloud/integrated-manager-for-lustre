@@ -64,7 +64,7 @@ async fn main() {
             }
         })
         .map(|status: warp::http::StatusCode| match status {
-            warp::http::StatusCode::OK => match Command::new("jobber reload").spawn() {
+            warp::http::StatusCode::OK => match Command::new("jobber").arg("reload").spawn() {
                 Ok(_) => {
                     tracing::debug!("Reloaded jobber daemon.");
                     warp::reply::with_status(warp::reply(), warp::http::StatusCode::OK)
