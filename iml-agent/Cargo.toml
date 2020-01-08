@@ -27,6 +27,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 structopt = "0.2"
 tokio = { version = "0.2", features = ["fs", "process", "macros", "net"] }
+tokio-util = { version = "0.2", features = ["codec"] }
 tracing = "0.1"
 tracing-subscriber = "0.1"
 native-tls = "0.2"
@@ -39,6 +40,7 @@ liblustreapi = { path = "../liblustreapi", version = "0.1" }
 iml-fs = { path = "../iml-fs", version = "0.1.0" }
 iml-util = { path = "../iml-util", version = "0.1.0" }
 version-utils = { path = "../version-utils", version = "0.1.0" }
+stream-cancel = "0.5"
 
 [dependencies.regex]
 version = "1.3"
