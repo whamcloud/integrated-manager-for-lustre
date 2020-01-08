@@ -9,7 +9,7 @@
 # fi
 
 # Start the iml-jobber http server
-./iml-jobber -D
+/usr/local/bin/iml-jobber -D
 status=$?
 if [ $status -ne 0 ]; then
   echo "Failed to start iml-jobber http server: $status"
