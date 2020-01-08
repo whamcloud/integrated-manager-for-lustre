@@ -233,18 +233,18 @@ mod tests {
 
         pager.next_page();
 
-        assert_eq!(pager.has_less(), true);
+        assert!(pager.has_less());
     }
 
     #[test]
     fn test_paging_more() {
         let mut pager = Model::new(20);
 
-        assert_eq!(pager.has_more(), true);
+        assert!(pager.has_more());
 
         pager.next_page();
 
-        assert_eq!(pager.has_more(), false);
+        assert!(!pager.has_more());
     }
 
     #[test]
@@ -262,15 +262,15 @@ mod tests {
     fn test_has_pages() {
         let mut pager = Model::default();
 
-        assert_eq!(pager.has_pages(), false);
+        assert!(!pager.has_pages());
 
         pager.total = 10;
 
-        assert_eq!(pager.has_pages(), false);
+        assert!(!pager.has_pages());
 
         pager.total = 11;
 
-        assert_eq!(pager.has_pages(), true);
+        assert!(pager.has_pages());
     }
 
     #[test]
@@ -292,7 +292,7 @@ mod tests {
 
         pager.next_page();
 
-        assert_eq!(pager.has_more(), false);
+        assert!(!pager.has_more());
 
         assert_eq!(pager.range(), 20..20);
     }
