@@ -23,6 +23,7 @@ members = [
     'iml-wire-types',
     'liblustreapi-types',
     'liblustreapi',
+    'iml-timer',
     'number-formatter',
     'tokio-runtime-shutdown',
     'version-utils',

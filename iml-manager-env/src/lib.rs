@@ -141,6 +141,16 @@ pub fn get_mailbox_addr() -> SocketAddr {
     to_socket_addr(&get_server_host(), &get_mailbox_port())
 }
 
+/// Get the timer port
+pub fn get_timer_port() -> String {
+    get_var("TIMER_PORT")
+}
+
+/// Get the timer address from the env or panic
+pub fn get_timer_addr() -> SocketAddr {
+    to_socket_addr(&get_server_host(), &get_timer_port())
+}
+
 /// Get the path to the mailbox from the env or panic
 pub fn get_mailbox_path() -> PathBuf {
     get_var("MAILBOX_PATH").into()
