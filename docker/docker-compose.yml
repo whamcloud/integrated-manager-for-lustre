@@ -273,6 +273,15 @@ services:
       - "PROXY_HOST=iml-mailbox"
       - MAILBOX_PORT=8891
       - "MAILBOX_PATH=/var/spool/iml/mailbox"
+  iml-jobber:
+    image: "imlteam/iml-jobber:dev"
+    hostname: "iml-jobber"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-jobber.dockerfile
+    deploy: *default-deploy
+    volumes:
+      - "jobber:/home/jobberuser"
   setup:
     image: "imlteam/manager-setup:dev"
     command: ["tail", "-f", "/dev/null"]
@@ -292,6 +301,7 @@ volumes:
   static-config1:
   static-config2:
   mailbox:
+  jobber:
 secrets:
   iml_pw:
     external: true
