@@ -35,6 +35,7 @@ cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-action-runner %{buildroot}%{_bindir}
 cp iml-warp-drive %{buildroot}%{_bindir}
 cp iml-mailbox %{buildroot}%{_bindir}
+cp iml-jobber %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp iml-stratagem.service %{buildroot}%{_unitdir}
 cp iml-agent-comms.service %{buildroot}%{_unitdir}
@@ -42,6 +43,7 @@ cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
 cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
 cp iml-warp-drive.service %{buildroot}%{_unitdir}
 cp iml-mailbox.service %{buildroot}%{_unitdir}
+cp iml-jobber.service %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_tmpfilesdir}
 cp iml-mailbox.conf %{buildroot}%{_tmpfilesdir}
 mkdir -p %{buildroot}%{_presetdir}
@@ -195,6 +197,29 @@ systemctl preset iml-mailbox.service
 %attr(0644,root,root)%{_unitdir}/iml-mailbox.service
 %attr(0644,root,root)%{_tmpfilesdir}/iml-mailbox.conf
 
+%package jobber
+Summary: Performs systemd timer services inside of a docker container
+License: MIT
+Group: System Environment/Libraries
+
+%description jobber
+%{summary}
+
+%post jobber
+systemctl preset iml-jobber.service
+
+%preun jobber
+%systemd_preun iml-jobber.service
+
+%postun jobber
+%systemd_postun_with_restart iml-jobber.service
+
+%files jobber
+%{_bindir}/iml-jobber
+%attr(0644,root,root)%{_unitdir}/iml-jobber.service
+
 %changelog
+* Thu Jan 9 2020 Will Johnson <wjohnson@whamcloud.com> - 0.2.0-1
+- Add iml-jobber
 * Wed Mar 6 2019 Joe Grund <jgrund@whamcloud.com> - 0.1.0-1
 - Initial package

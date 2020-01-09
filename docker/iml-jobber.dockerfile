@@ -1,7 +1,9 @@
 FROM rust-iml-base as builder
 
-FROM jobber
-COPY --from=builder /build/target/x86_64-unknown-linux-musl/release/iml-jobber /usr/local/bin
-COPY docker/setup-jobber.sh /usr/local/bin
+FROM centos:7
+RUN yum-config-manager --add-repo=https://copr.fedorainfracloud.org/coprs/managerforlustre/iml-manager-scheduler/repo/epel-7/managerforlustre-iml-manager-scheduler-epel-7.repo \
+  && yum install -y rust-iml-jobber \
+  && systemctl enable rust-iml-jobber \
+  && systemctl start rust-iml-jobber
 
-CMD ["setup-jobber.sh"]
+CMD ["/sbin/init"]

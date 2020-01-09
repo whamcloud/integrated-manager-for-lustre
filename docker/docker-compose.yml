@@ -282,6 +282,10 @@ services:
     deploy: *default-deploy
     volumes:
       - "jobber:/home/jobberuser"
+      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+    tmpfs:
+      - /tmp
+      - /run
     environment:
       - "PROXY_HOST=iml-jobber"
       - JOBBER_PORT=8892

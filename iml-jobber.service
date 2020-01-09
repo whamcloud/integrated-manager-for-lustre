@@ -1,0 +1,10 @@
+[Unit]
+Description=IML Jobber Service
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info
+ExecStart=/bin/iml-jobber
+Restart=always
+StandardOutput=journal
+StandardError=journal
