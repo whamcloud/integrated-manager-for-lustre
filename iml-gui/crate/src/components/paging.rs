@@ -134,6 +134,10 @@ pub fn dir_toggle_view<T>(dir: Dir, more_attrs: Attrs) -> Node<T> {
 }
 
 pub(crate) fn limit_selection_view(p: &Model) -> Node<Msg> {
+    if !p.has_pages() {
+        return empty![];
+    }
+
     let mut btn = button![
         class![
             C.bg_transparent,
