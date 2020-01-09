@@ -1,0 +1,68 @@
+<resources>
+  <primitive class="stonith" id="st-fencing" type="fence_chroma"/>
+  <primitive class="ocf" id="MGS_b8aa2b" provider="lustre" type="Lustre">
+    <instance_attributes id="MGS_b8aa2b-instance_attributes">
+      <nvpair id="MGS_b8aa2b-instance_attributes-instance_attributes-mountpoint" name="mountpoint" value="/mnt/MGS"/>
+      <nvpair id="MGS_b8aa2b-instance_attributes-instance_attributes-target" name="target" value="/dev/disk/by-id/scsi-36001405c20616f7b8b2492d8913a4d24"/>
+    </instance_attributes>
+    <operations>
+      <op id="MGS_b8aa2b-start-interval-0s" interval="0s" name="start" timeout="300s"/>
+      <op id="MGS_b8aa2b-stop-interval-0s" interval="0s" name="stop" timeout="300s"/>
+      <op id="MGS_b8aa2b-monitor-interval-20s" interval="20s" name="monitor" timeout="300s"/>
+    </operations>
+    <meta_attributes id="MGS_b8aa2b-meta_attributes">
+      <nvpair id="MGS_b8aa2b-meta_attributes-meta_attributes-target_role" name="target_role" value="Stopped"/>
+      <nvpair id="MGS_b8aa2b-meta_attributes-target-role" name="target-role" value="Started"/>
+    </meta_attributes>
+  </primitive>
+  <group id="group-fs10-MDT0000_c81867">
+    <primitive class="ocf" id="fs10-MDT0000_c81867" provider="lustre" type="Lustre">
+      <instance_attributes id="fs10-MDT0000_c81867-instance_attributes">
+        <nvpair id="fs10-MDT0000_c81867-instance_attributes-instance_attributes-mountpoint" name="mountpoint" value="/mnt/fs10-MDT0000"/>
+        <nvpair id="fs10-MDT0000_c81867-instance_attributes-instance_attributes-target" name="target" value="/dev/disk/by-id/scsi-3600140562d7cc2e77b040ae861a491f3"/>
+      </instance_attributes>
+      <operations>
+        <op id="fs10-MDT0000_c81867-start-interval-0s" interval="0s" name="start" timeout="300s"/>
+        <op id="fs10-MDT0000_c81867-stop-interval-0s" interval="0s" name="stop" timeout="300s"/>
+        <op id="fs10-MDT0000_c81867-monitor-interval-20s" interval="20s" name="monitor" timeout="300s"/>
+      </operations>
+      <meta_attributes id="fs10-MDT0000_c81867-meta_attributes">
+        <nvpair id="fs10-MDT0000_c81867-meta_attributes-meta_attributes-target_role" name="target_role" value="Stopped"/>
+        <nvpair id="fs10-MDT0000_c81867-meta_attributes-target-role" name="target-role" value="Started"/>
+      </meta_attributes>
+    </primitive>
+    <primitive class="systemd" id="test" type="httpd">
+      <operations>
+        <op id="test-monitor-interval-60" interval="60" name="monitor" timeout="100"/>
+        <op id="test-start-interval-0s" interval="0s" name="start" timeout="100"/>
+        <op id="test-stop-interval-0s" interval="0s" name="stop" timeout="100"/>
+      </operations>
+    </primitive>
+  </group>
+  <group id="group-fs11-MDT0000_13a57f">
+    <primitive class="ocf" id="fs11-MDT0000_13a57f-zfs" provider="chroma" type="ZFS">
+      <instance_attributes id="fs11-MDT0000_13a57f-zfs-instance_attributes">
+        <nvpair id="fs11-MDT0000_13a57f-zfs-instance_attributes-instance_attributes-pool" name="pool" value="mdt10"/>
+      </instance_attributes>
+      <operations>
+        <op id="fs11-MDT0000_13a57f-zfs-start-interval-0s" interval="0s" name="start" timeout="60s"/>
+        <op id="fs11-MDT0000_13a57f-zfs-stop-interval-0s" interval="0s" name="stop" timeout="60s"/>
+        <op id="fs11-MDT0000_13a57f-zfs-monitor-interval-5s" interval="5s" name="monitor" timeout="30s"/>
+      </operations>
+    </primitive>
+    <primitive class="ocf" id="fs11-MDT0000_13a57f" provider="lustre" type="Lustre">
+      <instance_attributes id="fs11-MDT0000_13a57f-instance_attributes">
+        <nvpair id="fs11-MDT0000_13a57f-instance_attributes-instance_attributes-mountpoint" name="mountpoint" value="/mnt/fs11-MDT0000"/>
+        <nvpair id="fs11-MDT0000_13a57f-instance_attributes-instance_attributes-target" name="target" value="mdt10/fs11-MDT0000"/>
+      </instance_attributes>
+      <operations>
+        <op id="fs11-MDT0000_13a57f-start-interval-0s" interval="0s" name="start" timeout="300s"/>
+        <op id="fs11-MDT0000_13a57f-stop-interval-0s" interval="0s" name="stop" timeout="300s"/>
+        <op id="fs11-MDT0000_13a57f-monitor-interval-20s" interval="20s" name="monitor" timeout="300s"/>
+      </operations>
+    </primitive>
+    <meta_attributes id="group-fs11-MDT0000_13a57f-meta_attributes">
+      <nvpair id="group-fs11-MDT0000_13a57f-meta_attributes-meta_attributes-target_role" name="target_role" value="Stopped"/>
+    </meta_attributes>
+  </group>
+</resources>
