@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{delete, get, get_all, get_one, post, put, wait_for_cmds},
+    api_utils::{delete, extract_api_id, get, get_all, get_one, post, put, wait_for_cmds},
     display_utils::{generate_table, wrap_fut},
     error::ImlManagerCliError,
 };
@@ -13,6 +13,7 @@ use iml_wire_types::{
     ApiList, Command, EndpointName, Filesystem, FlatQuery, Ost, OstPool, OstPoolApi,
 };
 use prettytable::{Row, Table};
+use std::iter::FromIterator;
 use structopt::StructOpt;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -97,7 +98,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
     let term = Term::stdout();
     match command {
         OstPoolCommand::List { fsname } => {
-            let xs = match fsname {
+            let xs: Vec<_> = match fsname {
                 Some(fsname) => {
                     let fs: Filesystem =
                         wrap_fut("Fetching Filesystem ...", get_one(vec![("name", &fsname)]))
@@ -119,17 +120,36 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
                 None => {
                     let pools: ApiList<OstPoolApi> =
                         wrap_fut("Fetching OstPools...", get_all()).await?;
-                    // @@ "cache" this
-                    try_join_all(pools.objects.into_iter().map(|p| {
-                        async move {
-                            get(&p.ost.filesystem, Filesystem::query()).await.map(
-                                move |fs: Filesystem| {
-                                    vec![fs.name, p.ost.name, p.ost.osts.len().to_string()]
-                                },
-                            )
-                        }
-                    }))
-                    .await?
+
+                    let fs_ids = pools
+                        .objects
+                        .iter()
+                        .filter_map(|p| {
+                            let id = extract_api_id(&p.ost.filesystem);
+
+                            id.map(|x| x.to_string())
+                        })
+                        .collect::<std::collections::HashSet<String>>();
+
+                    let mut query = Filesystem::query();
+
+                    query.push(("id__in", &Vec::from_iter(fs_ids).join(",")));
+
+                    let fs: ApiList<Filesystem> =
+                        get(Filesystem::endpoint_name(), Filesystem::query()).await?;
+
+                    pools
+                        .objects
+                        .into_iter()
+                        .filter_map(move |p| {
+                            fs.objects
+                                .iter()
+                                .find(|f| f.resource_uri == p.ost.filesystem)
+                                .map(move |fs| {
+                                    vec![fs.name.clone(), p.ost.name, p.ost.osts.len().to_string()]
+                                })
+                        })
+                        .collect()
                 }
             };
 
