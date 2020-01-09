@@ -6,6 +6,7 @@ pub(crate) mod dropdown;
 pub(crate) mod font_awesome;
 pub(crate) mod paging;
 pub(crate) mod popover;
+pub(crate) mod table;
 pub(crate) mod tooltip;
 pub(crate) mod tree;
 
