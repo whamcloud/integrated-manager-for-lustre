@@ -1109,7 +1109,7 @@ dependencies = [
  "tracing-subscriber 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "v_hist 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "v_hist 0.1.1 (git+https://github.com/jgrund/hist?branch=use-console-instead-of-termion)",
  "version-utils 0.1.0",
 ]
 
