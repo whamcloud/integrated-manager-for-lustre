@@ -22,6 +22,7 @@ members = [
     'iml-services/iml-ostpool',
     'iml-services/iml-stratagem',
     'number-formatter',
+    'version-utils',
 ]
 
 exclude = [
