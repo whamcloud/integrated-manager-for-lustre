@@ -191,4 +191,5 @@ help_text = {
     "stonith_enabled": "stonith-enabled set to true on %s",
     "creating_ostpool": "Creating OST Pool",
     "destroying_ostpool": "Destroying OST Pool",
+    "updating_ostpool": "Updating OST Pool",
 }

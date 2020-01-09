@@ -8,6 +8,7 @@ use crate::{
 };
 use futures::future::try_join_all;
 use iml_wire_types::OstPool;
+use std::iter::FromIterator;
 use std::time::Duration;
 use tokio::time::delay_for;
 
@@ -86,7 +87,7 @@ pub async fn action_pool_destroy(cmd: CmdPool) -> Result<(), ImlAgentError> {
     pool_destroy(cmd.filesystem, cmd.name).await
 }
 
-async fn pool_list(filesystem: &str) -> Result<Vec<String>, ImlAgentError> {
+pub async fn pool_list(filesystem: &str) -> Result<Vec<String>, ImlAgentError> {
     match lctl(vec!["pool_list", &filesystem]).await {
         Ok(o) => Ok(String::from_utf8_lossy(&o.stdout)
             .lines()
@@ -107,22 +108,31 @@ async fn pool_list(filesystem: &str) -> Result<Vec<String>, ImlAgentError> {
     }
 }
 
+pub async fn ost_list<B>(filesystem: &str, pool: &str) -> Result<B, ImlAgentError>
+where
+    B: FromIterator<String>,
+{
+    let pn = format!("{}.{}", filesystem, pool);
+    pool_list(&pn).await.map(|l| {
+        l.iter()
+            .map(|s| s.trim_end_matches("_UUID").to_string())
+            .collect()
+    })
+}
+
 pub async fn pools(filesystem: String) -> Result<Vec<OstPool>, ImlAgentError> {
     let xs = pool_list(&filesystem).await?;
 
     let xs = xs.into_iter().map(|pool| {
-        let filesystem = filesystem.clone();
+        let filesystem = &filesystem;
 
         async move {
-            let p = format!("{}.{}", filesystem, pool);
-
-            let osts = { pool_list(&p) };
+            let osts = ost_list(&filesystem, &pool);
 
             Ok::<_, ImlAgentError>(OstPool {
                 name: pool.to_string(),
-                filesystem,
+                filesystem: filesystem.clone(),
                 osts: osts.await?,
-                ..Default::default()
             })
         }
     });
