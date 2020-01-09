@@ -1,3 +1,5 @@
+#!/bin/bash
+
 mkdir -p /tmp/iml-install
 cd /tmp/iml-install
 curl -L https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/v$1/iml-$1.tar.gz | tar zx --strip 1

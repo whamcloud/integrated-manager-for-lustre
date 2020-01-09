@@ -1,3 +1,5 @@
+#!/bin/bash
+
 yum-config-manager --disable base extras updates
 yum-config-manager \
   --add-repo http://vault.centos.org/${1}/os/x86_64/ \
