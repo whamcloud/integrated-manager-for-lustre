@@ -131,12 +131,13 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
                         })
                         .collect::<std::collections::HashSet<String>>();
 
+                    let fs_ids = Vec::from_iter(fs_ids).join(",");
+
                     let mut query = Filesystem::query();
 
-                    query.push(("id__in", &Vec::from_iter(fs_ids).join(",")));
+                    query.push(("id__in", &fs_ids));
 
-                    let fs: ApiList<Filesystem> =
-                        get(Filesystem::endpoint_name(), Filesystem::query()).await?;
+                    let fs: ApiList<Filesystem> = get(Filesystem::endpoint_name(), query).await?;
 
                     pools
                         .objects
