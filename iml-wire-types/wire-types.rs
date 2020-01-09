@@ -2045,6 +2045,54 @@ impl fmt::Display for ServiceState {
     }
 }
 
+/// standard:provider:ocftype (e.g. ocf:heartbeat:ZFS, or stonith:fence_ipmilan)
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
+pub struct ResourceAgentType {
+    pub standard: String,         // e.g. ocf, lsb, stonith, etc..
+    pub provider: Option<String>, // e.g. heartbeat, lustre, chroma
+    pub ocftype: String,          // e.g. Lustre, ZFS
+}
+
+impl ResourceAgentType {
+    pub const fn new(standard: String, provider: Option<String>, ocftype: String) -> Self {
+        ResourceAgentType {
+            standard,
+            provider,
+            ocftype,
+        }
+    }
+}
+
+impl fmt::Display for ResourceAgentType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.provider {
+            Some(provider) => write!(f, "{}:{}:{}", self.standard, provider, self.ocftype),
+            None => write!(f, "{}:{}", self.standard, self.ocftype),
+        }
+    }
+}
+
+impl PartialEq<String> for ResourceAgentType {
+    fn eq(&self, other: &String) -> bool {
+        self.to_string() == *other
+    }
+}
+
+impl PartialEq<&str> for ResourceAgentType {
+    fn eq(&self, other: &&str) -> bool {
+        self.to_string() == *other
+    }
+}
+
+/// Information about pacemaker resource agents
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
+pub struct ResourceAgentInfo {
+    pub agent: ResourceAgentType,
+    pub group: Option<String>,
+    pub id: String,
+    pub args: HashMap<String, String>,
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum ConfigState {
     Unknown,

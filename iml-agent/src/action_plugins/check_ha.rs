@@ -6,84 +6,37 @@ use crate::{agent_error::ImlAgentError, systemd};
 use elementtree::Element;
 use futures::try_join;
 use iml_cmd::cmd_output_success;
-use iml_wire_types::{ComponentState, ConfigState, ServiceState};
-use std::{collections::HashMap, fmt, str};
+use iml_wire_types::{
+    ComponentState, ConfigState, ResourceAgentInfo, ResourceAgentType, ServiceState,
+};
+use std::collections::HashMap;
 use tokio::fs::metadata;
 
-/// standard:provider:ocftype (e.g. ocf:heartbeat:ZFS, or stonith:fence_ipmilan)
-#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
-pub struct ResourceAgentType {
-    pub standard: String,         // e.g. ocf, lsb, stonith, etc..
-    pub provider: Option<String>, // e.g. heartbeat, lustre, chroma
-    pub ocftype: String,          // e.g. Lustre, ZFS
-}
-
-impl ResourceAgentType {
-    pub fn new(standard: String, provider: Option<String>, ocftype: String) -> Self {
-        ResourceAgentType {
-            standard,
-            provider,
-            ocftype,
-        }
+fn create(elem: &Element, group: Option<String>) -> ResourceAgentInfo {
+    ResourceAgentInfo {
+        agent: ResourceAgentType::new(
+            elem.get_attr("class").unwrap_or("").to_string(),
+            elem.get_attr("provider").map(|s| s.to_string()),
+            elem.get_attr("type").unwrap_or("").to_string(),
+        ),
+        group,
+        id: elem.get_attr("id").unwrap_or("").to_string(),
+        args: match elem.find("instance_attributes") {
+            None => HashMap::new(),
+            Some(e) => e
+                .find_all("nvpair")
+                .map(|nv| {
+                    (
+                        nv.get_attr("name").unwrap_or("").to_string(),
+                        nv.get_attr("value").unwrap_or("").to_string(),
+                    )
+                })
+                .collect(),
+        },
     }
 }
 
-impl fmt::Display for ResourceAgentType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.provider {
-            Some(provider) => write!(f, "{}:{}:{}", self.standard, provider, self.ocftype),
-            None => write!(f, "{}:{}", self.standard, self.ocftype),
-        }
-    }
-}
-
-impl PartialEq<String> for ResourceAgentType {
-    fn eq(&self, other: &String) -> bool {
-        self.to_string() == *other
-    }
-}
-
-impl PartialEq<&str> for ResourceAgentType {
-    fn eq(&self, other: &&str) -> bool {
-        self.to_string() == *other
-    }
-}
-
-#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
-pub struct AgentInfo {
-    pub agent: ResourceAgentType,
-    pub group: Option<String>,
-    pub id: String,
-    pub args: HashMap<String, String>,
-}
-
-impl AgentInfo {
-    pub fn create(elem: &Element, group: Option<String>) -> Self {
-        AgentInfo {
-            agent: ResourceAgentType::new(
-                elem.get_attr("class").unwrap_or("").to_string(),
-                elem.get_attr("provider").map(|s| s.to_string()),
-                elem.get_attr("type").unwrap_or("").to_string(),
-            ),
-            group,
-            id: elem.get_attr("id").unwrap_or("").to_string(),
-            args: match elem.find("instance_attributes") {
-                None => HashMap::new(),
-                Some(e) => e
-                    .find_all("nvpair")
-                    .map(|nv| {
-                        (
-                            nv.get_attr("name").unwrap_or("").to_string(),
-                            nv.get_attr("value").unwrap_or("").to_string(),
-                        )
-                    })
-                    .collect(),
-            },
-        }
-    }
-}
-
-fn process_resource_list(output: &[u8]) -> Result<Vec<AgentInfo>, ImlAgentError> {
+fn process_resource_list(output: &[u8]) -> Result<Vec<ResourceAgentInfo>, ImlAgentError> {
     let element = Element::from_reader(output)?;
 
     Ok(element
@@ -91,17 +44,13 @@ fn process_resource_list(output: &[u8]) -> Result<Vec<AgentInfo>, ImlAgentError>
         .flat_map(|g| {
             let name = g.get_attr("id").unwrap_or("").to_string();
             g.find_all("primitive")
-                .map(move |p| AgentInfo::create(p, Some(name.clone())))
+                .map(move |p| create(p, Some(name.clone())))
         })
-        .chain(
-            element
-                .find_all("primitive")
-                .map(|p| AgentInfo::create(p, None)),
-        )
+        .chain(element.find_all("primitive").map(|p| create(p, None)))
         .collect())
 }
 
-pub async fn get_ha_resource_list(_: ()) -> Result<Vec<AgentInfo>, ImlAgentError> {
+pub async fn get_ha_resource_list(_: ()) -> Result<Vec<ResourceAgentInfo>, ImlAgentError> {
     let resources =
         cmd_output_success("cibadmin", vec!["--query", "--xpath", "//resources"]).await?;
 
@@ -212,7 +161,7 @@ pub async fn check_ha(
 
 #[cfg(test)]
 mod tests {
-    use super::{process_resource_list, AgentInfo, ResourceAgentType};
+    use super::{process_resource_list, ResourceAgentInfo, ResourceAgentType};
     use std::collections::HashMap;
 
     #[test]
@@ -220,10 +169,11 @@ mod tests {
         let testxml = r#"<resources>
   <primitive class="stonith" id="st-fencing" type="fence_chroma"/>
 </resources>
-"#;
+"#
+        .as_bytes();
         assert_eq!(
-            process_resource_list(&testxml.as_bytes()).unwrap(),
-            vec![AgentInfo {
+            process_resource_list(&testxml).unwrap(),
+            vec![ResourceAgentInfo {
                 agent: ResourceAgentType::new(
                     "stonith".to_string(),
                     None,
@@ -280,9 +230,9 @@ mod tests {
     </meta_attributes>
   </primitive>
 </resources>
-"#;
+"#.as_bytes();
 
-        let mut a1 = AgentInfo {
+        let mut a1 = ResourceAgentInfo {
             agent: ResourceAgentType::new(
                 "ocf".to_string(),
                 Some("chroma".to_string()),
@@ -293,7 +243,7 @@ mod tests {
             args: HashMap::new(),
         };
         a1.args.insert("pool".to_string(), "MGS".to_string());
-        let mut a2 = AgentInfo {
+        let mut a2 = ResourceAgentInfo {
             agent: ResourceAgentType::new(
                 "ocf".to_string(),
                 Some("lustre".to_string()),
@@ -306,7 +256,7 @@ mod tests {
         a2.args.insert("target".to_string(), "MGS/MGS".to_string());
         a2.args
             .insert("mountpoint".to_string(), "/mnt/MGS".to_string());
-        let mut a3 = AgentInfo {
+        let mut a3 = ResourceAgentInfo {
             agent: ResourceAgentType::new(
                 "ocf".to_string(),
                 Some("lustre".to_string()),
@@ -323,9 +273,6 @@ mod tests {
         a3.args
             .insert("mountpoint".to_string(), "/mnt/fs21-MDT0000".to_string());
 
-        assert_eq!(
-            process_resource_list(&testxml.as_bytes()).unwrap(),
-            vec![a1, a2, a3]
-        );
+        assert_eq!(process_resource_list(&testxml).unwrap(), vec![a1, a2, a3]);
     }
 }
