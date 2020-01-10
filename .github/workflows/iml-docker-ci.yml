@@ -2,8 +2,8 @@ name: IML Docker CI
 on: [push, pull_request]
 
 jobs:
-  check_rpm_build:
-    name: Check RPM build
+  check_rpm_build_iml_docker:
+    name: Check RPM build (iml-docker)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
