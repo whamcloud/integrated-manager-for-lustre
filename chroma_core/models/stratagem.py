@@ -121,7 +121,7 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
                 filesystem_id: config.filesystem.id,
                 iml_cmd: iml_cmd
             }
-            requests.put("http://nginx:{}/jobber/configure/".format(settings.JOBBER_PORT), json=post_data)
+            requests.put("http://nginx:{}/jobber/config/".format(settings.JOBBER_PORT), json=post_data)
         else:
             job_log.debug("Configure stratagem timer step kwargs: {}".format(kwargs))
             # Create systemd timer
