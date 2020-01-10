@@ -1,4 +1,4 @@
-use crate::{components::font_awesome, generated::css_classes::C, key_codes};
+use crate::{components::font_awesome, generated::css_classes::C, key_codes, GMsg};
 use seed::{prelude::*, *};
 
 #[derive(Default)]
@@ -12,7 +12,7 @@ pub enum Msg {
     Close,
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::KeyDown(code) => {
             if code == key_codes::ESC {

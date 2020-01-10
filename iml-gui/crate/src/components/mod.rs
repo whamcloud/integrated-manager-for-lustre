@@ -6,6 +6,7 @@ pub mod popover;
 pub mod table;
 pub mod tooltip;
 
+pub(crate) mod action_dropdown;
 pub(crate) mod activity_indicator;
 pub(crate) mod alert_indicator;
 pub(crate) mod arrow;
