@@ -4,6 +4,7 @@
 
 import logging
 import os
+import requests
 
 from os import path
 from toolz.functoolz import pipe, partial, flip
@@ -23,7 +24,7 @@ from chroma_core.lib.stratagem import (
     aggregate_points,
     submit_aggregated_data,
 )
-from chroma_core.lib.util import CommandLine
+from chroma_core.lib.util import CommandLine, runningInDocker
 
 from chroma_core.models import Job
 from chroma_core.models import StateChangeJob, StateLock, StepResult, LustreClientMount
@@ -106,40 +107,51 @@ def service_file(fid):
 
 class ConfigureStratagemTimerStep(Step, CommandLine):
     def run(self, kwargs):
-        job_log.debug("Configure stratagem timer step kwargs: {}".format(kwargs))
-        # Create systemd timer
-
-        config = kwargs["config"]
-
-        with open(timer_file(config.id), "w") as fn:
-            fn.write(
-                "#  This file is part of IML\n"
-                "#  This file will be overwritten automatically\n"
-                "\n[Unit]\n"
-                "Description=Start Stratagem run on {}\n"
-                "\n[Timer]\n"
-                "OnActiveSec={}\n"
-                "OnUnitActiveSec={}\n".format(config.filesystem.id, config.interval / 1000, config.interval / 1000)
-            )
-
         iml_cmd = "/usr/bin/iml stratagem scan --filesystem {}".format(config.filesystem.id)
         if config.report_duration is not None and config.report_duration >= 0:
             iml_cmd += " --report {}s".format(config.report_duration / 1000)
         if config.purge_duration is not None and config.purge_duration >= 0:
             iml_cmd += " --purge {}s".format(config.purge_duration / 1000)
-        with open(service_file(config.id), "w") as fn:
-            fn.write(
-                "#  This file is part of IML\n"
-                "#  This file will be overwritten automatically\n"
-                "\n[Unit]\n"
-                "Description=Start Stratagem run on {}\n"
-                "After=iml-manager.target\n"
-                "\n[Service]\n"
-                "Type=oneshot\n"
-                "ExecStart={}\n".format(config.filesystem.id, iml_cmd)
-            )
-        self.try_shell(["systemctl", "daemon-reload"])
-        self.try_shell(["systemctl", "enable", "--now", "{}.timer".format(unit_name(config.id))])
+
+        if runningInDocker():
+            # 1. Send PUT request to modify config on jobber container (will be sent to nginx reverse proxy)
+            post_data = {
+                config_id: config.id,
+                interval: config.interval / 1000,
+                filesystem_id: config.filesystem.id,
+                iml_cmd: iml_cmd
+            }
+            requests.put("http://nginx:{}/jobber/configure/".format(settings.JOBBER_PORT), json=post_data)
+        else:
+            job_log.debug("Configure stratagem timer step kwargs: {}".format(kwargs))
+            # Create systemd timer
+
+            config = kwargs["config"]
+
+            with open(timer_file(config.id), "w") as fn:
+                fn.write(
+                    "#  This file is part of IML\n"
+                    "#  This file will be overwritten automatically\n"
+                    "\n[Unit]\n"
+                    "Description=Start Stratagem run on {}\n"
+                    "\n[Timer]\n"
+                    "OnActiveSec={}\n"
+                    "OnUnitActiveSec={}\n".format(config.filesystem.id, config.interval / 1000, config.interval / 1000)
+                )
+
+            with open(service_file(config.id), "w") as fn:
+                fn.write(
+                    "#  This file is part of IML\n"
+                    "#  This file will be overwritten automatically\n"
+                    "\n[Unit]\n"
+                    "Description=Start Stratagem run on {}\n"
+                    "After=iml-manager.target\n"
+                    "\n[Service]\n"
+                    "Type=oneshot\n"
+                    "ExecStart={}\n".format(config.filesystem.id, iml_cmd)
+                )
+            self.try_shell(["systemctl", "daemon-reload"])
+            self.try_shell(["systemctl", "enable", "--now", "{}.timer".format(unit_name(config.id))])
 
 
 class UnconfigureStratagemTimerStep(Step, CommandLine):

@@ -2,35 +2,107 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use serde::{Deserialize, Serialize};
 use std::process::Command;
-use std::{
-    fs::File,
-    io::prelude::*,
-    str::{from_utf8, Utf8Error},
-};
+use std::{fs::File, io::prelude::*};
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
-use warp::{self, Buf, Filter};
+use warp::{self, Filter};
 
-static CONFIG_FILE: &str = "/home/jobberuser/.jobber";
+#[derive(Deserialize, Serialize)]
+struct ConfigDetails {
+    interval: u64,
+    config_id: String,
+    filesystem_id: String,
+    iml_cmd: String,
+}
 
-fn get_config(mut full_body: warp::body::FullBody) -> Result<String, Utf8Error> {
-    // Build the config string from the buffer.
-    let mut remaining = full_body.remaining();
-    let mut data: String = String::new();
-    while remaining != 0 {
-        let current_bytes = full_body.bytes();
-        data.push_str(from_utf8(&current_bytes)?);
-        let cnt = current_bytes.len();
-        full_body.advance(cnt);
-        remaining -= cnt;
-    }
+struct ConfigFile {
+    name: String,
+    content: String,
+}
 
-    Ok(data)
+struct ConfigFiles {
+    timer_file: ConfigFile,
+    service_file: ConfigFile,
+}
+
+fn unit_name(fid: String) -> String {
+    format!("iml-stratagem-{}", fid)
+}
+
+fn timer_file(fid: String) -> String {
+    format!("/etc/systemd/system/{}.timer", unit_name(fid))
+}
+
+fn service_file(fid: String) -> String {
+    format!("/etc/systemd/system/{}.service", unit_name(fid))
+}
+
+fn get_config(config: ConfigDetails) -> (String, ConfigFiles) {
+    // Create timer file
+    let timer_config = format!(
+        r#"
+# This file is part of IML
+# This file will be overwritten automatically
+
+[Unit]
+Description=Start Stratagem run on {}
+
+[Timer]
+OnActiveSec={}
+OnUnitActiveSec={}
+AccuracySec=1us
+"#,
+        config.filesystem_id, config.interval, config.interval
+    );
+
+    let service_config = format!(
+        r#"
+# This file is part of IML
+# This file will be overwritten automatically
+
+[Unit]
+Description=Start Stratagem run on {}
+
+[Service]
+Type=oneshot
+ExecStart={}
+"#,
+        config.filesystem_id, config.iml_cmd
+    );
+
+    (
+        config.config_id.clone(),
+        ConfigFiles {
+            timer_file: ConfigFile {
+                name: timer_file(config.config_id.clone()),
+                content: timer_config,
+            },
+            service_file: ConfigFile {
+                name: service_file(config.config_id.clone()),
+                content: service_config,
+            },
+        },
+    )
 }
 
 fn write_config_to_file(buf: &[u8], file: &str) -> std::io::Result<()> {
     let mut file = File::create(file)?;
     file.write_all(buf)?;
+    Ok(())
+}
+
+fn write_config_files(configs: ConfigFiles) -> std::io::Result<()> {
+    write_config_to_file(
+        configs.timer_file.content.as_bytes(),
+        &configs.timer_file.name,
+    )?;
+
+    write_config_to_file(
+        configs.service_file.content.as_bytes(),
+        &configs.service_file.name,
+    )?;
+
     Ok(())
 }
 
@@ -46,37 +118,45 @@ async fn main() {
     let config_route = warp::put()
         .and(warp::path("config"))
         .and(warp::body::content_length_limit(1024 * 16))
-        .and(warp::body::concat())
+        .and(warp::body::json())
         .map(get_config)
-        .map(|data: Result<String, Utf8Error>| match data {
-            Ok(config) => {
-                if let Ok(()) = write_config_to_file(config.as_bytes(), CONFIG_FILE) {
-                    tracing::debug!("Successfully wrote jobber config file at {}.", CONFIG_FILE);
-                    warp::http::StatusCode::OK
-                } else {
-                    tracing::error!("Couldn't write jobber config file at {}.", CONFIG_FILE);
-                    warp::http::StatusCode::INTERNAL_SERVER_ERROR
-                }
-            }
-            Err(e) => {
-                tracing::error!("Error processing config data: {:?}", e);
-                warp::http::StatusCode::INTERNAL_SERVER_ERROR
-            }
+        .map(|(config_id, configs)| {
+            (
+                config_id,
+                match write_config_files(configs) {
+                    Ok(_) => warp::http::StatusCode::OK,
+                    Err(_) => {
+                        tracing::error!("Failed to write config files.");
+                        warp::http::StatusCode::INTERNAL_SERVER_ERROR
+                    }
+                },
+            )
         })
-        .map(|status: warp::http::StatusCode| match status {
-            warp::http::StatusCode::OK => match Command::new("jobber").arg("reload").spawn() {
-                Ok(_) => {
-                    tracing::debug!("Reloaded jobber daemon.");
-                    warp::reply::with_status(warp::reply(), warp::http::StatusCode::OK)
+        .map(|(config_id, status)| match status {
+            warp::http::StatusCode::OK => {
+                tracing::debug!("loading the timer.");
+                let reload_result = Command::new("systemctl")
+                    .arg("daemon-reload")
+                    .spawn()
+                    .and_then(|_| {
+                        Command::new("systemctl")
+                            .arg("enable")
+                            .arg("--now")
+                            .arg(format!("{}.timer", unit_name(config_id)))
+                            .spawn()
+                    });
+
+                match reload_result {
+                    Ok(_) => warp::reply::with_status(warp::reply(), warp::http::StatusCode::OK),
+                    Err(e) => {
+                        tracing::error!("Failed to load the timer: {:?}", e);
+                        warp::reply::with_status(
+                            warp::reply(),
+                            warp::http::StatusCode::INTERNAL_SERVER_ERROR,
+                        )
+                    }
                 }
-                Err(e) => {
-                    tracing::error!("Failed to reload the jobber service: {:?}", e);
-                    warp::reply::with_status(
-                        warp::reply(),
-                        warp::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    )
-                }
-            },
+            }
             _ => warp::reply::with_status(warp::reply(), status),
         });
 

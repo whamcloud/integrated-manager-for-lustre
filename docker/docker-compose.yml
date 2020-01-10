@@ -284,9 +284,6 @@ services:
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
       - "tmp_vol:/tmp"
       - "run_vol:/run"
-    environment:
-      - "PROXY_HOST=iml-jobber"
-      - JOBBER_PORT=8892
   setup:
     image: "imlteam/manager-setup:dev"
     command: ["tail", "-f", "/dev/null"]
