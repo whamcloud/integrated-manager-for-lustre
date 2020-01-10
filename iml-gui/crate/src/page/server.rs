@@ -1,12 +1,12 @@
 use crate::{
-    components::{alert_indicator, lnet_status, paging, table, Placement},
+    components::{action_dropdown, alert_indicator, lnet_status, paging, table, Placement},
     extract_api,
     generated::css_classes::C,
     GMsg, MergeAttrs, Route,
 };
-use iml_wire_types::{warp_drive::Cache, Host, Label};
+use iml_wire_types::{warp_drive::Cache, Host, Label, ToCompositeId};
 use seed::{prelude::*, *};
-use std::cmp::Ordering;
+use std::{cmp::Ordering, collections::HashMap};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SortField {
@@ -20,9 +20,14 @@ impl Default for SortField {
     }
 }
 
+struct Row {
+    dropdown: action_dropdown::Model,
+}
+
 #[derive(Default)]
 pub struct Model {
     hosts: Vec<Host>,
+    rows: HashMap<u32, Row>,
     pager: paging::Model,
     sort: (SortField, paging::Dir),
 }
@@ -34,6 +39,7 @@ pub enum Msg {
     Sort,
     SortBy(SortField),
     WindowClick,
+    ActionDropdown(action_dropdown::IdMsg),
 }
 
 pub fn init(cache: &Cache, orders: &mut impl Orders<Msg, GMsg>) {
@@ -76,9 +82,28 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             if model.pager.dropdown.should_update() {
                 model.pager.dropdown.update();
             }
+
+            for (_, r) in model.rows.iter_mut() {
+                if r.dropdown.watching.should_update() {
+                    r.dropdown.watching.update();
+                }
+            }
         }
         Msg::SetHosts(hosts) => {
             model.hosts = hosts;
+
+            model.rows = model
+                .hosts
+                .iter()
+                .map(|x| {
+                    (
+                        x.id,
+                        Row {
+                            dropdown: action_dropdown::Model::new(vec![x.composite_id()]),
+                        },
+                    )
+                })
+                .collect();
 
             orders
                 .proxy(Msg::Page)
@@ -88,6 +113,15 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::Page(msg) => {
             paging::update(msg, &mut model.pager);
+        }
+        Msg::ActionDropdown(action_dropdown::IdMsg(id, msg)) => {
+            if let Some(x) = model.rows.get_mut(&id) {
+                action_dropdown::update(
+                    action_dropdown::IdMsg(id, msg),
+                    &mut x.dropdown,
+                    &mut orders.proxy(Msg::ActionDropdown),
+                );
+            }
         }
     }
 }
@@ -161,24 +195,31 @@ pub fn view(cache: &Cache, model: &Model) -> impl View<Msg> {
                         table::th_view(Node::new_text("LNet")).merge_attrs(class![C.text_center]),
                     ]),
                     tbody![model.hosts[model.pager.range()].iter().map(|x| {
-                        tr![
-                            table::td_view(vec![
-                                a![
-                                    class![C.text_blue_500, C.hover__underline, C.mr_2],
-                                    attrs! {
-                                        At::Href => Route::ServerDetail(x.id.into()).to_href()
-                                    },
-                                    x.label()
-                                ],
-                                alert_indicator(&cache.active_alert, &x.resource_uri, true, Placement::Top)
-                            ])
-                            .merge_attrs(class![C.text_center]),
-                            table::td_view(span![timeago(x).unwrap_or_else(|| "".into())])
+                        match model.rows.get(&x.id) {
+                            None => empty![],
+                            Some(row) => tr![
+                                table::td_view(vec![
+                                    a![
+                                        class![C.text_blue_500, C.hover__underline, C.mr_2],
+                                        attrs! {
+                                            At::Href => Route::ServerDetail(x.id.into()).to_href()
+                                        },
+                                        x.label()
+                                    ],
+                                    alert_indicator(&cache.active_alert, &x.resource_uri, true, Placement::Top)
+                                ])
                                 .merge_attrs(class![C.text_center]),
-                            table::td_view(span![x.server_profile.ui_name]).merge_attrs(class![C.text_center]),
-                            table::td_view(div![lnet_by_server(x, cache).unwrap_or_else(|| vec![])])
-                                .merge_attrs(class![C.text_center])
-                        ]
+                                table::td_view(span![timeago(x).unwrap_or_else(|| "".into())])
+                                    .merge_attrs(class![C.text_center]),
+                                table::td_view(span![x.server_profile.ui_name]).merge_attrs(class![C.text_center]),
+                                table::td_view(div![lnet_by_server(x, cache).unwrap_or_else(|| vec![])])
+                                    .merge_attrs(class![C.text_center]),
+                                td![
+                                    class![C.p_3, C.text_center],
+                                    action_dropdown::view(x.id, &row.dropdown).map_msg(Msg::ActionDropdown)
+                                ]
+                            ],
+                        }
                     })]
                 ])
                 .merge_attrs(class![C.my_6]),

@@ -12653,6 +12653,16 @@ pub struct CssClasses<'a> {
     pub rtl: &'a str,
 
     /**
+        animation: spin 2s linear infinite;
+    */
+    pub spin: &'a str,
+
+    /**
+        animation: spin 1s steps(8) infinite;
+    */
+    pub pulse: &'a str,
+
+    /**
         position: absolute;    @media (min-width: 569px)
         width: 1px;    @media (min-width: 569px)
         height: 1px;    @media (min-width: 569px)
@@ -67547,6 +67557,16 @@ pub static C: CssClasses = CssClasses {
         direction: rtl;
     */
     rtl: "rtl",
+
+    /**
+        animation: spin 2s linear infinite;
+    */
+    spin: "spin",
+
+    /**
+        animation: spin 1s steps(8) infinite;
+    */
+    pulse: "pulse",
 
     /**
         position: absolute;    @media (min-width: 569px)
