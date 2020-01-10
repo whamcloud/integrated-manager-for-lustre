@@ -107,6 +107,11 @@ def service_file(fid):
 
 class ConfigureStratagemTimerStep(Step, CommandLine):
     def run(self, kwargs):
+        job_log.debug("Configure stratagem timer step kwargs: {}".format(kwargs))
+        # Create systemd timer
+
+        config = kwargs["config"]
+
         iml_cmd = "/usr/bin/iml stratagem scan --filesystem {}".format(config.filesystem.id)
         if config.report_duration is not None and config.report_duration >= 0:
             iml_cmd += " --report {}s".format(config.report_duration / 1000)
@@ -123,11 +128,6 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
             }
             requests.put("http://nginx:{}/jobber/config/".format(settings.JOBBER_PORT), json=post_data)
         else:
-            job_log.debug("Configure stratagem timer step kwargs: {}".format(kwargs))
-            # Create systemd timer
-
-            config = kwargs["config"]
-
             with open(timer_file(config.id), "w") as fn:
                 fn.write(
                     "#  This file is part of IML\n"
