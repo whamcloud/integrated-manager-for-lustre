@@ -1583,7 +1583,7 @@ class ReplaceNidsStep(Step):
         target = args["target"]
         nids = args["nids"]
         flattened_nids = [e for t in nids for e in t]
-        agent_args = ["replace_nids", target] + [','.join(flattened_nids)]
+        agent_args = ["replace_nids", target] + [",".join(flattened_nids)]
         return self.invoke_rust_agent_expect_result(args["fqdn"], "lctl", agent_args)
 
 
@@ -1655,6 +1655,7 @@ class UpdateNidsJob(HostListMixin):
 
     def create_locks(self):
         from chroma_core.models.target import ManagedMgs
+
         locks = []
         filesystems, targets = self._targets_on_hosts()
 
