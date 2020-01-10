@@ -62,10 +62,10 @@ pub(crate) fn color_view<T>(content: &str, placement: Placement, color: &str) ->
                 C.opacity_90,
             ],
             style! {
-                St::Width => px(150),
+                St::Width => px(250),
                 St::BackgroundColor => color,
             },
-            content
+            El::from_html(content)
         ]
     ]
 }

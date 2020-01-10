@@ -10,7 +10,7 @@ use im::HashSet;
 use iml_wire_types::{warp_drive::Locks, LockChange, LockType, ToCompositeId};
 use seed::{prelude::*, *};
 
-pub(crate) fn lock_indicator<T>(x: &dyn ToCompositeId, all_locks: &Locks) -> Node<T> {
+pub(crate) fn view<T>(x: &dyn ToCompositeId, all_locks: &Locks) -> Node<T> {
     match all_locks.get(&x.composite_id().to_string()) {
         Some(locks) if !locks.is_empty() => indicator(locks),
         _ => empty![],

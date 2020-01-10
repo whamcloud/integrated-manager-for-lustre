@@ -2,15 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::CompositeId;
-use crate::EndpointName;
-use crate::Label;
 use crate::{
     db::{
         ContentTypeRecord, Id, LnetConfigurationRecord, ManagedTargetMountRecord,
         OstPoolOstsRecord, OstPoolRecord, StratagemConfiguration, VolumeNodeRecord,
     },
-    Alert, Filesystem, Host, LockChange, Target, TargetConfParam, Volume,
+    Alert, CompositeId, EndpointNameSelf, Filesystem, Host, Label, LockChange, Target,
+    TargetConfParam, ToCompositeId, Volume,
 };
 use im::{HashMap, HashSet};
 use std::{
@@ -184,8 +182,8 @@ impl Cache {
 /// A `Record` with it's concrete type erased.
 /// The returned item implements the `Label` and `EndpointName`
 /// traits.
-pub trait ErasedRecord: Label + EndpointName {}
-impl<T: Label + EndpointName> ErasedRecord for T {}
+pub trait ErasedRecord: Label + EndpointNameSelf + Id {}
+impl<T: Label + EndpointNameSelf + Id + ToCompositeId> ErasedRecord for T {}
 
 fn erase(x: Arc<impl ErasedRecord + 'static>) -> Box<Arc<dyn ErasedRecord>> {
     Box::new(x)
@@ -267,11 +265,6 @@ impl ArcCache {
                 .cloned()
                 .map(erase),
             "managedtarget" => self.target.get(&composite_id.1).cloned().map(erase),
-            "stratagemconfiguration" => self
-                .stratagem_config
-                .get(&composite_id.1)
-                .cloned()
-                .map(erase),
             _ => None,
         }
     }
