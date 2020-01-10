@@ -55,6 +55,7 @@ jobs:
           OWNER: managerforlustre
           PROJECT: manager-for-lustre-devel
           PACKAGE: iml-docker
+          SRPM_TASK: iml-docker-srpm
           SPEC: iml-docker.spec
           WORKSPACE: ${{ github.workspace }}
           KEY: ${{ secrets.key }}
