@@ -45,11 +45,7 @@ fn process_resource_list(output: &[u8]) -> Result<Vec<ResourceAgentInfo>, ImlAge
             g.find_all("primitive")
                 .map(move |p| create(p, Some(name.clone())))
         })
-        .chain(
-            element
-                .find_all("primitive")
-                .map(|p| create(p, None)),
-        )
+        .chain(element.find_all("primitive").map(|p| create(p, None)))
         .collect())
 }
 
@@ -172,7 +168,8 @@ mod tests {
         let testxml = r#"<resources>
   <primitive class="stonith" id="st-fencing" type="fence_chroma"/>
 </resources>
-"#.as_bytes();
+"#
+        .as_bytes();
         assert_eq!(
             process_resource_list(&testxml).unwrap(),
             vec![ResourceAgentInfo {
@@ -275,9 +272,6 @@ mod tests {
         a3.args
             .insert("mountpoint".to_string(), "/mnt/fs21-MDT0000".to_string());
 
-        assert_eq!(
-            process_resource_list(&testxml).unwrap(),
-            vec![a1, a2, a3]
-        );
+        assert_eq!(process_resource_list(&testxml).unwrap(), vec![a1, a2, a3]);
     }
 }
