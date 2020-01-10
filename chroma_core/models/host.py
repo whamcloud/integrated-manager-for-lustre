@@ -1583,7 +1583,7 @@ class ReplaceNidsStep(Step):
         target = args["target"]
         nids = args["nids"]
         flattened_nids = [e for t in nids for e in t]
-        agent_args = ["replace_nids", target] + flattened_nids
+        agent_args = ["replace_nids", target] + [','.join(flattened_nids)]
         return self.invoke_rust_agent_expect_result(args["fqdn"], "lctl", agent_args)
 
 
@@ -1634,6 +1634,8 @@ class UpdateNidsJob(HostListMixin):
         return filesystems, targets
 
     def get_deps(self):
+        from chroma_core.models.target import ManagedMgs
+
         filesystems, targets = self._targets_on_hosts()
 
         target_hosts = set()
@@ -1647,17 +1649,24 @@ class UpdateNidsJob(HostListMixin):
         return DependAll(
             [DependOn(host.lnet_configuration, "lnet_up") for host in target_primary_hosts]
             + [DependOn(fs, "stopped") for fs in filesystems]
-            + [DependOn(t, "unmounted") for t in targets]
+            + [DependOn(t, "unmounted") for t in targets if not issubclass(t.downcast_class, ManagedMgs)]
+            + [DependOn(t, "mounted") for t in targets if issubclass(t.downcast_class, ManagedMgs)]
         )
 
     def create_locks(self):
+        from chroma_core.models.target import ManagedMgs
         locks = []
         filesystems, targets = self._targets_on_hosts()
 
         for target in targets:
-            locks.append(
-                StateLock(job=self, locked_item=target, begin_state="unmounted", end_state="unmounted", write=True)
-            )
+            if not issubclass(target.downcast_class, ManagedMgs):
+                locks.append(
+                    StateLock(job=self, locked_item=target, begin_state="unmounted", end_state="unmounted", write=True)
+                )
+            else:
+                locks.append(
+                    StateLock(job=self, locked_item=target, begin_state="mounted", end_state="unmounted", write=True)
+                )
 
         return locks
 
