@@ -45,13 +45,17 @@ impl SessionExt for Session {
 
 /// Extension methods for`fetch::Request`
 pub(crate) trait RequestExt {
-    fn api_call(url: impl ToString) -> Self;
+    fn api_call(path: impl ToString) -> Self;
+    fn api_item(path: impl ToString, item: impl ToString) -> Self;
     fn with_auth(self: Self) -> Self;
 }
 
 impl RequestExt for fetch::Request {
-    fn api_call(url: impl ToString) -> Self {
-        Self::new(format!("/api/{}/", url.to_string()))
+    fn api_call(path: impl ToString) -> Self {
+        Self::new(format!("/api/{}/", path.to_string()))
+    }
+    fn api_item(path: impl ToString, item: impl ToString) -> Self {
+        Self::api_call(format!("{}/{}", path.to_string(), item.to_string()))
     }
     fn with_auth(self) -> Self {
         match csrf_token() {
@@ -83,6 +87,18 @@ impl<T> MergeAttrs for Node<T> {
         } else {
             self
         }
+    }
+}
+
+pub(crate) trait NodeExt<T> {
+    fn with_listener(self, event_handler: EventHandler<T>) -> Self;
+}
+
+impl<T> NodeExt<T> for Node<T> {
+    fn with_listener(mut self, event_handler: EventHandler<T>) -> Self {
+        self.add_listener(event_handler);
+
+        self
     }
 }
 

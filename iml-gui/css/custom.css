@@ -62,3 +62,30 @@ li {
   unicode-bidi: isolate;
 }
 
+.spin {
+  animation: spin 2s linear infinite;
+}
+
+.pulse {
+  animation: spin 1s steps(8) infinite;
+}
+
+@-webkit-keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(1turn);
+  }
+}

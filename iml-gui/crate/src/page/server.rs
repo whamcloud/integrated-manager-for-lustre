@@ -1,15 +1,16 @@
 use crate::{
-    components::{alert_indicator, lnet_status, paging, table, Placement},
-    extract_api,
+    components::{action_dropdown, alert_indicator, lnet_status, lock_indicator, paging, table, Placement},
+    extract_id,
     generated::css_classes::C,
     GMsg, MergeAttrs, Route,
 };
 use iml_wire_types::{
-    warp_drive::{ArcCache, ArcValuesExt},
-    Host, Label,
+    db::LnetConfigurationRecord,
+    warp_drive::{ArcCache, ArcValuesExt, Locks},
+    Host, Label, ToCompositeId,
 };
 use seed::{prelude::*, *};
-use std::cmp::Ordering;
+use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SortField {
@@ -23,27 +24,36 @@ impl Default for SortField {
     }
 }
 
+struct Row {
+    dropdown: action_dropdown::Model,
+}
+
 #[derive(Default)]
 pub struct Model {
     hosts: Vec<Host>,
+    rows: HashMap<u32, Row>,
     pager: paging::Model,
     sort: (SortField, paging::Dir),
 }
 
 #[derive(Clone)]
 pub enum Msg {
-    SetHosts(Vec<Host>),
+    SetHosts(Vec<Host>, im::HashMap<u32, Arc<LnetConfigurationRecord>>),
     Page(paging::Msg),
     Sort,
     SortBy(SortField),
     WindowClick,
+    ActionDropdown(action_dropdown::IdMsg),
 }
 
 pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
-    orders.send_msg(Msg::SetHosts(cache.host.arc_values().cloned().collect()));
+    orders.send_msg(Msg::SetHosts(
+        cache.host.arc_values().cloned().collect(),
+        cache.lnet_configuration.clone(),
+    ));
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
+pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::SortBy(x) => {
             let dir = if x == model.sort.0 {
@@ -79,9 +89,36 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             if model.pager.dropdown.should_update() {
                 model.pager.dropdown.update();
             }
+
+            for (_, r) in model.rows.iter_mut() {
+                if r.dropdown.watching.should_update() {
+                    r.dropdown.watching.update();
+                }
+            }
         }
-        Msg::SetHosts(hosts) => {
+        Msg::SetHosts(hosts, lnet_configs) => {
             model.hosts = hosts;
+
+            model.rows = model
+                .hosts
+                .iter()
+                .map(|x| {
+                    let mut config = lnet_by_server(&x, &lnet_configs)
+                        .map(|x| vec![x.composite_id()])
+                        .unwrap_or_default();
+
+                    let mut actions = vec![x.composite_id()];
+
+                    actions.append(&mut config);
+
+                    (
+                        x.id,
+                        Row {
+                            dropdown: action_dropdown::Model::new(actions),
+                        },
+                    )
+                })
+                .collect();
 
             orders
                 .proxy(Msg::Page)
@@ -91,6 +128,16 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::Page(msg) => {
             paging::update(msg, &mut model.pager);
+        }
+        Msg::ActionDropdown(action_dropdown::IdMsg(id, msg)) => {
+            if let Some(x) = model.rows.get_mut(&id) {
+                action_dropdown::update(
+                    action_dropdown::IdMsg(id, msg),
+                    &cache,
+                    &mut x.dropdown,
+                    &mut orders.proxy(Msg::ActionDropdown),
+                );
+            }
         }
     }
 }
@@ -119,33 +166,18 @@ fn sort_header(label: &str, sort_field: SortField, model: &Model) -> Node<Msg> {
     .merge_attrs(table_cls)
 }
 
-fn lnet_by_server<T>(x: &Host, cache: &ArcCache) -> Option<Vec<Node<T>>> {
-    let id = extract_api(&x.lnet_configuration)?;
+fn lnet_by_server(
+    x: &Host,
+    lnet_configs: &im::HashMap<u32, Arc<LnetConfigurationRecord>>,
+) -> Option<Arc<LnetConfigurationRecord>> {
+    let id = extract_id(&x.lnet_configuration)?;
 
     let id = id.parse::<u32>().unwrap();
 
-    let config = cache.lnet_configuration.get(&id)?;
-
-    Some(vec![
-        lnet_status::view(config).merge_attrs(class![C.mr_1]),
-        alert_indicator(
-            &cache.active_alert,
-            &format!("/api/lnet_configuration/{}/", config.id),
-            true,
-            Placement::Top,
-        ),
-    ])
+    lnet_configs.get(&id).cloned()
 }
 
-fn timeago(x: &Host) -> Option<String> {
-    let boot_time = x.boot_time.as_ref()?;
-
-    let dt = chrono::DateTime::parse_from_rfc3339(&format!("{}-00:00", boot_time)).unwrap();
-
-    Some(format!("{}", chrono_humanize::HumanTime::from(dt)))
-}
-
-pub fn view(cache: &ArcCache, model: &Model) -> impl View<Msg> {
+pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> impl View<Msg> {
     div![
         class![C.bg_white, C.border_t, C.border_b, C.border, C.rounded_lg, C.shadow],
         div![
@@ -164,24 +196,34 @@ pub fn view(cache: &ArcCache, model: &Model) -> impl View<Msg> {
                         table::th_view(Node::new_text("LNet")).merge_attrs(class![C.text_center]),
                     ]),
                     tbody![model.hosts[model.pager.range()].iter().map(|x| {
-                        tr![
-                            table::td_view(vec![
-                                a![
-                                    class![C.text_blue_500, C.hover__underline, C.mr_2],
-                                    attrs! {
-                                        At::Href => Route::ServerDetail(x.id.into()).to_href()
-                                    },
-                                    x.label()
-                                ],
-                                alert_indicator(&cache.active_alert, &x.resource_uri, true, Placement::Top)
-                            ])
-                            .merge_attrs(class![C.text_center]),
-                            table::td_view(span![timeago(x).unwrap_or_else(|| "".into())])
+                        match model.rows.get(&x.id) {
+                            None => empty![],
+                            Some(row) => tr![
+                                table::td_view(vec![
+                                    a![
+                                        class![C.text_blue_500, C.hover__underline, C.mr_2],
+                                        attrs! {
+                                            At::Href => Route::ServerDetail(x.id.into()).to_href()
+                                        },
+                                        x.label()
+                                    ],
+                                    lock_indicator::view(x, all_locks).merge_attrs(class![C.mr_2]),
+                                    alert_indicator(&cache.active_alert, &x.resource_uri, true, Placement::Top)
+                                ])
                                 .merge_attrs(class![C.text_center]),
-                            table::td_view(span![x.server_profile.ui_name]).merge_attrs(class![C.text_center]),
-                            table::td_view(div![lnet_by_server(x, cache).unwrap_or_else(|| vec![])])
-                                .merge_attrs(class![C.text_center])
-                        ]
+                                table::td_view(span![timeago(x).unwrap_or_else(|| "".into())])
+                                    .merge_attrs(class![C.text_center]),
+                                table::td_view(span![x.server_profile.ui_name]).merge_attrs(class![C.text_center]),
+                                table::td_view(
+                                    div![lnet_by_server_view(x, cache, all_locks).unwrap_or_else(|| vec![])]
+                                )
+                                .merge_attrs(class![C.text_center]),
+                                td![
+                                    class![C.p_3, C.text_center],
+                                    action_dropdown::view(x.id, &row.dropdown, &all_locks).map_msg(Msg::ActionDropdown)
+                                ]
+                            ],
+                        }
                     })]
                 ])
                 .merge_attrs(class![C.my_6]),
@@ -194,4 +236,26 @@ pub fn view(cache: &ArcCache, model: &Model) -> impl View<Msg> {
             ]
         }
     ]
+}
+
+fn lnet_by_server_view<T>(x: &Host, cache: &ArcCache, all_locks: &Locks) -> Option<Vec<Node<T>>> {
+    let config = lnet_by_server(x, &cache.lnet_configuration)?;
+
+    Some(nodes![
+        lnet_status::view(&config, &all_locks).merge_attrs(class![C.mr_2]),
+        alert_indicator(
+            &cache.active_alert,
+            &format!("/api/lnet_configuration/{}/", config.id),
+            true,
+            Placement::Top,
+        ),
+    ])
+}
+
+fn timeago(x: &Host) -> Option<String> {
+    let boot_time = x.boot_time.as_ref()?;
+
+    let dt = chrono::DateTime::parse_from_rfc3339(&format!("{}-00:00", boot_time)).unwrap();
+
+    Some(format!("{}", chrono_humanize::HumanTime::from(dt)))
 }

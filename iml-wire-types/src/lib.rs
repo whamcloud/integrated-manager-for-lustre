@@ -318,9 +318,17 @@ pub trait Label {
 }
 
 pub trait EndpointName {
-    fn endpoint_name() -> &'static str
-    where
-        Self: Sized;
+    fn endpoint_name() -> &'static str;
+}
+
+pub trait EndpointNameSelf {
+    fn endpoint_name(&self) -> &'static str;
+}
+
+impl<T: EndpointName> EndpointNameSelf for T {
+    fn endpoint_name(&self) -> &'static str {
+        Self::endpoint_name()
+    }
 }
 
 /// The type of lock
@@ -884,6 +892,12 @@ impl<T> Label for &Target<T> {
 impl<T> EndpointName for Target<T> {
     fn endpoint_name() -> &'static str {
         "target"
+    }
+}
+
+impl<T> db::Id for Target<T> {
+    fn id(&self) -> u32 {
+        self.id
     }
 }
 
