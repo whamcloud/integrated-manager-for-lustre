@@ -281,11 +281,9 @@ services:
       dockerfile: ./docker/iml-jobber.dockerfile
     deploy: *default-deploy
     volumes:
-      - "jobber:/home/jobberuser"
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
-    tmpfs:
-      - /tmp
-      - /run
+      - "tmp_vol:/tmp"
+      - "run_vol:/run"
     environment:
       - "PROXY_HOST=iml-jobber"
       - JOBBER_PORT=8892
@@ -309,6 +307,14 @@ volumes:
   static-config2:
   mailbox:
   jobber:
+  tmp_vol:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+  run_vol:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
 secrets:
   iml_pw:
     external: true
