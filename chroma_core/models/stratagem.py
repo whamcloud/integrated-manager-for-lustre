@@ -8,7 +8,7 @@ import requests
 
 from os import path
 from toolz.functoolz import pipe, partial, flip
-from settings import MAILBOX_PATH
+from settings import MAILBOX_PATH, JOBBER_PORT
 from django.db import models
 from django.db.models import CASCADE
 from chroma_core.lib.cache import ObjectCache
@@ -126,7 +126,7 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
                 "filesystem_id": config.filesystem.id,
                 "iml_cmd": iml_cmd
             }
-            requests.put("http://nginx:{}/jobber/config/".format(settings.JOBBER_PORT), json=post_data)
+            requests.put("http://nginx:{}/jobber/config/".format(JOBBER_PORT), json=post_data)
         else:
             with open(timer_file(config.id), "w") as fn:
                 fn.write(
