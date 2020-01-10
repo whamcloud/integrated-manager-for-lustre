@@ -16,9 +16,13 @@ use futures::{
 use futures_util::stream::StreamExt as ForEachStreamExt;
 use iml_wire_types::{Action, ActionId, ActionResult, AgentResult, ToJsonValue};
 use parking_lot::Mutex;
-use std::{collections::HashMap, pin::Pin, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    pin::Pin,
+    sync::Arc,
+};
 use stream_cancel::{StreamExt, Trigger, Tripwire};
-use tokio::{fs, net::UnixListener};
+use tokio::{fs, io::AsyncWriteExt, net::UnixListener};
 use tokio_util::codec::{BytesCodec, FramedRead};
 
 const CONF_FILE: &str = "/etc/iml/postman.conf";
@@ -28,7 +32,7 @@ pub struct PostOffice {
     // ids of actions (register/deregister)
     ids: Arc<Mutex<HashMap<ActionId, oneshot::Sender<()>>>>,
     // individual mailbox socket listeners
-    routes: Arc<Mutex<HashMap<String, Trigger>>>,
+    routes: Arc<Mutex<BTreeMap<String, Trigger>>>,
 }
 
 /// Return socket address for a given mailbox
@@ -78,24 +82,21 @@ fn stop_route(trigger: Trigger) {
     drop(trigger);
 }
 
-async fn configure_mailbox(mailbox: &str) -> Result<(), ImlAgentError> {
-    // @@ add route to config
-    //Err(ImlAgentError::UnexpectedStatusError)
-    tracing::info!("TODO add {} to mailbox config {}", mailbox, CONF_FILE);
-    Ok(())
-}
-
-async fn unconfigure_mailbox(mailbox: &str) -> Result<(), ImlAgentError> {
-    // @@ remove route from config
-    tracing::info!("TODO add {} to mailbox config {}", mailbox, CONF_FILE);
-    //Err(ImlAgentError::UnexpectedStatusError)
-    Ok(())
+async fn write_config(routes: Vec<String>) -> Result<serde_json::value::Value, String> {
+    let mut file = fs::File::create(CONF_FILE)
+        .await
+        .map_err(|e| format!("{}", e))?;
+    file.write_all(routes.join("\n").as_bytes())
+        .await
+        .map_err(|e| format!("{}", e))?;
+    file.write(b"\n").await.map_err(|e| format!("{}", e))?;
+    ().to_json_value()
 }
 
 pub fn create() -> impl DaemonPlugin {
     PostOffice {
         ids: Arc::new(Mutex::new(HashMap::new())),
-        routes: Arc::new(Mutex::new(HashMap::new())),
+        routes: Arc::new(Mutex::new(BTreeMap::new())),
     }
 }
 
@@ -107,9 +108,9 @@ impl DaemonPlugin for PostOffice {
         let fut = async move {
             if let Ok(file) = fs::read_to_string(CONF_FILE).await {
                 let itr = file.lines().map(|mb| {
-                        let trigger = start_route(mb.to_string());
-                        (mb.to_string(), trigger)
-                    });
+                    let trigger = start_route(mb.to_string());
+                    (mb.to_string(), trigger)
+                });
                 routes.lock().extend(itr);
             }
             Ok(None)
@@ -131,32 +132,18 @@ impl DaemonPlugin for PostOffice {
                     Ok(x) => x,
                     Err(e) => return Box::pin(future::err(ImlAgentError::Serde(e))),
                 };
-                let routes = Arc::clone(&self.routes);
-                let fut: Pin<
-                    Box<
-                        dyn Future<Output = Result<serde_json::value::Value, std::string::String>>
-                            + Send,
-                    >,
-                > = match action.0.as_str() {
-                    "register" => Box::pin(async move {
-                        configure_mailbox(&mailbox)
-                            .await
-                            .map_err(|e| format!("{}", e))?;
-                        routes
+                match action.0.as_str() {
+                    "register" => {
+                        self.routes
                             .lock()
                             .entry(mailbox.clone())
                             .or_insert_with(|| start_route(mailbox.clone()));
-                        ().to_json_value()
-                    }),
-                    "deregister" => Box::pin(async move {
-                        unconfigure_mailbox(&mailbox)
-                            .await
-                            .map_err(|e| format!("{}", e))?;
-                        if let Some(tx) = routes.lock().remove(&mailbox) {
+                    }
+                    "deregister" => {
+                        if let Some(tx) = self.routes.lock().remove(&mailbox) {
                             stop_route(tx);
                         }
-                        ().to_json_value()
-                    }),
+                    }
                     _ => {
                         let err =
                             RequiredError(format!("Could not find action {} in registry", action));
@@ -173,6 +160,9 @@ impl DaemonPlugin for PostOffice {
                 let (tx, rx) = oneshot::channel();
 
                 self.ids.lock().insert(id.clone(), tx);
+
+                let list = self.routes.lock().keys().cloned().collect();
+                let fut = Box::pin(write_config(list));
 
                 let ids = self.ids.clone();
 
@@ -218,9 +208,12 @@ impl DaemonPlugin for PostOffice {
             // We don't care what the result is here.
             let _ = tx.send(()).is_ok();
         }
-        for (_, trigger) in self.routes.lock().drain() {
-            // We don't care what the result is here.
-            stop_route(trigger);
+        let keys: Vec<String> = self.routes.lock().keys().cloned().collect();
+        let mut routes = self.routes.lock();
+        for key in keys {
+            if let Some(tx) = routes.remove(&key) {
+                stop_route(tx);
+            }
         }
 
         Ok(())
