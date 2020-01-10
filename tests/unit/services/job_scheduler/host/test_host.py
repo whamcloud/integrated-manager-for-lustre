@@ -123,16 +123,13 @@ class TestUpdateNids(NidTestCase):
         self.drain_progress()
         self.assertState(self.fs, "stopped")
 
+        # import ipdb; ipdb.set_trace()
         expected_calls = [
-            call("mgs", "lctl", ["replace_nids", "/fake/path/%d" % mgs_id, "192.168.0.99@tcp0"],),
-            call("mds", "lctl", ["replace_nids", "/fake/path/%d" % mds_id, "192.168.0.99@tcp0"],),
-            call("oss", "lctl", ["replace_nids", "/fake/path/%d" % oss_id, "192.168.0.99@tcp0"],),
+            call("mgs", "lctl", ["replace_nids", "%s" % self.mdt, "192.168.0.99@tcp0"],),
+            call("mgs", "lctl", ["replace_nids", "%s" % self.ost, "192.168.0.99@tcp0"],),
         ]
 
-        # failure is easier to see when comparing separate elements
-        self.assertEqual(expected_calls[0], invoke.call_args_list[0])
-        self.assertEqual(expected_calls[1], invoke.call_args_list[1])
-        self.assertEqual(expected_calls[2], invoke.call_args_list[2])
+        self.assertEqual(expected_calls, invoke.call_args_list)
 
 
 class TestHostAddRemove(JobTestCase):

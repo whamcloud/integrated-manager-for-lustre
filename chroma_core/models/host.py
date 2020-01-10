@@ -1580,10 +1580,10 @@ class UpdateJob(Job):
 
 class ReplaceNidsStep(Step):
     def run(self, args):
-        device = args["path"]
+        target = args["target"]
         nids = args["nids"]
         flattened_nids = [e for t in nids for e in t]
-        agent_args = ["replace_nids", device] + flattened_nids
+        agent_args = ["replace_nids", target] + flattened_nids
         return self.invoke_rust_agent_expect_result(args["fqdn"], "lctl", agent_args)
 
 
@@ -1674,18 +1674,17 @@ class UpdateNidsJob(HostListMixin):
             target = target.downcast()
             primary_tm = target.managedtargetmount_set.get(primary=True)
             steps.append((MountOrImportStep, MountOrImportStep.create_parameters(target, primary_tm.host, False)))
-            steps.append(
-                (
-                    ReplaceNidsStep,
-                    {
-                        "path": primary_tm.volume_node.path,
-                        "nids": target.filesystem.mgs.nids()
-                        if issubclass(target.downcast_class, FilesystemMember)
-                        else target.nids(),
-                        "fqdn": primary_tm.host.fqdn,
-                    },
+            if issubclass(target.downcast_class, FilesystemMember):
+                steps.append(
+                    (
+                        ReplaceNidsStep,
+                        {
+                            "target": "%s" % target,
+                            "nids": target.filesystem.mgs.nids(),
+                            "fqdn": target.filesystem.mgs.best_available_host().fqdn,
+                        },
+                    )
                 )
-            )
 
         mgs_targets = [t for t in targets if issubclass(t.downcast_class, ManagedMgs)]
         fs_targets = [t for t in targets if not issubclass(t.downcast_class, ManagedMgs)]
