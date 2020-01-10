@@ -220,6 +220,7 @@ pub enum Msg {
     EventSourceError(JsValue),
     Records(Box<warp_drive::Cache>),
     RecordChange(Box<warp_drive::RecordChange>),
+    RemoveRecord(warp_drive::RecordId),
     Locks(warp_drive::Locks),
     WindowClick,
     Notification(notification::Msg),
@@ -356,9 +357,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                     _ => {}
                 };
 
-                model.records.remove_record(&record_id);
+                orders.send_msg(Msg::RemoveRecord(record_id));
             }
         },
+        Msg::RemoveRecord(id) => {
+            model.records.remove_record(&id);
+        }
         Msg::Locks(locks) => {
             model.locks = locks;
         }
