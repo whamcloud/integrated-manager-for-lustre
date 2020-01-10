@@ -35,8 +35,8 @@ pub fn create() -> impl DaemonPlugin {
 }
 
 /// List all Lustre Filesystems with MDT0 on this host
-async fn list_fs() -> Result<Vec<String>, ImlAgentError> {
-    Ok(lctl(vec!["get_param", "-N", "mdt.*-MDT0000"])
+async fn list_fs() -> Vec<String> {
+    lctl(vec!["get_param", "-N", "mdt.*-MDT0000"])
         .await
         .map(|o| {
             String::from_utf8_lossy(&o.stdout)
@@ -49,7 +49,7 @@ async fn list_fs() -> Result<Vec<String>, ImlAgentError> {
                 .map(|s| s.to_string())
                 .collect()
         })
-        .unwrap_or_else(|_| vec![]))
+        .unwrap_or_else(|_| vec![])
 }
 
 async fn get_fsmap(fsname: String) -> (String, BTreeSet<OstPool>) {
@@ -62,7 +62,8 @@ async fn get_fsmap(fsname: String) -> (String, BTreeSet<OstPool>) {
 }
 
 async fn build_tree() -> FsPoolMap {
-    let fslist = list_fs().await.unwrap_or_else(|_| vec![]);
+    let fslist = list_fs().await;
+
     join_all(fslist.into_iter().map(get_fsmap))
         .await
         .into_iter()
