@@ -121,12 +121,12 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
         if runningInDocker():
             # 1. Send PUT request to modify config on jobber container (will be sent to nginx reverse proxy)
             post_data = {
-                "config_id": config.id,
+                "config_id": str(config.id),
                 "interval": config.interval / 1000,
-                "filesystem_id": config.filesystem.id,
+                "filesystem_id": str(config.filesystem.id),
                 "iml_cmd": iml_cmd
             }
-            requests.put("https://{}:{}/jobber/config/".format(SERVER_FQDN, HTTPS_FRONTEND_PORT), json=post_data)
+            requests.put("https://{}:{}/jobber/config/".format(SERVER_FQDN, HTTPS_FRONTEND_PORT), json=post_data, verify=False)
         else:
             with open(timer_file(config.id), "w") as fn:
                 fn.write(
