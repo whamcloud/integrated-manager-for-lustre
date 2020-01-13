@@ -97,16 +97,11 @@ class TestUpdateNids(NidTestCase):
             ManagedTargetMount,
         )
 
-        mgs_id = synthetic_volume_full(mgs).id
-        self.mgt, mgt_tms = ManagedMgs.create_for_volume(mgs_id, name="MGS")
+        self.mgt, mgt_tms = ManagedMgs.create_for_volume(synthetic_volume_full(mgs).id, name="MGS")
         self.fs = ManagedFilesystem.objects.create(mgs=self.mgt, name="testfs")
         ObjectCache.add(ManagedFilesystem, self.fs)
-
-        mds_id = synthetic_volume_full(mds).id
-        self.mdt, mdt_tms = ManagedMdt.create_for_volume(mds_id, filesystem=self.fs)
-
-        oss_id = synthetic_volume_full(oss).id
-        self.ost, ost_tms = ManagedOst.create_for_volume(oss_id, filesystem=self.fs)
+        self.mdt, mdt_tms = ManagedMdt.create_for_volume(synthetic_volume_full(mds).id, filesystem=self.fs)
+        self.ost, ost_tms = ManagedOst.create_for_volume(synthetic_volume_full(oss).id, filesystem=self.fs)
         for target in [self.mgt, self.ost, self.mdt]:
             ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
         for tm in chain(mgt_tms, mdt_tms, ost_tms):
