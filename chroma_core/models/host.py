@@ -1660,13 +1660,13 @@ class UpdateNidsJob(HostListMixin):
         filesystems, targets = self._targets_on_hosts()
 
         for target in targets:
-            if not issubclass(target.downcast_class, ManagedMgs):
+            if issubclass(target.downcast_class, ManagedMgs):
                 locks.append(
-                    StateLock(job=self, locked_item=target, begin_state="unmounted", end_state="unmounted", write=True)
+                    StateLock(job=self, locked_item=target, begin_state="mounted", end_state="unmounted", write=True)
                 )
             else:
                 locks.append(
-                    StateLock(job=self, locked_item=target, begin_state="mounted", end_state="unmounted", write=True)
+                    StateLock(job=self, locked_item=target, begin_state="unmounted", end_state="unmounted", write=True)
                 )
 
         return locks
