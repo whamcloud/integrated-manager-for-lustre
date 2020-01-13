@@ -4,13 +4,13 @@
 
 use crate::{
     agent_error::ImlAgentError,
-    env,
     daemon_plugins::{DaemonPlugin, Output},
+    env,
     http_comms::mailbox_client::send,
 };
 use futures::{
-    Future, FutureExt,
     stream::{StreamExt as _, TryStreamExt},
+    Future, FutureExt,
 };
 use inotify::{Inotify, WatchDescriptor, WatchMask};
 use parking_lot::Mutex;
@@ -54,6 +54,7 @@ impl std::fmt::Debug for PostOffice {
     }
 }
 
+// Returned trigger should bed drop'd to cause route to stop
 fn start_route(mailbox: String) -> Trigger {
     let (trigger, tripwire) = Tripwire::new();
     let addr = socket_name(&mailbox);
@@ -69,7 +70,7 @@ fn start_route(mailbox: String) -> Trigger {
                 Ok(inbound) => {
                     let stream = FramedRead::new(inbound, BytesCodec::new())
                         .map_ok(bytes::BytesMut::freeze)
-                        .map_err(ImlAgentError::Io);
+                        .err_into();
                     let transfer = send(mailbox.clone(), stream).map(|r| {
                         if let Err(e) = r {
                             tracing::error!("Failed to transfer: {}", e);
@@ -81,14 +82,13 @@ fn start_route(mailbox: String) -> Trigger {
             }
         }
         tracing::debug!("Ending Route for {}", mailbox);
-        fs::remove_file(addr).await
+        fs::remove_file(&addr).await.map_err(|e| {
+            tracing::error!("Failed to remove socket {}: {}", &addr, &e);
+            e
+        })
     };
     tokio::spawn(rc);
     trigger
-}
-
-fn stop_route(trigger: Trigger) {
-    drop(trigger);
 }
 
 impl DaemonPlugin for PostOffice {
@@ -141,9 +141,7 @@ impl DaemonPlugin for PostOffice {
                             let mut rt = routes.lock();
                             rt.extend(itr);
                             for rm in &oldset - &newset {
-                                if let Some(trigger) = rt.remove(&rm) {
-                                    stop_route(trigger);
-                                }
+                                rt.remove(&rm).map(drop);
                             }
                         }
                         Err(e) => {
@@ -164,9 +162,7 @@ impl DaemonPlugin for PostOffice {
         if let Some(wd) = self.wd.lock().0.clone() {
             let _ = self.inotify.lock().rm_watch(wd);
         }
-        for (_, tx) in self.routes.lock().drain() {
-            stop_route(tx);
-        }
+        self.routes.lock().clear();
 
         Ok(())
     }

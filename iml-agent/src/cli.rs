@@ -288,7 +288,7 @@ pub enum App {
     },
 
     #[structopt(name = "postoffice")]
-    /// Write lpurge configuration file
+    /// Add or Remove PostOffice routes
     PostOffice {
         #[structopt(subcommand)]
         cmd: PostOfficeCommand,
