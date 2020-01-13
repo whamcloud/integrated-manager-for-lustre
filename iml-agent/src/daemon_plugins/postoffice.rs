@@ -62,8 +62,11 @@ fn start_route(mailbox: String) -> Trigger {
     let addr = socket_name(&mailbox);
 
     let rc = async move {
-        // these must live in async because mutable values can't be sent
-        let mut listener = UnixListener::bind(addr.clone())?;
+        // remove old unix socket
+        let _ = fs::remove_file(&addr).await;
+        let mut listener = UnixListener::bind(addr.clone()).map_err(|e| {
+            tracing::error!("Failed to open unix socket {}: {}", &addr, &e);
+            e })?;
         let mut incoming = listener.incoming().take_until(tripwire);
 
         tracing::debug!("Starting Route for {}", mailbox);
@@ -163,7 +166,9 @@ impl DaemonPlugin for PostOffice {
         if let Some(wd) = self.wd.lock().0.clone() {
             let _ = self.inotify.lock().rm_watch(wd);
         }
-        self.routes.lock().clear();
+        for (_, trigger) in self.routes.lock().drain() {
+            drop(trigger);
+        }
 
         Ok(())
     }
