@@ -57,6 +57,31 @@ impl Visibility {
     }
 }
 
+/// Allows for merging attributes onto an existing item
+pub trait MergeAttrs {
+    fn merge_attrs(self, attrs: Attrs) -> Self;
+}
+
+impl MergeAttrs for Attrs {
+    fn merge_attrs(mut self, attrs: Attrs) -> Self {
+        self.merge(attrs);
+
+        self
+    }
+}
+
+impl<T> MergeAttrs for Node<T> {
+    fn merge_attrs(self, attrs: Attrs) -> Self {
+        if let Node::Element(mut el) = self {
+            el.attrs.merge(attrs);
+
+            Node::Element(el)
+        } else {
+            self
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum WatchState {
     Watching,
