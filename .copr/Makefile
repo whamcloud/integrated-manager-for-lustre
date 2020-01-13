@@ -56,6 +56,20 @@ srpm:
 	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
 	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)
 
+iml-docker-srpm:
+	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
+	mkdir -p ${TMPDIR}/scratch/iml-docker
+	rm -rf ${BUILDROOT}/_topdir
+
+	cp -r docker/docker-compose.yml ${TMPDIR}/scratch/iml-docker/
+	tar -czvf ${TMPDIR}/_topdir/SOURCES/iml-docker.tar.gz -C ${TMPDIR}/scratch/iml-docker .
+
+	cp iml-docker.spec ${TMPDIR}/_topdir/SPECS/
+	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/iml-docker.spec
+
+	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
+	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)
+
 iml-deps:
 	if ! rpm -q python-devel python-setuptools ed 2> /dev/null; then \
 		yum copr enable -y managerforlustre/buildtools; \

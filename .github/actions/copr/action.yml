@@ -1,0 +1,5 @@
+name: copr
+description: build in the copr image
+runs:
+  using: "docker"
+  image: "docker://imlteam/copr"
