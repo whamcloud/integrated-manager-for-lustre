@@ -123,7 +123,6 @@ mod lamigo_tests {
             lustre_device: "192.168.0.100@tcp0:/spfs".into(),
             hot_pool: "fast_pool".into(),
             cold_pool: "slow_pool".into(),
-            force: true,
         };
 
         let dir = tempdir().expect("could not create tmpdir");
