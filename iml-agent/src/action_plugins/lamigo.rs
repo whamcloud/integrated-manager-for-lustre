@@ -45,12 +45,6 @@ pub struct Config {
     #[structopt(long)]
     /// Lustre device to be mounted, e.g. `192.168.0.100@tcp0:/spfs`
     lustre_device: String,
-
-    #[structopt(long)]
-    /// (Optional argument)
-    /// By default, nothing is performed, if the mount point is already mounted.
-    /// This flag is to force the mount execution.
-    force: bool,
 }
 
 impl fmt::Display for Config {
@@ -80,39 +74,9 @@ impl fmt::Display for Config {
 }
 
 pub async fn create_lamigo_service_unit(c: Config) -> Result<(), ImlAgentError> {
-    if !c.force {
-        let is_mounted = is_filesystem_mounted(&c.mount_point).await?;
-        if !is_mounted {
-            mount_filesystem(&c).await?;
-        }
-    }
     create_lamigo_service_unit_internal(SYSTEMD_DIR, &c)
         .err_into()
         .await
-}
-
-pub async fn mount_filesystem(c: &Config) -> std::io::Result<()> {
-    // according to http://wiki.lustre.org/Mounting_a_Lustre_File_System_on_Client_Nodes
-    // we need to execute mount command
-    //   mount -t lustre \
-    //     [-o <options> ] \
-    //     <MGS NID>[:<MGS NID>]:/<fsname> \
-    //     /lustre/<fsname>
-    let mut command = Command::new("mount");
-    let process: Child = command
-        .arg("-t")
-        .arg("lustre")
-        .arg(c.lustre_device.clone())
-        .arg(c.mount_point.clone())
-        .spawn()?;
-    let output: Output = process.wait_with_output().await?;
-    match output.status.success() {
-        true => Ok(()),
-        false => Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!("Cannot execute command {:?}", command),
-        )),
-    }
 }
 
 pub async fn is_filesystem_mounted(mount_point: &str) -> std::io::Result<bool> {
