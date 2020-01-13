@@ -23,6 +23,7 @@ libc = "0.2"
 prettytable-rs = "0.8"
 reqwest = { git = "https://github.com/seanmonstar/reqwest", features = ["default-tls", "native-tls", "json", "stream"] }
 http = "0.2"
+inotify = "0.8"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 structopt = "0.2"

@@ -3,36 +3,44 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    agent_error::{ImlAgentError, RequiredError},
+    agent_error::ImlAgentError,
     daemon_plugins::{DaemonPlugin, Output},
     http_comms::mailbox_client::send,
 };
 use futures::stream::TryStreamExt;
-use futures::{
-    channel::oneshot,
-    future::{self, Either},
-    Future, FutureExt,
-};
+use futures::{Future, FutureExt};
 use futures_util::stream::StreamExt as ForEachStreamExt;
-use iml_wire_types::{Action, ActionId, ActionResult, AgentResult, ToJsonValue};
+use inotify::{Inotify, WatchDescriptor, WatchMask};
 use parking_lot::Mutex;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{HashMap, HashSet},
     pin::Pin,
     sync::Arc,
 };
 use stream_cancel::{StreamExt, Trigger, Tripwire};
-use tokio::{fs, io::AsyncWriteExt, net::UnixListener};
+use tokio::{fs, net::UnixListener};
 use tokio_util::codec::{BytesCodec, FramedRead};
 
-const CONF_FILE: &str = "/etc/iml/postman.conf";
-const SOCK_DIR: &str = "/run/iml/";
+pub const CONF_FILE: &str = "/etc/iml/postman.conf";
+pub const SOCK_DIR: &str = "/run/iml/";
+
+pub struct POWD(pub Option<WatchDescriptor>);
 
 pub struct PostOffice {
-    // ids of actions (register/deregister)
-    ids: Arc<Mutex<HashMap<ActionId, oneshot::Sender<()>>>>,
     // individual mailbox socket listeners
-    routes: Arc<Mutex<BTreeMap<String, Trigger>>>,
+    routes: Arc<Mutex<HashMap<String, Trigger>>>,
+    inotify: Arc<Mutex<Inotify>>,
+    wd: Arc<Mutex<POWD>>,
+}
+
+pub fn create() -> impl DaemonPlugin {
+    PostOffice {
+        wd: Arc::new(Mutex::new(POWD(None))),
+        inotify: Arc::new(Mutex::new(
+            Inotify::init().expect("Failed to initialize inotify"),
+        )),
+        routes: Arc::new(Mutex::new(HashMap::new())),
+    }
 }
 
 /// Return socket address for a given mailbox
@@ -42,11 +50,7 @@ pub fn socket_name(mailbox: &str) -> String {
 
 impl std::fmt::Debug for PostOffice {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "PostOffice {{ ids: {:?}, registry: RegistryFn }}",
-            self.ids
-        )
+        write!(f, "PostOffice {{ {:?} }}", self.routes.lock().keys())
     }
 }
 
@@ -55,7 +59,7 @@ fn start_route(mailbox: String) -> Trigger {
     let addr = socket_name(&mailbox);
 
     let rc = async move {
-        let mut listener = UnixListener::bind(addr).unwrap();
+        let mut listener = UnixListener::bind(addr.clone()).unwrap();
 
         let mut incoming = listener.incoming().take_until(tripwire);
         tracing::debug!("Starting Route for {}", mailbox);
@@ -73,6 +77,7 @@ fn start_route(mailbox: String) -> Trigger {
             }
         }
         tracing::debug!("Ending Route for {}", mailbox);
+        fs::remove_file(addr).await
     };
     tokio::spawn(rc);
     trigger
@@ -82,138 +87,80 @@ fn stop_route(trigger: Trigger) {
     drop(trigger);
 }
 
-async fn write_config(routes: Vec<String>) -> Result<serde_json::value::Value, String> {
-    let mut file = fs::File::create(CONF_FILE)
-        .await
-        .map_err(|e| format!("{}", e))?;
-    file.write_all(routes.join("\n").as_bytes())
-        .await
-        .map_err(|e| format!("{}", e))?;
-    file.write(b"\n").await.map_err(|e| format!("{}", e))?;
-    ().to_json_value()
-}
-
-pub fn create() -> impl DaemonPlugin {
-    PostOffice {
-        ids: Arc::new(Mutex::new(HashMap::new())),
-        routes: Arc::new(Mutex::new(BTreeMap::new())),
-    }
-}
-
 impl DaemonPlugin for PostOffice {
     fn start_session(
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<Output, ImlAgentError>> + Send>> {
         let routes = Arc::clone(&self.routes);
-        let fut = async move {
+        let inotify = Arc::clone(&self.inotify);
+        let wd = Arc::clone(&self.wd);
+
+        async move {
             if let Ok(file) = fs::read_to_string(CONF_FILE).await {
                 let itr = file.lines().map(|mb| {
                     let trigger = start_route(mb.to_string());
                     (mb.to_string(), trigger)
                 });
                 routes.lock().extend(itr);
+            } else {
+                fs::OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .open(CONF_FILE)
+                    .await?;
             }
-            Ok(None)
-        };
-        fut.boxed()
-    }
-    fn on_message(
-        &self,
-        v: serde_json::Value,
-    ) -> Pin<Box<dyn Future<Output = Result<AgentResult, ImlAgentError>> + Send>> {
-        let action: Action = match serde_json::from_value(v) {
-            Ok(x) => x,
-            Err(e) => return Box::pin(future::err(ImlAgentError::Serde(e))),
-        };
 
-        match action {
-            Action::ActionStart { action, args, id } => {
-                let mailbox: String = match serde_json::from_value(args) {
-                    Ok(x) => x,
-                    Err(e) => return Box::pin(future::err(ImlAgentError::Serde(e))),
-                };
-                match action.0.as_str() {
-                    "register" => {
-                        self.routes
-                            .lock()
-                            .entry(mailbox.clone())
-                            .or_insert_with(|| start_route(mailbox.clone()));
-                    }
-                    "deregister" => {
-                        if let Some(tx) = self.routes.lock().remove(&mailbox) {
-                            stop_route(tx);
-                        }
-                    }
-                    _ => {
-                        let err =
-                            RequiredError(format!("Could not find action {} in registry", action));
+            wd.lock().0 = inotify
+                .lock()
+                .add_watch(CONF_FILE, WatchMask::MODIFY)
+                .map_err(|e| tracing::error!("Failed to watch configuration: {}", e))
+                .ok();
 
-                        let result = ActionResult {
-                            id,
-                            result: Err(format!("{:?}", err)),
-                        };
+            let watcher = async move {
+                let mut buffer = [0; 32];
+                let mut stream = inotify.lock().event_stream(&mut buffer)?;
 
-                        return Box::pin(future::ok(result.to_json_value()));
-                    }
-                };
+                while let Some(event_or_error) = stream.next().await {
+                    tracing::debug!("event: {:?}", event_or_error);
+                    match fs::read_to_string(CONF_FILE).await {
+                        Ok(file) => {
+                            let newset: HashSet<String> =
+                                file.lines().map(|s| s.to_string()).collect();
+                            let oldset: HashSet<String> = routes.lock().keys().cloned().collect();
 
-                let (tx, rx) = oneshot::channel();
-
-                self.ids.lock().insert(id.clone(), tx);
-
-                let list = self.routes.lock().keys().cloned().collect();
-                let fut = Box::pin(write_config(list));
-
-                let ids = self.ids.clone();
-
-                Box::pin(
-                    future::select(fut, rx)
-                        .map(move |r| match r {
-                            Either::Left((result, _)) => {
-                                ids.lock().remove(&id);
-                                ActionResult { id, result }
-                            }
-                            Either::Right((_, z)) => {
-                                drop(z);
-                                ActionResult {
-                                    id,
-                                    result: ().to_json_value(),
+                            let added = &newset - &oldset;
+                            let itr = added.iter().map(|mb| {
+                                let trigger = start_route(mb.to_string());
+                                (mb.to_string(), trigger)
+                            });
+                            let mut rt = routes.lock();
+                            rt.extend(itr);
+                            for rm in &oldset - &newset {
+                                if let Some(trigger) = rt.remove(&rm) {
+                                    stop_route(trigger);
                                 }
                             }
-                        })
-                        .map(|r| Ok(r.to_json_value())),
-                )
-            }
-            Action::ActionCancel { id } => {
-                let tx = self.ids.lock().remove(&id);
-
-                if let Some(tx) = tx {
-                    // We don't care what the result is here.
-                    let _ = tx.send(()).is_ok();
-                }
-
-                Box::pin(future::ok(
-                    ActionResult {
-                        id,
-                        result: ().to_json_value(),
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to open configuration {}: {}", CONF_FILE, e)
+                        }
                     }
-                    .to_json_value(),
-                ))
-            }
+                }
+                tracing::debug!("Ending Inotify Listen for {}", CONF_FILE);
+                Ok::<_, ImlAgentError>(())
+            };
+            tokio::spawn(watcher);
+            Ok(None)
         }
+        .boxed()
     }
 
     fn teardown(&mut self) -> Result<(), ImlAgentError> {
-        for (_, tx) in self.ids.lock().drain() {
-            // We don't care what the result is here.
-            let _ = tx.send(()).is_ok();
+        if let Some(wd) = self.wd.lock().0.clone() {
+            let _ = self.inotify.lock().rm_watch(wd);
         }
-        let keys: Vec<String> = self.routes.lock().keys().cloned().collect();
-        let mut routes = self.routes.lock();
-        for key in keys {
-            if let Some(tx) = routes.remove(&key) {
-                stop_route(tx);
-            }
+        for (_, tx) in self.routes.lock().drain() {
+            stop_route(tx);
         }
 
         Ok(())
