@@ -23,6 +23,8 @@ use stream_cancel::{StreamExt, Trigger, Tripwire};
 use tokio::{fs, net::UnixListener};
 use tokio_util::codec::{BytesCodec, FramedRead};
 
+pub const CONF_FILE: &str = "/etc/iml/postman.conf";
+
 pub struct POWD(pub Option<WatchDescriptor>);
 
 pub struct PostOffice {
@@ -98,10 +100,9 @@ impl DaemonPlugin for PostOffice {
         let routes = Arc::clone(&self.routes);
         let inotify = Arc::clone(&self.inotify);
         let wd = Arc::clone(&self.wd);
-        let conf_path = env::get_var("POSTMAN_CONF_PATH");
 
         async move {
-            if let Ok(file) = fs::read_to_string(&conf_path).await {
+            if let Ok(file) = fs::read_to_string(CONF_FILE).await {
                 let itr = file.lines().map(|mb| {
                     let trigger = start_route(mb.to_string());
                     (mb.to_string(), trigger)
@@ -111,13 +112,13 @@ impl DaemonPlugin for PostOffice {
                 fs::OpenOptions::new()
                     .write(true)
                     .create(true)
-                    .open(&conf_path)
+                    .open(CONF_FILE)
                     .await?;
             }
 
             wd.lock().0 = inotify
                 .lock()
-                .add_watch(&conf_path, WatchMask::MODIFY)
+                .add_watch(CONF_FILE, WatchMask::MODIFY)
                 .map_err(|e| tracing::error!("Failed to watch configuration: {}", e))
                 .ok();
 
@@ -127,7 +128,7 @@ impl DaemonPlugin for PostOffice {
 
                 while let Some(event_or_error) = stream.next().await {
                     tracing::debug!("event: {:?}", event_or_error);
-                    match fs::read_to_string(&conf_path).await {
+                    match fs::read_to_string(CONF_FILE).await {
                         Ok(file) => {
                             let newset: HashSet<String> =
                                 file.lines().map(|s| s.to_string()).collect();
@@ -145,11 +146,11 @@ impl DaemonPlugin for PostOffice {
                             }
                         }
                         Err(e) => {
-                            tracing::error!("Failed to open configuration {}: {}", &conf_path, e)
+                            tracing::error!("Failed to open configuration {}: {}", CONF_FILE, e)
                         }
                     }
                 }
-                tracing::debug!("Ending Inotify Listen for {}", &conf_path);
+                tracing::debug!("Ending Inotify Listen for {}", CONF_FILE);
                 Ok::<_, ImlAgentError>(())
             };
             tokio::spawn(watcher);

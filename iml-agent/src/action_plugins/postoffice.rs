@@ -2,14 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, env};
+use crate::{agent_error::ImlAgentError, daemon_plugins::postoffice::CONF_FILE};
 use std::collections::BTreeSet;
 use std::iter::FromIterator;
 use tokio::{fs, io::AsyncWriteExt};
 
 async fn write_config(routes: BTreeSet<String>) -> Result<(), ImlAgentError> {
-    let conf_file = env::get_var("POSTMAN_CONF_PATH");
-    let mut file = fs::File::create(conf_file).await?;
+    let mut file = fs::File::create(CONF_FILE).await?;
     let rt: Vec<String> = Vec::from_iter(routes);
     file.write_all(rt.join("\n").as_bytes()).await?;
     file.write(b"\n").await?;
@@ -17,8 +16,7 @@ async fn write_config(routes: BTreeSet<String>) -> Result<(), ImlAgentError> {
 }
 
 async fn read_config() -> Result<BTreeSet<String>, ImlAgentError> {
-    let conf_file = env::get_var("POSTMAN_CONF_PATH");
-    Ok(fs::read_to_string(conf_file)
+    Ok(fs::read_to_string(CONF_FILE)
         .await?
         .lines()
         .map(|s| s.to_string())
