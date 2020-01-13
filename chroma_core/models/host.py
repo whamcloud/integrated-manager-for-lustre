@@ -1682,8 +1682,6 @@ class UpdateNidsJob(HostListMixin):
         steps = []
         for target in targets:
             target = target.downcast()
-            primary_tm = target.managedtargetmount_set.get(primary=True)
-            steps.append((MountOrImportStep, MountOrImportStep.create_parameters(target, primary_tm.host, False)))
             if issubclass(target.downcast_class, FilesystemMember):
                 steps.append(
                     (
