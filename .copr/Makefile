@@ -38,9 +38,10 @@ srpm:
 	mkdir -p ${TMPDIR}/release/rust-iml
 	rm -rf ${BUILDROOT}/_topdir
 	cargo build --release
-	cp target/release/iml-{action-runner,agent,agent-comms,mailbox,agent-daemon,stratagem,warp-drive} \
+	cp target/release/iml-{action-runner,agent,agent-comms,agent-daemon,mailbox,ostpool,stratagem,warp-drive} \
 		iml-agent-comms.service \
 		iml-mailbox.service \
+		iml-ostpool.service \
 		iml-stratagem.service \
 		iml-action-runner.service \
 		iml-action-runner.socket \
@@ -52,6 +53,20 @@ srpm:
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/rust-iml.tar.gz -C ${TMPDIR}/release/rust-iml .
 	cp rust-iml.spec ${TMPDIR}/_topdir/SPECS/
 	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-iml.spec
+	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
+	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)
+
+iml-docker-srpm:
+	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
+	mkdir -p ${TMPDIR}/scratch/iml-docker
+	rm -rf ${BUILDROOT}/_topdir
+
+	cp -r docker/docker-compose.yml ${TMPDIR}/scratch/iml-docker/
+	tar -czvf ${TMPDIR}/_topdir/SOURCES/iml-docker.tar.gz -C ${TMPDIR}/scratch/iml-docker .
+
+	cp iml-docker.spec ${TMPDIR}/_topdir/SPECS/
+	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/iml-docker.spec
+
 	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
 	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)
 

@@ -597,7 +597,6 @@ class AddOstPoolJob(Job):
     def on_success(self):
         super(AddOstPoolJob, self).on_success()
         self.pool.osts.add(self.ost)
-        self.pool.save()
 
 
 class AddOstPoolStep(Step):
@@ -652,7 +651,6 @@ class RemoveOstPoolJob(Job):
     def on_success(self):
         super(RemoveOstPoolJob, self).on_success()
         self.pool.osts.remove(self.ost)
-        self.pool.save()
 
 
 class RemoveOstPoolStep(Step):

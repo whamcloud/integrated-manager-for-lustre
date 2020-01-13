@@ -180,8 +180,8 @@ class JobSchedulerClient(object):
         return JobSchedulerRpc().create_ostpool(pool_data)
 
     @classmethod
-    def update_ostpool(cls, pool, pool_data):
-        return JobSchedulerRpc().update_ostpool(pool, pool_data)
+    def update_ostpool(cls, pool_data):
+        return JobSchedulerRpc().update_ostpool(pool_data)
 
     @classmethod
     def delete_ostpool(cls, pool):

@@ -1,0 +1,18 @@
+name: IML Docker CI
+on: [push, pull_request]
+
+jobs:
+  check_rpm_build:
+    name: Check RPM build (iml-docker)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Build rpm
+        uses: ./.github/actions/copr
+        env:
+          SPEC: iml-docker.spec
+          LOCAL_ONLY: true
+          SRPM_TASK: iml-docker-srpm
+          WORKSPACE: ${{ github.workspace }}

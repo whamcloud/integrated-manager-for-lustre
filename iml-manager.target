@@ -46,6 +46,9 @@ After=iml-stratagem.service
 Requires=iml-mailbox.service
 After=iml-mailbox.service
 
+Requires=iml-ostpool.service
+After=iml-ostpool.service
+
 Requires=iml-action-runner.service
 After=iml-action-runner.service
 

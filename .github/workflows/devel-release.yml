@@ -41,3 +41,22 @@ jobs:
           WORKSPACE: ${{ github.workspace }}/iml-wasm-components
           KEY: ${{ secrets.key }}
           IV: ${{ secrets.iv }}
+  push_iml_docker:
+    name: Push to Copr devel (iml-docker)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Push RPM
+        uses: ./.github/actions/copr
+        env:
+          PROD: false
+          OWNER: managerforlustre
+          PROJECT: manager-for-lustre-devel
+          PACKAGE: iml-docker
+          SRPM_TASK: iml-docker-srpm
+          SPEC: iml-docker.spec
+          WORKSPACE: ${{ github.workspace }}
+          KEY: ${{ secrets.key }}
+          IV: ${{ secrets.iv }}

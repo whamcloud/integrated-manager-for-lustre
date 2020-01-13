@@ -401,7 +401,7 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
                 for (host_id, failed_tests) in invalid {
                     let host = hosts.iter().find(|x| &x.id == host_id).unwrap();
 
-                    display_error(format!("\n\nHost {}\n", host.address));
+                    display_error(format!("Host {}\n", host.address));
 
                     let table = generate_table(
                         &["Description", "Test", "Error"],
@@ -411,6 +411,8 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
                     );
 
                     table.printstd();
+
+                    term.write_line("\n\n")?;
                 }
 
                 if !can_continue(&config) {
