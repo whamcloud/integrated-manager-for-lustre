@@ -13,6 +13,8 @@ Environment=CRT_PATH=/etc/iml/self.crt
 Environment=PFX_PATH=/etc/iml/identity.pfx
 Environment=AUTHORITY_CRT_PATH=/etc/iml/authority.crt
 Environment=LTUER_CONF_PATH=/etc/iml/ltuer.conf
+Environment=POSTMAN_CONF_PATH=/etc/iml/postman.conf
+Environment=SOCK_DIR=/run/iml
 ExecStart=/usr/bin/iml-agent-daemon
 StandardOutput=journal
 StandardError=journal
