@@ -123,7 +123,6 @@ class TestUpdateNids(NidTestCase):
         self.drain_progress()
         self.assertState(self.fs, "stopped")
 
-        # import ipdb; ipdb.set_trace()
         expected_calls = [
             call("mgs", "lctl", ["replace_nids", "%s" % self.mdt, "192.168.0.99@tcp0"],),
             call("mgs", "lctl", ["replace_nids", "%s" % self.ost, "192.168.0.99@tcp0"],),
