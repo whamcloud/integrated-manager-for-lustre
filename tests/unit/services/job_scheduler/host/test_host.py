@@ -82,7 +82,7 @@ class TestUpdateNids(NidTestCase):
 
     @patch("chroma_core.lib.job.Step.invoke_rust_agent", return_value=MagicMock())
     def test_mgs_nid_change(self, invoke):
-        invoke.return_value = """{"Ok": ""}"""
+        invoke.return_value = '{"Ok": ""}'
 
         mgs = synthetic_host("mgs")
         mds = synthetic_host("mds")
