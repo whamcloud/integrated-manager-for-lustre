@@ -19,6 +19,7 @@ members = [
     'iml-postgres',
     'iml-services/iml-service-queue',
     'iml-services/iml-action-runner',
+    'iml-services/iml-ostpool',
     'iml-services/iml-stratagem',
     'number-formatter',
     'version-utils',

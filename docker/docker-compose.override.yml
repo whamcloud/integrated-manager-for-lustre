@@ -38,6 +38,8 @@ services:
     restart: on-failure
   syslog:
     restart: on-failure
+  iml-ostpool:
+    restart: on-failure
   iml-warp-drive:
     restart: on-failure
   setup:

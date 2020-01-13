@@ -3,7 +3,12 @@
 // license that can be found in the LICENSE file.
 
 use serde_json;
-use std::{collections::HashMap, convert::TryFrom, fmt};
+use std::{
+    cmp::{Ord, Ordering},
+    collections::{BTreeMap, BTreeSet, HashMap},
+    convert::TryFrom,
+    fmt,
+};
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
@@ -1396,6 +1401,62 @@ pub mod db {
         }
     }
 
+    /// Record from the `chroma_core_managedost` table
+    #[derive(serde::Deserialize, Debug)]
+    pub struct ManagedOstRecord {
+        managedtarget_ptr_id: u32,
+        index: u32,
+        filesystem_id: u32,
+    }
+
+    impl Id for ManagedOstRecord {
+        fn id(&self) -> u32 {
+            self.managedtarget_ptr_id
+        }
+    }
+
+    impl NotDeleted for ManagedOstRecord {
+        fn not_deleted(&self) -> bool {
+            true
+        }
+    }
+
+    pub const MANAGED_OST_TABLE_NAME: TableName = TableName("chroma_core_managedost");
+
+    impl Name for ManagedOstRecord {
+        fn table_name() -> TableName<'static> {
+            MANAGED_OST_TABLE_NAME
+        }
+    }
+
+    /// Record from the `chroma_core_managedmdt` table
+    #[derive(serde::Deserialize, Debug)]
+    pub struct ManagedMdtRecord {
+        managedtarget_ptr_id: u32,
+        index: u32,
+        filesystem_id: u32,
+    }
+
+    impl Id for ManagedMdtRecord {
+        fn id(&self) -> u32 {
+            self.managedtarget_ptr_id
+        }
+    }
+
+    impl NotDeleted for ManagedMdtRecord {
+        fn not_deleted(&self) -> bool {
+            true
+        }
+    }
+
+    pub const MANAGED_MDT_TABLE_NAME: TableName = TableName("chroma_core_managedmdt");
+
+    impl Name for ManagedMdtRecord {
+        fn table_name() -> TableName<'static> {
+            MANAGED_MDT_TABLE_NAME
+        }
+    }
+
     /// Record from the `chroma_core_managedhost` table
     #[derive(serde::Deserialize, Debug)]
     pub struct ManagedHostRecord {
@@ -2000,12 +2061,36 @@ pub struct ComponentState<T: Default> {
 
 /// An OST Pool record from `/api/ostpool/`
 #[derive(Debug, Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct OstPoolApi {
+    pub id: u32,
+    pub resource_uri: String,
+    #[serde(flatten)]
+    pub ost: OstPool,
+}
+
+impl EndpointName for OstPoolApi {
+    fn endpoint_name() -> &'static str {
+        "ostpool"
+    }
+}
+
+impl FlatQuery for OstPoolApi {}
+
+impl std::fmt::Display for OstPoolApi {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[#{}] {}", self.id, self.ost)
+    }
+}
+
+/// Type Sent between ostpool agent daemon and service
+/// FS Name -> Set of OstPools
+pub type FsPoolMap = BTreeMap<String, BTreeSet<OstPool>>;
+
+#[derive(Debug, Default, Clone, Eq, serde::Serialize, serde::Deserialize)]
 pub struct OstPool {
     pub name: String,
     pub filesystem: String,
     pub osts: Vec<String>,
-    pub resource_uri: String,
-    pub id: u32,
 }
 
 impl std::fmt::Display for OstPool {
@@ -2020,13 +2105,27 @@ impl std::fmt::Display for OstPool {
     }
 }
 
-impl EndpointName for OstPool {
-    fn endpoint_name() -> &'static str {
-        "ostpool"
+impl Ord for OstPool {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let x = self.filesystem.cmp(&other.filesystem);
+        if x != Ordering::Equal {
+            return x;
+        }
+        self.name.cmp(&other.name)
     }
 }
 
-impl FlatQuery for OstPool {}
+impl PartialOrd for OstPool {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for OstPool {
+    fn eq(&self, other: &Self) -> bool {
+        self.filesystem == other.filesystem && self.name == other.name
+    }
+}
 
 pub mod warp_drive {
     use crate::{

@@ -1159,30 +1159,47 @@ class JobScheduler(object):
         self.progress.advance()
         return ostpool.id, command_id
 
-    def update_ostpool(self, ostpool_id, ostpool_data):
-        log.debug("Updating ostpool {} with: {}".format(ostpool_id, ostpool_data))
+    def update_ostpool(self, ostpool_data):
+        log.debug("Updating ostpool with: {}".format(ostpool_data))
+
+        newlist = set(ostpool_data.get("osts", []))
+
         with self._lock:
-            ostpool = OstPool.objects.get(pk=ostpool_id)
-        # @@
+            ostpool = OstPool.objects.get(pk=ostpool_data["id"])
+
+            current = set(ostpool.osts.all())
+            to_add = newlist - current
+            to_remove = current - newlist
+
+            with transaction.atomic():
+                cmds = []
+                for ost in ManagedOst.objects.filter(name__in=to_add):
+                    cmds.append({"class_name": "AddOstPoolJob", "args": {"pool": ostpool, "ost": ost}})
+                for ost in ManagedOst.objects.filter(name__in=to_remove):
+                    cmds.append({"class_name": "RemoveOstPoolJob", "args": {"pool": ostpool, "ost": ost}})
+                command_id = self.CommandPlan.command_run_jobs(cmds, help_text["updating_ostpool"])
+        self.progress.advance()
+        return command_id
 
     def delete_ostpool(self, ostpool_id):
         log.debug("Deleting ostpool {}".format(ostpool_id))
         with self._lock:
             ostpool = OstPool.objects.get(pk=ostpool_id)
-            with transaction.atomic():
-                cmds = []
-                for ost in ostpool.osts.all():
-                    cmds.append(
-                        {"class_name": "RemoveOstPoolJob", "args": {"pool": ostpool, "ost": ost},}
-                    )
 
+            cmds = []
+            for ost in ostpool.osts.all():
                 cmds.append(
-                    {
-                        "class_name": "DestroyOstPoolJob",
-                        "args": {"pool": ostpool, "depends_on_job_range": range(0, len(cmds))},
-                    }
+                    {"class_name": "RemoveOstPoolJob", "args": {"pool": ostpool, "ost": ost},}
                 )
 
+            cmds.append(
+                {
+                    "class_name": "DestroyOstPoolJob",
+                    "args": {"pool": ostpool, "depends_on_job_range": range(0, len(cmds))},
+                }
+            )
+
+            with transaction.atomic():
                 command_id = self.CommandPlan.command_run_jobs(cmds, help_text["destroying_ostpool"])
 
         self.progress.advance()
