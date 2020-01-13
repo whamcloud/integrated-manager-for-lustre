@@ -3,20 +3,20 @@
 // license that can be found in the LICENSE file.
 
 use crate::{agent_error::ImlAgentError, env};
-
-use std::collections::HashSet;
+use std::collections::BTreeSet;
+use std::iter::FromIterator;
 use tokio::{fs, io::AsyncWriteExt};
 
-async fn write_config(mut routes: HashSet<String>) -> Result<(), ImlAgentError> {
+async fn write_config(routes: BTreeSet<String>) -> Result<(), ImlAgentError> {
     let conf_file = env::get_var("POSTMAN_CONF_PATH");
     let mut file = fs::File::create(conf_file).await?;
-    let rt: Vec<String> = routes.drain().collect();
+    let rt: Vec<String> = Vec::from_iter(routes);
     file.write_all(rt.join("\n").as_bytes()).await?;
     file.write(b"\n").await?;
     Ok(())
 }
 
-async fn read_config() -> Result<HashSet<String>, ImlAgentError> {
+async fn read_config() -> Result<BTreeSet<String>, ImlAgentError> {
     let conf_file = env::get_var("POSTMAN_CONF_PATH");
     Ok(fs::read_to_string(conf_file)
         .await?
