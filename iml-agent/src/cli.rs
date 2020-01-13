@@ -9,6 +9,7 @@ use iml_agent::action_plugins::stratagem::{
 };
 use iml_agent::action_plugins::{
     check_ha, check_kernel, check_stonith, kernel_module, lpurge, ltuer, ostpool, package,
+    postoffice,
 };
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
@@ -83,6 +84,20 @@ pub enum PoolCommand {
     List {
         #[structopt(name = "FILESYSTEM", parse(try_from_str = "is_valid_fsname"))]
         filesystem: String,
+    },
+}
+
+#[derive(Debug, StructOpt)]
+pub enum PostOfficeCommand {
+    #[structopt(name = "add")]
+    Add {
+        #[structopt(name = "MAILBOX")]
+        mailbox: String,
+    },
+    #[structopt(name = "remove")]
+    Remove {
+        #[structopt(name = "MAILBOX")]
+        mailbox: String,
     },
 }
 
@@ -270,6 +285,13 @@ pub enum App {
     LPurge {
         #[structopt(flatten)]
         c: lpurge::Config,
+    },
+
+    #[structopt(name = "postoffice")]
+    /// Write lpurge configuration file
+    PostOffice {
+        #[structopt(subcommand)]
+        cmd: PostOfficeCommand,
     },
 }
 
@@ -508,6 +530,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("{}", pool)
                     }
                 }),
+            } {
+                println!("{:?}", e);
+                exit(exitcode::SOFTWARE);
+            }
+        }
+        App::PostOffice { cmd } => {
+            if let Err(e) = match cmd {
+                PostOfficeCommand::Add { mailbox } => postoffice::route_add(mailbox).await,
+                PostOfficeCommand::Remove { mailbox } => postoffice::route_remove(mailbox).await,
             } {
                 println!("{:?}", e);
                 exit(exitcode::SOFTWARE);
