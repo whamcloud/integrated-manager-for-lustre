@@ -76,7 +76,7 @@ Requires: iml-device-scanner >= 3.0
 %{_bindir}/iml-agent
 %{_bindir}/iml-agent-daemon
 %attr(0644,root,root)
-%{buildroot}%{_sysconfdir}/iml/iml-agent.conf
+%{_sysconfdir}/iml/iml-agent.conf
 %{_unitdir}/rust-iml-agent.service
 %{_unitdir}/rust-iml-agent.path
 %{_presetdir}/00-rust-iml-agent.preset
