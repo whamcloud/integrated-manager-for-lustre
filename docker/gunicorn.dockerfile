@@ -1,3 +1,3 @@
-FROM imlteam/manager-service-base:5.1
+FROM imlteam/manager-service-base:dev
 
 CMD ["gunicorn", "wsgi:application", "-c", "./wsgi.py"]
