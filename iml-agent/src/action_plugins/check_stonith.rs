@@ -2,11 +2,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{
-    agent_error::{CibError, ImlAgentError},
-    cmd::cmd_output,
-};
+use crate::agent_error::{CibError, ImlAgentError};
 use elementtree::Element;
+use iml_cmd::cmd_output;
 use iml_wire_types::{ComponentState, ConfigState, RunState, ServiceState};
 use std::default::Default;
 

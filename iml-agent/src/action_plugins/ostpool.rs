@@ -4,9 +4,10 @@
 
 use crate::{
     agent_error::{ImlAgentError, RequiredError},
-    cmd::lctl,
+    lustre::lctl,
 };
 use futures::future::try_join_all;
+use iml_cmd::CmdError;
 use iml_wire_types::OstPool;
 use std::iter::FromIterator;
 use std::time::Duration;
@@ -95,11 +96,11 @@ pub async fn pool_list(filesystem: &str) -> Result<Vec<String>, ImlAgentError> {
             .map(|s| s.rsplit('.').next().unwrap().to_string())
             .collect()),
         Err(e) => {
-            if let ImlAgentError::CmdOutputError(cerr) = e {
-                if cerr.status.code() == Some(2) {
+            if let ImlAgentError::CmdError(CmdError::Output(output)) = e {
+                if output.status.code() == Some(2) {
                     Ok(vec![])
                 } else {
-                    Err(ImlAgentError::CmdOutputError(cerr))
+                    Err(output.into())
                 }
             } else {
                 Err(e)

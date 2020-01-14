@@ -2,7 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, cmd::cmd_output_success};
+use crate::agent_error::ImlAgentError;
+use iml_cmd::cmd_output_success;
 
 pub async fn loaded(module: String) -> Result<bool, ImlAgentError> {
     let output = cmd_output_success("lsmod", vec![]).await?;

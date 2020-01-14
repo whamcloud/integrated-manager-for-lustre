@@ -2,10 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{
-    agent_error::{ImlAgentError, RequiredError},
-    cmd::{cmd_output, cmd_output_success},
-};
+use crate::agent_error::{ImlAgentError, RequiredError};
+use iml_cmd::{cmd_output, cmd_output_success};
 use iml_wire_types::{ActiveState, RunState, UnitFileState};
 use std::{str, time::Duration};
 use tokio::time::delay_for;
