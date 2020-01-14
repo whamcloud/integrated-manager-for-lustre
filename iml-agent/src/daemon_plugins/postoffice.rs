@@ -64,7 +64,8 @@ fn start_route(mailbox: String) -> Trigger {
         let _ = fs::remove_file(&addr).await;
         let mut listener = UnixListener::bind(addr.clone()).map_err(|e| {
             tracing::error!("Failed to open unix socket {}: {}", &addr, &e);
-            e })?;
+            e
+        })?;
         let mut incoming = listener.incoming().take_until(tripwire);
 
         tracing::debug!("Starting Route for {}", mailbox);
