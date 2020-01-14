@@ -5,8 +5,8 @@
 use crate::{
     action_plugins::ostpool::pools,
     agent_error::ImlAgentError,
-    cmd::lctl,
     daemon_plugins::{DaemonPlugin, Output},
+    lustre::lctl,
 };
 use futures::{future::join_all, lock::Mutex, Future, FutureExt};
 use iml_wire_types::{FsPoolMap, OstPool};

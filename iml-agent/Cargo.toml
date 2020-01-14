@@ -8,8 +8,8 @@ license = "MIT"
 repository = "https://github.com/whamcloud/integrated-manager-for-lustre/tree/master/iml-agent"
 
 [dependencies]
-bytes = "0.5"
 byte-unit = "=2.1"
+bytes = "0.5"
 chrono = "0.4"
 console = "0.9"
 dns-lookup = "1"
@@ -19,9 +19,14 @@ exitcode = "1.1"
 futures = "0.3"
 futures-util = "0.3.1"
 http = "0.2"
+iml-cmd = { path = "../iml-cmd", version = "0.1.0" }
+iml-fs = { path = "../iml-fs", version = "0.1.0" }
+iml-util = { path = "../iml-util", version = "0.1.0" }
+iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
 inotify = "0.8"
 lazy_static = "1.4.0"
 libc = "0.2"
+liblustreapi = { path = "../liblustreapi", version = "0.1" }
 native-tls = "0.2"
 parking_lot = "0.9"
 prettytable-rs = "0.8"
@@ -35,12 +40,8 @@ tokio-util = { version = "0.2", features = ["codec"] }
 tracing = "0.1"
 tracing-subscriber = "0.1"
 url = "2.1"
-v_hist = "0.1.2"
 uuid = { version = "0.7", features = ["v4"] }
-iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
-liblustreapi = { path = "../liblustreapi", version = "0.1" }
-iml-fs = { path = "../iml-fs", version = "0.1.0" }
-iml-util = { path = "../iml-util", version = "0.1.0" }
+v_hist = "0.1.2"
 version-utils = { path = "../version-utils", version = "0.1.0" }
 stream-cancel = "0.5"
 

@@ -2,9 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, cmd::cmd_output_success};
+use crate::agent_error::ImlAgentError;
 use elementtree::Element;
 use futures::{future, Future, TryFutureExt};
+use iml_cmd::cmd_output_success;
 use std::{collections::HashMap, fmt};
 
 /// standard:provider:ocftype (e.g. ocf:heartbeat:ZFS, or stonith:fence_ipmilan)
@@ -70,6 +71,7 @@ impl AgentInfo {
 
 pub fn check_ha(_: ()) -> impl Future<Output = Result<Vec<AgentInfo>, ImlAgentError>> {
     cmd_output_success("cibadmin", vec!["--query", "--xpath", "//resources"])
+        .err_into()
         .and_then(|output| {
             // This cannot split between map/map_err because Element does not implement Send
             match Element::from_reader(output.stdout.as_slice()) {

@@ -6,11 +6,11 @@
 
 pub mod action_plugins;
 pub mod agent_error;
-pub mod cmd;
 pub mod daemon_plugins;
 pub mod env;
 pub mod fidlist;
 pub mod http_comms;
+pub mod lustre;
 pub mod poller;
 pub mod reader;
 pub mod rpm;

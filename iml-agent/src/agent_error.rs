@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use iml_cmd::CmdError;
 use iml_fs::ImlFsError;
 use iml_wire_types::PluginName;
 use std::{fmt, process::Output};
@@ -86,7 +87,7 @@ pub enum ImlAgentError {
     RequiredError(RequiredError),
     OneshotCanceled(futures::channel::oneshot::Canceled),
     LiblustreError(liblustreapi::error::LiblustreError),
-    CmdOutputError(Output),
+    CmdError(CmdError),
     SendError,
     InvalidUriParts(http::uri::InvalidUriParts),
     InvalidUri(http::uri::InvalidUri),
@@ -117,14 +118,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::RequiredError(ref err) => write!(f, "{}", err),
             ImlAgentError::OneshotCanceled(ref err) => write!(f, "{}", err),
             ImlAgentError::LiblustreError(ref err) => write!(f, "{}", err),
-
-            ImlAgentError::CmdOutputError(ref err) => write!(
-                f,
-                "{}, stdout: {}, stderr: {}",
-                err.status,
-                String::from_utf8_lossy(&err.stdout),
-                String::from_utf8_lossy(&err.stderr)
-            ),
+            ImlAgentError::CmdError(ref err) => write!(f, "{}", err),
             ImlAgentError::SendError => write!(f, "Rx went away"),
             ImlAgentError::InvalidUriParts(ref err) => write!(f, "{}", err),
             ImlAgentError::InvalidUri(ref err) => write!(f, "{}", err),
@@ -157,8 +151,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::RequiredError(ref err) => Some(err),
             ImlAgentError::OneshotCanceled(ref err) => Some(err),
             ImlAgentError::LiblustreError(ref err) => Some(err),
-
-            ImlAgentError::CmdOutputError(_) => None,
+            ImlAgentError::CmdError(ref err) => Some(err),
             ImlAgentError::SendError => None,
             ImlAgentError::InvalidUriParts(ref err) => Some(err),
             ImlAgentError::InvalidUri(ref err) => Some(err),
@@ -264,7 +257,13 @@ impl From<liblustreapi::error::LiblustreError> for ImlAgentError {
 
 impl From<Output> for ImlAgentError {
     fn from(output: Output) -> Self {
-        ImlAgentError::CmdOutputError(output)
+        ImlAgentError::CmdError(output.into())
+    }
+}
+
+impl From<CmdError> for ImlAgentError {
+    fn from(err: CmdError) -> Self {
+        ImlAgentError::CmdError(err)
     }
 }
 

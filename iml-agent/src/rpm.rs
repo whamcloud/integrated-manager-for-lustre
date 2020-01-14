@@ -2,13 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use crate::agent_error::ImlAgentError;
+use iml_cmd::cmd_output;
 use regex::Regex;
-
-use std::fmt;
-use std::process::Output;
-use std::str;
-
-use crate::{agent_error::ImlAgentError, cmd::cmd_output};
+use std::{fmt, process::Output, str};
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Version(String);
@@ -24,7 +21,7 @@ fn parse(output: Output) -> Result<Option<Version>, ImlAgentError> {
         // In case there's syntax error in query format, exit code of `rpm` is 0,
         // but there's no data and an error is on stderr
         if output.stderr.len() > 0 {
-            Err(ImlAgentError::CmdOutputError(output))
+            Err(output.into())
         } else {
             Ok(Some(Version(
                 String::from_utf8_lossy(&output.stdout).to_string(),
@@ -36,7 +33,7 @@ fn parse(output: Output) -> Result<Option<Version>, ImlAgentError> {
         if re.is_match(&s) {
             Ok(None)
         } else {
-            Err(ImlAgentError::CmdOutputError(output))
+            Err(output.into())
         }
     }
 }
