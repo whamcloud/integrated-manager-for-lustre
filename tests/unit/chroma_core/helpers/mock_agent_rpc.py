@@ -252,7 +252,6 @@ class MockAgentRpc(object):
             "configure_network",
             "open_firewall",
             "close_firewall",
-            "writeconf_target",
         ]:
             return agent_result_ok
         elif cmd == "get_corosync_autoconfig":

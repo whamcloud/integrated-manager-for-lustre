@@ -1578,22 +1578,13 @@ class UpdateJob(Job):
         app_label = "chroma_core"
 
 
-class WriteConfStep(Step):
+class ReplaceNidsStep(Step):
     def run(self, args):
-        from chroma_core.models.target import FilesystemMember
-
         target = args["target"]
-
-        agent_args = {"erase_params": True, "device": args["path"]}
-
-        if issubclass(target.downcast_class, FilesystemMember):
-            agent_args["mgsnode"] = args["mgsnode"]
-            agent_args["writeconf"] = True
-
-        fail_nids = args["fail_nids"]
-        if fail_nids:
-            agent_args["failnode"] = fail_nids
-        self.invoke_agent(args["host"], "writeconf_target", agent_args)
+        nids = args["nids"]
+        flattened_nids = [e for t in nids for e in t]
+        agent_args = ["replace_nids", target] + [",".join(flattened_nids)]
+        return self.invoke_rust_agent_expect_result(args["fqdn"], "lctl", agent_args)
 
 
 class ResetConfParamsStep(Step):
@@ -1643,6 +1634,8 @@ class UpdateNidsJob(HostListMixin):
         return filesystems, targets
 
     def get_deps(self):
+        from chroma_core.models.target import ManagedMgs
+
         filesystems, targets = self._targets_on_hosts()
 
         target_hosts = set()
@@ -1656,16 +1649,24 @@ class UpdateNidsJob(HostListMixin):
         return DependAll(
             [DependOn(host.lnet_configuration, "lnet_up") for host in target_primary_hosts]
             + [DependOn(fs, "stopped") for fs in filesystems]
-            + [DependOn(t, "unmounted") for t in targets]
+            + [DependOn(t, "unmounted") for t in targets if not issubclass(t.downcast_class, ManagedMgs)]
+            + [DependOn(t, "mounted") for t in targets if issubclass(t.downcast_class, ManagedMgs)]
         )
 
     def create_locks(self):
+        from chroma_core.models.target import ManagedMgs
+
         locks = []
         filesystems, targets = self._targets_on_hosts()
 
         for target in targets:
+            if issubclass(target.downcast_class, ManagedMgs):
+                begin_state = "mounted"
+            else:
+                begin_state = "unmounted"
+
             locks.append(
-                StateLock(job=self, locked_item=target, begin_state="unmounted", end_state="unmounted", write=True)
+                StateLock(job=self, locked_item=target, begin_state=begin_state, end_state="unmounted", write=True)
             )
 
         return locks
@@ -1681,22 +1682,17 @@ class UpdateNidsJob(HostListMixin):
         steps = []
         for target in targets:
             target = target.downcast()
-            primary_tm = target.managedtargetmount_set.get(primary=True)
-            steps.append((MountOrImportStep, MountOrImportStep.create_parameters(target, primary_tm.host, False)))
-            steps.append(
-                (
-                    WriteConfStep,
-                    {
-                        "target": target,
-                        "path": primary_tm.volume_node.path,
-                        "mgsnode": target.filesystem.mgs.nids()
-                        if issubclass(target.downcast_class, FilesystemMember)
-                        else None,
-                        "host": primary_tm.host,
-                        "fail_nids": target.get_failover_nids(),
-                    },
+            if issubclass(target.downcast_class, FilesystemMember):
+                steps.append(
+                    (
+                        ReplaceNidsStep,
+                        {
+                            "target": "%s" % target,
+                            "nids": target.filesystem.mgs.nids(),
+                            "fqdn": target.filesystem.mgs.best_available_host().fqdn,
+                        },
+                    )
                 )
-            )
 
         mgs_targets = [t for t in targets if issubclass(t.downcast_class, ManagedMgs)]
         fs_targets = [t for t in targets if not issubclass(t.downcast_class, ManagedMgs)]

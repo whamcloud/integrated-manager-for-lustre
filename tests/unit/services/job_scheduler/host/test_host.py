@@ -1,5 +1,6 @@
 from copy import deepcopy
 from itertools import chain
+from mock import call, MagicMock, patch
 import json
 
 from chroma_core.lib.cache import ObjectCache
@@ -79,7 +80,10 @@ class TestUpdateNids(NidTestCase):
         },
     }
 
-    def test_mgs_nid_change(self):
+    @patch("chroma_core.lib.job.Step.invoke_rust_agent", return_value=MagicMock())
+    def test_mgs_nid_change(self, invoke):
+        invoke.return_value = '{"Ok": ""}'
+
         mgs = synthetic_host("mgs")
         mds = synthetic_host("mds")
         oss = synthetic_host("oss")
@@ -112,11 +116,14 @@ class TestUpdateNids(NidTestCase):
             [{"class_name": "UpdateNidsJob", "args": {"host_ids": json.dumps([mgs.id])}}], "Test update nids"
         )
         self.drain_progress()
-        # The -4 looks past the start/stop that happens after writeconf
-        self.assertEqual(MockAgentRpc.host_calls[mgs.fqdn][-4][0], "writeconf_target")
-        self.assertEqual(MockAgentRpc.host_calls[mds.fqdn][-4][0], "writeconf_target")
-        self.assertEqual(MockAgentRpc.host_calls[oss.fqdn][-4][0], "writeconf_target")
         self.assertState(self.fs, "stopped")
+
+        expected_calls = [
+            call("mgs", "lctl", ["replace_nids", "%s" % self.mdt, "192.168.0.99@tcp0"],),
+            call("mgs", "lctl", ["replace_nids", "%s" % self.ost, "192.168.0.99@tcp0"],),
+        ]
+
+        self.assertEqual(expected_calls, invoke.call_args_list)
 
 
 class TestHostAddRemove(JobTestCase):
