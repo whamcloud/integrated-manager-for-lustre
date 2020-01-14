@@ -1,5 +1,6 @@
 pub mod dropdown;
 pub mod lnet_status;
+pub mod modal;
 pub mod paging;
 pub mod popover;
 pub mod table;

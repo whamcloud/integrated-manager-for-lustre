@@ -3,6 +3,7 @@
 #![allow(clippy::enum_glob_use)]
 
 pub mod components;
+pub mod key_codes;
 
 mod auth;
 mod breakpoints;
