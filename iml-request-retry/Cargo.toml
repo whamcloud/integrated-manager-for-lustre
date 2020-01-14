@@ -8,14 +8,14 @@ edition = "2018"
 [dependencies]
 futures = "0.3"
 tokio = "0.2"
-rand = "0.7.2"
-tracing = "0.1.10"
+rand = "0.7"
+tracing = "0.1"
 
 [dev-dependencies]
-tokio-test = "0.2.0"
+tokio-test = "0.2"
 http = "0.2"
-reqwest = { git = "https://github.com/seanmonstar/reqwest", features = ["json"] }
-url = "2.1.0"
+reqwest = { version = "0.10", features = ["json"] }
+url = "2.1"
 rand_xorshift = "0.2.0"
 warp = { git = "https://github.com/seanmonstar/warp.git" }
 serde = { version = "1", features = ['derive'] }
