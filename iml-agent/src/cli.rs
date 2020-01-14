@@ -8,7 +8,8 @@ use iml_agent::action_plugins::stratagem::{
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
 use iml_agent::action_plugins::{
-    check_ha, check_kernel, check_stonith, kernel_module, lamigo, lpurge, ltuer, ostpool, package,
+    check_ha, check_kernel, check_stonith, kernel_module, lamigo, lpurge, ltuer, lustre, ostpool,
+    package,
     postoffice,
 };
 use liblustreapi as llapi;
@@ -264,6 +265,23 @@ pub enum App {
     #[structopt(name = "get_kernel")]
     /// Get latest kernel which supports listed modules
     GetKernel { modules: Vec<String> },
+
+    #[structopt(name = "is_mounted")]
+    /// Check if `mount_point` is mounted to some filesystem
+    IsMounted {
+        #[structopt(long)]
+        mount_point: String,
+    },
+
+    #[structopt(name = "try_mount")]
+    /// Try to mount `lustre_device` to the `mount_point`
+    TryMount {
+        #[structopt(long)]
+        lustre_device: String,
+
+        #[structopt(long)]
+        mount_point: String,
+    },
 
     #[structopt(name = "create_ltuer_conf")]
     CreateLtuerConf {
@@ -534,7 +552,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         App::GetKernel { modules } => match check_kernel::get_kernel(modules).await {
             Ok(s) => println!("{}", s),
-            Err(e) => println!("{:?}", e),
+            Err(e) => {
+                eprintln!("{:?}", e);
+                exit(exitcode::SOFTWARE);
+            }
+        },
+        App::IsMounted { mount_point } => match lustre::is_mounted(mount_point).await {
+            Ok(x) => println!("{}", x),
+            Err(e) => {
+                eprintln!("{:?}", e);
+                exit(exitcode::SOFTWARE);
+            }
+        },
+        App::TryMount {
+            lustre_device,
+            mount_point,
+        } => match lustre::try_mount((lustre_device, mount_point)).await {
+            Ok(()) => println!("Done"),
+            Err(e) => {
+                eprintln!("{:?}", e);
+                exit(exitcode::SOFTWARE);
+            }
         },
         App::Pool { command } => {
             if let Err(e) = match command {
