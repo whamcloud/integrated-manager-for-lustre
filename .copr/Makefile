@@ -36,7 +36,7 @@ substs: $(SUBSTS)
 srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/release/rust-iml
-	rm -rf ${BUILDROOT}/_topdir
+	[ ${BUILDROOT} = "." ] || rm -rf ${BUILDROOT}/_topdir
 	cargo build --release
 	cp target/release/iml-{action-runner,agent,agent-comms,agent-daemon,mailbox,ostpool,stratagem,warp-drive} \
 		iml-agent-comms.service \
@@ -79,7 +79,7 @@ iml-deps:
 iml-srpm: iml-deps substs
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/{scratch,configuration}
-	rm -rf ${BUILDROOT}/_topdir
+	[ ${BUILDROOT} = "." ] || rm -rf ${BUILDROOT}/_topdir
 
 	cp -r ${BUILDROOT}/{chroma_*,chroma-*,__init__.py,manage.py,scm_version.py,setup.py,settings.py,urls.py,wsgi.py,agent-bootstrap-script.template,*.profile} ${TMPDIR}/scratch
 	cp -r ${BUILDROOT}/{*.repo,README.*,licenses,polymorphic,scripts,example_storage_plugin_package,tests,MANIFEST.in} ${TMPDIR}/scratch
