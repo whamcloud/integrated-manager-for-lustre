@@ -390,6 +390,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
+    dotenv::from_path("/etc/iml/iml-agent.conf").expect("Could not load cli env");
 
     let matches = App::from_args();
 
