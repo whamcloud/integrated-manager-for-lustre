@@ -9,8 +9,7 @@ use iml_agent::action_plugins::stratagem::{
 };
 use iml_agent::action_plugins::{
     check_ha, check_kernel, check_stonith, kernel_module, lamigo, lpurge, ltuer, lustre, ostpool,
-    package,
-    postoffice,
+    package, postoffice,
 };
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};

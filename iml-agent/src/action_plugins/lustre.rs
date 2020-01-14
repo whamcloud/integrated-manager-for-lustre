@@ -2,11 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, cmd};
+use crate::{agent_error::ImlAgentError, lustre};
 
 /// Runs lctl with given arguments
 pub async fn lctl(args: Vec<String>) -> Result<String, ImlAgentError> {
-    cmd::lctl(args.iter().map(|s| s.as_ref()).collect())
+    lustre::lctl(args.iter().map(|s| s.as_ref()).collect())
         .await
         .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
 }
@@ -15,7 +15,7 @@ pub async fn lctl(args: Vec<String>) -> Result<String, ImlAgentError> {
 /// It provides no output, but signals the caller with the exit code
 pub async fn is_mounted(mount_point: String) -> Result<bool, ImlAgentError> {
     let args = vec!["-q", &mount_point];
-    let output = cmd::cmd_output("mountpoint", args).await?;
+    let output = iml_cmd::cmd_output("mountpoint", args).await?;
     Ok(output.status.success())
 }
 
@@ -32,5 +32,5 @@ pub async fn try_mount(
     (lustre_device, mount_point): (String, String),
 ) -> Result<(), ImlAgentError> {
     let args = vec!["-t", "lustre", &lustre_device, &mount_point];
-    cmd::cmd_output_success("mount", args).await.map(drop)
+    iml_cmd::cmd_output_success("mount", args).await.map(drop)
 }
