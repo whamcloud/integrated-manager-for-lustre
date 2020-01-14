@@ -282,15 +282,14 @@ pub enum App {
     },
 
     #[structopt(name = "lpurge")]
-    /// Write lpurge configuration file
+    /// Write `lpurge` configuration file
     LPurge {
         #[structopt(flatten)]
         c: lpurge::Config,
     },
 
     #[structopt(name = "lamigo")]
-    /// Create `lamigo` systemd unit. By default checks if the `mount_point` is mounted,
-    /// if not, mounts it, and then creates the unit.
+    /// Create `lamigo` systemd unit
     LAmigo {
         #[structopt(flatten)]
         c: lamigo::Config,
