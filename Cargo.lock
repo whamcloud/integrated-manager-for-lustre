@@ -1080,6 +1080,7 @@ dependencies = [
  "chrono 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "console 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "dns-lookup 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dotenv 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "elementtree 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "exitcode 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",

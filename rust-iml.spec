@@ -46,9 +46,11 @@ cp iml-warp-drive.service %{buildroot}%{_unitdir}
 cp iml-mailbox.service %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_tmpfilesdir}
 cp iml-mailbox.conf %{buildroot}%{_tmpfilesdir}
-cp iml-agent.conf %{buildroot}%{_tmpfilesdir}
+cp tmpfiles.conf %{buildroot}%{_tmpfilesdir}/iml-agent.conf
 mkdir -p %{buildroot}%{_presetdir}
 cp 00-rust-iml-agent.preset %{buildroot}%{_presetdir}
+mkdir -p %{buildroot}%{_sysconfdir}/iml/
+cp settings.conf %{buildroot}%{_sysconfdir}/iml/iml-agent.conf
 
 %package cli
 Summary: IML manager CLI
@@ -73,10 +75,12 @@ Requires: iml-device-scanner >= 3.0
 %files agent
 %{_bindir}/iml-agent
 %{_bindir}/iml-agent-daemon
-%attr(0644,root,root)%{_unitdir}/rust-iml-agent.service
-%attr(0644,root,root)%{_unitdir}/rust-iml-agent.path
-%attr(0644,root,root)%{_presetdir}/00-rust-iml-agent.preset
-%attr(0644,root,root)%{_tmpfilesdir}/iml-agent.conf
+%attr(0644,root,root)
+%{buildroot}%{_sysconfdir}/iml/iml-agent.conf
+%{_unitdir}/rust-iml-agent.service
+%{_unitdir}/rust-iml-agent.path
+%{_presetdir}/00-rust-iml-agent.preset
+%{_tmpfilesdir}/iml-agent.conf
 
 %post agent
 systemctl preset rust-iml-agent.path
