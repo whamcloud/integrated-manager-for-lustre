@@ -4,7 +4,7 @@
 
 use crate::{
     action_plugins::{
-        check_ha, check_kernel, check_stonith, kernel_module, lamigo, lctl, lpurge, ltuer,
+        check_ha, check_kernel, check_stonith, kernel_module, lamigo, lpurge, ltuer, lustre,
         ntp::action_configure,
         ostpool, package,
         stratagem::{action_purge, action_warning, server},
@@ -36,7 +36,9 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("action_check_ha", check_ha::check_ha)
         .add_plugin("action_check_stonith", check_stonith::check_stonith)
         .add_plugin("get_kernel", check_kernel::get_kernel)
-        .add_plugin("lctl", lctl::lctl)
+        .add_plugin("is_mounted", lustre::is_mounted)
+        .add_plugin("try_mount", lustre::try_mount)
+        .add_plugin("lctl", lustre::lctl)
         .add_plugin("ostpool_create", ostpool::action_pool_create)
         .add_plugin("ostpool_wait", ostpool::action_pool_wait)
         .add_plugin("ostpool_destroy", ostpool::action_pool_destroy)

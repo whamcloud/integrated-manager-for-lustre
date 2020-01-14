@@ -13,7 +13,7 @@ Environment=CRT_PATH=/etc/iml/self.crt
 Environment=PFX_PATH=/etc/iml/identity.pfx
 Environment=AUTHORITY_CRT_PATH=/etc/iml/authority.crt
 Environment=LTUER_CONF_PATH=/etc/iml/ltuer.conf
-# {name} correspond to the fields of iml_agent::action_plugins::lamigo::Config.name
+# Here {name} corresponds to the field names of iml_agent::action_plugins::lamigo::Config
 Environment=LAMIGO_UNIT_PATH=/etc/systemd/system/lamigo-{fs}-{mdt}.service
 ExecStart=/usr/bin/iml-agent-daemon
 StandardOutput=journal
