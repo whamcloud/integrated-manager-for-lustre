@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{extract_api_id, get, get_all, get_hosts, post, wait_for_cmds, CmdWrapper},
+    api_utils::{extract_api_id, get, get_all, get_hosts, post, put, wait_for_cmds, CmdWrapper},
     display_utils::{
         display_cancelled, display_error, format_error, format_success, generate_table, wrap_fut,
     },
@@ -13,8 +13,8 @@ use console::{style, Term};
 use dialoguer::Confirmation;
 use futures::future;
 use iml_wire_types::{
-    ApiList, Command, EndpointName, Host, HostProfile, HostProfileWrapper, ProfileTest,
-    ServerProfile, TestHostJob,
+    ApiList, AvailableAction, Command, EndpointName, Host, HostProfile, HostProfileWrapper,
+    ProfileTest, ServerProfile, TestHostJob, ToCompositeId,
 };
 use std::{
     collections::{BTreeSet, HashMap},
@@ -23,6 +23,13 @@ use std::{
 };
 use structopt::StructOpt;
 use tokio::time::delay_for;
+
+#[derive(StructOpt, Debug)]
+pub struct RemoveHosts {
+    /// The host(s) to remove. Takes a hostlist expression
+    #[structopt(short = "d", long = "delete_hosts")]
+    hosts: String,
+}
 
 #[derive(StructOpt, Debug)]
 pub struct AddHosts {
@@ -48,6 +55,9 @@ pub enum ServerCommand {
     /// Add new servers to IML
     #[structopt(name = "add")]
     Add(AddHosts),
+    /// Remove servers from IML
+    #[structopt(name = "remove")]
+    Remove(RemoveHosts),
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -61,6 +71,11 @@ struct AgentConfig<'a> {
     address: &'a str,
     auth_type: String,
     server_profile: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct StateChange {
+    state: String,
 }
 
 #[derive(serde::Serialize)]
@@ -92,14 +107,34 @@ pub struct Objects<T> {
     objects: Vec<T>,
 }
 
-fn filter_known_hosts<'a, 'b>(
-    hostlist: &'b BTreeSet<String>,
+/// Given an expanded hostlist and a list of API host objects
+/// returns a tuple of hosts that match a hostlist item, and the remaining hostlist items
+/// that did not match anything.
+fn filter_known_hosts<'a>(
+    hostlist: BTreeSet<String>,
     api_hosts: &'a Vec<Host>,
-) -> Vec<&'a Host> {
-    api_hosts
-        .iter()
-        .filter(move |x| hostlist.contains(&x.fqdn) || hostlist.contains(&x.nodename))
-        .collect()
+) -> (Vec<&'a Host>, BTreeSet<String>) {
+    hostlist
+        .into_iter()
+        .map(
+            |x| match api_hosts.iter().find(|y| y.fqdn == x || y.nodename == x) {
+                Some(y) => (Some(y), None),
+                None => (None, Some(x)),
+            },
+        )
+        .fold((vec![], BTreeSet::new()), |(mut xs, mut ys), x| {
+            match x {
+                (Some(x), None) => {
+                    xs.push(x);
+                }
+                (None, Some(y)) => {
+                    ys.insert(y);
+                }
+                _ => {}
+            }
+
+            (xs, ys)
+        })
 }
 
 fn can_continue(config: &AddHosts) -> bool {
@@ -228,10 +263,14 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
                 }
             };
 
-            let known_hosts = filter_known_hosts(&new_hosts, &api_hosts.objects);
+            let (known_hosts, new_hosts) = filter_known_hosts(new_hosts, &api_hosts.objects);
 
             for known_host in known_hosts {
                 display_cancelled(format!("Host {} already known to IML. Please remove first if attempting to complete deployment.", known_host.fqdn));
+            }
+
+            if new_hosts.is_empty() {
+                return Ok(());
             }
 
             let objects = new_hosts
@@ -370,7 +409,7 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
                 .collect();
 
             if !invalid.is_empty() {
-                display_error(format!("Profile {} is invalid:\n", profile.name));
+                display_error(format!("Profile {} is invalid:\n\n", profile.name));
 
                 for (host_id, failed_tests) in invalid {
                     let host = hosts.iter().find(|x| &x.id == host_id).unwrap();
@@ -420,6 +459,80 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
             term.write_line(&format!("{} host profiles...", style("Setting").green()))?;
 
             wait_for_cmds(cmds).await?;
+        }
+        ServerCommand::Remove(config) => {
+            let remove_hosts = hostlist_parser::parse(&config.hosts)?;
+
+            tracing::debug!("Parsed hosts {:?}", remove_hosts);
+
+            let api_hosts = wrap_fut("Fetching hosts...", get_hosts()).await?;
+
+            let (hosts, unknown_names) = filter_known_hosts(remove_hosts, &api_hosts.objects);
+
+            for unknown_name in unknown_names {
+                display_cancelled(format!(
+                    "Host {} unknown to IML; it will not be removed.",
+                    unknown_name
+                ));
+            }
+
+            let xs: Vec<_> = hosts
+                .iter()
+                .map(|x| x.composite_id())
+                .map(|x| ("composite_ids", x.to_string()))
+                .chain(std::iter::once(("limit", "0".into())))
+                .collect();
+
+            let actions: ApiList<AvailableAction> =
+                get(AvailableAction::endpoint_name(), &xs).await?;
+
+            let removable_ids = actions
+                .objects
+                .into_iter()
+                .fold(BTreeSet::new(), |mut xs, x| {
+                    if x.verb == "Remove" {
+                        xs.insert(x.composite_id);
+                    }
+
+                    xs
+                });
+
+            let (removable, not_removable): (Vec<_>, Vec<_>) = hosts
+                .into_iter()
+                .partition(|x| removable_ids.contains(&x.composite_id().to_string()));
+
+            for x in not_removable {
+                display_cancelled(format!("Host {} is unable to be removed.", x.fqdn));
+            }
+
+            if removable.is_empty() {
+                return Ok(());
+            }
+
+            let xs: Vec<_> = removable
+                .into_iter()
+                .map(|x| {
+                    async move {
+                        let r = put(
+                            &x.resource_uri,
+                            StateChange {
+                                state: "removed".into(),
+                            },
+                        )
+                        .await?
+                        .error_for_status()?;
+
+                        let CmdWrapper { command } = r.json().await?;
+
+                        Ok::<_, ImlManagerCliError>(command)
+                    }
+                })
+                .collect();
+
+            let commands: Vec<Command> =
+                wrap_fut("Removing Servers...", future::try_join_all(xs)).await?;
+
+            wait_for_cmds(commands).await?;
         }
     };
 
