@@ -1,4 +1,4 @@
-use crate::{components::font_awesome, generated::css_classes::C};
+use crate::{components::font_awesome, generated::css_classes::C, key_codes};
 use seed::{prelude::*, *};
 
 #[derive(Default)]
@@ -15,7 +15,7 @@ pub enum Msg {
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::KeyDown(code) => {
-            if code == 27 {
+            if code == key_codes::ESC {
                 orders.send_msg(Msg::Close);
             }
         }

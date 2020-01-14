@@ -8,6 +8,7 @@
 mod components;
 mod ctx_help;
 mod generated;
+mod key_codes;
 mod notification;
 mod page;
 mod route;
