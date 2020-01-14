@@ -34,6 +34,7 @@ url = "2.1"
 v_hist = { git = "https://github.com/jgrund/hist", branch = "use-console-instead-of-termion" }
 uuid = { version = "0.7", features = ["v4"] }
 parking_lot = "0.9"
+strfmt = "0.1.6"
 iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
 liblustreapi = { path = "../liblustreapi", version = "0.1" }
 iml-fs = { path = "../iml-fs", version = "0.1.0" }
