@@ -61,7 +61,9 @@ fn start_route(mailbox: String) -> Trigger {
 
     let rc = async move {
         // remove old unix socket
-        let _ = fs::remove_file(&addr).await;
+        let _ = fs::remove_file(&addr).await.map_err(|e| {
+            tracing::error!("Failed to remove file {}: {}", &addr, &e);
+        });
         let mut listener = UnixListener::bind(addr.clone()).map_err(|e| {
             tracing::error!("Failed to open unix socket {}: {}", &addr, &e);
             e
