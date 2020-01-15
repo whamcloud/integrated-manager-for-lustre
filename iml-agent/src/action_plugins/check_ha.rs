@@ -99,7 +99,6 @@ totem.interface.1.mcastaddr (str) = 226.94.1.1
             ConfigState::Unknown
         };
         corosync.service = systemd_unit_servicestate("corosync").await?;
-        // @@ check corosync setup
     }
 
     Ok(corosync)
@@ -188,49 +187,7 @@ mod tests {
 
     #[test]
     fn test_ha_mixed_mode() {
-        let testxml = r#"<resources>
-  <group id="group-MGS_695ee8">
-    <primitive class="ocf" id="MGS_695ee8-zfs" provider="chroma" type="ZFS">
-      <instance_attributes id="MGS_695ee8-zfs-instance_attributes">
-        <nvpair id="MGS_695ee8-zfs-instance_attributes-instance_attributes-pool" name="pool" value="MGS"/>
-      </instance_attributes>
-      <operations>
-        <op id="MGS_695ee8-zfs-start-interval-0s" interval="0s" name="start" timeout="60s"/>
-        <op id="MGS_695ee8-zfs-stop-interval-0s" interval="0s" name="stop" timeout="60s"/>
-        <op id="MGS_695ee8-zfs-monitor-interval-5s" interval="5s" name="monitor" timeout="30s"/>
-      </operations>
-    </primitive>
-    <primitive class="ocf" id="MGS_695ee8" provider="lustre" type="Lustre">
-      <instance_attributes id="MGS_695ee8-instance_attributes">
-        <nvpair id="MGS_695ee8-instance_attributes-instance_attributes-mountpoint" name="mountpoint" value="/mnt/MGS"/>
-        <nvpair id="MGS_695ee8-instance_attributes-instance_attributes-target" name="target" value="MGS/MGS"/>
-      </instance_attributes>
-      <operations>
-        <op id="MGS_695ee8-start-interval-0s" interval="0s" name="start" timeout="300s"/>
-        <op id="MGS_695ee8-stop-interval-0s" interval="0s" name="stop" timeout="300s"/>
-        <op id="MGS_695ee8-monitor-interval-20s" interval="20s" name="monitor" timeout="300s"/>
-      </operations>
-    </primitive>
-    <meta_attributes id="group-MGS_695ee8-meta_attributes">
-      <nvpair id="group-MGS_695ee8-meta_attributes-meta_attributes-target_role" name="target_role" value="Stopped"/>
-    </meta_attributes>
-  </group>
-  <primitive class="ocf" id="fs21-MDT0000_f61385" provider="lustre" type="Lustre">
-    <instance_attributes id="fs21-MDT0000_f61385-instance_attributes">
-      <nvpair id="fs21-MDT0000_f61385-instance_attributes-instance_attributes-mountpoint" name="mountpoint" value="/mnt/fs21-MDT0000"/>
-      <nvpair id="fs21-MDT0000_f61385-instance_attributes-instance_attributes-target" name="target" value="/dev/disk/by-id/scsi-36001405da302b267f944aeaaadb95af9"/>
-    </instance_attributes>
-    <operations>
-      <op id="fs21-MDT0000_f61385-start-interval-0s" interval="0s" name="start" timeout="300s"/>
-      <op id="fs21-MDT0000_f61385-stop-interval-0s" interval="0s" name="stop" timeout="300s"/>
-      <op id="fs21-MDT0000_f61385-monitor-interval-20s" interval="20s" name="monitor" timeout="300s"/>
-    </operations>
-    <meta_attributes id="fs21-MDT0000_f61385-meta_attributes">
-      <nvpair id="fs21-MDT0000_f61385-meta_attributes-meta_attributes-target_role" name="target_role" value="Stopped"/>
-    </meta_attributes>
-  </primitive>
-</resources>
-"#.as_bytes();
+        let testxml = include_bytes!("snapshots/check_ha_test_mixed_mode.xml");
 
         let mut a1 = ResourceAgentInfo {
             agent: ResourceAgentType::new(
@@ -273,6 +230,6 @@ mod tests {
         a3.args
             .insert("mountpoint".to_string(), "/mnt/fs21-MDT0000".to_string());
 
-        assert_eq!(process_resource_list(&testxml).unwrap(), vec![a1, a2, a3]);
+        assert_eq!(process_resource_list(testxml).unwrap(), vec![a1, a2, a3]);
     }
 }
