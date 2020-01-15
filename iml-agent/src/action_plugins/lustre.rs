@@ -33,5 +33,8 @@ pub async fn try_mount(
     (lustre_device, mount_point): (String, String),
 ) -> Result<(), ImlAgentError> {
     let args = vec!["-t", "lustre", &lustre_device, &mount_point];
-    iml_cmd::cmd_output_success("mount", args).err_into().await.map(drop)
+    iml_cmd::cmd_output_success("mount", args)
+        .err_into()
+        .await
+        .map(drop)
 }
