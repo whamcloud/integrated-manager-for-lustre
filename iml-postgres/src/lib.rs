@@ -58,3 +58,27 @@ where
 
     client.query_raw(&s, params).await
 }
+
+/// Selects and returns a single row from the query.
+pub async fn select(
+    client: &mut Client,
+    query: &str,
+    params: &[&(dyn ToSql + Sync)],
+) -> Result<Option<Row>, Error> {
+    let s = client.prepare(&query).await?;
+
+    let x: Option<Row> = client.query(&s, params).await?.into_iter().next();
+
+    Ok(x)
+}
+
+/// Updates a table given an update query
+pub async fn update(
+    client: &mut Client,
+    query: &str,
+    params: &[&(dyn ToSql + Sync)],
+) -> Result<u64, Error> {
+    let s = client.prepare(&query).await?;
+
+    client.execute(&s, params).await
+}

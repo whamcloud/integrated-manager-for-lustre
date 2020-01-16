@@ -37,6 +37,9 @@ After=iml-agent-comms.service
 Requires=iml-api.service
 After=iml-api.service
 
+Requires=iml-ntp.service
+After=iml-ntp.service
+
 Requires=iml-mailbox.service
 After=iml-mailbox.service
 
@@ -92,6 +95,7 @@ Also=iml-plugin-runner.service
 Also=iml-power-control.service
 Also=iml-rust-stats.service
 Also=iml-syslog.service
+Also=iml-ntp.service
 Also=iml-update-handler.socket
 Also=iml-warp-drive.service
 Also=influxdb.service

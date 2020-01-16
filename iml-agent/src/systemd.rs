@@ -24,7 +24,7 @@ async fn wait_for_state(
         delay_for(Duration::from_millis(500)).await;
     }
 
-    let x = get_run_state(unit_name.to_string()).await?;
+    let x = get_run_state(unit_name.into()).await?;
 
     Err(ImlAgentError::from(RequiredError(format!(
         "{} did not move into expected state after {} seconds. Current state: {:?}",

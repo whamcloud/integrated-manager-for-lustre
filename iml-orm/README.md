@@ -33,7 +33,8 @@ The following are some actions you can do with the cli tool
 - Print the current schema (excluding tables without primary key):
 
 ```sh
-diesel print-schema -e chroma_core_sample_10 chroma_core_sample_60 chroma_core_sample_300 chroma_core_sample_3600 chroma_core_sample_86400
+# only for RPM based install
+diesel print-schema --database-url postgres://chroma@
 ```
 
 - Generate models from the given schema (within `src` dir)
@@ -42,3 +43,9 @@ diesel print-schema -e chroma_core_sample_10 chroma_core_sample_60 chroma_core_s
 cargo install diesel_cli_ext
 diesel_ext --add-table-name --model > models.rs
 ```
+
+## Background
+
+This crate aims to centralize queries as much as possible. This allows for reuse between different downstream services.
+
+Model specific implementations and free fns live directly under `src/`.
