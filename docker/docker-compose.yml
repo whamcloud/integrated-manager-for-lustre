@@ -47,7 +47,6 @@ services:
       - GF_SERVER_HTTP_PORT=3000
       - GF_SERVER_PROTOCOL=http
       - "GF_DATABASE_HOST=postgres:5432"
-      - "GF_AUTH.PROXY_WHITELIST=grafana,127.0.0.1,::1"
     volumes:
       - "manager-config:/var/lib/chroma"
       - grafana-storage:/var/lib/grafana
