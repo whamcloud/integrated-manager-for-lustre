@@ -38,11 +38,11 @@ all: copr-rpms rpms
 
 rpms:
 	$(MAKE) -f .copr/Makefile iml-srpm outdir=.
-	rpmbuild -D "_topdir $(CURDIR)/_topdir" -bb _topdir/SPECS/python-iml-manager.spec
+	rpmbuild --rebuild -D "_topdir $(CURDIR)/_topdir" _topdir/SRPMS/python-iml-manager-*.src.rpm
 
 copr-rpms:
 	$(MAKE) -f .copr/Makefile srpm outdir=.
-	rpmbuild -D "_topdir $(CURDIR)/_topdir" -bb _topdir/SPECS/rust-iml.spec
+	rpmbuild --rebuild -D "_topdir $(CURDIR)/_topdir" _topdir/SRPMS/rust-iml-*.src.rpm
 
 cleandist:
 	rm -rf dist
