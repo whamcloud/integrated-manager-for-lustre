@@ -9,7 +9,11 @@ def psql_sql(sql):
     return p.stdout.read()
 
 
-out = psql_sql(
-    "SELECT 'CREATE DATABASE grafana' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'grafana')\\gexec"
+cmd = psql_sql(
+    "SELECT 'CREATE DATABASE grafana' WHERE NOT EXISTS (SELECT * FROM pg_database WHERE datname = 'grafana')"
 )
-print("Create grafana db if not already created: {}".format(out))
+if cmd:
+    psql_sql(cmd)
+    print("Grafana database created!")
+else:
+    print("Grafana database already exists.")
