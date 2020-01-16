@@ -109,6 +109,8 @@ fn do_check_stonith(xml: &[u8], nodename: &str) -> Result<ComponentState<bool>, 
         ..Default::default()
     };
 
+    let nodename = nodename.trim();
+
     match Element::from_reader(xml) {
         Err(err) => Err(ImlAgentError::XmlError(err)),
         Ok(elem) => match elem.tag().name() {
@@ -123,11 +125,25 @@ fn do_check_stonith(xml: &[u8], nodename: &str) -> Result<ComponentState<bool>, 
                 state.info = "No working fencing agents".to_string();
                 state.config = ConfigState::Other;
                 for el in elem.find_all("primitive") {
-                    if let Ok((true, msg, cs)) = stonith_ok(el, nodename) {
-                        state.config = cs;
-                        state.state = true;
-                        state.info = msg;
-                        break;
+                    tracing::debug!(
+                        "Checking {}, {}",
+                        el.get_attr("id").unwrap_or("<MISSING>"),
+                        nodename
+                    );
+                    match stonith_ok(el, nodename) {
+                        Ok((true, msg, cs)) => {
+                            state.config = cs;
+                            state.state = true;
+                            state.info = msg;
+                            break;
+                        }
+                        Ok((false, msg, _)) => tracing::debug!("False: {}", msg),
+                        Err(e) => tracing::error!(
+                            "stonith_ok({}, {}) errored: {}",
+                            el.get_attr("id").unwrap_or("<MISSING>"),
+                            nodename,
+                            e
+                        ),
                     }
                 }
                 Ok(state)
@@ -370,6 +386,22 @@ mod tests {
             ComponentState {
                 state: true,
                 info: "fence_ipmilan".to_string(),
+                config: ConfigState::Other,
+                service: ServiceState::Configured(RunState::Setup),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[test]
+    fn test_stonith_exascalar_static() {
+        let testxml = include_bytes!("snapshots/check_stonith_test_es.xml");
+
+        assert_eq!(
+            do_check_stonith(testxml, &"ai400-006c-vm00\n".to_string()).unwrap(),
+            ComponentState {
+                state: true,
+                info: "fence_sfa_vm".to_string(),
                 config: ConfigState::Other,
                 service: ServiceState::Configured(RunState::Setup),
                 ..Default::default()
