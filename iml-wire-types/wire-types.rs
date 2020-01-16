@@ -2054,11 +2054,15 @@ pub struct ResourceAgentType {
 }
 
 impl ResourceAgentType {
-    pub const fn new(standard: String, provider: Option<String>, ocftype: String) -> Self {
+    pub fn new<'a>(
+        standard: impl Into<Option<&'a str>>,
+        provider: impl Into<Option<&'a str>>,
+        ocftype: impl Into<Option<&'a str>>,
+    ) -> Self {
         ResourceAgentType {
-            standard,
-            provider,
-            ocftype,
+            standard: standard.into().map(str::to_string).unwrap_or_default(),
+            provider: provider.into().map(str::to_string),
+            ocftype: ocftype.into().map(str::to_string).unwrap_or_default(),
         }
     }
 }

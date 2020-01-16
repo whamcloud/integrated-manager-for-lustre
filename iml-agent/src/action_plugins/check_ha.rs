@@ -12,14 +12,14 @@ use iml_wire_types::{
 use std::collections::HashMap;
 use tokio::fs::metadata;
 
-fn create(elem: &Element, group: Option<String>) -> ResourceAgentInfo {
+fn create<'a>(elem: &Element, group: impl Into<Option<&'a str>>) -> ResourceAgentInfo {
     ResourceAgentInfo {
         agent: ResourceAgentType::new(
-            elem.get_attr("class").unwrap_or("").to_string(),
-            elem.get_attr("provider").map(|s| s.to_string()),
-            elem.get_attr("type").unwrap_or("").to_string(),
+            elem.get_attr("class"),
+            elem.get_attr("provider"),
+            elem.get_attr("type"),
         ),
-        group,
+        group: group.into().map(str::to_string),
         id: elem.get_attr("id").unwrap_or("").to_string(),
         args: match elem.find("instance_attributes") {
             None => HashMap::new(),
@@ -42,9 +42,8 @@ fn process_resource_list(output: &[u8]) -> Result<Vec<ResourceAgentInfo>, ImlAge
     Ok(element
         .find_all("group")
         .flat_map(|g| {
-            let name = g.get_attr("id").unwrap_or("").to_string();
             g.find_all("primitive")
-                .map(move |p| create(p, Some(name.clone())))
+                .map(move |p| create(p, g.get_attr("id").unwrap_or_default()))
         })
         .chain(element.find_all("primitive").map(|p| create(p, None)))
         .collect())
@@ -173,11 +172,7 @@ mod tests {
         assert_eq!(
             process_resource_list(&testxml).unwrap(),
             vec![ResourceAgentInfo {
-                agent: ResourceAgentType::new(
-                    "stonith".to_string(),
-                    None,
-                    "fence_chroma".to_string()
-                ),
+                agent: ResourceAgentType::new("stonith", None, "fence_chroma"),
                 group: None,
                 id: "st-fencing".to_string(),
                 args: HashMap::new()
@@ -190,22 +185,14 @@ mod tests {
         let testxml = include_bytes!("snapshots/check_ha_test_mixed_mode.xml");
 
         let mut a1 = ResourceAgentInfo {
-            agent: ResourceAgentType::new(
-                "ocf".to_string(),
-                Some("chroma".to_string()),
-                "ZFS".to_string(),
-            ),
+            agent: ResourceAgentType::new("ocf", Some("chroma"), "ZFS"),
             group: Some("group-MGS_695ee8".to_string()),
             id: "MGS_695ee8-zfs".to_string(),
             args: HashMap::new(),
         };
         a1.args.insert("pool".to_string(), "MGS".to_string());
         let mut a2 = ResourceAgentInfo {
-            agent: ResourceAgentType::new(
-                "ocf".to_string(),
-                Some("lustre".to_string()),
-                "Lustre".to_string(),
-            ),
+            agent: ResourceAgentType::new("ocf", Some("lustre"), "Lustre"),
             group: Some("group-MGS_695ee8".to_string()),
             id: "MGS_695ee8".to_string(),
             args: HashMap::new(),
@@ -214,11 +201,7 @@ mod tests {
         a2.args
             .insert("mountpoint".to_string(), "/mnt/MGS".to_string());
         let mut a3 = ResourceAgentInfo {
-            agent: ResourceAgentType::new(
-                "ocf".to_string(),
-                Some("lustre".to_string()),
-                "Lustre".to_string(),
-            ),
+            agent: ResourceAgentType::new("ocf", Some("lustre"), "Lustre"),
             group: None,
             id: "fs21-MDT0000_f61385".to_string(),
             args: HashMap::new(),
