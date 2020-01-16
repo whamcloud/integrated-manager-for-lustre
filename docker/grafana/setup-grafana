@@ -3,7 +3,6 @@
 import os
 import subprocess
 
-
 def psql_sql(sql):
     p = subprocess.Popen(["psql", "-h", "postgres", "-U", "chroma", "-tAc {}".format(sql)], stdout=subprocess.PIPE)
     return p.stdout.read()
@@ -17,3 +16,6 @@ if cmd:
     print("Grafana database created!")
 else:
     print("Grafana database already exists.")
+
+# remove whitelist entry from config
+sed -i '/^whitelist/d' /etc/grafana/grafana.ini
