@@ -97,6 +97,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let routes = config_route.or(unconfigure_route).recover(customize_error);
 
+    tracing::debug!("Serving routes.");
     warp::serve(routes)
         .run(iml_manager_env::get_timer_addr())
         .await;
