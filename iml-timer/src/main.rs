@@ -21,7 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Match a config route
     let config_route = warp::put()
-        .and(warp::path("config"))
+        .and(warp::path("configure"))
         .and(warp::body::content_length_limit(1024 * 16))
         .and(warp::body::json())
         .map(get_config)
@@ -53,10 +53,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|_| Ok(StatusCode::CREATED));
 
     let unconfigure_route = warp::delete()
-        .and(warp::path("config"))
+        .and(warp::path("unconfigure"))
         .and(warp::path::param::<String>())
         .and_then(move |config_id: String| {
-            tracing::debug!("Deleting timer with config id: {}", config_id);
             async move {
                 let timer_path = format!("{}.timer", unit_name(config_id.as_str()));
                 spawn_command(

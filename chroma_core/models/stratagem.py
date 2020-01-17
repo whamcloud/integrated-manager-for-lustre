@@ -165,7 +165,7 @@ ExecStart={}
             api_key = os.getenv('API_KEY')
             api_user = os.getenv('API_USER')
             s = get_api_session_request(api_user, api_key)
-            result = s.put("{}/timer/config/".format(SERVER_HTTP_URL), json=post_data, verify=False)
+            result = s.put("{}/timer/configure/".format(SERVER_HTTP_URL), json=post_data, verify=False)
 
             if not result.ok:
                 raise RuntimeError(result.reason)
@@ -205,11 +205,10 @@ class UnconfigureStratagemTimerStep(Step, CommandLine):
         config = kwargs["config"]
         
         if runningInDocker():
-            post_data = { "config_id": str(config.id) }
             api_key = os.getenv('API_KEY')
             api_user = os.getenv('API_USER')
             s = get_api_session_request(api_user, api_key)
-            result = s.delete("{}/timer/config/".format(SERVER_HTTP_URL), json=post_data, verify=False)
+            result = s.delete("{}/timer/unconfigure/{}".format(SERVER_HTTP_URL, config.id), verify=False)
 
             if not result.ok:
                 raise RuntimeError(result.reason)
