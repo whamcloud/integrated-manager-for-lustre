@@ -1,0 +1,66 @@
+<xpath-query>
+  <primitive id="stonith-ai400-006c-vm00" class="stonith" type="fence_sfa_vm">
+    <instance_attributes id="stonith-ai400-006c-vm00-instance_attributes">
+      <nvpair name="pcmk_host_list" value="ai400-006c-vm00" id="stonith-ai400-006c-vm00-instance_attributes-pcmk_host_list"/>
+      <nvpair name="targetvm" value="ai400-006c-vm00" id="stonith-ai400-006c-vm00-instance_attributes-targetvm"/>
+      <nvpair name="ip_addr" value="10.36.44.77" id="stonith-ai400-006c-vm00-instance_attributes-ip_addr"/>
+      <nvpair name="alt_ip_addr" value="10.36.44.78" id="stonith-ai400-006c-vm00-instance_attributes-alt_ip_addr"/>
+      <nvpair name="passwd" value="user" id="stonith-ai400-006c-vm00-instance_attributes-passwd"/>
+      <nvpair name="pcmk_host_check" value="static-list" id="stonith-ai400-006c-vm00-instance_attributes-pcmk_host_check"/>
+    </instance_attributes>
+    <meta_attributes id="stonith-ai400-006c-vm00-meta_attributes">
+      <nvpair name="failure-timeout" value="20" id="stonith-ai400-006c-vm00-meta_attributes-failure-timeout"/>
+    </meta_attributes>
+    <operations>
+      <op name="monitor" interval="20" timeout="20" id="stonith-ai400-006c-vm00-monitor-20"/>
+    </operations>
+  </primitive>
+  <primitive id="stonith-ai400-006c-vm01" class="stonith" type="fence_sfa_vm">
+    <instance_attributes id="stonith-ai400-006c-vm01-instance_attributes">
+      <nvpair name="pcmk_host_list" value="ai400-006c-vm01" id="stonith-ai400-006c-vm01-instance_attributes-pcmk_host_list"/>
+      <nvpair name="targetvm" value="ai400-006c-vm01" id="stonith-ai400-006c-vm01-instance_attributes-targetvm"/>
+      <nvpair name="ip_addr" value="10.36.44.77" id="stonith-ai400-006c-vm01-instance_attributes-ip_addr"/>
+      <nvpair name="alt_ip_addr" value="10.36.44.78" id="stonith-ai400-006c-vm01-instance_attributes-alt_ip_addr"/>
+      <nvpair name="passwd" value="user" id="stonith-ai400-006c-vm01-instance_attributes-passwd"/>
+      <nvpair name="pcmk_host_check" value="static-list" id="stonith-ai400-006c-vm01-instance_attributes-pcmk_host_check"/>
+    </instance_attributes>
+    <meta_attributes id="stonith-ai400-006c-vm01-meta_attributes">
+      <nvpair name="failure-timeout" value="20" id="stonith-ai400-006c-vm01-meta_attributes-failure-timeout"/>
+    </meta_attributes>
+    <operations>
+      <op name="monitor" interval="20" timeout="20" id="stonith-ai400-006c-vm01-monitor-20"/>
+    </operations>
+  </primitive>
+  <primitive id="stonith-ai400-006c-vm02" class="stonith" type="fence_sfa_vm">
+    <instance_attributes id="stonith-ai400-006c-vm02-instance_attributes">
+      <nvpair name="pcmk_host_list" value="ai400-006c-vm02" id="stonith-ai400-006c-vm02-instance_attributes-pcmk_host_list"/>
+      <nvpair name="targetvm" value="ai400-006c-vm02" id="stonith-ai400-006c-vm02-instance_attributes-targetvm"/>
+      <nvpair name="ip_addr" value="10.36.44.77" id="stonith-ai400-006c-vm02-instance_attributes-ip_addr"/>
+      <nvpair name="alt_ip_addr" value="10.36.44.78" id="stonith-ai400-006c-vm02-instance_attributes-alt_ip_addr"/>
+      <nvpair name="passwd" value="user" id="stonith-ai400-006c-vm02-instance_attributes-passwd"/>
+      <nvpair name="pcmk_host_check" value="static-list" id="stonith-ai400-006c-vm02-instance_attributes-pcmk_host_check"/>
+    </instance_attributes>
+    <meta_attributes id="stonith-ai400-006c-vm02-meta_attributes">
+      <nvpair name="failure-timeout" value="20" id="stonith-ai400-006c-vm02-meta_attributes-failure-timeout"/>
+    </meta_attributes>
+    <operations>
+      <op name="monitor" interval="20" timeout="20" id="stonith-ai400-006c-vm02-monitor-20"/>
+    </operations>
+  </primitive>
+  <primitive id="stonith-ai400-006c-vm03" class="stonith" type="fence_sfa_vm">
+    <instance_attributes id="stonith-ai400-006c-vm03-instance_attributes">
+      <nvpair name="pcmk_host_list" value="ai400-006c-vm03" id="stonith-ai400-006c-vm03-instance_attributes-pcmk_host_list"/>
+      <nvpair name="targetvm" value="ai400-006c-vm03" id="stonith-ai400-006c-vm03-instance_attributes-targetvm"/>
+      <nvpair name="ip_addr" value="10.36.44.77" id="stonith-ai400-006c-vm03-instance_attributes-ip_addr"/>
+      <nvpair name="alt_ip_addr" value="10.36.44.78" id="stonith-ai400-006c-vm03-instance_attributes-alt_ip_addr"/>
+      <nvpair name="passwd" value="user" id="stonith-ai400-006c-vm03-instance_attributes-passwd"/>
+      <nvpair name="pcmk_host_check" value="static-list" id="stonith-ai400-006c-vm03-instance_attributes-pcmk_host_check"/>
+    </instance_attributes>
+    <meta_attributes id="stonith-ai400-006c-vm03-meta_attributes">
+      <nvpair name="failure-timeout" value="20" id="stonith-ai400-006c-vm03-meta_attributes-failure-timeout"/>
+    </meta_attributes>
+    <operations>
+      <op name="monitor" interval="20" timeout="20" id="stonith-ai400-006c-vm03-monitor-20"/>
+    </operations>
+  </primitive>
+</xpath-query>

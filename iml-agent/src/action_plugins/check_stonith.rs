@@ -109,6 +109,8 @@ fn do_check_stonith(xml: &[u8], nodename: &str) -> Result<ComponentState<bool>, 
         ..Default::default()
     };
 
+    let nodename = nodename.trim();
+
     match Element::from_reader(xml) {
         Err(err) => Err(ImlAgentError::XmlError(err)),
         Ok(elem) => match elem.tag().name() {
@@ -123,11 +125,25 @@ fn do_check_stonith(xml: &[u8], nodename: &str) -> Result<ComponentState<bool>, 
                 state.info = "No working fencing agents".to_string();
                 state.config = ConfigState::Other;
                 for el in elem.find_all("primitive") {
-                    if let Ok((true, msg, cs)) = stonith_ok(el, nodename) {
-                        state.config = cs;
-                        state.state = true;
-                        state.info = msg;
-                        break;
+                    tracing::debug!(
+                        "Checking {}, {}",
+                        el.get_attr("id").unwrap_or("<MISSING>"),
+                        nodename
+                    );
+                    match stonith_ok(el, nodename) {
+                        Ok((true, msg, cs)) => {
+                            state.config = cs;
+                            state.state = true;
+                            state.info = msg;
+                            break;
+                        }
+                        Ok((false, msg, _)) => tracing::debug!("False: {}", msg),
+                        Err(e) => tracing::error!(
+                            "stonith_ok({}, {}) errored: {}",
+                            el.get_attr("id").unwrap_or("<MISSING>"),
+                            nodename,
+                            e
+                        ),
                     }
                 }
                 Ok(state)
@@ -219,55 +235,7 @@ mod tests {
     }
 
     fn multihost_testxml_static<'a>() -> &'a [u8] {
-        r#"<xpath-query>
-      <primitive id="stonith-host0" class="stonith" type="fence_ipmilan">
-        <instance_attributes id="stonith-host0-instance_attributes">
-          <nvpair name="pcmk_host_list" value="host0" id="stonith-host0-instance_attributes-pcmk_host_list"/>
-          <nvpair name="ipaddr" value="10.0.1.10" id="stonith-host0-instance_attributes-ipaddr"/>
-          <nvpair name="login" value="root" id="stonith-host0-instance_attributes-login"/>
-          <nvpair name="passwd" value="****" id="stonith-host0-instance_attributes-passwd"/>
-          <nvpair name="lanplus" value="true" id="stonith-host0-instance_attributes-lanplus"/>
-          <nvpair name="auth" value="md5" id="stonith-host0-instance_attributes-auth"/>
-          <nvpair name="power_wait" value="5" id="stonith-host0-instance_attributes-power_wait"/>
-          <nvpair name="method" value="onoff" id="stonith-host0-instance_attributes-method"/>
-          <nvpair name="delay" value="15" id="stonith-host0-instance_attributes-delay"/>
-          <nvpair name="privlvl" value="OPERATOR" id="stonith-host0-instance_attributes-privlvl"/>
-          <nvpair name="pcmk_host_check" value="static-list" id="stonith-host0-instance_attributes-pcmk_host_check"/>
-        </instance_attributes>
-        <meta_attributes id="stonith-host0-meta_attributes">
-          <nvpair name="priority" value="9000" id="stonith-host0-meta_attributes-priority"/>
-          <nvpair name="failure-timeout" value="20" id="stonith-host0-meta_attributes-failure-timeout"/>
-          <nvpair id="stonith-host0-meta_attributes-target-role" name="target-role" value="Started"/>
-        </meta_attributes>
-        <operations>
-          <op name="monitor" interval="20" timeout="240" id="stonith-host0-monitor-20"/>
-        </operations>
-      </primitive>
-      <primitive id="stonith-host1" class="stonith" type="fence_ipmilan">
-        <instance_attributes id="stonith-host1-instance_attributes">
-          <nvpair name="pcmk_host_check" value="static-list" id="stonith-host1-instance_attributes-pcmk_host_check"/>
-          <nvpair name="ipaddr" value="10.0.1.11" id="stonith-host1-instance_attributes-ipaddr"/>
-          <nvpair name="login" value="root" id="stonith-host1-instance_attributes-login"/>
-          <nvpair name="passwd" value="****" id="stonith-host1-instance_attributes-passwd"/>
-          <nvpair name="lanplus" value="true" id="stonith-host1-instance_attributes-lanplus"/>
-          <nvpair name="auth" value="md5" id="stonith-host1-instance_attributes-auth"/>
-          <nvpair name="power_wait" value="5" id="stonith-host1-instance_attributes-power_wait"/>
-          <nvpair name="method" value="onoff" id="stonith-host1-instance_attributes-method"/>
-          <nvpair name="delay" value="15" id="stonith-host1-instance_attributes-delay"/>
-          <nvpair name="privlvl" value="OPERATOR" id="stonith-host1-instance_attributes-privlvl"/>
-          <nvpair name="pcmk_host_list" value="host2,host1" id="stonith-host1-instance_attributes-pcmk_host_list"/>
-        </instance_attributes>
-        <meta_attributes id="stonith-host1-meta_attributes">
-          <nvpair name="priority" value="9000" id="stonith-host1-meta_attributes-priority"/>
-          <nvpair name="failure-timeout" value="20" id="stonith-host1-meta_attributes-failure-timeout"/>
-          <nvpair id="stonith-host1-meta_attributes-target-role" name="target-role" value="Started"/>
-        </meta_attributes>
-        <operations>
-          <op name="monitor" interval="20" timeout="240" id="stonith-host1-monitor-20"/>
-        </operations>
-      </primitive>
-</xpath-query>
-"#.as_bytes()
+        include_bytes!("fixtures/check_stonith_test_multihost_static.xml")
     }
 
     #[test]
@@ -313,54 +281,7 @@ mod tests {
     }
 
     fn multihost_testxml_dynamic<'a>() -> &'a [u8] {
-        r#"<xpath-query>
-      <primitive id="stonith-host0" class="stonith" type="fence_ipmilan">
-        <instance_attributes id="stonith-host0-instance_attributes">
-          <nvpair name="pcmk_host_list" value="host0" id="stonith-host0-instance_attributes-pcmk_host_list"/>
-          <nvpair name="ipaddr" value="10.0.1.10" id="stonith-host0-instance_attributes-ipaddr"/>
-          <nvpair name="login" value="root" id="stonith-host0-instance_attributes-login"/>
-          <nvpair name="passwd" value="****" id="stonith-host0-instance_attributes-passwd"/>
-          <nvpair name="lanplus" value="true" id="stonith-host0-instance_attributes-lanplus"/>
-          <nvpair name="auth" value="md5" id="stonith-host0-instance_attributes-auth"/>
-          <nvpair name="power_wait" value="5" id="stonith-host0-instance_attributes-power_wait"/>
-          <nvpair name="method" value="onoff" id="stonith-host0-instance_attributes-method"/>
-          <nvpair name="delay" value="15" id="stonith-host0-instance_attributes-delay"/>
-          <nvpair name="privlvl" value="OPERATOR" id="stonith-host0-instance_attributes-privlvl"/>
-          <nvpair name="pcmk_host_check" value="static-list" id="stonith-host0-instance_attributes-pcmk_host_check"/>
-        </instance_attributes>
-        <meta_attributes id="stonith-host0-meta_attributes">
-          <nvpair name="priority" value="9000" id="stonith-host0-meta_attributes-priority"/>
-          <nvpair name="failure-timeout" value="20" id="stonith-host0-meta_attributes-failure-timeout"/>
-          <nvpair id="stonith-host0-meta_attributes-target-role" name="target-role" value="Started"/>
-        </meta_attributes>
-        <operations>
-          <op name="monitor" interval="20" timeout="240" id="stonith-host0-monitor-20"/>
-        </operations>
-      </primitive>
-      <primitive id="stonith-dynamic" class="stonith" type="fence_ipmilan">
-        <instance_attributes id="stonith-dynamic-instance_attributes">
-          <nvpair name="pcmk_host_check" value="dynamic-list" id="stonith-dynamic-instance_attributes-pcmk_host_check"/>
-          <nvpair name="ipaddr" value="10.0.1.12" id="stonith-dynamic-instance_attributes-ipaddr"/>
-          <nvpair name="login" value="root" id="stonith-dynamic-instance_attributes-login"/>
-          <nvpair name="passwd" value="****" id="stonith-dynamic-instance_attributes-passwd"/>
-          <nvpair name="lanplus" value="true" id="stonith-dynamic-instance_attributes-lanplus"/>
-          <nvpair name="auth" value="md5" id="stonith-dynamic-instance_attributes-auth"/>
-          <nvpair name="power_wait" value="5" id="stonith-dynamic-instance_attributes-power_wait"/>
-          <nvpair name="method" value="onoff" id="stonith-dynamic-instance_attributes-method"/>
-          <nvpair name="delay" value="15" id="stonith-dynamic-instance_attributes-delay"/>
-          <nvpair name="privlvl" value="OPERATOR" id="stonith-dynamic-instance_attributes-privlvl"/>
-        </instance_attributes>
-        <meta_attributes id="stonith-dynamic-meta_attributes">
-          <nvpair name="priority" value="9000" id="stonith-dynamic-meta_attributes-priority"/>
-          <nvpair name="failure-timeout" value="20" id="stonith-dynamic-meta_attributes-failure-timeout"/>
-          <nvpair id="stonith-dynamic-meta_attributes-target-role" name="target-role" value="Started"/>
-        </meta_attributes>
-        <operations>
-          <op name="monitor" interval="20" timeout="240" id="stonith-dynamic-monitor-20"/>
-        </operations>
-      </primitive>
-</xpath-query>
-"#.as_bytes()
+        include_bytes!("fixtures/check_stonith_test_multihost_dynamic.xml")
     }
 
     #[test]
@@ -370,6 +291,22 @@ mod tests {
             ComponentState {
                 state: true,
                 info: "fence_ipmilan".to_string(),
+                config: ConfigState::Other,
+                service: ServiceState::Configured(RunState::Setup),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[test]
+    fn test_stonith_exascalar_static() {
+        let testxml = include_bytes!("fixtures/check_stonith_test_es.xml");
+
+        assert_eq!(
+            do_check_stonith(testxml, &"ai400-006c-vm00\n".to_string()).unwrap(),
+            ComponentState {
+                state: true,
+                info: "fence_sfa_vm".to_string(),
                 config: ConfigState::Other,
                 service: ServiceState::Configured(RunState::Setup),
                 ..Default::default()
