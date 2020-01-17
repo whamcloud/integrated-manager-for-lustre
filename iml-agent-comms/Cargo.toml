@@ -15,4 +15,4 @@ tokio = "0.2"
 tracing = "0.1"
 tracing-subscriber = "0.1"
 uuid = { version = "0.7", features = ["v4"] }
-warp = { git = "https://github.com/seanmonstar/warp.git" }
+warp = "0.2"
