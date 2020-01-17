@@ -72,6 +72,7 @@ iml-deps:
 	if ! rpm -q python-devel python-setuptools ed 2> /dev/null; then \
 		yum copr enable -y managerforlustre/buildtools; \
 		yum install -y python2-devel python2-setuptools ed; \
+		yum copr disable -y managerforlustre/buildtools;
 	fi
 
 iml-srpm: iml-deps substs
