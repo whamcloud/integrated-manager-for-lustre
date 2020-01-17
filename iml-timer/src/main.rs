@@ -57,6 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and(warp::body::content_length_limit(1024 * 16))
         .and(warp::body::json())
         .and_then(move |config_id: String| {
+            tracing::debug!("Deleting timer with config id: {}", config_id);
             async move {
                 let timer_path = format!("{}.timer", unit_name(config_id.as_str()));
                 spawn_command(
