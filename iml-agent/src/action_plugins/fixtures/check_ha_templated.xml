@@ -1,0 +1,67 @@
+<resources>
+  <template id="lustre-es01a-mdt-vg" class="ocf" provider="heartbeat" type="LVM">
+    <instance_attributes id="lustre-es01a-mdt-vg-instance_attributes">
+      <nvpair name="exclusive" value="true" id="lustre-es01a-mdt-vg-instance_attributes-exclusive"/>
+      <nvpair name="tag" value="exascaler" id="lustre-es01a-mdt-vg-instance_attributes-tag"/>
+    </instance_attributes>
+    <meta_attributes id="lustre-es01a-mdt-vg-meta_attributes">
+      <nvpair name="priority" value="101" id="lustre-es01a-mdt-vg-meta_attributes-priority"/>
+    </meta_attributes>
+    <operations>
+      <op name="start" interval="0" record-pending="true" timeout="120" id="lustre-es01a-mdt-vg-start-0"/>
+      <op name="stop" interval="0" record-pending="true" timeout="120" id="lustre-es01a-mdt-vg-stop-0"/>
+      <op name="monitor" interval="60" timeout="60" id="lustre-es01a-mdt-vg-monitor-60"/>
+    </operations>
+  </template>
+  <primitive id="lustre" class="ocf" provider="ddn" type="Ticketer">
+    <instance_attributes id="lustre-instance_attributes">
+      <nvpair name="name" value="lustre-allocated" id="lustre-instance_attributes-name"/>
+    </instance_attributes>
+    <meta_attributes id="lustre-meta_attributes">
+      <nvpair name="priority" value="399" id="lustre-meta_attributes-priority"/>
+      <nvpair name="allow-migrate" value="true" id="lustre-meta_attributes-allow-migrate"/>
+      <nvpair name="target-role" value="Started" id="lustre-meta_attributes-target-role"/>
+    </meta_attributes>
+    <operations>
+      <op name="start" interval="0" timeout="30" id="lustre-start-0"/>
+      <op name="stop" interval="0" timeout="30" id="lustre-stop-0"/>
+      <op name="monitor" interval="30" timeout="30" id="lustre-monitor-30"/>
+    </operations>
+  </primitive>
+  <primitive id="mdt0000-es01a" template="lustre-es01a-mdt">
+    <instance_attributes id="mdt0000-es01a-instance_attributes">
+      <nvpair name="device" value="/dev/mapper/vg_mdt0000_es01a-mdt0000" id="mdt0000-es01a-instance_attributes-device"/>
+      <nvpair name="directory" value="/lustre/es01a/mdt0000" id="mdt0000-es01a-instance_attributes-directory"/>
+    </instance_attributes>
+    <meta_attributes id="mdt0000-es01a-meta_attributes">
+      <nvpair name="zone" value="AI400-006c" id="mdt0000-es01a-meta_attributes-zone"/>
+    </meta_attributes>
+  </primitive>
+  <primitive id="mdt0000-es01a-vg" template="lustre-es01a-mdt-vg">
+    <instance_attributes id="mdt0000-es01a-vg-instance_attributes">
+      <nvpair name="volgrpname" value="vg_mdt0000_es01a" id="mdt0000-es01a-vg-instance_attributes-volgrpname"/>
+    </instance_attributes>
+    <meta_attributes id="mdt0000-es01a-vg-meta_attributes">
+      <nvpair name="zone" value="AI400-006c" id="mdt0000-es01a-vg-meta_attributes-zone"/>
+      <nvpair id="mdt0000-es01a-vg-meta_attributes-target-role" name="target-role" value="Started"/>
+    </meta_attributes>
+  </primitive>
+  <template id="lustre-es01a-mdt" class="ocf" provider="ddn" type="lustre-server">
+    <instance_attributes id="lustre-es01a-mdt-instance_attributes">
+      <nvpair name="lustre_resource_type" value="ddn" id="lustre-es01a-mdt-instance_attributes-lustre_resource_type"/>
+      <nvpair name="manage_directory" value="1" id="lustre-es01a-mdt-instance_attributes-manage_directory"/>
+      <nvpair name="options" value="max_sectors_kb=0" id="lustre-es01a-mdt-instance_attributes-options"/>
+    </instance_attributes>
+    <meta_attributes id="lustre-es01a-mdt-meta_attributes">
+      <nvpair name="priority" value="100" id="lustre-es01a-mdt-meta_attributes-priority"/>
+    </meta_attributes>
+    <utilization id="lustre-es01a-mdt-utilization">
+      <nvpair name="lustre-object" value="1" id="lustre-es01a-mdt-utilization-lustre-object"/>
+    </utilization>
+    <operations>
+      <op name="start" interval="0" record-pending="true" timeout="450" id="lustre-es01a-mdt-start-0"/>
+      <op name="stop" interval="0" record-pending="true" timeout="300" id="lustre-es01a-mdt-stop-0"/>
+      <op name="monitor" interval="30" timeout="300" id="lustre-es01a-mdt-monitor-30"/>
+    </operations>
+  </template>
+</resources>

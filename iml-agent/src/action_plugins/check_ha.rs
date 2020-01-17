@@ -12,13 +12,23 @@ use iml_wire_types::{
 use std::collections::HashMap;
 use tokio::fs::metadata;
 
-fn create<'a>(elem: &Element, group: impl Into<Option<&'a str>>) -> ResourceAgentInfo {
+fn create<'a>(
+    elem: &Element,
+    group: impl Into<Option<&'a str>>,
+    templates: &HashMap<String, ResourceAgentType>,
+) -> ResourceAgentInfo {
     ResourceAgentInfo {
-        agent: ResourceAgentType::new(
-            elem.get_attr("class"),
-            elem.get_attr("provider"),
-            elem.get_attr("type"),
-        ),
+        agent: {
+            if let Some(t) = elem.get_attr("template") {
+                templates.get(t).unwrap().clone()
+            } else {
+                ResourceAgentType::new(
+                    elem.get_attr("class"),
+                    elem.get_attr("provider"),
+                    elem.get_attr("type"),
+                )
+            }
+        },
         group: group.into().map(str::to_string),
         id: elem.get_attr("id").unwrap_or("").to_string(),
         args: match elem.find("instance_attributes") {
@@ -38,14 +48,31 @@ fn create<'a>(elem: &Element, group: impl Into<Option<&'a str>>) -> ResourceAgen
 
 fn process_resource_list(output: &[u8]) -> Result<Vec<ResourceAgentInfo>, ImlAgentError> {
     let element = Element::from_reader(output)?;
-
+    let templates: HashMap<String, ResourceAgentType> = element
+        .find_all("template")
+        .map(|elem| {
+            (
+                elem.get_attr("id").unwrap_or("").to_string(),
+                ResourceAgentType::new(
+                    elem.get_attr("class"),
+                    elem.get_attr("provider"),
+                    elem.get_attr("type"),
+                ),
+            )
+        })
+        .collect();
     Ok(element
         .find_all("group")
         .flat_map(|g| {
+            let templates = &templates;
             g.find_all("primitive")
-                .map(move |p| create(p, g.get_attr("id").unwrap_or_default()))
+                .map(move |p| create(p, g.get_attr("id").unwrap_or_default(), templates))
         })
-        .chain(element.find_all("primitive").map(|p| create(p, None)))
+        .chain(
+            element
+                .find_all("primitive")
+                .map(|p| create(p, None, &templates)),
+        )
         .collect())
 }
 
@@ -182,36 +209,79 @@ mod tests {
 
     #[test]
     fn test_ha_mixed_mode() {
-        let testxml = include_bytes!("snapshots/check_ha_test_mixed_mode.xml");
+        let testxml = include_bytes!("fixtures/check_ha_test_mixed_mode.xml");
 
-        let mut a1 = ResourceAgentInfo {
+        let a1 = ResourceAgentInfo {
             agent: ResourceAgentType::new("ocf", Some("chroma"), "ZFS"),
             group: Some("group-MGS_695ee8".to_string()),
             id: "MGS_695ee8-zfs".to_string(),
-            args: HashMap::new(),
+            args: vec![("pool", "MGS")]
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
         };
-        a1.args.insert("pool".to_string(), "MGS".to_string());
-        let mut a2 = ResourceAgentInfo {
+        let a2 = ResourceAgentInfo {
             agent: ResourceAgentType::new("ocf", Some("lustre"), "Lustre"),
             group: Some("group-MGS_695ee8".to_string()),
             id: "MGS_695ee8".to_string(),
-            args: HashMap::new(),
+            args: vec![("target", "MGS/MGS"), ("mountpoint", "/mnt/MGS")]
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
         };
-        a2.args.insert("target".to_string(), "MGS/MGS".to_string());
-        a2.args
-            .insert("mountpoint".to_string(), "/mnt/MGS".to_string());
-        let mut a3 = ResourceAgentInfo {
+        let a3 = ResourceAgentInfo {
             agent: ResourceAgentType::new("ocf", Some("lustre"), "Lustre"),
             group: None,
             id: "fs21-MDT0000_f61385".to_string(),
-            args: HashMap::new(),
+            args: vec![
+                (
+                    "target",
+                    "/dev/disk/by-id/scsi-36001405da302b267f944aeaaadb95af9",
+                ),
+                ("mountpoint", "/mnt/fs21-MDT0000"),
+            ]
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect(),
         };
-        a3.args.insert(
-            "target".to_string(),
-            "/dev/disk/by-id/scsi-36001405da302b267f944aeaaadb95af9".to_string(),
-        );
-        a3.args
-            .insert("mountpoint".to_string(), "/mnt/fs21-MDT0000".to_string());
+
+        assert_eq!(process_resource_list(testxml).unwrap(), vec![a1, a2, a3]);
+    }
+
+    #[test]
+    fn test_ha_templated() {
+        let testxml = include_bytes!("fixtures/check_ha_templated.xml");
+
+        let a1 = ResourceAgentInfo {
+            agent: ResourceAgentType::new("ocf", Some("ddn"), "Ticketer"),
+            group: None,
+            id: "lustre".to_string(),
+            args: vec![("name", "lustre-allocated")]
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
+        };
+        let a2 = ResourceAgentInfo {
+            agent: ResourceAgentType::new("ocf", Some("ddn"), "lustre-server"),
+            group: None,
+            id: "mdt0000-es01a".to_string(),
+            args: vec![
+                ("directory", "/lustre/es01a/mdt0000"),
+                ("device", "/dev/mapper/vg_mdt0000_es01a-mdt0000"),
+            ]
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect(),
+        };
+        let a3 = ResourceAgentInfo {
+            agent: ResourceAgentType::new("ocf", Some("heartbeat"), "LVM"),
+            group: None,
+            id: "mdt0000-es01a-vg".to_string(),
+            args: vec![("volgrpname", "vg_mdt0000_es01a")]
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
+        };
 
         assert_eq!(process_resource_list(testxml).unwrap(), vec![a1, a2, a3]);
     }
