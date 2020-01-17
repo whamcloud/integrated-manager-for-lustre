@@ -2036,6 +2036,67 @@ impl Default for ServiceState {
     }
 }
 
+impl fmt::Display for ServiceState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ServiceState::Unconfigured => f.pad(&format!("{:?}", self)),
+            ServiceState::Configured(r) => f.pad(&format!("{:?}", r)),
+        }
+    }
+}
+
+/// standard:provider:ocftype (e.g. ocf:heartbeat:ZFS, or stonith:fence_ipmilan)
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
+pub struct ResourceAgentType {
+    pub standard: String,         // e.g. ocf, lsb, stonith, etc..
+    pub provider: Option<String>, // e.g. heartbeat, lustre, chroma
+    pub ocftype: String,          // e.g. Lustre, ZFS
+}
+
+impl ResourceAgentType {
+    pub fn new<'a>(
+        standard: impl Into<Option<&'a str>>,
+        provider: impl Into<Option<&'a str>>,
+        ocftype: impl Into<Option<&'a str>>,
+    ) -> Self {
+        ResourceAgentType {
+            standard: standard.into().map(str::to_string).unwrap_or_default(),
+            provider: provider.into().map(str::to_string),
+            ocftype: ocftype.into().map(str::to_string).unwrap_or_default(),
+        }
+    }
+}
+
+impl fmt::Display for ResourceAgentType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.provider {
+            Some(provider) => write!(f, "{}:{}:{}", self.standard, provider, self.ocftype),
+            None => write!(f, "{}:{}", self.standard, self.ocftype),
+        }
+    }
+}
+
+impl PartialEq<String> for ResourceAgentType {
+    fn eq(&self, other: &String) -> bool {
+        self.to_string() == *other
+    }
+}
+
+impl PartialEq<&str> for ResourceAgentType {
+    fn eq(&self, other: &&str) -> bool {
+        self.to_string() == *other
+    }
+}
+
+/// Information about pacemaker resource agents
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
+pub struct ResourceAgentInfo {
+    pub agent: ResourceAgentType,
+    pub group: Option<String>,
+    pub id: String,
+    pub args: HashMap<String, String>,
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum ConfigState {
     Unknown,
@@ -2047,6 +2108,12 @@ pub enum ConfigState {
 impl Default for ConfigState {
     fn default() -> Self {
         ConfigState::Unknown
+    }
+}
+
+impl fmt::Display for ConfigState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.pad(&format!("{:?}", self))
     }
 }
 
