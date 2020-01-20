@@ -50,7 +50,11 @@ pub fn socket_name(mailbox: &str) -> String {
 
 impl std::fmt::Debug for PostOffice {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "PostOffice {{ {:?} }}", block_on(self.routes.lock()).keys())
+        write!(
+            f,
+            "PostOffice {{ {:?} }}",
+            block_on(self.routes.lock()).keys()
+        )
     }
 }
 
