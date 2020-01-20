@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 tokio = { version = "0.2", features = ["process", "macros"] }
-warp = { git = "https://github.com/seanmonstar/warp.git" }
+warp = "0.2"
 tracing = "0.1"
 tracing-subscriber = "0.1"
 serde = { version = "1", features = ["derive"] }

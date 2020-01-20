@@ -55,47 +55,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let unconfigure_route = warp::delete()
         .and(warp::path("unconfigure"))
         .and(warp::path::param::<String>())
-        .map(move |config_id: String| {
-            let timer_path = format!("{}.timer", unit_name(config_id.as_str()));
-            tracing::debug!("got delete: {}", timer_path);
-            config_id
+        .and_then(move |config_id: String| {
+            async move {
+                let timer_path = format!("{}.timer", unit_name(config_id.as_str()));
+                spawn_command(
+                    Command::new("systemctl")
+                        .arg("disable")
+                        .arg("--now")
+                        .arg(timer_path),
+                    config_id,
+                    TimerError::DisableTimerError,
+                )
+                .await
+            }
         })
-        // .and_then(move |config_id: String| {
-        //     async move {
-        //         let timer_path = format!("{}.timer", unit_name(config_id.as_str()));
-        //         spawn_command(
-        //             Command::new("systemctl")
-        //                 .arg("disable")
-        //                 .arg("--now")
-        //                 .arg(timer_path),
-        //             config_id,
-        //             TimerError::DisableTimerError,
-        //         )
-        //         .await
-        //     }
-        // })
-        // .and_then(move |config_id: String| {
-        //     async move {
-        //         let timer_path = timer_file(config_id.as_str());
-        //         delete_config(&timer_path, config_id).await
-        //     }
-        // })
-        // .and_then(move |config_id: String| {
-        //     async move {
-        //         let timer_path = service_file(config_id.as_str());
-        //         delete_config(&timer_path, config_id).await
-        //     }
-        // })
-        // .and_then(move |_| {
-        //     async move {
-        //         spawn_command(
-        //             Command::new("systemctl").arg("daemon-reload"),
-        //             (),
-        //             TimerError::DaemonReloadFailed,
-        //         )
-        //         .await
-        //     }
-        // })
+        .and_then(move |config_id: String| {
+            async move {
+                let timer_path = timer_file(config_id.as_str());
+                delete_config(&timer_path, config_id).await
+            }
+        })
+        .and_then(move |config_id: String| {
+            async move {
+                let timer_path = service_file(config_id.as_str());
+                delete_config(&timer_path, config_id).await
+            }
+        })
+        .and_then(move |_| {
+            async move {
+                spawn_command(
+                    Command::new("systemctl").arg("daemon-reload"),
+                    (),
+                    TimerError::DaemonReloadFailed,
+                )
+                .await
+            }
+        })
         .map(|_| Ok(StatusCode::NO_CONTENT));
 
     let routes = config_route.or(unconfigure_route).recover(customize_error);

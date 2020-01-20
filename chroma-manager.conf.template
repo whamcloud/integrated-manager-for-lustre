@@ -246,14 +246,15 @@ server {
         proxy_pass {{TIMER_PROXY_PASS}}/configure;
     }
 
-    location /timer/unconfigure {
+    location /timer/unconfigure/ {
         auth_request /auth;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass {{TIMER_PROXY_PASS}}$request_uri;
+        rewrite ^/timer/unconfigure/(.*)$ /unconfigure/$1 break;
+        proxy_pass {{TIMER_PROXY_PASS}};
     }
 
     location /agent/register {
