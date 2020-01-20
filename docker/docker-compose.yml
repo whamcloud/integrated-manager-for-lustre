@@ -300,7 +300,7 @@ services:
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
       - "tmp_vol:/tmp"
       - "run_vol:/run"
-      - "timer:/var/lib/systemd/timers"
+      - "timer:/etc/systemd/system"
       - "manager-config:/var/lib/chroma"
   setup:
     image: "imlteam/manager-setup:dev"
