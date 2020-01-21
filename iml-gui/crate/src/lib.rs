@@ -28,9 +28,9 @@ use regex::Regex;
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, Listener, *};
 pub(crate) use sleep::sleep_with_handle;
-use std::cmp;
+use std::{cmp, mem, sync::Arc};
 pub use watch_state::*;
-use web_sys::MessageEvent;
+use web_sys::{EventSource, MessageEvent};
 use Visibility::*;
 
 const TITLE_SUFFIX: &str = "IML";
@@ -283,7 +283,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             model.records = *records;
 
             let old = model.activity_health;
-            model.activity_health = update_activity_health(&model.records.active_alert);
+            model.activity_health = update_activity_health(Arc::clone(&model.records.active_alert));
 
             orders
                 .proxy(Msg::Notification)
@@ -300,11 +300,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 warp_drive::Record::ActiveAlert(x) => {
                     let msg = x.message.clone();
 
-                    model.records.active_alert.insert(x.id, x);
+                    Arc::make_mut(&mut model.records.active_alert).insert(x.id, x);
 
                     let old = model.activity_health;
 
-                    model.activity_health = update_activity_health(&model.records.active_alert);
+                    model.activity_health = update_activity_health(Arc::clone(&model.records.active_alert));
                     orders.proxy(Msg::Notification).send_msg(notification::generate(
                         Some(msg),
                         &old,
@@ -313,7 +313,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 }
                 warp_drive::Record::Filesystem(x) => {
                     let id = x.id;
-                    if model.records.filesystem.insert(x.id, x).is_none() {
+                    if Arc::make_mut(&mut model.records.filesystem).insert(x.id, x).is_none() {
                         orders
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::Filesystem(id)));
@@ -321,7 +321,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 }
                 warp_drive::Record::Host(x) => {
                     let id = x.id;
-                    if model.records.host.insert(x.id, x).is_none() {
+                    if Arc::make_mut(&mut model.records.host).insert(x.id, x).is_none() {
                         orders
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::Host(id)));
@@ -332,43 +332,46 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     ));
                 }
                 warp_drive::Record::ManagedTargetMount(x) => {
-                    model.records.managed_target_mount.insert(x.id, x);
+                    Arc::make_mut(&mut model.records.managed_target_mount).insert(x.id, x);
                 }
                 warp_drive::Record::OstPool(x) => {
-                    model.records.ost_pool.insert(x.id, x);
+                    Arc::make_mut(&mut model.records.ost_pool).insert(x.id, x);
                 }
                 warp_drive::Record::OstPoolOsts(x) => {
                     let id = x.id;
-                    if model.records.ost_pool_osts.insert(x.id, x).is_none() {
+                    if Arc::make_mut(&mut model.records.ost_pool_osts)
+                        .insert(x.id, x)
+                        .is_none()
+                    {
                         orders
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::OstPoolOsts(id)));
                     };
                 }
                 warp_drive::Record::StratagemConfig(x) => {
-                    model.records.stratagem_config.insert(x.id, x);
+                    Arc::make_mut(&mut model.records.stratagem_config).insert(x.id, x);
                 }
                 warp_drive::Record::Target(x) => {
                     let id = x.id;
-                    if model.records.target.insert(x.id, x).is_none() {
+                    if Arc::make_mut(&mut model.records.target).insert(x.id, x).is_none() {
                         orders
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::Target(id)));
                     };
                 }
                 warp_drive::Record::Volume(x) => {
-                    model.records.volume.insert(x.id, x);
+                    Arc::make_mut(&mut model.records.volume).insert(x.id, x);
                 }
                 warp_drive::Record::VolumeNode(x) => {
                     let id = x.id;
-                    if model.records.volume_node.insert(x.id, x).is_none() {
+                    if Arc::make_mut(&mut model.records.volume_node).insert(x.id, x).is_none() {
                         orders
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::VolumeNode(id)));
                     };
                 }
                 warp_drive::Record::LnetConfiguration(x) => {
-                    model.records.lnet_configuration.insert(x.id, x);
+                    Arc::make_mut(&mut model.records.lnet_configuration).insert(x.id, x);
                 }
             },
             warp_drive::RecordChange::Delete(record_id) => {

@@ -389,7 +389,7 @@ impl EndpointName for NtpConfiguration {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct ClientMount {
     pub filesystem_name: String,
     pub mountpoint: Option<String>,
@@ -397,7 +397,7 @@ pub struct ClientMount {
 }
 
 /// A Host record from `/api/host/`
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct Host {
     pub address: String,
     pub boot_time: Option<String>,
@@ -465,7 +465,7 @@ impl EndpointName for Host {
 }
 
 /// A server profile record from api/server_profile/
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct ServerProfile {
     pub corosync: bool,
     pub corosync2: bool,
@@ -595,7 +595,7 @@ impl<T> EndpointName for Job<T> {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct FilesystemConfParams {
     #[serde(rename = "llite.max_cached_mb")]
     pub llite_max_cached_mb: Option<String>,
@@ -682,7 +682,7 @@ pub struct OstConfParams {
 }
 
 /// A Volume record from api/volume/
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct Volume {
     pub filesystem_type: Option<String>,
     pub id: u32,
@@ -728,7 +728,7 @@ impl EndpointName for Volume {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct VolumeNode {
     pub host: String,
     pub host_id: u32,
@@ -750,14 +750,14 @@ impl EndpointName for VolumeNode {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 #[serde(untagged)]
 pub enum TargetConfParam {
     MdtConfParam(MdtConfParams),
     OstConfParam(OstConfParams),
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 #[serde(untagged)]
 pub enum VolumeOrResourceUri {
     ResourceUri(String),
@@ -773,7 +773,7 @@ pub enum TargetKind {
 }
 
 /// A Target record from /api/target/
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct Target<T> {
     pub active_host: Option<String>,
     pub active_host_name: String,
@@ -857,7 +857,7 @@ pub struct HsmControlParam {
 }
 
 /// A Filesystem record from /api/filesystem/
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct Filesystem {
     pub bytes_free: Option<f64>,
     pub bytes_total: Option<f64>,
@@ -925,13 +925,13 @@ impl EndpointName for Filesystem {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct FilesystemShort {
     pub id: u32,
     pub name: String,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub enum AlertRecordType {
     AlertState,
     LearnEvent,
@@ -977,7 +977,7 @@ pub enum AlertSeverity {
 }
 
 /// An Alert record from /api/alert/
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct Alert {
     pub _message: Option<String>,
     pub active: Option<bool>,
@@ -1238,7 +1238,7 @@ pub mod db {
     }
 
     /// Record from the `chroma_core_volumenode` table
-    #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+    #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
     pub struct VolumeNodeRecord {
         pub id: u32,
         pub volume_id: u32,
@@ -1308,7 +1308,7 @@ pub mod db {
     }
 
     /// Record from the `chroma_core_managedtargetmount` table
-    #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
+    #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
     pub struct ManagedTargetMountRecord {
         pub id: u32,
         pub host_id: u32,
@@ -1396,7 +1396,7 @@ pub mod db {
     }
 
     /// Record from the `chroma_core_ostpool` table
-    #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
+    #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
     pub struct OstPoolRecord {
         pub id: u32,
         pub name: String,
@@ -1459,7 +1459,7 @@ pub mod db {
     }
 
     /// Record from the `chroma_core_ostpool_osts` table
-    #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
+    #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
     pub struct OstPoolOstsRecord {
         pub id: u32,
         pub ostpool_id: u32,
@@ -1626,7 +1626,7 @@ pub mod db {
     }
 
     /// Record from the `chroma_core_stratagemconfiguration` table
-    #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+    #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
     pub struct StratagemConfiguration {
         pub id: u32,
         pub filesystem_id: u32,
@@ -1680,7 +1680,7 @@ pub mod db {
     }
 
     /// Record from the `chroma_core_lnetconfiguration` table
-    #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+    #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
     pub struct LnetConfigurationRecord {
         pub id: u32,
         pub state: String,
@@ -2282,23 +2282,24 @@ pub mod warp_drive {
     };
     use im::{HashMap, HashSet};
     use std::ops::Deref;
+    use std::sync::Arc;
 
     /// The current state of locks based on data from the locks queue
     pub type Locks = HashMap<String, HashSet<LockChange>>;
 
     #[derive(Default, serde::Serialize, serde::Deserialize, Debug, Clone)]
     pub struct Cache {
-        pub active_alert: HashMap<u32, Alert>,
-        pub filesystem: HashMap<u32, Filesystem>,
-        pub host: HashMap<u32, Host>,
-        pub lnet_configuration: HashMap<u32, LnetConfigurationRecord>,
-        pub managed_target_mount: HashMap<u32, ManagedTargetMountRecord>,
-        pub ost_pool: HashMap<u32, OstPoolRecord>,
-        pub ost_pool_osts: HashMap<u32, OstPoolOstsRecord>,
-        pub stratagem_config: HashMap<u32, StratagemConfiguration>,
-        pub target: HashMap<u32, Target<TargetConfParam>>,
-        pub volume: HashMap<u32, Volume>,
-        pub volume_node: HashMap<u32, VolumeNodeRecord>,
+        pub active_alert: Arc<HashMap<u32, Alert>>,
+        pub filesystem: Arc<HashMap<u32, Filesystem>>,
+        pub host: Arc<HashMap<u32, Host>>,
+        pub lnet_configuration: Arc<HashMap<u32, LnetConfigurationRecord>>,
+        pub managed_target_mount: Arc<HashMap<u32, ManagedTargetMountRecord>>,
+        pub ost_pool: Arc<HashMap<u32, OstPoolRecord>>,
+        pub ost_pool_osts: Arc<HashMap<u32, OstPoolOstsRecord>>,
+        pub stratagem_config: Arc<HashMap<u32, StratagemConfiguration>>,
+        pub target: Arc<HashMap<u32, Target<TargetConfParam>>>,
+        pub volume: Arc<HashMap<u32, Volume>>,
+        pub volume_node: Arc<HashMap<u32, VolumeNodeRecord>>,
     }
 
     impl Cache {
@@ -2306,54 +2307,54 @@ pub mod warp_drive {
         #[allow(clippy::trivially_copy_pass_by_ref)]
         pub fn remove_record(&mut self, x: &RecordId) -> bool {
             match x {
-                RecordId::ActiveAlert(id) => self.active_alert.remove(id).is_some(),
-                RecordId::Filesystem(id) => self.filesystem.remove(id).is_some(),
-                RecordId::Host(id) => self.host.remove(id).is_some(),
-                RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(id).is_some(),
-                RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(id).is_some(),
-                RecordId::OstPool(id) => self.ost_pool.remove(id).is_some(),
-                RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(id).is_some(),
-                RecordId::StratagemConfig(id) => self.stratagem_config.remove(id).is_some(),
-                RecordId::Target(id) => self.target.remove(id).is_some(),
-                RecordId::Volume(id) => self.volume.remove(id).is_some(),
-                RecordId::VolumeNode(id) => self.volume_node.remove(id).is_some(),
+                RecordId::ActiveAlert(id) => Arc::make_mut(&mut self.active_alert).remove(id).is_some(),
+                RecordId::Filesystem(id) => Arc::make_mut(&mut self.filesystem).remove(id).is_some(),
+                RecordId::Host(id) => Arc::make_mut(&mut self.host).remove(id).is_some(),
+                RecordId::LnetConfiguration(id) => Arc::make_mut(&mut self.lnet_configuration).remove(id).is_some(),
+                RecordId::ManagedTargetMount(id) => Arc::make_mut(&mut self.managed_target_mount).remove(id).is_some(),
+                RecordId::OstPool(id) => Arc::make_mut(&mut self.ost_pool).remove(id).is_some(),
+                RecordId::OstPoolOsts(id) => Arc::make_mut(&mut self.ost_pool_osts).remove(id).is_some(),
+                RecordId::StratagemConfig(id) => Arc::make_mut(&mut self.stratagem_config).remove(id).is_some(),
+                RecordId::Target(id) => Arc::make_mut(&mut self.target).remove(id).is_some(),
+                RecordId::Volume(id) => Arc::make_mut(&mut self.volume).remove(id).is_some(),
+                RecordId::VolumeNode(id) => Arc::make_mut(&mut self.volume_node).remove(id).is_some(),
             }
         }
         /// Inserts the record into the cache
         pub fn insert_record(&mut self, x: Record) {
             match x {
                 Record::ActiveAlert(x) => {
-                    self.active_alert.insert(x.id, x);
+                    Arc::make_mut(&mut self.active_alert).insert(x.id, x);
                 }
                 Record::Filesystem(x) => {
-                    self.filesystem.insert(x.id, x);
+                    Arc::make_mut(&mut self.filesystem).insert(x.id, x);
                 }
                 Record::Host(x) => {
-                    self.host.insert(x.id, x);
+                    Arc::make_mut(&mut self.host).insert(x.id, x);
                 }
                 Record::LnetConfiguration(x) => {
-                    self.lnet_configuration.insert(x.id(), x);
+                    Arc::make_mut(&mut self.lnet_configuration).insert(x.id(), x);
                 }
                 Record::ManagedTargetMount(x) => {
-                    self.managed_target_mount.insert(x.id(), x);
+                    Arc::make_mut(&mut self.managed_target_mount).insert(x.id(), x);
                 }
                 Record::OstPool(x) => {
-                    self.ost_pool.insert(x.id(), x);
+                    Arc::make_mut(&mut self.ost_pool).insert(x.id(), x);
                 }
                 Record::OstPoolOsts(x) => {
-                    self.ost_pool_osts.insert(x.id(), x);
+                    Arc::make_mut(&mut self.ost_pool_osts).insert(x.id(), x);
                 }
                 Record::StratagemConfig(x) => {
-                    self.stratagem_config.insert(x.id(), x);
+                    Arc::make_mut(&mut self.stratagem_config).insert(x.id(), x);
                 }
                 Record::Target(x) => {
-                    self.target.insert(x.id, x);
+                    Arc::make_mut(&mut self.target).insert(x.id, x);
                 }
                 Record::Volume(x) => {
-                    self.volume.insert(x.id, x);
+                    Arc::make_mut(&mut self.volume).insert(x.id, x);
                 }
                 Record::VolumeNode(x) => {
-                    self.volume_node.insert(x.id(), x);
+                    Arc::make_mut(&mut self.volume_node).insert(x.id(), x);
                 }
             }
         }
