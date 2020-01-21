@@ -31,7 +31,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let client = client.clone();
 
             async move {
-                let fsid = client.fsid(&fsname).await?;
+                // If fsid finds no match, assume FS hasn't been added to IML and skip
+                let fsid = match client.fsid(&fsname).await {
+                    Ok(id) => id,
+                    Err(Error::NotFound) => {
+                        tracing::info!("Filesystem {} not found in DB", &fsname);
+                        return Ok(vec![]);
+                    }
+                    Err(e) => return Err(e),
+                };
                 tracing::debug!("{}: {:?}", fsname, newpoolset);
 
                 let oldpoolset = client.poolset(fsname, fsid).await?;
