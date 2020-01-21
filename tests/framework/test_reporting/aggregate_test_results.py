@@ -17,9 +17,9 @@ import logging
 
 logging.basicConfig(filename="test_aggregation.log", level=logging.INFO)
 
-import requests
+import urllib3
 
-requests.packages.urllib3.disable_warnings()
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 def mkdir_p(path):
@@ -136,7 +136,9 @@ if __name__ == "__main__":
     required_tests = set(sys.argv[5].split())
 
     # Fetch the downstream build info from jenkins
-    requests.packages.urllib3.disable_warnings()
+    import urllib3
+
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     req = Requester(None, None, baseurl=jenkins_url, ssl_verify=False)
     jenkins = api.Jenkins(jenkins_url, requester=req)
     assert jenkins.get_jobs_list()  # A test we are logged in
