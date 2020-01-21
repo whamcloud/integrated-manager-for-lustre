@@ -125,7 +125,11 @@ class AlertTypeResource(Resource):
         return self._build_reverse_url(url_name, kwargs=kwargs)
 
     def get_object_list(self, request):
-        return [ContentType.objects.get_for_model(cls) for cls in AlertStateBase.subclasses() if cls is not AlertState]
+        return [
+            ContentType.objects.get_for_model(cls, False)
+            for cls in AlertStateBase.subclasses()
+            if cls is not AlertState
+        ]
 
     def obj_get_list(self, bundle, **kwargs):
         return self.get_object_list(bundle.request)
