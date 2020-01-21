@@ -344,6 +344,20 @@ pub struct ApiList<T> {
     pub objects: Vec<T>,
 }
 
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct Conf {
+    pub allow_anonymous_read: bool,
+    pub build: String,
+    pub version: String,
+    pub is_release: bool,
+}
+
+impl EndpointName for Conf {
+    fn endpoint_name() -> &'static str {
+        "conf"
+    }
+}
+
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct ActionArgs {
     pub host_id: Option<u64>,

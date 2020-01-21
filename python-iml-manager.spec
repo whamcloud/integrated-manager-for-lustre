@@ -91,11 +91,12 @@ Requires:       rust-iml-mailbox >= 0.1.2
 Requires:       rust-iml-postoffice >= 0.1.0
 Requires:       rust-iml-warp-drive >= 0.1.2
 Requires:       rust-iml-cli >= 0.1.2
+Requires:       rust-iml-api >= 0.1.2
 # Other Repos
 Requires:       influxdb
 Requires:       grafana
 
-Conflicts:       chroma-agent
+Conflicts:      chroma-agent
 Obsoletes:      chroma-manager
 Provides:       chroma-manager
 Obsoletes:      Django-south
