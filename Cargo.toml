@@ -4,6 +4,7 @@ members = [
     'iml-agent',
     'iml-cmd',
     'iml-fs',
+    'iml-integration-tests',
     'iml-mailbox',
     'iml-manager-cli',
     'iml-manager-client',

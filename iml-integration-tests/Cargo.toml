@@ -1,0 +1,11 @@
+[package]
+name = "iml-integration-tests"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dev-dependencies]
+iml-cmd = { version = "0.1.0", path = "../iml-cmd" }
+futures = "0.3"
+tokio = {version="0.2", features=["process", "macros", "fs"]}
+tokio-test = "0.2"
