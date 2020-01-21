@@ -253,6 +253,18 @@ services:
       - PROXY_HOST=iml-action-runner
       - ACTION_RUNNER_PORT=8009
       - RUST_LOG=info
+  iml-api:
+    image: "imlteam/iml-api:5.1"
+    hostname: "iml-api"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-api.dockerfile
+    deploy: *default-deploy
+    volumes:
+      - "manager-config:/var/lib/chroma"
+    environment:
+      - PROXY_HOST=iml-api
+      - RUST_LOG=info
   iml-manager-cli:
     image: "imlteam/iml-manager-cli:5.1.1-dev"
     stdin_open: true

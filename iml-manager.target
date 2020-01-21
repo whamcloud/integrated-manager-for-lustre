@@ -40,6 +40,9 @@ After=iml-view-server.service
 Requires=iml-agent-comms.service
 After=iml-agent-comms.service
 
+Requires=iml-api.service
+After=iml-api.service
+
 Requires=iml-mailbox.service
 After=iml-mailbox.service
 
@@ -96,6 +99,7 @@ Also=iml-mailbox.service
 Also=iml-action-runner.service
 Also=iml-update-handler.socket
 Also=iml-warp-drive.service
+Also=iml-api.service
 Also=device-aggregator.service
 Also=nginx.service
 Also=rabbitmq-server.service

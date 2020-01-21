@@ -7,6 +7,7 @@ yum copr enable -y managerforlustre/manager-for-lustre-devel
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/buildtools/repo/epel-8/managerforlustre-buildtools-epel-8.repo
 yum install -y rpmdevtools git ed epel-release python-setuptools gcc openssl-devel postgresql-devel
 curl https://sh.rustup.rs -sSf | sh -s -- -y
+rustup update
 source $HOME/.cargo/env
 cd /integrated-manager-for-lustre
 
@@ -29,7 +30,7 @@ yum autoremove -y rpmdevtools
 rm -rf /tmp/{manager,agent}-rpms
 mkdir -p /tmp/{manager,agent}-rpms
 
-cp /integrated-manager-for-lustre/_topdir/RPMS/x86_64/rust-iml-{action-runner,cli,ostpool,agent-comms,mailbox,postoffice,warp-drive}-*.rpm /tmp/manager-rpms/
+cp /integrated-manager-for-lustre/_topdir/RPMS/x86_64/rust-iml-{action-runner,agent-comms,api,cli,mailbox,ostpool,postoffice,warp-drive}-*.rpm /tmp/manager-rpms/
 cp /integrated-manager-for-lustre/_topdir/RPMS/noarch/python2-iml-manager-*.rpm /tmp/manager-rpms/
 cp /integrated-manager-for-lustre/_topdir/RPMS/x86_64/rust-iml-agent-[0-9]*.rpm /tmp/agent-rpms
 cp /integrated-manager-for-lustre/chroma_support.repo /etc/yum.repos.d/

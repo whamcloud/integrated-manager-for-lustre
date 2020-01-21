@@ -18,6 +18,7 @@ vars = {
     "MAILBOX_PROXY_PASS": "http://iml-mailbox:8891",
     "GRAFANA_PROXY_PASS": "http://grafana:3000",
     "INFLUXDB_PROXY_PASS": "http://influxdb:8086",
+    "IML_API_PROXY_PASS": "http://iml-api:8004"
 }
 
 conf_template = "./chroma-manager.conf.template"
