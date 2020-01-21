@@ -16,6 +16,7 @@ members = [
     'iml-services/iml-ostpool',
     'iml-services/iml-service-queue',
     'iml-services/iml-stratagem',
+    'iml-services/iml-postoffice',
     'iml-util',
     'iml-warp-drive',
     'iml-wire-types',

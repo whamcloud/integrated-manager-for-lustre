@@ -225,6 +225,28 @@ systemctl preset iml-mailbox.service
 %attr(0644,root,root)%{_unitdir}/iml-mailbox.service
 %attr(0644,root,root)%{_tmpfilesdir}/iml-mailbox.conf
 
+%package postoffice
+Summary: Consumer of IML Agent Postoffice push queue
+License: MIT
+Group: System Environment/Libraries
+Requires: rust-iml-agent-comms
+
+%description postoffice
+%{summary}
+
+%post postoffice
+systemctl preset iml-postoffice.service
+
+%preun postoffice
+%systemd_preun iml-postoffice.service
+
+%postun postoffice
+%systemd_postun_with_restart iml-postoffice.service
+
+%files postoffice
+%{_bindir}/iml-postoffice
+%attr(0644,root,root)%{_unitdir}/iml-postoffice.service
+
 %changelog
 * Wed Mar 6 2019 Joe Grund <jgrund@whamcloud.com> - 0.1.0-1
 - Initial package

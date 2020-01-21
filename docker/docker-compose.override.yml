@@ -48,6 +48,8 @@ services:
     restart: on-failure
   iml-stratagem:
     restart: on-failure
+  iml-postoffice:
+    restart: on-failure
 secrets:
   iml_pw:
     file: /tmp/iml_pw

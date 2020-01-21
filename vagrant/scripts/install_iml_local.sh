@@ -27,7 +27,7 @@ yum autoremove -y rpmdevtools
 rm -rf /tmp/{manager,agent}-rpms
 mkdir -p /tmp/{manager,agent}-rpms
 
-cp /integrated-manager-for-lustre/_topdir/RPMS/x86_64/rust-iml-{action-runner,cli,ostpool,stratagem,agent-comms,mailbox,warp-drive}-*.rpm /tmp/manager-rpms/
+cp /integrated-manager-for-lustre/_topdir/RPMS/x86_64/rust-iml-{action-runner,cli,ostpool,stratagem,agent-comms,mailbox,postoffice,warp-drive}-*.rpm /tmp/manager-rpms/
 cp /integrated-manager-for-lustre/_topdir/RPMS/noarch/python2-iml-manager-*.rpm /tmp/manager-rpms/
 cp /integrated-manager-for-lustre/_topdir/RPMS/x86_64/rust-iml-agent-[0-9]*.rpm /tmp/agent-rpms
 cp /integrated-manager-for-lustre/chroma_support.repo /etc/yum.repos.d/
