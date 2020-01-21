@@ -729,7 +729,7 @@ fn tree_target_collection_view(cache: &Cache, model: &Model, parent_address: &Ad
 
 pub fn view(cache: &Cache, model: &Model) -> Node<Msg> {
     div![
-        class![C.p_5, C.text_gray_500],
+        class![C.py_5, C.text_gray_500],
         tree_host_collection_view(cache, model),
         tree_fs_collection_view(cache, model),
     ]
