@@ -2313,22 +2313,30 @@ pub mod warp_drive {
                 RecordId::Filesystem(id) => {
                     Arc::make_mut(&mut self.filesystem).remove(id).is_some()
                 }
-                RecordId::Host(id) => Arc::make_mut(&mut self.host).remove(id).is_some(),
-                RecordId::LnetConfiguration(id) => Arc::make_mut(&mut self.lnet_configuration)
-                    .remove(id)
-                    .is_some(),
-                RecordId::ManagedTargetMount(id) => Arc::make_mut(&mut self.managed_target_mount)
-                    .remove(id)
-                    .is_some(),
-                RecordId::OstPool(id) => Arc::make_mut(&mut self.ost_pool).remove(id).is_some(),
+                RecordId::Host(id) => {
+                    Arc::make_mut(&mut self.host).remove(id).is_some()
+                }
+                RecordId::LnetConfiguration(id) => {
+                    Arc::make_mut(&mut self.lnet_configuration).remove(id).is_some()
+                }
+                RecordId::ManagedTargetMount(id) => {
+                    Arc::make_mut(&mut self.managed_target_mount).remove(id).is_some()
+                }
+                RecordId::OstPool(id) => {
+                    Arc::make_mut(&mut self.ost_pool).remove(id).is_some()
+                }
                 RecordId::OstPoolOsts(id) => {
                     Arc::make_mut(&mut self.ost_pool_osts).remove(id).is_some()
                 }
-                RecordId::StratagemConfig(id) => Arc::make_mut(&mut self.stratagem_config)
-                    .remove(id)
-                    .is_some(),
-                RecordId::Target(id) => Arc::make_mut(&mut self.target).remove(id).is_some(),
-                RecordId::Volume(id) => Arc::make_mut(&mut self.volume).remove(id).is_some(),
+                RecordId::StratagemConfig(id) => {
+                    Arc::make_mut(&mut self.stratagem_config).remove(id).is_some()
+                }
+                RecordId::Target(id) => {
+                    Arc::make_mut(&mut self.target).remove(id).is_some()
+                }
+                RecordId::Volume(id) => {
+                    Arc::make_mut(&mut self.volume).remove(id).is_some()
+                }
                 RecordId::VolumeNode(id) => {
                     Arc::make_mut(&mut self.volume_node).remove(id).is_some()
                 }
