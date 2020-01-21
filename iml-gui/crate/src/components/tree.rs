@@ -782,16 +782,9 @@ mod tests {
             ostpool_id: 2,
             managedost_id: 2,
         };
-        let rec18 = OstPoolOstsRecord {
-            id: 18,
-            ostpool_id: 18,
-            managedost_id: 13,
-        };
-        let rec19 = OstPoolOstsRecord {
-            id: 19,
-            ostpool_id: 18,
-            managedost_id: 14,
-        };
+        let rec18: OstPoolOstsRecord = (*c1.ost_pool_osts.get(&18).unwrap()).clone();
+        let rec19: OstPoolOstsRecord = (*c1.ost_pool_osts.get(&19).unwrap()).clone();
+
         Arc::make_mut(&mut c2.ost_pool_osts).insert(1, rec1.clone());
         Arc::make_mut(&mut c3.ost_pool_osts).insert(2, rec2.clone());
 

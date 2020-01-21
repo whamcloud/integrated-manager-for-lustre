@@ -2,8 +2,7 @@ use crate::{components::font_awesome, generated::css_classes::C};
 use im::HashMap;
 use iml_wire_types::{Alert, AlertSeverity};
 use seed::{prelude::*, *};
-use std::cmp::max;
-use std::sync::Arc;
+use std::{cmp::max, sync::Arc};
 
 pub fn update_activity_health(active_alert: Arc<HashMap<u32, Alert>>) -> ActivityHealth {
     active_alert
