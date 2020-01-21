@@ -10,7 +10,10 @@ use crate::{
 use seed::{prelude::*, virtual_dom::Attrs, *};
 
 fn menu_icon<T>(icon_name: &str) -> Node<T> {
-    font_awesome(class![C.h_6, C.w_6, C.mr_3, C.inline, C._mt_1], icon_name)
+    font_awesome(
+        class![C.h_6, C.inline, C.lg__h_5, C.lg__mr_2, C.lg__w_5, C.mr_3, C.w_6, C.xl__h_6, C.xl__mr_3, C.xl__w_6],
+        icon_name,
+    )
 }
 
 fn nav_manage_dropdown(open: bool) -> Node<Msg> {
@@ -90,23 +93,25 @@ fn nav_manage_dropdown(open: bool) -> Node<Msg> {
 fn main_menu_items(model: &Model) -> Node<Msg> {
     let menu_class = class![
         C.block,
-        C.lg__h_16,
-        C.lg__inline_block,
-        C.lg__flex,
-        C.lg__flex_auto,
-        C.lg__flex_col,
-        C.lg__justify_center,
-        C.lg__py_0,
-        C.p_6,
-        C.text_gray_500,
-        C.hover__bg_menu_active,
         C.border_b_2,
         C.border_transparent,
         C.group,
+        C.hover__bg_menu_active,
+        C.lg__flex_auto,
+        C.lg__flex_col,
+        C.lg__flex,
+        C.lg__h_16,
+        C.lg__inline_block,
+        C.lg__justify_center,
+        C.lg__p_4,
+        C.lg__py_0,
+        C.p_6,
+        C.text_gray_500,
+        C.xl__p_6,
     ];
 
     div![
-        class![C.text_base, C.lg__flex, C.lg__h_16,],
+        class![C.lg__flex, C.lg__h_16],
         a![
             &menu_class,
             class![C.bg_menu_active => model.route == Route::Dashboard],
@@ -206,6 +211,55 @@ fn context_sensitive_help_link(model: &Model, menu_class: &Attrs) -> Node<Msg> {
     ]
 }
 
+fn toggle_nav_view() -> Node<Msg> {
+    div![
+        class![C.block, C.lg__hidden],
+        button![
+            class![
+                C.flex,
+                C.items_center,
+                C.px_3,
+                C.py_3,
+                C.border,
+                C.rounded,
+                C.border_gray_400,
+                C.text_gray_300,
+                C.hover__text_white,
+                C.hover__border_white,
+            ],
+            simple_ev(Ev::Click, Msg::ToggleMenu),
+            svg![
+                class![C.fill_current, C.h_3, C.w_3],
+                attrs! {
+                    At::ViewBox => "0 0 20 20"
+                },
+                title!["Menu"],
+                path![attrs! { At::D => "M0 3h20v2H0V3zm0 6h20v2H0V9zm0 6h20v2H0v-2z" }],
+            ],
+        ],
+    ]
+}
+
+/// The navbar logo
+fn logo_nav_view<T>() -> Node<T> {
+    div![
+        class![
+            C.flex_shrink_0,
+            C.flex,
+            C.items_center,
+            C.lg__ml_0,
+            C.lg__mr_4,
+            C.lg__my_0,
+            C.ml_6,
+            C.my_2,
+            C.text_white,
+            C.xl__mr_12
+        ],
+        logo().merge_attrs(class![C.h_8, C.w_8, C.mr_3]),
+        span![class![C.font_semibold, C.text_3xl, C.tracking_tight], "IML"],
+    ]
+}
+
 fn nav(model: &Model) -> Node<Msg> {
     nav![
         class![
@@ -213,47 +267,22 @@ fn nav(model: &Model) -> Node<Msg> {
             C.bg_menu,
             C.items_center,
             C.px_5,
+            C.xl__px_5,
+            C.lg__px_4,
             C.lg__h_16,
             C.justify_between,
             C.flex_wrap
         ],
-        div![
-            class![C.flex, C.items_center, C.flex_shrink_0, C.text_white, C.mr_12,],
-            logo().merge_attrs(class![C.h_8, C.w_8, C.mr_3]),
-            span![class![C.font_semibold, C.text_3xl, C.tracking_tight], "IML"],
-        ],
-        div![
-            class![C.block, C.lg__hidden,],
-            button![
-                class![
-                    C.flex,
-                    C.items_center,
-                    C.px_3,
-                    C.py_2,
-                    C.border,
-                    C.rounded,
-                    C.border_gray_400,
-                    C.text_gray_300,
-                    C.hover__text_white,
-                    C.hover__border_white,
-                ],
-                simple_ev(Ev::Click, Msg::ToggleMenu),
-                svg![
-                    class![C.fill_current, C.h_3, C.w_3],
-                    attrs! {
-                        At::ViewBox => "0 0 20 20",
-                    },
-                    title!["Menu",],
-                    path![attrs! { At::D => "M0 3h20v2H0V3zm0 6h20v2H0V9zm0 6h20v2H0v-2z", },],
-                ],
-            ],
-        ],
+        logo_nav_view(),
+        toggle_nav_view(),
         if model.menu_visibility == Visible || model.breakpoint_size >= breakpoints::Size::LG {
             div![
                 class![
                     C.w_full,
                     C.block,
                     C.flex_grow,
+                    C.lg__text_sm,
+                    C.xl__text_base,
                     C.lg__flex,
                     C.lg__items_center,
                     C.lg__w_auto,
@@ -296,7 +325,7 @@ pub fn view(model: &Model) -> impl View<Msg> {
     vec![
         header![nav(model)],
         div![
-            class![C.bg_menu_active, C.text_gray_300, C.text_base, C.text_center, C.py_2],
+            class![C.bg_menu_active, C.text_gray_300, C.text_center, C.py_2],
             breadcrumbs::view(&model.breadcrumbs).els()
         ],
     ]
