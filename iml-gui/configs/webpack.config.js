@@ -31,6 +31,13 @@ module.exports = (env, argv) => {
         warnings: true,
         errors: true
       },
+      proxy: [
+        {
+          context: ["/api", "/help"],
+          target: "https://localhost:7444/",
+          secure: false
+        }
+      ],
       historyApiFallback: true
     },
     plugins: [
