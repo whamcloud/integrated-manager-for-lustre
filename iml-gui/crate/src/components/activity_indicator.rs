@@ -3,8 +3,9 @@ use im::HashMap;
 use iml_wire_types::{Alert, AlertSeverity};
 use seed::{prelude::*, *};
 use std::cmp::max;
+use std::sync::Arc;
 
-pub fn update_activity_health(active_alert: &HashMap<u32, Alert>) -> ActivityHealth {
+pub fn update_activity_health(active_alert: Arc<HashMap<u32, Alert>>) -> ActivityHealth {
     active_alert
         .values()
         .filter(|x| x.severity > AlertSeverity::INFO)

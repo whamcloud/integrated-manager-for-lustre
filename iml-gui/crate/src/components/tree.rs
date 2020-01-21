@@ -738,7 +738,11 @@ pub fn view(cache: &Cache, model: &Model) -> Node<Msg> {
 mod tests {
     use super::{update, Address, Model, Msg, Step};
     use crate::test_utils::{create_app_simple, fixtures};
+    use im::HashMap;
+    use iml_wire_types::db::OstPoolOstsRecord;
+    use iml_wire_types::warp_drive::Cache;
     use seed::virtual_dom::Node;
+    use std::sync::Arc;
     use wasm_bindgen_test::*;
 
     wasm_bindgen_test_configure!(run_in_browser);
@@ -750,6 +754,60 @@ mod tests {
             },
             |_| seed::empty(),
         )
+    }
+
+    #[test]
+    fn test_cache_cloning() {
+        let c1 = fixtures::get_cache();
+        let mut c2: Cache = c1.clone();
+        let mut c3: Cache = c2.clone();
+
+        // The hashmap ost_pool_osts is the same for all cache clones c1, c2, c3
+        assert_eq!(
+            &*c1.ost_pool_osts as *const HashMap<_, _>,
+            &*c2.ost_pool_osts as *const HashMap<_, _>
+        );
+        assert_eq!(
+            &*c1.ost_pool_osts as *const HashMap<_, _>,
+            &*c3.ost_pool_osts as *const HashMap<_, _>
+        );
+
+        let rec1 = OstPoolOstsRecord {
+            id: 1,
+            ostpool_id: 1,
+            managedost_id: 1,
+        };
+        let rec2 = OstPoolOstsRecord {
+            id: 2,
+            ostpool_id: 2,
+            managedost_id: 2,
+        };
+        let rec18 = OstPoolOstsRecord {
+            id: 18,
+            ostpool_id: 18,
+            managedost_id: 13,
+        };
+        let rec19 = OstPoolOstsRecord {
+            id: 19,
+            ostpool_id: 18,
+            managedost_id: 14,
+        };
+        Arc::make_mut(&mut c2.ost_pool_osts).insert(1, rec1.clone());
+        Arc::make_mut(&mut c3.ost_pool_osts).insert(2, rec2.clone());
+
+        // The entries to c2 and c3 are added independently despite sharing the same "body"
+        assert_eq!(
+            *c1.ost_pool_osts,
+            im::hashmap!(18 => rec18.clone(), 19 => rec19.clone())
+        );
+        assert_eq!(
+            *c2.ost_pool_osts,
+            im::hashmap!(18 => rec18.clone(), 19 => rec19.clone(), 1 => rec1)
+        );
+        assert_eq!(
+            *c3.ost_pool_osts,
+            im::hashmap!(18 => rec18.clone(), 19 => rec19.clone(), 2 => rec2)
+        );
     }
 
     #[wasm_bindgen_test]
