@@ -36,6 +36,8 @@ class Command(BaseCommand):
                 ("DEVICE_AGGREGATOR_PORT", settings.DEVICE_AGGREGATOR_PORT),
                 ("HTTP_AGENT2_PORT", settings.HTTP_AGENT2_PORT),
                 ("HTTP_AGENT2_PROXY_PASS", settings.HTTP_AGENT2_PROXY_PASS),
+                ("IML_API_PORT", settings.IML_API_PORT),
+                ("IML_API_PROXY_PASS", settings.IML_API_PROXY_PASS),
                 ("ALLOW_ANONYMOUS_READ", json.dumps(settings.ALLOW_ANONYMOUS_READ)),
                 ("BUILD", settings.BUILD),
                 ("IS_RELEASE", json.dumps(settings.IS_RELEASE)),

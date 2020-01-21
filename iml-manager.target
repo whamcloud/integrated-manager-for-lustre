@@ -43,6 +43,9 @@ After=iml-agent-comms.service
 Requires=iml-stratagem.service
 After=iml-stratagem.service
 
+Requires=iml-api.service
+After=iml-api.service
+
 Requires=iml-mailbox.service
 After=iml-mailbox.service
 

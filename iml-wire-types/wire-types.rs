@@ -1033,6 +1033,20 @@ impl EndpointName for StratagemConfiguration {
     }
 }
 
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct Conf {
+    pub allow_anonymous_read: bool,
+    pub build: String,
+    pub version: String,
+    pub is_release: bool,
+}
+
+impl EndpointName for Conf {
+    fn endpoint_name() -> &'static str {
+        "conf"
+    }
+}
+
 pub mod db {
     use crate::{Fqdn, Label};
     use std::{collections::BTreeSet, fmt, ops::Deref, path::PathBuf};

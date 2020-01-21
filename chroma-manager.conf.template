@@ -175,6 +175,14 @@ server {
         gzip_types text/css application/x-javascript application/javascript text/javascript application/json application/wasm;
     }
 
+    location /api/conf {
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass {{IML_API_PROXY_PASS}}/conf;
+    }
+
     location /api {
         proxy_set_header Host $http_host;
         proxy_set_header X-Forwarded-Proto $scheme;

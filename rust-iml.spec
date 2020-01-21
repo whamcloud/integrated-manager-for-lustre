@@ -31,6 +31,7 @@ cp iml %{buildroot}%{_bindir}
 cp iml-agent %{buildroot}%{_bindir}
 cp iml-agent-daemon %{buildroot}%{_bindir}
 cp iml-stratagem %{buildroot}%{_bindir}
+cp iml-api %{buildroot}%{_bindir}
 cp iml-ostpool %{buildroot}%{_bindir}
 cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-action-runner %{buildroot}%{_bindir}
@@ -38,6 +39,7 @@ cp iml-warp-drive %{buildroot}%{_bindir}
 cp iml-mailbox %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp iml-stratagem.service %{buildroot}%{_unitdir}
+cp iml-api.service %{buildroot}%{_unitdir}
 cp iml-ostpool.service %{buildroot}%{_unitdir}
 cp iml-agent-comms.service %{buildroot}%{_unitdir}
 cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
@@ -134,6 +136,27 @@ systemctl preset iml-stratagem.service
 %files stratagem
 %{_bindir}/iml-stratagem
 %attr(0644,root,root)%{_unitdir}/iml-stratagem.service
+
+%package api
+Summary: Standalone Rust API build on warp
+License: MIT
+Group: System Environment/Libraries
+
+%description api
+%{summary}
+
+%post api
+systemctl preset iml-api.service
+
+%preun api
+%systemd_preun iml-api.service
+
+%postun api
+%systemd_postun_with_restart iml-api.service
+
+%files api
+%{_bindir}/iml-api
+%attr(0644,root,root)%{_unitdir}/iml-api.service
 
 %package action-runner
 Summary: Dispatches and tracks RPCs to agents
