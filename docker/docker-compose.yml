@@ -266,7 +266,7 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - RUST_LOG=info
-  iml-stratagem:
+  iml-postoffice:
     image: "imlteam/iml-postoffice:5.1"
     hostname: "iml-postoffice"
     build:
