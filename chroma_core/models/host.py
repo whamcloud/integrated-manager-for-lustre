@@ -1664,9 +1664,7 @@ class UpdateNidsJob(HostListMixin):
             else:
                 state = "unmounted"
 
-            locks.append(
-                StateLock(job=self, locked_item=target, begin_state=state, end_state=state, write=True)
-            )
+            locks.append(StateLock(job=self, locked_item=target, begin_state=state, end_state=state, write=True))
 
         return locks
 
