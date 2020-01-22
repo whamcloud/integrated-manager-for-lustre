@@ -40,7 +40,7 @@ pub struct Config {
     lustre_device: String,
 
     #[structopt(long)]
-    /// IML mailbox name, e.g. `mailbox1`
+    /// IML mailbox name, e.g. `mailbox1`, where `lamigo` will write FIDs
     mailbox: String,
 }
 
