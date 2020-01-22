@@ -1649,7 +1649,6 @@ class UpdateNidsJob(HostListMixin):
         return DependAll(
             [DependOn(host.lnet_configuration, "lnet_up") for host in target_primary_hosts]
             + [DependOn(fs, "stopped") for fs in filesystems]
-            + [DependOn(t, "unmounted") for t in targets if not issubclass(t.downcast_class, ManagedMgs)]
             + [DependOn(t, "mounted") for t in targets if issubclass(t.downcast_class, ManagedMgs)]
         )
 
@@ -1661,12 +1660,12 @@ class UpdateNidsJob(HostListMixin):
 
         for target in targets:
             if issubclass(target.downcast_class, ManagedMgs):
-                begin_state = "mounted"
+                state = "mounted"
             else:
-                begin_state = "unmounted"
+                state = "unmounted"
 
             locks.append(
-                StateLock(job=self, locked_item=target, begin_state=begin_state, end_state="unmounted", write=True)
+                StateLock(job=self, locked_item=target, begin_state=state, end_state=state, write=True)
             )
 
         return locks
@@ -1677,7 +1676,7 @@ class UpdateNidsJob(HostListMixin):
         from chroma_core.models.target import FilesystemMember
         from chroma_core.models.target import MountOrImportStep
 
-        filesystems, targets = self._targets_on_hosts()
+        _, targets = self._targets_on_hosts()
 
         steps = []
         for target in targets:
@@ -1693,30 +1692,6 @@ class UpdateNidsJob(HostListMixin):
                         },
                     )
                 )
-
-        mgs_targets = [t for t in targets if issubclass(t.downcast_class, ManagedMgs)]
-        fs_targets = [t for t in targets if not issubclass(t.downcast_class, ManagedMgs)]
-
-        for target in mgs_targets:
-            steps.append((ResetConfParamsStep, {"mgt": target.downcast()}))
-
-        for target in mgs_targets:
-            steps.append(
-                (MountOrImportStep, MountOrImportStep.create_parameters(target, target.best_available_host(), True))
-            )
-
-        # FIXME: HYD-1133: when doing this properly these should
-        # be run as parallel jobs
-        for target in fs_targets:
-            steps.append(
-                (MountOrImportStep, MountOrImportStep.create_parameters(target, target.best_available_host(), True))
-            )
-
-        for target in fs_targets:
-            steps.append((UnmountStep, {"target": target, "host": target.best_available_host()}))
-
-        for target in mgs_targets:
-            steps.append((UnmountStep, {"target": target, "host": target.best_available_host()}))
 
         # FIXME: HYD-1133: should be marking targets as unregistered
         # so that they get started in the correct order next time
