@@ -2,10 +2,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, env};
+use crate::{agent_error::ImlAgentError, daemon_plugins, env};
 use futures::future::TryFutureExt;
 use std::collections::HashMap;
-use std::fmt;
 use std::path::Path;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
@@ -37,44 +36,42 @@ pub struct Config {
     min_age: u32,
 
     #[structopt(long)]
-    /// Lustre client mount point, e.g. `/mnt/lustre`
-    mount_point: String,
-
-    #[structopt(long)]
     /// Lustre device to be mounted, e.g. `192.168.0.100@tcp0:/spfs`
     lustre_device: String,
+
+    #[structopt(long)]
+    /// IML mailbox name, e.g. `mailbox1`
+    mailbox: String,
 }
 
-impl fmt::Display for Config {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "[Unit]\n\
-             Description=Run lamigo service\n\
-             [Service]\n\
-             ExecStart=/usr/bin/lamigo \
-             -m {fs}-{mdt} \
-             -u {user} \
-             -s {hot_pool} \
-             -t {cold_pool} \
-             -a {min_age} \
-             {mount_point}\n\
-             ",
-            fs = self.fs,
-            mdt = self.mdt,
-            cold_pool = self.cold_pool,
-            hot_pool = self.hot_pool,
-            min_age = self.min_age,
-            user = self.user,
-            mount_point = self.mount_point,
-        )
-    }
+fn format_lamigo_unit_contents(c: &Config, iml_socket: &str) -> String {
+    format!(
+        "[Unit]\n\
+         Description=Run lamigo service\n\
+         [Service]\n\
+         ExecStart=/usr/bin/lamigo \
+         -m {fs}-{mdt} \
+         -u {user} \
+         -s {hot_pool} \
+         -t {cold_pool} \
+         -a {min_age} \
+         --iml-socket {iml_socket}\n\
+         ",
+        fs = c.fs,
+        mdt = c.mdt,
+        cold_pool = c.cold_pool,
+        hot_pool = c.hot_pool,
+        min_age = c.min_age,
+        user = c.user,
+        iml_socket = iml_socket
+    )
 }
 
 pub async fn create_lamigo_service_unit(c: Config) -> Result<(), ImlAgentError> {
     let path_fmt = env::get_var("LAMIGO_UNIT_PATH");
+    let iml_socket = daemon_plugins::postoffice::socket_name(&c.mailbox); // wants SOCK_DIR
     let path = expand_path_fmt(&path_fmt, &c)?;
-    create_lamigo_service_unit_internal(path, &c)
+    create_lamigo_service_unit_internal(path, &c, &iml_socket)
         .err_into()
         .await
 }
@@ -88,8 +85,8 @@ fn expand_path_fmt(path_fmt: &str, c: &Config) -> strfmt::Result<String> {
     vars.insert("hot_pool".to_string(), &c.hot_pool);
     vars.insert("cold_pool".to_string(), &c.cold_pool);
     vars.insert("min_age".to_string(), &min_age_str);
-    vars.insert("mount_point".to_string(), &c.mount_point);
     vars.insert("lustre_device".to_string(), &c.lustre_device);
+    vars.insert("mailbox".to_string(), &c.mailbox);
     // path_fmt is like "/etc/systemd/system/lamigo-{fs}-{mdt}.service"
     strfmt::strfmt(&path_fmt, &vars)
 }
@@ -97,12 +94,13 @@ fn expand_path_fmt(path_fmt: &str, c: &Config) -> strfmt::Result<String> {
 async fn create_lamigo_service_unit_internal<P: AsRef<Path>>(
     file_path: P,
     c: &Config,
+    iml_socket: &str,
 ) -> std::io::Result<()> {
     if let Some(dir_path) = file_path.as_ref().parent() {
         fs::create_dir_all(&dir_path).await?;
     };
     let mut file = fs::File::create(file_path).await?;
-    let cnt = format!("{}", c);
+    let cnt = format_lamigo_unit_contents(c, iml_socket);
     file.write_all(cnt.as_bytes()).await?;
     Ok(())
     // fs::write(file, cnt.as_bytes()).await
@@ -121,10 +119,10 @@ mod lamigo_tests {
             mdt: "MDT000".into(),
             user: "nick".into(),
             min_age: 35353,
-            mount_point: "/mnt/lustre".into(),
             lustre_device: "192.168.0.100@tcp0:/spfs".into(),
             hot_pool: "FAST_POOL".into(),
             cold_pool: "SLOW_POOL".into(),
+            mailbox: "mailbox".into(),
         };
         let fmt1 = "/etc/systemd/system/lamigo-{fs}-{mdt}.service";
         assert_eq!(
@@ -152,21 +150,22 @@ mod lamigo_tests {
         // cargo run --package iml-agent --bin iml-agent -- lamigo
         // --cold_pool SLOW_POOL --hot_pool FAST_POOL
         // --fs LU_TEST2 --lustre_device 192.168.0.100@tcp0:/spfs
-        // --mdt MDT000 --min_age 35353 --user nick --mount_point /mnt/lustre
+        // --mdt MDT000 --min_age 35353 --user nick --iml-socket /run/postman-mailbox2.sock
         let config = Config {
             fs: "LU_TEST2".into(),
             mdt: "MDT000".into(),
             user: "nick".into(),
             min_age: 35353,
-            mount_point: "/mnt/lustre".into(),
+            mailbox: "mailbox2".into(),
             lustre_device: "192.168.0.100@tcp0:/spfs".into(),
             hot_pool: "FAST_POOL".into(),
             cold_pool: "SLOW_POOL".into(),
         };
 
         let dir = tempdir().expect("could not create tmpdir");
+        let iml_socket = format!("/run/postman-{}.sock", config.mailbox);
         let expected_file = dir.path().join("lamigo-LU_TEST2-MDT000.service");
-        create_lamigo_service_unit_internal(&expected_file, &config)
+        create_lamigo_service_unit_internal(&expected_file, &config, &iml_socket)
             .await
             .expect("could not write ");
 

@@ -36,7 +36,6 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("action_check_ha", check_ha::check_ha)
         .add_plugin("action_check_stonith", check_stonith::check_stonith)
         .add_plugin("get_kernel", check_kernel::get_kernel)
-        .add_plugin("is_mounted", lustre::is_mounted)
         .add_plugin("try_mount", lustre::try_mount)
         .add_plugin("lctl", lustre::lctl)
         .add_plugin("ostpool_create", ostpool::action_pool_create)

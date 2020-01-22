@@ -12,14 +12,6 @@ pub async fn lctl(args: Vec<String>) -> Result<String, ImlAgentError> {
         .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
 }
 
-/// Executes `mountpoint -q /mnt/something`
-/// It provides no output, but signals the caller with the exit code
-pub async fn is_mounted(mount_point: String) -> Result<bool, ImlAgentError> {
-    let args = vec!["-q", &mount_point];
-    let output = iml_cmd::cmd_output("mountpoint", args).await?;
-    Ok(output.status.success())
-}
-
 /// According to http://wiki.lustre.org/Mounting_a_Lustre_File_System_on_Client_Nodes
 /// we need to execute mount command
 /// ```bash

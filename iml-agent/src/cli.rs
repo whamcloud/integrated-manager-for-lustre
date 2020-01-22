@@ -265,13 +265,6 @@ pub enum App {
     /// Get latest kernel which supports listed modules
     GetKernel { modules: Vec<String> },
 
-    #[structopt(name = "is_mounted")]
-    /// Check if `mount_point` is mounted to some filesystem
-    IsMounted {
-        #[structopt(long)]
-        mount_point: String,
-    },
-
     #[structopt(name = "try_mount")]
     /// Try to mount `lustre_device` to the `mount_point`
     TryMount {
@@ -551,13 +544,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         App::GetKernel { modules } => match check_kernel::get_kernel(modules).await {
             Ok(s) => println!("{}", s),
-            Err(e) => {
-                eprintln!("{:?}", e);
-                exit(exitcode::SOFTWARE);
-            }
-        },
-        App::IsMounted { mount_point } => match lustre::is_mounted(mount_point).await {
-            Ok(x) => println!("{}", x),
             Err(e) => {
                 eprintln!("{:?}", e);
                 exit(exitcode::SOFTWARE);
