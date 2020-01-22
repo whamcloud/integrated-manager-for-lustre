@@ -15,7 +15,8 @@ vars = {
     "UPDATE_HANDLER_PROXY_PASS": "http://update-handler:8080",
     "WARP_DRIVE_PROXY_PASS": "http://iml-warp-drive:8890",
     "MAILBOX_PATH": "/var/spool/iml/mailbox",
-    "MAILBOX_PROXY_PASS": "http://mailbox:8891",
+    "MAILBOX_PROXY_PASS": "http://localhost:8891",
+    "GRAFANA_PROXY_PASS": "http://grafana:3000",
 }
 
 conf_template = "./chroma-manager.conf.template"
@@ -23,11 +24,7 @@ conf_template = "./chroma-manager.conf.template"
 with open(conf_template, "r") as f:
     config = f.read()
 
-    config = re.sub(
-        r"proxy_pass {{(.+)}}.*;",
-        r"set $proxy_upstream {{\g<1>}};\n        proxy_pass $proxy_upstream$uri$is_args$query_string;",
-        config,
-    )
+    config = re.sub(r"proxy_pass {{(.+)}}(.*);", r"proxy_pass {{\g<1>}}\g<2>;", config)
     config = re.sub(
         r"proxy_read_timeout (.+);",
         r"proxy_read_timeout \g<1>;\n    resolver 127.0.0.11 ipv6=off valid=5s;\n    resolver_timeout 5s;",
@@ -43,12 +40,6 @@ with open(conf_template, "r") as f:
         config = config.replace("{{%s}}" % k, v)
 
     config = re.sub(r"{{(.+)}}", r"{{ .Env.\g<1> }}", config)
-
-    config = re.sub(
-        r".+set \$proxy_upstream http://iml-agent-comms:(\d+);\n.+proxy_pass \$proxy_upstream\$uri\$is_args\$query_string;",
-        r"        set $proxy_upstream http://iml-agent-comms:\g<1>;\n        proxy_pass $proxy_upstream/message/$is_args$query_string;",
-        config,
-    )
 
     with open("iml.template", "w") as f2:
         f2.write(config)

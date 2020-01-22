@@ -180,9 +180,11 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq
 touch $RPM_BUILD_ROOT%{_sysconfdir}/nginx/conf.d/chroma-manager.conf
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/grafana/provisioning/dashboards
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/grafana/provisioning/datasources
 cp -r grafana $RPM_BUILD_ROOT%{manager_root}
 mv $RPM_BUILD_ROOT%{manager_root}/grafana/grafana-iml.ini $RPM_BUILD_ROOT%{_sysconfdir}/grafana/
 mv $RPM_BUILD_ROOT%{manager_root}/grafana/dashboards/iml-dashboards.yaml $RPM_BUILD_ROOT%{_sysconfdir}/grafana/provisioning/dashboards
+mv $RPM_BUILD_ROOT%{manager_root}/grafana/datasources/influxdb-iml-datasource.yml $RPM_BUILD_ROOT%{_sysconfdir}/grafana/provisioning/datasources
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}/grafana-server.service.d/
 mv $RPM_BUILD_ROOT%{manager_root}/grafana/dropin-iml.conf $RPM_BUILD_ROOT%{_unitdir}/grafana-server.service.d/90-iml.conf
 cp iml-manager-redirect.conf $RPM_BUILD_ROOT%{_sysconfdir}/nginx/default.d/iml-manager-redirect.conf
@@ -304,6 +306,7 @@ fi
 %attr(0644,root,root)%{_sysconfdir}/logrotate.d/chroma-manager
 %attr(0644,root,grafana)%{_sysconfdir}/grafana/provisioning/dashboards/iml-dashboards.yaml
 %attr(0644,root,grafana)%{manager_root}/grafana/dashboards/stratagem-dashboard*.json
+%attr(0644,root,grafana)%{_sysconfdir}/grafana/provisioning/datasources/influxdb-iml-datasource.yml
 %attr(0644,root,root)%{_unitdir}/iml-manager.target
 %attr(0644,root,root)%{_unitdir}/*.service
 %attr(0644,root,root)%{_unitdir}/device-aggregator.service.d/10-device-aggregator.service.conf

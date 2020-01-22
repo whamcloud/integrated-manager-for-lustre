@@ -333,45 +333,6 @@ class ServiceConfig(CommandLine):
             log.error(error)
             raise RuntimeError(error)
 
-        # Add Datasources
-        url = "http://localhost:3000/api/datasources"
-        headers = {"X-WEBAUTH-USER": "admin"}
-        urlname = "{}/id/{}".format(url, "iml-postgres")
-        r = requests.get(urlname, headers=headers)
-        if not r.ok:
-            db = settings.DATABASES["default"]
-            resp = requests.post(
-                url,
-                headers=headers,
-                json={
-                    "name": "iml-postgres",
-                    "type": "postgres",
-                    "access": "proxy",
-                    "user": db["USER"],
-                    "password": db["PASSWORD"],
-                    "database": db["NAME"],
-                    "url": ":".join((x for x in [db["HOST"], db["PORT"]] if x)) or "localhost",
-                    "jsonData": {"sslmode": "disable"},
-                },
-            )
-        for db in [settings.INFLUXDB_IML_DB, settings.INFLUXDB_STRATAGEM_SCAN_DB]:
-            name = "iml-influx-{}".format(db)
-            urlname = "{}/id/{}".format(url, name)
-            r = requests.get(urlname, headers=headers)
-            if not r.ok:
-                resp = requests.post(
-                    url,
-                    headers=headers,
-                    json={
-                        "name": name,
-                        "type": "influxdb",
-                        "database": db,
-                        "url": "http://localhost:8086",
-                        "jsonData": {"httpMode": "GET"},
-                        "access": "proxy",
-                    },
-                )
-
     def _setup_crypto(self):
         if not os.path.exists(settings.CRYPTO_FOLDER):
             os.makedirs(settings.CRYPTO_FOLDER)
@@ -663,6 +624,8 @@ class ServiceConfig(CommandLine):
             "DEVICE_AGGREGATOR_PORT",
             "DEVICE_AGGREGATOR_PROXY_PASS",
             "UPDATE_HANDLER_PROXY_PASS",
+            "GRAFANA_PORT",
+            "GRAFANA_PROXY_PASS",
         ]
 
         with open(conf_template, "r") as f:
