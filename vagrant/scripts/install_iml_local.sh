@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -ex
+
 yum copr enable -y managerforlustre/manager-for-lustre-devel
 # Add buildtools repo to get latest rpmdevtools
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/buildtools/repo/epel-8/managerforlustre-buildtools-epel-8.repo
