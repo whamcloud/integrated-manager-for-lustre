@@ -36,6 +36,7 @@ cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-action-runner %{buildroot}%{_bindir}
 cp iml-warp-drive %{buildroot}%{_bindir}
 cp iml-mailbox %{buildroot}%{_bindir}
+cp iml-postoffice %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp iml-stratagem.service %{buildroot}%{_unitdir}
 cp iml-ostpool.service %{buildroot}%{_unitdir}
@@ -44,6 +45,7 @@ cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
 cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
 cp iml-warp-drive.service %{buildroot}%{_unitdir}
 cp iml-mailbox.service %{buildroot}%{_unitdir}
+cp iml-postoffice.service %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_tmpfilesdir}
 cp iml-mailbox.conf %{buildroot}%{_tmpfilesdir}
 cp tmpfiles.conf %{buildroot}%{_tmpfilesdir}/iml-agent.conf
@@ -224,6 +226,28 @@ systemctl preset iml-mailbox.service
 %{_bindir}/iml-mailbox
 %attr(0644,root,root)%{_unitdir}/iml-mailbox.service
 %attr(0644,root,root)%{_tmpfilesdir}/iml-mailbox.conf
+
+%package postoffice
+Summary: Consumer of IML Agent Postoffice push queue
+License: MIT
+Group: System Environment/Libraries
+Requires: rust-iml-agent-comms
+
+%description postoffice
+%{summary}
+
+%post postoffice
+systemctl preset iml-postoffice.service
+
+%preun postoffice
+%systemd_preun iml-postoffice.service
+
+%postun postoffice
+%systemd_postun_with_restart iml-postoffice.service
+
+%files postoffice
+%{_bindir}/iml-postoffice
+%attr(0644,root,root)%{_unitdir}/iml-postoffice.service
 
 %changelog
 * Wed Mar 6 2019 Joe Grund <jgrund@whamcloud.com> - 0.1.0-1

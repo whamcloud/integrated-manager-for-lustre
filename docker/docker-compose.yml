@@ -266,6 +266,17 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - RUST_LOG=info
+  iml-postoffice:
+    image: "imlteam/iml-postoffice:5.1"
+    hostname: "iml-postoffice"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-postoffice.dockerfile
+    deploy: *default-deploy
+    volumes:
+      - "manager-config:/var/lib/chroma"
+    environment:
+      - PROXY_HOST=iml-postoffice
   setup:
     image: "imlteam/manager-setup:5.1"
     command: ["tail", "-f", "/dev/null"]
