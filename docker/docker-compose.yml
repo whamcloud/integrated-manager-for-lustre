@@ -28,6 +28,12 @@ services:
     volumes:
       - influxdb:/var/lib/influxdb/
       - "./influxdb/setup-influxdb.sh:/docker-entrypoint-initdb.d/setup-influxdb.sh:ro"
+    healthcheck:
+      test: ["CMD-SHELL", "influx -execute 'quit'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     ports:
       - 8086:8086
     environment:
