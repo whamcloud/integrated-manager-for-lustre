@@ -4,10 +4,14 @@
 
 use crate::{agent_error::ImlAgentError, daemon_plugins, env};
 use futures::future::TryFutureExt;
-use std::collections::HashMap;
-use std::path::Path;
-use tokio::fs;
-use tokio::io::AsyncWriteExt;
+use std::{
+    collections::HashMap,
+    path::Path
+};
+use tokio::{
+    fs,
+    io::AsyncWriteExt
+};
 
 #[derive(serde::Deserialize, structopt::StructOpt, Clone, Debug)]
 pub struct Config {
@@ -103,7 +107,6 @@ async fn create_lamigo_service_unit_internal<P: AsRef<Path>>(
     let cnt = format_lamigo_unit_contents(c, iml_socket);
     file.write_all(cnt.as_bytes()).await?;
     Ok(())
-    // fs::write(file, cnt.as_bytes()).await
 }
 
 #[cfg(test)]
