@@ -4,14 +4,8 @@
 
 use crate::{agent_error::ImlAgentError, daemon_plugins, env};
 use futures::future::TryFutureExt;
-use std::{
-    collections::HashMap,
-    path::Path
-};
-use tokio::{
-    fs,
-    io::AsyncWriteExt
-};
+use std::{collections::HashMap, path::Path};
+use tokio::{fs, io::AsyncWriteExt};
 
 #[derive(serde::Deserialize, structopt::StructOpt, Clone, Debug)]
 pub struct Config {
