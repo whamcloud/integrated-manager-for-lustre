@@ -1,4 +1,4 @@
-use crate::components::ActivityHealth;
+use crate::{components::ActivityHealth, GMsg};
 use seed::prelude::Orders;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
@@ -19,7 +19,7 @@ pub enum Msg {
     Update(String, String),
 }
 
-pub(crate) fn update(u: Msg, m: &mut Model, orders: &mut impl Orders<Msg>) {
+pub(crate) fn update(u: Msg, m: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match u {
         Msg::Close => {
             if let Some(svc) = &m.svc {

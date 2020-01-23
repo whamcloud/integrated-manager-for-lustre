@@ -5,29 +5,35 @@
 #![allow(clippy::non_ascii_literal)]
 #![allow(clippy::enum_glob_use)]
 
+mod auth;
 mod breakpoints;
 mod components;
 mod ctx_help;
+mod extensions;
 mod generated;
 mod notification;
 mod page;
 mod route;
+mod sleep;
+
 #[cfg(test)]
 mod test_utils;
 
-use components::{breadcrumbs::BreadCrumbs, tree, update_activity_health, ActivityHealth};
+use components::{breadcrumbs::BreadCrumbs, restrict, tree, update_activity_health, ActivityHealth};
+pub(crate) use extensions::*;
 use generated::css_classes::C;
-use iml_wire_types::warp_drive;
+use iml_wire_types::{warp_drive, GroupType, Session};
 use js_sys::Function;
+use page::login;
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, Listener, *};
+pub(crate) use sleep::sleep_with_handle;
 use std::{cmp, mem};
 use wasm_bindgen::JsCast;
 use web_sys::{EventSource, MessageEvent};
 use Visibility::*;
 
 const TITLE_SUFFIX: &str = "IML";
-const USER_AGENT_FOR_PRERENDERING: &str = "ReactSnap";
 const STATIC_PATH: &str = "static";
 const SLIDER_WIDTH_PX: u32 = 5;
 const MAX_SIDE_PERCENTAGE: f32 = 35_f32;
@@ -54,31 +60,6 @@ impl Visibility {
         *self = match self {
             Visible => Hidden,
             Hidden => Visible,
-        }
-    }
-}
-
-/// Allows for merging attributes onto an existing item
-pub trait MergeAttrs {
-    fn merge_attrs(self, attrs: Attrs) -> Self;
-}
-
-impl MergeAttrs for Attrs {
-    fn merge_attrs(mut self, attrs: Attrs) -> Self {
-        self.merge(attrs);
-
-        self
-    }
-}
-
-impl<T> MergeAttrs for Node<T> {
-    fn merge_attrs(self, attrs: Attrs) -> Self {
-        if let Node::Element(mut el) = self {
-            el.attrs.merge(attrs);
-
-            Node::Element(el)
-        } else {
-            self
         }
     }
 }
@@ -135,26 +116,28 @@ impl WatchState {
 // ------ ------
 
 pub struct Model {
-    pub route: Route<'static>,
-    pub menu_visibility: Visibility,
-    pub in_prerendering: bool,
-    pub manage_menu_state: WatchState,
-    pub track_slider: bool,
-    pub side_width_percentage: f32,
-    pub records: warp_drive::Cache,
-    pub locks: warp_drive::Locks,
-    pub activity_health: ActivityHealth,
-    pub breadcrumbs: BreadCrumbs<Route<'static>>,
     notification: notification::Model,
-    pub tree: tree::Model,
+    activity_health: ActivityHealth,
+    auth: auth::Model,
+    breadcrumbs: BreadCrumbs<Route<'static>>,
     breakpoint_size: breakpoints::Size,
+    locks: warp_drive::Locks,
+    login: login::Model,
+    logging_out: bool,
+    manage_menu_state: WatchState,
+    menu_visibility: Visibility,
+    records: warp_drive::Cache,
+    route: Route<'static>,
+    side_width_percentage: f32,
+    track_slider: bool,
+    tree: tree::Model,
 }
 
 pub fn register_eventsource_handle<T, F>(
     es_cb_setter: fn(&EventSource, Option<&Function>),
     msg: F,
     ws: &EventSource,
-    orders: &mut impl Orders<Msg>,
+    orders: &mut impl Orders<Msg, GMsg>,
 ) where
     T: wasm_bindgen::convert::FromWasmAbi + 'static,
     F: Fn(T) -> Msg + 'static,
@@ -181,7 +164,7 @@ fn before_mount(_: Url) -> BeforeMount {
 //  After Mount
 // ------ ------
 
-fn after_mount(url: Url, orders: &mut impl Orders<Msg>) -> AfterMount<Model> {
+fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Model> {
     // FIXME: This should be proxied via webpack devserver but there is an issue with buffering contents of SSE.
     let es = EventSource::new("https://localhost:7444/messaging").unwrap();
 
@@ -195,27 +178,25 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg>) -> AfterMount<Model> {
 
     orders.proxy(Msg::Notification).perform_cmd(notification::init());
 
+    orders.proxy(Msg::Auth).send_msg(auth::Msg::Fetch);
+
     AfterMount::new(Model {
+        auth: auth::Model::default(),
         breakpoint_size: breakpoints::size(),
         route: url.into(),
         menu_visibility: Visible,
-        in_prerendering: is_in_prerendering(),
         manage_menu_state: WatchState::default(),
         track_slider: false,
         side_width_percentage: 20_f32,
         records: warp_drive::Cache::default(),
         locks: im::hashmap!(),
+        logging_out: false,
         activity_health: ActivityHealth::default(),
         breadcrumbs: BreadCrumbs::default(),
         notification: notification::Model::default(),
         tree: tree::Model::default(),
+        login: login::Model::default(),
     })
-}
-
-fn is_in_prerendering() -> bool {
-    let user_agent = window().navigator().user_agent().expect("cannot get user agent");
-
-    user_agent == USER_AGENT_FOR_PRERENDERING
 }
 
 // ------ ------
@@ -228,6 +209,27 @@ pub fn routes(url: Url) -> Option<Msg> {
         return None;
     }
     Some(Msg::RouteChanged(url))
+}
+
+// ------ ------
+//     Sink
+// ------ ------
+
+pub enum GMsg {
+    RouteChange(Url),
+    AuthProxy(auth::Msg),
+}
+
+fn sink(g_msg: GMsg, _model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
+    match g_msg {
+        GMsg::RouteChange(url) => {
+            seed::push_route(url.clone());
+            orders.send_msg(Msg::RouteChanged(url));
+        }
+        GMsg::AuthProxy(msg) => {
+            orders.proxy(Msg::Auth).send_msg(msg);
+        }
+    }
 }
 
 // ------ ------
@@ -254,14 +256,26 @@ pub enum Msg {
     WindowClick,
     WindowResize,
     Notification(notification::Msg),
+    GetSession,
+    GotSession(fetch::ResponseDataResult<Session>),
+    Login(login::Msg),
+    Logout,
+    LoggedOut(fetch::FetchObject<()>),
     Tree(tree::Msg),
+    Auth(auth::Msg),
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::RouteChanged(url) => {
-            model.route = url.into();
+            model.route = Route::from(url);
+
             orders.send_msg(Msg::UpdatePageTitle);
+
+            if model.route == Route::Login {
+                orders.proxy(Msg::Auth).send_msg(auth::Msg::Stop);
+            }
+
             if model.route == Route::Home {
                 model.breadcrumbs.clear();
             }
@@ -291,6 +305,23 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::EventSourceError(_) => {
             log("EventSource error.");
         }
+        Msg::GetSession => {
+            orders
+                .skip()
+                .perform_cmd(auth::fetch_session().fetch_json_data(Msg::GotSession));
+        }
+        Msg::GotSession(data_result) => match data_result {
+            Ok(resp) => {
+                orders.send_g_msg(GMsg::AuthProxy(auth::Msg::SetSession(resp)));
+
+                model.logging_out = false;
+            }
+            Err(fail_reason) => {
+                error!("Error fetching login session {:?}", fail_reason.message());
+
+                orders.skip();
+            }
+        },
         Msg::Records(records) => {
             model.records = *records;
 
@@ -422,6 +453,20 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 side_width_percentage
             };
         }
+        Msg::Logout => {
+            model.logging_out = true;
+
+            orders.proxy(Msg::Auth).send_msg(auth::Msg::Stop);
+
+            orders.perform_cmd(
+                auth::fetch_session()
+                    .method(fetch::Method::Delete)
+                    .fetch(Msg::LoggedOut),
+            );
+        }
+        Msg::LoggedOut(_) => {
+            orders.send_msg(Msg::GetSession);
+        }
         Msg::WindowClick => {
             if model.manage_menu_state.should_update() {
                 model.manage_menu_state.update();
@@ -440,6 +485,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::Tree(msg) => {
             tree::update(&model.records, msg, &mut model.tree, &mut orders.proxy(Msg::Tree));
         }
+        Msg::Login(msg) => {
+            login::update(msg, &mut model.login, &mut orders.proxy(Msg::Login));
+        }
+        Msg::Auth(msg) => {
+            auth::update(msg, &mut model.auth, &mut orders.proxy(Msg::Auth));
+        }
     }
 }
 
@@ -447,13 +498,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 //     View
 // ------ ------
 
-pub fn view(model: &Model) -> impl View<Msg> {
-    // @TODO: Setup `prerendered` properly once https://github.com/David-OConnor/seed/issues/223 is resolved
-    let prerendered = true;
-
+pub fn main_panels(model: &Model, children: impl View<Msg>) -> impl View<Msg> {
     div![
         class![
-            C.fade_in => !prerendered,
+            C.fade_in,
             C.min_h_screen,
             C.flex,
             C.flex_col,
@@ -481,50 +529,58 @@ pub fn view(model: &Model) -> impl View<Msg> {
         div![
             class![C.flex, C.flex_wrap, C.flex_col, C.lg__flex_row, C.flex_grow],
             // side panel
-            div![
-                class![
-                    C.flex_grow_0,
-                    C.flex_shrink_0,
-                    C.overflow_x_hidden,
-                    C.overflow_y_auto,
-                    C.whitespace_no_wrap,
-                    C.bg_blue_900,
-                    C.border_r_2,
-                    C.border_gray_800,
-                    C.lg__h_main_content,
-                ],
-                style! { St::FlexBasis => percent(model.side_width_percentage) },
-                tree::view(&model.records, &model.tree).map_msg(Msg::Tree)
-            ],
-            // slider panel
-            div![
-                class![
-                    C.flex_grow_0,
-                    C.flex_shrink_0,
-                    C.cursor_ew_resize,
-                    C.bg_gray_500
-                    C.hover__bg_teal_400,
-                    C.bg_teal_400 => model.track_slider,
-                    C.relative,
-                    C.lg__block,
-                    C.lg__h_main_content,
-                    C.hidden
-                ],
-                simple_ev(Ev::MouseDown, Msg::StartSliderTracking),
-                style! {
-                    St::FlexBasis => px(SLIDER_WIDTH_PX),
-                },
+            restrict::view(
+                model.auth.get_session(),
+                GroupType::FilesystemAdministrators,
                 div![
-                    class![C.absolute, C.rounded],
-                    style! {
-                        St::BackgroundColor => "inherit",
-                        St::Height => px(64),
-                        St::Width => px(18),
-                        St::Top => "calc(50% - 32px)",
-                        St::Left => px(-7.5),
-                    }
+                    class![
+                        C.flex_grow_0,
+                        C.flex_shrink_0,
+                        C.overflow_x_hidden,
+                        C.overflow_y_auto,
+                        C.whitespace_no_wrap,
+                        C.bg_blue_900,
+                        C.border_r_2,
+                        C.border_gray_800,
+                        C.lg__h_main_content,
+                    ],
+                    style! { St::FlexBasis => percent(model.side_width_percentage) },
+                    tree::view(&model.records, &model.tree).map_msg(Msg::Tree)
                 ]
-            ],
+            ),
+            // slider panel
+            restrict::view(
+                model.auth.get_session(),
+                GroupType::FilesystemAdministrators,
+                div![
+                    class![
+                        C.flex_grow_0,
+                        C.flex_shrink_0,
+                        C.cursor_ew_resize,
+                        C.bg_gray_500
+                        C.hover__bg_teal_400,
+                        C.bg_teal_400 => model.track_slider,
+                        C.relative,
+                        C.lg__block,
+                        C.lg__h_main_content,
+                        C.hidden
+                    ],
+                    simple_ev(Ev::MouseDown, Msg::StartSliderTracking),
+                    style! {
+                        St::FlexBasis => px(SLIDER_WIDTH_PX),
+                    },
+                    div![
+                        class![C.absolute, C.rounded],
+                        style! {
+                            St::BackgroundColor => "inherit",
+                            St::Height => px(64),
+                            St::Width => px(18),
+                            St::Top => "calc(50% - 32px)",
+                            St::Left => px(-7.5),
+                        }
+                    ]
+                ]
+            ),
             // main panel
             div![
                 class![
@@ -539,36 +595,39 @@ pub fn view(model: &Model) -> impl View<Msg> {
                 // main content
                 div![
                     class![C.flex_grow, C.overflow_x_auto, C.overflow_y_auto, C.p_6],
-                    match &model.route {
-                        Route::About => page::about::view(model).els(),
-                        Route::Activity => page::activity::view(model).els(),
-                        Route::Dashboard => page::dashboard::view(model).els(),
-                        Route::Filesystem => page::filesystem::view(model).els(),
-                        Route::FilesystemDetail(id) => page::filesystem_detail::view(model, id).els(),
-                        Route::Home => page::home::view(model).els(),
-                        Route::Jobstats => page::jobstats::view(model).els(),
-                        Route::Login => page::login::view(model).els(),
-                        Route::Logs => page::logs::view(model).els(),
-                        Route::Mgt => page::mgt::view(model).els(),
-                        Route::NotFound => page::not_found::view(model).els(),
-                        Route::OstPool => page::ostpool::view(model).els(),
-                        Route::OstPoolDetail(id) => {
-                            page::ostpool_detail::view(model, id).els()
-                        }
-                        Route::PowerControl => page::power_control::view(model).els(),
-                        Route::Server => page::server::view(model).els(),
-                        Route::ServerDetail(id) => page::server_detail::view(model, id).els(),
-                        Route::Target => page::target::view(model).els(),
-                        Route::TargetDetail(id) => page::target_detail::view(model, id).els(),
-                        Route::User => page::user::view(model).els(),
-                        Route::Volume => page::volume::view(model).els(),
-                        Route::VolumeDetail(id) => page::volume_detail::view(model, id).els(),
-                    },
+                    children.els()
                 ],
                 page::partial::footer::view().els(),
             ]
         ],
     ]
+}
+
+pub fn view(model: &Model) -> impl View<Msg> {
+    match &model.route {
+        Route::About => main_panels(model, page::about::view(model)).els(),
+        Route::Activity => main_panels(model, page::activity::view(model)).els(),
+        Route::Dashboard => main_panels(model, page::dashboard::view(model)).els(),
+        Route::Filesystem => main_panels(model, page::filesystem::view(model)).els(),
+        Route::FilesystemDetail(id) => main_panels(model, page::filesystem_detail::view(model, id)).els(),
+        Route::Home => main_panels(model, page::home::view(model)).els(),
+        Route::Jobstats => main_panels(model, page::jobstats::view(model)).els(),
+        Route::Login => page::login::view(&model.login).els().map_msg(Msg::Login),
+        Route::Logs => main_panels(model, page::logs::view(model)).els(),
+        Route::Mgt => main_panels(model, page::mgt::view(model)).els(),
+        Route::NotFound => page::not_found::view(model).els(),
+        Route::OstPool => main_panels(model, page::ostpool::view(model)).els(),
+        Route::OstPoolDetail(id) => main_panels(model, page::ostpool_detail::view(model, id)).els(),
+        Route::PowerControl => main_panels(model, page::power_control::view(model)).els(),
+        Route::Server => main_panels(model, page::server::view(model)).els(),
+        Route::ServerDetail(id) => main_panels(model, page::server_detail::view(model, id)).els(),
+        Route::Target => main_panels(model, page::target::view(model)).els(),
+        Route::TargetDetail(id) => main_panels(model, page::target_detail::view(model, id)).els(),
+        Route::User => main_panels(model, page::user::view(model)).els(),
+        Route::UserDetail(id) => main_panels(model, page::user_detail::view(model, id)).els(),
+        Route::Volume => main_panels(model, page::volume::view(model)).els(),
+        Route::VolumeDetail(id) => main_panels(model, page::volume_detail::view(model, id)).els(),
+    }
 }
 
 pub fn asset_path(asset: &str) -> String {
@@ -604,6 +663,7 @@ pub fn run() {
         .before_mount(before_mount)
         .after_mount(after_mount)
         .routes(routes)
+        .sink(sink)
         .window_events(window_events)
         .build_and_start();
 

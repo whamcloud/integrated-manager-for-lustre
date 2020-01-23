@@ -932,7 +932,7 @@ pub struct FilesystemShort {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-pub enum AlertType {
+pub enum AlertRecordType {
     AlertState,
     LearnEvent,
     AlertEvent,
@@ -992,7 +992,7 @@ pub struct Alert {
     pub id: u32,
     pub lustre_pid: Option<i32>,
     pub message: String,
-    pub record_type: AlertType,
+    pub record_type: AlertRecordType,
     pub resource_uri: String,
     pub severity: AlertSeverity,
     pub variant: String,
@@ -1030,6 +1030,96 @@ pub struct StratagemConfiguration {
 impl EndpointName for StratagemConfiguration {
     fn endpoint_name() -> &'static str {
         "stratagem_configuration"
+    }
+}
+
+/// An `AlertType` record from `api/alert_type`.
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq)]
+pub struct AlertType {
+    pub description: String,
+    pub id: String,
+    pub resource_uri: String,
+}
+
+impl EndpointName for AlertType {
+    fn endpoint_name() -> &'static str {
+        "alert_type"
+    }
+}
+
+/// An `AlertSubscription` record from `api/alert_subscription`.
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq)]
+pub struct AlertSubscription {
+    pub alert_type: AlertType,
+    pub id: u32,
+    pub resource_uri: String,
+    pub user: String,
+}
+
+impl EndpointName for AlertSubscription {
+    fn endpoint_name() -> &'static str {
+        "alert_subscription"
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum GroupType {
+    Superusers,
+    FilesystemAdministrators,
+    FilesystemUsers,
+}
+
+/// A `Group` record from `api/group`.
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq)]
+pub struct Group {
+    pub id: u32,
+    pub name: GroupType,
+    pub resource_uri: String,
+}
+
+impl EndpointName for Group {
+    fn endpoint_name() -> &'static str {
+        "group"
+    }
+}
+
+/// A `User` record from `api/user`.
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq)]
+pub struct User {
+    pub alert_subscriptions: Option<Vec<AlertSubscription>>,
+    pub email: String,
+    pub first_name: String,
+    pub full_name: String,
+    pub groups: Option<Vec<Group>>,
+    pub id: u32,
+    pub is_superuser: bool,
+    pub last_name: String,
+    pub new_password1: Option<String>,
+    pub new_password2: Option<String>,
+    pub password1: Option<String>,
+    pub password2: Option<String>,
+    pub resource_uri: String,
+    pub username: String,
+}
+
+impl EndpointName for User {
+    fn endpoint_name() -> &'static str {
+        "user"
+    }
+}
+
+/// A `Session` record from `api/session`
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq)]
+pub struct Session {
+    pub read_enabled: bool,
+    pub resource_uri: String,
+    pub user: Option<User>,
+}
+
+impl EndpointName for Session {
+    fn endpoint_name() -> &'static str {
+        "session"
     }
 }
 

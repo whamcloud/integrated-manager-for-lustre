@@ -1,12 +1,13 @@
 use crate::{
-    breakpoints,
-    components::{activity_indicator, breadcrumbs, font_awesome, logo},
+    auth, breakpoints,
+    components::{activity_indicator, breadcrumbs, font_awesome, logo, restrict},
     ctx_help::CtxHelp,
     generated::css_classes::C,
-    MergeAttrs, Model, Msg, Route,
+    MergeAttrs, Model, Msg, Route, SessionExt,
     Visibility::*,
     CTX_HELP,
 };
+use iml_wire_types::GroupType;
 use seed::{prelude::*, virtual_dom::Attrs, *};
 
 fn menu_icon<T>(icon_name: &str) -> Node<T> {
@@ -126,31 +127,35 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                 ],
             ]
         ],
-        a![
-            &menu_class,
-            class![
-                C.lg__border_blue_400 => model.manage_menu_state.is_open(),
-                C.relative
-            ],
-            simple_ev(Ev::Click, Msg::ManageMenuState),
-            span![
-                menu_icon("cog"),
-                span![
-                    class![C.group_hover__text_active],
-                    "Management",
-                    font_awesome(
-                        class![C.fill_current, C.h_3, C.w_3, C.ml_1, C.inline, C._mt_1],
-                        "chevron-down"
-                    ),
+        restrict::view(
+            model.auth.get_session(),
+            GroupType::FilesystemAdministrators,
+            a![
+                &menu_class,
+                class![
+                    C.lg__border_blue_400 => model.manage_menu_state.is_open(),
+                    C.relative
                 ],
-            ],
-            nav_manage_dropdown(model.manage_menu_state.is_open()),
-        ],
+                simple_ev(Ev::Click, Msg::ManageMenuState),
+                span![
+                    menu_icon("cog"),
+                    span![
+                        class![C.group_hover__text_active],
+                        "Management",
+                        font_awesome(
+                            class![C.fill_current, C.h_3, C.w_3, C.ml_1, C.inline, C._mt_1],
+                            "chevron-down"
+                        ),
+                    ],
+                ],
+                nav_manage_dropdown(model.manage_menu_state.is_open()),
+            ]
+        ),
         a![
             &menu_class,
             class![C.bg_menu_active => model.route == Route::Jobstats],
             attrs! {
-                At::Href => Route::Jobstats.to_href()
+                At::Href => Route::Jobstats.to_href(),
             },
             span![
                 menu_icon("signal"),
@@ -289,35 +294,72 @@ fn nav(model: &Model) -> Node<Msg> {
                     C.lg__h_16,
                 ],
                 main_menu_items(model),
-                div![
-                    class![C.text_base, C.lg__flex, C.lg__h_16, C.lg__flex_grow, C.lg__justify_end],
-                    a![
-                        class![
-                            C.block,
-                            C.lg__h_16,
-                            C.lg__inline_block,
-                            C.lg__flex,
-                            C.lg__flex_auto,
-                            C.lg__flex_col,
-                            C.lg__flex_grow_0,
-                            C.lg__justify_center,
-                            C.lg__py_0,
-                            C.p_6,
-                            C.text_gray_300,
-                            C.hover__text_white,
-                            C.border_b_2,
-                            C.border_transparent
-                        ],
-                        attrs! {
-                            At::Href => Route::Login.to_href(),
-                        },
-                        Route::Login.to_string(),
-                    ],
-                ],
+                auth_view(&model.auth, model.logging_out),
             ]
         } else {
             empty![]
         }
+    ]
+}
+
+/// Show the logged in user if available.
+/// Also show the Login / Logout link
+pub fn auth_view(auth: &auth::Model, logging_out: bool) -> Node<Msg> {
+    let x = match auth.get_session() {
+        Some(session) => session,
+        None => return empty![],
+    };
+
+    let disabled = attrs! { At::Disabled => logging_out.as_at_value() };
+
+    let cls = class![
+        C.block,
+        C.border_b_2,
+        C.border_transparent,
+        C.cursor_pointer
+        C.hover__text_white,
+        C.lg__flex_auto,
+        C.lg__flex_col,
+        C.lg__flex_grow_0,
+        C.lg__flex,
+        C.lg__h_16,
+        C.lg__inline_block,
+        C.lg__justify_center,
+        C.lg__py_0,
+        C.p_6,
+        C.lg__p_4,
+        C.xl__p_6,
+        C.text_gray_300
+    ];
+
+    let mut auth_link = a![&cls, &disabled, if !x.has_user() { "Login" } else { "Logout" }];
+
+    let auth_link = if !x.has_user() {
+        auth_link.merge_attrs(attrs! {
+            At::Href => Route::Login.to_href(),
+        })
+    } else {
+        auth_link.add_listener(simple_ev(Ev::Click, Msg::Logout));
+
+        auth_link
+    };
+
+    div![
+        class![C.lg__flex, C.lg__h_16, C.lg__flex_grow, C.lg__justify_end],
+        match x.user.as_ref() {
+            Some(user) => {
+                a![
+                    &cls,
+                    &disabled,
+                    attrs! {
+                        At::Href => Route::UserDetail(user.id.into()).to_href()
+                    },
+                    user.username
+                ]
+            }
+            None => empty![],
+        },
+        auth_link
     ]
 }
 
