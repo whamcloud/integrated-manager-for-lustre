@@ -1,7 +1,7 @@
 use crate::{
     components::{alert_indicator, font_awesome, paging, Placement},
     generated::css_classes::C,
-    Route,
+    GMsg, Route,
 };
 use iml_wire_types::{
     db::{Id, OstPoolRecord, VolumeNodeRecord},
@@ -194,7 +194,7 @@ impl Model {
 
 // Update
 
-fn add_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut impl Orders<Msg>) -> Option<()> {
+fn add_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -> Option<()> {
     match record_id {
         RecordId::Host(id) => {
             let addr: Address = vec![Step::HostCollection].into();
@@ -300,7 +300,12 @@ fn add_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut 
     Some(())
 }
 
-fn remove_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut impl Orders<Msg>) -> Option<()> {
+fn remove_item(
+    record_id: RecordId,
+    cache: &Cache,
+    model: &mut Model,
+    orders: &mut impl Orders<Msg, GMsg>,
+) -> Option<()> {
     match record_id {
         RecordId::Host(id) => {
             let addr: Address = vec![Step::HostCollection].into();
@@ -369,7 +374,7 @@ pub enum Msg {
     Page(Address, paging::Msg),
 }
 
-pub fn update(cache: &Cache, msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
+pub fn update(cache: &Cache, msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::Reset => {
             model.reset();
@@ -737,14 +742,14 @@ pub fn view(cache: &Cache, model: &Model) -> Node<Msg> {
 
 #[cfg(test)]
 mod tests {
-    use super::{update, Address, Model, Msg, Step};
+    use super::{update, Address, GMsg, Model, Msg, Step};
     use crate::test_utils::{create_app_simple, fixtures};
     use seed::virtual_dom::Node;
     use wasm_bindgen_test::*;
 
     wasm_bindgen_test_configure!(run_in_browser);
 
-    fn create_app() -> seed::App<Msg, Model, Node<Msg>> {
+    fn create_app() -> seed::App<Msg, Model, Node<Msg>, GMsg> {
         create_app_simple(
             |msg, model, orders| {
                 update(&fixtures::get_cache(), msg, model, orders);
