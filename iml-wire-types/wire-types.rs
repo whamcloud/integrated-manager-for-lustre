@@ -33,7 +33,7 @@ impl fmt::Display for PluginName {
 }
 
 #[derive(
-    Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Clone, serde::Serialize, serde::Deserialize,
+Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Clone, serde::Serialize, serde::Deserialize,
 )]
 #[serde(transparent)]
 pub struct Fqdn(pub String);
@@ -966,7 +966,7 @@ pub enum AlertType {
 }
 
 #[derive(
-    serde::Serialize, serde::Deserialize, Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq,
+serde::Serialize, serde::Deserialize, Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq,
 )]
 pub enum AlertSeverity {
     DEBUG,
@@ -1637,7 +1637,7 @@ pub mod db {
     }
 
     #[derive(
-        Debug, serde::Serialize, serde::Deserialize, Eq, PartialEq, Ord, PartialOrd, Clone, Hash,
+    Debug, serde::Serialize, serde::Deserialize, Eq, PartialEq, Ord, PartialOrd, Clone, Hash,
     )]
     pub struct DeviceId(String);
 
@@ -2048,8 +2048,10 @@ impl fmt::Display for ServiceState {
 /// standard:provider:ocftype (e.g. ocf:heartbeat:ZFS, or stonith:fence_ipmilan)
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct ResourceAgentType {
-    pub standard: String,         // e.g. ocf, lsb, stonith, etc..
-    pub provider: Option<String>, // e.g. heartbeat, lustre, chroma
+    pub standard: String,
+    // e.g. ocf, lsb, stonith, etc..
+    pub provider: Option<String>,
+    // e.g. heartbeat, lustre, chroma
     pub ocftype: String,          // e.g. Lustre, ZFS
 }
 
@@ -2100,8 +2102,10 @@ pub struct ResourceAgentInfo {
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum ConfigState {
     Unknown,
-    Default, // components is in default configuration
-    IML,     // matches what IML would do
+    Default,
+    // components is in default configuration
+    IML,
+    // matches what IML would do
     Other,
 }
 
@@ -2224,6 +2228,85 @@ pub mod warp_drive {
         pub volume_node: HashMap<u32, VolumeNodeRecord>,
     }
 
+    impl Cache {
+        /// Removes the record from the cache
+        pub fn remove_record(&mut self, x: &RecordId) -> bool {
+            match x {
+                RecordId::ActiveAlert(id) => {
+                    self.active_alert.remove(id).is_some()
+                }
+                RecordId::Filesystem(id) => {
+                    self.filesystem.remove(id).is_some()
+                }
+                RecordId::Host(id) => {
+                    self.host.remove(id).is_some()
+                }
+                RecordId::LnetConfiguration(id) => {
+                    self.lnet_configuration.remove(id).is_some()
+                }
+                RecordId::ManagedTargetMount(id) => {
+                    self.managed_target_mount.remove(id).is_some()
+                }
+                RecordId::OstPool(id) => {
+                    self.ost_pool.remove(id).is_some()
+                }
+                RecordId::OstPoolOsts(id) => {
+                    self.ost_pool_osts.remove(id).is_some()
+                }
+                RecordId::StratagemConfig(id) => {
+                    self.stratagem_config.remove(id).is_some()
+                }
+                RecordId::Target(id) => {
+                    self.target.remove(id).is_some()
+                }
+                RecordId::Volume(id) => {
+                    self.volume.remove(id).is_some()
+                }
+                RecordId::VolumeNode(id) => {
+                    self.volume_node.remove(id).is_some()
+                }
+            }
+        }
+        /// Inserts the record into the cache
+        pub fn insert_record(&mut self, x: Record) {
+            match x {
+                Record::ActiveAlert(x) => {
+                    self.active_alert.insert(x.id, x);
+                }
+                Record::Filesystem(x) => {
+                    self.filesystem.insert(x.id, x);
+                }
+                Record::Host(x) => {
+                    self.host.insert(x.id, x);
+                }
+                Record::LnetConfiguration(x) => {
+                    self.lnet_configuration.insert(x.id(), x);
+                }
+                Record::ManagedTargetMount(x) => {
+                    self.managed_target_mount.insert(x.id(), x);
+                }
+                Record::OstPool(x) => {
+                    self.ost_pool.insert(x.id(), x);
+                }
+                Record::OstPoolOsts(x) => {
+                    self.ost_pool_osts.insert(x.id(), x);
+                }
+                Record::StratagemConfig(x) => {
+                    self.stratagem_config.insert(x.id(), x);
+                }
+                Record::Target(x) => {
+                    self.target.insert(x.id, x);
+                }
+                Record::Volume(x) => {
+                    self.volume.insert(x.id, x);
+                }
+                Record::VolumeNode(x) => {
+                    self.volume_node.insert(x.id(), x);
+                }
+            }
+        }
+    }
+
     #[derive(Default, serde::Serialize, serde::Deserialize, Debug, Clone)]
     pub struct ArchedCache {
         pub active_alert: HashMap<u32, Arc<Alert>>,
@@ -2239,81 +2322,50 @@ pub mod warp_drive {
         pub volume_node: HashMap<u32, Arc<VolumeNodeRecord>>,
     }
 
-    impl Cache {
-        /// Removes the record from the cache
-        pub fn remove_record(&mut self, x: &RecordId) -> bool {
-            match x {
-                RecordId::ActiveAlert(id) => {
-                    Arc::make_mut(&mut self.active_alert).remove(id).is_some()
-                }
-                RecordId::Filesystem(id) => {
-                    Arc::make_mut(&mut self.filesystem).remove(id).is_some()
-                }
-                RecordId::Host(id) => {
-                    Arc::make_mut(&mut self.host).remove(id).is_some()
-                }
-                RecordId::LnetConfiguration(id) => {
-                    Arc::make_mut(&mut self.lnet_configuration).remove(id).is_some()
-                }
-                RecordId::ManagedTargetMount(id) => {
-                    Arc::make_mut(&mut self.managed_target_mount).remove(id).is_some()
-                }
-                RecordId::OstPool(id) => {
-                    Arc::make_mut(&mut self.ost_pool).remove(id).is_some()
-                }
-                RecordId::OstPoolOsts(id) => {
-                    Arc::make_mut(&mut self.ost_pool_osts).remove(id).is_some()
-                }
-                RecordId::StratagemConfig(id) => {
-                    Arc::make_mut(&mut self.stratagem_config).remove(id).is_some()
-                }
-                RecordId::Target(id) => {
-                    Arc::make_mut(&mut self.target).remove(id).is_some()
-                }
-                RecordId::Volume(id) => {
-                    Arc::make_mut(&mut self.volume).remove(id).is_some()
-                }
-                RecordId::VolumeNode(id) => {
-                    Arc::make_mut(&mut self.volume_node).remove(id).is_some()
-                }
+    fn hashmap_to_arched<K, V>(hm: HashMap<K, V>) -> HashMap<K, Arc<V>>
+        where K: std::hash::Hash + Eq + Clone
+    {
+        hm.iter().map(|(k, v)| (*k, Arc::new(*v.clone()))).collect()
+    }
+
+    fn hashmap_to_flat<K, V>(hm: HashMap<K, Arc<V>>) -> HashMap<K, V>
+        where K: std::hash::Hash + Eq + Clone
+    {
+        hm.iter().map(|(k, v)| (*k, (*v).clone())).collect()
+    }
+
+    impl From<Cache> for ArchedCache {
+        fn from(cache: Cache) -> Self {
+            Self {
+                active_alert: hashmap_to_arched(cache.active_alert),
+                filesystem: hashmap_to_arched(cache.filesystem),
+                host: hashmap_to_arched(cache.host),
+                lnet_configuration: hashmap_to_arched(cache.lnet_configuration),
+                managed_target_mount: hashmap_to_arched(cache.managed_target_mount),
+                ost_pool: hashmap_to_arched(cache.ost_pool),
+                ost_pool_osts: hashmap_to_arched(cache.ost_pool_osts),
+                stratagem_config: hashmap_to_arched(cache.stratagem_config),
+                target: hashmap_to_arched(cache.target),
+                volume: hashmap_to_arched(cache.volume),
+                volume_node: hashmap_to_arched(cache.volume_node),
             }
         }
-        /// Inserts the record into the cache
-        pub fn insert_record(&mut self, x: Record) {
-            match x {
-                Record::ActiveAlert(x) => {
-                    Arc::make_mut(&mut self.active_alert).insert(x.id, x);
-                }
-                Record::Filesystem(x) => {
-                    Arc::make_mut(&mut self.filesystem).insert(x.id, x);
-                }
-                Record::Host(x) => {
-                    Arc::make_mut(&mut self.host).insert(x.id, x);
-                }
-                Record::LnetConfiguration(x) => {
-                    Arc::make_mut(&mut self.lnet_configuration).insert(x.id(), x);
-                }
-                Record::ManagedTargetMount(x) => {
-                    Arc::make_mut(&mut self.managed_target_mount).insert(x.id(), x);
-                }
-                Record::OstPool(x) => {
-                    Arc::make_mut(&mut self.ost_pool).insert(x.id(), x);
-                }
-                Record::OstPoolOsts(x) => {
-                    Arc::make_mut(&mut self.ost_pool_osts).insert(x.id(), x);
-                }
-                Record::StratagemConfig(x) => {
-                    Arc::make_mut(&mut self.stratagem_config).insert(x.id(), x);
-                }
-                Record::Target(x) => {
-                    Arc::make_mut(&mut self.target).insert(x.id, x);
-                }
-                Record::Volume(x) => {
-                    Arc::make_mut(&mut self.volume).insert(x.id, x);
-                }
-                Record::VolumeNode(x) => {
-                    Arc::make_mut(&mut self.volume_node).insert(x.id(), x);
-                }
+    }
+
+    impl From<ArchedCache> for Cache {
+        fn from(cache: ArchedCache) -> Self {
+            Self {
+                active_alert: hashmap_to_flat(cache.active_alert),
+                filesystem: hashmap_to_flat(cache.filesystem),
+                host: hashmap_to_flat(cache.host),
+                lnet_configuration: hashmap_to_flat(cache.lnet_configuration),
+                managed_target_mount: hashmap_to_flat(cache.managed_target_mount),
+                ost_pool: hashmap_to_flat(cache.ost_pool),
+                ost_pool_osts: hashmap_to_flat(cache.ost_pool_osts),
+                stratagem_config: hashmap_to_flat(cache.stratagem_config),
+                target: hashmap_to_flat(cache.target),
+                volume: hashmap_to_flat(cache.volume),
+                volume_node: hashmap_to_flat(cache.volume_node),
             }
         }
     }
