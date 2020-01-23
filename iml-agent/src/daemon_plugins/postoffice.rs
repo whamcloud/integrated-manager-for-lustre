@@ -9,18 +9,18 @@ use crate::{
     http_comms::mailbox_client::send,
 };
 use futures::{
+    executor::block_on,
     stream::{StreamExt as _, TryStreamExt},
     Future, FutureExt,
 };
 use inotify::{Inotify, WatchDescriptor, WatchMask};
-use parking_lot::Mutex;
 use std::{
     collections::{HashMap, HashSet},
     pin::Pin,
     sync::Arc,
 };
 use stream_cancel::{StreamExt, Trigger, Tripwire};
-use tokio::{fs, net::UnixListener};
+use tokio::{fs, net::UnixListener, sync::Mutex};
 use tokio_util::codec::{BytesCodec, FramedRead};
 
 pub struct POWD(pub Option<WatchDescriptor>);
@@ -50,7 +50,11 @@ pub fn socket_name(mailbox: &str) -> String {
 
 impl std::fmt::Debug for PostOffice {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "PostOffice {{ {:?} }}", self.routes.lock().keys())
+        write!(
+            f,
+            "PostOffice {{ {:?} }}",
+            block_on(self.routes.lock()).keys()
+        )
     }
 }
 
@@ -112,7 +116,7 @@ impl DaemonPlugin for PostOffice {
                     let trigger = start_route(mb.to_string());
                     (mb.to_string(), trigger)
                 });
-                routes.lock().extend(itr);
+                routes.lock().await.extend(itr);
             } else {
                 fs::OpenOptions::new()
                     .write(true)
@@ -121,15 +125,16 @@ impl DaemonPlugin for PostOffice {
                     .await?;
             }
 
-            wd.lock().0 = inotify
+            wd.lock().await.0 = inotify
                 .lock()
+                .await
                 .add_watch(&conf_file, WatchMask::MODIFY)
                 .map_err(|e| tracing::error!("Failed to watch configuration: {}", e))
                 .ok();
 
             let watcher = async move {
                 let mut buffer = [0; 32];
-                let mut stream = inotify.lock().event_stream(&mut buffer)?;
+                let mut stream = inotify.lock().await.event_stream(&mut buffer)?;
 
                 while let Some(event_or_error) = stream.next().await {
                     tracing::debug!("event: {:?}", event_or_error);
@@ -137,14 +142,15 @@ impl DaemonPlugin for PostOffice {
                         Ok(file) => {
                             let newset: HashSet<String> =
                                 file.lines().map(|s| s.to_string()).collect();
-                            let oldset: HashSet<String> = routes.lock().keys().cloned().collect();
+                            let oldset: HashSet<String> =
+                                routes.lock().await.keys().cloned().collect();
 
                             let added = &newset - &oldset;
                             let itr = added.iter().map(|mb| {
                                 let trigger = start_route(mb.to_string());
                                 (mb.to_string(), trigger)
                             });
-                            let mut rt = routes.lock();
+                            let mut rt = routes.lock().await;
                             rt.extend(itr);
                             for rm in &oldset - &newset {
                                 rt.remove(&rm);
@@ -165,12 +171,14 @@ impl DaemonPlugin for PostOffice {
     }
 
     fn teardown(&mut self) -> Result<(), ImlAgentError> {
-        if let Some(wd) = self.wd.lock().0.clone() {
-            let _ = self.inotify.lock().rm_watch(wd);
-        }
-        // drop all triggers
-        self.routes.lock().clear();
+        block_on(async move {
+            if let Some(wd) = self.wd.lock().await.0.clone() {
+                let _ = self.inotify.lock().await.rm_watch(wd);
+            }
+            // drop all triggers
+            self.routes.lock().await.clear();
 
-        Ok(())
+            Ok(())
+        })
     }
 }

@@ -36,10 +36,19 @@ services:
     ports:
       - 8086:8086
   grafana:
-    image: "grafana/grafana"
+    image: "imlteam/grafana:5.1"
+    build:
+      context: ../
+      dockerfile: ./docker/grafana.dockerfile
     hostname: "grafana"
     deploy: *default-deploy
+    environment:
+      - GF_SERVER_DOMAIN=grafana
+      - GF_SERVER_HTTP_PORT=3000
+      - GF_SERVER_PROTOCOL=http
+      - "GF_DATABASE_HOST=postgres:5432"
     volumes:
+      - "manager-config:/var/lib/chroma"
       - grafana-storage:/var/lib/grafana
     ports:
       - 3000:3000
@@ -266,6 +275,17 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - RUST_LOG=info
+  iml-postoffice:
+    image: "imlteam/iml-postoffice:5.1"
+    hostname: "iml-postoffice"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-postoffice.dockerfile
+    deploy: *default-deploy
+    volumes:
+      - "manager-config:/var/lib/chroma"
+    environment:
+      - PROXY_HOST=iml-postoffice
   setup:
     image: "imlteam/manager-setup:5.1"
     command: ["tail", "-f", "/dev/null"]

@@ -180,6 +180,7 @@ fn before_mount(_: Url) -> BeforeMount {
 // ------ ------
 
 fn after_mount(url: Url, orders: &mut impl Orders<Msg>) -> AfterMount<Model> {
+    // FIXME: This should be proxied via webpack devserver but there is an issue with buffering contents of SSE.
     let es = EventSource::new("https://localhost:7444/messaging").unwrap();
 
     register_eventsource_handle(EventSource::set_onopen, Msg::EventSourceConnect, &es, orders);

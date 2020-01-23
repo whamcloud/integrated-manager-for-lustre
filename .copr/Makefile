@@ -37,9 +37,10 @@ srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/release/rust-iml
 	cargo build --release
-	cp target/release/iml-{action-runner,agent,agent-comms,agent-daemon,mailbox,ostpool,stratagem,warp-drive} \
+	cp target/release/iml-{action-runner,agent,agent-comms,agent-daemon,mailbox,postoffice,ostpool,stratagem,warp-drive} \
 		iml-agent-comms.service \
 		iml-mailbox.service \
+		iml-postoffice.service \
 		iml-ostpool.service \
 		iml-stratagem.service \
 		iml-action-runner.service \
@@ -72,6 +73,7 @@ iml-deps:
 	if ! rpm -q python-devel python-setuptools ed 2> /dev/null; then \
 		yum copr enable -y managerforlustre/buildtools; \
 		yum install -y python2-devel python2-setuptools ed; \
+		yum copr disable -y managerforlustre/buildtools; \
 	fi
 
 iml-srpm: iml-deps substs
