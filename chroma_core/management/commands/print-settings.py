@@ -48,6 +48,8 @@ class Command(BaseCommand):
                 ("SOURCE_MAP_PATH", SOURCE_MAP_PATH),
                 ("MAILBOX_PATH", settings.MAILBOX_PATH),
                 ("PROXY_HOST", settings.PROXY_HOST),
+                ("INFLUXDB_IML_DB", settings.INFLUXDB_IML_DB),
+                ("INFLUXDB_STRATAGEM_SCAN_DB", settings.INFLUXDB_STRATAGEM_SCAN_DB),
                 ("DB_HOST", DB.get("HOST")),
                 ("DB_NAME", DB.get("NAME")),
                 ("DB_USER", DB.get("USER")),
