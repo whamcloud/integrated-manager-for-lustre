@@ -1,4 +1,5 @@
 use crate::{
+    breakpoints,
     components::{activity_indicator, breadcrumbs, font_awesome},
     ctx_help::CtxHelp,
     generated::css_classes::C,
@@ -252,7 +253,7 @@ fn nav(model: &Model) -> Node<Msg> {
                 ],
             ],
         ],
-        if model.menu_visibility == Visible {
+        if model.menu_visibility == Visible || model.breakpoint_size >= breakpoints::Size::LG {
             div![
                 class![
                     C.w_full,
