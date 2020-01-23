@@ -137,12 +137,7 @@ mod lamigo_tests {
         );
 
         let fmt3 = "lamigo-{unknown_value}.service";
-        assert_eq!(
-            expand_path_fmt(fmt3, &config),
-            Err(strfmt::FmtError::KeyError(
-                "Invalid key: unknown_value".to_string()
-            ))
-        );
+        assert!(expand_path_fmt(fmt3, &config).is_err());
     }
 
     #[tokio::test]
