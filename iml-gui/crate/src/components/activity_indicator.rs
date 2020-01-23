@@ -2,12 +2,12 @@ use crate::{components::font_awesome, generated::css_classes::C};
 use im::HashMap;
 use iml_wire_types::{Alert, AlertSeverity};
 use seed::{prelude::*, *};
-use std::{cmp::max, sync::Arc};
+use std::cmp::max;
 
-pub fn update_activity_health(active_alert: Arc<HashMap<u32, Alert>>) -> ActivityHealth {
+pub fn update_activity_health(active_alert: &HashMap<u32, Alert>) -> ActivityHealth {
     active_alert
         .values()
-        .filter(|x| x.severity > AlertSeverity::INFO)
+        .filter(|x: &&Alert| x.severity > AlertSeverity::INFO)
         .fold(ActivityHealth::default(), |mut acc, x| {
             acc.health = max(acc.health, x.severity);
             acc.count += 1;

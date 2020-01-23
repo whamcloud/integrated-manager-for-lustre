@@ -746,7 +746,7 @@ mod tests {
     use crate::test_utils::{create_app_simple, fixtures};
     use im::HashMap;
     use iml_wire_types::db::OstPoolOstsRecord;
-    use iml_wire_types::warp_drive::Cache;
+    use iml_wire_types::warp_drive::{Cache, ArchedCache};
     use seed::virtual_dom::Node;
     use std::sync::Arc;
     use wasm_bindgen_test::*;
@@ -764,35 +764,35 @@ mod tests {
 
     #[test]
     fn test_cache_cloning() {
-        let c1 = fixtures::get_cache();
-        let mut c2: Cache = c1.clone();
-        let mut c3: Cache = c2.clone();
+        let c1: ArchedCache = fixtures::get_cache().into();
+        let mut c2: ArchedCache = c1.clone();
+        let mut c3: ArchedCache = c2.clone();
 
         // The hashmap ost_pool_osts is the same for all cache clones c1, c2, c3
         assert_eq!(
-            &*c1.ost_pool_osts as *const HashMap<_, _>,
-            &*c2.ost_pool_osts as *const HashMap<_, _>
+            &c1.ost_pool_osts as *const HashMap<_, _>,
+            &c2.ost_pool_osts as *const HashMap<_, _>
         );
         assert_eq!(
-            &*c1.ost_pool_osts as *const HashMap<_, _>,
-            &*c3.ost_pool_osts as *const HashMap<_, _>
+            &c1.ost_pool_osts as *const HashMap<_, _>,
+            &c3.ost_pool_osts as *const HashMap<_, _>
         );
 
-        let rec1 = OstPoolOstsRecord {
+        let rec1 = Arc::new(OstPoolOstsRecord {
             id: 1,
             ostpool_id: 1,
             managedost_id: 1,
-        };
-        let rec2 = OstPoolOstsRecord {
+        });
+        let rec2 = Arc::new(OstPoolOstsRecord {
             id: 2,
             ostpool_id: 2,
             managedost_id: 2,
-        };
-        let rec18: OstPoolOstsRecord = (*c1.ost_pool_osts.get(&18).unwrap()).clone();
-        let rec19: OstPoolOstsRecord = (*c1.ost_pool_osts.get(&19).unwrap()).clone();
+        });
+        let rec18 = (*c1.ost_pool_osts.get(&18)).unwrap();
+        let rec19 = (*c1.ost_pool_osts.get(&19)).unwrap();
 
-        Arc::make_mut(&mut c2.ost_pool_osts).insert(1, rec1.clone());
-        Arc::make_mut(&mut c3.ost_pool_osts).insert(2, rec2.clone());
+        c2.ost_pool_osts.insert(1, Arc::clone(&rec1));
+        c3.ost_pool_osts.insert(2, Arc::clone(&rec2));
 
         // The entries to c2 and c3 are added independently despite sharing the same "body"
         assert_eq!(
