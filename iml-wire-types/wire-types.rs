@@ -2211,17 +2211,32 @@ pub mod warp_drive {
 
     #[derive(Default, serde::Serialize, serde::Deserialize, Debug, Clone)]
     pub struct Cache {
-        pub active_alert: Arc<HashMap<u32, Alert>>,
-        pub filesystem: Arc<HashMap<u32, Filesystem>>,
-        pub host: Arc<HashMap<u32, Host>>,
-        pub lnet_configuration: Arc<HashMap<u32, LnetConfigurationRecord>>,
-        pub managed_target_mount: Arc<HashMap<u32, ManagedTargetMountRecord>>,
-        pub ost_pool: Arc<HashMap<u32, OstPoolRecord>>,
-        pub ost_pool_osts: Arc<HashMap<u32, OstPoolOstsRecord>>,
-        pub stratagem_config: Arc<HashMap<u32, StratagemConfiguration>>,
-        pub target: Arc<HashMap<u32, Target<TargetConfParam>>>,
-        pub volume: Arc<HashMap<u32, Volume>>,
-        pub volume_node: Arc<HashMap<u32, VolumeNodeRecord>>,
+        pub active_alert: HashMap<u32, Alert>,
+        pub filesystem: HashMap<u32, Filesystem>,
+        pub host: HashMap<u32, Host>,
+        pub lnet_configuration: HashMap<u32, LnetConfigurationRecord>,
+        pub managed_target_mount: HashMap<u32, ManagedTargetMountRecord>,
+        pub ost_pool: HashMap<u32, OstPoolRecord>,
+        pub ost_pool_osts: HashMap<u32, OstPoolOstsRecord>,
+        pub stratagem_config: HashMap<u32, StratagemConfiguration>,
+        pub target: HashMap<u32, Target<TargetConfParam>>,
+        pub volume: HashMap<u32, Volume>,
+        pub volume_node: HashMap<u32, VolumeNodeRecord>,
+    }
+
+    #[derive(Default, serde::Serialize, serde::Deserialize, Debug, Clone)]
+    pub struct ArchedCache {
+        pub active_alert: HashMap<u32, Arc<Alert>>,
+        pub filesystem: HashMap<u32, Arc<Filesystem>>,
+        pub host: HashMap<u32, Arc<Host>>,
+        pub lnet_configuration: HashMap<u32, Arc<LnetConfigurationRecord>>,
+        pub managed_target_mount: HashMap<u32, Arc<ManagedTargetMountRecord>>,
+        pub ost_pool: HashMap<u32, Arc<OstPoolRecord>>,
+        pub ost_pool_osts: HashMap<u32, Arc<OstPoolOstsRecord>>,
+        pub stratagem_config: HashMap<u32, Arc<StratagemConfiguration>>,
+        pub target: HashMap<u32, Arc<Target<TargetConfParam>>>,
+        pub volume: HashMap<u32, Arc<Volume>>,
+        pub volume_node: HashMap<u32, Arc<VolumeNodeRecord>>,
     }
 
     impl Cache {
