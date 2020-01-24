@@ -56,7 +56,7 @@ fn get_targets_by_pool_id(cache: &ArcCache, ostpool_id: u32) -> Vec<&Target<Targ
     let target_ids: Vec<_> = cache
         .ost_pool_osts
         .values()
-        .map(|x| **x)
+        .map(|x| &**x)
         .filter(|x| x.ostpool_id == ostpool_id)
         .map(|x| x.managedost_id)
         .collect();
@@ -767,7 +767,7 @@ mod tests {
     fn create_app() -> seed::App<Msg, Model, Node<Msg>, GMsg> {
         create_app_simple(
             |msg, model, orders| {
-                update((&fixtures::get_cache()).into(), msg, model, orders);
+                update(&fixtures::get_cache().into(), msg, model, orders);
             },
             |_| seed::empty(),
         )
