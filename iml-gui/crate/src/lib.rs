@@ -33,7 +33,6 @@ use std::{cmp, mem, sync::Arc};
 pub use watch_state::*;
 use web_sys::{EventSource, MessageEvent};
 use Visibility::*;
-use std::sync::Arc;
 
 const TITLE_SUFFIX: &str = "IML";
 const STATIC_PATH: &str = "static";
@@ -132,6 +131,12 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
         auth: auth::Model::default(),
         breadcrumbs: BreadCrumbs::default(),
         breakpoint_size: breakpoints::size(),
+        route: url.into(),
+        menu_visibility: Visible,
+        manage_menu_state: WatchState::default(),
+        track_slider: false,
+        side_width_percentage: 20_f32,
+        records: warp_drive::ArcCache::default(),
         locks: im::hashmap!(),
         logging_out: false,
         login: login::Model::default(),
@@ -199,7 +204,7 @@ pub enum Msg {
     EventSourceConnect(JsValue),
     EventSourceMessage(MessageEvent),
     EventSourceError(JsValue),
-    Records(Box<warp_drive::Cache>),
+    Records(Box<warp_drive::ArcCache>),
     RecordChange(Box<warp_drive::RecordChange>),
     RemoveRecord(warp_drive::RecordId),
     Locks(warp_drive::Locks),
@@ -659,18 +664,17 @@ pub fn run() {
 mod tests {
     use crate::test_utils::fixtures;
     use iml_wire_types::db::OstPoolOstsRecord;
-    use iml_wire_types::warp_drive::{FlatCache, Cache};
+    use iml_wire_types::warp_drive::{ArcCache, Cache};
     use std::sync::Arc;
 
     #[test]
     fn test_cache_conversions() {
+        let c0: &Cache = &fixtures::get_cache();
+        let c1: ArcCache = c0.into();
+        let c0_again: Cache = (&c1).into();
 
-        let c0: &FlatCache = &fixtures::get_cache();
-        let c1: Cache = c0.into();
-        let c0_again: FlatCache = (&c1).into();
-
-        let mut c2: Cache = c1.clone();
-        let mut c3: Cache = c2.clone();
+        let mut c2: ArcCache = c1.clone();
+        let mut c3: ArcCache = c2.clone();
 
         let rec1 = Arc::new(OstPoolOstsRecord {
             id: 1,
