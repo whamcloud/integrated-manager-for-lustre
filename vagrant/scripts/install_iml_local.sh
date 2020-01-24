@@ -19,8 +19,8 @@ rpmdev-bumpspec python-iml-manager.spec
 # causes a re-install
 TS=$(date +%s)
 
-V=$(rpmspec -q --srpm --queryformat='%{VERSION}' /integrated-manager-for-lustre/rust-iml.spec)
-rpmdev-bumpspec -n $V.$TS rust-iml.spec
+V=$(rpmspec -q --srpm --queryformat='%{VERSION}' /integrated-manager-for-lustre/rust-iml.spec | cut -d - -f 1)
+rpmdev-bumpspec -n $V-$TS rust-iml.spec
 
 make all
 
