@@ -5,6 +5,7 @@
 #![allow(clippy::non_ascii_literal)]
 #![allow(clippy::enum_glob_use)]
 
+mod breakpoints;
 mod components;
 mod ctx_help;
 mod generated;
@@ -146,6 +147,7 @@ pub struct Model {
     pub breadcrumbs: BreadCrumbs<Route<'static>>,
     notification: notification::Model,
     pub tree: tree::Model,
+    breakpoint_size: breakpoints::Size,
 }
 
 pub fn register_eventsource_handle<T, F>(
@@ -194,6 +196,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg>) -> AfterMount<Model> {
     orders.proxy(Msg::Notification).perform_cmd(notification::init());
 
     AfterMount::new(Model {
+        breakpoint_size: breakpoints::size(),
         route: url.into(),
         menu_visibility: Visible,
         in_prerendering: is_in_prerendering(),
@@ -249,6 +252,7 @@ pub enum Msg {
     RemoveRecord(warp_drive::RecordId),
     Locks(warp_drive::Locks),
     WindowClick,
+    WindowResize,
     Notification(notification::Msg),
     Tree(tree::Msg),
 }
@@ -423,6 +427,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 model.manage_menu_state.update();
             }
         }
+        Msg::WindowResize => {
+            model.breakpoint_size = breakpoints::size();
+
+            if model.menu_visibility == Visibility::Visible {
+                orders.skip();
+            }
+        }
         Msg::Notification(nu) => {
             notification::update(nu, &mut model.notification, &mut orders.proxy(Msg::Notification));
         }
@@ -569,7 +580,10 @@ pub fn asset_path(asset: &str) -> String {
 // ------ ------
 
 pub fn window_events(model: &Model) -> Vec<Listener<Msg>> {
-    let mut xs = vec![simple_ev(Ev::Click, Msg::WindowClick)];
+    let mut xs = vec![
+        simple_ev(Ev::Click, Msg::WindowClick),
+        simple_ev(Ev::Resize, Msg::WindowResize),
+    ];
 
     if model.track_slider {
         xs.push(simple_ev(Ev::MouseUp, Msg::StopSliderTracking));
