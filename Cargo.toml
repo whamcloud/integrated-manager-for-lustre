@@ -6,7 +6,6 @@ members = [
     'iml-cmd',
     'iml-fs',
     'iml-job-scheduler-rpc',
-    'iml-integration-tests',
     'iml-mailbox',
     'iml-manager-cli',
     'iml-manager-client',
@@ -32,5 +31,6 @@ members = [
 ]
 
 exclude = [
-    'iml-gui/crate'
+    'iml-gui/crate',
+    'iml-system-tests',
 ]
