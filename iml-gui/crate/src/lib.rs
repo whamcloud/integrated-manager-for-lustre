@@ -24,6 +24,7 @@ use std::{cmp, mem};
 use wasm_bindgen::JsCast;
 use web_sys::{EventSource, MessageEvent};
 use Visibility::*;
+use std::sync::Arc;
 
 const TITLE_SUFFIX: &str = "IML";
 const USER_AGENT_FOR_PRERENDERING: &str = "ReactSnap";
@@ -303,7 +304,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 warp_drive::Record::ActiveAlert(x) => {
                     let msg = x.message.clone();
 
-                    model.records.active_alert.insert(x.id, x);
+                    model.records.active_alert.insert(x.id, Arc::new(x));
 
                     let old = model.activity_health;
 
@@ -316,7 +317,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 }
                 warp_drive::Record::Filesystem(x) => {
                     let id = x.id;
-                    if model.records.filesystem.insert(x.id, x).is_none() {
+                    if model.records.filesystem.insert(x.id, Arc::new(x)).is_none() {
                         orders
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::Filesystem(id)));
@@ -324,50 +325,50 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 }
                 warp_drive::Record::Host(x) => {
                     let id = x.id;
-                    if model.records.host.insert(x.id, x).is_none() {
+                    if model.records.host.insert(x.id, Arc::new(x)).is_none() {
                         orders
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::Host(id)));
                     };
                 }
                 warp_drive::Record::ManagedTargetMount(x) => {
-                    model.records.managed_target_mount.insert(x.id, x);
+                    model.records.managed_target_mount.insert(x.id, Arc::new(x));
                 }
                 warp_drive::Record::OstPool(x) => {
-                    model.records.ost_pool.insert(x.id, x);
+                    model.records.ost_pool.insert(x.id, Arc::new(x));
                 }
                 warp_drive::Record::OstPoolOsts(x) => {
                     let id = x.id;
-                    if model.records.ost_pool_osts.insert(x.id, x).is_none() {
+                    if model.records.ost_pool_osts.insert(x.id, Arc::new(x)).is_none() {
                         orders
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::OstPoolOsts(id)));
                     };
                 }
                 warp_drive::Record::StratagemConfig(x) => {
-                    model.records.stratagem_config.insert(x.id, x);
+                    model.records.stratagem_config.insert(x.id, Arc::new(x));
                 }
                 warp_drive::Record::Target(x) => {
                     let id = x.id;
-                    if model.records.target.insert(x.id, x).is_none() {
+                    if model.records.target.insert(x.id, Arc::new(x)).is_none() {
                         orders
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::Target(id)));
                     };
                 }
                 warp_drive::Record::Volume(x) => {
-                    model.records.volume.insert(x.id, x);
+                    model.records.volume.insert(x.id, Arc::new(x));
                 }
                 warp_drive::Record::VolumeNode(x) => {
                     let id = x.id;
-                    if model.records.volume_node.insert(x.id, x).is_none() {
+                    if model.records.volume_node.insert(x.id, Arc::new(x)).is_none() {
                         orders
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::VolumeNode(id)));
                     };
                 }
                 warp_drive::Record::LnetConfiguration(x) => {
-                    model.records.lnet_configuration.insert(x.id, x);
+                    model.records.lnet_configuration.insert(x.id, Arc::new(x));
                 }
             },
             warp_drive::RecordChange::Delete(record_id) => {
@@ -593,4 +594,55 @@ pub fn run() {
         .build_and_start();
 
     log!("App started.");
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::test_utils::fixtures;
+    use iml_wire_types::db::OstPoolOstsRecord;
+    use iml_wire_types::warp_drive::{FlatCache, Cache};
+    use std::sync::Arc;
+
+    #[test]
+    fn test_cache_conversions() {
+
+        let c0: &FlatCache = &fixtures::get_cache();
+        let c1: Cache = c0.into();
+        let c0_again: FlatCache = (&c1).into();
+
+        let mut c2: Cache = c1.clone();
+        let mut c3: Cache = c2.clone();
+
+        let rec1 = Arc::new(OstPoolOstsRecord {
+            id: 1,
+            ostpool_id: 1,
+            managedost_id: 1,
+        });
+        let rec2 = Arc::new(OstPoolOstsRecord {
+            id: 2,
+            ostpool_id: 2,
+            managedost_id: 2,
+        });
+        let rec18 = Arc::clone(&c1.ost_pool_osts.get(&18).unwrap());
+        let rec19 = Arc::clone(&c1.ost_pool_osts.get(&19).unwrap());
+
+        c2.ost_pool_osts.insert(1, Arc::clone(&rec1));
+        c3.ost_pool_osts.insert(2, Arc::clone(&rec2));
+
+        // The entries to c2 and c3 are added independently despite sharing the same "body"
+        assert_eq!(
+            c1.ost_pool_osts,
+            im::hashmap!(18 => Arc::clone(&rec18), 19 => Arc::clone(&rec19))
+        );
+        assert_eq!(
+            c2.ost_pool_osts,
+            im::hashmap!(18 => Arc::clone(&rec18), 19 => Arc::clone(&rec19), 1 => rec1)
+        );
+        assert_eq!(
+            c3.ost_pool_osts,
+            im::hashmap!(18 => Arc::clone(&rec18), 19 => Arc::clone(&rec19), 2 => rec2)
+        );
+        // the original cache and the cache - conversion result - should be equal
+        assert_eq!(*c0, c0_again);
+    }
 }

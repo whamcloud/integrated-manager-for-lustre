@@ -10,7 +10,7 @@ use futures::{
     Stream, StreamExt,
 };
 use im::HashMap;
-use iml_wire_types::warp_drive::{Cache, Message};
+use iml_wire_types::warp_drive::{FlatCache, Message};
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -25,7 +25,7 @@ pub type SharedUsers = Arc<Mutex<HashMap<usize, mpsc::UnboundedSender<Message>>>
 pub async fn user_connected(
     state: SharedUsers,
     locks: Locks,
-    api_cache: Cache,
+    api_cache: FlatCache,
 ) -> impl Stream<Item = Result<impl ServerSentEvent, warp::Error>> {
     // Use a counter to assign a new unique ID for this user.
     let id = NEXT_USER_ID.fetch_add(1, Ordering::Relaxed);
