@@ -1582,7 +1582,7 @@ class ReplaceNidsStep(Step):
     def run(self, args):
         target = args["target"]
         nids = args["nids"]
-        agent_args = ["replace_nids", target] + [",".join(nids)]
+        agent_args = ["replace_nids", target] + [":".join([",".join(x) for x in nids])]
         return self.invoke_rust_agent_expect_result(args["fqdn"], "lctl", agent_args)
 
 
@@ -1684,7 +1684,7 @@ class UpdateNidsJob(HostListMixin):
                         ReplaceNidsStep,
                         {
                             "target": "%s" % target,
-                            "nids": target.best_available_host().lnet_configuration.get_nids(),
+                            "nids": target.nids(),
                             "fqdn": target.filesystem.mgs.best_available_host().fqdn,
                         },
                     )

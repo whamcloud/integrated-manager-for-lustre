@@ -178,6 +178,20 @@ class ManagedTarget(StatefulObject):
             fail_nids.extend(failhost_nids)
         return fail_nids
 
+    def nids(self):
+        """Returns a tuple of per-host NID strings tuples"""
+        host_nids = []
+        # Note: order by -primary in order that the first argument passed to mkfs
+        # in failover configurations is the primary mount -- Lustre will use the
+        # first --mgsnode argument as the NID to connect to for target registration,
+        # and if that is the secondary NID then bad things happen during first
+        # filesystem start.
+        for target_mount in self.managedtargetmount_set.all().order_by("-primary"):
+            host = target_mount.host
+            host_nids.append(tuple(host.lnet_configuration.get_nids()))
+
+        return tuple(host_nids)
+
     @property
     def default_mount_point(self):
         return "/mnt/%s" % self.name
@@ -520,20 +534,6 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
     class Meta:
         app_label = "chroma_core"
         ordering = ["id"]
-
-    def nids(self):
-        """Returns a tuple of per-host NID strings tuples"""
-        host_nids = []
-        # Note: order by -primary in order that the first argument passed to mkfs
-        # in failover configurations is the primary mount -- Lustre will use the
-        # first --mgsnode argument as the NID to connect to for target registration,
-        # and if that is the secondary NID then bad things happen during first
-        # filesystem start.
-        for target_mount in self.managedtargetmount_set.all().order_by("-primary"):
-            host = target_mount.host
-            host_nids.append(tuple(host.lnet_configuration.get_nids()))
-
-        return tuple(host_nids)
 
     def set_conf_params(self, params, new=True):
         """
