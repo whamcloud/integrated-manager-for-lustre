@@ -2401,32 +2401,30 @@ pub mod warp_drive {
         pub volume_node: HashMap<u32, Arc<VolumeNodeRecord>>,
     }
 
-    fn hashmap_to_arched<K, V>(hm: HashMap<K, V>) -> HashMap<K, Arc<V>>
-        where K: std::hash::Hash + Eq + Clone
-    {
-        hm.iter().map(|(k, v)| (*k, Arc::new(*v.clone()))).collect()
+    fn hashmap_to_arc_hashmap<K, V>(hm: &HashMap<K, V>) -> HashMap<K, Arc<V>>
+        where K: std::hash::Hash + Eq + Copy, V: Clone {
+        hm.iter().map(|(k, v)| (*k, Arc::new(v.clone()))).collect()
     }
 
-    fn hashmap_to_flat<K, V>(hm: HashMap<K, Arc<V>>) -> HashMap<K, V>
-        where K: std::hash::Hash + Eq + Clone
-    {
-        hm.iter().map(|(k, v)| (*k, (*v).clone())).collect()
+    fn arc_hashmap_to_hashmap<K, V>(hm: &HashMap<K, Arc<V>>) -> HashMap<K, V>
+        where K: std::hash::Hash + Eq + Copy, V: Clone {
+        hm.iter().map(|(k, v)| (*k, (**v).clone())).collect()
     }
 
     impl From<Cache> for ArchedCache {
         fn from(cache: Cache) -> Self {
             Self {
-                active_alert: hashmap_to_arched(cache.active_alert),
-                filesystem: hashmap_to_arched(cache.filesystem),
-                host: hashmap_to_arched(cache.host),
-                lnet_configuration: hashmap_to_arched(cache.lnet_configuration),
-                managed_target_mount: hashmap_to_arched(cache.managed_target_mount),
-                ost_pool: hashmap_to_arched(cache.ost_pool),
-                ost_pool_osts: hashmap_to_arched(cache.ost_pool_osts),
-                stratagem_config: hashmap_to_arched(cache.stratagem_config),
-                target: hashmap_to_arched(cache.target),
-                volume: hashmap_to_arched(cache.volume),
-                volume_node: hashmap_to_arched(cache.volume_node),
+                active_alert: hashmap_to_arc_hashmap(&cache.active_alert),
+                filesystem: hashmap_to_arc_hashmap(&cache.filesystem),
+                host: hashmap_to_arc_hashmap(&cache.host),
+                lnet_configuration: hashmap_to_arc_hashmap(&cache.lnet_configuration),
+                managed_target_mount: hashmap_to_arc_hashmap(&cache.managed_target_mount),
+                ost_pool: hashmap_to_arc_hashmap(&cache.ost_pool),
+                ost_pool_osts: hashmap_to_arc_hashmap(&cache.ost_pool_osts),
+                stratagem_config: hashmap_to_arc_hashmap(&cache.stratagem_config),
+                target: hashmap_to_arc_hashmap(&cache.target),
+                volume: hashmap_to_arc_hashmap(&cache.volume),
+                volume_node: hashmap_to_arc_hashmap(&cache.volume_node),
             }
         }
     }
@@ -2434,17 +2432,17 @@ pub mod warp_drive {
     impl From<ArchedCache> for Cache {
         fn from(cache: ArchedCache) -> Self {
             Self {
-                active_alert: hashmap_to_flat(cache.active_alert),
-                filesystem: hashmap_to_flat(cache.filesystem),
-                host: hashmap_to_flat(cache.host),
-                lnet_configuration: hashmap_to_flat(cache.lnet_configuration),
-                managed_target_mount: hashmap_to_flat(cache.managed_target_mount),
-                ost_pool: hashmap_to_flat(cache.ost_pool),
-                ost_pool_osts: hashmap_to_flat(cache.ost_pool_osts),
-                stratagem_config: hashmap_to_flat(cache.stratagem_config),
-                target: hashmap_to_flat(cache.target),
-                volume: hashmap_to_flat(cache.volume),
-                volume_node: hashmap_to_flat(cache.volume_node),
+                active_alert: arc_hashmap_to_hashmap(&cache.active_alert),
+                filesystem: arc_hashmap_to_hashmap(&cache.filesystem),
+                host: arc_hashmap_to_hashmap(&cache.host),
+                lnet_configuration: arc_hashmap_to_hashmap(&cache.lnet_configuration),
+                managed_target_mount: arc_hashmap_to_hashmap(&cache.managed_target_mount),
+                ost_pool: arc_hashmap_to_hashmap(&cache.ost_pool),
+                ost_pool_osts: arc_hashmap_to_hashmap(&cache.ost_pool_osts),
+                stratagem_config: arc_hashmap_to_hashmap(&cache.stratagem_config),
+                target: arc_hashmap_to_hashmap(&cache.target),
+                volume: arc_hashmap_to_hashmap(&cache.volume),
+                volume_node: arc_hashmap_to_hashmap(&cache.volume_node),
             }
         }
     }
