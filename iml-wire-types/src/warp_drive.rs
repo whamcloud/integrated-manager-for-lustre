@@ -174,7 +174,7 @@
         }
     }
 
-    impl<'a> From<&'a Cache> for ArcCache {
+    impl From<&Cache> for ArcCache {
         fn from(cache: &Cache) -> Self {
             Self {
                 active_alert: hashmap_to_arc_hashmap(&cache.active_alert),
@@ -192,8 +192,8 @@
         }
     }
 
-    impl<'a> From<&'a ArcCache> for Cache {
-        fn from(cache: &'a ArcCache) -> Self {
+    impl From<&ArcCache> for Cache {
+        fn from(cache: &ArcCache) -> Self {
             Self {
                 active_alert: arc_hashmap_to_hashmap(&cache.active_alert),
                 filesystem: arc_hashmap_to_hashmap(&cache.filesystem),
