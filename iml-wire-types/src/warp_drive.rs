@@ -193,7 +193,7 @@
     }
 
     impl<'a> From<&'a ArcCache> for Cache {
-        fn from(cache: &ArcCache) -> Self {
+        fn from(cache: &'a ArcCache) -> Self {
             Self {
                 active_alert: arc_hashmap_to_hashmap(&cache.active_alert),
                 filesystem: arc_hashmap_to_hashmap(&cache.filesystem),
@@ -274,6 +274,6 @@
     #[serde(tag = "tag", content = "payload")]
     pub enum Message {
         Locks(Locks),
-        Records(Cache),
+        Records(ArcCache),
         RecordChange(RecordChange),
     }
