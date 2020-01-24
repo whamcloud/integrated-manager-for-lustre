@@ -13,12 +13,12 @@ use iml_wire_types::{
         ManagedTargetMountRecord, ManagedTargetRecord, Name, NotDeleted, OstPoolOstsRecord,
         OstPoolRecord, StratagemConfiguration, VolumeNodeRecord, VolumeRecord,
     },
-    warp_drive::{Cache, Record, RecordChange, RecordId},
+    warp_drive::{FlatCache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam, Volume,
 };
 use std::{fmt::Debug, iter, pin::Pin, sync::Arc};
 
-pub type SharedCache = Arc<Mutex<Cache>>;
+pub type SharedCache = Arc<Mutex<FlatCache>>;
 
 pub trait ToApiRecord: std::fmt::Debug + Id {
     fn to_api_record<T: 'static>(
@@ -209,11 +209,11 @@ pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlM
 
     let mut api_cache = shared_api_cache.lock().await;
 
-    api_cache.filesystem = Arc::new(filesystem);
-    api_cache.target = Arc::new(target);
-    api_cache.active_alert = Arc::new(alert);
-    api_cache.host = Arc::new(host);
-    api_cache.volume = Arc::new(volume);
+    api_cache.filesystem = filesystem;
+    api_cache.target = target;
+    api_cache.active_alert = alert;
+    api_cache.host = host;
+    api_cache.volume = volume;
 
     tracing::debug!("Populated from api");
 
@@ -287,12 +287,12 @@ pub async fn populate_from_db(
 
     let mut cache = shared_api_cache.lock().await;
 
-    cache.managed_target_mount = Arc::new(managed_target_mount);
-    cache.stratagem_config = Arc::new(stratagem_configuration);
-    cache.lnet_configuration = Arc::new(lnet_configuration);
-    cache.volume_node = Arc::new(volume_node);
-    cache.ost_pool = Arc::new(ost_pool);
-    cache.ost_pool_osts = Arc::new(ost_pool_osts);
+    cache.managed_target_mount = managed_target_mount;
+    cache.stratagem_config = stratagem_configuration;
+    cache.lnet_configuration = lnet_configuration;
+    cache.volume_node = volume_node;
+    cache.ost_pool = ost_pool;
+    cache.ost_pool_osts = ost_pool_osts;
 
     tracing::debug!("Populated from db");
 

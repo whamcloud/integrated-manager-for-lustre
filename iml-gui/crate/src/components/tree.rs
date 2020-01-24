@@ -13,6 +13,7 @@ use std::{
     collections::{BTreeSet, HashMap},
     iter::{once, FromIterator},
     ops::{Deref, DerefMut},
+    sync::Arc,
 };
 
 fn sort_by_label(xs: &mut Vec<impl Label>) {
@@ -23,7 +24,7 @@ pub fn slice_page<'a>(paging: &paging::Model, xs: &'a BTreeSet<u32>) -> impl Ite
     xs.iter().skip(paging.offset()).take(paging.end())
 }
 
-fn sorted_cache<'a>(x: &'a im::HashMap<u32, impl Label + Id>) -> impl Iterator<Item = u32> + 'a {
+fn sorted_cache<'a>(x: &'a im::HashMap<u32, Arc<impl Label + Id>>) -> impl Iterator<Item = u32> + 'a {
     let mut xs: Vec<_> = x.values().collect();
 
     xs.sort_by(|a, b| natord::compare(a.label(), b.label()));
@@ -31,12 +32,12 @@ fn sorted_cache<'a>(x: &'a im::HashMap<u32, impl Label + Id>) -> impl Iterator<I
     xs.into_iter().map(|x| x.id())
 }
 
-fn get_volume_nodes_by_host_id(xs: &im::HashMap<u32, VolumeNodeRecord>, host_id: u32) -> Vec<&VolumeNodeRecord> {
-    xs.values().filter(|v| v.host_id == host_id).collect()
+fn get_volume_nodes_by_host_id(xs: &im::HashMap<u32, Arc<VolumeNodeRecord>>, host_id: u32) -> Vec<&VolumeNodeRecord> {
+    xs.values().map(|x| &**x).filter(|v| v.host_id == host_id).collect()
 }
 
-fn get_ost_pools_by_fs_id(xs: &im::HashMap<u32, OstPoolRecord>, fs_id: u32) -> Vec<&OstPoolRecord> {
-    xs.values().filter(|v| v.filesystem_id == fs_id).collect()
+fn get_ost_pools_by_fs_id(xs: &im::HashMap<u32, Arc<OstPoolRecord>>, fs_id: u32) -> Vec<&OstPoolRecord> {
+    xs.values().map(|x| &**x).filter(|v| v.filesystem_id == fs_id).collect()
 }
 
 fn get_targets_by_parent_resource(
@@ -55,20 +56,22 @@ fn get_targets_by_pool_id(cache: &Cache, ostpool_id: u32) -> Vec<&Target<TargetC
     let target_ids: Vec<_> = cache
         .ost_pool_osts
         .values()
+        .map(|x| **x)
         .filter(|x| x.ostpool_id == ostpool_id)
         .map(|x| x.managedost_id)
         .collect();
 
-    cache.target.values().filter(|x| target_ids.contains(&x.id)).collect()
+    cache.target.values().map(|x| &**x).filter(|x| target_ids.contains(&x.id)).collect()
 }
 
 fn get_targets_by_fs_id(
-    xs: &im::HashMap<u32, Target<TargetConfParam>>,
+    xs: &im::HashMap<u32, Arc<Target<TargetConfParam>>>,
     fs_id: u32,
     kind: TargetKind,
 ) -> Vec<&Target<TargetConfParam>> {
     xs.values()
-        .filter(|x| match kind {
+        .map(|x| &**x)
+        .filter(|x: &&Target<TargetConfParam>| match kind {
             TargetKind::Mgt => {
                 x.kind == TargetKind::Mgt
                     && x.filesystems
@@ -227,6 +230,7 @@ fn add_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut 
             let mut xs = cache
                 .volume_node
                 .values()
+                .map(|x| &**x)
                 .filter(|y| tree_node.items.contains(&y.id))
                 .collect();
 
@@ -253,7 +257,7 @@ fn add_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut 
 
             let mut xs = cache
                 .ost_pool
-                .values()
+                .values().map(|x| &**x)
                 .filter(|y| tree_node.items.contains(&y.id))
                 .collect();
 
@@ -268,7 +272,7 @@ fn add_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut 
             let ids = get_target_fs_ids(target);
 
             let sort_fn = |cache: &Cache, model: &TreeNode| {
-                let mut xs = cache.target.values().filter(|y| model.items.contains(&y.id)).collect();
+                let mut xs = cache.target.values().map(|x| &**x).filter(|y| model.items.contains(&y.id)).collect();
 
                 sort_by_label(&mut xs);
 
@@ -744,11 +748,7 @@ pub fn view(cache: &Cache, model: &Model) -> Node<Msg> {
 mod tests {
     use super::{update, Address, GMsg, Model, Msg, Step};
     use crate::test_utils::{create_app_simple, fixtures};
-    use im::HashMap;
-    use iml_wire_types::db::OstPoolOstsRecord;
-    use iml_wire_types::warp_drive::{Cache, ArchedCache};
     use seed::virtual_dom::Node;
-    use std::sync::Arc;
     use wasm_bindgen_test::*;
 
     wasm_bindgen_test_configure!(run_in_browser);
@@ -756,57 +756,10 @@ mod tests {
     fn create_app() -> seed::App<Msg, Model, Node<Msg>, GMsg> {
         create_app_simple(
             |msg, model, orders| {
-                update(&fixtures::get_cache(), msg, model, orders);
+                update((&fixtures::get_cache()).into(), msg, model, orders);
             },
             |_| seed::empty(),
         )
-    }
-
-    #[test]
-    fn test_cache_cloning() {
-        let c1: ArchedCache = fixtures::get_cache().into();
-        let mut c2: ArchedCache = c1.clone();
-        let mut c3: ArchedCache = c2.clone();
-
-        // The hashmap ost_pool_osts is the same for all cache clones c1, c2, c3
-        assert_eq!(
-            &c1.ost_pool_osts as *const HashMap<_, _>,
-            &c2.ost_pool_osts as *const HashMap<_, _>
-        );
-        assert_eq!(
-            &c1.ost_pool_osts as *const HashMap<_, _>,
-            &c3.ost_pool_osts as *const HashMap<_, _>
-        );
-
-        let rec1 = Arc::new(OstPoolOstsRecord {
-            id: 1,
-            ostpool_id: 1,
-            managedost_id: 1,
-        });
-        let rec2 = Arc::new(OstPoolOstsRecord {
-            id: 2,
-            ostpool_id: 2,
-            managedost_id: 2,
-        });
-        let rec18 = (*c1.ost_pool_osts.get(&18)).unwrap();
-        let rec19 = (*c1.ost_pool_osts.get(&19)).unwrap();
-
-        c2.ost_pool_osts.insert(1, Arc::clone(&rec1));
-        c3.ost_pool_osts.insert(2, Arc::clone(&rec2));
-
-        // The entries to c2 and c3 are added independently despite sharing the same "body"
-        assert_eq!(
-            *c1.ost_pool_osts,
-            im::hashmap!(18 => rec18.clone(), 19 => rec19.clone())
-        );
-        assert_eq!(
-            *c2.ost_pool_osts,
-            im::hashmap!(18 => rec18.clone(), 19 => rec19.clone(), 1 => rec1)
-        );
-        assert_eq!(
-            *c3.ost_pool_osts,
-            im::hashmap!(18 => rec18.clone(), 19 => rec19.clone(), 2 => rec2)
-        );
     }
 
     #[wasm_bindgen_test]
