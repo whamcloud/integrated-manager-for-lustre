@@ -31,6 +31,12 @@ services:
     volumes:
       - influxdb:/var/lib/influxdb/
       - "manager-config:/var/lib/chroma"
+    healthcheck:
+      test: ["CMD-SHELL", "influx -host influxdb -execute 'quit'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     ports:
       - 8086:8086
     environment:
