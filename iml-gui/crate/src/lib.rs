@@ -671,9 +671,9 @@ mod tests {
 
     #[test]
     fn test_cache_conversions() {
-        let c0: &Cache = &fixtures::get_cache();
-        let c1: ArcCache = c0.into();
-        let c0_again: Cache = (&c1).into();
+        let c0: Cache = fixtures::get_cache();
+        let c1: ArcCache = (&c0).into(); // From<&Cache> for ArcCache
+        let c0_again: Cache = (&c1).into(); // From<&ArcCache> for Cache
 
         let mut c2: ArcCache = c1.clone();
         let mut c3: ArcCache = c2.clone();
@@ -708,6 +708,6 @@ mod tests {
             im::hashmap!(18 => Arc::clone(&rec18), 19 => Arc::clone(&rec19), 2 => rec2)
         );
         // the original cache and the cache - conversion result - should be equal
-        assert_eq!(*c0, c0_again);
+        assert_eq!(c0, c0_again);
     }
 }

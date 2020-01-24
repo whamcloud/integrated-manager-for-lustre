@@ -761,13 +761,15 @@ mod tests {
     use crate::test_utils::{create_app_simple, fixtures};
     use seed::virtual_dom::Node;
     use wasm_bindgen_test::*;
+    use iml_wire_types::warp_drive::ArcCache;
 
     wasm_bindgen_test_configure!(run_in_browser);
 
     fn create_app() -> seed::App<Msg, Model, Node<Msg>, GMsg> {
         create_app_simple(
             |msg, model, orders| {
-                update(&fixtures::get_cache().into(), msg, model, orders);
+                let cache: ArcCache = (&fixtures::get_cache()).into();
+                update(&cache, msg, model, orders);
             },
             |_| seed::empty(),
         )
