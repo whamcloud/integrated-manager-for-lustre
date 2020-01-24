@@ -11,7 +11,7 @@ use iml_warp_drive::{
     locks::{self, create_locks_consumer, Locks},
     users,
 };
-use iml_wire_types::warp_drive::{Cache, Message};
+use iml_wire_types::warp_drive::{FlatCache, Message};
 use std::sync::Arc;
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::Filter;
@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let lock_state: SharedLocks = Arc::new(Mutex::new(im::hashmap! {}));
 
-    let api_cache_state: SharedCache = Arc::new(Mutex::new(Cache::default()));
+    let api_cache_state: SharedCache = Arc::new(Mutex::new(FlatCache::default()));
 
     // Clone here to allow SSE route to get a ref.
     let user_state2 = Arc::clone(&user_state);
