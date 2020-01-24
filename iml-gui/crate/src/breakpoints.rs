@@ -6,26 +6,21 @@
 
 use seed::window;
 
-pub(crate) const SM: f64 = 569.;
-pub(crate) const MD: f64 = 769.;
-pub(crate) const LG: f64 = 1025.;
-pub(crate) const XL: f64 = 1701.;
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub(crate) enum Size {
-    XS,
-    SM,
-    MD,
-    LG,
-    XL,
+    XS = 0,
+    SM = 569,
+    MD = 769,
+    LG = 1025,
+    XL = 1701,
 }
 
-fn inner_width() -> f64 {
+fn inner_width() -> u64 {
     window()
         .inner_width()
         .expect("Could not get inner_width")
         .as_f64()
-        .expect("Could not parse inner_width to f64")
+        .expect("Could not parse inner_width to f64") as u64
 }
 
 /// Returns *maximum* matching breakpoint based on `window.inner_width`.
@@ -33,13 +28,13 @@ fn inner_width() -> f64 {
 pub(crate) fn size() -> Size {
     let w = inner_width();
 
-    if w >= XL {
+    if w >= Size::XL as u64 {
         Size::XL
-    } else if w >= LG {
+    } else if w >= Size::LG as u64 {
         Size::LG
-    } else if w >= MD {
+    } else if w >= Size::MD as u64 {
         Size::MD
-    } else if w >= SM {
+    } else if w >= Size::SM as u64 {
         Size::SM
     } else {
         Size::XS
