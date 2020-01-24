@@ -30,12 +30,7 @@ services:
     deploy: *default-deploy
     volumes:
       - influxdb:/var/lib/influxdb/
-    healthcheck:
-      test: ["CMD-SHELL", "influx -execute 'quit'"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      - "manager-config:/var/lib/chroma"
     ports:
       - 8086:8086
     environment:
