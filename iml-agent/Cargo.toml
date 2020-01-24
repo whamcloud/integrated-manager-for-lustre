@@ -34,6 +34,7 @@ reqwest = { version = "0.10", features = ["default-tls", "native-tls", "json", "
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 spinners = "1.2"
+strfmt = "0.1.6"
 structopt = "0.2"
 tokio = { version = "0.2", features = ["fs", "process", "macros", "net"] }
 tokio-util = { version = "0.2", features = ["codec"] }

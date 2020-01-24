@@ -1,0 +1,9 @@
+---
+source: iml-agent/src/action_plugins/lamigo.rs
+expression: content
+---
+[Unit]
+Description=Run lamigo service
+[Service]
+ExecStart=/usr/bin/lamigo -m LU_TEST2-MDT000 -u nick -s FAST_POOL -t SLOW_POOL -a 35353 --iml-socket /run/postman-mailbox2.sock
+

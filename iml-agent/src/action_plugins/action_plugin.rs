@@ -4,7 +4,7 @@
 
 use crate::{
     action_plugins::{
-        check_ha, check_kernel, check_stonith, kernel_module, lctl, lpurge, ltuer,
+        check_ha, check_kernel, check_stonith, kernel_module, lamigo, lpurge, ltuer, lustre,
         ntp::action_configure,
         ostpool, package, postoffice,
         stratagem::{action_purge, action_warning, server},
@@ -36,7 +36,8 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("action_check_ha", check_ha::check_ha)
         .add_plugin("action_check_stonith", check_stonith::check_stonith)
         .add_plugin("get_kernel", check_kernel::get_kernel)
-        .add_plugin("lctl", lctl::lctl)
+        .add_plugin("try_mount", lustre::try_mount)
+        .add_plugin("lctl", lustre::lctl)
         .add_plugin("ostpool_create", ostpool::action_pool_create)
         .add_plugin("ostpool_wait", ostpool::action_pool_wait)
         .add_plugin("ostpool_destroy", ostpool::action_pool_destroy)
@@ -45,6 +46,7 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("postoffice_add", postoffice::route_add)
         .add_plugin("postoffice_remove", postoffice::route_remove)
         .add_plugin("create_lpurge_conf", lpurge::create_lpurge_conf)
+        .add_plugin("create_lamigo_service", lamigo::create_lamigo_service_unit)
         .add_plugin(
             "configure_ntp",
             action_configure::update_and_write_new_config,
