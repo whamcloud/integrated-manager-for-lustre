@@ -77,7 +77,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --exclude iml-integration-tests --workspace
+          args: --exclude iml-system-tests --workspace
 
   check_rpm_build:
     name: Check RPM build

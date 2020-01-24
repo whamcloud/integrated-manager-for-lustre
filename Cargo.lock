@@ -1164,16 +1164,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "iml-integration-tests"
-version = "0.1.0"
-dependencies = [
- "futures 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "iml-cmd 0.1.0",
- "tokio 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "tokio-test 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "iml-mailbox"
 version = "0.1.0"
 dependencies = [
@@ -1334,6 +1324,16 @@ dependencies = [
  "tokio 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "tracing 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "tracing-subscriber 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "iml-system-tests"
+version = "0.1.0"
+dependencies = [
+ "futures 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "iml-cmd 0.1.0",
+ "tokio 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio-test 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
