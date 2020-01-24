@@ -30,7 +30,7 @@
 
     /// Do not forget to keep [`Cache`](iml_wire_types::warp_drive::ArcCache) in sync
     #[derive(serde::Serialize, serde::Deserialize, Default, PartialEq, Clone, Debug)]
-    pub struct FlatCache {
+    pub struct Cache {
         pub active_alert: HashMap<u32, Alert>,
         pub filesystem: HashMap<u32, Filesystem>,
         pub host: HashMap<u32, Host>,
@@ -46,7 +46,7 @@
 
     /// Do not forget to keep [`FlatCache`](iml_wire_types::warp_drive::Cache) in sync
     #[derive(serde::Serialize, serde::Deserialize, Default, PartialEq, Clone, Debug)]
-    pub struct Cache {
+    pub struct ArcCache {
         pub active_alert: HashMap<u32, Arc<Alert>>,
         pub filesystem: HashMap<u32, Arc<Filesystem>>,
         pub host: HashMap<u32, Arc<Host>>,
@@ -60,7 +60,7 @@
         pub volume_node: HashMap<u32, Arc<VolumeNodeRecord>>,
     }
 
-    impl FlatCache {
+    impl Cache {
         /// Removes the record from the cache
         pub fn remove_record(&mut self, x: &RecordId) -> bool {
             match x {
@@ -174,8 +174,8 @@
         }
     }
 
-    impl<'a> From<&'a FlatCache> for Cache {
-        fn from(cache: &FlatCache) -> Self {
+    impl<'a> From<&'a Cache> for Cache {
+        fn from(cache: &Cache) -> Self {
             Self {
                 active_alert: hashmap_to_arc_hashmap(&cache.active_alert),
                 filesystem: hashmap_to_arc_hashmap(&cache.filesystem),
@@ -192,7 +192,7 @@
         }
     }
 
-    impl<'a> From<&'a Cache> for FlatCache {
+    impl<'a> From<&'a Cache> for Cache {
         fn from(cache: &Cache) -> Self {
             Self {
                 active_alert: arc_hashmap_to_hashmap(&cache.active_alert),

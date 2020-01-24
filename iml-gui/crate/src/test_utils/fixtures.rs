@@ -1,6 +1,6 @@
-use iml_wire_types::warp_drive::FlatCache;
+use iml_wire_types::warp_drive::Cache;
 
-pub(crate) fn get_cache() -> FlatCache {
+pub(crate) fn get_cache() -> Cache {
     let data = r#"
     {
   "active_alert": {

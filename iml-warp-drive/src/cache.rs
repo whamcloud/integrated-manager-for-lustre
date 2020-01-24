@@ -13,12 +13,12 @@ use iml_wire_types::{
         ManagedTargetMountRecord, ManagedTargetRecord, Name, NotDeleted, OstPoolOstsRecord,
         OstPoolRecord, StratagemConfiguration, VolumeNodeRecord, VolumeRecord,
     },
-    warp_drive::{FlatCache, Record, RecordChange, RecordId},
+    warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam, Volume,
 };
 use std::{fmt::Debug, iter, pin::Pin, sync::Arc};
 
-pub type SharedCache = Arc<Mutex<FlatCache>>;
+pub type SharedCache = Arc<Mutex<Cache>>;
 
 pub trait ToApiRecord: std::fmt::Debug + Id {
     fn to_api_record<T: 'static>(

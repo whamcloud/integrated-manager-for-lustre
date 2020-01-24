@@ -5,7 +5,7 @@ use crate::{
 };
 use iml_wire_types::{
     db::{Id, OstPoolRecord, VolumeNodeRecord},
-    warp_drive::{Cache, RecordId},
+    warp_drive::{ArcCache, RecordId},
     Filesystem, Host, Label, Target, TargetConfParam, TargetKind,
 };
 use seed::{prelude::*, *};
@@ -41,7 +41,7 @@ fn get_ost_pools_by_fs_id(xs: &im::HashMap<u32, Arc<OstPoolRecord>>, fs_id: u32)
 }
 
 fn get_targets_by_parent_resource(
-    cache: &Cache,
+    cache: &ArcCache,
     parent_resource_id: RecordId,
     kind: TargetKind,
 ) -> Vec<&Target<TargetConfParam>> {
@@ -52,7 +52,7 @@ fn get_targets_by_parent_resource(
     }
 }
 
-fn get_targets_by_pool_id(cache: &Cache, ostpool_id: u32) -> Vec<&Target<TargetConfParam>> {
+fn get_targets_by_pool_id(cache: &ArcCache, ostpool_id: u32) -> Vec<&Target<TargetConfParam>> {
     let target_ids: Vec<_> = cache
         .ost_pool_osts
         .values()
@@ -61,7 +61,12 @@ fn get_targets_by_pool_id(cache: &Cache, ostpool_id: u32) -> Vec<&Target<TargetC
         .map(|x| x.managedost_id)
         .collect();
 
-    cache.target.values().map(|x| &**x).filter(|x| target_ids.contains(&x.id)).collect()
+    cache
+        .target
+        .values()
+        .map(|x| &**x)
+        .filter(|x| target_ids.contains(&x.id))
+        .collect()
 }
 
 fn get_targets_by_fs_id(
@@ -197,7 +202,7 @@ impl Model {
 
 // Update
 
-fn add_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut impl Orders<Msg>) -> Option<()> {
+fn add_item(record_id: RecordId, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg>) -> Option<()> {
     match record_id {
         RecordId::Host(id) => {
             let addr: Address = vec![Step::HostCollection].into();
@@ -257,7 +262,8 @@ fn add_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut 
 
             let mut xs = cache
                 .ost_pool
-                .values().map(|x| &**x)
+                .values()
+                .map(|x| &**x)
                 .filter(|y| tree_node.items.contains(&y.id))
                 .collect();
 
@@ -271,8 +277,13 @@ fn add_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut 
 
             let ids = get_target_fs_ids(target);
 
-            let sort_fn = |cache: &Cache, model: &TreeNode| {
-                let mut xs = cache.target.values().map(|x| &**x).filter(|y| model.items.contains(&y.id)).collect();
+            let sort_fn = |cache: &ArcCache, model: &TreeNode| {
+                let mut xs = cache
+                    .target
+                    .values()
+                    .map(|x| &**x)
+                    .filter(|y| model.items.contains(&y.id))
+                    .collect();
 
                 sort_by_label(&mut xs);
 
@@ -304,7 +315,7 @@ fn add_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut 
     Some(())
 }
 
-fn remove_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut impl Orders<Msg>) -> Option<()> {
+fn remove_item(record_id: RecordId, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg>) -> Option<()> {
     match record_id {
         RecordId::Host(id) => {
             let addr: Address = vec![Step::HostCollection].into();
@@ -373,7 +384,7 @@ pub enum Msg {
     Page(Address, paging::Msg),
 }
 
-pub fn update(cache: &Cache, msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
+pub fn update(cache: &ArcCache, msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::Reset => {
             model.reset();
@@ -532,7 +543,7 @@ fn item_view(icon: &str, label: &str, route: Route) -> Node<Msg> {
     ]
 }
 
-fn tree_host_item_view(cache: &Cache, model: &Model, host: &Host) -> Option<Node<Msg>> {
+fn tree_host_item_view(cache: &ArcCache, model: &Model, host: &Host) -> Option<Node<Msg>> {
     let address = Address::new(vec![Step::HostCollection, Step::Host(host.id)]);
 
     let tree_node = model.get(&address)?;
@@ -550,7 +561,7 @@ fn tree_host_item_view(cache: &Cache, model: &Model, host: &Host) -> Option<Node
     ])
 }
 
-fn tree_pool_item_view(cache: &Cache, model: &Model, address: &Address, pool: &OstPoolRecord) -> Option<Node<Msg>> {
+fn tree_pool_item_view(cache: &ArcCache, model: &Model, address: &Address, pool: &OstPoolRecord) -> Option<Node<Msg>> {
     let address = address.extend(Step::OstPool(pool.id));
 
     let tree_node = model.get(&address)?;
@@ -567,7 +578,7 @@ fn tree_pool_item_view(cache: &Cache, model: &Model, address: &Address, pool: &O
     ])
 }
 
-fn tree_fs_item_view(cache: &Cache, model: &Model, fs: &Filesystem) -> Option<Node<Msg>> {
+fn tree_fs_item_view(cache: &ArcCache, model: &Model, fs: &Filesystem) -> Option<Node<Msg>> {
     let address = Address::new(vec![Step::FsCollection, Step::Fs(fs.id)]);
 
     let tree_node = model.get(&address)?;
@@ -619,7 +630,7 @@ fn tree_collection_view(
     Some(el)
 }
 
-fn tree_fs_collection_view(cache: &Cache, model: &Model) -> Node<Msg> {
+fn tree_fs_collection_view(cache: &ArcCache, model: &Model) -> Node<Msg> {
     tree_collection_view(
         model,
         Address::new(vec![Step::FsCollection]),
@@ -640,7 +651,7 @@ fn tree_fs_collection_view(cache: &Cache, model: &Model) -> Node<Msg> {
     .unwrap_or(empty![])
 }
 
-fn tree_host_collection_view(cache: &Cache, model: &Model) -> Node<Msg> {
+fn tree_host_collection_view(cache: &ArcCache, model: &Model) -> Node<Msg> {
     tree_collection_view(
         model,
         Address::new(vec![Step::HostCollection]),
@@ -655,7 +666,7 @@ fn tree_host_collection_view(cache: &Cache, model: &Model) -> Node<Msg> {
     .unwrap_or(empty![])
 }
 
-fn tree_pools_collection_view(cache: &Cache, model: &Model, parent_address: &Address) -> Node<Msg> {
+fn tree_pools_collection_view(cache: &ArcCache, model: &Model, parent_address: &Address) -> Node<Msg> {
     let addr = parent_address.extend(Step::OstPoolCollection);
 
     tree_collection_view(
@@ -672,7 +683,7 @@ fn tree_pools_collection_view(cache: &Cache, model: &Model, parent_address: &Add
     .unwrap_or(empty![])
 }
 
-fn tree_volume_collection_view(cache: &Cache, model: &Model, parent_address: &Address) -> Node<Msg> {
+fn tree_volume_collection_view(cache: &ArcCache, model: &Model, parent_address: &Address) -> Node<Msg> {
     tree_collection_view(
         model,
         parent_address.extend(Step::VolumeCollection),
@@ -703,7 +714,7 @@ fn tree_volume_collection_view(cache: &Cache, model: &Model, parent_address: &Ad
     .unwrap_or(empty![])
 }
 
-fn tree_target_collection_view(cache: &Cache, model: &Model, parent_address: &Address, kind: TargetKind) -> Node<Msg> {
+fn tree_target_collection_view(cache: &ArcCache, model: &Model, parent_address: &Address, kind: TargetKind) -> Node<Msg> {
     let label = match kind {
         TargetKind::Mgt => "MGTs",
         TargetKind::Mdt => "MDTs",
@@ -730,7 +741,7 @@ fn tree_target_collection_view(cache: &Cache, model: &Model, parent_address: &Ad
     .unwrap_or(empty![])
 }
 
-pub fn view(cache: &Cache, model: &Model) -> Node<Msg> {
+pub fn view(cache: &ArcCache, model: &Model) -> Node<Msg> {
     div![
         class![C.p_5, C.text_gray_500],
         tree_host_collection_view(cache, model),
