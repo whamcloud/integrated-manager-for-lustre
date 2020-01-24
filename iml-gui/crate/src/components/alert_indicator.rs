@@ -24,7 +24,7 @@ pub(crate) fn alert_indicator<T>(
     let alerts: Vec<&Alert> = alerts
         .values()
         .map(|x| &**x)
-        .filter_map(|x: &Alert| match x.affected {
+        .filter_map(|x: &Alert| match &x.affected {
             Some(xs) => xs.iter().find(|x| x == &resource_uri).map(|_| x),
             None => None,
         })
