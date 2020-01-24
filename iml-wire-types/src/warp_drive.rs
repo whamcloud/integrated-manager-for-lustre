@@ -117,7 +117,7 @@
         }
     }
 
-    impl Cache {
+    impl ArcCache {
         /// Removes the record from the cache
         pub fn remove_record(&mut self, x: &RecordId) -> bool {
             match x {
@@ -174,7 +174,7 @@
         }
     }
 
-    impl<'a> From<&'a Cache> for Cache {
+    impl<'a> From<&'a Cache> for ArcCache {
         fn from(cache: &Cache) -> Self {
             Self {
                 active_alert: hashmap_to_arc_hashmap(&cache.active_alert),
@@ -192,8 +192,8 @@
         }
     }
 
-    impl<'a> From<&'a Cache> for Cache {
-        fn from(cache: &Cache) -> Self {
+    impl<'a> From<&'a ArcCache> for Cache {
+        fn from(cache: &ArcCache) -> Self {
             Self {
                 active_alert: arc_hashmap_to_hashmap(&cache.active_alert),
                 filesystem: arc_hashmap_to_hashmap(&cache.filesystem),
