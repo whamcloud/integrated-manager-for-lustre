@@ -32,7 +32,7 @@ services:
       - influxdb:/var/lib/influxdb/
       - "manager-config:/var/lib/chroma"
     healthcheck:
-      test: ["CMD-SHELL", "influx -host influxdb -execute 'quit'"]
+      test: ["CMD-SHELL", "influx -host influxdb -execute 'show databases'"]
       interval: 5s
       timeout: 5s
       retries: 5
