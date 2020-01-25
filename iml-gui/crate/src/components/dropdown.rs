@@ -1,6 +1,7 @@
 use crate::{components::Placement, generated::css_classes::C};
 use seed::{prelude::*, virtual_dom::Attrs, Style, *};
 
+#[allow(unused)]
 pub(crate) fn wrapper_view<T>(attrs: Attrs, placement: Placement, open: bool, children: impl View<T>) -> Node<T> {
     if !open {
         return empty![];
@@ -43,6 +44,7 @@ pub(crate) fn wrapper_view<T>(attrs: Attrs, placement: Placement, open: bool, ch
     div![cls, st, children.els(),]
 }
 
+#[allow(unused)]
 pub fn item_view<T>(children: impl View<T>) -> Node<T> {
     div![
         class![
