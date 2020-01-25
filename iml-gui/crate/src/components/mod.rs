@@ -16,6 +16,7 @@ pub(crate) use alert_indicator::alert_indicator;
 pub(crate) use arrow::arrow;
 pub(crate) use font_awesome::{font_awesome, font_awesome_outline};
 
+#[allow(unused)]
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Placement {
     Left,

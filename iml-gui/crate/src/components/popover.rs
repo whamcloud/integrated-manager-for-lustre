@@ -4,6 +4,7 @@ use crate::{
 };
 use seed::{prelude::*, *};
 
+#[allow(unused)]
 pub fn title_view<T>(content: &str) -> Node<T> {
     div![
         class![C.bg_gray_200, C.py_1, C.px_3],
@@ -11,10 +12,12 @@ pub fn title_view<T>(content: &str) -> Node<T> {
     ]
 }
 
+#[allow(unused)]
 pub fn content_view<T>(content: impl View<T>) -> Node<T> {
     div![class![C.py_2, C.px_3, C.w_64], content.els()]
 }
 
+#[allow(unused)]
 pub(crate) fn view<T>(content: impl View<T>, placement: Placement, visible: bool) -> Node<T> {
     let color = "#e2e8f0";
 

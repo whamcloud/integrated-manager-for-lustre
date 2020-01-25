@@ -62,6 +62,7 @@ impl Model {
     pub fn next_page(&mut self) {
         self.offset = self.end();
     }
+    #[allow(unused)]
     pub fn range(&self) -> Range<usize> {
         self.offset..self.end()
     }
@@ -100,6 +101,7 @@ pub fn update(msg: Msg, model: &mut Model) {
     }
 }
 
+#[allow(unused)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Dir {
     Asc,
@@ -113,6 +115,7 @@ impl Default for Dir {
 }
 
 impl Dir {
+    #[allow(unused)]
     pub fn next(self) -> Self {
         match self {
             Dir::Asc => Dir::Desc,
@@ -124,6 +127,7 @@ impl Dir {
 // View
 
 /// Given a direction, renders the correct chevron for that direction.
+#[allow(unused)]
 pub fn dir_toggle_view<T>(dir: Dir, more_attrs: Attrs) -> Node<T> {
     let x = match dir {
         Dir::Asc => "chevron-up",
@@ -133,6 +137,7 @@ pub fn dir_toggle_view<T>(dir: Dir, more_attrs: Attrs) -> Node<T> {
     font_awesome(more_attrs, x)
 }
 
+#[allow(unused)]
 pub(crate) fn limit_selection_view(p: &Model) -> Node<Msg> {
     let mut btn = button![
         class![
@@ -178,6 +183,7 @@ pub(crate) fn limit_selection_view(p: &Model) -> Node<Msg> {
 }
 
 /// Given a paging `Model`, renders the current range and total records.
+#[allow(unused)]
 pub fn page_count_view<T>(p: &Model) -> Node<T> {
     span![
         class![C.self_center, C.text_sm, C.mr_1],

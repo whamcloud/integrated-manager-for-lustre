@@ -2077,12 +2077,14 @@ impl fmt::Display for ResourceAgentType {
 }
 
 impl PartialEq<String> for ResourceAgentType {
+    #[allow(clippy::cmp_owned)]
     fn eq(&self, other: &String) -> bool {
         self.to_string() == *other
     }
 }
 
 impl PartialEq<&str> for ResourceAgentType {
+    #[allow(clippy::cmp_owned)]
     fn eq(&self, other: &&str) -> bool {
         self.to_string() == *other
     }
@@ -2280,6 +2282,7 @@ pub mod warp_drive {
         }
     }
 
+    #[allow(clippy::large_enum_variant)]
     #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
     #[serde(tag = "tag", content = "payload")]
     pub enum Record {
@@ -2332,6 +2335,7 @@ pub mod warp_drive {
         }
     }
 
+    #[allow(clippy::large_enum_variant)]
     #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
     #[serde(tag = "tag", content = "payload")]
     pub enum RecordChange {
@@ -2340,6 +2344,7 @@ pub mod warp_drive {
     }
 
     /// Message variants.
+    #[allow(clippy::large_enum_variant)]
     #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
     #[serde(tag = "tag", content = "payload")]
     pub enum Message {

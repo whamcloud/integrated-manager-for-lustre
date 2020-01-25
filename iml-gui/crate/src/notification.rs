@@ -35,7 +35,7 @@ pub(crate) fn update(u: Msg, m: &mut Model, orders: &mut impl Orders<Msg>) {
                 .body(body.as_str());
 
             if let Some(svc) = &m.svc {
-                svc.show_notification_with_options(title.as_str(), &opts).unwrap();
+                let _ = svc.show_notification_with_options(title.as_str(), &opts).unwrap();
             } else {
                 let n = N::new_with_options(title.as_str(), &opts).unwrap();
                 seed::set_timeout(Box::new(move || n.close()), 9000);
