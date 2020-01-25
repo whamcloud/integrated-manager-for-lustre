@@ -19,6 +19,7 @@ pub(crate) use arrow::arrow;
 pub(crate) use font_awesome::{font_awesome, font_awesome_outline};
 pub(crate) use logo::logo;
 
+#[allow(unused)]
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Placement {
     Left,
