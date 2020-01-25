@@ -1,10 +1,15 @@
+pub mod dropdown;
+pub mod lnet_status;
+pub mod paging;
+pub mod popover;
+pub mod table;
+pub mod tooltip;
+
 pub(crate) mod activity_indicator;
 pub(crate) mod alert_indicator;
 pub(crate) mod arrow;
 pub(crate) mod breadcrumbs;
-pub(crate) mod dropdown;
 pub(crate) mod font_awesome;
-pub(crate) mod lnet_status;
 pub(crate) mod logo;
 pub(crate) mod paging;
 pub(crate) mod popover;
@@ -19,9 +24,8 @@ pub(crate) use arrow::arrow;
 pub(crate) use font_awesome::{font_awesome, font_awesome_outline};
 pub(crate) use logo::logo;
 
-#[allow(unused)]
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum Placement {
+pub enum Placement {
     Left,
     Right,
     Top,

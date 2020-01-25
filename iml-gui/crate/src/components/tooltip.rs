@@ -83,7 +83,6 @@ pub(crate) fn view<T>(content: &str, direction: Placement) -> Node<T> {
 }
 
 /// Render a tooltip with a red error color.
-#[allow(unused)]
-pub(crate) fn error_view<T>(content: &str, direction: Placement) -> Node<T> {
+pub fn error_view<T>(content: &str, direction: Placement) -> Node<T> {
     color_view(content, direction, "red")
 }
