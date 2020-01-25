@@ -5,8 +5,9 @@
 #![allow(clippy::non_ascii_literal)]
 #![allow(clippy::enum_glob_use)]
 
+pub mod components;
+
 mod breakpoints;
-mod components;
 mod ctx_help;
 mod generated;
 mod notification;
