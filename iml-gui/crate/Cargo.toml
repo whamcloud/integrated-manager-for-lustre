@@ -48,6 +48,7 @@ features = [
   "NotificationOptions",
   "NotificationPermission",
   "ServiceWorkerContainer",
+
   "ServiceWorkerRegistration",
   "Window",
 ]
