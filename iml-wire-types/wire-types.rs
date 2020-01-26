@@ -2076,20 +2076,6 @@ impl fmt::Display for ResourceAgentType {
     }
 }
 
-impl PartialEq<String> for ResourceAgentType {
-    #[allow(clippy::cmp_owned)]
-    fn eq(&self, other: &String) -> bool {
-        self.to_string() == *other
-    }
-}
-
-impl PartialEq<&str> for ResourceAgentType {
-    #[allow(clippy::cmp_owned)]
-    fn eq(&self, other: &&str) -> bool {
-        self.to_string() == *other
-    }
-}
-
 /// Information about pacemaker resource agents
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct ResourceAgentInfo {
