@@ -1,4 +1,5 @@
 use crate::components::ActivityHealth;
+use futures::FutureExt;
 use seed::prelude::Orders;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
