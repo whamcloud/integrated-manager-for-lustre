@@ -4,9 +4,11 @@
 
 [![Build Status](https://travis-ci.com/whamcloud/integrated-manager-for-lustre.svg?branch=master)](https://travis-ci.com/whamcloud/integrated-manager-for-lustre)
 
-<a href="whamcloud/integrated-manager-for-lustre"><img alt="GitHub Actions status" src="https://github.com/whamcloud/integrated-manager-for-lustre/workflows/iml-rust/badge.svg"></a>
+![iml-rust](https://github.com/whamcloud/integrated-manager-for-lustre/workflows/iml-rust/badge.svg)
 
-<a href="whamcloud/integrated-manager-for-lustre"><img alt="GitHub Actions status" src="https://github.com/whamcloud/integrated-manager-for-lustre/workflows/iml-wasm-components/badge.svg"></a>
+![iml-wasm-components](https://github.com/whamcloud/integrated-manager-for-lustre/workflows/iml-wasm-components/badge.svg)
+
+![IML GUI](https://github.com/whamcloud/integrated-manager-for-lustre/workflows/IML%20GUI/badge.svg)
 
 Simple, but powerful, management tools that provide a unified, consistent view of Lustre storage systems and simplify the installation, configuration, monitoring, and overall management of Lustre.
 

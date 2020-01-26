@@ -96,3 +96,8 @@ jobs:
           SPEC: iml-wasm-components/iml-wasm-components.spec
           LOCAL_ONLY: true
           WORKSPACE: ${{ github.workspace }}/iml-wasm-components
+      - name: Archive rpm
+        uses: actions/upload-artifact@v1
+        with:
+          name: rpm
+          path: iml-wasm-components/_topdir/RPMS/x86_64
