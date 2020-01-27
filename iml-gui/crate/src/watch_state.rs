@@ -2,7 +2,7 @@ use std::mem;
 
 /// An abstraction over a component being open / closed
 /// or watching for a change. This is needed
-/// due to the way seed
+/// due to the way seed handles window events.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum WatchState {
     Watching,
