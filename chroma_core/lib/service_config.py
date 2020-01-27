@@ -626,6 +626,7 @@ class ServiceConfig(CommandLine):
             "UPDATE_HANDLER_PROXY_PASS",
             "GRAFANA_PORT",
             "GRAFANA_PROXY_PASS",
+            "INFLUXDB_PROXY_PASS",
         ]
 
         with open(conf_template, "r") as f:
