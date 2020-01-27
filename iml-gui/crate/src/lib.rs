@@ -1,6 +1,3 @@
-// @TODO: uncomment once https://github.com/rust-lang/rust/issues/54726 stable
-//#![rustfmt::skip::macros(class)]
-
 #![allow(clippy::used_underscore_binding)]
 #![allow(clippy::non_ascii_literal)]
 #![allow(clippy::enum_glob_use)]
@@ -9,28 +6,29 @@ mod auth;
 mod breakpoints;
 mod components;
 mod ctx_help;
+mod event_source;
 mod extensions;
 mod generated;
 mod notification;
 mod page;
 mod route;
 mod sleep;
+mod watch_state;
 
 #[cfg(test)]
 mod test_utils;
 
-use components::{breadcrumbs::BreadCrumbs, restrict, tree, update_activity_health, ActivityHealth};
+use components::{breadcrumbs::BreadCrumbs, loading, restrict, tree, update_activity_health, ActivityHealth};
 pub(crate) use extensions::*;
 use generated::css_classes::C;
 use iml_wire_types::{warp_drive, GroupType, Session};
-use js_sys::Function;
 use page::login;
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, Listener, *};
 pub(crate) use sleep::sleep_with_handle;
-use std::{cmp, mem};
-use wasm_bindgen::JsCast;
-use web_sys::{EventSource, MessageEvent};
+use std::cmp;
+pub use watch_state::*;
+use web_sys::MessageEvent;
 use Visibility::*;
 
 const TITLE_SUFFIX: &str = "IML";
@@ -64,92 +62,35 @@ impl Visibility {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum WatchState {
-    Watching,
-    Open,
-    Close,
-}
-
-impl Default for WatchState {
-    fn default() -> Self {
-        WatchState::Close
-    }
-}
-
-impl WatchState {
-    pub fn is_open(self) -> bool {
-        match self {
-            WatchState::Open => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_watching(self) -> bool {
-        match self {
-            WatchState::Watching => true,
-            _ => false,
-        }
-    }
-
-    pub fn should_update(self) -> bool {
-        self.is_watching() || self.is_open()
-    }
-
-    pub fn update(&mut self) {
-        match self {
-            WatchState::Close => {
-                mem::replace(self, WatchState::Watching);
-            }
-            WatchState::Watching => {
-                mem::replace(self, WatchState::Open);
-            }
-            WatchState::Open => {
-                mem::replace(self, WatchState::Close);
-            }
-        }
-    }
-}
-
 // ------ ------
 //     Model
 // ------ ------
 
 pub struct Model {
-    notification: notification::Model,
     activity_health: ActivityHealth,
     auth: auth::Model,
     breadcrumbs: BreadCrumbs<Route<'static>>,
     breakpoint_size: breakpoints::Size,
     locks: warp_drive::Locks,
-    login: login::Model,
     logging_out: bool,
+    login: login::Model,
     manage_menu_state: WatchState,
     menu_visibility: Visibility,
+    notification: notification::Model,
     records: warp_drive::Cache,
     route: Route<'static>,
+    saw_es_locks: bool,
+    saw_es_messages: bool,
     side_width_percentage: f32,
     track_slider: bool,
     tree: tree::Model,
 }
 
-pub fn register_eventsource_handle<T, F>(
-    es_cb_setter: fn(&EventSource, Option<&Function>),
-    msg: F,
-    ws: &EventSource,
-    orders: &mut impl Orders<Msg, GMsg>,
-) where
-    T: wasm_bindgen::convert::FromWasmAbi + 'static,
-    F: Fn(T) -> Msg + 'static,
-{
-    let (app, msg_mapper) = (orders.clone_app(), orders.msg_mapper());
-
-    let closure = Closure::new(move |data| {
-        app.update(msg_mapper(msg(data)));
-    });
-
-    es_cb_setter(ws, Some(closure.as_ref().unchecked_ref()));
-    closure.forget();
+impl Model {
+    /// Do we have enough data to load the app?
+    fn loaded(&self) -> bool {
+        self.auth.get_session().is_some() && self.saw_es_messages && self.saw_es_locks
+    }
 }
 
 // ------ ------
@@ -165,14 +106,7 @@ fn before_mount(_: Url) -> BeforeMount {
 // ------ ------
 
 fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Model> {
-    // FIXME: This should be proxied via webpack devserver but there is an issue with buffering contents of SSE.
-    let es = EventSource::new("https://localhost:7444/messaging").unwrap();
-
-    register_eventsource_handle(EventSource::set_onopen, Msg::EventSourceConnect, &es, orders);
-
-    register_eventsource_handle(EventSource::set_onmessage, Msg::EventSourceMessage, &es, orders);
-
-    register_eventsource_handle(EventSource::set_onerror, Msg::EventSourceError, &es, orders);
+    event_source::init(orders);
 
     orders.send_msg(Msg::UpdatePageTitle);
 
@@ -181,21 +115,23 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
     orders.proxy(Msg::Auth).send_msg(auth::Msg::Fetch);
 
     AfterMount::new(Model {
+        activity_health: ActivityHealth::default(),
         auth: auth::Model::default(),
+        breadcrumbs: BreadCrumbs::default(),
         breakpoint_size: breakpoints::size(),
-        route: url.into(),
-        menu_visibility: Visible,
-        manage_menu_state: WatchState::default(),
-        track_slider: false,
-        side_width_percentage: 20_f32,
-        records: warp_drive::Cache::default(),
         locks: im::hashmap!(),
         logging_out: false,
-        activity_health: ActivityHealth::default(),
-        breadcrumbs: BreadCrumbs::default(),
-        notification: notification::Model::default(),
-        tree: tree::Model::default(),
         login: login::Model::default(),
+        manage_menu_state: WatchState::default(),
+        menu_visibility: Visible,
+        notification: notification::Model::default(),
+        records: warp_drive::Cache::default(),
+        route: url.into(),
+        saw_es_locks: false,
+        saw_es_messages: false,
+        side_width_percentage: 20_f32,
+        track_slider: false,
+        tree: tree::Model::default(),
     })
 }
 
@@ -273,10 +209,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             orders.send_msg(Msg::UpdatePageTitle);
 
             if model.route == Route::Login {
-                orders.proxy(Msg::Auth).send_msg(auth::Msg::Stop);
+                orders.send_msg(Msg::Logout);
             }
 
-            if model.route == Route::Home {
+            if model.route == Route::Dashboard {
                 model.breadcrumbs.clear();
             }
             model.breadcrumbs.push(model.route.clone());
@@ -295,8 +231,16 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             let msg: warp_drive::Message = serde_json::from_str(&txt).unwrap();
 
             let msg = match msg {
-                warp_drive::Message::Locks(locks) => Msg::Locks(locks),
-                warp_drive::Message::Records(records) => Msg::Records(Box::new(records)),
+                warp_drive::Message::Locks(locks) => {
+                    model.saw_es_locks = true;
+
+                    Msg::Locks(locks)
+                }
+                warp_drive::Message::Records(records) => {
+                    model.saw_es_messages = true;
+
+                    Msg::Records(Box::new(records))
+                }
                 warp_drive::Message::RecordChange(record_change) => Msg::RecordChange(Box::new(record_change)),
             };
 
@@ -603,14 +547,17 @@ pub fn main_panels(model: &Model, children: impl View<Msg>) -> impl View<Msg> {
     ]
 }
 
-pub fn view(model: &Model) -> impl View<Msg> {
+pub fn view(model: &Model) -> Vec<Node<Msg>> {
+    if !model.loaded() {
+        return loading::view().els();
+    }
+
     match &model.route {
         Route::About => main_panels(model, page::about::view(model)).els(),
         Route::Activity => main_panels(model, page::activity::view(model)).els(),
         Route::Dashboard => main_panels(model, page::dashboard::view(model)).els(),
         Route::Filesystem => main_panels(model, page::filesystem::view(model)).els(),
         Route::FilesystemDetail(id) => main_panels(model, page::filesystem_detail::view(model, id)).els(),
-        Route::Home => main_panels(model, page::home::view(model)).els(),
         Route::Jobstats => main_panels(model, page::jobstats::view(model)).els(),
         Route::Login => page::login::view(&model.login).els().map_msg(Msg::Login),
         Route::Logs => main_panels(model, page::logs::view(model)).els(),

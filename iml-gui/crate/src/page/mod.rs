@@ -3,7 +3,6 @@ pub mod activity;
 pub mod dashboard;
 pub mod filesystem;
 pub mod filesystem_detail;
-pub mod home;
 pub mod jobstats;
 pub mod login;
 pub mod logs;
