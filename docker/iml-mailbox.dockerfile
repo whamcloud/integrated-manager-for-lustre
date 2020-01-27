@@ -1,16 +1,13 @@
+FROM rust-iml-base as builder
+
 FROM centos:7
+COPY --from=builder /build/target/release/iml-mailbox /usr/local/bin
+COPY iml-mailbox.service /etc/systemd/system/iml-mailbox.service
+COPY docker/iml-mailbox/iml-mailbox-overrides.conf /etc/systemd/system/iml-mailbox.d/iml-mailbox-overrides.conf
+
 ENV container docker
 
-COPY _topdir/RPMS/x86_64/rust-iml-mailbox*.rpm /tmp/
-
-RUN yum clean all \
-  && yum install -y epel-release \
-  && yum install -y  python-pip \
-  && pip install requests \
-  && yum autoremove -y python-pip \
-  && yum install -y /tmp/rust-iml-mailbox*.rpm \
-  && rm -f /tmp/rust-iml-mailbox*.rpm \
-  && systemctl enable iml-mailbox
+RUN systemctl enable iml-mailbox
 
 
 STOPSIGNAL SIGRTMIN+3
