@@ -76,6 +76,11 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         unique_together = ("name", "mgs")
         ordering = ["id"]
 
+    def get_ticket(self):
+        from chroma_core.models import FilesystemTicket
+
+        return FilesystemTicket.objects.filter(filesystem=self)
+
     def get_targets(self):
         return ManagedTarget.objects.filter(
             (Q(managedmdt__filesystem=self) | Q(managedost__filesystem=self)) | Q(id=self.mgs_id)
@@ -198,6 +203,10 @@ class RemoveFilesystemJob(StateChangeJob):
         return locks
 
     def get_deps(self):
+        ticket = self.filesystem.get_ticket()
+        if ticket:
+            deps.append(DependOn(ticket, "revoked", fix_state="unavailable"))
+
         deps = []
 
         mgs_target = ObjectCache.get_one(ManagedTarget, lambda t: t.id == self.filesystem.mgs_id)
@@ -278,6 +287,10 @@ class StartStoppedFilesystemJob(StateChangeJob):
     def get_deps(self):
         deps = []
 
+        ticket = self.filesystem.get_ticket()
+        if ticket:
+            deps.append(DependOn(ticket, "granted", fix_state="unavailable"))
+
         for t in ObjectCache.get_targets_by_filesystem(self.filesystem_id):
             # Report filesystem available if MDTs other than 0 are unmounted
             (_, label, index) = target_label_split(t.get_label())
@@ -311,7 +324,12 @@ class StartUnavailableFilesystemJob(StateChangeJob):
         return "Start filesystem %s" % self.filesystem.name
 
     def get_deps(self):
+        ticket = self.filesystem.get_ticket()
+        if ticket:
+            return DependAll([DependOn(ticket, "granted", fix_state="unavailable")])
+
         deps = []
+
         for t in ObjectCache.get_targets_by_filesystem(self.filesystem_id):
             # Report filesystem available if MDTs other than 0 are unmounted
             (_, label, index) = target_label_split(t.get_label())
@@ -345,6 +363,10 @@ class StopUnavailableFilesystemJob(StateChangeJob):
         return "Stop file system %s" % self.filesystem.name
 
     def get_deps(self):
+        ticket = self.filesystem.get_ticket()
+        if ticket:
+            return DependAll([DependOn(ticket, "revoked", fix_state="unavailable")])
+
         deps = []
         targets = ObjectCache.get_targets_by_filesystem(self.filesystem_id)
         targets = [t for t in targets if not issubclass(t.downcast_class, ManagedMgs)]
