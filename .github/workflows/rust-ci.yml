@@ -92,3 +92,8 @@ jobs:
           LOCAL_ONLY: true
           WORKSPACE: ${{ github.workspace }}
           RUSTUP_TOOLCHAIN: stable-x86_64-unknown-linux-gnu
+      - name: Archive rpm
+        uses: actions/upload-artifact@v1
+        with:
+          name: rpm
+          path: _topdir/RPMS/x86_64
