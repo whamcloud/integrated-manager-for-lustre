@@ -554,6 +554,11 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
     def target_type(self):
         return "mgs"
 
+    def get_ticket(self):
+        from chroma_core.models import MasterTicket
+
+        return MasterTicket.objects.filter(mgs=self)
+
     def mkfs_override_options(self, filesystemtype, mkfs_options):
         # HYD-1089 should supercede these settings
         if settings.LUSTRE_MKFS_OPTIONS_MGS:
