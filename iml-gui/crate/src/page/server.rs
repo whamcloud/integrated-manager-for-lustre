@@ -169,9 +169,10 @@ pub fn view(cache: &Cache, model: &Model) -> impl View<Msg> {
                                 alert_indicator(&cache.active_alert, &x.resource_uri, true, Placement::Top)
                             ])
                             .merge_attrs(class![C.text_center]),
-                            table::td_view(span![timeago(&x).unwrap_or("".into())]).merge_attrs(class![C.text_center]),
+                            table::td_view(span![timeago(x).unwrap_or_else(|| "".into())])
+                                .merge_attrs(class![C.text_center]),
                             table::td_view(span![x.server_profile.ui_name]).merge_attrs(class![C.text_center]),
-                            table::td_view(div![lnet_by_server(&x, &cache).unwrap_or(vec![])])
+                            table::td_view(div![lnet_by_server(x, cache).unwrap_or_else(|| vec![])])
                                 .merge_attrs(class![C.text_center])
                         ]
                     })]
