@@ -24,6 +24,7 @@ pub(crate) use extensions::*;
 use generated::css_classes::C;
 use iml_wire_types::{warp_drive, GroupType, Session};
 use page::login;
+use regex::Regex;
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, Listener, *};
 pub(crate) use sleep::sleep_with_handle;
@@ -47,6 +48,14 @@ const MAX_SIDE_PERCENTAGE: f32 = 35_f32;
 /// ```
 /// help url becomes `https://localhost:8443/help/docs/Graphical_User_Interface_9_0.html`
 const CTX_HELP: &str = "help/docs/Graphical_User_Interface_9_0.html";
+
+pub fn extract_api(s: &str) -> Option<&str> {
+    let re = Regex::new(r"^/?api/[^/]+/(\d+)/?$").unwrap();
+
+    let x = re.captures(s)?;
+
+    x.get(1).map(|x| x.as_str())
+}
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum Visibility {
@@ -82,6 +91,7 @@ pub struct Model {
     route: Route<'static>,
     saw_es_locks: bool,
     saw_es_messages: bool,
+    server_page: page::server::Model,
     side_width_percentage: f32,
     track_slider: bool,
     tree: tree::Model,
@@ -130,6 +140,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
         route: url.into(),
         saw_es_locks: false,
         saw_es_messages: false,
+        server_page: page::server::Model::default(),
         side_width_percentage: 20_f32,
         track_slider: false,
         tree: tree::Model::default(),
@@ -190,6 +201,7 @@ pub enum Msg {
     RecordChange(Box<warp_drive::RecordChange>),
     RemoveRecord(warp_drive::RecordId),
     Locks(warp_drive::Locks),
+    ServerPage(page::server::Msg),
     WindowClick,
     WindowResize,
     Notification(notification::Msg),
@@ -277,6 +289,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .proxy(Msg::Notification)
                 .send_msg(notification::generate(None, &old, &model.activity_health));
 
+            orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::SetHosts(
+                model.records.host.values().cloned().collect(),
+            ));
+
             orders.proxy(Msg::Tree).send_msg(tree::Msg::Reset);
         }
         Msg::RecordChange(record_change) => match *record_change {
@@ -310,6 +326,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::Host(id)));
                     };
+
+                    orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::SetHosts(
+                        model.records.host.values().cloned().collect(),
+                    ));
                 }
                 warp_drive::Record::ManagedTargetMount(x) => {
                     model.records.managed_target_mount.insert(x.id, x);
@@ -368,6 +388,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         },
         Msg::RemoveRecord(id) => {
             model.records.remove_record(&id);
+
+            if let warp_drive::RecordId::Host(_) = id {
+                orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::SetHosts(
+                    model.records.host.values().cloned().collect(),
+                ));
+            }
         }
         Msg::Locks(locks) => {
             model.locks = locks;
@@ -379,6 +405,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::HideMenu => {
             model.menu_visibility = Hidden;
         }
+        Msg::ServerPage(msg) => page::server::update(msg, &mut model.server_page, &mut orders.proxy(Msg::ServerPage)),
         Msg::StartSliderTracking => {
             model.track_slider = true;
         }
@@ -416,6 +443,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             if model.manage_menu_state.should_update() {
                 model.manage_menu_state.update();
             }
+
+            orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::WindowClick);
         }
         Msg::WindowResize => {
             model.breakpoint_size = breakpoints::size();
@@ -567,7 +596,13 @@ pub fn view(model: &Model) -> Vec<Node<Msg>> {
         Route::OstPool => main_panels(model, page::ostpool::view(model)).els(),
         Route::OstPoolDetail(id) => main_panels(model, page::ostpool_detail::view(model, id)).els(),
         Route::PowerControl => main_panels(model, page::power_control::view(model)).els(),
-        Route::Server => main_panels(model, page::server::view(model)).els(),
+        Route::Server => main_panels(
+            model,
+            page::server::view(&model.records, &model.server_page)
+                .els()
+                .map_msg(Msg::ServerPage),
+        )
+        .els(),
         Route::ServerDetail(id) => main_panels(model, page::server_detail::view(model, id)).els(),
         Route::Target => main_panels(model, page::target::view(model)).els(),
         Route::TargetDetail(id) => main_panels(model, page::target_detail::view(model, id)).els(),
