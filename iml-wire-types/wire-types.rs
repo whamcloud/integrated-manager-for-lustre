@@ -2213,6 +2213,7 @@ pub mod warp_drive {
 
     impl Cache {
         /// Removes the record from the cache
+        #[allow(clippy::trivially_copy_pass_by_ref)]
         pub fn remove_record(&mut self, x: &RecordId) -> bool {
             match x {
                 RecordId::ActiveAlert(id) => self.active_alert.remove(id).is_some(),
