@@ -11,11 +11,7 @@ pub(crate) mod arrow;
 pub(crate) mod breadcrumbs;
 pub(crate) mod font_awesome;
 pub(crate) mod logo;
-pub(crate) mod paging;
-pub(crate) mod popover;
 pub(crate) mod restrict;
-pub(crate) mod table;
-pub(crate) mod tooltip;
 pub(crate) mod tree;
 
 pub(crate) use activity_indicator::{activity_indicator, update_activity_health, ActivityHealth};

@@ -32,7 +32,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path iml-gui/crate/Cargo.toml --all-features -- --deny clippy::nursery
+          args: --manifest-path iml-gui/crate/Cargo.toml --all-features -- --deny clippy::nursery --deny warnings
 
   rustfmt:
     name: Format
