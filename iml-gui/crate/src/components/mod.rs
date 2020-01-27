@@ -5,6 +5,7 @@ pub(crate) mod breadcrumbs;
 pub(crate) mod dropdown;
 pub(crate) mod font_awesome;
 pub(crate) mod lnet_status;
+pub(crate) mod loading;
 pub(crate) mod logo;
 pub(crate) mod paging;
 pub(crate) mod popover;

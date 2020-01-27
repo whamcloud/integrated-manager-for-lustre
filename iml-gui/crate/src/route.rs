@@ -31,7 +31,6 @@ pub enum Route<'a> {
     Dashboard,
     Filesystem,
     FilesystemDetail(RouteId<'a>),
-    Home,
     Jobstats,
     Login,
     Logs,
@@ -58,7 +57,6 @@ impl<'a> Route<'a> {
             Self::Dashboard => vec!["dashboard"],
             Self::Filesystem => vec!["filesystem"],
             Self::FilesystemDetail(id) => vec!["filesystem_detail", id],
-            Self::Home => vec![""],
             Self::Jobstats => vec!["jobstats"],
             Self::Login => vec!["login"],
             Self::Logs => vec!["logs"],
@@ -91,7 +89,6 @@ impl<'a> ToString for Route<'a> {
             Self::Dashboard => "Dashboard".into(),
             Self::Filesystem => "Filesystems".into(),
             Self::FilesystemDetail(_) => "Filesystem Detail".into(),
-            Self::Home => "Home".into(),
             Self::Jobstats => "Jobstats".into(),
             Self::Login => "Login".into(),
             Self::Logs => "Logs".into(),
@@ -132,7 +129,7 @@ impl<'a> From<Url> for Route<'a> {
                 .map(RouteId::from)
                 .map(Self::FilesystemDetail)
                 .unwrap_or(Self::NotFound),
-            None | Some("") => Self::Home,
+            None | Some("") => Self::Dashboard,
             Some("jobstats") => Self::Jobstats,
             Some("login") => Self::Login,
             Some("logs") => Self::Logs,
