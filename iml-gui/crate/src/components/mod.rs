@@ -10,6 +10,7 @@ pub(crate) mod alert_indicator;
 pub(crate) mod arrow;
 pub(crate) mod breadcrumbs;
 pub(crate) mod font_awesome;
+pub(crate) mod loading;
 pub(crate) mod logo;
 pub(crate) mod restrict;
 pub(crate) mod tree;
