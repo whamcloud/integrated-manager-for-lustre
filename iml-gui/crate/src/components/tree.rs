@@ -720,7 +720,12 @@ fn tree_volume_collection_view(cache: &ArcCache, model: &Model, parent_address: 
     .unwrap_or(empty![])
 }
 
-fn tree_target_collection_view(cache: &ArcCache, model: &Model, parent_address: &Address, kind: TargetKind) -> Node<Msg> {
+fn tree_target_collection_view(
+    cache: &ArcCache,
+    model: &Model,
+    parent_address: &Address,
+    kind: TargetKind,
+) -> Node<Msg> {
     let label = match kind {
         TargetKind::Mgt => "MGTs",
         TargetKind::Mdt => "MDTs",
@@ -759,9 +764,9 @@ pub fn view(cache: &ArcCache, model: &Model) -> Node<Msg> {
 mod tests {
     use super::{update, Address, GMsg, Model, Msg, Step};
     use crate::test_utils::{create_app_simple, fixtures};
+    use iml_wire_types::warp_drive::ArcCache;
     use seed::virtual_dom::Node;
     use wasm_bindgen_test::*;
-    use iml_wire_types::warp_drive::ArcCache;
 
     wasm_bindgen_test_configure!(run_in_browser);
 
