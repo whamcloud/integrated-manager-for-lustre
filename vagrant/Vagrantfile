@@ -617,6 +617,8 @@ Vagrant.configure('2') do |config|
       # Lustre / application network
       provision_lnet_net c, "3#{i}"
 
+      configure_docker_network c
+
       c.vm.provision 'install-iml-local',
             type: 'shell',
             run: 'never',
