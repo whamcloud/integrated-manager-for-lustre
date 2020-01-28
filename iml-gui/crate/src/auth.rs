@@ -3,6 +3,7 @@ use futures::channel::oneshot;
 use iml_wire_types::{EndpointName, Session};
 use regex::Regex;
 use seed::{browser::service::fetch, prelude::*, *};
+use std::time::Duration;
 use wasm_bindgen::JsValue;
 use web_sys::HtmlDocument;
 
@@ -86,7 +87,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 return;
             }
 
-            let (cancel, fut) = sleep_with_handle(10_000, Msg::Fetch, Msg::Noop);
+            let (cancel, fut) = sleep_with_handle(Duration::from_secs(10), Msg::Fetch, Msg::Noop);
 
             model.cancel = Some(cancel);
 

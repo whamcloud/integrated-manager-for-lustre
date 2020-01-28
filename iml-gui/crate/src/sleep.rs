@@ -4,17 +4,18 @@ use futures::{
     Future, FutureExt,
 };
 use gloo_timers::future::TimeoutFuture;
+use std::time::Duration;
 
 /// Sleeps for the given duration and calls `complete_msg`
 /// or calls `drop_msg` if the returned handle is dropped.
 pub(crate) fn sleep_with_handle<Msg>(
-    timeout: u32,
+    timeout: Duration,
     complete_msg: Msg,
     drop_msg: Msg,
 ) -> (oneshot::Sender<()>, impl Future<Output = Result<Msg, Msg>>) {
     let (p, c) = oneshot::channel::<()>();
 
-    let fut = future::select(c, TimeoutFuture::new(timeout)).map(move |either| match either {
+    let fut = future::select(c, TimeoutFuture::new(timeout.as_millis() as u32)).map(move |either| match either {
         Either::Left((_, b)) => {
             drop(b);
 
