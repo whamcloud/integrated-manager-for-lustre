@@ -8,6 +8,7 @@ pub(crate) mod lnet_status;
 pub(crate) mod logo;
 pub(crate) mod paging;
 pub(crate) mod popover;
+pub(crate) mod restrict;
 pub(crate) mod table;
 pub(crate) mod tooltip;
 pub(crate) mod tree;

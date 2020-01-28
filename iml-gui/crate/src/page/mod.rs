@@ -18,5 +18,6 @@ pub mod server_detail;
 pub mod target;
 pub mod target_detail;
 pub mod user;
+pub mod user_detail;
 pub mod volume;
 pub mod volume_detail;

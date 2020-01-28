@@ -45,6 +45,7 @@ pub enum Route<'a> {
     Target,
     TargetDetail(RouteId<'a>),
     User,
+    UserDetail(RouteId<'a>),
     Volume,
     VolumeDetail(RouteId<'a>),
 }
@@ -71,6 +72,7 @@ impl<'a> Route<'a> {
             Self::Target => vec!["target"],
             Self::TargetDetail(id) => vec!["target_detail", id],
             Self::User => vec!["user"],
+            Self::UserDetail(id) => vec!["user_detail", id],
             Self::Volume => vec!["volume"],
             Self::VolumeDetail(id) => vec!["volume_detail", id],
         }
@@ -103,9 +105,16 @@ impl<'a> ToString for Route<'a> {
             Self::Target => "Target".into(),
             Self::TargetDetail(_) => "Target Detail".into(),
             Self::User => "Users".into(),
+            Self::UserDetail(_) => "User".into(),
             Self::Volume => "Volumes".into(),
             Self::VolumeDetail(_) => "Volume Detail".into(),
         }
+    }
+}
+
+impl<'a> From<Route<'a>> for Url {
+    fn from(route: Route<'a>) -> Self {
+        route.path().into()
     }
 }
 
@@ -148,6 +157,11 @@ impl<'a> From<Url> for Route<'a> {
                 .map(Self::TargetDetail)
                 .unwrap_or(Self::NotFound),
             Some("user") => Self::User,
+            Some("user_detail") => path
+                .next()
+                .map(RouteId::from)
+                .map(Self::UserDetail)
+                .unwrap_or(Self::NotFound),
             Some("volume") => Self::Volume,
             Some("volume_detail") => path
                 .next()
