@@ -662,8 +662,10 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use crate::test_utils::fixtures;
-    use iml_wire_types::db::OstPoolOstsRecord;
-    use iml_wire_types::warp_drive::{ArcCache, Cache};
+    use iml_wire_types::{
+        db::OstPoolOstsRecord,
+        warp_drive::{ArcCache, ArcValuesExt, Cache},
+    };
     use std::sync::Arc;
 
     #[test]
@@ -706,5 +708,14 @@ mod tests {
         );
         // the original cache and the cache - conversion result - should be equal
         assert_eq!(c0, c0_again);
+    }
+
+    #[test]
+    fn test_arc_values() {
+        let cache: ArcCache = (&fixtures::get_cache()).into();
+
+        let osts: Vec<&OstPoolOstsRecord> = cache.ost_pool_osts.values().map(|x| &**x).collect();
+        let osts2: Vec<&OstPoolOstsRecord> = cache.ost_pool_osts.arc_values().collect();
+        assert_eq!(osts, osts2);
     }
 }
