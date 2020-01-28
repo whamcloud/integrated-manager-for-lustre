@@ -1,6 +1,5 @@
 # vi: set ft=ruby :
 
-require 'etc'
 require 'socket'
 
 if ENV['JENKINS'] == 'true'
@@ -113,7 +112,7 @@ Vagrant.configure('2') do |config|
 127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
 ::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
 
-192.168.121.1 host
+192.168.121.1 host vmhost
 #{mgmt_net_pfx}.8 vm4
 #{mgmt_net_pfx}.10 vm3
 #{mgmt_net_pfx}.21 vm5
@@ -182,7 +181,7 @@ __EOF
     open('ssh_config', 'w') { |f|
     f.puts <<-__EOF
 Host host
-  User #{Etc.getlogin}
+  User #{ENV['USER']}
   StrictHostKeyChecking no
 
 Host #{hostname} vmhost
