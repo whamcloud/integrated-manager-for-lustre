@@ -54,7 +54,7 @@ pub async fn handle_db_notifications(
                         RecordChange::Delete(r) => {
                             tracing::debug!("LISTEN / NOTIFY Delete record: {:?}", r);
 
-                            let removed = api_cache_state.lock().await.remove_record(&r);
+                            let removed = api_cache_state.lock().await.remove_record(r);
 
                             if removed {
                                 users::send_message(
