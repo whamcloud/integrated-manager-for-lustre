@@ -1,7 +1,7 @@
 use crate::components::{font_awesome_outline, tooltip, Placement};
 use crate::generated::css_classes::C;
 use im::HashMap;
-use iml_wire_types::{Alert, AlertSeverity};
+use iml_wire_types::{Alert, AlertSeverity, warp_drive::ArcValuesExt};
 use seed::{prelude::*, *};
 use std::{cmp::max, sync::Arc};
 
@@ -22,8 +22,7 @@ pub(crate) fn alert_indicator<T>(
     tt_placement: Placement,
 ) -> Node<T> {
     let alerts: Vec<&Alert> = alerts
-        .values()
-        .map(|x| &**x)
+        .arc_values()
         .filter_map(|x: &Alert| match &x.affected {
             Some(xs) => xs.iter().find(|x| x == &resource_uri).map(|_| x),
             None => None,

@@ -107,19 +107,19 @@ pub struct ArcCache {
 
 impl Cache {
     /// Removes the record from the cache
-    pub fn remove_record(&mut self, x: &RecordId) -> bool {
+    pub fn remove_record(&mut self, x: RecordId) -> bool {
         match x {
-            RecordId::ActiveAlert(id) => self.active_alert.remove(id).is_some(),
-            RecordId::Filesystem(id) => self.filesystem.remove(id).is_some(),
-            RecordId::Host(id) => self.host.remove(id).is_some(),
-            RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(id).is_some(),
-            RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(id).is_some(),
-            RecordId::OstPool(id) => self.ost_pool.remove(id).is_some(),
-            RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(id).is_some(),
-            RecordId::StratagemConfig(id) => self.stratagem_config.remove(id).is_some(),
-            RecordId::Target(id) => self.target.remove(id).is_some(),
-            RecordId::Volume(id) => self.volume.remove(id).is_some(),
-            RecordId::VolumeNode(id) => self.volume_node.remove(id).is_some(),
+            RecordId::ActiveAlert(id) => self.active_alert.remove(&id).is_some(),
+            RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
+            RecordId::Host(id) => self.host.remove(&id).is_some(),
+            RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
+            RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(&id).is_some(),
+            RecordId::OstPool(id) => self.ost_pool.remove(&id).is_some(),
+            RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(&id).is_some(),
+            RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
+            RecordId::Target(id) => self.target.remove(&id).is_some(),
+            RecordId::Volume(id) => self.volume.remove(&id).is_some(),
+            RecordId::VolumeNode(id) => self.volume_node.remove(&id).is_some(),
         }
     }
     /// Inserts the record into the cache
@@ -163,20 +163,20 @@ impl Cache {
 }
 
 impl ArcCache {
-    /// Removes the record from the cache
-    pub fn remove_record(&mut self, x: &RecordId) -> bool {
+    /// Removes the record from the arc cache
+    pub fn remove_record(&mut self, x: RecordId) -> bool {
         match x {
-            RecordId::ActiveAlert(id) => self.active_alert.remove(id).is_some(),
-            RecordId::Filesystem(id) => self.filesystem.remove(id).is_some(),
-            RecordId::Host(id) => self.host.remove(id).is_some(),
-            RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(id).is_some(),
-            RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(id).is_some(),
-            RecordId::OstPool(id) => self.ost_pool.remove(id).is_some(),
-            RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(id).is_some(),
-            RecordId::StratagemConfig(id) => self.stratagem_config.remove(id).is_some(),
-            RecordId::Target(id) => self.target.remove(id).is_some(),
-            RecordId::Volume(id) => self.volume.remove(id).is_some(),
-            RecordId::VolumeNode(id) => self.volume_node.remove(id).is_some(),
+            RecordId::ActiveAlert(id) => self.active_alert.remove(&id).is_some(),
+            RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
+            RecordId::Host(id) => self.host.remove(&id).is_some(),
+            RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
+            RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(&id).is_some(),
+            RecordId::OstPool(id) => self.ost_pool.remove(&id).is_some(),
+            RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(&id).is_some(),
+            RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
+            RecordId::Target(id) => self.target.remove(&id).is_some(),
+            RecordId::Volume(id) => self.volume.remove(&id).is_some(),
+            RecordId::VolumeNode(id) => self.volume_node.remove(&id).is_some(),
         }
     }
     /// Inserts the record into the cache
@@ -319,6 +319,6 @@ pub enum RecordChange {
 #[serde(tag = "tag", content = "payload")]
 pub enum Message {
     Locks(Locks),
-    Records(ArcCache),
+    Records(Cache),
     RecordChange(RecordChange),
 }

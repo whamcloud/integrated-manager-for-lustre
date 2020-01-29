@@ -5,7 +5,7 @@ use crate::{
 };
 use iml_wire_types::{
     db::{Id, OstPoolRecord, VolumeNodeRecord},
-    warp_drive::{ArcCache, RecordId},
+    warp_drive::{ArcCache, ArcValuesExt, RecordId},
     Filesystem, Host, Label, Target, TargetConfParam, TargetKind,
 };
 use seed::{prelude::*, *};
@@ -33,11 +33,11 @@ fn sorted_cache<'a>(x: &'a im::HashMap<u32, Arc<impl Label + Id>>) -> impl Itera
 }
 
 fn get_volume_nodes_by_host_id(xs: &im::HashMap<u32, Arc<VolumeNodeRecord>>, host_id: u32) -> Vec<&VolumeNodeRecord> {
-    xs.values().map(|x| &**x).filter(|v| v.host_id == host_id).collect()
+    xs.arc_values().filter(|v| v.host_id == host_id).collect()
 }
 
 fn get_ost_pools_by_fs_id(xs: &im::HashMap<u32, Arc<OstPoolRecord>>, fs_id: u32) -> Vec<&OstPoolRecord> {
-    xs.values().map(|x| &**x).filter(|v| v.filesystem_id == fs_id).collect()
+    xs.arc_values().filter(|v| v.filesystem_id == fs_id).collect()
 }
 
 fn get_targets_by_parent_resource(
@@ -55,16 +55,14 @@ fn get_targets_by_parent_resource(
 fn get_targets_by_pool_id(cache: &ArcCache, ostpool_id: u32) -> Vec<&Target<TargetConfParam>> {
     let target_ids: Vec<_> = cache
         .ost_pool_osts
-        .values()
-        .map(|x| &**x)
+        .arc_values()
         .filter(|x| x.ostpool_id == ostpool_id)
         .map(|x| x.managedost_id)
         .collect();
 
     cache
         .target
-        .values()
-        .map(|x| &**x)
+        .arc_values()
         .filter(|x| target_ids.contains(&x.id))
         .collect()
 }
@@ -74,8 +72,7 @@ fn get_targets_by_fs_id(
     fs_id: u32,
     kind: TargetKind,
 ) -> Vec<&Target<TargetConfParam>> {
-    xs.values()
-        .map(|x| &**x)
+    xs.arc_values()
         .filter(|x: &&Target<TargetConfParam>| match kind {
             TargetKind::Mgt => {
                 x.kind == TargetKind::Mgt
@@ -234,8 +231,7 @@ fn add_item(record_id: RecordId, cache: &ArcCache, model: &mut Model, orders: &m
 
             let mut xs = cache
                 .volume_node
-                .values()
-                .map(|x| &**x)
+                .arc_values()
                 .filter(|y| tree_node.items.contains(&y.id))
                 .collect();
 
@@ -262,8 +258,7 @@ fn add_item(record_id: RecordId, cache: &ArcCache, model: &mut Model, orders: &m
 
             let mut xs = cache
                 .ost_pool
-                .values()
-                .map(|x| &**x)
+                .arc_values()
                 .filter(|y| tree_node.items.contains(&y.id))
                 .collect();
 
@@ -280,8 +275,7 @@ fn add_item(record_id: RecordId, cache: &ArcCache, model: &mut Model, orders: &m
             let sort_fn = |cache: &ArcCache, model: &TreeNode| {
                 let mut xs = cache
                     .target
-                    .values()
-                    .map(|x| &**x)
+                    .arc_values()
                     .filter(|y| model.items.contains(&y.id))
                     .collect();
 
