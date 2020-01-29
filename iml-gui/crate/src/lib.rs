@@ -127,7 +127,7 @@ pub struct Model {
     logging_out: bool,
     manage_menu_state: WatchState,
     menu_visibility: Visibility,
-    records: warp_drive::Cache,
+    records: warp_drive::ArcCache,
     route: Route<'static>,
     side_width_percentage: f32,
     track_slider: bool,
@@ -216,6 +216,7 @@ pub fn routes(url: Url) -> Option<Msg> {
 //     Sink
 // ------ ------
 
+#[allow(clippy::large_enum_variant)]
 pub enum GMsg {
     RouteChange(Url),
     AuthProxy(auth::Msg),
@@ -237,6 +238,7 @@ fn sink(g_msg: GMsg, _model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
 //    Update
 // ------ ------
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone)]
 pub enum Msg {
     RouteChanged(Url),
