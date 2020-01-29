@@ -206,7 +206,7 @@ pub enum Msg {
     EventSourceConnect(JsValue),
     EventSourceMessage(MessageEvent),
     EventSourceError(JsValue),
-    Records(Box<warp_drive::ArcCache>),
+    Records(Box<warp_drive::Cache>),
     RecordChange(Box<warp_drive::RecordChange>),
     RemoveRecord(warp_drive::RecordId),
     Locks(warp_drive::Locks),
@@ -289,7 +289,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
         },
         Msg::Records(records) => {
-            model.records = *records;
+            model.records = (&*records).into();
 
             let old = model.activity_health;
             model.activity_health = update_activity_health(&model.records.active_alert);
@@ -396,7 +396,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
         },
         Msg::RemoveRecord(id) => {
-            model.records.remove_record(&id);
+            model.records.remove_record(id);
 
             if let warp_drive::RecordId::Host(_) = id {
                 orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::SetHosts(
