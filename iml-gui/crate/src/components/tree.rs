@@ -120,7 +120,7 @@ impl From<TargetKind> for Step {
     }
 }
 
-#[derive(Debug, Default, Eq, PartialEq, Hash, Clone)]
+#[derive(Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Clone)]
 pub struct Address(BTreeSet<Step>);
 
 impl Address {
@@ -796,12 +796,15 @@ mod tests {
 
         let model = app.data.model.borrow();
 
-        let expected = vec![
+        let mut expected = vec![
             Address::new(vec![Step::HostCollection]),
             Address::new(vec![Step::FsCollection]),
         ];
+        expected.sort();
 
-        let actual: Vec<_> = model.as_ref().unwrap().keys().cloned().collect();
+        // note: keys() returns elements in arbitrary order
+        let mut actual: Vec<_> = model.as_ref().unwrap().keys().cloned().collect();
+        actual.sort();
 
         assert_eq!(actual, expected);
     }
