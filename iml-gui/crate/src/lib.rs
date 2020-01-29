@@ -88,7 +88,7 @@ pub struct Model {
     manage_menu_state: WatchState,
     menu_visibility: Visibility,
     notification: notification::Model,
-    records: warp_drive::Cache,
+    records: warp_drive::ArcCache,
     route: Route<'static>,
     saw_es_locks: bool,
     saw_es_messages: bool,
