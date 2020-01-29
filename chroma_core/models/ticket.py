@@ -30,6 +30,10 @@ class Ticket(StatefulObject):
         default=True, help_text="Ticket is controlled by a resources named in `ha_label`"
     )
 
+    @property
+    def ticket(self):
+        return Ticket.objects.get(id=self.id)
+
 
 class MasterTicket(Ticket):
     """
@@ -78,12 +82,20 @@ class GrantRevokedTicketJob(StateChangeJob):
 
     def get_steps(self):
         steps = []
-        if self.ticket.resource_controlled:
-            steps.append((StartResourceStep, {"host": self.ticket.get_host(), "ha_label": self.ticket.ha_label}))
+        ticket = self.ticket.downcast()
+        if ticket.resource_controlled:
+            steps.append((StartResourceStep, {"host": ticket.get_host(), "ha_label": ticket.ha_label}))
         else:
             raise RuntimeError("Ticket `%s' is not resource controlled" % self.ticket.name)
 
         return steps
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["grant_ticket"]
+
+    def description(self):
+        return "Grant ticket %s" % self.ticket.name
 
 
 class RevokeGrantedTicketJob(StateChangeJob):
@@ -95,24 +107,36 @@ class RevokeGrantedTicketJob(StateChangeJob):
 
     def get_steps(self):
         steps = []
+        ticket = self.ticket.downcast()
 
-        if self.ticket.resource_controlled:
-            steps.append((StartResourceStep, {"host": self.ticket.get_host(), "ha_label": self.ticket.ha_label}))
+        if ticket.resource_controlled:
+            steps.append((StopResourceStep, {"host": ticket.get_host(), "ha_label": ticket.ha_label}))
         else:
-            raise RuntimeError("Ticket `%s' is not resource controlled" % self.ticket.name)
+            raise RuntimeError("Ticket `%s' is not resource controlled" % ticket.name)
 
         return steps
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["revoke_ticket"]
+
+    def description(self):
+        return "Revoke ticket %s" % self.ticket.name
 
 
 class StartResourceStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.inoke_agent(kwargs["host"], "start_target", {"ha_label", kwargs["ha_label"]})
+        host = kwargs["host"]
+        label = kwargs["ha_label"]
+        self.invoke_agent_expect_result(host, "start_target", {"ha_label": label})
 
 
 class StopResourceStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.inoke_agent(kwargs["host"], "stop_target", {"ha_label", kwargs["ha_label"]})
+        host = kwargs["host"]
+        label = kwargs["ha_label"]
+        self.invoke_agent_expect_result(host, "stop_target", {"ha_label": label})
