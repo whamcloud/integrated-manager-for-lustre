@@ -123,7 +123,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
 
     orders.proxy(Msg::Notification).perform_cmd(notification::init());
 
-    orders.proxy(Msg::Auth).send_msg(auth::Msg::Fetch);
+    orders.proxy(Msg::Auth).send_msg(Box::new(auth::Msg::Fetch));
 
     AfterMount::new(Model {
         activity_health: ActivityHealth::default(),
@@ -165,7 +165,7 @@ pub fn routes(url: Url) -> Option<Msg> {
 
 pub enum GMsg {
     RouteChange(Url),
-    AuthProxy(auth::Msg),
+    AuthProxy(Box<auth::Msg>),
 }
 
 fn sink(g_msg: GMsg, _model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -211,7 +211,7 @@ pub enum Msg {
     Logout,
     LoggedOut(fetch::FetchObject<()>),
     Tree(tree::Msg),
-    Auth(auth::Msg),
+    Auth(Box<auth::Msg>),
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -269,7 +269,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::GotSession(data_result) => match data_result {
             Ok(resp) => {
-                orders.send_g_msg(GMsg::AuthProxy(auth::Msg::SetSession(resp)));
+                orders.send_g_msg(GMsg::AuthProxy(Box::new(auth::Msg::SetSession(resp))));
 
                 model.logging_out = false;
             }
@@ -428,7 +428,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::Logout => {
             model.logging_out = true;
 
-            orders.proxy(Msg::Auth).send_msg(auth::Msg::Stop);
+            orders.proxy(Msg::Auth).send_msg(Box::new(auth::Msg::Stop));
 
             orders.perform_cmd(
                 auth::fetch_session()
@@ -463,7 +463,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             login::update(msg, &mut model.login, &mut orders.proxy(Msg::Login));
         }
         Msg::Auth(msg) => {
-            auth::update(msg, &mut model.auth, &mut orders.proxy(Msg::Auth));
+            auth::update(*msg, &mut model.auth, &mut orders.proxy(|x| Msg::Auth(Box::new(x))));
         }
     }
 }
