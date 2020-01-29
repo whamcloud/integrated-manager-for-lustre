@@ -33,6 +33,7 @@ impl Default for State {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone)]
 pub enum Msg {
     Fetch,

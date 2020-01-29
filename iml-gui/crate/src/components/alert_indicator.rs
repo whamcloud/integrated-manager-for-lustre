@@ -1,7 +1,7 @@
 use crate::components::{font_awesome_outline, tooltip, Placement};
 use crate::generated::css_classes::C;
 use im::HashMap;
-use iml_wire_types::{Alert, AlertSeverity, warp_drive::ArcValuesExt};
+use iml_wire_types::{warp_drive::ArcValuesExt, Alert, AlertSeverity};
 use seed::{prelude::*, *};
 use std::{cmp::max, sync::Arc};
 
