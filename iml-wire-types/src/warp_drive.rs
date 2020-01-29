@@ -6,14 +6,21 @@ use crate::{
     Alert, Filesystem, Host, LockChange, Target, TargetConfParam, Volume,
 };
 use im::{HashMap, HashSet};
-use std::iter::FusedIterator;
-use std::ops::Deref;
-use std::sync::Arc;
+use std::{
+    hash::{BuildHasher, Hash},
+    iter::FusedIterator,
+    ops::Deref,
+    sync::Arc,
+};
 
 /// This trait is to bring method `arc_values()` to the collections of
 /// type HashMap<K, Arc<V>> to simplify iterating through the values.
 /// Example:
 /// ```rust,norun
+///     use std::sync::Arc;
+///     use im::HashMap;
+///     use iml_wire_types::warp_drive::ArcValuesExt;
+///
 ///     let hm: HashMap<i32, Arc<String>> = im::hashmap!(
 ///         1 => Arc::new("one".to_string()),
 ///         2 => Arc::new("two".to_string()),
@@ -25,13 +32,14 @@ pub trait ArcValuesExt<K, V> {
     fn arc_values(&self) -> ArcValues<K, V>;
 }
 
-// the newtype around the wrapper from the library
+// the newtype around the iterator from the library
 pub struct ArcValues<'a, K: 'a, V: 'a>(im::hashmap::Values<'a, K, Arc<V>>);
 
-impl<'a, K, V> ArcValuesExt<K, V> for HashMap<K, Arc<V>>
+impl<'a, K, V, S> ArcValuesExt<K, V> for HashMap<K, Arc<V>, S>
 where
-    K: std::hash::Hash + Eq + Copy,
+    K: Hash + Eq + Copy,
     V: Clone,
+    S: BuildHasher,
 {
     fn arc_values(&self) -> ArcValues<K, V> {
         ArcValues(self.values())
@@ -255,6 +263,7 @@ impl From<&ArcCache> for Cache {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 #[serde(tag = "tag", content = "payload")]
 pub enum Record {
@@ -307,6 +316,7 @@ impl Deref for RecordId {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 #[serde(tag = "tag", content = "payload")]
 pub enum RecordChange {
@@ -315,6 +325,7 @@ pub enum RecordChange {
 }
 
 /// Message variants.
+#[allow(clippy::large_enum_variant)]
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 #[serde(tag = "tag", content = "payload")]
 pub enum Message {

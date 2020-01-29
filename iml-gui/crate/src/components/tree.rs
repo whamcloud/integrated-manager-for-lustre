@@ -199,7 +199,12 @@ impl Model {
 
 // Update
 
-fn add_item(record_id: RecordId, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -> Option<()> {
+fn add_item(
+    record_id: RecordId,
+    cache: &ArcCache,
+    model: &mut Model,
+    orders: &mut impl Orders<Msg, GMsg>,
+) -> Option<()> {
     match record_id {
         RecordId::Host(id) => {
             let addr: Address = vec![Step::HostCollection].into();
