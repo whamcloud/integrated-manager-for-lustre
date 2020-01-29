@@ -557,7 +557,8 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
     def get_ticket(self):
         from chroma_core.models import MasterTicket
 
-        return MasterTicket.objects.filter(mgs=self)
+        tl = MasterTicket.objects.filter(mgs=self)
+        return list(tl)[0].ticket if len(list(tl)) > 0 else None
 
     def mkfs_override_options(self, filesystemtype, mkfs_options):
         # HYD-1089 should supercede these settings

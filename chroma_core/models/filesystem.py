@@ -79,7 +79,8 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
     def get_ticket(self):
         from chroma_core.models import FilesystemTicket
 
-        return FilesystemTicket.objects.filter(filesystem=self)
+        tl = FilesystemTicket.objects.filter(filesystem=self)
+        return list(tl)[0].ticket if len(list(tl)) > 0 else None
 
     def get_targets(self):
         return ManagedTarget.objects.filter(
@@ -285,12 +286,11 @@ class StartStoppedFilesystemJob(StateChangeJob):
         return "Start file system %s" % self.filesystem.name
 
     def get_deps(self):
-        deps = []
-
         ticket = self.filesystem.get_ticket()
         if ticket:
-            deps.append(DependOn(ticket, "granted", fix_state="unavailable"))
+            return DependAll(DependOn(ticket, "granted", fix_state="unavailable"))
 
+        deps = []
         for t in ObjectCache.get_targets_by_filesystem(self.filesystem_id):
             # Report filesystem available if MDTs other than 0 are unmounted
             (_, label, index) = target_label_split(t.get_label())

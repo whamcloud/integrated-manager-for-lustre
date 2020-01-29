@@ -192,4 +192,6 @@ help_text = {
     "creating_ostpool": "Creating OST Pool",
     "destroying_ostpool": "Destroying OST Pool",
     "updating_ostpool": "Updating OST Pool",
+    "grant_ticket": "Granting Ticket",
+    "revoke_ticket": "Revoking Ticket",
 }
