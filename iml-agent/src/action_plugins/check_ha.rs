@@ -111,7 +111,7 @@ async fn check_pacemaker() -> Result<ComponentState<bool>, ImlAgentError> {
     if file_exists("/var/lib/pacemaker/cib/cib.xml").await {
         pacemaker.service = systemd_unit_servicestate("pacemaker").await?;
         let resources = get_ha_resource_list(()).await?;
-        if resources.len() == 0 {
+        if resources.is_empty() {
             pacemaker.config = ConfigState::Default;
         } else {
             pacemaker.config = ConfigState::Unknown;

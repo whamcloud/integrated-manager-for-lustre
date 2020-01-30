@@ -60,12 +60,7 @@ async fn get_delivery(
                     }),
                 );
             }
-            ManagerMessage::Data {
-                plugin,
-                session_id: _,
-                body,
-                ..
-            } => {
+            ManagerMessage::Data { plugin, body, .. } => {
                 let r = { sessions2.message(&plugin, body) };
 
                 if let Some(fut) = r {

@@ -53,7 +53,7 @@ fn configure_ntp(
 }
 
 fn transform_config(server: String, line: String, prefix_found: bool) -> (String, bool) {
-    let m = line.split(" ").take(1).collect::<Vec<&str>>();
+    let m = line.split(' ').take(1).collect::<Vec<&str>>();
     match (m.as_slice(), prefix_found) {
         (&["server"], false) => {
             if server == "localhost" {
@@ -69,7 +69,7 @@ fn transform_config(server: String, line: String, prefix_found: bool) -> (String
                 ([PREFIX, &server, "iburst", MARKER, &line].join(" "), true)
             }
         }
-        (["server"], true) => ([MARKER, &line].join(" ").to_string(), true),
+        (["server"], true) => ([MARKER, &line].join(" "), true),
         _ => (line, prefix_found),
     }
 }
@@ -78,7 +78,7 @@ fn reset_config(line: String) -> String {
     if let Some(marker_location) = line.find(MARKER) {
         let end_location = marker_location + MARKER.len();
         let original = line[end_location..].trim();
-        if original.len() > 0 {
+        if !original.is_empty() {
             original.into()
         } else {
             REMOVE_MARKER.into()

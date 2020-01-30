@@ -180,9 +180,7 @@ class ChromaLogCollector(object):
         errors.append(self.fetch_log(server, "/var/tmp/%s" % diagnostics, ""))
 
         if shell_run(["chmod", "777", "%s/%s" % (self.destination_path, diagnostics)]).rc:
-            errors.append(
-                "Unable to change perms on diagnostics at %s/%s" % (self.destination_path, diagnostics)
-            )
+            errors.append("Unable to change perms on diagnostics at %s/%s" % (self.destination_path, diagnostics))
 
         return errors
 
