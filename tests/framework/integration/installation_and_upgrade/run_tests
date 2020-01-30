@@ -5,6 +5,7 @@ spacelist_to_commalist() {
 }
 
 . "$CHROMA_DIR"/tests/framework/integration/utils/node_lib.sh
+. $CHROMA_DIR/tests/framework/utils/collect_reports.sh
 
 [ -r localenv ] && . localenv
 
@@ -26,7 +27,7 @@ eval $(python $CHROMA_DIR/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
 TESTS_DIR="tests/integration/installation_and_upgrade/"
 
-trap "set +e; echo 'Collecting reports...'; scp root@$TEST_RUNNER:~/test_report*.xml \"$PWD/test_reports/\"" EXIT
+trap "set +e; collect_reports" EXIT
 
 # Install and setup chroma software storage appliances
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
