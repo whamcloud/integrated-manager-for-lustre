@@ -211,8 +211,16 @@ module.exports = {
     }
   },
   variants: {
-    display: ["group-hover", "responsive"],
+    display: ["group-hover", "group-focus", "responsive"],
     textColor: ["hover", "group-hover", "focus"]
   },
-  plugins: []
+  plugins: [
+    function({ addVariant }) {
+      addVariant('group-focus', ({ container, separator }) => {
+        container.walkRules(rule => {
+          rule.selector = `.group:focus-within .group-focus\\:${rule.selector.slice(1)}`
+        })
+      })
+    }
+  ]
 };
