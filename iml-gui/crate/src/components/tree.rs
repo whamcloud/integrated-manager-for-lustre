@@ -1,7 +1,7 @@
 use crate::{
     components::{alert_indicator, font_awesome, paging, Placement},
     generated::css_classes::C,
-    Route,
+    GMsg, Route,
 };
 use iml_wire_types::{
     db::{Id, OstPoolRecord, VolumeNodeRecord},
@@ -194,7 +194,7 @@ impl Model {
 
 // Update
 
-fn add_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut impl Orders<Msg>) -> Option<()> {
+fn add_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -> Option<()> {
     match record_id {
         RecordId::Host(id) => {
             let addr: Address = vec![Step::HostCollection].into();
@@ -300,7 +300,12 @@ fn add_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut 
     Some(())
 }
 
-fn remove_item(record_id: RecordId, cache: &Cache, model: &mut Model, orders: &mut impl Orders<Msg>) -> Option<()> {
+fn remove_item(
+    record_id: RecordId,
+    cache: &Cache,
+    model: &mut Model,
+    orders: &mut impl Orders<Msg, GMsg>,
+) -> Option<()> {
     match record_id {
         RecordId::Host(id) => {
             let addr: Address = vec![Step::HostCollection].into();
@@ -369,7 +374,7 @@ pub enum Msg {
     Page(Address, paging::Msg),
 }
 
-pub fn update(cache: &Cache, msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
+pub fn update(cache: &Cache, msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::Reset => {
             model.reset();
@@ -504,6 +509,7 @@ fn toggle_view(address: Address, is_open: bool) -> Node<Msg> {
             C.h_4,
             C.inline,
             C.mr_1,
+            C._mt_1
         ],
         "chevron-right",
     );
@@ -523,7 +529,7 @@ fn item_view(icon: &str, label: &str, route: Route) -> Node<Msg> {
         attrs! {
             At::Href => route.to_href()
         },
-        font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1], icon),
+        font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], icon),
         label
     ]
 }
@@ -728,7 +734,7 @@ fn tree_target_collection_view(cache: &Cache, model: &Model, parent_address: &Ad
 
 pub fn view(cache: &Cache, model: &Model) -> Node<Msg> {
     div![
-        class![C.p_5, C.text_gray_500],
+        class![C.py_5, C.text_gray_500],
         tree_host_collection_view(cache, model),
         tree_fs_collection_view(cache, model),
     ]
@@ -736,14 +742,14 @@ pub fn view(cache: &Cache, model: &Model) -> Node<Msg> {
 
 #[cfg(test)]
 mod tests {
-    use super::{update, Address, Model, Msg, Step};
+    use super::{update, Address, GMsg, Model, Msg, Step};
     use crate::test_utils::{create_app_simple, fixtures};
     use seed::virtual_dom::Node;
     use wasm_bindgen_test::*;
 
     wasm_bindgen_test_configure!(run_in_browser);
 
-    fn create_app() -> seed::App<Msg, Model, Node<Msg>> {
+    fn create_app() -> seed::App<Msg, Model, Node<Msg>, GMsg> {
         create_app_simple(
             |msg, model, orders| {
                 update(&fixtures::get_cache(), msg, model, orders);

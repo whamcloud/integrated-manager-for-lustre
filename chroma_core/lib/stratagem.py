@@ -101,7 +101,7 @@ def parse_stratagem_results_to_influx(measurement, fs_name, stratagem_results_js
 
 def clear_scan_results(clear_measurement_query):
     response = requests.post(
-        "http://{}:8086/query".format(settings.SERVER_FQDN),
+        "{}/query".format(settings.INFLUXDB_PROXY_PASS),
         params={"db": settings.INFLUXDB_STRATAGEM_SCAN_DB, "q": clear_measurement_query},
     )
 
@@ -110,7 +110,7 @@ def clear_scan_results(clear_measurement_query):
 
 def record_stratagem_point(point):
     response = requests.post(
-        "http://{}:8086/write?db={}".format(settings.SERVER_FQDN, settings.INFLUXDB_STRATAGEM_SCAN_DB), data=point
+        "{}/write?db={}".format(settings.INFLUXDB_PROXY_PASS, settings.INFLUXDB_STRATAGEM_SCAN_DB), data=point
     )
 
     response.raise_for_status()
@@ -118,7 +118,7 @@ def record_stratagem_point(point):
 
 def aggregate_points(measurement_query):
     response = requests.get(
-        "http://{}:8086/query".format(settings.SERVER_FQDN),
+        "{}/query".format(settings.INFLUXDB_PROXY_PASS),
         params={"db": settings.INFLUXDB_STRATAGEM_SCAN_DB, "epoch": 0, "q": measurement_query},
     )
 

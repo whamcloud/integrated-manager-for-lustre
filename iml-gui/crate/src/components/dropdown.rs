@@ -1,7 +1,7 @@
 use crate::{components::Placement, generated::css_classes::C};
 use seed::{prelude::*, virtual_dom::Attrs, Style, *};
 
-pub(crate) fn wrapper_view<T>(attrs: Attrs, placement: Placement, open: bool, children: impl View<T>) -> Node<T> {
+pub fn wrapper_view<T>(attrs: Attrs, placement: Placement, open: bool, children: impl View<T>) -> Node<T> {
     if !open {
         return empty![];
     }

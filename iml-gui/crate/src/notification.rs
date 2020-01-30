@@ -1,4 +1,5 @@
-use crate::components::ActivityHealth;
+use crate::{components::ActivityHealth, GMsg};
+use futures::FutureExt;
 use seed::prelude::Orders;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
@@ -19,7 +20,7 @@ pub enum Msg {
     Update(String, String),
 }
 
-pub(crate) fn update(u: Msg, m: &mut Model, orders: &mut impl Orders<Msg>) {
+pub(crate) fn update(u: Msg, m: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match u {
         Msg::Close => {
             if let Some(svc) = &m.svc {
@@ -35,7 +36,8 @@ pub(crate) fn update(u: Msg, m: &mut Model, orders: &mut impl Orders<Msg>) {
                 .body(body.as_str());
 
             if let Some(svc) = &m.svc {
-                svc.show_notification_with_options(title.as_str(), &opts).unwrap();
+                let promise = svc.show_notification_with_options(title.as_str(), &opts).unwrap();
+                orders.perform_cmd(JsFuture::from(promise).map(|_| Ok(Msg::Nothing)));
             } else {
                 let n = N::new_with_options(title.as_str(), &opts).unwrap();
                 seed::set_timeout(Box::new(move || n.close()), 9000);

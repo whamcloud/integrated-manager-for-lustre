@@ -8,8 +8,8 @@ use iml_agent::action_plugins::stratagem::{
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
 use iml_agent::action_plugins::{
-    check_ha, check_kernel, check_stonith, kernel_module, lpurge, ltuer, ostpool, package,
-    postoffice,
+    check_ha, check_kernel, check_stonith, kernel_module, lamigo, lpurge, ltuer, lustre, ostpool,
+    package, postoffice,
 };
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
@@ -223,6 +223,7 @@ pub enum StratagemClientCommand {
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "iml-agent")]
+#[structopt(raw(setting = "structopt::clap::AppSettings::ColoredHelp"))]
 /// The Integrated Manager for Lustre Agent CLI
 pub enum App {
     #[structopt(name = "stratagem")]
@@ -264,6 +265,16 @@ pub enum App {
     /// Get latest kernel which supports listed modules
     GetKernel { modules: Vec<String> },
 
+    #[structopt(name = "try_mount")]
+    /// Try to mount `lustre_device` to the `mount_point`
+    TryMount {
+        #[structopt(long)]
+        lustre_device: String,
+
+        #[structopt(long)]
+        mount_point: String,
+    },
+
     #[structopt(name = "create_ltuer_conf")]
     CreateLtuerConf {
         #[structopt(name = "MAILBOX_PATH")]
@@ -284,10 +295,17 @@ pub enum App {
     },
 
     #[structopt(name = "lpurge")]
-    /// Write lpurge configuration file
+    /// Write `lpurge` configuration file
     LPurge {
         #[structopt(flatten)]
         c: lpurge::Config,
+    },
+
+    #[structopt(name = "lamigo")]
+    /// Create `lamigo` systemd unit
+    LAmigo {
+        #[structopt(flatten)]
+        c: lamigo::Config,
     },
 
     #[structopt(name = "postoffice")]
@@ -526,7 +544,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         App::GetKernel { modules } => match check_kernel::get_kernel(modules).await {
             Ok(s) => println!("{}", s),
-            Err(e) => println!("{:?}", e),
+            Err(e) => {
+                eprintln!("{:?}", e);
+                exit(exitcode::SOFTWARE);
+            }
+        },
+        App::TryMount {
+            lustre_device,
+            mount_point,
+        } => match lustre::try_mount((lustre_device, mount_point)).await {
+            Ok(()) => println!("Done"),
+            Err(e) => {
+                eprintln!("{:?}", e);
+                exit(exitcode::SOFTWARE);
+            }
         },
         App::Pool { command } => {
             if let Err(e) = match command {
@@ -584,6 +615,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         App::LPurge { c } => {
             if let Err(e) = lpurge::create_lpurge_conf(c).await {
+                eprintln!("{}", e);
+                exit(exitcode::SOFTWARE);
+            }
+        }
+        App::LAmigo { c } => {
+            if let Err(e) = lamigo::create_lamigo_service_unit(c).await {
                 eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
             }

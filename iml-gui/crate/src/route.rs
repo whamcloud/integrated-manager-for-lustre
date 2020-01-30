@@ -31,7 +31,6 @@ pub enum Route<'a> {
     Dashboard,
     Filesystem,
     FilesystemDetail(RouteId<'a>),
-    Home,
     Jobstats,
     Login,
     Logs,
@@ -45,6 +44,7 @@ pub enum Route<'a> {
     Target,
     TargetDetail(RouteId<'a>),
     User,
+    UserDetail(RouteId<'a>),
     Volume,
     VolumeDetail(RouteId<'a>),
 }
@@ -57,7 +57,6 @@ impl<'a> Route<'a> {
             Self::Dashboard => vec!["dashboard"],
             Self::Filesystem => vec!["filesystem"],
             Self::FilesystemDetail(id) => vec!["filesystem_detail", id],
-            Self::Home => vec![""],
             Self::Jobstats => vec!["jobstats"],
             Self::Login => vec!["login"],
             Self::Logs => vec!["logs"],
@@ -71,6 +70,7 @@ impl<'a> Route<'a> {
             Self::Target => vec!["target"],
             Self::TargetDetail(id) => vec!["target_detail", id],
             Self::User => vec!["user"],
+            Self::UserDetail(id) => vec!["user_detail", id],
             Self::Volume => vec!["volume"],
             Self::VolumeDetail(id) => vec!["volume_detail", id],
         }
@@ -89,7 +89,6 @@ impl<'a> ToString for Route<'a> {
             Self::Dashboard => "Dashboard".into(),
             Self::Filesystem => "Filesystems".into(),
             Self::FilesystemDetail(_) => "Filesystem Detail".into(),
-            Self::Home => "Home".into(),
             Self::Jobstats => "Jobstats".into(),
             Self::Login => "Login".into(),
             Self::Logs => "Logs".into(),
@@ -103,9 +102,16 @@ impl<'a> ToString for Route<'a> {
             Self::Target => "Target".into(),
             Self::TargetDetail(_) => "Target Detail".into(),
             Self::User => "Users".into(),
+            Self::UserDetail(_) => "User".into(),
             Self::Volume => "Volumes".into(),
             Self::VolumeDetail(_) => "Volume Detail".into(),
         }
+    }
+}
+
+impl<'a> From<Route<'a>> for Url {
+    fn from(route: Route<'a>) -> Self {
+        route.path().into()
     }
 }
 
@@ -123,7 +129,7 @@ impl<'a> From<Url> for Route<'a> {
                 .map(RouteId::from)
                 .map(Self::FilesystemDetail)
                 .unwrap_or(Self::NotFound),
-            None | Some("") => Self::Home,
+            None | Some("") => Self::Dashboard,
             Some("jobstats") => Self::Jobstats,
             Some("login") => Self::Login,
             Some("logs") => Self::Logs,
@@ -148,6 +154,11 @@ impl<'a> From<Url> for Route<'a> {
                 .map(Self::TargetDetail)
                 .unwrap_or(Self::NotFound),
             Some("user") => Self::User,
+            Some("user_detail") => path
+                .next()
+                .map(RouteId::from)
+                .map(Self::UserDetail)
+                .unwrap_or(Self::NotFound),
             Some("volume") => Self::Volume,
             Some("volume_detail") => path
                 .next()

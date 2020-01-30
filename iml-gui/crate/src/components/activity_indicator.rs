@@ -35,7 +35,10 @@ pub fn activity_indicator<T>(activity_health: &ActivityHealth) -> Node<T> {
         class![C.mr_3, C.text_green_500 => activity_health.health == AlertSeverity::INFO,
                             C.text_yellow_500 => activity_health.health == AlertSeverity::WARNING,
                             C.text_red_500 => activity_health.health == AlertSeverity::ERROR],
-        font_awesome(class![C.h_6, C.w_6, C.mr_1, C.inline], "bell"),
+        font_awesome(
+            class![C.h_6, C.w_6, C.xl__h_6, C.xl__w_6, C.lg__h_5, C.lg__w_5, C.mr_1, C.inline],
+            "bell"
+        ),
         sup![activity_health.count.to_string()]
     ]
 }

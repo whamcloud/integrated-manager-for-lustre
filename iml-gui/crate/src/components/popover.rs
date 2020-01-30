@@ -15,7 +15,7 @@ pub fn content_view<T>(content: impl View<T>) -> Node<T> {
     div![class![C.py_2, C.px_3, C.w_64], content.els()]
 }
 
-pub(crate) fn view<T>(content: impl View<T>, placement: Placement, visible: bool) -> Node<T> {
+pub fn view<T>(content: impl View<T>, placement: Placement, visible: bool) -> Node<T> {
     let color = "#e2e8f0";
 
     let popover_top_styles = style! {

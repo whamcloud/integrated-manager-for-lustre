@@ -133,7 +133,7 @@ pub fn dir_toggle_view<T>(dir: Dir, more_attrs: Attrs) -> Node<T> {
     font_awesome(more_attrs, x)
 }
 
-pub(crate) fn limit_selection_view(p: &Model) -> Node<Msg> {
+pub fn limit_selection_view(p: &Model) -> Node<Msg> {
     let mut btn = button![
         class![
             C.bg_transparent,
@@ -153,7 +153,7 @@ pub(crate) fn limit_selection_view(p: &Model) -> Node<Msg> {
             C.hover__text_white
         ],
         p.limit.to_string(),
-        font_awesome(class![C.w_3, C.h_3, C.inline], "chevron-up")
+        font_awesome(class![C.w_3, C.h_3, C.inline, C._mt_1], "chevron-up")
     ];
 
     btn.add_listener(mouse_ev(Ev::Click, |_| Msg::Dropdown(WatchState::Watching)));
@@ -205,7 +205,7 @@ pub fn next_prev_view(paging: &Model) -> Vec<Node<Msg>> {
                 C.px_5,
                 C.pointer_events_none => !paging.has_less(),
             ],
-            font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1], "chevron-left",),
+            font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chevron-left",),
             simple_ev(Ev::Click, Msg::Prev),
             "prev"
         ],
@@ -216,7 +216,7 @@ pub fn next_prev_view(paging: &Model) -> Vec<Node<Msg>> {
             ],
             "next",
             simple_ev(Ev::Click, Msg::Next),
-            font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1], "chevron-right",)
+            font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chevron-right",)
         ],
     ]
 }
