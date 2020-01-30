@@ -36,6 +36,10 @@ pub enum Msg {
     WindowClick,
 }
 
+pub fn init(cache: &Cache, orders: &mut impl Orders<Msg, GMsg>) {
+    orders.send_msg(Msg::SetHosts(cache.host.values().cloned().collect()));
+}
+
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::SortBy(x) => {
