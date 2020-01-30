@@ -4,7 +4,7 @@ use crate::{
     generated::css_classes::C,
     GMsg, MergeAttrs, Route,
 };
-use iml_wire_types::{warp_drive::Cache, Host, Label};
+use iml_wire_types::{warp_drive::ArcCache, Host, Label};
 use seed::{prelude::*, *};
 use std::cmp::Ordering;
 
@@ -112,7 +112,7 @@ fn sort_header(label: &str, sort_field: SortField, model: &Model) -> Node<Msg> {
     .merge_attrs(table_cls)
 }
 
-fn lnet_by_server<T>(x: &Host, cache: &Cache) -> Option<Vec<Node<T>>> {
+fn lnet_by_server<T>(x: &Host, cache: &ArcCache) -> Option<Vec<Node<T>>> {
     let id = extract_api(&x.lnet_configuration)?;
 
     let id = id.parse::<u32>().unwrap();
@@ -138,7 +138,7 @@ fn timeago(x: &Host) -> Option<String> {
     Some(format!("{}", chrono_humanize::HumanTime::from(dt)))
 }
 
-pub fn view(cache: &Cache, model: &Model) -> impl View<Msg> {
+pub fn view(cache: &ArcCache, model: &Model) -> impl View<Msg> {
     div![
         class![C.bg_white, C.border_t, C.border_b, C.border, C.rounded_lg, C.shadow],
         div![
