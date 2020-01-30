@@ -3913,6 +3913,15 @@ pub struct CssClasses<'a> {
         display: table-row;
         display: table-cell;
         display: none;
+        display: block;
+        display: inline-block;
+        display: inline;
+        display: flex;
+        display: inline-flex;
+        display: table;
+        display: table-row;
+        display: table-cell;
+        display: none;
         color: transparent;
         color: #000;
         color: #FFF;
@@ -4018,6 +4027,24 @@ pub struct CssClasses<'a> {
         display: table-row;    @media (min-width: 569px)
         display: table-cell;    @media (min-width: 569px)
         display: none;    @media (min-width: 569px)
+        display: block;    @media (min-width: 569px)
+        display: inline-block;    @media (min-width: 569px)
+        display: inline;    @media (min-width: 569px)
+        display: flex;    @media (min-width: 569px)
+        display: inline-flex;    @media (min-width: 569px)
+        display: table;    @media (min-width: 569px)
+        display: table-row;    @media (min-width: 569px)
+        display: table-cell;    @media (min-width: 569px)
+        display: none;    @media (min-width: 569px)
+        display: block;    @media (min-width: 769px)
+        display: inline-block;    @media (min-width: 769px)
+        display: inline;    @media (min-width: 769px)
+        display: flex;    @media (min-width: 769px)
+        display: inline-flex;    @media (min-width: 769px)
+        display: table;    @media (min-width: 769px)
+        display: table-row;    @media (min-width: 769px)
+        display: table-cell;    @media (min-width: 769px)
+        display: none;    @media (min-width: 769px)
         display: block;    @media (min-width: 769px)
         display: inline-block;    @media (min-width: 769px)
         display: inline;    @media (min-width: 769px)
@@ -4036,6 +4063,24 @@ pub struct CssClasses<'a> {
         display: table-row;    @media (min-width: 1025px)
         display: table-cell;    @media (min-width: 1025px)
         display: none;    @media (min-width: 1025px)
+        display: block;    @media (min-width: 1025px)
+        display: inline-block;    @media (min-width: 1025px)
+        display: inline;    @media (min-width: 1025px)
+        display: flex;    @media (min-width: 1025px)
+        display: inline-flex;    @media (min-width: 1025px)
+        display: table;    @media (min-width: 1025px)
+        display: table-row;    @media (min-width: 1025px)
+        display: table-cell;    @media (min-width: 1025px)
+        display: none;    @media (min-width: 1025px)
+        display: block;    @media (min-width: 1701px)
+        display: inline-block;    @media (min-width: 1701px)
+        display: inline;    @media (min-width: 1701px)
+        display: flex;    @media (min-width: 1701px)
+        display: inline-flex;    @media (min-width: 1701px)
+        display: table;    @media (min-width: 1701px)
+        display: table-row;    @media (min-width: 1701px)
+        display: table-cell;    @media (min-width: 1701px)
+        display: none;    @media (min-width: 1701px)
         display: block;    @media (min-width: 1701px)
         display: inline-block;    @media (min-width: 1701px)
         display: inline;    @media (min-width: 1701px)
@@ -4092,6 +4137,51 @@ pub struct CssClasses<'a> {
         display: none;
     */
     pub group_hover__hidden: &'a str,
+
+    /**
+        display: block;
+    */
+    pub group_focus__block: &'a str,
+
+    /**
+        display: inline-block;
+    */
+    pub group_focus__inline_block: &'a str,
+
+    /**
+        display: inline;
+    */
+    pub group_focus__inline: &'a str,
+
+    /**
+        display: flex;
+    */
+    pub group_focus__flex: &'a str,
+
+    /**
+        display: inline-flex;
+    */
+    pub group_focus__inline_flex: &'a str,
+
+    /**
+        display: table;
+    */
+    pub group_focus__table: &'a str,
+
+    /**
+        display: table-row;
+    */
+    pub group_focus__table_row: &'a str,
+
+    /**
+        display: table-cell;
+    */
+    pub group_focus__table_cell: &'a str,
+
+    /**
+        display: none;
+    */
+    pub group_focus__hidden: &'a str,
 
     /**
         flex-direction: row;
@@ -16590,6 +16680,51 @@ pub struct CssClasses<'a> {
     pub sm__group_hover__hidden: &'a str,
 
     /**
+        display: block;    @media (min-width: 569px)
+    */
+    pub sm__group_focus__block: &'a str,
+
+    /**
+        display: inline-block;    @media (min-width: 569px)
+    */
+    pub sm__group_focus__inline_block: &'a str,
+
+    /**
+        display: inline;    @media (min-width: 569px)
+    */
+    pub sm__group_focus__inline: &'a str,
+
+    /**
+        display: flex;    @media (min-width: 569px)
+    */
+    pub sm__group_focus__flex: &'a str,
+
+    /**
+        display: inline-flex;    @media (min-width: 569px)
+    */
+    pub sm__group_focus__inline_flex: &'a str,
+
+    /**
+        display: table;    @media (min-width: 569px)
+    */
+    pub sm__group_focus__table: &'a str,
+
+    /**
+        display: table-row;    @media (min-width: 569px)
+    */
+    pub sm__group_focus__table_row: &'a str,
+
+    /**
+        display: table-cell;    @media (min-width: 569px)
+    */
+    pub sm__group_focus__table_cell: &'a str,
+
+    /**
+        display: none;    @media (min-width: 569px)
+    */
+    pub sm__group_focus__hidden: &'a str,
+
+    /**
         flex-direction: row;    @media (min-width: 569px)
     */
     pub sm__flex_row: &'a str,
@@ -27149,6 +27284,51 @@ pub struct CssClasses<'a> {
         display: none;    @media (min-width: 769px)
     */
     pub md__group_hover__hidden: &'a str,
+
+    /**
+        display: block;    @media (min-width: 769px)
+    */
+    pub md__group_focus__block: &'a str,
+
+    /**
+        display: inline-block;    @media (min-width: 769px)
+    */
+    pub md__group_focus__inline_block: &'a str,
+
+    /**
+        display: inline;    @media (min-width: 769px)
+    */
+    pub md__group_focus__inline: &'a str,
+
+    /**
+        display: flex;    @media (min-width: 769px)
+    */
+    pub md__group_focus__flex: &'a str,
+
+    /**
+        display: inline-flex;    @media (min-width: 769px)
+    */
+    pub md__group_focus__inline_flex: &'a str,
+
+    /**
+        display: table;    @media (min-width: 769px)
+    */
+    pub md__group_focus__table: &'a str,
+
+    /**
+        display: table-row;    @media (min-width: 769px)
+    */
+    pub md__group_focus__table_row: &'a str,
+
+    /**
+        display: table-cell;    @media (min-width: 769px)
+    */
+    pub md__group_focus__table_cell: &'a str,
+
+    /**
+        display: none;    @media (min-width: 769px)
+    */
+    pub md__group_focus__hidden: &'a str,
 
     /**
         flex-direction: row;    @media (min-width: 769px)
@@ -37712,6 +37892,51 @@ pub struct CssClasses<'a> {
     pub lg__group_hover__hidden: &'a str,
 
     /**
+        display: block;    @media (min-width: 1025px)
+    */
+    pub lg__group_focus__block: &'a str,
+
+    /**
+        display: inline-block;    @media (min-width: 1025px)
+    */
+    pub lg__group_focus__inline_block: &'a str,
+
+    /**
+        display: inline;    @media (min-width: 1025px)
+    */
+    pub lg__group_focus__inline: &'a str,
+
+    /**
+        display: flex;    @media (min-width: 1025px)
+    */
+    pub lg__group_focus__flex: &'a str,
+
+    /**
+        display: inline-flex;    @media (min-width: 1025px)
+    */
+    pub lg__group_focus__inline_flex: &'a str,
+
+    /**
+        display: table;    @media (min-width: 1025px)
+    */
+    pub lg__group_focus__table: &'a str,
+
+    /**
+        display: table-row;    @media (min-width: 1025px)
+    */
+    pub lg__group_focus__table_row: &'a str,
+
+    /**
+        display: table-cell;    @media (min-width: 1025px)
+    */
+    pub lg__group_focus__table_cell: &'a str,
+
+    /**
+        display: none;    @media (min-width: 1025px)
+    */
+    pub lg__group_focus__hidden: &'a str,
+
+    /**
         flex-direction: row;    @media (min-width: 1025px)
     */
     pub lg__flex_row: &'a str,
@@ -48273,6 +48498,51 @@ pub struct CssClasses<'a> {
     pub xl__group_hover__hidden: &'a str,
 
     /**
+        display: block;    @media (min-width: 1701px)
+    */
+    pub xl__group_focus__block: &'a str,
+
+    /**
+        display: inline-block;    @media (min-width: 1701px)
+    */
+    pub xl__group_focus__inline_block: &'a str,
+
+    /**
+        display: inline;    @media (min-width: 1701px)
+    */
+    pub xl__group_focus__inline: &'a str,
+
+    /**
+        display: flex;    @media (min-width: 1701px)
+    */
+    pub xl__group_focus__flex: &'a str,
+
+    /**
+        display: inline-flex;    @media (min-width: 1701px)
+    */
+    pub xl__group_focus__inline_flex: &'a str,
+
+    /**
+        display: table;    @media (min-width: 1701px)
+    */
+    pub xl__group_focus__table: &'a str,
+
+    /**
+        display: table-row;    @media (min-width: 1701px)
+    */
+    pub xl__group_focus__table_row: &'a str,
+
+    /**
+        display: table-cell;    @media (min-width: 1701px)
+    */
+    pub xl__group_focus__table_cell: &'a str,
+
+    /**
+        display: none;    @media (min-width: 1701px)
+    */
+    pub xl__group_focus__hidden: &'a str,
+
+    /**
         flex-direction: row;    @media (min-width: 1701px)
     */
     pub xl__flex_row: &'a str,
@@ -58809,6 +59079,15 @@ pub static C: CssClasses = CssClasses {
         display: table-row;
         display: table-cell;
         display: none;
+        display: block;
+        display: inline-block;
+        display: inline;
+        display: flex;
+        display: inline-flex;
+        display: table;
+        display: table-row;
+        display: table-cell;
+        display: none;
         color: transparent;
         color: #000;
         color: #FFF;
@@ -58914,6 +59193,24 @@ pub static C: CssClasses = CssClasses {
         display: table-row;    @media (min-width: 569px)
         display: table-cell;    @media (min-width: 569px)
         display: none;    @media (min-width: 569px)
+        display: block;    @media (min-width: 569px)
+        display: inline-block;    @media (min-width: 569px)
+        display: inline;    @media (min-width: 569px)
+        display: flex;    @media (min-width: 569px)
+        display: inline-flex;    @media (min-width: 569px)
+        display: table;    @media (min-width: 569px)
+        display: table-row;    @media (min-width: 569px)
+        display: table-cell;    @media (min-width: 569px)
+        display: none;    @media (min-width: 569px)
+        display: block;    @media (min-width: 769px)
+        display: inline-block;    @media (min-width: 769px)
+        display: inline;    @media (min-width: 769px)
+        display: flex;    @media (min-width: 769px)
+        display: inline-flex;    @media (min-width: 769px)
+        display: table;    @media (min-width: 769px)
+        display: table-row;    @media (min-width: 769px)
+        display: table-cell;    @media (min-width: 769px)
+        display: none;    @media (min-width: 769px)
         display: block;    @media (min-width: 769px)
         display: inline-block;    @media (min-width: 769px)
         display: inline;    @media (min-width: 769px)
@@ -58932,6 +59229,24 @@ pub static C: CssClasses = CssClasses {
         display: table-row;    @media (min-width: 1025px)
         display: table-cell;    @media (min-width: 1025px)
         display: none;    @media (min-width: 1025px)
+        display: block;    @media (min-width: 1025px)
+        display: inline-block;    @media (min-width: 1025px)
+        display: inline;    @media (min-width: 1025px)
+        display: flex;    @media (min-width: 1025px)
+        display: inline-flex;    @media (min-width: 1025px)
+        display: table;    @media (min-width: 1025px)
+        display: table-row;    @media (min-width: 1025px)
+        display: table-cell;    @media (min-width: 1025px)
+        display: none;    @media (min-width: 1025px)
+        display: block;    @media (min-width: 1701px)
+        display: inline-block;    @media (min-width: 1701px)
+        display: inline;    @media (min-width: 1701px)
+        display: flex;    @media (min-width: 1701px)
+        display: inline-flex;    @media (min-width: 1701px)
+        display: table;    @media (min-width: 1701px)
+        display: table-row;    @media (min-width: 1701px)
+        display: table-cell;    @media (min-width: 1701px)
+        display: none;    @media (min-width: 1701px)
         display: block;    @media (min-width: 1701px)
         display: inline-block;    @media (min-width: 1701px)
         display: inline;    @media (min-width: 1701px)
@@ -58988,6 +59303,51 @@ pub static C: CssClasses = CssClasses {
         display: none;
     */
     group_hover__hidden: "group-hover:hidden",
+
+    /**
+        display: block;
+    */
+    group_focus__block: "group-focus:block",
+
+    /**
+        display: inline-block;
+    */
+    group_focus__inline_block: "group-focus:inline-block",
+
+    /**
+        display: inline;
+    */
+    group_focus__inline: "group-focus:inline",
+
+    /**
+        display: flex;
+    */
+    group_focus__flex: "group-focus:flex",
+
+    /**
+        display: inline-flex;
+    */
+    group_focus__inline_flex: "group-focus:inline-flex",
+
+    /**
+        display: table;
+    */
+    group_focus__table: "group-focus:table",
+
+    /**
+        display: table-row;
+    */
+    group_focus__table_row: "group-focus:table-row",
+
+    /**
+        display: table-cell;
+    */
+    group_focus__table_cell: "group-focus:table-cell",
+
+    /**
+        display: none;
+    */
+    group_focus__hidden: "group-focus:hidden",
 
     /**
         flex-direction: row;
@@ -71486,6 +71846,51 @@ pub static C: CssClasses = CssClasses {
     sm__group_hover__hidden: "sm:group-hover:hidden",
 
     /**
+        display: block;    @media (min-width: 569px)
+    */
+    sm__group_focus__block: "sm:group-focus:block",
+
+    /**
+        display: inline-block;    @media (min-width: 569px)
+    */
+    sm__group_focus__inline_block: "sm:group-focus:inline-block",
+
+    /**
+        display: inline;    @media (min-width: 569px)
+    */
+    sm__group_focus__inline: "sm:group-focus:inline",
+
+    /**
+        display: flex;    @media (min-width: 569px)
+    */
+    sm__group_focus__flex: "sm:group-focus:flex",
+
+    /**
+        display: inline-flex;    @media (min-width: 569px)
+    */
+    sm__group_focus__inline_flex: "sm:group-focus:inline-flex",
+
+    /**
+        display: table;    @media (min-width: 569px)
+    */
+    sm__group_focus__table: "sm:group-focus:table",
+
+    /**
+        display: table-row;    @media (min-width: 569px)
+    */
+    sm__group_focus__table_row: "sm:group-focus:table-row",
+
+    /**
+        display: table-cell;    @media (min-width: 569px)
+    */
+    sm__group_focus__table_cell: "sm:group-focus:table-cell",
+
+    /**
+        display: none;    @media (min-width: 569px)
+    */
+    sm__group_focus__hidden: "sm:group-focus:hidden",
+
+    /**
         flex-direction: row;    @media (min-width: 569px)
     */
     sm__flex_row: "sm:flex-row",
@@ -82045,6 +82450,51 @@ pub static C: CssClasses = CssClasses {
         display: none;    @media (min-width: 769px)
     */
     md__group_hover__hidden: "md:group-hover:hidden",
+
+    /**
+        display: block;    @media (min-width: 769px)
+    */
+    md__group_focus__block: "md:group-focus:block",
+
+    /**
+        display: inline-block;    @media (min-width: 769px)
+    */
+    md__group_focus__inline_block: "md:group-focus:inline-block",
+
+    /**
+        display: inline;    @media (min-width: 769px)
+    */
+    md__group_focus__inline: "md:group-focus:inline",
+
+    /**
+        display: flex;    @media (min-width: 769px)
+    */
+    md__group_focus__flex: "md:group-focus:flex",
+
+    /**
+        display: inline-flex;    @media (min-width: 769px)
+    */
+    md__group_focus__inline_flex: "md:group-focus:inline-flex",
+
+    /**
+        display: table;    @media (min-width: 769px)
+    */
+    md__group_focus__table: "md:group-focus:table",
+
+    /**
+        display: table-row;    @media (min-width: 769px)
+    */
+    md__group_focus__table_row: "md:group-focus:table-row",
+
+    /**
+        display: table-cell;    @media (min-width: 769px)
+    */
+    md__group_focus__table_cell: "md:group-focus:table-cell",
+
+    /**
+        display: none;    @media (min-width: 769px)
+    */
+    md__group_focus__hidden: "md:group-focus:hidden",
 
     /**
         flex-direction: row;    @media (min-width: 769px)
@@ -92608,6 +93058,51 @@ pub static C: CssClasses = CssClasses {
     lg__group_hover__hidden: "lg:group-hover:hidden",
 
     /**
+        display: block;    @media (min-width: 1025px)
+    */
+    lg__group_focus__block: "lg:group-focus:block",
+
+    /**
+        display: inline-block;    @media (min-width: 1025px)
+    */
+    lg__group_focus__inline_block: "lg:group-focus:inline-block",
+
+    /**
+        display: inline;    @media (min-width: 1025px)
+    */
+    lg__group_focus__inline: "lg:group-focus:inline",
+
+    /**
+        display: flex;    @media (min-width: 1025px)
+    */
+    lg__group_focus__flex: "lg:group-focus:flex",
+
+    /**
+        display: inline-flex;    @media (min-width: 1025px)
+    */
+    lg__group_focus__inline_flex: "lg:group-focus:inline-flex",
+
+    /**
+        display: table;    @media (min-width: 1025px)
+    */
+    lg__group_focus__table: "lg:group-focus:table",
+
+    /**
+        display: table-row;    @media (min-width: 1025px)
+    */
+    lg__group_focus__table_row: "lg:group-focus:table-row",
+
+    /**
+        display: table-cell;    @media (min-width: 1025px)
+    */
+    lg__group_focus__table_cell: "lg:group-focus:table-cell",
+
+    /**
+        display: none;    @media (min-width: 1025px)
+    */
+    lg__group_focus__hidden: "lg:group-focus:hidden",
+
+    /**
         flex-direction: row;    @media (min-width: 1025px)
     */
     lg__flex_row: "lg:flex-row",
@@ -103167,6 +103662,51 @@ pub static C: CssClasses = CssClasses {
         display: none;    @media (min-width: 1701px)
     */
     xl__group_hover__hidden: "xl:group-hover:hidden",
+
+    /**
+        display: block;    @media (min-width: 1701px)
+    */
+    xl__group_focus__block: "xl:group-focus:block",
+
+    /**
+        display: inline-block;    @media (min-width: 1701px)
+    */
+    xl__group_focus__inline_block: "xl:group-focus:inline-block",
+
+    /**
+        display: inline;    @media (min-width: 1701px)
+    */
+    xl__group_focus__inline: "xl:group-focus:inline",
+
+    /**
+        display: flex;    @media (min-width: 1701px)
+    */
+    xl__group_focus__flex: "xl:group-focus:flex",
+
+    /**
+        display: inline-flex;    @media (min-width: 1701px)
+    */
+    xl__group_focus__inline_flex: "xl:group-focus:inline-flex",
+
+    /**
+        display: table;    @media (min-width: 1701px)
+    */
+    xl__group_focus__table: "xl:group-focus:table",
+
+    /**
+        display: table-row;    @media (min-width: 1701px)
+    */
+    xl__group_focus__table_row: "xl:group-focus:table-row",
+
+    /**
+        display: table-cell;    @media (min-width: 1701px)
+    */
+    xl__group_focus__table_cell: "xl:group-focus:table-cell",
+
+    /**
+        display: none;    @media (min-width: 1701px)
+    */
+    xl__group_focus__hidden: "xl:group-focus:hidden",
 
     /**
         flex-direction: row;    @media (min-width: 1701px)
