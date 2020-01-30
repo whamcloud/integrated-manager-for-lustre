@@ -334,16 +334,15 @@ pub enum Message {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_utils::fixtures;
     use crate::{
-        db::OstPoolOstsRecord,
+        db::{OstPoolOstsRecord, OstPoolRecord},
         warp_drive::{ArcCache, ArcValuesExt, Cache},
     };
     use std::sync::Arc;
 
     #[test]
     fn test_cache_conversions() {
-        let c0: Cache = fixtures::get_cache();
+        let c0: Cache = get_cache();
         let c1: ArcCache = (&c0).into(); // From<&Cache> for ArcCache
         let c0_again: Cache = (&c1).into(); // From<&ArcCache> for Cache
 
@@ -385,10 +384,41 @@ mod tests {
 
     #[test]
     fn test_arc_values() {
-        let cache: ArcCache = (&fixtures::get_cache()).into();
+        let cache: ArcCache = (&get_cache()).into();
 
         let osts: Vec<&OstPoolOstsRecord> = cache.ost_pool_osts.values().map(|x| &**x).collect();
         let osts2: Vec<&OstPoolOstsRecord> = cache.ost_pool_osts.arc_values().collect();
         assert_eq!(osts, osts2);
+    }
+
+    fn get_cache() -> Cache {
+        let mut cache: Cache = Default::default();
+        cache.ost_pool.insert(
+            18,
+            OstPoolRecord {
+                id: 18,
+                name: "pool".to_string(),
+                filesystem_id: 1,
+                not_deleted: Some(true),
+                content_type_id: Some(41),
+            },
+        );
+        cache.ost_pool_osts.insert(
+            18,
+            OstPoolOstsRecord {
+                id: 18,
+                ostpool_id: 18,
+                managedost_id: 13,
+            },
+        );
+        cache.ost_pool_osts.insert(
+            19,
+            OstPoolOstsRecord {
+                id: 19,
+                ostpool_id: 18,
+                managedost_id: 14,
+            },
+        );
+        cache
     }
 }
