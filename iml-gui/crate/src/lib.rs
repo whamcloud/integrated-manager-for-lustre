@@ -23,15 +23,18 @@ mod test_utils;
 use components::{breadcrumbs::BreadCrumbs, loading, restrict, tree, update_activity_health, ActivityHealth};
 pub(crate) use extensions::*;
 use generated::css_classes::C;
-use iml_wire_types::{warp_drive, GroupType, Session};
+use iml_wire_types::{
+    warp_drive::{self, ArcValuesExt},
+    GroupType, Session,
+};
 use page::login;
 use regex::Regex;
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, Listener, *};
 pub(crate) use sleep::sleep_with_handle;
-use std::{cmp, mem, sync::Arc};
+use std::{cmp, sync::Arc};
 pub use watch_state::*;
-use web_sys::{EventSource, MessageEvent};
+use web_sys::MessageEvent;
 use Visibility::*;
 
 const TITLE_SUFFIX: &str = "IML";
@@ -131,19 +134,13 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
         auth: auth::Model::default(),
         breadcrumbs: BreadCrumbs::default(),
         breakpoint_size: breakpoints::size(),
-        route: url.into(),
-        menu_visibility: Visible,
-        manage_menu_state: WatchState::default(),
-        track_slider: false,
-        side_width_percentage: 20_f32,
-        records: warp_drive::ArcCache::default(),
         locks: im::hashmap!(),
         logging_out: false,
         login: login::Model::default(),
         manage_menu_state: WatchState::default(),
         menu_visibility: Visible,
         notification: notification::Model::default(),
-        records: warp_drive::Cache::default(),
+        records: warp_drive::ArcCache::default(),
         route: url.into(),
         saw_es_locks: false,
         saw_es_messages: false,
@@ -299,7 +296,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .send_msg(notification::generate(None, &old, &model.activity_health));
 
             orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::SetHosts(
-                model.records.host.values().cloned().collect(),
+                model.records.host.arc_values().cloned().collect(),
             ));
 
             orders.proxy(Msg::Tree).send_msg(tree::Msg::Reset);
@@ -337,7 +334,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     };
 
                     orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::SetHosts(
-                        model.records.host.values().cloned().collect(),
+                        model.records.host.arc_values().cloned().collect(),
                     ));
                 }
                 warp_drive::Record::ManagedTargetMount(x) => {
@@ -400,7 +397,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
             if let warp_drive::RecordId::Host(_) = id {
                 orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::SetHosts(
-                    model.records.host.values().cloned().collect(),
+                    model.records.host.arc_values().cloned().collect(),
                 ));
             }
         }
