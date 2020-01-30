@@ -177,32 +177,12 @@ class ChromaLogCollector(object):
 
         errors = []
 
-        # Copy and expand the diagnostics locally, so they will be
-        # able to be read in browser in Jenkins.
         errors.append(self.fetch_log(server, "/var/tmp/%s" % diagnostics, ""))
 
-        if diagnostics.endswith("tar.xz"):
-            if shell_run(
-                ["tar", "-xvJf", "%s/%s" % (self.destination_path, diagnostics), "-C", self.destination_path]
-            ).rc:
-                errors.append("Error tar --xvJf the iml diagnostics file")
-        elif diagnostics.endswith("tar.gz"):
-            if shell_run(
-                ["tar", "-xvzf", "%s/%s" % (self.destination_path, diagnostics), "-C", self.destination_path]
-            ).rc:
-                errors.append("Error tar -xvzf the iml diagnostics file")
-        else:
-            errors = "Didn't recognize iml-diagnostics file format"
-
-        diagnostics_dir = re.compile("(sosreport-.*)\.tar\..*").search(diagnostics).group(1)
-
-        if shell_run(["chmod", "-R", "777", "%s/%s" % (self.destination_path, diagnostics_dir)]).rc:
+        if shell_run(["chmod", "777", "%s/%s" % (self.destination_path, diagnostics)]).rc:
             errors.append(
-                "Unable to change perms on expanded diagnostics at %s/%s" % (self.destination_path, diagnostics_dir)
+                "Unable to change perms on diagnostics at %s/%s" % (self.destination_path, diagnostics)
             )
-
-        if shell_run(["rm", "-f", "%s/%s" % (self.destination_path, diagnostics)]).rc:
-            errors.append("Unable to remove the diagnostics %s/%s" % (self.destination_path, diagnostics))
 
         return errors
 
