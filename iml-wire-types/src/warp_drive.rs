@@ -64,7 +64,7 @@ impl<'a, K, V> FusedIterator for ArcValues<'a, K, V> {}
 
 fn hashmap_to_arc_hashmap<K, V>(hm: &HashMap<K, V>) -> HashMap<K, Arc<V>>
 where
-    K: std::hash::Hash + Eq + Copy,
+    K: Hash + Eq + Copy,
     V: Clone,
 {
     hm.iter().map(|(k, v)| (*k, Arc::new(v.clone()))).collect()
@@ -72,7 +72,7 @@ where
 
 fn arc_hashmap_to_hashmap<K, V>(hm: &HashMap<K, Arc<V>>) -> HashMap<K, V>
 where
-    K: std::hash::Hash + Eq + Copy,
+    K: Hash + Eq + Copy,
     V: Clone,
 {
     hm.iter().map(|(k, v)| (*k, (**v).clone())).collect()
@@ -81,7 +81,6 @@ where
 /// The current state of locks based on data from the locks queue
 pub type Locks = HashMap<String, HashSet<LockChange>>;
 
-/// Do not forget to keep [`ArcCache`](iml_wire_types::warp_drive::ArcCache) in sync
 #[derive(serde::Serialize, serde::Deserialize, Default, PartialEq, Clone, Debug)]
 pub struct Cache {
     pub active_alert: HashMap<u32, Alert>,
@@ -97,8 +96,7 @@ pub struct Cache {
     pub volume_node: HashMap<u32, VolumeNodeRecord>,
 }
 
-/// Do not forget to keep [`Cache`](iml_wire_types::warp_drive::Cache) in sync
-#[derive(serde::Serialize, serde::Deserialize, Default, PartialEq, Clone, Debug)]
+#[derive(Default, PartialEq, Clone, Debug)]
 pub struct ArcCache {
     pub active_alert: HashMap<u32, Arc<Alert>>,
     pub filesystem: HashMap<u32, Arc<Filesystem>>,
@@ -332,4 +330,65 @@ pub enum Message {
     Locks(Locks),
     Records(Cache),
     RecordChange(RecordChange),
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::test_utils::fixtures;
+    use crate::{
+        db::OstPoolOstsRecord,
+        warp_drive::{ArcCache, ArcValuesExt, Cache},
+    };
+    use std::sync::Arc;
+
+    #[test]
+    fn test_cache_conversions() {
+        let c0: Cache = fixtures::get_cache();
+        let c1: ArcCache = (&c0).into(); // From<&Cache> for ArcCache
+        let c0_again: Cache = (&c1).into(); // From<&ArcCache> for Cache
+
+        let mut c2: ArcCache = c1.clone();
+        let mut c3: ArcCache = c2.clone();
+
+        let rec1 = Arc::new(OstPoolOstsRecord {
+            id: 1,
+            ostpool_id: 1,
+            managedost_id: 1,
+        });
+        let rec2 = Arc::new(OstPoolOstsRecord {
+            id: 2,
+            ostpool_id: 2,
+            managedost_id: 2,
+        });
+        let rec18 = Arc::clone(&c1.ost_pool_osts.get(&18).unwrap());
+        let rec19 = Arc::clone(&c1.ost_pool_osts.get(&19).unwrap());
+
+        c2.ost_pool_osts.insert(1, Arc::clone(&rec1));
+        c3.ost_pool_osts.insert(2, Arc::clone(&rec2));
+
+        // The entries to c2 and c3 are added independently despite sharing the same "body"
+        assert_eq!(
+            c1.ost_pool_osts,
+            im::hashmap!(18 => Arc::clone(&rec18), 19 => Arc::clone(&rec19))
+        );
+        assert_eq!(
+            c2.ost_pool_osts,
+            im::hashmap!(18 => Arc::clone(&rec18), 19 => Arc::clone(&rec19), 1 => rec1)
+        );
+        assert_eq!(
+            c3.ost_pool_osts,
+            im::hashmap!(18 => Arc::clone(&rec18), 19 => Arc::clone(&rec19), 2 => rec2)
+        );
+        // the original cache and the cache - conversion result - should be equal
+        assert_eq!(c0, c0_again);
+    }
+
+    #[test]
+    fn test_arc_values() {
+        let cache: ArcCache = (&fixtures::get_cache()).into();
+
+        let osts: Vec<&OstPoolOstsRecord> = cache.ost_pool_osts.values().map(|x| &**x).collect();
+        let osts2: Vec<&OstPoolOstsRecord> = cache.ost_pool_osts.arc_values().collect();
+        assert_eq!(osts, osts2);
+    }
 }
