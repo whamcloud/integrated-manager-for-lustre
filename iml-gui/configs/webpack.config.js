@@ -55,7 +55,7 @@ module.exports = (env, argv) => {
       }),
       // Inline the critical part of styles, preload remainder.
       new Critters({
-        logLevel: "warn",
+        logLevel: "error",
         // https://github.com/GoogleChromeLabs/critters/issues/34
         pruneSource: false
       }),
