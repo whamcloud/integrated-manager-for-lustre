@@ -164,6 +164,7 @@ pub fn routes(url: Url) -> Option<Msg> {
 //     Sink
 // ------ ------
 
+#[allow(clippy::large_enum_variant)]
 pub enum GMsg {
     RouteChange(Url),
     AuthProxy(auth::Msg),
@@ -185,6 +186,7 @@ fn sink(g_msg: GMsg, _model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
 //    Update
 // ------ ------
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone)]
 pub enum Msg {
     RouteChanged(Url),

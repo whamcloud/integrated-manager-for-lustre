@@ -60,12 +60,7 @@ async fn get_delivery(
                     }),
                 );
             }
-            ManagerMessage::Data {
-                plugin,
-                session_id: _,
-                body,
-                ..
-            } => {
+            ManagerMessage::Data { plugin, body, .. } => {
                 let r = { sessions2.message(&plugin, body) };
 
                 if let Some(fut) = r {
@@ -84,11 +79,9 @@ async fn get_delivery(
                     );
                 };
             }
-            ManagerMessage::SessionTerminate {
-                plugin,
-                session_id: _,
-                ..
-            } => sessions.terminate_session(&plugin)?,
+            ManagerMessage::SessionTerminate { plugin, .. } => {
+                sessions.terminate_session(&plugin)?
+            }
             ManagerMessage::SessionTerminateAll { .. } => sessions.terminate_all_sessions()?,
         }
     }

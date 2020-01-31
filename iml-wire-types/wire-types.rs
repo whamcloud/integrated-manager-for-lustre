@@ -231,7 +231,7 @@ pub enum Action {
 impl Action {
     pub fn get_id(&self) -> &ActionId {
         match self {
-            Action::ActionStart { id, .. } | Action::ActionCancel { id, .. } => id,
+            Self::ActionStart { id, .. } | Self::ActionCancel { id, .. } => id,
         }
     }
 }
@@ -239,7 +239,7 @@ impl Action {
 impl TryFrom<Action> for serde_json::Value {
     type Error = serde_json::Error;
 
-    fn try_from(action: Action) -> Result<serde_json::Value, serde_json::Error> {
+    fn try_from(action: Action) -> Result<Self, Self::Error> {
         serde_json::to_value(action)
     }
 }
@@ -1868,14 +1868,14 @@ pub mod db {
     impl std::fmt::Display for DeviceType {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             match self {
-                DeviceType::ScsiDevice => write!(f, "scsi"),
-                DeviceType::Partition => write!(f, "partition"),
-                DeviceType::MdRaid => write!(f, "mdraid"),
-                DeviceType::Mpath => write!(f, "mpath"),
-                DeviceType::VolumeGroup => write!(f, "vg"),
-                DeviceType::LogicalVolume => write!(f, "lv"),
-                DeviceType::Zpool => write!(f, "zpool"),
-                DeviceType::Dataset => write!(f, "dataset"),
+                Self::ScsiDevice => write!(f, "scsi"),
+                Self::Partition => write!(f, "partition"),
+                Self::MdRaid => write!(f, "mdraid"),
+                Self::Mpath => write!(f, "mpath"),
+                Self::VolumeGroup => write!(f, "vg"),
+                Self::LogicalVolume => write!(f, "lv"),
+                Self::Zpool => write!(f, "zpool"),
+                Self::Dataset => write!(f, "dataset"),
             }
         }
     }
@@ -2110,7 +2110,7 @@ pub enum RunState {
 
 impl Default for RunState {
     fn default() -> Self {
-        RunState::Stopped
+        Self::Stopped
     }
 }
 
@@ -2122,15 +2122,15 @@ pub enum ServiceState {
 
 impl Default for ServiceState {
     fn default() -> Self {
-        ServiceState::Unconfigured
+        Self::Unconfigured
     }
 }
 
 impl fmt::Display for ServiceState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ServiceState::Unconfigured => f.pad(&format!("{:?}", self)),
-            ServiceState::Configured(r) => f.pad(&format!("{:?}", r)),
+            Self::Unconfigured => f.pad(&format!("{:?}", self)),
+            Self::Configured(r) => f.pad(&format!("{:?}", r)),
         }
     }
 }
@@ -2149,7 +2149,7 @@ impl ResourceAgentType {
         provider: impl Into<Option<&'a str>>,
         ocftype: impl Into<Option<&'a str>>,
     ) -> Self {
-        ResourceAgentType {
+        Self {
             standard: standard.into().map(str::to_string).unwrap_or_default(),
             provider: provider.into().map(str::to_string),
             ocftype: ocftype.into().map(str::to_string).unwrap_or_default(),
@@ -2185,7 +2185,7 @@ pub enum ConfigState {
 
 impl Default for ConfigState {
     fn default() -> Self {
-        ConfigState::Unknown
+        Self::Unknown
     }
 }
 

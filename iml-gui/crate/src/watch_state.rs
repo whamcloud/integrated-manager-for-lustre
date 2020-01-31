@@ -12,21 +12,21 @@ pub enum WatchState {
 
 impl Default for WatchState {
     fn default() -> Self {
-        WatchState::Close
+        Self::Close
     }
 }
 
 impl WatchState {
     pub fn is_open(self) -> bool {
         match self {
-            WatchState::Open => true,
+            Self::Open => true,
             _ => false,
         }
     }
 
     pub fn is_watching(self) -> bool {
         match self {
-            WatchState::Watching => true,
+            Self::Watching => true,
             _ => false,
         }
     }
@@ -37,14 +37,14 @@ impl WatchState {
 
     pub fn update(&mut self) {
         match self {
-            WatchState::Close => {
-                mem::replace(self, WatchState::Watching);
+            Self::Close => {
+                mem::replace(self, Self::Watching);
             }
-            WatchState::Watching => {
-                mem::replace(self, WatchState::Open);
+            Self::Watching => {
+                mem::replace(self, Self::Open);
             }
-            WatchState::Open => {
-                mem::replace(self, WatchState::Close);
+            Self::Open => {
+                mem::replace(self, Self::Close);
             }
         }
     }

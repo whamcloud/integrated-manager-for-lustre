@@ -12,7 +12,7 @@ pub enum ImlWarpDriveError {
     ImlRabbitError(ImlRabbitError),
     ImlManagerClientError(ImlManagerClientError),
     TokioPostgresError(iml_postgres::Error),
-    DbError(DbError),
+    DbError(Box<DbError>),
     SerdeJsonError(serde_json::error::Error),
 }
 
@@ -56,7 +56,7 @@ impl From<ImlManagerClientError> for ImlWarpDriveError {
 
 impl From<DbError> for ImlWarpDriveError {
     fn from(err: DbError) -> Self {
-        ImlWarpDriveError::DbError(err)
+        ImlWarpDriveError::DbError(Box::new(err))
     }
 }
 

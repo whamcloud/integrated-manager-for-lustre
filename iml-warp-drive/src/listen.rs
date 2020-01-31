@@ -27,20 +27,53 @@ fn into_db_record(s: &str) -> serde_json::error::Result<(MessageType, DbRecord)>
     Ok((msg_type, r))
 }
 
+async fn handle_record_change(
+    record_change: RecordChange,
+    api_cache_state: cache::SharedCache,
+    user_state: users::SharedUsers,
+) {
+    match record_change.clone() {
+        RecordChange::Delete(r) => {
+            tracing::debug!("LISTEN / NOTIFY Delete record: {:?}", r);
+
+            let removed = api_cache_state.lock().await.remove_record(&r);
+
+            if removed {
+                users::send_message(
+                    Message::RecordChange(record_change),
+                    Arc::clone(&user_state),
+                )
+                .await;
+            }
+        }
+        RecordChange::Update(r) => {
+            tracing::debug!("LISTEN / NOTIFY Update record: {:?}", r);
+
+            api_cache_state.lock().await.insert_record(r);
+
+            users::send_message(
+                Message::RecordChange(record_change),
+                Arc::clone(&user_state),
+            )
+            .await;
+        }
+    };
+}
+
 pub async fn handle_db_notifications(
     mut stream: impl Stream<Item = Result<iml_postgres::AsyncMessage, iml_postgres::Error>>
         + std::marker::Unpin,
     client: iml_postgres::SharedClient,
     api_client: iml_manager_client::Client,
     api_cache_state: cache::SharedCache,
-    user_state4: users::SharedUsers,
+    user_state: users::SharedUsers,
 ) -> Result<(), error::ImlWarpDriveError> {
     // Keep the client alive within the spawned future so the LISTEN/NOTIFY stream is not dropped
     let _keep_alive = &client;
 
     while let Some(msg) = stream.try_next().await? {
         let api_cache_state = Arc::clone(&api_cache_state);
-        let user_state4 = Arc::clone(&user_state4);
+        let user_state = Arc::clone(&user_state);
 
         match msg {
             iml_postgres::AsyncMessage::Notification(n) => {
@@ -50,32 +83,7 @@ pub async fn handle_db_notifications(
                     let record_change =
                         cache::db_record_to_change_record(r, api_client.clone()).await?;
 
-                    match record_change.clone() {
-                        RecordChange::Delete(r) => {
-                            tracing::debug!("LISTEN / NOTIFY Delete record: {:?}", r);
-
-                            let removed = api_cache_state.lock().await.remove_record(&r);
-
-                            if removed {
-                                users::send_message(
-                                    Message::RecordChange(record_change),
-                                    Arc::clone(&user_state4),
-                                )
-                                .await;
-                            }
-                        }
-                        RecordChange::Update(r) => {
-                            tracing::debug!("LISTEN / NOTIFY Update record: {:?}", r);
-
-                            api_cache_state.lock().await.insert_record(r);
-
-                            users::send_message(
-                                Message::RecordChange(record_change),
-                                Arc::clone(&user_state4),
-                            )
-                            .await;
-                        }
-                    };
+                    handle_record_change(record_change, api_cache_state, user_state).await;
                 } else {
                     tracing::warn!("unknown channel: {}", n.channel());
                 }
