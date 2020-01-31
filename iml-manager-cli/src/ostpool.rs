@@ -94,69 +94,71 @@ async fn pool_lookup(fsname: &str, poolname: &str) -> Result<OstPoolApi, ImlMana
     Ok(pool)
 }
 
+async fn ostpool_list(fsname: Option<String>) -> Result<(), ImlManagerCliError> {
+    let xs: Vec<_> = match fsname {
+        Some(fsname) => {
+            let fs: Filesystem =
+                wrap_fut("Fetching Filesystem ...", get_one(vec![("name", &fsname)])).await?;
+            let pools: ApiList<OstPoolApi> = wrap_fut(
+                "Fetching OstPools...",
+                get(
+                    OstPoolApi::endpoint_name(),
+                    vec![("limit", 0), ("filesystem", fs.id)],
+                ),
+            )
+            .await?;
+            pools
+                .objects
+                .into_iter()
+                .map(|p| vec![fsname.clone(), p.ost.name, p.ost.osts.len().to_string()])
+                .collect()
+        }
+        None => {
+            let pools: ApiList<OstPoolApi> = wrap_fut("Fetching OstPools...", get_all()).await?;
+
+            let fs_ids = pools
+                .objects
+                .iter()
+                .filter_map(|p| {
+                    let id = extract_api_id(&p.ost.filesystem);
+
+                    id.map(|x| x.to_string())
+                })
+                .collect::<std::collections::HashSet<String>>();
+
+            let fs_ids = Vec::from_iter(fs_ids).join(",");
+
+            let mut query = Filesystem::query();
+
+            query.push(("id__in", &fs_ids));
+
+            let fs: ApiList<Filesystem> = get(Filesystem::endpoint_name(), query).await?;
+
+            pools
+                .objects
+                .into_iter()
+                .filter_map(move |p| {
+                    fs.objects
+                        .iter()
+                        .find(|f| f.resource_uri == p.ost.filesystem)
+                        .map(move |fs| {
+                            vec![fs.name.clone(), p.ost.name, p.ost.osts.len().to_string()]
+                        })
+                })
+                .collect()
+        }
+    };
+
+    let table = generate_table(&["Filesystem", "Pool Name", "OST Count"], xs);
+    table.printstd();
+
+    Ok(())
+}
+
 pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliError> {
     let term = Term::stdout();
     match command {
-        OstPoolCommand::List { fsname } => {
-            let xs: Vec<_> = match fsname {
-                Some(fsname) => {
-                    let fs: Filesystem =
-                        wrap_fut("Fetching Filesystem ...", get_one(vec![("name", &fsname)]))
-                            .await?;
-                    let pools: ApiList<OstPoolApi> = wrap_fut(
-                        "Fetching OstPools...",
-                        get(
-                            OstPoolApi::endpoint_name(),
-                            vec![("limit", 0), ("filesystem", fs.id)],
-                        ),
-                    )
-                    .await?;
-                    pools
-                        .objects
-                        .into_iter()
-                        .map(|p| vec![fsname.clone(), p.ost.name, p.ost.osts.len().to_string()])
-                        .collect()
-                }
-                None => {
-                    let pools: ApiList<OstPoolApi> =
-                        wrap_fut("Fetching OstPools...", get_all()).await?;
-
-                    let fs_ids = pools
-                        .objects
-                        .iter()
-                        .filter_map(|p| {
-                            let id = extract_api_id(&p.ost.filesystem);
-
-                            id.map(|x| x.to_string())
-                        })
-                        .collect::<std::collections::HashSet<String>>();
-
-                    let fs_ids = Vec::from_iter(fs_ids).join(",");
-
-                    let mut query = Filesystem::query();
-
-                    query.push(("id__in", &fs_ids));
-
-                    let fs: ApiList<Filesystem> = get(Filesystem::endpoint_name(), query).await?;
-
-                    pools
-                        .objects
-                        .into_iter()
-                        .filter_map(move |p| {
-                            fs.objects
-                                .iter()
-                                .find(|f| f.resource_uri == p.ost.filesystem)
-                                .map(move |fs| {
-                                    vec![fs.name.clone(), p.ost.name, p.ost.osts.len().to_string()]
-                                })
-                        })
-                        .collect()
-                }
-            };
-
-            let table = generate_table(&["Filesystem", "Pool Name", "OST Count"], xs);
-            table.printstd();
-        }
+        OstPoolCommand::List { fsname } => ostpool_list(fsname).await?,
         OstPoolCommand::Show { fsname, poolname } => {
             let pool = pool_lookup(&fsname, &poolname).await?;
 
