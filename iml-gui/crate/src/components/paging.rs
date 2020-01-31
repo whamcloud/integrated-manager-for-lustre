@@ -18,7 +18,7 @@ pub struct Model {
 
 impl Default for Model {
     fn default() -> Self {
-        Model {
+        Self {
             limit: ROW_OPTS[0],
             total: 0,
             offset: 0,
@@ -108,15 +108,15 @@ pub enum Dir {
 
 impl Default for Dir {
     fn default() -> Self {
-        Dir::Asc
+        Self::Asc
     }
 }
 
 impl Dir {
     pub fn next(self) -> Self {
         match self {
-            Dir::Asc => Dir::Desc,
-            Dir::Desc => Dir::Asc,
+            Self::Asc => Self::Desc,
+            Self::Desc => Self::Asc,
         }
     }
 }
@@ -126,8 +126,8 @@ impl Dir {
 /// Given a direction, renders the correct chevron for that direction.
 pub fn dir_toggle_view<T>(dir: Dir, more_attrs: Attrs) -> Node<T> {
     let x = match dir {
-        Dir::Asc => "chevron-up",
-        Dir::Desc => "chevron-down",
+        Self::Asc => "chevron-up",
+        Self::Desc => "chevron-down",
     };
 
     font_awesome(more_attrs, x)
