@@ -108,9 +108,9 @@ pub enum Step {
 impl From<TargetKind> for Step {
     fn from(target_kind: TargetKind) -> Self {
         match target_kind {
-            TargetKind::Mgt => Step::MgtCollection,
-            TargetKind::Mdt => Step::MdtCollection,
-            TargetKind::Ost => Step::OstCollection,
+            TargetKind::Mgt => Self::MgtCollection,
+            TargetKind::Mdt => Self::MdtCollection,
+            TargetKind::Ost => Self::OstCollection,
         }
     }
 }
@@ -120,10 +120,10 @@ pub struct Address(BTreeSet<Step>);
 
 impl Address {
     fn new(path: impl IntoIterator<Item = Step>) -> Self {
-        Address(BTreeSet::from_iter(path))
+        Self(BTreeSet::from_iter(path))
     }
-    fn extend(&self, step: impl Into<Step>) -> Address {
-        Address::new(self.iter().copied().chain(once(step.into())))
+    fn extend(&self, step: impl Into<Step>) -> Self {
+        Self::new(self.iter().copied().chain(once(step.into())))
     }
     fn as_vec(&self) -> Vec<Step> {
         self.iter().copied().collect()
@@ -140,7 +140,7 @@ impl Deref for Address {
 
 impl From<Vec<Step>> for Address {
     fn from(xs: Vec<Step>) -> Self {
-        Address::new(xs)
+        Self::new(xs)
     }
 }
 
@@ -155,7 +155,7 @@ impl TreeNode {
     fn from_items(xs: impl IntoIterator<Item = u32>) -> Self {
         let items = BTreeSet::from_iter(xs);
 
-        TreeNode {
+        Self {
             open: false,
             paging: paging::Model::new(items.len()),
             items,

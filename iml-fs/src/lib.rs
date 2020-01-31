@@ -20,8 +20,8 @@ pub enum ImlFsError {
 impl std::fmt::Display for ImlFsError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
-            ImlFsError::LinesCodecError(ref err) => write!(f, "{}", err),
-            ImlFsError::IoError(ref err) => write!(f, "{}", err),
+            Self::LinesCodecError(ref err) => write!(f, "{}", err),
+            Self::IoError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -29,21 +29,21 @@ impl std::fmt::Display for ImlFsError {
 impl std::error::Error for ImlFsError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
-            ImlFsError::LinesCodecError(ref err) => Some(err),
-            ImlFsError::IoError(ref err) => Some(err),
+            Self::LinesCodecError(ref err) => Some(err),
+            Self::IoError(ref err) => Some(err),
         }
     }
 }
 
 impl From<LinesCodecError> for ImlFsError {
     fn from(err: LinesCodecError) -> Self {
-        ImlFsError::LinesCodecError(err)
+        Self::LinesCodecError(err)
     }
 }
 
 impl From<io::Error> for ImlFsError {
     fn from(err: io::Error) -> Self {
-        ImlFsError::IoError(err)
+        Self::IoError(err)
     }
 }
 

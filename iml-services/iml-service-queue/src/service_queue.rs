@@ -58,12 +58,10 @@ pub fn consume_service_queue(
 
     connect_to_queue(name.to_string(), client)
         .map_err(ImlServiceQueueError::from)
-        .and_then(move |(c, q)| {
-            async {
-                let c = purge_queue(c, name2).await?;
+        .and_then(move |(c, q)| async {
+            let c = purge_queue(c, name2).await?;
 
-                Ok((c, q))
-            }
+            Ok((c, q))
         })
         .and_then(move |(c, q)| {
             basic_consume(

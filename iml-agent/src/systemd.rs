@@ -34,7 +34,7 @@ async fn wait_for_state(
 
 fn clean_bus_output(output: &str) -> Result<&str, ImlAgentError> {
     output
-        .split("\"")
+        .split('"')
         .nth(1)
         .ok_or_else(|| ImlAgentError::UnexpectedStatusError)
 }

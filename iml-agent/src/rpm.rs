@@ -20,7 +20,7 @@ fn parse(output: Output) -> Result<Option<Version>, ImlAgentError> {
     if output.status.success() {
         // In case there's syntax error in query format, exit code of `rpm` is 0,
         // but there's no data and an error is on stderr
-        if output.stderr.len() > 0 {
+        if !output.stderr.is_empty() {
             Err(output.into())
         } else {
             Ok(Some(Version(

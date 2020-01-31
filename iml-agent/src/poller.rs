@@ -34,14 +34,12 @@ fn handle_state(
         State::Active(a) if a.instant <= now => Either::Left(
             a.session
                 .poll()
-                .and_then(move |x| {
-                    async move {
-                        if let Some((info, output)) = x {
-                            agent_client.send_data(info, output).await?;
-                        }
-
-                        Ok(())
+                .and_then(move |x| async move {
+                    if let Some((info, output)) = x {
+                        agent_client.send_data(info, output).await?;
                     }
+
+                    Ok(())
                 })
                 .then(move |r| match r {
                     Ok(_) => {
