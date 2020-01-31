@@ -122,7 +122,7 @@ impl Address {
     fn new(path: impl IntoIterator<Item = Step>) -> Self {
         Self(BTreeSet::from_iter(path))
     }
-    fn extend(&self, step: impl Into<Step>) -> Address {
+    fn extend(&self, step: impl Into<Step>) -> Self {
         Self::new(self.iter().copied().chain(once(step.into())))
     }
     fn as_vec(&self) -> Vec<Step> {
