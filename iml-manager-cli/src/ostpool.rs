@@ -155,20 +155,38 @@ async fn ostpool_list(fsname: Option<String>) -> Result<(), ImlManagerCliError> 
     Ok(())
 }
 
-#[allow(clippy::cognitive_complexity)]
+async fn ostpool_show(fsname: String, poolname: String) -> Result<(), ImlManagerCliError> {
+    let pool = pool_lookup(&fsname, &poolname).await?;
+
+    let mut table = Table::new();
+    table.add_row(Row::from(&["Filesystem".to_string(), fsname]));
+    table.add_row(Row::from(&["Name".to_string(), poolname]));
+    table.add_row(Row::from(&["OSTs".to_string(), pool.ost.osts.join("\n")]));
+    table.printstd();
+
+    Ok(())
+}
+
+async fn ostpool_destroy(
+    term: &Term,
+    fsname: String,
+    poolname: String,
+) -> Result<(), ImlManagerCliError> {
+    let pool = pool_lookup(&fsname, &poolname).await?;
+    let resp = delete(&pool.resource_uri, "").await?;
+    term.write_line(&format!("{} ost pool...", style("Destroying").green()))?;
+    let objs: ObjCommands = resp.json().await?;
+    wait_for_cmds(objs.commands).await?;
+
+    Ok(())
+}
+
 pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliError> {
     let term = Term::stdout();
+
     match command {
         OstPoolCommand::List { fsname } => ostpool_list(fsname).await?,
-        OstPoolCommand::Show { fsname, poolname } => {
-            let pool = pool_lookup(&fsname, &poolname).await?;
-
-            let mut table = Table::new();
-            table.add_row(Row::from(&["Filesystem".to_string(), fsname]));
-            table.add_row(Row::from(&["Name".to_string(), poolname]));
-            table.add_row(Row::from(&["OSTs".to_string(), pool.ost.osts.join("\n")]));
-            table.printstd();
-        }
+        OstPoolCommand::Show { fsname, poolname } => ostpool_show(fsname, poolname).await?,
         OstPoolCommand::Create {
             fsname,
             poolname,
@@ -189,11 +207,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
             wait_for_cmds(vec![objs.command]).await?;
         }
         OstPoolCommand::Destroy { fsname, poolname } => {
-            let pool = pool_lookup(&fsname, &poolname).await?;
-            let resp = delete(&pool.resource_uri, "").await?;
-            term.write_line(&format!("{} ost pool...", style("Destroying").green()))?;
-            let objs: ObjCommands = resp.json().await?;
-            wait_for_cmds(objs.commands).await?;
+            ostpool_destroy(&term, fsname, poolname).await?;
         }
         OstPoolCommand::Grow {
             fsname,
@@ -221,13 +235,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
         } => {
             let mut pool = pool_lookup(&fsname, &poolname).await?;
 
-            pool.ost.osts = pool
-                .ost
-                .osts
-                .iter()
-                .filter(|o| !osts.contains(o))
-                .cloned()
-                .collect();
+            pool.ost.osts.retain(|o| !osts.contains(o));
 
             tracing::debug!("POOL: {:?}", pool);
             term.write_line(&format!("{} ost pool...", style("Shrinking").green()))?;
@@ -238,5 +246,6 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
             wait_for_cmds(vec![objs.command]).await?;
         }
     };
+
     Ok(())
 }
