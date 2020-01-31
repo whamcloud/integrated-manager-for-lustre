@@ -7,7 +7,7 @@ use crate::{
     Sessions, Shared,
 };
 use iml_rabbit::{send_message, Client};
-use iml_wire_types::{ActionResult, Fqdn, PluginMessage};
+use iml_wire_types::{ActionResult, Fqdn, Id, PluginMessage};
 
 pub static AGENT_TX_RUST: &str = "agent_tx_rust";
 
@@ -26,6 +26,46 @@ fn terminate_session(fqdn: &Fqdn, sessions: &mut Sessions, session_to_rpcs: &mut
     }
 }
 
+async fn create_session(
+    client: Client,
+    sessions: Shared<Sessions>,
+    rpcs: Shared<SessionToRpcs>,
+    fqdn: Fqdn,
+    session_id: Id,
+) -> Result<(), ()> {
+    let maybe_old_id = {
+        sessions
+            .lock()
+            .await
+            .insert(fqdn.clone(), session_id.clone())
+    };
+
+    if let Some(old_id) = maybe_old_id {
+        if let Some(xs) = { rpcs.lock().await.remove(&old_id) } {
+            for action_in_flight in xs.values() {
+                let session_id = session_id.clone();
+                let fqdn = fqdn.clone();
+                let body = action_in_flight.action.clone();
+
+                let msg = create_data_message(session_id, fqdn, body);
+
+                let fut = send_message(client.clone(), "", AGENT_TX_RUST, msg);
+
+                tokio::spawn(async move {
+                    fut.await
+                        .unwrap_or_else(|e| tracing::error!("Got an error resending rpcs {:?}", e));
+                });
+            }
+
+            rpcs.lock().await.insert(session_id.clone(), xs);
+        };
+    };
+
+    tracing::info!("Created new session: {}/{}", fqdn, session_id);
+
+    Ok(())
+}
+
 pub async fn handle_agent_data(
     client: Client,
     m: PluginMessage,
@@ -35,38 +75,7 @@ pub async fn handle_agent_data(
     match m {
         PluginMessage::SessionCreate {
             fqdn, session_id, ..
-        } => {
-            let maybe_old_id = {
-                sessions
-                    .lock()
-                    .await
-                    .insert(fqdn.clone(), session_id.clone())
-            };
-
-            if let Some(old_id) = maybe_old_id {
-                if let Some(xs) = { rpcs.lock().await.remove(&old_id) } {
-                    for action_in_flight in xs.values() {
-                        let session_id = session_id.clone();
-                        let fqdn = fqdn.clone();
-                        let body = action_in_flight.action.clone();
-
-                        let msg = create_data_message(session_id, fqdn, body);
-
-                        let fut = send_message(client.clone(), "", AGENT_TX_RUST, msg);
-
-                        tokio::spawn(async move {
-                            fut.await.unwrap_or_else(|e| {
-                                tracing::error!("Got an error resending rpcs {:?}", e)
-                            });
-                        });
-                    }
-
-                    rpcs.lock().await.insert(session_id.clone(), xs);
-                };
-            };
-
-            tracing::info!("Created new session: {}/{}", fqdn, session_id);
-        }
+        } => return create_session(client, sessions, rpcs, fqdn, session_id).await,
         PluginMessage::SessionTerminate {
             fqdn, session_id, ..
         } => {
