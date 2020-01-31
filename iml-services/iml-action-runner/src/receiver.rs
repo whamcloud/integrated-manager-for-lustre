@@ -66,7 +66,52 @@ async fn create_session(
     Ok(())
 }
 
-#[allow(clippy::cognitive_complexity)]
+async fn handle_data(
+    sessions: Shared<Sessions>,
+    rpcs: Shared<SessionToRpcs>,
+    fqdn: Fqdn,
+    session_id: Id,
+    body: serde_json::Value,
+) {
+    let mut sessions = sessions.lock().await;
+
+    match sessions.get(&fqdn) {
+        Some(held_session) if held_session == &session_id => {
+            tracing::info!("good session {:?}/{:?}", fqdn, session_id);
+
+            let result: Result<ActionResult, String> = serde_json::from_value(body).unwrap();
+
+            let result = result.unwrap();
+
+            let mut lock = rpcs.lock().await;
+
+            match remove_action_in_flight(&session_id, &result.id, &mut lock) {
+                Some(action_in_flight) => {
+                    action_in_flight.complete(result.result).unwrap();
+                }
+                None => {
+                    tracing::error!("Response received from UNKNOWN RPC of (id: {})", result.id);
+                }
+            };
+        }
+        Some(held_session) => {
+            tracing::info!(
+                "cancelling session {}/{} (replaced by {:?})",
+                fqdn,
+                held_session,
+                session_id
+            );
+
+            let mut lock = rpcs.lock().await;
+
+            terminate_session(&fqdn, &mut sessions, &mut lock);
+        }
+        None => {
+            tracing::info!("unknown session {:?}/{:?}", fqdn, session_id);
+        }
+    }
+}
+
 pub async fn handle_agent_data(
     client: Client,
     m: PluginMessage,
@@ -108,49 +153,7 @@ pub async fn handle_agent_data(
             session_id,
             body,
             ..
-        } => {
-            let mut sessions = sessions.lock().await;
-
-            match sessions.get(&fqdn) {
-                Some(held_session) if held_session == &session_id => {
-                    tracing::info!("good session {:?}/{:?}", fqdn, session_id);
-
-                    let result: Result<ActionResult, String> =
-                        serde_json::from_value(body).unwrap();
-
-                    let result = result.unwrap();
-
-                    let mut lock = rpcs.lock().await;
-
-                    match remove_action_in_flight(&session_id, &result.id, &mut lock) {
-                        Some(action_in_flight) => {
-                            action_in_flight.complete(result.result).unwrap();
-                        }
-                        None => {
-                            tracing::error!(
-                                "Response received from UNKNOWN RPC of (id: {})",
-                                result.id
-                            );
-                        }
-                    };
-                }
-                Some(held_session) => {
-                    tracing::info!(
-                        "cancelling session {}/{} (replaced by {:?})",
-                        fqdn,
-                        held_session,
-                        session_id
-                    );
-
-                    let mut lock = rpcs.lock().await;
-
-                    terminate_session(&fqdn, &mut sessions, &mut lock);
-                }
-                None => {
-                    tracing::info!("unknown session {:?}/{:?}", fqdn, session_id);
-                }
-            }
-        }
+        } => handle_data(sessions, rpcs, fqdn, session_id, body).await,
     };
 
     Ok(())
