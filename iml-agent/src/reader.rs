@@ -81,7 +81,6 @@ async fn get_delivery(
             }
             ManagerMessage::SessionTerminate {
                 plugin,
-                session_id: _,
                 ..
             } => sessions.terminate_session(&plugin)?,
             ManagerMessage::SessionTerminateAll { .. } => sessions.terminate_all_sessions()?,
