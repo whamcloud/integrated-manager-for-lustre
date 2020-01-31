@@ -126,8 +126,8 @@ impl Dir {
 /// Given a direction, renders the correct chevron for that direction.
 pub fn dir_toggle_view<T>(dir: Dir, more_attrs: Attrs) -> Node<T> {
     let x = match dir {
-        Self::Asc => "chevron-up",
-        Self::Desc => "chevron-down",
+        Dir::Asc => "chevron-up",
+        Dir::Desc => "chevron-down",
     };
 
     font_awesome(more_attrs, x)
