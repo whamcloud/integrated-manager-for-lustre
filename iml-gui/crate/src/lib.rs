@@ -4,6 +4,7 @@
 
 pub mod components;
 pub mod key_codes;
+pub mod page;
 
 mod auth;
 mod breakpoints;
@@ -12,7 +13,6 @@ mod event_source;
 mod extensions;
 mod generated;
 mod notification;
-mod page;
 mod route;
 mod sleep;
 mod watch_state;
@@ -22,12 +22,13 @@ mod test_utils;
 
 use components::{breadcrumbs::BreadCrumbs, loading, restrict, tree, update_activity_health, ActivityHealth};
 pub(crate) use extensions::*;
+use futures::channel::oneshot;
 use generated::css_classes::C;
 use iml_wire_types::{
     warp_drive::{self, ArcValuesExt},
     GroupType, Session,
 };
-use page::login;
+use page::{login, Page};
 use regex::Regex;
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, Listener, *};
@@ -76,6 +77,23 @@ impl Visibility {
     }
 }
 
+struct Loading {
+    session: Option<oneshot::Sender<()>>,
+    messages: Option<oneshot::Sender<()>>,
+    locks: Option<oneshot::Sender<()>>,
+}
+
+impl Loading {
+    /// Do we have enough data to load the app?
+    fn loaded(&self) -> bool {
+        self.session
+            .as_ref()
+            .or_else(|| self.messages.as_ref())
+            .or_else(|| self.locks.as_ref())
+            .is_none()
+    }
+}
+
 // ------ ------
 //     Model
 // ------ ------
@@ -85,27 +103,18 @@ pub struct Model {
     auth: auth::Model,
     breadcrumbs: BreadCrumbs<Route<'static>>,
     breakpoint_size: breakpoints::Size,
+    loading: Loading,
     locks: warp_drive::Locks,
     logging_out: bool,
-    login: login::Model,
     manage_menu_state: WatchState,
     menu_visibility: Visibility,
     notification: notification::Model,
+    page: Page,
     records: warp_drive::ArcCache,
     route: Route<'static>,
-    saw_es_locks: bool,
-    saw_es_messages: bool,
-    server_page: page::server::Model,
     side_width_percentage: f32,
     track_slider: bool,
     tree: tree::Model,
-}
-
-impl Model {
-    /// Do we have enough data to load the app?
-    fn loaded(&self) -> bool {
-        self.auth.get_session().is_some() && self.saw_es_messages && self.saw_es_locks
-    }
 }
 
 // ------ ------
@@ -127,24 +136,42 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
 
     orders.proxy(Msg::Notification).perform_cmd(notification::init());
 
-    orders.proxy(Msg::Auth).send_msg(auth::Msg::Fetch);
+    orders.proxy(Msg::Auth).send_msg(Box::new(auth::Msg::Fetch));
+
+    let (session_tx, session_rx) = oneshot::channel();
+    let (messages_tx, messages_rx) = oneshot::channel();
+    let (locks_tx, locks_rx) = oneshot::channel();
+
+    let fut = async {
+        let (r1, r2, r3) = futures::join!(session_rx, messages_rx, locks_rx);
+
+        if let Err(e) = r1.or(r2).or(r3) {
+            error!(format!("Could not load initial data: {:?}", e));
+        }
+
+        Ok(Msg::LoadPage)
+    };
+
+    orders.perform_cmd(fut);
 
     AfterMount::new(Model {
         activity_health: ActivityHealth::default(),
         auth: auth::Model::default(),
         breadcrumbs: BreadCrumbs::default(),
         breakpoint_size: breakpoints::size(),
+        loading: Loading {
+            session: Some(session_tx),
+            messages: Some(messages_tx),
+            locks: Some(locks_tx),
+        },
         locks: im::hashmap!(),
         logging_out: false,
-        login: login::Model::default(),
         manage_menu_state: WatchState::default(),
         menu_visibility: Visible,
         notification: notification::Model::default(),
+        page: Page::AppLoading,
         records: warp_drive::ArcCache::default(),
         route: url.into(),
-        saw_es_locks: false,
-        saw_es_messages: false,
-        server_page: page::server::Model::default(),
         side_width_percentage: 20_f32,
         track_slider: false,
         tree: tree::Model::default(),
@@ -170,7 +197,7 @@ pub fn routes(url: Url) -> Option<Msg> {
 #[allow(clippy::large_enum_variant)]
 pub enum GMsg {
     RouteChange(Url),
-    AuthProxy(auth::Msg),
+    AuthProxy(Box<auth::Msg>),
 }
 
 fn sink(g_msg: GMsg, _model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -206,6 +233,7 @@ pub enum Msg {
     Records(Box<warp_drive::Cache>),
     RecordChange(Box<warp_drive::RecordChange>),
     RemoveRecord(warp_drive::RecordId),
+    LoadPage,
     Locks(warp_drive::Locks),
     ServerPage(page::server::Msg),
     WindowClick,
@@ -217,7 +245,7 @@ pub enum Msg {
     Logout,
     LoggedOut(fetch::FetchObject<()>),
     Tree(tree::Msg),
-    Auth(auth::Msg),
+    Auth(Box<auth::Msg>),
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -234,7 +262,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             if model.route == Route::Dashboard {
                 model.breadcrumbs.clear();
             }
+
             model.breadcrumbs.push(model.route.clone());
+
+            orders.send_msg(Msg::LoadPage);
         }
         Msg::UpdatePageTitle => {
             let title = format!("{} - {}", model.route.to_string(), TITLE_SUFFIX);
@@ -244,6 +275,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::EventSourceConnect(_) => {
             log("EventSource connected.");
         }
+        Msg::LoadPage => {
+            if model.loading.loaded() && !model.page.is_active(&model.route) {
+                model.page = (&model.route).into();
+                model.page.init(&model.records, orders);
+            } else {
+                orders.skip();
+            }
+        }
         Msg::EventSourceMessage(msg) => {
             let txt = msg.data().as_string().unwrap();
 
@@ -251,12 +290,16 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
             let msg = match msg {
                 warp_drive::Message::Locks(locks) => {
-                    model.saw_es_locks = true;
+                    if let Some(locks) = model.loading.locks.take() {
+                        let _ = locks.send(());
+                    }
 
                     Msg::Locks(locks)
                 }
                 warp_drive::Message::Records(records) => {
-                    model.saw_es_messages = true;
+                    if let Some(messages) = model.loading.messages.take() {
+                        let _ = messages.send(());
+                    }
 
                     Msg::Records(Box::new(records))
                 }
@@ -275,7 +318,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::GotSession(data_result) => match data_result {
             Ok(resp) => {
-                orders.send_g_msg(GMsg::AuthProxy(auth::Msg::SetSession(resp)));
+                orders.send_g_msg(GMsg::AuthProxy(Box::new(auth::Msg::SetSession(resp))));
 
                 model.logging_out = false;
             }
@@ -411,7 +454,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::HideMenu => {
             model.menu_visibility = Hidden;
         }
-        Msg::ServerPage(msg) => page::server::update(msg, &mut model.server_page, &mut orders.proxy(Msg::ServerPage)),
+        Msg::ServerPage(msg) => {
+            if let Page::Server(page) = &mut model.page {
+                page::server::update(msg, page, &mut orders.proxy(Msg::ServerPage))
+            }
+        }
         Msg::StartSliderTracking => {
             model.track_slider = true;
         }
@@ -434,7 +481,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::Logout => {
             model.logging_out = true;
 
-            orders.proxy(Msg::Auth).send_msg(auth::Msg::Stop);
+            orders.proxy(Msg::Auth).send_msg(Box::new(auth::Msg::Stop));
 
             orders.perform_cmd(
                 auth::fetch_session()
@@ -466,10 +513,16 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             tree::update(&model.records, msg, &mut model.tree, &mut orders.proxy(Msg::Tree));
         }
         Msg::Login(msg) => {
-            login::update(msg, &mut model.login, &mut orders.proxy(Msg::Login));
+            if let Page::Login(page) = &mut model.page {
+                login::update(msg, page, &mut orders.proxy(Msg::Login));
+            }
         }
         Msg::Auth(msg) => {
-            auth::update(msg, &mut model.auth, &mut orders.proxy(Msg::Auth));
+            if let (Some(_), Some(session)) = (model.auth.get_session(), model.loading.session.take()) {
+                let _ = session.send(());
+            }
+
+            auth::update(*msg, &mut model.auth, &mut orders.proxy(|x| Msg::Auth(Box::new(x))));
         }
     }
 }
@@ -583,39 +636,34 @@ pub fn main_panels(model: &Model, children: impl View<Msg>) -> impl View<Msg> {
     ]
 }
 
-pub fn view(model: &Model) -> Vec<Node<Msg>> {
-    if !model.loaded() {
-        return loading::view().els();
-    }
-
-    match &model.route {
-        Route::About => main_panels(model, page::about::view(model)).els(),
-        Route::Activity => main_panels(model, page::activity::view(model)).els(),
-        Route::Dashboard => main_panels(model, page::dashboard::view(model)).els(),
-        Route::Filesystem => main_panels(model, page::filesystem::view(model)).els(),
-        Route::FilesystemDetail(id) => main_panels(model, page::filesystem_detail::view(model, id)).els(),
-        Route::Jobstats => main_panels(model, page::jobstats::view(model)).els(),
-        Route::Login => page::login::view(&model.login).els().map_msg(Msg::Login),
-        Route::Logs => main_panels(model, page::logs::view(model)).els(),
-        Route::Mgt => main_panels(model, page::mgt::view(model)).els(),
-        Route::NotFound => page::not_found::view(model).els(),
-        Route::OstPool => main_panels(model, page::ostpool::view(model)).els(),
-        Route::OstPoolDetail(id) => main_panels(model, page::ostpool_detail::view(model, id)).els(),
-        Route::PowerControl => main_panels(model, page::power_control::view(model)).els(),
-        Route::Server => main_panels(
+fn view(model: &Model) -> Vec<Node<Msg>> {
+    match &model.page {
+        Page::AppLoading => loading::view().els(),
+        Page::About => main_panels(model, page::about::view(model)).els(),
+        Page::Activity => main_panels(model, page::activity::view(model)).els(),
+        Page::Dashboard => main_panels(model, page::dashboard::view(model)).els(),
+        Page::Filesystem => main_panels(model, page::filesystem::view(model)).els(),
+        Page::FilesystemDetail(x) => main_panels(model, page::filesystem_detail::view(x)).els(),
+        Page::Jobstats => main_panels(model, page::jobstats::view(model)).els(),
+        Page::Login(x) => page::login::view(x).els().map_msg(Msg::Login),
+        Page::Logs => main_panels(model, page::logs::view(model)).els(),
+        Page::Mgt => main_panels(model, page::mgt::view(model)).els(),
+        Page::NotFound => page::not_found::view(model).els(),
+        Page::OstPool => main_panels(model, page::ostpool::view(model)).els(),
+        Page::OstPoolDetail(x) => main_panels(model, page::ostpool_detail::view(x)).els(),
+        Page::PowerControl => main_panels(model, page::power_control::view(model)).els(),
+        Page::Server(page) => main_panels(
             model,
-            page::server::view(&model.records, &model.server_page)
-                .els()
-                .map_msg(Msg::ServerPage),
+            page::server::view(&model.records, page).els().map_msg(Msg::ServerPage),
         )
         .els(),
-        Route::ServerDetail(id) => main_panels(model, page::server_detail::view(model, id)).els(),
-        Route::Target => main_panels(model, page::target::view(model)).els(),
-        Route::TargetDetail(id) => main_panels(model, page::target_detail::view(model, id)).els(),
-        Route::User => main_panels(model, page::user::view(model)).els(),
-        Route::UserDetail(id) => main_panels(model, page::user_detail::view(model, id)).els(),
-        Route::Volume => main_panels(model, page::volume::view(model)).els(),
-        Route::VolumeDetail(id) => main_panels(model, page::volume_detail::view(model, id)).els(),
+        Page::ServerDetail(x) => main_panels(model, page::server_detail::view(x)).els(),
+        Page::Target => main_panels(model, page::target::view(model)).els(),
+        Page::TargetDetail(x) => main_panels(model, page::target_detail::view(x)).els(),
+        Page::User => main_panels(model, page::user::view(model)).els(),
+        Page::UserDetail(x) => main_panels(model, page::user_detail::view(x)).els(),
+        Page::Volume => main_panels(model, page::volume::view(model)).els(),
+        Page::VolumeDetail(x) => main_panels(model, page::volume_detail::view(x)).els(),
     }
 }
 

@@ -4,7 +4,10 @@ use crate::{
     generated::css_classes::C,
     GMsg, MergeAttrs, Route,
 };
-use iml_wire_types::{warp_drive::ArcCache, Host, Label};
+use iml_wire_types::{
+    warp_drive::{ArcCache, ArcValuesExt},
+    Host, Label,
+};
 use seed::{prelude::*, *};
 use std::cmp::Ordering;
 
@@ -34,6 +37,10 @@ pub enum Msg {
     Sort,
     SortBy(SortField),
     WindowClick,
+}
+
+pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+    orders.send_msg(Msg::SetHosts(cache.host.arc_values().cloned().collect()));
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {

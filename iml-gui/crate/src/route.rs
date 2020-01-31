@@ -10,6 +10,12 @@ impl<'a> From<u32> for RouteId<'a> {
     }
 }
 
+impl<'a> From<&u32> for RouteId<'a> {
+    fn from(n: &u32) -> Self {
+        RouteId(Cow::from(n.to_string()))
+    }
+}
+
 impl<'a> From<String> for RouteId<'a> {
     fn from(n: String) -> Self {
         RouteId(Cow::from(n))
