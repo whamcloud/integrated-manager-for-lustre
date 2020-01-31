@@ -740,14 +740,14 @@ pub enum DeviceType {
 impl std::fmt::Display for DeviceType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            DeviceType::ScsiDevice => write!(f, "scsi"),
-            DeviceType::Partition => write!(f, "partition"),
-            DeviceType::MdRaid => write!(f, "mdraid"),
-            DeviceType::Mpath => write!(f, "mpath"),
-            DeviceType::VolumeGroup => write!(f, "vg"),
-            DeviceType::LogicalVolume => write!(f, "lv"),
-            DeviceType::Zpool => write!(f, "zpool"),
-            DeviceType::Dataset => write!(f, "dataset"),
+            Self::ScsiDevice => write!(f, "scsi"),
+            Self::Partition => write!(f, "partition"),
+            Self::MdRaid => write!(f, "mdraid"),
+            Self::Mpath => write!(f, "mpath"),
+            Self::VolumeGroup => write!(f, "vg"),
+            Self::LogicalVolume => write!(f, "lv"),
+            Self::Zpool => write!(f, "zpool"),
+            Self::Dataset => write!(f, "dataset"),
         }
     }
 }
