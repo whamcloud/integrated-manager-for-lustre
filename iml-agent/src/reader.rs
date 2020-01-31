@@ -79,10 +79,9 @@ async fn get_delivery(
                     );
                 };
             }
-            ManagerMessage::SessionTerminate {
-                plugin,
-                ..
-            } => sessions.terminate_session(&plugin)?,
+            ManagerMessage::SessionTerminate { plugin, .. } => {
+                sessions.terminate_session(&plugin)?
+            }
             ManagerMessage::SessionTerminateAll { .. } => sessions.terminate_all_sessions()?,
         }
     }
