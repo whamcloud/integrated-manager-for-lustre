@@ -29,10 +29,11 @@ pub enum State {
 
 impl Default for State {
     fn default() -> Self {
-        State::Fetching
+        Self::Fetching
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone)]
 pub enum Msg {
     Fetch,

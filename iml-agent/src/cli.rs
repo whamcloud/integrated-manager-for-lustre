@@ -165,7 +165,7 @@ fn parse_duration(src: &str) -> Result<u64, io::Error> {
 fn is_valid_fsname(src: &str) -> Result<String, io::Error> {
     // c.f. lustre-release/lustre/utils/mkfs_lustre.c::parse_opts for
     // 'L' (fsname) option
-    if src.len() < 1 {
+    if src.is_empty() {
         return Err(invalid_input_err("FSName too short (min length 1)"));
     }
     if src.len() > llapi::MAXFSNAME {

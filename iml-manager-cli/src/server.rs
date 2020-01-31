@@ -112,7 +112,7 @@ pub struct Objects<T> {
 /// that did not match anything.
 fn filter_known_hosts<'a>(
     hostlist: BTreeSet<String>,
-    api_hosts: &'a Vec<Host>,
+    api_hosts: &'a [Host],
 ) -> (Vec<&'a Host>, BTreeSet<String>) {
     hostlist
         .into_iter()
@@ -151,7 +151,7 @@ fn get_confirm() -> bool {
 }
 
 async fn wait_till_agent_starts(
-    hosts: &Vec<Host>,
+    hosts: &[Host],
     profile_name: &str,
 ) -> Result<(), ImlManagerCliError> {
     let host_ids: Vec<_> = hosts
@@ -169,21 +169,22 @@ async fn wait_till_agent_starts(
         tracing::debug!("Host Profiles {:?}", objects);
 
         if let Some(x) = objects.iter_mut().find(|x| x.error.is_some()) {
-            return Err(ImlManagerCliError::ApiError(
-                x.error.take().unwrap().to_string(),
-            ));
+            return Err(ImlManagerCliError::ApiError(x.error.take().unwrap()));
         };
 
         let profile_checks: HashMap<u32, Vec<ProfileTest>> = objects
             .iter_mut()
             .filter_map(|x| x.host_profiles.take())
             .map(|mut x| {
-                x.profiles.remove(profile_name).map(|y| (x.host, y)).ok_or(
-                    ImlManagerCliError::ApiError(format!(
-                        "Profile {} not found for host {} while booting",
-                        profile_name, x.host
-                    )),
-                )
+                x.profiles
+                    .remove(profile_name)
+                    .map(|y| (x.host, y))
+                    .ok_or_else(|| {
+                        ImlManagerCliError::ApiError(format!(
+                            "Profile {} not found for host {} while booting",
+                            profile_name, x.host
+                        ))
+                    })
             })
             .collect::<Result<HashMap<u32, Vec<ProfileTest>>, ImlManagerCliError>>()?;
 
@@ -217,6 +218,7 @@ async fn wait_till_agent_starts(
     Ok(())
 }
 
+#[allow(clippy::cognitive_complexity)]
 pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError> {
     match command {
         ServerCommand::List => {
@@ -337,7 +339,7 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
 
                         false
                     } else {
-                        state && true
+                        state
                     }
                 });
 
@@ -404,7 +406,7 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
 
             let invalid: Vec<_> = objects
                 .iter()
-                .map(|(k, tests)| (k, tests.into_iter().filter(|y| !y.pass).collect::<Vec<_>>()))
+                .map(|(k, tests)| (k, tests.iter().filter(|y| !y.pass).collect::<Vec<_>>()))
                 .filter(|(_, tests)| !tests.is_empty())
                 .collect();
 
@@ -511,21 +513,19 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
 
             let xs: Vec<_> = removable
                 .into_iter()
-                .map(|x| {
-                    async move {
-                        let r = put(
-                            &x.resource_uri,
-                            StateChange {
-                                state: "removed".into(),
-                            },
-                        )
-                        .await?
-                        .error_for_status()?;
+                .map(|x| async move {
+                    let r = put(
+                        &x.resource_uri,
+                        StateChange {
+                            state: "removed".into(),
+                        },
+                    )
+                    .await?
+                    .error_for_status()?;
 
-                        let CmdWrapper { command } = r.json().await?;
+                    let CmdWrapper { command } = r.json().await?;
 
-                        Ok::<_, ImlManagerCliError>(command)
-                    }
+                    Ok::<_, ImlManagerCliError>(command)
                 })
                 .collect();
 

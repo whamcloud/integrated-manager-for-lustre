@@ -35,8 +35,8 @@ impl LoadError {
         LoadError { msg: s }
     }
 
-    pub fn into_raw(&self) -> String {
-        self.msg.clone()
+    pub fn into_raw(self) -> String {
+        self.msg
     }
 }
 

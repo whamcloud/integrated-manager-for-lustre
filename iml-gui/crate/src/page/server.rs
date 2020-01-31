@@ -16,7 +16,7 @@ pub enum SortField {
 
 impl Default for SortField {
     fn default() -> Self {
-        SortField::Label
+        Self::Label
     }
 }
 

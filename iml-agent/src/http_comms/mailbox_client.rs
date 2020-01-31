@@ -42,12 +42,10 @@ pub fn get(message_name: String) -> impl Stream<Item = Result<String, ImlAgentEr
     future::ready(crypto_client::get_id(&env::PFX))
         .err_into()
         .and_then(|id| async { crypto_client::create_client(id) })
-        .and_then(move |client| {
-            async move {
-                let message_endpoint = env::MANAGER_URL.join("/mailbox/")?.join(&message_name)?;
+        .and_then(move |client| async move {
+            let message_endpoint = env::MANAGER_URL.join("/mailbox/")?.join(&message_name)?;
 
-                Ok((client, message_endpoint))
-            }
+            Ok((client, message_endpoint))
         })
         .map_ok(move |(client, message_endpoint)| {
             read_lines(crypto_client::get_stream(&client, message_endpoint, &q)).err_into()

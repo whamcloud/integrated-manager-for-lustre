@@ -80,15 +80,13 @@ pub fn get_stream(
         .inspect_ok(|resp| tracing::debug!("Get stream headers: {:?}", resp.headers()))
         .and_then(|resp| async { resp.error_for_status().map_err(|e| e.into()) })
         .map_ok(|resp| {
-            stream::unfold(resp, |mut resp| {
-                async move {
-                    let result = resp.chunk().await;
+            stream::unfold(resp, |mut resp| async move {
+                let result = resp.chunk().await;
 
-                    match result {
-                        Ok(Some(chunk)) => Some((Ok(chunk), resp)),
-                        Ok(None) => None,
-                        Err(err) => Some((Err(err), resp)),
-                    }
+                match result {
+                    Ok(Some(chunk)) => Some((Ok(chunk), resp)),
+                    Ok(None) => None,
+                    Err(err) => Some((Err(err), resp)),
                 }
             })
             .err_into()
