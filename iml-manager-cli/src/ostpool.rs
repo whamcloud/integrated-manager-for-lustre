@@ -155,6 +155,7 @@ async fn ostpool_list(fsname: Option<String>) -> Result<(), ImlManagerCliError> 
     Ok(())
 }
 
+#[allow(clippy::cognitive_complexity)]
 pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliError> {
     let term = Term::stdout();
     match command {

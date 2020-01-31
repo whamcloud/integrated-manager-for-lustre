@@ -15,6 +15,7 @@ use serde::de::Error;
 use std::convert::TryFrom;
 
 /// Records from `chroma` database.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub enum DbRecord {
     AlertState(AlertStateRecord),

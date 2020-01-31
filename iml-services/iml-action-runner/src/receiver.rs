@@ -66,6 +66,7 @@ async fn create_session(
     Ok(())
 }
 
+#[allow(clippy::cognitive_complexity)]
 pub async fn handle_agent_data(
     client: Client,
     m: PluginMessage,

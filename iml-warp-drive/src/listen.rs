@@ -27,6 +27,7 @@ fn into_db_record(s: &str) -> serde_json::error::Result<(MessageType, DbRecord)>
     Ok((msg_type, r))
 }
 
+#[allow(clippy::cognitive_complexity)]
 pub async fn handle_db_notifications(
     mut stream: impl Stream<Item = Result<iml_postgres::AsyncMessage, iml_postgres::Error>>
         + std::marker::Unpin,

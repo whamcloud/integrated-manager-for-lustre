@@ -218,6 +218,7 @@ async fn wait_till_agent_starts(
     Ok(())
 }
 
+#[allow(clippy::cognitive_complexity)]
 pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError> {
     match command {
         ServerCommand::List => {
