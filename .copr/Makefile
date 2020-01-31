@@ -60,7 +60,8 @@ iml-docker-srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/scratch/iml-docker
 
-	cp -r docker/docker-compose.yml ${TMPDIR}/scratch/iml-docker/
+	cp -r docker/{docker-compose.yml,iml-images.tgz,iml-cli-proxy.sh} ${TMPDIR}/scratch/iml-docker/
+	cp iml-docker.service ${TMPDIR}/scratch/iml-docker/
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/iml-docker.tar.gz -C ${TMPDIR}/scratch/iml-docker .
 
 	cp iml-docker.spec ${TMPDIR}/_topdir/SPECS/

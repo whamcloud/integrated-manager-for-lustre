@@ -6,8 +6,12 @@ jobs:
     name: Check RPM build (iml-docker)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v1
+      - uses: actions/checkout@v1
+      - name: Build the iml images
+        working-directory: ./docker
+        run: |
+          make save
+          docker image ls
 
       - name: Build rpm
         uses: ./.github/actions/copr
@@ -16,3 +20,8 @@ jobs:
           LOCAL_ONLY: true
           SRPM_TASK: iml-docker-srpm
           WORKSPACE: ${{ github.workspace }}
+      - name: Archive rpm
+        uses: actions/upload-artifact@v1
+        with:
+          name: rpm
+          path: _topdir/RPMS/x86_64

@@ -1,0 +1,18 @@
+[Unit]
+Description=iml-docker
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+StandardError=null
+StandardOutput=null
+WorkingDirectory=/etc/iml-docker
+ExecStart=docker stack deploy -c /etc/iml-docker/docker-compose.yml -c /etc/iml-docker/docker-compose.overrides.yml iml --resolve-image=never
+# @FIXME: Need to poll service removal since docker stack rm is async
+ExecStop=docker stack rm iml
+
+
+[Install]
+WantedBy=multi-user.target

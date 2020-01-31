@@ -1,11 +1,13 @@
 Name:           iml-docker
-Version:        0.1.0
+Version:        0.2.0
 Release:        1%{?dist}
-Summary: IML + Docker config
+Summary: IML + Docker Images and Config
 
 License: MIT
 URL: https://github.com/whamcloud/integrated-manager-for-lustre
 Source0: iml-docker.tar.gz
+
+Requires: docker-ce
 
 %description
 %{summary}
@@ -20,12 +22,41 @@ Source0: iml-docker.tar.gz
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}%{_sysconfdir}/iml-docker
+mkdir -p %{buildroot}%{_tmppath}
+mkdir -p %{buildroot}%{_bindir}
+mkdir -p %{buildroot}%{_unitdir}
 cp docker-compose.yml %{buildroot}%{_sysconfdir}/iml-docker
+mv iml-images.tgz %{buildroot}%{_tmppath}
+mv iml-cli-proxy.sh %{buildroot}%{_bindir}/iml
+mv iml-docker.service %{buildroot}%{_unitdir}
 
 
 %files
 %{_sysconfdir}/iml-docker/docker-compose.yml
+%attr(750, root, root) %config(missingok) %{_tmppath}/iml-images.tgz
+%attr(754, root, root) %{_bindir}/iml
+%attr(0644,root,root) %{_unitdir}/iml-docker.service
+
+
+%post
+systemctl preset iml-docker.service
+systemctl enable --now docker
+docker load -i %{_tmppath}/iml-images.tgz
+
+
+%preun
+%systemd_preun iml-docker.service
+
+
+%postun
+%systemd_postun_with_restart iml-docker.service
+
 
 %changelog
+* Mon Feb 03 2020 Joe Grund <jgrund@whamcloud.com> - 0.2.0-1
+- Add docker Images
+- Add post block to load images
+- Add iml cli proxy script
+
 * Fri Jan 10 2020 Joe Grund <jgrund@whamcloud.com> - 0.1.0-1
 - Initial package

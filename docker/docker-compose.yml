@@ -79,6 +79,9 @@ services:
       start_period: 10s
   nginx:
     image: "imlteam/manager-nginx:5.1"
+    build:
+      context: ../
+      dockerfile: ./docker/nginx.dockerfile
     hostname: "nginx"
     deploy: *default-deploy
     volumes:
@@ -273,7 +276,7 @@ services:
     environment:
       - SERVER_HTTP_URL=gunicorn
   iml-ostpool:
-    image: "imlteam/iml-ostpool"
+    image: "imlteam/iml-ostpool:5.1"
     hostname: "iml-ostpool"
     build:
       context: ../
