@@ -23,7 +23,7 @@ pub struct ActivityHealth {
 
 impl Default for ActivityHealth {
     fn default() -> Self {
-        ActivityHealth {
+        Self {
             health: AlertSeverity::INFO,
             count: 0,
         }

@@ -51,7 +51,7 @@ pub(crate) trait RequestExt {
 
 impl RequestExt for fetch::Request {
     fn api_call(url: impl ToString) -> Self {
-        fetch::Request::new(format!("/api/{}/", url.to_string()))
+        Self::new(format!("/api/{}/", url.to_string()))
     }
     fn with_auth(self) -> Self {
         match csrf_token() {
@@ -76,10 +76,10 @@ impl MergeAttrs for Attrs {
 
 impl<T> MergeAttrs for Node<T> {
     fn merge_attrs(self, attrs: Attrs) -> Self {
-        if let Node::Element(mut el) = self {
+        if let Self::Element(mut el) = self {
             el.attrs.merge(attrs);
 
-            Node::Element(el)
+            Self::Element(el)
         } else {
             self
         }
@@ -94,11 +94,11 @@ pub(crate) trait FailReasonExt {
 impl<T> FailReasonExt for fetch::FailReason<T> {
     fn message(&self) -> String {
         match self {
-            fetch::FailReason::RequestError(err, _) => match err {
+            Self::RequestError(err, _) => match err {
                 fetch::RequestError::DomException(e) => e.message(),
             },
-            fetch::FailReason::Status(status, _) => format!("Status: {}", status.code),
-            fetch::FailReason::DataError(err, _) => match err {
+            Self::Status(status, _) => format!("Status: {}", status.code),
+            Self::DataError(err, _) => match err {
                 fetch::DataError::DomException(e) => e.message(),
                 fetch::DataError::SerdeError(e, _) => format!("Serde error: {}", e),
             },

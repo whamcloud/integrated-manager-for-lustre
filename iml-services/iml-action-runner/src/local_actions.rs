@@ -60,12 +60,10 @@ pub fn spawn_plugin(
     in_flight: SharedLocalActionsInFlight,
     id: ActionId,
 ) {
-    tokio::spawn(fut.then(move |result| {
-        async move {
-            let _ = remove_in_flight(in_flight, &id)
-                .await
-                .map(|tx| tx.send(result));
-        }
+    tokio::spawn(fut.then(move |result| async move {
+        let _ = remove_in_flight(in_flight, &id)
+            .await
+            .map(|tx| tx.send(result));
     }));
 }
 
