@@ -1075,7 +1075,9 @@ def chroma_config():
     elif command == "profile":
 
         def profile_usage():
-            print("usage: profile [register|delete|default] PROFILE")
+            print("usage:")
+            print("  profile [list|help]")
+            print("  profile [register|delete|default] PROFILE")
             sys.exit(0)
 
         if len(sys.argv) < 3:
@@ -1084,6 +1086,11 @@ def chroma_config():
         operation = sys.argv[2]
         if operation == "help":
             profile_usage()
+
+        elif operation == "list":
+            for profile in ServerProfile.objects.all():
+                if profile.user_selectable:
+                    print(profile.name)
 
         elif operation == "register":
             try:
