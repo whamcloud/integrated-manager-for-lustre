@@ -1,9 +1,9 @@
 use crate::components::{font_awesome_outline, tooltip, Placement};
 use crate::generated::css_classes::C;
 use im::HashMap;
-use iml_wire_types::{Alert, AlertSeverity};
+use iml_wire_types::{warp_drive::ArcValuesExt, Alert, AlertSeverity};
 use seed::{prelude::*, *};
-use std::cmp::max;
+use std::{cmp::max, sync::Arc};
 
 fn get_message(alerts: &[&Alert]) -> String {
     if alerts.is_empty() {
@@ -16,14 +16,14 @@ fn get_message(alerts: &[&Alert]) -> String {
 }
 
 pub(crate) fn alert_indicator<T>(
-    alerts: &HashMap<u32, Alert>,
+    alerts: &HashMap<u32, Arc<Alert>>,
     resource_uri: &str,
     compact: bool,
     tt_placement: Placement,
 ) -> Node<T> {
     let alerts: Vec<&Alert> = alerts
-        .values()
-        .filter_map(|x| match &x.affected {
+        .arc_values()
+        .filter_map(|x: &Alert| match &x.affected {
             Some(xs) => xs.iter().find(|x| x == &resource_uri).map(|_| x),
             None => None,
         })

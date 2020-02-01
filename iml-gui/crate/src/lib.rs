@@ -23,13 +23,16 @@ mod test_utils;
 use components::{breadcrumbs::BreadCrumbs, loading, restrict, tree, update_activity_health, ActivityHealth};
 pub(crate) use extensions::*;
 use generated::css_classes::C;
-use iml_wire_types::{warp_drive, GroupType, Session};
+use iml_wire_types::{
+    warp_drive::{self, ArcValuesExt},
+    GroupType, Session,
+};
 use page::login;
 use regex::Regex;
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, Listener, *};
 pub(crate) use sleep::sleep_with_handle;
-use std::cmp;
+use std::{cmp, sync::Arc};
 pub use watch_state::*;
 use web_sys::MessageEvent;
 use Visibility::*;
@@ -88,7 +91,7 @@ pub struct Model {
     manage_menu_state: WatchState,
     menu_visibility: Visibility,
     notification: notification::Model,
-    records: warp_drive::Cache,
+    records: warp_drive::ArcCache,
     route: Route<'static>,
     saw_es_locks: bool,
     saw_es_messages: bool,
@@ -137,7 +140,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
         manage_menu_state: WatchState::default(),
         menu_visibility: Visible,
         notification: notification::Model::default(),
-        records: warp_drive::Cache::default(),
+        records: warp_drive::ArcCache::default(),
         route: url.into(),
         saw_es_locks: false,
         saw_es_messages: false,
@@ -283,7 +286,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
         },
         Msg::Records(records) => {
-            model.records = *records;
+            model.records = (&*records).into();
 
             let old = model.activity_health;
             model.activity_health = update_activity_health(&model.records.active_alert);
@@ -293,7 +296,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .send_msg(notification::generate(None, &old, &model.activity_health));
 
             orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::SetHosts(
-                model.records.host.values().cloned().collect(),
+                model.records.host.arc_values().cloned().collect(),
             ));
 
             orders.proxy(Msg::Tree).send_msg(tree::Msg::Reset);
@@ -303,7 +306,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 warp_drive::Record::ActiveAlert(x) => {
                     let msg = x.message.clone();
 
-                    model.records.active_alert.insert(x.id, x);
+                    model.records.active_alert.insert(x.id, Arc::new(x));
 
                     let old = model.activity_health;
 
@@ -316,7 +319,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 }
                 warp_drive::Record::Filesystem(x) => {
                     let id = x.id;
-                    if model.records.filesystem.insert(x.id, x).is_none() {
+                    if model.records.filesystem.insert(x.id, Arc::new(x)).is_none() {
                         orders
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::Filesystem(id)));
@@ -324,54 +327,54 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 }
                 warp_drive::Record::Host(x) => {
                     let id = x.id;
-                    if model.records.host.insert(x.id, x).is_none() {
+                    if model.records.host.insert(x.id, Arc::new(x)).is_none() {
                         orders
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::Host(id)));
                     };
 
                     orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::SetHosts(
-                        model.records.host.values().cloned().collect(),
+                        model.records.host.arc_values().cloned().collect(),
                     ));
                 }
                 warp_drive::Record::ManagedTargetMount(x) => {
-                    model.records.managed_target_mount.insert(x.id, x);
+                    model.records.managed_target_mount.insert(x.id, Arc::new(x));
                 }
                 warp_drive::Record::OstPool(x) => {
-                    model.records.ost_pool.insert(x.id, x);
+                    model.records.ost_pool.insert(x.id, Arc::new(x));
                 }
                 warp_drive::Record::OstPoolOsts(x) => {
                     let id = x.id;
-                    if model.records.ost_pool_osts.insert(x.id, x).is_none() {
+                    if model.records.ost_pool_osts.insert(x.id, Arc::new(x)).is_none() {
                         orders
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::OstPoolOsts(id)));
                     };
                 }
                 warp_drive::Record::StratagemConfig(x) => {
-                    model.records.stratagem_config.insert(x.id, x);
+                    model.records.stratagem_config.insert(x.id, Arc::new(x));
                 }
                 warp_drive::Record::Target(x) => {
                     let id = x.id;
-                    if model.records.target.insert(x.id, x).is_none() {
+                    if model.records.target.insert(x.id, Arc::new(x)).is_none() {
                         orders
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::Target(id)));
                     };
                 }
                 warp_drive::Record::Volume(x) => {
-                    model.records.volume.insert(x.id, x);
+                    model.records.volume.insert(x.id, Arc::new(x));
                 }
                 warp_drive::Record::VolumeNode(x) => {
                     let id = x.id;
-                    if model.records.volume_node.insert(x.id, x).is_none() {
+                    if model.records.volume_node.insert(x.id, Arc::new(x)).is_none() {
                         orders
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::VolumeNode(id)));
                     };
                 }
                 warp_drive::Record::LnetConfiguration(x) => {
-                    model.records.lnet_configuration.insert(x.id, x);
+                    model.records.lnet_configuration.insert(x.id, Arc::new(x));
                 }
             },
             warp_drive::RecordChange::Delete(record_id) => {
@@ -390,11 +393,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
         },
         Msg::RemoveRecord(id) => {
-            model.records.remove_record(&id);
+            model.records.remove_record(id);
 
             if let warp_drive::RecordId::Host(_) = id {
                 orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::SetHosts(
-                    model.records.host.values().cloned().collect(),
+                    model.records.host.arc_values().cloned().collect(),
                 ));
             }
         }

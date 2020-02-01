@@ -182,7 +182,7 @@ pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlM
         Filesystem::query(),
     )
     .map_ok(|fs: ApiList<Filesystem>| fs.objects)
-    .map_ok(|fs| fs.into_iter().map(|f| (f.id, f)).collect());
+    .map_ok(|fs: Vec<Filesystem>| fs.into_iter().map(|f| (f.id, f)).collect());
 
     let target_fut = get(
         client.clone(),
@@ -190,19 +190,19 @@ pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlM
         <Target<TargetConfParam>>::query(),
     )
     .map_ok(|x: ApiList<Target<TargetConfParam>>| x.objects)
-    .map_ok(|x| x.into_iter().map(|x| (x.id, x)).collect());
+    .map_ok(|x: Vec<Target<TargetConfParam>>| x.into_iter().map(|x| (x.id, x)).collect());
 
     let active_alert_fut = get(client.clone(), Alert::endpoint_name(), Alert::query())
         .map_ok(|x: ApiList<Alert>| x.objects)
-        .map_ok(|x| x.into_iter().map(|x| (x.id, x)).collect());
+        .map_ok(|x: Vec<Alert>| x.into_iter().map(|x| (x.id, x)).collect());
 
     let host_fut = get(client.clone(), Host::endpoint_name(), Host::query())
         .map_ok(|x: ApiList<Host>| x.objects)
-        .map_ok(|x| x.into_iter().map(|x| (x.id, x)).collect());
+        .map_ok(|x: Vec<Host>| x.into_iter().map(|x| (x.id, x)).collect());
 
     let volume_fut = get(client, Volume::endpoint_name(), Volume::query())
         .map_ok(|x: ApiList<Volume>| x.objects)
-        .map_ok(|x| x.into_iter().map(|x| (x.id, x)).collect());
+        .map_ok(|x: Vec<Volume>| x.into_iter().map(|x| (x.id, x)).collect());
 
     let (filesystem, target, alert, host, volume) =
         future::try_join5(fs_fut, target_fut, active_alert_fut, host_fut, volume_fut).await?;

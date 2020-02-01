@@ -6,10 +6,6 @@ version = "0.2.0"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
-[lib]
-path = "wire-types.rs"
-
-
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
