@@ -218,250 +218,396 @@ async fn wait_till_agent_starts(
     Ok(())
 }
 
-#[allow(clippy::cognitive_complexity)]
+fn list_server(hosts: ApiList<Host>) {
+    tracing::debug!("Hosts: {:?}", hosts);
+
+    let table = generate_table(
+        &["Id", "FQDN", "State", "Nids"],
+        hosts.objects.into_iter().map(|h| {
+            vec![
+                h.id.to_string(),
+                h.fqdn,
+                h.state,
+                h.nids.unwrap_or_else(|| vec![]).join(" "),
+            ]
+        }),
+    );
+
+    table.printstd();
+}
+
+fn get_profile(config: &AddHosts, profiles: ApiList<ServerProfile>) -> Option<ServerProfile> {
+    let profile_opt = profiles
+        .objects
+        .into_iter()
+        .filter(|x| x.user_selectable)
+        .find(|x| x.name == config.profile);
+
+    if profile_opt.is_none() {
+        display_error(format!("Unknown profile {}", config.profile));
+    }
+
+    profile_opt
+}
+
+fn show_known_host_messages<'a, I>(known_hosts: I)
+where
+    I: IntoIterator<Item = &'a Host>,
+{
+    for known_host in known_hosts {
+        display_cancelled(format!("Host {} already known to IML. Please remove first if attempting to complete deployment.", known_host.fqdn));
+    }
+}
+
+fn get_test_host_configs<'a>(new_hosts: &'a BTreeSet<String>) -> Vec<TestHostConfig<'a>> {
+    new_hosts
+        .iter()
+        .map(|address| TestHostConfig {
+            address,
+            auth_type: "existing_keys_choice".into(),
+        })
+        .collect()
+}
+
+async fn post_test_host<'a>(
+    objects: Vec<TestHostConfig<'a>>,
+) -> Result<Objects<CmdWrapper>, ImlManagerCliError> {
+    Ok(post("test_host", Objects { objects })
+        .await?
+        .error_for_status()?
+        .json::<Objects<CmdWrapper>>()
+        .await
+        .map_err(iml_manager_client::ImlManagerClientError::Reqwest)?)
+}
+
+fn get_commands_from_objects<I>(objects: I) -> Vec<Command>
+where
+    I: IntoIterator<Item = CmdWrapper>,
+{
+    objects
+        .into_iter()
+        .map(|CmdWrapper { command }| command)
+        .collect()
+}
+
+fn get_jobs_from_commands<I>(cmds: I) -> Vec<[String; 2]>
+where
+    I: IntoIterator<Item = Command>,
+{
+    cmds.into_iter()
+        .flat_map(|cmd| cmd.jobs)
+        .filter_map(|job| extract_api_id(&job).map(|x| x.to_string()))
+        .map(|x| ["id__in".into(), x])
+        .chain(iter::once(["limit".into(), "0".into()]))
+        .collect()
+}
+
+fn all_jobs_passed(jobs: ApiList<TestHostJob>) -> bool {
+    jobs.objects
+        .into_iter()
+        .flat_map(|x| x.step_results.into_iter().map(|(_, b)| b))
+        .fold(true, |state, check| {
+            if !check.valid {
+                display_error(format!(
+                    "Host {} has failed pre-flight checks.",
+                    check.address,
+                ));
+
+                generate_table(
+                    &["Check", "Passed"],
+                    check.status.iter().map(|x| {
+                        let v = if x.value {
+                            format_success("Pass")
+                        } else {
+                            format_error("Fail")
+                        };
+
+                        vec![x.name.clone(), v]
+                    }),
+                );
+
+                false
+            } else {
+                state
+            }
+        })
+}
+
+fn handle_test_host_failure(all_passed: bool, config: &AddHosts) -> Result<(), ImlManagerCliError> {
+    if !all_passed {
+        let error_msg = "Preflight checks failed";
+
+        display_error(&error_msg);
+
+        if !can_continue(config) {
+            return Err(ImlManagerCliError::ApiError(error_msg.into()));
+        }
+    }
+
+    Ok(())
+}
+
+fn get_agent_config_objects<'a>(new_hosts: &'a BTreeSet<String>) -> Vec<AgentConfig<'a>> {
+    new_hosts
+        .iter()
+        .map(|address| AgentConfig {
+            address: &address,
+            auth_type: "existing_keys_choice".into(),
+            server_profile: "/api/server_profile/default/".into(),
+        })
+        .collect()
+}
+
+async fn post_command_to_host<'a>(
+    objects: Vec<AgentConfig<'a>>,
+) -> Result<Objects<CommandAndHostWrapper>, ImlManagerCliError> {
+    Ok(post(Host::endpoint_name(), Objects { objects })
+        .await?
+        .json()
+        .await
+        .map_err(iml_manager_client::ImlManagerClientError::Reqwest)?)
+}
+
+fn get_commands_and_hosts_from_objects<I>(objects: I) -> (Vec<Command>, Vec<Host>)
+where
+    I: IntoIterator<Item = CommandAndHostWrapper>,
+{
+    objects
+        .into_iter()
+        .filter_map(|x| x.command_and_host)
+        .map(|x| (x.command, x.host))
+        .unzip()
+}
+
+fn get_host_ids(hosts: &[Host]) -> Vec<[String; 2]> {
+    hosts
+        .iter()
+        .map(|x| ["id__in".into(), x.id.to_string()])
+        .chain(iter::once(["limit".into(), "0".into()]))
+        .collect()
+}
+
+fn filter_host_profiles<I>(profile: &ServerProfile, objects: I) -> Vec<(u32, Vec<ProfileTest>)>
+where
+    I: IntoIterator<Item = HostProfileWrapper>,
+{
+    objects
+        .into_iter()
+        .filter_map(|x| x.host_profiles)
+        .filter_map(|mut x| x.profiles.remove(&profile.name).map(|p| (x.host, p)))
+        .collect()
+}
+
+fn filter_profile_tests(objects: &[(u32, Vec<ProfileTest>)]) -> Vec<(&u32, Vec<&ProfileTest>)> {
+    objects
+        .iter()
+        .map(|(k, tests)| (k, tests.iter().filter(|y| !y.pass).collect::<Vec<_>>()))
+        .filter(|(_, tests)| !tests.is_empty())
+        .collect()
+}
+
+fn handle_invalid_profile_tests(
+    term: &Term,
+    config: &AddHosts,
+    profile: &ServerProfile,
+    hosts: &[Host],
+    invalid: Vec<(&u32, Vec<&ProfileTest>)>,
+) -> Result<(), ImlManagerCliError> {
+    if !invalid.is_empty() {
+        display_error(format!("Profile {} is invalid:\n\n", profile.name));
+
+        for (host_id, failed_tests) in invalid {
+            let host = hosts.iter().find(|x| &x.id == host_id).unwrap();
+
+            display_error(format!("Host {}\n", host.address));
+
+            let table = generate_table(
+                &["Description", "Test", "Error"],
+                failed_tests
+                    .into_iter()
+                    .map(|x| vec![&x.description, &x.test, &x.error]),
+            );
+
+            table.printstd();
+
+            term.write_line("\n\n")?;
+        }
+
+        if !can_continue(&config) {
+            return Err(ImlManagerCliError::ApiError(
+                "Did not deploy profile.".into(),
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+fn get_host_profile_configs<'a>(
+    profile: &'a ServerProfile,
+    objects: &[(u32, Vec<ProfileTest>)],
+) -> Vec<HostProfileConfig<'a>> {
+    objects
+        .iter()
+        .map(|(host, _)| HostProfileConfig {
+            host: *host,
+            profile: &profile.name,
+        })
+        .collect()
+}
+
+async fn post_profile<'a>(
+    objects: Vec<HostProfileConfig<'a>>,
+) -> Result<Objects<HostProfileCmdWrapper>, ImlManagerCliError> {
+    Ok(post(HostProfile::endpoint_name(), Objects { objects })
+        .await?
+        .json()
+        .await
+        .map_err(iml_manager_client::ImlManagerClientError::Reqwest)?)
+}
+
+fn get_commands_from_wrapper(objects: Vec<HostProfileCmdWrapper>) -> Vec<Command> {
+    objects
+        .into_iter()
+        .flat_map(|HostProfileCmdWrapper { commands }| commands)
+        .collect()
+}
+
+async fn profiles_and_servers(
+    config: &AddHosts,
+    new_hosts: BTreeSet<String>,
+) -> Result<(ServerProfile, BTreeSet<String>), ImlManagerCliError> {
+    let (profiles, api_hosts): (ApiList<ServerProfile>, ApiList<Host>) =
+        future::try_join(get_all(), get_all()).await?;
+
+    let profile_name = config.profile.clone();
+    let profile =
+        get_profile(&config, profiles).ok_or(ImlManagerCliError::ProfileNotFound(profile_name))?;
+
+    let (known_hosts, new_hosts) = filter_known_hosts(new_hosts, &api_hosts.objects);
+
+    show_known_host_messages(known_hosts);
+
+    Ok((profile, new_hosts))
+}
+
+async fn get_test_host_commands_and_jobs(
+    term: &Term,
+    new_hosts: &BTreeSet<String>,
+) -> Result<bool, ImlManagerCliError> {
+    let objects = get_test_host_configs(&new_hosts);
+
+    let Objects { objects } = post_test_host(objects).await?;
+
+    let cmds = get_commands_from_objects(objects);
+
+    tracing::debug!("cmds {:?}", cmds);
+
+    term.write_line(&format!("{} preflight checks...", style("Running").green()))?;
+
+    let cmds = wait_for_cmds(cmds).await?;
+
+    let jobs = get_jobs_from_commands(cmds);
+
+    let jobs: ApiList<TestHostJob> = get(TestHostJob::endpoint_name(), jobs).await?;
+
+    tracing::debug!("jobs {:?}", jobs);
+
+    let all_passed = all_jobs_passed(jobs);
+
+    Ok(all_passed)
+}
+
+async fn handle_agents(
+    term: &Term,
+    new_hosts: &BTreeSet<String>,
+    profile: &ServerProfile,
+) -> Result<Vec<Host>, ImlManagerCliError> {
+    let objects = get_agent_config_objects(new_hosts);
+
+    let Objects { objects }: Objects<CommandAndHostWrapper> = post_command_to_host(objects).await?;
+
+    tracing::debug!("command and hosts {:?}", objects);
+
+    let (commands, hosts): (Vec<_>, Vec<_>) = get_commands_and_hosts_from_objects(objects);
+
+    term.write_line(&format!("{} agents...", style("Deploying").green()))?;
+
+    wait_for_cmds(commands).await?;
+
+    wrap_fut(
+        "Waiting for agents to restart...",
+        wait_till_agent_starts(&hosts, &profile.name),
+    )
+    .await?;
+
+    Ok(hosts)
+}
+
+async fn handle_profiles(
+    term: &Term,
+    config: &AddHosts,
+    hosts: &[Host],
+    profile: &ServerProfile,
+) -> Result<Vec<Command>, ImlManagerCliError> {
+    let host_ids = get_host_ids(hosts);
+
+    let ApiList { objects, .. }: ApiList<HostProfileWrapper> =
+        get(HostProfile::endpoint_name(), host_ids).await?;
+
+    tracing::debug!("Host Profiles {:?}", objects);
+
+    let objects = filter_host_profiles(profile, objects);
+
+    let invalid = filter_profile_tests(&objects);
+
+    handle_invalid_profile_tests(term, config, profile, hosts, invalid)?;
+
+    let objects = get_host_profile_configs(&profile, &objects);
+
+    let Objects { objects } = post_profile(objects).await?;
+
+    tracing::debug!("Host Profile resp {:?}", objects);
+
+    let cmds: Vec<Command> = get_commands_from_wrapper(objects);
+
+    term.write_line(&format!("{} host profiles...", style("Setting").green()))?;
+
+    Ok(cmds)
+}
+
+async fn add_server(config: AddHosts) -> Result<(), ImlManagerCliError> {
+    let term = Term::stdout();
+
+    let new_hosts = hostlist_parser::parse(&config.hosts)?;
+
+    tracing::debug!("Parsed hosts {:?}", new_hosts);
+
+    let (profile, new_hosts) = profiles_and_servers(&config, new_hosts).await?;
+
+    if new_hosts.is_empty() {
+        return Ok(());
+    }
+
+    let all_passed = get_test_host_commands_and_jobs(&term, &new_hosts).await?;
+
+    handle_test_host_failure(all_passed, &config)?;
+
+    let hosts = handle_agents(&term, &new_hosts, &profile).await?;
+
+    let cmds = handle_profiles(&term, &config, &hosts, &profile).await?;
+
+    wait_for_cmds(cmds).await?;
+    Ok(())
+}
+
 pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError> {
     match command {
         ServerCommand::List => {
             let hosts: ApiList<Host> = wrap_fut("Fetching hosts...", get_hosts()).await?;
-
-            tracing::debug!("Hosts: {:?}", hosts);
-
-            let table = generate_table(
-                &["Id", "FQDN", "State", "Nids"],
-                hosts.objects.into_iter().map(|h| {
-                    vec![
-                        h.id.to_string(),
-                        h.fqdn,
-                        h.state,
-                        h.nids.unwrap_or_else(|| vec![]).join(" "),
-                    ]
-                }),
-            );
-
-            table.printstd();
+            list_server(hosts);
         }
-        ServerCommand::Add(config) => {
-            let term = Term::stdout();
-
-            let new_hosts = hostlist_parser::parse(&config.hosts)?;
-
-            tracing::debug!("Parsed hosts {:?}", new_hosts);
-
-            let (profiles, api_hosts): (ApiList<ServerProfile>, ApiList<Host>) =
-                future::try_join(get_all(), get_all()).await?;
-
-            let profile_opt = profiles
-                .objects
-                .into_iter()
-                .filter(|x| x.user_selectable)
-                .find(|x| x.name == config.profile);
-
-            let profile = match profile_opt {
-                Some(p) => p,
-                None => {
-                    display_error(format!("Unknown profile {}", config.profile));
-
-                    return Ok(());
-                }
-            };
-
-            let (known_hosts, new_hosts) = filter_known_hosts(new_hosts, &api_hosts.objects);
-
-            for known_host in known_hosts {
-                display_cancelled(format!("Host {} already known to IML. Please remove first if attempting to complete deployment.", known_host.fqdn));
-            }
-
-            if new_hosts.is_empty() {
-                return Ok(());
-            }
-
-            let objects = new_hosts
-                .iter()
-                .map(|address| TestHostConfig {
-                    address,
-                    auth_type: "existing_keys_choice".into(),
-                })
-                .collect();
-
-            let Objects { objects } = post("test_host", Objects { objects })
-                .await?
-                .error_for_status()?
-                .json()
-                .await
-                .map_err(iml_manager_client::ImlManagerClientError::Reqwest)?;
-
-            let cmds = objects
-                .into_iter()
-                .map(|CmdWrapper { command }| command)
-                .collect();
-
-            tracing::debug!("cmds {:?}", cmds);
-
-            term.write_line(&format!("{} preflight checks...", style("Running").green()))?;
-
-            let cmds = wait_for_cmds(cmds).await?;
-
-            let jobs: Vec<_> = cmds
-                .into_iter()
-                .flat_map(|cmd| cmd.jobs)
-                .filter_map(|job| extract_api_id(&job).map(|x| x.to_string()))
-                .map(|x| ["id__in".into(), x])
-                .chain(iter::once(["limit".into(), "0".into()]))
-                .collect();
-
-            let jobs: ApiList<TestHostJob> = get(TestHostJob::endpoint_name(), jobs).await?;
-
-            tracing::debug!("jobs {:?}", jobs);
-
-            let all_passed = jobs
-                .objects
-                .into_iter()
-                .flat_map(|x| x.step_results.into_iter().map(|(_, b)| b))
-                .fold(true, |state, check| {
-                    if !check.valid {
-                        display_error(format!(
-                            "Host {} has failed pre-flight checks.",
-                            check.address,
-                        ));
-
-                        generate_table(
-                            &["Check", "Passed"],
-                            check.status.iter().map(|x| {
-                                let v = if x.value {
-                                    format_success("Pass")
-                                } else {
-                                    format_error("Fail")
-                                };
-
-                                vec![x.name.clone(), v]
-                            }),
-                        );
-
-                        false
-                    } else {
-                        state
-                    }
-                });
-
-            if !all_passed {
-                let error_msg = "Preflight checks failed";
-
-                display_error(&error_msg);
-
-                if !can_continue(&config) {
-                    return Err(ImlManagerCliError::ApiError(error_msg.into()));
-                }
-            }
-
-            let objects = new_hosts
-                .iter()
-                .map(|address| AgentConfig {
-                    address,
-                    auth_type: "existing_keys_choice".into(),
-                    server_profile: "/api/server_profile/default/".into(),
-                })
-                .collect();
-
-            let Objects { objects }: Objects<CommandAndHostWrapper> =
-                post(Host::endpoint_name(), Objects { objects })
-                    .await?
-                    .json()
-                    .await
-                    .map_err(iml_manager_client::ImlManagerClientError::Reqwest)?;
-
-            tracing::debug!("command and hosts {:?}", objects);
-
-            let (commands, hosts): (Vec<_>, Vec<_>) = objects
-                .into_iter()
-                .filter_map(|x| x.command_and_host)
-                .map(|x| (x.command, x.host))
-                .unzip();
-
-            term.write_line(&format!("{} agents...", style("Deploying").green()))?;
-
-            wait_for_cmds(commands).await?;
-
-            wrap_fut(
-                "Waiting for agents to restart...",
-                wait_till_agent_starts(&hosts, &profile.name),
-            )
-            .await?;
-
-            let host_ids: Vec<_> = hosts
-                .iter()
-                .map(|x| ["id__in".into(), x.id.to_string()])
-                .chain(iter::once(["limit".into(), "0".into()]))
-                .collect();
-
-            let ApiList { objects, .. }: ApiList<HostProfileWrapper> =
-                get(HostProfile::endpoint_name(), host_ids).await?;
-
-            tracing::debug!("Host Profiles {:?}", objects);
-
-            let objects: Vec<(u32, _)> = objects
-                .into_iter()
-                .filter_map(|x| x.host_profiles)
-                .filter_map(|mut x| x.profiles.remove(&profile.name).map(|p| (x.host, p)))
-                .collect();
-
-            let invalid: Vec<_> = objects
-                .iter()
-                .map(|(k, tests)| (k, tests.iter().filter(|y| !y.pass).collect::<Vec<_>>()))
-                .filter(|(_, tests)| !tests.is_empty())
-                .collect();
-
-            if !invalid.is_empty() {
-                display_error(format!("Profile {} is invalid:\n\n", profile.name));
-
-                for (host_id, failed_tests) in invalid {
-                    let host = hosts.iter().find(|x| &x.id == host_id).unwrap();
-
-                    display_error(format!("Host {}\n", host.address));
-
-                    let table = generate_table(
-                        &["Description", "Test", "Error"],
-                        failed_tests
-                            .into_iter()
-                            .map(|x| vec![&x.description, &x.test, &x.error]),
-                    );
-
-                    table.printstd();
-
-                    term.write_line("\n\n")?;
-                }
-
-                if !can_continue(&config) {
-                    return Err(ImlManagerCliError::ApiError(
-                        "Did not deploy profile.".into(),
-                    ));
-                }
-            }
-
-            let objects = objects
-                .into_iter()
-                .map(|(host, _)| HostProfileConfig {
-                    host,
-                    profile: &profile.name,
-                })
-                .collect();
-
-            let Objects { objects } = post(HostProfile::endpoint_name(), Objects { objects })
-                .await?
-                .json()
-                .await
-                .map_err(iml_manager_client::ImlManagerClientError::Reqwest)?;
-
-            tracing::debug!("Host Profile resp {:?}", objects);
-
-            let cmds = objects
-                .into_iter()
-                .flat_map(|HostProfileCmdWrapper { commands }| commands)
-                .collect();
-
-            term.write_line(&format!("{} host profiles...", style("Setting").green()))?;
-
-            wait_for_cmds(cmds).await?;
-        }
+        ServerCommand::Add(config) => add_server(config).await?,
         ServerCommand::Remove(config) => {
             let remove_hosts = hostlist_parser::parse(&config.hosts)?;
 
