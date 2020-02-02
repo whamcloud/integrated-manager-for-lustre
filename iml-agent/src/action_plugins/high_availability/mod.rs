@@ -2,15 +2,17 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+pub(crate) mod corosync_conf;
+
 use crate::{agent_error::ImlAgentError, systemd};
 use elementtree::Element;
 use futures::try_join;
-use iml_cmd::cmd_output_success;
+use iml_cmd::{CheckedCommandExt, Command};
+use iml_fs::file_exists;
 use iml_wire_types::{
     ComponentState, ConfigState, ResourceAgentInfo, ResourceAgentType, ServiceState,
 };
 use std::collections::HashMap;
-use tokio::fs::metadata;
 
 fn create<'a>(elem: &Element, group: impl Into<Option<&'a str>>) -> ResourceAgentInfo {
     ResourceAgentInfo {
@@ -50,8 +52,10 @@ fn process_resource_list(output: &[u8]) -> Result<Vec<ResourceAgentInfo>, ImlAge
 }
 
 pub async fn get_ha_resource_list(_: ()) -> Result<Vec<ResourceAgentInfo>, ImlAgentError> {
-    let resources =
-        cmd_output_success("cibadmin", vec!["--query", "--xpath", "//resources"]).await?;
+    let resources = Command::new("cibadmin")
+        .args(&["--query", "--xpath", "//resources"])
+        .checked_output()
+        .await?;
 
     process_resource_list(resources.stdout.as_slice())
 }
@@ -67,15 +71,6 @@ async fn systemd_unit_servicestate(name: &str) -> Result<ServiceState, ImlAgentE
     }
 }
 
-async fn file_exists(path: &str) -> bool {
-    let f = metadata(path).await;
-    tracing::debug!("Checking file {} : {:?}", path, f);
-    match f {
-        Ok(m) => m.is_file(),
-        Err(_) => false,
-    }
-}
-
 async fn check_corosync() -> Result<ComponentState<bool>, ImlAgentError> {
     let mut corosync = ComponentState::<bool> {
         ..Default::default()
@@ -86,11 +81,10 @@ async fn check_corosync() -> Result<ComponentState<bool>, ImlAgentError> {
 totem.interface.1.mcastaddr (str) = 226.94.1.1
 "#
         .as_bytes();
-        let output = cmd_output_success(
-            "corosync-cmapctl",
-            vec!["totem.interface.0.mcastaddr", "totem.interface.1.mcastaddr"],
-        )
-        .await?;
+        let output = Command::new("corosync-cmapctl")
+            .args(&["totem.interface.0.mcastaddr", "totem.interface.1.mcastaddr"])
+            .checked_output()
+            .await?;
 
         corosync.config = if output.stdout == expected {
             ConfigState::IML
@@ -157,6 +151,12 @@ pub async fn check_ha(
     try_join!(corosync, pacemaker, pcs)
 }
 
+pub(crate) async fn pcs(args: Vec<String>) -> Result<String, ImlAgentError> {
+    let o = Command::new("pcs").args(args).checked_output().await?;
+
+    Ok(String::from_utf8_lossy(&o.stdout).to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::{process_resource_list, ResourceAgentInfo, ResourceAgentType};
@@ -182,7 +182,7 @@ mod tests {
 
     #[test]
     fn test_ha_mixed_mode() {
-        let testxml = include_bytes!("snapshots/check_ha_test_mixed_mode.xml");
+        let testxml = include_bytes!("../fixtures/check_ha_test_mixed_mode.xml");
 
         let mut a1 = ResourceAgentInfo {
             agent: ResourceAgentType::new("ocf", Some("chroma"), "ZFS"),

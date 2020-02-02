@@ -5,11 +5,11 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-combine = "=4.0.0-beta.1"
+combine = "=4.0.1"
 console = "0.9"
 dotenv = "0.15"
 futures = "0.3"
-hostlist-parser = "0.1"
+hostlist-parser = "0.1.2"
 iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
 iml-manager-client = { path = "../iml-manager-client", version = "0.1.0" }
 indicatif = "0.13"

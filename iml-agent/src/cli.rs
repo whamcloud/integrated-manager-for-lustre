@@ -8,8 +8,8 @@ use iml_agent::action_plugins::stratagem::{
     server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
 use iml_agent::action_plugins::{
-    check_ha, check_kernel, check_stonith, kernel_module, lamigo, lpurge, ltuer, lustre, ostpool,
-    package, postoffice,
+    check_kernel, check_stonith, high_availability, kernel_module, lamigo, lpurge, ltuer, lustre,
+    ostpool, package, postoffice,
 };
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
@@ -490,7 +490,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 };
             }
         },
-        App::CheckHA => match check_ha::check_ha(()).await {
+        App::CheckHA => match high_availability::check_ha(()).await {
             Ok((cs, pm, pc)) => {
                 let mut table = Table::new();
                 table.add_row(row!["Name", "Config", "Service"]);
@@ -501,7 +501,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             Err(e) => println!("{:?}", e),
         },
-        App::HAResources => match check_ha::get_ha_resource_list(()).await {
+        App::HAResources => match high_availability::get_ha_resource_list(()).await {
             Ok(v) => {
                 for e in v {
                     println!("{}", serde_json::to_string(&e).unwrap())

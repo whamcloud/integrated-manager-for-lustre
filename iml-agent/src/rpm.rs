@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::agent_error::ImlAgentError;
-use iml_cmd::cmd_output;
+use iml_cmd::Command;
 use regex::Regex;
 use std::{fmt, process::Output, str};
 
@@ -43,10 +43,9 @@ pub(crate) async fn installed(package_name: &str) -> Result<bool, ImlAgentError>
 }
 
 pub(crate) async fn version(package_name: &str) -> Result<Option<Version>, ImlAgentError> {
-    let output = cmd_output(
-        "rpm",
-        vec!["--query", "--queryformat", "%{VERSION}", package_name],
-    )
-    .await?;
+    let output = Command::new("rpm")
+        .args(&["--query", "--queryformat", "%{VERSION}", package_name])
+        .output()
+        .await?;
     parse(output)
 }

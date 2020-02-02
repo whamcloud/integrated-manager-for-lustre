@@ -4,7 +4,7 @@
 
 use crate::agent_error::{CibError, ImlAgentError};
 use elementtree::Element;
-use iml_cmd::cmd_output;
+use iml_cmd::{CheckedCommandExt, Command};
 use iml_wire_types::{ComponentState, ConfigState, RunState, ServiceState};
 use std::default::Default;
 
@@ -157,11 +157,10 @@ fn do_check_stonith(xml: &[u8], nodename: &str) -> Result<ComponentState<bool>, 
 }
 
 pub async fn check_stonith(_: ()) -> Result<ComponentState<bool>, ImlAgentError> {
-    let stonith = cmd_output(
-        "cibadmin",
-        vec!["--query", "--xpath", "//primitive[@class='stonith']"],
-    )
-    .await?;
+    let stonith = Command::new("cibadmin")
+        .args(&["--query", "--xpath", "//primitive[@class='stonith']"])
+        .output()
+        .await?;
 
     if !stonith.status.success() {
         return Ok(ComponentState {
@@ -170,7 +169,9 @@ pub async fn check_stonith(_: ()) -> Result<ComponentState<bool>, ImlAgentError>
             ..Default::default()
         });
     }
-    let node = cmd_output("crm_node", vec!["-n"]).await?;
+
+    let node = Command::new("crm_node").arg("-n").checked_output().await?;
+
     do_check_stonith(stonith.stdout.as_slice(), &String::from_utf8(node.stdout)?)
 }
 

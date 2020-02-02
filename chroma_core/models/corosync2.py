@@ -11,11 +11,12 @@ from collections import defaultdict
 from django.utils.timezone import now
 from django.db import models
 from django.db.models import CASCADE
+from toolz import dicttoolz
 
-from chroma_core.services import log_register
-from chroma_core.models import CorosyncConfiguration
+from chroma_core.lib.job import Step, DependAll
 from chroma_core.models import corosync_common
-from chroma_core.lib.job import Step
+from chroma_core.models import CorosyncConfiguration
+from chroma_core.services import log_register
 from chroma_core.services.job_scheduler import job_scheduler_notify
 
 logging = log_register("corosync2")
@@ -313,18 +314,47 @@ class StopCorosync2Job(corosync_common.StopCorosyncJob):
 
 class ChangeMcastPortStep(Step):
     idempotent = True
-    database = True
 
     def run(self, kwargs):
-        corosync_configuration = kwargs["corosync_configuration"]
-
-        self.invoke_agent_expect_result(
-            corosync_configuration.host,
-            "change_mcast_port",
-            {"old_mcast_port": kwargs["old_mcast_port"], "new_mcast_port": kwargs["new_mcast_port"]},
+        self.invoke_rust_agent_expect_result(
+            kwargs["fqdn"], "change_mcast_port", kwargs["mcast_port"],
         )
 
-        job_scheduler_notify.notify(corosync_configuration, now(), {"mcast_port": kwargs["new_mcast_port"]})
+
+class ActivateClusterMaintenceModeStep(Step):
+    def run(self, kwargs):
+        self.invoke_rust_agent_expect_result(kwargs["fqdn"], "pcs", ["property", "set", "maintenance-mode=true"])
+
+
+class DeactivateClusterMaintenceModeStep(Step):
+    def run(self, kwargs):
+        self.invoke_rust_agent_expect_result(kwargs["fqdn"], "pcs", ["property", "unset", "maintenance-mode"])
+
+
+class SyncClusterStep(Step):
+    def run(self, kwargs):
+        self.invoke_rust_agent_expect_result(kwargs["fqdn"], "pcs", ["cluster", "sync"])
+
+
+class RestartCorosync2Step(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        return self.invoke_rust_agent_expect_result(kwargs["fqdn"], "restart_unit", "corosync.service")
+
+
+class AddFirewallPortStep(Step):
+    def run(self, kwargs):
+        return self.invoke_rust_agent_expect_result(
+            kwargs["fqdn"], "add_firewall_port", [kwargs["port"], kwargs["proto"]]
+        )
+
+
+class RemoveFirewallPortStep(Step):
+    def run(self, kwargs):
+        return self.invoke_rust_agent_expect_result(
+            kwargs["fqdn"], "remove_firewall_port", [kwargs["port"], kwargs["proto"]]
+        )
 
 
 class ConfigureCorosync2Job(corosync_common.ConfigureCorosyncJob):
@@ -335,15 +365,38 @@ class ConfigureCorosync2Job(corosync_common.ConfigureCorosyncJob):
         ordering = ["id"]
 
     def get_steps(self):
+        from chroma_core.models import HaCluster
+
+        corosync_configuration = self.corosync_configuration
+        host = corosync_configuration.host
+        peers = HaCluster.host_peers(host)
+
+        fqdn_kwargs = {"fqdn": host.fqdn}
+
         steps = [
-            (
-                ChangeMcastPortStep,
-                {
-                    "corosync_configuration": self.corosync_configuration,
-                    "old_mcast_port": self.corosync_configuration.mcast_port,
-                    "new_mcast_port": self.mcast_port,
-                },
-            )
+            (ActivateClusterMaintenceModeStep, fqdn_kwargs),
+            (ChangeMcastPortStep, dicttoolz.merge(fqdn_kwargs, {"mcast_port": self.mcast_port})),
+            (SyncClusterStep, fqdn_kwargs),
         ]
 
+        for h in peers:
+            old_port = h.corosync_configuration.mcast_port
+
+            if old_port is not None:
+                steps += [(RemoveFirewallPortStep, {"fqdn": h.fqdn, "proto": "udp", "port": old_port})]
+
+            steps += [(AddFirewallPortStep, {"fqdn": h.fqdn, "proto": "udp", "port": self.mcast_port})]
+
+        steps += [(RestartCorosync2Step, {"fqdn": h.fqdn}) for h in peers]
+        steps += [(DeactivateClusterMaintenceModeStep, fqdn_kwargs)]
+
         return steps
+
+    def get_deps(self):
+        return DependAll()
+
+    def on_success(self):
+        from chroma_core.models import HaCluster
+
+        for h in HaCluster.host_peers(self.corosync_configuration.host):
+            job_scheduler_notify.notify(h.corosync_configuration, now(), {"mcast_port": self.mcast_port})

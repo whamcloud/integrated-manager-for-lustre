@@ -3,10 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use crate::agent_error::ImlAgentError;
-use iml_cmd::cmd_output_success;
+use iml_cmd::{CheckedCommandExt, Command};
 
 pub async fn loaded(module: String) -> Result<bool, ImlAgentError> {
-    let output = cmd_output_success("lsmod", vec![]).await?;
+    let output = Command::new("lsmod").checked_output().await?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let module = stdout.lines().find(|m| {
@@ -19,7 +19,10 @@ pub async fn loaded(module: String) -> Result<bool, ImlAgentError> {
 }
 
 pub async fn version(module: String) -> Result<String, ImlAgentError> {
-    let output = cmd_output_success("modinfo", vec!["-F", "version", &module]).await?;
+    let output = Command::new("modinfo")
+        .args(&["-F", "version", &module])
+        .checked_output()
+        .await?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let version = stdout.trim().to_string();
