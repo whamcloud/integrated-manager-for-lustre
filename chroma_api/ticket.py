@@ -8,7 +8,7 @@ from tastypie import fields
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.chroma_model_resource import ChromaModelResource
 from chroma_api.host import HostResource
-from chroma_core.models.ticket import *
+from chroma_core.models.ticket import FilesystemTicket, MasterTicket, Ticket
 
 KIND_TO_KLASS = {"Master": MasterTicket, "Filesystem": FilesystemTicket}
 KLASS_TO_KIND = dict([(v, k) for k, v in KIND_TO_KLASS.items()])
@@ -19,24 +19,25 @@ class TicketResource(ChromaModelResource):
     kind = fields.CharField(help_text="Type of ticket, one of %s" % KIND_TO_KLASS.keys())
     related_uri = fields.CharField()
 
-    def content_type_id_to_kind(self, id):
+    def content_type_id_to_kind(self, ct_id):
         if not hasattr(self, "CONTENT_TYPE_ID_TO_KIND"):
             self.CONTENT_TYPE_ID_TO_KIND = dict(
                 [(ContentType.objects.get_for_model(v).id, k) for k, v in KIND_TO_KLASS.items()]
             )
 
-        return self.CONTENT_TYPE_ID_TO_KIND[id]
+        return self.CONTENT_TYPE_ID_TO_KIND[ct_id]
 
     def dehydrate_kind(self, bundle):
         return self.content_type_id_to_kind(bundle.obj.content_type_id)
 
     def dehydrate_related_uri(self, bundle):
         target = bundle.obj.downcast()
-        if type(target) == FilesystemTicket:
+        if isinstance(target, FilesystemTicket):
             from chroma_api.filesystem import FilesystemResource
 
             return FilesystemResource().get_resource_uri(target.filesystem)
-        elif type(target) == MasterTicket:
+
+        if isinstance(target, MasterTicket):
             from chroma_api.target import TargetResource
 
             return TargetResource().get_resource_uri(target.mgs)

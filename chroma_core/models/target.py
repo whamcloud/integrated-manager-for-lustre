@@ -1231,6 +1231,11 @@ class StartTargetJob(StateChangeJob):
         return "Start target %s" % self.target
 
     def get_deps(self):
+        if issubclass(self.target.downcast_class, ManagedMgs):
+            ticket = self.target.downcast().get_ticket()
+            if ticket:
+                return DependAll(DependOn(ticket, "granted", fix_state="unmounted"))
+
         deps = []
         # Depend on at least one targetmount having lnet up
         mtms = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.target_id)
@@ -1300,6 +1305,13 @@ class StopTargetJob(StateChangeJob):
 
     def description(self):
         return "Stop target %s" % self.target
+
+    def get_deps(self):
+        if issubclass(self.target.downcast_class, ManagedMgs):
+            ticket = self.target.downcast().get_ticket()
+            if ticket:
+                return DependAll(DependOn(ticket, "revoked", fix_state="mounted"))
+        return super(StopTargetJob, self).get_deps()
 
     def get_steps(self):
         # Update MTMs before attempting to stop/unmount

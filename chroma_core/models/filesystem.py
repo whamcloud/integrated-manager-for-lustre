@@ -204,11 +204,11 @@ class RemoveFilesystemJob(StateChangeJob):
         return locks
 
     def get_deps(self):
+        deps = []
+
         ticket = self.filesystem.get_ticket()
         if ticket:
             deps.append(DependOn(ticket, "revoked", fix_state="unavailable"))
-
-        deps = []
 
         mgs_target = ObjectCache.get_one(ManagedTarget, lambda t: t.id == self.filesystem.mgs_id)
 
