@@ -27,7 +27,6 @@ chroma-config.1.gz
 copr-local.mk
 database.db
 deps
-dist
 dist/
 id_rsa
 id_rsa.pub
