@@ -82,7 +82,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             match data_result {
                 Ok(resp) => {
                     orders
-                        .send_g_msg(GMsg::AuthProxy(auth::Msg::SetSession(resp)))
+                        .send_g_msg(GMsg::AuthProxy(Box::new(auth::Msg::SetSession(resp))))
                         .send_g_msg(GMsg::RouteChange(Route::Dashboard.into()));
 
                     model.logging_in = false;
