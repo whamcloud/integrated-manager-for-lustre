@@ -35,7 +35,6 @@ impl Default for State {
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone)]
-#[allow(clippy::large_enum_variant)]
 pub enum Msg {
     Fetch,
     Fetched(fetch::ResponseDataResult<Session>),
