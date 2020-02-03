@@ -66,7 +66,6 @@ pub enum ImlManagerCliError {
     IoError(std::io::Error),
     CombineEasyError(combine::stream::easy::Errors<char, &'static str, usize>),
     ReqwestError(reqwest::Error),
-    ProfileNotFound(String),
 }
 
 impl std::fmt::Display for ImlManagerCliError {
@@ -84,7 +83,6 @@ impl std::fmt::Display for ImlManagerCliError {
             ImlManagerCliError::IoError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::CombineEasyError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::ReqwestError(ref err) => write!(f, "{}", err),
-            ImlManagerCliError::ProfileNotFound(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -110,7 +108,6 @@ impl std::error::Error for ImlManagerCliError {
             ImlManagerCliError::IoError(ref err) => Some(err),
             ImlManagerCliError::CombineEasyError(ref err) => Some(err),
             ImlManagerCliError::ReqwestError(ref err) => Some(err),
-            ImlManagerCliError::ProfileNotFound(_) => None,
         }
     }
 }

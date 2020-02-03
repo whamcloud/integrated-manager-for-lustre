@@ -18,6 +18,7 @@ use iml_wire_types::{
 };
 use std::{
     collections::{BTreeSet, HashMap},
+    io::{Error, ErrorKind},
     iter,
     time::Duration,
 };
@@ -228,7 +229,7 @@ fn list_server(hosts: ApiList<Host>) {
                 h.id.to_string(),
                 h.fqdn,
                 h.state,
-                h.nids.unwrap_or_else(|| vec![]).join(" "),
+                h.nids.unwrap_or_default().join(" "),
             ]
         }),
     );
@@ -481,8 +482,12 @@ async fn profiles_and_servers(
         future::try_join(get_all(), get_all()).await?;
 
     let profile_name = config.profile.clone();
-    let profile =
-        get_profile(&config, profiles).ok_or(ImlManagerCliError::ProfileNotFound(profile_name))?;
+    let profile = get_profile(&config, profiles).ok_or_else(|| {
+        Error::new(
+            ErrorKind::NotFound,
+            format!("{} profile not found.", profile_name),
+        )
+    })?;
 
     let (known_hosts, new_hosts) = filter_known_hosts(new_hosts, &api_hosts.objects);
 
