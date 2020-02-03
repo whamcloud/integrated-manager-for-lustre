@@ -86,6 +86,7 @@ services:
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
+      - "mailbox:/var/spool/iml/mailbox"
       - "static-config1:/usr/lib/iml-manager"
       - "static-config2:/usr/lib/node_modules/@iml"
     ports:
@@ -176,6 +177,7 @@ services:
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
+      - "mailbox:/var/spool/iml/mailbox"
     environment:
       - PROXY_HOST=iml-action-runner
       - INFLUXDB_SERVER_FQDN=influxdb
