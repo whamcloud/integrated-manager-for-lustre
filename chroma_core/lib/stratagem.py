@@ -123,8 +123,12 @@ def aggregate_points(measurement_query):
     )
 
     results = json.loads(response._content).get("results")[0]
-    values = results.get("series")[0].get("values")
-    columns = results.get("series")[0].get("columns")
+    series = results.get("series")
+    if not series:
+        return []
+
+    values = series[0].get("values")
+    columns = series[0].get("columns")
 
     points = [dict(zip(columns, xs)) for xs in values]
 
