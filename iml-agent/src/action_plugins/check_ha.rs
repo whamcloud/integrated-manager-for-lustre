@@ -20,7 +20,7 @@ fn create<'a>(
     ResourceAgentInfo {
         agent: {
             if let Some(t) = elem.get_attr("template") {
-                templates.get(t).unwrap().clone()
+                templates[t].clone()
             } else {
                 ResourceAgentType::new(
                     elem.get_attr("class"),
