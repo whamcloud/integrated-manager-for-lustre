@@ -4,10 +4,7 @@
 **/.vscode
 **/.git
 **/.cargo
-**/Cargo.lock
-**/Cargo.toml
 **/*.dockerfile
-**/grafana/
 benchmark
 example_storage_plugin_package
 tests
