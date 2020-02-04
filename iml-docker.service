@@ -6,12 +6,12 @@ After=docker.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-StandardError=null
-StandardOutput=null
+StandardError=journal
+StandardOutput=journal
 WorkingDirectory=/etc/iml-docker
-ExecStart=docker stack deploy -c /etc/iml-docker/docker-compose.yml -c /etc/iml-docker/docker-compose.overrides.yml iml --resolve-image=never
-# @FIXME: Need to poll service removal since docker stack rm is async
-ExecStop=docker stack rm iml
+ExecStart=/usr/bin/docker stack deploy -c docker-compose.yml -c docker-compose.overrides.yml iml --resolve-image=never
+ExecStop=/usr/bin/docker stack rm iml
+ExecStop=/bin/bash -c 'while /usr/bin/docker stack ps iml > /dev/null 2>&1; do sleep 1; done'
 
 
 [Install]
