@@ -29,6 +29,7 @@ ISCI_IP2 = "#{SUBNET_PREFIX}.50.10".freeze
 
 Vagrant.configure('2') do |config|
   config.vm.box = 'centos/7'
+  config.vm.box_url = "http://cloud.centos.org/centos/7/vagrant/x86_64/images/CentOS-7-x86_64-Vagrant-2001_01.VirtualBox.box"
 
   config.vm.provider 'virtualbox' do |vbx|
     vbx.linked_clone = true
