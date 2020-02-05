@@ -86,6 +86,7 @@ services:
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
+      - "mailbox:/var/spool/iml/mailbox"
       - "static-config1:/usr/lib/iml-manager"
       - "static-config2:/usr/lib/node_modules/@iml"
     ports:
@@ -176,6 +177,7 @@ services:
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
+      - "mailbox:/var/spool/iml/mailbox"
     environment:
       - PROXY_HOST=iml-action-runner
       - INFLUXDB_SERVER_FQDN=influxdb
@@ -286,6 +288,18 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - RUST_LOG=info
+  iml-mailbox:
+    image: "imlteam/iml-mailbox:5.1"
+    hostname: "iml-mailbox"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-mailbox.dockerfile
+    deploy: *default-deploy
+    volumes:
+      - "mailbox:/var/spool/iml/mailbox"
+      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+      - "mailbox_run:/run"
+      - "manager-config:/var/lib/chroma"
   iml-postoffice:
     image: "imlteam/iml-postoffice:5.1"
     hostname: "iml-postoffice"
@@ -315,6 +329,11 @@ volumes:
   grafana-storage:
   static-config1:
   static-config2:
+  mailbox:
+  mailbox_run:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
 secrets:
   iml_pw:
     external: true
