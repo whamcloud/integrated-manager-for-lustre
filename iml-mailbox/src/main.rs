@@ -10,8 +10,8 @@
 //! Data has the requirement that is line-delimited so writes can be processed
 //! concurrently
 
-use futures::{lock::Mutex, Stream, TryStreamExt};
-use iml_mailbox::{Errors, MailboxSenders};
+use futures::{lock::Mutex, Stream, TryFutureExt, TryStreamExt};
+use iml_mailbox::{Errors, Incoming, MailboxSenders};
 use std::{fs, path::PathBuf, pin::Pin, sync::Arc};
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::Filter as _;
@@ -88,8 +88,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     while let Some(l) = s.try_next().await? {
                         tracing::debug!("Sending line {:?}", l);
 
-                        tx.unbounded_send(l).map_err(Errors::TrySendError).map_err(warp::reject::custom)?
+                        tx.unbounded_send(Incoming::Line(l)).map_err(Errors::TrySendError).map_err(warp::reject::custom)?
                     }
+
+
+                    let (eof, rx) = Incoming::create_eof();
+
+                    tx.unbounded_send(eof).map_err(Errors::TrySendError).map_err(warp::reject::custom)?;
+
+                    let _ = rx.map_err(|e| tracing::warn!("Error waiting for flush {:?}", e)).await;
 
                     Ok::<_, warp::reject::Rejection>(())
                 }

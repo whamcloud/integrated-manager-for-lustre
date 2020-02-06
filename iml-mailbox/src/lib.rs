@@ -3,7 +3,11 @@
 // license that can be found in the LICENSE file.
 
 use bytes::Buf;
-use futures::{channel::mpsc, stream::BoxStream, Future, Stream, StreamExt, TryStreamExt};
+use futures::{
+    channel::{mpsc, oneshot},
+    stream::BoxStream,
+    Future, Stream, StreamExt, TryStreamExt,
+};
 use std::{collections::HashMap, path::PathBuf};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 use warp::{filters::BoxedFilter, reject, Filter};
@@ -11,7 +15,7 @@ use warp::{filters::BoxedFilter, reject, Filter};
 #[derive(Debug)]
 pub enum Errors {
     IoError(std::io::Error),
-    TrySendError(mpsc::TrySendError<String>),
+    TrySendError(mpsc::TrySendError<Incoming>),
 }
 
 impl reject::Reject for Errors {}
@@ -30,13 +34,26 @@ fn streamer<'a>(
         .boxed()
 }
 
+pub enum Incoming {
+    Line(String),
+    EOF(oneshot::Sender<()>),
+}
+
+impl Incoming {
+    pub fn create_eof() -> (Self, oneshot::Receiver<()>) {
+        let (tx, rx) = oneshot::channel();
+
+        (Incoming::EOF(tx), rx)
+    }
+}
+
 /// Warp Filter that streams a newline delimited body
 pub fn line_stream<'a>() -> BoxedFilter<(BoxStream<'a, Result<String, warp::Rejection>>,)> {
     warp::body::stream().map(streamer).boxed()
 }
 
 /// Holds all active streams that are currently writing to an address.
-pub struct MailboxSenders(HashMap<PathBuf, mpsc::UnboundedSender<String>>);
+pub struct MailboxSenders(HashMap<PathBuf, mpsc::UnboundedSender<Incoming>>);
 
 impl Default for MailboxSenders {
     fn default() -> Self {
@@ -46,7 +63,7 @@ impl Default for MailboxSenders {
 
 impl MailboxSenders {
     /// Adds a new address and tx handle to write lines with
-    pub fn insert(&mut self, address: PathBuf, tx: mpsc::UnboundedSender<String>) {
+    pub fn insert(&mut self, address: PathBuf, tx: mpsc::UnboundedSender<Incoming>) {
         self.0.insert(address, tx);
     }
     /// Removes an address.
@@ -56,7 +73,7 @@ impl MailboxSenders {
         self.0.remove(address);
     }
     /// Returns a cloned reference to a tx handle matching the provided address, if one exists.
-    pub fn get(&mut self, address: &PathBuf) -> Option<mpsc::UnboundedSender<String>> {
+    pub fn get(&mut self, address: &PathBuf) -> Option<mpsc::UnboundedSender<Incoming>> {
         self.0.get(address).cloned()
     }
     /// Creates a new sender entry.
@@ -68,7 +85,7 @@ impl MailboxSenders {
         &mut self,
         address: PathBuf,
     ) -> (
-        mpsc::UnboundedSender<String>,
+        mpsc::UnboundedSender<Incoming>,
         impl Future<Output = Result<(), std::io::Error>>,
     ) {
         let (tx, rx) = mpsc::unbounded();
@@ -86,9 +103,9 @@ impl MailboxSenders {
 /// to that file.
 pub async fn ingest_data(
     address: PathBuf,
-    mut rx: mpsc::UnboundedReceiver<String>,
+    mut rx: mpsc::UnboundedReceiver<Incoming>,
 ) -> Result<(), std::io::Error> {
-    tracing::debug!("Starting ingest for {:?}", address);
+    tracing::info!("Starting ingest for {:?}", address);
 
     let mut file = OpenOptions::new()
         .append(true)
@@ -96,14 +113,23 @@ pub async fn ingest_data(
         .open(address)
         .await?;
 
-    while let Some(mut line) = rx.next().await {
-        if !line.ends_with('\n') {
-            line.extend(['\n'].iter());
+    while let Some(incoming) = rx.next().await {
+        match incoming {
+            Incoming::Line(mut line) => {
+                if !line.ends_with('\n') {
+                    line.extend(['\n'].iter());
+                }
+
+                tracing::trace!("handling line {:?}", line);
+
+                file.write_all(line.as_bytes()).await?;
+            }
+            Incoming::EOF(tx) => {
+                file.flush().await?;
+
+                let _ = tx.send(());
+            }
         }
-
-        tracing::debug!("handling line {:?}", line);
-
-        file.write_all(line.as_bytes()).await?;
     }
 
     file.flush().await?;
@@ -126,14 +152,14 @@ mod tests {
 
         let (tx, fut) = mailbox_sender.create(address.clone());
 
-        tx.unbounded_send("foo\n".into())?;
+        tx.unbounded_send(Incoming::Line("foo\n".into()))?;
 
         mailbox_sender
             .get(&address)
             .unwrap()
-            .unbounded_send("bar".into())?;
+            .unbounded_send(Incoming::Line("bar".into()))?;
 
-        tx.unbounded_send("baz\n".into())?;
+        tx.unbounded_send(Incoming::Line("baz\n".into()))?;
 
         mailbox_sender.remove(&address);
 
