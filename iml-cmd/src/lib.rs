@@ -58,8 +58,8 @@ fn handle_status(x: ExitStatus) -> Result<(), io::Error> {
         let err = io::Error::new(
             io::ErrorKind::Other,
             format!("process exited with code: {:?}", x.code()),
-        )
-        .into();
+        );
+
         Err(err)
     }
 }

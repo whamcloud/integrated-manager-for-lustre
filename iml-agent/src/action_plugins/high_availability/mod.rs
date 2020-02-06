@@ -38,6 +38,15 @@ fn create<'a>(elem: &Element, group: impl Into<Option<&'a str>>) -> ResourceAgen
     }
 }
 
+pub(crate) async fn crm_attribute(args: Vec<String>) -> Result<String, ImlAgentError> {
+    let o = Command::new("crm_attribute")
+        .args(args)
+        .checked_output()
+        .await?;
+
+    Ok(String::from_utf8_lossy(&o.stdout).to_string())
+}
+
 fn process_resource_list(output: &[u8]) -> Result<Vec<ResourceAgentInfo>, ImlAgentError> {
     let element = Element::from_reader(output)?;
 

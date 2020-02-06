@@ -38,6 +38,7 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("action_check_stonith", check_stonith::check_stonith)
         .add_plugin("get_kernel", check_kernel::get_kernel)
         .add_plugin("try_mount", lustre::try_mount)
+        .add_plugin("crm_attribute", high_availability::crm_attribute)
         .add_plugin(
             "change_mcast_port",
             high_availability::corosync_conf::change_mcast_port,

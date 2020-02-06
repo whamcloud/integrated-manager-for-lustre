@@ -143,7 +143,10 @@ impl<'a> TryFrom<(&'a str, StringMap<'a>)> for Interface {
 
 /// View the current totem and interface information from `corosync-cmapctl`.
 async fn corosync_cmapctl() -> Result<(Totem, Vec<Interface>), ImlAgentError> {
-    let x = Command::new("corosync-cmapctl").checked_output().await?;
+    let x = Command::new("corosync-cmapctl")
+        .arg("totem")
+        .checked_output()
+        .await?;
 
     corosync_cmapctl_parser(&x.stdout)
 }
@@ -203,7 +206,7 @@ mod tests {
     use std::iter::FromIterator;
 
     fn corosync_cmapctl_fixture() -> &'static [u8] {
-        include_bytes!("../fixtures/corosync-cmapctl.txt")
+        include_bytes!("../fixtures/corosync-cmapctl-totem.txt")
     }
 
     fn corosync_conf_fixture() -> &'static [u8] {

@@ -323,12 +323,16 @@ class ChangeMcastPortStep(Step):
 
 class ActivateClusterMaintenceModeStep(Step):
     def run(self, kwargs):
-        self.invoke_rust_agent_expect_result(kwargs["fqdn"], "pcs", ["property", "set", "maintenance-mode=true"])
+        self.invoke_rust_agent_expect_result(
+            kwargs["fqdn"], "crm_attribute", ["--type", "crm_config", "--name", "maintenance-mode", "--update", "true"]
+        )
 
 
 class DeactivateClusterMaintenceModeStep(Step):
     def run(self, kwargs):
-        self.invoke_rust_agent_expect_result(kwargs["fqdn"], "pcs", ["property", "unset", "maintenance-mode"])
+        self.invoke_rust_agent_expect_result(
+            kwargs["fqdn"], "crm_attribute", ["--type", "crm_config", "--name", "maintenance-mode", "--delete"]
+        )
 
 
 class SyncClusterStep(Step):
