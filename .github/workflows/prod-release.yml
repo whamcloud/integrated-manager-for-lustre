@@ -48,6 +48,12 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v1
 
+      - name: Build the iml images
+        working-directory: ./docker
+        run: |
+          make save
+          docker image ls
+
       - name: Push RPM
         uses: ./.github/actions/copr
         env:
