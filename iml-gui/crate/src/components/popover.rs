@@ -7,15 +7,15 @@ use seed::{prelude::*, *};
 pub fn title_view<T>(content: &str) -> Node<T> {
     div![
         class![C.bg_gray_200, C.py_1, C.px_3],
-        h4![class![C.font_normal, C.text_lg], content]
+        h4![class![C.font_normal], content]
     ]
 }
 
 pub fn content_view<T>(content: impl View<T>) -> Node<T> {
-    div![class![C.py_2, C.px_3, C.w_64], content.els()]
+    div![class![C.py_2, C.px_3, C.w_64, C.text_sm], content.els()]
 }
 
-pub fn view<T>(content: impl View<T>, placement: Placement, visible: bool) -> Node<T> {
+pub fn view<T>(content: impl View<T>, placement: Placement) -> Node<T> {
     let color = "#e2e8f0";
 
     let popover_top_styles = style! {
@@ -58,8 +58,8 @@ pub fn view<T>(content: impl View<T>, placement: Placement, visible: bool) -> No
             C.absolute,
             C.pointer_events_none,
             C.z_10,
-            C.hidden => !visible,
-            C.block => visible
+            C.hidden,
+            C.group_focus__block,
         ],
         popover_style,
         arrow(placement, color),
