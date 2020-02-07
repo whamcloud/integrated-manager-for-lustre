@@ -31,7 +31,7 @@ use iml_wire_types::{
 use page::{login, Page};
 use regex::Regex;
 use route::Route;
-use seed::{app::MessageMapper, prelude::*, Listener, *};
+use seed::{app::MessageMapper, prelude::*, EventHandler, *};
 pub(crate) use sleep::sleep_with_handle;
 use std::{cmp, sync::Arc};
 pub use watch_state::*;
@@ -675,7 +675,7 @@ pub fn asset_path(asset: &str) -> String {
 // Window Events
 // ------ ------
 
-pub fn window_events(model: &Model) -> Vec<Listener<Msg>> {
+pub fn window_events(model: &Model) -> Vec<EventHandler<Msg>> {
     let mut xs = vec![
         simple_ev(Ev::Click, Msg::WindowClick),
         simple_ev(Ev::Resize, Msg::WindowResize),
