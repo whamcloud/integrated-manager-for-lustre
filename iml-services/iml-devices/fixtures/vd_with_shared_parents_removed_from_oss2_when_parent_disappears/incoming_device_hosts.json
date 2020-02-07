@@ -1,0 +1,26 @@
+[
+  {
+    "device_id": "a",
+    "fqdn": "oss2",
+    "local": true,
+    "paths": [
+      "/fake/path/scsi/a"
+    ],
+    "mount_path": "/fake/path/scsi/a",
+    "fs_type": "some_fs",
+    "fs_label": "some_label",
+    "fs_uuid": "some_uuid"
+  },
+  {
+    "device_id": "c",
+    "fqdn": "oss2",
+    "local": true,
+    "paths": [
+      "/fake/path/zpool/a"
+    ],
+    "mount_path": "/fake/path/zpool/a",
+    "fs_type": "some_fs",
+    "fs_label": "some_label",
+    "fs_uuid": "some_uuid"
+  }
+]

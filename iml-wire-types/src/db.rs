@@ -1,5 +1,5 @@
 use crate::{Fqdn, Label};
-use std::{collections::BTreeSet, fmt, ops::Deref, path::PathBuf};
+use std::{collections::BTreeSet, fmt, ops::{Deref, DerefMut}, path::PathBuf};
 
 #[cfg(feature = "postgres-interop")]
 use bytes::BytesMut;
@@ -602,7 +602,7 @@ impl Name for LnetConfigurationRecord {
 #[derive(
     Debug, serde::Serialize, serde::Deserialize, Eq, PartialEq, Ord, PartialOrd, Clone, Hash,
 )]
-pub struct DeviceId(String);
+pub struct DeviceId(pub String);
 
 #[cfg(feature = "postgres-interop")]
 impl ToSql for DeviceId {
@@ -643,7 +643,7 @@ impl Deref for DeviceId {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct DeviceIds(pub BTreeSet<DeviceId>);
 
 impl Deref for DeviceIds {
@@ -651,6 +651,12 @@ impl Deref for DeviceIds {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl DerefMut for DeviceIds {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
@@ -686,7 +692,7 @@ impl<'a> FromSql<'a> for DeviceIds {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Size(pub u64);
 
 #[cfg(feature = "postgres-interop")]
@@ -725,7 +731,9 @@ impl<'a> FromSql<'a> for Size {
 }
 
 /// The current type of Devices we support
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub enum DeviceType {
     ScsiDevice,
     Partition,
@@ -802,7 +810,7 @@ impl<'a> FromSql<'a> for DeviceType {
 
 /// A device (Block or Virtual).
 /// These should be unique per cluster
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Device {
     pub id: DeviceId,
     pub size: Size,
@@ -834,7 +842,7 @@ impl From<Row> for Device {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Paths(pub BTreeSet<PathBuf>);
 
 impl Deref for Paths {
@@ -878,7 +886,7 @@ impl<'a> FromSql<'a> for Paths {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct MountPath(pub Option<PathBuf>);
 
 #[cfg(feature = "postgres-interop")]
@@ -913,7 +921,7 @@ impl Deref for MountPath {
 
 /// A pointer to a `Device` present on a host.
 /// Stores mount_path and paths to reach the pointed to `Device`.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct DeviceHost {
     pub device_id: DeviceId,
     pub fqdn: Fqdn,

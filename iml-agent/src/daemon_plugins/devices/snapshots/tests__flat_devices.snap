@@ -1,0 +1,1741 @@
+---
+source: iml-agent/src/daemon_plugins/devices/devices.rs
+expression: fds
+---
+{
+    DeviceId(
+        "dataset_14058142534232748000",
+    ): FlatDevice {
+        id: DeviceId(
+            "dataset_14058142534232748000",
+        ),
+        size: 0,
+        device_type: Dataset,
+        parents: {
+            DeviceId(
+                "zpool_2957248016653106000",
+            ),
+        },
+        children: {},
+        paths: {
+            "ost18/fs-OST000c",
+        },
+        mount_path: Some(
+            "/mnt/fs-OST000c",
+        ),
+        fs_type: Some(
+            "lustre",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "dataset_15799967299178152000",
+    ): FlatDevice {
+        id: DeviceId(
+            "dataset_15799967299178152000",
+        ),
+        size: 0,
+        device_type: Dataset,
+        parents: {
+            DeviceId(
+                "zpool_11404755598234436000",
+            ),
+        },
+        children: {},
+        paths: {
+            "ost1/fs-OST0001",
+        },
+        mount_path: Some(
+            "/mnt/fs-OST0001",
+        ),
+        fs_type: Some(
+            "lustre",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "dataset_16113689415528647000",
+    ): FlatDevice {
+        id: DeviceId(
+            "dataset_16113689415528647000",
+        ),
+        size: 0,
+        device_type: Dataset,
+        parents: {
+            DeviceId(
+                "zpool_3897016046943655400",
+            ),
+        },
+        children: {},
+        paths: {
+            "ost11/fs-OST0004",
+        },
+        mount_path: Some(
+            "/mnt/fs-OST0004",
+        ),
+        fs_type: Some(
+            "lustre",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "dataset_17832669426331950000",
+    ): FlatDevice {
+        id: DeviceId(
+            "dataset_17832669426331950000",
+        ),
+        size: 0,
+        device_type: Dataset,
+        parents: {
+            DeviceId(
+                "zpool_18108742345939087000",
+            ),
+        },
+        children: {},
+        paths: {
+            "ost2/fs-OST000e",
+        },
+        mount_path: Some(
+            "/mnt/fs-OST000e",
+        ),
+        fs_type: Some(
+            "lustre",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "dataset_546326277712140300",
+    ): FlatDevice {
+        id: DeviceId(
+            "dataset_546326277712140300",
+        ),
+        size: 0,
+        device_type: Dataset,
+        parents: {
+            DeviceId(
+                "zpool_16191343403350233000",
+            ),
+        },
+        children: {},
+        paths: {
+            "ost15/fs-OST0008",
+        },
+        mount_path: Some(
+            "/mnt/fs-OST0008",
+        ),
+        fs_type: Some(
+            "lustre",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "dataset_5733272054209430000",
+    ): FlatDevice {
+        id: DeviceId(
+            "dataset_5733272054209430000",
+        ),
+        size: 0,
+        device_type: Dataset,
+        parents: {
+            DeviceId(
+                "zpool_13289720406207140000",
+            ),
+        },
+        children: {},
+        paths: {
+            "ost6/fs-OST0010",
+        },
+        mount_path: Some(
+            "/mnt/fs-OST0010",
+        ),
+        fs_type: Some(
+            "lustre",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "dataset_6040026289001357000",
+    ): FlatDevice {
+        id: DeviceId(
+            "dataset_6040026289001357000",
+        ),
+        size: 0,
+        device_type: Dataset,
+        parents: {
+            DeviceId(
+                "zpool_18069017291544870000",
+            ),
+        },
+        children: {},
+        paths: {
+            "ost10/fs-OST0002",
+        },
+        mount_path: Some(
+            "/mnt/fs-OST0002",
+        ),
+        fs_type: Some(
+            "lustre",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "dataset_673547581259299800",
+    ): FlatDevice {
+        id: DeviceId(
+            "dataset_673547581259299800",
+        ),
+        size: 0,
+        device_type: Dataset,
+        parents: {
+            DeviceId(
+                "zpool_160900275567926530",
+            ),
+        },
+        children: {},
+        paths: {
+            "ost8/fs-OST0012",
+        },
+        mount_path: Some(
+            "/mnt/fs-OST0012",
+        ),
+        fs_type: Some(
+            "lustre",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "dataset_6933372219775899000",
+    ): FlatDevice {
+        id: DeviceId(
+            "dataset_6933372219775899000",
+        ),
+        size: 0,
+        device_type: Dataset,
+        parents: {
+            DeviceId(
+                "zpool_7075211415692163000",
+            ),
+        },
+        children: {},
+        paths: {
+            "ost13/fs-OST0006",
+        },
+        mount_path: Some(
+            "/mnt/fs-OST0006",
+        ),
+        fs_type: Some(
+            "lustre",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "dataset_9506230558717944000",
+    ): FlatDevice {
+        id: DeviceId(
+            "dataset_9506230558717944000",
+        ),
+        size: 0,
+        device_type: Dataset,
+        parents: {
+            DeviceId(
+                "zpool_18427740215538354000",
+            ),
+        },
+        children: {},
+        paths: {
+            "ost17/fs-OST000a",
+        },
+        mount_path: Some(
+            "/mnt/fs-OST000a",
+        ),
+        fs_type: Some(
+            "lustre",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_360014050ed572fdf3a54e31bedcae861",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_360014050ed572fdf3a54e31bedcae861",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_360014050ed572fdf3a54e31bedcae861",
+            ),
+        },
+        children: {
+            DeviceId(
+                "zpool_3897016046943655400",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/dm-name-mpathl",
+            "/dev/disk/by-id/dm-uuid-mpath-360014050ed572fdf3a54e31bedcae861",
+            "/dev/dm-19",
+            "/dev/mapper/mpathl",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_3600140518a1f3b780ad4cd091a43bff8",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_3600140518a1f3b780ad4cd091a43bff8",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_3600140518a1f3b780ad4cd091a43bff8",
+            ),
+        },
+        children: {},
+        paths: {
+            "/dev/disk/by-id/dm-name-mpathm",
+            "/dev/disk/by-id/dm-uuid-mpath-3600140518a1f3b780ad4cd091a43bff8",
+            "/dev/dm-2",
+            "/dev/mapper/mpathm",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_360014051ab54e05af6848e8a9a01274f",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_360014051ab54e05af6848e8a9a01274f",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_360014051ab54e05af6848e8a9a01274f",
+            ),
+        },
+        children: {
+            DeviceId(
+                "zpool_2957248016653106000",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/dm-name-mpaths",
+            "/dev/disk/by-id/dm-uuid-mpath-360014051ab54e05af6848e8a9a01274f",
+            "/dev/dm-9",
+            "/dev/mapper/mpaths",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_360014051b427e6b1e184581b48b0885b",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_360014051b427e6b1e184581b48b0885b",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_360014051b427e6b1e184581b48b0885b",
+            ),
+        },
+        children: {
+            DeviceId(
+                "zpool_13289720406207140000",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/dm-name-mpathg",
+            "/dev/disk/by-id/dm-uuid-mpath-360014051b427e6b1e184581b48b0885b",
+            "/dev/dm-14",
+            "/dev/mapper/mpathg",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_360014051bde360ae3cb4b75a56bf4c88",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_360014051bde360ae3cb4b75a56bf4c88",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_360014051bde360ae3cb4b75a56bf4c88",
+            ),
+        },
+        children: {},
+        paths: {
+            "/dev/disk/by-id/dm-name-mpathh",
+            "/dev/disk/by-id/dm-uuid-mpath-360014051bde360ae3cb4b75a56bf4c88",
+            "/dev/dm-15",
+            "/dev/mapper/mpathh",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_3600140529cc0e6c1dff4017a6bde4a07",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_3600140529cc0e6c1dff4017a6bde4a07",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_3600140529cc0e6c1dff4017a6bde4a07",
+            ),
+        },
+        children: {},
+        paths: {
+            "/dev/disk/by-id/dm-name-mpathd",
+            "/dev/disk/by-id/dm-uuid-mpath-3600140529cc0e6c1dff4017a6bde4a07",
+            "/dev/dm-10",
+            "/dev/mapper/mpathd",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_36001405371822eb788947d6ac331285f",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_36001405371822eb788947d6ac331285f",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_36001405371822eb788947d6ac331285f",
+            ),
+        },
+        children: {},
+        paths: {
+            "/dev/disk/by-id/dm-name-mpathe",
+            "/dev/disk/by-id/dm-uuid-mpath-36001405371822eb788947d6ac331285f",
+            "/dev/dm-12",
+            "/dev/mapper/mpathe",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_360014053f4429267572462bbd33b7cfb",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_360014053f4429267572462bbd33b7cfb",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_360014053f4429267572462bbd33b7cfb",
+            ),
+        },
+        children: {
+            DeviceId(
+                "zpool_160900275567926530",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/dm-name-mpathi",
+            "/dev/disk/by-id/dm-uuid-mpath-360014053f4429267572462bbd33b7cfb",
+            "/dev/dm-16",
+            "/dev/mapper/mpathi",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_3600140542f7d97a92f54741b85ad0b99",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_3600140542f7d97a92f54741b85ad0b99",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_3600140542f7d97a92f54741b85ad0b99",
+            ),
+        },
+        children: {
+            DeviceId(
+                "zpool_18069017291544870000",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/dm-name-mpathk",
+            "/dev/disk/by-id/dm-uuid-mpath-3600140542f7d97a92f54741b85ad0b99",
+            "/dev/dm-18",
+            "/dev/mapper/mpathk",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_3600140561357b809f7641b7a42110c1f",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_3600140561357b809f7641b7a42110c1f",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_3600140561357b809f7641b7a42110c1f",
+            ),
+        },
+        children: {},
+        paths: {
+            "/dev/disk/by-id/dm-name-mpatht",
+            "/dev/disk/by-id/dm-uuid-mpath-3600140561357b809f7641b7a42110c1f",
+            "/dev/dm-7",
+            "/dev/mapper/mpatht",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_360014057672ba4d59674840a5a5409ae",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_360014057672ba4d59674840a5a5409ae",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_360014057672ba4d59674840a5a5409ae",
+            ),
+        },
+        children: {
+            DeviceId(
+                "zpool_18427740215538354000",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/dm-name-mpathr",
+            "/dev/disk/by-id/dm-uuid-mpath-360014057672ba4d59674840a5a5409ae",
+            "/dev/dm-8",
+            "/dev/mapper/mpathr",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_3600140579ff981effbd4c50a6e771d75",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_3600140579ff981effbd4c50a6e771d75",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_3600140579ff981effbd4c50a6e771d75",
+            ),
+        },
+        children: {},
+        paths: {
+            "/dev/disk/by-id/dm-name-mpathj",
+            "/dev/disk/by-id/dm-uuid-mpath-3600140579ff981effbd4c50a6e771d75",
+            "/dev/dm-17",
+            "/dev/mapper/mpathj",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_3600140593876bad79284c7ba8439d55b",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_3600140593876bad79284c7ba8439d55b",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_3600140593876bad79284c7ba8439d55b",
+            ),
+        },
+        children: {},
+        paths: {
+            "/dev/disk/by-id/dm-name-mpathf",
+            "/dev/disk/by-id/dm-uuid-mpath-3600140593876bad79284c7ba8439d55b",
+            "/dev/dm-13",
+            "/dev/mapper/mpathf",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_360014059a0f2d0094114424a76d07a20",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_360014059a0f2d0094114424a76d07a20",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_360014059a0f2d0094114424a76d07a20",
+            ),
+        },
+        children: {
+            DeviceId(
+                "zpool_16191343403350233000",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/dm-name-mpathp",
+            "/dev/disk/by-id/dm-uuid-mpath-360014059a0f2d0094114424a76d07a20",
+            "/dev/dm-5",
+            "/dev/mapper/mpathp",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_360014059a9e3c3393fe41c1aef4a1946",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_360014059a9e3c3393fe41c1aef4a1946",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_360014059a9e3c3393fe41c1aef4a1946",
+            ),
+        },
+        children: {},
+        paths: {
+            "/dev/disk/by-id/dm-name-mpathq",
+            "/dev/disk/by-id/dm-uuid-mpath-360014059a9e3c3393fe41c1aef4a1946",
+            "/dev/dm-6",
+            "/dev/mapper/mpathq",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_36001405a1ce936ce4034972a9346c9a8",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_36001405a1ce936ce4034972a9346c9a8",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_36001405a1ce936ce4034972a9346c9a8",
+            ),
+        },
+        children: {
+            DeviceId(
+                "zpool_11404755598234436000",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/dm-name-mpathb",
+            "/dev/disk/by-id/dm-uuid-mpath-36001405a1ce936ce4034972a9346c9a8",
+            "/dev/dm-0",
+            "/dev/mapper/mpathb",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_36001405c4e0b8dfac2c4838a269f8387",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_36001405c4e0b8dfac2c4838a269f8387",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_36001405c4e0b8dfac2c4838a269f8387",
+            ),
+        },
+        children: {},
+        paths: {
+            "/dev/disk/by-id/dm-name-mpatho",
+            "/dev/disk/by-id/dm-uuid-mpath-36001405c4e0b8dfac2c4838a269f8387",
+            "/dev/dm-4",
+            "/dev/mapper/mpatho",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_36001405e7558cf8239542d3b38ab9e93",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_36001405e7558cf8239542d3b38ab9e93",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_36001405e7558cf8239542d3b38ab9e93",
+            ),
+        },
+        children: {},
+        paths: {
+            "/dev/disk/by-id/dm-name-mpatha",
+            "/dev/disk/by-id/dm-uuid-mpath-36001405e7558cf8239542d3b38ab9e93",
+            "/dev/dm-1",
+            "/dev/mapper/mpatha",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_36001405ea8d6822c1d349b9bf2460e8d",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_36001405ea8d6822c1d349b9bf2460e8d",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_36001405ea8d6822c1d349b9bf2460e8d",
+            ),
+        },
+        children: {
+            DeviceId(
+                "zpool_18108742345939087000",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/dm-name-mpathc",
+            "/dev/disk/by-id/dm-uuid-mpath-36001405ea8d6822c1d349b9bf2460e8d",
+            "/dev/dm-11",
+            "/dev/mapper/mpathc",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "mpath_36001405f73d7e74d12745e581d8ae7d0",
+    ): FlatDevice {
+        id: DeviceId(
+            "mpath_36001405f73d7e74d12745e581d8ae7d0",
+        ),
+        size: 5368709120,
+        device_type: Mpath,
+        parents: {
+            DeviceId(
+                "scsi_36001405f73d7e74d12745e581d8ae7d0",
+            ),
+        },
+        children: {
+            DeviceId(
+                "zpool_7075211415692163000",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/dm-name-mpathn",
+            "/dev/disk/by-id/dm-uuid-mpath-36001405f73d7e74d12745e581d8ae7d0",
+            "/dev/dm-3",
+            "/dev/mapper/mpathn",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "partition1_1ATA     VBOX HARDDISK                           VB37dcb049-54698a06",
+    ): FlatDevice {
+        id: DeviceId(
+            "partition1_1ATA     VBOX HARDDISK                           VB37dcb049-54698a06",
+        ),
+        size: 42948624384,
+        device_type: Partition,
+        parents: {
+            DeviceId(
+                "scsi_1ATA     VBOX HARDDISK                           VB37dcb049-54698a06",
+            ),
+        },
+        children: {},
+        paths: {
+            "/dev/disk/by-id/ata-VBOX_HARDDISK_VB37dcb049-54698a06-part1",
+            "/dev/disk/by-path/pci-0000:00:01.1-ata-1.0-part1",
+            "/dev/disk/by-uuid/8ac075e3-1124-4bb6-bef7-a6811bf8b870",
+            "/dev/sda1",
+        },
+        mount_path: Some(
+            "/",
+        ),
+        fs_type: Some(
+            "xfs",
+        ),
+        fs_label: None,
+        fs_uuid: Some(
+            "8ac075e3-1124-4bb6-bef7-a6811bf8b870",
+        ),
+    },
+    DeviceId(
+        "scsi_1ATA     VBOX HARDDISK                           VB37dcb049-54698a06",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_1ATA     VBOX HARDDISK                           VB37dcb049-54698a06",
+        ),
+        size: 42949672960,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "partition1_1ATA     VBOX HARDDISK                           VB37dcb049-54698a06",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/ata-VBOX_HARDDISK_VB37dcb049-54698a06",
+            "/dev/disk/by-path/pci-0000:00:01.1-ata-1.0",
+            "/dev/sda",
+        },
+        mount_path: None,
+        fs_type: None,
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_360014050ed572fdf3a54e31bedcae861",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_360014050ed572fdf3a54e31bedcae861",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_360014050ed572fdf3a54e31bedcae861",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-360014050ed572fdf3a54e31bedcae861",
+            "/dev/disk/by-id/wwn-0x60014050ed572fdf3a54e31bedcae861",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-19",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-19",
+            "/dev/sdan",
+            "/dev/sdao",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_3600140518a1f3b780ad4cd091a43bff8",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_3600140518a1f3b780ad4cd091a43bff8",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_3600140518a1f3b780ad4cd091a43bff8",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-3600140518a1f3b780ad4cd091a43bff8",
+            "/dev/disk/by-id/wwn-0x600140518a1f3b780ad4cd091a43bff8",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-2",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-2",
+            "/dev/sdf",
+            "/dev/sdg",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_360014051ab54e05af6848e8a9a01274f",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_360014051ab54e05af6848e8a9a01274f",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_360014051ab54e05af6848e8a9a01274f",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-360014051ab54e05af6848e8a9a01274f",
+            "/dev/disk/by-id/wwn-0x60014051ab54e05af6848e8a9a01274f",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-8",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-8",
+            "/dev/sdr",
+            "/dev/sdu",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_360014051b427e6b1e184581b48b0885b",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_360014051b427e6b1e184581b48b0885b",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_360014051b427e6b1e184581b48b0885b",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-360014051b427e6b1e184581b48b0885b",
+            "/dev/disk/by-id/wwn-0x60014051b427e6b1e184581b48b0885b",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-14",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-14",
+            "/dev/sdad",
+            "/dev/sdae",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_360014051bde360ae3cb4b75a56bf4c88",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_360014051bde360ae3cb4b75a56bf4c88",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_360014051bde360ae3cb4b75a56bf4c88",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-360014051bde360ae3cb4b75a56bf4c88",
+            "/dev/disk/by-id/wwn-0x60014051bde360ae3cb4b75a56bf4c88",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-15",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-15",
+            "/dev/sdaf",
+            "/dev/sdag",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_3600140529cc0e6c1dff4017a6bde4a07",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_3600140529cc0e6c1dff4017a6bde4a07",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_3600140529cc0e6c1dff4017a6bde4a07",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-3600140529cc0e6c1dff4017a6bde4a07",
+            "/dev/disk/by-id/wwn-0x600140529cc0e6c1dff4017a6bde4a07",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-11",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-11",
+            "/dev/sdw",
+            "/dev/sdz",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_36001405371822eb788947d6ac331285f",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_36001405371822eb788947d6ac331285f",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_36001405371822eb788947d6ac331285f",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-36001405371822eb788947d6ac331285f",
+            "/dev/disk/by-id/wwn-0x6001405371822eb788947d6ac331285f",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-12",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-12",
+            "/dev/sdaa",
+            "/dev/sdy",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_360014053f4429267572462bbd33b7cfb",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_360014053f4429267572462bbd33b7cfb",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_360014053f4429267572462bbd33b7cfb",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-360014053f4429267572462bbd33b7cfb",
+            "/dev/disk/by-id/wwn-0x60014053f4429267572462bbd33b7cfb",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-16",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-16",
+            "/dev/sdah",
+            "/dev/sdaj",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_3600140542f7d97a92f54741b85ad0b99",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_3600140542f7d97a92f54741b85ad0b99",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_3600140542f7d97a92f54741b85ad0b99",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-3600140542f7d97a92f54741b85ad0b99",
+            "/dev/disk/by-id/wwn-0x600140542f7d97a92f54741b85ad0b99",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-18",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-18",
+            "/dev/sdal",
+            "/dev/sdam",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_3600140561357b809f7641b7a42110c1f",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_3600140561357b809f7641b7a42110c1f",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_3600140561357b809f7641b7a42110c1f",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-3600140561357b809f7641b7a42110c1f",
+            "/dev/disk/by-id/wwn-0x600140561357b809f7641b7a42110c1f",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-9",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-9",
+            "/dev/sds",
+            "/dev/sdv",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_360014057672ba4d59674840a5a5409ae",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_360014057672ba4d59674840a5a5409ae",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_360014057672ba4d59674840a5a5409ae",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-360014057672ba4d59674840a5a5409ae",
+            "/dev/disk/by-id/wwn-0x60014057672ba4d59674840a5a5409ae",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-7",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-7",
+            "/dev/sdp",
+            "/dev/sdq",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_3600140579ff981effbd4c50a6e771d75",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_3600140579ff981effbd4c50a6e771d75",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_3600140579ff981effbd4c50a6e771d75",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-3600140579ff981effbd4c50a6e771d75",
+            "/dev/disk/by-id/wwn-0x600140579ff981effbd4c50a6e771d75",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-17",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-17",
+            "/dev/sdai",
+            "/dev/sdak",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_3600140593876bad79284c7ba8439d55b",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_3600140593876bad79284c7ba8439d55b",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_3600140593876bad79284c7ba8439d55b",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-3600140593876bad79284c7ba8439d55b",
+            "/dev/disk/by-id/wwn-0x600140593876bad79284c7ba8439d55b",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-13",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-13",
+            "/dev/sdab",
+            "/dev/sdac",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_360014059a0f2d0094114424a76d07a20",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_360014059a0f2d0094114424a76d07a20",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_360014059a0f2d0094114424a76d07a20",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-360014059a0f2d0094114424a76d07a20",
+            "/dev/disk/by-id/wwn-0x60014059a0f2d0094114424a76d07a20",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-5",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-5",
+            "/dev/sdl",
+            "/dev/sdm",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_360014059a9e3c3393fe41c1aef4a1946",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_360014059a9e3c3393fe41c1aef4a1946",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_360014059a9e3c3393fe41c1aef4a1946",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-360014059a9e3c3393fe41c1aef4a1946",
+            "/dev/disk/by-id/wwn-0x60014059a9e3c3393fe41c1aef4a1946",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-6",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-6",
+            "/dev/sdn",
+            "/dev/sdo",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_36001405a1ce936ce4034972a9346c9a8",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_36001405a1ce936ce4034972a9346c9a8",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_36001405a1ce936ce4034972a9346c9a8",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-36001405a1ce936ce4034972a9346c9a8",
+            "/dev/disk/by-id/wwn-0x6001405a1ce936ce4034972a9346c9a8",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-1",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-1",
+            "/dev/sdd",
+            "/dev/sde",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_36001405c4e0b8dfac2c4838a269f8387",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_36001405c4e0b8dfac2c4838a269f8387",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_36001405c4e0b8dfac2c4838a269f8387",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-36001405c4e0b8dfac2c4838a269f8387",
+            "/dev/disk/by-id/wwn-0x6001405c4e0b8dfac2c4838a269f8387",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-4",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-4",
+            "/dev/sdj",
+            "/dev/sdk",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_36001405e7558cf8239542d3b38ab9e93",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_36001405e7558cf8239542d3b38ab9e93",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_36001405e7558cf8239542d3b38ab9e93",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-36001405e7558cf8239542d3b38ab9e93",
+            "/dev/disk/by-id/wwn-0x6001405e7558cf8239542d3b38ab9e93",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-0",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-0",
+            "/dev/sdb",
+            "/dev/sdc",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_36001405ea8d6822c1d349b9bf2460e8d",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_36001405ea8d6822c1d349b9bf2460e8d",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_36001405ea8d6822c1d349b9bf2460e8d",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-36001405ea8d6822c1d349b9bf2460e8d",
+            "/dev/disk/by-id/wwn-0x6001405ea8d6822c1d349b9bf2460e8d",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-10",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-10",
+            "/dev/sdt",
+            "/dev/sdx",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "scsi_36001405f73d7e74d12745e581d8ae7d0",
+    ): FlatDevice {
+        id: DeviceId(
+            "scsi_36001405f73d7e74d12745e581d8ae7d0",
+        ),
+        size: 5368709120,
+        device_type: ScsiDevice,
+        parents: {},
+        children: {
+            DeviceId(
+                "mpath_36001405f73d7e74d12745e581d8ae7d0",
+            ),
+        },
+        paths: {
+            "/dev/disk/by-id/scsi-36001405f73d7e74d12745e581d8ae7d0",
+            "/dev/disk/by-id/wwn-0x6001405f73d7e74d12745e581d8ae7d0",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-3",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-3",
+            "/dev/sdh",
+            "/dev/sdi",
+        },
+        mount_path: None,
+        fs_type: Some(
+            "mpath_member",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "zpool_11404755598234436000",
+    ): FlatDevice {
+        id: DeviceId(
+            "zpool_11404755598234436000",
+        ),
+        size: 5335154688,
+        device_type: Zpool,
+        parents: {
+            DeviceId(
+                "mpath_36001405a1ce936ce4034972a9346c9a8",
+            ),
+        },
+        children: {
+            DeviceId(
+                "dataset_15799967299178152000",
+            ),
+        },
+        paths: {
+            "ost1",
+        },
+        mount_path: Some(
+            "/ost1",
+        ),
+        fs_type: Some(
+            "zfs",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "zpool_13289720406207140000",
+    ): FlatDevice {
+        id: DeviceId(
+            "zpool_13289720406207140000",
+        ),
+        size: 5335154688,
+        device_type: Zpool,
+        parents: {
+            DeviceId(
+                "mpath_360014051b427e6b1e184581b48b0885b",
+            ),
+        },
+        children: {
+            DeviceId(
+                "dataset_5733272054209430000",
+            ),
+        },
+        paths: {
+            "ost6",
+        },
+        mount_path: Some(
+            "/ost6",
+        ),
+        fs_type: Some(
+            "zfs",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "zpool_160900275567926530",
+    ): FlatDevice {
+        id: DeviceId(
+            "zpool_160900275567926530",
+        ),
+        size: 5335154688,
+        device_type: Zpool,
+        parents: {
+            DeviceId(
+                "mpath_360014053f4429267572462bbd33b7cfb",
+            ),
+        },
+        children: {
+            DeviceId(
+                "dataset_673547581259299800",
+            ),
+        },
+        paths: {
+            "ost8",
+        },
+        mount_path: Some(
+            "/ost8",
+        ),
+        fs_type: Some(
+            "zfs",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "zpool_16191343403350233000",
+    ): FlatDevice {
+        id: DeviceId(
+            "zpool_16191343403350233000",
+        ),
+        size: 5335154688,
+        device_type: Zpool,
+        parents: {
+            DeviceId(
+                "mpath_360014059a0f2d0094114424a76d07a20",
+            ),
+        },
+        children: {
+            DeviceId(
+                "dataset_546326277712140300",
+            ),
+        },
+        paths: {
+            "ost15",
+        },
+        mount_path: Some(
+            "/ost15",
+        ),
+        fs_type: Some(
+            "zfs",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "zpool_18069017291544870000",
+    ): FlatDevice {
+        id: DeviceId(
+            "zpool_18069017291544870000",
+        ),
+        size: 5335154688,
+        device_type: Zpool,
+        parents: {
+            DeviceId(
+                "mpath_3600140542f7d97a92f54741b85ad0b99",
+            ),
+        },
+        children: {
+            DeviceId(
+                "dataset_6040026289001357000",
+            ),
+        },
+        paths: {
+            "ost10",
+        },
+        mount_path: Some(
+            "/ost10",
+        ),
+        fs_type: Some(
+            "zfs",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "zpool_18108742345939087000",
+    ): FlatDevice {
+        id: DeviceId(
+            "zpool_18108742345939087000",
+        ),
+        size: 5335154688,
+        device_type: Zpool,
+        parents: {
+            DeviceId(
+                "mpath_36001405ea8d6822c1d349b9bf2460e8d",
+            ),
+        },
+        children: {
+            DeviceId(
+                "dataset_17832669426331950000",
+            ),
+        },
+        paths: {
+            "ost2",
+        },
+        mount_path: Some(
+            "/ost2",
+        ),
+        fs_type: Some(
+            "zfs",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "zpool_18427740215538354000",
+    ): FlatDevice {
+        id: DeviceId(
+            "zpool_18427740215538354000",
+        ),
+        size: 5335154688,
+        device_type: Zpool,
+        parents: {
+            DeviceId(
+                "mpath_360014057672ba4d59674840a5a5409ae",
+            ),
+        },
+        children: {
+            DeviceId(
+                "dataset_9506230558717944000",
+            ),
+        },
+        paths: {
+            "ost17",
+        },
+        mount_path: Some(
+            "/ost17",
+        ),
+        fs_type: Some(
+            "zfs",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "zpool_2957248016653106000",
+    ): FlatDevice {
+        id: DeviceId(
+            "zpool_2957248016653106000",
+        ),
+        size: 5335154688,
+        device_type: Zpool,
+        parents: {
+            DeviceId(
+                "mpath_360014051ab54e05af6848e8a9a01274f",
+            ),
+        },
+        children: {
+            DeviceId(
+                "dataset_14058142534232748000",
+            ),
+        },
+        paths: {
+            "ost18",
+        },
+        mount_path: Some(
+            "/ost18",
+        ),
+        fs_type: Some(
+            "zfs",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "zpool_3897016046943655400",
+    ): FlatDevice {
+        id: DeviceId(
+            "zpool_3897016046943655400",
+        ),
+        size: 5335154688,
+        device_type: Zpool,
+        parents: {
+            DeviceId(
+                "mpath_360014050ed572fdf3a54e31bedcae861",
+            ),
+        },
+        children: {
+            DeviceId(
+                "dataset_16113689415528647000",
+            ),
+        },
+        paths: {
+            "ost11",
+        },
+        mount_path: Some(
+            "/ost11",
+        ),
+        fs_type: Some(
+            "zfs",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+    DeviceId(
+        "zpool_7075211415692163000",
+    ): FlatDevice {
+        id: DeviceId(
+            "zpool_7075211415692163000",
+        ),
+        size: 5335154688,
+        device_type: Zpool,
+        parents: {
+            DeviceId(
+                "mpath_36001405f73d7e74d12745e581d8ae7d0",
+            ),
+        },
+        children: {
+            DeviceId(
+                "dataset_6933372219775899000",
+            ),
+        },
+        paths: {
+            "ost13",
+        },
+        mount_path: Some(
+            "/ost13",
+        ),
+        fs_type: Some(
+            "zfs",
+        ),
+        fs_label: None,
+        fs_uuid: None,
+    },
+}

@@ -1,0 +1,70 @@
+{
+  "a1": {
+    "id": "a1",
+    "size": 1,
+    "usable_for_lustre": false,
+    "device_type": "ScsiDevice",
+    "parents": [],
+    "children": [
+      "b1",
+      "b2"
+    ]
+  },
+  "a2": {
+    "id": "a2",
+    "size": 1,
+    "usable_for_lustre": false,
+    "device_type": "ScsiDevice",
+    "parents": [],
+    "children": [
+      "b1",
+      "b2"
+    ]
+  },
+  "b1": {
+    "id": "b1",
+    "size": 1,
+    "usable_for_lustre": false,
+    "device_type": "Mpath",
+    "parents": [
+      "a1",
+      "a2"
+    ],
+    "children": [
+      "c1"
+    ]
+  },
+  "b2": {
+    "id": "b2",
+    "size": 1,
+    "usable_for_lustre": false,
+    "device_type": "Mpath",
+    "parents": [
+      "a1",
+      "a2"
+    ],
+    "children": [
+      "c2"
+    ]
+  },
+  "c1": {
+    "id": "c1",
+    "size": 1,
+    "usable_for_lustre": false,
+    "device_type": "Zpool",
+    "parents": [
+      "b1"
+    ],
+    "children": []
+  },
+  "c2": {
+    "id": "c2",
+    "size": 1,
+    "usable_for_lustre": false,
+    "device_type": "Zpool",
+    "parents": [
+      "b2"
+    ],
+    "children": []
+  }
+}

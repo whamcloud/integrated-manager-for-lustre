@@ -1,0 +1,34 @@
+{
+    "10": {
+        "id": "10",
+        "size": 1,
+        "usable_for_lustre": false,
+        "device_type": "ScsiDevice",
+        "parents": [],
+        "children": [
+            "9"
+        ]
+    },
+    "9": {
+        "id": "9",
+        "size": 1,
+        "usable_for_lustre": false,
+        "device_type": "Partition",
+        "parents": [
+            "10"
+        ],
+        "children": [
+            "8"
+        ]
+    },
+    "8": {
+        "id": "8",
+        "size": 1,
+        "usable_for_lustre": false,
+        "device_type": "Mpath",
+        "parents": [
+            "9"
+        ],
+        "children": []
+    }
+}

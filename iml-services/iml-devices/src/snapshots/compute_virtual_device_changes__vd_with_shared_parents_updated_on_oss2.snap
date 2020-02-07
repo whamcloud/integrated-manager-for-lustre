@@ -1,0 +1,41 @@
+---
+source: iml-services/iml-devices/src/virtual_device.rs
+expression: updates
+---
+{
+    (
+        DeviceId(
+            "c",
+        ),
+        Fqdn(
+            "oss2",
+        ),
+    ): Update(
+        DeviceHost {
+            device_id: DeviceId(
+                "c",
+            ),
+            fqdn: Fqdn(
+                "oss2",
+            ),
+            local: false,
+            paths: Paths(
+                {
+                    "/fake/path/zpool/a",
+                },
+            ),
+            mount_path: MountPath(
+                None,
+            ),
+            fs_type: Some(
+                "some_fs",
+            ),
+            fs_label: Some(
+                "new_some_label",
+            ),
+            fs_uuid: Some(
+                "some_uuid",
+            ),
+        },
+    ),
+}

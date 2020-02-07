@@ -1,0 +1,111 @@
+---
+source: iml-services/iml-devices/src/virtual_device.rs
+expression: updates
+---
+{
+    (
+        DeviceId(
+            "5",
+        ),
+        Fqdn(
+            "oss2",
+        ),
+    ): Add(
+        DeviceHost {
+            device_id: DeviceId(
+                "5",
+            ),
+            fqdn: Fqdn(
+                "oss2",
+            ),
+            local: false,
+            paths: Paths(
+                {
+                    "/fake/path/dataset/h",
+                },
+            ),
+            mount_path: MountPath(
+                None,
+            ),
+            fs_type: Some(
+                "some_fs",
+            ),
+            fs_label: Some(
+                "some_label",
+            ),
+            fs_uuid: Some(
+                "some_uuid",
+            ),
+        },
+    ),
+    (
+        DeviceId(
+            "6",
+        ),
+        Fqdn(
+            "oss2",
+        ),
+    ): Add(
+        DeviceHost {
+            device_id: DeviceId(
+                "6",
+            ),
+            fqdn: Fqdn(
+                "oss2",
+            ),
+            local: false,
+            paths: Paths(
+                {
+                    "/fake/path/zpool/h",
+                },
+            ),
+            mount_path: MountPath(
+                None,
+            ),
+            fs_type: Some(
+                "some_fs",
+            ),
+            fs_label: Some(
+                "some_label",
+            ),
+            fs_uuid: Some(
+                "some_uuid",
+            ),
+        },
+    ),
+    (
+        DeviceId(
+            "7",
+        ),
+        Fqdn(
+            "oss2",
+        ),
+    ): Add(
+        DeviceHost {
+            device_id: DeviceId(
+                "7",
+            ),
+            fqdn: Fqdn(
+                "oss2",
+            ),
+            local: false,
+            paths: Paths(
+                {
+                    "/fake/path/lv/h",
+                },
+            ),
+            mount_path: MountPath(
+                None,
+            ),
+            fs_type: Some(
+                "some_fs",
+            ),
+            fs_label: Some(
+                "some_label",
+            ),
+            fs_uuid: Some(
+                "some_uuid",
+            ),
+        },
+    ),
+}

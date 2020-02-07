@@ -1,0 +1,10 @@
+{
+    "a": {
+        "id": "a",
+        "size": 1,
+        "usable_for_lustre": false,
+        "device_type": "ScsiDevice",
+        "parents": [],
+        "children": []
+    }
+}

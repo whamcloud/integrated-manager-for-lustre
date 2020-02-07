@@ -1,0 +1,22 @@
+{
+    "a": {
+        "id": "a",
+        "size": 1,
+        "usable_for_lustre": false,
+        "device_type": "ScsiDevice",
+        "parents": [],
+        "children": [
+            "b"
+        ]
+    },
+    "b": {
+        "id": "b",
+        "size": 1,
+        "usable_for_lustre": false,
+        "device_type": "Mpath",
+        "parents": [
+            "a"
+        ],
+        "children": []
+    }
+}

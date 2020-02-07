@@ -1,0 +1,50 @@
+[
+  {
+    "device_id": "h",
+    "fqdn": "oss1",
+    "local": true,
+    "paths": [
+      "/fake/path/scsi/h"
+    ],
+    "mount_path": "/fake/path/scsi/h",
+    "fs_type": "some_fs",
+    "fs_label": "some_label",
+    "fs_uuid": "some_uuid"
+  },
+  {
+    "device_id": "g",
+    "fqdn": "oss1",
+    "local": true,
+    "paths": [
+      "/fake/path/mpath/h"
+    ],
+    "mount_path": "/fake/path/mpath/h",
+    "fs_type": "some_fs",
+    "fs_label": "some_label",
+    "fs_uuid": "some_uuid"
+  },
+  {
+    "device_id": "f",
+    "fqdn": "oss1",
+    "local": true,
+    "paths": [
+      "/fake/path/zpool/h"
+    ],
+    "mount_path": "/fake/path/zpool/h",
+    "fs_type": "some_fs",
+    "fs_label": "some_label",
+    "fs_uuid": "some_uuid"
+  },
+  {
+    "device_id": "e",
+    "fqdn": "oss1",
+    "local": true,
+    "paths": [
+      "/fake/path/dataset/h"
+    ],
+    "mount_path": "/fake/path/dataset/h",
+    "fs_type": "some_fs",
+    "fs_label": "some_label",
+    "fs_uuid": "some_uuid"
+  }
+]

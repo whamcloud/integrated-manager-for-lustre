@@ -1,0 +1,15 @@
+---
+source: iml-services/iml-devices/src/db.rs
+expression: result
+---
+[
+    DeviceId(
+        "b1",
+    ),
+    DeviceId(
+        "a1",
+    ),
+    DeviceId(
+        "a2",
+    ),
+]

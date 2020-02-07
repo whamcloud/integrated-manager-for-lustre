@@ -1,0 +1,34 @@
+{
+  "a": {
+    "id": "a",
+    "size": 1,
+    "usable_for_lustre": false,
+    "device_type": "ScsiDevice",
+    "parents": [],
+    "children": [
+      "b"
+    ]
+  },
+  "b": {
+    "id": "b",
+    "size": 1,
+    "usable_for_lustre": false,
+    "device_type": "Mpath",
+    "parents": [
+      "a"
+    ],
+    "children": [
+      "c"
+    ]
+  },
+  "c": {
+    "id": "c",
+    "size": 1,
+    "usable_for_lustre": false,
+    "device_type": "Zpool",
+    "parents": [
+      "b"
+    ],
+    "children": []
+  }
+}

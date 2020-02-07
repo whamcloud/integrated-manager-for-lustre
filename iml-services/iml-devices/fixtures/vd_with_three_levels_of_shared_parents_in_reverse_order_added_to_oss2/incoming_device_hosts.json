@@ -1,0 +1,74 @@
+[
+  {
+    "device_id": "10",
+    "fqdn": "oss1",
+    "local": true,
+    "paths": [
+      "/fake/path/scsi/10"
+    ],
+    "mount_path": "/fake/path/scsi/10",
+    "fs_type": "some_fs",
+    "fs_label": "some_label",
+    "fs_uuid": "some_uuid"
+  },
+  {
+    "device_id": "9",
+    "fqdn": "oss1",
+    "local": true,
+    "paths": [
+      "/fake/path/partition/10"
+    ],
+    "mount_path": "/fake/path/partition/10",
+    "fs_type": "some_fs",
+    "fs_label": "some_label",
+    "fs_uuid": "some_uuid"
+  },
+  {
+    "device_id": "8",
+    "fqdn": "oss1",
+    "local": true,
+    "paths": [
+      "/fake/path/mpath/10"
+    ],
+    "mount_path": "/fake/path/mpath/10",
+    "fs_type": "some_fs",
+    "fs_label": "some_label",
+    "fs_uuid": "some_uuid"
+  },
+  {
+    "device_id": "7",
+    "fqdn": "oss1",
+    "local": true,
+    "paths": [
+      "/fake/path/lv/h"
+    ],
+    "mount_path": "/fake/path/lv/10",
+    "fs_type": "some_fs",
+    "fs_label": "some_label",
+    "fs_uuid": "some_uuid"
+  },
+  {
+    "device_id": "6",
+    "fqdn": "oss1",
+    "local": true,
+    "paths": [
+      "/fake/path/zpool/h"
+    ],
+    "mount_path": "/fake/path/zpool/10",
+    "fs_type": "some_fs",
+    "fs_label": "some_label",
+    "fs_uuid": "some_uuid"
+  },
+  {
+    "device_id": "5",
+    "fqdn": "oss1",
+    "local": true,
+    "paths": [
+      "/fake/path/dataset/h"
+    ],
+    "mount_path": "/fake/path/dataset/10",
+    "fs_type": "some_fs",
+    "fs_label": "some_label",
+    "fs_uuid": "some_uuid"
+  }
+]

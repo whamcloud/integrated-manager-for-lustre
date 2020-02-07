@@ -1,0 +1,38 @@
+[
+    {
+        "device_id": "10",
+        "fqdn": "oss2",
+        "local": true,
+        "paths": [
+            "/fake/path/scsi/10"
+        ],
+        "mount_path": "/fake/path/scsi/10",
+        "fs_type": "some_fs",
+        "fs_label": "some_label",
+        "fs_uuid": "some_uuid"
+    },
+    {
+        "device_id": "9",
+        "fqdn": "oss2",
+        "local": true,
+        "paths": [
+            "/fake/path/partition/10"
+        ],
+        "mount_path": "/fake/path/partition/10",
+        "fs_type": "some_fs",
+        "fs_label": "some_label",
+        "fs_uuid": "some_uuid"
+    },
+    {
+        "device_id": "8",
+        "fqdn": "oss2",
+        "local": true,
+        "paths": [
+            "/fake/path/mpath/10"
+        ],
+        "mount_path": "/fake/path/mpath/10",
+        "fs_type": "some_fs",
+        "fs_label": "some_label",
+        "fs_uuid": "some_uuid"
+    }
+]

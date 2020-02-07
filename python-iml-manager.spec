@@ -87,6 +87,7 @@ Requires:       python2-massiviu >= 0.1.0-2
 Requires:       rust-iml-action-runner >= 0.1.2
 Requires:       rust-iml-ostpool >= 0.1.2
 Requires:       rust-iml-agent-comms >= 0.1.2
+Requires:       rust-iml-devices >= 0.1.2
 Requires:       rust-iml-mailbox >= 0.1.2
 Requires:       rust-iml-postoffice >= 0.1.0
 Requires:       rust-iml-stratagem >= 0.1.2

@@ -333,10 +333,6 @@ class ResourceManager(object):
                 self._persist_lun_updates(scannable_id)
                 self._persist_nid_updates(scannable_id, None, None)
 
-                # Plugins are allowed to create VirtualMachine objects, indicating that
-                # we should created a ManagedHost to go with it (e.g. discovering VMs)
-                self._persist_created_hosts(session, scannable_id, initial_resources)
-
         log.debug("<< session_open %s" % scannable_id)
 
     def session_close(self, scannable_id):
@@ -345,34 +341,6 @@ class ResourceManager(object):
                 del self._sessions[scannable_id]
             except KeyError:
                 log.warning("Cannot remove session for %s, it does not exist" % scannable_id)
-
-    def _persist_created_hosts(self, session, scannable_id, new_resources):
-        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
-        assert not transaction.get_autocommit()
-
-        log.debug("_persist_created_hosts")
-
-        record_pks = []
-        from chroma_core.lib.storage_plugin.api.resources import VirtualMachine
-
-        for resource in new_resources:
-            if isinstance(resource, VirtualMachine):
-                assert not resource._handle_global
-                record_pks.append(session.local_id_to_global_id[resource._handle])
-
-        for vm_record_pk in record_pks:
-            record = StorageResourceRecord.objects.get(pk=vm_record_pk)
-            resource = record.to_resource()
-
-            if not resource.host_id:
-                try:
-                    host = ManagedHost.objects.get(address=resource.address)
-                    log.info("Associated existing host with VirtualMachine resource: %s" % resource.address)
-                    record.update_attribute("host_id", host.pk)
-                except ManagedHost.DoesNotExist:
-                    log.info("Creating host for new VirtualMachine resource: %s" % resource.address)
-                    host, command = JobSchedulerClient.create_host_ssh(resource.address)
-                    record.update_attribute("host_id", host.pk)
 
     def _balance_volume_nodes(self, volumes_to_balance, volume_id_to_nodes):
         # The sort by label is not functionally necessary but makes the list
@@ -962,7 +930,6 @@ class ResourceManager(object):
                 self._resource_persist_update_attributes(scannable_id, record_id, attrs)
                 # self._persist_lun_updates(scannable_id)
                 self._persist_nid_updates(scannable_id, record_id, attrs)
-                # self._persist_created_hosts(scannable_id, scannable_id, resources)
 
     def session_resource_add_parent(self, scannable_id, local_resource_id, local_parent_id):
 
@@ -1063,7 +1030,6 @@ class ResourceManager(object):
                 self._persist_new_resources(session, resources)
                 self._persist_lun_updates(scannable_id)
                 self._persist_nid_updates(scannable_id, None, None)
-                self._persist_created_hosts(session, scannable_id, resources)
 
     def session_remove_local_resources(self, scannable_id, resources):
         with self._instance_lock:
