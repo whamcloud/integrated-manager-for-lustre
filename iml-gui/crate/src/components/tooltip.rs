@@ -2,14 +2,7 @@ use crate::{
     components::{arrow, Placement},
     generated::css_classes::C,
 };
-use seed::{prelude::*, virtual_dom::Attrs, *};
-
-/// Call this fn within the element wrapping the tooltip
-/// It will add the needed styles so the tooltip will render
-/// in the expected position and will render on hover.
-pub fn container() -> Attrs {
-    class![C.relative, C.group, C.cursor_pointer]
-}
+use seed::{prelude::*, *};
 
 /// Render a tooltip with vaild CSS color string.
 pub(crate) fn color_view<T>(content: &str, placement: Placement, color: &str) -> Node<T> {
