@@ -206,7 +206,7 @@ pub fn compute_virtual_device_changes<'a>(
     // then on second iteration e will find previously added f and will be added
 
     // Limitation: we support up to three levels of VIRTUAL DEVICES currently
-    // We need to look into more generic algorithm in the future
+    // We need to look into more general algorithm in the future
     for virtual_device in virtual_devices.chain(vd2).chain(vd3) {
         tracing::info!(
             "virtual_device: {:?}, parents: {:?}, children: {:?}",
@@ -265,7 +265,6 @@ pub fn compute_virtual_device_changes<'a>(
             .collect();
 
         for host in all_other_host_fqdns {
-            // We want to look at in-flight changes (results)?
             let all_available = are_all_parents_available_with_results(
                 incoming_devices,
                 &db_device_hosts,
@@ -279,9 +278,8 @@ pub fn compute_virtual_device_changes<'a>(
                 .is_some();
 
             if all_available {
-                // add to database if missing and not in flight
-                // update in database if present and not in flight
-                // update in flight if in flight - is it necessary though?
+                // add to database if missing
+                // update in database if present
                 let is_in_results = results
                     .get(&(virtual_device.id.clone(), host.clone()))
                     .is_none();
@@ -313,13 +311,9 @@ pub fn compute_virtual_device_changes<'a>(
                     );
                 }
             } else {
-                // remove from db if present and not in flight
-                // remove from in-flight if in flight - is it necessary though?
-
+                // remove from db if present
                 if is_in_db {
                     remove_device_host(virtual_device.id.clone(), host.clone(), &mut results);
-                } else {
-                    // It wasn't in the DB in the first place, nothing to do
                 }
             }
         }
