@@ -216,6 +216,15 @@ pub fn compute_virtual_device_changes<'a>(
         );
         let virtual_device_host =
             incoming_device_hosts.get(&(virtual_device.id.clone(), fqdn.clone()));
+
+        // After first iteration, we might have discovered this virtual device already
+        if results
+            .get(&(virtual_device.id.clone(), fqdn.clone()))
+            .is_some()
+        {
+            continue;
+        }
+
         tracing::info!(
             "virtual_device_host: {:?}, fqdn: {:?}",
             virtual_device_host.map(|x| &x.device_id),
