@@ -197,7 +197,7 @@ pub fn compute_virtual_device_changes<'a>(
     let vd2 = virtual_devices.clone();
     let vd3 = virtual_devices.clone();
 
-    // We're iterating the device twice
+    // We're iterating the devices several times
     // Consider devices h -> g -> f -> e
     // f and e are virtual
     // e will be seen first and it won't have f as a parent available on the other host
