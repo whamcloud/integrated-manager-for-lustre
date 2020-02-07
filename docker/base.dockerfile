@@ -1,4 +1,4 @@
-FROM centos as builder
+FROM centos:7 as builder
 WORKDIR /build
 COPY . .
 RUN yum update -y
