@@ -4,7 +4,7 @@
 
 use crate::{agent_error::ImlAgentError, http_comms::mailbox_client};
 use futures::{future, stream, StreamExt, TryStreamExt};
-use iml_cmd::cmd_output_success;
+use iml_cmd::{CheckedCommandExt, Command};
 use iml_fs::{read_file_to_end, stream_dir_lines, write_tempfile};
 use std::{convert::Into, path::PathBuf};
 use uuid::Uuid;
@@ -338,11 +338,10 @@ pub async fn trigger_scan(
 
     let f = write_tempfile(xs).await?;
 
-    let output = cmd_output_success(
-        "/usr/bin/lipe_scan",
-        vec!["-c", &f.path().to_str().unwrap(), "-W", &tmp_dir],
-    )
-    .await?;
+    let output = Command::new("/usr/bin/lipe_scan")
+        .args(&["-c", &f.path().to_str().unwrap(), "-W", &tmp_dir])
+        .checked_output()
+        .await?;
 
     tracing::debug!(
         "Scan result: {}",

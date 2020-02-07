@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::agent_error::{ImlAgentError, RequiredError};
-use iml_cmd::{cmd_output, cmd_output_success};
+use iml_cmd::{CheckedCommandExt, Command};
 use iml_wire_types::{ActiveState, RunState, UnitFileState};
 use std::{str, time::Duration};
 use tokio::time::delay_for;
@@ -43,9 +43,8 @@ fn clean_bus_output(output: &str) -> Result<&str, ImlAgentError> {
 ///
 /// This fn will take a unit name and return the encoded object path.
 async fn get_unit_object_path(unit_name: &str) -> Result<String, ImlAgentError> {
-    let output = cmd_output_success(
-        "busctl",
-        vec![
+    let output = Command::new("busctl")
+        .args(&[
             "--system",
             "--no-pager",
             "call",
@@ -55,9 +54,9 @@ async fn get_unit_object_path(unit_name: &str) -> Result<String, ImlAgentError> 
             "LoadUnit",
             "s",
             unit_name,
-        ],
-    )
-    .await?;
+        ])
+        .checked_output()
+        .await?;
 
     let path = clean_bus_output(str::from_utf8(&output.stdout)?)?;
 
@@ -68,9 +67,8 @@ async fn get_unit_object_path(unit_name: &str) -> Result<String, ImlAgentError> 
 async fn get_unit_states(unit_name: &str) -> Result<(UnitFileState, ActiveState), ImlAgentError> {
     let s = get_unit_object_path(unit_name).await?;
 
-    let output = cmd_output_success(
-        "busctl",
-        vec![
+    let output = Command::new("busctl")
+        .args(&[
             "--system",
             "--no-pager",
             "get-property",
@@ -79,9 +77,9 @@ async fn get_unit_states(unit_name: &str) -> Result<(UnitFileState, ActiveState)
             "org.freedesktop.systemd1.Unit",
             "UnitFileState",
             "ActiveState",
-        ],
-    )
-    .await?;
+        ])
+        .checked_output()
+        .await?;
 
     let xs: Vec<_> = str::from_utf8(&output.stdout)?
         .lines()
@@ -106,9 +104,8 @@ async fn get_unit_states(unit_name: &str) -> Result<(UnitFileState, ActiveState)
 ///
 /// * `unit_name` - The unit to start
 pub async fn start_unit(unit_name: String) -> Result<(), ImlAgentError> {
-    let output = cmd_output_success(
-        "busctl",
-        vec![
+    let output = Command::new("busctl")
+        .args(&[
             "--system",
             "--no-pager",
             "call",
@@ -119,9 +116,9 @@ pub async fn start_unit(unit_name: String) -> Result<(), ImlAgentError> {
             "ss",
             &unit_name,
             "replace",
-        ],
-    )
-    .await?;
+        ])
+        .checked_output()
+        .await?;
 
     tracing::debug!("start unit job for {}, {:?}", unit_name, output.stdout);
 
@@ -137,7 +134,10 @@ pub async fn start_unit(unit_name: String) -> Result<(), ImlAgentError> {
 ///
 /// * `unit_name` - The unit to stop
 pub async fn stop_unit(unit_name: String) -> Result<(), ImlAgentError> {
-    let output = cmd_output("systemctl", vec!["stop", &unit_name]).await?;
+    let output = Command::new("systemctl")
+        .args(&["stop", &unit_name])
+        .output()
+        .await?;
 
     tracing::debug!("stop unit result for {}, {:?}", unit_name, output.stdout);
 
@@ -153,7 +153,10 @@ pub async fn stop_unit(unit_name: String) -> Result<(), ImlAgentError> {
 ///
 /// * `unit_name` - The unit to enable
 pub async fn enable_unit(unit_name: String) -> Result<(), ImlAgentError> {
-    let output = cmd_output("systemctl", vec!["enable", &unit_name]).await?;
+    let output = Command::new("systemctl")
+        .args(&["enable", &unit_name])
+        .output()
+        .await?;
 
     tracing::debug!("enable unit result for {}, {:?}", unit_name, output.stdout);
 
@@ -169,7 +172,10 @@ pub async fn enable_unit(unit_name: String) -> Result<(), ImlAgentError> {
 ///
 /// * `unit_name` - The unit to disable
 pub async fn disable_unit(unit_name: String) -> Result<(), ImlAgentError> {
-    let output = cmd_output("systemctl", vec!["disable", &unit_name]).await?;
+    let output = Command::new("systemctl")
+        .args(&["disable", &unit_name])
+        .output()
+        .await?;
 
     tracing::debug!("disable unit result for {}, {:?}", unit_name, output.stdout);
 
@@ -185,7 +191,10 @@ pub async fn disable_unit(unit_name: String) -> Result<(), ImlAgentError> {
 ///
 /// * `unit_name` - The unit to restart
 pub async fn restart_unit(unit_name: String) -> Result<(), ImlAgentError> {
-    let output = cmd_output("systemctl", vec!["restart", &unit_name]).await?;
+    let output = Command::new("systemctl")
+        .args(&["restart", &unit_name])
+        .output()
+        .await?;
 
     tracing::debug!("restart unit result for {}, {:?}", unit_name, output.stdout);
 

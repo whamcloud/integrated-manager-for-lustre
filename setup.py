@@ -24,7 +24,7 @@ setup(
     package_data={
         "chroma_core": ["fixtures/default_power_types.json"],
         "polymorphic": ["COPYING"],
-        "tests": ["integration/run_tests", "integration/*/*.json", "sample_data/*", "integration/core/clear_ha_el?.sh"],
+        "tests": ["integration/run_tests", "integration/*/*.json", "sample_data/*"],
     },
     scripts=[],
     entry_points={

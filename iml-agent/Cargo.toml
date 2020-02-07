@@ -17,7 +17,7 @@ dotenv = "0.15"
 elementtree = "0.5"
 exitcode = "1.1"
 futures = "0.3"
-futures-util = "0.3.1"
+futures-util = "0.3"
 http = "0.2"
 iml-cmd = { path = "../iml-cmd", version = "0.1.0" }
 iml-fs = { path = "../iml-fs", version = "0.1.0" }
