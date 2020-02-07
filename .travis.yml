@@ -62,24 +62,6 @@ jobs:
         - export SPEC=python-iml-manager.spec
         - export SRPM_TASK=iml-srpm
         - docker run -it -e OWNER="$OWNER" -e PROJECT="$PROJECT" -e PACKAGE="$PACKAGE" -e SPEC="$SPEC" -e SRPM_TASK="$SRPM_TASK" -e KEY="$encrypted_253525cedcf6_key" -e IV="$encrypted_253525cedcf6_iv" -v $(pwd):/build:rw imlteam/copr
-    - stage: docker-publish
-      name: "Continuous Deployment (Docker)"
-      script:
-        - sudo rm /usr/local/bin/docker-compose
-        - curl -L https://github.com/docker/compose/releases/download/1.25.0/docker-compose-Linux-x86_64 > docker-compose
-        - chmod +x docker-compose
-        - sudo mv docker-compose /usr/local/bin
-        - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-        - cd docker
-        - docker build --rm -t imlteam/manager-service-base:5.1 -f base.dockerfile ../
-        - docker push imlteam/manager-service-base:5.1
-        - docker build --rm -t imlteam/iml-wasm-components:5.1 -f iml-wasm-components.dockerfile ../
-        - docker push imlteam/iml-wasm-components:5.1
-        - docker build --rm -t imlteam/manager-nginx:5.1 -f nginx.dockerfile ../
-        - docker build --rm -t rust-iml-base -f rust-base.dockerfile ../
-        - docker push imlteam/manager-nginx:5.1
-        - docker-compose build --parallel
-        - docker-compose push
     - stage: deploy-copr-r5.1
       name: "Copr 5.1 deploy"
       script:
@@ -93,7 +75,5 @@ stages:
   - test
   - name: cd
     if: branch = master AND type = push AND fork = false
-  - name: docker-publish
-    if: env(DOCKER_BUILD) IS present AND branch = master
   - name: deploy-copr-r5.1
     if: branch =~ ^b5\.1\.\d+-iml$
