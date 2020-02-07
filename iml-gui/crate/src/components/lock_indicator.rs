@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    components::{font_awesome, popover, tooltip, Placement},
+    components::{attrs, font_awesome, popover, tooltip, Placement},
     generated::css_classes::C,
 };
 use im::HashSet;
@@ -47,7 +47,8 @@ fn indicator<T>(lcks: &HashSet<LockChange>) -> Node<T> {
     }
 
     span![
-        class![C.group, C.cursor_pointer, C.relative],
+        attrs::container(),
+        class![C.cursor_pointer],
         attrs! {At::TabIndex => 0},
         font_awesome(class![C.inline, C.w_4, C.h_4], "lock"),
         tooltip::view(&tooltip.join(", "), Placement::Top),
