@@ -1,5 +1,10 @@
 use crate::{Fqdn, Label};
-use std::{collections::BTreeSet, fmt, ops::{Deref, DerefMut}, path::PathBuf};
+use std::{
+    collections::BTreeSet,
+    fmt,
+    ops::{Deref, DerefMut},
+    path::PathBuf,
+};
 
 #[cfg(feature = "postgres-interop")]
 use bytes::BytesMut;

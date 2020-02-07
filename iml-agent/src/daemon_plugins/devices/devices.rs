@@ -18,14 +18,12 @@ use tokio_util::codec::{FramedRead, LinesCodec};
 fn device_stream() -> impl Stream<Item = Result<String, ImlAgentError>> {
     UnixStream::connect("/var/run/device-scanner.sock")
         .err_into()
-        .and_then(|mut conn| {
-            async {
-                conn.write_all(b"\"Stream\"\n")
-                    .err_into::<ImlAgentError>()
-                    .await?;
+        .and_then(|mut conn| async {
+            conn.write_all(b"\"Stream\"\n")
+                .err_into::<ImlAgentError>()
+                .await?;
 
-                Ok(conn)
-            }
+            Ok(conn)
         })
         .map_ok(|c| FramedRead::new(c, LinesCodec::new()).err_into())
         .try_flatten_stream()
