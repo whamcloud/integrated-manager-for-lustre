@@ -12,6 +12,7 @@ use iml_wire_types::{
     db::{Device, DeviceHost, DeviceId, DeviceType, MountPath, Paths},
     Fqdn,
 };
+use itertools::Itertools;
 use std::collections::{BTreeMap, BTreeSet};
 
 fn is_virtual_device(device: &Device) -> bool {
@@ -198,21 +199,18 @@ pub fn compute_virtual_device_changes<'a>(
     let virtual_devices = incoming_devices
         .iter()
         .filter(|(_, d)| is_virtual_device(d))
-        .map(|(_, d)| d);
-    let vd2 = virtual_devices.clone();
-    let vd3 = virtual_devices.clone();
+        .map(|(_, d)| d)
+        .sorted_by_key(|d| d.max_depth);
 
-    // We're iterating the devices several times
-    // Consider devices h -> g -> f -> e
+    // We're sorting the devices by depth
+    // Consider devices h -> g -> f -> e, not sorted by depth
     // f and e are virtual
     // e will be seen first and it won't have f as a parent available on the other host
     // so it won't be added
     // f will be added
     // then on second iteration e will find previously added f and will be added
 
-    // Limitation: we support up to three levels of VIRTUAL DEVICES currently
-    // We need to look into more general algorithm in the future
-    for virtual_device in virtual_devices.chain(vd2).chain(vd3) {
+    for virtual_device in virtual_devices {
         tracing::info!(
             "virtual_device: {:?}, parents: {:?}, children: {:?}",
             virtual_device.id,
@@ -252,10 +250,9 @@ pub fn compute_virtual_device_changes<'a>(
             }
         }
 
-        // For all other hosts, run parents check for this virtual device ON THE DB.
-        // This is because main loop processes updates from single host at a time.
-        // That means current state of other hosts is in DB at this point.
-
+        // For all other hosts, run parents check for this virtual device ON THE DB
+        // This is because main loop processes updates from single host at a time
+        // That means current state of other hosts is in DB at this point
         let all_other_host_fqdns: BTreeSet<_> = db_device_hosts
             .iter()
             .filter_map(|((_, f), _)| if f != fqdn { Some(f) } else { None })

@@ -1279,6 +1279,7 @@ dependencies = [
  "iml-service-queue",
  "iml-wire-types",
  "insta",
+ "itertools",
  "serde",
  "serde_json",
  "test-case",
