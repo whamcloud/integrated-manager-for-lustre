@@ -46,6 +46,7 @@ pub struct FlatDevice {
     pub fs_type: Option<String>,
     pub fs_label: Option<String>,
     pub fs_uuid: Option<String>,
+    pub max_depth: i64,
 }
 
 fn create_dev(
@@ -60,7 +61,7 @@ fn create_dev(
         children: DeviceIds(flat_dev.children.clone()),
         // usable_for_lustre: flat_dev.usable_for_lustre,
         usable_for_lustre: false,
-        max_depth: 0,
+        max_depth: flat_dev.max_depth,
     };
 
     let dh = DeviceHost {
