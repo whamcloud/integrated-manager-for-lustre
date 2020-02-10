@@ -6,6 +6,7 @@ use device_types::devices::{
     self, Dataset, LogicalVolume, Mpath, Partition, Root, ScsiDevice, VolumeGroup, Zpool,
 };
 use std::{
+    cmp::max,
     collections::{BTreeMap, BTreeSet},
     convert::TryFrom,
     path::Path,
@@ -25,6 +26,7 @@ pub struct FlatDevice<'a> {
     pub fs_type: Option<&'a String>,
     pub fs_label: Option<&'a String>,
     pub fs_uuid: Option<&'a String>,
+    pub max_depth: usize,
 }
 
 impl<'a> TryFrom<&'a ScsiDevice> for FlatDevice<'a> {
@@ -46,6 +48,7 @@ impl<'a> TryFrom<&'a ScsiDevice> for FlatDevice<'a> {
             fs_type: x.filesystem_type.as_ref(),
             fs_label: x.fs_label.as_ref(),
             fs_uuid: x.fs_uuid.as_ref(),
+            max_depth: 0,
         })
     }
 }
@@ -69,6 +72,7 @@ impl<'a> TryFrom<&'a Partition> for FlatDevice<'a> {
             fs_type: x.filesystem_type.as_ref(),
             fs_label: x.fs_label.as_ref(),
             fs_uuid: x.fs_uuid.as_ref(),
+            max_depth: 0,
         })
     }
 }
@@ -92,6 +96,7 @@ impl<'a> TryFrom<&'a Mpath> for FlatDevice<'a> {
             fs_type: x.filesystem_type.as_ref(),
             fs_label: x.fs_label.as_ref(),
             fs_uuid: x.fs_uuid.as_ref(),
+            max_depth: 0,
         })
     }
 }
@@ -115,6 +120,7 @@ impl<'a> TryFrom<&'a VolumeGroup> for FlatDevice<'a> {
             fs_type: None,
             fs_label: None,
             fs_uuid: None,
+            max_depth: 0,
         })
     }
 }
@@ -138,6 +144,7 @@ impl<'a> TryFrom<&'a LogicalVolume> for FlatDevice<'a> {
             fs_type: x.filesystem_type.as_ref(),
             fs_label: None,
             fs_uuid: None,
+            max_depth: 0,
         })
     }
 }
@@ -164,6 +171,7 @@ impl<'a> TryFrom<&'a Zpool> for FlatDevice<'a> {
             fs_type: x.mount.as_ref().map(|x| &x.fs_type.0),
             fs_label: None,
             fs_uuid: None,
+            max_depth: 0,
         })
     }
 }
@@ -186,6 +194,7 @@ impl<'a> TryFrom<&'a Dataset> for FlatDevice<'a> {
             fs_type: x.mount.as_ref().map(|x| &x.fs_type.0),
             fs_label: None,
             fs_uuid: None,
+            max_depth: 0,
         })
     }
 }
@@ -200,11 +209,12 @@ pub fn process_tree<'a>(
     tree: &'a devices::Device,
     parent_id: Option<DeviceId>,
     ds: &mut FlatDevices<'a>,
+    depth: usize,
 ) {
     match tree {
         devices::Device::Root(Root { children }) => {
             for c in children {
-                process_tree(c, None, ds)
+                process_tree(c, None, ds, depth + 1)
             }
         }
         devices::Device::ScsiDevice(x) => match FlatDevice::try_from(x) {
@@ -216,12 +226,13 @@ pub fn process_tree<'a>(
                         d.fs_uuid = d.fs_uuid.or(x.fs_uuid.as_ref());
                         d.fs_label = d.fs_label.or(x.fs_label.as_ref());
 
-                        d.paths.extend(convert_paths(&x.paths).iter())
+                        d.paths.extend(convert_paths(&x.paths).iter());
+                        d.max_depth = max(d.max_depth, depth);
                     })
                     .or_insert(device);
 
                 for c in x.children.iter() {
-                    process_tree(c, Some(id.clone()), ds)
+                    process_tree(c, Some(id.clone()), ds, depth + 1)
                 }
             }
             Err(e) => tracing::warn!("discarding ScsiDevice {:?} due to error {}", x, e),
@@ -232,7 +243,10 @@ pub fn process_tree<'a>(
 
                 let device = ds
                     .entry(device.id.clone())
-                    .and_modify(|d| d.paths.extend(convert_paths(&x.paths).iter()))
+                    .and_modify(|d| {
+                        d.paths.extend(convert_paths(&x.paths).iter());
+                        d.max_depth = max(d.max_depth, depth);
+                    })
                     .or_insert(device);
 
                 if let Some(p) = parent_id {
@@ -240,7 +254,7 @@ pub fn process_tree<'a>(
                 }
 
                 for c in x.children.iter() {
-                    process_tree(c, Some(id.clone()), ds)
+                    process_tree(c, Some(id.clone()), ds, depth + 1)
                 }
             }
             Err(e) => tracing::warn!("discarding Partition {:?} due to error {}", x, e),
@@ -254,7 +268,10 @@ pub fn process_tree<'a>(
 
                 let device = ds
                     .entry(device.id.clone())
-                    .and_modify(|d| d.paths.extend(convert_paths(&x.paths).iter()))
+                    .and_modify(|d| {
+                        d.paths.extend(convert_paths(&x.paths).iter());
+                        d.max_depth = max(d.max_depth, depth);
+                    })
                     .or_insert(device);
 
                 if let Some(p) = parent_id {
@@ -262,7 +279,7 @@ pub fn process_tree<'a>(
                 }
 
                 for c in x.children.iter() {
-                    process_tree(c, Some(id.clone()), ds)
+                    process_tree(c, Some(id.clone()), ds, depth + 1)
                 }
             }
             Err(e) => tracing::warn!("discarding Mpath {:?} due to error {}", x, e),
@@ -271,14 +288,19 @@ pub fn process_tree<'a>(
             Ok(device) => {
                 let id = device.id.clone();
 
-                let device = ds.entry(device.id.clone()).or_insert(device);
+                let device = ds
+                    .entry(device.id.clone())
+                    .and_modify(|d| {
+                        d.max_depth = max(d.max_depth, depth);
+                    })
+                    .or_insert(device);
 
                 if let Some(p) = parent_id {
                     device.parents.insert(p);
                 }
 
                 for c in x.children.iter() {
-                    process_tree(c, Some(id.clone()), ds)
+                    process_tree(c, Some(id.clone()), ds, depth + 1)
                 }
             }
             Err(e) => tracing::warn!("discarding VolumeGroup {:?} due to error {}", x, e),
@@ -289,7 +311,10 @@ pub fn process_tree<'a>(
 
                 let device = ds
                     .entry(device.id.clone())
-                    .and_modify(|d| d.paths.extend(convert_paths(&x.paths).iter()))
+                    .and_modify(|d| {
+                        d.paths.extend(convert_paths(&x.paths).iter());
+                        d.max_depth = max(d.max_depth, depth);
+                    })
                     .or_insert(device);
 
                 if let Some(p) = parent_id {
@@ -297,7 +322,7 @@ pub fn process_tree<'a>(
                 }
 
                 for c in x.children.iter() {
-                    process_tree(c, Some(id.clone()), ds)
+                    process_tree(c, Some(id.clone()), ds, depth + 1)
                 }
             }
             Err(e) => tracing::warn!("discarding LogicalVolume {:?} due to error {}", x, e),
@@ -306,21 +331,31 @@ pub fn process_tree<'a>(
             Ok(device) => {
                 let id = device.id.clone();
 
-                let device = ds.entry(device.id.clone()).or_insert(device);
+                let device = ds
+                    .entry(device.id.clone())
+                    .and_modify(|d| {
+                        d.max_depth = max(d.max_depth, depth);
+                    })
+                    .or_insert(device);
 
                 if let Some(p) = parent_id {
                     device.parents.insert(p);
                 }
 
                 for c in x.children.iter() {
-                    process_tree(c, Some(id.clone()), ds)
+                    process_tree(c, Some(id.clone()), ds, depth + 1)
                 }
             }
             Err(e) => tracing::warn!("discarding Zpool {:?} due to error {}", x, e),
         },
         devices::Device::Dataset(x) => match FlatDevice::try_from(x) {
             Ok(device) => {
-                let device = ds.entry(device.id.clone()).or_insert(device);
+                let device = ds
+                    .entry(device.id.clone())
+                    .and_modify(|d| {
+                        d.max_depth = max(d.max_depth, depth);
+                    })
+                    .or_insert(device);
 
                 if let Some(p) = parent_id {
                     device.parents.insert(p);
@@ -519,7 +554,7 @@ mod tests {
 
         let mut fds = FlatDevices::default();
 
-        process_tree(&x, Some(id), &mut fds);
+        process_tree(&x, Some(id), &mut fds, 0);
 
         assert_debug_snapshot!("flat_devices", fds);
     }

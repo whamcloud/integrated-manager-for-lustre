@@ -60,7 +60,7 @@ impl DaemonPlugin for Devices {
                 .and_then(|x| {
                     let mut flat_devices = BTreeMap::new();
 
-                    process_tree(&x, None, &mut flat_devices);
+                    process_tree(&x, None, &mut flat_devices, 0);
 
                     future::ready(
                         serde_json::to_value(flat_devices)

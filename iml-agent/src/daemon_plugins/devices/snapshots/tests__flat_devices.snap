@@ -1,5 +1,5 @@
 ---
-source: iml-agent/src/daemon_plugins/devices/devices.rs
+source: iml-agent/src/daemon_plugins/devices/flat_devices.rs
 expression: fds
 ---
 {
@@ -28,6 +28,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 4,
     },
     DeviceId(
         "dataset_15799967299178152000",
@@ -54,6 +55,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 4,
     },
     DeviceId(
         "dataset_16113689415528647000",
@@ -80,6 +82,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 4,
     },
     DeviceId(
         "dataset_17832669426331950000",
@@ -106,6 +109,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 4,
     },
     DeviceId(
         "dataset_546326277712140300",
@@ -132,6 +136,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 4,
     },
     DeviceId(
         "dataset_5733272054209430000",
@@ -158,6 +163,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 4,
     },
     DeviceId(
         "dataset_6040026289001357000",
@@ -184,6 +190,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 4,
     },
     DeviceId(
         "dataset_673547581259299800",
@@ -210,6 +217,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 4,
     },
     DeviceId(
         "dataset_6933372219775899000",
@@ -236,6 +244,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 4,
     },
     DeviceId(
         "dataset_9506230558717944000",
@@ -262,6 +271,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 4,
     },
     DeviceId(
         "mpath_360014050ed572fdf3a54e31bedcae861",
@@ -291,6 +301,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_3600140518a1f3b780ad4cd091a43bff8",
@@ -316,6 +327,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_360014051ab54e05af6848e8a9a01274f",
@@ -345,6 +357,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_360014051b427e6b1e184581b48b0885b",
@@ -374,6 +387,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_360014051bde360ae3cb4b75a56bf4c88",
@@ -399,6 +413,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_3600140529cc0e6c1dff4017a6bde4a07",
@@ -424,6 +439,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_36001405371822eb788947d6ac331285f",
@@ -449,6 +465,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_360014053f4429267572462bbd33b7cfb",
@@ -478,6 +495,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_3600140542f7d97a92f54741b85ad0b99",
@@ -507,6 +525,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_3600140561357b809f7641b7a42110c1f",
@@ -532,6 +551,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_360014057672ba4d59674840a5a5409ae",
@@ -561,6 +581,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_3600140579ff981effbd4c50a6e771d75",
@@ -586,6 +607,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_3600140593876bad79284c7ba8439d55b",
@@ -611,6 +633,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_360014059a0f2d0094114424a76d07a20",
@@ -640,6 +663,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_360014059a9e3c3393fe41c1aef4a1946",
@@ -665,6 +689,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_36001405a1ce936ce4034972a9346c9a8",
@@ -694,6 +719,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_36001405c4e0b8dfac2c4838a269f8387",
@@ -719,6 +745,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_36001405e7558cf8239542d3b38ab9e93",
@@ -744,6 +771,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_36001405ea8d6822c1d349b9bf2460e8d",
@@ -773,6 +801,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "mpath_36001405f73d7e74d12745e581d8ae7d0",
@@ -802,6 +831,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 2,
     },
     DeviceId(
         "partition1_1ATA     VBOX HARDDISK                           VB37dcb049-54698a06",
@@ -833,6 +863,7 @@ expression: fds
         fs_uuid: Some(
             "8ac075e3-1124-4bb6-bef7-a6811bf8b870",
         ),
+        max_depth: 0,
     },
     DeviceId(
         "scsi_1ATA     VBOX HARDDISK                           VB37dcb049-54698a06",
@@ -857,6 +888,7 @@ expression: fds
         fs_type: None,
         fs_label: None,
         fs_uuid: None,
+        max_depth: 0,
     },
     DeviceId(
         "scsi_360014050ed572fdf3a54e31bedcae861",
@@ -886,6 +918,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_3600140518a1f3b780ad4cd091a43bff8",
@@ -915,6 +948,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_360014051ab54e05af6848e8a9a01274f",
@@ -944,6 +978,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_360014051b427e6b1e184581b48b0885b",
@@ -973,6 +1008,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_360014051bde360ae3cb4b75a56bf4c88",
@@ -1002,6 +1038,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_3600140529cc0e6c1dff4017a6bde4a07",
@@ -1031,6 +1068,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_36001405371822eb788947d6ac331285f",
@@ -1060,6 +1098,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_360014053f4429267572462bbd33b7cfb",
@@ -1089,6 +1128,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_3600140542f7d97a92f54741b85ad0b99",
@@ -1118,6 +1158,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_3600140561357b809f7641b7a42110c1f",
@@ -1147,6 +1188,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_360014057672ba4d59674840a5a5409ae",
@@ -1176,6 +1218,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_3600140579ff981effbd4c50a6e771d75",
@@ -1205,6 +1248,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_3600140593876bad79284c7ba8439d55b",
@@ -1234,6 +1278,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_360014059a0f2d0094114424a76d07a20",
@@ -1263,6 +1308,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_360014059a9e3c3393fe41c1aef4a1946",
@@ -1292,6 +1338,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_36001405a1ce936ce4034972a9346c9a8",
@@ -1321,6 +1368,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_36001405c4e0b8dfac2c4838a269f8387",
@@ -1350,6 +1398,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_36001405e7558cf8239542d3b38ab9e93",
@@ -1379,6 +1428,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_36001405ea8d6822c1d349b9bf2460e8d",
@@ -1408,6 +1458,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "scsi_36001405f73d7e74d12745e581d8ae7d0",
@@ -1437,6 +1488,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 1,
     },
     DeviceId(
         "zpool_11404755598234436000",
@@ -1467,6 +1519,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 3,
     },
     DeviceId(
         "zpool_13289720406207140000",
@@ -1497,6 +1550,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 3,
     },
     DeviceId(
         "zpool_160900275567926530",
@@ -1527,6 +1581,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 3,
     },
     DeviceId(
         "zpool_16191343403350233000",
@@ -1557,6 +1612,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 3,
     },
     DeviceId(
         "zpool_18069017291544870000",
@@ -1587,6 +1643,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 3,
     },
     DeviceId(
         "zpool_18108742345939087000",
@@ -1617,6 +1674,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 3,
     },
     DeviceId(
         "zpool_18427740215538354000",
@@ -1647,6 +1705,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 3,
     },
     DeviceId(
         "zpool_2957248016653106000",
@@ -1677,6 +1736,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 3,
     },
     DeviceId(
         "zpool_3897016046943655400",
@@ -1707,6 +1767,7 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 3,
     },
     DeviceId(
         "zpool_7075211415692163000",
@@ -1737,5 +1798,6 @@ expression: fds
         ),
         fs_label: None,
         fs_uuid: None,
+        max_depth: 3,
     },
 }
