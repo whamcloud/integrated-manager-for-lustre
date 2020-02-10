@@ -29,13 +29,11 @@ fn make_other_device_host(
         device_id,
         fqdn,
         local: false,
-        // Does it make sense to use paths from other hosts?
         paths: Paths(
             virtual_device_host
                 .map(|x| x.paths.clone())
                 .unwrap_or(BTreeSet::new()),
         ),
-        // It can't be mounted on other hosts at the time this is processed?
         mount_path: MountPath(None),
         fs_type: virtual_device_host
             .map(|x| x.fs_type.clone())
