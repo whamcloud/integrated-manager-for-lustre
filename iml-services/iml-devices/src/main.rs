@@ -93,8 +93,6 @@ async fn main() -> Result<(), error::ImlDevicesError> {
         )
         .await?;
 
-        // TODO: We need to have second transaction because when device hosts update comes in,
-        // if it removes a parent of some device, it has to happen in DB to be accounted for at this point
         db::update_virtual_devices(
             &mut transaction,
             &fqdn,
