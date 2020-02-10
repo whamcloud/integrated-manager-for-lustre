@@ -209,7 +209,7 @@ pub fn compute_virtual_device_changes<'a>(
     // so it won't be added
     // f will be added
     // then on second iteration e will find previously added f and will be added
-    // So we're sorting to avoid the need to iterate devices N times where N is max depth of 
+    // So we're sorting to avoid the need to iterate devices N times where N is max depth of
     // virtual device nesting
 
     for virtual_device in virtual_devices {
