@@ -3,18 +3,23 @@
 // license that can be found in the LICENSE file.
 
 use crate::agent_error::ImlAgentError;
-use iml_cmd::{cmd_output, cmd_output_success};
+use iml_cmd::{CheckedCommandExt, Command};
 use version_utils::Version;
 
 async fn check_kver_module(module: &str, kver: &str) -> Result<bool, ImlAgentError> {
-    let output = cmd_output("modinfo", vec!["-n", "-k", kver, module]).await?;
+    Command::new("modinfo")
+        .args(&["-n", "-k", kver, module])
+        .checked_status()
+        .await?;
 
-    Ok(output.status.success())
+    Ok(true)
 }
 
 pub async fn get_kernel(modules: Vec<String>) -> Result<String, ImlAgentError> {
-    let output =
-        cmd_output_success("rpm", vec!["-q", "--qf", "%{V}-%{R}.%{ARCH}\n", "kernel"]).await?;
+    let output = Command::new("rpm")
+        .args(&["-q", "--qf", "%{V}-%{R}.%{ARCH}\n", "kernel"])
+        .checked_output()
+        .await?;
 
     let mut newest = Version::from("");
 

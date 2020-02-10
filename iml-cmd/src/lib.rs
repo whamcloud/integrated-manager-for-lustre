@@ -2,9 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::TryFutureExt;
-use std::{error, ffi::OsStr, fmt, io, process::Output};
-use tokio::process::Command;
+use futures::{future::BoxFuture, FutureExt, TryFutureExt};
+use std::{
+    error, fmt, io,
+    process::{ExitStatus, Output},
+};
+pub use tokio::process::Command;
 
 #[derive(Debug)]
 pub enum CmdError {
@@ -48,42 +51,47 @@ impl From<Output> for CmdError {
     }
 }
 
-/// Runs an arbitrary command and collects all output
-///
-/// # Arguments
-///
-/// * `program` - The program to run
-/// * `xs` - The args to pass to the systemctl call. `xs` Implements `IntoIterator`
-pub async fn cmd_output<S, I>(program: S, xs: I) -> Result<Output, CmdError>
-where
-    I: IntoIterator<Item = S>,
-    S: AsRef<OsStr>,
-{
-    Command::new(program).args(xs).output().err_into().await
-}
-
-/// Runs an arbitrary command and collects all output
-/// Returns `Error` if the command did not succeed.
-///
-/// # Arguments
-///
-/// * `program` - The program to run
-/// * `xs` - The args to pass to the systemctl call. `xs` Implements `IntoIterator`
-pub async fn cmd_output_success<S, I>(program: S, xs: I) -> Result<Output, CmdError>
-where
-    I: IntoIterator<Item = S>,
-    S: AsRef<OsStr>,
-{
-    let x = cmd_output(program, xs).await?;
-
-    if x.status.success() {
-        Ok(x)
+fn handle_status(x: ExitStatus) -> Result<(), io::Error> {
+    if x.success() {
+        Ok(())
     } else {
-        Err(x.into())
+        let err = io::Error::new(
+            io::ErrorKind::Other,
+            format!("process exited with code: {:?}", x.code()),
+        );
+
+        Err(err)
     }
 }
 
-/// Runs lctl with given arguments
-pub async fn lctl(args: Vec<&str>) -> Result<Output, CmdError> {
-    cmd_output_success("/usr/sbin/lctl", args).await
+pub trait CheckedCommandExt {
+    fn checked_status(&mut self) -> BoxFuture<Result<(), CmdError>>;
+    fn checked_output(&mut self) -> BoxFuture<Result<Output, CmdError>>;
+}
+
+impl CheckedCommandExt for Command {
+    /// Similar to `status`, but returns `Err` if the exit code is non-zero.
+    fn checked_status(&mut self) -> BoxFuture<Result<(), CmdError>> {
+        tracing::debug!("Running cmd: {:?}", self);
+
+        self.status()
+            .and_then(|x| async move { handle_status(x) })
+            .err_into()
+            .boxed()
+    }
+    /// Similar to `output`, but returns `Err` if the exit code is non-zero.
+    fn checked_output(&mut self) -> BoxFuture<Result<Output, CmdError>> {
+        tracing::debug!("Running cmd: {:?}", self);
+
+        self.output()
+            .err_into()
+            .and_then(|x| async {
+                if x.status.success() {
+                    Ok(x)
+                } else {
+                    Err(x.into())
+                }
+            })
+            .boxed()
+    }
 }

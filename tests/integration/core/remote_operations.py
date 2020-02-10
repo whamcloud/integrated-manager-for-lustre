@@ -937,8 +937,23 @@ class RealRemoteOperations(RemoteOperations):
 
             firewall = RemoteFirewallControl.create(address, self._ssh_address_no_check)
 
-            # clear_ha_el7.sh
-            result = self._ssh_address(address, "if crm_mon -b1; then crm_resource -l|xargs pcs resource disable; fi")
+            result = self._ssh_address(
+                address,
+                "if crm_mon -b1; then crm_attribute --type crm_config --name maintenance-mode --update true; fi",
+            )
+            logger.debug("CMD OUTPUT:\n%s" % result.stdout)
+
+            result = self._ssh_address(
+                address,
+                "if crm_mon -b1; then crm_resource -l | xargs -n 1 crm_resource --set-parameter target-role --meta --parameter-value Stopped --resource; fi",
+            )
+            logger.debug("CMD OUTPUT:\n%s" % result.stdout)
+
+            result = self._ssh_address(
+                address,
+                "if crm_mon -b1; then crm_attribute --type crm_config --name maintenance-mode --delete true; fi",
+            )
+
             logger.debug("CMD OUTPUT:\n%s" % result.stdout)
 
             result = self._ssh_address(address, "if crm_mon -b1; then pcs cluster stop --all; fi")

@@ -7,7 +7,8 @@ clean:
 	rm -rf iml-images.tar.gz
 
 build: clean
-	DOCKER_BUILDKIT=1 docker build -t imlteam/manager-service-base:5.1 -f base.dockerfile ../
+	DOCKER_BUILDKIT=1 docker build -t imlteam/manager-service-base:5.1.1-dev -f base.dockerfile ../
+	DOCKER_BUILDKIT=1 docker build -t imlteam/systemd-base:5.1.1-dev -f systemd-base.dockerfile ../
 	DOCKER_BUILDKIT=1 docker build -t rust-iml-base -f rust-base.dockerfile ../
 	COMPOSE_DOCKER_CLI_BUILD=1 docker-compose build
 

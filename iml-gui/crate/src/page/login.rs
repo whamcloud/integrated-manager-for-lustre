@@ -135,7 +135,7 @@ pub fn view(model: &Model) -> impl View<Msg> {
                 C.border_b_4,
                 C.border_teal_500
             ],
-            raw_ev(Ev::Submit, move |event| {
+            ev(Ev::Submit, move |event| {
                 event.prevent_default();
                 Msg::Submit
             }),

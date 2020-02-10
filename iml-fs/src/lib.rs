@@ -8,7 +8,11 @@ use std::{
     path::{Path, PathBuf},
 };
 use tempfile::NamedTempFile;
-use tokio::{fs::File, prelude::*, task::spawn_blocking};
+use tokio::{
+    fs::{self, File},
+    prelude::*,
+    task::spawn_blocking,
+};
 use tokio_util::codec::{BytesCodec, FramedRead, FramedWrite, LinesCodec, LinesCodecError};
 
 #[derive(Debug)]
@@ -176,10 +180,20 @@ pub async fn write_tempfile(contents: Vec<u8>) -> Result<NamedTempFile, io::Erro
     .await?
 }
 
+/// Does the given `str` ref exist as a file?
+pub async fn file_exists(path: &str) -> bool {
+    let f = fs::metadata(path).await;
+
+    match f {
+        Ok(m) => m.is_file(),
+        Err(_) => false,
+    }
+}
+
 /// Given a `PathBuf`, creates a new file that can have
 /// arbitrary `Bytes` written to it.
 pub async fn file_write_bytes(path: PathBuf) -> Result<FramedWrite<File, BytesCodec>, io::Error> {
-    let file = tokio::fs::File::create(path).await?;
+    let file = fs::File::create(path).await?;
 
     Ok(FramedWrite::new(file, BytesCodec::new()))
 }

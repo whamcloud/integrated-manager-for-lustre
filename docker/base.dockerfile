@@ -1,4 +1,4 @@
-FROM centos as builder
+FROM centos:7 as builder
 WORKDIR /build
 COPY . .
 RUN yum update -y
@@ -22,6 +22,7 @@ RUN yum update -y \
   && yum install -y python python-pip python-devel postgresql openssl gcc-c++ \
   && pip install -r requirements.txt \
   && yum autoremove -y gcc-c++ python-pip python-devel \
+  && rm -rf /root/.cache/pip \
   && yum install -y python-setuptools \
   && yum clean all
 

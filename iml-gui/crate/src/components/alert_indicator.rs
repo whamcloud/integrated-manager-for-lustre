@@ -1,4 +1,4 @@
-use crate::components::{font_awesome_outline, tooltip, Placement};
+use crate::components::{attrs, font_awesome_outline, tooltip, Placement};
 use crate::generated::css_classes::C;
 use im::HashMap;
 use iml_wire_types::{warp_drive::ArcValuesExt, Alert, AlertSeverity};
@@ -51,7 +51,7 @@ pub(crate) fn alert_indicator<T>(
 
     let el = span![
         class![C.inline_block],
-        span![tooltip::container(), icon, tooltip::view(&msg, tt_placement)],
+        span![attrs::container(), icon, tooltip::view(&msg, tt_placement)],
         el
     ];
 

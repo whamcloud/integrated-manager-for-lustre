@@ -4,6 +4,7 @@
 
 use crate::{agent_error::ImlAgentError, lustre};
 use futures::TryFutureExt;
+use iml_cmd::{CheckedCommandExt, Command};
 
 /// Runs lctl with given arguments
 pub async fn lctl(args: Vec<String>) -> Result<String, ImlAgentError> {
@@ -25,7 +26,9 @@ pub async fn try_mount(
     (lustre_device, mount_point): (String, String),
 ) -> Result<(), ImlAgentError> {
     let args = vec!["-t", "lustre", &lustre_device, &mount_point];
-    iml_cmd::cmd_output_success("mount", args)
+    Command::new("mount")
+        .args(args)
+        .checked_output()
         .err_into()
         .await
         .map(drop)
