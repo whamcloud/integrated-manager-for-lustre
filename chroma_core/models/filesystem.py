@@ -62,7 +62,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
             return ["forgotten"]
         else:
             available_states = super(ManagedFilesystem, self).get_available_states(begin_state)
-            available_states = list(set(available_states) - set(["forgotten"]))
+            available_states = list(set(available_states))
 
             # Exclude 'stopped' if we are in 'unavailable' and everything is stopped
             target_states = set([t.state for t in self.get_filesystem_targets()])

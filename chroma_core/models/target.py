@@ -277,8 +277,9 @@ class ManagedTarget(StatefulObject):
             lnet_configuration = ObjectCache.get_by_id(LNetConfiguration, host.lnet_configuration.id)
             deps.append(DependOn(lnet_configuration, "lnet_up", fix_state="unmounted"))
 
-            pacemaker_configuration = ObjectCache.get_by_id(PacemakerConfiguration, host.pacemaker_configuration.id)
-            deps.append(DependOn(pacemaker_configuration, "started", fix_state="unmounted"))
+            if host.pacemaker_configuration:
+                pacemaker_configuration = ObjectCache.get_by_id(PacemakerConfiguration, host.pacemaker_configuration.id)
+                deps.append(DependOn(pacemaker_configuration, "started", fix_state="unmounted"))
 
             # TODO: also express that this situation may be resolved by migrating
             # the target instead of stopping it.
@@ -516,8 +517,9 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
         else:
             available_states = super(ManagedMgs, self).get_available_states(begin_state)
 
-            # Exclude the transition to 'forgotten' because immutable_state is False
-            available_states = list(set(available_states) - set(["forgotten"]))
+            # Exclude the transition to 'forgotten' if multiple filesystems
+            if self.managedfilesystem_set.count():
+                available_states = list(set(available_states) - set(["forgotten"]))
 
             # Only advertise removal if the FS has already gone away
             if self.managedfilesystem_set.count() > 0:
@@ -1245,10 +1247,13 @@ class StartTargetJob(StateChangeJob):
             lnet_configuration = ObjectCache.get_one(LNetConfiguration, lambda l: l.host_id == target_mount.host_id)
             deps.append(DependOn(lnet_configuration, "lnet_up", fix_state="unmounted"))
 
-            pacemaker_configuration = ObjectCache.get_one(
-                PacemakerConfiguration, lambda pm: pm.host_id == target_mount.host_id
-            )
-            deps.append(DependOn(pacemaker_configuration, "started", fix_state="unmounted"))
+            try:
+                pacemaker_configuration = ObjectCache.get_one(
+                    PacemakerConfiguration, lambda pm: pm.host_id == target_mount.host_id
+                )
+                deps.append(DependOn(pacemaker_configuration, "started", fix_state="unmounted"))
+            except PacemakerConfiguration.DoesNotExist:
+                pass
 
         return DependAny(deps)
 
@@ -1678,13 +1683,13 @@ class FailbackTargetJob(MigrateTargetJob):
         return FailbackTargetJob.long_description(None)
 
     def get_deps(self):
-        return DependAll(
-            [
-                DependOn(self.target, "mounted"),
-                DependOn(self.target.primary_host.lnet_configuration, "lnet_up"),
-                DependOn(self.target.primary_host.pacemaker_configuration, "started"),
-            ]
-        )
+        deps = [
+            DependOn(self.target, "mounted"),
+            DependOn(self.target.primary_host.lnet_configuration, "lnet_up"),
+        ]
+        if self.target.primary_host.pacemaker_configuration:
+            deps.append(DependOn(self.target.primary_host.pacemaker_configuration, "started"))
+        return DependAll(deps)
 
     def on_success(self):
         # Persist the update to active_target_mount
@@ -1742,13 +1747,13 @@ class FailoverTargetJob(MigrateTargetJob):
         return FailoverTargetJob.long_description(None)
 
     def get_deps(self):
-        return DependAll(
-            [
-                DependOn(self.target, "mounted"),
-                DependOn(self.target.failover_hosts[0].lnet_configuration, "lnet_up"),
-                DependOn(self.target.failover_hosts[0].pacemaker_configuration, "started"),
-            ]
-        )
+        deps = [
+            DependOn(self.target, "mounted"),
+            DependOn(self.target.failover_hosts[0].lnet_configuration, "lnet_up"),
+        ]
+        if self.target.failover_hosts[0].pacemaker_configuration:
+            deps.append(DependOn(self.target.failover_hosts[0].pacemaker_configuration, "started"))
+        return DependAll(deps)
 
     def on_success(self):
         # Persist the update to active_target_mount
