@@ -156,6 +156,7 @@ fn are_all_parents_available_with_results(
         tracing::trace!("Checking device {:?} on host {:?}: {:?}", p, host, result);
         let result_results = if !result {
             let result_results = results.get(&(p.clone(), host.clone())).is_some();
+            // TODO: Check if the result is not Remove<...>. Probably just assert it.
             tracing::trace!(
                 "Checking device {:?} on host {:?} in results: {:?}",
                 p,
