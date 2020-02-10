@@ -126,26 +126,3 @@ impl DaemonPlugin for Devices {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::daemon_plugins::devices::flat_devices::{process_tree, DeviceId, FlatDevices};
-    use insta::assert_debug_snapshot;
-    use serde_json;
-    use std::fs;
-
-    #[test]
-    fn test_dev_tree_conversion() {
-        use std::default::Default;
-        let f = fs::read_to_string("./fixtures.json").unwrap();
-        let x = serde_json::from_str(&f).unwrap();
-
-        let id = DeviceId("none".to_string());
-
-        let mut fds = FlatDevices::default();
-
-        process_tree(&x, Some(id), &mut fds);
-
-        assert_debug_snapshot!("flat_devices", fds);
-    }
-}
