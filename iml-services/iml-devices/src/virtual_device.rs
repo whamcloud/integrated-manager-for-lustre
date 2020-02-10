@@ -8,8 +8,10 @@ use crate::{
     db::{DeviceHosts, Devices},
     error::ImlDevicesError,
 };
-use iml_wire_types::db::{Device, DeviceHost, DeviceId, DeviceType, MountPath, Paths};
-use iml_wire_types::Fqdn;
+use iml_wire_types::{
+    db::{Device, DeviceHost, DeviceId, DeviceType, MountPath, Paths},
+    Fqdn,
+};
 use std::collections::{BTreeMap, BTreeSet};
 
 fn is_virtual_device(device: &Device) -> bool {
