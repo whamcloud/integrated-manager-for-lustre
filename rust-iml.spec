@@ -30,7 +30,6 @@ mkdir -p %{buildroot}%{_bindir}
 cp iml %{buildroot}%{_bindir}
 cp iml-agent %{buildroot}%{_bindir}
 cp iml-agent-daemon %{buildroot}%{_bindir}
-cp iml-stratagem %{buildroot}%{_bindir}
 cp iml-ostpool %{buildroot}%{_bindir}
 cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-action-runner %{buildroot}%{_bindir}
@@ -38,7 +37,6 @@ cp iml-warp-drive %{buildroot}%{_bindir}
 cp iml-mailbox %{buildroot}%{_bindir}
 cp iml-postoffice %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
-cp iml-stratagem.service %{buildroot}%{_unitdir}
 cp iml-ostpool.service %{buildroot}%{_unitdir}
 cp iml-agent-comms.service %{buildroot}%{_unitdir}
 cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
@@ -114,28 +112,6 @@ systemctl preset iml-agent-comms.service
 %files agent-comms
 %{_bindir}/iml-agent-comms
 %attr(0644,root,root)%{_unitdir}/iml-agent-comms.service
-
-%package stratagem
-Summary: Consumer of IML Agent Stratagem push queue
-License: MIT
-Group: System Environment/Libraries
-Requires: rust-iml-agent-comms
-
-%description stratagem
-%{summary}
-
-%post stratagem
-systemctl preset iml-stratagem.service
-
-%preun stratagem
-%systemd_preun iml-stratagem.service
-
-%postun stratagem
-%systemd_postun_with_restart iml-stratagem.service
-
-%files stratagem
-%{_bindir}/iml-stratagem
-%attr(0644,root,root)%{_unitdir}/iml-stratagem.service
 
 %package action-runner
 Summary: Dispatches and tracks RPCs to agents

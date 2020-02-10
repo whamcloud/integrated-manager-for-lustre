@@ -40,9 +40,6 @@ After=iml-view-server.service
 Requires=iml-agent-comms.service
 After=iml-agent-comms.service
 
-Requires=iml-stratagem.service
-After=iml-stratagem.service
-
 Requires=iml-mailbox.service
 After=iml-mailbox.service
 
@@ -95,7 +92,6 @@ Also=iml-syslog.service
 Also=iml-realtime.service
 Also=iml-view-server.service
 Also=iml-agent-comms.service
-Also=iml-stratagem.service
 Also=iml-mailbox.service
 Also=iml-action-runner.service
 Also=iml-update-handler.socket

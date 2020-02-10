@@ -1408,19 +1408,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "iml-stratagem"
-version = "0.1.0"
-dependencies = [
- "futures 0.3.4",
- "iml-rabbit",
- "iml-service-queue",
- "iml-wire-types",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "iml-util"
 version = "0.1.0"
 dependencies = [

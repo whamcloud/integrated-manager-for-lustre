@@ -46,8 +46,6 @@ services:
     restart: on-failure
   iml-action-runner:
     restart: on-failure
-  iml-stratagem:
-    restart: on-failure
   iml-postoffice:
     restart: on-failure
 secrets:
