@@ -823,6 +823,7 @@ pub struct Device {
     pub device_type: DeviceType,
     pub parents: DeviceIds,
     pub children: DeviceIds,
+    pub max_depth: i64,
 }
 
 pub const DEVICE_TABLE_NAME: TableName = TableName("chroma_core_device");
@@ -843,6 +844,7 @@ impl From<Row> for Device {
             device_type: row.get("device_type"),
             parents: row.get("parents"),
             children: row.get("children"),
+            max_depth: row.get("max_depth"),
         }
     }
 }

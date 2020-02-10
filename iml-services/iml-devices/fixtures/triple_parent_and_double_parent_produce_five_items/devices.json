@@ -8,7 +8,8 @@
     "children": [
       "b1",
       "b2"
-    ]
+    ],
+    "max_depth": 0
   },
   "a2": {
     "id": "a2",
@@ -19,7 +20,8 @@
     "children": [
       "b1",
       "b2"
-    ]
+    ],
+    "max_depth": 0
   },
   "b1": {
     "id": "b1",
@@ -32,7 +34,8 @@
     ],
     "children": [
       "c1"
-    ]
+    ],
+    "max_depth": 1
   },
   "b2": {
     "id": "b2",
@@ -45,7 +48,8 @@
     ],
     "children": [
       "c2"
-    ]
+    ],
+    "max_depth": 1
   },
   "b3": {
     "id": "b3",
@@ -58,7 +62,8 @@
     ],
     "children": [
       "c2"
-    ]
+    ],
+    "max_depth": 1
   },
   "c1": {
     "id": "c1",
@@ -68,7 +73,8 @@
     "parents": [
       "b1", "b2", "b3"
     ],
-    "children": []
+    "children": [],
+    "max_depth": 2
   },
   "c2": {
     "id": "c2",
@@ -78,6 +84,7 @@
     "parents": [
       "b2"
     ],
-    "children": []
+    "children": [],
+    "max_depth": 2
   }
 }

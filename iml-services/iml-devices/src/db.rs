@@ -60,6 +60,7 @@ fn create_dev(
         children: DeviceIds(flat_dev.children.clone()),
         // usable_for_lustre: flat_dev.usable_for_lustre,
         usable_for_lustre: false,
+        max_depth: 0,
     };
 
     let dh = DeviceHost {

@@ -7,7 +7,8 @@
     "parents": [],
     "children": [
       "g"
-    ]
+    ],
+    "max_depth": 0
   },
   "g": {
     "id": "g",
@@ -19,7 +20,8 @@
     ],
     "children": [
       "f"
-    ]
+    ],
+    "max_depth": 1
   },
   "f": {
     "id": "f",
@@ -31,7 +33,8 @@
     ],
     "children": [
       "e"
-    ]
+    ],
+    "max_depth": 2
   },
   "e": {
     "id": "e",
@@ -41,6 +44,7 @@
     "parents": [
       "f"
     ],
-    "children": []
+    "children": [],
+    "max_depth": 3
   }
 }

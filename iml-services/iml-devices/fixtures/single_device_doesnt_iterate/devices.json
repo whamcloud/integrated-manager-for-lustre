@@ -5,6 +5,7 @@
         "usable_for_lustre": false,
         "device_type": "ScsiDevice",
         "parents": [],
-        "children": []
+        "children": [],
+        "max_depth": 0
     }
 }
