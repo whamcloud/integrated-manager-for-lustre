@@ -129,7 +129,7 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
         config = kwargs["config"]
 
         if runningInDocker():
-            iml_cmd = self.get_run_stratagem_command("/usr/local/bin/start-stratagem-scan.py", config, None)
+            iml_cmd = self.get_run_stratagem_command("/usr/bin/start-stratagem-scan", config, None)
 
             # Create timer file
             timer_config = """# This file is part of IML
