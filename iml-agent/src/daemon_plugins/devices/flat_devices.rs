@@ -5,9 +5,9 @@
 use device_types::devices::{
     self, Dataset, LogicalVolume, Mpath, Partition, Root, ScsiDevice, VolumeGroup, Zpool,
 };
-use std::convert::TryFrom;
 use std::{
     collections::{BTreeMap, BTreeSet},
+    convert::TryFrom,
     path::Path,
 };
 
