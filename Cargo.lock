@@ -1270,6 +1270,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-job-scheduler-rpc"
+version = "0.1.0"
+dependencies = [
+ "futures 0.3.4",
+ "iml-rabbit",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid 0.8.1",
+]
+
+[[package]]
 name = "iml-mailbox"
 version = "0.1.0"
 dependencies = [
