@@ -9,11 +9,17 @@ use std::{
 };
 pub use tokio::process::Command;
 
+#[cfg(feature = "warp-errs")]
+use warp::reject;
+
 #[derive(Debug)]
 pub enum CmdError {
     Io(io::Error),
     Output(Output),
 }
+
+#[cfg(feature = "warp-errs")]
+impl reject::Reject for CmdError {}
 
 impl fmt::Display for CmdError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

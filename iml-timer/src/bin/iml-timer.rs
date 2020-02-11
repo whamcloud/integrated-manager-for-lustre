@@ -2,12 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_timer::{
-    command::spawn_command,
-    config::{delete_config, get_config, service_file, timer_file, unit_name, write_configs},
-    error::{customize_error, TimerError},
+use futures::TryFutureExt;
+use iml_cmd::{CheckedCommandExt, Command};
+use iml_timer::config::{
+    delete_config, get_config, service_file, timer_file, unit_name, write_configs,
 };
-use tokio::process::Command;
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::{self, http::StatusCode, Filter};
 
@@ -27,24 +26,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(get_config)
         .and_then(write_configs)
         .and_then(move |config_id: String| async move {
-            spawn_command(
-                Command::new("systemctl").arg("daemon-reload"),
-                config_id,
-                TimerError::DaemonReloadFailed,
-            )
-            .await
+            Command::new("systemctl")
+                .arg("daemon-reload")
+                .checked_output()
+                .map_err(warp::reject::custom)
+                .await?;
+
+            Ok::<_, warp::Rejection>(config_id)
         })
         .and_then(move |config_id: String| async move {
             let timer_path = format!("{}.timer", unit_name(config_id.as_str()));
-            spawn_command(
-                Command::new("systemctl")
-                    .arg("enable")
-                    .arg("--now")
-                    .arg(timer_path),
-                config_id,
-                TimerError::EnableTimerError,
-            )
-            .await
+
+            Command::new("systemctl")
+                .arg("enable")
+                .arg("--now")
+                .arg(timer_path)
+                .checked_output()
+                .map_err(warp::reject::custom)
+                .await
         })
         .map(|_| Ok(StatusCode::CREATED));
 
@@ -53,15 +52,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and(warp::path::param::<String>())
         .and_then(move |config_id: String| async move {
             let timer_path = format!("{}.timer", unit_name(config_id.as_str()));
-            spawn_command(
-                Command::new("systemctl")
-                    .arg("disable")
-                    .arg("--now")
-                    .arg(timer_path),
-                config_id,
-                TimerError::DisableTimerError,
-            )
-            .await
+
+            Command::new("systemctl")
+                .arg("disable")
+                .arg("--now")
+                .arg(timer_path)
+                .checked_output()
+                .map_err(warp::reject::custom)
+                .await?;
+
+            Ok::<_, warp::Rejection>(config_id)
         })
         .and_then(move |config_id: String| async move {
             let timer_path = timer_file(config_id.as_str());
@@ -72,17 +72,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             delete_config(&timer_path, config_id).await
         })
         .and_then(move |_| async move {
-            spawn_command(
-                Command::new("systemctl").arg("daemon-reload"),
-                (),
-                TimerError::DaemonReloadFailed,
-            )
-            .await
+            Command::new("systemctl")
+                .arg("daemon-reload")
+                .checked_output()
+                .map_err(warp::reject::custom)
+                .await
         })
         .map(|_| Ok(StatusCode::NO_CONTENT));
 
     let log = warp::log("iml_timer::api");
-    let routes = config_route.or(unconfigure_route).with(log).recover(customize_error);
+    let routes = config_route.or(unconfigure_route).with(log);
 
     tracing::debug!("Serving routes.");
     warp::serve(routes)

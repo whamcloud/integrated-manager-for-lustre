@@ -3,12 +3,12 @@
 // license that can be found in the LICENSE file.
 
 use crate::error::TimerError;
+use futures::TryFutureExt;
 use serde::{Deserialize, Serialize};
 use tokio::{
     fs::{remove_file, File},
     prelude::*,
 };
-use warp::{self, reject};
 
 #[derive(Deserialize, Serialize)]
 pub struct ConfigDetails {
@@ -85,17 +85,19 @@ pub async fn write_config_files(configs: ConfigFiles) -> tokio::io::Result<()> {
 pub async fn write_configs(
     (config_id, configs): (String, ConfigFiles),
 ) -> Result<String, warp::Rejection> {
-    let write_result = write_config_files(configs).await;
-    match write_result {
-        Ok(_) => Ok::<String, warp::Rejection>(config_id),
-        Err(_) => Err::<String, warp::Rejection>(reject::custom(TimerError::WriteFailed)),
-    }
+    write_config_files(configs)
+        .map_err(TimerError::IoError)
+        .map_err(warp::reject::custom)
+        .await?;
+
+    Ok(config_id)
 }
 
 pub async fn delete_config(config: &str, config_id: String) -> Result<String, warp::Rejection> {
-    let remove_result = remove_file(config).await;
-    match remove_result {
-        Ok(_) => Ok::<String, warp::Rejection>(config_id),
-        Err(_) => Err::<String, warp::Rejection>(reject::custom(TimerError::DeleteFailed)),
-    }
+    remove_file(config)
+        .map_err(TimerError::IoError)
+        .map_err(warp::reject::custom)
+        .await?;
+
+    Ok(config_id)
 }
