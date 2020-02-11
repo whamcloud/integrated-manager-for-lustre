@@ -1,6 +1,4 @@
 ---
-created: "2019-07-03T22:24:45.815246Z"
-creator: insta@0.8.1
 source: iml-action-dropdown/src/model.rs
 expression: "groups.get(&\"Label2\".to_string())"
 ---
@@ -9,11 +7,10 @@ Some(
         (
             AvailableAction {
                 args: Some(
-                    ActionArgs {
-                        host_id: Some(
+                    {
+                        "host_id": Some(
                             2,
                         ),
-                        target_id: None,
                     },
                 ),
                 composite_id: "62:2",
@@ -38,11 +35,10 @@ Some(
         (
             AvailableAction {
                 args: Some(
-                    ActionArgs {
-                        host_id: Some(
+                    {
+                        "host_id": Some(
                             2,
                         ),
-                        target_id: None,
                     },
                 ),
                 composite_id: "62:2",

@@ -6,12 +6,10 @@
 
 use futures::{lock::Mutex, prelude::*};
 use iml_action_runner::{
-    data::SessionToRpcs,
-    local_actions::SharedLocalActionsInFlight,
-    receiver::handle_agent_data,
-    sender::{create_client_filter, sender},
-    Sessions, Shared,
+    data::SessionToRpcs, local_actions::SharedLocalActionsInFlight, receiver::handle_agent_data,
+    sender::sender, Sessions, Shared,
 };
+use iml_rabbit::create_client_filter;
 use iml_service_queue::service_queue::{consume_service_queue, ImlServiceQueueError};
 use iml_util::tokio_utils::get_tcp_or_unix_listener;
 use std::{collections::HashMap, sync::Arc};

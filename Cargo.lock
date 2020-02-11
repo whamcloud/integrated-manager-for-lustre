@@ -1230,7 +1230,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
- "tracing-subscriber 0.1.6",
+ "tracing-subscriber 0.2.0",
  "uuid 0.7.4",
  "warp",
 ]
@@ -1239,11 +1239,16 @@ dependencies = [
 name = "iml-api"
 version = "0.1.0"
 dependencies = [
+ "futures 0.3.4",
+ "iml-job-scheduler-rpc",
  "iml-manager-env",
+ "iml-rabbit",
  "iml-wire-types",
+ "serde",
+ "serde_json",
  "tokio",
  "tracing",
- "tracing-subscriber 0.1.6",
+ "tracing-subscriber 0.2.0",
  "warp",
 ]
 
@@ -1276,6 +1281,7 @@ version = "0.1.0"
 dependencies = [
  "futures 0.3.4",
  "iml-rabbit",
+ "iml-wire-types",
  "serde",
  "serde_json",
  "tokio",
@@ -1401,6 +1407,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
+ "warp",
 ]
 
 [[package]]

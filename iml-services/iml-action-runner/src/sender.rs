@@ -11,8 +11,8 @@ use crate::{
     local_actions::{handle_local_action, SharedLocalActionsInFlight},
     ActionType, Sessions, Shared,
 };
-use futures::{channel::oneshot, Future, TryFutureExt};
-use iml_rabbit::{connect_to_rabbit, get_cloned_conns, send_message, Client};
+use futures::{channel::oneshot, TryFutureExt};
+use iml_rabbit::{send_message, Client};
 use iml_wire_types::{Action, ActionId, Id, ManagerMessage};
 use std::{sync::Arc, time::Duration};
 use warp::{self, Filter};
@@ -55,31 +55,6 @@ async fn cancel_running_action(
     }
 
     Ok(Ok(serde_json::Value::Null))
-}
-
-/// Creates a warp `Filter` that will hand out
-/// a cloned client for each request.
-pub async fn create_client_filter() -> Result<
-    (
-        impl Future<Output = ()>,
-        impl Filter<Extract = (Client,), Error = warp::Rejection> + Clone,
-    ),
-    ActionRunnerError,
-> {
-    let client = connect_to_rabbit().await?;
-
-    let (tx, fut) = get_cloned_conns(client);
-
-    let filter = warp::any().and_then(move || {
-        let (tx2, rx2) = futures::channel::oneshot::channel();
-
-        tx.unbounded_send(tx2).unwrap();
-
-        rx2.map_err(ActionRunnerError::OneShotCanceledError)
-            .map_err(warp::reject::custom)
-    });
-
-    Ok((fut, filter))
 }
 
 pub fn sender(
