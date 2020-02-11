@@ -1,7 +1,6 @@
 [Unit]
-Description=IML Stratagem Service
+Description=IML API Service
 PartOf=iml-manager.target
-After=rabbitmq-server.service
 After=iml-settings-populator.service
 Requires=iml-settings-populator.service
 
@@ -10,7 +9,7 @@ Requires=iml-settings-populator.service
 Type=simple
 Environment=RUST_LOG=info
 EnvironmentFile=/var/lib/chroma/iml-settings.conf
-ExecStart=/bin/iml-stratagem
+ExecStart=/bin/iml-api
 Restart=always
 StandardOutput=journal
 StandardError=journal

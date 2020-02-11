@@ -28,26 +28,26 @@ ExclusiveArch: x86_64
 %install
 mkdir -p %{buildroot}%{_bindir}
 cp iml %{buildroot}%{_bindir}
-cp iml-agent %{buildroot}%{_bindir}
-cp iml-agent-daemon %{buildroot}%{_bindir}
-cp iml-stratagem %{buildroot}%{_bindir}
-cp iml-devices %{buildroot}%{_bindir}
-cp iml-ostpool %{buildroot}%{_bindir}
-cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-action-runner %{buildroot}%{_bindir}
-cp iml-warp-drive %{buildroot}%{_bindir}
+cp iml-agent %{buildroot}%{_bindir}
+cp iml-agent-comms %{buildroot}%{_bindir}
+cp iml-agent-daemon %{buildroot}%{_bindir}
+cp iml-api %{buildroot}%{_bindir}
+cp iml-devices %{buildroot}%{_bindir}
 cp iml-mailbox %{buildroot}%{_bindir}
+cp iml-ostpool %{buildroot}%{_bindir}
 cp iml-postoffice %{buildroot}%{_bindir}
+cp iml-warp-drive %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
-cp iml-stratagem.service %{buildroot}%{_unitdir}
-cp iml-devices.service %{buildroot}%{_unitdir}
-cp iml-ostpool.service %{buildroot}%{_unitdir}
-cp iml-agent-comms.service %{buildroot}%{_unitdir}
 cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
-cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
-cp iml-warp-drive.service %{buildroot}%{_unitdir}
+cp iml-agent-comms.service %{buildroot}%{_unitdir}
+cp iml-api.service %{buildroot}%{_unitdir}
+cp iml-devices.service %{buildroot}%{_unitdir}
 cp iml-mailbox.service %{buildroot}%{_unitdir}
+cp iml-ostpool.service %{buildroot}%{_unitdir}
 cp iml-postoffice.service %{buildroot}%{_unitdir}
+cp iml-warp-drive.service %{buildroot}%{_unitdir}
+cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_tmpfilesdir}
 cp iml-mailbox.conf %{buildroot}%{_tmpfilesdir}
 cp tmpfiles.conf %{buildroot}%{_tmpfilesdir}/iml-agent.conf
@@ -117,27 +117,26 @@ systemctl preset iml-agent-comms.service
 %{_bindir}/iml-agent-comms
 %attr(0644,root,root)%{_unitdir}/iml-agent-comms.service
 
-%package stratagem
-Summary: Consumer of IML Agent Stratagem push queue
+%package api
+Summary: Standalone Rust API build on warp
 License: MIT
 Group: System Environment/Libraries
-Requires: rust-iml-agent-comms
 
-%description stratagem
+%description api
 %{summary}
 
-%post stratagem
-systemctl preset iml-stratagem.service
+%post api
+systemctl preset iml-api.service
 
-%preun stratagem
-%systemd_preun iml-stratagem.service
+%preun api
+%systemd_preun iml-api.service
 
-%postun stratagem
-%systemd_postun_with_restart iml-stratagem.service
+%postun api
+%systemd_postun_with_restart iml-api.service
 
-%files stratagem
-%{_bindir}/iml-stratagem
-%attr(0644,root,root)%{_unitdir}/iml-stratagem.service
+%files api
+%{_bindir}/iml-api
+%attr(0644,root,root)%{_unitdir}/iml-api.service
 
 %package devices
 Summary: Consumer of IML Agent devices push queue

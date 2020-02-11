@@ -2,6 +2,7 @@
 members = [
     'iml-agent-comms',
     'iml-agent',
+    'iml-api',
     'iml-cmd',
     'iml-fs',
     'iml-mailbox',
@@ -16,8 +17,8 @@ members = [
     'iml-services/iml-devices',
     'iml-services/iml-ostpool',
     'iml-services/iml-postoffice',
+    'iml-services/iml-postoffice',
     'iml-services/iml-service-queue',
-    'iml-services/iml-stratagem',
     'iml-util',
     'iml-warp-drive',
     'iml-wire-types',

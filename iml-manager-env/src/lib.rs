@@ -36,6 +36,33 @@ fn empty_str_to_none(x: String) -> Option<String> {
     }
 }
 
+fn string_to_bool(x: String) -> bool {
+    match x.as_ref() {
+        "true" => true,
+        _ => false,
+    }
+}
+
+/// Get anonymous read permission from the env or panic
+pub fn get_allow_anonymous_read() -> bool {
+    string_to_bool(get_var("ALLOW_ANONYMOUS_READ"))
+}
+
+/// Get build num from the env or panic
+pub fn get_build() -> String {
+    get_var("BUILD")
+}
+
+/// Get is release from the env or panic
+pub fn get_is_release() -> bool {
+    string_to_bool(get_var("IS_RELEASE"))
+}
+
+/// Get version from the env or panic
+pub fn get_version() -> String {
+    get_var("VERSION")
+}
+
 /// Get the broker URL from the env or panic
 pub fn get_amqp_broker_url() -> String {
     get_var("AMQP_BROKER_URL")
@@ -64,6 +91,16 @@ pub fn get_host() -> String {
 /// Get the broker port from the env or panic
 pub fn get_port() -> String {
     get_var("AMQP_BROKER_PORT")
+}
+
+/// Get the IML API port from the env or panic
+pub fn get_iml_api_port() -> String {
+    get_var("IML_API_PORT")
+}
+
+/// Get the IML API address from the env or panic
+pub fn get_iml_api_addr() -> SocketAddr {
+    to_socket_addr(&get_server_host(), &get_iml_api_port())
 }
 
 /// Get the `http_agent2` port from the env or panic
