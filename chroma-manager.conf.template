@@ -186,6 +186,16 @@ server {
         proxy_pass {{IML_API_PROXY_PASS}}/conf;
     }
 
+    location /api/action {
+        auth_request /auth;
+
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass {{IML_API_PROXY_PASS}}/action;
+    }
+
     location /api {
         proxy_set_header Host $http_host;
         proxy_set_header X-Forwarded-Proto $scheme;

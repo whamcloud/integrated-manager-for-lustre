@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{channel::oneshot, Future, FutureExt, TryFutureExt, TryStreamExt};
+use futures::{channel::oneshot, FutureExt, TryFutureExt, TryStreamExt};
 use iml_agent_comms::{
     error::ImlAgentCommsError,
     flush_queue,
@@ -10,7 +10,7 @@ use iml_agent_comms::{
     messaging::{consume_agent_tx_queue, AgentData, AGENT_TX_RUST},
     session::{self, Session, Sessions},
 };
-use iml_rabbit::{self, send_message, Client};
+use iml_rabbit::{self, create_client_filter, send_message, Client};
 use iml_wire_types::{
     Envelope, Fqdn, ManagerMessage, ManagerMessages, Message, PluginMessage, PluginName,
 };
@@ -116,31 +116,6 @@ struct GetArgs {
 #[derive(serde::Deserialize, Debug)]
 struct MessageFqdn {
     pub fqdn: Fqdn,
-}
-
-/// Creates a warp `Filter` that will hand out
-/// a cloned client for each request.
-pub async fn create_client_filter() -> Result<
-    (
-        impl Future<Output = ()>,
-        impl Filter<Extract = (Client,), Error = warp::Rejection> + Clone,
-    ),
-    ImlAgentCommsError,
-> {
-    let conn = iml_rabbit::connect_to_rabbit().await?;
-
-    let (tx, fut) = iml_rabbit::get_cloned_conns(conn);
-
-    let filter = warp::any().and_then(move || {
-        let (tx2, rx2) = oneshot::channel();
-
-        tx.unbounded_send(tx2).unwrap();
-
-        rx2.map_err(ImlAgentCommsError::OneshotCanceled)
-            .map_err(warp::reject::custom)
-    });
-
-    Ok((fut, filter))
 }
 
 #[tokio::main]

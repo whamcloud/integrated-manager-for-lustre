@@ -5,6 +5,6 @@
 #[derive(serde::Deserialize, serde::Serialize, Debug, Eq, PartialEq)]
 pub struct Response<T> {
     pub exception: Option<String>,
-    pub result: T,
+    pub result: Option<T>,
     pub request_id: String,
 }
