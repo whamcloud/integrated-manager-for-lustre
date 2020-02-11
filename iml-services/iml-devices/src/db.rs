@@ -293,7 +293,7 @@ pub async fn persist_local_devices<'a>(
 
                 tracing::debug!("Going to add device {:?}", d.id);
 
-                let s = transaction.prepare("INSERT INTO chroma_core_device (id, size, usable_for_lustre, device_type, parents, children) VALUES ($1, $2, $3, $4, $5, $6, $7)").await?;
+                let s = transaction.prepare("INSERT INTO chroma_core_device (id, size, usable_for_lustre, device_type, parents, children, max_depth) VALUES ($1, $2, $3, $4, $5, $6, $7)").await?;
 
                 transaction
                     .execute(
