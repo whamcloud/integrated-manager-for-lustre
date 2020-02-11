@@ -293,7 +293,7 @@ pub async fn persist_local_devices<'a>(
 
                 tracing::debug!("Going to add device {:?}", d.id);
 
-                let s = transaction.prepare("INSERT INTO chroma_core_device (id, size, usable_for_lustre, device_type, parents, children) VALUES ($1, $2, $3, $4, $5, $6)").await?;
+                let s = transaction.prepare("INSERT INTO chroma_core_device (id, size, usable_for_lustre, device_type, parents, children) VALUES ($1, $2, $3, $4, $5, $6, $7)").await?;
 
                 transaction
                     .execute(
@@ -305,6 +305,7 @@ pub async fn persist_local_devices<'a>(
                             &d.device_type,
                             &d.parents,
                             &d.children,
+                            &d.max_depth,
                         ],
                     )
                     .await?;
@@ -312,7 +313,7 @@ pub async fn persist_local_devices<'a>(
             Change::Update(d) => {
                 tracing::debug!("Going to update device {:?}", d.id);
 
-                let s = transaction.prepare("UPDATE chroma_core_device SET size = $2, usable_for_lustre = $3, device_type = $4, parents=$5, children=$6 WHERE id = $1").await?;
+                let s = transaction.prepare("UPDATE chroma_core_device SET size = $2, usable_for_lustre = $3, device_type = $4, parents=$5, children=$6, max_depth=$7 WHERE id = $1").await?;
 
                 transaction
                     .execute(
@@ -324,6 +325,7 @@ pub async fn persist_local_devices<'a>(
                             &d.device_type,
                             &d.parents,
                             &d.children,
+                            &d.max_depth,
                         ],
                     )
                     .await?;
