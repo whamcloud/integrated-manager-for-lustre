@@ -1,7 +1,7 @@
 use crate::{
     components::{alert_indicator, font_awesome, paging, Placement},
     generated::css_classes::C,
-    GMsg, Route,
+    get_targets_by_fs_id, GMsg, Route,
 };
 use iml_wire_types::{
     db::{Id, OstPoolRecord, VolumeNodeRecord},
@@ -64,26 +64,6 @@ fn get_targets_by_pool_id(cache: &ArcCache, ostpool_id: u32) -> Vec<&Target<Targ
         .target
         .arc_values()
         .filter(|x| target_ids.contains(&x.id))
-        .collect()
-}
-
-fn get_targets_by_fs_id(
-    xs: &im::HashMap<u32, Arc<Target<TargetConfParam>>>,
-    fs_id: u32,
-    kind: TargetKind,
-) -> Vec<&Target<TargetConfParam>> {
-    xs.arc_values()
-        .filter(|x: &&Target<TargetConfParam>| match kind {
-            TargetKind::Mgt => {
-                x.kind == TargetKind::Mgt
-                    && x.filesystems
-                        .as_ref()
-                        .and_then(|ys| ys.iter().find(|y| y.id == fs_id))
-                        .is_some()
-            }
-            TargetKind::Mdt => x.kind == TargetKind::Mdt && x.filesystem_id == Some(fs_id),
-            TargetKind::Ost => x.kind == TargetKind::Ost && x.filesystem_id == Some(fs_id),
-        })
         .collect()
 }
 

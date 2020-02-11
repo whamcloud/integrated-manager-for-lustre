@@ -26,7 +26,7 @@ use futures::channel::oneshot;
 use generated::css_classes::C;
 use iml_wire_types::{
     warp_drive::{self, ArcValuesExt},
-    GroupType, Session,
+    GroupType, Session, Target, TargetConfParam, TargetKind,
 };
 use page::{login, Page};
 use regex::Regex;
@@ -669,6 +669,26 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
 
 pub fn asset_path(asset: &str) -> String {
     format!("{}/{}", STATIC_PATH, asset)
+}
+
+pub(crate) fn get_targets_by_fs_id(
+    ts: &im::HashMap<u32, Arc<Target<TargetConfParam>>>,
+    fs_id: u32,
+    kind: TargetKind,
+) -> Vec<&Target<TargetConfParam>> {
+    let it = ts.arc_values().filter(|t| t.kind == kind);
+
+    if kind == TargetKind::Mgt {
+        it.filter(|t| {
+            t.filesystems
+                .as_ref()
+                .and_then(|fss| fss.iter().find(|f| f.id == fs_id))
+                .is_some()
+        })
+        .collect()
+    } else {
+        it.filter(|t| t.filesystem_id == Some(fs_id)).collect()
+    }
 }
 
 // ------ ------
