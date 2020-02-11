@@ -2,10 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use reqwest;
-use reqwest::{header, Client};
-use serde::{Deserialize, Serialize};
-use std::{env::var, io::Error, time::Duration};
+use iml_manager_client::{get_client, post};
 use structopt::StructOpt;
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
@@ -23,29 +20,11 @@ struct App {
     purge: Option<String>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(serde::Serialize)]
 struct StratagemData {
     filesystem: String,
     report_duration: Option<String>,
     purge_duration: Option<String>,
-}
-
-/// Get a client that is able to make authenticated requests
-/// against the API
-pub fn get_client(api_user: &str, api_key: &str) -> Result<Client, Error> {
-    let header_value = header::HeaderValue::from_str(&format!("ApiKey {}:{}", api_user, api_key))
-        .map_err(|e| Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
-
-    let headers = vec![(header::AUTHORIZATION, header_value)]
-        .into_iter()
-        .collect();
-
-    Client::builder()
-        .timeout(Duration::from_secs(60))
-        .default_headers(headers)
-        .danger_accept_invalid_certs(true)
-        .build()
-        .map_err(|e| Error::new(std::io::ErrorKind::Other, e.to_string()))
 }
 
 #[tokio::main]
@@ -58,24 +37,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let opts = App::from_args();
 
-    let url = var("SERVER_HTTP_URL")?;
-    let api_user = var("API_USER")?;
-    let api_key = var("API_KEY")?;
-
     let post_data = StratagemData {
         filesystem: opts.filesystem,
         report_duration: opts.report,
         purge_duration: opts.purge,
     };
 
-    get_client(&api_user, &api_key)?
-        .post(&format!("{}/api/run_stratagem/", url))
-        .header("AUTHORIZATION", format!("ApiKey {}:{}", api_user, api_key))
-        .json(&post_data)
-        .send()
+    post(get_client()?, "run_stratagem", &post_data)
         .await?
         .error_for_status()?;
 
     tracing::info!("Sent request to run stratagem scan.");
+
     Ok(())
 }

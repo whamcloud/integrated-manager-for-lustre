@@ -5,12 +5,14 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-tokio = { version = "0.2", features = ["process", "macros"] }
-warp = "0.2"
-tracing = "0.1"
-tracing-subscriber = "0.1"
+futures = "0.3"
+iml-cmd = { path = "../iml-cmd", version = "0.1", features = ["warp-errs"] }
+iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
+iml-manager-client = { path = "../iml-manager-client", version = "0.1" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 structopt = "0.3.9"
-reqwest = { version = "0.10", features = ["json", "native-tls"] }
-iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
+tokio = { version = "0.2", features = ["process", "macros"] }
+tracing = "0.1"
+tracing-subscriber = "0.2"
+warp = "0.2"

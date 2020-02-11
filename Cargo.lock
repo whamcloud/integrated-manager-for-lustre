@@ -1166,7 +1166,7 @@ dependencies = [
  "tokio-runtime-shutdown",
  "tokio-test",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.1.6",
  "warp",
 ]
 
@@ -1211,7 +1211,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.1.6",
  "url",
  "uuid 0.7.4",
  "v_hist",
@@ -1230,7 +1230,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.1.6",
  "uuid 0.7.4",
  "warp",
 ]
@@ -1243,7 +1243,7 @@ dependencies = [
  "iml-wire-types",
  "tokio",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.1.6",
  "warp",
 ]
 
@@ -1254,6 +1254,7 @@ dependencies = [
  "futures 0.3.4",
  "tokio",
  "tracing",
+ "warp",
 ]
 
 [[package]]
@@ -1294,7 +1295,7 @@ dependencies = [
  "tempdir",
  "tokio",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.1.6",
  "warp",
 ]
 
@@ -1321,7 +1322,7 @@ dependencies = [
  "structopt 0.2.18",
  "tokio",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.1.6",
 ]
 
 [[package]]
@@ -1363,7 +1364,7 @@ dependencies = [
  "iml-wire-types",
  "tokio",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.1.6",
 ]
 
 [[package]]
@@ -1386,7 +1387,7 @@ dependencies = [
  "iml-wire-types",
  "tokio",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.1.6",
 ]
 
 [[package]]
@@ -1436,14 +1437,16 @@ dependencies = [
 name = "iml-timer"
 version = "0.1.0"
 dependencies = [
+ "futures 0.3.4",
+ "iml-cmd",
+ "iml-manager-client",
  "iml-manager-env",
- "reqwest",
  "serde",
  "serde_json",
  "structopt 0.3.9",
  "tokio",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.2.0",
  "warp",
 ]
 
@@ -1475,7 +1478,7 @@ dependencies = [
  "tokio",
  "tokio-runtime-shutdown",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.1.6",
  "uuid 0.7.4",
  "warp",
 ]
@@ -2921,6 +2924,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "sharded-slab"
+version = "0.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae75d0445b5d3778c9da3d1f840faa16d0627c8607f78a74daf69e5b988c39a1"
+dependencies = [
+ "lazy_static",
+]
+
+[[package]]
 name = "shlex"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3451,6 +3463,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-serde"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d65dea8255e378ab7db9db2077a90cb3e051515e18eaa819a405c4eb129b9beb"
+dependencies = [
+ "serde",
+ "tracing-core",
+]
+
+[[package]]
 name = "tracing-subscriber"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3465,6 +3487,26 @@ dependencies = [
  "smallvec 0.6.13",
  "tracing-core",
  "tracing-log",
+]
+
+[[package]]
+name = "tracing-subscriber"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25dc36e47794112347ccb9ae8a05b5ec4fab45f01545e4929323cdb1a543a8f4"
+dependencies = [
+ "ansi_term 0.11.0",
+ "chrono",
+ "lazy_static",
+ "matchers",
+ "regex",
+ "serde",
+ "serde_json",
+ "sharded-slab",
+ "smallvec 1.2.0",
+ "tracing-core",
+ "tracing-log",
+ "tracing-serde",
 ]
 
 [[package]]
