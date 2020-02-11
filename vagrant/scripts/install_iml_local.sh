@@ -7,7 +7,6 @@ yum copr enable -y managerforlustre/manager-for-lustre-devel
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/buildtools/repo/epel-8/managerforlustre-buildtools-epel-8.repo
 yum install -y rpmdevtools git ed epel-release python-setuptools gcc openssl-devel postgresql-devel
 curl https://sh.rustup.rs -sSf | sh -s -- -y
-rustup update
 source $HOME/.cargo/env
 rustup update
 rustc --version
