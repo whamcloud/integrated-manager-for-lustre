@@ -61,7 +61,6 @@ import chroma_api.copytool
 import chroma_api.nid
 import chroma_api.lnet_configuration
 import chroma_api.pacemaker
-import chroma_api.action
 import chroma_api.stratagem
 import chroma_api.ntp
 
@@ -103,7 +102,6 @@ api.register(chroma_api.nid.NidResource())
 api.register(chroma_api.lnet_configuration.LNetConfigurationResource())
 api.register(chroma_api.corosync.CorosyncConfigurationResource())
 api.register(chroma_api.pacemaker.PacemakerConfigurationResource())
-api.register(chroma_api.action.ActionResource())
 api.register(chroma_api.stratagem.StratagemConfigurationResource())
 api.register(chroma_api.stratagem.RunStratagemResource())
 api.register(chroma_api.ntp.NtpConfigurationResource())

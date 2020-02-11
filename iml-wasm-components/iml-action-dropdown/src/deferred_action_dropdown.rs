@@ -211,7 +211,7 @@ pub fn render<'a, T: 'static + ActionRecord>(
     let xs = model
         .actions
         .iter()
-        .filter(|x| x.composite_id == record.composite_id().to_string())
+        .filter(|x| x.composite_id == record.composite_id())
         .map(|x| (x, record))
         .collect();
 
