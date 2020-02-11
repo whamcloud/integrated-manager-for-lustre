@@ -354,6 +354,7 @@ mod test {
     // oss1 is processed completely on empty DB, with local VDs
     // oss2 is coming in second and it considers all other hosts for adding shared devices
     // that is oss1. oss2 is never considered to have added shared devices from oss1
+    #[test_case("vd_with_shared_parents_added_to_oss2_after_oss1")]
     fn compute_virtual_device_changes(test_name: &str) {
         // crate::db::test::_init_subscriber();
         let (fqdn, incoming_devices, incoming_device_hosts, db_devices, db_device_hosts) =

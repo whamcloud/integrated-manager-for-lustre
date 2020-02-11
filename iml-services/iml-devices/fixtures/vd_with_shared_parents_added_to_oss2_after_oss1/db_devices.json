@@ -1,0 +1,37 @@
+{
+    "a": {
+        "id": "a",
+        "size": 1,
+        "usable_for_lustre": false,
+        "device_type": "ScsiDevice",
+        "parents": [],
+        "children": [
+            "b"
+        ],
+        "max_depth": 0
+    },
+    "b": {
+        "id": "b",
+        "size": 1,
+        "usable_for_lustre": false,
+        "device_type": "Mpath",
+        "parents": [
+            "a"
+        ],
+        "children": [
+            "c"
+        ],
+        "max_depth": 1
+    },
+    "c": {
+        "id": "c",
+        "size": 1,
+        "usable_for_lustre": false,
+        "device_type": "Zpool",
+        "parents": [
+            "b"
+        ],
+        "children": [],
+        "max_depth": 2
+    }
+}
