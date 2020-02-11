@@ -9,6 +9,9 @@ yum install -y rpmdevtools git ed epel-release python-setuptools gcc openssl-dev
 curl https://sh.rustup.rs -sSf | sh -s -- -y
 rustup update
 source $HOME/.cargo/env
+rustup update
+rustc --version
+cargo --version
 cd /integrated-manager-for-lustre
 
 # Bump the release number. This should ensure we get picked 
