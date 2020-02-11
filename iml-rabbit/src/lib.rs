@@ -5,7 +5,7 @@
 use futures::{
     channel::{mpsc, oneshot},
     compat::{Future01CompatExt, Stream01CompatExt},
-    future, Future, Stream, StreamExt,
+    future, Future, Stream, StreamExt, TryFutureExt,
 };
 use iml_manager_env;
 use iml_wire_types::ToBytes;
@@ -19,6 +19,8 @@ pub use lapin_futures::{
     BasicProperties, Channel, Client, ConnectionProperties, Consumer, Error as LapinError,
     ExchangeKind, Queue,
 };
+#[cfg(feature = "client-filter")]
+use warp::Filter;
 
 #[derive(Debug)]
 pub enum ImlRabbitError {
@@ -26,7 +28,11 @@ pub enum ImlRabbitError {
     SerdeJsonError(serde_json::error::Error),
     Utf8Error(std::str::Utf8Error),
     ConsumerEndedError,
+    OneshotCanceled(oneshot::Canceled),
 }
+
+#[cfg(feature = "client-filter")]
+impl warp::reject::Reject for ImlRabbitError {}
 
 impl std::fmt::Display for ImlRabbitError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -35,6 +41,7 @@ impl std::fmt::Display for ImlRabbitError {
             ImlRabbitError::SerdeJsonError(ref err) => write!(f, "{}", err),
             ImlRabbitError::Utf8Error(ref err) => write!(f, "{}", err),
             ImlRabbitError::ConsumerEndedError => write!(f, "Consumer ended"),
+            ImlRabbitError::OneshotCanceled(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -45,6 +52,7 @@ impl std::error::Error for ImlRabbitError {
             ImlRabbitError::LapinError(ref err) => Some(err),
             ImlRabbitError::SerdeJsonError(ref err) => Some(err),
             ImlRabbitError::Utf8Error(ref err) => Some(err),
+            ImlRabbitError::OneshotCanceled(ref err) => Some(err),
             ImlRabbitError::ConsumerEndedError => None,
         }
     }
@@ -65,6 +73,12 @@ impl From<serde_json::error::Error> for ImlRabbitError {
 impl From<std::str::Utf8Error> for ImlRabbitError {
     fn from(err: std::str::Utf8Error) -> Self {
         ImlRabbitError::Utf8Error(err)
+    }
+}
+
+impl From<oneshot::Canceled> for ImlRabbitError {
+    fn from(err: oneshot::Canceled) -> Self {
+        ImlRabbitError::OneshotCanceled(err)
     }
 }
 
@@ -432,6 +446,32 @@ pub fn get_cloned_conns(
     });
 
     (tx, fut)
+}
+
+/// Creates a warp `Filter` that will hand out
+/// a cloned client for each request.
+#[cfg(feature = "client-filter")]
+pub async fn create_client_filter() -> Result<
+    (
+        impl Future<Output = ()>,
+        impl Filter<Extract = (Client,), Error = warp::Rejection> + Clone,
+    ),
+    ImlRabbitError,
+> {
+    let conn = connect_to_rabbit().await?;
+
+    let (tx, fut) = get_cloned_conns(conn);
+
+    let filter = warp::any().and_then(move || {
+        let (tx2, rx2) = oneshot::channel();
+
+        tx.unbounded_send(tx2).unwrap();
+
+        rx2.map_err(ImlRabbitError::OneshotCanceled)
+            .map_err(warp::reject::custom)
+    });
+
+    Ok((fut, filter))
 }
 
 #[cfg(test)]

@@ -273,11 +273,36 @@ impl<T: serde::Serialize> ToBytes for T {
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq, Hash)]
+#[serde(try_from = "String")]
 pub struct CompositeId(pub u32, pub u32);
 
 impl fmt::Display for CompositeId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}:{}", self.0, self.1)
+    }
+}
+
+impl From<CompositeId> for String {
+    fn from(x: CompositeId) -> Self {
+        format!("{}", x)
+    }
+}
+
+impl TryFrom<String> for CompositeId {
+    type Error = Box<dyn std::error::Error>;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        let xs: Vec<_> = s.split(':').collect();
+
+        if xs.len() != 2 {
+            return Err("Could not convert to CompositeId, String did not contain 2 parts.".into());
+        }
+
+        let x = xs[0].parse::<u32>()?;
+        let y = xs[1].parse::<u32>()?;
+
+        Ok(Self(x, y))
     }
 }
 
@@ -346,6 +371,21 @@ pub struct ApiList<T> {
     pub objects: Vec<T>,
 }
 
+impl<T> ApiList<T> {
+    pub fn new(objects: Vec<T>) -> Self {
+        Self {
+            meta: Meta {
+                limit: 0,
+                next: None,
+                offset: 0,
+                previous: None,
+                total_count: objects.len() as u32,
+            },
+            objects,
+        }
+    }
+}
+
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct Conf {
     pub allow_anonymous_read: bool,
@@ -360,16 +400,10 @@ impl EndpointName for Conf {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
-pub struct ActionArgs {
-    pub host_id: Option<u64>,
-    pub target_id: Option<u64>,
-}
-
 // An available action from `/api/action/`
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct AvailableAction {
-    pub args: Option<ActionArgs>,
+    pub args: Option<HashMap<String, Option<u64>>>,
     pub composite_id: String,
     pub class_name: Option<String>,
     pub confirmation: Option<String>,

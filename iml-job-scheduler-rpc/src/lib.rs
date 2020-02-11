@@ -16,6 +16,7 @@ use iml_rabbit::{
     declare_transient_queue, delete_queue, BasicConsumeOptions, Client, ExchangeKind,
     ImlRabbitError,
 };
+use iml_wire_types::CompositeId;
 use request::Request;
 use response::Response;
 use std::{collections::HashMap, fmt::Debug};
@@ -126,5 +127,49 @@ pub async fn call<I: Debug + serde::Serialize, T: serde::de::DeserializeOwned>(
         return Err(e.into());
     }
 
-    Ok(resp.result)
+    if let Some(x) = resp.result {
+        Ok(x)
+    } else {
+        Err(ImlJobSchedulerRpcError::RpcError(
+            "RPC response was unexpectedly empty".into(),
+        ))
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct Transition {
+    pub display_group: u64,
+    pub display_order: u64,
+    pub long_description: String,
+    pub state: String,
+    pub verb: String,
+}
+
+pub async fn available_transitions(
+    client: Client,
+    ids: &[CompositeId],
+) -> Result<HashMap<CompositeId, Vec<Transition>>, ImlJobSchedulerRpcError> {
+    let ids: Vec<_> = ids.into_iter().map(|x| (x.0, x.1)).collect();
+
+    call(client, "available_transitions", vec![ids], None).await
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct Job {
+    pub args: Option<HashMap<String, Option<u64>>>,
+    pub class_name: Option<String>,
+    pub confirmation: Option<String>,
+    pub display_group: u64,
+    pub display_order: u64,
+    pub long_description: String,
+    pub verb: String,
+}
+
+pub async fn available_jobs(
+    client: Client,
+    ids: &[CompositeId],
+) -> Result<HashMap<CompositeId, Vec<Job>>, ImlJobSchedulerRpcError> {
+    let ids: Vec<_> = ids.into_iter().map(|x| (x.0, x.1)).collect();
+
+    call(client, "available_jobs", vec![ids], None).await
 }
