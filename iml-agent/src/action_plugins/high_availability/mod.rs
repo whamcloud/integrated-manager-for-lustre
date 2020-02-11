@@ -70,26 +70,29 @@ fn process_resource(output: &[u8]) -> Result<ResourceAgentInfo, ImlAgentError> {
 pub async fn get_ha_resource_list(_: ()) -> Result<Vec<ResourceAgentInfo>, ImlAgentError> {
     let resources = crm_resource(&["--list-raw"]).await?;
 
-    let xs = resources.trim().lines().filter(|res| {
-        // This filters out cloned resources which show up as:
-        // clones-resource:0
-        // clones-resource:1
-        // ...
-        // ":" is not valid in normal resource ids so only ":0" should be processed
-        if let Some(n) = res.split(":").nth(1) {
-            n.parse() == Ok(0)
-        } else {
-            true
-        }
-    }
-    ).map(|res| async move {
-        let output = crm_resource(&["--query-xml", "--resource", res]).await?;
-        if let Some(xml) = output.split("xml:").last() {
-            process_resource(xml.as_bytes())
-        } else {
-            Err(ImlAgentError::MarkerNotFound)
-        }
-    });
+    let xs = resources
+        .trim()
+        .lines()
+        .filter(|res| {
+            // This filters out cloned resources which show up as:
+            // clones-resource:0
+            // clones-resource:1
+            // ...
+            // ":" is not valid in normal resource ids so only ":0" should be processed
+            if let Some(n) = res.split(":").nth(1) {
+                n.parse() == Ok(0)
+            } else {
+                true
+            }
+        })
+        .map(|res| async move {
+            let output = crm_resource(&["--query-xml", "--resource", res]).await?;
+            if let Some(xml) = output.split("xml:").last() {
+                process_resource(xml.as_bytes())
+            } else {
+                Err(ImlAgentError::MarkerNotFound)
+            }
+        });
     try_join_all(xs).await
 }
 
