@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                         base_field=models.CharField(max_length=255), help_text=b"", size=None
                     ),
                 ),
-                ("max_depth", models.IntegerField(default=0, help_text=b"")),
+                ("max_depth", models.SmallIntegerField(default=0, help_text=b"")),
             ],
         ),
         migrations.CreateModel(

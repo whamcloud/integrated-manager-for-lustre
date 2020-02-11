@@ -46,7 +46,7 @@ pub struct FlatDevice {
     pub fs_type: Option<String>,
     pub fs_label: Option<String>,
     pub fs_uuid: Option<String>,
-    pub max_depth: i64,
+    pub max_depth: i16,
 }
 
 fn create_dev(

@@ -823,7 +823,7 @@ pub struct Device {
     pub device_type: DeviceType,
     pub parents: DeviceIds,
     pub children: DeviceIds,
-    pub max_depth: i64,
+    pub max_depth: i16,
 }
 
 pub const DEVICE_TABLE_NAME: TableName = TableName("chroma_core_device");

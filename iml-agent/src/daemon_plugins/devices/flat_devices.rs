@@ -26,7 +26,7 @@ pub struct FlatDevice<'a> {
     pub fs_type: Option<&'a String>,
     pub fs_label: Option<&'a String>,
     pub fs_uuid: Option<&'a String>,
-    pub max_depth: usize,
+    pub max_depth: i16,
 }
 
 impl<'a> TryFrom<&'a ScsiDevice> for FlatDevice<'a> {
@@ -209,7 +209,7 @@ pub fn process_tree<'a>(
     tree: &'a devices::Device,
     parent_id: Option<DeviceId>,
     ds: &mut FlatDevices<'a>,
-    depth: usize,
+    depth: i16,
 ) {
     match tree {
         devices::Device::Root(Root { children }) => {
