@@ -119,7 +119,7 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
         if config.purge_duration is not None and config.purge_duration >= 0:
             duration = self.calc_duration(config.purge_duration, units)
             iml_cmd += " --purge {}".format(duration)
-        
+
         return iml_cmd
 
     def run(self, kwargs):
@@ -146,7 +146,9 @@ Persistent=true
 
 [Install]
 WantedBy=timers.target
-""".format(config.filesystem.id, config.interval / 1000, config.interval / 1000)
+""".format(
+                config.filesystem.id, config.interval / 1000, config.interval / 1000
+            )
 
             service_config = """# This file is part of IML
 # This file will be overwritten automatically
@@ -158,16 +160,14 @@ Description=Start Stratagem run on {}
 Type=oneshot
 EnvironmentFile=/var/lib/chroma/iml-settings.conf
 ExecStart={}
-""".format(config.filesystem.id, iml_cmd)
+""".format(
+                config.filesystem.id, iml_cmd
+            )
 
-            post_data = {
-                "config_id": str(config.id),
-                "timer_config": timer_config,
-                "service_config": service_config
-            }
+            post_data = {"config_id": str(config.id), "timer_config": timer_config, "service_config": service_config}
 
-            api_key = os.getenv('API_KEY')
-            api_user = os.getenv('API_USER')
+            api_key = os.getenv("API_KEY")
+            api_user = os.getenv("API_USER")
             s = get_api_session_request(api_user, api_key)
             result = s.put("{}/timer/configure/".format(SERVER_HTTP_URL), json=post_data, verify=False)
 
@@ -177,7 +177,8 @@ ExecStart={}
             iml_cmd = self.get_run_stratagem_command("/usr/bin/iml stratagem scan", config, "s")
 
             with open(timer_file(config.id), "w") as fn:
-                fn.write("""#  This file is part of IML
+                fn.write(
+                    """#  This file is part of IML
 #  This file will be overwritten automatically
 [Unit]
 Description=Start Stratagem run on {}
@@ -189,10 +190,14 @@ Persistent=true
 
 [Install]
 WantedBy=timers.target
-""".format(config.filesystem.id, config.interval / 1000, config.interval / 1000))
+""".format(
+                        config.filesystem.id, config.interval / 1000, config.interval / 1000
+                    )
+                )
 
             with open(service_file(config.id), "w") as fn:
-                fn.write("""#  This file is part of IML
+                fn.write(
+                    """#  This file is part of IML
 #  This file will be overwritten automatically
 [Unit]
 Description=Start Stratagem run on {}
@@ -201,7 +206,10 @@ After=iml-manager.target
 [Service]
 Type=oneshot
 ExecStart={}
-""".format(config.filesystem.id, iml_cmd))
+""".format(
+                        config.filesystem.id, iml_cmd
+                    )
+                )
             self.try_shell(["systemctl", "daemon-reload"])
             self.try_shell(["systemctl", "enable", "--now", "{}.timer".format(unit_name(config.id))])
 
@@ -211,10 +219,10 @@ class UnconfigureStratagemTimerStep(Step, CommandLine):
         job_log.debug("Unconfigure stratagem timer step kwargs: {}".format(kwargs))
 
         config = kwargs["config"]
-        
+
         if runningInDocker():
-            api_key = os.getenv('API_KEY')
-            api_user = os.getenv('API_USER')
+            api_key = os.getenv("API_KEY")
+            api_user = os.getenv("API_USER")
             s = get_api_session_request(api_user, api_key)
             result = s.delete("{}/timer/unconfigure/{}".format(SERVER_HTTP_URL, config.id), verify=False)
 
@@ -635,7 +643,7 @@ class SendResultsToClientStep(Step):
             if duration is not None
         ]
 
-        action_list = filter(lambda (_, xs): path.exists("{}/{}".format(MAILBOX_PATH, xs[1])), action_list)
+        action_list = filter(lambda xs: path.exists("{}/{}".format(MAILBOX_PATH, xs[1][1])), action_list)
 
         file_location = pipe(
             action_list,
