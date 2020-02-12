@@ -281,7 +281,11 @@ pub fn compute_virtual_device_changes<'a>(
                 fqdn.clone(),
                 &virtual_device.id,
             );
-            tracing::trace!("For this host: local: {:?}, all_available: {:?}", local, all_available);
+            tracing::trace!(
+                "For this host: local: {:?}, all_available: {:?}",
+                local,
+                all_available
+            );
             if !local && !all_available {
                 // remove from db if present
                 let is_in_db = db_device_hosts
