@@ -38,13 +38,15 @@ impl DaemonPlugin for Stats {
 
             match r {
                 Ok((x, y)) => {
-                    let lctl_output = parse_lctl_output(&x.stdout)?;
+                    let mut lctl_output = parse_lctl_output(&x.stdout)?;
 
                     let lnetctl_stats = str::from_utf8(&y.stdout)?;
 
-                    let lnetctl_output = parse_lnetctl_output(lnetctl_stats)?;
+                    let mut lnetctl_output = parse_lnetctl_output(lnetctl_stats)?;
 
-                    let out = serde_json::to_value(&vec![lctl_output, lnetctl_output])?;
+                    lctl_output.append(&mut lnetctl_output);
+
+                    let out = serde_json::to_value(&lctl_output)?;
 
                     Ok(Some(out))
                 }
