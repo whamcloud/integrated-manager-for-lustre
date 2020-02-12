@@ -34,7 +34,7 @@ fn make_other_device_host(
         local: false,
         paths: Paths(
             virtual_device_host
-                .map(|x| x.paths.clone())
+                .map(|x| x.paths.0.clone())
                 .unwrap_or(BTreeSet::new()),
         ),
         mount_path: MountPath(None),
@@ -196,11 +196,51 @@ pub fn compute_virtual_device_changes<'a>(
     );
     let mut results = BTreeMap::new();
 
-    let virtual_devices = incoming_devices
+    let other_device_hosts: DeviceHosts = db_device_hosts
+        .iter()
+        .filter(|(_, dh)| &dh.fqdn != fqdn)
+        .map(|(x, y)| (x.clone(), y.clone()))
+        .collect();
+    tracing::trace!("other_device_hosts: {:#?}", other_device_hosts);
+
+    let all_device_hosts: DeviceHosts = incoming_device_hosts
+        .iter()
+        .chain(other_device_hosts.iter())
+        .map(|(x, y)| (x.clone(), y.clone()))
+        .collect();
+    tracing::trace!("all_device_hosts: {:#?}", all_device_hosts);
+
+    // let other_device_hosts_devices: BTreeSet<DeviceId> = all_device_hosts
+    //     .iter()
+    //     .filter_map(
+    //         |((id, host), _)| {
+    //             if host != fqdn {
+    //                 Some(id.clone())
+    //             } else {
+    //                 None
+    //             }
+    //         },
+    //     )
+    //     .collect();
+    // tracing::trace!(
+    //     "other_device_hosts_devices: {:#?}",
+    //     other_device_hosts_devices
+    // );
+
+    let all_devices: Devices = incoming_devices
+        .iter()
+        .chain(db_devices.iter())
+        .filter_map(|(id, d)| Some((id.clone(), d.clone())))
+        .collect();
+    tracing::trace!("all_devices: {:#?}", all_devices);
+
+    let virtual_devices = all_devices
         .iter()
         .filter(|(_, d)| is_virtual_device(d))
         .map(|(_, d)| d)
         .sorted_by_key(|d| d.max_depth);
+
+    tracing::trace!("virtual_devices: {:#?}", virtual_devices);
 
     // We're sorting the devices by depth
     // Consider devices h -> g -> f -> e, not sorted by depth
@@ -231,16 +271,17 @@ pub fn compute_virtual_device_changes<'a>(
         // For this host itself, run parents check for this virtual device ON THE INCOMING DEVICE HOSTS
         // If it fails, remove the device host of this virtual device FROM THE DB
         // We don't add virtual devices here because either:
-        // 1. Device-scanner sends us the virtual device, if it's initially available on this host
-        // 2. We will add it while processing other hosts, if it's not initially available on this host
-        {
+        // 1. Device-scanner sends us the virtual device, if it's local on this host
+        // 2. We will add it while processing other hosts, if it's not local on this host
+        if virtual_device_host.is_some() {
+            let local = virtual_device_host.map(|x| x.local).unwrap_or(false);
             let all_available = are_all_parents_available(
                 incoming_devices,
                 incoming_device_hosts,
                 fqdn.clone(),
                 &virtual_device.id,
             );
-            if !all_available {
+            if !local && !all_available {
                 // remove from db if present
                 let is_in_db = db_device_hosts
                     .get(&(virtual_device.id.clone(), fqdn.clone()))
@@ -257,59 +298,69 @@ pub fn compute_virtual_device_changes<'a>(
         // That means current state of other hosts is in DB at this point
         let all_other_host_fqdns: BTreeSet<_> = db_device_hosts
             .iter()
-            .filter_map(|((_, f), _)| if f != fqdn { Some(f) } else { None })
+            .chain(incoming_device_hosts.iter())
+            .filter_map(|((_, f), _)| if true { Some(f) } else { None })
             .collect();
+        tracing::trace!("all_other_host_fqdns: {:?}", all_other_host_fqdns);
 
         for host in all_other_host_fqdns {
             let all_available = are_all_parents_available_with_results(
-                incoming_devices,
-                &db_device_hosts,
+                &all_devices,
+                &all_device_hosts,
                 &results,
                 host.clone(),
                 &virtual_device.id,
             );
 
-            let is_in_db = db_device_hosts
-                .get(&(virtual_device.id.clone(), host.clone()))
-                .is_some();
+            let db_device_host = db_device_hosts.get(&(virtual_device.id.clone(), host.clone()));
+            let incoming_device_host =
+                incoming_device_hosts.get(&(virtual_device.id.clone(), host.clone()));
+            let is_in_db = db_device_host.is_some();
+            let local = db_device_host
+                .map(|x| x.local)
+                .or_else(|| incoming_device_host.map(|x| x.local))
+                .unwrap_or(false);
+            tracing::trace!("DB device host: {:?}", db_device_host);
 
-            if all_available {
-                // add to database if missing
-                // update in database if present
-                let is_in_results = results
-                    .get(&(virtual_device.id.clone(), host.clone()))
-                    .is_none();
+            if !local {
+                if all_available {
+                    // add to database if missing
+                    // update in database if present
 
-                if !is_in_db {
-                    add_device_host(
-                        virtual_device.id.clone(),
-                        host.clone(),
-                        virtual_device_host,
-                        &mut results,
-                    );
-                } else if is_in_db {
-                    update_device_host(
-                        virtual_device.id.clone(),
-                        host.clone(),
-                        virtual_device_host,
-                        &mut results,
-                    );
+                    if !is_in_db {
+                        add_device_host(
+                            virtual_device.id.clone(),
+                            host.clone(),
+                            virtual_device_host,
+                            &mut results,
+                        );
+                    } else if is_in_db {
+                        update_device_host(
+                            virtual_device.id.clone(),
+                            host.clone(),
+                            virtual_device_host,
+                            &mut results,
+                        );
+                    } else {
+                        let is_in_incoming = incoming_device_hosts
+                            .get(&(virtual_device.id.clone(), fqdn.clone()))
+                            .is_some();
+                        let is_in_results = results
+                            .get(&(virtual_device.id.clone(), host.clone()))
+                            .is_none();
+
+                        tracing::warn!(
+                            "DB: {:?}, incoming: {:?}, results: {:?}",
+                            is_in_db,
+                            is_in_incoming,
+                            is_in_results
+                        );
+                    }
                 } else {
-                    let is_in_incoming = incoming_device_hosts
-                        .get(&(virtual_device.id.clone(), fqdn.clone()))
-                        .is_some();
-
-                    tracing::warn!(
-                        "DB: {:?}, incoming: {:?}, results: {:?}",
-                        is_in_db,
-                        is_in_incoming,
-                        is_in_results
-                    );
-                }
-            } else {
-                // remove from db if present
-                if is_in_db {
-                    remove_device_host(virtual_device.id.clone(), host.clone(), &mut results);
+                    // remove from db if present
+                    if is_in_db {
+                        remove_device_host(virtual_device.id.clone(), host.clone(), &mut results);
+                    }
                 }
             }
         }
@@ -354,9 +405,9 @@ mod test {
     // oss1 is processed completely on empty DB, with local VDs
     // oss2 is coming in second and it considers all other hosts for adding shared devices
     // that is oss1. oss2 is never considered to have added shared devices from oss1
-    #[test_case("vd_with_shared_parents_added_to_oss2_after_oss1")]
+    #[test_case("vd_with_shared_parents_added_after_oss1_to_oss2")]
     fn compute_virtual_device_changes(test_name: &str) {
-        // crate::db::test::_init_subscriber();
+        crate::db::test::_init_subscriber();
         let (fqdn, incoming_devices, incoming_device_hosts, db_devices, db_device_hosts) =
             deser_fixture(test_name);
 

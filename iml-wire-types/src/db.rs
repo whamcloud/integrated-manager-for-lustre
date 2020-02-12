@@ -648,7 +648,7 @@ impl Deref for DeviceId {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct DeviceIds(pub BTreeSet<DeviceId>);
 
 impl Deref for DeviceIds {
@@ -697,7 +697,7 @@ impl<'a> FromSql<'a> for DeviceIds {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Size(pub u64);
 
 #[cfg(feature = "postgres-interop")]
@@ -815,7 +815,7 @@ impl<'a> FromSql<'a> for DeviceType {
 
 /// A device (Block or Virtual).
 /// These should be unique per cluster
-#[derive(Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Device {
     pub id: DeviceId,
     pub size: Size,
@@ -849,7 +849,7 @@ impl From<Row> for Device {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Paths(pub BTreeSet<PathBuf>);
 
 impl Deref for Paths {
@@ -893,7 +893,7 @@ impl<'a> FromSql<'a> for Paths {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct MountPath(pub Option<PathBuf>);
 
 #[cfg(feature = "postgres-interop")]
@@ -928,7 +928,7 @@ impl Deref for MountPath {
 
 /// A pointer to a `Device` present on a host.
 /// Stores mount_path and paths to reach the pointed to `Device`.
-#[derive(Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct DeviceHost {
     pub device_id: DeviceId,
     pub fqdn: Fqdn,

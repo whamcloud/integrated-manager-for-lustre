@@ -20,7 +20,7 @@ impl<'a, 'b> BreadthFirstParentIterator<'a, 'b> {
 
         Self {
             devices,
-            parents: device.parents.clone(),
+            parents: device.parents.0.clone(),
             next_parents: BTreeSet::new(),
             _marker: &std::marker::PhantomData,
         }

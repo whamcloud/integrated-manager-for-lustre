@@ -403,7 +403,11 @@ pub(crate) mod test {
     use std::{fs, path::Path};
 
     pub(crate) fn _init_subscriber() {
-        tracing_subscriber::fmt::init();
+        if let Ok(o) = std::env::var("ENABLE_LOG") {
+            if o == "1" {
+                tracing_subscriber::fmt::init();
+            }
+        }
     }
 
     pub(crate) fn deser_devices<P>(path: P) -> BTreeMap<DeviceId, Device>
