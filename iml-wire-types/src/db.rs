@@ -826,6 +826,16 @@ pub struct Device {
     pub max_depth: i16,
 }
 
+impl std::fmt::Display for Device {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "({}, {:?}, {:?})",
+            self.id.0, self.parents.0, self.children.0
+        )
+    }
+}
+
 pub const DEVICE_TABLE_NAME: TableName = TableName("chroma_core_device");
 
 impl Name for Device {
@@ -938,6 +948,16 @@ pub struct DeviceHost {
     pub fs_type: Option<String>,
     pub fs_label: Option<String>,
     pub fs_uuid: Option<String>,
+}
+
+impl std::fmt::Display for DeviceHost {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "({}, {}, {}, {:?})",
+            self.device_id.0, self.fqdn.0, self.local, self.paths.0
+        )
+    }
 }
 
 pub const DEVICE_HOST_TABLE_NAME: TableName = TableName("chroma_core_devicehost");

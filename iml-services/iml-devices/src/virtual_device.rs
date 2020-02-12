@@ -208,7 +208,10 @@ pub fn compute_virtual_device_changes<'a>(
         .chain(other_device_hosts.iter())
         .map(|(x, y)| (x.clone(), y.clone()))
         .collect();
-    tracing::trace!("all_device_hosts: {:#?}", all_device_hosts);
+    let v: Vec<_> = all_device_hosts.values().collect();
+    for x in v {
+        tracing::trace!("all_device_hosts: {}", x);
+    }
 
     // let other_device_hosts_devices: BTreeSet<DeviceId> = all_device_hosts
     //     .iter()
@@ -232,15 +235,16 @@ pub fn compute_virtual_device_changes<'a>(
         .chain(db_devices.iter())
         .filter_map(|(id, d)| Some((id.clone(), d.clone())))
         .collect();
-    tracing::trace!("all_devices: {:#?}", all_devices);
+    let v: Vec<_> = all_devices.values().collect();
+    for x in v {
+        tracing::trace!("all_devices: {}", x);
+    }
 
     let virtual_devices = all_devices
         .iter()
         .filter(|(_, d)| is_virtual_device(d))
         .map(|(_, d)| d)
         .sorted_by_key(|d| d.max_depth);
-
-    tracing::trace!("virtual_devices: {:#?}", virtual_devices);
 
     // We're sorting the devices by depth
     // Consider devices h -> g -> f -> e, not sorted by depth
@@ -296,7 +300,7 @@ pub fn compute_virtual_device_changes<'a>(
                     if is_in_db {
                         remove_device_host(virtual_device.id.clone(), fqdn.clone(), &mut results);
                     } else {
-                        tracing::warn!("This host: DB: {:?}, doing nothing", is_in_db,);
+                        tracing::warn!("This host: DB: {:?}, doing nothing", is_in_db);
                     }
                 } else {
                     tracing::warn!(
@@ -338,8 +342,25 @@ pub fn compute_virtual_device_changes<'a>(
                 .map(|x| x.local)
                 .or_else(|| incoming_device_host.map(|x| x.local))
                 .unwrap_or(false);
-            tracing::debug!("DB device host: {:?}", db_device_host);
-            tracing::debug!("Incoming device host: {:?}", incoming_device_host);
+
+            tracing::debug!(
+                "DB device host: {}",
+                if let Some(dh) = db_device_host {
+                    format!("{}", dh)
+                } else {
+                    "None".into()
+                }
+            );
+
+            tracing::debug!(
+                "Incoming device host: {}",
+                if let Some(dh) = incoming_device_host {
+                    format!("{}", dh)
+                } else {
+                    "None".into()
+                }
+            );
+
             // let new_device_host = db_device_host.or(incoming_device_host);
 
             if !local {
@@ -364,10 +385,14 @@ pub fn compute_virtual_device_changes<'a>(
                             );
                         } else {
                             tracing::warn!(
-                                "DB: {:?}, incoming: {:?}, virtual_device_host: {:?}",
+                                "DB: {:?}, incoming: {:?}, virtual_device_host: {}",
                                 is_in_db,
                                 is_in_incoming,
-                                virtual_device_host
+                                if let Some(dh) = virtual_device_host {
+                                    format!("{}", dh)
+                                } else {
+                                    "None".into()
+                                }
                             );
                         }
                     } else {
