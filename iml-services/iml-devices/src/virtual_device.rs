@@ -295,7 +295,14 @@ pub fn compute_virtual_device_changes<'a>(
 
                     if is_in_db {
                         remove_device_host(virtual_device.id.clone(), fqdn.clone(), &mut results);
+                    } else {
+                        tracing::warn!("This host: DB: {:?}, doing nothing", is_in_db,);
                     }
+                } else {
+                    tracing::warn!(
+                        "This host: all_available: {:?}, doing nothing",
+                        all_available,
+                    );
                 }
             } else {
                 tracing::info!("Device host is local, skipping");
