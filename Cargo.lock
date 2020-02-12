@@ -1212,7 +1212,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
- "tracing-subscriber 0.1.6",
+ "tracing-subscriber 0.2.0",
  "url",
  "uuid 0.7.4",
  "v_hist",
@@ -1740,9 +1740,9 @@ dependencies = [
 
 [[package]]
 name = "lustre_collector"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7558f3d4d46073e19fe29152f030ef0009cee7a2a13e65df10e96c2e1b21f083"
+checksum = "8c7990c7d3b121235ed5236ae5ac588c4e806d2b78df7b9013da411a815c6fd2"
 dependencies = [
  "clap",
  "combine",
