@@ -393,7 +393,7 @@ class StreamFidlistStep(Step):
         unique_id = args["uuid"]
         fs_name = args["fs_name"]
 
-        _, stratagem_result, mailbox_files = scan_result
+        parent_dir, stratagem_result, mailbox_files = scan_result
 
         # Send stratagem_results to time series database
         influx_entries = parse_stratagem_results_to_influx(temp_stratagem_measurement, fs_name, stratagem_result)
@@ -402,7 +402,7 @@ class StreamFidlistStep(Step):
         record_stratagem_point("\n".join(influx_entries))
 
         mailbox_files = map(lambda xs: (xs[0], "{}-{}".format(unique_id, xs[1])), mailbox_files)
-        result = self.invoke_rust_agent_expect_result(host, "stream_fidlists_stratagem", mailbox_files)
+        result = self.invoke_rust_agent_expect_result(host, "stream_fidlists_stratagem", (parent_dir, mailbox_files))
 
         return result
 
@@ -562,7 +562,7 @@ class SendResultsToClientStep(Step):
             if duration is not None
         ]
 
-        action_list = filter(lambda (_, xs): path.exists("{}/{}".format(MAILBOX_PATH, xs[1])), action_list)
+        action_list = filter(lambda action: path.exists("{}/{}".format(MAILBOX_PATH, action[1][1])), action_list)
 
         file_location = pipe(
             action_list,
