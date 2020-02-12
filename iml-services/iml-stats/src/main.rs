@@ -2,10 +2,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::future::try_join_all;
-use futures_util::stream::TryStreamExt;
-use lustre_collector::types::Record;
+use futures::stream::TryStreamExt;
 use iml_service_queue::service_queue::consume_data;
+use lustre_collector::types::Record;
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 #[tokio::main]
