@@ -62,7 +62,7 @@
     {
         "device_id": "c",
         "fqdn": "oss2",
-        "local": true,
+        "local": false,
         "paths": [
             "/fake/path/zpool/a"
         ],

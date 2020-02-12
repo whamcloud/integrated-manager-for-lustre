@@ -326,6 +326,7 @@ pub fn compute_virtual_device_changes<'a>(
                 .or_else(|| incoming_device_host.map(|x| x.local))
                 .unwrap_or(false);
             tracing::trace!("DB device host: {:?}", db_device_host);
+            // let new_device_host = db_device_host.or(incoming_device_host);
 
             if !local {
                 if all_available {

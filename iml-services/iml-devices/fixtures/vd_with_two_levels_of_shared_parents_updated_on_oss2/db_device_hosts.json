@@ -74,7 +74,7 @@
     {
         "device_id": "c",
         "fqdn": "oss2",
-        "local": true,
+        "local": false,
         "paths": [
             "/fake/path/zpool/a"
         ],
@@ -86,7 +86,7 @@
     {
         "device_id": "d",
         "fqdn": "oss2",
-        "local": true,
+        "local": false,
         "paths": [
             "/fake/path/dataset/a"
         ],
