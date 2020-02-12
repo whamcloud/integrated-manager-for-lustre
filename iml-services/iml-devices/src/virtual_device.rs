@@ -362,6 +362,13 @@ pub fn compute_virtual_device_changes<'a>(
                                 virtual_device_host,
                                 &mut results,
                             );
+                        } else {
+                            tracing::warn!(
+                                "DB: {:?}, incoming: {:?}, virtual_device_host: {:?}",
+                                is_in_db,
+                                is_in_incoming,
+                                virtual_device_host
+                            );
                         }
                     } else {
                         let is_in_results = results
