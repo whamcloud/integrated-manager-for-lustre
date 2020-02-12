@@ -325,7 +325,7 @@ pub fn compute_virtual_device_changes<'a>(
             let incoming_device_host =
                 incoming_device_hosts.get(&(virtual_device.id.clone(), host.clone()));
             let is_in_db = db_device_host.is_some();
-            let is_in_incoming = incoming_device_host.is_some() || virtual_device_host.is_some();
+            let is_in_incoming = incoming_device_host.is_some();
 
             let local = db_device_host
                 .map(|x| x.local)
@@ -348,7 +348,7 @@ pub fn compute_virtual_device_changes<'a>(
                             &mut results,
                         );
                     } else if is_in_db {
-                        if is_in_incoming {
+                        if virtual_device_host.is_some() {
                             update_device_host(
                                 virtual_device.id.clone(),
                                 host.clone(),
