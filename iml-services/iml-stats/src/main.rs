@@ -4,7 +4,7 @@
 
 use futures::stream::TryStreamExt;
 use iml_service_queue::service_queue::consume_data;
-use lustre_collector::types::Record;
+use lustre_collector::Record;
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 #[tokio::main]
