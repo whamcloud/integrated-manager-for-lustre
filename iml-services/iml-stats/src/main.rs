@@ -15,7 +15,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    let mut s = consume_data::<Record>("rust_agent_stats_rx");
+    let mut s = consume_data::<Vec<Record>>("rust_agent_stats_rx");
 
     while let Some(xs) = s.try_next().await? {
         tracing::info!("Incoming stats: {:?}", xs);
