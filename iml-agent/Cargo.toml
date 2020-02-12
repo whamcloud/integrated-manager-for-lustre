@@ -27,6 +27,7 @@ inotify = "0.8"
 lazy_static = "1.4.0"
 libc = "0.2"
 liblustreapi = { path = "../liblustreapi", version = "0.1" }
+lustre_collector = "0.2.1"
 native-tls = "0.2"
 parking_lot = "0.9"
 prettytable-rs = "0.8"
@@ -34,6 +35,7 @@ reqwest = { version = "0.10", features = ["default-tls", "native-tls", "json", "
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 spinners = "1.2"
+stream-cancel = "0.5"
 strfmt = "0.1.6"
 structopt = "0.2"
 tokio = { version = "0.2", features = ["fs", "process", "macros", "net"] }
@@ -44,7 +46,6 @@ url = "2.1"
 uuid = { version = "0.7", features = ["v4"] }
 v_hist = "0.1.2"
 version-utils = { path = "../version-utils", version = "0.1.0" }
-stream-cancel = "0.5"
 
 [dependencies.regex]
 version = "1.3"

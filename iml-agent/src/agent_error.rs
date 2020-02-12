@@ -87,6 +87,7 @@ pub enum ImlAgentError {
     RequiredError(RequiredError),
     OneshotCanceled(futures::channel::oneshot::Canceled),
     LiblustreError(liblustreapi::error::LiblustreError),
+    LustreCollectorError(lustre_collector::error::LustreCollectorError),
     CmdError(CmdError),
     SendError,
     InvalidUriParts(http::uri::InvalidUriParts),
@@ -119,6 +120,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::RequiredError(ref err) => write!(f, "{}", err),
             ImlAgentError::OneshotCanceled(ref err) => write!(f, "{}", err),
             ImlAgentError::LiblustreError(ref err) => write!(f, "{}", err),
+            ImlAgentError::LustreCollectorError(ref err) => write!(f, "{}", err),
             ImlAgentError::CmdError(ref err) => write!(f, "{}", err),
             ImlAgentError::SendError => write!(f, "Rx went away"),
             ImlAgentError::InvalidUriParts(ref err) => write!(f, "{}", err),
@@ -153,6 +155,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::RequiredError(ref err) => Some(err),
             ImlAgentError::OneshotCanceled(ref err) => Some(err),
             ImlAgentError::LiblustreError(ref err) => Some(err),
+            ImlAgentError::LustreCollectorError(ref err) => Some(err),
             ImlAgentError::CmdError(ref err) => Some(err),
             ImlAgentError::SendError => None,
             ImlAgentError::InvalidUriParts(ref err) => Some(err),
@@ -255,6 +258,12 @@ impl From<NoPluginError> for ImlAgentError {
 impl From<liblustreapi::error::LiblustreError> for ImlAgentError {
     fn from(err: liblustreapi::error::LiblustreError) -> Self {
         ImlAgentError::LiblustreError(err)
+    }
+}
+
+impl From<lustre_collector::error::LustreCollectorError> for ImlAgentError {
+    fn from(err: lustre_collector::error::LustreCollectorError) -> Self {
+        ImlAgentError::LustreCollectorError(err)
     }
 }
 
