@@ -412,6 +412,8 @@ mod test {
         let (fqdn, incoming_devices, incoming_device_hosts, db_devices, db_device_hosts) =
             deser_fixture(test_name);
 
+        // TODO: Assert that fqdn == incoming_device_hosts[0].fqdn
+
         let updates = super::compute_virtual_device_changes(
             &fqdn,
             &incoming_devices,
