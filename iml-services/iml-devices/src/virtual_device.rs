@@ -187,7 +187,7 @@ pub fn compute_virtual_device_changes<'a>(
     db_devices: &Devices,
     db_device_hosts: &DeviceHosts,
 ) -> Result<BTreeMap<(DeviceId, Fqdn), Change<DeviceHost>>, ImlDevicesError> {
-    tracing::info!(
+    tracing::trace!(
         "Incoming: devices: {}, device hosts: {}, Database: devices: {}, device hosts: {}",
         incoming_devices.len(),
         incoming_device_hosts.len(),
@@ -286,15 +286,19 @@ pub fn compute_virtual_device_changes<'a>(
                 local,
                 all_available
             );
-            if !local && !all_available {
-                // remove from db if present
-                let is_in_db = db_device_hosts
-                    .get(&(virtual_device.id.clone(), fqdn.clone()))
-                    .is_some();
+            if !local {
+                if !all_available {
+                    // remove from db if present
+                    let is_in_db = db_device_hosts
+                        .get(&(virtual_device.id.clone(), fqdn.clone()))
+                        .is_some();
 
-                if is_in_db {
-                    remove_device_host(virtual_device.id.clone(), fqdn.clone(), &mut results);
+                    if is_in_db {
+                        remove_device_host(virtual_device.id.clone(), fqdn.clone(), &mut results);
+                    }
                 }
+            } else {
+                tracing::info!("Device host is local, skipping");
             }
         }
 
@@ -321,11 +325,14 @@ pub fn compute_virtual_device_changes<'a>(
             let incoming_device_host =
                 incoming_device_hosts.get(&(virtual_device.id.clone(), host.clone()));
             let is_in_db = db_device_host.is_some();
+            let is_in_incoming = incoming_device_host.is_some() || virtual_device_host.is_some();
+
             let local = db_device_host
                 .map(|x| x.local)
                 .or_else(|| incoming_device_host.map(|x| x.local))
                 .unwrap_or(false);
-            tracing::trace!("DB device host: {:?}", db_device_host);
+            tracing::debug!("DB device host: {:?}", db_device_host);
+            tracing::debug!("Incoming device host: {:?}", incoming_device_host);
             // let new_device_host = db_device_host.or(incoming_device_host);
 
             if !local {
@@ -341,16 +348,15 @@ pub fn compute_virtual_device_changes<'a>(
                             &mut results,
                         );
                     } else if is_in_db {
-                        update_device_host(
-                            virtual_device.id.clone(),
-                            host.clone(),
-                            virtual_device_host,
-                            &mut results,
-                        );
+                        if is_in_incoming {
+                            update_device_host(
+                                virtual_device.id.clone(),
+                                host.clone(),
+                                virtual_device_host,
+                                &mut results,
+                            );
+                        }
                     } else {
-                        let is_in_incoming = incoming_device_hosts
-                            .get(&(virtual_device.id.clone(), fqdn.clone()))
-                            .is_some();
                         let is_in_results = results
                             .get(&(virtual_device.id.clone(), host.clone()))
                             .is_none();
@@ -368,6 +374,8 @@ pub fn compute_virtual_device_changes<'a>(
                         remove_device_host(virtual_device.id.clone(), host.clone(), &mut results);
                     }
                 }
+            } else {
+                tracing::info!("Device host is local, skipping");
             }
         }
     }
