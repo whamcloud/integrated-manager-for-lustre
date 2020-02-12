@@ -7,9 +7,9 @@ use crate::{
     daemon_plugins::{DaemonPlugin, Output},
 };
 use futures::{future, Future, FutureExt};
-use iml_cmd::{CheckedCommandExt, Command};
+use iml_cmd::Command;
 use lustre_collector::{parse_lctl_output, parse_lnetctl_output, parser};
-use std::{pin::Pin, str};
+use std::{io, pin::Pin, str};
 
 pub fn create() -> impl DaemonPlugin {
     Stats
@@ -29,25 +29,32 @@ impl DaemonPlugin for Stats {
     ) -> Pin<Box<dyn Future<Output = Result<Output, ImlAgentError>> + Send>> {
         async {
             let mut cmd1 = Command::new("lctl");
-            let cmd1 = cmd1
-                .arg("get_param")
-                .args(parser::params())
-                .checked_output();
+            let cmd1 = cmd1.arg("get_param").args(parser::params()).output();
 
             let mut cmd2 = Command::new("lnetctl");
-            let cmd2 = cmd2.arg("export").checked_output();
+            let cmd2 = cmd2.arg("export").output();
 
-            let (x, y) = future::try_join(cmd1, cmd2).await?;
+            let r = future::try_join(cmd1, cmd2).await;
 
-            let lctl_output = parse_lctl_output(&x.stdout)?;
+            match r {
+                Ok((x, y)) => {
+                    let lctl_output = parse_lctl_output(&x.stdout)?;
 
-            let lnetctl_stats = str::from_utf8(&y.stdout)?;
+                    let lnetctl_stats = str::from_utf8(&y.stdout)?;
 
-            let lnetctl_output = parse_lnetctl_output(lnetctl_stats)?;
+                    let lnetctl_output = parse_lnetctl_output(lnetctl_stats)?;
 
-            let out = serde_json::to_value(&vec![lctl_output, lnetctl_output])?;
+                    let out = serde_json::to_value(&vec![lctl_output, lnetctl_output])?;
 
-            Ok(Some(out))
+                    Ok(Some(out))
+                }
+                Err(ref err) if err.kind() == io::ErrorKind::NotFound => {
+                    tracing::debug!("Program was not found; will not send report.");
+
+                    Ok(None)
+                }
+                Err(e) => Err(e.into()),
+            }
         }
         .boxed()
     }
