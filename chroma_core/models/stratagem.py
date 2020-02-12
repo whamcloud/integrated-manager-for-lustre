@@ -127,6 +127,7 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
         # Create systemd timer
 
         config = kwargs["config"]
+        interval_in_seconds = config.interval / 1000
 
         if runningInDocker():
             iml_cmd = self.get_run_stratagem_command("/usr/bin/start-stratagem-scan", config, None)
@@ -147,7 +148,7 @@ Persistent=true
 [Install]
 WantedBy=timers.target
 """.format(
-                config.filesystem.id, config.interval / 1000, config.interval / 1000
+                config.filesystem.id, interval_in_seconds, interval_in_seconds
             )
 
             service_config = """# This file is part of IML
@@ -191,7 +192,7 @@ Persistent=true
 [Install]
 WantedBy=timers.target
 """.format(
-                        config.filesystem.id, config.interval / 1000, config.interval / 1000
+                        config.filesystem.id, interval_in_seconds, interval_in_seconds
                     )
                 )
 
