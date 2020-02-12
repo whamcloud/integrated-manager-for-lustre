@@ -136,7 +136,7 @@ fn are_all_parents_available(
         result
     });
     tracing::info!(
-        "Host: {:?}, device: {:?}, all_available: {:?}",
+        "are_all_parents_available: host: {:?}, device: {:?}, all_available: {:?}",
         host,
         child_id,
         all_available
@@ -172,7 +172,7 @@ fn are_all_parents_available_with_results(
         result || result_results.unwrap()
     });
     tracing::info!(
-        "Host: {:?}, device: {:?}, all_available: {:?}",
+        "are_all_parents_available_with_results: host: {:?}, device: {:?}, all_available: {:?}",
         host,
         child_id,
         all_available
@@ -281,6 +281,7 @@ pub fn compute_virtual_device_changes<'a>(
                 fqdn.clone(),
                 &virtual_device.id,
             );
+            tracing::trace!("For this host: local: {:?}, all_available: {:?}", local, all_available);
             if !local && !all_available {
                 // remove from db if present
                 let is_in_db = db_device_hosts
