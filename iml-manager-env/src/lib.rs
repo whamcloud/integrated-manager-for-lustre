@@ -164,6 +164,14 @@ pub fn get_influxdb_addr() -> SocketAddr {
 /// Get the metrics influxdb database name
 pub fn get_influxdb_metrics_db() -> String {
     get_var("INFLUXDB_IML_STATS_DB")
+/// Get the timer port
+pub fn get_timer_port() -> String {
+    get_var("TIMER_PORT")
+}
+
+/// Get the timer address from the env or panic
+pub fn get_timer_addr() -> SocketAddr {
+    to_socket_addr(&get_server_host(), &get_timer_port())
 }
 
 /// Get the path to the mailbox from the env or panic
