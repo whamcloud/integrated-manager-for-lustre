@@ -3,6 +3,7 @@ use iml_wire_types::warp_drive::Cache;
 pub(crate) fn get_cache() -> Cache {
     let data = r#"
     {
+  "content_type": {},
   "active_alert": {
     "577": {
       "_message": "Updates are ready for server oss1.local",
