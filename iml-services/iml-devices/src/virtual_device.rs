@@ -4,6 +4,7 @@
 
 use crate::{
     breadth_first_parent_iterator::BreadthFirstParentIterator,
+    build_new_state::build_new_state,
     change::Change,
     db::{DeviceHosts, Devices},
     error::ImlDevicesError,
@@ -12,7 +13,6 @@ use iml_wire_types::{
     db::{Device, DeviceHost, DeviceId, DeviceType, MountPath, Paths},
     Fqdn,
 };
-use itertools::Itertools;
 use std::collections::{BTreeMap, BTreeSet};
 
 fn is_virtual_device(device: &Device) -> bool {
@@ -123,27 +123,6 @@ fn remove_device_host(
     );
 }
 
-fn are_all_parents_available(
-    devices: &Devices,
-    device_hosts: &DeviceHosts,
-    host: Fqdn,
-    child_id: &DeviceId,
-) -> bool {
-    let mut i = BreadthFirstParentIterator::new(devices, child_id);
-    let all_available = i.all(|p| {
-        let result = device_hosts.get(&(p.clone(), host.clone())).is_some();
-        tracing::trace!("Checking device {:?} on host {:?}: {:?}", p, host, result);
-        result
-    });
-    tracing::info!(
-        "are_all_parents_available: host: {:?}, device: {:?}, all_available: {:?}",
-        host,
-        child_id,
-        all_available
-    );
-    all_available
-}
-
 fn are_all_parents_available_with_results(
     devices: &Devices,
     device_hosts: &DeviceHosts,
@@ -189,13 +168,21 @@ pub fn virtual_device_changes<'a>(
 ) -> Result<BTreeMap<(DeviceId, Fqdn), Change<DeviceHost>>, ImlDevicesError> {
     let results = BTreeMap::new();
 
+    let (temporary_devices, temporary_device_hosts) = build_new_state(
+        fqdn,
+        incoming_devices,
+        incoming_device_hosts,
+        db_devices,
+        db_device_hosts,
+    );
+
     Ok(results)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::db::test::{deser_devices, deser_fixture};
+    use crate::db::test::deser_fixture;
     use ::test_case::test_case;
     use insta::assert_debug_snapshot;
 
@@ -249,20 +236,5 @@ mod test {
         .unwrap();
 
         assert_debug_snapshot!(test_name, changes);
-    }
-
-    #[test_case("single_device_doesnt_iterate", "a")]
-    #[test_case("single_parent_produces_one_item", "b")]
-    #[test_case("two_parents_produce_two_items", "c")]
-    #[test_case("parent_and_double_parent_produce_three_items", "c1")]
-    #[test_case("triple_parent_and_double_parent_produce_five_items", "c1")]
-    fn breadth_first_iterator(test_case: &str, child: &str) {
-        let prefix = String::from("fixtures/") + test_case + "/";
-        let devices = deser_devices(prefix.clone() + "devices.json");
-
-        let id = DeviceId(child.into());
-        let i = BreadthFirstParentIterator::new(&devices, &id);
-        let result: Vec<_> = i.collect();
-        assert_debug_snapshot!(test_case, result);
     }
 }

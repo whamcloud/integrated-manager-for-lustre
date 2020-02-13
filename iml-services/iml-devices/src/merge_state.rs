@@ -6,7 +6,7 @@ use crate::db::{DeviceHosts, Devices};
 use iml_wire_types::Fqdn;
 use std::collections::BTreeSet;
 
-fn merge_state(
+pub fn merge_state(
     fqdn: &Fqdn,
     incoming_devices: &Devices,
     incoming_device_hosts: &DeviceHosts,
