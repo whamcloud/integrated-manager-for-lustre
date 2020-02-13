@@ -21,7 +21,7 @@ async fn main() -> Result<(), ImlStatsError> {
     let mut s = consume_data::<Vec<Record>>("rust_agent_stats_rx");
 
     while let Some((host, xs)) = s.try_next().await? {
-        tracing::info!("Incoming stats: {:?}", xs);
+        tracing::info!("Incoming stats: {}: {:?}", host, xs);
 
         let client = Client::new(get_influxdb_addr().to_string(), get_influxdb_metrics_db());
         //Write the entry into the influxdb database
