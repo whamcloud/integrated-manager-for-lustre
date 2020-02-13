@@ -31,7 +31,7 @@ async fn main() -> Result<(), ImlStatsError> {
                     TargetStats::FilesFree(x) => {
                         let q = Query::write_query(Timestamp::Now, "target")
                             .add_tag("host", host.0.as_ref())
-                            .add_tag("target", x.target.0)
+                            .add_tag("target", &*x.target)
                             .add_field("bytes_free", x.value);
                         Some(q)
                     }

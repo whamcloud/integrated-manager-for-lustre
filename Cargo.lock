@@ -1766,9 +1766,9 @@ dependencies = [
 
 [[package]]
 name = "lustre_collector"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c7990c7d3b121235ed5236ae5ac588c4e806d2b78df7b9013da411a815c6fd2"
+checksum = "83e43979375442327ad693fae889341927d307fd34fd79c63ef748b724b9ce60"
 dependencies = [
  "clap",
  "combine",
