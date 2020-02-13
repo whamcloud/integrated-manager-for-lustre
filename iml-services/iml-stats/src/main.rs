@@ -3,8 +3,11 @@
 // license that can be found in the LICENSE file.
 
 use futures::stream::TryStreamExt;
+use iml_manager_env::{get_influxdb_addr, get_influxdb_metrics_db};
 use iml_service_queue::service_queue::consume_data;
-use lustre_collector::Record;
+use iml_stats::error::ImlStatsError;
+use influxdb::{Client, Query, Timestamp};
+use lustre_collector::{Record, TargetStats};
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 #[tokio::main]
@@ -17,8 +20,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut s = consume_data::<Vec<Record>>("rust_agent_stats_rx");
 
-    while let Some(xs) = s.try_next().await? {
+    while let Some((_, xs)) = s.try_next().await? {
         tracing::info!("Incoming stats: {:?}", xs);
+
+        let client = Client::new(get_influxdb_addr().to_string(), get_influxdb_metrics_db());
+        //Write the entry into the influxdb database
+        for record in xs {
+            let maybe_entry = match record {
+                Record::Target(target_stats) => match target_stats {
+                    TargetStats::FilesFree(x) => {
+                        let q = Query::write_query(Timestamp::Now, "target")
+                            .add_field("bytes_free", x.value);
+                        Some(q)
+                    }
+                    _ => {
+                        tracing::debug!("Received target stat type that is not implemented yet.");
+                        None
+                    }
+                },
+                _ => {
+                    tracing::debug!("Received record type that is not iplemented yet.");
+                    None
+                }
+            };
+
+            if let Some(entry) = maybe_entry {
+                let r = client.query(&entry).await.map_err(|e| {
+                    tracing::error!("Error writing series to influxdb: {:?}", e.to_string());
+                    ImlStatsError::InfluxDbError(e)
+                })?;
+                tracing::debug!("Result of writing series to influxdb: {}", r);
+            }
+        }
     }
 
     Ok(())
