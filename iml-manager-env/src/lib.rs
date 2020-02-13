@@ -174,6 +174,21 @@ pub fn get_timer_addr() -> SocketAddr {
     to_socket_addr(&get_server_host(), &get_timer_port())
 }
 
+/// Get the influxdb port from the env or panic
+pub fn get_influxdb_port() -> String {
+    get_var("INFLUXDB_PORT")
+}
+
+/// Get the influxdb address from the env or panic
+pub fn get_influxdb_addr() -> SocketAddr {
+    to_socket_addr(&get_server_host(), &get_influxdb_port())
+}
+
+/// Get the metrics influxdb database name
+pub fn get_influxdb_metrics_db() -> String {
+    get_var("INFLUXDB_IML_STATS_DB")
+}
+
 /// Get the path to the mailbox from the env or panic
 pub fn get_mailbox_path() -> PathBuf {
     get_var("MAILBOX_PATH").into()
