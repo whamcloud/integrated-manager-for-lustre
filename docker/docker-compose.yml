@@ -311,6 +311,19 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - PROXY_HOST=iml-postoffice
+  iml-timer:
+    image: "imlteam/iml-timer:5.1.1-dev"
+    hostname: "iml-timer"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-timer.dockerfile
+    deploy: *default-deploy
+    volumes:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+      - "timer_run:/run"
+      - "timer_systemd:/var/lib/systemd"
+      - "timer_system:/etc/systemd/system"
+      - "manager-config:/var/lib/chroma"
   setup:
     image: "imlteam/manager-setup:5.1.1-dev"
     command: ["tail", "-f", "/dev/null"]
@@ -334,6 +347,12 @@ volumes:
     driver_opts:
       type: tmpfs
       device: tmpfs
+  timer_run:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+  timer_system:
+  timer_systemd:
 secrets:
   iml_pw:
     external: true
