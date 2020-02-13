@@ -180,7 +180,7 @@ fn are_all_parents_available_with_results(
     all_available
 }
 
-pub fn compute_virtual_device_changes<'a>(
+pub fn virtual_device_changes<'a>(
     fqdn: &Fqdn,
     incoming_devices: &Devices,
     incoming_device_hosts: &DeviceHosts,
@@ -469,7 +469,7 @@ mod test {
             assert_eq!(fqdn, dh.fqdn);
         }
 
-        let updates = super::compute_virtual_device_changes(
+        let updates = super::virtual_device_changes(
             &fqdn,
             &incoming_devices,
             &incoming_device_hosts,

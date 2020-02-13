@@ -5,7 +5,7 @@
 use crate::{
     change::{self, Change},
     error::ImlDevicesError,
-    virtual_device::compute_virtual_device_changes,
+    virtual_device::virtual_device_changes,
 };
 use futures::TryStreamExt;
 use iml_postgres::{select_all, Client, Transaction};
@@ -361,7 +361,7 @@ pub async fn update_virtual_devices<'a>(
     db_devices: &Devices,
     db_device_hosts: &DeviceHosts,
 ) -> Result<(), ImlDevicesError> {
-    let changes = compute_virtual_device_changes(
+    let changes = virtual_device_changes(
         fqdn,
         incoming_devices,
         incoming_device_hosts,
