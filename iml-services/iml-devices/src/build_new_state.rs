@@ -27,14 +27,22 @@ pub fn build_new_state<'a>(
         db_devices,
         db_device_hosts,
     );
-    let local_virtual_device_hosts = temporary_device_hosts.iter().filter(|(_, dh)| dh.local);
-    let non_local_virtual_device_hosts = temporary_device_hosts.iter().filter(|(_, dh)| !dh.local);
 
-    let sorted_device_ids: Vec<_> = temporary_devices
+    let sorted_device_ids: BTreeMap<DeviceId, i16> = temporary_devices
         .iter()
         .sorted_by_key(|(_, d)| d.max_depth)
-        .map(|(id, _)| id.clone())
+        .map(|(id, d)| (id.clone(), d.max_depth))
         .collect();
+
+    let sorted_device_hosts =
+        temporary_device_hosts
+            .iter()
+            .sorted_by(|((id1, _), _), ((id2, _), _)| {
+                Ord::cmp(&sorted_device_ids[id1], &sorted_device_ids[id2])
+            });
+    let sorted_device_hosts2 = sorted_device_hosts.clone();
+    let local_virtual_device_hosts = sorted_device_hosts.filter(|(_, dh)| dh.local);
+    let non_local_virtual_device_hosts = sorted_device_hosts2.filter(|(_, dh)| !dh.local);
 
     let new_device_hosts = temporary_device_hosts.clone();
     let new_devices = temporary_devices.clone();
@@ -44,7 +52,6 @@ pub fn build_new_state<'a>(
         .filter_map(|((_, f), _)| if f != fqdn { Some(f) } else { None })
         .collect();
 
-    // FIXME: Sort local_virtual_device_hosts by max_depth!
     for (_, dh) in local_virtual_device_hosts {
         for f in other_fqdns.iter() {
             let all_available = are_all_parents_available(
