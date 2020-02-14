@@ -19,8 +19,6 @@ pub fn build_new_state<'a>(
     db_devices: &Devices,
     db_device_hosts: &DeviceHosts,
 ) -> (Devices, DeviceHosts) {
-    let (devices, device_hosts) = (BTreeMap::new(), BTreeMap::new());
-
     let (temporary_devices, temporary_device_hosts) = merge_state(
         fqdn,
         incoming_devices,
@@ -80,7 +78,7 @@ pub fn build_new_state<'a>(
         }
     }
 
-    (devices, device_hosts)
+    (new_devices, new_device_hosts)
 }
 
 fn are_all_parents_available(
