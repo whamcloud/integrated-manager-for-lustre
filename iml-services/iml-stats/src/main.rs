@@ -126,7 +126,7 @@ async fn main() -> Result<(), ImlStatsError> {
                         )
                         .add_tag("host", host.0.as_ref())
                         .add_tag("target", &*x.target)
-                        .add_field("bytes_free", x.value)])
+                        .add_field("files_free", x.value)])
                     }
                     TargetStats::FilesTotal(x) => {
                         tracing::debug!("FilesTotal - {:?}", x);
