@@ -3,13 +3,13 @@
 // license that can be found in the LICENSE file.
 
 use iml_wire_types::db::{
-    AlertStateRecord, FsRecord, LnetConfigurationRecord, ManagedHostRecord,
+    AlertStateRecord, ContentTypeRecord, FsRecord, LnetConfigurationRecord, ManagedHostRecord,
     ManagedTargetMountRecord, ManagedTargetRecord, OstPoolOstsRecord, OstPoolRecord,
     StratagemConfiguration, TableName, VolumeNodeRecord, VolumeRecord, ALERT_STATE_TABLE_NAME,
-    LNET_CONFIGURATION_TABLE_NAME, MANAGED_FILESYSTEM_TABLE_NAME, MANAGED_HOST_TABLE_NAME,
-    MANAGED_TARGET_MOUNT_TABLE_NAME, MANAGED_TARGET_TABLE_NAME, OSTPOOL_OSTS_TABLE_NAME,
-    OSTPOOL_TABLE_NAME, STRATAGEM_CONFIGURATION_TABLE_NAME, VOLUME_NODE_TABLE_NAME,
-    VOLUME_TABLE_NAME,
+    CONTENT_TYPE_TABLE_NAME, LNET_CONFIGURATION_TABLE_NAME, MANAGED_FILESYSTEM_TABLE_NAME,
+    MANAGED_HOST_TABLE_NAME, MANAGED_TARGET_MOUNT_TABLE_NAME, MANAGED_TARGET_TABLE_NAME,
+    OSTPOOL_OSTS_TABLE_NAME, OSTPOOL_TABLE_NAME, STRATAGEM_CONFIGURATION_TABLE_NAME,
+    VOLUME_NODE_TABLE_NAME, VOLUME_TABLE_NAME,
 };
 use serde::de::Error;
 use std::convert::TryFrom;
@@ -19,6 +19,7 @@ use std::convert::TryFrom;
 #[derive(Debug)]
 pub enum DbRecord {
     AlertState(AlertStateRecord),
+    ContentType(ContentTypeRecord),
     LnetConfiguration(LnetConfigurationRecord),
     ManagedFilesystem(FsRecord),
     ManagedHost(ManagedHostRecord),
@@ -57,6 +58,7 @@ impl TryFrom<(TableName<'_>, serde_json::Value)> for DbRecord {
             LNET_CONFIGURATION_TABLE_NAME => {
                 serde_json::from_value(x).map(DbRecord::LnetConfiguration)
             }
+            CONTENT_TYPE_TABLE_NAME => serde_json::from_value(x).map(DbRecord::ContentType),
             x => Err(serde_json::Error::custom(format!(
                 "No matching table representation for {}",
                 x

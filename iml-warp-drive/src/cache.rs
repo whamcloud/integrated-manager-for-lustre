@@ -9,9 +9,9 @@ use iml_manager_client::{get, get_client, Client, ImlManagerClientError};
 use iml_postgres::Client as PgClient;
 use iml_wire_types::{
     db::{
-        AlertStateRecord, FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord,
-        ManagedTargetMountRecord, ManagedTargetRecord, Name, NotDeleted, OstPoolOstsRecord,
-        OstPoolRecord, StratagemConfiguration, VolumeNodeRecord, VolumeRecord,
+        AlertStateRecord, ContentTypeRecord, FsRecord, Id, LnetConfigurationRecord,
+        ManagedHostRecord, ManagedTargetMountRecord, ManagedTargetRecord, Name, NotDeleted,
+        OstPoolOstsRecord, OstPoolRecord, StratagemConfiguration, VolumeNodeRecord, VolumeRecord,
     },
     warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam, Volume,
@@ -147,6 +147,12 @@ pub async fn db_record_to_change_record(
                 Ok(RecordChange::Update(Record::LnetConfiguration(x)))
             }
         },
+        DbRecord::ContentType(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::ContentType(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::ContentType(x)))
+            }
+        },
         DbRecord::ManagedTargetMount(x) => match (msg_type, x) {
             (MessageType::Delete, x) => {
                 Ok(RecordChange::Delete(RecordId::ManagedTargetMount(x.id())))
@@ -265,6 +271,10 @@ pub async fn populate_from_db(
             "select * from {}",
             OstPoolOstsRecord::table_name()
         )),
+        client.prepare(&format!(
+            "select * from {}",
+            ContentTypeRecord::table_name()
+        )),
     ])
     .await?;
 
@@ -279,9 +289,11 @@ pub async fn populate_from_db(
     let (
         (managed_target_mount, stratagem_configuration, lnet_configuration, volume_node, ost_pool),
         ost_pool_osts,
-    ) = future::try_join(
+        content_types,
+    ) = future::try_join3(
         fut,
         into_row(client.query_raw(&stmts[5], iter::empty()).await?),
+        into_row(client.query_raw(&stmts[6], iter::empty()).await?),
     )
     .await?;
 
@@ -293,6 +305,7 @@ pub async fn populate_from_db(
     cache.volume_node = volume_node;
     cache.ost_pool = ost_pool;
     cache.ost_pool_osts = ost_pool_osts;
+    cache.content_type = content_types;
 
     tracing::debug!("Populated from db");
 
