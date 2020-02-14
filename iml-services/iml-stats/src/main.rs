@@ -38,15 +38,30 @@ async fn main() -> Result<(), ImlStatsError> {
                         x.value
                             .iter()
                             .map(|stat| {
-                                Query::write_query(Timestamp::Nanoseconds(ts), "target")
-                                    .add_tag("host", host.0.as_ref())
-                                    .add_tag("target", &*x.target)
-                                    .add_tag("name", &*stat.name)
-                                    .add_tag("units", &*stat.units)
-                                    .add_field("min", stat.min)
-                                    .add_field("max", stat.max)
-                                    .add_field("sum", stat.sum)
-                                    .add_field("sumsquare", stat.sumsquare)
+                                let mut query =
+                                    Query::write_query(Timestamp::Nanoseconds(ts), "target")
+                                        .add_tag("host", host.0.as_ref())
+                                        .add_tag("target", &*x.target)
+                                        .add_tag("name", &*stat.name)
+                                        .add_tag("units", &*stat.units);
+
+                                if let Some(min) = stat.min {
+                                    query = query.add_field("min", min);
+                                }
+
+                                if let Some(max) = stat.max {
+                                    query = query.add_field("max", max);
+                                }
+
+                                if let Some(sum) = stat.sum {
+                                    query = query.add_field("sum", sum);
+                                }
+
+                                if let Some(sumsquare) = stat.sumsquare {
+                                    query = query.add_field("sumsquare", sumsquare);
+                                }
+
+                                query
                             })
                             .collect(),
                     ),
