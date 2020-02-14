@@ -318,7 +318,9 @@ pub trait Label {
 }
 
 pub trait EndpointName {
-    fn endpoint_name() -> &'static str;
+    fn endpoint_name() -> &'static str
+    where
+        Self: Sized;
 }
 
 pub trait EndpointNameSelf {
