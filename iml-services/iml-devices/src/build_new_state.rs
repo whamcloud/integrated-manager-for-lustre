@@ -6,6 +6,7 @@ use crate::{
     breadth_first_parent_iterator::BreadthFirstParentIterator,
     db::{DeviceHosts, Devices},
     merge_state::merge_state,
+    virtual_device::make_other_device_host,
 };
 use iml_wire_types::{db::DeviceId, Fqdn};
 use itertools::Itertools;
@@ -44,8 +45,8 @@ pub fn build_new_state<'a>(
     let local_virtual_device_hosts = sorted_device_hosts.filter(|(_, dh)| dh.local);
     let non_local_virtual_device_hosts = sorted_device_hosts2.filter(|(_, dh)| !dh.local);
 
-    let new_device_hosts = temporary_device_hosts.clone();
-    let new_devices = temporary_devices.clone();
+    let mut new_device_hosts = temporary_device_hosts.clone();
+    let new_devices = temporary_devices;
 
     let other_fqdns: BTreeSet<_> = temporary_device_hosts
         .iter()
@@ -54,12 +55,28 @@ pub fn build_new_state<'a>(
 
     for (_, dh) in local_virtual_device_hosts {
         for f in other_fqdns.iter() {
-            let all_available = are_all_parents_available(
-                &temporary_devices,
-                &temporary_device_hosts,
-                Fqdn(f.0.clone()),
-                &dh.device_id,
-            );
+            let f = Fqdn(f.0.clone());
+            let f2 = f.clone();
+            let f3 = f.clone();
+            let all_available =
+                are_all_parents_available(&new_devices, &new_device_hosts, f, &dh.device_id);
+            if all_available {
+                let other_host = make_other_device_host(dh.device_id.clone(), f2, Some(dh));
+
+                new_device_hosts.insert((dh.device_id.clone(), f3), other_host);
+            }
+        }
+    }
+
+    for (_, dh) in non_local_virtual_device_hosts {
+        for f in other_fqdns.iter() {
+            let f = Fqdn(f.0.clone());
+            let f3 = f.clone();
+            let all_available =
+                are_all_parents_available(&new_devices, &new_device_hosts, f, &dh.device_id);
+            if !all_available {
+                new_device_hosts.remove(&(dh.device_id.clone(), f3));
+            }
         }
     }
 

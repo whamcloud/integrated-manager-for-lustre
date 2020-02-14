@@ -23,7 +23,7 @@ fn is_virtual_device(device: &Device) -> bool {
         || device.device_type == DeviceType::Zpool
 }
 
-fn make_other_device_host(
+pub fn make_other_device_host(
     device_id: DeviceId,
     fqdn: Fqdn,
     virtual_device_host: Option<&DeviceHost>,
