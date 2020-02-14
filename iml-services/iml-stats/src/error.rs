@@ -9,6 +9,7 @@ use std::{error::Error, fmt};
 pub enum ImlStatsError {
     ImlServiceQueueError(ImlServiceQueueError),
     InfluxDbError(influxdb::Error),
+    SystemTimeError(std::time::SystemTimeError),
 }
 
 impl fmt::Display for ImlStatsError {
@@ -16,6 +17,7 @@ impl fmt::Display for ImlStatsError {
         match *self {
             ImlStatsError::ImlServiceQueueError(ref err) => write!(f, "{}", err),
             ImlStatsError::InfluxDbError(ref err) => write!(f, "{}", err),
+            ImlStatsError::SystemTimeError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -25,6 +27,7 @@ impl Error for ImlStatsError {
         match *self {
             ImlStatsError::ImlServiceQueueError(ref err) => Some(err),
             ImlStatsError::InfluxDbError(_) => None,
+            ImlStatsError::SystemTimeError(ref err) => Some(err),
         }
     }
 }
@@ -38,5 +41,11 @@ impl From<ImlServiceQueueError> for ImlStatsError {
 impl From<influxdb::Error> for ImlStatsError {
     fn from(err: influxdb::Error) -> Self {
         ImlStatsError::InfluxDbError(err)
+    }
+}
+
+impl From<std::time::SystemTimeError> for ImlStatsError {
+    fn from(err: std::time::SystemTimeError) -> Self {
+        ImlStatsError::SystemTimeError(err)
     }
 }

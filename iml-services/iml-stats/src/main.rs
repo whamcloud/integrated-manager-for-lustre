@@ -26,7 +26,9 @@ async fn main() -> Result<(), ImlStatsError> {
         tracing::info!("Incoming stats: {}: {:?}", host, xs);
 
         let client = Client::new(&influx_url, get_influxdb_metrics_db());
-        let ts = Timestamp::Now;
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::SystemTime::UNIX_EPOCH)?
+            .as_nanos() as usize;
 
         //Write the entry into the influxdb database
         for record in xs {
@@ -36,7 +38,7 @@ async fn main() -> Result<(), ImlStatsError> {
                         x.value
                             .iter()
                             .map(|stat| {
-                                Query::write_query(ts, "target")
+                                Query::write_query(Timestamp::Nanoseconds(ts), "target")
                                     .add_tag("host", host.0.as_ref())
                                     .add_tag("target", &*x.target)
                                     .add_tag("name", &*stat.name)
@@ -56,7 +58,7 @@ async fn main() -> Result<(), ImlStatsError> {
                                     .buckets
                                     .iter()
                                     .map(|bucket| {
-                                        Query::write_query(ts, "target")
+                                        Query::write_query(Timestamp::Nanoseconds(ts), "target")
                                             .add_tag("host", host.0.as_ref())
                                             .add_tag("target", &*x.target)
                                             .add_tag("name", &*brw_stat.name)
@@ -69,108 +71,181 @@ async fn main() -> Result<(), ImlStatsError> {
                             })
                             .collect(),
                     ),
-                    TargetStats::FilesFree(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("bytes_free", x.value)]),
-                    TargetStats::FilesTotal(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("files_total", x.value)]),
-                    TargetStats::FsType(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("fs_type", x.value)]),
-                    TargetStats::BytesAvail(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("bytes_avail", x.value)]),
-                    TargetStats::BytesFree(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("bytes_free", x.value)]),
-                    TargetStats::BytesTotal(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("bytes_total", x.value)]),
-                    TargetStats::NumExports(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("num_exports", x.value)]),
-                    TargetStats::TotDirty(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("tot_dirty", x.value)]),
-                    TargetStats::TotGranted(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("tot_granted", x.value)]),
-                    TargetStats::TotPending(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("tot_pending", x.value)]),
-                    TargetStats::ContendedLocks(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("contended_locks", x.value)]),
-                    TargetStats::ContentionSeconds(x) => {
-                        Some(vec![Query::write_query(ts, "target")
-                            .add_tag("host", host.0.as_ref())
-                            .add_tag("target", &*x.target)
-                            .add_field("contention_seconds", x.value)])
-                    }
-                    TargetStats::CtimeAgeLimit(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("ctime_age_limit", x.value)]),
-                    TargetStats::EarlyLockCancel(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("early_lock_cancel", x.value)]),
-                    TargetStats::LockCount(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("lock_count", x.value)]),
-                    TargetStats::LockTimeouts(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("lock_timeouts", x.value)]),
-                    TargetStats::LockUnusedCount(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("lock_unused_count", x.value)]),
-                    TargetStats::LruMaxAge(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("lru_max_age", x.value)]),
-                    TargetStats::LruSize(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("lru_size", x.value)]),
-                    TargetStats::MaxNolockBytes(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("max_no_lock_bytes", x.value)]),
-                    TargetStats::MaxParallelAst(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("max_parallel_ast", x.value)]),
-                    TargetStats::ResourceCount(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("resource_count", x.value)]),
-                    TargetStats::ThreadsMin(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("threads_min", x.value)]),
-                    TargetStats::ThreadsMax(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("threads_max", x.value)]),
-                    TargetStats::ThreadsStarted(x) => Some(vec![Query::write_query(ts, "target")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_field("threads_started", x.value)]),
+                    TargetStats::FilesFree(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("bytes_free", x.value)]),
+                    TargetStats::FilesTotal(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("files_total", x.value)]),
+                    TargetStats::FsType(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("fs_type", x.value)]),
+                    TargetStats::BytesAvail(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("bytes_avail", x.value)]),
+                    TargetStats::BytesFree(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("bytes_free", x.value)]),
+                    TargetStats::BytesTotal(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("bytes_total", x.value)]),
+                    TargetStats::NumExports(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("num_exports", x.value)]),
+                    TargetStats::TotDirty(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("tot_dirty", x.value)]),
+                    TargetStats::TotGranted(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("tot_granted", x.value)]),
+                    TargetStats::TotPending(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("tot_pending", x.value)]),
+                    TargetStats::ContendedLocks(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("contended_locks", x.value)]),
+                    TargetStats::ContentionSeconds(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("contention_seconds", x.value)]),
+                    TargetStats::CtimeAgeLimit(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("ctime_age_limit", x.value)]),
+                    TargetStats::EarlyLockCancel(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("early_lock_cancel", x.value)]),
+                    TargetStats::LockCount(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("lock_count", x.value)]),
+                    TargetStats::LockTimeouts(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("lock_timeouts", x.value)]),
+                    TargetStats::LockUnusedCount(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("lock_unused_count", x.value)]),
+                    TargetStats::LruMaxAge(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("lru_max_age", x.value)]),
+                    TargetStats::LruSize(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("lru_size", x.value)]),
+                    TargetStats::MaxNolockBytes(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("max_no_lock_bytes", x.value)]),
+                    TargetStats::MaxParallelAst(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("max_parallel_ast", x.value)]),
+                    TargetStats::ResourceCount(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("resource_count", x.value)]),
+                    TargetStats::ThreadsMin(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("threads_min", x.value)]),
+                    TargetStats::ThreadsMax(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("threads_max", x.value)]),
+                    TargetStats::ThreadsStarted(x) => Some(vec![Query::write_query(
+                        Timestamp::Nanoseconds(ts),
+                        "target",
+                    )
+                    .add_tag("host", host.0.as_ref())
+                    .add_tag("target", &*x.target)
+                    .add_field("threads_started", x.value)]),
                     _ => {
                         tracing::debug!("Received target stat type that is not implemented yet.");
 
@@ -178,32 +253,46 @@ async fn main() -> Result<(), ImlStatsError> {
                     }
                 },
                 Record::Host(host_stats) => match host_stats {
-                    HostStats::MemusedMax(x) => Some(vec![Query::write_query(ts, "host")
-                        .add_tag("host", host.0.as_ref())
-                        .add_field("memused_max", x.value)]),
-                    HostStats::Memused(x) => Some(vec![Query::write_query(ts, "host")
-                        .add_tag("host", host.0.as_ref())
-                        .add_field("memused", x.value)]),
-                    HostStats::LNetMemUsed(x) => Some(vec![Query::write_query(ts, "host")
-                        .add_tag("host", host.0.as_ref())
-                        .add_field("lnet_mem_used", x.value)]),
-                    HostStats::HealthCheck(x) => Some(vec![Query::write_query(ts, "host")
-                        .add_tag("host", host.0.as_ref())
-                        .add_field("health_check", x.value)]),
+                    HostStats::MemusedMax(x) => {
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "host")
+                            .add_tag("host", host.0.as_ref())
+                            .add_field("memused_max", x.value)])
+                    }
+                    HostStats::Memused(x) => {
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "host")
+                            .add_tag("host", host.0.as_ref())
+                            .add_field("memused", x.value)])
+                    }
+                    HostStats::LNetMemUsed(x) => {
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "host")
+                            .add_tag("host", host.0.as_ref())
+                            .add_field("lnet_mem_used", x.value)])
+                    }
+                    HostStats::HealthCheck(x) => {
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "host")
+                            .add_tag("host", host.0.as_ref())
+                            .add_field("health_check", x.value)])
+                    }
                 },
                 Record::LNetStat(lnet_stats) => match lnet_stats {
-                    LNetStats::SendCount(x) => Some(vec![Query::write_query(ts, "host")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("nid", x.nid)
-                        .add_field("send_count", x.value)]),
-                    LNetStats::RecvCount(x) => Some(vec![Query::write_query(ts, "host")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("nid", x.nid)
-                        .add_field("recv_count", x.value)]),
-                    LNetStats::DropCount(x) => Some(vec![Query::write_query(ts, "host")
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("nid", x.nid)
-                        .add_field("drop_count", x.value)]),
+                    LNetStats::SendCount(x) => {
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "host")
+                            .add_tag("host", host.0.as_ref())
+                            .add_tag("nid", x.nid)
+                            .add_field("send_count", x.value)])
+                    }
+                    LNetStats::RecvCount(x) => {
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "host")
+                            .add_tag("host", host.0.as_ref())
+                            .add_tag("nid", x.nid)
+                            .add_field("recv_count", x.value)])
+                    }
+                    LNetStats::DropCount(x) => {
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "host")
+                            .add_tag("host", host.0.as_ref())
+                            .add_tag("nid", x.nid)
+                            .add_field("drop_count", x.value)])
+                    }
                 },
             };
 
