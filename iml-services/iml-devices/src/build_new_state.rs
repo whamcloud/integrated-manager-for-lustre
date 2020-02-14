@@ -131,7 +131,7 @@ mod test {
             assert_eq!(fqdn, dh.fqdn);
         }
 
-        let changes = super::build_new_state(
+        let new_state = super::build_new_state(
             &fqdn,
             &incoming_devices,
             &incoming_device_hosts,
@@ -139,6 +139,6 @@ mod test {
             &db_device_hosts,
         );
 
-        assert_debug_snapshot!(test_name, changes);
+        assert_debug_snapshot!(test_name, new_state);
     }
 }
