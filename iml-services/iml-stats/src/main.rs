@@ -35,50 +35,50 @@ async fn main() -> Result<(), ImlStatsError> {
         for record in xs {
             let maybe_entries = match record {
                 Record::Target(target_stats) => match target_stats {
-                    TargetStats::Stats(x) => {
-                        tracing::debug!("Stats: {:?}", x);
-                        Some(
-                            x.value
-                                .iter()
-                                .map(|stat| {
-                                    let mut query =
-                                        Query::write_query(Timestamp::Nanoseconds(ts), "target")
-                                            .add_tag("host", host.0.as_ref())
-                                            .add_tag("target", &*x.target)
-                                            .add_tag("name", &*stat.name)
-                                            .add_tag("units", &*stat.units);
+                    // TargetStats::Stats(x) => {
+                    //     tracing::debug!("Stats: {:?}", x);
+                    //     Some(
+                    //         x.value
+                    //             .iter()
+                    //             .map(|stat| {
+                    //                 let mut query =
+                    //                     Query::write_query(Timestamp::Nanoseconds(ts), "target")
+                    //                         .add_tag("host", host.0.as_ref())
+                    //                         .add_tag("target", &*x.target)
+                    //                         .add_tag("name", &*stat.name)
+                    //                         .add_tag("units", &*stat.units);
 
-                                    if let Some(min) = stat.min {
-                                        query = query.add_field("min", min);
-                                        tracing::debug!("Target Stat - min: {}", min);
-                                    }
+                    //                 if let Some(min) = stat.min {
+                    //                     query = query.add_field("min", min);
+                    //                     tracing::debug!("Target Stat - min: {}", min);
+                    //                 }
 
-                                    if let Some(max) = stat.max {
-                                        query = query.add_field("max", max);
-                                        tracing::debug!("Target Stat - max: {}", max);
-                                    }
+                    //                 if let Some(max) = stat.max {
+                    //                     query = query.add_field("max", max);
+                    //                     tracing::debug!("Target Stat - max: {}", max);
+                    //                 }
 
-                                    if let Some(sum) = stat.sum {
-                                        query = query.add_field("sum", sum);
-                                        tracing::debug!("Target Stat - sum: {}", sum);
-                                    }
+                    //                 if let Some(sum) = stat.sum {
+                    //                     query = query.add_field("sum", sum);
+                    //                     tracing::debug!("Target Stat - sum: {}", sum);
+                    //                 }
 
-                                    if let Some(sumsquare) = stat.sumsquare {
-                                        query = query.add_field("sumsquare", sumsquare);
-                                        tracing::debug!("Target Stat - sumsquare: {}", sumsquare);
-                                    }
-                                    tracing::debug!(
-                                        "Target Stats: target: {:?}, name: {}, units: {}",
-                                        &*x.target,
-                                        &*stat.name,
-                                        &*stat.units
-                                    );
+                    //                 if let Some(sumsquare) = stat.sumsquare {
+                    //                     query = query.add_field("sumsquare", sumsquare);
+                    //                     tracing::debug!("Target Stat - sumsquare: {}", sumsquare);
+                    //                 }
+                    //                 tracing::debug!(
+                    //                     "Target Stats: target: {:?}, name: {}, units: {}",
+                    //                     &*x.target,
+                    //                     &*stat.name,
+                    //                     &*stat.units
+                    //                 );
 
-                                    query
-                                })
-                                .collect(),
-                        )
-                    }
+                    //                 query
+                    //             })
+                    //             .collect(),
+                    //     )
+                    // }
                     TargetStats::BrwStats(x) => {
                         tracing::debug!("BrwStats: {:?}", x);
                         Some(
