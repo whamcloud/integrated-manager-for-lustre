@@ -10,18 +10,10 @@ use crate::{
     error::ImlDevicesError,
 };
 use iml_wire_types::{
-    db::{Device, DeviceHost, DeviceId, DeviceType, MountPath, Paths},
+    db::{DeviceHost, DeviceId, MountPath, Paths},
     Fqdn,
 };
 use std::collections::{BTreeMap, BTreeSet};
-
-fn is_virtual_device(device: &Device) -> bool {
-    device.device_type == DeviceType::MdRaid
-        || device.device_type == DeviceType::VolumeGroup
-        || device.device_type == DeviceType::LogicalVolume
-        || device.device_type == DeviceType::Dataset
-        || device.device_type == DeviceType::Zpool
-}
 
 pub fn make_other_device_host(
     device_id: DeviceId,
