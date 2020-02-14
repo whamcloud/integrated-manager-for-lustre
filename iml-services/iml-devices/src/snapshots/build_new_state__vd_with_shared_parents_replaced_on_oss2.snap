@@ -1,0 +1,326 @@
+---
+source: iml-services/iml-devices/src/build_new_state.rs
+expression: new_state
+---
+(
+    {
+        DeviceId(
+            "a",
+        ): Device {
+            id: DeviceId(
+                "a",
+            ),
+            size: Size(
+                1,
+            ),
+            usable_for_lustre: false,
+            device_type: ScsiDevice,
+            parents: DeviceIds(
+                {},
+            ),
+            children: DeviceIds(
+                {
+                    DeviceId(
+                        "b",
+                    ),
+                },
+            ),
+            max_depth: 0,
+        },
+        DeviceId(
+            "b",
+        ): Device {
+            id: DeviceId(
+                "b",
+            ),
+            size: Size(
+                1,
+            ),
+            usable_for_lustre: false,
+            device_type: Mpath,
+            parents: DeviceIds(
+                {
+                    DeviceId(
+                        "a",
+                    ),
+                },
+            ),
+            children: DeviceIds(
+                {
+                    DeviceId(
+                        "d",
+                    ),
+                },
+            ),
+            max_depth: 1,
+        },
+        DeviceId(
+            "d",
+        ): Device {
+            id: DeviceId(
+                "d",
+            ),
+            size: Size(
+                1,
+            ),
+            usable_for_lustre: false,
+            device_type: Zpool,
+            parents: DeviceIds(
+                {
+                    DeviceId(
+                        "b",
+                    ),
+                },
+            ),
+            children: DeviceIds(
+                {},
+            ),
+            max_depth: 2,
+        },
+    },
+    {
+        (
+            DeviceId(
+                "a",
+            ),
+            Fqdn(
+                "oss1",
+            ),
+        ): DeviceHost {
+            device_id: DeviceId(
+                "a",
+            ),
+            fqdn: Fqdn(
+                "oss1",
+            ),
+            local: true,
+            paths: Paths(
+                {
+                    "/fake/path/scsi/a",
+                },
+            ),
+            mount_path: MountPath(
+                Some(
+                    "/fake/path/scsi/a",
+                ),
+            ),
+            fs_type: Some(
+                "some_fs",
+            ),
+            fs_label: Some(
+                "some_label",
+            ),
+            fs_uuid: Some(
+                "some_uuid",
+            ),
+        },
+        (
+            DeviceId(
+                "a",
+            ),
+            Fqdn(
+                "oss2",
+            ),
+        ): DeviceHost {
+            device_id: DeviceId(
+                "a",
+            ),
+            fqdn: Fqdn(
+                "oss2",
+            ),
+            local: true,
+            paths: Paths(
+                {
+                    "/fake/path/scsi/a",
+                },
+            ),
+            mount_path: MountPath(
+                Some(
+                    "/fake/path/scsi/a",
+                ),
+            ),
+            fs_type: Some(
+                "some_fs",
+            ),
+            fs_label: Some(
+                "some_label",
+            ),
+            fs_uuid: Some(
+                "some_uuid",
+            ),
+        },
+        (
+            DeviceId(
+                "b",
+            ),
+            Fqdn(
+                "oss1",
+            ),
+        ): DeviceHost {
+            device_id: DeviceId(
+                "b",
+            ),
+            fqdn: Fqdn(
+                "oss1",
+            ),
+            local: true,
+            paths: Paths(
+                {
+                    "/fake/path/mpath/a",
+                },
+            ),
+            mount_path: MountPath(
+                Some(
+                    "/fake/path/mpath/a",
+                ),
+            ),
+            fs_type: Some(
+                "some_fs",
+            ),
+            fs_label: Some(
+                "some_label",
+            ),
+            fs_uuid: Some(
+                "some_uuid",
+            ),
+        },
+        (
+            DeviceId(
+                "b",
+            ),
+            Fqdn(
+                "oss2",
+            ),
+        ): DeviceHost {
+            device_id: DeviceId(
+                "b",
+            ),
+            fqdn: Fqdn(
+                "oss2",
+            ),
+            local: true,
+            paths: Paths(
+                {
+                    "/fake/path/mpath/a",
+                },
+            ),
+            mount_path: MountPath(
+                Some(
+                    "/fake/path/mpath/a",
+                ),
+            ),
+            fs_type: Some(
+                "some_fs",
+            ),
+            fs_label: Some(
+                "some_label",
+            ),
+            fs_uuid: Some(
+                "some_uuid",
+            ),
+        },
+        (
+            DeviceId(
+                "c",
+            ),
+            Fqdn(
+                "oss2",
+            ),
+        ): DeviceHost {
+            device_id: DeviceId(
+                "c",
+            ),
+            fqdn: Fqdn(
+                "oss2",
+            ),
+            local: false,
+            paths: Paths(
+                {
+                    "/fake/path/zpool/a",
+                },
+            ),
+            mount_path: MountPath(
+                Some(
+                    "/fake/path/zpool/a",
+                ),
+            ),
+            fs_type: Some(
+                "some_fs",
+            ),
+            fs_label: Some(
+                "some_label",
+            ),
+            fs_uuid: Some(
+                "some_uuid",
+            ),
+        },
+        (
+            DeviceId(
+                "d",
+            ),
+            Fqdn(
+                "oss1",
+            ),
+        ): DeviceHost {
+            device_id: DeviceId(
+                "d",
+            ),
+            fqdn: Fqdn(
+                "oss1",
+            ),
+            local: true,
+            paths: Paths(
+                {
+                    "/fake/path/zpool/a",
+                },
+            ),
+            mount_path: MountPath(
+                Some(
+                    "/fake/path/zpool/a",
+                ),
+            ),
+            fs_type: Some(
+                "some_fs",
+            ),
+            fs_label: Some(
+                "some_label",
+            ),
+            fs_uuid: Some(
+                "some_uuid",
+            ),
+        },
+        (
+            DeviceId(
+                "d",
+            ),
+            Fqdn(
+                "oss2",
+            ),
+        ): DeviceHost {
+            device_id: DeviceId(
+                "d",
+            ),
+            fqdn: Fqdn(
+                "oss2",
+            ),
+            local: false,
+            paths: Paths(
+                {
+                    "/fake/path/zpool/a",
+                },
+            ),
+            mount_path: MountPath(
+                None,
+            ),
+            fs_type: Some(
+                "some_fs",
+            ),
+            fs_label: Some(
+                "some_label",
+            ),
+            fs_uuid: Some(
+                "some_uuid",
+            ),
+        },
+    },
+)

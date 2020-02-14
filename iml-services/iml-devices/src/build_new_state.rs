@@ -9,7 +9,7 @@ use crate::{
     virtual_device::make_other_device_host,
 };
 use iml_wire_types::{
-    db::{DeviceId, DeviceType, Device},
+    db::{Device, DeviceId, DeviceType},
     Fqdn,
 };
 use itertools::Itertools;
@@ -40,7 +40,9 @@ pub fn build_new_state<'a>(
         temporary_device_hosts
             .iter()
             .sorted_by(|((id1, _), _), ((id2, _), _)| {
-                Ord::cmp(&sorted_device_ids[id1], &sorted_device_ids[id2])
+                let depth_1 = &sorted_device_ids.get(id1).unwrap_or(&std::i16::MAX);
+                let depth_2 = &sorted_device_ids.get(id2).unwrap_or(&std::i16::MAX);
+                Ord::cmp(depth_1, depth_2)
             });
 
     let virtual_device_hosts = sorted_device_hosts.filter(|((id, _), _)| {
