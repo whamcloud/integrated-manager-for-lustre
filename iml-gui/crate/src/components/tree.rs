@@ -72,19 +72,19 @@ fn get_targets_by_fs_id(
     fs_id: u32,
     kind: TargetKind,
 ) -> Vec<&Target<TargetConfParam>> {
-    xs.arc_values()
-        .filter(|x: &&Target<TargetConfParam>| match kind {
-            TargetKind::Mgt => {
-                x.kind == TargetKind::Mgt
-                    && x.filesystems
-                        .as_ref()
-                        .and_then(|ys| ys.iter().find(|y| y.id == fs_id))
-                        .is_some()
-            }
-            TargetKind::Mdt => x.kind == TargetKind::Mdt && x.filesystem_id == Some(fs_id),
-            TargetKind::Ost => x.kind == TargetKind::Ost && x.filesystem_id == Some(fs_id),
+    let it = xs.arc_values().filter(|t| t.kind == kind);
+
+    if kind == TargetKind::Mgt {
+        it.filter(|t| {
+            t.filesystems
+                .as_ref()
+                .and_then(|fss| fss.iter().find(|f| f.id == fs_id))
+                .is_some()
         })
         .collect()
+    } else {
+        it.filter(|t| t.filesystem_id == Some(fs_id)).collect()
+    }
 }
 
 fn get_target_fs_ids(x: &Target<TargetConfParam>) -> Vec<u32> {

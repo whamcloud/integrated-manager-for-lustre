@@ -5,8 +5,7 @@
 use futures::{
     channel::{mpsc, oneshot},
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, Future},
-    stream::{Stream, StreamExt},
+    future, Future, Stream, StreamExt,
 };
 use iml_manager_env;
 use iml_wire_types::ToBytes;
@@ -14,7 +13,7 @@ pub use lapin_futures::{
     message,
     options::{
         BasicConsumeOptions, BasicPublishOptions, ExchangeDeclareOptions, QueueBindOptions,
-        QueueDeclareOptions, QueuePurgeOptions,
+        QueueDeclareOptions, QueueDeleteOptions, QueuePurgeOptions,
     },
     types::{AMQPValue, FieldTable},
     BasicProperties, Channel, Client, ConnectionProperties, Consumer, Error as LapinError,
@@ -26,6 +25,7 @@ pub enum ImlRabbitError {
     LapinError(LapinError),
     SerdeJsonError(serde_json::error::Error),
     Utf8Error(std::str::Utf8Error),
+    ConsumerEndedError,
 }
 
 impl std::fmt::Display for ImlRabbitError {
@@ -34,6 +34,7 @@ impl std::fmt::Display for ImlRabbitError {
             ImlRabbitError::LapinError(ref err) => write!(f, "{}", err),
             ImlRabbitError::SerdeJsonError(ref err) => write!(f, "{}", err),
             ImlRabbitError::Utf8Error(ref err) => write!(f, "{}", err),
+            ImlRabbitError::ConsumerEndedError => write!(f, "Consumer ended"),
         }
     }
 }
@@ -44,6 +45,7 @@ impl std::error::Error for ImlRabbitError {
             ImlRabbitError::LapinError(ref err) => Some(err),
             ImlRabbitError::SerdeJsonError(ref err) => Some(err),
             ImlRabbitError::Utf8Error(ref err) => Some(err),
+            ImlRabbitError::ConsumerEndedError => None,
         }
     }
 }
@@ -273,6 +275,22 @@ pub async fn purge_queue(
     Ok(channel)
 }
 
+pub async fn delete_queue(
+    channel: Channel,
+    queue_name: impl Into<String>,
+) -> Result<Channel, ImlRabbitError> {
+    let name = queue_name.into();
+
+    channel
+        .queue_delete(&name, QueueDeleteOptions::default())
+        .compat()
+        .await?;
+
+    tracing::info!("queue {} deleted", &name);
+
+    Ok(channel)
+}
+
 /// Starts consuming from a queue
 ///
 /// # Arguments
@@ -295,6 +313,29 @@ pub async fn basic_consume(
         .await
         .map(|s| s.compat().map(|x| x.map_err(|e| e.into())))
         .map_err(ImlRabbitError::from)
+}
+
+pub async fn basic_consume_one(
+    channel: Channel,
+    queue: Queue,
+    consumer_tag: impl Into<String>,
+    options: Option<BasicConsumeOptions>,
+) -> Result<(message::Delivery, Channel), ImlRabbitError> {
+    let options = options.unwrap_or_default();
+
+    let (x, _) = channel
+        .basic_consume(&queue, &consumer_tag.into(), options, FieldTable::default())
+        .compat()
+        .await?
+        .compat()
+        .map(|x| x.map_err(ImlRabbitError::from))
+        .into_future()
+        .await;
+
+    let x = x.transpose()?;
+    let x = x.ok_or_else(|| ImlRabbitError::ConsumerEndedError)?;
+
+    Ok((x, channel))
 }
 
 /// Publish a message to a given exchange

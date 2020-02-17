@@ -1,0 +1,16 @@
+[Unit]
+Description=IML Timer Service
+After=syslog.target network.target
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info
+Environment=TIMER_PORT=8892
+Environment=PROXY_HOST=iml-timer
+ExecStart=/bin/iml-timer
+Restart=always
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

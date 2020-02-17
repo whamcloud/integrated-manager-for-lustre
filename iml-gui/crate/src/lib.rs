@@ -368,6 +368,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::Filesystem(id)));
                     };
                 }
+                warp_drive::Record::ContentType(x) => {
+                    model.records.content_type.insert(x.id, Arc::new(x));
+                }
                 warp_drive::Record::Host(x) => {
                     let id = x.id;
                     if model.records.host.insert(x.id, Arc::new(x)).is_none() {

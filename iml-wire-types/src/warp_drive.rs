@@ -1,7 +1,14 @@
+// Copyright (c) 2020 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
+use crate::CompositeId;
+use crate::EndpointName;
+use crate::Label;
 use crate::{
     db::{
-        Id, LnetConfigurationRecord, ManagedTargetMountRecord, OstPoolOstsRecord, OstPoolRecord,
-        StratagemConfiguration, VolumeNodeRecord,
+        ContentTypeRecord, Id, LnetConfigurationRecord, ManagedTargetMountRecord,
+        OstPoolOstsRecord, OstPoolRecord, StratagemConfiguration, VolumeNodeRecord,
     },
     Alert, Filesystem, Host, LockChange, Target, TargetConfParam, Volume,
 };
@@ -83,6 +90,7 @@ pub type Locks = HashMap<String, HashSet<LockChange>>;
 
 #[derive(serde::Serialize, serde::Deserialize, Default, PartialEq, Clone, Debug)]
 pub struct Cache {
+    pub content_type: HashMap<u32, ContentTypeRecord>,
     pub active_alert: HashMap<u32, Alert>,
     pub filesystem: HashMap<u32, Filesystem>,
     pub host: HashMap<u32, Host>,
@@ -98,6 +106,7 @@ pub struct Cache {
 
 #[derive(Default, PartialEq, Clone, Debug)]
 pub struct ArcCache {
+    pub content_type: HashMap<u32, Arc<ContentTypeRecord>>,
     pub active_alert: HashMap<u32, Arc<Alert>>,
     pub filesystem: HashMap<u32, Arc<Filesystem>>,
     pub host: HashMap<u32, Arc<Host>>,
@@ -119,6 +128,7 @@ impl Cache {
             RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
             RecordId::Host(id) => self.host.remove(&id).is_some(),
             RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
+            RecordId::ContentType(id) => self.content_type.remove(&id).is_some(),
             RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(&id).is_some(),
             RecordId::OstPool(id) => self.ost_pool.remove(&id).is_some(),
             RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(&id).is_some(),
@@ -139,6 +149,9 @@ impl Cache {
             }
             Record::Host(x) => {
                 self.host.insert(x.id, x);
+            }
+            Record::ContentType(x) => {
+                self.content_type.insert(x.id(), x);
             }
             Record::LnetConfiguration(x) => {
                 self.lnet_configuration.insert(x.id(), x);
@@ -168,6 +181,16 @@ impl Cache {
     }
 }
 
+/// A `Record` with it's concrete type erased.
+/// The returned item implements the `Label` and `EndpointName`
+/// traits.
+pub trait ErasedRecord: Label + EndpointName {}
+impl<T: Label + EndpointName> ErasedRecord for T {}
+
+fn erase(x: Arc<impl ErasedRecord + 'static>) -> Box<Arc<dyn ErasedRecord>> {
+    Box::new(x)
+}
+
 impl ArcCache {
     /// Removes the record from the arc cache
     pub fn remove_record(&mut self, x: RecordId) -> bool {
@@ -175,6 +198,7 @@ impl ArcCache {
             RecordId::ActiveAlert(id) => self.active_alert.remove(&id).is_some(),
             RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
             RecordId::Host(id) => self.host.remove(&id).is_some(),
+            RecordId::ContentType(id) => self.content_type.remove(&id).is_some(),
             RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
             RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(&id).is_some(),
             RecordId::OstPool(id) => self.ost_pool.remove(&id).is_some(),
@@ -196,6 +220,9 @@ impl ArcCache {
             }
             Record::Host(x) => {
                 self.host.insert(x.id, Arc::new(x));
+            }
+            Record::ContentType(x) => {
+                self.content_type.insert(x.id(), Arc::new(x));
             }
             Record::LnetConfiguration(x) => {
                 self.lnet_configuration.insert(x.id(), Arc::new(x));
@@ -223,11 +250,37 @@ impl ArcCache {
             }
         }
     }
+    /// Given a `CompositeId`, returns an `ErasedRecord` if
+    /// a matching one exists.
+    pub fn get_erased_record(
+        &self,
+        composite_id: &CompositeId,
+    ) -> Option<Box<Arc<dyn ErasedRecord>>> {
+        let content_type = self.content_type.get(&composite_id.0)?;
+
+        match content_type.model.as_ref() {
+            "managedfilesystem" => self.filesystem.get(&composite_id.1).cloned().map(erase),
+            "managedhost" => self.host.get(&composite_id.1).cloned().map(erase),
+            "lnetconfiguration" => self
+                .lnet_configuration
+                .get(&composite_id.1)
+                .cloned()
+                .map(erase),
+            "managedtarget" => self.target.get(&composite_id.1).cloned().map(erase),
+            "stratagemconfiguration" => self
+                .stratagem_config
+                .get(&composite_id.1)
+                .cloned()
+                .map(erase),
+            _ => None,
+        }
+    }
 }
 
 impl From<&Cache> for ArcCache {
     fn from(cache: &Cache) -> Self {
         Self {
+            content_type: hashmap_to_arc_hashmap(&cache.content_type),
             active_alert: hashmap_to_arc_hashmap(&cache.active_alert),
             filesystem: hashmap_to_arc_hashmap(&cache.filesystem),
             host: hashmap_to_arc_hashmap(&cache.host),
@@ -246,6 +299,7 @@ impl From<&Cache> for ArcCache {
 impl From<&ArcCache> for Cache {
     fn from(cache: &ArcCache) -> Self {
         Self {
+            content_type: arc_hashmap_to_hashmap(&cache.content_type),
             active_alert: arc_hashmap_to_hashmap(&cache.active_alert),
             filesystem: arc_hashmap_to_hashmap(&cache.filesystem),
             host: arc_hashmap_to_hashmap(&cache.host),
@@ -266,8 +320,10 @@ impl From<&ArcCache> for Cache {
 #[serde(tag = "tag", content = "payload")]
 pub enum Record {
     ActiveAlert(Alert),
+    ContentType(ContentTypeRecord),
     Filesystem(Filesystem),
     Host(Host),
+    LnetConfiguration(LnetConfigurationRecord),
     ManagedTargetMount(ManagedTargetMountRecord),
     OstPool(OstPoolRecord),
     OstPoolOsts(OstPoolOstsRecord),
@@ -275,15 +331,16 @@ pub enum Record {
     Target(Target<TargetConfParam>),
     Volume(Volume),
     VolumeNode(VolumeNodeRecord),
-    LnetConfiguration(LnetConfigurationRecord),
 }
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(tag = "tag", content = "payload")]
 pub enum RecordId {
     ActiveAlert(u32),
+    ContentType(u32),
     Filesystem(u32),
     Host(u32),
+    LnetConfiguration(u32),
     ManagedTargetMount(u32),
     OstPool(u32),
     OstPoolOsts(u32),
@@ -291,7 +348,6 @@ pub enum RecordId {
     Target(u32),
     Volume(u32),
     VolumeNode(u32),
-    LnetConfiguration(u32),
 }
 
 impl Deref for RecordId {
@@ -300,6 +356,7 @@ impl Deref for RecordId {
     fn deref(&self) -> &u32 {
         match self {
             Self::ActiveAlert(x)
+            | Self::ContentType(x)
             | Self::Filesystem(x)
             | Self::Host(x)
             | Self::ManagedTargetMount(x)

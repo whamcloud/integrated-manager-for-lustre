@@ -1,4 +1,4 @@
-use crate::{Fqdn, Label};
+use crate::{EndpointName, Fqdn, Label};
 use std::{
     collections::BTreeSet,
     fmt,
@@ -47,6 +47,39 @@ impl fmt::Display for TableName<'_> {
 pub trait Name {
     /// Get the name of a `chroma` table
     fn table_name() -> TableName<'static>;
+}
+
+/// Record from the `django_content_type` table
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
+pub struct ContentTypeRecord {
+    pub id: u32,
+    pub app_label: String,
+    pub model: String,
+}
+
+impl Id for ContentTypeRecord {
+    fn id(&self) -> u32 {
+        self.id
+    }
+}
+
+pub const CONTENT_TYPE_TABLE_NAME: TableName = TableName("django_content_type");
+
+impl Name for ContentTypeRecord {
+    fn table_name() -> TableName<'static> {
+        CONTENT_TYPE_TABLE_NAME
+    }
+}
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for ContentTypeRecord {
+    fn from(row: Row) -> Self {
+        ContentTypeRecord {
+            id: row.get::<_, i32>("id") as u32,
+            app_label: row.get("app_label"),
+            model: row.get("model"),
+        }
+    }
 }
 
 /// Record from the `chroma_core_managedfilesystem` table
@@ -557,6 +590,18 @@ impl Name for StratagemConfiguration {
     }
 }
 
+impl Label for StratagemConfiguration {
+    fn label(&self) -> &str {
+        "Stratagem Configuration"
+    }
+}
+
+impl EndpointName for StratagemConfiguration {
+    fn endpoint_name() -> &'static str {
+        "stratagem_configuration"
+    }
+}
+
 /// Record from the `chroma_core_lnetconfiguration` table
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct LnetConfigurationRecord {
@@ -593,6 +638,18 @@ impl Id for LnetConfigurationRecord {
 impl NotDeleted for LnetConfigurationRecord {
     fn not_deleted(&self) -> bool {
         not_deleted(self.not_deleted)
+    }
+}
+
+impl EndpointName for LnetConfigurationRecord {
+    fn endpoint_name() -> &'static str {
+        "lnet_configuration"
+    }
+}
+
+impl Label for LnetConfigurationRecord {
+    fn label(&self) -> &str {
+        "lnet configuration"
     }
 }
 
