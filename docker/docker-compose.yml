@@ -6,7 +6,7 @@ x-deploy: &default-deploy
     window: 5s
 services:
   postgres:
-    image: "postgres:9.2.23"
+    image: "postgres:9.2.23-alpine"
     hostname: "postgres"
     deploy:
       <<: *default-deploy
@@ -60,7 +60,7 @@ services:
     ports:
       - 3000:3000
   rabbit:
-    image: "rabbitmq:3.6-management"
+    image: "rabbitmq:3.6-management-alpine"
     hostname: "rabbit"
     deploy:
       <<: *default-deploy
