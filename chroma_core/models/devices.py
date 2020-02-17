@@ -13,6 +13,7 @@ class Device(models.Model):
     device_type = models.CharField(help_text="The type of block or virtual device", max_length=64)
     parents = ArrayField(models.CharField(max_length=255), help_text="A list of parent devices")
     children = ArrayField(models.CharField(max_length=255), help_text="A list of child devices")
+    max_depth = models.SmallIntegerField(help_text="Maximum depth where the device is nested")
 
 
 class DeviceHost(models.Model):
