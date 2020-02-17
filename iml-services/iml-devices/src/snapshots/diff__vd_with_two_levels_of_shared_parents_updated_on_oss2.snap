@@ -5,15 +5,15 @@ expression: results
 {
     (
         DeviceId(
-            "c",
+            "d",
         ),
         Fqdn(
             "oss2",
         ),
-    ): Remove(
+    ): Update(
         DeviceHost {
             device_id: DeviceId(
-                "c",
+                "d",
             ),
             fqdn: Fqdn(
                 "oss2",
@@ -21,7 +21,7 @@ expression: results
             local: false,
             paths: Paths(
                 {
-                    "/fake/path/zpool/a",
+                    "/fake/path/dataset/a",
                 },
             ),
             mount_path: MountPath(
@@ -31,7 +31,7 @@ expression: results
                 "some_fs",
             ),
             fs_label: Some(
-                "some_label",
+                "new_some_label",
             ),
             fs_uuid: Some(
                 "some_uuid",

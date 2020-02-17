@@ -425,7 +425,10 @@ pub(crate) mod test {
         let device_hosts_from_json = fs::read_to_string(path).unwrap();
         let vec: Vec<DeviceHost> = serde_json::from_str(&device_hosts_from_json).unwrap();
         vec.into_iter()
-            .map(|x| ((x.device_id.clone(), x.fqdn.clone()), x))
+            .map(|x| {
+                assert!(x.local && x.mount_path.is_some() || (!x.local && !x.mount_path.is_some()));
+                ((x.device_id.clone(), x.fqdn.clone()), x)
+            })
             .collect()
     }
 

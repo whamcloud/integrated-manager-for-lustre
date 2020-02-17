@@ -25,9 +25,7 @@ expression: results
                 },
             ),
             mount_path: MountPath(
-                Some(
-                    "/fake/path/zpool/a",
-                ),
+                None,
             ),
             fs_type: Some(
                 "some_fs",
@@ -62,9 +60,7 @@ expression: results
                 },
             ),
             mount_path: MountPath(
-                Some(
-                    "/fake/path/dataset/a",
-                ),
+                None,
             ),
             fs_type: Some(
                 "some_fs",
