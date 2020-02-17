@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    breadth_first_parent_iterator::BreadthFirstParentIterator,
     build_new_state::build_new_state,
     change::Change,
     db::{DeviceHosts, Devices},
@@ -42,115 +41,6 @@ pub fn make_other_device_host(
     }
 }
 
-fn make_other_device_host_for_removal(device_id: DeviceId, fqdn: Fqdn) -> DeviceHost {
-    DeviceHost {
-        device_id,
-        fqdn,
-        local: false,
-        paths: Paths(BTreeSet::new()),
-        mount_path: MountPath(None),
-        fs_type: None,
-        fs_label: None,
-        fs_uuid: None,
-    }
-}
-
-fn add_device_host(
-    device_id: DeviceId,
-    fqdn: Fqdn,
-    virtual_device_host: Option<&DeviceHost>,
-    results: &mut BTreeMap<(DeviceId, Fqdn), Change<DeviceHost>>,
-) {
-    let other_device_host =
-        make_other_device_host(device_id.clone(), fqdn.clone(), virtual_device_host);
-
-    tracing::info!(
-        "Adding new device host with id {:?} to host {:?}",
-        device_id,
-        fqdn
-    );
-
-    results.insert(
-        (device_id.clone(), fqdn.clone()),
-        Change::Add(other_device_host),
-    );
-}
-
-fn update_device_host(
-    device_id: DeviceId,
-    fqdn: Fqdn,
-    virtual_device_host: Option<&DeviceHost>,
-    results: &mut BTreeMap<(DeviceId, Fqdn), Change<DeviceHost>>,
-) {
-    let other_device_host =
-        make_other_device_host(device_id.clone(), fqdn.clone(), virtual_device_host);
-
-    tracing::info!(
-        "Updating device host with id {:?} on host {:?}",
-        device_id,
-        fqdn
-    );
-
-    results.insert(
-        (device_id.clone(), fqdn.clone()),
-        Change::Update(other_device_host),
-    );
-}
-
-fn remove_device_host(
-    device_id: DeviceId,
-    fqdn: Fqdn,
-    results: &mut BTreeMap<(DeviceId, Fqdn), Change<DeviceHost>>,
-) {
-    let other_device_host = make_other_device_host_for_removal(device_id.clone(), fqdn.clone());
-
-    tracing::info!(
-        "Removing device host with id {:?} on host {:?}",
-        device_id,
-        fqdn,
-    );
-    results.insert(
-        (device_id.clone(), fqdn.clone()),
-        Change::Remove(other_device_host),
-    );
-}
-
-fn are_all_parents_available_with_results(
-    devices: &Devices,
-    device_hosts: &DeviceHosts,
-    results: &BTreeMap<(DeviceId, Fqdn), Change<DeviceHost>>,
-    host: Fqdn,
-    child_id: &DeviceId,
-) -> bool {
-    let mut i = BreadthFirstParentIterator::new(devices, child_id);
-    let all_available = i.all(|p| {
-        let result = device_hosts.get(&(p.clone(), host.clone())).is_some();
-        tracing::trace!("Checking device {:?} on host {:?}: {:?}", p, host, result);
-        let result_results = if !result {
-            let result_results = results.get(&(p.clone(), host.clone())).is_some();
-            // TODO: Check if the result is not Remove<...>. Probably just assert it.
-            tracing::trace!(
-                "Checking device {:?} on host {:?} in results: {:?}",
-                p,
-                host,
-                result_results
-            );
-            Some(result_results)
-        } else {
-            None
-        };
-
-        result || result_results.unwrap()
-    });
-    tracing::info!(
-        "are_all_parents_available_with_results: host: {:?}, device: {:?}, all_available: {:?}",
-        host,
-        child_id,
-        all_available
-    );
-    all_available
-}
-
 pub fn virtual_device_changes<'a>(
     fqdn: &Fqdn,
     incoming_devices: &Devices,
@@ -158,15 +48,43 @@ pub fn virtual_device_changes<'a>(
     db_devices: &Devices,
     db_device_hosts: &DeviceHosts,
 ) -> Result<BTreeMap<(DeviceId, Fqdn), Change<DeviceHost>>, ImlDevicesError> {
-    let results = BTreeMap::new();
+    let mut results = BTreeMap::new();
 
-    let (temporary_devices, temporary_device_hosts) = build_new_state(
+    let (_new_devices, new_device_hosts) = build_new_state(
         fqdn,
         incoming_devices,
         incoming_device_hosts,
         db_devices,
         db_device_hosts,
     );
+    let old_device_hosts = db_device_hosts;
+
+    let union = {
+        let mut new_device_hosts = new_device_hosts.clone();
+        let mut db_device_hosts = db_device_hosts.clone();
+        let mut union = BTreeMap::new();
+        union.append(&mut db_device_hosts);
+        union.append(&mut new_device_hosts);
+        union
+    };
+
+    for ((id, f), _dh) in union.into_iter() {
+        let old = old_device_hosts.get(&(id.clone(), f.clone()));
+        let new = new_device_hosts.get(&(id.clone(), f.clone()));
+        let change = match (old, new) {
+            (None, None) => unreachable!(),
+            (None, Some(dh)) => Some(Change::Add(dh.clone())),
+            (Some(dh), None) => Some(Change::Remove(dh.clone())),
+            (Some(old), Some(new)) => {
+                if old != new {
+                    Some(Change::Update(new.clone()))
+                } else {
+                    None
+                }
+            }
+        };
+        change.map(|c| results.insert((id, f), c));
+    }
 
     Ok(results)
 }
@@ -208,7 +126,7 @@ mod test {
     // oss2 is coming in second and it considers all other hosts for adding shared devices
     // that is oss1. oss2 is never considered to have added shared devices from oss1
     #[test_case("vd_with_shared_parents_added_after_oss1_to_oss2")]
-    fn compute_virtual_device_changes(test_name: &str) {
+    fn virtual_device_changes(test_name: &str) {
         crate::db::test::_init_subscriber();
         let (fqdn, incoming_devices, incoming_device_hosts, db_devices, db_device_hosts) =
             deser_fixture(test_name);
