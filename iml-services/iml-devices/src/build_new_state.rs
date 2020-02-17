@@ -125,7 +125,7 @@ fn are_all_parents_available(
     all_available
 }
 
-fn is_virtual_device(device: &Device) -> bool {
+pub fn is_virtual_device(device: &Device) -> bool {
     device.device_type == DeviceType::MdRaid
         || device.device_type == DeviceType::VolumeGroup
         || device.device_type == DeviceType::LogicalVolume

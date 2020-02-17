@@ -1,0 +1,76 @@
+---
+source: iml-services/iml-devices/src/virtual_device.rs
+expression: results
+---
+{
+    (
+        DeviceId(
+            "c",
+        ),
+        Fqdn(
+            "oss2",
+        ),
+    ): Add(
+        DeviceHost {
+            device_id: DeviceId(
+                "c",
+            ),
+            fqdn: Fqdn(
+                "oss2",
+            ),
+            local: false,
+            paths: Paths(
+                {
+                    "/fake/path/zpool/a",
+                },
+            ),
+            mount_path: MountPath(
+                None,
+            ),
+            fs_type: Some(
+                "some_fs",
+            ),
+            fs_label: Some(
+                "some_label",
+            ),
+            fs_uuid: Some(
+                "some_uuid",
+            ),
+        },
+    ),
+    (
+        DeviceId(
+            "d",
+        ),
+        Fqdn(
+            "oss2",
+        ),
+    ): Add(
+        DeviceHost {
+            device_id: DeviceId(
+                "d",
+            ),
+            fqdn: Fqdn(
+                "oss2",
+            ),
+            local: false,
+            paths: Paths(
+                {
+                    "/fake/path/dataset/a",
+                },
+            ),
+            mount_path: MountPath(
+                None,
+            ),
+            fs_type: Some(
+                "some_fs",
+            ),
+            fs_label: Some(
+                "some_label",
+            ),
+            fs_uuid: Some(
+                "some_uuid",
+            ),
+        },
+    ),
+}

@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    build_new_state::build_new_state,
+    build_new_state::{build_new_state, is_virtual_device},
     change::Change,
     db::{DeviceHosts, Devices},
     error::ImlDevicesError,
@@ -41,36 +41,21 @@ pub fn make_other_device_host(
     }
 }
 
-pub fn virtual_device_changes<'a>(
-    fqdn: &Fqdn,
-    incoming_devices: &Devices,
-    incoming_device_hosts: &DeviceHosts,
-    db_devices: &Devices,
-    db_device_hosts: &DeviceHosts,
-) -> Result<BTreeMap<(DeviceId, Fqdn), Change<DeviceHost>>, ImlDevicesError> {
+fn diff(old: &DeviceHosts, new: &DeviceHosts) -> BTreeMap<(DeviceId, Fqdn), Change<DeviceHost>> {
     let mut results = BTreeMap::new();
 
-    let (_new_devices, new_device_hosts) = build_new_state(
-        fqdn,
-        incoming_devices,
-        incoming_device_hosts,
-        db_devices,
-        db_device_hosts,
-    );
-    let old_device_hosts = db_device_hosts;
-
     let union = {
-        let mut new_device_hosts = new_device_hosts.clone();
-        let mut db_device_hosts = db_device_hosts.clone();
+        let mut new = new.clone();
+        let mut old = old.clone();
         let mut union = BTreeMap::new();
-        union.append(&mut db_device_hosts);
-        union.append(&mut new_device_hosts);
+        union.append(&mut old);
+        union.append(&mut new);
         union
     };
 
-    for ((id, f), _dh) in union.into_iter() {
-        let old = old_device_hosts.get(&(id.clone(), f.clone()));
-        let new = new_device_hosts.get(&(id.clone(), f.clone()));
+    for ((id, f), _dh) in union.into_iter().filter(|(_, dh)| !dh.local) {
+        let old = old.get(&(id.clone(), f.clone()));
+        let new = new.get(&(id.clone(), f.clone()));
         let change = match (old, new) {
             (None, None) => unreachable!(),
             (None, Some(dh)) => Some(Change::Add(dh.clone())),
@@ -85,6 +70,47 @@ pub fn virtual_device_changes<'a>(
         };
         change.map(|c| results.insert((id, f), c));
     }
+
+    results
+}
+
+pub fn virtual_device_changes<'a>(
+    fqdn: &Fqdn,
+    incoming_devices: &Devices,
+    incoming_device_hosts: &DeviceHosts,
+    db_devices: &Devices,
+    db_device_hosts: &DeviceHosts,
+) -> Result<BTreeMap<(DeviceId, Fqdn), Change<DeviceHost>>, ImlDevicesError> {
+    let (_new_devices, new_device_hosts) = build_new_state(
+        fqdn,
+        incoming_devices,
+        incoming_device_hosts,
+        db_devices,
+        db_device_hosts,
+    );
+
+    let db_device_hosts = db_device_hosts
+        .into_iter()
+        .filter(|((id, _), _)| {
+            db_devices
+                .get(id)
+                .map(|d| is_virtual_device(d))
+                .unwrap_or(false)
+        })
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect();
+    let new_device_hosts = new_device_hosts
+        .into_iter()
+        .filter(|((id, _), _)| {
+            db_devices
+                .get(id)
+                .map(|d| is_virtual_device(d))
+                .unwrap_or(false)
+        })
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect();
+
+    let results = diff(&db_device_hosts, &new_device_hosts);
 
     Ok(results)
 }
@@ -146,5 +172,40 @@ mod test {
         .unwrap();
 
         assert_debug_snapshot!(test_name, changes);
+    }
+
+    #[test_case("vd_with_shared_parents_added_to_oss2")]
+    #[test_case("vd_with_no_shared_parents_not_added_to_oss2")]
+    #[test_case("vd_with_shared_parents_updated_on_oss2")]
+    #[test_case("vd_with_shared_parents_replaced_on_oss2")]
+    #[test_case("vd_with_shared_parents_removed_from_oss2_when_parent_disappears")]
+    #[test_case("vd_with_two_levels_of_shared_parents_added_to_oss2")]
+    #[test_case("vd_with_two_levels_of_shared_parents_removed_from_oss2_when_parent_disappears")]
+    #[test_case("vd_with_two_levels_of_shared_parents_replaced_on_oss2")]
+    #[test_case("vd_with_two_levels_of_shared_parents_updated_on_oss2")]
+    #[test_case("vd_with_two_levels_of_shared_parents_in_reverse_order_added_to_oss2")]
+    #[test_case("vd_with_three_levels_of_shared_parents_in_reverse_order_added_to_oss2")]
+    #[test_case("vd_with_shared_parents_added_after_oss1_to_oss2")]
+    fn diff(test_name: &str) {
+        crate::db::test::_init_subscriber();
+        let (fqdn, incoming_devices, incoming_device_hosts, db_devices, db_device_hosts) =
+            deser_fixture(test_name);
+
+        for ((_, f), dh) in incoming_device_hosts.iter() {
+            assert_eq!(&fqdn, f);
+            assert_eq!(fqdn, dh.fqdn);
+        }
+
+        let (_new_devices, new_device_hosts) = build_new_state(
+            &fqdn,
+            &incoming_devices,
+            &incoming_device_hosts,
+            &db_devices,
+            &db_device_hosts,
+        );
+
+        let results = super::diff(&db_device_hosts, &new_device_hosts);
+
+        assert_debug_snapshot!(test_name, results);
     }
 }
