@@ -97,6 +97,7 @@ async fn main() -> Result<(), ImlStatsError> {
                                         )
                                         .add_tag("host", host.0.as_ref())
                                         .add_tag("target", &*x.target)
+                                        .add_tag("kind", x.kind.to_string())
                                         .add_tag("name", &*brw_stat.name)
                                         .add_tag("unit", &*brw_stat.unit)
                                         .add_tag("bucket_name", bucket.name)
@@ -127,6 +128,7 @@ async fn main() -> Result<(), ImlStatsError> {
                         )
                         .add_tag("host", host.0.as_ref())
                         .add_tag("target", &*x.target)
+                        .add_tag("kind", x.kind.to_string())
                         .add_field("files_free", x.value)])
                     }
                     TargetStats::FilesTotal(x) => {
@@ -136,6 +138,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("files_total", x.value)])
                     }
@@ -146,6 +149,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("fs_type", x.value)])
                     }
@@ -156,6 +160,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("bytes_avail", x.value)])
                     }
@@ -166,6 +171,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("bytes_free", x.value)])
                     }
@@ -176,6 +182,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("bytes_total", x.value)])
                     }
@@ -186,6 +193,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("num_exports", x.value)])
                     }
@@ -196,6 +204,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("tot_dirty", x.value)])
                     }
@@ -206,6 +215,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("tot_granted", x.value)])
                     }
@@ -216,6 +226,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("tot_pending", x.value)])
                     }
@@ -226,6 +237,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("contended_locks", x.value)])
                     }
@@ -236,6 +248,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("contention_seconds", x.value)])
                     }
@@ -246,6 +259,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("ctime_age_limit", x.value)])
                     }
@@ -256,6 +270,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("early_lock_cancel", x.value)])
                     }
@@ -266,6 +281,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("lock_count", x.value)])
                     }
@@ -276,6 +292,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("lock_timeouts", x.value)])
                     }
@@ -286,6 +303,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("lock_unused_count", x.value)])
                     }
@@ -296,6 +314,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("lru_max_age", x.value)])
                     }
@@ -306,6 +325,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("lru_size", x.value)])
                     }
@@ -316,6 +336,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("max_no_lock_bytes", x.value)])
                     }
@@ -326,6 +347,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("max_parallel_ast", x.value)])
                     }
@@ -336,6 +358,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("resource_count", x.value)])
                     }
@@ -346,6 +369,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("threads_min", x.value)])
                     }
@@ -356,6 +380,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("threads_max", x.value)])
                     }
@@ -366,6 +391,7 @@ async fn main() -> Result<(), ImlStatsError> {
                             "target",
                         )
                         .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
                         .add_field("threads_started", x.value)])
                     }
