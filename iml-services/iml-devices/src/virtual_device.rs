@@ -201,7 +201,7 @@ mod test {
 
         let db_device_hosts = non_local_virtual_device_hosts(db_device_hosts, &db_devices);
         let new_device_hosts = non_local_virtual_device_hosts(new_device_hosts, &new_devices);
-    
+
         let results = super::diff(&db_device_hosts, &new_device_hosts);
 
         assert_debug_snapshot!(test_name, results);
