@@ -1,19 +1,19 @@
 ---
 source: iml-services/iml-devices/src/virtual_device.rs
-expression: updates
+expression: changes
 ---
 {
     (
         DeviceId(
-            "c",
+            "d",
         ),
         Fqdn(
             "oss2",
         ),
-    ): Update(
+    ): Remove(
         DeviceHost {
             device_id: DeviceId(
-                "c",
+                "d",
             ),
             fqdn: Fqdn(
                 "oss2",
@@ -21,7 +21,7 @@ expression: updates
             local: false,
             paths: Paths(
                 {
-                    "/fake/path/zpool/a",
+                    "/fake/path/dataset/a",
                 },
             ),
             mount_path: MountPath(

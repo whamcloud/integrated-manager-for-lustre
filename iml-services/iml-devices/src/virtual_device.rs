@@ -53,9 +53,16 @@ fn diff(old: &DeviceHosts, new: &DeviceHosts) -> BTreeMap<(DeviceId, Fqdn), Chan
         union
     };
 
-    for ((id, f), _dh) in union.into_iter().filter(|(_, dh)| !dh.local) {
+    for ((id, f), _dh) in union.into_iter() {
         let old = old.get(&(id.clone(), f.clone()));
         let new = new.get(&(id.clone(), f.clone()));
+
+        tracing::trace!(
+            "{} {}",
+            old.map(|o| format!("{}", o)).unwrap_or("None".into()),
+            new.map(|o| format!("{}", o)).unwrap_or("None".into()),
+        );
+
         let change = match (old, new) {
             (None, None) => unreachable!(),
             (None, Some(dh)) => Some(Change::Add(dh.clone())),
@@ -74,6 +81,20 @@ fn diff(old: &DeviceHosts, new: &DeviceHosts) -> BTreeMap<(DeviceId, Fqdn), Chan
     results
 }
 
+fn non_local_virtual_device_hosts(device_hosts: DeviceHosts, devices: &Devices) -> DeviceHosts {
+    device_hosts
+        .into_iter()
+        .filter(|((id, _), dh)| {
+            devices
+                .get(id)
+                .map(|d| is_virtual_device(d))
+                .unwrap_or(false)
+                && !dh.local
+        })
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect()
+}
+
 pub fn virtual_device_changes<'a>(
     fqdn: &Fqdn,
     incoming_devices: &Devices,
@@ -81,7 +102,7 @@ pub fn virtual_device_changes<'a>(
     db_devices: &Devices,
     db_device_hosts: &DeviceHosts,
 ) -> Result<BTreeMap<(DeviceId, Fqdn), Change<DeviceHost>>, ImlDevicesError> {
-    let (_new_devices, new_device_hosts) = build_new_state(
+    let (new_devices, new_device_hosts) = build_new_state(
         fqdn,
         incoming_devices,
         incoming_device_hosts,
@@ -89,26 +110,8 @@ pub fn virtual_device_changes<'a>(
         db_device_hosts,
     );
 
-    let db_device_hosts = db_device_hosts
-        .into_iter()
-        .filter(|((id, _), _)| {
-            db_devices
-                .get(id)
-                .map(|d| is_virtual_device(d))
-                .unwrap_or(false)
-        })
-        .map(|(k, v)| (k.clone(), v.clone()))
-        .collect();
-    let new_device_hosts = new_device_hosts
-        .into_iter()
-        .filter(|((id, _), _)| {
-            db_devices
-                .get(id)
-                .map(|d| is_virtual_device(d))
-                .unwrap_or(false)
-        })
-        .map(|(k, v)| (k.clone(), v.clone()))
-        .collect();
+    let db_device_hosts = non_local_virtual_device_hosts(db_device_hosts.clone(), db_devices);
+    let new_device_hosts = non_local_virtual_device_hosts(new_device_hosts, &new_devices);
 
     let results = diff(&db_device_hosts, &new_device_hosts);
 
@@ -128,29 +131,21 @@ mod test {
     // It has to have updated data on the other one
     #[test_case("vd_with_shared_parents_updated_on_oss2")]
     // A leaf device is replaced with another leaf device
-    // Previous one stays in the DB as available
-    // We're not removing it since parents are still available
     #[test_case("vd_with_shared_parents_replaced_on_oss2")]
     #[test_case("vd_with_shared_parents_removed_from_oss2_when_parent_disappears")]
     #[test_case("vd_with_two_levels_of_shared_parents_added_to_oss2")]
     // An intermediary non-virtual parent disappears from the host
     // Its children are getting removed
-    // Virtual devices from the other host receive updates that aren't necessary but aren't harmful
     #[test_case("vd_with_two_levels_of_shared_parents_removed_from_oss2_when_parent_disappears")]
     // A leaf virtual device is replaced with another virtual device on one host
-    // Previous one stays in the DB as available
-    // We're not removing it since parents are still available
-    // Virtual device that is parent of the replaced receives update that isn't necessary but isn't harmful
     #[test_case("vd_with_two_levels_of_shared_parents_replaced_on_oss2")]
     // A leaf device has changed data on one host
     // It has to have updated data on the other one
-    // Virtual device that is parent of the updated receives update that isn't necessary but isn't harmful
     #[test_case("vd_with_two_levels_of_shared_parents_updated_on_oss2")]
     #[test_case("vd_with_two_levels_of_shared_parents_in_reverse_order_added_to_oss2")]
     #[test_case("vd_with_three_levels_of_shared_parents_in_reverse_order_added_to_oss2")]
     // oss1 is processed completely on empty DB, with local VDs
     // oss2 is coming in second and it considers all other hosts for adding shared devices
-    // that is oss1. oss2 is never considered to have added shared devices from oss1
     #[test_case("vd_with_shared_parents_added_after_oss1_to_oss2")]
     fn virtual_device_changes(test_name: &str) {
         crate::db::test::_init_subscriber();
@@ -196,7 +191,7 @@ mod test {
             assert_eq!(fqdn, dh.fqdn);
         }
 
-        let (_new_devices, new_device_hosts) = build_new_state(
+        let (new_devices, new_device_hosts) = build_new_state(
             &fqdn,
             &incoming_devices,
             &incoming_device_hosts,
@@ -204,6 +199,9 @@ mod test {
             &db_device_hosts,
         );
 
+        let db_device_hosts = non_local_virtual_device_hosts(db_device_hosts, &db_devices);
+        let new_device_hosts = non_local_virtual_device_hosts(new_device_hosts, &new_devices);
+    
         let results = super::diff(&db_device_hosts, &new_device_hosts);
 
         assert_debug_snapshot!(test_name, results);

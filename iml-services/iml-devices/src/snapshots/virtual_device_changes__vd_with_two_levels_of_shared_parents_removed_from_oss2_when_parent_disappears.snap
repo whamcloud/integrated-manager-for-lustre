@@ -1,6 +1,6 @@
 ---
 source: iml-services/iml-devices/src/virtual_device.rs
-expression: updates
+expression: changes
 ---
 {
     (
@@ -20,14 +20,22 @@ expression: updates
             ),
             local: false,
             paths: Paths(
-                {},
+                {
+                    "/fake/path/zpool/a",
+                },
             ),
             mount_path: MountPath(
                 None,
             ),
-            fs_type: None,
-            fs_label: None,
-            fs_uuid: None,
+            fs_type: Some(
+                "some_fs",
+            ),
+            fs_label: Some(
+                "some_label",
+            ),
+            fs_uuid: Some(
+                "some_uuid",
+            ),
         },
     ),
     (
@@ -47,14 +55,22 @@ expression: updates
             ),
             local: false,
             paths: Paths(
-                {},
+                {
+                    "/fake/path/dataset/a",
+                },
             ),
             mount_path: MountPath(
                 None,
             ),
-            fs_type: None,
-            fs_label: None,
-            fs_uuid: None,
+            fs_type: Some(
+                "some_fs",
+            ),
+            fs_label: Some(
+                "some_label",
+            ),
+            fs_uuid: Some(
+                "some_uuid",
+            ),
         },
     ),
 }
