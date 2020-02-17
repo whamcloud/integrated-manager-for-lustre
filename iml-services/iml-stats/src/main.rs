@@ -45,6 +45,7 @@ async fn main() -> Result<(), ImlStatsError> {
                                         Query::write_query(Timestamp::Nanoseconds(ts), "target")
                                             .add_tag("host", host.0.as_ref())
                                             .add_tag("target", &*x.target)
+                                            .add_tag("kind", x.kind.to_string())
                                             .add_tag("name", &*stat.name)
                                             .add_tag("units", &*stat.units)
                                             .add_field("samples", stat.samples);
