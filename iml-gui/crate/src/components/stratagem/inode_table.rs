@@ -35,7 +35,7 @@ impl Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     FetchInodes,
     InodesFetched(Box<fetch::ResponseDataResult<InfluxResults>>),

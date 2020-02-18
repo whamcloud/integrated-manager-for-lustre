@@ -23,7 +23,7 @@ pub struct Model {
     pub mgts: Vec<Arc<Target<TargetConfParam>>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     ActionDropdown(Box<action_dropdown::IdMsg>),
     SetTargets(Vec<Arc<Target<TargetConfParam>>>),

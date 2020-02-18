@@ -60,7 +60,7 @@ pub struct InfluxResult {
 pub struct InfluxResponse {
     results: Vec<InfluxResult>,
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     FetchStats,
     StatsFetched(Box<fetch::ResponseDataResult<InfluxResponse>>),

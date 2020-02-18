@@ -23,7 +23,7 @@ impl Default for Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     Close,
     Open,

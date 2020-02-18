@@ -64,7 +64,7 @@ pub struct FsUsage {
     pub bytes_total: f64,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     DataFetched(Box<seed::fetch::ResponseDataResult<InfluxResults>>),
     FetchData,

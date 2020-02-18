@@ -19,7 +19,7 @@ pub struct Model {
     pub fs_usage: fs_usage::Model,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     FsUsage(fs_usage::Msg),
 }

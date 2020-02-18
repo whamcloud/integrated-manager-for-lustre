@@ -36,7 +36,7 @@ pub struct Model {
     sort: (SortField, paging::Dir),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     SetHosts(
         Vec<Arc<Host>>,
