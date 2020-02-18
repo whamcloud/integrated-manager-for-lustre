@@ -5,7 +5,7 @@
 use crate::{listen::MessageType, DbRecord};
 use futures::{future, lock::Mutex, Future, FutureExt, Stream, TryFutureExt, TryStreamExt};
 use im::HashMap;
-use iml_manager_client::{get, get_client, Client, ImlManagerClientError};
+use iml_manager_client::{get_client, get_retry, Client, ImlManagerClientError};
 use iml_postgres::Client as PgClient;
 use iml_wire_types::{
     db::{
@@ -30,7 +30,7 @@ pub trait ToApiRecord: std::fmt::Debug + Id {
     {
         let id = self.id();
 
-        get(
+        get_retry(
             client,
             format!("{}/{}/", T::endpoint_name(), id),
             T::query(),
@@ -182,7 +182,7 @@ pub async fn db_record_to_change_record(
 pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlManagerClientError> {
     let client = get_client().unwrap();
 
-    let fs_fut = get(
+    let fs_fut = get_retry(
         client.clone(),
         Filesystem::endpoint_name(),
         Filesystem::query(),
@@ -190,7 +190,7 @@ pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlM
     .map_ok(|fs: ApiList<Filesystem>| fs.objects)
     .map_ok(|fs: Vec<Filesystem>| fs.into_iter().map(|f| (f.id, f)).collect());
 
-    let target_fut = get(
+    let target_fut = get_retry(
         client.clone(),
         <Target<TargetConfParam>>::endpoint_name(),
         <Target<TargetConfParam>>::query(),
@@ -198,15 +198,15 @@ pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlM
     .map_ok(|x: ApiList<Target<TargetConfParam>>| x.objects)
     .map_ok(|x: Vec<Target<TargetConfParam>>| x.into_iter().map(|x| (x.id, x)).collect());
 
-    let active_alert_fut = get(client.clone(), Alert::endpoint_name(), Alert::query())
+    let active_alert_fut = get_retry(client.clone(), Alert::endpoint_name(), Alert::query())
         .map_ok(|x: ApiList<Alert>| x.objects)
         .map_ok(|x: Vec<Alert>| x.into_iter().map(|x| (x.id, x)).collect());
 
-    let host_fut = get(client.clone(), Host::endpoint_name(), Host::query())
+    let host_fut = get_retry(client.clone(), Host::endpoint_name(), Host::query())
         .map_ok(|x: ApiList<Host>| x.objects)
         .map_ok(|x: Vec<Host>| x.into_iter().map(|x| (x.id, x)).collect());
 
-    let volume_fut = get(client, Volume::endpoint_name(), Volume::query())
+    let volume_fut = get_retry(client, Volume::endpoint_name(), Volume::query())
         .map_ok(|x: ApiList<Volume>| x.objects)
         .map_ok(|x: Vec<Volume>| x.into_iter().map(|x| (x.id, x)).collect());
 
