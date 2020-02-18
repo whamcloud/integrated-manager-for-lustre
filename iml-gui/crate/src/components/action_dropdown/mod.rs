@@ -1,7 +1,7 @@
 mod confirm_action_modal;
 
 use crate::{
-    components::{attrs, dropdown, font_awesome, modal, tooltip, Placement},
+    components::{attrs, dropdown, font_awesome, modal, restrict, tooltip, Placement},
     generated::css_classes::C,
     sleep::sleep_with_handle,
     GMsg, MergeAttrs as _, RequestExt, WatchState,
@@ -9,7 +9,7 @@ use crate::{
 use futures::channel::oneshot;
 use iml_wire_types::{
     warp_drive::{ArcCache, ErasedRecord, Locks},
-    ApiList, AvailableAction, CompositeId, LockChange,
+    ApiList, AvailableAction, CompositeId, GroupType, LockChange, Session,
 };
 use seed::{prelude::*, *};
 use serde_json::json;
@@ -260,23 +260,43 @@ fn sort_actions<T>(actions: &mut Vec<(Arc<AvailableAction>, T)>) {
     actions.sort_by(|a, b| a.0.display_order.cmp(&b.0.display_order));
 }
 
-pub fn view(id: u32, model: &Model, all_locks: &Locks) -> Node<IdMsg> {
+pub fn view<'a>(id: u32, model: &Model, all_locks: &Locks, session: impl Into<Option<&'a Session>>) -> Node<IdMsg> {
+    unstyled_view(
+        id,
+        model,
+        all_locks,
+        session,
+        class![C.bg_blue_500, C.hover__bg_blue_700],
+    )
+}
+
+pub fn unstyled_view<'a>(
+    id: u32,
+    model: &Model,
+    all_locks: &Locks,
+    session: impl Into<Option<&'a Session>>,
+    btn_styles: Attrs,
+) -> Node<IdMsg> {
+    if !restrict::is_allowed(session, GroupType::FilesystemAdministrators) {
+        return empty![];
+    }
+
     let cls = class![
-        C.bg_blue_500,
-        C.hover__bg_blue_700,
-        C.text_white,
+        C.focus__outline_none,
         C.font_bold,
-        C.py_2,
         C.px_4,
+        C.py_2,
         C.rounded,
-    ];
+        C.text_white,
+    ]
+    .merge_attrs(btn_styles);
 
     let disabled_cls = class![C.opacity_50, C.cursor_not_allowed];
 
     if has_locks(all_locks, &model.composite_ids) {
         return span![
             attrs::container(),
-            class![C.inline_block],
+            class![C.inline_block, C.z_0],
             button![
                 cls,
                 disabled_cls,
@@ -304,7 +324,7 @@ pub fn view(id: u32, model: &Model, all_locks: &Locks) -> Node<IdMsg> {
                 button![cls.merge_attrs(disabled_cls), "No Actions"]
             } else {
                 span![
-                    class![C.relative, C.inline_block],
+                    class![C.relative, C.inline_block, C.z_0],
                     button![
                         cls,
                         "Actions",
@@ -312,7 +332,7 @@ pub fn view(id: u32, model: &Model, all_locks: &Locks) -> Node<IdMsg> {
                         simple_ev(Ev::Click, IdMsg(id, Msg::WatchChange))
                     ],
                     dropdown::wrapper_view(
-                        class![C.z_30, C.w_64],
+                        class![C.z_30, C.w_56],
                         Placement::Bottom,
                         model.watching.is_open(),
                         items_view(id, &model.actions)

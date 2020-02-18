@@ -8,7 +8,7 @@ use crate::{
 };
 use iml_wire_types::{
     warp_drive::{ArcCache, ArcValuesExt, Locks},
-    Filesystem, Target, TargetConfParam, TargetKind, ToCompositeId, VolumeOrResourceUri,
+    Filesystem, Session, Target, TargetConfParam, TargetKind, ToCompositeId, VolumeOrResourceUri,
 };
 use number_formatter as NF;
 use seed::{prelude::*, *};
@@ -105,12 +105,33 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
     }
 }
 
-pub(crate) fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> Node<Msg> {
+pub(crate) fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<&Session>) -> Node<Msg> {
     div![
         details_table(cache, all_locks, model),
-        targets("Management Target", cache, all_locks, &model.rows, &model.mgt[..]),
-        targets("Metadata Targets", cache, all_locks, &model.rows, &model.mdts[..]),
-        targets("Object Storage Targets", cache, all_locks, &model.rows, &model.osts[..]),
+        targets(
+            "Management Target",
+            cache,
+            all_locks,
+            session,
+            &model.rows,
+            &model.mgt[..]
+        ),
+        targets(
+            "Metadata Targets",
+            cache,
+            all_locks,
+            session,
+            &model.rows,
+            &model.mdts[..]
+        ),
+        targets(
+            "Object Storage Targets",
+            cache,
+            all_locks,
+            session,
+            &model.rows,
+            &model.osts[..]
+        ),
     ]
 }
 
@@ -162,6 +183,7 @@ fn targets(
     title: &str,
     cache: &ArcCache,
     all_locks: &Locks,
+    session: Option<&Session>,
     rows: &HashMap<u32, Row>,
     tgts: &[Target<TargetConfParam>],
 ) -> Node<Msg> {
@@ -212,7 +234,7 @@ fn targets(
                         T::td_view(server_link(x.active_host.as_ref(), &x.active_host_name)),
                         td![
                             class![C.p_3, C.text_center],
-                            action_dropdown::view(x.id, &row.dropdown, all_locks)
+                            action_dropdown::view(x.id, &row.dropdown, all_locks, session)
                                 .map_msg(|x| Msg::ActionDropdown(Box::new(x)))
                         ]
                     ],

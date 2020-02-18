@@ -273,6 +273,7 @@ pub enum Msg {
     ToggleMenu,
     Tree(tree::Msg),
     UpdatePageTitle,
+    ActivityPage(page::activity::Msg),
     WindowClick,
     WindowResize,
 }
@@ -524,6 +525,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 page::filesystems::update(msg, &model.records, page, &mut orders.proxy(Msg::FilesystemsPage))
             }
         }
+        Msg::ActivityPage(msg) => {
+            if let Page::Activity(page) = &mut model.page {
+                page::activity::update(msg, &model.records, page, &mut orders.proxy(Msg::ActivityPage))
+            }
+        }
         Msg::StartSliderTracking => {
             model.track_slider = true;
         }
@@ -570,6 +576,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             orders
                 .proxy(Msg::FilesystemPage)
                 .send_msg(page::filesystem::Msg::WindowClick);
+            orders
+                .proxy(Msg::ActivityPage)
+                .send_msg(page::activity::Msg::WindowClick);
         }
         Msg::WindowResize => {
             model.breakpoint_size = breakpoints::size();
@@ -712,18 +721,24 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
     match &model.page {
         Page::AppLoading => loading::view().els(),
         Page::About => main_panels(model, page::about::view(model)).els(),
-        Page::Activity => main_panels(model, page::activity::view(model)).els(),
+        Page::Activity(page) => main_panels(
+            model,
+            page::activity::view(page, model.auth.get_session(), &model.locks)
+                .els()
+                .map_msg(Msg::ActivityPage),
+        )
+        .els(),
         Page::Dashboard => main_panels(model, page::dashboard::view(model)).els(),
         Page::Filesystems(page) => main_panels(
             model,
-            page::filesystems::view(&model.records, page, &model.locks)
+            page::filesystems::view(&model.records, page, &model.locks, model.auth.get_session())
                 .els()
                 .map_msg(Msg::FilesystemsPage),
         )
         .els(),
         Page::Filesystem(page) => main_panels(
             model,
-            page::filesystem::view(&model.records, page, &model.locks)
+            page::filesystem::view(&model.records, page, &model.locks, model.auth.get_session())
                 .els()
                 .map_msg(Msg::FilesystemPage),
         )
@@ -738,7 +753,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::PowerControl => main_panels(model, page::power_control::view(model)).els(),
         Page::Servers(page) => main_panels(
             model,
-            page::servers::view(&model.records, page, &model.locks)
+            page::servers::view(&model.records, model.auth.get_session(), page, &model.locks)
                 .els()
                 .map_msg(Msg::ServersPage),
         )
