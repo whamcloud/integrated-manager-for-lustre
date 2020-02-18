@@ -58,13 +58,17 @@ From here you can decide what type of setup to run.
 - Monitored Ldiskfs:
 
   ```sh
-  vagrant provision --provision-with=install-ldiskfs-no-iml,configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2
+  vagrant provision --provision-with=install-ldiskfs-no-iml
+  vagrant reload mds1 mds2 oss1 oss2
+  vagrant provision --provision-with=configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2
   ```
 
 - Monitored ZFS:
 
   ```sh
-  vagrant provision --provision-with=install-zfs-no-iml,configure-lustre-network,create-pools,zfs-params,create-zfs-fs
+  vagrant provision --provision-with=install-zfs-no-iml
+  vagrant reload mds1 mds2 oss1 oss2
+  vagrant provision --provision-with=configure-lustre-network,create-pools,zfs-params,create-zfs-fs
   ```
 
 - Managed Mode:
