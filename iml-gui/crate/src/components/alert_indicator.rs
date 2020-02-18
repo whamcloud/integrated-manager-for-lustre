@@ -1,9 +1,11 @@
-use crate::components::{attrs, font_awesome_outline, tooltip, Placement};
-use crate::generated::css_classes::C;
+use crate::{
+    components::{attrs, font_awesome_outline, tooltip, Placement},
+    generated::css_classes::C,
+};
 use im::HashMap;
-use iml_wire_types::{warp_drive::ArcValuesExt, Alert, AlertSeverity};
+use iml_wire_types::{warp_drive::ArcValuesExt, Alert, AlertSeverity, ToCompositeId};
 use seed::{prelude::*, *};
-use std::{cmp::max, sync::Arc};
+use std::{cmp::max, collections::BTreeSet, iter::FromIterator, sync::Arc};
 
 fn get_message(alerts: &[&Alert]) -> String {
     if alerts.is_empty() {
@@ -17,15 +19,20 @@ fn get_message(alerts: &[&Alert]) -> String {
 
 pub(crate) fn alert_indicator<T>(
     alerts: &HashMap<u32, Arc<Alert>>,
-    resource_uri: &str,
+    x: &dyn ToCompositeId,
     compact: bool,
     tt_placement: Placement,
 ) -> Node<T> {
+    let composite_id = x.composite_id();
+
     let alerts: Vec<&Alert> = alerts
         .arc_values()
-        .filter_map(|x: &Alert| match &x.affected {
-            Some(xs) => xs.iter().find(|x| x == &resource_uri).map(|_| x),
-            None => None,
+        .filter_map(|x| {
+            let xs = x.affected_composite_ids.as_ref()?;
+
+            BTreeSet::from_iter(xs).get(&composite_id)?;
+
+            Some(x)
         })
         .collect();
 

@@ -30,7 +30,7 @@ use seed::prelude::Orders;
 
 pub enum Page {
     About,
-    Activity,
+    Activity(activity::Model),
     AppLoading,
     Dashboard,
     Filesystems,
@@ -63,7 +63,7 @@ impl<'a> From<&Route<'a>> for Page {
     fn from(route: &Route<'a>) -> Self {
         match route {
             Route::About => Self::About,
-            Route::Activity => Self::Activity,
+            Route::Activity => Self::Activity(activity::Model::default()),
             Route::Dashboard => Self::Dashboard,
             Route::Filesystems => Self::Filesystems,
             Route::Filesystem(id) => id
@@ -107,7 +107,7 @@ impl Page {
     pub fn is_active<'a>(&self, route: &Route<'a>) -> bool {
         match (route, self) {
             (Route::About, Self::About)
-            | (Route::Activity, Self::Activity)
+            | (Route::Activity, Self::Activity(_))
             | (Route::Dashboard, Self::Dashboard)
             | (Route::Filesystems, Self::Filesystems)
             | (Route::Jobstats, Self::Jobstats)
@@ -135,5 +135,9 @@ impl Page {
         if let Self::Servers(_) = self {
             servers::init(cache, &mut orders.proxy(Msg::ServersPage))
         };
+
+        if let Self::Activity(_) = self {
+            activity::init(&mut orders.proxy(Msg::ActivityPage))
+        }
     }
 }
