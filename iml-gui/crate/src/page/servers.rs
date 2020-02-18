@@ -7,7 +7,7 @@ use crate::{
 use iml_wire_types::{
     db::LnetConfigurationRecord,
     warp_drive::{ArcCache, ArcValuesExt, Locks},
-    Host, Label, ToCompositeId,
+    Host, Label, Session, ToCompositeId,
 };
 use seed::{prelude::*, *};
 use std::{cmp::Ordering, collections::HashMap, sync::Arc};
@@ -144,30 +144,6 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
     }
 }
 
-fn sort_header(label: &str, sort_field: SortField, model: &Model) -> Node<Msg> {
-    let is_active = model.sort.0 == sort_field;
-
-    let table_cls = class![C.text_center];
-
-    let table_cls = if is_active {
-        table_cls.merge_attrs(table::th_sortable_cls())
-    } else {
-        table_cls
-    };
-
-    table::th_view(a![
-        class![C.select_none, C.cursor_pointer, C.font_semibold],
-        mouse_ev(Ev::Click, move |_| Msg::SortBy(sort_field)),
-        label,
-        if is_active {
-            paging::dir_toggle_view(model.sort.1, class![C.w_5, C.h_4, C.inline, C.ml_1, C.text_blue_500])
-        } else {
-            empty![]
-        }
-    ])
-    .merge_attrs(table_cls)
-}
-
 fn lnet_by_server(
     x: &Host,
     lnet_configs: &im::HashMap<u32, Arc<LnetConfigurationRecord>>,
@@ -179,7 +155,7 @@ fn lnet_by_server(
     lnet_configs.get(&id).cloned()
 }
 
-pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> impl View<Msg> {
+pub fn view(cache: &ArcCache, session: Option<&Session>, model: &Model, all_locks: &Locks) -> impl View<Msg> {
     div![
         class![C.bg_white, C.border_t, C.border_b, C.border, C.rounded_lg, C.shadow],
         div![
@@ -210,7 +186,7 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> impl View<Msg
                                         x.label()
                                     ],
                                     lock_indicator::view(all_locks, x).merge_attrs(class![C.mr_2]),
-                                    alert_indicator(&cache.active_alert, &x.resource_uri, true, Placement::Top)
+                                    alert_indicator(&cache.active_alert, &x, true, Placement::Top)
                                 ])
                                 .merge_attrs(class![C.text_center]),
                                 table::td_view(span![timeago(x).unwrap_or_else(|| "".into())])
@@ -222,7 +198,7 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> impl View<Msg
                                 .merge_attrs(class![C.text_center]),
                                 td![
                                     class![C.p_3, C.text_center],
-                                    action_dropdown::view(x.id, &row.dropdown, all_locks)
+                                    action_dropdown::view(x.id, &row.dropdown, all_locks, session)
                                         .map_msg(|x| Msg::ActionDropdown(Box::new(x)))
                                 ]
                             ],
@@ -246,12 +222,7 @@ fn lnet_by_server_view<T>(x: &Host, cache: &ArcCache, all_locks: &Locks) -> Opti
 
     Some(nodes![
         lnet_status::view(&config, all_locks).merge_attrs(class![C.mr_2]),
-        alert_indicator(
-            &cache.active_alert,
-            &format!("/api/lnet_configuration/{}/", config.id),
-            true,
-            Placement::Top,
-        ),
+        alert_indicator(&cache.active_alert, &config, true, Placement::Top,),
     ])
 }
 
@@ -261,4 +232,28 @@ fn timeago(x: &Host) -> Option<String> {
     let dt = chrono::DateTime::parse_from_rfc3339(&format!("{}-00:00", boot_time)).unwrap();
 
     Some(format!("{}", chrono_humanize::HumanTime::from(dt)))
+}
+
+fn sort_header(label: &str, sort_field: SortField, model: &Model) -> Node<Msg> {
+    let is_active = model.sort.0 == sort_field;
+
+    let table_cls = class![C.text_center];
+
+    let table_cls = if is_active {
+        table_cls.merge_attrs(table::th_sortable_cls())
+    } else {
+        table_cls
+    };
+
+    table::th_view(a![
+        class![C.select_none, C.cursor_pointer, C.font_semibold],
+        mouse_ev(Ev::Click, move |_| Msg::SortBy(sort_field)),
+        label,
+        if is_active {
+            paging::dir_toggle_view(model.sort.1, class![C.w_5, C.h_4, C.inline, C.ml_1, C.text_blue_500])
+        } else {
+            empty![]
+        }
+    ])
+    .merge_attrs(table_cls)
 }
