@@ -182,8 +182,8 @@ impl Cache {
 /// A `Record` with it's concrete type erased.
 /// The returned item implements the `Label` and `EndpointName`
 /// traits.
-pub trait ErasedRecord: Label + EndpointNameSelf + Id {}
-impl<T: Label + EndpointNameSelf + Id + ToCompositeId> ErasedRecord for T {}
+pub trait ErasedRecord: Label + EndpointNameSelf + Id + core::fmt::Debug {}
+impl<T: Label + EndpointNameSelf + Id + ToCompositeId + core::fmt::Debug> ErasedRecord for T {}
 
 fn erase(x: Arc<impl ErasedRecord + 'static>) -> Arc<dyn ErasedRecord> {
     x

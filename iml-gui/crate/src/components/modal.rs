@@ -1,14 +1,14 @@
 use crate::{components::font_awesome, generated::css_classes::C, key_codes, GMsg};
 use seed::{prelude::*, *};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Model {
     pub open: bool,
 }
 
 type ParentMsg<T> = fn(Msg) -> T;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Msg {
     KeyDown(u32),
     Close,
@@ -29,6 +29,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
 pub fn title_view<T>(p_msg: ParentMsg<T>, children: impl View<T>) -> Node<T> {
     div![
+        id!["modal__title_view"],
         class![C.flex, C.justify_between, C.items_center, C.pb_3,],
         p![class![C.text_2xl, C.font_bold,], children.els()],
         div![
@@ -40,11 +41,15 @@ pub fn title_view<T>(p_msg: ParentMsg<T>, children: impl View<T>) -> Node<T> {
 }
 
 pub fn footer_view<T>(children: impl View<T>) -> Node<T> {
-    div![class![C.flex, C.justify_end, C.pt_2,], children.els()]
+    div![
+        id!["modal__footer_view"],
+        class![C.flex, C.justify_end, C.pt_2,], children.els()
+    ]
 }
 
 pub fn content_view<T>(p_msg: ParentMsg<T>, children: impl View<T>) -> Node<T> {
     div![
+        id!["modal__content_view"],
         class![
             C.bg_white,
             C.w_10of12,
@@ -84,6 +89,7 @@ pub fn bg_view<T>(open: bool, p_msg: ParentMsg<T>, children: impl View<T>) -> No
     }
 
     div![
+        id!["modal__bg_view"],
         class![
             C.fixed,
             C.flex,

@@ -10,7 +10,7 @@ pub struct Model {
     grafana_vars: HashMap<String, String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     InodeTable(inode_table::Msg),
 }

@@ -130,6 +130,7 @@ impl Loading {
 // ------ ------
 
 pub struct Model {
+    my_test: bool,
     activity_health: ActivityHealth,
     auth: auth::Model,
     breadcrumbs: BreadCrumbs<Route<'static>>,
@@ -187,6 +188,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
     orders.perform_cmd(fut);
 
     AfterMount::new(Model {
+        my_test: false,
         activity_health: ActivityHealth::default(),
         auth: auth::Model::default(),
         breadcrumbs: BreadCrumbs::default(),
@@ -252,8 +254,9 @@ fn sink(g_msg: GMsg, _model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
 // ------ ------
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
+    MyTest,
     Auth(Box<auth::Msg>),
     EventSourceConnect(JsValue),
     EventSourceError(JsValue),
@@ -292,6 +295,9 @@ pub enum Msg {
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
+        Msg::MyTest => {
+            model.my_test = !model.my_test;
+        }
         Msg::RouteChanged(url) => {
             model.route = Route::from(url);
 

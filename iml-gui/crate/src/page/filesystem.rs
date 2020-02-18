@@ -63,7 +63,7 @@ impl Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     ActionDropdown(Box<action_dropdown::IdMsg>),
     AddTarget(Arc<Target<TargetConfParam>>),

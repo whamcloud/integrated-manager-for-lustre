@@ -34,7 +34,7 @@ impl Default for Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     ActionDropdown(Box<action_dropdown::IdMsg>),
     ActionsFetched(Box<fetch::ResponseDataResult<ApiList<Alert>>>),

@@ -25,7 +25,7 @@ impl Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     ActionDropdown(action_dropdown::IdMsg),
     UpdateTarget(Arc<Target<TargetConfParam>>),

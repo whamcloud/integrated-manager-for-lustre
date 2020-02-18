@@ -36,7 +36,7 @@ pub struct Model {
     sort: (SortField, paging::Dir),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     SetHosts(Vec<Host>, im::HashMap<u32, Arc<LnetConfigurationRecord>>), // @FIXME: This should be more granular so row state isn't lost.
     Page(paging::Msg),

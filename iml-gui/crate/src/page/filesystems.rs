@@ -24,7 +24,7 @@ pub struct Model {
     rows: HashMap<u32, Row>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     ActionDropdown(Box<action_dropdown::IdMsg>),
     AddFilesystem(Arc<Filesystem>),

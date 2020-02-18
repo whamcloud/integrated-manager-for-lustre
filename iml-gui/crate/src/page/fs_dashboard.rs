@@ -16,7 +16,7 @@ pub struct Model {
     pub fs_name: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     FsUsage(fs_usage::Msg),
 }
