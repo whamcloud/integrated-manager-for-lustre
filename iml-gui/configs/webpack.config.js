@@ -20,6 +20,9 @@ module.exports = (env, argv) => {
       path: dist,
       filename: "[name].[contenthash].js"
     },
+    performance: {
+      maxAssetSize: 3000000
+    },
     devServer: {
       contentBase: dist,
       // You can connect to dev server from devices in your network (e.g. 192.168.0.3:8000).

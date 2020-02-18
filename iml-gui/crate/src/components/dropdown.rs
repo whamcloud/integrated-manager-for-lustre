@@ -46,11 +46,14 @@ pub fn wrapper_view<T>(attrs: Attrs, placement: Placement, open: bool, children:
 pub fn item_view<T>(children: impl View<T>) -> Node<T> {
     div![
         class![
-            C.px_4,
-            C.py_2,
-            C.text_gray_800,
+            C.bg_gray_100,
             C.hover__bg_blue_700,
             C.hover__text_white,
+            C.m_2,
+            C.px_4,
+            C.py_2,
+            C.rounded,
+            C.text_gray_800,
         ],
         children.els()
     ]

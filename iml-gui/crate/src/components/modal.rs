@@ -1,4 +1,4 @@
-use crate::{components::font_awesome, generated::css_classes::C, key_codes};
+use crate::{components::font_awesome, generated::css_classes::C, key_codes, GMsg};
 use seed::{prelude::*, *};
 
 #[derive(Default)]
@@ -6,13 +6,15 @@ pub struct Model {
     pub open: bool,
 }
 
-#[derive(Clone)]
+type ParentMsg<T> = fn(Msg) -> T;
+
+#[derive(Clone, PartialEq)]
 pub enum Msg {
     KeyDown(u32),
     Close,
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::KeyDown(code) => {
             if code == key_codes::ESC {
@@ -25,14 +27,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     }
 }
 
-pub fn title_view(children: impl View<Msg>) -> Node<Msg> {
+pub fn title_view<T>(p_msg: ParentMsg<T>, children: impl View<T>) -> Node<T> {
     div![
         class![C.flex, C.justify_between, C.items_center, C.pb_3,],
         p![class![C.text_2xl, C.font_bold,], children.els()],
         div![
             class![C.cursor_pointer, C.z_50,],
             font_awesome(class![C.w_4, C.h_4, C.inline, C.ml_1], "times"),
-            simple_ev(Ev::Click, Msg::Close)
+            ev(Ev::Click, move |_| p_msg(Msg::Close))
         ],
     ]
 }
@@ -41,7 +43,7 @@ pub fn footer_view<T>(children: impl View<T>) -> Node<T> {
     div![class![C.flex, C.justify_end, C.pt_2,], children.els()]
 }
 
-pub fn content_view(children: impl View<Msg>) -> Node<Msg> {
+pub fn content_view<T>(p_msg: ParentMsg<T>, children: impl View<T>) -> Node<T> {
     div![
         class![
             C.bg_white,
@@ -68,7 +70,7 @@ pub fn content_view(children: impl View<Msg>) -> Node<Msg> {
                 C.text_sm,
                 C.z_50,
             ],
-            simple_ev(Ev::Click, Msg::Close),
+            ev(Ev::Click, move |_| p_msg(Msg::Close)),
             font_awesome(class![C.w_4, C.h_4, C.inline], "times"),
             span![class![C.text_sm,], "(Esc)",],
         ],
@@ -76,7 +78,7 @@ pub fn content_view(children: impl View<Msg>) -> Node<Msg> {
     ]
 }
 
-pub fn bg_view(open: bool, children: impl View<Msg>) -> Node<Msg> {
+pub fn bg_view<T>(open: bool, p_msg: ParentMsg<T>, children: impl View<T>) -> Node<T> {
     if !open {
         return empty![];
     }
@@ -93,7 +95,7 @@ pub fn bg_view(open: bool, children: impl View<Msg>) -> Node<Msg> {
             C.justify_center,
         ],
         attrs! {At::TabIndex => 0, At::AutoFocus => true},
-        keyboard_ev("keydown", |ev| Msg::KeyDown(ev.key_code())),
+        keyboard_ev("keydown", move |ev| p_msg(Msg::KeyDown(ev.key_code()))),
         div![
             class![C.absolute, C.w_full, C.h_full],
             style! {St::BackgroundColor => "rgba(26, 32, 44, 0.6)"},

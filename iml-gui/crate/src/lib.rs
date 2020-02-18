@@ -54,7 +54,7 @@ const MAX_SIDE_PERCENTAGE: f32 = 35_f32;
 /// help url becomes `https://localhost:8443/help/docs/Graphical_User_Interface_9_0.html`
 const CTX_HELP: &str = "help/docs/Graphical_User_Interface_9_0.html";
 
-pub fn extract_api(s: &str) -> Option<&str> {
+pub fn extract_id(s: &str) -> Option<&str> {
     let re = Regex::new(r"^/?api/[^/]+/(\d+)/?$").unwrap();
 
     let x = re.captures(s)?;
@@ -340,6 +340,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
             orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::SetHosts(
                 model.records.host.arc_values().cloned().collect(),
+                model.records.lnet_configuration.clone(),
             ));
 
             orders.proxy(Msg::Tree).send_msg(tree::Msg::Reset);
@@ -381,6 +382,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
                     orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::SetHosts(
                         model.records.host.arc_values().cloned().collect(),
+                        model.records.lnet_configuration.clone(),
                     ));
                 }
                 warp_drive::Record::ManagedTargetMount(x) => {
@@ -444,6 +446,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             if let warp_drive::RecordId::Host(_) = id {
                 orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::SetHosts(
                     model.records.host.arc_values().cloned().collect(),
+                    model.records.lnet_configuration.clone(),
                 ));
             }
         }
@@ -459,7 +462,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::ServerPage(msg) => {
             if let Page::Server(page) = &mut model.page {
-                page::server::update(msg, page, &mut orders.proxy(Msg::ServerPage))
+                page::server::update(msg, &model.records, page, &mut orders.proxy(Msg::ServerPage))
             }
         }
         Msg::StartSliderTracking => {
@@ -657,7 +660,9 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::PowerControl => main_panels(model, page::power_control::view(model)).els(),
         Page::Server(page) => main_panels(
             model,
-            page::server::view(&model.records, page).els().map_msg(Msg::ServerPage),
+            page::server::view(&model.records, page, &model.locks)
+                .els()
+                .map_msg(Msg::ServerPage),
         )
         .els(),
         Page::ServerDetail(x) => main_panels(model, page::server_detail::view(x)).els(),

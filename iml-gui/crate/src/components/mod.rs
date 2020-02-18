@@ -6,6 +6,7 @@ pub mod popover;
 pub mod table;
 pub mod tooltip;
 
+pub(crate) mod action_dropdown;
 pub(crate) mod activity_indicator;
 pub(crate) mod alert_indicator;
 pub(crate) mod arrow;
@@ -13,6 +14,7 @@ pub(crate) mod attrs;
 pub(crate) mod breadcrumbs;
 pub(crate) mod font_awesome;
 pub(crate) mod loading;
+pub(crate) mod lock_indicator;
 pub(crate) mod logo;
 pub(crate) mod restrict;
 pub(crate) mod tree;
