@@ -50,9 +50,9 @@ fn nav_manage_dropdown(open: bool) -> Node<Msg> {
         ul![
             li![a![
                 &cls,
-                Route::Server.to_string(),
+                Route::Servers.to_string(),
                 attrs! {
-                    At::Href => Route::Server.to_href(),
+                    At::Href => Route::Servers.to_href(),
                 },
             ]],
             li![
@@ -62,23 +62,23 @@ fn nav_manage_dropdown(open: bool) -> Node<Msg> {
                 },
             ],
             li![
-                a![&cls, Route::Filesystem.to_string()],
+                a![&cls, Route::Filesystems.to_string()],
                 attrs! {
-                    At::Href => Route::Filesystem.to_href(),
+                    At::Href => Route::Filesystems.to_href(),
                 },
             ],
             li![a![&cls, "HSM"]],
             li![a![&cls, "Storage"]],
             li![
-                a![&cls, Route::User.to_string()],
+                a![&cls, Route::Users.to_string()],
                 attrs! {
-                    At::Href => Route::User.to_href(),
+                    At::Href => Route::Users.to_href(),
                 },
             ],
             li![
-                a![&cls, Route::Volume.to_string()],
+                a![&cls, Route::Volumes.to_string()],
                 attrs! {
-                    At::Href => Route::Volume.to_href(),
+                    At::Href => Route::Volumes.to_href(),
                 },
             ],
             li![
@@ -352,7 +352,7 @@ pub fn auth_view(auth: &auth::Model, logging_out: bool) -> Node<Msg> {
                     &cls,
                     &disabled,
                     attrs! {
-                        At::Href => Route::UserDetail(user.id.into()).to_href()
+                        At::Href => Route::User(user.id.into()).to_href()
                     },
                     user.username
                 ]

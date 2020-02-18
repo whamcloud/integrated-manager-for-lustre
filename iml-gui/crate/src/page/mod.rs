@@ -2,24 +2,24 @@ pub mod about;
 pub mod activity;
 pub mod dashboard;
 pub mod filesystem;
-pub mod filesystem_detail;
+pub mod filesystems;
 pub mod jobstats;
 pub mod login;
 pub mod logs;
 pub mod mgt;
 pub mod not_found;
 pub mod ostpool;
-pub mod ostpool_detail;
+pub mod ostpools;
 pub mod partial;
 pub mod power_control;
 pub mod server;
-pub mod server_detail;
+pub mod servers;
 pub mod target;
-pub mod target_detail;
+pub mod targets;
 pub mod user;
-pub mod user_detail;
+pub mod users;
 pub mod volume;
-pub mod volume_detail;
+pub mod volumes;
 
 use crate::{
     route::{Route, RouteId},
@@ -33,24 +33,24 @@ pub enum Page {
     Activity,
     AppLoading,
     Dashboard,
-    Filesystem,
-    FilesystemDetail(filesystem_detail::Model),
+    Filesystems,
+    Filesystem(filesystem::Model),
     Jobstats,
     Login(login::Model),
     Logs,
     Mgt,
     NotFound,
-    OstPool,
-    OstPoolDetail(ostpool_detail::Model),
+    OstPools,
+    OstPool(ostpool::Model),
     PowerControl,
+    Servers(servers::Model),
     Server(server::Model),
-    ServerDetail(server_detail::Model),
-    Target,
-    TargetDetail(target_detail::Model),
-    User,
-    UserDetail(user_detail::Model),
-    Volume,
-    VolumeDetail(volume_detail::Model),
+    Targets,
+    Target(target::Model),
+    Users,
+    User(user::Model),
+    Volumes,
+    Volume(volume::Model),
 }
 
 impl Default for Page {
@@ -65,41 +65,38 @@ impl<'a> From<&Route<'a>> for Page {
             Route::About => Self::About,
             Route::Activity => Self::Activity,
             Route::Dashboard => Self::Dashboard,
-            Route::Filesystem => Self::Filesystem,
-            Route::FilesystemDetail(id) => id
+            Route::Filesystems => Self::Filesystems,
+            Route::Filesystem(id) => id
                 .parse()
-                .map(|id| Self::FilesystemDetail(filesystem_detail::Model { id }))
+                .map(|id| Self::Filesystem(filesystem::Model { id }))
                 .unwrap_or_default(),
             Route::Jobstats => Self::Jobstats,
             Route::Login => Self::Login(login::Model::default()),
             Route::Logs => Self::Logs,
             Route::Mgt => Self::Mgt,
             Route::NotFound => Self::NotFound,
-            Route::OstPool => Self::OstPool,
-            Route::OstPoolDetail(id) => id
+            Route::OstPools => Self::OstPools,
+            Route::OstPool(id) => id
                 .parse()
-                .map(|id| Self::OstPoolDetail(ostpool_detail::Model { id }))
+                .map(|id| Self::OstPool(ostpool::Model { id }))
                 .unwrap_or_default(),
             Route::PowerControl => Self::PowerControl,
-            Route::Server => Self::Server(server::Model::default()),
-            Route::ServerDetail(id) => id
+            Route::Servers => Self::Servers(servers::Model::default()),
+            Route::Server(id) => id
                 .parse()
-                .map(|id| Self::ServerDetail(server_detail::Model { id }))
+                .map(|id| Self::Server(server::Model { id }))
                 .unwrap_or_default(),
-            Route::Target => Self::Target,
-            Route::TargetDetail(id) => id
+            Route::Targets => Self::Targets,
+            Route::Target(id) => id
                 .parse()
-                .map(|id| Self::TargetDetail(target_detail::Model { id }))
+                .map(|id| Self::Target(target::Model { id }))
                 .unwrap_or_default(),
-            Route::User => Self::User,
-            Route::UserDetail(id) => id
+            Route::Users => Self::Users,
+            Route::User(id) => id.parse().map(|id| Self::User(user::Model { id })).unwrap_or_default(),
+            Route::Volumes => Self::Volumes,
+            Route::Volume(id) => id
                 .parse()
-                .map(|id| Self::UserDetail(user_detail::Model { id }))
-                .unwrap_or_default(),
-            Route::Volume => Self::Volume,
-            Route::VolumeDetail(id) => id
-                .parse()
-                .map(|id| Self::VolumeDetail(volume_detail::Model { id }))
+                .map(|id| Self::Volume(volume::Model { id }))
                 .unwrap_or_default(),
         }
     }
@@ -112,33 +109,31 @@ impl Page {
             (Route::About, Self::About)
             | (Route::Activity, Self::Activity)
             | (Route::Dashboard, Self::Dashboard)
-            | (Route::Filesystem, Self::Filesystem)
+            | (Route::Filesystems, Self::Filesystems)
             | (Route::Jobstats, Self::Jobstats)
             | (Route::Login, Self::Login(_))
             | (Route::Logs, Self::Logs)
             | (Route::Mgt, Self::Mgt)
             | (Route::NotFound, Self::NotFound)
-            | (Route::OstPool, Self::OstPool)
+            | (Route::OstPools, Self::OstPools)
             | (Route::PowerControl, Self::PowerControl)
-            | (Route::Server, Self::Server(_))
-            | (Route::Target, Self::Target)
-            | (Route::User, Self::User)
-            | (Route::Volume, Self::Volume) => true,
-            (Route::FilesystemDetail(route_id), Self::FilesystemDetail(filesystem_detail::Model { id }))
-            | (Route::OstPoolDetail(route_id), Self::OstPoolDetail(ostpool_detail::Model { id }))
-            | (Route::ServerDetail(route_id), Self::ServerDetail(server_detail::Model { id }))
-            | (Route::TargetDetail(route_id), Self::TargetDetail(target_detail::Model { id }))
-            | (Route::UserDetail(route_id), Self::UserDetail(user_detail::Model { id }))
-            | (Route::VolumeDetail(route_id), Self::VolumeDetail(volume_detail::Model { id })) => {
-                route_id == &RouteId::from(id)
-            }
+            | (Route::Servers, Self::Servers(_))
+            | (Route::Targets, Self::Targets)
+            | (Route::Users, Self::Users)
+            | (Route::Volumes, Self::Volumes) => true,
+            (Route::Filesystem(route_id), Self::Filesystem(filesystem::Model { id }))
+            | (Route::OstPool(route_id), Self::OstPool(ostpool::Model { id }))
+            | (Route::Server(route_id), Self::Server(server::Model { id }))
+            | (Route::Target(route_id), Self::Target(target::Model { id }))
+            | (Route::User(route_id), Self::User(user::Model { id }))
+            | (Route::Volume(route_id), Self::Volume(volume::Model { id })) => route_id == &RouteId::from(id),
             _ => false,
         }
     }
     /// Initialize the page. This gives a chance to initialize data when a page is switched to.
     pub fn init(&self, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
         if let Self::Server(_) = self {
-            server::init(cache, &mut orders.proxy(Msg::ServerPage))
+            servers::init(cache, &mut orders.proxy(Msg::ServersPage))
         };
     }
 }
