@@ -58,7 +58,9 @@ From here you can decide what type of setup to run.
 - Monitored Ldiskfs:
 
   ```sh
+  # This installs kernel and kernel modules
   vagrant provision --provision-with=install-ldiskfs-no-iml
+  # To make use of new kernel, reboot storage nodes
   vagrant reload mds1 mds2 oss1 oss2
   vagrant provision --provision-with=configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2
   ```
@@ -66,7 +68,9 @@ From here you can decide what type of setup to run.
 - Monitored ZFS:
 
   ```sh
+  # This installs kernel and kernel modules
   vagrant provision --provision-with=install-zfs-no-iml
+  # To make use of new kernel, reboot storage nodes
   vagrant reload mds1 mds2 oss1 oss2
   vagrant provision --provision-with=configure-lustre-network,create-pools,zfs-params,create-zfs-fs
   ```
