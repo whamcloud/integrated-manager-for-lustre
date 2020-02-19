@@ -113,7 +113,7 @@ async fn main() -> Result<(), error::ImlDevicesError> {
 
         let end: DateTime<Local> = Local::now();
 
-        tracing::info!("Iteration {}: end: {}", iteration, end);
+        tracing::info!("Iteration {}: end: {}, duration: {}", iteration, end, end - begin);
 
         iteration = iteration.wrapping_add(1);
     }
