@@ -63,7 +63,7 @@ class TestAvailableTransitions(IMLUnitTestCase):
         #  No FS - mgs unformatted
         mgs = ManagedMgs.objects.create(volume=self.volume)
 
-        expected_transitions = ["registered", "mounted", "formatted", "unmounted", "removed"]
+        expected_transitions = ["registered", "mounted", "formatted", "unmounted", "removed", "forgotten"]
         received_transitions = [t["state"] for t in self._get_transition_states(mgs)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
@@ -117,7 +117,7 @@ class TestAvailableTransitions(IMLUnitTestCase):
         mgs = ManagedMgs.objects.create(volume=self.volume)
         fs = ManagedFilesystem.objects.create(name="mgsfs", mgs=mgs)
 
-        expected_transitions = ["available", "removed"]
+        expected_transitions = ["available", "removed", "forgotten"]
         received_transitions = [t["state"] for t in self._get_transition_states(fs)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
