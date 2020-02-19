@@ -23,14 +23,14 @@ fn create<'a>(elem: &Element) -> ResourceAgentInfo {
                 elem.get_attr("type"),
             )
         },
-        id: elem.get_attr("id").unwrap_or("").to_string(),
+        id: elem.get_attr("id").unwrap_or_default().to_string(),
         args: elem
             .find_all("instance_attributes")
             .map(|e| {
                 e.find_all("nvpair").map(|nv| {
                     (
-                        nv.get_attr("name").unwrap_or("").to_string(),
-                        nv.get_attr("value").unwrap_or("").to_string(),
+                        nv.get_attr("name").unwrap_or_default().to_string(),
+                        nv.get_attr("value").unwrap_or_default().to_string(),
                     )
                 })
             })
