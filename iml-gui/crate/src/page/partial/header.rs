@@ -1,6 +1,6 @@
 use crate::{
     auth, breakpoints,
-    components::{activity_indicator, breadcrumbs, font_awesome, logo, restrict},
+    components::{activity_indicator, breadcrumbs, ddn_logo, font_awesome, restrict},
     ctx_help::CtxHelp,
     generated::css_classes::C,
     MergeAttrs, Model, Msg, Route, SessionExt,
@@ -257,11 +257,11 @@ fn logo_nav_view<T>() -> Node<T> {
             C.lg__my_0,
             C.ml_6,
             C.my_2,
-            C.text_white,
+            C.text_red_500,
             C.xl__mr_12
         ],
-        logo().merge_attrs(class![C.h_8, C.w_8, C.mr_3]),
-        span![class![C.font_semibold, C.text_3xl, C.tracking_tight], "IML"],
+        ddn_logo().merge_attrs(class![C.h_12, C.w_24, C.mr_3]),
+        span![class![C.font_semibold, C.text_3xl, C.tracking_tight], "AI400"],
     ]
 }
 

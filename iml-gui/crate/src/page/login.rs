@@ -1,4 +1,4 @@
-use crate::{auth, components::logo, generated::css_classes::C, FailReasonExt, GMsg, MergeAttrs, Route};
+use crate::{auth, components::ddn_logo, generated::css_classes::C, FailReasonExt, GMsg, MergeAttrs, Route};
 use iml_wire_types::Session;
 use seed::{browser::service::fetch, prelude::*, *};
 
@@ -127,21 +127,14 @@ pub fn view(model: &Model) -> impl View<Msg> {
             C.min_h_screen,
         ],
         form![
-            class![
-                C.bg_white,
-                C.shadow_md,
-                C.px_16,
-                C.py_8,
-                C.border_b_4,
-                C.border_teal_500
-            ],
+            class![C.bg_white, C.shadow_md, C.px_16, C.py_8, C.border_b_8, C.border_red_700],
             ev(Ev::Submit, move |event| {
                 event.prevent_default();
                 Msg::Submit
             }),
             div![
-                class![C.text_teal_500, C.flex, C.justify_center, C.mb_6],
-                logo().merge_attrs(class![C.h_16, C.w_16])
+                class![C.text_red_700, C.flex, C.justify_center, C.mb_6],
+                ddn_logo().merge_attrs(class![C.h_16, C.w_32])
             ],
             match errs.__all__.as_ref() {
                 Some(x) => err_item(x),
