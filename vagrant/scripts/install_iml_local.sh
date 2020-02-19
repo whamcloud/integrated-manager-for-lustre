@@ -2,6 +2,8 @@
 
 set -ex
 
+yum clean all
+
 yum copr enable -y managerforlustre/manager-for-lustre-devel
 # Get latest rpmdevtools
 yum install -y https://copr-be.cloud.fedoraproject.org/results/managerforlustre/buildtools/epel-8-x86_64/01152137-rpmdevtools/rpmdevtools-8.10-7.el8.noarch.rpm
