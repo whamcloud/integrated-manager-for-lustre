@@ -34,6 +34,10 @@ async fn main() -> Result<(), ImlStatsError> {
         //Write the entry into the influxdb database
         for record in xs {
             let maybe_entries = match record {
+                Record::Node(_) => {
+                    //@TODO: Implement node stat collection.
+                    None
+                }
                 Record::Target(target_stats) => match target_stats {
                     TargetStats::Stats(x) => {
                         tracing::debug!("Stats: {:?}", x);
