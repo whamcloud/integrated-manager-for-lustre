@@ -115,7 +115,7 @@ async fn main() -> Result<(), error::ImlDevicesError> {
 
         tracing::info!("Iteration {}: end: {}", iteration, end);
 
-        iteration += 1;
+        iteration = iteration.wrapping_add(1);
     }
 
     Ok(())
