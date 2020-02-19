@@ -132,7 +132,7 @@ impl Page {
     }
     /// Initialize the page. This gives a chance to initialize data when a page is switched to.
     pub fn init(&self, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
-        if let Self::Server(_) = self {
+        if let Self::Servers(_) = self {
             servers::init(cache, &mut orders.proxy(Msg::ServersPage))
         };
     }
