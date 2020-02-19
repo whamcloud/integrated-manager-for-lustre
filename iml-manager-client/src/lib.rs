@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use iml_request_retry::{retry_future, RetryAction, RetryPolicy};
 pub use reqwest::{header, Client, Response, StatusCode, Url};
 use serde::de::DeserializeOwned;
 use std::{fmt::Debug, time::Duration};
@@ -126,6 +127,35 @@ pub async fn get<T: DeserializeOwned + Debug>(
     tracing::debug!("Resp: {:?}", json);
 
     Ok(json)
+}
+
+fn create_policy<E: Debug>() -> impl RetryPolicy<E> + Send {
+    |k: u32, e| match k {
+        0 => RetryAction::RetryNow,
+        k if k < 3 => RetryAction::WaitFor(Duration::from_secs((2 * k) as u64)),
+        _ => RetryAction::ReturnError(e),
+    }
+}
+
+/// Performs a GET to the given API path.
+/// If the request fails, this fn will retry 3 times,
+/// sleeping between each attempt
+pub async fn get_retry<T: DeserializeOwned + Debug>(
+    client: Client,
+    path: impl ToString,
+    query: impl serde::Serialize,
+) -> Result<T, ImlManagerClientError> {
+    let client2 = client.clone();
+
+    let mut policy = create_policy();
+
+    let query = &query;
+
+    retry_future(
+        move || get(client2.clone(), path.to_string(), query),
+        &mut policy,
+    )
+    .await
 }
 
 /// Performs a POST to the given API path

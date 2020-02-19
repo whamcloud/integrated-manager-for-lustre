@@ -525,9 +525,9 @@ dependencies = [
 
 [[package]]
 name = "csv-core"
-version = "0.1.9"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca2be23073829399f39689074cca6997d929a634f73e5d08e24323c30c01832e"
+checksum = "2b2466559f260f48ad25fe6317b3c8dac77b5bdb5763ac7d9d6103530663bc90"
 dependencies = [
  "memchr",
 ]
@@ -1011,9 +1011,9 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eff2656d88f158ce120947499e971d743c05dbcbed62e5bd2f38f1698bbc3772"
+checksum = "e2c55f143919fbc0bc77e427fe2d74cf23786d7c1875666f2fde3ac3c659bb67"
 dependencies = [
  "libc",
 ]
@@ -1230,7 +1230,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
- "tracing-subscriber 0.2.0",
+ "tracing-subscriber 0.2.1",
  "uuid 0.7.4",
  "warp",
 ]
@@ -1248,7 +1248,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
- "tracing-subscriber 0.2.0",
+ "tracing-subscriber 0.2.1",
  "warp",
 ]
 
@@ -1336,6 +1336,7 @@ name = "iml-manager-client"
 version = "0.1.0"
 dependencies = [
  "iml-manager-env",
+ "iml-request-retry",
  "reqwest",
  "serde",
  "serde_json",
@@ -1453,7 +1454,7 @@ dependencies = [
  "structopt 0.3.9",
  "tokio",
  "tracing",
- "tracing-subscriber 0.2.0",
+ "tracing-subscriber 0.2.1",
  "warp",
 ]
 
@@ -1479,13 +1480,14 @@ dependencies = [
  "iml-manager-env",
  "iml-postgres",
  "iml-rabbit",
+ "iml-request-retry",
  "iml-wire-types",
  "serde",
  "serde_json",
  "tokio",
  "tokio-runtime-shutdown",
  "tracing",
- "tracing-subscriber 0.2.0",
+ "tracing-subscriber 0.2.1",
  "uuid 0.7.4",
  "warp",
 ]
@@ -2808,9 +2810,9 @@ checksum = "ea6a9290e3c9cf0f18145ef7ffa62d68ee0bf5fcd651017e586dc7fd5da448c2"
 
 [[package]]
 name = "scopeguard"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b42e15e59b18a828bbf5c58ea01debb36b9b096346de35d941dcb89009f24a0d"
+checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "security-framework"
@@ -3495,9 +3497,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-subscriber"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25dc36e47794112347ccb9ae8a05b5ec4fab45f01545e4929323cdb1a543a8f4"
+checksum = "c6bbfcf5ab0799649189b0df4bd7f730f1929a3846d33ae56cb0ad6e0bbdad09"
 dependencies = [
  "ansi_term 0.11.0",
  "chrono",
