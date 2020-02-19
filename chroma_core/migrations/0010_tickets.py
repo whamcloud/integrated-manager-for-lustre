@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("chroma_core", "0008_ostpool_json_notify"),
+        ("chroma_core", "0009_django_content_type_json_notify"),
     ]
 
     operations = [
