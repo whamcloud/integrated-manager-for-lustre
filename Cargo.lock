@@ -1286,6 +1286,7 @@ dependencies = [
 name = "iml-devices"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "futures 0.3.4",
  "iml-postgres",
  "iml-rabbit",

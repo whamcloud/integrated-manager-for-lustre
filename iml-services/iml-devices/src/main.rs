@@ -30,6 +30,7 @@
 //! 2. The need for devices to not be forgotten if they dissapear from a device host, but instead be raised as an alert.
 //!
 
+use chrono::prelude::*;
 use futures::TryStreamExt;
 use iml_devices::{db, error};
 use iml_postgres::connect;
@@ -47,7 +48,12 @@ async fn main() -> Result<(), error::ImlDevicesError> {
 
     let mut s = consume_data("rust_agent_device_rx");
 
+    let mut iteration = 0u64;
     while let Some((fqdn, flat_devices)) = s.try_next().await? {
+        let begin: DateTime<Local> = Local::now();
+
+        tracing::info!("Iteration {}: begin: {}", iteration, begin);
+
         let (incoming_devices, incoming_device_hosts) =
             db::convert_flat_devices(&flat_devices, fqdn.clone());
 
@@ -104,6 +110,12 @@ async fn main() -> Result<(), error::ImlDevicesError> {
         .await?;
 
         transaction.commit().await?;
+
+        let end: DateTime<Local> = Local::now();
+
+        tracing::info!("Iteration {}: end: {}", iteration, end);
+
+        iteration += 1;
     }
 
     Ok(())
