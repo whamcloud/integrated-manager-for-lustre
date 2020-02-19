@@ -9,7 +9,7 @@ pub struct Model {
 
 pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
     iframe![attrs! {
-        At::Src => format!("https://localhost:7444/grafana/d/2vkrIIQWz/fs-dashboard?fs_name={}&orgId=1&from=1581968869809&to=1581969769809&kiosk", model.fs_name),
+        At::Src => format!("https://localhost:7444/grafana/d/2vkrIIQWz/fs-dashboard?var-fs_name={}&orgId=1&from=1581968869809&to=1581969769809&kiosk", model.fs_name),
         At::Width => "100%",
         At::Height => "100%",
         "frameborder" => 0
