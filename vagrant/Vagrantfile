@@ -113,6 +113,7 @@ Vagrant.configure('2') do |config|
                            '/integrated-manager-for-lustre/',
                            type: 'rsync',
                            rsync__exclude: [
+                              '_topdir',
                               '.cargo/',
                               '.git/',
                               'iml-gui/crate/.cargo/',
