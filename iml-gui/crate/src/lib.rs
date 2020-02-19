@@ -28,6 +28,7 @@ use iml_wire_types::{
     warp_drive::{self, ArcValuesExt},
     GroupType, Session,
 };
+use lazy_static::lazy_static;
 use page::{login, Page};
 use regex::Regex;
 use route::Route;
@@ -55,9 +56,10 @@ const MAX_SIDE_PERCENTAGE: f32 = 35_f32;
 const CTX_HELP: &str = "help/docs/Graphical_User_Interface_9_0.html";
 
 pub fn extract_id(s: &str) -> Option<&str> {
-    let re = Regex::new(r"^/?api/[^/]+/(\d+)/?$").unwrap();
-
-    let x = re.captures(s)?;
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"^/?api/[^/]+/(\d+)/?$").unwrap();
+    }
+    let x = RE.captures(s)?;
 
     x.get(1).map(|x| x.as_str())
 }
@@ -649,7 +651,13 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::Activity => main_panels(model, page::activity::view(model)).els(),
         Page::Dashboard => main_panels(model, page::dashboard::view(model)).els(),
         Page::Filesystems => main_panels(model, page::filesystems::view(model)).els(),
-        Page::Filesystem(x) => main_panels(model, page::filesystem::view(x)).els(),
+        Page::Filesystem(id) => {
+            if let Some(f) = model.records.filesystem.get(id) {
+                main_panels(model, page::filesystem::view(model, f)).els()
+            } else {
+                page::not_found::view(model).els()
+            }
+        }
         Page::Jobstats => main_panels(model, page::jobstats::view(model)).els(),
         Page::Login(x) => page::login::view(x).els().map_msg(Msg::Login),
         Page::Logs => main_panels(model, page::logs::view(model)).els(),

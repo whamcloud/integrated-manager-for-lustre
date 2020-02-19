@@ -209,7 +209,7 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> impl View<Msg
                                         },
                                         x.label()
                                     ],
-                                    lock_indicator::view(x, all_locks).merge_attrs(class![C.mr_2]),
+                                    lock_indicator::view(all_locks, x).merge_attrs(class![C.mr_2]),
                                     alert_indicator(&cache.active_alert, &x.resource_uri, true, Placement::Top)
                                 ])
                                 .merge_attrs(class![C.text_center]),

@@ -28,13 +28,13 @@ use crate::{
 use iml_wire_types::warp_drive::ArcCache;
 use seed::prelude::Orders;
 
-pub enum Page {
+pub(crate) enum Page {
     About,
     Activity,
     AppLoading,
     Dashboard,
     Filesystems,
-    Filesystem(filesystem::Model),
+    Filesystem(u32),
     Jobstats,
     Login(login::Model),
     Logs,
@@ -66,10 +66,7 @@ impl<'a> From<&Route<'a>> for Page {
             Route::Activity => Self::Activity,
             Route::Dashboard => Self::Dashboard,
             Route::Filesystems => Self::Filesystems,
-            Route::Filesystem(id) => id
-                .parse()
-                .map(|id| Self::Filesystem(filesystem::Model { id }))
-                .unwrap_or_default(),
+            Route::Filesystem(id) => id.parse().map(Self::Filesystem).unwrap_or_default(),
             Route::Jobstats => Self::Jobstats,
             Route::Login => Self::Login(login::Model::default()),
             Route::Logs => Self::Logs,
@@ -121,7 +118,7 @@ impl Page {
             | (Route::Targets, Self::Targets)
             | (Route::Users, Self::Users)
             | (Route::Volumes, Self::Volumes) => true,
-            (Route::Filesystem(route_id), Self::Filesystem(filesystem::Model { id }))
+            (Route::Filesystem(route_id), Self::Filesystem(id))
             | (Route::OstPool(route_id), Self::OstPool(ostpool::Model { id }))
             | (Route::Server(route_id), Self::Server(server::Model { id }))
             | (Route::Target(route_id), Self::Target(target::Model { id }))

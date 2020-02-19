@@ -28,6 +28,6 @@ pub fn view<T>(x: &LnetConfigurationRecord, all_locks: &Locks) -> Node<T> {
     span![
         attrs::container(),
         state,
-        lock_indicator::view(x, all_locks).merge_attrs(class![C.ml_2])
+        lock_indicator::view(all_locks, x).merge_attrs(class![C.ml_2])
     ]
 }

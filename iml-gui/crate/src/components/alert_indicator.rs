@@ -1,63 +1,57 @@
 use crate::components::{attrs, font_awesome_outline, tooltip, Placement};
 use crate::generated::css_classes::C;
 use im::HashMap;
-use iml_wire_types::{warp_drive::ArcValuesExt, Alert, AlertSeverity};
+use iml_wire_types::{warp_drive::ArcValuesExt, Alert, AlertSeverity, ResourceUri};
 use seed::{prelude::*, *};
 use std::{cmp::max, sync::Arc};
 
-fn get_message(alerts: &[&Alert]) -> String {
-    if alerts.is_empty() {
-        "No Alerts".into()
-    } else if alerts.len() == 1 {
-        alerts[0].message.clone()
-    } else {
-        format!("{} Alerts", alerts.len())
-    }
-}
-
 pub(crate) fn alert_indicator<T>(
     alerts: &HashMap<u32, Arc<Alert>>,
-    resource_uri: &str,
+    x: &dyn ResourceUri,
     compact: bool,
     tt_placement: Placement,
 ) -> Node<T> {
     let alerts: Vec<&Alert> = alerts
         .arc_values()
-        .filter_map(|x: &Alert| match &x.affected {
-            Some(xs) => xs.iter().find(|x| x == &resource_uri).map(|_| x),
+        .filter_map(|a: &Alert| match &a.affected {
+            Some(rs) => rs.iter().find(|r| r == &x.resource_uri()).map(|_| a),
             None => None,
         })
         .collect();
 
-    if alerts.is_empty() {
+    if compact && alerts.is_empty() {
         return empty![];
     }
 
-    let msg = get_message(&alerts);
-
     let count = alerts.len();
+
+    let msg = if count == 0 {
+        "No Alerts".into()
+    } else if count == 1 {
+        alerts[0].message.clone()
+    } else {
+        format!("{} Alerts", alerts.len())
+    };
 
     let health = alerts.into_iter().map(|x| x.severity).fold(AlertSeverity::INFO, max);
 
-    let cls = class![C.text_blue_500 => health == AlertSeverity::INFO,
-                            C.text_yellow_500 => health == AlertSeverity::WARNING,
-                            C.text_red_500 => health == AlertSeverity::ERROR];
+    let cls = if health == AlertSeverity::INFO {
+        C.text_blue_500
+    } else if health == AlertSeverity::WARNING {
+        C.text_yellow_500
+    } else {
+        C.text_red_500
+    };
 
-    let el = sup![&cls, count.to_string()];
-
-    let mut icon = font_awesome_outline(cls, "bell");
-
-    icon.add_class(C.w_4).add_class(C.h_4).add_class(C.inline);
-
-    let el = span![
-        class![C.inline_block],
-        span![attrs::container(), icon, tooltip::view(&msg, tt_placement)],
-        el
-    ];
+    let icon = font_awesome_outline(class![cls, C.inline, C.h_4, C.w_4], "bell");
 
     if compact {
-        el
+        span![
+            class![C.inline_block],
+            span![attrs::container(), icon, tooltip::view(&msg, tt_placement)],
+            sup![class![cls], count.to_string()]
+        ]
     } else {
-        span![el, span![class![C.ml_1], &msg]]
+        span![icon, span![class![C.ml_1], &msg]]
     }
 }
