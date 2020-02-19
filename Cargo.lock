@@ -11,9 +11,9 @@ dependencies = [
 
 [[package]]
 name = "amq-protocol"
-version = "3.1.0"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0261eeb244071203cd9727151a3161b9f6b443001c265dd52e782db6a36aa4d0"
+checksum = "3249cfdac820c4df7c63fe6ae3b06d94f15fb294996e50f4a6d2da580337c966"
 dependencies = [
  "amq-protocol-codegen",
  "amq-protocol-tcp",
@@ -25,9 +25,9 @@ dependencies = [
 
 [[package]]
 name = "amq-protocol-codegen"
-version = "3.1.0"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "804fc12efd85663a6ced824386dde4f9b255fc00dd3db96459e35165164828e5"
+checksum = "3e12e0b090bc6ebec18ecb38ebf0be22653702e7ed523361d195efa80c361b5d"
 dependencies = [
  "amq-protocol-types",
  "handlebars",
@@ -37,9 +37,9 @@ dependencies = [
 
 [[package]]
 name = "amq-protocol-tcp"
-version = "3.1.0"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7623ad8723830dd9c48372e1d5fde9973ce7c28636267dfcf506bed382e84150"
+checksum = "4221dcd6665e958d353485d28109fc7c4ed1d9cb06b9ba0a48c06847f03b4039"
 dependencies = [
  "amq-protocol-uri",
  "mio",
@@ -48,9 +48,9 @@ dependencies = [
 
 [[package]]
 name = "amq-protocol-types"
-version = "3.1.0"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a13489ba9891aac7f217c80ef10ead9e0219422d9af826bceb13a84346f75d0f"
+checksum = "4ec472722ea67718835222ea608c0410c41fbde0dc033a11a14c94b6a0dd61d6"
 dependencies = [
  "cookie-factory",
  "nom 5.1.0",
@@ -60,9 +60,9 @@ dependencies = [
 
 [[package]]
 name = "amq-protocol-uri"
-version = "3.1.0"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52e68b30bc7968ba7a013083e52d43429b1f253261a2960de6eb0905169e10f4"
+checksum = "09cb1e049824f477dbaeff58faf55d865bf2ce3409b48eaf32cd9c5cfe13c91c"
 dependencies = [
  "percent-encoding 2.1.0",
  "url",
@@ -118,10 +118,11 @@ checksum = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
 
 [[package]]
 name = "assert-json-diff"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9881d306dee755eccf052d652b774a6b2861e86b4772f555262130e58e4f81d2"
+checksum = "6f8d0d5ebee6ef30f131793343f1a2c26023324ee72e0f38d91c73f7f44af41a"
 dependencies = [
+ "extend",
  "serde",
  "serde_json",
 ]
@@ -720,6 +721,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de853764b47027c2e862a995c34978ffa63c1501f2e15f987ba11bd4f9bba193"
 
 [[package]]
+name = "extend"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf29866f640a891350d1aa695e0bf254df007df909cbecb65f6db4ba593b70a8"
+dependencies = [
+ "proc-macro-error 0.3.4",
+ "proc-macro2 1.0.8",
+ "quote 1.0.2",
+ "syn 1.0.14",
+]
+
+[[package]]
 name = "failure"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1225,7 +1238,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
- "tracing-subscriber 0.2.0",
+ "tracing-subscriber 0.2.1",
  "url",
  "uuid 0.7.4",
  "v_hist",
@@ -1456,6 +1469,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-stats"
+version = "0.1.0"
+dependencies = [
+ "futures 0.3.4",
+ "iml-manager-env",
+ "iml-service-queue",
+ "iml-wire-types",
+ "influxdb",
+ "lustre_collector",
+ "tokio",
+ "tracing",
+ "tracing-subscriber 0.2.1",
+]
+
+[[package]]
 name = "iml-timer"
 version = "0.1.0"
 dependencies = [
@@ -1494,7 +1522,6 @@ dependencies = [
  "iml-manager-env",
  "iml-postgres",
  "iml-rabbit",
- "iml-request-retry",
  "iml-wire-types",
  "serde",
  "serde_json",
@@ -1766,9 +1793,9 @@ dependencies = [
 
 [[package]]
 name = "lustre_collector"
-version = "0.2.8"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6958c313d914665212d0dc8a543820010c55224e01083218c3011b5243305c1e"
+checksum = "60964d6475793c57b1b607943a4bdcda2a37a8c475ff49822f054eef8c11f9c1"
 dependencies = [
  "clap",
  "combine",
@@ -2386,11 +2413,35 @@ dependencies = [
 
 [[package]]
 name = "proc-macro-error"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03e202b6302b80433b759eb9314be63521361a6622f6c125fe0dc3f6196e2722"
+dependencies = [
+ "proc-macro-error-attr 0.3.4",
+ "proc-macro2 1.0.8",
+ "quote 1.0.2",
+ "syn 1.0.14",
+]
+
+[[package]]
+name = "proc-macro-error"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "052b3c9af39c7e5e94245f820530487d19eb285faedcb40e0c3275132293f242"
 dependencies = [
- "proc-macro-error-attr",
+ "proc-macro-error-attr 0.4.9",
+ "proc-macro2 1.0.8",
+ "quote 1.0.2",
+ "rustversion",
+ "syn 1.0.14",
+]
+
+[[package]]
+name = "proc-macro-error-attr"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d140e22ca819b3aa3719d1aafbdea40544799e3f901886a4ee72c3ff710de7c9"
+dependencies = [
  "proc-macro2 1.0.8",
  "quote 1.0.2",
  "rustversion",
@@ -3176,7 +3227,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "095064aa1f5b94d14e635d0a5684cf140c43ae40a0fd990708d38f5d669e5f64"
 dependencies = [
  "heck",
- "proc-macro-error",
+ "proc-macro-error 0.4.9",
  "proc-macro2 1.0.8",
  "quote 1.0.2",
  "syn 1.0.14",

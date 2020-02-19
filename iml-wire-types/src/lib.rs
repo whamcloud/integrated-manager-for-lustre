@@ -331,16 +331,6 @@ impl<T: EndpointName> EndpointNameSelf for T {
     }
 }
 
-pub trait EndpointNameSelf {
-    fn endpoint_name(&self) -> &'static str;
-}
-
-impl<T: EndpointName> EndpointNameSelf for T {
-    fn endpoint_name(&self) -> &'static str {
-        Self::endpoint_name()
-    }
-}
-
 /// The type of lock
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
 #[serde(rename_all = "lowercase")]
