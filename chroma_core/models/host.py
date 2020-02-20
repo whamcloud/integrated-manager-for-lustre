@@ -1021,9 +1021,10 @@ class SetHostProfileStep(Step):
         old_session_id = AgentRpc.get_session_id(host.fqdn)
         self.invoke_agent(host, "restart_agent")
         AgentRpc.await_restart(host.fqdn, timeout=settings.AGENT_RESTART_TIMEOUT, old_session_id=old_session_id)
-        self.invoke_rust_local_action_expect_result(
-            "await_next_session", (host.fqdn, old_rust_session_id, settings.AGENT_RESTART_TIMEOUT)
-        )
+        if old_rust_session_id:
+            self.invoke_rust_local_action_expect_result(
+                "await_next_session", (host.fqdn, old_rust_session_id, settings.AGENT_RESTART_TIMEOUT)
+            )
 
     @classmethod
     def describe(cls, kwargs):
