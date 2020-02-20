@@ -50,7 +50,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --locked --all -- --check
+          args: --all -- --check
 
   test:
     name: Test Suite
