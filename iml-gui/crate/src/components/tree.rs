@@ -539,7 +539,7 @@ fn toggle_view(address: Address, is_open: bool) -> Node<Msg> {
 
 fn item_view(icon: &str, label: &str, route: Route) -> Node<Msg> {
     a![
-        class![C.hover__underline, C.hover__text_gray_300, C.mr_1],
+        class![C.hover__underline, C.hover__text_gray_300, C.mr_1, C.break_all],
         attrs! {
             At::Href => route.to_href()
         },
