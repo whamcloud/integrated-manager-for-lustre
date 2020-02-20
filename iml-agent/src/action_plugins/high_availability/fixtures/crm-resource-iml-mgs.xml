@@ -1,0 +1,12 @@
+<primitive class="ocf" id="MGS" provider="lustre" type="Lustre">
+  <instance_attributes id="MGS-instance_attributes">
+    <nvpair id="MGS-instance_attributes-mountpoint" name="mountpoint" value="/mnt/MGS"/>
+    <nvpair id="MGS-instance_attributes-target" name="target" value="/dev/disk/by-id/scsi-36001405c20616f7b8b2492d8913a4d24"/>
+  </instance_attributes>
+  <operations>
+    <op id="MGS-monitor-interval-20s" interval="20s" name="monitor" timeout="300s"/>
+    <op id="MGS-start-interval-0s" interval="0s" name="start" timeout="300s"/>
+    <op id="MGS-stop-interval-0s" interval="0s" name="stop" timeout="300s"/>
+  </operations>
+</primitive>
+

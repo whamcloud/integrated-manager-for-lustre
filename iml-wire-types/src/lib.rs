@@ -1322,7 +1322,6 @@ impl fmt::Display for ResourceAgentType {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ResourceAgentInfo {
     pub agent: ResourceAgentType,
-    pub group: Option<String>,
     pub id: String,
     pub args: HashMap<String, String>,
 }
