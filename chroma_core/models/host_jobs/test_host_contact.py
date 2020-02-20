@@ -100,6 +100,7 @@ class TestHostConnectionStep(Step):
 
     def _test_yum_sanity(self, agent_ssh, auth_args, address):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
+        from chroma_core.models import ServerProfile
 
         can_update = False
 
@@ -108,9 +109,14 @@ class TestHostConnectionStep(Step):
             check_yum = """
 python -c "from yum import YumBase
 yb = YumBase()
+baselist = %s
+if len(yb.repos.listEnabled()) == 0 and len([x for x in yb.doPackageLists(pkgnarrow='installed', patterns=baselist)]) == len(baselist):
+    exit(0)
 missing_electric_fence = not [p.name for p in yb.pkgSack.returnNewestByNameArch() if p.name == 'ElectricFence']
 exit(missing_electric_fence)"
-"""
+""" % [
+                x for x in ServerProfile().base_packages
+            ]
             rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args, check_yum)
             if rc == 0:
                 can_update = True
