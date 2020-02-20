@@ -305,7 +305,7 @@ fi
 %attr(0755,root,root)%{_mandir}/man1/chroma-config.1.gz
 %attr(0644,root,root)%{_sysconfdir}/logrotate.d/chroma-manager
 %attr(0644,root,grafana)%{_sysconfdir}/grafana/provisioning/dashboards/iml-dashboards.yaml
-%attr(0644,root,grafana)%{manager_root}/grafana/dashboards/stratagem-dashboard*.json
+%attr(0644,root,grafana)%{manager_root}/grafana/dashboards/
 %attr(0644,root,grafana)%{_sysconfdir}/grafana/provisioning/datasources/influxdb-iml-datasource.yml
 %attr(0644,root,root)%{_unitdir}/iml-manager.target
 %attr(0644,root,root)%{_unitdir}/*.service
