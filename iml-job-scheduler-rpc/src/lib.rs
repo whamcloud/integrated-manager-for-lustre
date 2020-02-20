@@ -12,9 +12,9 @@ mod request;
 mod response;
 
 use iml_rabbit::{
-    basic_consume_one, basic_publish, bind_queue, create_channel, declare_transient_exchange,
-    declare_transient_queue, delete_queue, BasicConsumeOptions, Client, ExchangeKind,
-    ImlRabbitError,
+    basic_consume_one, basic_publish, bind_queue, close_channel, create_channel,
+    declare_transient_exchange, declare_transient_queue, delete_queue, BasicConsumeOptions, Client,
+    ExchangeKind, ImlRabbitError,
 };
 use iml_wire_types::CompositeId;
 use request::Request;
@@ -119,7 +119,9 @@ pub async fn call<I: Debug + serde::Serialize, T: serde::de::DeserializeOwned>(
         std::str::from_utf8(&delivery.data)
     );
 
-    delete_queue(channel, &response_key).await?;
+    let channel = delete_queue(channel, &response_key).await?;
+
+    close_channel(channel).await?;
 
     let resp: Response<T> = serde_json::from_slice(&delivery.data)?;
 
