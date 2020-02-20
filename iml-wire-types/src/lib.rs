@@ -8,6 +8,8 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     convert::TryFrom,
     fmt,
+    ops::Deref,
+    sync::Arc,
 };
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -311,6 +313,22 @@ impl TryFrom<String> for CompositeId {
 
 pub trait ToCompositeId {
     fn composite_id(&self) -> CompositeId;
+}
+
+impl<T: ToCompositeId> ToCompositeId for &Arc<T> {
+    fn composite_id(&self) -> CompositeId {
+        let t: &T = self.deref();
+
+        t.composite_id()
+    }
+}
+
+impl<T: ToCompositeId> ToCompositeId for Arc<T> {
+    fn composite_id(&self) -> CompositeId {
+        let t: &T = self.deref();
+
+        t.composite_id()
+    }
 }
 
 pub trait Label {

@@ -264,7 +264,9 @@ impl ArcCache {
                 .get(&composite_id.1)
                 .cloned()
                 .map(erase),
-            "managedtarget" => self.target.get(&composite_id.1).cloned().map(erase),
+            "managedtarget" | "managedost" | "managedmdt" | "managedmgt" | "managedmgs" => {
+                self.target.get(&composite_id.1).cloned().map(erase)
+            }
             _ => None,
         }
     }
