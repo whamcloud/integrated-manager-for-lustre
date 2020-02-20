@@ -7,7 +7,7 @@ use iml_manager_env::{get_influxdb_addr, get_influxdb_metrics_db};
 use iml_service_queue::service_queue::consume_data;
 use iml_stats::error::ImlStatsError;
 use influxdb::{Client, Query, Timestamp};
-use lustre_collector::{HostStats, LNetStats, Record, TargetStats};
+use lustre_collector::{HostStats, LNetStats, NodeStats, Record, TargetStats};
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 #[tokio::main]
@@ -34,10 +34,6 @@ async fn main() -> Result<(), ImlStatsError> {
         //Write the entry into the influxdb database
         for record in xs {
             let maybe_entries = match record {
-                Record::Node(_) => {
-                    //@TODO: Implement node stat collection.
-                    None
-                }
                 Record::Target(target_stats) => match target_stats {
                     TargetStats::Stats(x) => {
                         tracing::debug!("Stats: {:?}", x);
@@ -434,24 +430,66 @@ async fn main() -> Result<(), ImlStatsError> {
                 Record::LNetStat(lnet_stats) => match lnet_stats {
                     LNetStats::SendCount(x) => {
                         tracing::debug!("SendCount - {:?}", x);
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "host")
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "lnet")
                             .add_tag("host", host.0.as_ref())
                             .add_tag("nid", x.nid)
                             .add_field("send_count", x.value)])
                     }
                     LNetStats::RecvCount(x) => {
                         tracing::debug!("RecvCount - {:?}", x);
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "host")
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "lnet")
                             .add_tag("host", host.0.as_ref())
                             .add_tag("nid", x.nid)
                             .add_field("recv_count", x.value)])
                     }
                     LNetStats::DropCount(x) => {
                         tracing::debug!("DropCount - {:?}", x);
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "host")
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "lnet")
                             .add_tag("host", host.0.as_ref())
                             .add_tag("nid", x.nid)
                             .add_field("drop_count", x.value)])
+                    }
+                },
+                Record::Node(node) => match node {
+                    NodeStats::CpuUser(x) => {
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "node")
+                            .add_tag("host", host.0.as_ref())
+                            .add_field("cpu_user", x.value)])
+                    }
+                    NodeStats::CpuSystem(x) => {
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "node")
+                            .add_tag("host", host.0.as_ref())
+                            .add_field("cpu_system", x.value)])
+                    }
+                    NodeStats::CpuIowait(x) => {
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "node")
+                            .add_tag("host", host.0.as_ref())
+                            .add_field("cpu_iowait", x.value)])
+                    }
+                    NodeStats::CpuTotal(x) => {
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "node")
+                            .add_tag("host", host.0.as_ref())
+                            .add_field("cpu_total", x.value)])
+                    }
+                    NodeStats::MemTotal(x) => {
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "node")
+                            .add_tag("host", host.0.as_ref())
+                            .add_field("mem_total", x.value)])
+                    }
+                    NodeStats::MemFree(x) => {
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "node")
+                            .add_tag("host", host.0.as_ref())
+                            .add_field("mem_free", x.value)])
+                    }
+                    NodeStats::SwapTotal(x) => {
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "node")
+                            .add_tag("host", host.0.as_ref())
+                            .add_field("swap_total", x.value)])
+                    }
+                    NodeStats::SwapFree(x) => {
+                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "node")
+                            .add_tag("host", host.0.as_ref())
+                            .add_field("swap_free", x.value)])
                     }
                 },
             };
