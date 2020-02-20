@@ -28,7 +28,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: check
-          args: --manifest-path iml-wasm-components/Cargo.toml
+          args: --locked --manifest-path iml-wasm-components/Cargo.toml
 
   clippy:
     name: Clippy
@@ -43,7 +43,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path iml-wasm-components/Cargo.toml -- -W warnings
+          args: --locked --manifest-path iml-wasm-components/Cargo.toml -- -W warnings
 
   rustfmt:
     name: Format
@@ -58,7 +58,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --manifest-path iml-wasm-components/Cargo.toml --all -- --check
+          args: --locked --manifest-path iml-wasm-components/Cargo.toml --all -- --check
 
   test:
     name: Test Suite
@@ -81,7 +81,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path iml-wasm-components/Cargo.toml
+          args: --locked --manifest-path iml-wasm-components/Cargo.toml
 
   check_rpm_build:
     name: Check RPM build
