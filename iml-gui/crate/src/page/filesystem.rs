@@ -190,9 +190,9 @@ fn is_fs_target(fs: &Filesystem, t: &Target<TargetConfParam>) -> bool {
             .is_some()
 }
 
-fn server_link<I>(uri: Option<&String>, txt: &String) -> Node<I> {
+fn server_link<I>(uri: Option<&String>, txt: &str) -> Node<I> {
     if let Some(u) = uri {
-        let srv_id = extract_id(&u).unwrap();
+        let srv_id = extract_id(u).unwrap();
         a![
             class![C.text_blue_500, C.hover__underline, C.block],
             attrs! {At::Href => Route::Server(RouteId::from(srv_id)).to_href()},
@@ -205,7 +205,7 @@ fn server_link<I>(uri: Option<&String>, txt: &String) -> Node<I> {
 
 fn volume_link<I>(cache: &ArcCache, t: &Target<TargetConfParam>) -> Node<I> {
     let vol_id = match &t.volume {
-        VolumeOrResourceUri::ResourceUri(url) => extract_id(&url).unwrap().parse::<u32>().unwrap(),
+        VolumeOrResourceUri::ResourceUri(url) => extract_id(url).unwrap().parse::<u32>().unwrap(),
         VolumeOrResourceUri::Volume(v) => v.id,
     };
 
