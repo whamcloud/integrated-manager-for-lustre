@@ -246,33 +246,35 @@ fn sink(g_msg: GMsg, _model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone)]
 pub enum Msg {
-    RouteChanged(Url),
-    UpdatePageTitle,
-    ToggleMenu,
-    ManageMenuState,
-    HideMenu,
-    StartSliderTracking,
-    StopSliderTracking,
-    SliderX(i32, f64),
+    Auth(Box<auth::Msg>),
     EventSourceConnect(JsValue),
-    EventSourceMessage(MessageEvent),
     EventSourceError(JsValue),
-    Records(Box<warp_drive::Cache>),
-    RecordChange(Box<warp_drive::RecordChange>),
-    RemoveRecord(warp_drive::RecordId),
-    LoadPage,
-    Locks(warp_drive::Locks),
-    ServersPage(page::servers::Msg),
-    WindowClick,
-    WindowResize,
-    Notification(notification::Msg),
+    EventSourceMessage(MessageEvent),
+    FilesystemsPage(page::filesystems::Msg),
+    FilesystemPage(page::filesystem::Msg),
     GetSession,
     GotSession(fetch::ResponseDataResult<Session>),
+    HideMenu,
+    LoadPage,
+    Locks(warp_drive::Locks),
+    LoggedOut(fetch::FetchObject<()>),
     Login(login::Msg),
     Logout,
-    LoggedOut(fetch::FetchObject<()>),
+    ManageMenuState,
+    Notification(notification::Msg),
+    RecordChange(Box<warp_drive::RecordChange>),
+    Records(Box<warp_drive::Cache>),
+    RemoveRecord(warp_drive::RecordId),
+    RouteChanged(Url),
+    ServersPage(page::servers::Msg),
+    SliderX(i32, f64),
+    StartSliderTracking,
+    StopSliderTracking,
+    ToggleMenu,
     Tree(tree::Msg),
-    Auth(Box<auth::Msg>),
+    UpdatePageTitle,
+    WindowClick,
+    WindowResize,
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -370,6 +372,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 model.records.lnet_configuration.clone(),
             ));
 
+            orders
+                .proxy(Msg::FilesystemsPage)
+                .send_msg(page::filesystems::Msg::SetFilesystems(
+                    model.records.filesystem.arc_values().cloned().collect(),
+                ));
+
             orders.proxy(Msg::Tree).send_msg(tree::Msg::Reset);
         }
         Msg::RecordChange(record_change) => match *record_change {
@@ -395,6 +403,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::Filesystem(id)));
                     };
+
+                    orders
+                        .proxy(Msg::FilesystemsPage)
+                        .send_msg(page::filesystems::Msg::SetFilesystems(
+                            model.records.filesystem.arc_values().cloned().collect(),
+                        ));
                 }
                 warp_drive::Record::ContentType(x) => {
                     model.records.content_type.insert(x.id, Arc::new(x));
@@ -476,6 +490,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     model.records.lnet_configuration.clone(),
                 ));
             }
+
+            if let warp_drive::RecordId::Filesystem(_) = id {
+                orders
+                    .proxy(Msg::FilesystemsPage)
+                    .send_msg(page::filesystems::Msg::SetFilesystems(
+                        model.records.filesystem.arc_values().cloned().collect(),
+                    ));
+            }
         }
         Msg::Locks(locks) => {
             model.locks = locks;
@@ -490,6 +512,16 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::ServersPage(msg) => {
             if let Page::Servers(page) = &mut model.page {
                 page::servers::update(msg, &model.records, page, &mut orders.proxy(Msg::ServersPage))
+            }
+        }
+        Msg::FilesystemPage(msg) => {
+            if let Page::Filesystem(page) = &mut model.page {
+                page::filesystem::update(msg, &model.records, page, &mut orders.proxy(Msg::FilesystemPage))
+            }
+        }
+        Msg::FilesystemsPage(msg) => {
+            if let Page::Filesystems(page) = &mut model.page {
+                page::filesystems::update(msg, &model.records, page, &mut orders.proxy(Msg::FilesystemsPage))
             }
         }
         Msg::StartSliderTracking => {
@@ -531,6 +563,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
 
             orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::WindowClick);
+            orders
+                .proxy(Msg::FilesystemsPage)
+                .send_msg(page::filesystems::Msg::WindowClick);
+
+            orders
+                .proxy(Msg::FilesystemPage)
+                .send_msg(page::filesystem::Msg::WindowClick);
         }
         Msg::WindowResize => {
             model.breakpoint_size = breakpoints::size();
@@ -675,14 +714,20 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::About => main_panels(model, page::about::view(model)).els(),
         Page::Activity => main_panels(model, page::activity::view(model)).els(),
         Page::Dashboard => main_panels(model, page::dashboard::view(model)).els(),
-        Page::Filesystems => main_panels(model, page::filesystems::view(model)).els(),
-        Page::Filesystem(id) => {
-            if let Some(f) = model.records.filesystem.get(id) {
-                main_panels(model, page::filesystem::view(model, f)).els()
-            } else {
-                page::not_found::view(model).els()
-            }
-        }
+        Page::Filesystems(page) => main_panels(
+            model,
+            page::filesystems::view(&model.records, page, &model.locks)
+                .els()
+                .map_msg(Msg::FilesystemsPage),
+        )
+        .els(),
+        Page::Filesystem(page) => main_panels(
+            model,
+            page::filesystem::view(&model.records, page, &model.locks)
+                .els()
+                .map_msg(Msg::FilesystemPage),
+        )
+        .els(),
         Page::Jobstats => main_panels(model, page::jobstats::view(model)).els(),
         Page::Login(x) => page::login::view(x).els().map_msg(Msg::Login),
         Page::Logs => main_panels(model, page::logs::view(model)).els(),
