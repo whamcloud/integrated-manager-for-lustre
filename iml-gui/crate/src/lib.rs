@@ -250,6 +250,8 @@ pub enum Msg {
     EventSourceConnect(JsValue),
     EventSourceError(JsValue),
     EventSourceMessage(MessageEvent),
+    FilesystemsPage(page::filesystems::Msg),
+    FilesystemPage(page::filesystem::Msg),
     FsDashboardPage(page::fs_dashboard::Msg),
     GetSession,
     GotSession(fetch::ResponseDataResult<Session>),
@@ -371,6 +373,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 model.records.lnet_configuration.clone(),
             ));
 
+            orders
+                .proxy(Msg::FilesystemsPage)
+                .send_msg(page::filesystems::Msg::SetFilesystems(
+                    model.records.filesystem.arc_values().cloned().collect(),
+                ));
+
             orders.proxy(Msg::Tree).send_msg(tree::Msg::Reset);
         }
         Msg::RecordChange(record_change) => match *record_change {
@@ -396,6 +404,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::Filesystem(id)));
                     };
+
+                    orders
+                        .proxy(Msg::FilesystemsPage)
+                        .send_msg(page::filesystems::Msg::SetFilesystems(
+                            model.records.filesystem.arc_values().cloned().collect(),
+                        ));
                 }
                 warp_drive::Record::ContentType(x) => {
                     model.records.content_type.insert(x.id, Arc::new(x));
@@ -477,6 +491,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     model.records.lnet_configuration.clone(),
                 ));
             }
+
+            if let warp_drive::RecordId::Filesystem(_) = id {
+                orders
+                    .proxy(Msg::FilesystemsPage)
+                    .send_msg(page::filesystems::Msg::SetFilesystems(
+                        model.records.filesystem.arc_values().cloned().collect(),
+                    ));
+            }
         }
         Msg::Locks(locks) => {
             model.locks = locks;
@@ -491,6 +513,16 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::ServersPage(msg) => {
             if let Page::Servers(page) = &mut model.page {
                 page::servers::update(msg, &model.records, page, &mut orders.proxy(Msg::ServersPage))
+            }
+        }
+        Msg::FilesystemPage(msg) => {
+            if let Page::Filesystem(page) = &mut model.page {
+                page::filesystem::update(msg, &model.records, page, &mut orders.proxy(Msg::FilesystemPage))
+            }
+        }
+        Msg::FilesystemsPage(msg) => {
+            if let Page::Filesystems(page) = &mut model.page {
+                page::filesystems::update(msg, &model.records, page, &mut orders.proxy(Msg::FilesystemsPage))
             }
         }
         Msg::FsDashboardPage(msg) => {
@@ -537,6 +569,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
 
             orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::WindowClick);
+            orders
+                .proxy(Msg::FilesystemsPage)
+                .send_msg(page::filesystems::Msg::WindowClick);
+
+            orders
+                .proxy(Msg::FilesystemPage)
+                .send_msg(page::filesystem::Msg::WindowClick);
         }
         Msg::WindowResize => {
             model.breakpoint_size = breakpoints::size();
@@ -682,16 +721,22 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::Activity => main_panels(model, page::activity::view(model)).els(),
         Page::Dashboard(page) => main_panels(model, page::dashboard::view(page)).els(),
         Page::FsDashboard(page) => main_panels(model, page::fs_dashboard::view(page)).els(),
+        Page::Filesystems(page) => main_panels(
+            model,
+            page::filesystems::view(&model.records, page, &model.locks)
+                .els()
+                .map_msg(Msg::FilesystemsPage),
+        )
+        .els(),
+        Page::Filesystem(page) => main_panels(
+            model,
+            page::filesystem::view(&model.records, page, &model.locks)
+                .els()
+                .map_msg(Msg::FilesystemPage),
+        )
+        .els(),
         Page::ServerDashboard(page) => main_panels(model, page::server_dashboard::view(&model.records, page)).els(),
         Page::TargetDashboard(page) => main_panels(model, page::target_dashboard::view(&model.records, page)).els(),
-        Page::Filesystems => main_panels(model, page::filesystems::view(model)).els(),
-        Page::Filesystem(id) => {
-            if let Some(f) = model.records.filesystem.get(id) {
-                main_panels(model, page::filesystem::view(model, f)).els()
-            } else {
-                page::not_found::view(model).els()
-            }
-        }
         Page::Jobstats => main_panels(model, page::jobstats::view(model)).els(),
         Page::Login(x) => page::login::view(x).els().map_msg(Msg::Login),
         Page::Logs => main_panels(model, page::logs::view(model)).els(),
