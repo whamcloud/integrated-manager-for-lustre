@@ -9,6 +9,10 @@ COPY grafana/grafana-iml.ini /etc/grafana/grafana.ini
 COPY grafana/datasources/influxdb-iml-datasource.yml /etc/grafana/provisioning/datasources/
 COPY grafana/dashboards/iml-dashboards.yaml /etc/grafana/provisioning/dashboards/
 COPY grafana/dashboards/stratagem-dashboard-1.json /usr/share/chroma-manager/grafana/dashboards/
+COPY grafana/dashboards/fs-dashboard.json /usr/share/chroma-manager/grafana/dashboards/
+COPY grafana/dashboards/server-dashboard.json /usr/share/chroma-manager/grafana/dashboards/
+COPY grafana/dashboards/target-mdt-dashboard.json /usr/share/chroma-manager/grafana/dashboards/
+COPY grafana/dashboards/target-ost-dashboard.json /usr/share/chroma-manager/grafana/dashboards/
 COPY docker/wait-for-dependencies-postgres.sh /usr/bin/
 
 # Remove whitelist entry from grafana config as docker will not work with a whitelist

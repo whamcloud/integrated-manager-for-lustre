@@ -15,5 +15,12 @@ datasources:
     url: http://localhost:8086
     jsonData: { httpMode: GET }
 
+  - name: "iml_stats"
+    type: influxdb
+    access: proxy
+    database: "iml_stats"
+    url: http://localhost:8086
+    jsonData: { httpMode: GET }
+
 version: 1
 editable: false
