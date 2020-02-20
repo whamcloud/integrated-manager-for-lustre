@@ -20,6 +20,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: check
+          args: --locked
 
   clippy:
     name: Clippy
@@ -34,7 +35,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -W warnings
+          args: --locked -- -W warnings
 
   rustfmt:
     name: Format
@@ -77,6 +78,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
+          args: --locked
 
   check_rpm_build:
     name: Check RPM build

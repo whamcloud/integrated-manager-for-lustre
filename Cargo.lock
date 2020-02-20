@@ -1480,7 +1480,6 @@ dependencies = [
  "iml-manager-env",
  "iml-postgres",
  "iml-rabbit",
- "iml-request-retry",
  "iml-wire-types",
  "serde",
  "serde_json",
