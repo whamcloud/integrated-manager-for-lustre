@@ -5,7 +5,7 @@
 mod action;
 mod error;
 
-use iml_rabbit::{self, create_client_filter};
+use iml_rabbit::{self, create_connection_filter};
 use iml_wire_types::Conf;
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::Filter;
@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    let (fut, client_filter) = create_client_filter().await?;
+    let (fut, client_filter) = create_connection_filter().await?;
 
     tokio::spawn(fut);
 
@@ -37,9 +37,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Starting on {:?}", addr);
 
-    warp::serve(routes.with(warp::log("iml-api")))
-        .run(addr)
-        .await;
+    let log = warp::log::custom(|info| {
+        tracing::debug!(
+            "{:?} \"{} {} {:?}\" {} \"{:?}\" \"{:?}\" {:?}",
+            info.remote_addr(),
+            info.method(),
+            info.path(),
+            info.version(),
+            info.status().as_u16(),
+            info.referer(),
+            info.user_agent(),
+            info.elapsed(),
+        );
+    });
+
+    warp::serve(
+        routes
+            .or_else(|e| async {
+                tracing::error!("{:?}", e);
+
+                Err(e)
+            })
+            .with(log),
+    )
+    .run(addr)
+    .await;
 
     Ok(())
 }

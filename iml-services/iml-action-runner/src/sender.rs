@@ -12,7 +12,7 @@ use crate::{
     ActionType, Sessions, Shared,
 };
 use futures::{channel::oneshot, TryFutureExt};
-use iml_rabbit::{send_message, Client};
+use iml_rabbit::{send_message, Connection};
 use iml_wire_types::{Action, ActionId, Id, ManagerMessage};
 use std::{sync::Arc, time::Duration};
 use warp::{self, Filter};
@@ -24,7 +24,7 @@ use warp::{self, Filter};
 ///
 /// If unsuccessful, this fn will keep the `ActionInFlight` within the rpcs.
 async fn cancel_running_action(
-    client: Client,
+    client: Connection,
     msg: ManagerMessage,
     queue_name: impl Into<String>,
     session_id: Id,
@@ -62,7 +62,7 @@ pub fn sender(
     sessions: Shared<Sessions>,
     session_to_rpcs: Shared<SessionToRpcs>,
     local_actions: SharedLocalActionsInFlight,
-    client_filter: impl Filter<Extract = (Client,), Error = warp::Rejection> + Clone + Send,
+    client_filter: impl Filter<Extract = (Connection,), Error = warp::Rejection> + Clone + Send,
 ) -> impl Filter<Extract = (Result<serde_json::Value, String>,), Error = warp::Rejection> + Clone {
     let queue_name = queue_name.into();
 
@@ -81,7 +81,7 @@ pub fn sender(
         move |shared_sessions: Shared<Sessions>,
               shared_session_to_rpcs: Shared<SessionToRpcs>,
               local_actions: SharedLocalActionsInFlight,
-              client: Client,
+              client: Connection,
               queue_name: String,
               action_type: ActionType| {
             async move {

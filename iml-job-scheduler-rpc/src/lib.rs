@@ -12,9 +12,9 @@ mod request;
 mod response;
 
 use iml_rabbit::{
-    basic_consume_one, basic_publish, bind_queue, close_channel, create_channel,
-    declare_transient_exchange, declare_transient_queue, delete_queue, BasicConsumeOptions, Client,
-    ExchangeKind, ImlRabbitError,
+    basic_consume_one, basic_publish, bind_queue, close_channel, create_channel, declare_queue,
+    declare_transient_exchange, BasicConsumeOptions, Connection, ExchangeKind, ImlRabbitError,
+    QueueDeclareOptions,
 };
 use iml_wire_types::CompositeId;
 use request::Request;
@@ -72,7 +72,7 @@ impl From<serde_json::error::Error> for ImlJobSchedulerRpcError {
 
 /// Performs an RPC call to the `job_scheduler`.
 pub async fn call<I: Debug + serde::Serialize, T: serde::de::DeserializeOwned>(
-    client: Client,
+    client: &Connection,
     method: impl Into<String>,
     args: impl Into<Option<Vec<I>>>,
     kwargs: impl Into<Option<HashMap<String, String>>>,
@@ -96,7 +96,19 @@ pub async fn call<I: Debug + serde::Serialize, T: serde::de::DeserializeOwned>(
 
     let channel = create_channel(client).await?;
     let channel = declare_transient_exchange(channel, RPC, ExchangeKind::Topic).await?;
-    let (channel, queue) = declare_transient_queue(channel, &response_key).await?;
+
+    let (channel, queue) = declare_queue(
+        channel,
+        &response_key,
+        QueueDeclareOptions {
+            durable: false,
+            auto_delete: true,
+            ..QueueDeclareOptions::default()
+        },
+        None,
+    )
+    .await?;
+
     let channel = bind_queue(channel, RPC, &response_key, &response_key).await?;
 
     let channel =
@@ -118,8 +130,6 @@ pub async fn call<I: Debug + serde::Serialize, T: serde::de::DeserializeOwned>(
         method,
         std::str::from_utf8(&delivery.data)
     );
-
-    let channel = delete_queue(channel, &response_key).await?;
 
     close_channel(channel).await?;
 
@@ -144,10 +154,10 @@ pub struct Transition {
 }
 
 pub async fn available_transitions(
-    client: Client,
+    client: &Connection,
     ids: &[CompositeId],
 ) -> Result<HashMap<CompositeId, Vec<Transition>>, ImlJobSchedulerRpcError> {
-    let ids: Vec<_> = ids.into_iter().map(|x| (x.0, x.1)).collect();
+    let ids: Vec<_> = ids.iter().map(|x| (x.0, x.1)).collect();
 
     call(client, "available_transitions", vec![ids], None).await
 }
@@ -164,10 +174,10 @@ pub struct Job {
 }
 
 pub async fn available_jobs(
-    client: Client,
+    client: &Connection,
     ids: &[CompositeId],
 ) -> Result<HashMap<CompositeId, Vec<Job>>, ImlJobSchedulerRpcError> {
-    let ids: Vec<_> = ids.into_iter().map(|x| (x.0, x.1)).collect();
+    let ids: Vec<_> = ids.iter().map(|x| (x.0, x.1)).collect();
 
     call(client, "available_jobs", vec![ids], None).await
 }

@@ -10,7 +10,7 @@ use iml_agent_comms::{
     messaging::{consume_agent_tx_queue, AgentData, AGENT_TX_RUST},
     session::{self, Session, Sessions},
 };
-use iml_rabbit::{self, create_client_filter, send_message, Client};
+use iml_rabbit::{self, create_connection_filter, send_message, Connection};
 use iml_wire_types::{
     Envelope, Fqdn, ManagerMessage, ManagerMessages, Message, PluginMessage, PluginName,
 };
@@ -20,7 +20,7 @@ use warp::Filter;
 
 async fn data_handler(
     has_session: bool,
-    client: Client,
+    client: Connection,
     data: AgentData,
 ) -> Result<(), ImlAgentCommsError> {
     if has_session {
@@ -50,7 +50,7 @@ async fn data_handler(
 
 async fn session_create_req_handler(
     sessions: &mut Sessions,
-    client: Client,
+    client: Connection,
     fqdn: Fqdn,
     plugin: PluginName,
 ) -> Result<(), ImlAgentCommsError> {
@@ -137,7 +137,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         async move {
             let conn = iml_rabbit::connect_to_rabbit().await?;
 
-            let ch = iml_rabbit::create_channel(conn).await?;
+            let ch = iml_rabbit::create_channel(&conn).await?;
 
             let mut s = consume_agent_tx_queue(ch, AGENT_TX_RUST).await?;
 
@@ -174,7 +174,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let hosts_filter = warp::any().map(move || Arc::clone(&shared_hosts2));
 
-    let (fut, client_filter) = create_client_filter().await?;
+    let (fut, client_filter) = create_connection_filter().await?;
 
     tokio::spawn(fut);
 
@@ -186,7 +186,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(
             |fqdn: Fqdn,
              hosts: SharedHosts,
-             client: Client,
+             client: Connection,
              Envelope {
                  messages,
                  client_start_time,
