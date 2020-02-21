@@ -14,6 +14,7 @@ RUN apk update && apk upgrade && \
   && tar -C /usr/local/bin -xzvf dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
   && rm dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
   && apk del gettext
+COPY --from=rust-iml-gui /usr/share/iml-manager/rust-iml-gui /usr/share/iml-manager/rust-iml-gui
 COPY --from=imlteam/gui:5.1 /home/node/GUI /usr/lib/iml-manager/iml-gui
 COPY --from=imlteam/online-help:5.1 /root /usr/lib/iml-manager/iml-online-help
 COPY --from=imlteam/old-gui:5.1 /root /usr/lib/node_modules/@iml/old-gui

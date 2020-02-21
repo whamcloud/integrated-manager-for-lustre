@@ -53,7 +53,32 @@ const MAX_SIDE_PERCENTAGE: f32 = 35_f32;
 /// }
 /// ```
 /// help url becomes `https://localhost:8443/help/docs/Graphical_User_Interface_9_0.html`
-const CTX_HELP: &str = "help/docs/Graphical_User_Interface_9_0.html";
+const CTX_HELP: &str = "/help/docs/Graphical_User_Interface_9_0.html";
+
+lazy_static! {
+    static ref IS_PRODUCTION: bool = window()
+        .get("IS_PRODUCTION")
+        .expect("IS_PRODUCTION global variable not set.")
+        .as_bool()
+        .expect("IS_PRODUCTION global variable is not a boolean.");
+}
+
+lazy_static! {
+    static ref UI_BASE: Option<String> = ui_base();
+}
+
+fn ui_base() -> Option<String> {
+    let x = document().base_uri().unwrap().unwrap_or_default();
+
+    let url = web_sys::Url::new(&x).unwrap();
+
+    let base = url.href().replace(&url.origin(), "").replace('/', "");
+
+    match base.as_str() {
+        "" => None,
+        _ => Some(base),
+    }
+}
 
 pub fn extract_id(s: &str) -> Option<&str> {
     lazy_static! {
@@ -186,7 +211,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
 
 pub fn routes(url: Url) -> Option<Msg> {
     // Urls which start with `static` are files => treat them as external links.
-    if url.path.starts_with(&[STATIC_PATH.into()]) {
+    if url.get_path().starts_with(&[STATIC_PATH.into()]) {
         return None;
     }
     Some(Msg::RouteChanged(url))
