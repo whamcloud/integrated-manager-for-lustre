@@ -314,7 +314,7 @@ class ServerHandler(Handler):
             "fqdn_resolves": "The self-reported fqdn on %s does not resolve on the manager",
             "fqdn_matches": "The self-reported fqdn on %s does not resolve to the same address as the hostname supplied via CLI",
             "yum_valid_repos": "The yum configuration on %s contains invalid repository entries",
-            "yum_can_update": "Unable to verify that %s is able to access any yum mirrors for vendor packages",
+            "yum_can_update": "Unable to verify that %s is able to access any yum mirrors for vendor packages, or that rpms are already installed and repos are disabled",
             "openssl": "Unable to verify that OpenSSL is working as expected for %s",
         }
 
