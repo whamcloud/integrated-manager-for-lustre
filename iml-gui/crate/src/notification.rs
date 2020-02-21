@@ -65,7 +65,7 @@ pub(crate) async fn init() -> Result<Msg, Msg> {
         let svc_p = seed::window()
             .navigator()
             .service_worker()
-            .register("/static/notification.sw.js");
+            .register("static/notification.sw.js");
 
         JsFuture::from(svc_p).await.map(Msg::SetSVCWorker).map_err(|v| {
             Msg::Error(

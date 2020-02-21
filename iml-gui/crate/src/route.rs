@@ -62,7 +62,7 @@ pub enum Route<'a> {
 
 impl<'a> Route<'a> {
     pub fn path(&self) -> Vec<&str> {
-        match self {
+        let mut p = match self {
             Self::About => vec!["about"],
             Self::Activity => vec!["activity"],
             Self::Dashboard => vec!["dashboard"],
@@ -84,7 +84,13 @@ impl<'a> Route<'a> {
             Self::User(id) => vec!["users", id],
             Self::Volumes => vec!["volumes"],
             Self::Volume(id) => vec!["volumes", id],
+        };
+
+        if let Some(base) = crate::UI_BASE.as_ref() {
+            p.insert(0, base);
         }
+
+        p
     }
 
     pub fn to_href(&self) -> String {

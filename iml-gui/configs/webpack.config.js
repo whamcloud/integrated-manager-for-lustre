@@ -54,6 +54,8 @@ module.exports = (env, argv) => {
       }),
       // Add scripts, css, ... to html template.
       new HtmlWebpackPlugin({
+        base_path: process.env.NODE_ENV === "production" ? "/ui2" : "/",
+        is_production: process.env.NODE_ENV === "production",
         template: path.resolve(__dirname, "../entries/index.hbs")
       }),
       // Inline the critical part of styles, preload remainder.
