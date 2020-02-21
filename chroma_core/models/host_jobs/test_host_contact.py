@@ -110,7 +110,7 @@ class TestHostConnectionStep(Step):
 python -c "from yum import YumBase
 yb = YumBase()
 baselist = %s
-if len(yb.repos.listEnabled()) == 0 and len([x for x in yb.doPackageLists(pkgnarrow='installed', patterns=baselist)]) == len(baselist):
+if not yb.repos.listEnabled() and len([x for x in yb.doPackageLists(pkgnarrow='installed', patterns=baselist)]) >= len(baselist):
     exit(0)
 missing_electric_fence = not [p.name for p in yb.pkgSack.returnNewestByNameArch() if p.name == 'ElectricFence']
 exit(missing_electric_fence)"
