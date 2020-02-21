@@ -3,12 +3,12 @@
 // license that can be found in the LICENSE file.
 
 use crate::request::Request;
-use futures::Stream as Stream03;
+use futures::Stream;
 use im::{HashMap, HashSet};
 use iml_rabbit::{
     basic_consume, basic_publish, bind_queue, create_channel, declare_transient_exchange,
-    declare_transient_queue, message::Delivery, purge_queue, BasicConsumeOptions, Channel, Client,
-    ExchangeKind, ImlRabbitError, Queue,
+    declare_transient_queue, message::Delivery, purge_queue, BasicConsumeOptions, Channel,
+    Connection, ExchangeKind, ImlRabbitError, Queue,
 };
 use iml_wire_types::{LockAction, LockChange, ToCompositeId};
 
@@ -29,9 +29,9 @@ async fn declare_locks_queue(c: Channel) -> Result<(Channel, Queue), ImlRabbitEr
 ///
 /// This is expected to be called once during startup.
 pub async fn create_locks_consumer(
-    client: Client,
-) -> Result<impl Stream03<Item = Result<Delivery, ImlRabbitError>>, ImlRabbitError> {
-    let channel = create_channel(client).await?;
+    conn: Connection,
+) -> Result<impl Stream<Item = Result<Delivery, ImlRabbitError>>, ImlRabbitError> {
+    let channel = create_channel(&conn).await?;
     let channel = declare_rpc_exchange(channel).await?;
     let (channel, queue) = declare_locks_queue(channel).await?;
 

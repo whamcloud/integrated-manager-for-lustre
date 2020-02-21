@@ -22,7 +22,7 @@ fn create_random_string() -> String {
     thread_rng().sample_iter(&Alphanumeric).take(5).collect()
 }
 
-async fn create_test_connection() -> Result<iml_rabbit::Client, iml_rabbit::ImlRabbitError> {
+async fn create_test_connection() -> Result<iml_rabbit::Connection, iml_rabbit::ImlRabbitError> {
     iml_rabbit::connect("amqp://127.0.0.1:5672//", ConnectionProperties::default()).await
 }
 
@@ -39,7 +39,7 @@ fn create_shared_state() -> (
 }
 
 fn create_client_filter(
-) -> impl Filter<Extract = (iml_rabbit::Client,), Error = warp::Rejection> + Clone {
+) -> impl Filter<Extract = (iml_rabbit::Connection,), Error = warp::Rejection> + Clone {
     warp::any().and_then(|| create_test_connection().map_err(|_| warp::reject::not_found()))
 }
 
@@ -97,9 +97,9 @@ async fn test_data_sent_to_active_session() -> Result<(), Box<dyn std::error::Er
 
     tokio::spawn(
         async move {
-            let client = create_test_connection().await?;
+            let conn = create_test_connection().await?;
 
-            let ch = iml_rabbit::create_channel(client).await?;
+            let ch = iml_rabbit::create_channel(&conn).await?;
 
             let _ = consume_agent_tx_queue(ch, queue_name2)
                 .await?
@@ -190,9 +190,9 @@ async fn test_cancel_sent_to_active_session() -> Result<(), Box<dyn std::error::
 
     tokio::spawn(
         async move {
-            let client = create_test_connection().await?;
+            let conn = create_test_connection().await?;
 
-            let ch = iml_rabbit::create_channel(client).await?;
+            let ch = iml_rabbit::create_channel(&conn).await?;
 
             consume_agent_tx_queue(ch, queue_name2)
                 .await?

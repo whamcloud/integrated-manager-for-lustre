@@ -9,7 +9,7 @@ use iml_action_runner::{
     data::SessionToRpcs, local_actions::SharedLocalActionsInFlight, receiver::handle_agent_data,
     sender::sender, Sessions, Shared,
 };
-use iml_rabbit::create_client_filter;
+use iml_rabbit::create_connection_filter;
 use iml_service_queue::service_queue::{consume_service_queue, ImlServiceQueueError};
 use iml_util::tokio_utils::get_tcp_or_unix_listener;
 use std::{collections::HashMap, sync::Arc};
@@ -34,7 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let log = warp::log("iml_action_runner::sender");
 
-    let (fut, client_filter) = create_client_filter().await?;
+    let (fut, client_filter) = create_connection_filter().await?;
 
     tokio::spawn(fut);
 

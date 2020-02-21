@@ -5,7 +5,7 @@
 use crate::error::ImlApiError;
 use futures::{future::try_join, TryFutureExt};
 use iml_job_scheduler_rpc::{available_jobs, available_transitions, Job, Transition};
-use iml_rabbit::Client;
+use iml_rabbit::Connection;
 use iml_wire_types::{ApiList, AvailableAction, CompositeId};
 use std::convert::TryFrom;
 use warp::Filter;
@@ -22,12 +22,11 @@ fn composite_ids() -> impl Filter<Extract = (CompositeIds,), Error = warp::Rejec
 
 async fn get_actions(
     ids: CompositeIds,
-    client: Client,
+    client: Connection,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let fut1 =
-        available_transitions(client.clone(), &ids).map_err(ImlApiError::ImlJobSchedulerRpcError);
+    let fut1 = available_transitions(&client, &ids).map_err(ImlApiError::ImlJobSchedulerRpcError);
 
-    let fut2 = available_jobs(client.clone(), &ids).map_err(ImlApiError::ImlJobSchedulerRpcError);
+    let fut2 = available_jobs(&client, &ids).map_err(ImlApiError::ImlJobSchedulerRpcError);
 
     let (computed_transitions, computed_jobs) = try_join(fut1, fut2).await?;
 
@@ -53,7 +52,7 @@ async fn get_actions(
 }
 
 pub(crate) fn endpoint(
-    client_filter: impl Filter<Extract = (Client,), Error = warp::Rejection> + Clone + Send,
+    client_filter: impl Filter<Extract = (Connection,), Error = warp::Rejection> + Clone + Send,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     warp::path("action")
         .and(warp::get())

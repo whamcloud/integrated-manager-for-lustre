@@ -6,7 +6,7 @@ use crate::{
     data::{create_data_message, remove_action_in_flight, SessionToRpcs},
     Sessions, Shared,
 };
-use iml_rabbit::{send_message, Client};
+use iml_rabbit::{send_message, Connection};
 use iml_wire_types::{ActionResult, Fqdn, Id, PluginMessage};
 
 pub static AGENT_TX_RUST: &str = "agent_tx_rust";
@@ -27,7 +27,7 @@ fn terminate_session(fqdn: &Fqdn, sessions: &mut Sessions, session_to_rpcs: &mut
 }
 
 async fn create_session(
-    client: Client,
+    client: Connection,
     sessions: Shared<Sessions>,
     rpcs: Shared<SessionToRpcs>,
     fqdn: Fqdn,
@@ -113,7 +113,7 @@ async fn handle_data(
 }
 
 pub async fn handle_agent_data(
-    client: Client,
+    client: Connection,
     m: PluginMessage,
     sessions: Shared<Sessions>,
     rpcs: Shared<SessionToRpcs>,
