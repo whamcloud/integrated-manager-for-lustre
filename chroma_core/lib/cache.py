@@ -16,7 +16,7 @@ class ObjectCache(object):
     def __init__(self):
         from chroma_core.models import ManagedFilesystem, ManagedHost, LNetConfiguration, LustreClientMount
         from chroma_core.models import PacemakerConfiguration, CorosyncConfiguration, Corosync2Configuration
-        from chroma_core.models import NTPConfiguration, StratagemConfiguration
+        from chroma_core.models import NTPConfiguration, StratagemConfiguration, Ticket
         from chroma_core.models.target import ManagedTarget, ManagedTargetMount
         from chroma_core.models.copytool import Copytool
 
@@ -39,6 +39,7 @@ class ObjectCache(object):
             Corosync2Configuration,
             NTPConfiguration,
             StratagemConfiguration,
+            Ticket,
         ]
 
         for klass in self._cached_models:
