@@ -94,15 +94,15 @@ where
 pub fn usage(
     free: Option<u64>,
     total: Option<u64>,
-    formatter: fn(f64, Option<usize>) -> String,
+    formatter: fn(u64, Option<usize>) -> String,
 ) -> String {
     match (free, total) {
         (Some(free), Some(total)) => format!(
             "{} / {}",
-            formatter(total as f64 - free as f64, Some(0)),
-            formatter(total as f64, Some(0))
+            formatter(total - free, Some(0)),
+            formatter(total, Some(0))
         ),
-        (None, Some(total)) => format!("Calculating ... / {}", formatter(total as f64, Some(0))),
+        (None, Some(total)) => format!("Calculating ... / {}", formatter(total, Some(0))),
         _ => "Calculating ...".to_string(),
     }
 }

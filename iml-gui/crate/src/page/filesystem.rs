@@ -434,16 +434,16 @@ pub(crate) fn space_used_view<T>(
         .and_then(|total| {
             let free = free.into()?;
             let avail = avail.into()?;
-            let used = total.saturating_sub(free) as f64;
-            let pct = used / total as f64;
+            let used = total.saturating_sub(free);
+            let pct = used as f64 / total as f64;
 
             Some(span![
                 class![C.whitespace_no_wrap],
                 progress_circle::view((pct, progress_circle::used_to_color(pct)))
                     .merge_attrs(class![C.h_16, C.inline, C.mx_2]),
-                nf::format_bytes(used as f64, None),
+                nf::format_bytes(used, None),
                 " / ",
-                nf::format_bytes(avail as f64, None)
+                nf::format_bytes(avail, None)
             ])
         })
         .unwrap_or_else(|| plain!["---"])
@@ -454,16 +454,16 @@ fn files_created_view<T>(free: impl Into<Option<u64>>, total: impl Into<Option<u
         .into()
         .and_then(|total| {
             let free = free.into()?;
-            let used = total.saturating_sub(free) as f64;
-            let pct = used / total as f64;
+            let used = total.saturating_sub(free);
+            let pct = used as f64 / total as f64;
 
             Some(span![
                 class![C.whitespace_no_wrap],
                 progress_circle::view((pct, progress_circle::used_to_color(pct)))
                     .merge_attrs(class![C.h_16, C.inline, C.mx_2]),
-                nf::format_number(used as f64, None),
+                nf::format_number(used, None),
                 " / ",
-                nf::format_number(total as f64, None)
+                nf::format_number(total, None)
             ])
         })
         .unwrap_or_else(|| plain!["---"])

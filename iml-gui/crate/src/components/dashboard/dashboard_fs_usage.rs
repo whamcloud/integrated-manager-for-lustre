@@ -11,7 +11,7 @@ use seed::{prelude::*, *};
 
 pub fn view<T>(model: &fs_usage::Model) -> Node<T> {
     if let Some(metrics) = &model.metric_data {
-        let color = progress_circle::used_to_color(model.percent_used);
+        let color = progress_circle::used_to_color(model.ratio_used);
 
         let dashboard_chart = div![
             class![C.grid, C.grid_cols_3, C.gap_2, C.items_center, C.h_full, C.min_h_80],
@@ -20,7 +20,7 @@ pub fn view<T>(model: &fs_usage::Model) -> Node<T> {
                 p![class![color], number_formatter::format_bytes(metrics.bytes_used, 1)],
                 p![class![C.text_gray_500, C.text_xs], "(Used)"]
             ],
-            progress_circle::view((model.percent_used, color)).merge_attrs(class![
+            progress_circle::view((model.ratio_used, color)).merge_attrs(class![
                 C.justify_self_center,
                 C.w_full,
                 C.h_full

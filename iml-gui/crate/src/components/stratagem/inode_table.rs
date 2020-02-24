@@ -12,7 +12,7 @@ use std::time::Duration;
 #[derive(serde::Deserialize, serde::Serialize, Debug, Eq, PartialEq, Ord, PartialOrd, Clone)]
 pub(crate) struct INodeCount {
     count: u64,
-    size: i64,
+    size: u64,
     uid: String,
     timestamp: i64,
 }
@@ -48,7 +48,7 @@ pub struct InfluxSeries {
     name: String,
     #[serde(skip)]
     columns: Vec<String>,
-    values: Vec<(i64, String, u64, i64)>,
+    values: Vec<(i64, String, u64, u64)>,
 }
 
 #[derive(serde::Deserialize, Clone, Debug)]
@@ -155,7 +155,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
                 tbody![model.inodes.iter().map(|i| tr![
                     t::td_view(plain![i.uid.clone()]),
                     t::td_center(plain![i.count.to_string()]),
-                    t::td_center(plain![format_bytes(i.size as f64, None)])
+                    t::td_center(plain![format_bytes(i.size, None)])
                 ])]
             ]
         ]

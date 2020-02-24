@@ -13,7 +13,7 @@ pub struct Model {
     fs_name: Option<String>,
     cancel: Option<oneshot::Sender<()>>,
     pub metric_data: Option<FsUsage>,
-    pub percent_used: f64,
+    pub ratio_used: f64,
 }
 
 impl Default for Model {
@@ -22,7 +22,7 @@ impl Default for Model {
             fs_name: None,
             cancel: None,
             metric_data: None,
-            percent_used: f64::default(),
+            ratio_used: 0.0,
         }
     }
 }
@@ -42,7 +42,7 @@ pub struct InfluxSeries {
     name: String,
     #[serde(skip)]
     columns: Vec<String>,
-    values: Vec<(String, f64, f64, f64)>,
+    values: Vec<(String, u64, u64, u64)>,
 }
 
 #[derive(serde::Deserialize, Clone, Debug)]
@@ -59,9 +59,9 @@ pub struct InfluxResults {
 
 #[derive(serde::Deserialize, Clone, Debug)]
 pub struct FsUsage {
-    pub bytes_used: f64,
-    pub bytes_avail: f64,
-    pub bytes_total: f64,
+    pub bytes_used: u64,
+    pub bytes_avail: u64,
+    pub bytes_total: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -121,7 +121,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                             bytes_total,
                         });
 
-                        model.percent_used = bytes_used / bytes_total;
+                        model.ratio_used = bytes_used as f64 / bytes_total as f64;
                     }
                 }
                 Err(e) => {
