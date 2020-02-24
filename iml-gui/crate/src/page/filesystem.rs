@@ -158,9 +158,9 @@ pub(crate) fn size_view<I>(f: &Filesystem) -> Node<I> {
         span![
             class![C.whitespace_no_wrap],
             pie_chart(u / t).merge_attrs(class![C.h_8, C.inline, C.mx_2]),
-            NF::format_bytes(u, None),
+            NF::format_bytes(u as u64, None),
             " / ",
-            NF::format_bytes(t, None)
+            NF::format_bytes(t as u64, None)
         ]
     } else {
         plain!("N/A")
@@ -169,13 +169,12 @@ pub(crate) fn size_view<I>(f: &Filesystem) -> Node<I> {
 
 fn files_view<I>(fs: &Filesystem) -> Node<I> {
     if let Some((u, t)) = fs.files_total.and_then(|t| fs.files_free.map(|f| (t - f, t))) {
-        log!("used: {}, total: {}", u, t);
         span![
             class![C.whitespace_no_wrap],
             pie_chart(u / t).merge_attrs(class![C.h_8, C.inline, C.mx_2]),
-            NF::format_number(u, None),
+            NF::format_number(u as u64, None),
             " / ",
-            NF::format_number(t, None)
+            NF::format_number(t as u64, None)
         ]
     } else {
         plain!("N/A")
@@ -214,7 +213,7 @@ fn volume_link<I>(cache: &ArcCache, t: &Target<TargetConfParam>) -> Node<I> {
             .volume
             .arc_values()
             .find(|v| v.id == vol_id)
-            .map(|v| format!("({})", number_formatter::format_bytes(v.size.unwrap() as f64, None)))
+            .map(|v| format!("({})", number_formatter::format_bytes(v.size.unwrap() as u64, None)))
             .unwrap();
         a![
             class![C.whitespace_no_wrap, C.text_blue_500, C.hover__underline, C.block],

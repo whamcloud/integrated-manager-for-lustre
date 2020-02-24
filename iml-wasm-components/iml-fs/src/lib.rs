@@ -40,10 +40,10 @@ fn mgt_link<T>(mgt: Option<&Target<TargetConfParam>>) -> Node<T> {
 fn usage<T>(
     used: Option<f64>,
     total: Option<f64>,
-    formatter: fn(f64, Option<usize>) -> String,
+    formatter: fn(u64, Option<usize>) -> String,
 ) -> Node<T> {
     div![match (used, total) {
-        (Some(used), Some(total)) => {
+        (Some(used), Some(total)) if total >= used => {
             let mut pc = pie_chart(used, total, "#aec7e8", "#1f77b4");
             pc.add_style("width", px(18))
                 .add_style("height", px(18))
@@ -51,9 +51,9 @@ fn usage<T>(
                 .add_style("margin-right", px(3));
             div![
                 pc,
-                formatter(used, Some(1)),
+                formatter(used as u64, Some(1)),
                 " / ",
-                formatter(total, Some(1)),
+                formatter(total as u64, Some(1)),
             ]
         }
         _ => Node::new_text("Calculating..."),
