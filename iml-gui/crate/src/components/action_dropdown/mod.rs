@@ -53,7 +53,7 @@ fn has_locks(locks: &Locks, composite_ids: &[CompositeId]) -> bool {
     locked_items(locks, composite_ids).next().is_some()
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct IdMsg(pub u32, pub Msg);
 
 pub enum State {
@@ -116,7 +116,7 @@ impl Drop for Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     StartFetch,
     SendFetch,

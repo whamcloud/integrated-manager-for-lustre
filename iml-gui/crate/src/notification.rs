@@ -10,7 +10,7 @@ pub(crate) struct Model {
     svc: Option<ServiceWorkerRegistration>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     Close,
     Display(String, String),

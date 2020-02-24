@@ -28,7 +28,7 @@ pub struct Model {
     pub modal: modal::Model,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     SendJob(String, Arc<AvailableAction>),
     JobSent(Box<fetch::ResponseDataResult<Command>>),
@@ -97,7 +97,7 @@ pub(crate) fn view(action: &Action) -> Node<Msg> {
     };
 
     let confirm_msg2 = confirm_msg.clone();
-
+    log!("modal::bg_view");
     modal::bg_view(
         true,
         Msg::Modal,

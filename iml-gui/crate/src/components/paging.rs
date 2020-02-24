@@ -67,7 +67,7 @@ impl Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     SetTotal(usize),
     SetOffset(usize),

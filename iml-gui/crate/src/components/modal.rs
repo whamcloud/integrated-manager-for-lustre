@@ -8,7 +8,7 @@ pub struct Model {
 
 type ParentMsg<T> = fn(Msg) -> T;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Msg {
     KeyDown(u32),
     Close,
