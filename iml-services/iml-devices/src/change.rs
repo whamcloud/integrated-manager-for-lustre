@@ -117,7 +117,7 @@ mod test {
     }
 
     #[test]
-    fn update_only_adds_updated_elements() {
+    fn add_remove_is_two_changes() {
         let old: BTreeMap<isize, isize> = vec![(1, 1), (2, 2), (3, 3)].into_iter().collect();
         let new: BTreeMap<isize, isize> = vec![(1, 1), (2, 2), (4, 4)].into_iter().collect();
         let old = &old.iter().collect();
@@ -125,6 +125,6 @@ mod test {
 
         let changes = get_changes_values(old, new);
 
-        assert_debug_snapshot!("update_only_adds_updated_elements", changes);
+        assert_debug_snapshot!("add_remove_is_two_changes", changes);
     }
 }
