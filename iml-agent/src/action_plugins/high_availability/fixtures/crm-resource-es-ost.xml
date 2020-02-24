@@ -1,0 +1,25 @@
+<primitive id="ost0001-es01a" class="ocf" provider="ddn" type="lustre-server">
+  <instance_attributes id="lustre-es01a-ost-instance_attributes">
+    <nvpair name="lustre_resource_type" value="ost" id="lustre-es01a-ost-instance_attributes-lustre_resource_type"/>
+    <nvpair name="manage_directory" value="1" id="lustre-es01a-ost-instance_attributes-manage_directory"/>
+  </instance_attributes>
+  <meta_attributes id="lustre-es01a-ost-meta_attributes">
+    <nvpair name="priority" value="0" id="lustre-es01a-ost-meta_attributes-priority"/>
+  </meta_attributes>
+  <utilization id="lustre-es01a-ost-utilization">
+    <nvpair name="lustre-object" value="1" id="lustre-es01a-ost-utilization-lustre-object"/>
+  </utilization>
+  <operations>
+    <op name="start" interval="0" record-pending="true" timeout="450" id="lustre-es01a-ost-start-0"/>
+    <op name="stop" interval="0" record-pending="true" timeout="300" id="lustre-es01a-ost-stop-0"/>
+    <op name="monitor" interval="30" timeout="300" id="lustre-es01a-ost-monitor-30"/>
+  </operations>
+  <instance_attributes id="ost0001-es01a-instance_attributes">
+    <nvpair name="device" value="/dev/ddn/es01a_ost0001" id="ost0001-es01a-instance_attributes-device"/>
+    <nvpair name="directory" value="/lustre/es01a/ost0001" id="ost0001-es01a-instance_attributes-directory"/>
+  </instance_attributes>
+  <meta_attributes id="ost0001-es01a-meta_attributes">
+    <nvpair name="zone" value="AI400-006c" id="ost0001-es01a-meta_attributes-zone"/>
+  </meta_attributes>
+</primitive>
+

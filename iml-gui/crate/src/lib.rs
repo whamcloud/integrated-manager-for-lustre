@@ -28,6 +28,7 @@ use iml_wire_types::{
     warp_drive::{self, ArcValuesExt},
     GroupType, Session,
 };
+use lazy_static::lazy_static;
 use page::{login, Page};
 use regex::Regex;
 use route::Route;
@@ -54,10 +55,11 @@ const MAX_SIDE_PERCENTAGE: f32 = 35_f32;
 /// help url becomes `https://localhost:8443/help/docs/Graphical_User_Interface_9_0.html`
 const CTX_HELP: &str = "help/docs/Graphical_User_Interface_9_0.html";
 
-pub fn extract_api(s: &str) -> Option<&str> {
-    let re = Regex::new(r"^/?api/[^/]+/(\d+)/?$").unwrap();
-
-    let x = re.captures(s)?;
+pub fn extract_id(s: &str) -> Option<&str> {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"^/?api/[^/]+/(\d+)/?$").unwrap();
+    }
+    let x = RE.captures(s)?;
 
     x.get(1).map(|x| x.as_str())
 }
@@ -235,7 +237,7 @@ pub enum Msg {
     RemoveRecord(warp_drive::RecordId),
     LoadPage,
     Locks(warp_drive::Locks),
-    ServerPage(page::server::Msg),
+    ServersPage(page::servers::Msg),
     WindowClick,
     WindowResize,
     Notification(notification::Msg),
@@ -338,8 +340,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .proxy(Msg::Notification)
                 .send_msg(notification::generate(None, &old, &model.activity_health));
 
-            orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::SetHosts(
+            orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::SetHosts(
                 model.records.host.arc_values().cloned().collect(),
+                model.records.lnet_configuration.clone(),
             ));
 
             orders.proxy(Msg::Tree).send_msg(tree::Msg::Reset);
@@ -379,8 +382,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::Host(id)));
                     };
 
-                    orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::SetHosts(
+                    orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::SetHosts(
                         model.records.host.arc_values().cloned().collect(),
+                        model.records.lnet_configuration.clone(),
                     ));
                 }
                 warp_drive::Record::ManagedTargetMount(x) => {
@@ -442,8 +446,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             model.records.remove_record(id);
 
             if let warp_drive::RecordId::Host(_) = id {
-                orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::SetHosts(
+                orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::SetHosts(
                     model.records.host.arc_values().cloned().collect(),
+                    model.records.lnet_configuration.clone(),
                 ));
             }
         }
@@ -457,9 +462,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::HideMenu => {
             model.menu_visibility = Hidden;
         }
-        Msg::ServerPage(msg) => {
-            if let Page::Server(page) = &mut model.page {
-                page::server::update(msg, page, &mut orders.proxy(Msg::ServerPage))
+        Msg::ServersPage(msg) => {
+            if let Page::Servers(page) = &mut model.page {
+                page::servers::update(msg, &model.records, page, &mut orders.proxy(Msg::ServersPage))
             }
         }
         Msg::StartSliderTracking => {
@@ -500,7 +505,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 model.manage_menu_state.update();
             }
 
-            orders.proxy(Msg::ServerPage).send_msg(page::server::Msg::WindowClick);
+            orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::WindowClick);
         }
         Msg::WindowResize => {
             model.breakpoint_size = breakpoints::size();
@@ -645,28 +650,36 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::About => main_panels(model, page::about::view(model)).els(),
         Page::Activity => main_panels(model, page::activity::view(model)).els(),
         Page::Dashboard => main_panels(model, page::dashboard::view(model)).els(),
-        Page::Filesystem => main_panels(model, page::filesystem::view(model)).els(),
-        Page::FilesystemDetail(x) => main_panels(model, page::filesystem_detail::view(x)).els(),
+        Page::Filesystems => main_panels(model, page::filesystems::view(model)).els(),
+        Page::Filesystem(id) => {
+            if let Some(f) = model.records.filesystem.get(id) {
+                main_panels(model, page::filesystem::view(model, f)).els()
+            } else {
+                page::not_found::view(model).els()
+            }
+        }
         Page::Jobstats => main_panels(model, page::jobstats::view(model)).els(),
         Page::Login(x) => page::login::view(x).els().map_msg(Msg::Login),
         Page::Logs => main_panels(model, page::logs::view(model)).els(),
         Page::Mgt => main_panels(model, page::mgt::view(model)).els(),
         Page::NotFound => page::not_found::view(model).els(),
-        Page::OstPool => main_panels(model, page::ostpool::view(model)).els(),
-        Page::OstPoolDetail(x) => main_panels(model, page::ostpool_detail::view(x)).els(),
+        Page::OstPools => main_panels(model, page::ostpools::view(model)).els(),
+        Page::OstPool(x) => main_panels(model, page::ostpool::view(x)).els(),
         Page::PowerControl => main_panels(model, page::power_control::view(model)).els(),
-        Page::Server(page) => main_panels(
+        Page::Servers(page) => main_panels(
             model,
-            page::server::view(&model.records, page).els().map_msg(Msg::ServerPage),
+            page::servers::view(&model.records, page, &model.locks)
+                .els()
+                .map_msg(Msg::ServersPage),
         )
         .els(),
-        Page::ServerDetail(x) => main_panels(model, page::server_detail::view(x)).els(),
-        Page::Target => main_panels(model, page::target::view(model)).els(),
-        Page::TargetDetail(x) => main_panels(model, page::target_detail::view(x)).els(),
-        Page::User => main_panels(model, page::user::view(model)).els(),
-        Page::UserDetail(x) => main_panels(model, page::user_detail::view(x)).els(),
-        Page::Volume => main_panels(model, page::volume::view(model)).els(),
-        Page::VolumeDetail(x) => main_panels(model, page::volume_detail::view(x)).els(),
+        Page::Server(x) => main_panels(model, page::server::view(x)).els(),
+        Page::Targets => main_panels(model, page::targets::view(model)).els(),
+        Page::Target(x) => main_panels(model, page::target::view(x)).els(),
+        Page::Users => main_panels(model, page::users::view(model)).els(),
+        Page::User(x) => main_panels(model, page::user::view(x)).els(),
+        Page::Volumes => main_panels(model, page::volumes::view(model)).els(),
+        Page::Volume(x) => main_panels(model, page::volume::view(x)).els(),
     }
 }
 

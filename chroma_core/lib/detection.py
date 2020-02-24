@@ -77,21 +77,29 @@ class DetectScan(object):
                 # Remove any Filesystems with zero MDTs or zero OSTs, or set state
                 # of a valid filesystem
                 for fs in self.created_filesystems:
-                    mdt_count = ManagedMdt.objects.filter(filesystem=fs).count()
-                    ost_count = ManagedOst.objects.filter(filesystem=fs).count()
-                    if not mdt_count:
+                    mdts = ManagedMdt.objects.filter(filesystem=fs)
+                    osts = ManagedOst.objects.filter(filesystem=fs)
+                    if not mdts.count():
                         logs.append(help_text["found_not_TYPE_for_filesystem"] % ("MDT", fs.name))
                         fs.mark_deleted()
-                    elif not ost_count:
+                    elif not osts.count():
                         logs.append(help_text["found_not_TYPE_for_filesystem"] % ("OST", fs.name))
                         fs.mark_deleted()
                     else:
                         logs.append(
-                            help_text["discovered_filesystem_with_n_MDTs_and_n_OSTs"] % (fs.name, mdt_count, ost_count)
+                            help_text["discovered_filesystem_with_n_MDTs_and_n_OSTs"]
+                            % (fs.name, mdts.count(), osts.count())
                         )
 
-                        if set([t.state for t in fs.get_targets()]) == set(["mounted"]):
+                        targets = fs.get_targets()
+
+                        if all(t.state == "mounted" for t in targets):
                             fs.state = "available"
+
+                        if not any(t.immutable_state for t in targets):
+                            fs.immutable_state = False
+                            fs.mdt_next_index = max(t.index for t in mdts) + 1
+                            fs.ost_next_index = max(t.index for t in osts) + 1
                         fs.save()
 
                         first_target = fs.get_filesystem_targets()[0]
@@ -104,7 +112,6 @@ class DetectScan(object):
                     logs.append(
                         help_text["discovered_target"] % (mgt.target_type().upper(), mgt.name, mgt.primary_host)
                     )
-                    ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
 
             # Bit of additional complication so we can print really cracking messages, and detailed messages.
             for target in [ManagedMdt(), ManagedOst()]:
@@ -192,6 +199,7 @@ class DetectScan(object):
             log.info("Target %s has been set to primary" % (primary_target))
             primary_target.primary = True
             primary_target.save()
+            ObjectCache.update(primary_target)
 
         return primary_target
 
@@ -292,7 +300,6 @@ class DetectScan(object):
                             if local_info["mounted"]:
                                 tm.mount_point = local_info.get("mount_point")
 
-                            tm.immutable_state = True
                             tm.save()
                             log.info(
                                 "Learned association %d between %s and host %s" % (tm.id, local_info["name"], host)
@@ -303,7 +310,15 @@ class DetectScan(object):
                         if local_info["mounted"]:
                             target.state = "mounted"
                             target.active_mount = tm
+
+                            label = local_info.get("ha_label")
+
+                            if label:
+                                target.ha_label = label
+                                target.immutable_state = False
+
                             target.save()
+                            ObjectCache.update(target)
 
                     except NoNidsPresent:
                         log.warning("Cannot set up target %s on %s until LNet is running" % (local_info["name"], host))
@@ -420,3 +435,4 @@ class DetectScan(object):
                 )
                 mgs.save()
                 self.created_mgss.append(mgs)
+                ObjectCache.add(ManagedTarget, mgs.managedtarget_ptr)

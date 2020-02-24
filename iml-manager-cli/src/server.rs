@@ -652,7 +652,7 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
 
             let (removable, not_removable): (Vec<_>, Vec<_>) = hosts
                 .into_iter()
-                .partition(|x| removable_ids.contains(&x.composite_id().to_string()));
+                .partition(|x| removable_ids.contains(&x.composite_id()));
 
             for x in not_removable {
                 display_cancelled(format!("Host {} is unable to be removed.", x.fqdn));

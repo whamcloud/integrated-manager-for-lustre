@@ -3,8 +3,8 @@
 set -ex
 
 yum copr enable -y managerforlustre/manager-for-lustre-devel
-# Add buildtools repo to get latest rpmdevtools
-yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/buildtools/repo/epel-8/managerforlustre-buildtools-epel-8.repo
+# Get latest rpmdevtools
+yum install -y https://copr-be.cloud.fedoraproject.org/results/managerforlustre/buildtools/epel-8-x86_64/01152137-rpmdevtools/rpmdevtools-8.10-7.el8.noarch.rpm
 yum install -y rpmdevtools git ed epel-release python-setuptools gcc openssl-devel postgresql-devel
 curl https://sh.rustup.rs -sSf | sh -s -- -y
 source $HOME/.cargo/env

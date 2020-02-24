@@ -21,7 +21,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: check
-          args: --manifest-path iml-gui/crate/Cargo.toml
+          args: --locked --manifest-path iml-gui/crate/Cargo.toml
 
   clippy:
     name: Clippy
@@ -36,7 +36,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path iml-gui/crate/Cargo.toml --all-features -- --deny clippy::nursery --deny warnings
+          args: --locked --manifest-path iml-gui/crate/Cargo.toml --all-features -- --deny clippy::nursery --deny warnings
 
   rustfmt:
     name: Format
@@ -74,7 +74,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path iml-gui/crate/Cargo.toml
+          args: --locked --manifest-path iml-gui/crate/Cargo.toml
 
   headlesstest:
     name: Firefox Headless Test Suite

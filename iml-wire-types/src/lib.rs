@@ -273,11 +273,39 @@ impl<T: serde::Serialize> ToBytes for T {
     }
 }
 
+#[derive(
+    serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash,
+)]
+#[serde(try_from = "String")]
+#[serde(into = "String")]
 pub struct CompositeId(pub u32, pub u32);
 
 impl fmt::Display for CompositeId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}:{}", self.0, self.1)
+    }
+}
+
+impl From<CompositeId> for String {
+    fn from(x: CompositeId) -> Self {
+        format!("{}", x)
+    }
+}
+
+impl TryFrom<String> for CompositeId {
+    type Error = Box<dyn std::error::Error>;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        let xs: Vec<_> = s.split(':').collect();
+
+        if xs.len() != 2 {
+            return Err("Could not convert to CompositeId, String did not contain 2 parts.".into());
+        }
+
+        let x = xs[0].parse::<u32>()?;
+        let y = xs[1].parse::<u32>()?;
+
+        Ok(Self(x, y))
     }
 }
 
@@ -289,10 +317,28 @@ pub trait Label {
     fn label(&self) -> &str;
 }
 
+pub trait ResourceUri {
+    fn resource_uri(&self) -> &str;
+}
+
+impl ResourceUri for String {
+    fn resource_uri(&self) -> &str {
+        self
+    }
+}
+
 pub trait EndpointName {
-    fn endpoint_name() -> &'static str
-    where
-        Self: Sized;
+    fn endpoint_name() -> &'static str;
+}
+
+pub trait EndpointNameSelf {
+    fn endpoint_name(&self) -> &'static str;
+}
+
+impl<T: EndpointName> EndpointNameSelf for T {
+    fn endpoint_name(&self) -> &'static str {
+        Self::endpoint_name()
+    }
 }
 
 /// The type of lock
@@ -346,6 +392,21 @@ pub struct ApiList<T> {
     pub objects: Vec<T>,
 }
 
+impl<T> ApiList<T> {
+    pub fn new(objects: Vec<T>) -> Self {
+        Self {
+            meta: Meta {
+                limit: 0,
+                next: None,
+                offset: 0,
+                previous: None,
+                total_count: objects.len() as u32,
+            },
+            objects,
+        }
+    }
+}
+
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct Conf {
     pub allow_anonymous_read: bool,
@@ -360,17 +421,11 @@ impl EndpointName for Conf {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
-pub struct ActionArgs {
-    pub host_id: Option<u64>,
-    pub target_id: Option<u64>,
-}
-
 // An available action from `/api/action/`
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct AvailableAction {
-    pub args: Option<ActionArgs>,
-    pub composite_id: String,
+    pub args: Option<HashMap<String, Option<u64>>>,
+    pub composite_id: CompositeId,
     pub class_name: Option<String>,
     pub confirmation: Option<String>,
     pub display_group: u64,
@@ -459,6 +514,12 @@ impl Label for Host {
 impl Label for &Host {
     fn label(&self) -> &str {
         &self.label
+    }
+}
+
+impl ResourceUri for Host {
+    fn resource_uri(&self) -> &str {
+        &self.resource_uri
     }
 }
 
@@ -832,6 +893,12 @@ impl<T> ToCompositeId for Target<T> {
     }
 }
 
+impl<T> ToCompositeId for &Target<T> {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id, self.id)
+    }
+}
+
 impl<T> Label for Target<T> {
     fn label(&self) -> &str {
         &self.label
@@ -844,9 +911,27 @@ impl<T> Label for &Target<T> {
     }
 }
 
+impl<T> ResourceUri for Target<T> {
+    fn resource_uri(&self) -> &str {
+        &self.resource_uri
+    }
+}
+
+impl<T> ResourceUri for &Target<T> {
+    fn resource_uri(&self) -> &str {
+        &self.resource_uri
+    }
+}
+
 impl<T> EndpointName for Target<T> {
     fn endpoint_name() -> &'static str {
         "target"
+    }
+}
+
+impl<T> db::Id for Target<T> {
+    fn id(&self) -> u32 {
+        self.id
     }
 }
 
@@ -914,6 +999,12 @@ impl ToCompositeId for Filesystem {
 impl Label for Filesystem {
     fn label(&self) -> &str {
         &self.label
+    }
+}
+
+impl ResourceUri for Filesystem {
+    fn resource_uri(&self) -> &str {
+        &self.resource_uri
     }
 }
 
@@ -1231,7 +1322,6 @@ impl fmt::Display for ResourceAgentType {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ResourceAgentInfo {
     pub agent: ResourceAgentType,
-    pub group: Option<String>,
     pub id: String,
     pub args: HashMap<String, String>,
 }

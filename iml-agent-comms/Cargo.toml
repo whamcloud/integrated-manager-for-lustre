@@ -7,12 +7,12 @@ edition = "2018"
 [dependencies]
 futures = "0.3"
 iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
-iml-rabbit = { path = "../iml-rabbit", version = "0.1.0" }
+iml-rabbit = { path = "../iml-rabbit", version = "0.1.0", features = ["warp-filters"]}
 iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 tokio = "0.2"
 tracing = "0.1"
-tracing-subscriber = "0.1"
+tracing-subscriber = "0.2"
 uuid = { version = "0.7", features = ["v4"] }
 warp = "0.2"

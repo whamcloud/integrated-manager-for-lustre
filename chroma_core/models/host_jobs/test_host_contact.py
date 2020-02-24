@@ -98,19 +98,26 @@ class TestHostConnectionStep(Step):
             job_log.error("Failed configuration check on '%s': Can't resolve %s" % (address, manager_hostname))
             return False, False
 
-    def _test_yum_sanity(self, agent_ssh, auth_args, address):
+    def _test_yum_rpm_sanity(self, agent_ssh, auth_args, address):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
+        from chroma_core.models import ServerProfile
 
         can_update = False
 
         try:
-            # Check to see if yum can or ever has gotten OS repo metadata
+            # Check to see if yum can or ever has gotten OS repo metadata or if base packages are
+            # already installed and no repos are enabled
             check_yum = """
 python -c "from yum import YumBase
 yb = YumBase()
+baselist = %s
+if not yb.repos.listEnabled() and len([x for x in yb.doPackageLists(pkgnarrow='installed', patterns=baselist)]) >= len(baselist):
+    exit(0)
 missing_electric_fence = not [p.name for p in yb.pkgSack.returnNewestByNameArch() if p.name == 'ElectricFence']
 exit(missing_electric_fence)"
-"""
+""" % [
+                x for x in ServerProfile().base_packages
+            ]
             rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args, check_yum)
             if rc == 0:
                 can_update = True
@@ -212,7 +219,7 @@ exit(missing_electric_fence)"
                 status["hostname_valid"], status["fqdn_resolves"], status["fqdn_matches"] = self._test_hostname(
                     agent_ssh, auth_args, address, resolved_address
                 )
-                status["yum_can_update"] = self._test_yum_sanity(agent_ssh, auth_args, address)
+                status["yum_can_update"] = self._test_yum_rpm_sanity(agent_ssh, auth_args, address)
                 status["openssl"] = self._test_openssl(agent_ssh, auth_args, address)
             except (AuthenticationException, SSHException):
                 #  No auth methods available, or wrong credentials

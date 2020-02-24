@@ -1,3 +1,9 @@
+// Copyright (c) 2020 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
+use crate::CompositeId;
+use crate::ToCompositeId;
 use crate::{EndpointName, Fqdn, Label};
 use std::{
     collections::BTreeSet,
@@ -650,6 +656,12 @@ impl EndpointName for LnetConfigurationRecord {
 impl Label for LnetConfigurationRecord {
     fn label(&self) -> &str {
         "lnet configuration"
+    }
+}
+
+impl ToCompositeId for LnetConfigurationRecord {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id.unwrap(), self.id)
     }
 }
 

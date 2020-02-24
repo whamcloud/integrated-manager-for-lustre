@@ -90,7 +90,7 @@ pub fn group_actions_by_label<'a, T: ActionRecord>(
     records: &'a RecordMap<T>,
 ) -> ActionMap<'a, T> {
     objects.iter().fold(HashMap::new(), |mut obj, action| {
-        let record = &records[&action.composite_id];
+        let record = &records[&action.composite_id.to_string()];
 
         match obj.get_mut(record.label()) {
             Some(xs) => xs.push((action, record)),
@@ -124,9 +124,9 @@ pub fn records_to_map<T: ActionRecord>(xs: Vec<T>) -> RecordMap<T> {
 mod tests {
     use super::*;
     use crate::model::Record;
-    use iml_wire_types::{ActionArgs, LockAction};
+    use iml_wire_types::LockAction;
     use insta::assert_debug_snapshot;
-    use std::collections::HashMap;
+    use std::{collections::HashMap, iter::FromIterator};
 
     #[test]
     fn test_lock_list() {
@@ -183,13 +183,12 @@ mod tests {
 
     #[test]
     fn test_group_actions_by_label() {
+        let args = Some(HashMap::from_iter(vec![("host_id".into(), Some(1))]));
+
         let action_item1 = AvailableAction {
-            args: Some(ActionArgs {
-                host_id: Some(1),
-                target_id: None
-            }),
+            args,
             class_name: Some("RebootHostJob".to_string()),
-            composite_id: "62:1".to_string(),
+            composite_id: CompositeId(62, 1),
             confirmation: None,
             display_group: 2,
             display_order: 50,
@@ -198,13 +197,12 @@ mod tests {
             verb: "Reboot".to_string()
         };
 
+        let args = Some(HashMap::from_iter(vec![("host_id".into(), Some(1))]));
+
         let action_item2 = AvailableAction {
-            args: Some(ActionArgs {
-                host_id: Some(1),
-                target_id: None
-            }),
+            args,
             class_name: Some("ShutdownHostJob".to_string()),
-            composite_id: "62:1".to_string(),
+            composite_id: CompositeId(62, 1),
             confirmation: Some("Initiate an orderly shutdown on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has been restarted.".to_string()),
             display_group: 2,
             display_order: 60,
@@ -213,13 +211,12 @@ mod tests {
             verb: "Shutdown".to_string()
         };
 
+        let args = Some(HashMap::from_iter(vec![("host_id".into(), Some(2))]));
+
         let action_item3 = AvailableAction {
-            args: Some(ActionArgs {
-                host_id: Some(2),
-                target_id: None
-            }),
+            args,
             class_name: Some("RebootHostJob".to_string()),
-            composite_id: "62:2".to_string(),
+            composite_id: CompositeId(62, 2),
             confirmation: None,
             display_group: 2,
             display_order: 50,
@@ -228,13 +225,12 @@ mod tests {
             verb: "Reboot".to_string()
         };
 
+        let args = Some(HashMap::from_iter(vec![("host_id".into(), Some(2))]));
+
         let action_item4 = AvailableAction {
-            args: Some( ActionArgs {
-                host_id: Some(2),
-                target_id: None
-            }),
+            args,
             class_name: Some("ShutdownHostJob".to_string()),
-            composite_id: "62:2".to_string(),
+            composite_id: CompositeId(62, 2),
             confirmation: Some("Initiate an orderly shutdown on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has been restarted.".to_string()),
             display_group: 2,
             display_order: 60,
@@ -285,13 +281,12 @@ mod tests {
 
     #[test]
     fn test_sort_actions() {
+        let args = Some(HashMap::from_iter(vec![("host_id".into(), Some(1))]));
+
         let action_item1 = AvailableAction {
-            args: Some(ActionArgs {
-                host_id: Some(1),
-                target_id: None
-            }),
+            args,
             class_name: Some("RebootHostJob".to_string()),
-            composite_id: "62:1".to_string(),
+            composite_id: CompositeId(62, 1),
             confirmation: None,
             display_group: 2,
             display_order: 50,
@@ -300,13 +295,12 @@ mod tests {
             verb: "Reboot".to_string()
         };
 
+        let args = Some(HashMap::from_iter(vec![("host_id".into(), Some(1))]));
+
         let action_item2 = AvailableAction {
-            args: Some(ActionArgs {
-                host_id: Some(1),
-                target_id: None
-            }),
+            args,
             class_name: Some("ShutdownHostJob".to_string()),
-            composite_id: "62:1".to_string(),
+            composite_id: CompositeId(62, 1),
             confirmation: Some("Initiate an orderly shutdown on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has been restarted.".to_string()),
             display_group: 2,
             display_order: 60,
@@ -315,13 +309,12 @@ mod tests {
             verb: "Shutdown".to_string()
         };
 
+        let args = Some(HashMap::from_iter(vec![("host_id".into(), Some(1))]));
+
         let action_item3 = AvailableAction {
-            args: Some(ActionArgs {
-                host_id: Some(1),
-                target_id: None
-            }),
+            args,
             class_name: Some("RebootHostJob".to_string()),
-            composite_id: "62:1".to_string(),
+            composite_id: CompositeId(62, 1),
             confirmation: None,
             display_group: 4,
             display_order: 120,
@@ -330,13 +323,12 @@ mod tests {
             verb: "Reboot".to_string()
         };
 
+        let args = Some(HashMap::from_iter(vec![("host_id".into(), Some(1))]));
+
         let action_item4 = AvailableAction {
-            args: Some( ActionArgs {
-                host_id: Some(1),
-                target_id: None
-            }),
+            args,
             class_name: Some("ShutdownHostJob".to_string()),
-            composite_id: "62:1".to_string(),
+            composite_id: CompositeId(62, 1),
             confirmation: Some("Initiate an orderly shutdown on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has been restarted.".to_string()),
             display_group: 4,
             display_order: 150,

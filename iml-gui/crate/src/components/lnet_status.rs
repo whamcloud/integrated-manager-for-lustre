@@ -1,5 +1,9 @@
-use crate::{components::font_awesome, generated::css_classes::C};
-use iml_wire_types::db::LnetConfigurationRecord;
+use crate::{
+    components::{attrs, font_awesome, lock_indicator},
+    extensions::MergeAttrs,
+    generated::css_classes::C,
+};
+use iml_wire_types::{db::LnetConfigurationRecord, warp_drive::Locks};
 use seed::{prelude::*, *};
 
 pub fn network<T>(color: impl Into<Option<&'static str>>) -> Node<T> {
@@ -10,8 +14,8 @@ pub fn network<T>(color: impl Into<Option<&'static str>>) -> Node<T> {
     }
 }
 
-pub fn view<T>(x: &LnetConfigurationRecord) -> Node<T> {
-    match x.state.as_str() {
+pub fn view<T>(x: &LnetConfigurationRecord, all_locks: &Locks) -> Node<T> {
+    let state = match x.state.as_str() {
         "lnet_up" => span![network(C.text_green_500), "Up"],
         "lnet_down" => span![network(C.text_red_500), "Down"],
         "lnet_unloaded" => span![network(C.text_yellow_500), "Unloaded"],
@@ -19,5 +23,11 @@ pub fn view<T>(x: &LnetConfigurationRecord) -> Node<T> {
         "unconfigured" => span![network(None), "Unconfigured"],
         "undeployed" => span![network(None), "Undeployed"],
         _ => span![network(C.text_yellow_500), "Unknown"],
-    }
+    };
+
+    span![
+        attrs::container(),
+        state,
+        lock_indicator::view(all_locks, x).merge_attrs(class![C.ml_2])
+    ]
 }

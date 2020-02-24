@@ -6,35 +6,36 @@ pub(crate) mod corosync_conf;
 
 use crate::{agent_error::ImlAgentError, systemd};
 use elementtree::Element;
-use futures::try_join;
+use futures::{future::try_join_all, try_join};
 use iml_cmd::{CheckedCommandExt, Command};
 use iml_fs::file_exists;
 use iml_wire_types::{
     ComponentState, ConfigState, ResourceAgentInfo, ResourceAgentType, ServiceState,
 };
-use std::collections::HashMap;
+use std::ffi::OsStr;
 
-fn create<'a>(elem: &Element, group: impl Into<Option<&'a str>>) -> ResourceAgentInfo {
+fn create(elem: &Element) -> ResourceAgentInfo {
     ResourceAgentInfo {
-        agent: ResourceAgentType::new(
-            elem.get_attr("class"),
-            elem.get_attr("provider"),
-            elem.get_attr("type"),
-        ),
-        group: group.into().map(str::to_string),
-        id: elem.get_attr("id").unwrap_or("").to_string(),
-        args: match elem.find("instance_attributes") {
-            None => HashMap::new(),
-            Some(e) => e
-                .find_all("nvpair")
-                .map(|nv| {
+        agent: {
+            ResourceAgentType::new(
+                elem.get_attr("class"),
+                elem.get_attr("provider"),
+                elem.get_attr("type"),
+            )
+        },
+        id: elem.get_attr("id").unwrap_or_default().to_string(),
+        args: elem
+            .find_all("instance_attributes")
+            .map(|e| {
+                e.find_all("nvpair").map(|nv| {
                     (
-                        nv.get_attr("name").unwrap_or("").to_string(),
-                        nv.get_attr("value").unwrap_or("").to_string(),
+                        nv.get_attr("name").unwrap_or_default().to_string(),
+                        nv.get_attr("value").unwrap_or_default().to_string(),
                     )
                 })
-                .collect(),
-        },
+            })
+            .flatten()
+            .collect(),
     }
 }
 
@@ -47,26 +48,52 @@ pub(crate) async fn crm_attribute(args: Vec<String>) -> Result<String, ImlAgentE
     Ok(String::from_utf8_lossy(&o.stdout).to_string())
 }
 
-fn process_resource_list(output: &[u8]) -> Result<Vec<ResourceAgentInfo>, ImlAgentError> {
-    let element = Element::from_reader(output)?;
-
-    Ok(element
-        .find_all("group")
-        .flat_map(|g| {
-            g.find_all("primitive")
-                .map(move |p| create(p, g.get_attr("id").unwrap_or_default()))
-        })
-        .chain(element.find_all("primitive").map(|p| create(p, None)))
-        .collect())
-}
-
-pub async fn get_ha_resource_list(_: ()) -> Result<Vec<ResourceAgentInfo>, ImlAgentError> {
-    let resources = Command::new("cibadmin")
-        .args(&["--query", "--xpath", "//resources"])
+pub(crate) async fn crm_resource<I, S>(args: I) -> Result<String, ImlAgentError>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    let o = Command::new("crm_resource")
+        .args(args)
         .checked_output()
         .await?;
 
-    process_resource_list(resources.stdout.as_slice())
+    Ok(String::from_utf8_lossy(&o.stdout).to_string())
+}
+
+fn process_resource(output: &[u8]) -> Result<ResourceAgentInfo, ImlAgentError> {
+    let element = Element::from_reader(output)?;
+
+    Ok(create(&element))
+}
+
+pub async fn get_ha_resource_list(_: ()) -> Result<Vec<ResourceAgentInfo>, ImlAgentError> {
+    let resources = crm_resource(&["--list-raw"]).await?;
+
+    let xs = resources
+        .trim()
+        .lines()
+        .filter(|res| {
+            // This filters out cloned resources which show up as:
+            // clones-resource:0
+            // clones-resource:1
+            // ...
+            // ":" is not valid in normal resource ids so only ":0" should be processed
+            if let Some(n) = res.split(':').nth(1) {
+                n.parse() == Ok(0)
+            } else {
+                true
+            }
+        })
+        .map(|res| async move {
+            let output = crm_resource(&["--query-xml", "--resource", res]).await?;
+            if let Some(xml) = output.split("xml:").last() {
+                process_resource(xml.as_bytes())
+            } else {
+                Err(ImlAgentError::MarkerNotFound)
+            }
+        });
+    try_join_all(xs).await
 }
 
 async fn systemd_unit_servicestate(name: &str) -> Result<ServiceState, ImlAgentError> {
@@ -168,60 +195,63 @@ pub(crate) async fn pcs(args: Vec<String>) -> Result<String, ImlAgentError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{process_resource_list, ResourceAgentInfo, ResourceAgentType};
+    use super::{process_resource, ResourceAgentInfo, ResourceAgentType};
     use std::collections::HashMap;
 
     #[test]
     fn test_ha_only_fence_chroma() {
-        let testxml = r#"<resources>
-  <primitive class="stonith" id="st-fencing" type="fence_chroma"/>
-</resources>
-"#
-        .as_bytes();
+        let testxml = include_bytes!("fixtures/crm-resource-chroma-stonith.xml");
+
         assert_eq!(
-            process_resource_list(&testxml).unwrap(),
-            vec![ResourceAgentInfo {
+            process_resource(testxml).unwrap(),
+            ResourceAgentInfo {
                 agent: ResourceAgentType::new("stonith", None, "fence_chroma"),
-                group: None,
                 id: "st-fencing".to_string(),
                 args: HashMap::new()
-            }]
+            }
         );
     }
 
     #[test]
-    fn test_ha_mixed_mode() {
-        let testxml = include_bytes!("../fixtures/check_ha_test_mixed_mode.xml");
+    fn test_iml() {
+        let testxml = include_bytes!("fixtures/crm-resource-iml-mgs.xml");
 
-        let mut a1 = ResourceAgentInfo {
-            agent: ResourceAgentType::new("ocf", Some("chroma"), "ZFS"),
-            group: Some("group-MGS_695ee8".to_string()),
-            id: "MGS_695ee8-zfs".to_string(),
-            args: HashMap::new(),
-        };
-        a1.args.insert("pool".to_string(), "MGS".to_string());
-        let mut a2 = ResourceAgentInfo {
+        let r1 = ResourceAgentInfo {
             agent: ResourceAgentType::new("ocf", Some("lustre"), "Lustre"),
-            group: Some("group-MGS_695ee8".to_string()),
-            id: "MGS_695ee8".to_string(),
-            args: HashMap::new(),
+            id: "MGS".to_string(),
+            args: vec![
+                ("mountpoint", "/mnt/MGS"),
+                (
+                    "target",
+                    "/dev/disk/by-id/scsi-36001405c20616f7b8b2492d8913a4d24",
+                ),
+            ]
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect(),
         };
-        a2.args.insert("target".to_string(), "MGS/MGS".to_string());
-        a2.args
-            .insert("mountpoint".to_string(), "/mnt/MGS".to_string());
-        let mut a3 = ResourceAgentInfo {
-            agent: ResourceAgentType::new("ocf", Some("lustre"), "Lustre"),
-            group: None,
-            id: "fs21-MDT0000_f61385".to_string(),
-            args: HashMap::new(),
-        };
-        a3.args.insert(
-            "target".to_string(),
-            "/dev/disk/by-id/scsi-36001405da302b267f944aeaaadb95af9".to_string(),
-        );
-        a3.args
-            .insert("mountpoint".to_string(), "/mnt/fs21-MDT0000".to_string());
 
-        assert_eq!(process_resource_list(testxml).unwrap(), vec![a1, a2, a3]);
+        assert_eq!(process_resource(testxml).unwrap(), r1);
+    }
+
+    #[test]
+    fn test_es_ost() {
+        let testxml = include_bytes!("fixtures/crm-resource-es-ost.xml");
+
+        let r1 = ResourceAgentInfo {
+            agent: ResourceAgentType::new("ocf", Some("ddn"), "lustre-server"),
+            id: "ost0001-es01a".to_string(),
+            args: vec![
+                ("lustre_resource_type", "ost"),
+                ("manage_directory", "1"),
+                ("device", "/dev/ddn/es01a_ost0001"),
+                ("directory", "/lustre/es01a/ost0001"),
+            ]
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect(),
+        };
+
+        assert_eq!(process_resource(testxml).unwrap(), r1);
     }
 }

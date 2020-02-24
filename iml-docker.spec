@@ -40,9 +40,6 @@ mv iml-docker.service %{buildroot}%{_unitdir}
 
 %post
 systemctl preset iml-docker.service
-systemctl enable --now docker
-docker load -i %{_tmppath}/iml-images.tgz
-
 
 %preun
 %systemd_preun iml-docker.service

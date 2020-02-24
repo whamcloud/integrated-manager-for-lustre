@@ -4,8 +4,8 @@
 
 use futures::{future, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use iml_rabbit::{
-    basic_consume, connect_to_queue, connect_to_rabbit, purge_queue, BasicConsumeOptions, Client,
-    ImlRabbitError,
+    basic_consume, connect_to_queue, connect_to_rabbit, purge_queue, BasicConsumeOptions,
+    Connection, ImlRabbitError,
 };
 use iml_wire_types::{Fqdn, PluginMessage};
 
@@ -51,7 +51,7 @@ impl From<serde_json::error::Error> for ImlServiceQueueError {
 ///
 /// This is expected to be called once during startup.
 pub fn consume_service_queue(
-    client: Client,
+    client: Connection,
     name: &'static str,
 ) -> impl Stream<Item = Result<PluginMessage, ImlServiceQueueError>> {
     let name2 = name.to_string();

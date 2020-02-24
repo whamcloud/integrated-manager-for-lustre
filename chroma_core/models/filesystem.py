@@ -62,7 +62,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
             return ["forgotten"]
         else:
             available_states = super(ManagedFilesystem, self).get_available_states(begin_state)
-            available_states = list(set(available_states) - set(["forgotten"]))
+            available_states = list(set(available_states))
 
             # Exclude 'stopped' if we are in 'unavailable' and everything is stopped
             target_states = set([t.state for t in self.get_filesystem_targets()])
@@ -75,6 +75,12 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         app_label = "chroma_core"
         unique_together = ("name", "mgs")
         ordering = ["id"]
+
+    def get_ticket(self):
+        from chroma_core.models import FilesystemTicket
+
+        tl = FilesystemTicket.objects.filter(filesystem=self)
+        return list(tl)[0].ticket if len(list(tl)) > 0 else None
 
     def get_targets(self):
         return ManagedTarget.objects.filter(
@@ -200,6 +206,10 @@ class RemoveFilesystemJob(StateChangeJob):
     def get_deps(self):
         deps = []
 
+        ticket = self.filesystem.get_ticket()
+        if ticket:
+            deps.append(DependOn(ticket, "revoked", fix_state="unavailable"))
+
         mgs_target = ObjectCache.get_one(ManagedTarget, lambda t: t.id == self.filesystem.mgs_id)
 
         # Can't start a MGT that hasn't made it past formatting.
@@ -276,8 +286,11 @@ class StartStoppedFilesystemJob(StateChangeJob):
         return "Start file system %s" % self.filesystem.name
 
     def get_deps(self):
-        deps = []
+        ticket = self.filesystem.get_ticket()
+        if ticket:
+            return DependAll(DependOn(ticket, "granted", fix_state="unavailable"))
 
+        deps = []
         for t in ObjectCache.get_targets_by_filesystem(self.filesystem_id):
             # Report filesystem available if MDTs other than 0 are unmounted
             (_, label, index) = target_label_split(t.get_label())
@@ -311,7 +324,12 @@ class StartUnavailableFilesystemJob(StateChangeJob):
         return "Start filesystem %s" % self.filesystem.name
 
     def get_deps(self):
+        ticket = self.filesystem.get_ticket()
+        if ticket:
+            return DependAll([DependOn(ticket, "granted", fix_state="unavailable")])
+
         deps = []
+
         for t in ObjectCache.get_targets_by_filesystem(self.filesystem_id):
             # Report filesystem available if MDTs other than 0 are unmounted
             (_, label, index) = target_label_split(t.get_label())
@@ -345,6 +363,10 @@ class StopUnavailableFilesystemJob(StateChangeJob):
         return "Stop file system %s" % self.filesystem.name
 
     def get_deps(self):
+        ticket = self.filesystem.get_ticket()
+        if ticket:
+            return DependAll([DependOn(ticket, "revoked", fix_state="unavailable")])
+
         deps = []
         targets = ObjectCache.get_targets_by_filesystem(self.filesystem_id)
         targets = [t for t in targets if not issubclass(t.downcast_class, ManagedMgs)]

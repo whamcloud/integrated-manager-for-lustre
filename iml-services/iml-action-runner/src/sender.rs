@@ -11,8 +11,8 @@ use crate::{
     local_actions::{handle_local_action, SharedLocalActionsInFlight},
     ActionType, Sessions, Shared,
 };
-use futures::{channel::oneshot, Future, TryFutureExt};
-use iml_rabbit::{connect_to_rabbit, get_cloned_conns, send_message, Client};
+use futures::{channel::oneshot, TryFutureExt};
+use iml_rabbit::{send_message, Connection};
 use iml_wire_types::{Action, ActionId, Id, ManagerMessage};
 use std::{sync::Arc, time::Duration};
 use warp::{self, Filter};
@@ -24,7 +24,7 @@ use warp::{self, Filter};
 ///
 /// If unsuccessful, this fn will keep the `ActionInFlight` within the rpcs.
 async fn cancel_running_action(
-    client: Client,
+    client: Connection,
     msg: ManagerMessage,
     queue_name: impl Into<String>,
     session_id: Id,
@@ -57,37 +57,12 @@ async fn cancel_running_action(
     Ok(Ok(serde_json::Value::Null))
 }
 
-/// Creates a warp `Filter` that will hand out
-/// a cloned client for each request.
-pub async fn create_client_filter() -> Result<
-    (
-        impl Future<Output = ()>,
-        impl Filter<Extract = (Client,), Error = warp::Rejection> + Clone,
-    ),
-    ActionRunnerError,
-> {
-    let client = connect_to_rabbit().await?;
-
-    let (tx, fut) = get_cloned_conns(client);
-
-    let filter = warp::any().and_then(move || {
-        let (tx2, rx2) = futures::channel::oneshot::channel();
-
-        tx.unbounded_send(tx2).unwrap();
-
-        rx2.map_err(ActionRunnerError::OneShotCanceledError)
-            .map_err(warp::reject::custom)
-    });
-
-    Ok((fut, filter))
-}
-
 pub fn sender(
     queue_name: impl Into<String>,
     sessions: Shared<Sessions>,
     session_to_rpcs: Shared<SessionToRpcs>,
     local_actions: SharedLocalActionsInFlight,
-    client_filter: impl Filter<Extract = (Client,), Error = warp::Rejection> + Clone + Send,
+    client_filter: impl Filter<Extract = (Connection,), Error = warp::Rejection> + Clone + Send,
 ) -> impl Filter<Extract = (Result<serde_json::Value, String>,), Error = warp::Rejection> + Clone {
     let queue_name = queue_name.into();
 
@@ -106,7 +81,7 @@ pub fn sender(
         move |shared_sessions: Shared<Sessions>,
               shared_session_to_rpcs: Shared<SessionToRpcs>,
               local_actions: SharedLocalActionsInFlight,
-              client: Client,
+              client: Connection,
               queue_name: String,
               action_type: ActionType| {
             async move {

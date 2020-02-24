@@ -8,7 +8,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [("chroma_core", "0009_django_content_type_json_notify")]
+    dependencies = [("chroma_core", "0010_tickets")]
 
     operations = [
         migrations.CreateModel(

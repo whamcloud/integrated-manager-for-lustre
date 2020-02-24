@@ -28,6 +28,14 @@ pub fn th_view<T>(children: impl View<T>) -> Node<T> {
     th![th_cls(), children.els()]
 }
 
+pub fn th_left<T>(children: impl View<T>) -> Node<T> {
+    th![th_cls(), class![C.text_left], children.els()]
+}
+
+pub fn th_right<T>(children: impl View<T>) -> Node<T> {
+    th![th_cls(), class![C.text_right], children.els()]
+}
+
 pub fn th_sortable_cls() -> Attrs {
     class![C.border_b_2, C.border_blue_500]
 }
@@ -38,4 +46,8 @@ pub fn td_cls() -> Attrs {
 
 pub fn td_view<T>(children: impl View<T>) -> Node<T> {
     td![td_cls(), children.els()]
+}
+
+pub fn td_right<T>(children: impl View<T>) -> Node<T> {
+    td![td_cls(), class![C.text_right], children.els()]
 }

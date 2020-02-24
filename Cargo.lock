@@ -11,9 +11,9 @@ dependencies = [
 
 [[package]]
 name = "amq-protocol"
-version = "3.1.0"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0261eeb244071203cd9727151a3161b9f6b443001c265dd52e782db6a36aa4d0"
+checksum = "3249cfdac820c4df7c63fe6ae3b06d94f15fb294996e50f4a6d2da580337c966"
 dependencies = [
  "amq-protocol-codegen",
  "amq-protocol-tcp",
@@ -25,9 +25,9 @@ dependencies = [
 
 [[package]]
 name = "amq-protocol-codegen"
-version = "3.1.0"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "804fc12efd85663a6ced824386dde4f9b255fc00dd3db96459e35165164828e5"
+checksum = "3e12e0b090bc6ebec18ecb38ebf0be22653702e7ed523361d195efa80c361b5d"
 dependencies = [
  "amq-protocol-types",
  "handlebars",
@@ -37,9 +37,9 @@ dependencies = [
 
 [[package]]
 name = "amq-protocol-tcp"
-version = "3.1.0"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7623ad8723830dd9c48372e1d5fde9973ce7c28636267dfcf506bed382e84150"
+checksum = "4221dcd6665e958d353485d28109fc7c4ed1d9cb06b9ba0a48c06847f03b4039"
 dependencies = [
  "amq-protocol-uri",
  "mio",
@@ -48,9 +48,9 @@ dependencies = [
 
 [[package]]
 name = "amq-protocol-types"
-version = "3.1.0"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a13489ba9891aac7f217c80ef10ead9e0219422d9af826bceb13a84346f75d0f"
+checksum = "4ec472722ea67718835222ea608c0410c41fbde0dc033a11a14c94b6a0dd61d6"
 dependencies = [
  "cookie-factory",
  "nom 5.1.0",
@@ -60,11 +60,11 @@ dependencies = [
 
 [[package]]
 name = "amq-protocol-uri"
-version = "3.1.0"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52e68b30bc7968ba7a013083e52d43429b1f253261a2960de6eb0905169e10f4"
+checksum = "09cb1e049824f477dbaeff58faf55d865bf2ce3409b48eaf32cd9c5cfe13c91c"
 dependencies = [
- "percent-encoding 2.1.0",
+ "percent-encoding",
  "url",
 ]
 
@@ -118,10 +118,11 @@ checksum = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
 
 [[package]]
 name = "assert-json-diff"
-version = "1.0.1"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9881d306dee755eccf052d652b774a6b2861e86b4772f555262130e58e4f81d2"
+checksum = "9c356497fd3417158bcb318266ac83c391219ca3a5fa659049f42e0041ab57d6"
 dependencies = [
+ "extend",
  "serde",
  "serde_json",
 ]
@@ -525,9 +526,9 @@ dependencies = [
 
 [[package]]
 name = "csv-core"
-version = "0.1.9"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca2be23073829399f39689074cca6997d929a634f73e5d08e24323c30c01832e"
+checksum = "2b2466559f260f48ad25fe6317b3c8dac77b5bdb5763ac7d9d6103530663bc90"
 dependencies = [
  "memchr",
 ]
@@ -732,6 +733,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de853764b47027c2e862a995c34978ffa63c1501f2e15f987ba11bd4f9bba193"
 
 [[package]]
+name = "extend"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf29866f640a891350d1aa695e0bf254df007df909cbecb65f6db4ba593b70a8"
+dependencies = [
+ "proc-macro-error 0.3.4",
+ "proc-macro2 1.0.8",
+ "quote 1.0.2",
+ "syn 1.0.14",
+]
+
+[[package]]
 name = "failure"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -794,12 +807,6 @@ name = "fuchsia-zircon-sys"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3dcaa9ae7725d12cdb85b3ad99a434db70b468c09ded17e012d86b5c1010f7a7"
-
-[[package]]
-name = "futures"
-version = "0.1.29"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b980f2816d6ee8673b6517b52cb0e808a180efc92e5c19d02cdda79066703ef"
 
 [[package]]
 name = "futures"
@@ -879,7 +886,6 @@ version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22766cf25d64306bedf0384da004d05c9974ab104fcc4528f1236181c18004c5"
 dependencies = [
- "futures 0.1.29",
  "futures-channel",
  "futures-core",
  "futures-io",
@@ -1023,9 +1029,9 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eff2656d88f158ce120947499e971d743c05dbcbed62e5bd2f38f1698bbc3772"
+checksum = "e2c55f143919fbc0bc77e427fe2d74cf23786d7c1875666f2fde3ac3c659bb67"
 dependencies = [
  "libc",
 ]
@@ -1176,7 +1182,7 @@ dependencies = [
 name = "iml-action-runner"
 version = "0.1.0"
 dependencies = [
- "futures 0.3.4",
+ "futures",
  "iml-agent-comms",
  "iml-manager-env",
  "iml-rabbit",
@@ -1207,7 +1213,7 @@ dependencies = [
  "dotenv",
  "elementtree",
  "exitcode",
- "futures 0.3.4",
+ "futures",
  "futures-util",
  "http 0.2.0",
  "iml-cmd",
@@ -1236,7 +1242,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
- "tracing-subscriber 0.1.6",
+ "tracing-subscriber 0.2.1",
  "url",
  "uuid 0.7.4",
  "v_hist",
@@ -1247,7 +1253,7 @@ dependencies = [
 name = "iml-agent-comms"
 version = "0.1.0"
 dependencies = [
- "futures 0.3.4",
+ "futures",
  "iml-manager-env",
  "iml-rabbit",
  "iml-wire-types",
@@ -1255,7 +1261,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
- "tracing-subscriber 0.1.6",
+ "tracing-subscriber 0.2.1",
  "uuid 0.7.4",
  "warp",
 ]
@@ -1264,11 +1270,16 @@ dependencies = [
 name = "iml-api"
 version = "0.1.0"
 dependencies = [
+ "futures",
+ "iml-job-scheduler-rpc",
  "iml-manager-env",
+ "iml-rabbit",
  "iml-wire-types",
+ "serde",
+ "serde_json",
  "tokio",
  "tracing",
- "tracing-subscriber 0.1.6",
+ "tracing-subscriber 0.2.1",
  "warp",
 ]
 
@@ -1276,7 +1287,7 @@ dependencies = [
 name = "iml-cmd"
 version = "0.1.0"
 dependencies = [
- "futures 0.3.4",
+ "futures",
  "tokio",
  "tracing",
  "warp",
@@ -1287,7 +1298,7 @@ name = "iml-devices"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "futures 0.3.4",
+ "futures",
  "iml-postgres",
  "iml-rabbit",
  "iml-service-queue",
@@ -1308,7 +1319,7 @@ name = "iml-fs"
 version = "0.1.0"
 dependencies = [
  "bytes 0.5.4",
- "futures 0.3.4",
+ "futures",
  "pretty_assertions",
  "tempdir",
  "tempfile",
@@ -1320,8 +1331,9 @@ dependencies = [
 name = "iml-job-scheduler-rpc"
 version = "0.1.0"
 dependencies = [
- "futures 0.3.4",
+ "futures",
  "iml-rabbit",
+ "iml-wire-types",
  "serde",
  "serde_json",
  "tokio",
@@ -1334,7 +1346,7 @@ name = "iml-mailbox"
 version = "0.1.0"
 dependencies = [
  "bytes 0.5.4",
- "futures 0.3.4",
+ "futures",
  "iml-fs",
  "iml-manager-env",
  "pretty_assertions",
@@ -1353,7 +1365,7 @@ dependencies = [
  "console",
  "dialoguer",
  "dotenv",
- "futures 0.3.4",
+ "futures",
  "hostlist-parser",
  "iml-manager-client",
  "iml-wire-types",
@@ -1376,6 +1388,7 @@ name = "iml-manager-client"
 version = "0.1.0"
 dependencies = [
  "iml-manager-env",
+ "iml-request-retry",
  "reqwest",
  "serde",
  "serde_json",
@@ -1403,7 +1416,7 @@ dependencies = [
 name = "iml-ostpool"
 version = "0.1.0"
 dependencies = [
- "futures 0.3.4",
+ "futures",
  "futures-util",
  "iml-postgres",
  "iml-service-queue",
@@ -1417,7 +1430,7 @@ dependencies = [
 name = "iml-postgres"
 version = "0.1.0"
 dependencies = [
- "futures 0.3.4",
+ "futures",
  "iml-manager-env",
  "tokio-postgres",
  "tracing",
@@ -1427,7 +1440,7 @@ dependencies = [
 name = "iml-postoffice"
 version = "0.1.0"
 dependencies = [
- "futures 0.3.4",
+ "futures",
  "iml-rabbit",
  "iml-service-queue",
  "iml-wire-types",
@@ -1440,20 +1453,21 @@ dependencies = [
 name = "iml-rabbit"
 version = "0.1.0"
 dependencies = [
- "futures 0.3.4",
+ "futures",
  "iml-manager-env",
  "iml-wire-types",
- "lapin-futures",
+ "lapin",
  "serde_json",
  "tokio",
  "tracing",
+ "warp",
 ]
 
 [[package]]
 name = "iml-request-retry"
 version = "0.1.0"
 dependencies = [
- "futures 0.3.4",
+ "futures",
  "http 0.2.0",
  "rand 0.7.3",
  "rand_xorshift 0.2.0",
@@ -1471,7 +1485,7 @@ dependencies = [
 name = "iml-service-queue"
 version = "0.1.0"
 dependencies = [
- "futures 0.3.4",
+ "futures",
  "iml-rabbit",
  "iml-wire-types",
  "serde",
@@ -1483,7 +1497,7 @@ dependencies = [
 name = "iml-timer"
 version = "0.1.0"
 dependencies = [
- "futures 0.3.4",
+ "futures",
  "iml-cmd",
  "iml-manager-client",
  "iml-manager-env",
@@ -1492,7 +1506,7 @@ dependencies = [
  "structopt 0.3.9",
  "tokio",
  "tracing",
- "tracing-subscriber 0.2.0",
+ "tracing-subscriber 0.2.1",
  "warp",
 ]
 
@@ -1500,7 +1514,7 @@ dependencies = [
 name = "iml-util"
 version = "0.1.0"
 dependencies = [
- "futures 0.3.4",
+ "futures",
  "iml-wire-types",
  "serde",
  "serde_json",
@@ -1512,7 +1526,7 @@ dependencies = [
 name = "iml-warp-drive"
 version = "0.1.0"
 dependencies = [
- "futures 0.3.4",
+ "futures",
  "im 14.2.0",
  "iml-manager-client",
  "iml-manager-env",
@@ -1524,7 +1538,7 @@ dependencies = [
  "tokio",
  "tokio-runtime-shutdown",
  "tracing",
- "tracing-subscriber 0.2.0",
+ "tracing-subscriber 0.2.1",
  "uuid 0.7.4",
  "warp",
 ]
@@ -1670,21 +1684,11 @@ dependencies = [
  "amq-protocol",
  "amq-protocol-codegen",
  "crossbeam-channel",
+ "futures-core",
  "log 0.4.8",
  "mio",
  "parking_lot 0.10.0",
  "serde_json",
-]
-
-[[package]]
-name = "lapin-futures"
-version = "0.28.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68b394ba17e07251555988f7a7fb8452e4e56833bdf2965d9b1e614bcf78a3db"
-dependencies = [
- "futures 0.1.29",
- "lapin",
- "log 0.4.8",
 ]
 
 [[package]]
@@ -1708,9 +1712,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.66"
+version = "0.2.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d515b1f41455adea1313a4a2ac8a8a477634fbae63cc6100e3aebb207ce61558"
+checksum = "eb147597cdf94ed43ab7a9038716637d2d1bf2bc571da995d0028dec06bd3018"
 
 [[package]]
 name = "libloading"
@@ -1926,9 +1930,9 @@ dependencies = [
 
 [[package]]
 name = "mockito"
-version = "0.22.0"
+version = "0.23.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e524e85ea7c80559354217a6470c14abc2411802a9996aed1821559b9e28e3c"
+checksum = "ae82e6bad452dd42b0f4437414eae3c8c27b958a55dc6c198e351042c4e3024e"
 dependencies = [
  "assert-json-diff",
  "colored",
@@ -1936,7 +1940,7 @@ dependencies = [
  "httparse",
  "lazy_static",
  "log 0.4.8",
- "percent-encoding 1.0.1",
+ "percent-encoding",
  "rand 0.7.3",
  "regex",
  "serde_json",
@@ -2166,12 +2170,6 @@ checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
 
 [[package]]
 name = "percent-encoding"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31010dd2e1ac33d5b46a5b413495239882813e0369f8ed8a5e266f173602f831"
-
-[[package]]
-name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
@@ -2393,11 +2391,35 @@ dependencies = [
 
 [[package]]
 name = "proc-macro-error"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03e202b6302b80433b759eb9314be63521361a6622f6c125fe0dc3f6196e2722"
+dependencies = [
+ "proc-macro-error-attr 0.3.4",
+ "proc-macro2 1.0.8",
+ "quote 1.0.2",
+ "syn 1.0.14",
+]
+
+[[package]]
+name = "proc-macro-error"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "052b3c9af39c7e5e94245f820530487d19eb285faedcb40e0c3275132293f242"
 dependencies = [
- "proc-macro-error-attr",
+ "proc-macro-error-attr 0.4.9",
+ "proc-macro2 1.0.8",
+ "quote 1.0.2",
+ "rustversion",
+ "syn 1.0.14",
+]
+
+[[package]]
+name = "proc-macro-error-attr"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d140e22ca819b3aa3719d1aafbdea40544799e3f901886a4ee72c3ff710de7c9"
+dependencies = [
  "proc-macro2 1.0.8",
  "quote 1.0.2",
  "rustversion",
@@ -2756,7 +2778,7 @@ dependencies = [
  "mime 0.3.16",
  "mime_guess 2.0.1",
  "native-tls",
- "percent-encoding 2.1.0",
+ "percent-encoding",
  "pin-project-lite",
  "serde",
  "serde_json",
@@ -2857,9 +2879,9 @@ checksum = "ea6a9290e3c9cf0f18145ef7ffa62d68ee0bf5fcd651017e586dc7fd5da448c2"
 
 [[package]]
 name = "scopeguard"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b42e15e59b18a828bbf5c58ea01debb36b9b096346de35d941dcb89009f24a0d"
+checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "security-framework"
@@ -3192,7 +3214,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "095064aa1f5b94d14e635d0a5684cf140c43ae40a0fd990708d38f5d669e5f64"
 dependencies = [
  "heck",
- "proc-macro-error",
+ "proc-macro-error 0.4.9",
  "proc-macro2 1.0.8",
  "quote 1.0.2",
  "syn 1.0.14",
@@ -3432,10 +3454,10 @@ dependencies = [
  "byteorder",
  "bytes 0.5.4",
  "fallible-iterator",
- "futures 0.3.4",
+ "futures",
  "log 0.4.8",
  "parking_lot 0.10.0",
- "percent-encoding 2.1.0",
+ "percent-encoding",
  "phf 0.8.0",
  "pin-project-lite",
  "postgres-protocol",
@@ -3448,7 +3470,7 @@ dependencies = [
 name = "tokio-runtime-shutdown"
 version = "0.1.0"
 dependencies = [
- "futures 0.3.4",
+ "futures",
  "stream-cancel",
  "tokio",
  "tokio-test",
@@ -3565,9 +3587,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-subscriber"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25dc36e47794112347ccb9ae8a05b5ec4fab45f01545e4929323cdb1a543a8f4"
+checksum = "c6bbfcf5ab0799649189b0df4bd7f730f1929a3846d33ae56cb0ad6e0bbdad09"
 dependencies = [
  "ansi_term 0.11.0",
  "chrono",
@@ -3703,7 +3725,7 @@ checksum = "829d4a8476c35c9bf0bbce5a3b23f4106f79728039b726d292bb93bc106787cb"
 dependencies = [
  "idna",
  "matches",
- "percent-encoding 2.1.0",
+ "percent-encoding",
 ]
 
 [[package]]
@@ -3809,7 +3831,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce153bc4ad61ed81c255cad4f1bf2474a1d284b482b20eecaefb152d0675fb1b"
 dependencies = [
  "bytes 0.5.4",
- "futures 0.3.4",
+ "futures",
  "headers",
  "http 0.2.0",
  "hyper",

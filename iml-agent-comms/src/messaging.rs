@@ -4,7 +4,8 @@
 
 use futures::{Future, Stream};
 use iml_rabbit::{
-    basic_consume, declare_transient_queue, BasicConsumeOptions, Channel, Client, ImlRabbitError,
+    basic_consume, declare_transient_queue, BasicConsumeOptions, Channel, Connection,
+    ImlRabbitError,
 };
 use iml_wire_types::{Fqdn, Id, ManagerMessage, Message, PluginMessage, PluginName, Seq};
 
@@ -77,7 +78,7 @@ pub fn terminate_agent_session(
     plugin: PluginName,
     fqdn: Fqdn,
     session_id: Id,
-    client: Client,
+    client: Connection,
 ) -> impl Future<Output = Result<(), ImlRabbitError>> {
     iml_rabbit::send_message(
         client,

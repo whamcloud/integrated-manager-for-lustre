@@ -86,7 +86,7 @@ help_text = {
     "fqdn_resolves": "Indicates if a DNS lookup at the manager server, of the self-reported fully-qualified domain name (FQDN) of the storage server, succeeded.",
     "fqdn_matches": "Indicates if there is match between the DNS lookup at the manager server of the user-supplied hostname, and the DNS lookup at the storage server of the self-reported fully-qualified domain name (FQDN) of the storage server.",
     "yum_valid_repos": "Indicates if the storage server's yum configuration has been found to be free of problematic and unsupported software repositories.",
-    "yum_can_update": "Indicates if the storage server is able to access a repository of packages provided by the Linux distribution vendor. This requirement ensures that yum can satisfy vendor-provided dependencies and obtain vendor-provided software updates.",
+    "yum_can_update": "Indicates if the storage server is able to access a repository of packages provided by the Linux distribution vendor. This requirement ensures that yum can satisfy vendor-provided dependencies and obtain vendor-provided software updates. Alternately, this check can be skipped if all repositories are disabled and the necessary rpms are already installed.",
     "openssl": "Indicates if OpenSSL is working as expected.",
     "rewrite_target_configuration-dialog": "Select all servers for which the NIDs were re-read by clicking the <strong>Rescan NIDs</strong> button.  Then click <b>Run</b> to rewrite the Lustre target configuration for targets associated with the selected servers.",
     "rewrite_target_configuration-tooltip": "Update each target with the current NID for the server with which it is associated.",
@@ -192,4 +192,6 @@ help_text = {
     "creating_ostpool": "Creating OST Pool",
     "destroying_ostpool": "Destroying OST Pool",
     "updating_ostpool": "Updating OST Pool",
+    "grant_ticket": "Granting Ticket",
+    "revoke_ticket": "Revoking Ticket",
 }

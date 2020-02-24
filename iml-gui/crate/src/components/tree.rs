@@ -556,8 +556,8 @@ fn tree_host_item_view(cache: &ArcCache, model: &Model, host: &Host) -> Option<N
     Some(li![
         class![C.py_1],
         toggle_view(address.clone(), tree_node.open),
-        item_view("server", &host.label, Route::ServerDetail(host.id.into())),
-        alert_indicator(&cache.active_alert, &host.resource_uri, true, Placement::Bottom),
+        item_view("server", &host.label, Route::Server(host.id.into())),
+        alert_indicator(&cache.active_alert, host, true, Placement::Bottom),
         if tree_node.open {
             tree_volume_collection_view(cache, model, &address)
         } else {
@@ -574,7 +574,7 @@ fn tree_pool_item_view(cache: &ArcCache, model: &Model, address: &Address, pool:
     Some(li![
         class![C.py_1],
         toggle_view(address.clone(), tree_node.open),
-        item_view("swimming-pool", pool.label(), Route::OstPoolDetail(pool.id.into())),
+        item_view("swimming-pool", pool.label(), Route::OstPool(pool.id.into())),
         if tree_node.open {
             tree_target_collection_view(cache, model, &address, TargetKind::Ost)
         } else {
@@ -591,8 +591,8 @@ fn tree_fs_item_view(cache: &ArcCache, model: &Model, fs: &Filesystem) -> Option
     Some(li![
         class![C.py_1],
         toggle_view(address.clone(), tree_node.open),
-        item_view("server", &fs.label, Route::FilesystemDetail(fs.id.into())),
-        alert_indicator(&cache.active_alert, &fs.resource_uri, true, Placement::Bottom),
+        item_view("server", &fs.label, Route::Filesystem(fs.id.into())),
+        alert_indicator(&cache.active_alert, fs, true, Placement::Bottom),
         if tree_node.open {
             vec![
                 tree_target_collection_view(cache, model, &address, TargetKind::Mgt),
@@ -643,7 +643,7 @@ fn tree_fs_collection_view(cache: &ArcCache, model: &Model) -> Node<Msg> {
             item_view(
                 "folder",
                 &format!("Filesystems ({})", x.paging.total()),
-                Route::Filesystem,
+                Route::Filesystems,
             )
         },
         |x| {
@@ -660,7 +660,7 @@ fn tree_host_collection_view(cache: &ArcCache, model: &Model) -> Node<Msg> {
     tree_collection_view(
         model,
         Address::new(vec![Step::HostCollection]),
-        |x| item_view("folder", &format!("Servers ({})", x.paging.total()), Route::Server),
+        |x| item_view("folder", &format!("Servers ({})", x.paging.total()), Route::Servers),
         |x| {
             slice_page(&x.paging, &x.items)
                 .filter_map(|x| cache.host.get(x))
@@ -677,7 +677,7 @@ fn tree_pools_collection_view(cache: &ArcCache, model: &Model, parent_address: &
     tree_collection_view(
         model,
         addr.clone(),
-        |x| item_view("folder", &format!("OST Pools ({})", x.paging.total()), Route::OstPool),
+        |x| item_view("folder", &format!("OST Pools ({})", x.paging.total()), Route::OstPools),
         |x| {
             slice_page(&x.paging, &x.items)
                 .filter_map(|x| cache.ost_pool.get(x))
@@ -692,7 +692,7 @@ fn tree_volume_collection_view(cache: &ArcCache, model: &Model, parent_address: 
     tree_collection_view(
         model,
         parent_address.extend(Step::VolumeCollection),
-        |x| item_view("folder", &format!("Volumes ({})", x.paging.total()), Route::Volume),
+        |x| item_view("folder", &format!("Volumes ({})", x.paging.total()), Route::Volumes),
         |x| {
             slice_page(&x.paging, &x.items)
                 .filter_map(|x| cache.volume_node.get(x))
@@ -706,11 +706,7 @@ fn tree_volume_collection_view(cache: &ArcCache, model: &Model, parent_address: 
 
                     li![
                         class![C.py_1],
-                        item_view(
-                            "hdd",
-                            &format!("{}{}", x.label(), size),
-                            Route::VolumeDetail(v.id.into())
-                        ),
+                        item_view("hdd", &format!("{}{}", x.label(), size), Route::Volume(v.id.into())),
                     ]
                 })
                 .collect()
@@ -734,15 +730,15 @@ fn tree_target_collection_view(
     tree_collection_view(
         model,
         parent_address.extend(kind),
-        |x| item_view("folder", &format!("{} ({})", label, x.paging.total()), Route::Target),
+        |x| item_view("folder", &format!("{} ({})", label, x.paging.total()), Route::Targets),
         |x| {
             slice_page(&x.paging, &x.items)
                 .filter_map(|x| cache.target.get(x))
                 .map(|x| {
                     li![
                         class![C.py_1],
-                        item_view("bullseye", x.label(), Route::TargetDetail(x.id.into())),
-                        alert_indicator(&cache.active_alert, &x.resource_uri, true, Placement::Bottom),
+                        item_view("bullseye", x.label(), Route::Target(x.id.into())),
+                        alert_indicator(&cache.active_alert, &**x, true, Placement::Bottom),
                     ]
                 })
                 .collect()

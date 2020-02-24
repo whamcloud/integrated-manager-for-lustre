@@ -4,21 +4,23 @@
 
 use futures::{
     channel::{mpsc, oneshot},
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future, Future, Stream, StreamExt,
+    future, Future, Stream, StreamExt, TryFutureExt,
 };
 use iml_manager_env;
 use iml_wire_types::ToBytes;
-pub use lapin_futures::{
+pub use lapin::{
     message,
     options::{
         BasicConsumeOptions, BasicPublishOptions, ExchangeDeclareOptions, QueueBindOptions,
         QueueDeclareOptions, QueueDeleteOptions, QueuePurgeOptions,
     },
     types::{AMQPValue, FieldTable},
-    BasicProperties, Channel, Client, ConnectionProperties, Consumer, Error as LapinError,
+    BasicProperties, Channel, Connection, ConnectionProperties, Consumer, Error as LapinError,
     ExchangeKind, Queue,
 };
+
+#[cfg(feature = "warp-filters")]
+use warp::Filter;
 
 #[derive(Debug)]
 pub enum ImlRabbitError {
@@ -26,7 +28,11 @@ pub enum ImlRabbitError {
     SerdeJsonError(serde_json::error::Error),
     Utf8Error(std::str::Utf8Error),
     ConsumerEndedError,
+    OneshotCanceled(oneshot::Canceled),
 }
+
+#[cfg(feature = "warp-filters")]
+impl warp::reject::Reject for ImlRabbitError {}
 
 impl std::fmt::Display for ImlRabbitError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -35,6 +41,7 @@ impl std::fmt::Display for ImlRabbitError {
             ImlRabbitError::SerdeJsonError(ref err) => write!(f, "{}", err),
             ImlRabbitError::Utf8Error(ref err) => write!(f, "{}", err),
             ImlRabbitError::ConsumerEndedError => write!(f, "Consumer ended"),
+            ImlRabbitError::OneshotCanceled(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -45,6 +52,7 @@ impl std::error::Error for ImlRabbitError {
             ImlRabbitError::LapinError(ref err) => Some(err),
             ImlRabbitError::SerdeJsonError(ref err) => Some(err),
             ImlRabbitError::Utf8Error(ref err) => Some(err),
+            ImlRabbitError::OneshotCanceled(ref err) => Some(err),
             ImlRabbitError::ConsumerEndedError => None,
         }
     }
@@ -68,29 +76,37 @@ impl From<std::str::Utf8Error> for ImlRabbitError {
     }
 }
 
+impl From<oneshot::Canceled> for ImlRabbitError {
+    fn from(err: oneshot::Canceled) -> Self {
+        ImlRabbitError::OneshotCanceled(err)
+    }
+}
+
 /// Connects to an AMQP server
 ///
 /// # Arguments
 ///
 /// * `addr` - An address to connect to
 /// * `opts` - `ConnectionProperties` to configure the connection
-pub async fn connect(addr: &str, options: ConnectionProperties) -> Result<Client, ImlRabbitError> {
-    Client::connect(addr, options)
-        .compat()
+pub async fn connect(
+    addr: &str,
+    options: ConnectionProperties,
+) -> Result<Connection, ImlRabbitError> {
+    Connection::connect(addr, options)
         .await
         .map_err(ImlRabbitError::from)
 }
 
-pub trait ChannelFuture: Future<Output = Result<lapin_futures::Channel, LapinError>> {}
-impl<T: Future<Output = Result<lapin_futures::Channel, LapinError>>> ChannelFuture for T {}
+pub trait ChannelFuture: Future<Output = Result<Channel, LapinError>> {}
+impl<T: Future<Output = Result<Channel, LapinError>>> ChannelFuture for T {}
 
 /// Creates a channel for the passed in client
 ///
 /// # Arguments
 ///
-/// * `client` - A `Client` to create a channel on
-pub async fn create_channel(client: Client) -> Result<lapin_futures::Channel, ImlRabbitError> {
-    let chan = client.create_channel().compat().await?;
+/// * `connection` - A `Connection` to create a channel on
+pub async fn create_channel(connection: &Connection) -> Result<lapin::Channel, ImlRabbitError> {
+    let chan = connection.create_channel().await?;
 
     tracing::debug!("created channel with id: {}", chan.id());
 
@@ -105,7 +121,7 @@ pub async fn create_channel(client: Client) -> Result<lapin_futures::Channel, Im
 pub async fn close_channel(channel: Channel) -> Result<(), ImlRabbitError> {
     let id = channel.id();
 
-    channel.close(200, "OK").compat().await?;
+    channel.close(200, "OK").await?;
 
     tracing::debug!("closed channel with id: {}", id);
 
@@ -121,11 +137,11 @@ pub async fn close_channel(channel: Channel) -> Result<(), ImlRabbitError> {
 /// * `exchange_kind` - The type of the exchange
 /// * `options` - An `Option<ExchangeDeclareOptions>` of additional options to pass in. If not supplied, `ExchangeDeclareOptions::default()` is used
 pub async fn declare_exchange(
-    channel: lapin_futures::Channel,
+    channel: Channel,
     name: impl Into<String>,
     exchange_kind: ExchangeKind,
     options: Option<ExchangeDeclareOptions>,
-) -> Result<lapin_futures::Channel, ImlRabbitError> {
+) -> Result<Channel, ImlRabbitError> {
     let name = name.into();
     let options = options.unwrap_or_default();
 
@@ -133,7 +149,6 @@ pub async fn declare_exchange(
 
     channel
         .exchange_declare(&name, exchange_kind, options, FieldTable::default())
-        .compat()
         .await?;
 
     Ok(channel)
@@ -147,10 +162,10 @@ pub async fn declare_exchange(
 /// * `name` - The name of the exchange
 /// * `exchange_kind` - The type of the exchange
 pub async fn declare_transient_exchange(
-    channel: lapin_futures::Channel,
+    channel: Channel,
     name: impl Into<String>,
     exchange_kind: ExchangeKind,
-) -> Result<lapin_futures::Channel, ImlRabbitError> {
+) -> Result<Channel, ImlRabbitError> {
     declare_exchange(
         channel,
         name,
@@ -173,19 +188,16 @@ pub async fn declare_transient_exchange(
 pub async fn declare_queue(
     channel: Channel,
     name: impl Into<String>,
-    options: Option<QueueDeclareOptions>,
-    field_table: Option<FieldTable>,
+    options: impl Into<Option<QueueDeclareOptions>>,
+    field_table: impl Into<Option<FieldTable>>,
 ) -> Result<(Channel, Queue), ImlRabbitError> {
     let name = name.into();
-    let options = options.unwrap_or_default();
-    let field_table = field_table.unwrap_or_default();
+    let options = options.into().unwrap_or_default();
+    let field_table = field_table.into().unwrap_or_default();
 
     tracing::debug!("declaring queue {}", name);
 
-    let queue = channel
-        .queue_declare(&name, options, field_table)
-        .compat()
-        .await?;
+    let queue = channel.queue_declare(&name, options, field_table).await?;
 
     Ok((channel, queue))
 }
@@ -207,10 +219,10 @@ pub async fn declare_transient_queue(
     declare_queue(
         channel,
         name,
-        Some(QueueDeclareOptions {
+        QueueDeclareOptions {
             durable: false,
             ..QueueDeclareOptions::default()
-        }),
+        },
         Some(f),
     )
     .await
@@ -238,7 +250,6 @@ pub async fn bind_queue(
             QueueBindOptions::default(),
             FieldTable::default(),
         )
-        .compat()
         .await?;
 
     Ok(channel)
@@ -246,9 +257,9 @@ pub async fn bind_queue(
 
 pub async fn connect_to_queue(
     name: impl Into<String>,
-    client: Client,
+    conn: Connection,
 ) -> Result<(Channel, Queue), ImlRabbitError> {
-    let ch = create_channel(client).await?;
+    let ch = create_channel(&conn).await?;
 
     declare_transient_queue(ch, name).await
 }
@@ -267,7 +278,6 @@ pub async fn purge_queue(
 
     channel
         .queue_purge(&name, QueuePurgeOptions::default())
-        .compat()
         .await?;
 
     tracing::info!("purged queue {}", &name);
@@ -283,7 +293,6 @@ pub async fn delete_queue(
 
     channel
         .queue_delete(&name, QueueDeleteOptions::default())
-        .compat()
         .await?;
 
     tracing::info!("queue {} deleted", &name);
@@ -309,9 +318,8 @@ pub async fn basic_consume(
 
     channel
         .basic_consume(&queue, &consumer_tag.into(), options, FieldTable::default())
-        .compat()
         .await
-        .map(|s| s.compat().map(|x| x.map_err(|e| e.into())))
+        .map(|s| s.map(|x| x.map_err(|e| e.into())))
         .map_err(ImlRabbitError::from)
 }
 
@@ -325,9 +333,7 @@ pub async fn basic_consume_one(
 
     let (x, _) = channel
         .basic_consume(&queue, &consumer_tag.into(), options, FieldTable::default())
-        .compat()
         .await?
-        .compat()
         .map(|x| x.map_err(ImlRabbitError::from))
         .into_future()
         .await;
@@ -360,14 +366,13 @@ pub async fn basic_publish<T: ToBytes + std::fmt::Debug>(
         .basic_publish(
             &exchange.into(),
             &routing_key.into(),
-            bytes,
             BasicPublishOptions::default(),
+            bytes,
             BasicProperties::default()
                 .with_content_type("application/json".into())
                 .with_content_encoding("utf-8".into())
                 .with_priority(0),
         )
-        .compat()
         .await?;
 
     Ok(channel)
@@ -375,12 +380,12 @@ pub async fn basic_publish<T: ToBytes + std::fmt::Debug>(
 
 /// Sends a JSON encoded message to the given exchange / queue
 pub async fn send_message<T: ToBytes + std::fmt::Debug>(
-    client: Client,
+    conn: Connection,
     exchange_name: impl Into<String>,
     queue_name: impl Into<String>,
     msg: T,
 ) -> Result<(), ImlRabbitError> {
-    let ch = create_channel(client.clone()).await?;
+    let ch = create_channel(&conn).await?;
 
     let name = queue_name.into();
 
@@ -396,7 +401,7 @@ pub async fn send_message<T: ToBytes + std::fmt::Debug>(
 /// This fn is useful for production code as it reads in env vars
 /// to make a connection.
 ///
-pub async fn connect_to_rabbit() -> Result<Client, ImlRabbitError> {
+pub async fn connect_to_rabbit() -> Result<Connection, ImlRabbitError> {
     connect(
         &iml_manager_env::get_amqp_broker_url(),
         ConnectionProperties::default(),
@@ -404,7 +409,7 @@ pub async fn connect_to_rabbit() -> Result<Client, ImlRabbitError> {
     .await
 }
 
-type ClientSender = oneshot::Sender<Client>;
+type ConnectionSender = oneshot::Sender<Connection>;
 
 /// Given a `Client`, this fn will
 /// return a `(UnboundedSender, Future)` pair.
@@ -416,15 +421,15 @@ type ClientSender = oneshot::Sender<Client>;
 /// This is useful for multiplexing channels over a
 /// single connection.
 pub fn get_cloned_conns(
-    client: Client,
+    conn: Connection,
 ) -> (
-    mpsc::UnboundedSender<ClientSender>,
+    mpsc::UnboundedSender<ConnectionSender>,
     impl Future<Output = ()>,
 ) {
     let (tx, rx) = mpsc::unbounded();
 
-    let fut = rx.for_each(move |sender: ClientSender| {
-        let _ = sender.send(client.clone()).map_err(|_| {
+    let fut = rx.for_each(move |sender: ConnectionSender| {
+        let _ = sender.send(conn.clone()).map_err(|_| {
             tracing::info!("channel recv dropped before we could hand out a connection")
         });
 
@@ -434,15 +439,41 @@ pub fn get_cloned_conns(
     (tx, fut)
 }
 
+/// Creates a warp `Filter` that will hand out
+/// a cloned client for each request.
+#[cfg(feature = "warp-filters")]
+pub async fn create_connection_filter() -> Result<
+    (
+        impl Future<Output = ()>,
+        impl Filter<Extract = (Connection,), Error = warp::Rejection> + Clone,
+    ),
+    ImlRabbitError,
+> {
+    let conn = connect_to_rabbit().await?;
+
+    let (tx, fut) = get_cloned_conns(conn);
+
+    let filter = warp::any().and_then(move || {
+        let (tx2, rx2) = oneshot::channel();
+
+        tx.unbounded_send(tx2).unwrap();
+
+        rx2.map_err(ImlRabbitError::OneshotCanceled)
+            .map_err(warp::reject::custom)
+    });
+
+    Ok((fut, filter))
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         basic_publish, bind_queue, connect, create_channel, declare_transient_exchange,
         declare_transient_queue, get_cloned_conns, ImlRabbitError,
     };
-    use futures::{channel::oneshot, compat::Future01CompatExt, TryFutureExt};
-    use lapin_futures::{
-        message::BasicGetMessage, options::BasicGetOptions, Client, ConnectionProperties,
+    use futures::{channel::oneshot, TryFutureExt};
+    use lapin::{
+        message::BasicGetMessage, options::BasicGetOptions, Connection, ConnectionProperties,
         ExchangeKind,
     };
 
@@ -450,9 +481,9 @@ mod tests {
         exchange_name: &'static str,
         queue_name: &'static str,
     ) -> Result<Option<BasicGetMessage>, ImlRabbitError> {
-        let client = create_test_connection().await?;
+        let conn = create_test_connection().await?;
 
-        let ch = create_channel(client).await?;
+        let ch = create_channel(&conn).await?;
 
         let ch = declare_transient_exchange(ch, exchange_name, ExchangeKind::Direct).await?;
 
@@ -468,11 +499,10 @@ mod tests {
                     ..BasicGetOptions::default()
                 },
             )
-            .compat()
             .await?)
     }
 
-    async fn create_test_connection() -> Result<Client, ImlRabbitError> {
+    async fn create_test_connection() -> Result<Connection, ImlRabbitError> {
         let addr = "amqp://127.0.0.1:5672//";
 
         connect(&addr, ConnectionProperties::default()).await
@@ -481,9 +511,9 @@ mod tests {
     #[test]
     fn test_connect() -> Result<(), ImlRabbitError> {
         let msg = futures::executor::block_on(async {
-            let client = create_test_connection().await?;
+            let conn = create_test_connection().await?;
 
-            let ch = create_channel(client).await?;
+            let ch = create_channel(&conn).await?;
 
             let ch = declare_transient_exchange(ch, "foo", ExchangeKind::Direct).await?;
 
@@ -517,9 +547,9 @@ mod tests {
 
         tx.unbounded_send(tx2).unwrap();
 
-        let client = rx2.await.unwrap();
+        let conn = rx2.await.unwrap();
 
-        let msg = create_channel(client)
+        let msg = create_channel(&conn)
             .and_then(|ch| declare_transient_exchange(ch, "foo2", ExchangeKind::Direct))
             .and_then(|ch| declare_transient_queue(ch, "fooQ2"))
             .and_then(move |(c, _)| bind_queue(c, "foo2", "fooQ2", "fooQ2"))
@@ -539,7 +569,7 @@ mod tests {
 
         let client = rx2.await.unwrap();
 
-        let msg = create_channel(client)
+        let msg = create_channel(&client)
             .and_then(|ch| basic_publish(ch, "foo2", "fooQ2", "baz"))
             .and_then(|_| read_message("foo2", "fooQ2"))
             .await?;
