@@ -110,6 +110,8 @@ fn are_all_parents_available(
     host: Fqdn,
     child_id: &DeviceId,
 ) -> bool {
+    // If this panics, device-scanner has given us the tree that's not consistent or
+    // we asked to start iterating with device that's not present.
     let mut i = BreadthFirstParentIterator::new(devices, child_id);
     let all_available = i.all(|p| {
         let result = device_hosts.get(&(p.clone(), host.clone())).is_some();

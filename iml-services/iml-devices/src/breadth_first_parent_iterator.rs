@@ -5,6 +5,7 @@
 use iml_wire_types::db::{Device, DeviceId};
 use std::collections::{BTreeMap, BTreeSet};
 
+/// Breadth-first iterator over parents of the device.
 pub struct BreadthFirstParentIterator<'a, 'b> {
     devices: &'a BTreeMap<DeviceId, Device>,
     parents: BTreeSet<DeviceId>,
@@ -13,9 +14,14 @@ pub struct BreadthFirstParentIterator<'a, 'b> {
 }
 
 impl<'a, 'b> BreadthFirstParentIterator<'a, 'b> {
+    /// Make a new iterator.
+    /// 
+    /// # Panics
+    /// 
+    /// If `device_id` is not found in `devices`.
+    /// It means caller asked to start with device that's not present in the tree.
     pub fn new(devices: &'a BTreeMap<DeviceId, Device>, device_id: &'b DeviceId) -> Self {
         tracing::trace!("Getting {:?} from devices", device_id);
-        // TODO: This is dangerous
         let device = &devices[device_id];
 
         Self {
@@ -30,6 +36,12 @@ impl<'a, 'b> BreadthFirstParentIterator<'a, 'b> {
 impl<'a, 'b> Iterator for BreadthFirstParentIterator<'a, 'b> {
     type Item = DeviceId;
 
+    /// Iterate.
+    /// 
+    /// # Panics
+    /// 
+    /// If next parent device is not found in `devices`.
+    /// It means tree is not consistent.
     fn next(&mut self) -> Option<DeviceId> {
         if self.parents.is_empty() {
             return None;
@@ -37,7 +49,6 @@ impl<'a, 'b> Iterator for BreadthFirstParentIterator<'a, 'b> {
 
         let p = self.parents.iter().next().unwrap().clone();
         tracing::trace!("Getting {:?} from devices", p);
-        // TODO: This is dangerous
         let parent_device = &self.devices[&p];
         let parent_parents = &parent_device.parents;
 
