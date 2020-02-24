@@ -15,9 +15,9 @@ pub struct BreadthFirstParentIterator<'a, 'b> {
 
 impl<'a, 'b> BreadthFirstParentIterator<'a, 'b> {
     /// Make a new iterator.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// If `device_id` is not found in `devices`.
     /// It means caller asked to start with device that's not present in the tree.
     pub fn new(devices: &'a BTreeMap<DeviceId, Device>, device_id: &'b DeviceId) -> Self {
@@ -37,9 +37,9 @@ impl<'a, 'b> Iterator for BreadthFirstParentIterator<'a, 'b> {
     type Item = DeviceId;
 
     /// Iterate.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// If next parent device is not found in `devices`.
     /// It means tree is not consistent.
     fn next(&mut self) -> Option<DeviceId> {
