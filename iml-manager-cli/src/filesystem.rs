@@ -45,15 +45,15 @@ pub enum FilesystemCommand {
 fn usage(
     free: Option<f64>,
     total: Option<f64>,
-    formatter: fn(f64, Option<usize>) -> String,
+    formatter: fn(u64, Option<usize>) -> String,
 ) -> String {
     match (free, total) {
-        (Some(free), Some(total)) => format!(
+        (Some(free), Some(total)) if total >= free => format!(
             "{} / {}",
-            formatter(total - free, Some(0)),
-            formatter(total, Some(0))
+            formatter((total - free) as u64, Some(0)),
+            formatter(total as u64, Some(0))
         ),
-        (None, Some(total)) => format!("Calculating ... / {}", formatter(total, Some(0))),
+        (None, Some(total)) => format!("Calculating ... / {}", formatter(total as u64, Some(0))),
         _ => "Calculating ...".to_string(),
     }
 }
@@ -124,7 +124,7 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
                         f.state,
                         usage(f.bytes_free, f.bytes_total, format_bytes),
                         usage(f.files_free, f.files_total, format_number),
-                        format_number(f.client_count.unwrap_or(0.0), Some(0)),
+                        format_number(f.client_count.unwrap_or(0.0) as u64, Some(0)),
                         f.mdts.len().to_string(),
                         f.osts.len().to_string(),
                     ]

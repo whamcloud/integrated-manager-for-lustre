@@ -173,7 +173,7 @@ fn get_inode_elements<T>(inodes: &Vec<INodeCount>) -> Vec<Node<T>> {
             tr![
                 td![x.uid],
                 td![x.count.to_string()],
-                td![format_bytes(x.size as f64, None)]
+                td![format_bytes(x.size as u64, None)]
             ]
         })
         .collect()
