@@ -86,7 +86,7 @@ server {
     }
 
     location ~ ^/$ {
-        return 301 https://$http_host/ui2;
+        return 307 https://$http_host/ui2;
     }
 
     location /help {
