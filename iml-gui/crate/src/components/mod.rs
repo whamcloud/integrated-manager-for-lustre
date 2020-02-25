@@ -13,12 +13,14 @@ pub(crate) mod arrow;
 pub(crate) mod attrs;
 pub(crate) mod breadcrumbs;
 pub(crate) mod font_awesome;
+pub(crate) mod grafana_chart;
 pub(crate) mod loading;
 pub(crate) mod lock_indicator;
 pub(crate) mod logo;
 pub(crate) mod pie_chart;
 pub(crate) mod restrict;
 pub(crate) mod tree;
+pub(crate) mod charts;
 
 pub(crate) use activity_indicator::{activity_indicator, update_activity_health, ActivityHealth};
 pub(crate) use alert_indicator::alert_indicator;

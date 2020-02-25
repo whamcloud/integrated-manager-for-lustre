@@ -28,6 +28,9 @@ After=iml-power-control.service
 Requires=iml-stats.service
 After=iml-stats.service
 
+Requires=iml-rust-stats.service
+After=iml-rust-stats.service
+
 Requires=iml-syslog.service
 After=iml-syslog.service
 
@@ -91,6 +94,7 @@ Also=iml-lustre-audit.service
 Also=iml-plugin-runner.service
 Also=iml-power-control.service
 Also=iml-stats.service
+Also=iml-rust-stats.service
 Also=iml-syslog.service
 Also=iml-realtime.service
 Also=iml-view-server.service

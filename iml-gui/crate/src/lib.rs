@@ -702,7 +702,7 @@ pub fn main_panels(model: &Model, children: impl View<Msg>) -> impl View<Msg> {
                     C.flex_col,
                     C.flex_grow,
                     C.flex_shrink_0,
-                    C.bg_gray_200,
+                    C.bg_gray_300,
                     C.lg__w_0,
                     C.lg__h_main_content,
                 ],
@@ -728,7 +728,10 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
                 .map_msg(Msg::ActivityPage),
         )
         .els(),
-        Page::Dashboard => main_panels(model, page::dashboard::view(model)).els(),
+        Page::Dashboard(page) => main_panels(model, page::dashboard::view(page)).els(),
+        Page::FsDashboard(page) => main_panels(model, page::fs_dashboard::view(&model.records, page)).els(),
+        Page::ServerDashboard(page) => main_panels(model, page::server_dashboard::view(&model.records, page)).els(),
+        Page::TargetDashboard(page) => main_panels(model, page::target_dashboard::view(&model.records, page)).els(),
         Page::Filesystems(page) => main_panels(
             model,
             page::filesystems::view(&model.records, page, &model.locks, model.auth.get_session())

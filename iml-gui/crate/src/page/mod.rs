@@ -3,6 +3,7 @@ pub mod activity;
 pub mod dashboard;
 pub mod filesystem;
 pub mod filesystems;
+pub mod fs_dashboard;
 pub mod jobstats;
 pub mod login;
 pub mod logs;
@@ -13,8 +14,10 @@ pub mod ostpools;
 pub mod partial;
 pub mod power_control;
 pub mod server;
+pub mod server_dashboard;
 pub mod servers;
 pub mod target;
+pub mod target_dashboard;
 pub mod targets;
 pub mod user;
 pub mod users;
@@ -32,7 +35,10 @@ pub(crate) enum Page {
     About,
     Activity(activity::Model),
     AppLoading,
-    Dashboard,
+    Dashboard(dashboard::Model),
+    FsDashboard(fs_dashboard::Model),
+    ServerDashboard(server_dashboard::Model),
+    TargetDashboard(target_dashboard::Model),
     Filesystems(filesystems::Model),
     Filesystem(filesystem::Model),
     Jobstats,
@@ -64,7 +70,16 @@ impl<'a> From<&Route<'a>> for Page {
         match route {
             Route::About => Self::About,
             Route::Activity => Self::Activity(activity::Model::default()),
-            Route::Dashboard => Self::Dashboard,
+            Route::Dashboard => Self::Dashboard(dashboard::Model::default()),
+            Route::FsDashboard(id) => Self::FsDashboard(fs_dashboard::Model {
+                fs_name: id.to_string(),
+            }),
+            Route::ServerDashboard(id) => Self::ServerDashboard(server_dashboard::Model {
+                host_name: id.to_string(),
+            }),
+            Route::TargetDashboard(id) => Self::TargetDashboard(target_dashboard::Model {
+                target_name: id.to_string(),
+            }),
             Route::Filesystems => Self::Filesystems(filesystems::Model::default()),
             Route::Filesystem(id) => id
                 .parse()
@@ -113,7 +128,7 @@ impl Page {
         match (route, self) {
             (Route::About, Self::About)
             | (Route::Activity, Self::Activity(_))
-            | (Route::Dashboard, Self::Dashboard)
+            | (Route::Dashboard, Self::Dashboard(dashboard::Model {}))
             | (Route::Filesystems, Self::Filesystems(_))
             | (Route::Jobstats, Self::Jobstats)
             | (Route::Login, Self::Login(_))
@@ -132,6 +147,15 @@ impl Page {
             | (Route::Target(route_id), Self::Target(target::Model { id }))
             | (Route::User(route_id), Self::User(user::Model { id }))
             | (Route::Volume(route_id), Self::Volume(volume::Model { id })) => route_id == &RouteId::from(id),
+            (Route::FsDashboard(route_id), Self::FsDashboard(fs_dashboard::Model { fs_name })) => {
+                &route_id.to_string() == fs_name
+            }
+            (Route::ServerDashboard(route_id), Self::ServerDashboard(server_dashboard::Model { host_name })) => {
+                &route_id.to_string() == host_name
+            }
+            (Route::TargetDashboard(route_id), Self::TargetDashboard(target_dashboard::Model { target_name })) => {
+                &route_id.to_string() == target_name
+            }
             _ => false,
         }
     }
