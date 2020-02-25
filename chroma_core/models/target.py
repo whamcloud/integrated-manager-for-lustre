@@ -749,10 +749,21 @@ class ForgetTargetJob(StateChangeJob):
         )
 
     def description(self):
-        return "Forget unmanaged target %s" % self.target
+        modifier = "unmanaged" if self.target.immutable_state else "managed"
+        return "Forget %s target %s" % (modifier, self.target)
 
     def get_requires_confirmation(self):
         return True
+
+    def get_deps(self):
+        deps = []
+        if issubclass(self.target.downcast_class, ManagedMgs):
+            mgs = self.target.downcast()
+            ticket = mgs.get_ticket()
+            if ticket:
+                deps.append(DependOn(ticket, "forgotten", fix_state=ticket.state))
+
+        return DependAll(deps)
 
     def on_success(self):
         mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target.id == self.target.id)

@@ -62,12 +62,18 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
             return ["forgotten"]
         else:
             available_states = super(ManagedFilesystem, self).get_available_states(begin_state)
-            available_states = list(set(available_states))
+            excluded_states = []
 
             # Exclude 'stopped' if we are in 'unavailable' and everything is stopped
             target_states = set([t.state for t in self.get_filesystem_targets()])
             if begin_state == "unavailable" and not "mounted" in target_states:
-                available_states = list(set(available_states) - set(["stopped"]))
+                excluded_states.append("stopped")
+
+            ticket = self.get_ticket()
+            if ticket:
+                excluded_states.append("removed")
+
+            available_states = list(set(available_states) - set(excluded_states))
 
             return available_states
 
@@ -148,7 +154,10 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         else:
             raise NotImplementedError(target.__class__)
 
-    reverse_deps = {"ManagedTarget": lambda mt: ManagedFilesystem.filter_by_target(mt)}
+    reverse_deps = {
+        "ManagedTarget": lambda mt: ManagedFilesystem.filter_by_target(mt),
+        "FilesystemTicket": lambda fst: [fst.ticket],
+    }
 
 
 class PurgeFilesystemStep(Step):
@@ -426,7 +435,8 @@ class ForgetFilesystemJob(StateChangeJob):
         return help_text["remove_file_system"]
 
     def description(self):
-        return "Forget unmanaged file system %s" % self.filesystem.name
+        modifier = "unmanaged" if self.filesystem.immutable_state else "managed"
+        return "Forget %s file system %s" % (modifier, self.filesystem.name)
 
     def on_success(self):
         super(ForgetFilesystemJob, self).on_success()
@@ -434,6 +444,14 @@ class ForgetFilesystemJob(StateChangeJob):
         assert ManagedMdt.objects.filter(filesystem=self.filesystem).count() == 0
         assert ManagedOst.objects.filter(filesystem=self.filesystem).count() == 0
         self.filesystem.mark_deleted()
+
+    def get_deps(self):
+        deps = []
+        ticket = self.filesystem.get_ticket()
+        if ticket:
+            deps.append(DependOn(ticket, "forgotten", fix_state=ticket.state))
+
+        return DependAll(deps)
 
 
 class OstPool(models.Model):
