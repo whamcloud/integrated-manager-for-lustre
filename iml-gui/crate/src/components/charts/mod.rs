@@ -1,1 +1,1 @@
-mod fs_usage;
+pub(crate) mod fs_usage;

@@ -252,6 +252,7 @@ pub enum Msg {
     EventSourceMessage(MessageEvent),
     FilesystemsPage(page::filesystems::Msg),
     FilesystemPage(page::filesystem::Msg),
+    FsDashboardPage(page::fs_dashboard::Msg),
     GetSession,
     GotSession(fetch::ResponseDataResult<Session>),
     HideMenu,
@@ -525,6 +526,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 page::filesystems::update(msg, &model.records, page, &mut orders.proxy(Msg::FilesystemsPage))
             }
         }
+        Msg::FsDashboardPage(msg) => {
+            if let Page::FsDashboard(page) = &mut model.page {
+                page::fs_dashboard::update(msg, page, &mut orders.proxy(Msg::FsDashboardPage))
+            }
+        }
         Msg::ActivityPage(msg) => {
             if let Page::Activity(page) = &mut model.page {
                 page::activity::update(msg, &model.records, page, &mut orders.proxy(Msg::ActivityPage))
@@ -729,7 +735,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         )
         .els(),
         Page::Dashboard(page) => main_panels(model, page::dashboard::view(page)).els(),
-        Page::FsDashboard(page) => main_panels(model, page::fs_dashboard::view(&model.records, page)).els(),
+        Page::FsDashboard(page) => main_panels(model, page::fs_dashboard::view(page)).els(),
         Page::ServerDashboard(page) => main_panels(model, page::server_dashboard::view(&model.records, page)).els(),
         Page::TargetDashboard(page) => main_panels(model, page::target_dashboard::view(&model.records, page)).els(),
         Page::Filesystems(page) => main_panels(

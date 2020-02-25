@@ -73,6 +73,7 @@ impl<'a> From<&Route<'a>> for Page {
             Route::Dashboard => Self::Dashboard(dashboard::Model::default()),
             Route::FsDashboard(id) => Self::FsDashboard(fs_dashboard::Model {
                 fs_name: id.to_string(),
+                ..fs_dashboard::Model::default()
             }),
             Route::ServerDashboard(id) => Self::ServerDashboard(server_dashboard::Model {
                 host_name: id.to_string(),
@@ -147,7 +148,7 @@ impl Page {
             | (Route::Target(route_id), Self::Target(target::Model { id }))
             | (Route::User(route_id), Self::User(user::Model { id }))
             | (Route::Volume(route_id), Self::Volume(volume::Model { id })) => route_id == &RouteId::from(id),
-            (Route::FsDashboard(route_id), Self::FsDashboard(fs_dashboard::Model { fs_name })) => {
+            (Route::FsDashboard(route_id), Self::FsDashboard(fs_dashboard::Model { fs_name, .. })) => {
                 &route_id.to_string() == fs_name
             }
             (Route::ServerDashboard(route_id), Self::ServerDashboard(server_dashboard::Model { host_name })) => {
@@ -175,6 +176,10 @@ impl Page {
 
         if let Self::Activity(_) = self {
             activity::init(&mut orders.proxy(Msg::ActivityPage))
+        }
+
+        if let Self::FsDashboard(_) = self {
+            fs_dashboard::init(&mut orders.proxy(Msg::FsDashboardPage))
         }
     }
 }
