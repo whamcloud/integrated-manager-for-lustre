@@ -56,6 +56,7 @@ jobs:
           PROJECT: manager-for-lustre-devel
           PACKAGE: rust-iml-gui
           SPEC: iml-gui/rust-iml-gui.spec
+          SRPM_TASK: iml-gui-srpm
           WORKSPACE: ${{ github.workspace }}
           KEY: ${{ secrets.key }}
           IV: ${{ secrets.iv }}
