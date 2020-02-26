@@ -207,6 +207,15 @@ module.exports = {
         white: "#FFF",
         menu: "#344151",
         "menu-active": "#1C2A3C"
+      },
+      strokeWidth: {
+        "3": "3",
+        "4": "4",
+        "5": "5",
+        "6": "6"
+      },
+      transitionProperty: {
+        stroke_dashoffset: "stroke-dashoffset"
       }
     }
   },
@@ -216,11 +225,13 @@ module.exports = {
   },
   plugins: [
     function({ addVariant }) {
-      addVariant('group-focus', ({ container, separator }) => {
+      addVariant("group-focus", ({ container, separator }) => {
         container.walkRules(rule => {
-          rule.selector = `.group:focus-within .group-focus\\:${rule.selector.slice(1)}`
-        })
-      })
+          rule.selector = `.group:focus-within .group-focus\\:${rule.selector.slice(
+            1
+          )}`;
+        });
+      });
     }
   ]
 };

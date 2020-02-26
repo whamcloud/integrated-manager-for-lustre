@@ -10294,6 +10294,26 @@ pub struct CssClasses<'a> {
     pub stroke_2: &'a str,
 
     /**
+        stroke-width: 3;
+    */
+    pub stroke_3: &'a str,
+
+    /**
+        stroke-width: 4;
+    */
+    pub stroke_4: &'a str,
+
+    /**
+        stroke-width: 5;
+    */
+    pub stroke_5: &'a str,
+
+    /**
+        stroke-width: 6;
+    */
+    pub stroke_6: &'a str,
+
+    /**
         table-layout: auto;
     */
     pub table_auto: &'a str,
@@ -15991,6 +16011,11 @@ pub struct CssClasses<'a> {
         transition-property: transform;
     */
     pub transition_transform: &'a str,
+
+    /**
+        transition-property: stroke-dashoffset;
+    */
+    pub transition_stroke_dashoffset: &'a str,
 
     /**
         transition-timing-function: linear;
@@ -26098,6 +26123,26 @@ pub struct CssClasses<'a> {
     pub sm__stroke_2: &'a str,
 
     /**
+        stroke-width: 3;    @media (min-width: 569px)
+    */
+    pub sm__stroke_3: &'a str,
+
+    /**
+        stroke-width: 4;    @media (min-width: 569px)
+    */
+    pub sm__stroke_4: &'a str,
+
+    /**
+        stroke-width: 5;    @media (min-width: 569px)
+    */
+    pub sm__stroke_5: &'a str,
+
+    /**
+        stroke-width: 6;    @media (min-width: 569px)
+    */
+    pub sm__stroke_6: &'a str,
+
+    /**
         table-layout: auto;    @media (min-width: 569px)
     */
     pub sm__table_auto: &'a str,
@@ -29875,6 +29920,11 @@ pub struct CssClasses<'a> {
         transition-property: transform;    @media (min-width: 569px)
     */
     pub sm__transition_transform: &'a str,
+
+    /**
+        transition-property: stroke-dashoffset;    @media (min-width: 569px)
+    */
+    pub sm__transition_stroke_dashoffset: &'a str,
 
     /**
         transition-timing-function: linear;    @media (min-width: 569px)
@@ -39957,6 +40007,26 @@ pub struct CssClasses<'a> {
     pub md__stroke_2: &'a str,
 
     /**
+        stroke-width: 3;    @media (min-width: 769px)
+    */
+    pub md__stroke_3: &'a str,
+
+    /**
+        stroke-width: 4;    @media (min-width: 769px)
+    */
+    pub md__stroke_4: &'a str,
+
+    /**
+        stroke-width: 5;    @media (min-width: 769px)
+    */
+    pub md__stroke_5: &'a str,
+
+    /**
+        stroke-width: 6;    @media (min-width: 769px)
+    */
+    pub md__stroke_6: &'a str,
+
+    /**
         table-layout: auto;    @media (min-width: 769px)
     */
     pub md__table_auto: &'a str,
@@ -43734,6 +43804,11 @@ pub struct CssClasses<'a> {
         transition-property: transform;    @media (min-width: 769px)
     */
     pub md__transition_transform: &'a str,
+
+    /**
+        transition-property: stroke-dashoffset;    @media (min-width: 769px)
+    */
+    pub md__transition_stroke_dashoffset: &'a str,
 
     /**
         transition-timing-function: linear;    @media (min-width: 769px)
@@ -53816,6 +53891,26 @@ pub struct CssClasses<'a> {
     pub lg__stroke_2: &'a str,
 
     /**
+        stroke-width: 3;    @media (min-width: 1025px)
+    */
+    pub lg__stroke_3: &'a str,
+
+    /**
+        stroke-width: 4;    @media (min-width: 1025px)
+    */
+    pub lg__stroke_4: &'a str,
+
+    /**
+        stroke-width: 5;    @media (min-width: 1025px)
+    */
+    pub lg__stroke_5: &'a str,
+
+    /**
+        stroke-width: 6;    @media (min-width: 1025px)
+    */
+    pub lg__stroke_6: &'a str,
+
+    /**
         table-layout: auto;    @media (min-width: 1025px)
     */
     pub lg__table_auto: &'a str,
@@ -57593,6 +57688,11 @@ pub struct CssClasses<'a> {
         transition-property: transform;    @media (min-width: 1025px)
     */
     pub lg__transition_transform: &'a str,
+
+    /**
+        transition-property: stroke-dashoffset;    @media (min-width: 1025px)
+    */
+    pub lg__transition_stroke_dashoffset: &'a str,
 
     /**
         transition-timing-function: linear;    @media (min-width: 1025px)
@@ -67675,6 +67775,26 @@ pub struct CssClasses<'a> {
     pub xl__stroke_2: &'a str,
 
     /**
+        stroke-width: 3;    @media (min-width: 1701px)
+    */
+    pub xl__stroke_3: &'a str,
+
+    /**
+        stroke-width: 4;    @media (min-width: 1701px)
+    */
+    pub xl__stroke_4: &'a str,
+
+    /**
+        stroke-width: 5;    @media (min-width: 1701px)
+    */
+    pub xl__stroke_5: &'a str,
+
+    /**
+        stroke-width: 6;    @media (min-width: 1701px)
+    */
+    pub xl__stroke_6: &'a str,
+
+    /**
         table-layout: auto;    @media (min-width: 1701px)
     */
     pub xl__table_auto: &'a str,
@@ -71452,6 +71572,11 @@ pub struct CssClasses<'a> {
         transition-property: transform;    @media (min-width: 1701px)
     */
     pub xl__transition_transform: &'a str,
+
+    /**
+        transition-property: stroke-dashoffset;    @media (min-width: 1701px)
+    */
+    pub xl__transition_stroke_dashoffset: &'a str,
 
     /**
         transition-timing-function: linear;    @media (min-width: 1701px)
@@ -81806,6 +81931,26 @@ pub static C: CssClasses = CssClasses {
     stroke_2: "stroke-2",
 
     /**
+        stroke-width: 3;
+    */
+    stroke_3: "stroke-3",
+
+    /**
+        stroke-width: 4;
+    */
+    stroke_4: "stroke-4",
+
+    /**
+        stroke-width: 5;
+    */
+    stroke_5: "stroke-5",
+
+    /**
+        stroke-width: 6;
+    */
+    stroke_6: "stroke-6",
+
+    /**
         table-layout: auto;
     */
     table_auto: "table-auto",
@@ -87503,6 +87648,11 @@ pub static C: CssClasses = CssClasses {
         transition-property: transform;
     */
     transition_transform: "transition-transform",
+
+    /**
+        transition-property: stroke-dashoffset;
+    */
+    transition_stroke_dashoffset: "transition-stroke_dashoffset",
 
     /**
         transition-timing-function: linear;
@@ -97610,6 +97760,26 @@ pub static C: CssClasses = CssClasses {
     sm__stroke_2: "sm:stroke-2",
 
     /**
+        stroke-width: 3;    @media (min-width: 569px)
+    */
+    sm__stroke_3: "sm:stroke-3",
+
+    /**
+        stroke-width: 4;    @media (min-width: 569px)
+    */
+    sm__stroke_4: "sm:stroke-4",
+
+    /**
+        stroke-width: 5;    @media (min-width: 569px)
+    */
+    sm__stroke_5: "sm:stroke-5",
+
+    /**
+        stroke-width: 6;    @media (min-width: 569px)
+    */
+    sm__stroke_6: "sm:stroke-6",
+
+    /**
         table-layout: auto;    @media (min-width: 569px)
     */
     sm__table_auto: "sm:table-auto",
@@ -101387,6 +101557,11 @@ pub static C: CssClasses = CssClasses {
         transition-property: transform;    @media (min-width: 569px)
     */
     sm__transition_transform: "sm:transition-transform",
+
+    /**
+        transition-property: stroke-dashoffset;    @media (min-width: 569px)
+    */
+    sm__transition_stroke_dashoffset: "sm:transition-stroke_dashoffset",
 
     /**
         transition-timing-function: linear;    @media (min-width: 569px)
@@ -111469,6 +111644,26 @@ pub static C: CssClasses = CssClasses {
     md__stroke_2: "md:stroke-2",
 
     /**
+        stroke-width: 3;    @media (min-width: 769px)
+    */
+    md__stroke_3: "md:stroke-3",
+
+    /**
+        stroke-width: 4;    @media (min-width: 769px)
+    */
+    md__stroke_4: "md:stroke-4",
+
+    /**
+        stroke-width: 5;    @media (min-width: 769px)
+    */
+    md__stroke_5: "md:stroke-5",
+
+    /**
+        stroke-width: 6;    @media (min-width: 769px)
+    */
+    md__stroke_6: "md:stroke-6",
+
+    /**
         table-layout: auto;    @media (min-width: 769px)
     */
     md__table_auto: "md:table-auto",
@@ -115246,6 +115441,11 @@ pub static C: CssClasses = CssClasses {
         transition-property: transform;    @media (min-width: 769px)
     */
     md__transition_transform: "md:transition-transform",
+
+    /**
+        transition-property: stroke-dashoffset;    @media (min-width: 769px)
+    */
+    md__transition_stroke_dashoffset: "md:transition-stroke_dashoffset",
 
     /**
         transition-timing-function: linear;    @media (min-width: 769px)
@@ -125328,6 +125528,26 @@ pub static C: CssClasses = CssClasses {
     lg__stroke_2: "lg:stroke-2",
 
     /**
+        stroke-width: 3;    @media (min-width: 1025px)
+    */
+    lg__stroke_3: "lg:stroke-3",
+
+    /**
+        stroke-width: 4;    @media (min-width: 1025px)
+    */
+    lg__stroke_4: "lg:stroke-4",
+
+    /**
+        stroke-width: 5;    @media (min-width: 1025px)
+    */
+    lg__stroke_5: "lg:stroke-5",
+
+    /**
+        stroke-width: 6;    @media (min-width: 1025px)
+    */
+    lg__stroke_6: "lg:stroke-6",
+
+    /**
         table-layout: auto;    @media (min-width: 1025px)
     */
     lg__table_auto: "lg:table-auto",
@@ -129105,6 +129325,11 @@ pub static C: CssClasses = CssClasses {
         transition-property: transform;    @media (min-width: 1025px)
     */
     lg__transition_transform: "lg:transition-transform",
+
+    /**
+        transition-property: stroke-dashoffset;    @media (min-width: 1025px)
+    */
+    lg__transition_stroke_dashoffset: "lg:transition-stroke_dashoffset",
 
     /**
         transition-timing-function: linear;    @media (min-width: 1025px)
@@ -139187,6 +139412,26 @@ pub static C: CssClasses = CssClasses {
     xl__stroke_2: "xl:stroke-2",
 
     /**
+        stroke-width: 3;    @media (min-width: 1701px)
+    */
+    xl__stroke_3: "xl:stroke-3",
+
+    /**
+        stroke-width: 4;    @media (min-width: 1701px)
+    */
+    xl__stroke_4: "xl:stroke-4",
+
+    /**
+        stroke-width: 5;    @media (min-width: 1701px)
+    */
+    xl__stroke_5: "xl:stroke-5",
+
+    /**
+        stroke-width: 6;    @media (min-width: 1701px)
+    */
+    xl__stroke_6: "xl:stroke-6",
+
+    /**
         table-layout: auto;    @media (min-width: 1701px)
     */
     xl__table_auto: "xl:table-auto",
@@ -142964,6 +143209,11 @@ pub static C: CssClasses = CssClasses {
         transition-property: transform;    @media (min-width: 1701px)
     */
     xl__transition_transform: "xl:transition-transform",
+
+    /**
+        transition-property: stroke-dashoffset;    @media (min-width: 1701px)
+    */
+    xl__transition_stroke_dashoffset: "xl:transition-stroke_dashoffset",
 
     /**
         transition-timing-function: linear;    @media (min-width: 1701px)

@@ -300,6 +300,18 @@ services:
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
       - "mailbox_run:/run"
       - "manager-config:/var/lib/chroma"
+  iml-stats:
+    image: "imlteam/iml-stats:5.1.1-dev"
+    hostname: "iml-stats"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-stats.dockerfile
+    deploy: *default-deploy
+    volumes:
+      - "manager-config:/var/lib/chroma"
+    environment:
+      - RUST_LOG=info
+      - PROXY_HOST=influxdb
   iml-postoffice:
     image: "imlteam/iml-postoffice:5.1.1-dev"
     hostname: "iml-postoffice"

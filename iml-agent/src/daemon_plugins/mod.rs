@@ -13,6 +13,7 @@ pub mod action_runner;
 pub mod daemon_plugin;
 pub mod ostpool;
 pub mod postoffice;
+pub mod stats;
 
 pub use daemon_plugin::{
     get_plugin, plugin_registry, DaemonBox, DaemonPlugin, DaemonPlugins, Output, OutputValue,
