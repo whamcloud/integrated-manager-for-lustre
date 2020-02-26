@@ -12,10 +12,13 @@ use seed::{prelude::*, Request, *};
 use std::time::Duration;
 
 pub static DB_NAME: &str = "iml_stats";
-pub static FS_USAGE_QUERY: &str = "SELECT last(bytes_used) AS bytes_used, last(bytes_avail) AS bytes_avail \
-FROM(SELECT SUM(bytes_used) AS bytes_used FROM (SELECT (LAST(\"bytes_total\") - LAST(\"bytes_free\")) AS bytes_used \
-FROM \"target\" WHERE \"kind\" = '\"OST\"' GROUP BY target)),(SELECT SUM(bytes_avail) AS bytes_avail FROM(SELECT LAST(\"bytes_avail\") \
-AS bytes_avail from \"target\" WHERE \"kind\" = '\"OST\"' GROUP BY target))";
+pub static FS_USAGE_QUERY: &str = "SELECT last(bytes_used) AS bytes_used, last(bytes_avail) AS bytes_avail, \
+last(bytes_total) AS bytes_total FROM(SELECT SUM(bytes_used) AS bytes_used FROM (SELECT (LAST(\"bytes_total\") \
+- LAST(\"bytes_free\")) AS bytes_used FROM \"target\" WHERE \"kind\" = '\"OST\"' GROUP BY target)),\
+(SELECT SUM(bytes_avail) AS bytes_avail FROM(SELECT LAST(\"bytes_avail\") AS bytes_avail from \"target\" \
+WHERE \"kind\" = '\"OST\"' GROUP BY target)), (SELECT SUM(bytes_total) AS bytes_total FROM(SELECT \
+LAST(\"bytes_total\") AS bytes_total from \"target\" WHERE \"kind\" = '\"OST\"' GROUP BY target))";
+
 
 enum ChartColor {
     Red,
@@ -30,9 +33,9 @@ fn match_range(val: f64, min: f64, max: f64) -> bool {
 impl From<f64> for ChartColor {
     fn from(f: f64) -> ChartColor {
         match f {
-            _ if match_range(f, 0.50, 1.0) => ChartColor::Green,
-            _ if match_range(f, 0.25, 0.50) => ChartColor::Yellow,
-            _ if match_range(f, 0.0, 0.25) => ChartColor::Red,
+            _ if match_range(f, 0.75, 1.0) => ChartColor::Red,
+            _ if match_range(f, 0.50, 0.75) => ChartColor::Yellow,
+            _ if match_range(f, 0.0, 0.50) => ChartColor::Green,
             _ => ChartColor::Red,
         }
     }
@@ -60,7 +63,7 @@ pub struct InfluxSeries {
     name: String,
     #[serde(skip)]
     columns: Vec<String>,
-    values: Vec<(String, f64, f64)>,
+    values: Vec<(String, f64, f64, f64)>,
 }
 
 #[derive(serde::Deserialize, Clone, Debug)]
@@ -79,6 +82,7 @@ pub struct InfluxResults {
 pub struct FsUsage {
     bytes_used: f64,
     bytes_avail: f64,
+    bytes_total: f64,
 }
 
 #[derive(Clone)]
@@ -108,9 +112,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     if let Some(series) = &(*result).series {
                         let bytes_used = series[0].values[0].1;
                         let bytes_avail = series[0].values[0].2;
+                        let bytes_total = series[0].values[0].3;
                         model.metric_data = Some(FsUsage {
                             bytes_used,
                             bytes_avail,
+                            bytes_total,
                         });
                     }
                 }
@@ -135,7 +141,7 @@ fn calc_circumference(radius: f64) -> f64 {
 }
 
 fn calc_percentage(circumference: f64, val: f64) -> f64 {
-    val * circumference
+    (1.0 - val) * circumference
 }
 
 pub fn view<T>(model: &Model) -> Node<T> {
@@ -143,14 +149,14 @@ pub fn view<T>(model: &Model) -> Node<T> {
         class![C.bg_white, C.rounded_lg],
         div![
             class![C.px_6, C.bg_gray_200],
-            h3![class![C.py_4, C.font_normal, C.text_lg], "Filesystem"]
+            h3![class![C.py_4, C.font_normal, C.text_lg], "Filesystem Space Usage"]
         ],
         match &model.metric_data {
             Some(x) => {
                 let c = calc_circumference(90.0);
-                let percent_available = 1.0 - x.bytes_used / x.bytes_avail;
-                let p = calc_percentage(c, percent_available);
-                let usage_color: ChartColor = percent_available.into();
+                let percent_used = x.bytes_used / x.bytes_total;
+                let p = calc_percentage(c, percent_used);
+                let usage_color: ChartColor = percent_used.into();
                 let usage_color: &str = usage_color.into();
 
                 div![
@@ -223,7 +229,7 @@ pub fn view<T>(model: &Model) -> Node<T> {
                               At::DominantBaseline => "central",
                               At::TextAnchor => "middle"
                             },
-                            tspan![format!("{}", (100.0 * percent_available) as u16)],
+                            tspan![format!("{}", (100.0 * percent_used) as u16)],
                             tspan![class![C.text_gray_400], "%"]
                         ]
                     ],
