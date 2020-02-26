@@ -176,13 +176,9 @@ async fn insert_device_host(
     fqdn: &Fqdn,
     x: &DeviceHost,
 ) -> Result<(), ImlDevicesError> {
-    let s = transaction.prepare(
-        &format!("INSERT INTO {} (device_id, fqdn, local, paths, mount_path, fs_type, fs_label, fs_uuid) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)", DeviceHost::table_name())
-    ).await?;
-
     transaction
         .execute(
-            &s,
+            &*format!("INSERT INTO {} (device_id, fqdn, local, paths, mount_path, fs_type, fs_label, fs_uuid) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)", DeviceHost::table_name()),
             &[
                 &x.device_id,
                 &fqdn.0,
@@ -204,11 +200,9 @@ async fn update_device_host(
     fqdn: &Fqdn,
     x: &DeviceHost,
 ) -> Result<(), ImlDevicesError> {
-    let s = transaction.prepare(&format!("UPDATE {} SET local = $3, paths = $4, mount_path = $5, fs_type = $6, fs_label= $7, fs_uuid=$8 WHERE device_id = $1 AND fqdn = $2", DeviceHost::table_name())).await?;
-
     transaction
         .execute(
-            &s,
+            &*format!("UPDATE {} SET local = $3, paths = $4, mount_path = $5, fs_type = $6, fs_label= $7, fs_uuid=$8 WHERE device_id = $1 AND fqdn = $2", DeviceHost::table_name()),
             &[
                 &x.device_id,
                 &fqdn.0,
@@ -230,14 +224,15 @@ async fn remove_device_host(
     fqdn: &Fqdn,
     id: &DeviceId,
 ) -> Result<(), ImlDevicesError> {
-    let s = transaction
-        .prepare(&format!(
-            "DELETE FROM {} WHERE device_id = $1 AND fqdn = $2",
-            DeviceHost::table_name()
-        ))
+    transaction
+        .execute(
+            &*format!(
+                "DELETE FROM {} WHERE device_id = $1 AND fqdn = $2",
+                DeviceHost::table_name()
+            ),
+            &[id, &fqdn.0],
+        )
         .await?;
-
-    transaction.execute(&s, &[id, &fqdn.0]).await?;
 
     Ok(())
 }
@@ -293,11 +288,9 @@ pub async fn persist_local_devices<'a>(
 
                 tracing::debug!("Going to add device {:?}", d.id);
 
-                let s = transaction.prepare("INSERT INTO chroma_core_device (id, size, usable_for_lustre, device_type, parents, children, max_depth) VALUES ($1, $2, $3, $4, $5, $6, $7)").await?;
-
                 transaction
                     .execute(
-                        &s,
+                        "INSERT INTO chroma_core_device (id, size, usable_for_lustre, device_type, parents, children, max_depth) VALUES ($1, $2, $3, $4, $5, $6, $7)",
                         &[
                             &d.id,
                             &d.size,
@@ -313,11 +306,9 @@ pub async fn persist_local_devices<'a>(
             Change::Update(d) => {
                 tracing::debug!("Going to update device {:?}", d.id);
 
-                let s = transaction.prepare("UPDATE chroma_core_device SET size = $2, usable_for_lustre = $3, device_type = $4, parents=$5, children=$6, max_depth=$7 WHERE id = $1").await?;
-
                 transaction
                     .execute(
-                        &s,
+                        "UPDATE chroma_core_device SET size = $2, usable_for_lustre = $3, device_type = $4, parents=$5, children=$6, max_depth=$7 WHERE id = $1",
                         &[
                             &d.id,
                             &d.size,
@@ -335,14 +326,12 @@ pub async fn persist_local_devices<'a>(
                 // Orphan devices should probably be surfaced as alerts.
                 tracing::debug!("Going to remove device {:?}", d.id);
 
-                let s = transaction
-                    .prepare(&format!(
-                        "DELETE FROM {} WHERE id = $1",
-                        Device::table_name()
-                    ))
+                transaction
+                    .execute(
+                        &*format!("DELETE FROM {} WHERE id = $1", Device::table_name()),
+                        &[&d.id],
+                    )
                     .await?;
-
-                transaction.execute(&s, &[&d.id]).await?;
             }
         }
     }
