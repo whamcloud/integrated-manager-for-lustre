@@ -167,6 +167,14 @@ class AlertResource(SeverityResource):
         ),
     )
 
+    affected_composite_ids = fields.ListField(
+        help_text=(
+            "List of composite ids which are affected by the alert "
+            "(e.g. a target alert also affects the file system to "
+            "which the target belongs)"
+        ),
+    )
+
     alert_item_str = fields.CharField(
         readonly=True, help_text=("A human readable noun describing the object " "that is the subject of the alert")
     )
@@ -233,6 +241,37 @@ class AlertResource(SeverityResource):
         affected_objects.append(alert.alert_item)
 
         return [api.get_resource_uri(ao) for ao in set(affected_objects)]
+
+    def dehydrate_affected_composite_ids(self, bundle):
+        alert = bundle.obj
+
+        affected_objects = []
+
+        def affect_target(target):
+            affected_objects.append(target)
+            if target.filesystem_member:
+                affected_objects.append(target.filesystem)
+            elif target.target_type == "mgs":
+                for fs in target.managedfilesystem_set.all():
+                    affected_objects.append(fs)
+
+        affected_objects.extend(alert.affected_objects)
+
+        alert.affected_targets(affect_target)
+
+        affected_objects.append(alert.alert_item)
+
+        def build_composite_id(x):
+            if getattr(x, "downcast", None) and callable(x.downcast):
+                item = x.downcast()
+            else:
+                item = x
+
+            content_type_id = ContentType.objects.get_for_model(item).id
+
+            return "{}:{}".format(content_type_id, item.id)
+
+        return [build_composite_id(x) for x in set(affected_objects)]
 
     def build_filters(self, filters=None, **kwargs):
 

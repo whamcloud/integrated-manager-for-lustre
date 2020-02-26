@@ -8,6 +8,8 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     convert::TryFrom,
     fmt,
+    ops::Deref,
+    sync::Arc,
 };
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -313,6 +315,22 @@ pub trait ToCompositeId {
     fn composite_id(&self) -> CompositeId;
 }
 
+impl<T: ToCompositeId> ToCompositeId for &Arc<T> {
+    fn composite_id(&self) -> CompositeId {
+        let t: &T = self.deref();
+
+        t.composite_id()
+    }
+}
+
+impl<T: ToCompositeId> ToCompositeId for Arc<T> {
+    fn composite_id(&self) -> CompositeId {
+        let t: &T = self.deref();
+
+        t.composite_id()
+    }
+}
+
 pub trait Label {
     fn label(&self) -> &str;
 }
@@ -379,9 +397,9 @@ impl ToCompositeId for LockChange {
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct Meta {
     pub limit: u32,
-    pub next: Option<u32>,
+    pub next: Option<String>,
     pub offset: u32,
-    pub previous: Option<u32>,
+    pub previous: Option<String>,
     pub total_count: u32,
 }
 
@@ -500,6 +518,12 @@ pub struct Host {
 impl FlatQuery for Host {}
 
 impl ToCompositeId for Host {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id, self.id)
+    }
+}
+
+impl ToCompositeId for &Host {
     fn composite_id(&self) -> CompositeId {
         CompositeId(self.content_type_id, self.id)
     }
@@ -996,6 +1020,12 @@ impl ToCompositeId for Filesystem {
     }
 }
 
+impl ToCompositeId for &Filesystem {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id, self.id)
+    }
+}
+
 impl Label for Filesystem {
     fn label(&self) -> &str {
         &self.label
@@ -1038,7 +1068,7 @@ pub struct FilesystemShort {
     pub name: String,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Debug)]
 pub enum AlertRecordType {
     AlertState,
     LearnEvent,
@@ -1089,6 +1119,7 @@ pub struct Alert {
     pub _message: Option<String>,
     pub active: Option<bool>,
     pub affected: Option<Vec<String>>,
+    pub affected_composite_ids: Option<Vec<CompositeId>>,
     pub alert_item: String,
     pub alert_item_id: Option<i32>,
     pub alert_item_str: String,

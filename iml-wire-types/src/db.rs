@@ -660,6 +660,12 @@ impl ToCompositeId for LnetConfigurationRecord {
     }
 }
 
+impl ToCompositeId for &LnetConfigurationRecord {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id.unwrap(), self.id)
+    }
+}
+
 pub const LNET_CONFIGURATION_TABLE_NAME: TableName = TableName("chroma_core_lnetconfiguration");
 
 impl Name for LnetConfigurationRecord {
