@@ -213,6 +213,9 @@ module.exports = {
         "4": "4",
         "5": "5",
         "6": "6"
+      },
+      transitionProperty: {
+        stroke_dashoffset: "stroke-dashoffset"
       }
     }
   },

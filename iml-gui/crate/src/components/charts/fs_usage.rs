@@ -173,7 +173,7 @@ pub fn view<T>(model: &Model) -> Node<T> {
                       At::ViewBox => "0 0 195 195"
                     },
                     circle![
-                      class![C.stroke_6, usage_color],
+                      class![C.stroke_6, usage_color, C.transition_stroke_dashoffset, C.duration_500, C.ease_linear],
                       attrs!{
                         At::R => "90",
                         At::Cx => "100", 
@@ -182,7 +182,7 @@ pub fn view<T>(model: &Model) -> Node<T> {
                       }
                     ],
                     circle![
-                      class![C.stroke_6, C.text_gray_200],
+                      class![C.stroke_6, C.text_gray_200, C.transition_stroke_dashoffset, C.duration_500, C.ease_linear],
                       attrs!{
                         At::R => "90",
                         At::Cx => "100", 

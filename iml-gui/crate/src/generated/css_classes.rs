@@ -16013,6 +16013,11 @@ pub struct CssClasses<'a> {
     pub transition_transform: &'a str,
 
     /**
+        transition-property: stroke-dashoffset;
+    */
+    pub transition_stroke_dashoffset: &'a str,
+
+    /**
         transition-timing-function: linear;
     */
     pub ease_linear: &'a str,
@@ -29917,6 +29922,11 @@ pub struct CssClasses<'a> {
     pub sm__transition_transform: &'a str,
 
     /**
+        transition-property: stroke-dashoffset;    @media (min-width: 569px)
+    */
+    pub sm__transition_stroke_dashoffset: &'a str,
+
+    /**
         transition-timing-function: linear;    @media (min-width: 569px)
     */
     pub sm__ease_linear: &'a str,
@@ -43794,6 +43804,11 @@ pub struct CssClasses<'a> {
         transition-property: transform;    @media (min-width: 769px)
     */
     pub md__transition_transform: &'a str,
+
+    /**
+        transition-property: stroke-dashoffset;    @media (min-width: 769px)
+    */
+    pub md__transition_stroke_dashoffset: &'a str,
 
     /**
         transition-timing-function: linear;    @media (min-width: 769px)
@@ -57675,6 +57690,11 @@ pub struct CssClasses<'a> {
     pub lg__transition_transform: &'a str,
 
     /**
+        transition-property: stroke-dashoffset;    @media (min-width: 1025px)
+    */
+    pub lg__transition_stroke_dashoffset: &'a str,
+
+    /**
         transition-timing-function: linear;    @media (min-width: 1025px)
     */
     pub lg__ease_linear: &'a str,
@@ -71552,6 +71572,11 @@ pub struct CssClasses<'a> {
         transition-property: transform;    @media (min-width: 1701px)
     */
     pub xl__transition_transform: &'a str,
+
+    /**
+        transition-property: stroke-dashoffset;    @media (min-width: 1701px)
+    */
+    pub xl__transition_stroke_dashoffset: &'a str,
 
     /**
         transition-timing-function: linear;    @media (min-width: 1701px)
@@ -87625,6 +87650,11 @@ pub static C: CssClasses = CssClasses {
     transition_transform: "transition-transform",
 
     /**
+        transition-property: stroke-dashoffset;
+    */
+    transition_stroke_dashoffset: "transition-stroke_dashoffset",
+
+    /**
         transition-timing-function: linear;
     */
     ease_linear: "ease-linear",
@@ -101529,6 +101559,11 @@ pub static C: CssClasses = CssClasses {
     sm__transition_transform: "sm:transition-transform",
 
     /**
+        transition-property: stroke-dashoffset;    @media (min-width: 569px)
+    */
+    sm__transition_stroke_dashoffset: "sm:transition-stroke_dashoffset",
+
+    /**
         transition-timing-function: linear;    @media (min-width: 569px)
     */
     sm__ease_linear: "sm:ease-linear",
@@ -115406,6 +115441,11 @@ pub static C: CssClasses = CssClasses {
         transition-property: transform;    @media (min-width: 769px)
     */
     md__transition_transform: "md:transition-transform",
+
+    /**
+        transition-property: stroke-dashoffset;    @media (min-width: 769px)
+    */
+    md__transition_stroke_dashoffset: "md:transition-stroke_dashoffset",
 
     /**
         transition-timing-function: linear;    @media (min-width: 769px)
@@ -129287,6 +129327,11 @@ pub static C: CssClasses = CssClasses {
     lg__transition_transform: "lg:transition-transform",
 
     /**
+        transition-property: stroke-dashoffset;    @media (min-width: 1025px)
+    */
+    lg__transition_stroke_dashoffset: "lg:transition-stroke_dashoffset",
+
+    /**
         transition-timing-function: linear;    @media (min-width: 1025px)
     */
     lg__ease_linear: "lg:ease-linear",
@@ -143164,6 +143209,11 @@ pub static C: CssClasses = CssClasses {
         transition-property: transform;    @media (min-width: 1701px)
     */
     xl__transition_transform: "xl:transition-transform",
+
+    /**
+        transition-property: stroke-dashoffset;    @media (min-width: 1701px)
+    */
+    xl__transition_stroke_dashoffset: "xl:transition-stroke_dashoffset",
 
     /**
         transition-timing-function: linear;    @media (min-width: 1701px)
