@@ -1,3 +1,4 @@
+use crate::extensions::UrlExt;
 use seed::prelude::*;
 use std::{borrow::Cow, ops::Deref};
 
@@ -62,7 +63,7 @@ pub enum Route<'a> {
 
 impl<'a> Route<'a> {
     pub fn path(&self) -> Vec<&str> {
-        match self {
+        let mut p = match self {
             Self::About => vec!["about"],
             Self::Activity => vec!["activity"],
             Self::Dashboard => vec!["dashboard"],
@@ -84,7 +85,13 @@ impl<'a> Route<'a> {
             Self::User(id) => vec!["users", id],
             Self::Volumes => vec!["volumes"],
             Self::Volume(id) => vec!["volumes", id],
+        };
+
+        if let Some(base) = crate::UI_BASE.as_ref() {
+            p.insert(0, base);
         }
+
+        p
     }
 
     pub fn to_href(&self) -> String {
@@ -128,7 +135,7 @@ impl<'a> From<Route<'a>> for Url {
 
 impl<'a> From<Url> for Route<'a> {
     fn from(url: Url) -> Self {
-        let mut path = url.path.into_iter();
+        let mut path = url.get_path().into_iter();
 
         match path.next().as_ref().map(String::as_str) {
             Some("about") => Self::About,

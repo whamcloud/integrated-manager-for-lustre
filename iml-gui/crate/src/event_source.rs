@@ -5,8 +5,14 @@ use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::EventSource;
 
 pub fn init(orders: &mut impl Orders<Msg, GMsg>) {
-    // FIXME: This should be proxied via webpack devserver but there is an issue with buffering contents of SSE.
-    let es = EventSource::new("https://localhost:7444/messaging").unwrap();
+    let uri = if *crate::IS_PRODUCTION {
+        "/messaging"
+    } else {
+        "https://localhost:7444/messaging"
+    };
+
+    // FIXME: This should be proxied via webpack dev-server but there is an issue with buffering contents of SSE.
+    let es = EventSource::new(uri).unwrap();
 
     register_eventsource_handle(EventSource::set_onopen, Msg::EventSourceConnect, &es, orders);
 

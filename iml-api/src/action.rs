@@ -48,7 +48,7 @@ async fn get_actions(
 
     xs.sort_by(|a, b| a.display_order.cmp(&b.display_order));
 
-    Ok(serde_json::to_string(&ApiList::new(xs)).map_err(ImlApiError::SerdeJsonError)?)
+    Ok(warp::reply::json(&ApiList::new(xs)))
 }
 
 pub(crate) fn endpoint(

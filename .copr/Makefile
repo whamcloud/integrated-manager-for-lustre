@@ -106,3 +106,17 @@ iml-srpm: iml-deps substs
 	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
 	cp -r ${TMPDIR}/_topdir/SRPMS/* $(outdir)
 	rm -rf ${TMPDIR}
+
+iml-gui-srpm:
+	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
+	curl --silent --location https://dl.yarnpkg.com/rpm/yarn.repo | tee /etc/yum.repos.d/yarn.repo
+	curl --silent --location https://rpm.nodesource.com/setup_12.x | bash -
+	yum install -y yarn
+	cd iml-gui; \
+	yarn install; \
+	yarn build:release; \
+	tar cvf ${TMPDIR}/_topdir/SOURCES/iml-gui.tar -C ${BUILDROOT}/iml-gui dist
+	cp iml-gui/rust-iml-gui.spec ${TMPDIR}/_topdir/SPECS/
+	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-iml-gui.spec
+	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
+	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)
