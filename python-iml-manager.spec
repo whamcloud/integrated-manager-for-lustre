@@ -92,6 +92,7 @@ Requires:       rust-iml-gui >= 0.1.0
 Requires:       rust-iml-mailbox >= 0.1.2
 Requires:       rust-iml-ostpool >= 0.1.2
 Requires:       rust-iml-postoffice >= 0.1.0
+Requires:       rust-iml-stats >= 0.1.2
 Requires:       rust-iml-warp-drive >= 0.1.2
 # Other Repos
 Requires:       influxdb
@@ -306,7 +307,7 @@ fi
 %attr(0755,root,root)%{_mandir}/man1/chroma-config.1.gz
 %attr(0644,root,root)%{_sysconfdir}/logrotate.d/chroma-manager
 %attr(0644,root,grafana)%{_sysconfdir}/grafana/provisioning/dashboards/iml-dashboards.yaml
-%attr(0644,root,grafana)%{manager_root}/grafana/dashboards/stratagem-dashboard*.json
+%attr(0674,root,grafana)%{manager_root}/grafana/dashboards/
 %attr(0644,root,grafana)%{_sysconfdir}/grafana/provisioning/datasources/influxdb-iml-datasource.yml
 %attr(0644,root,root)%{_unitdir}/iml-manager.target
 %attr(0644,root,root)%{_unitdir}/*.service

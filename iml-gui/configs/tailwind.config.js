@@ -184,7 +184,9 @@ module.exports = {
         "2330px": "2330px",
         "2360px": "2360px",
         "2560px": "2560px",
-        "3670px": "3670px"
+        "3670px": "3670px",
+        "80": "20rem",
+        "96": "24rem"
       },
       borderRadius: {
         "28px": "28px",
@@ -206,7 +208,17 @@ module.exports = {
         black: "#000",
         white: "#FFF",
         menu: "#344151",
-        "menu-active": "#1C2A3C"
+        "menu-active": "#1C2A3C",
+        "throughput-background": "#5350fb"
+      },
+      strokeWidth: {
+        "3": "3",
+        "4": "4",
+        "5": "5",
+        "6": "6"
+      },
+      transitionProperty: {
+        stroke_dashoffset: "stroke-dashoffset"
       }
     }
   },
@@ -216,11 +228,13 @@ module.exports = {
   },
   plugins: [
     function({ addVariant }) {
-      addVariant('group-focus', ({ container, separator }) => {
+      addVariant("group-focus", ({ container, separator }) => {
         container.walkRules(rule => {
-          rule.selector = `.group:focus-within .group-focus\\:${rule.selector.slice(1)}`
-        })
-      })
+          rule.selector = `.group:focus-within .group-focus\\:${rule.selector.slice(
+            1
+          )}`;
+        });
+      });
     }
   ]
 };

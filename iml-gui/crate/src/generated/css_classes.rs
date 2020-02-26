@@ -559,6 +559,11 @@ pub struct CssClasses<'a> {
     pub bg_menu_active: &'a str,
 
     /**
+        background-color: #5350fb;
+    */
+    pub bg_throughput_background: &'a str,
+
+    /**
         background-color: transparent;
     */
     pub hover__bg_transparent: &'a str,
@@ -1034,6 +1039,11 @@ pub struct CssClasses<'a> {
     pub hover__bg_menu_active: &'a str,
 
     /**
+        background-color: #5350fb;
+    */
+    pub hover__bg_throughput_background: &'a str,
+
+    /**
         background-color: transparent;
     */
     pub focus__bg_transparent: &'a str,
@@ -1507,6 +1517,11 @@ pub struct CssClasses<'a> {
         background-color: #1C2A3C;
     */
     pub focus__bg_menu_active: &'a str,
+
+    /**
+        background-color: #5350fb;
+    */
+    pub focus__bg_throughput_background: &'a str,
 
     /**
         background-position: bottom;
@@ -2084,6 +2099,11 @@ pub struct CssClasses<'a> {
     pub border_menu_active: &'a str,
 
     /**
+        border-color: #5350fb;
+    */
+    pub border_throughput_background: &'a str,
+
+    /**
         border-color: transparent;
     */
     pub hover__border_transparent: &'a str,
@@ -2559,6 +2579,11 @@ pub struct CssClasses<'a> {
     pub hover__border_menu_active: &'a str,
 
     /**
+        border-color: #5350fb;
+    */
+    pub hover__border_throughput_background: &'a str,
+
+    /**
         border-color: transparent;
     */
     pub focus__border_transparent: &'a str,
@@ -3032,6 +3057,11 @@ pub struct CssClasses<'a> {
         border-color: #1C2A3C;
     */
     pub focus__border_menu_active: &'a str,
+
+    /**
+        border-color: #5350fb;
+    */
+    pub focus__border_throughput_background: &'a str,
 
     /**
         border-radius: 0;
@@ -4127,6 +4157,7 @@ pub struct CssClasses<'a> {
         color: #702459;
         color: #344151;
         color: #1C2A3C;
+        color: #5350fb;
         color: #3793FF;
         display: block;    @media (min-width: 569px)
         display: inline-block;    @media (min-width: 569px)
@@ -4970,6 +5001,16 @@ pub struct CssClasses<'a> {
         height: 18rem;
     */
     pub h_72: &'a str,
+
+    /**
+        height: 20rem;
+    */
+    pub h_80: &'a str,
+
+    /**
+        height: 24rem;
+    */
+    pub h_96: &'a str,
 
     /**
         height: auto;
@@ -9319,6 +9360,11 @@ pub struct CssClasses<'a> {
     pub placeholder_menu_active: &'a str,
 
     /**
+        color: #5350fb;
+    */
+    pub placeholder_throughput_background: &'a str,
+
+    /**
         color: transparent;
     */
     pub focus__placeholder_transparent: &'a str,
@@ -9792,6 +9838,11 @@ pub struct CssClasses<'a> {
         color: #1C2A3C;
     */
     pub focus__placeholder_menu_active: &'a str,
+
+    /**
+        color: #5350fb;
+    */
+    pub focus__placeholder_throughput_background: &'a str,
 
     /**
         pointer-events: none;
@@ -10292,6 +10343,26 @@ pub struct CssClasses<'a> {
         stroke-width: 2;
     */
     pub stroke_2: &'a str,
+
+    /**
+        stroke-width: 3;
+    */
+    pub stroke_3: &'a str,
+
+    /**
+        stroke-width: 4;
+    */
+    pub stroke_4: &'a str,
+
+    /**
+        stroke-width: 5;
+    */
+    pub stroke_5: &'a str,
+
+    /**
+        stroke-width: 6;
+    */
+    pub stroke_6: &'a str,
 
     /**
         table-layout: auto;
@@ -10799,6 +10870,11 @@ pub struct CssClasses<'a> {
     pub text_menu_active: &'a str,
 
     /**
+        color: #5350fb;
+    */
+    pub text_throughput_background: &'a str,
+
+    /**
         color: #3793FF;
     */
     pub text_active: &'a str,
@@ -11277,6 +11353,11 @@ pub struct CssClasses<'a> {
         color: #1C2A3C;
     */
     pub hover__text_menu_active: &'a str,
+
+    /**
+        color: #5350fb;
+    */
+    pub hover__text_throughput_background: &'a str,
 
     /**
         color: #3793FF;
@@ -11759,6 +11840,11 @@ pub struct CssClasses<'a> {
     pub group_hover__text_menu_active: &'a str,
 
     /**
+        color: #5350fb;
+    */
+    pub group_hover__text_throughput_background: &'a str,
+
+    /**
         color: #3793FF;
     */
     pub group_hover__text_active: &'a str,
@@ -12237,6 +12323,11 @@ pub struct CssClasses<'a> {
         color: #1C2A3C;
     */
     pub focus__text_menu_active: &'a str,
+
+    /**
+        color: #5350fb;
+    */
+    pub focus__text_throughput_background: &'a str,
 
     /**
         color: #3793FF;
@@ -15993,6 +16084,11 @@ pub struct CssClasses<'a> {
     pub transition_transform: &'a str,
 
     /**
+        transition-property: stroke-dashoffset;
+    */
+    pub transition_stroke_dashoffset: &'a str,
+
+    /**
         transition-timing-function: linear;
     */
     pub ease_linear: &'a str,
@@ -16623,6 +16719,11 @@ pub struct CssClasses<'a> {
     pub sm__bg_menu_active: &'a str,
 
     /**
+        background-color: #5350fb;    @media (min-width: 569px)
+    */
+    pub sm__bg_throughput_background: &'a str,
+
+    /**
         background-color: transparent;    @media (min-width: 569px)
     */
     pub sm__hover__bg_transparent: &'a str,
@@ -17098,6 +17199,11 @@ pub struct CssClasses<'a> {
     pub sm__hover__bg_menu_active: &'a str,
 
     /**
+        background-color: #5350fb;    @media (min-width: 569px)
+    */
+    pub sm__hover__bg_throughput_background: &'a str,
+
+    /**
         background-color: transparent;    @media (min-width: 569px)
     */
     pub sm__focus__bg_transparent: &'a str,
@@ -17571,6 +17677,11 @@ pub struct CssClasses<'a> {
         background-color: #1C2A3C;    @media (min-width: 569px)
     */
     pub sm__focus__bg_menu_active: &'a str,
+
+    /**
+        background-color: #5350fb;    @media (min-width: 569px)
+    */
+    pub sm__focus__bg_throughput_background: &'a str,
 
     /**
         background-position: bottom;    @media (min-width: 569px)
@@ -18148,6 +18259,11 @@ pub struct CssClasses<'a> {
     pub sm__border_menu_active: &'a str,
 
     /**
+        border-color: #5350fb;    @media (min-width: 569px)
+    */
+    pub sm__border_throughput_background: &'a str,
+
+    /**
         border-color: transparent;    @media (min-width: 569px)
     */
     pub sm__hover__border_transparent: &'a str,
@@ -18623,6 +18739,11 @@ pub struct CssClasses<'a> {
     pub sm__hover__border_menu_active: &'a str,
 
     /**
+        border-color: #5350fb;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_throughput_background: &'a str,
+
+    /**
         border-color: transparent;    @media (min-width: 569px)
     */
     pub sm__focus__border_transparent: &'a str,
@@ -19096,6 +19217,11 @@ pub struct CssClasses<'a> {
         border-color: #1C2A3C;    @media (min-width: 569px)
     */
     pub sm__focus__border_menu_active: &'a str,
+
+    /**
+        border-color: #5350fb;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_throughput_background: &'a str,
 
     /**
         border-radius: 0;    @media (min-width: 569px)
@@ -20774,6 +20900,16 @@ pub struct CssClasses<'a> {
         height: 18rem;    @media (min-width: 569px)
     */
     pub sm__h_72: &'a str,
+
+    /**
+        height: 20rem;    @media (min-width: 569px)
+    */
+    pub sm__h_80: &'a str,
+
+    /**
+        height: 24rem;    @media (min-width: 569px)
+    */
+    pub sm__h_96: &'a str,
 
     /**
         height: auto;    @media (min-width: 569px)
@@ -25123,6 +25259,11 @@ pub struct CssClasses<'a> {
     pub sm__placeholder_menu_active: &'a str,
 
     /**
+        color: #5350fb;    @media (min-width: 569px)
+    */
+    pub sm__placeholder_throughput_background: &'a str,
+
+    /**
         color: transparent;    @media (min-width: 569px)
     */
     pub sm__focus__placeholder_transparent: &'a str,
@@ -25596,6 +25737,11 @@ pub struct CssClasses<'a> {
         color: #1C2A3C;    @media (min-width: 569px)
     */
     pub sm__focus__placeholder_menu_active: &'a str,
+
+    /**
+        color: #5350fb;    @media (min-width: 569px)
+    */
+    pub sm__focus__placeholder_throughput_background: &'a str,
 
     /**
         pointer-events: none;    @media (min-width: 569px)
@@ -26096,6 +26242,26 @@ pub struct CssClasses<'a> {
         stroke-width: 2;    @media (min-width: 569px)
     */
     pub sm__stroke_2: &'a str,
+
+    /**
+        stroke-width: 3;    @media (min-width: 569px)
+    */
+    pub sm__stroke_3: &'a str,
+
+    /**
+        stroke-width: 4;    @media (min-width: 569px)
+    */
+    pub sm__stroke_4: &'a str,
+
+    /**
+        stroke-width: 5;    @media (min-width: 569px)
+    */
+    pub sm__stroke_5: &'a str,
+
+    /**
+        stroke-width: 6;    @media (min-width: 569px)
+    */
+    pub sm__stroke_6: &'a str,
 
     /**
         table-layout: auto;    @media (min-width: 569px)
@@ -29877,6 +30043,11 @@ pub struct CssClasses<'a> {
     pub sm__transition_transform: &'a str,
 
     /**
+        transition-property: stroke-dashoffset;    @media (min-width: 569px)
+    */
+    pub sm__transition_stroke_dashoffset: &'a str,
+
+    /**
         transition-timing-function: linear;    @media (min-width: 569px)
     */
     pub sm__ease_linear: &'a str,
@@ -30482,6 +30653,11 @@ pub struct CssClasses<'a> {
     pub md__bg_menu_active: &'a str,
 
     /**
+        background-color: #5350fb;    @media (min-width: 769px)
+    */
+    pub md__bg_throughput_background: &'a str,
+
+    /**
         background-color: transparent;    @media (min-width: 769px)
     */
     pub md__hover__bg_transparent: &'a str,
@@ -30957,6 +31133,11 @@ pub struct CssClasses<'a> {
     pub md__hover__bg_menu_active: &'a str,
 
     /**
+        background-color: #5350fb;    @media (min-width: 769px)
+    */
+    pub md__hover__bg_throughput_background: &'a str,
+
+    /**
         background-color: transparent;    @media (min-width: 769px)
     */
     pub md__focus__bg_transparent: &'a str,
@@ -31430,6 +31611,11 @@ pub struct CssClasses<'a> {
         background-color: #1C2A3C;    @media (min-width: 769px)
     */
     pub md__focus__bg_menu_active: &'a str,
+
+    /**
+        background-color: #5350fb;    @media (min-width: 769px)
+    */
+    pub md__focus__bg_throughput_background: &'a str,
 
     /**
         background-position: bottom;    @media (min-width: 769px)
@@ -32007,6 +32193,11 @@ pub struct CssClasses<'a> {
     pub md__border_menu_active: &'a str,
 
     /**
+        border-color: #5350fb;    @media (min-width: 769px)
+    */
+    pub md__border_throughput_background: &'a str,
+
+    /**
         border-color: transparent;    @media (min-width: 769px)
     */
     pub md__hover__border_transparent: &'a str,
@@ -32482,6 +32673,11 @@ pub struct CssClasses<'a> {
     pub md__hover__border_menu_active: &'a str,
 
     /**
+        border-color: #5350fb;    @media (min-width: 769px)
+    */
+    pub md__hover__border_throughput_background: &'a str,
+
+    /**
         border-color: transparent;    @media (min-width: 769px)
     */
     pub md__focus__border_transparent: &'a str,
@@ -32955,6 +33151,11 @@ pub struct CssClasses<'a> {
         border-color: #1C2A3C;    @media (min-width: 769px)
     */
     pub md__focus__border_menu_active: &'a str,
+
+    /**
+        border-color: #5350fb;    @media (min-width: 769px)
+    */
+    pub md__focus__border_throughput_background: &'a str,
 
     /**
         border-radius: 0;    @media (min-width: 769px)
@@ -34633,6 +34834,16 @@ pub struct CssClasses<'a> {
         height: 18rem;    @media (min-width: 769px)
     */
     pub md__h_72: &'a str,
+
+    /**
+        height: 20rem;    @media (min-width: 769px)
+    */
+    pub md__h_80: &'a str,
+
+    /**
+        height: 24rem;    @media (min-width: 769px)
+    */
+    pub md__h_96: &'a str,
 
     /**
         height: auto;    @media (min-width: 769px)
@@ -38982,6 +39193,11 @@ pub struct CssClasses<'a> {
     pub md__placeholder_menu_active: &'a str,
 
     /**
+        color: #5350fb;    @media (min-width: 769px)
+    */
+    pub md__placeholder_throughput_background: &'a str,
+
+    /**
         color: transparent;    @media (min-width: 769px)
     */
     pub md__focus__placeholder_transparent: &'a str,
@@ -39455,6 +39671,11 @@ pub struct CssClasses<'a> {
         color: #1C2A3C;    @media (min-width: 769px)
     */
     pub md__focus__placeholder_menu_active: &'a str,
+
+    /**
+        color: #5350fb;    @media (min-width: 769px)
+    */
+    pub md__focus__placeholder_throughput_background: &'a str,
 
     /**
         pointer-events: none;    @media (min-width: 769px)
@@ -39955,6 +40176,26 @@ pub struct CssClasses<'a> {
         stroke-width: 2;    @media (min-width: 769px)
     */
     pub md__stroke_2: &'a str,
+
+    /**
+        stroke-width: 3;    @media (min-width: 769px)
+    */
+    pub md__stroke_3: &'a str,
+
+    /**
+        stroke-width: 4;    @media (min-width: 769px)
+    */
+    pub md__stroke_4: &'a str,
+
+    /**
+        stroke-width: 5;    @media (min-width: 769px)
+    */
+    pub md__stroke_5: &'a str,
+
+    /**
+        stroke-width: 6;    @media (min-width: 769px)
+    */
+    pub md__stroke_6: &'a str,
 
     /**
         table-layout: auto;    @media (min-width: 769px)
@@ -43736,6 +43977,11 @@ pub struct CssClasses<'a> {
     pub md__transition_transform: &'a str,
 
     /**
+        transition-property: stroke-dashoffset;    @media (min-width: 769px)
+    */
+    pub md__transition_stroke_dashoffset: &'a str,
+
+    /**
         transition-timing-function: linear;    @media (min-width: 769px)
     */
     pub md__ease_linear: &'a str,
@@ -44341,6 +44587,11 @@ pub struct CssClasses<'a> {
     pub lg__bg_menu_active: &'a str,
 
     /**
+        background-color: #5350fb;    @media (min-width: 1025px)
+    */
+    pub lg__bg_throughput_background: &'a str,
+
+    /**
         background-color: transparent;    @media (min-width: 1025px)
     */
     pub lg__hover__bg_transparent: &'a str,
@@ -44816,6 +45067,11 @@ pub struct CssClasses<'a> {
     pub lg__hover__bg_menu_active: &'a str,
 
     /**
+        background-color: #5350fb;    @media (min-width: 1025px)
+    */
+    pub lg__hover__bg_throughput_background: &'a str,
+
+    /**
         background-color: transparent;    @media (min-width: 1025px)
     */
     pub lg__focus__bg_transparent: &'a str,
@@ -45289,6 +45545,11 @@ pub struct CssClasses<'a> {
         background-color: #1C2A3C;    @media (min-width: 1025px)
     */
     pub lg__focus__bg_menu_active: &'a str,
+
+    /**
+        background-color: #5350fb;    @media (min-width: 1025px)
+    */
+    pub lg__focus__bg_throughput_background: &'a str,
 
     /**
         background-position: bottom;    @media (min-width: 1025px)
@@ -45866,6 +46127,11 @@ pub struct CssClasses<'a> {
     pub lg__border_menu_active: &'a str,
 
     /**
+        border-color: #5350fb;    @media (min-width: 1025px)
+    */
+    pub lg__border_throughput_background: &'a str,
+
+    /**
         border-color: transparent;    @media (min-width: 1025px)
     */
     pub lg__hover__border_transparent: &'a str,
@@ -46341,6 +46607,11 @@ pub struct CssClasses<'a> {
     pub lg__hover__border_menu_active: &'a str,
 
     /**
+        border-color: #5350fb;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_throughput_background: &'a str,
+
+    /**
         border-color: transparent;    @media (min-width: 1025px)
     */
     pub lg__focus__border_transparent: &'a str,
@@ -46814,6 +47085,11 @@ pub struct CssClasses<'a> {
         border-color: #1C2A3C;    @media (min-width: 1025px)
     */
     pub lg__focus__border_menu_active: &'a str,
+
+    /**
+        border-color: #5350fb;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_throughput_background: &'a str,
 
     /**
         border-radius: 0;    @media (min-width: 1025px)
@@ -48492,6 +48768,16 @@ pub struct CssClasses<'a> {
         height: 18rem;    @media (min-width: 1025px)
     */
     pub lg__h_72: &'a str,
+
+    /**
+        height: 20rem;    @media (min-width: 1025px)
+    */
+    pub lg__h_80: &'a str,
+
+    /**
+        height: 24rem;    @media (min-width: 1025px)
+    */
+    pub lg__h_96: &'a str,
 
     /**
         height: auto;    @media (min-width: 1025px)
@@ -52841,6 +53127,11 @@ pub struct CssClasses<'a> {
     pub lg__placeholder_menu_active: &'a str,
 
     /**
+        color: #5350fb;    @media (min-width: 1025px)
+    */
+    pub lg__placeholder_throughput_background: &'a str,
+
+    /**
         color: transparent;    @media (min-width: 1025px)
     */
     pub lg__focus__placeholder_transparent: &'a str,
@@ -53314,6 +53605,11 @@ pub struct CssClasses<'a> {
         color: #1C2A3C;    @media (min-width: 1025px)
     */
     pub lg__focus__placeholder_menu_active: &'a str,
+
+    /**
+        color: #5350fb;    @media (min-width: 1025px)
+    */
+    pub lg__focus__placeholder_throughput_background: &'a str,
 
     /**
         pointer-events: none;    @media (min-width: 1025px)
@@ -53814,6 +54110,26 @@ pub struct CssClasses<'a> {
         stroke-width: 2;    @media (min-width: 1025px)
     */
     pub lg__stroke_2: &'a str,
+
+    /**
+        stroke-width: 3;    @media (min-width: 1025px)
+    */
+    pub lg__stroke_3: &'a str,
+
+    /**
+        stroke-width: 4;    @media (min-width: 1025px)
+    */
+    pub lg__stroke_4: &'a str,
+
+    /**
+        stroke-width: 5;    @media (min-width: 1025px)
+    */
+    pub lg__stroke_5: &'a str,
+
+    /**
+        stroke-width: 6;    @media (min-width: 1025px)
+    */
+    pub lg__stroke_6: &'a str,
 
     /**
         table-layout: auto;    @media (min-width: 1025px)
@@ -57595,6 +57911,11 @@ pub struct CssClasses<'a> {
     pub lg__transition_transform: &'a str,
 
     /**
+        transition-property: stroke-dashoffset;    @media (min-width: 1025px)
+    */
+    pub lg__transition_stroke_dashoffset: &'a str,
+
+    /**
         transition-timing-function: linear;    @media (min-width: 1025px)
     */
     pub lg__ease_linear: &'a str,
@@ -58200,6 +58521,11 @@ pub struct CssClasses<'a> {
     pub xl__bg_menu_active: &'a str,
 
     /**
+        background-color: #5350fb;    @media (min-width: 1701px)
+    */
+    pub xl__bg_throughput_background: &'a str,
+
+    /**
         background-color: transparent;    @media (min-width: 1701px)
     */
     pub xl__hover__bg_transparent: &'a str,
@@ -58675,6 +59001,11 @@ pub struct CssClasses<'a> {
     pub xl__hover__bg_menu_active: &'a str,
 
     /**
+        background-color: #5350fb;    @media (min-width: 1701px)
+    */
+    pub xl__hover__bg_throughput_background: &'a str,
+
+    /**
         background-color: transparent;    @media (min-width: 1701px)
     */
     pub xl__focus__bg_transparent: &'a str,
@@ -59148,6 +59479,11 @@ pub struct CssClasses<'a> {
         background-color: #1C2A3C;    @media (min-width: 1701px)
     */
     pub xl__focus__bg_menu_active: &'a str,
+
+    /**
+        background-color: #5350fb;    @media (min-width: 1701px)
+    */
+    pub xl__focus__bg_throughput_background: &'a str,
 
     /**
         background-position: bottom;    @media (min-width: 1701px)
@@ -59725,6 +60061,11 @@ pub struct CssClasses<'a> {
     pub xl__border_menu_active: &'a str,
 
     /**
+        border-color: #5350fb;    @media (min-width: 1701px)
+    */
+    pub xl__border_throughput_background: &'a str,
+
+    /**
         border-color: transparent;    @media (min-width: 1701px)
     */
     pub xl__hover__border_transparent: &'a str,
@@ -60200,6 +60541,11 @@ pub struct CssClasses<'a> {
     pub xl__hover__border_menu_active: &'a str,
 
     /**
+        border-color: #5350fb;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_throughput_background: &'a str,
+
+    /**
         border-color: transparent;    @media (min-width: 1701px)
     */
     pub xl__focus__border_transparent: &'a str,
@@ -60673,6 +61019,11 @@ pub struct CssClasses<'a> {
         border-color: #1C2A3C;    @media (min-width: 1701px)
     */
     pub xl__focus__border_menu_active: &'a str,
+
+    /**
+        border-color: #5350fb;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_throughput_background: &'a str,
 
     /**
         border-radius: 0;    @media (min-width: 1701px)
@@ -62351,6 +62702,16 @@ pub struct CssClasses<'a> {
         height: 18rem;    @media (min-width: 1701px)
     */
     pub xl__h_72: &'a str,
+
+    /**
+        height: 20rem;    @media (min-width: 1701px)
+    */
+    pub xl__h_80: &'a str,
+
+    /**
+        height: 24rem;    @media (min-width: 1701px)
+    */
+    pub xl__h_96: &'a str,
 
     /**
         height: auto;    @media (min-width: 1701px)
@@ -66700,6 +67061,11 @@ pub struct CssClasses<'a> {
     pub xl__placeholder_menu_active: &'a str,
 
     /**
+        color: #5350fb;    @media (min-width: 1701px)
+    */
+    pub xl__placeholder_throughput_background: &'a str,
+
+    /**
         color: transparent;    @media (min-width: 1701px)
     */
     pub xl__focus__placeholder_transparent: &'a str,
@@ -67173,6 +67539,11 @@ pub struct CssClasses<'a> {
         color: #1C2A3C;    @media (min-width: 1701px)
     */
     pub xl__focus__placeholder_menu_active: &'a str,
+
+    /**
+        color: #5350fb;    @media (min-width: 1701px)
+    */
+    pub xl__focus__placeholder_throughput_background: &'a str,
 
     /**
         pointer-events: none;    @media (min-width: 1701px)
@@ -67673,6 +68044,26 @@ pub struct CssClasses<'a> {
         stroke-width: 2;    @media (min-width: 1701px)
     */
     pub xl__stroke_2: &'a str,
+
+    /**
+        stroke-width: 3;    @media (min-width: 1701px)
+    */
+    pub xl__stroke_3: &'a str,
+
+    /**
+        stroke-width: 4;    @media (min-width: 1701px)
+    */
+    pub xl__stroke_4: &'a str,
+
+    /**
+        stroke-width: 5;    @media (min-width: 1701px)
+    */
+    pub xl__stroke_5: &'a str,
+
+    /**
+        stroke-width: 6;    @media (min-width: 1701px)
+    */
+    pub xl__stroke_6: &'a str,
 
     /**
         table-layout: auto;    @media (min-width: 1701px)
@@ -71454,6 +71845,11 @@ pub struct CssClasses<'a> {
     pub xl__transition_transform: &'a str,
 
     /**
+        transition-property: stroke-dashoffset;    @media (min-width: 1701px)
+    */
+    pub xl__transition_stroke_dashoffset: &'a str,
+
+    /**
         transition-timing-function: linear;    @media (min-width: 1701px)
     */
     pub xl__ease_linear: &'a str,
@@ -72071,6 +72467,11 @@ pub static C: CssClasses = CssClasses {
     bg_menu_active: "bg-menu-active",
 
     /**
+        background-color: #5350fb;
+    */
+    bg_throughput_background: "bg-throughput-background",
+
+    /**
         background-color: transparent;
     */
     hover__bg_transparent: "hover:bg-transparent",
@@ -72546,6 +72947,11 @@ pub static C: CssClasses = CssClasses {
     hover__bg_menu_active: "hover:bg-menu-active",
 
     /**
+        background-color: #5350fb;
+    */
+    hover__bg_throughput_background: "hover:bg-throughput-background",
+
+    /**
         background-color: transparent;
     */
     focus__bg_transparent: "focus:bg-transparent",
@@ -73019,6 +73425,11 @@ pub static C: CssClasses = CssClasses {
         background-color: #1C2A3C;
     */
     focus__bg_menu_active: "focus:bg-menu-active",
+
+    /**
+        background-color: #5350fb;
+    */
+    focus__bg_throughput_background: "focus:bg-throughput-background",
 
     /**
         background-position: bottom;
@@ -73596,6 +74007,11 @@ pub static C: CssClasses = CssClasses {
     border_menu_active: "border-menu-active",
 
     /**
+        border-color: #5350fb;
+    */
+    border_throughput_background: "border-throughput-background",
+
+    /**
         border-color: transparent;
     */
     hover__border_transparent: "hover:border-transparent",
@@ -74071,6 +74487,11 @@ pub static C: CssClasses = CssClasses {
     hover__border_menu_active: "hover:border-menu-active",
 
     /**
+        border-color: #5350fb;
+    */
+    hover__border_throughput_background: "hover:border-throughput-background",
+
+    /**
         border-color: transparent;
     */
     focus__border_transparent: "focus:border-transparent",
@@ -74544,6 +74965,11 @@ pub static C: CssClasses = CssClasses {
         border-color: #1C2A3C;
     */
     focus__border_menu_active: "focus:border-menu-active",
+
+    /**
+        border-color: #5350fb;
+    */
+    focus__border_throughput_background: "focus:border-throughput-background",
 
     /**
         border-radius: 0;
@@ -75639,6 +76065,7 @@ pub static C: CssClasses = CssClasses {
         color: #702459;
         color: #344151;
         color: #1C2A3C;
+        color: #5350fb;
         color: #3793FF;
         display: block;    @media (min-width: 569px)
         display: inline-block;    @media (min-width: 569px)
@@ -76482,6 +76909,16 @@ pub static C: CssClasses = CssClasses {
         height: 18rem;
     */
     h_72: "h-72",
+
+    /**
+        height: 20rem;
+    */
+    h_80: "h-80",
+
+    /**
+        height: 24rem;
+    */
+    h_96: "h-96",
 
     /**
         height: auto;
@@ -80831,6 +81268,11 @@ pub static C: CssClasses = CssClasses {
     placeholder_menu_active: "placeholder-menu-active",
 
     /**
+        color: #5350fb;
+    */
+    placeholder_throughput_background: "placeholder-throughput-background",
+
+    /**
         color: transparent;
     */
     focus__placeholder_transparent: "focus:placeholder-transparent",
@@ -81304,6 +81746,11 @@ pub static C: CssClasses = CssClasses {
         color: #1C2A3C;
     */
     focus__placeholder_menu_active: "focus:placeholder-menu-active",
+
+    /**
+        color: #5350fb;
+    */
+    focus__placeholder_throughput_background: "focus:placeholder-throughput-background",
 
     /**
         pointer-events: none;
@@ -81804,6 +82251,26 @@ pub static C: CssClasses = CssClasses {
         stroke-width: 2;
     */
     stroke_2: "stroke-2",
+
+    /**
+        stroke-width: 3;
+    */
+    stroke_3: "stroke-3",
+
+    /**
+        stroke-width: 4;
+    */
+    stroke_4: "stroke-4",
+
+    /**
+        stroke-width: 5;
+    */
+    stroke_5: "stroke-5",
+
+    /**
+        stroke-width: 6;
+    */
+    stroke_6: "stroke-6",
 
     /**
         table-layout: auto;
@@ -82311,6 +82778,11 @@ pub static C: CssClasses = CssClasses {
     text_menu_active: "text-menu-active",
 
     /**
+        color: #5350fb;
+    */
+    text_throughput_background: "text-throughput-background",
+
+    /**
         color: #3793FF;
     */
     text_active: "text-active",
@@ -82789,6 +83261,11 @@ pub static C: CssClasses = CssClasses {
         color: #1C2A3C;
     */
     hover__text_menu_active: "hover:text-menu-active",
+
+    /**
+        color: #5350fb;
+    */
+    hover__text_throughput_background: "hover:text-throughput-background",
 
     /**
         color: #3793FF;
@@ -83271,6 +83748,11 @@ pub static C: CssClasses = CssClasses {
     group_hover__text_menu_active: "group-hover:text-menu-active",
 
     /**
+        color: #5350fb;
+    */
+    group_hover__text_throughput_background: "group-hover:text-throughput-background",
+
+    /**
         color: #3793FF;
     */
     group_hover__text_active: "group-hover:text-active",
@@ -83749,6 +84231,11 @@ pub static C: CssClasses = CssClasses {
         color: #1C2A3C;
     */
     focus__text_menu_active: "focus:text-menu-active",
+
+    /**
+        color: #5350fb;
+    */
+    focus__text_throughput_background: "focus:text-throughput-background",
 
     /**
         color: #3793FF;
@@ -87505,6 +87992,11 @@ pub static C: CssClasses = CssClasses {
     transition_transform: "transition-transform",
 
     /**
+        transition-property: stroke-dashoffset;
+    */
+    transition_stroke_dashoffset: "transition-stroke_dashoffset",
+
+    /**
         transition-timing-function: linear;
     */
     ease_linear: "ease-linear",
@@ -88135,6 +88627,11 @@ pub static C: CssClasses = CssClasses {
     sm__bg_menu_active: "sm:bg-menu-active",
 
     /**
+        background-color: #5350fb;    @media (min-width: 569px)
+    */
+    sm__bg_throughput_background: "sm:bg-throughput-background",
+
+    /**
         background-color: transparent;    @media (min-width: 569px)
     */
     sm__hover__bg_transparent: "sm:hover:bg-transparent",
@@ -88610,6 +89107,11 @@ pub static C: CssClasses = CssClasses {
     sm__hover__bg_menu_active: "sm:hover:bg-menu-active",
 
     /**
+        background-color: #5350fb;    @media (min-width: 569px)
+    */
+    sm__hover__bg_throughput_background: "sm:hover:bg-throughput-background",
+
+    /**
         background-color: transparent;    @media (min-width: 569px)
     */
     sm__focus__bg_transparent: "sm:focus:bg-transparent",
@@ -89083,6 +89585,11 @@ pub static C: CssClasses = CssClasses {
         background-color: #1C2A3C;    @media (min-width: 569px)
     */
     sm__focus__bg_menu_active: "sm:focus:bg-menu-active",
+
+    /**
+        background-color: #5350fb;    @media (min-width: 569px)
+    */
+    sm__focus__bg_throughput_background: "sm:focus:bg-throughput-background",
 
     /**
         background-position: bottom;    @media (min-width: 569px)
@@ -89660,6 +90167,11 @@ pub static C: CssClasses = CssClasses {
     sm__border_menu_active: "sm:border-menu-active",
 
     /**
+        border-color: #5350fb;    @media (min-width: 569px)
+    */
+    sm__border_throughput_background: "sm:border-throughput-background",
+
+    /**
         border-color: transparent;    @media (min-width: 569px)
     */
     sm__hover__border_transparent: "sm:hover:border-transparent",
@@ -90135,6 +90647,11 @@ pub static C: CssClasses = CssClasses {
     sm__hover__border_menu_active: "sm:hover:border-menu-active",
 
     /**
+        border-color: #5350fb;    @media (min-width: 569px)
+    */
+    sm__hover__border_throughput_background: "sm:hover:border-throughput-background",
+
+    /**
         border-color: transparent;    @media (min-width: 569px)
     */
     sm__focus__border_transparent: "sm:focus:border-transparent",
@@ -90608,6 +91125,11 @@ pub static C: CssClasses = CssClasses {
         border-color: #1C2A3C;    @media (min-width: 569px)
     */
     sm__focus__border_menu_active: "sm:focus:border-menu-active",
+
+    /**
+        border-color: #5350fb;    @media (min-width: 569px)
+    */
+    sm__focus__border_throughput_background: "sm:focus:border-throughput-background",
 
     /**
         border-radius: 0;    @media (min-width: 569px)
@@ -92286,6 +92808,16 @@ pub static C: CssClasses = CssClasses {
         height: 18rem;    @media (min-width: 569px)
     */
     sm__h_72: "sm:h-72",
+
+    /**
+        height: 20rem;    @media (min-width: 569px)
+    */
+    sm__h_80: "sm:h-80",
+
+    /**
+        height: 24rem;    @media (min-width: 569px)
+    */
+    sm__h_96: "sm:h-96",
 
     /**
         height: auto;    @media (min-width: 569px)
@@ -96635,6 +97167,11 @@ pub static C: CssClasses = CssClasses {
     sm__placeholder_menu_active: "sm:placeholder-menu-active",
 
     /**
+        color: #5350fb;    @media (min-width: 569px)
+    */
+    sm__placeholder_throughput_background: "sm:placeholder-throughput-background",
+
+    /**
         color: transparent;    @media (min-width: 569px)
     */
     sm__focus__placeholder_transparent: "sm:focus:placeholder-transparent",
@@ -97108,6 +97645,11 @@ pub static C: CssClasses = CssClasses {
         color: #1C2A3C;    @media (min-width: 569px)
     */
     sm__focus__placeholder_menu_active: "sm:focus:placeholder-menu-active",
+
+    /**
+        color: #5350fb;    @media (min-width: 569px)
+    */
+    sm__focus__placeholder_throughput_background: "sm:focus:placeholder-throughput-background",
 
     /**
         pointer-events: none;    @media (min-width: 569px)
@@ -97608,6 +98150,26 @@ pub static C: CssClasses = CssClasses {
         stroke-width: 2;    @media (min-width: 569px)
     */
     sm__stroke_2: "sm:stroke-2",
+
+    /**
+        stroke-width: 3;    @media (min-width: 569px)
+    */
+    sm__stroke_3: "sm:stroke-3",
+
+    /**
+        stroke-width: 4;    @media (min-width: 569px)
+    */
+    sm__stroke_4: "sm:stroke-4",
+
+    /**
+        stroke-width: 5;    @media (min-width: 569px)
+    */
+    sm__stroke_5: "sm:stroke-5",
+
+    /**
+        stroke-width: 6;    @media (min-width: 569px)
+    */
+    sm__stroke_6: "sm:stroke-6",
 
     /**
         table-layout: auto;    @media (min-width: 569px)
@@ -101389,6 +101951,11 @@ pub static C: CssClasses = CssClasses {
     sm__transition_transform: "sm:transition-transform",
 
     /**
+        transition-property: stroke-dashoffset;    @media (min-width: 569px)
+    */
+    sm__transition_stroke_dashoffset: "sm:transition-stroke_dashoffset",
+
+    /**
         transition-timing-function: linear;    @media (min-width: 569px)
     */
     sm__ease_linear: "sm:ease-linear",
@@ -101994,6 +102561,11 @@ pub static C: CssClasses = CssClasses {
     md__bg_menu_active: "md:bg-menu-active",
 
     /**
+        background-color: #5350fb;    @media (min-width: 769px)
+    */
+    md__bg_throughput_background: "md:bg-throughput-background",
+
+    /**
         background-color: transparent;    @media (min-width: 769px)
     */
     md__hover__bg_transparent: "md:hover:bg-transparent",
@@ -102469,6 +103041,11 @@ pub static C: CssClasses = CssClasses {
     md__hover__bg_menu_active: "md:hover:bg-menu-active",
 
     /**
+        background-color: #5350fb;    @media (min-width: 769px)
+    */
+    md__hover__bg_throughput_background: "md:hover:bg-throughput-background",
+
+    /**
         background-color: transparent;    @media (min-width: 769px)
     */
     md__focus__bg_transparent: "md:focus:bg-transparent",
@@ -102942,6 +103519,11 @@ pub static C: CssClasses = CssClasses {
         background-color: #1C2A3C;    @media (min-width: 769px)
     */
     md__focus__bg_menu_active: "md:focus:bg-menu-active",
+
+    /**
+        background-color: #5350fb;    @media (min-width: 769px)
+    */
+    md__focus__bg_throughput_background: "md:focus:bg-throughput-background",
 
     /**
         background-position: bottom;    @media (min-width: 769px)
@@ -103519,6 +104101,11 @@ pub static C: CssClasses = CssClasses {
     md__border_menu_active: "md:border-menu-active",
 
     /**
+        border-color: #5350fb;    @media (min-width: 769px)
+    */
+    md__border_throughput_background: "md:border-throughput-background",
+
+    /**
         border-color: transparent;    @media (min-width: 769px)
     */
     md__hover__border_transparent: "md:hover:border-transparent",
@@ -103994,6 +104581,11 @@ pub static C: CssClasses = CssClasses {
     md__hover__border_menu_active: "md:hover:border-menu-active",
 
     /**
+        border-color: #5350fb;    @media (min-width: 769px)
+    */
+    md__hover__border_throughput_background: "md:hover:border-throughput-background",
+
+    /**
         border-color: transparent;    @media (min-width: 769px)
     */
     md__focus__border_transparent: "md:focus:border-transparent",
@@ -104467,6 +105059,11 @@ pub static C: CssClasses = CssClasses {
         border-color: #1C2A3C;    @media (min-width: 769px)
     */
     md__focus__border_menu_active: "md:focus:border-menu-active",
+
+    /**
+        border-color: #5350fb;    @media (min-width: 769px)
+    */
+    md__focus__border_throughput_background: "md:focus:border-throughput-background",
 
     /**
         border-radius: 0;    @media (min-width: 769px)
@@ -106145,6 +106742,16 @@ pub static C: CssClasses = CssClasses {
         height: 18rem;    @media (min-width: 769px)
     */
     md__h_72: "md:h-72",
+
+    /**
+        height: 20rem;    @media (min-width: 769px)
+    */
+    md__h_80: "md:h-80",
+
+    /**
+        height: 24rem;    @media (min-width: 769px)
+    */
+    md__h_96: "md:h-96",
 
     /**
         height: auto;    @media (min-width: 769px)
@@ -110494,6 +111101,11 @@ pub static C: CssClasses = CssClasses {
     md__placeholder_menu_active: "md:placeholder-menu-active",
 
     /**
+        color: #5350fb;    @media (min-width: 769px)
+    */
+    md__placeholder_throughput_background: "md:placeholder-throughput-background",
+
+    /**
         color: transparent;    @media (min-width: 769px)
     */
     md__focus__placeholder_transparent: "md:focus:placeholder-transparent",
@@ -110967,6 +111579,11 @@ pub static C: CssClasses = CssClasses {
         color: #1C2A3C;    @media (min-width: 769px)
     */
     md__focus__placeholder_menu_active: "md:focus:placeholder-menu-active",
+
+    /**
+        color: #5350fb;    @media (min-width: 769px)
+    */
+    md__focus__placeholder_throughput_background: "md:focus:placeholder-throughput-background",
 
     /**
         pointer-events: none;    @media (min-width: 769px)
@@ -111467,6 +112084,26 @@ pub static C: CssClasses = CssClasses {
         stroke-width: 2;    @media (min-width: 769px)
     */
     md__stroke_2: "md:stroke-2",
+
+    /**
+        stroke-width: 3;    @media (min-width: 769px)
+    */
+    md__stroke_3: "md:stroke-3",
+
+    /**
+        stroke-width: 4;    @media (min-width: 769px)
+    */
+    md__stroke_4: "md:stroke-4",
+
+    /**
+        stroke-width: 5;    @media (min-width: 769px)
+    */
+    md__stroke_5: "md:stroke-5",
+
+    /**
+        stroke-width: 6;    @media (min-width: 769px)
+    */
+    md__stroke_6: "md:stroke-6",
 
     /**
         table-layout: auto;    @media (min-width: 769px)
@@ -115248,6 +115885,11 @@ pub static C: CssClasses = CssClasses {
     md__transition_transform: "md:transition-transform",
 
     /**
+        transition-property: stroke-dashoffset;    @media (min-width: 769px)
+    */
+    md__transition_stroke_dashoffset: "md:transition-stroke_dashoffset",
+
+    /**
         transition-timing-function: linear;    @media (min-width: 769px)
     */
     md__ease_linear: "md:ease-linear",
@@ -115853,6 +116495,11 @@ pub static C: CssClasses = CssClasses {
     lg__bg_menu_active: "lg:bg-menu-active",
 
     /**
+        background-color: #5350fb;    @media (min-width: 1025px)
+    */
+    lg__bg_throughput_background: "lg:bg-throughput-background",
+
+    /**
         background-color: transparent;    @media (min-width: 1025px)
     */
     lg__hover__bg_transparent: "lg:hover:bg-transparent",
@@ -116328,6 +116975,11 @@ pub static C: CssClasses = CssClasses {
     lg__hover__bg_menu_active: "lg:hover:bg-menu-active",
 
     /**
+        background-color: #5350fb;    @media (min-width: 1025px)
+    */
+    lg__hover__bg_throughput_background: "lg:hover:bg-throughput-background",
+
+    /**
         background-color: transparent;    @media (min-width: 1025px)
     */
     lg__focus__bg_transparent: "lg:focus:bg-transparent",
@@ -116801,6 +117453,11 @@ pub static C: CssClasses = CssClasses {
         background-color: #1C2A3C;    @media (min-width: 1025px)
     */
     lg__focus__bg_menu_active: "lg:focus:bg-menu-active",
+
+    /**
+        background-color: #5350fb;    @media (min-width: 1025px)
+    */
+    lg__focus__bg_throughput_background: "lg:focus:bg-throughput-background",
 
     /**
         background-position: bottom;    @media (min-width: 1025px)
@@ -117378,6 +118035,11 @@ pub static C: CssClasses = CssClasses {
     lg__border_menu_active: "lg:border-menu-active",
 
     /**
+        border-color: #5350fb;    @media (min-width: 1025px)
+    */
+    lg__border_throughput_background: "lg:border-throughput-background",
+
+    /**
         border-color: transparent;    @media (min-width: 1025px)
     */
     lg__hover__border_transparent: "lg:hover:border-transparent",
@@ -117853,6 +118515,11 @@ pub static C: CssClasses = CssClasses {
     lg__hover__border_menu_active: "lg:hover:border-menu-active",
 
     /**
+        border-color: #5350fb;    @media (min-width: 1025px)
+    */
+    lg__hover__border_throughput_background: "lg:hover:border-throughput-background",
+
+    /**
         border-color: transparent;    @media (min-width: 1025px)
     */
     lg__focus__border_transparent: "lg:focus:border-transparent",
@@ -118326,6 +118993,11 @@ pub static C: CssClasses = CssClasses {
         border-color: #1C2A3C;    @media (min-width: 1025px)
     */
     lg__focus__border_menu_active: "lg:focus:border-menu-active",
+
+    /**
+        border-color: #5350fb;    @media (min-width: 1025px)
+    */
+    lg__focus__border_throughput_background: "lg:focus:border-throughput-background",
 
     /**
         border-radius: 0;    @media (min-width: 1025px)
@@ -120004,6 +120676,16 @@ pub static C: CssClasses = CssClasses {
         height: 18rem;    @media (min-width: 1025px)
     */
     lg__h_72: "lg:h-72",
+
+    /**
+        height: 20rem;    @media (min-width: 1025px)
+    */
+    lg__h_80: "lg:h-80",
+
+    /**
+        height: 24rem;    @media (min-width: 1025px)
+    */
+    lg__h_96: "lg:h-96",
 
     /**
         height: auto;    @media (min-width: 1025px)
@@ -124353,6 +125035,11 @@ pub static C: CssClasses = CssClasses {
     lg__placeholder_menu_active: "lg:placeholder-menu-active",
 
     /**
+        color: #5350fb;    @media (min-width: 1025px)
+    */
+    lg__placeholder_throughput_background: "lg:placeholder-throughput-background",
+
+    /**
         color: transparent;    @media (min-width: 1025px)
     */
     lg__focus__placeholder_transparent: "lg:focus:placeholder-transparent",
@@ -124826,6 +125513,11 @@ pub static C: CssClasses = CssClasses {
         color: #1C2A3C;    @media (min-width: 1025px)
     */
     lg__focus__placeholder_menu_active: "lg:focus:placeholder-menu-active",
+
+    /**
+        color: #5350fb;    @media (min-width: 1025px)
+    */
+    lg__focus__placeholder_throughput_background: "lg:focus:placeholder-throughput-background",
 
     /**
         pointer-events: none;    @media (min-width: 1025px)
@@ -125326,6 +126018,26 @@ pub static C: CssClasses = CssClasses {
         stroke-width: 2;    @media (min-width: 1025px)
     */
     lg__stroke_2: "lg:stroke-2",
+
+    /**
+        stroke-width: 3;    @media (min-width: 1025px)
+    */
+    lg__stroke_3: "lg:stroke-3",
+
+    /**
+        stroke-width: 4;    @media (min-width: 1025px)
+    */
+    lg__stroke_4: "lg:stroke-4",
+
+    /**
+        stroke-width: 5;    @media (min-width: 1025px)
+    */
+    lg__stroke_5: "lg:stroke-5",
+
+    /**
+        stroke-width: 6;    @media (min-width: 1025px)
+    */
+    lg__stroke_6: "lg:stroke-6",
 
     /**
         table-layout: auto;    @media (min-width: 1025px)
@@ -129107,6 +129819,11 @@ pub static C: CssClasses = CssClasses {
     lg__transition_transform: "lg:transition-transform",
 
     /**
+        transition-property: stroke-dashoffset;    @media (min-width: 1025px)
+    */
+    lg__transition_stroke_dashoffset: "lg:transition-stroke_dashoffset",
+
+    /**
         transition-timing-function: linear;    @media (min-width: 1025px)
     */
     lg__ease_linear: "lg:ease-linear",
@@ -129712,6 +130429,11 @@ pub static C: CssClasses = CssClasses {
     xl__bg_menu_active: "xl:bg-menu-active",
 
     /**
+        background-color: #5350fb;    @media (min-width: 1701px)
+    */
+    xl__bg_throughput_background: "xl:bg-throughput-background",
+
+    /**
         background-color: transparent;    @media (min-width: 1701px)
     */
     xl__hover__bg_transparent: "xl:hover:bg-transparent",
@@ -130187,6 +130909,11 @@ pub static C: CssClasses = CssClasses {
     xl__hover__bg_menu_active: "xl:hover:bg-menu-active",
 
     /**
+        background-color: #5350fb;    @media (min-width: 1701px)
+    */
+    xl__hover__bg_throughput_background: "xl:hover:bg-throughput-background",
+
+    /**
         background-color: transparent;    @media (min-width: 1701px)
     */
     xl__focus__bg_transparent: "xl:focus:bg-transparent",
@@ -130660,6 +131387,11 @@ pub static C: CssClasses = CssClasses {
         background-color: #1C2A3C;    @media (min-width: 1701px)
     */
     xl__focus__bg_menu_active: "xl:focus:bg-menu-active",
+
+    /**
+        background-color: #5350fb;    @media (min-width: 1701px)
+    */
+    xl__focus__bg_throughput_background: "xl:focus:bg-throughput-background",
 
     /**
         background-position: bottom;    @media (min-width: 1701px)
@@ -131237,6 +131969,11 @@ pub static C: CssClasses = CssClasses {
     xl__border_menu_active: "xl:border-menu-active",
 
     /**
+        border-color: #5350fb;    @media (min-width: 1701px)
+    */
+    xl__border_throughput_background: "xl:border-throughput-background",
+
+    /**
         border-color: transparent;    @media (min-width: 1701px)
     */
     xl__hover__border_transparent: "xl:hover:border-transparent",
@@ -131712,6 +132449,11 @@ pub static C: CssClasses = CssClasses {
     xl__hover__border_menu_active: "xl:hover:border-menu-active",
 
     /**
+        border-color: #5350fb;    @media (min-width: 1701px)
+    */
+    xl__hover__border_throughput_background: "xl:hover:border-throughput-background",
+
+    /**
         border-color: transparent;    @media (min-width: 1701px)
     */
     xl__focus__border_transparent: "xl:focus:border-transparent",
@@ -132185,6 +132927,11 @@ pub static C: CssClasses = CssClasses {
         border-color: #1C2A3C;    @media (min-width: 1701px)
     */
     xl__focus__border_menu_active: "xl:focus:border-menu-active",
+
+    /**
+        border-color: #5350fb;    @media (min-width: 1701px)
+    */
+    xl__focus__border_throughput_background: "xl:focus:border-throughput-background",
 
     /**
         border-radius: 0;    @media (min-width: 1701px)
@@ -133863,6 +134610,16 @@ pub static C: CssClasses = CssClasses {
         height: 18rem;    @media (min-width: 1701px)
     */
     xl__h_72: "xl:h-72",
+
+    /**
+        height: 20rem;    @media (min-width: 1701px)
+    */
+    xl__h_80: "xl:h-80",
+
+    /**
+        height: 24rem;    @media (min-width: 1701px)
+    */
+    xl__h_96: "xl:h-96",
 
     /**
         height: auto;    @media (min-width: 1701px)
@@ -138212,6 +138969,11 @@ pub static C: CssClasses = CssClasses {
     xl__placeholder_menu_active: "xl:placeholder-menu-active",
 
     /**
+        color: #5350fb;    @media (min-width: 1701px)
+    */
+    xl__placeholder_throughput_background: "xl:placeholder-throughput-background",
+
+    /**
         color: transparent;    @media (min-width: 1701px)
     */
     xl__focus__placeholder_transparent: "xl:focus:placeholder-transparent",
@@ -138685,6 +139447,11 @@ pub static C: CssClasses = CssClasses {
         color: #1C2A3C;    @media (min-width: 1701px)
     */
     xl__focus__placeholder_menu_active: "xl:focus:placeholder-menu-active",
+
+    /**
+        color: #5350fb;    @media (min-width: 1701px)
+    */
+    xl__focus__placeholder_throughput_background: "xl:focus:placeholder-throughput-background",
 
     /**
         pointer-events: none;    @media (min-width: 1701px)
@@ -139185,6 +139952,26 @@ pub static C: CssClasses = CssClasses {
         stroke-width: 2;    @media (min-width: 1701px)
     */
     xl__stroke_2: "xl:stroke-2",
+
+    /**
+        stroke-width: 3;    @media (min-width: 1701px)
+    */
+    xl__stroke_3: "xl:stroke-3",
+
+    /**
+        stroke-width: 4;    @media (min-width: 1701px)
+    */
+    xl__stroke_4: "xl:stroke-4",
+
+    /**
+        stroke-width: 5;    @media (min-width: 1701px)
+    */
+    xl__stroke_5: "xl:stroke-5",
+
+    /**
+        stroke-width: 6;    @media (min-width: 1701px)
+    */
+    xl__stroke_6: "xl:stroke-6",
 
     /**
         table-layout: auto;    @media (min-width: 1701px)
@@ -142964,6 +143751,11 @@ pub static C: CssClasses = CssClasses {
         transition-property: transform;    @media (min-width: 1701px)
     */
     xl__transition_transform: "xl:transition-transform",
+
+    /**
+        transition-property: stroke-dashoffset;    @media (min-width: 1701px)
+    */
+    xl__transition_stroke_dashoffset: "xl:transition-stroke_dashoffset",
 
     /**
         transition-timing-function: linear;    @media (min-width: 1701px)

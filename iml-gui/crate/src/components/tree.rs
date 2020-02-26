@@ -557,7 +557,14 @@ fn tree_host_item_view(cache: &ArcCache, model: &Model, host: &Host) -> Option<N
         class![C.py_1],
         toggle_view(address.clone(), tree_node.open),
         item_view("server", &host.label, Route::Server(host.id.into())),
-        alert_indicator(&cache.active_alert, host, true, Placement::Bottom),
+        a![
+            class![C.hover__underline, C.hover__text_gray_300, C.mr_1],
+            attrs! {
+                At::Href => Route::ServerDashboard(host.nodename.to_string().into()).to_href()
+            },
+            font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chart-bar"),
+        ],
+        alert_indicator(&cache.active_alert, &host, true, Placement::Bottom),
         if tree_node.open {
             tree_volume_collection_view(cache, model, &address)
         } else {
@@ -592,7 +599,14 @@ fn tree_fs_item_view(cache: &ArcCache, model: &Model, fs: &Filesystem) -> Option
         class![C.py_1],
         toggle_view(address.clone(), tree_node.open),
         item_view("server", &fs.label, Route::Filesystem(fs.id.into())),
-        alert_indicator(&cache.active_alert, fs, true, Placement::Bottom),
+        a![
+            class![C.hover__underline, C.hover__text_gray_300, C.mr_1],
+            attrs! {
+                At::Href => Route::FsDashboard(fs.name.to_string().into()).to_href()
+            },
+            font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chart-bar"),
+        ],
+        alert_indicator(&cache.active_alert, &fs, true, Placement::Bottom),
         if tree_node.open {
             vec![
                 tree_target_collection_view(cache, model, &address, TargetKind::Mgt),
@@ -738,7 +752,14 @@ fn tree_target_collection_view(
                     li![
                         class![C.py_1],
                         item_view("bullseye", x.label(), Route::Target(x.id.into())),
-                        alert_indicator(&cache.active_alert, &**x, true, Placement::Bottom),
+                        a![
+                            class![C.hover__underline, C.hover__text_gray_300, C.mr_1],
+                            attrs! {
+                                At::Href => Route::TargetDashboard(x.name.to_string().into()).to_href()
+                            },
+                            font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chart-bar"),
+                        ],
+                        alert_indicator(&cache.active_alert, &x, true, Placement::Bottom),
                     ]
                 })
                 .collect()
