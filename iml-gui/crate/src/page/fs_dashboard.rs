@@ -3,9 +3,10 @@ use crate::{
         charts::fs_usage,
         grafana_chart::{self, FsDashboardChart, IML_METRICS_DASHBOARD_ID, IML_METRICS_DASHBOARD_NAME},
     },
+    generated::css_classes::C,
     GMsg,
 };
-use seed::prelude::*;
+use seed::{*, prelude::*};
 
 #[derive(Default)]
 pub struct Model {
@@ -27,30 +28,33 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 }
 
 pub fn view<T: 'static>(model: &Model) -> impl View<T> {
-    vec![
-        fs_usage::view(&model.fs_usage),
-        grafana_chart::view(
-            IML_METRICS_DASHBOARD_ID,
-            IML_METRICS_DASHBOARD_NAME,
-            "Objects Used",
-            FsDashboardChart {
-                org_id: 1,
-                refresh: "10s",
-                var_fs_name: &model.fs_name,
-                panel_id: 2,
-            },
-        ),
-        grafana_chart::view(
-            IML_METRICS_DASHBOARD_ID,
-            IML_METRICS_DASHBOARD_NAME,
-            "Files Used",
-            FsDashboardChart {
-                org_id: 1,
-                refresh: "10s",
-                var_fs_name: &model.fs_name,
-                panel_id: 4,
-            },
-        ),
+    div![
+        class![C.grid, C.grid_cols_2, C.gap_6],
+        vec![
+            fs_usage::view(&model.fs_usage),
+            grafana_chart::view(
+                IML_METRICS_DASHBOARD_ID,
+                IML_METRICS_DASHBOARD_NAME,
+                "Objects Used",
+                FsDashboardChart {
+                    org_id: 1,
+                    refresh: "10s",
+                    var_fs_name: &model.fs_name,
+                    panel_id: 2,
+                },
+            ),
+            grafana_chart::view(
+                IML_METRICS_DASHBOARD_ID,
+                IML_METRICS_DASHBOARD_NAME,
+                "Files Used",
+                FsDashboardChart {
+                    org_id: 1,
+                    refresh: "10s",
+                    var_fs_name: &model.fs_name,
+                    panel_id: 4,
+                },
+            ),
+        ]
     ]
 }
 
