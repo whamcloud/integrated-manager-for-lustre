@@ -7,8 +7,8 @@ use crate::{
     {generated::css_classes::C, sleep::sleep_with_handle},
 };
 use futures::channel::oneshot;
-use seed::{prelude::*, Request, *};
 use number_formatter;
+use seed::{prelude::*, Request, *};
 use std::time::Duration;
 
 pub static DB_NAME: &str = "iml_stats";
@@ -18,34 +18,34 @@ FROM \"target\" WHERE \"kind\" = '\"OST\"' GROUP BY target)),(SELECT SUM(bytes_a
 AS bytes_avail from \"target\" WHERE \"kind\" = '\"OST\"' GROUP BY target))";
 
 enum ChartColor {
-  Red,
-  Yellow,
-  Green,
+    Red,
+    Yellow,
+    Green,
 }
 
 fn match_range(val: f64, min: f64, max: f64) -> bool {
-  val >= min && val <= max
+    val >= min && val <= max
 }
 
 impl From<f64> for ChartColor {
-  fn from(f: f64) -> ChartColor {
-    match f {
-      _ if match_range(f, 0.50, 1.0) => ChartColor::Green,
-      _ if match_range(f, 0.25, 0.50) => ChartColor::Yellow,
-      _ if match_range(f, 0.0, 0.25) => ChartColor::Red,
-      _ => ChartColor::Red
+    fn from(f: f64) -> ChartColor {
+        match f {
+            _ if match_range(f, 0.50, 1.0) => ChartColor::Green,
+            _ if match_range(f, 0.25, 0.50) => ChartColor::Yellow,
+            _ if match_range(f, 0.0, 0.25) => ChartColor::Red,
+            _ => ChartColor::Red,
+        }
     }
-  }
 }
 
 impl<'a> From<ChartColor> for &str {
-  fn from(f: ChartColor) -> Self {
-    match f {
-      ChartColor::Green => C.text_green_500,
-      ChartColor::Yellow => C.text_yellow_500,
-      ChartColor::Red => C.text_red_500,
+    fn from(f: ChartColor) -> Self {
+        match f {
+            ChartColor::Green => C.text_green_500,
+            ChartColor::Yellow => C.text_yellow_500,
+            ChartColor::Red => C.text_red_500,
+        }
     }
-  }
 }
 
 #[derive(Default)]
@@ -102,18 +102,17 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::DataFetched(influx_data) => {
             match influx_data {
                 Ok(influx_data) => {
-                  log!(format!("Metric Data: {:#?}", influx_data));
-                  let result: &InfluxResult = &influx_data.results[0];
+                    log!(format!("Metric Data: {:#?}", influx_data));
+                    let result: &InfluxResult = &influx_data.results[0];
 
-                  if let Some(series) =  &(*result).series {
-                    let bytes_used = series[0].values[0].1;
-                    let bytes_avail = series[0].values[0].2;
-                    model.metric_data = Some(FsUsage {
-                      bytes_used,
-                      bytes_avail,
-                    });
-                  }
-                    
+                    if let Some(series) = &(*result).series {
+                        let bytes_used = series[0].values[0].1;
+                        let bytes_avail = series[0].values[0].2;
+                        model.metric_data = Some(FsUsage {
+                            bytes_used,
+                            bytes_avail,
+                        });
+                    }
                 }
                 Err(e) => {
                     error!("Failed to fetch filesystem usage metrics - {:#?}", e);
@@ -132,11 +131,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 }
 
 fn calc_circumference(radius: f64) -> f64 {
-  2.0 * std::f64::consts::PI * radius
+    2.0 * std::f64::consts::PI * radius
 }
 
 fn calc_percentage(circumference: f64, val: f64) -> f64 {
-  val * circumference
+    val * circumference
 }
 
 pub fn view<T>(model: &Model) -> Node<T> {
@@ -151,70 +150,88 @@ pub fn view<T>(model: &Model) -> Node<T> {
                 let c = calc_circumference(90.0);
                 let percent_available = 1.0 - x.bytes_used / x.bytes_avail;
                 let p = calc_percentage(c, percent_available);
-                let usage_color:ChartColor = percent_available.into();
+                let usage_color: ChartColor = percent_available.into();
                 let usage_color: &str = usage_color.into();
 
                 div![
-                  class![C.flex, C.content_start, C.stroke_current, C.fill_current, C.items_center, C.justify_center, C.h_64],
-                  div![
-                    class![C.w_1of3, C.text_right, C.p_2],
-                    p![
-                      class![usage_color],
-                      format!("{}", number_formatter::format_bytes(x.bytes_used, Some(1)))
+                    class![
+                        C.flex,
+                        C.content_start,
+                        C.stroke_current,
+                        C.fill_current,
+                        C.items_center,
+                        C.justify_center,
+                        C.h_64
                     ],
-                    p![
-                        class![C.text_gray_500, C.text_xs],
-                        "(Used)"
-                      ]
-                  ],
-                  svg![
-                    class![C.w_1of3, C.p_2],
-                    attrs!{
-                      At::ViewBox => "0 0 195 195"
-                    },
-                    circle![
-                      class![C.stroke_6, usage_color, C.transition_stroke_dashoffset, C.duration_500, C.ease_linear],
-                      attrs!{
-                        At::R => "90",
-                        At::Cx => "100", 
-                        At::Cy => "100", 
-                        At::Fill => "transparent",
-                      }
+                    div![
+                        class![C.w_1of3, C.text_right, C.p_2],
+                        p![
+                            class![usage_color],
+                            format!("{}", number_formatter::format_bytes(x.bytes_used, Some(1)))
+                        ],
+                        p![class![C.text_gray_500, C.text_xs], "(Used)"]
                     ],
-                    circle![
-                      class![C.stroke_6, C.text_gray_200, C.transition_stroke_dashoffset, C.duration_500, C.ease_linear],
-                      attrs!{
-                        At::R => "90",
-                        At::Cx => "100", 
-                        At::Cy => "100", 
-                        At::Fill => "transparent", 
-                        At::StrokeDashArray => c, 
-                        At::StrokeDashOffset => p
-                      }
+                    svg![
+                        class![C.w_1of3, C.p_2, C.transform, C._rotate_90],
+                        attrs! {
+                          At::ViewBox => "0 0 195 195"
+                        },
+                        circle![
+                            class![
+                                C.stroke_6,
+                                C.text_gray_200,
+                                C.transition_stroke_dashoffset,
+                                C.duration_500,
+                                C.ease_linear
+                            ],
+                            attrs! {
+                              At::R => "90",
+                              At::Cx => "100",
+                              At::Cy => "100",
+                              At::Fill => "transparent",
+                            }
+                        ],
+                        circle![
+                            class![
+                                C.stroke_6,
+                                usage_color,
+                                C.transition_stroke_dashoffset,
+                                C.duration_500,
+                                C.ease_linear
+                            ],
+                            attrs! {
+                              At::R => "90",
+                              At::Cx => "100",
+                              At::Cy => "100",
+                              At::Fill => "transparent",
+                              At::StrokeDashArray => c,
+                              At::StrokeDashOffset => p
+                            }
+                        ],
+                        text![
+                            class![
+                                C.rotate_90
+                                C.origin_center,
+                                C.stroke_2,
+                                C.text_4xl,
+                                C.transform,
+                                usage_color,
+                            ],
+                            attrs! {
+                              At::X => "50%",
+                              At::Y => "50%",
+                              At::DominantBaseline => "central",
+                              At::TextAnchor => "middle"
+                            },
+                            tspan![format!("{}", (100.0 * percent_available) as u16)],
+                            tspan![class![C.text_gray_500], "%"]
+                        ]
                     ],
-                    text![
-                      class![C.stroke_2, usage_color, C.text_4xl],
-                      attrs!{
-                        At::X => "50%",
-                        At::Y => "50%",
-                        At::DominantBaseline => "central",
-                        At::TextAnchor => "middle"
-                      },
-                      tspan![format!("{}", (100.0 * percent_available) as u16)],
-                      tspan![
-                        class!["text-gray-500"], 
-                        "%"
-                      ]
-                    ]
-                  ],
-                  div![
-                    class![C.w_1of3, C.p_2],
-                    p![format!("{}", number_formatter::format_bytes(x.bytes_avail, Some(1)))],
-                    p![
-                      class![C.text_gray_500, C.text_xs],
-                      "(Available)"
-                    ]
-                  ],
+                    div![
+                        class![C.w_1of3, C.p_2],
+                        p![format!("{}", number_formatter::format_bytes(x.bytes_avail, Some(1)))],
+                        p![class![C.text_gray_500, C.text_xs], "(Available)"]
+                    ],
                 ]
             }
             None => div!["Loading"],
