@@ -41,7 +41,7 @@ impl From<f64> for ChartColor {
 impl<'a> From<ChartColor> for &str {
     fn from(f: ChartColor) -> Self {
         match f {
-            ChartColor::Green => C.text_green_500,
+            ChartColor::Green => C.text_green_400,
             ChartColor::Yellow => C.text_yellow_500,
             ChartColor::Red => C.text_red_500,
         }
@@ -178,7 +178,7 @@ pub fn view<T>(model: &Model) -> Node<T> {
                         },
                         circle![
                             class![
-                                C.stroke_6,
+                                C.stroke_5,
                                 C.text_gray_200,
                                 C.transition_stroke_dashoffset,
                                 C.duration_500,
@@ -193,7 +193,7 @@ pub fn view<T>(model: &Model) -> Node<T> {
                         ],
                         circle![
                             class![
-                                C.stroke_6,
+                                C.stroke_5,
                                 usage_color,
                                 C.transition_stroke_dashoffset,
                                 C.duration_500,
@@ -224,7 +224,7 @@ pub fn view<T>(model: &Model) -> Node<T> {
                               At::TextAnchor => "middle"
                             },
                             tspan![format!("{}", (100.0 * percent_available) as u16)],
-                            tspan![class![C.text_gray_500], "%"]
+                            tspan![class![C.text_gray_400], "%"]
                         ]
                     ],
                     div![
