@@ -250,10 +250,7 @@ impl ArcCache {
     }
     /// Given a `CompositeId`, returns an `ErasedRecord` if
     /// a matching one exists.
-    pub fn get_erased_record(
-        &self,
-        composite_id: &CompositeId,
-    ) -> Option<Arc<dyn ErasedRecord>> {
+    pub fn get_erased_record(&self, composite_id: &CompositeId) -> Option<Arc<dyn ErasedRecord>> {
         let content_type = self.content_type.get(&composite_id.0)?;
 
         match content_type.model.as_ref() {
