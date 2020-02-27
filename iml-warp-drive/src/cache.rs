@@ -88,6 +88,33 @@ pub async fn db_record_to_change_record(
     client: Client,
 ) -> Result<RecordChange, ImlManagerClientError> {
     match record {
+        DbRecord::AlertState(x) => match (msg_type, &x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::ActiveAlert(x.id()))),
+            (_, x) if !x.is_active() => Ok(RecordChange::Delete(RecordId::ActiveAlert(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                ToApiRecord::to_api_record(x, client)
+                    .map_ok(Record::ActiveAlert)
+                    .map_ok(RecordChange::Update)
+                    .await
+            }
+        },
+        DbRecord::ContentType(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::ContentType(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::ContentType(x)))
+            }
+        },
+        DbRecord::LnetConfiguration(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => {
+                Ok(RecordChange::Delete(RecordId::LnetConfiguration(x.id())))
+            }
+            (_, ref x) if x.deleted() => {
+                Ok(RecordChange::Delete(RecordId::LnetConfiguration(x.id())))
+            }
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::LnetConfiguration(x)))
+            }
+        },
         DbRecord::ManagedHost(x) => {
             converter(client, msg_type, x, Record::Host, RecordId::Host).await
         }
@@ -104,14 +131,15 @@ pub async fn db_record_to_change_record(
         DbRecord::ManagedTarget(x) => {
             converter(client, msg_type, x, Record::Target, RecordId::Target).await
         }
-        DbRecord::AlertState(x) => match (msg_type, &x) {
-            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::ActiveAlert(x.id()))),
-            (_, x) if !x.is_active() => Ok(RecordChange::Delete(RecordId::ActiveAlert(x.id()))),
+        DbRecord::ManagedTargetMount(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => {
+                Ok(RecordChange::Delete(RecordId::ManagedTargetMount(x.id())))
+            }
+            (_, ref x) if x.deleted() => {
+                Ok(RecordChange::Delete(RecordId::ManagedTargetMount(x.id())))
+            }
             (MessageType::Insert, x) | (MessageType::Update, x) => {
-                ToApiRecord::to_api_record(x, client)
-                    .map_ok(Record::ActiveAlert)
-                    .map_ok(RecordChange::Update)
-                    .await
+                Ok(RecordChange::Update(Record::ManagedTargetMount(x)))
             }
         },
         DbRecord::OstPool(x) => match (msg_type, x) {
@@ -134,34 +162,6 @@ pub async fn db_record_to_change_record(
             }
             (MessageType::Insert, x) | (MessageType::Update, x) => {
                 Ok(RecordChange::Update(Record::StratagemConfig(x)))
-            }
-        },
-        DbRecord::LnetConfiguration(x) => match (msg_type, x) {
-            (MessageType::Delete, x) => {
-                Ok(RecordChange::Delete(RecordId::LnetConfiguration(x.id())))
-            }
-            (_, ref x) if x.deleted() => {
-                Ok(RecordChange::Delete(RecordId::LnetConfiguration(x.id())))
-            }
-            (MessageType::Insert, x) | (MessageType::Update, x) => {
-                Ok(RecordChange::Update(Record::LnetConfiguration(x)))
-            }
-        },
-        DbRecord::ContentType(x) => match (msg_type, x) {
-            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::ContentType(x.id()))),
-            (MessageType::Insert, x) | (MessageType::Update, x) => {
-                Ok(RecordChange::Update(Record::ContentType(x)))
-            }
-        },
-        DbRecord::ManagedTargetMount(x) => match (msg_type, x) {
-            (MessageType::Delete, x) => {
-                Ok(RecordChange::Delete(RecordId::ManagedTargetMount(x.id())))
-            }
-            (_, ref x) if x.deleted() => {
-                Ok(RecordChange::Delete(RecordId::ManagedTargetMount(x.id())))
-            }
-            (MessageType::Insert, x) | (MessageType::Update, x) => {
-                Ok(RecordChange::Update(Record::ManagedTargetMount(x)))
             }
         },
         DbRecord::Volume(x) => {
