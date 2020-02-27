@@ -18,6 +18,7 @@ from chroma_core.models.target import (
     ManagedMdt,
     ManagedOst,
 )
+from chroma_core.models.ticket import FilesystemTicket, MasterTicket
 from chroma_core.lib.cache import ObjectCache
 from chroma_help.help import help_text
 import re
@@ -105,6 +106,15 @@ class DetectScan(object):
                         first_target = fs.get_filesystem_targets()[0]
                         self._learn_event(first_target.primary_host, first_target)
 
+                        # check for fs ticket
+                        if self._has_ticket(first_target.primary_host, fs.name):
+                            ticket = FilesystemTicket(state="granted", name=fs.name, filesystem=fs, ha_label=fs.name)
+                            ticket.save()
+                            logs.append(
+                                help_text["discovered_target"]
+                                % ("Filesystem Ticket", fs.name, first_target.primary_host)
+                            )
+
             if not self.created_mgss:
                 logs.append(help_text["discovered_no_new_target"] % ManagedMgs().target_type().upper())
             else:
@@ -112,6 +122,11 @@ class DetectScan(object):
                     logs.append(
                         help_text["discovered_target"] % (mgt.target_type().upper(), mgt.name, mgt.primary_host)
                     )
+                    # check for Master Ticket on discovered MGT
+                    if self._has_ticket(mgt.primary_host, "lustre"):
+                        ticket = MasterTicket(state="granted", name="lustre", mgs=mgt, ha_label="lustre")
+                        ticket.save()
+                        logs.append(help_text["discovered_target"] % ("Master Ticket", "lustre", mgt.primary_host))
 
             # Bit of additional complication so we can print really cracking messages, and detailed messages.
             for target in [ManagedMdt(), ManagedOst()]:
@@ -124,6 +139,15 @@ class DetectScan(object):
                 )
 
         map(self.log, logs)
+
+    def _has_ticket(self, host, ticket):
+        if not ticket in self.all_hosts_data[host]["ha_list"]:
+            return False
+        ha = self.all_hosts_data[host]["ha_list"][ticket]
+        agent = ":".join([ha["agent"].get(key) for key in ["standard", "provider", "ocftype"]])
+        if agent == "ocf:ddn:Ticketer":
+            return True
+        return False
 
     def _nids_to_mgs(self, host, nid_strings):
         """
