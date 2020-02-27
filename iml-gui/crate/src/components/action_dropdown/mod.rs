@@ -15,7 +15,7 @@ use seed::{prelude::*, *};
 use serde_json::json;
 use std::{collections::BTreeMap, iter, sync::Arc, time::Duration};
 
-type ActionMap = BTreeMap<String, Vec<(Arc<AvailableAction>, Box<Arc<dyn ErasedRecord>>)>>;
+type ActionMap = BTreeMap<String, Vec<(Arc<AvailableAction>, Arc<dyn ErasedRecord>)>>;
 
 type AvailableActions = ApiList<AvailableAction>;
 

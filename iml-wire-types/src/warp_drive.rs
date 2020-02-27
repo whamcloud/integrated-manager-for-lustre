@@ -185,8 +185,8 @@ impl Cache {
 pub trait ErasedRecord: Label + EndpointNameSelf + Id {}
 impl<T: Label + EndpointNameSelf + Id + ToCompositeId> ErasedRecord for T {}
 
-fn erase(x: Arc<impl ErasedRecord + 'static>) -> Box<Arc<dyn ErasedRecord>> {
-    Box::new(x)
+fn erase(x: Arc<impl ErasedRecord + 'static>) -> Arc<dyn ErasedRecord> {
+    x
 }
 
 impl ArcCache {
@@ -253,7 +253,7 @@ impl ArcCache {
     pub fn get_erased_record(
         &self,
         composite_id: &CompositeId,
-    ) -> Option<Box<Arc<dyn ErasedRecord>>> {
+    ) -> Option<Arc<dyn ErasedRecord>> {
         let content_type = self.content_type.get(&composite_id.0)?;
 
         match content_type.model.as_ref() {
