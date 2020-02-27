@@ -516,17 +516,18 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
                 return []
         else:
             available_states = super(ManagedMgs, self).get_available_states(begin_state)
+            excluded_states = []
 
             # Exclude the transition to 'forgotten' if multiple filesystems
             if self.managedfilesystem_set.count():
-                available_states = list(set(available_states) - set(["forgotten"]))
+                excluded_states.append("forgotten")
 
-            # Only advertise removal if the FS has already gone away
-            if self.managedfilesystem_set.count() > 0:
-                available_states = list(set(available_states) - set(["removed"]))
-                if "removed" in available_states:
-                    available_states.remove("removed")
+            # Only advertise removal if the FS has already gone away or if no ticket
+            ticket = self.get_ticket()
+            if self.managedfilesystem_set.count() > 0 or ticket:
+                excluded_states.append("removed")
 
+            available_states = list(set(available_states) - set(excluded_states))
             return available_states
 
     @classmethod
