@@ -36,6 +36,10 @@ ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo '
 
 all: copr-rpms rpms
 
+iml-gui-rpm:
+	$(MAKE) -f .copr/Makefile iml-gui-srpm outdir=.
+	rpmbuild --rebuild -D "_topdir $(CURDIR)/_topdir" _topdir/SRPMS/rust-iml-gui-*.src.rpm
+
 rpms:
 	$(MAKE) -f .copr/Makefile iml-srpm outdir=.
 	rpmbuild --rebuild -D "_topdir $(CURDIR)/_topdir" _topdir/SRPMS/python-iml-manager-*.src.rpm

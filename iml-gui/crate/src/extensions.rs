@@ -121,3 +121,31 @@ impl<T> FailReasonExt for fetch::FailReason<T> {
         }
     }
 }
+
+/// Extension methods for`seed::browser::url::Url`
+pub(crate) trait UrlExt {
+    /// Returns the path of the `Url`.
+    /// This fn will account for
+    /// the base (via the `base`) tag
+    /// and remove it from the path
+    fn get_path(&self) -> Vec<String>;
+}
+
+impl UrlExt for Url {
+    fn get_path(&self) -> Vec<String> {
+        let mut path = self.path.clone();
+
+        let base = match crate::UI_BASE.as_ref() {
+            Some(x) => x,
+            None => return path,
+        };
+
+        let has_base = path.get(0).filter(|x| x == &base).is_some();
+
+        if has_base {
+            path.remove(0);
+        }
+
+        path
+    }
+}
