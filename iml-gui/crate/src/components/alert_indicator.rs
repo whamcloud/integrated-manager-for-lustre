@@ -1,21 +1,28 @@
-use crate::components::{attrs, font_awesome_outline, tooltip, Placement};
-use crate::generated::css_classes::C;
+use crate::{
+    components::{attrs, font_awesome_outline, tooltip, Placement},
+    generated::css_classes::C,
+};
 use im::HashMap;
-use iml_wire_types::{warp_drive::ArcValuesExt, Alert, AlertSeverity, ResourceUri};
+use iml_wire_types::{warp_drive::ArcValuesExt, Alert, AlertSeverity, ToCompositeId};
 use seed::{prelude::*, *};
-use std::{cmp::max, sync::Arc};
+use std::{cmp::max, collections::BTreeSet, iter::FromIterator, sync::Arc};
 
 pub(crate) fn alert_indicator<T>(
     alerts: &HashMap<u32, Arc<Alert>>,
-    x: &dyn ResourceUri,
+    x: &dyn ToCompositeId,
     compact: bool,
     tt_placement: Placement,
 ) -> Node<T> {
+    let composite_id = x.composite_id();
+
     let alerts: Vec<&Alert> = alerts
         .arc_values()
-        .filter_map(|a: &Alert| match &a.affected {
-            Some(rs) => rs.iter().find(|r| r == &x.resource_uri()).map(|_| a),
-            None => None,
+        .filter_map(|x| {
+            let xs = x.affected_composite_ids.as_ref()?;
+
+            BTreeSet::from_iter(xs).get(&composite_id)?;
+
+            Some(x)
         })
         .collect();
 

@@ -9,7 +9,7 @@ use crate::{
 use im::HashMap;
 use iml_wire_types::{
     warp_drive::{ArcCache, ArcValuesExt},
-    Filesystem, ResourceUri, Target, TargetConfParam, TargetKind, ToCompositeId, VolumeOrResourceUri,
+    Filesystem, Target, TargetConfParam, TargetKind, ToCompositeId, VolumeOrResourceUri,
 };
 use number_formatter as NF;
 use seed::{prelude::*, *};
@@ -127,7 +127,7 @@ fn targets<I>(caption: &str, model: &Model, tgts: &[&Arc<Target<TargetConfParam>
     ]
 }
 
-pub(crate) fn status_view<I, E: ResourceUri + ToCompositeId>(model: &Model, x: &E) -> Node<I> {
+pub(crate) fn status_view<I, E: ToCompositeId>(model: &Model, x: &E) -> Node<I> {
     span![
         class![C.whitespace_no_wrap],
         span![class![C.mx_1], lock_indicator::view(&model.locks, x)],

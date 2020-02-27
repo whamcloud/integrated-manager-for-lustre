@@ -210,7 +210,7 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> impl View<Msg
                                         x.label()
                                     ],
                                     lock_indicator::view(all_locks, x).merge_attrs(class![C.mr_2]),
-                                    alert_indicator(&cache.active_alert, &x.resource_uri, true, Placement::Top)
+                                    alert_indicator(&cache.active_alert, &x, true, Placement::Top)
                                 ])
                                 .merge_attrs(class![C.text_center]),
                                 table::td_view(span![timeago(x).unwrap_or_else(|| "".into())])
@@ -246,12 +246,7 @@ fn lnet_by_server_view<T>(x: &Host, cache: &ArcCache, all_locks: &Locks) -> Opti
 
     Some(nodes![
         lnet_status::view(&config, all_locks).merge_attrs(class![C.mr_2]),
-        alert_indicator(
-            &cache.active_alert,
-            &format!("/api/lnet_configuration/{}/", config.id),
-            true,
-            Placement::Top,
-        ),
+        alert_indicator(&cache.active_alert, &config, true, Placement::Top,),
     ])
 }
 
