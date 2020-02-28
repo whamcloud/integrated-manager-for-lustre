@@ -68,26 +68,30 @@ async fn detect_filesystem(hosts: Option<String>) -> Result<(), ImlManagerCliErr
         let hostlist = hostlist_parser::parse(&hl)?;
         tracing::debug!("Host Names: {:?}", hostlist);
         let all_hosts = get_hosts().await?;
-        let hostmap: BTreeMap<String, String> = all_hosts
+
+        let hostmap: BTreeMap<&str, &str> = all_hosts
             .objects
             .iter()
             .map(|h| {
                 vec![
-                    (h.nodename.clone(), h.resource_uri.clone()),
-                    (h.fqdn.clone(), h.resource_uri.clone()),
+                    (h.nodename.as_str(), h.resource_uri.as_str()),
+                    (h.fqdn.as_str(), h.resource_uri.as_str()),
                 ]
             })
             .flatten()
             .collect();
+
         hostlist
             .iter()
-            .filter_map(|h| hostmap.get(h))
-            .cloned()
+            .filter_map(|h| hostmap.get(h.as_str()))
+            .map(|x| x.to_string())
             .collect()
     } else {
         vec![]
     };
+
     tracing::debug!("Host APIs: {:?}", hosts);
+
     let cmd = SendCmd {
         message: "Detecting filesystems".into(),
         jobs: vec![SendJob {
