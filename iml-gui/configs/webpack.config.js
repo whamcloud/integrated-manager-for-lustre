@@ -1,6 +1,7 @@
 const path = require("path");
 const dist = path.resolve(__dirname, "../dist");
 
+const { EnvironmentPlugin } = require("webpack");
 const WebpackBar = require("webpackbar");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
@@ -8,6 +9,8 @@ const CopyWebpackPlugin = require("copy-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const Critters = require("critters-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+
+new EnvironmentPlugin(['IML_PORT', '8443']);
 
 module.exports = (env, argv) => {
   return {
@@ -37,7 +40,7 @@ module.exports = (env, argv) => {
       proxy: [
         {
           context: ["/api", "/help"],
-          target: "https://localhost:7444/",
+          target: "https://localhost:" + JSON.stringify(process.env.IML_PORT) + "/",
           secure: false
         }
       ],
