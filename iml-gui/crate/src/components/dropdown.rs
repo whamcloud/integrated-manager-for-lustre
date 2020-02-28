@@ -1,7 +1,55 @@
 use crate::{components::Placement, generated::css_classes::C};
-use seed::{prelude::*, virtual_dom::Attrs, Style, *};
+use seed::{prelude::*, Style, *};
+use std::mem;
 
-pub fn wrapper_view<T>(attrs: Attrs, placement: Placement, open: bool, children: impl View<T>) -> Node<T> {
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum Model {
+    Open,
+    Close,
+}
+
+impl Model {
+    pub fn is_open(self) -> bool {
+        self == Self::Open
+    }
+    pub fn is_closed(self) -> bool {
+        !self.is_open()
+    }
+}
+
+impl Default for Model {
+    fn default() -> Self {
+        Self::Close
+    }
+}
+
+#[derive(Clone)]
+pub enum Msg {
+    Close,
+    Open,
+    Toggle,
+}
+
+pub fn update(msg: Msg, model: &mut Model) {
+    match msg {
+        Msg::Open => {
+            mem::replace(model, Model::Open);
+        }
+        Msg::Close => {
+            mem::replace(model, Model::Close);
+        }
+        Msg::Toggle => {
+            let next_state = match model {
+                Model::Open => Model::Close,
+                Model::Close => Model::Open,
+            };
+
+            mem::replace(model, next_state);
+        }
+    }
+}
+
+pub fn wrapper_view<T>(placement: Placement, open: bool, children: impl View<T>) -> Node<T> {
     if !open {
         return empty![];
     }
@@ -27,20 +75,20 @@ pub fn wrapper_view<T>(attrs: Attrs, placement: Placement, open: bool, children:
         _ => Style::empty(),
     };
 
-    let mut cls = class![
-        C.mt_2,
-        C.py_2,
-        C.cursor_pointer,
-        C.text_center,
-        C.bg_white,
-        C.rounded_lg,
-        C.shadow_xl,
-        C.absolute
-    ];
-
-    cls.merge(attrs);
-
-    div![cls, st, children.els(),]
+    div![
+        class![
+            C.mt_2,
+            C.py_2,
+            C.cursor_pointer,
+            C.text_center,
+            C.bg_white,
+            C.rounded_lg,
+            C.shadow_xl,
+            C.absolute
+        ],
+        st,
+        children.els()
+    ]
 }
 
 pub fn item_view<T>(children: impl View<T>) -> Node<T> {

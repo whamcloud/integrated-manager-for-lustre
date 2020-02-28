@@ -206,7 +206,8 @@ module.exports = {
         black: "#000",
         white: "#FFF",
         menu: "#344151",
-        "menu-active": "#1C2A3C"
+        "menu-active": "#1C2A3C",
+        "blue-1000": "#0D1B2C"
       }
     }
   },
@@ -216,11 +217,13 @@ module.exports = {
   },
   plugins: [
     function({ addVariant }) {
-      addVariant('group-focus', ({ container, separator }) => {
+      addVariant("group-focus", ({ container, separator }) => {
         container.walkRules(rule => {
-          rule.selector = `.group:focus-within .group-focus\\:${rule.selector.slice(1)}`
-        })
-      })
+          rule.selector = `.group:focus-within .group-focus\\:${rule.selector.slice(
+            1
+          )}`;
+        });
+      });
     }
   ]
 };

@@ -246,33 +246,35 @@ fn sink(g_msg: GMsg, _model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone)]
 pub enum Msg {
-    RouteChanged(Url),
-    UpdatePageTitle,
-    ToggleMenu,
-    ManageMenuState,
-    HideMenu,
-    StartSliderTracking,
-    StopSliderTracking,
-    SliderX(i32, f64),
+    Auth(Box<auth::Msg>),
     EventSourceConnect(JsValue),
-    EventSourceMessage(MessageEvent),
     EventSourceError(JsValue),
-    Records(Box<warp_drive::Cache>),
-    RecordChange(Box<warp_drive::RecordChange>),
-    RemoveRecord(warp_drive::RecordId),
-    LoadPage,
-    Locks(warp_drive::Locks),
-    ServersPage(page::servers::Msg),
-    WindowClick,
-    WindowResize,
-    Notification(notification::Msg),
+    EventSourceMessage(MessageEvent),
+    FilesystemsPage(page::filesystems::Msg),
+    FilesystemPage(page::filesystem::Msg),
     GetSession,
     GotSession(fetch::ResponseDataResult<Session>),
+    HideMenu,
+    LoadPage,
+    Locks(warp_drive::Locks),
+    LoggedOut(fetch::FetchObject<()>),
     Login(login::Msg),
     Logout,
-    LoggedOut(fetch::FetchObject<()>),
+    ManageMenuState,
+    Notification(notification::Msg),
+    RecordChange(Box<warp_drive::RecordChange>),
+    Records(Box<warp_drive::Cache>),
+    RemoveRecord(warp_drive::RecordId),
+    RouteChanged(Url),
+    ServersPage(page::servers::Msg),
+    SliderX(i32, f64),
+    StartSliderTracking,
+    StopSliderTracking,
+    ToggleMenu,
     Tree(tree::Msg),
-    Auth(Box<auth::Msg>),
+    UpdatePageTitle,
+    WindowClick,
+    WindowResize,
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -370,103 +372,17 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 model.records.lnet_configuration.clone(),
             ));
 
+            orders
+                .proxy(Msg::FilesystemsPage)
+                .send_msg(page::filesystems::Msg::SetFilesystems(
+                    model.records.filesystem.values().cloned().collect(),
+                ));
+
             orders.proxy(Msg::Tree).send_msg(tree::Msg::Reset);
         }
-        Msg::RecordChange(record_change) => match *record_change {
-            warp_drive::RecordChange::Update(record) => match record {
-                warp_drive::Record::ActiveAlert(x) => {
-                    let msg = x.message.clone();
-
-                    model.records.active_alert.insert(x.id, Arc::new(x));
-
-                    let old = model.activity_health;
-
-                    model.activity_health = update_activity_health(&model.records.active_alert);
-                    orders.proxy(Msg::Notification).send_msg(notification::generate(
-                        Some(msg),
-                        &old,
-                        &model.activity_health,
-                    ));
-                }
-                warp_drive::Record::Filesystem(x) => {
-                    let id = x.id;
-                    if model.records.filesystem.insert(x.id, Arc::new(x)).is_none() {
-                        orders
-                            .proxy(Msg::Tree)
-                            .send_msg(tree::Msg::Add(warp_drive::RecordId::Filesystem(id)));
-                    };
-                }
-                warp_drive::Record::ContentType(x) => {
-                    model.records.content_type.insert(x.id, Arc::new(x));
-                }
-                warp_drive::Record::Host(x) => {
-                    let id = x.id;
-                    if model.records.host.insert(x.id, Arc::new(x)).is_none() {
-                        orders
-                            .proxy(Msg::Tree)
-                            .send_msg(tree::Msg::Add(warp_drive::RecordId::Host(id)));
-                    };
-
-                    orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::SetHosts(
-                        model.records.host.arc_values().cloned().collect(),
-                        model.records.lnet_configuration.clone(),
-                    ));
-                }
-                warp_drive::Record::ManagedTargetMount(x) => {
-                    model.records.managed_target_mount.insert(x.id, Arc::new(x));
-                }
-                warp_drive::Record::OstPool(x) => {
-                    model.records.ost_pool.insert(x.id, Arc::new(x));
-                }
-                warp_drive::Record::OstPoolOsts(x) => {
-                    let id = x.id;
-                    if model.records.ost_pool_osts.insert(x.id, Arc::new(x)).is_none() {
-                        orders
-                            .proxy(Msg::Tree)
-                            .send_msg(tree::Msg::Add(warp_drive::RecordId::OstPoolOsts(id)));
-                    };
-                }
-                warp_drive::Record::StratagemConfig(x) => {
-                    model.records.stratagem_config.insert(x.id, Arc::new(x));
-                }
-                warp_drive::Record::Target(x) => {
-                    let id = x.id;
-                    if model.records.target.insert(x.id, Arc::new(x)).is_none() {
-                        orders
-                            .proxy(Msg::Tree)
-                            .send_msg(tree::Msg::Add(warp_drive::RecordId::Target(id)));
-                    };
-                }
-                warp_drive::Record::Volume(x) => {
-                    model.records.volume.insert(x.id, Arc::new(x));
-                }
-                warp_drive::Record::VolumeNode(x) => {
-                    let id = x.id;
-                    if model.records.volume_node.insert(x.id, Arc::new(x)).is_none() {
-                        orders
-                            .proxy(Msg::Tree)
-                            .send_msg(tree::Msg::Add(warp_drive::RecordId::VolumeNode(id)));
-                    };
-                }
-                warp_drive::Record::LnetConfiguration(x) => {
-                    model.records.lnet_configuration.insert(x.id, Arc::new(x));
-                }
-            },
-            warp_drive::RecordChange::Delete(record_id) => {
-                match record_id {
-                    warp_drive::RecordId::Filesystem(_)
-                    | warp_drive::RecordId::VolumeNode(_)
-                    | warp_drive::RecordId::Host(_)
-                    | warp_drive::RecordId::OstPoolOsts(_)
-                    | warp_drive::RecordId::Target(_) => {
-                        orders.proxy(Msg::Tree).send_msg(tree::Msg::Remove(record_id));
-                    }
-                    _ => {}
-                };
-
-                orders.send_msg(Msg::RemoveRecord(record_id));
-            }
-        },
+        Msg::RecordChange(record_change) => {
+            handle_record_change(*record_change, model, orders);
+        }
         Msg::RemoveRecord(id) => {
             model.records.remove_record(id);
 
@@ -475,6 +391,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     model.records.host.arc_values().cloned().collect(),
                     model.records.lnet_configuration.clone(),
                 ));
+            }
+
+            if let warp_drive::RecordId::Filesystem(x) = id {
+                orders
+                    .proxy(Msg::FilesystemsPage)
+                    .send_msg(page::filesystems::Msg::RemoveFilesystem(x));
             }
         }
         Msg::Locks(locks) => {
@@ -490,6 +412,16 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::ServersPage(msg) => {
             if let Page::Servers(page) = &mut model.page {
                 page::servers::update(msg, &model.records, page, &mut orders.proxy(Msg::ServersPage))
+            }
+        }
+        Msg::FilesystemPage(msg) => {
+            if let Page::Filesystem(page) = &mut model.page {
+                page::filesystem::update(msg, &model.records, page, &mut orders.proxy(Msg::FilesystemPage))
+            }
+        }
+        Msg::FilesystemsPage(msg) => {
+            if let Page::Filesystems(page) = &mut model.page {
+                page::filesystems::update(msg, &model.records, page, &mut orders.proxy(Msg::FilesystemsPage))
             }
         }
         Msg::StartSliderTracking => {
@@ -529,8 +461,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             if model.manage_menu_state.should_update() {
                 model.manage_menu_state.update();
             }
-
-            orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::WindowClick);
         }
         Msg::WindowResize => {
             model.breakpoint_size = breakpoints::size();
@@ -556,6 +486,114 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
 
             auth::update(*msg, &mut model.auth, &mut orders.proxy(|x| Msg::Auth(Box::new(x))));
+        }
+    }
+}
+
+fn handle_record_change(
+    record_change: warp_drive::RecordChange,
+    model: &mut Model,
+    orders: &mut impl Orders<Msg, GMsg>,
+) {
+    match record_change {
+        warp_drive::RecordChange::Update(record) => match record {
+            warp_drive::Record::ActiveAlert(x) => {
+                let msg = x.message.clone();
+
+                model.records.active_alert.insert(x.id, Arc::new(x));
+
+                let old = model.activity_health;
+
+                model.activity_health = update_activity_health(&model.records.active_alert);
+                orders.proxy(Msg::Notification).send_msg(notification::generate(
+                    Some(msg),
+                    &old,
+                    &model.activity_health,
+                ));
+            }
+            warp_drive::Record::Filesystem(x) => {
+                let id = x.id;
+                let fs = Arc::new(x);
+
+                if model.records.filesystem.insert(id, Arc::clone(&fs)).is_none() {
+                    orders
+                        .proxy(Msg::Tree)
+                        .send_msg(tree::Msg::Add(warp_drive::RecordId::Filesystem(id)));
+
+                    orders
+                        .proxy(Msg::FilesystemsPage)
+                        .send_msg(page::filesystems::Msg::AddFilesystem(fs));
+                }
+            }
+            warp_drive::Record::ContentType(x) => {
+                model.records.content_type.insert(x.id, Arc::new(x));
+            }
+            warp_drive::Record::Host(x) => {
+                let id = x.id;
+                if model.records.host.insert(x.id, Arc::new(x)).is_none() {
+                    orders
+                        .proxy(Msg::Tree)
+                        .send_msg(tree::Msg::Add(warp_drive::RecordId::Host(id)));
+                };
+
+                orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::SetHosts(
+                    model.records.host.arc_values().cloned().collect(),
+                    model.records.lnet_configuration.clone(),
+                ));
+            }
+            warp_drive::Record::ManagedTargetMount(x) => {
+                model.records.managed_target_mount.insert(x.id, Arc::new(x));
+            }
+            warp_drive::Record::OstPool(x) => {
+                model.records.ost_pool.insert(x.id, Arc::new(x));
+            }
+            warp_drive::Record::OstPoolOsts(x) => {
+                let id = x.id;
+                if model.records.ost_pool_osts.insert(x.id, Arc::new(x)).is_none() {
+                    orders
+                        .proxy(Msg::Tree)
+                        .send_msg(tree::Msg::Add(warp_drive::RecordId::OstPoolOsts(id)));
+                };
+            }
+            warp_drive::Record::StratagemConfig(x) => {
+                model.records.stratagem_config.insert(x.id, Arc::new(x));
+            }
+            warp_drive::Record::Target(x) => {
+                let id = x.id;
+                if model.records.target.insert(x.id, Arc::new(x)).is_none() {
+                    orders
+                        .proxy(Msg::Tree)
+                        .send_msg(tree::Msg::Add(warp_drive::RecordId::Target(id)));
+                };
+            }
+            warp_drive::Record::Volume(x) => {
+                model.records.volume.insert(x.id, Arc::new(x));
+            }
+            warp_drive::Record::VolumeNode(x) => {
+                let id = x.id;
+                if model.records.volume_node.insert(x.id, Arc::new(x)).is_none() {
+                    orders
+                        .proxy(Msg::Tree)
+                        .send_msg(tree::Msg::Add(warp_drive::RecordId::VolumeNode(id)));
+                };
+            }
+            warp_drive::Record::LnetConfiguration(x) => {
+                model.records.lnet_configuration.insert(x.id, Arc::new(x));
+            }
+        },
+        warp_drive::RecordChange::Delete(record_id) => {
+            match record_id {
+                warp_drive::RecordId::Filesystem(_)
+                | warp_drive::RecordId::VolumeNode(_)
+                | warp_drive::RecordId::Host(_)
+                | warp_drive::RecordId::OstPoolOsts(_)
+                | warp_drive::RecordId::Target(_) => {
+                    orders.proxy(Msg::Tree).send_msg(tree::Msg::Remove(record_id));
+                }
+                _ => {}
+            };
+
+            orders.send_msg(Msg::RemoveRecord(record_id));
         }
     }
 }
@@ -605,7 +643,7 @@ pub fn main_panels(model: &Model, children: impl View<Msg>) -> impl View<Msg> {
                         C.overflow_x_hidden,
                         C.overflow_y_auto,
                         C.whitespace_no_wrap,
-                        C.bg_blue_900,
+                        C.bg_blue_1000,
                         C.border_r_2,
                         C.border_gray_800,
                         C.lg__h_main_content,
@@ -620,16 +658,16 @@ pub fn main_panels(model: &Model, children: impl View<Msg>) -> impl View<Msg> {
                 GroupType::FilesystemAdministrators,
                 div![
                     class![
+                        C.bg_gray_600,
+                        C.bg_green_400 => model.track_slider,
+                        C.cursor_ew_resize,
                         C.flex_grow_0,
                         C.flex_shrink_0,
-                        C.cursor_ew_resize,
-                        C.bg_gray_500
-                        C.hover__bg_teal_400,
-                        C.bg_teal_400 => model.track_slider,
-                        C.relative,
+                        C.hidden
+                        C.hover__bg_green_400,
                         C.lg__block,
                         C.lg__h_main_content,
-                        C.hidden
+                        C.relative,
                     ],
                     simple_ev(Ev::MouseDown, Msg::StartSliderTracking),
                     style! {
@@ -654,7 +692,7 @@ pub fn main_panels(model: &Model, children: impl View<Msg>) -> impl View<Msg> {
                     C.flex_col,
                     C.flex_grow,
                     C.flex_shrink_0,
-                    C.bg_gray_200,
+                    C.bg_gray_300,
                     C.lg__w_0,
                     C.lg__h_main_content,
                 ],
@@ -675,14 +713,20 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::About => main_panels(model, page::about::view(model)).els(),
         Page::Activity => main_panels(model, page::activity::view(model)).els(),
         Page::Dashboard => main_panels(model, page::dashboard::view(model)).els(),
-        Page::Filesystems => main_panels(model, page::filesystems::view(model)).els(),
-        Page::Filesystem(id) => {
-            if let Some(f) = model.records.filesystem.get(id) {
-                main_panels(model, page::filesystem::view(model, f)).els()
-            } else {
-                page::not_found::view(model).els()
-            }
-        }
+        Page::Filesystems(page) => main_panels(
+            model,
+            page::filesystems::view(&model.records, page, &model.locks)
+                .els()
+                .map_msg(Msg::FilesystemsPage),
+        )
+        .els(),
+        Page::Filesystem(page) => main_panels(
+            model,
+            page::filesystem::view(&model.records, page, &model.locks)
+                .els()
+                .map_msg(Msg::FilesystemPage),
+        )
+        .els(),
         Page::Jobstats => main_panels(model, page::jobstats::view(model)).els(),
         Page::Login(x) => page::login::view(x).els().map_msg(Msg::Login),
         Page::Logs => main_panels(model, page::logs::view(model)).els(),

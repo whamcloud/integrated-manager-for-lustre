@@ -1,4 +1,4 @@
-use crate::generated::css_classes::C;
+use crate::{extensions::MergeAttrs, generated::css_classes::C};
 use seed::{prelude::*, Attrs, *};
 
 pub fn wrapper_cls() -> Attrs {
@@ -49,5 +49,9 @@ pub fn td_view<T>(children: impl View<T>) -> Node<T> {
 }
 
 pub fn td_right<T>(children: impl View<T>) -> Node<T> {
-    td![td_cls(), class![C.text_right], children.els()]
+    td_view(children).merge_attrs(class![C.text_right])
+}
+
+pub fn td_center<T>(children: impl View<T>) -> Node<T> {
+    td_view(children).merge_attrs(class![C.text_center])
 }

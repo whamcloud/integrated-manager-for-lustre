@@ -257,7 +257,7 @@ fn logo_nav_view<T>() -> Node<T> {
             C.lg__my_0,
             C.ml_6,
             C.my_2,
-            C.text_red_500,
+            C.text_red_600,
             C.xl__mr_12
         ],
         ddn_logo().merge_attrs(class![C.h_12, C.w_24, C.mr_3]),

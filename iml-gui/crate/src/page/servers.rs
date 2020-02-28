@@ -38,11 +38,10 @@ pub struct Model {
 
 #[derive(Clone)]
 pub enum Msg {
-    SetHosts(Vec<Host>, im::HashMap<u32, Arc<LnetConfigurationRecord>>),
+    SetHosts(Vec<Host>, im::HashMap<u32, Arc<LnetConfigurationRecord>>), // @FIXME: This should be more granular so row state isn't lost.
     Page(paging::Msg),
     Sort,
     SortBy(SortField),
-    WindowClick,
     ActionDropdown(Box<action_dropdown::IdMsg>),
 }
 
@@ -85,17 +84,6 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
 
             model.hosts.sort_by(sort_fn);
         }
-        Msg::WindowClick => {
-            if model.pager.dropdown.should_update() {
-                model.pager.dropdown.update();
-            }
-
-            for (_, r) in model.rows.iter_mut() {
-                if r.dropdown.watching.should_update() {
-                    r.dropdown.watching.update();
-                }
-            }
-        }
         Msg::SetHosts(hosts, lnet_configs) => {
             model.hosts = hosts;
 
@@ -127,7 +115,7 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
             orders.send_msg(Msg::Sort);
         }
         Msg::Page(msg) => {
-            paging::update(msg, &mut model.pager);
+            paging::update(msg, &mut model.pager, &mut orders.proxy(Msg::Page));
         }
         Msg::ActionDropdown(msg) => {
             let action_dropdown::IdMsg(id, msg) = *msg;
@@ -181,7 +169,7 @@ fn lnet_by_server(
 
 pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> impl View<Msg> {
     div![
-        class![C.bg_white, C.border_t, C.border_b, C.border, C.rounded_lg, C.shadow],
+        class![C.bg_white],
         div![
             class![C.flex, C.justify_between, C.px_6, C._mb_px, C.bg_gray_200],
             h3![class![C.py_4, C.font_normal, C.text_lg], "Servers"]
