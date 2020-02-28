@@ -104,6 +104,12 @@ pub async fn db_record_to_change_record(
                 Ok(RecordChange::Update(Record::ContentType(x)))
             }
         },
+        DbRecord::Device(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::Device(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::Device(x)))
+            }
+        },
         DbRecord::LnetConfiguration(x) => match (msg_type, x) {
             (MessageType::Delete, x) => {
                 Ok(RecordChange::Delete(RecordId::LnetConfiguration(x.id())))

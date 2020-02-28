@@ -929,6 +929,46 @@ impl From<Row> for Device {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct DeviceRecord {
+    pub id: DeviceId,
+    pub size: Size,
+    pub usable_for_lustre: bool,
+    pub device_type: DeviceType,
+    pub parents: DeviceIds,
+    pub children: DeviceIds,
+    pub max_depth: i16,
+    pub record_id: u32,
+}
+
+// impl Name for DeviceRecord {
+//     fn table_name() -> TableName<'static> {
+//         DEVICE_TABLE_NAME
+//     }
+// }
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for DeviceRecord {
+    fn from(row: Row) -> Self {
+        DeviceRecord {
+            id: row.get("id"),
+            size: row.get("size"),
+            usable_for_lustre: row.get("usable_for_lustre"),
+            device_type: row.get("device_type"),
+            parents: row.get("parents"),
+            children: row.get("children"),
+            max_depth: row.get("max_depth"),
+            record_id: row.get("record_id"),
+        }
+    }
+}
+
+impl Id for DeviceRecord {
+    fn id(&self) -> u32 {
+        self.record_id
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Paths(pub BTreeSet<PathBuf>);
 
 impl Deref for Paths {
