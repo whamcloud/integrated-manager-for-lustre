@@ -178,6 +178,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
       - "mailbox:/var/spool/iml/mailbox"
+      - "/root/.ssh:/root/.ssh"
     environment:
       - PROXY_HOST=iml-action-runner
       - INFLUXDB_SERVER_FQDN=influxdb
@@ -332,6 +333,7 @@ services:
       dockerfile: ./setup.dockerfile
     volumes:
       - "manager-config:/var/lib/chroma"
+      - "/etc/iml-docker/setup:/var/lib/chroma-setup"
     secrets:
       - iml_pw
     deploy: *default-deploy
