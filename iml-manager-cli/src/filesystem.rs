@@ -84,7 +84,7 @@ async fn detect_filesystem(hosts: Option<String>) -> Result<(), ImlManagerCliErr
         hostlist
             .iter()
             .filter_map(|h| hostmap.get(h.as_str()))
-            .map(|x| x.to_string())
+            .map(|x| (*x).to_string())
             .collect()
     } else {
         vec![]
