@@ -23,7 +23,10 @@ use std::{
     time::Duration,
 };
 use structopt::StructOpt;
-use tokio::time::delay_for;
+use tokio::{
+    io::{stdin, AsyncReadExt},
+    time::delay_for,
+};
 
 #[derive(StructOpt, Debug)]
 pub struct RemoveHosts {
@@ -46,6 +49,15 @@ pub struct AddHosts {
     /// Always continue if command fails
     #[structopt(long)]
     force: bool,
+
+    /// Authentication Type (shared, password, private)
+    /// for "private" key is read from stdin
+    #[structopt(name = "auth", long, short, default_value = "shared")]
+    auth: String,
+
+    /// Password for "password" or password for "private" key
+    #[structopt(long, short = "P", required_if("auth", "password"))]
+    password: Option<String>,
 }
 
 #[derive(Debug, StructOpt)]
@@ -61,17 +73,61 @@ pub enum ServerCommand {
     Remove(RemoveHosts),
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug)]
+pub enum AuthType {
+    Shared,
+    Password(String),
+    PrivateKey(String),
+}
+
+impl From<&AuthType> for String {
+    fn from(auth: &AuthType) -> Self {
+        match auth {
+            AuthType::Shared => "existing_keys_choice".into(),
+            AuthType::Password(_) => "id_password_root".into(),
+            AuthType::PrivateKey(_) => "private_key_choice".into(),
+        }
+    }
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Default)]
 struct TestHostConfig<'a> {
     address: &'a str,
     auth_type: String,
+    // For auth_type == "id_password_root"
+    root_password: Option<String>,
+    // For auth_type == "private_key_choice"
+    private_key: Option<String>,
+}
+
+impl<'a> TestHostConfig<'a> {
+    fn new(address: &'a str, auth: &AuthType) -> Self {
+        Self {
+            address,
+            auth_type: auth.into(),
+            root_password: {
+                if let AuthType::Password(pass) = auth {
+                    Some(pass.clone())
+                } else {
+                    None
+                }
+            },
+            private_key: {
+                if let AuthType::PrivateKey(key) = auth {
+                    Some(key.clone())
+                } else {
+                    None
+                }
+            },
+        }
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
 struct AgentConfig<'a> {
-    address: &'a str,
-    auth_type: String,
     server_profile: String,
+    #[serde(flatten, borrow)]
+    info: TestHostConfig<'a>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -260,13 +316,13 @@ where
     }
 }
 
-fn get_test_host_configs<'a>(new_hosts: &'a BTreeSet<String>) -> Vec<TestHostConfig<'a>> {
+fn get_test_host_configs<'a>(
+    new_hosts: &'a BTreeSet<String>,
+    auth: &AuthType,
+) -> Vec<TestHostConfig<'a>> {
     new_hosts
         .iter()
-        .map(|address| TestHostConfig {
-            address,
-            auth_type: "existing_keys_choice".into(),
-        })
+        .map(|address| TestHostConfig::new(address, auth))
         .collect()
 }
 
@@ -348,12 +404,14 @@ fn handle_test_host_failure(all_passed: bool, config: &AddHosts) -> Result<(), I
     Ok(())
 }
 
-fn get_agent_config_objects<'a>(new_hosts: &'a BTreeSet<String>) -> Vec<AgentConfig<'a>> {
+fn get_agent_config_objects<'a>(
+    new_hosts: &'a BTreeSet<String>,
+    auth: &AuthType,
+) -> Vec<AgentConfig<'a>> {
     new_hosts
         .iter()
         .map(|address| AgentConfig {
-            address: &address,
-            auth_type: "existing_keys_choice".into(),
+            info: TestHostConfig::new(&address, &auth),
             server_profile: "/api/server_profile/default/".into(),
         })
         .collect()
@@ -474,10 +532,10 @@ fn get_commands_from_wrapper(objects: Vec<HostProfileCmdWrapper>) -> Vec<Command
         .collect()
 }
 
-async fn profiles_and_servers(
+async fn process_addhosts(
     config: &AddHosts,
     new_hosts: BTreeSet<String>,
-) -> Result<(ServerProfile, BTreeSet<String>), ImlManagerCliError> {
+) -> Result<(ServerProfile, BTreeSet<String>, AuthType), ImlManagerCliError> {
     let (profiles, api_hosts): (ApiList<ServerProfile>, ApiList<Host>) =
         future::try_join(get_all(), get_all()).await?;
 
@@ -493,14 +551,32 @@ async fn profiles_and_servers(
 
     show_known_host_messages(known_hosts);
 
-    Ok((profile, new_hosts))
+    let auth = match config.auth.as_str() {
+        "shared" => AuthType::Shared,
+        "private" => {
+            let mut buf: Vec<u8> = Vec::new();
+            stdin().read_to_end(&mut buf).await?;
+            AuthType::PrivateKey(String::from_utf8_lossy(&buf).to_string())
+        }
+        "password" => AuthType::Password(config.password.clone().unwrap_or_default()),
+        bad => {
+            return Err(Error::new(
+                ErrorKind::NotFound,
+                format!("{} not a valid auth type", bad),
+            )
+            .into());
+        }
+    };
+
+    Ok((profile, new_hosts, auth))
 }
 
 async fn get_test_host_commands_and_jobs(
     term: &Term,
     new_hosts: &BTreeSet<String>,
+    auth: &AuthType,
 ) -> Result<bool, ImlManagerCliError> {
-    let objects = get_test_host_configs(&new_hosts);
+    let objects = get_test_host_configs(&new_hosts, auth);
 
     let Objects { objects } = post_test_host(objects).await?;
 
@@ -527,8 +603,9 @@ async fn handle_agents(
     term: &Term,
     new_hosts: &BTreeSet<String>,
     profile: &ServerProfile,
+    auth: &AuthType,
 ) -> Result<Vec<Host>, ImlManagerCliError> {
-    let objects = get_agent_config_objects(new_hosts);
+    let objects = get_agent_config_objects(new_hosts, auth);
 
     let Objects { objects }: Objects<CommandAndHostWrapper> = post_command_to_host(objects).await?;
 
@@ -588,17 +665,19 @@ async fn add_server(config: AddHosts) -> Result<(), ImlManagerCliError> {
 
     tracing::debug!("Parsed hosts {:?}", new_hosts);
 
-    let (profile, new_hosts) = profiles_and_servers(&config, new_hosts).await?;
+    let (profile, new_hosts, auth) = process_addhosts(&config, new_hosts).await?;
 
     if new_hosts.is_empty() {
         return Ok(());
     }
 
-    let all_passed = get_test_host_commands_and_jobs(&term, &new_hosts).await?;
+    tracing::debug!("AUTH: {:?}", auth);
+
+    let all_passed = get_test_host_commands_and_jobs(&term, &new_hosts, &auth).await?;
 
     handle_test_host_failure(all_passed, &config)?;
 
-    let hosts = handle_agents(&term, &new_hosts, &profile).await?;
+    let hosts = handle_agents(&term, &new_hosts, &profile, &auth).await?;
 
     let cmds = handle_profiles(&term, &config, &hosts, &profile).await?;
 

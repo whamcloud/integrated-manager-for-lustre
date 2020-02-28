@@ -32,17 +32,17 @@ pub enum StratagemCommand {
         #[structopt(short = "d", long = "device")]
         device_path: String,
         /// The report duration
-        #[structopt(short = "r", long = "report", parse(try_from_str = "parse_duration"))]
+        #[structopt(short = "r", long = "report", parse(try_from_str = parse_duration))]
         rd: Option<u64>,
         /// The purge duration
-        #[structopt(short = "p", long = "purge", parse(try_from_str = "parse_duration"))]
+        #[structopt(short = "p", long = "purge", parse(try_from_str = parse_duration))]
         pd: Option<u64>,
     },
 }
 
 #[derive(Debug, StructOpt)]
 pub struct FsPool {
-    #[structopt(name = "FILESYSTEM", parse(try_from_str = "is_valid_fsname"))]
+    #[structopt(name = "FILESYSTEM", parse(try_from_str = is_valid_fsname))]
     filesystem: String,
 
     #[structopt(name = "POOL")]
@@ -82,7 +82,7 @@ pub enum PoolCommand {
     },
     #[structopt(name = "list")]
     List {
-        #[structopt(name = "FILESYSTEM", parse(try_from_str = "is_valid_fsname"))]
+        #[structopt(name = "FILESYSTEM", parse(try_from_str = is_valid_fsname))]
         filesystem: String,
     },
 }
@@ -191,7 +191,7 @@ pub struct FidInput {
     /// File to read from, "-" for stdin, or unspecified for on cli
     input: Option<String>,
 
-    #[structopt(name = "FSNAME", parse(try_from_str = "is_valid_fsname"))]
+    #[structopt(name = "FSNAME", parse(try_from_str = is_valid_fsname))]
     /// Lustre filesystem name, or mountpoint
     fsname: String,
 
@@ -222,8 +222,7 @@ pub enum StratagemClientCommand {
 }
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "iml-agent")]
-#[structopt(raw(setting = "structopt::clap::AppSettings::ColoredHelp"))]
+#[structopt(name = "iml-agent", setting = structopt::clap::AppSettings::ColoredHelp)]
 /// The Integrated Manager for Lustre Agent CLI
 pub enum App {
     #[structopt(name = "stratagem")]

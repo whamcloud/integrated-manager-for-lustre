@@ -46,13 +46,13 @@ pub struct StratagemIntervalConfig {
     #[structopt(short = "f", long = "filesystem")]
     filesystem: String,
     /// Interval to scan
-    #[structopt(short = "i", long = "interval", parse(try_from_str = "parse_duration"))]
+    #[structopt(short = "i", long = "interval", parse(try_from_str = parse_duration))]
     interval: u64,
     /// The report duration
-    #[structopt(short = "r", long = "report", parse(try_from_str = "parse_duration"))]
+    #[structopt(short = "r", long = "report", parse(try_from_str = parse_duration))]
     report_duration: Option<u64>,
     /// The purge duration
-    #[structopt(short = "p", long = "purge", parse(try_from_str = "parse_duration"))]
+    #[structopt(short = "p", long = "purge", parse(try_from_str = parse_duration))]
     purge_duration: Option<u64>,
 }
 
@@ -69,10 +69,10 @@ pub struct StratagemScanData {
     #[structopt(short = "f", long = "filesystem")]
     filesystem: String,
     /// The report duration
-    #[structopt(short = "r", long = "report", parse(try_from_str = "parse_duration"))]
+    #[structopt(short = "r", long = "report", parse(try_from_str = parse_duration))]
     report_duration: Option<u64>,
     /// The purge duration
-    #[structopt(short = "p", long = "purge", parse(try_from_str = "parse_duration"))]
+    #[structopt(short = "p", long = "purge", parse(try_from_str = parse_duration))]
     purge_duration: Option<u64>,
 }
 
