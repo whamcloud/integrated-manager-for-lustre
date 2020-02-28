@@ -10,7 +10,7 @@ use crate::{
 };
 use iml_wire_types::{
     warp_drive::{ArcCache, Locks},
-    Filesystem, Target, TargetConfParam, TargetKind, ToCompositeId, VolumeOrResourceUri,
+    Filesystem, Session, Target, TargetConfParam, TargetKind, ToCompositeId, VolumeOrResourceUri,
 };
 use number_formatter as nf;
 use seed::{prelude::*, *};
@@ -206,7 +206,7 @@ fn paging_view(pager: &paging::Model) -> Node<paging::Msg> {
     ]
 }
 
-pub(crate) fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> Node<Msg> {
+pub(crate) fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<&Session>) -> Node<Msg> {
     div![
         details_table(cache, all_locks, model),
         if let Some(model) = &model.stratagem {
@@ -214,11 +214,20 @@ pub(crate) fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> Node<M
         } else {
             empty![]
         },
-        targets("Management Target", cache, all_locks, &model.rows, &model.mgt[..], None),
+        targets(
+            "Management Target",
+            cache,
+            all_locks,
+            session,
+            &model.rows,
+            &model.mgt[..],
+            None
+        ),
         targets(
             "Metadata Targets",
             cache,
             all_locks,
+            session,
             &model.rows,
             &model.mdts[model.mdt_paging.range()],
             paging_view(&model.mdt_paging).map_msg(Msg::MdtPaging)
@@ -227,6 +236,7 @@ pub(crate) fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> Node<M
             "Object Storage Targets",
             cache,
             all_locks,
+            session,
             &model.rows,
             &model.osts[model.ost_paging.range()],
             paging_view(&model.ost_paging).map_msg(Msg::OstPaging)
@@ -286,6 +296,7 @@ fn targets(
     title: &str,
     cache: &ArcCache,
     all_locks: &Locks,
+    session: Option<&Session>,
     rows: &HashMap<u32, Row>,
     tgts: &[Arc<Target<TargetConfParam>>],
     pager: impl Into<Option<Node<Msg>>>,
@@ -338,7 +349,7 @@ fn targets(
                         t::td_view(server_link(x.active_host.as_ref(), &x.active_host_name)),
                         td![
                             class![C.p_3, C.text_center],
-                            action_dropdown::view(x.id, &row.dropdown, all_locks)
+                            action_dropdown::view(x.id, &row.dropdown, all_locks, session)
                                 .map_msg(|x| Msg::ActionDropdown(Box::new(x)))
                         ]
                     ],

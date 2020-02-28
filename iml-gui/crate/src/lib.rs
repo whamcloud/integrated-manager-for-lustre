@@ -15,12 +15,16 @@ mod generated;
 mod notification;
 mod route;
 mod sleep;
+mod status_section;
 mod watch_state;
 
 #[cfg(test)]
 mod test_utils;
 
-use components::{breadcrumbs::BreadCrumbs, loading, restrict, tree, update_activity_health, ActivityHealth};
+use components::{
+    breadcrumbs::BreadCrumbs, font_awesome, font_awesome_outline, loading, restrict, tree, update_activity_health,
+    ActivityHealth,
+};
 pub(crate) use extensions::*;
 use futures::channel::oneshot;
 use generated::css_classes::C;
@@ -140,6 +144,7 @@ pub struct Model {
     records: warp_drive::ArcCache,
     route: Route<'static>,
     side_width_percentage: f32,
+    status_section: status_section::Model,
     track_slider: bool,
     tree: tree::Model,
 }
@@ -200,6 +205,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
         records: warp_drive::ArcCache::default(),
         route: url.into(),
         side_width_percentage: 20_f32,
+        status_section: status_section::Model::default(),
         track_slider: false,
         tree: tree::Model::default(),
     })
@@ -267,6 +273,7 @@ pub enum Msg {
     RemoveRecord(warp_drive::RecordId),
     RouteChanged(Url),
     ServersPage(page::servers::Msg),
+    StatusSection(status_section::Msg),
     SliderX(i32, f64),
     StartSliderTracking,
     StopSliderTracking,
@@ -455,6 +462,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             } else {
                 side_width_percentage
             };
+        }
+        Msg::StatusSection(msg) => {
+            status_section::update(
+                msg,
+                &model.records,
+                &mut model.status_section,
+                &mut orders.proxy(Msg::StatusSection),
+            );
         }
         Msg::Logout => {
             model.logging_out = true;
@@ -721,7 +736,17 @@ pub fn main_panels(model: &Model, children: impl View<Msg>) -> impl View<Msg> {
                     children.els()
                 ],
                 page::partial::footer::view().els(),
-            ]
+            ],
+            // Side buttons panel
+            status_section::view(
+                &model.status_section,
+                &model.route,
+                &model.activity_health,
+                model.auth.get_session(),
+                &model.locks
+            )
+            .els()
+            .map_msg(Msg::StatusSection)
         ],
     ]
 }
@@ -730,18 +755,17 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
     match &model.page {
         Page::AppLoading => loading::view().els(),
         Page::About => main_panels(model, page::about::view(model)).els(),
-        Page::Activity => main_panels(model, page::activity::view(model)).els(),
         Page::Dashboard => main_panels(model, page::dashboard::view(model)).els(),
         Page::Filesystems(page) => main_panels(
             model,
-            page::filesystems::view(&model.records, page, &model.locks)
+            page::filesystems::view(&model.records, page, &model.locks, model.auth.get_session())
                 .els()
                 .map_msg(Msg::FilesystemsPage),
         )
         .els(),
         Page::Filesystem(page) => main_panels(
             model,
-            page::filesystem::view(&model.records, page, &model.locks)
+            page::filesystem::view(&model.records, page, &model.locks, model.auth.get_session())
                 .els()
                 .map_msg(Msg::FilesystemPage),
         )
@@ -756,7 +780,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::PowerControl => main_panels(model, page::power_control::view(model)).els(),
         Page::Servers(page) => main_panels(
             model,
-            page::servers::view(&model.records, page, &model.locks)
+            page::servers::view(&model.records, model.auth.get_session(), page, &model.locks)
                 .els()
                 .map_msg(Msg::ServersPage),
         )
