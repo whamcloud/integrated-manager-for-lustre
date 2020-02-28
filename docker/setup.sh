@@ -18,10 +18,10 @@ DATADIR=/var/lib/chroma
 
 for repo in $(ls $SETUPDIR/ |grep .repo$); do
     mkdir -p $DATADIR/repo
-    cp $repo $DATADIR/repo/
-    chroma-config repos register $DATADIR/repo/$(basename $repo)
+    cp $SETUPDIR/$repo $DATADIR/repo/
+    chroma-config repos register $DATADIR/repo/$repo
 done
 
 for profile in $(ls $SETUPDIR/ |grep .profile$); do
-    chroma-config profile register $profile
+    chroma-config profile register $SETUPDIR/$profile
 done
