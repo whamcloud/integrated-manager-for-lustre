@@ -5,7 +5,7 @@
 use crate::{
     db::{
         ContentTypeRecord, DeviceRecord, Id, LnetConfigurationRecord, ManagedTargetMountRecord,
-        OstPoolOstsRecord, OstPoolRecord, StratagemConfiguration, VolumeNodeRecord,
+        OstPoolOstsRecord, OstPoolRecord, StratagemConfiguration, VolumeNodeRecord, DeviceHostRecord,
     },
     Alert, CompositeId, EndpointNameSelf, Filesystem, Host, Label, LockChange, Target,
     TargetConfParam, ToCompositeId, Volume,
@@ -91,6 +91,7 @@ pub struct Cache {
     pub active_alert: HashMap<u32, Alert>,
     pub content_type: HashMap<u32, ContentTypeRecord>,
     pub device: HashMap<u32, DeviceRecord>,
+    pub device_host: HashMap<u32, DeviceHostRecord>,
     pub filesystem: HashMap<u32, Filesystem>,
     pub host: HashMap<u32, Host>,
     pub lnet_configuration: HashMap<u32, LnetConfigurationRecord>,
@@ -108,6 +109,7 @@ pub struct ArcCache {
     pub active_alert: HashMap<u32, Arc<Alert>>,
     pub content_type: HashMap<u32, Arc<ContentTypeRecord>>,
     pub device: HashMap<u32, Arc<DeviceRecord>>,
+    pub device_host: HashMap<u32, Arc<DeviceHostRecord>>,
     pub filesystem: HashMap<u32, Arc<Filesystem>>,
     pub host: HashMap<u32, Arc<Host>>,
     pub lnet_configuration: HashMap<u32, Arc<LnetConfigurationRecord>>,
@@ -127,6 +129,7 @@ impl Cache {
             RecordId::ActiveAlert(id) => self.active_alert.remove(&id).is_some(),
             RecordId::ContentType(id) => self.content_type.remove(&id).is_some(),
             RecordId::Device(id) => self.device.remove(&id).is_some(),
+            RecordId::DeviceHost(id) => self.device.remove(&id).is_some(),
             RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
             RecordId::Host(id) => self.host.remove(&id).is_some(),
             RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
@@ -150,6 +153,9 @@ impl Cache {
             }
             Record::Device(x) => {
                 self.device.insert(x.id(), x);
+            }
+            Record::DeviceHost(x) => {
+                self.device_host.insert(x.id(), x);
             }
             Record::Filesystem(x) => {
                 self.filesystem.insert(x.id, x);
@@ -203,6 +209,7 @@ impl ArcCache {
             RecordId::ActiveAlert(id) => self.active_alert.remove(&id).is_some(),
             RecordId::ContentType(id) => self.content_type.remove(&id).is_some(),
             RecordId::Device(id) => self.device.remove(&id).is_some(),
+            RecordId::DeviceHost(id) => self.device_host.remove(&id).is_some(),
             RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
             RecordId::Host(id) => self.host.remove(&id).is_some(),
             RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
@@ -226,6 +233,9 @@ impl ArcCache {
             }
             Record::Device(x) => {
                 self.device.insert(x.id(), Arc::new(x));
+            }
+            Record::DeviceHost(x) => {
+                self.device_host.insert(x.id(), Arc::new(x));
             }
             Record::Filesystem(x) => {
                 self.filesystem.insert(x.id, Arc::new(x));
@@ -284,6 +294,7 @@ impl From<&Cache> for ArcCache {
             active_alert: hashmap_to_arc_hashmap(&cache.active_alert),
             content_type: hashmap_to_arc_hashmap(&cache.content_type),
             device: hashmap_to_arc_hashmap(&cache.device),
+            device_host: hashmap_to_arc_hashmap(&cache.device_host),
             filesystem: hashmap_to_arc_hashmap(&cache.filesystem),
             host: hashmap_to_arc_hashmap(&cache.host),
             lnet_configuration: hashmap_to_arc_hashmap(&cache.lnet_configuration),
@@ -304,6 +315,7 @@ impl From<&ArcCache> for Cache {
             active_alert: arc_hashmap_to_hashmap(&cache.active_alert),
             content_type: arc_hashmap_to_hashmap(&cache.content_type),
             device: arc_hashmap_to_hashmap(&cache.device),
+            device_host: arc_hashmap_to_hashmap(&cache.device_host),
             filesystem: arc_hashmap_to_hashmap(&cache.filesystem),
             host: arc_hashmap_to_hashmap(&cache.host),
             lnet_configuration: arc_hashmap_to_hashmap(&cache.lnet_configuration),
@@ -325,6 +337,7 @@ pub enum Record {
     ActiveAlert(Alert),
     ContentType(ContentTypeRecord),
     Device(DeviceRecord),
+    DeviceHost(DeviceHostRecord),
     Filesystem(Filesystem),
     Host(Host),
     LnetConfiguration(LnetConfigurationRecord),
@@ -343,6 +356,7 @@ pub enum RecordId {
     ActiveAlert(u32),
     ContentType(u32),
     Device(u32),
+    DeviceHost(u32),
     Filesystem(u32),
     Host(u32),
     LnetConfiguration(u32),
@@ -363,6 +377,7 @@ impl Deref for RecordId {
             Self::ActiveAlert(x)
             | Self::ContentType(x)
             | Self::Device(x)
+            | Self::DeviceHost(x)
             | Self::Filesystem(x)
             | Self::Host(x)
             | Self::LnetConfiguration(x)

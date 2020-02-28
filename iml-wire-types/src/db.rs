@@ -1085,3 +1085,15 @@ impl From<Row> for DeviceHost {
         }
     }
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct DeviceHostRecord {
+    pub device_host: DeviceHost,
+    pub record_id: u32,
+}
+
+impl Id for DeviceHostRecord {
+    fn id(&self) -> u32 {
+        self.record_id
+    }
+}
