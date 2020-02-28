@@ -36,11 +36,11 @@ pub(crate) enum Page {
     Activity,
     AppLoading,
     Dashboard(dashboard::Model),
+    Filesystems(filesystems::Model),
+    Filesystem(filesystem::Model),
     FsDashboard(fs_dashboard::Model),
     ServerDashboard(server_dashboard::Model),
     TargetDashboard(target_dashboard::Model),
-    Filesystems,
-    Filesystem(u32),
     Jobstats,
     Login(login::Model),
     Logs,
@@ -73,6 +73,16 @@ impl<'a> From<&Route<'a>> for Page {
             Route::Dashboard => Self::Dashboard(dashboard::Model {
                 ..dashboard::Model::default()
             }),
+            Route::Filesystems => Self::Filesystems(filesystems::Model::default()),
+            Route::Filesystem(id) => id
+                .parse()
+                .map(|id| {
+                    Self::Filesystem(filesystem::Model {
+                        id,
+                        ..filesystem::Model::default()
+                    })
+                })
+                .unwrap_or_default(),
             Route::FsDashboard(id) => Self::FsDashboard(fs_dashboard::Model {
                 fs_name: id.to_string(),
                 ..fs_dashboard::Model::default()
@@ -83,8 +93,6 @@ impl<'a> From<&Route<'a>> for Page {
             Route::TargetDashboard(id) => Self::TargetDashboard(target_dashboard::Model {
                 target_name: id.to_string(),
             }),
-            Route::Filesystems => Self::Filesystems,
-            Route::Filesystem(id) => id.parse().map(Self::Filesystem).unwrap_or_default(),
             Route::Jobstats => Self::Jobstats,
             Route::Login => Self::Login(login::Model::default()),
             Route::Logs => Self::Logs,
@@ -124,7 +132,7 @@ impl Page {
             (Route::About, Self::About)
             | (Route::Activity, Self::Activity)
             | (Route::Dashboard, Self::Dashboard(dashboard::Model { .. }))
-            | (Route::Filesystems, Self::Filesystems)
+            | (Route::Filesystems, Self::Filesystems(_))
             | (Route::Jobstats, Self::Jobstats)
             | (Route::Login, Self::Login(_))
             | (Route::Logs, Self::Logs)
@@ -136,7 +144,7 @@ impl Page {
             | (Route::Targets, Self::Targets)
             | (Route::Users, Self::Users)
             | (Route::Volumes, Self::Volumes) => true,
-            (Route::Filesystem(route_id), Self::Filesystem(id))
+            (Route::Filesystem(route_id), Self::Filesystem(filesystem::Model { id, .. }))
             | (Route::OstPool(route_id), Self::OstPool(ostpool::Model { id }))
             | (Route::Server(route_id), Self::Server(server::Model { id }))
             | (Route::Target(route_id), Self::Target(target::Model { id }))
@@ -155,10 +163,18 @@ impl Page {
         }
     }
     /// Initialize the page. This gives a chance to initialize data when a page is switched to.
-    pub fn init(&self, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+    pub fn init(&mut self, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
         if let Self::Servers(_) = self {
             servers::init(cache, &mut orders.proxy(Msg::ServersPage))
         };
+
+        if let Self::Filesystems(_) = self {
+            filesystems::init(cache, &mut orders.proxy(Msg::FilesystemsPage))
+        }
+
+        if let Self::Filesystem(_) = self {
+            filesystem::init(cache, &mut orders.proxy(Msg::FilesystemPage))
+        }
 
         if let Self::FsDashboard(_) = self {
             fs_dashboard::init(&mut orders.proxy(Msg::FsDashboardPage))

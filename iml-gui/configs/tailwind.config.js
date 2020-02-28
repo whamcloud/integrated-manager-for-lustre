@@ -209,7 +209,8 @@ module.exports = {
         white: "#FFF",
         menu: "#344151",
         "menu-active": "#1C2A3C",
-        "throughput-background": "#5350fb"
+        "throughput-background": "#5350FB",
+        "blue-1000": "#0D1B2C"
       },
       strokeWidth: {
         "3": "3",
