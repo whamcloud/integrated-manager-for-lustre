@@ -31,7 +31,6 @@ use std::sync::Arc;
 
 pub(crate) enum Page {
     About,
-    Activity,
     AppLoading,
     Dashboard,
     Filesystems(filesystems::Model),
@@ -64,7 +63,6 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
     fn from((cache, route): (&ArcCache, &Route<'a>)) -> Self {
         match route {
             Route::About => Self::About,
-            Route::Activity => Self::Activity,
             Route::Dashboard => Self::Dashboard,
             Route::Filesystems => Self::Filesystems(filesystems::Model::default()),
             Route::Filesystem(id) => id
@@ -120,8 +118,6 @@ impl Page {
     pub fn is_active<'a>(&self, route: &Route<'a>) -> bool {
         match (route, self) {
             (Route::About, Self::About)
-            | (Route::Activity, Self::Activity)
-            | (Route::Dashboard, Self::Dashboard)
             | (Route::Filesystems, Self::Filesystems(_))
             | (Route::Jobstats, Self::Jobstats)
             | (Route::Login, Self::Login(_))
