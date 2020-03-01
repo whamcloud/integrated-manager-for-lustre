@@ -6,6 +6,11 @@ use seed::{attrs, iframe, prelude::*};
 use serde_with::with_prefix;
 use std::collections::HashMap;
 
+use seed::{attrs, iframe, p, prelude::*};
+
+pub static IML_METRICS_DASHBOARD_ID: &str = "8Klek6wZz";
+pub static IML_METRICS_DASHBOARD_NAME: &str = "iml-metrics";
+
 with_prefix!(grafana_var "var-");
 
 #[derive(serde::Serialize)]
@@ -16,6 +21,15 @@ pub(crate) struct GrafanaChartData<'a> {
     pub panel_id: u16,
     #[serde(flatten, with = "grafana_var")]
     pub vars: &'a HashMap<String, String>,
+}
+
+pub(crate) fn create_chart_params(panel_id: u32, vars: impl Into<Option<HashMap<String, String>>>) {
+    GrafanaChartData {
+        org_id: 1,
+        refresh: "10s",
+        panel_id,
+        vars: vars.into(),
+    }
 }
 
 /// Create an iframe that loads the specified stratagem chart

@@ -36,12 +36,12 @@ pub fn format(num: f64, precision: Option<usize>, suffix: &str, order2: bool) ->
     }
 }
 
-pub fn format_bytes(bytes: f64, precision: Option<usize>) -> String {
-    format(bytes, precision, "B", true)
+pub fn format_bytes(bytes: f64, precision: impl Into<Option<usize>>) -> String {
+    format(bytes, precision.into(), "B", true)
 }
 
-pub fn format_number(num: f64, precision: Option<usize>) -> String {
-    format(num, precision, "", false)
+pub fn format_number(num: f64, precision: impl Into<Option<usize>>) -> String {
+    format(num, precision.into(), "", false)
 }
 
 #[cfg(test)]

@@ -40,6 +40,9 @@ impl<'a> Deref for RouteId<'a> {
 pub enum Route<'a> {
     About,
     Dashboard,
+    FsDashboard(RouteId<'a>),
+    ServerDashboard(RouteId<'a>),
+    TargetDashboard(RouteId<'a>),
     Filesystems,
     Filesystem(RouteId<'a>),
     Jobstats,
@@ -65,6 +68,9 @@ impl<'a> Route<'a> {
         let mut p = match self {
             Self::About => vec!["about"],
             Self::Dashboard => vec!["dashboard"],
+            Self::FsDashboard(id) => vec!["dashboard", "fs", id],
+            Self::ServerDashboard(id) => vec!["dashboard", "server", id],
+            Self::TargetDashboard(id) => vec!["dashboard", "target", id],
             Self::Filesystems => vec!["filesystems"],
             Self::Filesystem(id) => vec!["filesystems", id],
             Self::Jobstats => vec!["jobstats"],
@@ -102,6 +108,9 @@ impl<'a> ToString for Route<'a> {
         match self {
             Self::About => "About".into(),
             Self::Dashboard => "Dashboard".into(),
+            Self::FsDashboard(_) => "Fs Dashboard".into(),
+            Self::ServerDashboard(_) => "Server Dashboard".into(),
+            Self::TargetDashboard(_) => "Target Dashboard".into(),
             Self::Filesystems => "Filesystems".into(),
             Self::Filesystem(_) => "Filesystem Detail".into(),
             Self::Jobstats => "Jobstats".into(),
@@ -136,7 +145,24 @@ impl<'a> From<Url> for Route<'a> {
 
         match path.next().as_ref().map(String::as_str) {
             Some("about") => Self::About,
-            Some("dashboard") => Self::Dashboard,
+            Some("dashboard") => match path.next() {
+                None => Self::Dashboard,
+                Some(name) => match name.as_str() {
+                    "fs" => match path.next() {
+                        Some(name) => Self::FsDashboard(RouteId::from(name)),
+                        None => Self::Dashboard,
+                    },
+                    "server" => match path.next() {
+                        Some(name) => Self::ServerDashboard(RouteId::from(name)),
+                        None => Self::Dashboard,
+                    },
+                    "target" => match path.next() {
+                        Some(name) => Self::TargetDashboard(RouteId::from(name)),
+                        None => Self::Dashboard,
+                    },
+                    _ => Self::Dashboard,
+                },
+            },
             Some("filesystems") => match path.next() {
                 None => Self::Filesystems,
                 Some(id) => Self::Filesystem(RouteId::from(id)),

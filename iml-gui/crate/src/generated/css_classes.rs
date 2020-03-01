@@ -5034,6 +5034,16 @@ pub struct CssClasses<'a> {
     pub h_72: &'a str,
 
     /**
+        height: 20rem;
+    */
+    pub h_80: &'a str,
+
+    /**
+        height: 24rem;
+    */
+    pub h_96: &'a str,
+
+    /**
         height: auto;
     */
     pub h_auto: &'a str,
@@ -20998,6 +21008,16 @@ pub struct CssClasses<'a> {
     pub sm__h_72: &'a str,
 
     /**
+        height: 20rem;    @media (min-width: 569px)
+    */
+    pub sm__h_80: &'a str,
+
+    /**
+        height: 24rem;    @media (min-width: 569px)
+    */
+    pub sm__h_96: &'a str,
+
+    /**
         height: auto;    @media (min-width: 569px)
     */
     pub sm__h_auto: &'a str,
@@ -34960,6 +34980,16 @@ pub struct CssClasses<'a> {
         height: 18rem;    @media (min-width: 769px)
     */
     pub md__h_72: &'a str,
+
+    /**
+        height: 20rem;    @media (min-width: 769px)
+    */
+    pub md__h_80: &'a str,
+
+    /**
+        height: 24rem;    @media (min-width: 769px)
+    */
+    pub md__h_96: &'a str,
 
     /**
         height: auto;    @media (min-width: 769px)
@@ -48926,6 +48956,16 @@ pub struct CssClasses<'a> {
     pub lg__h_72: &'a str,
 
     /**
+        height: 20rem;    @media (min-width: 1025px)
+    */
+    pub lg__h_80: &'a str,
+
+    /**
+        height: 24rem;    @media (min-width: 1025px)
+    */
+    pub lg__h_96: &'a str,
+
+    /**
         height: auto;    @media (min-width: 1025px)
     */
     pub lg__h_auto: &'a str,
@@ -62888,6 +62928,16 @@ pub struct CssClasses<'a> {
         height: 18rem;    @media (min-width: 1701px)
     */
     pub xl__h_72: &'a str,
+
+    /**
+        height: 20rem;    @media (min-width: 1701px)
+    */
+    pub xl__h_80: &'a str,
+
+    /**
+        height: 24rem;    @media (min-width: 1701px)
+    */
+    pub xl__h_96: &'a str,
 
     /**
         height: auto;    @media (min-width: 1701px)
@@ -77126,6 +77176,16 @@ pub static C: CssClasses = CssClasses {
         height: 18rem;
     */
     h_72: "h-72",
+
+    /**
+        height: 20rem;
+    */
+    h_80: "h-80",
+
+    /**
+        height: 24rem;
+    */
+    h_96: "h-96",
 
     /**
         height: auto;
@@ -93092,6 +93152,16 @@ pub static C: CssClasses = CssClasses {
     sm__h_72: "sm:h-72",
 
     /**
+        height: 20rem;    @media (min-width: 569px)
+    */
+    sm__h_80: "sm:h-80",
+
+    /**
+        height: 24rem;    @media (min-width: 569px)
+    */
+    sm__h_96: "sm:h-96",
+
+    /**
         height: auto;    @media (min-width: 569px)
     */
     sm__h_auto: "sm:h-auto",
@@ -107054,6 +107124,16 @@ pub static C: CssClasses = CssClasses {
         height: 18rem;    @media (min-width: 769px)
     */
     md__h_72: "md:h-72",
+
+    /**
+        height: 20rem;    @media (min-width: 769px)
+    */
+    md__h_80: "md:h-80",
+
+    /**
+        height: 24rem;    @media (min-width: 769px)
+    */
+    md__h_96: "md:h-96",
 
     /**
         height: auto;    @media (min-width: 769px)
@@ -121020,6 +121100,16 @@ pub static C: CssClasses = CssClasses {
     lg__h_72: "lg:h-72",
 
     /**
+        height: 20rem;    @media (min-width: 1025px)
+    */
+    lg__h_80: "lg:h-80",
+
+    /**
+        height: 24rem;    @media (min-width: 1025px)
+    */
+    lg__h_96: "lg:h-96",
+
+    /**
         height: auto;    @media (min-width: 1025px)
     */
     lg__h_auto: "lg:h-auto",
@@ -134982,6 +135072,16 @@ pub static C: CssClasses = CssClasses {
         height: 18rem;    @media (min-width: 1701px)
     */
     xl__h_72: "xl:h-72",
+
+    /**
+        height: 20rem;    @media (min-width: 1701px)
+    */
+    xl__h_80: "xl:h-80",
+
+    /**
+        height: 24rem;    @media (min-width: 1701px)
+    */
+    xl__h_96: "xl:h-96",
 
     /**
         height: auto;    @media (min-width: 1701px)

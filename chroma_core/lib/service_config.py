@@ -317,6 +317,7 @@ class ServiceConfig(CommandLine):
         log.info("Creating InfluxDB database...")
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_IML_DB)])
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_STRATAGEM_SCAN_DB)])
+        self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_IML_STATS_DB)])
 
     def _setup_grafana(self):
         # grafana needs daemon-reload before enable and start

@@ -3,6 +3,7 @@ pub mod activity;
 pub mod dashboard;
 pub mod filesystem;
 pub mod filesystems;
+pub mod fs_dashboard;
 pub mod jobstats;
 pub mod login;
 pub mod logs;
@@ -13,8 +14,10 @@ pub mod ostpools;
 pub mod partial;
 pub mod power_control;
 pub mod server;
+pub mod server_dashboard;
 pub mod servers;
 pub mod target;
+pub mod target_dashboard;
 pub mod targets;
 pub mod user;
 pub mod users;
@@ -32,9 +35,12 @@ use std::sync::Arc;
 pub(crate) enum Page {
     About,
     AppLoading,
-    Dashboard,
     Filesystems(filesystems::Model),
     Filesystem(Box<filesystem::Model>),
+    Dashboard(dashboard::Model),
+    FsDashboard(fs_dashboard::Model),
+    ServerDashboard(server_dashboard::Model),
+    TargetDashboard(target_dashboard::Model),
     Jobstats,
     Login(login::Model),
     Logs,
@@ -63,7 +69,6 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
     fn from((cache, route): (&ArcCache, &Route<'a>)) -> Self {
         match route {
             Route::About => Self::About,
-            Route::Dashboard => Self::Dashboard,
             Route::Filesystems => Self::Filesystems(filesystems::Model::default()),
             Route::Filesystem(id) => id
                 .parse()
@@ -82,6 +87,19 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
                     }))
                 })
                 .unwrap_or_default(),
+            Route::Dashboard => Self::Dashboard(dashboard::Model {
+                ..dashboard::Model::default()
+            }),
+            Route::FsDashboard(id) => Self::FsDashboard(fs_dashboard::Model {
+                fs_name: id.to_string(),
+                ..fs_dashboard::Model::default()
+            }),
+            Route::ServerDashboard(id) => Self::ServerDashboard(server_dashboard::Model {
+                host_name: id.to_string(),
+            }),
+            Route::TargetDashboard(id) => Self::TargetDashboard(target_dashboard::Model {
+                target_name: id.to_string(),
+            }),
             Route::Jobstats => Self::Jobstats,
             Route::Login => Self::Login(login::Model::default()),
             Route::Logs => Self::Logs,
@@ -122,6 +140,7 @@ impl Page {
         match (route, self) {
             (Route::About, Self::About)
             | (Route::Filesystems, Self::Filesystems(_))
+            | (Route::Dashboard, Self::Dashboard(dashboard::Model { .. }))
             | (Route::Jobstats, Self::Jobstats)
             | (Route::Login, Self::Login(_))
             | (Route::Logs, Self::Logs)
@@ -139,6 +158,15 @@ impl Page {
             | (Route::Volume(route_id), Self::Volume(volume::Model { id })) => route_id == &RouteId::from(id),
             (Route::Filesystem(route_id), Self::Filesystem(x)) => route_id == &RouteId::from(x.fs.id),
             (Route::Target(route_id), Self::Target(x)) => route_id == &RouteId::from(x.target.id),
+            (Route::FsDashboard(route_id), Self::FsDashboard(fs_dashboard::Model { fs_name, .. })) => {
+                &route_id.to_string() == fs_name
+            }
+            (Route::ServerDashboard(route_id), Self::ServerDashboard(server_dashboard::Model { host_name })) => {
+                &route_id.to_string() == host_name
+            }
+            (Route::TargetDashboard(route_id), Self::TargetDashboard(target_dashboard::Model { target_name })) => {
+                &route_id.to_string() == target_name
+            }
             _ => false,
         }
     }
@@ -158,6 +186,14 @@ impl Page {
 
         if let Self::Mgts(_) = self {
             mgts::init(cache, &mut orders.proxy(Msg::MgtsPage))
+        }
+
+        if let Self::FsDashboard(_) = self {
+            fs_dashboard::init(&mut orders.proxy(Msg::FsDashboardPage))
+        }
+
+        if let Self::Dashboard(_) = self {
+            dashboard::init(&mut orders.proxy(Msg::DashboardPage))
         }
     }
 }
