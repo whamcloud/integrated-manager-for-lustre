@@ -1,5 +1,7 @@
 use crate::{
-    components::{action_dropdown, alert_indicator, lock_indicator, paging, progress_circle, table as t, Placement},
+    components::{
+        action_dropdown, alert_indicator, lock_indicator, paging, progress_circle, stratagem, table as t, Placement,
+    },
     extensions::MergeAttrs,
     extract_id,
     generated::css_classes::C,
@@ -26,6 +28,41 @@ pub struct Model {
     pub osts: Vec<Arc<Target<TargetConfParam>>>,
     pub ost_paging: paging::Model,
     pub rows: HashMap<u32, Row>,
+    pub stratagem: Option<stratagem::Model>,
+}
+
+impl Model {
+    fn is_stratagem_ready(self: &mut Self, cache: &ArcCache) -> bool {
+        let server_resources: Vec<_> = self
+            .mdts
+            .iter()
+            .flat_map(|x| x.failover_servers.iter().chain(std::iter::once(&x.primary_server)))
+            .collect();
+
+        let servers: Vec<_> = cache
+            .host
+            .values()
+            .filter(|x| server_resources.contains(&&x.resource_uri))
+            .collect();
+
+        let stratagem_enabled = !servers.is_empty()
+            && servers
+                .iter()
+                .all(|x| x.server_profile.name == "stratagem_server" || x.server_profile.name == "exascaler_server");
+
+        if stratagem_enabled {
+            if self.stratagem.is_none() {
+                self.stratagem = Some(stratagem::Model {
+                    inode_table: stratagem::inode_table::Model::new(&self.fs.name),
+                });
+                return true;
+            }
+        } else {
+            self.stratagem = None;
+        }
+
+        return false;
+    }
 }
 
 #[derive(Clone)]
@@ -37,6 +74,7 @@ pub enum Msg {
     OstPaging(paging::Msg),
     MdtPaging(paging::Msg),
     UpdatePaging,
+    Stratagem(stratagem::Msg),
 }
 
 pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
@@ -93,6 +131,9 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
             }
 
             orders.send_msg(Msg::UpdatePaging);
+            if model.is_stratagem_ready(&cache) {
+                stratagem::init(&mut orders.proxy(Msg::Stratagem));
+            }
         }
         Msg::SetTargets(xs) => {
             model.rows = xs
@@ -127,6 +168,9 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
             model.osts = osts;
 
             orders.send_msg(Msg::UpdatePaging);
+            if model.is_stratagem_ready(&cache) {
+                stratagem::init(&mut orders.proxy(Msg::Stratagem));
+            }
         }
         Msg::MdtPaging(msg) => {
             paging::update(msg, &mut model.mdt_paging, &mut orders.proxy(Msg::MdtPaging));
@@ -141,6 +185,11 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
             orders
                 .proxy(Msg::OstPaging)
                 .send_msg(paging::Msg::SetTotal(model.osts.len()));
+        }
+        Msg::Stratagem(msg) => {
+            if let Some(model) = &mut model.stratagem {
+                stratagem::update(msg, model, &mut orders.proxy(Msg::Stratagem))
+            }
         }
     }
 }
@@ -157,6 +206,11 @@ fn paging_view(pager: &paging::Model) -> Node<paging::Msg> {
 pub(crate) fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> Node<Msg> {
     div![
         details_table(cache, all_locks, model),
+        if let Some(model) = &model.stratagem {
+            stratagem::view(model).map_msg(Msg::Stratagem)
+        } else {
+            empty![]
+        },
         targets("Management Target", cache, all_locks, &model.rows, &model.mgt[..], None),
         targets(
             "Metadata Targets",
@@ -178,25 +232,29 @@ pub(crate) fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> Node<M
 }
 
 fn details_table(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg> {
-    let fs = cache.filesystem.get(&model.fs.id).unwrap();
-
     div![
         class![C.bg_white, C.border_t, C.border_b, C.border, C.rounded_lg, C.shadow],
         div![
             class![C.flex, C.justify_between, C.px_6, C._mb_px, C.bg_gray_200],
             h3![
                 class![C.py_4, C.font_normal, C.text_lg],
-                format!("Filesystem {}", &fs.label)
+                format!("Filesystem {}", &model.fs.label)
             ]
         ],
         t::wrapper_view(vec![
-            tr![t::th_left(plain!("Space Used / Total")), t::td_view(size_view(fs))],
+            tr![
+                t::th_left(plain!("Space Used / Total")),
+                t::td_view(size_view(&model.fs))
+            ],
             tr![
                 t::th_left(plain!("Files Created / Maximum")),
-                t::td_view(files_view(fs))
+                t::td_view(files_view(&model.fs))
             ],
-            tr![t::th_left(plain!("State")), t::td_view(plain![fs.state.to_string()])],
-            tr![t::th_left(plain!("MGS")), t::td_view(mgs(&model.mgt, fs)),],
+            tr![
+                t::th_left(plain!("State")),
+                t::td_view(plain![model.fs.state.to_string()])
+            ],
+            tr![t::th_left(plain!("MGS")), t::td_view(mgs(&model.mgt, &model.fs)),],
             tr![
                 t::th_left(plain!("Number of MGTs")),
                 t::td_view(plain!(model.mdts.len().to_string()))
@@ -207,15 +265,15 @@ fn details_table(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg
             ],
             tr![
                 t::th_left(plain!["Number of Connected Clients"]),
-                t::td_view(clients_view(fs))
+                t::td_view(clients_view(&model.fs))
             ],
             tr![
                 t::th_left(plain!["Status"]),
-                t::td_view(status_view(cache, all_locks, fs))
+                t::td_view(status_view(cache, all_locks, &model.fs))
             ],
             tr![
                 t::th_left(plain!["Client mount command"]),
-                t::td_view(plain![fs.mount_command.to_string()])
+                t::td_view(plain![model.fs.mount_command.to_string()])
             ],
         ])
     ]

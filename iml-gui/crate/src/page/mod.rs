@@ -80,6 +80,7 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
                         osts: Default::default(),
                         ost_paging: Default::default(),
                         rows: Default::default(),
+                        stratagem: None,
                     })
                 })
                 .unwrap_or_default(),
