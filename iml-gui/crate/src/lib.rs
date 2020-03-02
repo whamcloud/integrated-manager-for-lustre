@@ -378,6 +378,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     model.records.filesystem.values().cloned().collect(),
                 ));
 
+            orders
+                .proxy(Msg::FilesystemPage)
+                .send_msg(page::filesystem::Msg::SetTargets(
+                    model.records.target.values().cloned().collect(),
+                ));
+
             orders.proxy(Msg::Tree).send_msg(tree::Msg::Reset);
         }
         Msg::RecordChange(record_change) => {
@@ -386,17 +392,24 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::RemoveRecord(id) => {
             model.records.remove_record(id);
 
-            if let warp_drive::RecordId::Host(_) = id {
-                orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::SetHosts(
-                    model.records.host.arc_values().cloned().collect(),
-                    model.records.lnet_configuration.clone(),
-                ));
-            }
-
-            if let warp_drive::RecordId::Filesystem(x) = id {
-                orders
-                    .proxy(Msg::FilesystemsPage)
-                    .send_msg(page::filesystems::Msg::RemoveFilesystem(x));
+            match id {
+                warp_drive::RecordId::Host(_) => {
+                    orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::SetHosts(
+                        model.records.host.arc_values().cloned().collect(),
+                        model.records.lnet_configuration.clone(),
+                    ));
+                }
+                warp_drive::RecordId::Filesystem(x) => {
+                    orders
+                        .proxy(Msg::FilesystemsPage)
+                        .send_msg(page::filesystems::Msg::RemoveFilesystem(x));
+                }
+                warp_drive::RecordId::Target(x) => {
+                    orders
+                        .proxy(Msg::FilesystemPage)
+                        .send_msg(page::filesystem::Msg::RemoveTarget(x));
+                }
+                _ => {}
             }
         }
         Msg::Locks(locks) => {
@@ -519,11 +532,11 @@ fn handle_record_change(
                     orders
                         .proxy(Msg::Tree)
                         .send_msg(tree::Msg::Add(warp_drive::RecordId::Filesystem(id)));
-
-                    orders
-                        .proxy(Msg::FilesystemsPage)
-                        .send_msg(page::filesystems::Msg::AddFilesystem(fs));
                 }
+
+                orders
+                    .proxy(Msg::FilesystemsPage)
+                    .send_msg(page::filesystems::Msg::AddFilesystem(fs));
             }
             warp_drive::Record::ContentType(x) => {
                 model.records.content_type.insert(x.id, Arc::new(x));
@@ -560,11 +573,17 @@ fn handle_record_change(
             }
             warp_drive::Record::Target(x) => {
                 let id = x.id;
-                if model.records.target.insert(x.id, Arc::new(x)).is_none() {
+                let x = Arc::new(x);
+
+                if model.records.target.insert(x.id, Arc::clone(&x)).is_none() {
                     orders
                         .proxy(Msg::Tree)
                         .send_msg(tree::Msg::Add(warp_drive::RecordId::Target(id)));
                 };
+
+                orders
+                    .proxy(Msg::FilesystemPage)
+                    .send_msg(page::filesystem::Msg::AddTarget(x));
             }
             warp_drive::Record::Volume(x) => {
                 model.records.volume.insert(x.id, Arc::new(x));

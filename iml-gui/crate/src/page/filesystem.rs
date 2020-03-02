@@ -1,5 +1,5 @@
 use crate::{
-    components::{action_dropdown, alert_indicator, lock_indicator, pie_chart, table as t, Placement},
+    components::{action_dropdown, alert_indicator, lock_indicator, paging, pie_chart, table as t, Placement},
     extensions::MergeAttrs,
     extract_id,
     generated::css_classes::C,
@@ -12,10 +12,7 @@ use iml_wire_types::{
 };
 use number_formatter as nf;
 use seed::{prelude::*, *};
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
 pub struct Row {
     dropdown: action_dropdown::Model,
@@ -25,17 +22,22 @@ pub struct Row {
 pub struct Model {
     pub id: u32,
     pub mdts: Vec<Arc<Target<TargetConfParam>>>,
+    pub mdt_paging: paging::Model,
     pub mgt: Vec<Arc<Target<TargetConfParam>>>,
     pub osts: Vec<Arc<Target<TargetConfParam>>>,
+    pub ost_paging: paging::Model,
     pub rows: HashMap<u32, Row>,
 }
 
 #[derive(Clone)]
 pub enum Msg {
     ActionDropdown(Box<action_dropdown::IdMsg>),
-    // AddTarget(Target<TargetConfParam>),
-    // RemoveTarget(Target<TargetConfParam>),
+    AddTarget(Arc<Target<TargetConfParam>>),
+    RemoveTarget(u32),
     SetTargets(Vec<Arc<Target<TargetConfParam>>>),
+    OstPaging(paging::Msg),
+    MdtPaging(paging::Msg),
+    UpdatePaging,
 }
 
 pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
@@ -56,27 +58,55 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                 );
             }
         }
+        Msg::RemoveTarget(id) => {
+            model.mgt.retain(|x| x.id != id);
+            model.mdts.retain(|x| x.id != id);
+            model.osts.retain(|x| x.id != id);
+
+            model.rows.remove(&id);
+
+            orders.send_msg(Msg::UpdatePaging);
+        }
+        Msg::AddTarget(x) => {
+            if !is_fs_target(model.id, &x) {
+                return;
+            }
+
+            let xs = match x.kind {
+                TargetKind::Mgt => &mut model.mgt,
+                TargetKind::Mdt => &mut model.mdts,
+                TargetKind::Ost => &mut model.osts,
+            };
+
+            match xs.iter().position(|y| y.id == x.id) {
+                Some(p) => {
+                    xs.remove(p);
+                    xs.insert(p, x);
+                }
+                None => {
+                    model.rows.insert(
+                        x.id,
+                        Row {
+                            dropdown: action_dropdown::Model::new(vec![x.composite_id()]),
+                        },
+                    );
+                }
+            }
+
+            orders.send_msg(Msg::UpdatePaging);
+        }
         Msg::SetTargets(xs) => {
-            let old_keys: HashSet<u32> = model.rows.keys().copied().collect();
-            let new_keys: HashSet<u32> = xs.iter().map(|x| x.id).collect();
-
-            let to_remove = &old_keys - &new_keys;
-            let to_add = &new_keys - &old_keys;
-
-            for x in to_remove {
-                model.rows.remove(&x);
-            }
-
-            for x in to_add {
-                let composite_id = xs.iter().find(|y| y.id == x).unwrap().composite_id();
-
-                model.rows.insert(
-                    x,
-                    Row {
-                        dropdown: action_dropdown::Model::new(vec![composite_id]),
-                    },
-                );
-            }
+            model.rows = xs
+                .iter()
+                .map(|x| {
+                    (
+                        x.id,
+                        Row {
+                            dropdown: action_dropdown::Model::new(vec![x.composite_id()]),
+                        },
+                    )
+                })
+                .collect();
 
             let (mgt, mut mdts, mut osts) = xs.into_iter().filter(|t| is_fs_target(model.id, t)).fold(
                 (vec![], vec![], vec![]),
@@ -96,16 +126,55 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
             model.mgt = mgt;
             model.mdts = mdts;
             model.osts = osts;
+
+            orders.send_msg(Msg::UpdatePaging);
+        }
+        Msg::MdtPaging(msg) => {
+            paging::update(msg, &mut model.mdt_paging, &mut orders.proxy(Msg::MdtPaging));
+        }
+        Msg::OstPaging(msg) => {
+            paging::update(msg, &mut model.ost_paging, &mut orders.proxy(Msg::OstPaging));
+        }
+        Msg::UpdatePaging => {
+            orders
+                .proxy(Msg::MdtPaging)
+                .send_msg(paging::Msg::SetTotal(model.mdts.len()));
+            orders
+                .proxy(Msg::OstPaging)
+                .send_msg(paging::Msg::SetTotal(model.osts.len()));
         }
     }
+}
+
+fn paging_view(pager: &paging::Model) -> Node<paging::Msg> {
+    div![
+        class![C.flex, C.justify_end, C.py_1, C.pr_3],
+        paging::limit_selection_view(pager),
+        paging::page_count_view(pager),
+        paging::next_prev_view(pager)
+    ]
 }
 
 pub(crate) fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> Node<Msg> {
     div![
         details_table(cache, all_locks, model),
-        targets("Management Target", cache, all_locks, &model.rows, &model.mgt[..]),
-        targets("Metadata Targets", cache, all_locks, &model.rows, &model.mdts[..]),
-        targets("Object Storage Targets", cache, all_locks, &model.rows, &model.osts[..]),
+        targets("Management Target", cache, all_locks, &model.rows, &model.mgt[..], None),
+        targets(
+            "Metadata Targets",
+            cache,
+            all_locks,
+            &model.rows,
+            &model.mdts[model.mdt_paging.range()],
+            paging_view(&model.mdt_paging).map_msg(Msg::MdtPaging)
+        ),
+        targets(
+            "Object Storage Targets",
+            cache,
+            all_locks,
+            &model.rows,
+            &model.osts[model.ost_paging.range()],
+            paging_view(&model.ost_paging).map_msg(Msg::OstPaging)
+        ),
     ]
 }
 
@@ -159,6 +228,7 @@ fn targets(
     all_locks: &Locks,
     rows: &HashMap<u32, Row>,
     tgts: &[Arc<Target<TargetConfParam>>],
+    pager: impl Into<Option<Node<Msg>>>,
 ) -> Node<Msg> {
     div![
         class![
@@ -182,7 +252,7 @@ fn targets(
             },
             vec![
                 t::thead_view(vec![
-                    t::th_left(plain!["Name"]).merge_attrs(class![C.w_32]),
+                    t::th_left(plain!["Name"]).merge_attrs(class![C.w_48]),
                     t::th_left(plain!["Volume"]),
                     t::th_left(plain!["Primary Server"]).merge_attrs(class![C.w_48]),
                     t::th_left(plain!["Failover Server"]).merge_attrs(class![C.w_48]),
@@ -198,8 +268,9 @@ fn targets(
                                 attrs! {At::Href => Route::Target(RouteId::from(x.id)).to_href()},
                                 &x.name
                             ],
-                            lock_indicator::view(all_locks, &x),
-                            alert_indicator(&cache.active_alert, &x, true, Placement::Top),
+                            lock_indicator::view(all_locks, &x).merge_attrs(class![C.ml_2]),
+                            alert_indicator(&cache.active_alert, &x, true, Placement::Right)
+                                .merge_attrs(class![C.ml_2]),
                         ]),
                         t::td_view(volume_link(x)),
                         t::td_view(server_link(Some(&x.primary_server), &x.primary_server_name)),
@@ -214,6 +285,11 @@ fn targets(
                 })]
             ]
         ]
+        .merge_attrs(class![C.p_6]),
+        match pager.into() {
+            Some(x) => x,
+            None => empty![],
+        }
     ]
 }
 
@@ -256,7 +332,6 @@ pub(crate) fn size_view<T>(f: &Filesystem) -> Node<T> {
 
 fn files_view<T>(fs: &Filesystem) -> Node<T> {
     if let Some((u, t)) = fs.files_total.and_then(|t| fs.files_free.map(|f| (t - f, t))) {
-        log!("used: {}, total: {}", u, t);
         span![
             class![C.whitespace_no_wrap],
             pie_chart(u / t).merge_attrs(class![C.h_8, C.inline, C.mx_2]),
