@@ -559,6 +559,11 @@ pub struct CssClasses<'a> {
     pub bg_menu_active: &'a str,
 
     /**
+        background-color: #0D1B2C;
+    */
+    pub bg_blue_1000: &'a str,
+
+    /**
         background-color: transparent;
     */
     pub hover__bg_transparent: &'a str,
@@ -1034,6 +1039,11 @@ pub struct CssClasses<'a> {
     pub hover__bg_menu_active: &'a str,
 
     /**
+        background-color: #0D1B2C;
+    */
+    pub hover__bg_blue_1000: &'a str,
+
+    /**
         background-color: transparent;
     */
     pub focus__bg_transparent: &'a str,
@@ -1507,6 +1517,11 @@ pub struct CssClasses<'a> {
         background-color: #1C2A3C;
     */
     pub focus__bg_menu_active: &'a str,
+
+    /**
+        background-color: #0D1B2C;
+    */
+    pub focus__bg_blue_1000: &'a str,
 
     /**
         background-position: bottom;
@@ -2084,6 +2099,11 @@ pub struct CssClasses<'a> {
     pub border_menu_active: &'a str,
 
     /**
+        border-color: #0D1B2C;
+    */
+    pub border_blue_1000: &'a str,
+
+    /**
         border-color: transparent;
     */
     pub hover__border_transparent: &'a str,
@@ -2559,6 +2579,11 @@ pub struct CssClasses<'a> {
     pub hover__border_menu_active: &'a str,
 
     /**
+        border-color: #0D1B2C;
+    */
+    pub hover__border_blue_1000: &'a str,
+
+    /**
         border-color: transparent;
     */
     pub focus__border_transparent: &'a str,
@@ -3032,6 +3057,11 @@ pub struct CssClasses<'a> {
         border-color: #1C2A3C;
     */
     pub focus__border_menu_active: &'a str,
+
+    /**
+        border-color: #0D1B2C;
+    */
+    pub focus__border_blue_1000: &'a str,
 
     /**
         border-radius: 0;
@@ -4127,6 +4157,7 @@ pub struct CssClasses<'a> {
         color: #702459;
         color: #344151;
         color: #1C2A3C;
+        color: #0D1B2C;
         color: #3793FF;
         display: block;    @media (min-width: 569px)
         display: inline-block;    @media (min-width: 569px)
@@ -9319,6 +9350,11 @@ pub struct CssClasses<'a> {
     pub placeholder_menu_active: &'a str,
 
     /**
+        color: #0D1B2C;
+    */
+    pub placeholder_blue_1000: &'a str,
+
+    /**
         color: transparent;
     */
     pub focus__placeholder_transparent: &'a str,
@@ -9792,6 +9828,11 @@ pub struct CssClasses<'a> {
         color: #1C2A3C;
     */
     pub focus__placeholder_menu_active: &'a str,
+
+    /**
+        color: #0D1B2C;
+    */
+    pub focus__placeholder_blue_1000: &'a str,
 
     /**
         pointer-events: none;
@@ -10799,6 +10840,11 @@ pub struct CssClasses<'a> {
     pub text_menu_active: &'a str,
 
     /**
+        color: #0D1B2C;
+    */
+    pub text_blue_1000: &'a str,
+
+    /**
         color: #3793FF;
     */
     pub text_active: &'a str,
@@ -11277,6 +11323,11 @@ pub struct CssClasses<'a> {
         color: #1C2A3C;
     */
     pub hover__text_menu_active: &'a str,
+
+    /**
+        color: #0D1B2C;
+    */
+    pub hover__text_blue_1000: &'a str,
 
     /**
         color: #3793FF;
@@ -11759,6 +11810,11 @@ pub struct CssClasses<'a> {
     pub group_hover__text_menu_active: &'a str,
 
     /**
+        color: #0D1B2C;
+    */
+    pub group_hover__text_blue_1000: &'a str,
+
+    /**
         color: #3793FF;
     */
     pub group_hover__text_active: &'a str,
@@ -12237,6 +12293,11 @@ pub struct CssClasses<'a> {
         color: #1C2A3C;
     */
     pub focus__text_menu_active: &'a str,
+
+    /**
+        color: #0D1B2C;
+    */
+    pub focus__text_blue_1000: &'a str,
 
     /**
         color: #3793FF;
@@ -16623,6 +16684,11 @@ pub struct CssClasses<'a> {
     pub sm__bg_menu_active: &'a str,
 
     /**
+        background-color: #0D1B2C;    @media (min-width: 569px)
+    */
+    pub sm__bg_blue_1000: &'a str,
+
+    /**
         background-color: transparent;    @media (min-width: 569px)
     */
     pub sm__hover__bg_transparent: &'a str,
@@ -17098,6 +17164,11 @@ pub struct CssClasses<'a> {
     pub sm__hover__bg_menu_active: &'a str,
 
     /**
+        background-color: #0D1B2C;    @media (min-width: 569px)
+    */
+    pub sm__hover__bg_blue_1000: &'a str,
+
+    /**
         background-color: transparent;    @media (min-width: 569px)
     */
     pub sm__focus__bg_transparent: &'a str,
@@ -17571,6 +17642,11 @@ pub struct CssClasses<'a> {
         background-color: #1C2A3C;    @media (min-width: 569px)
     */
     pub sm__focus__bg_menu_active: &'a str,
+
+    /**
+        background-color: #0D1B2C;    @media (min-width: 569px)
+    */
+    pub sm__focus__bg_blue_1000: &'a str,
 
     /**
         background-position: bottom;    @media (min-width: 569px)
@@ -18148,6 +18224,11 @@ pub struct CssClasses<'a> {
     pub sm__border_menu_active: &'a str,
 
     /**
+        border-color: #0D1B2C;    @media (min-width: 569px)
+    */
+    pub sm__border_blue_1000: &'a str,
+
+    /**
         border-color: transparent;    @media (min-width: 569px)
     */
     pub sm__hover__border_transparent: &'a str,
@@ -18623,6 +18704,11 @@ pub struct CssClasses<'a> {
     pub sm__hover__border_menu_active: &'a str,
 
     /**
+        border-color: #0D1B2C;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_blue_1000: &'a str,
+
+    /**
         border-color: transparent;    @media (min-width: 569px)
     */
     pub sm__focus__border_transparent: &'a str,
@@ -19096,6 +19182,11 @@ pub struct CssClasses<'a> {
         border-color: #1C2A3C;    @media (min-width: 569px)
     */
     pub sm__focus__border_menu_active: &'a str,
+
+    /**
+        border-color: #0D1B2C;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_blue_1000: &'a str,
 
     /**
         border-radius: 0;    @media (min-width: 569px)
@@ -25123,6 +25214,11 @@ pub struct CssClasses<'a> {
     pub sm__placeholder_menu_active: &'a str,
 
     /**
+        color: #0D1B2C;    @media (min-width: 569px)
+    */
+    pub sm__placeholder_blue_1000: &'a str,
+
+    /**
         color: transparent;    @media (min-width: 569px)
     */
     pub sm__focus__placeholder_transparent: &'a str,
@@ -25596,6 +25692,11 @@ pub struct CssClasses<'a> {
         color: #1C2A3C;    @media (min-width: 569px)
     */
     pub sm__focus__placeholder_menu_active: &'a str,
+
+    /**
+        color: #0D1B2C;    @media (min-width: 569px)
+    */
+    pub sm__focus__placeholder_blue_1000: &'a str,
 
     /**
         pointer-events: none;    @media (min-width: 569px)
@@ -30482,6 +30583,11 @@ pub struct CssClasses<'a> {
     pub md__bg_menu_active: &'a str,
 
     /**
+        background-color: #0D1B2C;    @media (min-width: 769px)
+    */
+    pub md__bg_blue_1000: &'a str,
+
+    /**
         background-color: transparent;    @media (min-width: 769px)
     */
     pub md__hover__bg_transparent: &'a str,
@@ -30957,6 +31063,11 @@ pub struct CssClasses<'a> {
     pub md__hover__bg_menu_active: &'a str,
 
     /**
+        background-color: #0D1B2C;    @media (min-width: 769px)
+    */
+    pub md__hover__bg_blue_1000: &'a str,
+
+    /**
         background-color: transparent;    @media (min-width: 769px)
     */
     pub md__focus__bg_transparent: &'a str,
@@ -31430,6 +31541,11 @@ pub struct CssClasses<'a> {
         background-color: #1C2A3C;    @media (min-width: 769px)
     */
     pub md__focus__bg_menu_active: &'a str,
+
+    /**
+        background-color: #0D1B2C;    @media (min-width: 769px)
+    */
+    pub md__focus__bg_blue_1000: &'a str,
 
     /**
         background-position: bottom;    @media (min-width: 769px)
@@ -32007,6 +32123,11 @@ pub struct CssClasses<'a> {
     pub md__border_menu_active: &'a str,
 
     /**
+        border-color: #0D1B2C;    @media (min-width: 769px)
+    */
+    pub md__border_blue_1000: &'a str,
+
+    /**
         border-color: transparent;    @media (min-width: 769px)
     */
     pub md__hover__border_transparent: &'a str,
@@ -32482,6 +32603,11 @@ pub struct CssClasses<'a> {
     pub md__hover__border_menu_active: &'a str,
 
     /**
+        border-color: #0D1B2C;    @media (min-width: 769px)
+    */
+    pub md__hover__border_blue_1000: &'a str,
+
+    /**
         border-color: transparent;    @media (min-width: 769px)
     */
     pub md__focus__border_transparent: &'a str,
@@ -32955,6 +33081,11 @@ pub struct CssClasses<'a> {
         border-color: #1C2A3C;    @media (min-width: 769px)
     */
     pub md__focus__border_menu_active: &'a str,
+
+    /**
+        border-color: #0D1B2C;    @media (min-width: 769px)
+    */
+    pub md__focus__border_blue_1000: &'a str,
 
     /**
         border-radius: 0;    @media (min-width: 769px)
@@ -38982,6 +39113,11 @@ pub struct CssClasses<'a> {
     pub md__placeholder_menu_active: &'a str,
 
     /**
+        color: #0D1B2C;    @media (min-width: 769px)
+    */
+    pub md__placeholder_blue_1000: &'a str,
+
+    /**
         color: transparent;    @media (min-width: 769px)
     */
     pub md__focus__placeholder_transparent: &'a str,
@@ -39455,6 +39591,11 @@ pub struct CssClasses<'a> {
         color: #1C2A3C;    @media (min-width: 769px)
     */
     pub md__focus__placeholder_menu_active: &'a str,
+
+    /**
+        color: #0D1B2C;    @media (min-width: 769px)
+    */
+    pub md__focus__placeholder_blue_1000: &'a str,
 
     /**
         pointer-events: none;    @media (min-width: 769px)
@@ -44341,6 +44482,11 @@ pub struct CssClasses<'a> {
     pub lg__bg_menu_active: &'a str,
 
     /**
+        background-color: #0D1B2C;    @media (min-width: 1025px)
+    */
+    pub lg__bg_blue_1000: &'a str,
+
+    /**
         background-color: transparent;    @media (min-width: 1025px)
     */
     pub lg__hover__bg_transparent: &'a str,
@@ -44816,6 +44962,11 @@ pub struct CssClasses<'a> {
     pub lg__hover__bg_menu_active: &'a str,
 
     /**
+        background-color: #0D1B2C;    @media (min-width: 1025px)
+    */
+    pub lg__hover__bg_blue_1000: &'a str,
+
+    /**
         background-color: transparent;    @media (min-width: 1025px)
     */
     pub lg__focus__bg_transparent: &'a str,
@@ -45289,6 +45440,11 @@ pub struct CssClasses<'a> {
         background-color: #1C2A3C;    @media (min-width: 1025px)
     */
     pub lg__focus__bg_menu_active: &'a str,
+
+    /**
+        background-color: #0D1B2C;    @media (min-width: 1025px)
+    */
+    pub lg__focus__bg_blue_1000: &'a str,
 
     /**
         background-position: bottom;    @media (min-width: 1025px)
@@ -45866,6 +46022,11 @@ pub struct CssClasses<'a> {
     pub lg__border_menu_active: &'a str,
 
     /**
+        border-color: #0D1B2C;    @media (min-width: 1025px)
+    */
+    pub lg__border_blue_1000: &'a str,
+
+    /**
         border-color: transparent;    @media (min-width: 1025px)
     */
     pub lg__hover__border_transparent: &'a str,
@@ -46341,6 +46502,11 @@ pub struct CssClasses<'a> {
     pub lg__hover__border_menu_active: &'a str,
 
     /**
+        border-color: #0D1B2C;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_blue_1000: &'a str,
+
+    /**
         border-color: transparent;    @media (min-width: 1025px)
     */
     pub lg__focus__border_transparent: &'a str,
@@ -46814,6 +46980,11 @@ pub struct CssClasses<'a> {
         border-color: #1C2A3C;    @media (min-width: 1025px)
     */
     pub lg__focus__border_menu_active: &'a str,
+
+    /**
+        border-color: #0D1B2C;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_blue_1000: &'a str,
 
     /**
         border-radius: 0;    @media (min-width: 1025px)
@@ -52841,6 +53012,11 @@ pub struct CssClasses<'a> {
     pub lg__placeholder_menu_active: &'a str,
 
     /**
+        color: #0D1B2C;    @media (min-width: 1025px)
+    */
+    pub lg__placeholder_blue_1000: &'a str,
+
+    /**
         color: transparent;    @media (min-width: 1025px)
     */
     pub lg__focus__placeholder_transparent: &'a str,
@@ -53314,6 +53490,11 @@ pub struct CssClasses<'a> {
         color: #1C2A3C;    @media (min-width: 1025px)
     */
     pub lg__focus__placeholder_menu_active: &'a str,
+
+    /**
+        color: #0D1B2C;    @media (min-width: 1025px)
+    */
+    pub lg__focus__placeholder_blue_1000: &'a str,
 
     /**
         pointer-events: none;    @media (min-width: 1025px)
@@ -58200,6 +58381,11 @@ pub struct CssClasses<'a> {
     pub xl__bg_menu_active: &'a str,
 
     /**
+        background-color: #0D1B2C;    @media (min-width: 1701px)
+    */
+    pub xl__bg_blue_1000: &'a str,
+
+    /**
         background-color: transparent;    @media (min-width: 1701px)
     */
     pub xl__hover__bg_transparent: &'a str,
@@ -58675,6 +58861,11 @@ pub struct CssClasses<'a> {
     pub xl__hover__bg_menu_active: &'a str,
 
     /**
+        background-color: #0D1B2C;    @media (min-width: 1701px)
+    */
+    pub xl__hover__bg_blue_1000: &'a str,
+
+    /**
         background-color: transparent;    @media (min-width: 1701px)
     */
     pub xl__focus__bg_transparent: &'a str,
@@ -59148,6 +59339,11 @@ pub struct CssClasses<'a> {
         background-color: #1C2A3C;    @media (min-width: 1701px)
     */
     pub xl__focus__bg_menu_active: &'a str,
+
+    /**
+        background-color: #0D1B2C;    @media (min-width: 1701px)
+    */
+    pub xl__focus__bg_blue_1000: &'a str,
 
     /**
         background-position: bottom;    @media (min-width: 1701px)
@@ -59725,6 +59921,11 @@ pub struct CssClasses<'a> {
     pub xl__border_menu_active: &'a str,
 
     /**
+        border-color: #0D1B2C;    @media (min-width: 1701px)
+    */
+    pub xl__border_blue_1000: &'a str,
+
+    /**
         border-color: transparent;    @media (min-width: 1701px)
     */
     pub xl__hover__border_transparent: &'a str,
@@ -60200,6 +60401,11 @@ pub struct CssClasses<'a> {
     pub xl__hover__border_menu_active: &'a str,
 
     /**
+        border-color: #0D1B2C;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_blue_1000: &'a str,
+
+    /**
         border-color: transparent;    @media (min-width: 1701px)
     */
     pub xl__focus__border_transparent: &'a str,
@@ -60673,6 +60879,11 @@ pub struct CssClasses<'a> {
         border-color: #1C2A3C;    @media (min-width: 1701px)
     */
     pub xl__focus__border_menu_active: &'a str,
+
+    /**
+        border-color: #0D1B2C;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_blue_1000: &'a str,
 
     /**
         border-radius: 0;    @media (min-width: 1701px)
@@ -66700,6 +66911,11 @@ pub struct CssClasses<'a> {
     pub xl__placeholder_menu_active: &'a str,
 
     /**
+        color: #0D1B2C;    @media (min-width: 1701px)
+    */
+    pub xl__placeholder_blue_1000: &'a str,
+
+    /**
         color: transparent;    @media (min-width: 1701px)
     */
     pub xl__focus__placeholder_transparent: &'a str,
@@ -67173,6 +67389,11 @@ pub struct CssClasses<'a> {
         color: #1C2A3C;    @media (min-width: 1701px)
     */
     pub xl__focus__placeholder_menu_active: &'a str,
+
+    /**
+        color: #0D1B2C;    @media (min-width: 1701px)
+    */
+    pub xl__focus__placeholder_blue_1000: &'a str,
 
     /**
         pointer-events: none;    @media (min-width: 1701px)
@@ -72071,6 +72292,11 @@ pub static C: CssClasses = CssClasses {
     bg_menu_active: "bg-menu-active",
 
     /**
+        background-color: #0D1B2C;
+    */
+    bg_blue_1000: "bg-blue-1000",
+
+    /**
         background-color: transparent;
     */
     hover__bg_transparent: "hover:bg-transparent",
@@ -72546,6 +72772,11 @@ pub static C: CssClasses = CssClasses {
     hover__bg_menu_active: "hover:bg-menu-active",
 
     /**
+        background-color: #0D1B2C;
+    */
+    hover__bg_blue_1000: "hover:bg-blue-1000",
+
+    /**
         background-color: transparent;
     */
     focus__bg_transparent: "focus:bg-transparent",
@@ -73019,6 +73250,11 @@ pub static C: CssClasses = CssClasses {
         background-color: #1C2A3C;
     */
     focus__bg_menu_active: "focus:bg-menu-active",
+
+    /**
+        background-color: #0D1B2C;
+    */
+    focus__bg_blue_1000: "focus:bg-blue-1000",
 
     /**
         background-position: bottom;
@@ -73596,6 +73832,11 @@ pub static C: CssClasses = CssClasses {
     border_menu_active: "border-menu-active",
 
     /**
+        border-color: #0D1B2C;
+    */
+    border_blue_1000: "border-blue-1000",
+
+    /**
         border-color: transparent;
     */
     hover__border_transparent: "hover:border-transparent",
@@ -74071,6 +74312,11 @@ pub static C: CssClasses = CssClasses {
     hover__border_menu_active: "hover:border-menu-active",
 
     /**
+        border-color: #0D1B2C;
+    */
+    hover__border_blue_1000: "hover:border-blue-1000",
+
+    /**
         border-color: transparent;
     */
     focus__border_transparent: "focus:border-transparent",
@@ -74544,6 +74790,11 @@ pub static C: CssClasses = CssClasses {
         border-color: #1C2A3C;
     */
     focus__border_menu_active: "focus:border-menu-active",
+
+    /**
+        border-color: #0D1B2C;
+    */
+    focus__border_blue_1000: "focus:border-blue-1000",
 
     /**
         border-radius: 0;
@@ -75639,6 +75890,7 @@ pub static C: CssClasses = CssClasses {
         color: #702459;
         color: #344151;
         color: #1C2A3C;
+        color: #0D1B2C;
         color: #3793FF;
         display: block;    @media (min-width: 569px)
         display: inline-block;    @media (min-width: 569px)
@@ -80831,6 +81083,11 @@ pub static C: CssClasses = CssClasses {
     placeholder_menu_active: "placeholder-menu-active",
 
     /**
+        color: #0D1B2C;
+    */
+    placeholder_blue_1000: "placeholder-blue-1000",
+
+    /**
         color: transparent;
     */
     focus__placeholder_transparent: "focus:placeholder-transparent",
@@ -81304,6 +81561,11 @@ pub static C: CssClasses = CssClasses {
         color: #1C2A3C;
     */
     focus__placeholder_menu_active: "focus:placeholder-menu-active",
+
+    /**
+        color: #0D1B2C;
+    */
+    focus__placeholder_blue_1000: "focus:placeholder-blue-1000",
 
     /**
         pointer-events: none;
@@ -82311,6 +82573,11 @@ pub static C: CssClasses = CssClasses {
     text_menu_active: "text-menu-active",
 
     /**
+        color: #0D1B2C;
+    */
+    text_blue_1000: "text-blue-1000",
+
+    /**
         color: #3793FF;
     */
     text_active: "text-active",
@@ -82789,6 +83056,11 @@ pub static C: CssClasses = CssClasses {
         color: #1C2A3C;
     */
     hover__text_menu_active: "hover:text-menu-active",
+
+    /**
+        color: #0D1B2C;
+    */
+    hover__text_blue_1000: "hover:text-blue-1000",
 
     /**
         color: #3793FF;
@@ -83271,6 +83543,11 @@ pub static C: CssClasses = CssClasses {
     group_hover__text_menu_active: "group-hover:text-menu-active",
 
     /**
+        color: #0D1B2C;
+    */
+    group_hover__text_blue_1000: "group-hover:text-blue-1000",
+
+    /**
         color: #3793FF;
     */
     group_hover__text_active: "group-hover:text-active",
@@ -83749,6 +84026,11 @@ pub static C: CssClasses = CssClasses {
         color: #1C2A3C;
     */
     focus__text_menu_active: "focus:text-menu-active",
+
+    /**
+        color: #0D1B2C;
+    */
+    focus__text_blue_1000: "focus:text-blue-1000",
 
     /**
         color: #3793FF;
@@ -88135,6 +88417,11 @@ pub static C: CssClasses = CssClasses {
     sm__bg_menu_active: "sm:bg-menu-active",
 
     /**
+        background-color: #0D1B2C;    @media (min-width: 569px)
+    */
+    sm__bg_blue_1000: "sm:bg-blue-1000",
+
+    /**
         background-color: transparent;    @media (min-width: 569px)
     */
     sm__hover__bg_transparent: "sm:hover:bg-transparent",
@@ -88610,6 +88897,11 @@ pub static C: CssClasses = CssClasses {
     sm__hover__bg_menu_active: "sm:hover:bg-menu-active",
 
     /**
+        background-color: #0D1B2C;    @media (min-width: 569px)
+    */
+    sm__hover__bg_blue_1000: "sm:hover:bg-blue-1000",
+
+    /**
         background-color: transparent;    @media (min-width: 569px)
     */
     sm__focus__bg_transparent: "sm:focus:bg-transparent",
@@ -89083,6 +89375,11 @@ pub static C: CssClasses = CssClasses {
         background-color: #1C2A3C;    @media (min-width: 569px)
     */
     sm__focus__bg_menu_active: "sm:focus:bg-menu-active",
+
+    /**
+        background-color: #0D1B2C;    @media (min-width: 569px)
+    */
+    sm__focus__bg_blue_1000: "sm:focus:bg-blue-1000",
 
     /**
         background-position: bottom;    @media (min-width: 569px)
@@ -89660,6 +89957,11 @@ pub static C: CssClasses = CssClasses {
     sm__border_menu_active: "sm:border-menu-active",
 
     /**
+        border-color: #0D1B2C;    @media (min-width: 569px)
+    */
+    sm__border_blue_1000: "sm:border-blue-1000",
+
+    /**
         border-color: transparent;    @media (min-width: 569px)
     */
     sm__hover__border_transparent: "sm:hover:border-transparent",
@@ -90135,6 +90437,11 @@ pub static C: CssClasses = CssClasses {
     sm__hover__border_menu_active: "sm:hover:border-menu-active",
 
     /**
+        border-color: #0D1B2C;    @media (min-width: 569px)
+    */
+    sm__hover__border_blue_1000: "sm:hover:border-blue-1000",
+
+    /**
         border-color: transparent;    @media (min-width: 569px)
     */
     sm__focus__border_transparent: "sm:focus:border-transparent",
@@ -90608,6 +90915,11 @@ pub static C: CssClasses = CssClasses {
         border-color: #1C2A3C;    @media (min-width: 569px)
     */
     sm__focus__border_menu_active: "sm:focus:border-menu-active",
+
+    /**
+        border-color: #0D1B2C;    @media (min-width: 569px)
+    */
+    sm__focus__border_blue_1000: "sm:focus:border-blue-1000",
 
     /**
         border-radius: 0;    @media (min-width: 569px)
@@ -96635,6 +96947,11 @@ pub static C: CssClasses = CssClasses {
     sm__placeholder_menu_active: "sm:placeholder-menu-active",
 
     /**
+        color: #0D1B2C;    @media (min-width: 569px)
+    */
+    sm__placeholder_blue_1000: "sm:placeholder-blue-1000",
+
+    /**
         color: transparent;    @media (min-width: 569px)
     */
     sm__focus__placeholder_transparent: "sm:focus:placeholder-transparent",
@@ -97108,6 +97425,11 @@ pub static C: CssClasses = CssClasses {
         color: #1C2A3C;    @media (min-width: 569px)
     */
     sm__focus__placeholder_menu_active: "sm:focus:placeholder-menu-active",
+
+    /**
+        color: #0D1B2C;    @media (min-width: 569px)
+    */
+    sm__focus__placeholder_blue_1000: "sm:focus:placeholder-blue-1000",
 
     /**
         pointer-events: none;    @media (min-width: 569px)
@@ -101994,6 +102316,11 @@ pub static C: CssClasses = CssClasses {
     md__bg_menu_active: "md:bg-menu-active",
 
     /**
+        background-color: #0D1B2C;    @media (min-width: 769px)
+    */
+    md__bg_blue_1000: "md:bg-blue-1000",
+
+    /**
         background-color: transparent;    @media (min-width: 769px)
     */
     md__hover__bg_transparent: "md:hover:bg-transparent",
@@ -102469,6 +102796,11 @@ pub static C: CssClasses = CssClasses {
     md__hover__bg_menu_active: "md:hover:bg-menu-active",
 
     /**
+        background-color: #0D1B2C;    @media (min-width: 769px)
+    */
+    md__hover__bg_blue_1000: "md:hover:bg-blue-1000",
+
+    /**
         background-color: transparent;    @media (min-width: 769px)
     */
     md__focus__bg_transparent: "md:focus:bg-transparent",
@@ -102942,6 +103274,11 @@ pub static C: CssClasses = CssClasses {
         background-color: #1C2A3C;    @media (min-width: 769px)
     */
     md__focus__bg_menu_active: "md:focus:bg-menu-active",
+
+    /**
+        background-color: #0D1B2C;    @media (min-width: 769px)
+    */
+    md__focus__bg_blue_1000: "md:focus:bg-blue-1000",
 
     /**
         background-position: bottom;    @media (min-width: 769px)
@@ -103519,6 +103856,11 @@ pub static C: CssClasses = CssClasses {
     md__border_menu_active: "md:border-menu-active",
 
     /**
+        border-color: #0D1B2C;    @media (min-width: 769px)
+    */
+    md__border_blue_1000: "md:border-blue-1000",
+
+    /**
         border-color: transparent;    @media (min-width: 769px)
     */
     md__hover__border_transparent: "md:hover:border-transparent",
@@ -103994,6 +104336,11 @@ pub static C: CssClasses = CssClasses {
     md__hover__border_menu_active: "md:hover:border-menu-active",
 
     /**
+        border-color: #0D1B2C;    @media (min-width: 769px)
+    */
+    md__hover__border_blue_1000: "md:hover:border-blue-1000",
+
+    /**
         border-color: transparent;    @media (min-width: 769px)
     */
     md__focus__border_transparent: "md:focus:border-transparent",
@@ -104467,6 +104814,11 @@ pub static C: CssClasses = CssClasses {
         border-color: #1C2A3C;    @media (min-width: 769px)
     */
     md__focus__border_menu_active: "md:focus:border-menu-active",
+
+    /**
+        border-color: #0D1B2C;    @media (min-width: 769px)
+    */
+    md__focus__border_blue_1000: "md:focus:border-blue-1000",
 
     /**
         border-radius: 0;    @media (min-width: 769px)
@@ -110494,6 +110846,11 @@ pub static C: CssClasses = CssClasses {
     md__placeholder_menu_active: "md:placeholder-menu-active",
 
     /**
+        color: #0D1B2C;    @media (min-width: 769px)
+    */
+    md__placeholder_blue_1000: "md:placeholder-blue-1000",
+
+    /**
         color: transparent;    @media (min-width: 769px)
     */
     md__focus__placeholder_transparent: "md:focus:placeholder-transparent",
@@ -110967,6 +111324,11 @@ pub static C: CssClasses = CssClasses {
         color: #1C2A3C;    @media (min-width: 769px)
     */
     md__focus__placeholder_menu_active: "md:focus:placeholder-menu-active",
+
+    /**
+        color: #0D1B2C;    @media (min-width: 769px)
+    */
+    md__focus__placeholder_blue_1000: "md:focus:placeholder-blue-1000",
 
     /**
         pointer-events: none;    @media (min-width: 769px)
@@ -115853,6 +116215,11 @@ pub static C: CssClasses = CssClasses {
     lg__bg_menu_active: "lg:bg-menu-active",
 
     /**
+        background-color: #0D1B2C;    @media (min-width: 1025px)
+    */
+    lg__bg_blue_1000: "lg:bg-blue-1000",
+
+    /**
         background-color: transparent;    @media (min-width: 1025px)
     */
     lg__hover__bg_transparent: "lg:hover:bg-transparent",
@@ -116328,6 +116695,11 @@ pub static C: CssClasses = CssClasses {
     lg__hover__bg_menu_active: "lg:hover:bg-menu-active",
 
     /**
+        background-color: #0D1B2C;    @media (min-width: 1025px)
+    */
+    lg__hover__bg_blue_1000: "lg:hover:bg-blue-1000",
+
+    /**
         background-color: transparent;    @media (min-width: 1025px)
     */
     lg__focus__bg_transparent: "lg:focus:bg-transparent",
@@ -116801,6 +117173,11 @@ pub static C: CssClasses = CssClasses {
         background-color: #1C2A3C;    @media (min-width: 1025px)
     */
     lg__focus__bg_menu_active: "lg:focus:bg-menu-active",
+
+    /**
+        background-color: #0D1B2C;    @media (min-width: 1025px)
+    */
+    lg__focus__bg_blue_1000: "lg:focus:bg-blue-1000",
 
     /**
         background-position: bottom;    @media (min-width: 1025px)
@@ -117378,6 +117755,11 @@ pub static C: CssClasses = CssClasses {
     lg__border_menu_active: "lg:border-menu-active",
 
     /**
+        border-color: #0D1B2C;    @media (min-width: 1025px)
+    */
+    lg__border_blue_1000: "lg:border-blue-1000",
+
+    /**
         border-color: transparent;    @media (min-width: 1025px)
     */
     lg__hover__border_transparent: "lg:hover:border-transparent",
@@ -117853,6 +118235,11 @@ pub static C: CssClasses = CssClasses {
     lg__hover__border_menu_active: "lg:hover:border-menu-active",
 
     /**
+        border-color: #0D1B2C;    @media (min-width: 1025px)
+    */
+    lg__hover__border_blue_1000: "lg:hover:border-blue-1000",
+
+    /**
         border-color: transparent;    @media (min-width: 1025px)
     */
     lg__focus__border_transparent: "lg:focus:border-transparent",
@@ -118326,6 +118713,11 @@ pub static C: CssClasses = CssClasses {
         border-color: #1C2A3C;    @media (min-width: 1025px)
     */
     lg__focus__border_menu_active: "lg:focus:border-menu-active",
+
+    /**
+        border-color: #0D1B2C;    @media (min-width: 1025px)
+    */
+    lg__focus__border_blue_1000: "lg:focus:border-blue-1000",
 
     /**
         border-radius: 0;    @media (min-width: 1025px)
@@ -124353,6 +124745,11 @@ pub static C: CssClasses = CssClasses {
     lg__placeholder_menu_active: "lg:placeholder-menu-active",
 
     /**
+        color: #0D1B2C;    @media (min-width: 1025px)
+    */
+    lg__placeholder_blue_1000: "lg:placeholder-blue-1000",
+
+    /**
         color: transparent;    @media (min-width: 1025px)
     */
     lg__focus__placeholder_transparent: "lg:focus:placeholder-transparent",
@@ -124826,6 +125223,11 @@ pub static C: CssClasses = CssClasses {
         color: #1C2A3C;    @media (min-width: 1025px)
     */
     lg__focus__placeholder_menu_active: "lg:focus:placeholder-menu-active",
+
+    /**
+        color: #0D1B2C;    @media (min-width: 1025px)
+    */
+    lg__focus__placeholder_blue_1000: "lg:focus:placeholder-blue-1000",
 
     /**
         pointer-events: none;    @media (min-width: 1025px)
@@ -129712,6 +130114,11 @@ pub static C: CssClasses = CssClasses {
     xl__bg_menu_active: "xl:bg-menu-active",
 
     /**
+        background-color: #0D1B2C;    @media (min-width: 1701px)
+    */
+    xl__bg_blue_1000: "xl:bg-blue-1000",
+
+    /**
         background-color: transparent;    @media (min-width: 1701px)
     */
     xl__hover__bg_transparent: "xl:hover:bg-transparent",
@@ -130187,6 +130594,11 @@ pub static C: CssClasses = CssClasses {
     xl__hover__bg_menu_active: "xl:hover:bg-menu-active",
 
     /**
+        background-color: #0D1B2C;    @media (min-width: 1701px)
+    */
+    xl__hover__bg_blue_1000: "xl:hover:bg-blue-1000",
+
+    /**
         background-color: transparent;    @media (min-width: 1701px)
     */
     xl__focus__bg_transparent: "xl:focus:bg-transparent",
@@ -130660,6 +131072,11 @@ pub static C: CssClasses = CssClasses {
         background-color: #1C2A3C;    @media (min-width: 1701px)
     */
     xl__focus__bg_menu_active: "xl:focus:bg-menu-active",
+
+    /**
+        background-color: #0D1B2C;    @media (min-width: 1701px)
+    */
+    xl__focus__bg_blue_1000: "xl:focus:bg-blue-1000",
 
     /**
         background-position: bottom;    @media (min-width: 1701px)
@@ -131237,6 +131654,11 @@ pub static C: CssClasses = CssClasses {
     xl__border_menu_active: "xl:border-menu-active",
 
     /**
+        border-color: #0D1B2C;    @media (min-width: 1701px)
+    */
+    xl__border_blue_1000: "xl:border-blue-1000",
+
+    /**
         border-color: transparent;    @media (min-width: 1701px)
     */
     xl__hover__border_transparent: "xl:hover:border-transparent",
@@ -131712,6 +132134,11 @@ pub static C: CssClasses = CssClasses {
     xl__hover__border_menu_active: "xl:hover:border-menu-active",
 
     /**
+        border-color: #0D1B2C;    @media (min-width: 1701px)
+    */
+    xl__hover__border_blue_1000: "xl:hover:border-blue-1000",
+
+    /**
         border-color: transparent;    @media (min-width: 1701px)
     */
     xl__focus__border_transparent: "xl:focus:border-transparent",
@@ -132185,6 +132612,11 @@ pub static C: CssClasses = CssClasses {
         border-color: #1C2A3C;    @media (min-width: 1701px)
     */
     xl__focus__border_menu_active: "xl:focus:border-menu-active",
+
+    /**
+        border-color: #0D1B2C;    @media (min-width: 1701px)
+    */
+    xl__focus__border_blue_1000: "xl:focus:border-blue-1000",
 
     /**
         border-radius: 0;    @media (min-width: 1701px)
@@ -138212,6 +138644,11 @@ pub static C: CssClasses = CssClasses {
     xl__placeholder_menu_active: "xl:placeholder-menu-active",
 
     /**
+        color: #0D1B2C;    @media (min-width: 1701px)
+    */
+    xl__placeholder_blue_1000: "xl:placeholder-blue-1000",
+
+    /**
         color: transparent;    @media (min-width: 1701px)
     */
     xl__focus__placeholder_transparent: "xl:focus:placeholder-transparent",
@@ -138685,6 +139122,11 @@ pub static C: CssClasses = CssClasses {
         color: #1C2A3C;    @media (min-width: 1701px)
     */
     xl__focus__placeholder_menu_active: "xl:focus:placeholder-menu-active",
+
+    /**
+        color: #0D1B2C;    @media (min-width: 1701px)
+    */
+    xl__focus__placeholder_blue_1000: "xl:focus:placeholder-blue-1000",
 
     /**
         pointer-events: none;    @media (min-width: 1701px)

@@ -4,7 +4,7 @@ use crate::{
     components::{attrs, dropdown, font_awesome, modal, tooltip, Placement},
     generated::css_classes::C,
     sleep::sleep_with_handle,
-    GMsg, MergeAttrs as _, RequestExt, WatchState,
+    GMsg, MergeAttrs as _, RequestExt,
 };
 use futures::channel::oneshot;
 use iml_wire_types::{
@@ -84,7 +84,7 @@ pub struct Model {
     pub composite_ids: Vec<CompositeId>,
     pub request_controller: Option<fetch::RequestController>,
     pub actions: ActionMap,
-    pub watching: WatchState,
+    dropdown_state: dropdown::Model,
     pub cancel: Option<oneshot::Sender<()>>,
     pub confirm_modal: confirm_action_modal::Model,
 }
@@ -96,7 +96,7 @@ impl Model {
             composite_ids,
             request_controller: None,
             actions: BTreeMap::new(),
-            watching: WatchState::default(),
+            dropdown_state: dropdown::Model::default(),
             cancel: None,
             confirm_modal: confirm_action_modal::Model::default(),
         }
@@ -120,7 +120,7 @@ impl Drop for Model {
 pub enum Msg {
     StartFetch,
     SendFetch,
-    WatchChange,
+    Dropdown(dropdown::Msg),
     Fetched(Box<fetch::ResponseDataResult<AvailableActions>>),
     ActionSelected(Arc<AvailableAction>, Arc<dyn ErasedRecord>),
     ConfirmJobModal(confirm_action_modal::Msg),
@@ -198,6 +198,9 @@ pub fn update(msg: IdMsg, cache: &ArcCache, model: &mut Model, orders: &mut impl
             if x.class_name.is_some() {
                 if let Some(body) = &x.confirmation {
                     model.state = State::Confirming(confirm_action_modal::Action::Job(body.to_string(), x, y));
+                } else {
+                    model.state =
+                        State::Confirming(confirm_action_modal::Action::Job(x.long_description.clone(), x, y));
                 }
             } else {
                 let req = state_change(&x, &y, true);
@@ -229,7 +232,9 @@ pub fn update(msg: IdMsg, cache: &ArcCache, model: &mut Model, orders: &mut impl
                 &mut orders.proxy(move |m| IdMsg(id, Msg::ConfirmJobModal(m))),
             );
         }
-        Msg::WatchChange => model.watching.update(),
+        Msg::Dropdown(msg) => {
+            dropdown::update(msg, &mut model.dropdown_state);
+        }
         Msg::Noop => {}
     };
 }
@@ -309,14 +314,15 @@ pub fn view(id: u32, model: &Model, all_locks: &Locks) -> Node<IdMsg> {
                         cls,
                         "Actions",
                         font_awesome(class![C.w_4, C.h_4, C.inline, C.ml_1], "chevron-down"),
-                        simple_ev(Ev::Click, IdMsg(id, Msg::WatchChange))
+                        simple_ev(Ev::Blur, IdMsg(id, Msg::Dropdown(dropdown::Msg::Close))),
+                        simple_ev(Ev::Click, IdMsg(id, Msg::Dropdown(dropdown::Msg::Toggle))),
                     ],
                     dropdown::wrapper_view(
-                        class![C.z_30, C.w_64],
                         Placement::Bottom,
-                        model.watching.is_open(),
+                        model.dropdown_state.is_open(),
                         items_view(id, &model.actions)
                     )
+                    .merge_attrs(class![C.z_30, C.w_64])
                 ]
             }
         }
@@ -343,6 +349,10 @@ fn items_view(id: u32, x: &ActionMap) -> impl View<IdMsg> {
                     attrs::container(),
                     dropdown::item_view(a![y.verb]),
                     tooltip::view(&y.long_description, Placement::Left),
+                    ev(Ev::MouseDown, move |ev| {
+                        ev.prevent_default();
+                        IdMsg(id, Msg::Noop)
+                    }),
                     mouse_ev(Ev::Click, move |_| IdMsg(id, Msg::ActionSelected(y2, z2)))
                 ]
             });
