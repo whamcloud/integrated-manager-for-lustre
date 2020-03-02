@@ -10,7 +10,7 @@ const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const Critters = require("critters-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
-new EnvironmentPlugin(['IML_PORT', '8443']);
+new EnvironmentPlugin({ 'IML_PORT': '8443' });
 
 module.exports = (env, argv) => {
   return {
@@ -40,7 +40,7 @@ module.exports = (env, argv) => {
       proxy: [
         {
           context: ["/api", "/help"],
-          target: "https://localhost:" + JSON.stringify(process.env.IML_PORT) + "/",
+          target: "https://localhost:" + process.env.IML_PORT + "/",
           secure: false
         }
       ],
