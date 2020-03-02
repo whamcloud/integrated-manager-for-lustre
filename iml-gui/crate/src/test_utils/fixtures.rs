@@ -4,6 +4,8 @@ pub(crate) fn get_cache() -> Cache {
     let data = r#"
     {
   "content_type": {},
+  "device": {},
+  "device_host": {},
   "active_alert": {
     "577": {
       "_message": "Updates are ready for server oss1.local",
