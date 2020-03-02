@@ -4,8 +4,9 @@
 
 use crate::{
     db::{
-        ContentTypeRecord, DeviceRecord, Id, LnetConfigurationRecord, ManagedTargetMountRecord,
-        OstPoolOstsRecord, OstPoolRecord, StratagemConfiguration, VolumeNodeRecord, DeviceHostRecord,
+        ContentTypeRecord, DeviceHostRecord, DeviceRecord, Id, LnetConfigurationRecord,
+        ManagedTargetMountRecord, OstPoolOstsRecord, OstPoolRecord, StratagemConfiguration,
+        VolumeNodeRecord,
     },
     Alert, CompositeId, EndpointNameSelf, Filesystem, Host, Label, LockChange, Target,
     TargetConfParam, ToCompositeId, Volume,
