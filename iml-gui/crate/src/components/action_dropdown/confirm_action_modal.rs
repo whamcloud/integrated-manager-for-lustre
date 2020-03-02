@@ -154,7 +154,7 @@ fn state_change_body_view<T>(dry_run: &DryRun) -> Node<T> {
     };
 
     div![
-        desc,
+        El::from_html(desc),
         if dep_jobs.is_empty() {
             empty![]
         } else {

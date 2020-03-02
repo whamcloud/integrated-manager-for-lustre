@@ -99,6 +99,8 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
         Msg::RemoveFilesystem(id) => {
             model.rows.remove(&id);
 
+            model.filesystems.retain(|x| x.id != id);
+
             orders
                 .proxy(Msg::Page)
                 .send_msg(paging::Msg::SetTotal(model.filesystems.len()));
