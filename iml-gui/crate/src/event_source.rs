@@ -6,7 +6,7 @@ use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::EventSource;
 
 pub fn init(orders: &mut impl Orders<Msg, GMsg>) {
-    let iml_port = env::var("IML_PORT").unwrap_or("8443".into());
+    let iml_port = env::var("IML_PORT").unwrap_or_else(|_| "8443".into());
 
     let localhost_uri = format!("https://localhost:{}/messaging", iml_port);
     let uri = if *crate::IS_PRODUCTION {
