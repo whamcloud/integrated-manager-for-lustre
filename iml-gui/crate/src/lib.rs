@@ -388,6 +388,15 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                         &model.activity_health,
                     ));
                 }
+                warp_drive::Record::ContentType(x) => {
+                    model.records.content_type.insert(x.id, Arc::new(x));
+                }
+                warp_drive::Record::Device(x) => {
+                    model.records.device.insert(x.record_id, Arc::new(x));
+                }
+                warp_drive::Record::DeviceHost(x) => {
+                    model.records.device_host.insert(x.record_id, Arc::new(x));
+                }
                 warp_drive::Record::Filesystem(x) => {
                     let id = x.id;
                     if model.records.filesystem.insert(x.id, Arc::new(x)).is_none() {
@@ -395,9 +404,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::Filesystem(id)));
                     };
-                }
-                warp_drive::Record::ContentType(x) => {
-                    model.records.content_type.insert(x.id, Arc::new(x));
                 }
                 warp_drive::Record::Host(x) => {
                     let id = x.id;
@@ -411,6 +417,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                         model.records.host.arc_values().cloned().collect(),
                         model.records.lnet_configuration.clone(),
                     ));
+                }
+                warp_drive::Record::LnetConfiguration(x) => {
+                    model.records.lnet_configuration.insert(x.id, Arc::new(x));
                 }
                 warp_drive::Record::ManagedTargetMount(x) => {
                     model.records.managed_target_mount.insert(x.id, Arc::new(x));
@@ -448,17 +457,16 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::VolumeNode(id)));
                     };
                 }
-                warp_drive::Record::LnetConfiguration(x) => {
-                    model.records.lnet_configuration.insert(x.id, Arc::new(x));
-                }
             },
             warp_drive::RecordChange::Delete(record_id) => {
                 match record_id {
                     warp_drive::RecordId::Filesystem(_)
-                    | warp_drive::RecordId::VolumeNode(_)
+                    | warp_drive::RecordId::Device(_)
+                    | warp_drive::RecordId::DeviceHost(_)
                     | warp_drive::RecordId::Host(_)
                     | warp_drive::RecordId::OstPoolOsts(_)
-                    | warp_drive::RecordId::Target(_) => {
+                    | warp_drive::RecordId::Target(_)
+                    | warp_drive::RecordId::VolumeNode(_) => {
                         orders.proxy(Msg::Tree).send_msg(tree::Msg::Remove(record_id));
                     }
                     _ => {}
