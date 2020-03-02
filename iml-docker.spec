@@ -23,7 +23,7 @@ Requires: docker-ce
 
 %install
 rm -rf %{buildroot}
-mkdir -p %{buildroot}%{_sysconfdir}/iml-docker
+mkdir -p %{buildroot}%{_sysconfdir}/iml-docker/setup
 mkdir -p %{buildroot}%{_tmppath}
 mkdir -p %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
@@ -34,7 +34,7 @@ mv iml-docker.service %{buildroot}%{_unitdir}
 
 
 %files
-%{_sysconfdir}/iml-docker/docker-compose.yml
+%{_sysconfdir}/iml-docker
 %attr(750, root, root) %config(missingok) %{_tmppath}/iml-images.tgz
 %attr(754, root, root) %{_bindir}/iml
 %attr(0644,root,root) %{_unitdir}/iml-docker.service
