@@ -1,14 +1,18 @@
 use crate::{GMsg, Msg, Orders};
 use js_sys::Function;
 use seed::browser::util::ClosureNew;
+use std::env;
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::EventSource;
 
 pub fn init(orders: &mut impl Orders<Msg, GMsg>) {
+    let iml_port = env::var("IML_PORT").unwrap_or("8443".into());
+
+    let localhost_uri = format!("https://localhost:{}/messaging", iml_port);
     let uri = if *crate::IS_PRODUCTION {
         "/messaging"
     } else {
-        "https://localhost:7444/messaging"
+        &localhost_uri
     };
 
     // FIXME: This should be proxied via webpack dev-server but there is an issue with buffering contents of SSE.
