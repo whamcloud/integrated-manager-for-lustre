@@ -68,7 +68,13 @@ fn process_resource(output: &[u8]) -> Result<ResourceAgentInfo, ImlAgentError> {
 }
 
 pub async fn get_ha_resource_list(_: ()) -> Result<Vec<ResourceAgentInfo>, ImlAgentError> {
-    let resources = crm_resource(&["--list-raw"]).await?;
+    let resources = match crm_resource(&["--list-raw"]).await {
+        Ok(res) => res,
+        Err(e) => {
+            tracing::info!("Failed to get resource list: {:?}", e);
+            return Ok(vec![]);
+        }
+    };
 
     let xs = resources
         .trim()
