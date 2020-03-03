@@ -3,6 +3,7 @@ pub mod lnet_status;
 pub mod modal;
 pub mod paging;
 pub mod popover;
+pub mod progress_circle;
 pub mod table;
 pub mod tooltip;
 
@@ -16,7 +17,6 @@ pub(crate) mod font_awesome;
 pub(crate) mod loading;
 pub(crate) mod lock_indicator;
 pub(crate) mod logo;
-pub(crate) mod pie_chart;
 pub(crate) mod restrict;
 pub(crate) mod tree;
 
@@ -25,7 +25,6 @@ pub(crate) use alert_indicator::alert_indicator;
 pub(crate) use arrow::arrow;
 pub(crate) use font_awesome::{font_awesome, font_awesome_outline};
 pub use logo::{ddn_logo, whamcloud_logo};
-pub(crate) use pie_chart::pie_chart;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Placement {

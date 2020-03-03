@@ -207,7 +207,17 @@ module.exports = {
         white: "#FFF",
         menu: "#344151",
         "menu-active": "#1C2A3C",
-        "blue-1000": "#0D1B2C"
+        "blue-1000": "#0D1B2C",
+        "throughput-background": "#5350FB"
+      },
+      strokeWidth: {
+        "3": "3",
+        "4": "4",
+        "5": "5",
+        "6": "6"
+      },
+      transitionProperty: {
+        stroke_dashoffset: "stroke-dashoffset"
       }
     }
   },
