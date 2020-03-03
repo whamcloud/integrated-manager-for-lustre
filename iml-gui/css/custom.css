@@ -89,3 +89,16 @@ li {
     transform: rotate(1turn);
   }
 }
+
+/* Placeholders until https://github.com/tailwindcss/tailwindcss/issues/1354 is fixed */
+.justify-self-start {
+  justify-self: start;
+}
+
+.justify-self-center {
+  justify-self: center;
+}
+
+.justify-self-end {
+  justify-self: end;
+}

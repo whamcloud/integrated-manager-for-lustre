@@ -1,5 +1,5 @@
 use crate::{
-    components::{action_dropdown, alert_indicator, lock_indicator, paging, pie_chart, table as t, Placement},
+    components::{action_dropdown, alert_indicator, lock_indicator, paging, progress_circle, table as t, Placement},
     extensions::MergeAttrs,
     extract_id,
     generated::css_classes::C,
@@ -197,13 +197,13 @@ fn details_table(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg
                 t::td_view(files_view(fs))
             ],
             tr![t::th_left(plain!("State")), t::td_view(plain![fs.state.to_string()])],
-            tr![t::th_left(plain!("Management Server")), t::td_view(mgs(&model.mgt, fs)),],
+            tr![t::th_left(plain!("MGS")), t::td_view(mgs(&model.mgt, fs)),],
             tr![
-                t::th_left(plain!("Number of Metadata Targets")),
+                t::th_left(plain!("Number of MGTs")),
                 t::td_view(plain!(model.mdts.len().to_string()))
             ],
             tr![
-                t::th_left(plain!("Number of Object Storage Targets")),
+                t::th_left(plain!("Number of OSTs")),
                 t::td_view(plain!(model.osts.len().to_string()))
             ],
             tr![
@@ -318,9 +318,12 @@ pub(crate) fn clients_view<T>(f: &Filesystem) -> Node<T> {
 
 pub(crate) fn size_view<T>(f: &Filesystem) -> Node<T> {
     if let Some((u, t)) = f.bytes_total.and_then(|t| f.bytes_free.map(|f| (t - f, t))) {
+        let pct = u / t;
+
         span![
             class![C.whitespace_no_wrap],
-            pie_chart(u / t).merge_attrs(class![C.h_8, C.inline, C.mx_2]),
+            progress_circle::view((pct, progress_circle::used_to_color(pct)))
+                .merge_attrs(class![C.h_16, C.inline, C.mx_2]),
             nf::format_bytes(u, None),
             " / ",
             nf::format_bytes(t, None)
@@ -332,9 +335,12 @@ pub(crate) fn size_view<T>(f: &Filesystem) -> Node<T> {
 
 fn files_view<T>(fs: &Filesystem) -> Node<T> {
     if let Some((u, t)) = fs.files_total.and_then(|t| fs.files_free.map(|f| (t - f, t))) {
+        let pct = u / t;
+
         span![
             class![C.whitespace_no_wrap],
-            pie_chart(u / t).merge_attrs(class![C.h_8, C.inline, C.mx_2]),
+            progress_circle::view((pct, progress_circle::used_to_color(pct)))
+                .merge_attrs(class![C.h_16, C.inline, C.mx_2]),
             nf::format_number(u, None),
             " / ",
             nf::format_number(t, None)
