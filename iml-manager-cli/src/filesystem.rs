@@ -14,7 +14,7 @@ use futures::future::{try_join, try_join_all};
 use iml_wire_types::{ApiList, Filesystem, FlatQuery, Mgt, Ost};
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -40,11 +40,6 @@ pub enum FilesystemCommand {
         #[structopt(short, long)]
         hosts: Option<String>,
     },
-}
-
-#[derive(serde::Serialize)]
-pub struct HostList {
-    hosts: Vec<String>,
 }
 
 fn usage(
@@ -91,12 +86,18 @@ async fn detect_filesystem(hosts: Option<String>) -> Result<(), ImlManagerCliErr
     };
 
     tracing::debug!("Host APIs: {:?}", hosts);
-
+    
+    let args = if hosts.is_empty() {
+                    vec![]
+    } else {
+        vec![("hosts".to_string(), hosts)]
+    };
+    
     let cmd = SendCmd {
         message: "Detecting filesystems".into(),
-        jobs: vec![SendJob {
+        jobs: vec![SendJob::<HashMap<String, Vec<String>>> {
             class_name: "DetectTargetsJob".into(),
-            args: HostList { hosts },
+            args: args.iter().cloned().collect(),
         }],
     };
     let cmd = wrap_fut("Detecting filesystems...", create_command(cmd)).await?;
