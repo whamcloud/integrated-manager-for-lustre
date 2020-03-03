@@ -37,7 +37,7 @@ module.exports = (env, argv) => {
       proxy: [
         {
           context: ["/api", "/help"],
-          target: "https://localhost:7444/",
+          target: "https://localhost:8443/",
           secure: false
         }
       ],
