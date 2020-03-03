@@ -56,23 +56,9 @@ fn nav_manage_dropdown(open: bool) -> Node<Msg> {
                 },
             ]],
             li![
-                a![&cls, Route::PowerControl.to_string()],
-                attrs! {
-                    At::Href => Route::PowerControl.to_href(),
-                },
-            ],
-            li![
                 a![&cls, Route::Filesystems.to_string()],
                 attrs! {
                     At::Href => Route::Filesystems.to_href(),
-                },
-            ],
-            li![a![&cls, "HSM"]],
-            li![a![&cls, "Storage"]],
-            li![
-                a![&cls, Route::Users.to_string()],
-                attrs! {
-                    At::Href => Route::Users.to_href(),
                 },
             ],
             li![
@@ -86,7 +72,13 @@ fn nav_manage_dropdown(open: bool) -> Node<Msg> {
                 attrs! {
                     At::Href => Route::Mgt.to_href(),
                 },
-            ]
+            ],
+            li![
+                a![&cls, Route::Users.to_string()],
+                attrs! {
+                    At::Href => Route::Users.to_href(),
+                },
+            ],
         ]
     ]
 }
@@ -151,20 +143,6 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                 nav_manage_dropdown(model.manage_menu_state.is_open()),
             ]
         ),
-        a![
-            &menu_class,
-            class![C.bg_menu_active => model.route == Route::Jobstats],
-            attrs! {
-                At::Href => Route::Jobstats.to_href(),
-            },
-            span![
-                menu_icon("signal"),
-                span![
-                    class![C.group_hover__text_active, C.text_active => model.route == Route::Jobstats],
-                    Route::Jobstats.to_string(),
-                ],
-            ]
-        ],
         a![
             &menu_class,
             class![C.bg_menu_active => model.route == Route::Logs],
