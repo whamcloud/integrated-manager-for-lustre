@@ -27,6 +27,7 @@ use crate::{
 };
 use iml_wire_types::warp_drive::ArcCache;
 use seed::prelude::Orders;
+use std::sync::Arc;
 
 pub(crate) enum Page {
     About,
@@ -59,8 +60,8 @@ impl Default for Page {
     }
 }
 
-impl<'a> From<&Route<'a>> for Page {
-    fn from(route: &Route<'a>) -> Self {
+impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
+    fn from((cache, route): (&ArcCache, &Route<'a>)) -> Self {
         match route {
             Route::About => Self::About,
             Route::Activity => Self::Activity,
@@ -68,10 +69,17 @@ impl<'a> From<&Route<'a>> for Page {
             Route::Filesystems => Self::Filesystems(filesystems::Model::default()),
             Route::Filesystem(id) => id
                 .parse()
-                .map(|id| {
+                .ok()
+                .and_then(|x| cache.filesystem.get(&x))
+                .map(|x| {
                     Self::Filesystem(filesystem::Model {
-                        id,
-                        ..filesystem::Model::default()
+                        fs: Arc::clone(x),
+                        mdts: Default::default(),
+                        mdt_paging: Default::default(),
+                        mgt: Default::default(),
+                        osts: Default::default(),
+                        ost_paging: Default::default(),
+                        rows: Default::default(),
                     })
                 })
                 .unwrap_or_default(),
@@ -126,12 +134,14 @@ impl Page {
             | (Route::Targets, Self::Targets)
             | (Route::Users, Self::Users)
             | (Route::Volumes, Self::Volumes) => true,
-            (Route::Filesystem(route_id), Self::Filesystem(filesystem::Model { id, .. }))
-            | (Route::OstPool(route_id), Self::OstPool(ostpool::Model { id }))
+            (Route::OstPool(route_id), Self::OstPool(ostpool::Model { id }))
             | (Route::Server(route_id), Self::Server(server::Model { id }))
             | (Route::Target(route_id), Self::Target(target::Model { id }))
             | (Route::User(route_id), Self::User(user::Model { id }))
             | (Route::Volume(route_id), Self::Volume(volume::Model { id })) => route_id == &RouteId::from(id),
+            (Route::Filesystem(route_id), Self::Filesystem(filesystem::Model { fs, .. })) => {
+                route_id == &RouteId::from(fs.id)
+            }
             _ => false,
         }
     }
