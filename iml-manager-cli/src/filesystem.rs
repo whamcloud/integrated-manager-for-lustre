@@ -86,18 +86,18 @@ async fn detect_filesystem(hosts: Option<String>) -> Result<(), ImlManagerCliErr
     };
 
     tracing::debug!("Host APIs: {:?}", hosts);
-    
+
     let args = if hosts.is_empty() {
-                    vec![]
+        vec![]
     } else {
         vec![("hosts".to_string(), hosts)]
     };
-    
+
     let cmd = SendCmd {
         message: "Detecting filesystems".into(),
         jobs: vec![SendJob::<HashMap<String, Vec<String>>> {
             class_name: "DetectTargetsJob".into(),
-            args: args.iter().cloned().collect(),
+            args: args.into_iter().collect(),
         }],
     };
     let cmd = wrap_fut("Detecting filesystems...", create_command(cmd)).await?;
