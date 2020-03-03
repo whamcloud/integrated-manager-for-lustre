@@ -18,9 +18,8 @@ pub struct Row {
     dropdown: action_dropdown::Model,
 }
 
-#[derive(Default)]
 pub struct Model {
-    pub id: u32,
+    pub fs: Arc<Filesystem>,
     pub mdts: Vec<Arc<Target<TargetConfParam>>>,
     pub mdt_paging: paging::Model,
     pub mgt: Vec<Arc<Target<TargetConfParam>>>,
@@ -68,7 +67,7 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
             orders.send_msg(Msg::UpdatePaging);
         }
         Msg::AddTarget(x) => {
-            if !is_fs_target(model.id, &x) {
+            if !is_fs_target(model.fs.id, &x) {
                 return;
             }
 
@@ -108,7 +107,7 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                 })
                 .collect();
 
-            let (mgt, mut mdts, mut osts) = xs.into_iter().filter(|t| is_fs_target(model.id, t)).fold(
+            let (mgt, mut mdts, mut osts) = xs.into_iter().filter(|t| is_fs_target(model.fs.id, t)).fold(
                 (vec![], vec![], vec![]),
                 |(mut mgt, mut mdts, mut osts), x| {
                     match x.kind {
@@ -179,7 +178,7 @@ pub(crate) fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> Node<M
 }
 
 fn details_table(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg> {
-    let fs = cache.filesystem.get(&model.id).unwrap();
+    let fs = cache.filesystem.get(&model.fs.id).unwrap();
 
     div![
         class![C.bg_white, C.border_t, C.border_b, C.border, C.rounded_lg, C.shadow],
