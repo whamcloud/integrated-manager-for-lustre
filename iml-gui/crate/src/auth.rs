@@ -37,7 +37,7 @@ impl Default for State {
 #[derive(Clone)]
 pub enum Msg {
     Fetch,
-    Fetched(fetch::ResponseDataResult<Session>),
+    Fetched(fetch::FetchObject<Session>),
     SetSession(Session),
     Loop,
     Stop,
@@ -52,7 +52,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
             let request = fetch_session().controller(|controller| model.request_controller = Some(controller));
 
-            orders.skip().perform_cmd(request.fetch_json_data(Msg::Fetched));
+            orders.skip().perform_cmd(request.fetch_json(Msg::Fetched));
         }
         Msg::SetSession(session) => {
             if session.needs_login() {
@@ -61,25 +61,35 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
             model.session = Some(session);
         }
-        Msg::Fetched(data_result) => {
-            let next_session = match data_result {
-                Ok(resp) => resp,
+        Msg::Fetched(data) => {
+            match data.response() {
                 Err(fail_reason) => {
                     log!(format!("Error during session poll: {}", fail_reason.message()));
-
                     orders.skip().send_msg(Msg::Loop);
+                }
+                Ok(resp) => {
+                    model.session = Some(resp.data);
 
-                    return;
+                    if model.session.as_ref().unwrap().needs_login() {
+                        orders.send_g_msg(GMsg::RouteChange(Route::Login.into()));
+                    } else {
+                        orders.send_msg(Msg::Loop);
+                    }
+
+                    resp.raw
+                        .headers()
+                        .get("date")
+                        .map_err(|j| error!(j))
+                        .ok()
+                        .flatten()
+                        .and_then(|h| {
+                            chrono::DateTime::parse_from_rfc2822(&h)
+                                .map_err(|e| error!(e))
+                                .map(|dt| orders.send_g_msg(GMsg::ServerDate(dt)))
+                                .ok()
+                        });
                 }
             };
-
-            if next_session.needs_login() {
-                orders.send_g_msg(GMsg::RouteChange(Route::Login.into()));
-            } else {
-                orders.send_msg(Msg::Loop);
-            }
-
-            model.session = Some(next_session);
         }
         Msg::Loop => {
             orders.skip();
