@@ -124,7 +124,7 @@ pub fn view(model: &Model) -> impl View<Msg> {
             C.flex,
             C.items_center,
             C.justify_center,
-            C.min_h_screen,
+            C.min_h_full,
         ],
         form![
             class![C.bg_white, C.shadow_md, C.px_16, C.py_8, C.border_b_8, C.border_red_700],

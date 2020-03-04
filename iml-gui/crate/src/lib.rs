@@ -654,7 +654,7 @@ pub fn main_panels(model: &Model, children: impl View<Msg>) -> impl View<Msg> {
     div![
         class![
             C.fade_in,
-            C.min_h_screen,
+            C.min_h_full,
             C.flex,
             C.flex_col,
             C.select_none => model.track_slider
