@@ -13,11 +13,11 @@ pub(crate) struct INodeCount {
     timestamp: i64,
 }
 
-pub struct Model {
-    fs_name: String,
+pub(crate) struct Model {
+    pub(crate) fs_name: String,
+    pub(crate) last_known_scan: Option<String>,
     inodes: Vec<INodeCount>,
     cancel: Option<oneshot::Sender<()>>,
-    last_known_scan: Option<String>,
 }
 
 impl Model {
