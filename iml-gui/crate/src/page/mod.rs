@@ -6,7 +6,7 @@ pub mod filesystems;
 pub mod jobstats;
 pub mod login;
 pub mod logs;
-pub mod mgt;
+pub mod mgts;
 pub mod not_found;
 pub mod ostpool;
 pub mod ostpools;
@@ -38,7 +38,7 @@ pub(crate) enum Page {
     Jobstats,
     Login(login::Model),
     Logs,
-    Mgt,
+    Mgts(mgts::Model),
     NotFound,
     OstPools,
     OstPool(ostpool::Model),
@@ -85,7 +85,7 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
             Route::Jobstats => Self::Jobstats,
             Route::Login => Self::Login(login::Model::default()),
             Route::Logs => Self::Logs,
-            Route::Mgt => Self::Mgt,
+            Route::Mgt => Self::Mgts(mgts::Model::default()),
             Route::NotFound => Self::NotFound,
             Route::OstPools => Self::OstPools,
             Route::OstPool(id) => id
@@ -123,7 +123,7 @@ impl Page {
             | (Route::Jobstats, Self::Jobstats)
             | (Route::Login, Self::Login(_))
             | (Route::Logs, Self::Logs)
-            | (Route::Mgt, Self::Mgt)
+            | (Route::Mgt, Self::Mgts(_))
             | (Route::NotFound, Self::NotFound)
             | (Route::OstPools, Self::OstPools)
             | (Route::PowerControl, Self::PowerControl)
@@ -152,6 +152,10 @@ impl Page {
 
         if let Self::Filesystem(_) = self {
             filesystem::init(cache, &mut orders.proxy(Msg::FilesystemPage))
+        }
+
+        if let Self::Mgts(_) = self {
+            mgts::init(cache, &mut orders.proxy(Msg::MgtsPage))
         }
     }
 }
