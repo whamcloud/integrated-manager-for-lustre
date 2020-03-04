@@ -1,16 +1,16 @@
 use crate::{
     components::{
-        action_dropdown, alert_indicator, lock_indicator, paging, progress_circle, stratagem, table as t, Placement,
+        action_dropdown, alert_indicator, lock_indicator, paging, progress_circle, resource_links, stratagem,
+        table as t, Placement,
     },
     extensions::MergeAttrs,
-    extract_id,
     generated::css_classes::C,
     route::RouteId,
     GMsg, Route,
 };
 use iml_wire_types::{
     warp_drive::{ArcCache, Locks},
-    Filesystem, Session, Target, TargetConfParam, TargetKind, ToCompositeId, VolumeOrResourceUri,
+    Filesystem, Session, Target, TargetConfParam, TargetKind, ToCompositeId,
 };
 use number_formatter as nf;
 use seed::{prelude::*, *};
@@ -343,10 +343,16 @@ fn targets(
                             alert_indicator(&cache.active_alert, &x, true, Placement::Right)
                                 .merge_attrs(class![C.ml_2]),
                         ]),
-                        t::td_view(volume_link(x)),
-                        t::td_view(server_link(Some(&x.primary_server), &x.primary_server_name)),
-                        t::td_view(server_link(x.failover_servers.first(), &x.failover_server_name)),
-                        t::td_view(server_link(x.active_host.as_ref(), &x.active_host_name)),
+                        t::td_view(resource_links::volume_link(x)),
+                        t::td_view(resource_links::server_link(
+                            Some(&x.primary_server),
+                            &x.primary_server_name
+                        )),
+                        t::td_view(resource_links::server_link(
+                            x.failover_servers.first(),
+                            &x.failover_server_name
+                        )),
+                        t::td_view(resource_links::server_link(x.active_host.as_ref(), &x.active_host_name)),
                         td![
                             class![C.p_3, C.text_center],
                             action_dropdown::view(x.id, &row.dropdown, all_locks, session)
@@ -374,7 +380,7 @@ pub(crate) fn status_view<T>(cache: &ArcCache, all_locks: &Locks, x: &Filesystem
 
 pub(crate) fn mgs<T>(xs: &[Arc<Target<TargetConfParam>>], f: &Filesystem) -> Node<T> {
     if let Some(t) = xs.iter().find(|t| t.kind == TargetKind::Mgt && f.mgt == t.resource_uri) {
-        server_link(Some(&t.primary_server), &t.primary_server_name)
+        resource_links::server_link(Some(&t.primary_server), &t.primary_server_name)
     } else {
         plain!("N/A")
     }
@@ -427,30 +433,4 @@ fn is_fs_target(fs_id: u32, t: &Target<TargetConfParam>) -> bool {
             .as_ref()
             .and_then(|f| f.iter().find(|x| x.id == fs_id))
             .is_some()
-}
-
-fn server_link<T>(uri: Option<&String>, txt: &str) -> Node<T> {
-    if let Some(u) = uri {
-        let srv_id = extract_id(u).unwrap();
-        a![
-            class![C.text_blue_500, C.hover__underline, C.block],
-            attrs! {At::Href => Route::Server(RouteId::from(srv_id)).to_href()},
-            txt
-        ]
-    } else {
-        plain!("N/A")
-    }
-}
-
-fn volume_link<T>(t: &Target<TargetConfParam>) -> Node<T> {
-    let vol_id = match &t.volume {
-        VolumeOrResourceUri::ResourceUri(url) => extract_id(url).unwrap().parse::<u32>().unwrap(),
-        VolumeOrResourceUri::Volume(v) => v.id,
-    };
-
-    a![
-        class![C.text_blue_500, C.hover__underline, C.break_all],
-        attrs! {At::Href => Route::Volume(RouteId::from(vol_id)).to_href()},
-        t.volume_name,
-    ]
 }

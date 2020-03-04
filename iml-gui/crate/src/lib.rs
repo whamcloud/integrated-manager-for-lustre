@@ -267,6 +267,7 @@ pub enum Msg {
     Login(login::Msg),
     Logout,
     ManageMenuState,
+    MgtsPage(page::mgts::Msg),
     Notification(notification::Msg),
     RecordChange(Box<warp_drive::RecordChange>),
     Records(Box<warp_drive::Cache>),
@@ -391,6 +392,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     model.records.target.values().cloned().collect(),
                 ));
 
+            orders.proxy(Msg::MgtsPage).send_msg(page::mgts::Msg::SetTargets(
+                model.records.target.values().cloned().collect(),
+            ));
+
             orders.proxy(Msg::Tree).send_msg(tree::Msg::Reset);
         }
         Msg::RecordChange(record_change) => {
@@ -415,6 +420,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     orders
                         .proxy(Msg::FilesystemPage)
                         .send_msg(page::filesystem::Msg::RemoveTarget(x));
+
+                    orders.proxy(Msg::MgtsPage).send_msg(page::mgts::Msg::RemoveTarget(x));
                 }
                 _ => {}
             }
@@ -442,6 +449,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::FilesystemsPage(msg) => {
             if let Page::Filesystems(page) = &mut model.page {
                 page::filesystems::update(msg, &model.records, page, &mut orders.proxy(Msg::FilesystemsPage))
+            }
+        }
+        Msg::MgtsPage(msg) => {
+            if let Page::Mgts(page) = &mut model.page {
+                page::mgts::update(msg, &model.records, page, &mut orders.proxy(Msg::MgtsPage))
             }
         }
         Msg::StartSliderTracking => {
@@ -598,7 +610,9 @@ fn handle_record_change(
 
                 orders
                     .proxy(Msg::FilesystemPage)
-                    .send_msg(page::filesystem::Msg::AddTarget(x));
+                    .send_msg(page::filesystem::Msg::AddTarget(Arc::clone(&x)));
+
+                orders.proxy(Msg::MgtsPage).send_msg(page::mgts::Msg::AddTarget(x));
             }
             warp_drive::Record::Volume(x) => {
                 model.records.volume.insert(x.id, Arc::new(x));
@@ -773,7 +787,13 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::Jobstats => main_panels(model, page::jobstats::view(model)).els(),
         Page::Login(x) => page::login::view(x).els().map_msg(Msg::Login),
         Page::Logs => main_panels(model, page::logs::view(model)).els(),
-        Page::Mgt => main_panels(model, page::mgt::view(model)).els(),
+        Page::Mgts(x) => main_panels(
+            model,
+            page::mgts::view(&model.records, x, &model.locks, model.auth.get_session())
+                .els()
+                .map_msg(Msg::MgtsPage),
+        )
+        .els(),
         Page::NotFound => page::not_found::view(model).els(),
         Page::OstPools => main_panels(model, page::ostpools::view(model)).els(),
         Page::OstPool(x) => main_panels(model, page::ostpool::view(x)).els(),

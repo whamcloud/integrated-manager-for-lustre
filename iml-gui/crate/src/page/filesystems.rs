@@ -118,7 +118,7 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<
         div![
             class![C.bg_white, C.rounded_lg],
             div![
-                class![C.flex, C.justify_between, C.px_6, C._mb_px, C.bg_gray_200],
+                class![C.px_6, C._mb_px, C.bg_gray_200],
                 h3![class![C.py_4, C.font_normal, C.text_lg], "Filesystems"]
             ],
             t::wrapper_view(vec![

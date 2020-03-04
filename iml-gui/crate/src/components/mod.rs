@@ -4,6 +4,7 @@ pub mod modal;
 pub mod paging;
 pub mod popover;
 pub mod progress_circle;
+pub mod resource_links;
 pub mod table;
 pub mod tooltip;
 
