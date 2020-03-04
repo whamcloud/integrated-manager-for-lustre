@@ -39,7 +39,6 @@ impl<'a> Deref for RouteId<'a> {
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Route<'a> {
     About,
-    Activity,
     Dashboard,
     Filesystems,
     Filesystem(RouteId<'a>),
@@ -65,7 +64,6 @@ impl<'a> Route<'a> {
     pub fn path(&self) -> Vec<&str> {
         let mut p = match self {
             Self::About => vec!["about"],
-            Self::Activity => vec!["activity"],
             Self::Dashboard => vec!["dashboard"],
             Self::Filesystems => vec!["filesystems"],
             Self::Filesystem(id) => vec!["filesystems", id],
@@ -103,7 +101,6 @@ impl<'a> ToString for Route<'a> {
     fn to_string(&self) -> String {
         match self {
             Self::About => "About".into(),
-            Self::Activity => "Activity".into(),
             Self::Dashboard => "Dashboard".into(),
             Self::Filesystems => "Filesystems".into(),
             Self::Filesystem(_) => "Filesystem Detail".into(),
@@ -139,7 +136,6 @@ impl<'a> From<Url> for Route<'a> {
 
         match path.next().as_ref().map(String::as_str) {
             Some("about") => Self::About,
-            Some("activity") => Self::Activity,
             Some("dashboard") => Self::Dashboard,
             Some("filesystems") => match path.next() {
                 None => Self::Filesystems,

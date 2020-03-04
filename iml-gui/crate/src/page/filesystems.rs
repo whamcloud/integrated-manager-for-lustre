@@ -8,7 +8,7 @@ use crate::{
 };
 use iml_wire_types::{
     warp_drive::{ArcCache, Locks},
-    Filesystem, ToCompositeId,
+    Filesystem, Session, ToCompositeId,
 };
 use seed::{prelude::*, *};
 use std::{collections::HashMap, sync::Arc};
@@ -108,7 +108,7 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
     }
 }
 
-pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> impl View<Msg> {
+pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<&Session>) -> impl View<Msg> {
     if cache.filesystem.is_empty() {
         div![
             class![C.text_3xl, C.text_center],
@@ -149,7 +149,7 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> impl View<Msg
                                 t::td_center(filesystem::size_view(f)),
                                 td![
                                     class![C.p_3, C.text_center],
-                                    action_dropdown::view(f.id, &row.dropdown, all_locks)
+                                    action_dropdown::view(f.id, &row.dropdown, all_locks, session)
                                         .map_msg(|x| Msg::ActionDropdown(Box::new(x)))
                                 ]
                             ]

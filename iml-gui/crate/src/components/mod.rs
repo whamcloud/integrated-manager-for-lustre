@@ -21,7 +21,7 @@ pub(crate) mod restrict;
 pub(crate) mod stratagem;
 pub(crate) mod tree;
 
-pub(crate) use activity_indicator::{activity_indicator, update_activity_health, ActivityHealth};
+pub(crate) use activity_indicator::{update_activity_health, ActivityHealth};
 pub(crate) use alert_indicator::alert_indicator;
 pub(crate) use arrow::arrow;
 pub(crate) use font_awesome::{font_awesome, font_awesome_outline};

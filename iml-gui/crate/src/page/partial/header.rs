@@ -1,14 +1,12 @@
 use crate::{
     auth, breakpoints,
-    components::{activity_indicator, breadcrumbs, ddn_logo, font_awesome, restrict},
-    ctx_help::CtxHelp,
+    components::{breadcrumbs, ddn_logo, font_awesome, restrict},
     generated::css_classes::C,
     MergeAttrs, Model, Msg, Route, SessionExt,
     Visibility::*,
-    CTX_HELP,
 };
 use iml_wire_types::GroupType;
-use seed::{prelude::*, virtual_dom::Attrs, *};
+use seed::{prelude::*, *};
 
 fn menu_icon<T>(icon_name: &str) -> Node<T> {
     font_awesome(
@@ -143,54 +141,6 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                 nav_manage_dropdown(model.manage_menu_state.is_open()),
             ]
         ),
-        a![
-            &menu_class,
-            class![C.bg_menu_active => model.route == Route::Logs],
-            attrs! {
-                At::Href => Route::Logs.to_href()
-            },
-            span![
-                menu_icon("book"),
-                span![
-                    class![C.group_hover__text_active, C.bg_menu_active => model.route == Route::Logs],
-                    Route::Logs.to_string(),
-                ]
-            ]
-        ],
-        context_sensitive_help_link(model, &menu_class),
-        a![
-            &menu_class,
-            class![C.bg_menu_active => model.route == Route::Activity],
-            attrs! {
-                At::Href => Route::Activity.to_href(),
-            },
-            span![
-                activity_indicator(&model.activity_health),
-                span![
-                    class![C.group_hover__text_active, C.bg_menu_active => model.route == Route::Activity],
-                    Route::Activity.to_string(),
-                ]
-            ]
-        ],
-    ]
-}
-
-fn context_sensitive_help_link(model: &Model, menu_class: &Attrs) -> Node<Msg> {
-    let attrs = attrs! {
-       At::Target => "_blank", // open the link in a new tab
-       At::Href => format!(
-           "{}{}",
-           CTX_HELP,
-           model.route.help_link().unwrap_or_else(|| "".into())
-       )
-    };
-    a![
-        menu_class,
-        attrs,
-        span![
-            menu_icon("question-circle"),
-            span![class![C.group_hover__text_active], "Help"]
-        ]
     ]
 }
 
