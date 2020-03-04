@@ -35,7 +35,7 @@ pub(crate) enum Page {
     AppLoading,
     Dashboard,
     Filesystems(filesystems::Model),
-    Filesystem(filesystem::Model),
+    Filesystem(Box<filesystem::Model>),
     Jobstats,
     Login(login::Model),
     Logs,
@@ -72,7 +72,7 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
                 .ok()
                 .and_then(|x| cache.filesystem.get(&x))
                 .map(|x| {
-                    Self::Filesystem(filesystem::Model {
+                    Self::Filesystem(Box::new(filesystem::Model {
                         fs: Arc::clone(x),
                         mdts: Default::default(),
                         mdt_paging: Default::default(),
@@ -80,7 +80,8 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
                         osts: Default::default(),
                         ost_paging: Default::default(),
                         rows: Default::default(),
-                    })
+                        stratagem: None,
+                    }))
                 })
                 .unwrap_or_default(),
             Route::Jobstats => Self::Jobstats,
@@ -139,9 +140,7 @@ impl Page {
             | (Route::Target(route_id), Self::Target(target::Model { id }))
             | (Route::User(route_id), Self::User(user::Model { id }))
             | (Route::Volume(route_id), Self::Volume(volume::Model { id })) => route_id == &RouteId::from(id),
-            (Route::Filesystem(route_id), Self::Filesystem(filesystem::Model { fs, .. })) => {
-                route_id == &RouteId::from(fs.id)
-            }
+            (Route::Filesystem(route_id), Self::Filesystem(x)) => route_id == &RouteId::from(x.fs.id),
             _ => false,
         }
     }

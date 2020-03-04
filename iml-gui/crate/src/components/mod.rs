@@ -18,6 +18,7 @@ pub(crate) mod loading;
 pub(crate) mod lock_indicator;
 pub(crate) mod logo;
 pub(crate) mod restrict;
+pub(crate) mod stratagem;
 pub(crate) mod tree;
 
 pub(crate) use activity_indicator::{activity_indicator, update_activity_health, ActivityHealth};
