@@ -9,11 +9,15 @@ static RADIUS: f64 = 90.0;
 static CIRCUMFERENCE: f64 = 2.0 * std::f64::consts::PI * RADIUS;
 
 pub fn used_to_color(used: f64) -> &'static str {
-    match (used.round() as i64) * 100 {
-        75..=100 => C.text_red_500,
-        50..=74 => C.text_yellow_500,
-        0..=49 => C.text_green_500,
-        _ => C.text_gray_500,
+    if used.is_nan() {
+        C.text_gray_500
+    } else {
+        match (used.round() as u64) * 100 {
+            75..=100 => C.text_red_500,
+            50..=74 => C.text_yellow_500,
+            0..=49 => C.text_green_500,
+            _ => C.text_gray_500,
+        }
     }
 }
 
