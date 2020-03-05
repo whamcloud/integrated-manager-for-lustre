@@ -1,6 +1,6 @@
 use crate::{
     components::activity_indicator, ctx_help::CtxHelp, extensions::MergeAttrs as _, font_awesome, font_awesome_outline,
-    generated::css_classes::C, page::activity, route::Route, GMsg, CTX_HELP,
+    generated::css_classes::C, page::activity, route::Route, GMsg, HELP_PATH,
 };
 use iml_wire_types::{
     warp_drive::{ArcCache, Locks},
@@ -212,8 +212,8 @@ fn context_sensitive_help_link<T: 'static>(route: &Route) -> impl View<T> {
     let at = attrs! {
        At::Target => "_blank", // open the link in a new tab
        At::Href => format!(
-           "{}{}",
-           CTX_HELP,
+           "/{}/docs/Graphical_User_Interface_9_0.html{}",
+           HELP_PATH,
            route.help_link().unwrap_or_else(|| "".into())
        )
     };
