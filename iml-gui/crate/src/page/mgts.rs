@@ -89,7 +89,7 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
     }
 }
 
-pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<&Session>) -> impl View<Msg> {
+pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<&Session>) -> Node<Msg> {
     div![
         class![C.bg_white],
         div![

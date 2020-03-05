@@ -278,6 +278,7 @@ pub enum Msg {
     SliderX(i32, f64),
     StartSliderTracking,
     StopSliderTracking,
+    TargetPage(page::target::Msg),
     ToggleMenu,
     Tree(tree::Msg),
     UpdatePageTitle,
@@ -456,6 +457,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 page::mgts::update(msg, &model.records, page, &mut orders.proxy(Msg::MgtsPage))
             }
         }
+        Msg::TargetPage(msg) => {
+            if let Page::Target(page) = &mut model.page {
+                page::target::update(msg, &model.records, page, &mut orders.proxy(Msg::TargetPage))
+            }
+        }
         Msg::StartSliderTracking => {
             model.track_slider = true;
         }
@@ -611,6 +617,10 @@ fn handle_record_change(
                 orders
                     .proxy(Msg::FilesystemPage)
                     .send_msg(page::filesystem::Msg::AddTarget(Arc::clone(&x)));
+
+                orders
+                    .proxy(Msg::TargetPage)
+                    .send_msg(page::target::Msg::UpdateTarget(Arc::clone(&x)));
 
                 orders.proxy(Msg::MgtsPage).send_msg(page::mgts::Msg::AddTarget(x));
             }
@@ -807,7 +817,13 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         .els(),
         Page::Server(x) => main_panels(model, page::server::view(x)).els(),
         Page::Targets => main_panels(model, page::targets::view(model)).els(),
-        Page::Target(x) => main_panels(model, page::target::view(x)).els(),
+        Page::Target(x) => main_panels(
+            model,
+            page::target::view(&model.records, x, &model.locks, model.auth.get_session())
+                .els()
+                .map_msg(Msg::TargetPage),
+        )
+        .els(),
         Page::Users => main_panels(model, page::users::view(model)).els(),
         Page::User(x) => main_panels(model, page::user::view(x)).els(),
         Page::Volumes => main_panels(model, page::volumes::view(model)).els(),
