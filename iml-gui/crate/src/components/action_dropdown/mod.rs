@@ -288,7 +288,7 @@ pub fn view(id: u32, model: &Model, all_locks: &Locks) -> Node<IdMsg> {
                 "Locked",
                 font_awesome(class![C.w_4, C.h_4, C.inline, C.ml_1, C.pulse], "spinner"),
             ],
-            tooltip::view("This record has active locks. It cannot be modified.", Placement::Left),
+            tooltip::hover_view("This record has active locks. It cannot be modified.", Placement::Left),
         ];
     }
 
@@ -348,7 +348,7 @@ fn items_view(id: u32, x: &ActionMap) -> impl View<IdMsg> {
                 div![
                     attrs::container(),
                     dropdown::item_view(a![y.verb]),
-                    tooltip::view(&y.long_description, Placement::Left),
+                    tooltip::hover_view(&y.long_description, Placement::Left),
                     ev(Ev::MouseDown, move |ev| {
                         ev.prevent_default();
                         IdMsg(id, Msg::Noop)

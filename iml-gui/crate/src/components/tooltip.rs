@@ -1,5 +1,6 @@
 use crate::{
     components::{arrow, Placement},
+    extensions::MergeAttrs,
     generated::css_classes::C,
 };
 use seed::{prelude::*, *};
@@ -41,14 +42,7 @@ pub(crate) fn color_view<T>(content: &str, placement: Placement, color: &str) ->
     };
 
     div![
-        class![
-            C.absolute,
-            C.hidden,
-            C.group_hover__block,
-            C.pointer_events_none,
-            C.z_20,
-            C.whitespace_normal
-        ],
+        class![C.absolute, C.pointer_events_none, C.z_20, C.whitespace_normal],
         tooltip_style,
         arrow(placement, color),
         div![
@@ -70,12 +64,26 @@ pub(crate) fn color_view<T>(content: &str, placement: Placement, color: &str) ->
     ]
 }
 
+pub(crate) fn color_hover_view<T>(content: &str, placement: Placement, color: &str) -> Node<T> {
+    color_view(content, placement, color).merge_attrs(class![C.hidden, C.group_hover__block,])
+}
+
 /// Render a tooltip.
 pub(crate) fn view<T>(content: &str, direction: Placement) -> Node<T> {
     color_view(content, direction, "black")
 }
 
+/// Render a hover tooltip.
+pub(crate) fn hover_view<T>(content: &str, direction: Placement) -> Node<T> {
+    color_hover_view(content, direction, "black")
+}
+
 /// Render a tooltip with a red error color.
-pub fn error_view<T>(content: &str, direction: Placement) -> Node<T> {
+pub(crate) fn error_view<T>(content: &str, direction: Placement) -> Node<T> {
     color_view(content, direction, "red")
+}
+
+/// Render a hover tooltip with a red error color.
+pub(crate) fn hover_error_view<T>(content: &str, direction: Placement) -> Node<T> {
+    color_hover_view(content, direction, "red")
 }

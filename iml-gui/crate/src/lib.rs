@@ -9,7 +9,9 @@ pub mod page;
 mod auth;
 mod breakpoints;
 mod ctx_help;
+mod environment;
 mod event_source;
+mod events;
 mod extensions;
 mod generated;
 mod notification;
@@ -570,6 +572,11 @@ fn handle_record_change(
             }
             warp_drive::Record::StratagemConfig(x) => {
                 model.records.stratagem_config.insert(x.id, Arc::new(x));
+                let x = Arc::new(x);
+
+                orders
+                    .proxy(Msg::FilesystemPage)
+                    .send_msg(page::filesystem::Msg::SetStratagemConfig(x));
             }
             warp_drive::Record::Target(x) => {
                 let id = x.id;

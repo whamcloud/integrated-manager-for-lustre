@@ -9,6 +9,7 @@ use crate::{
     GMsg, Route,
 };
 use iml_wire_types::{
+    db::StratagemConfiguration,
     warp_drive::{ArcCache, Locks},
     Filesystem, Target, TargetConfParam, TargetKind, ToCompositeId, VolumeOrResourceUri,
 };
@@ -52,9 +53,20 @@ impl Model {
 
         if stratagem_enabled {
             if self.stratagem.is_none() {
-                self.stratagem = Some(stratagem::Model {
-                    inode_table: stratagem::inode_table::Model::new(&self.fs.name),
-                });
+                let config: Option<Arc<StratagemConfiguration>> = cache
+                    .stratagem_config
+                    .values()
+                    .cloned()
+                    .find(|x| x.filesystem_id == self.fs.id);
+
+                self.stratagem = Some(stratagem::Model::new(
+                    stratagem::inode_table::Model::new(&self.fs.name),
+                    Arc::clone(&self.fs),
+                    config,
+                ));
+
+                self.stratagem.as_mut().map(|x| x.validate());
+
                 return true;
             }
         } else {
@@ -75,6 +87,7 @@ pub enum Msg {
     MdtPaging(paging::Msg),
     UpdatePaging,
     Stratagem(stratagem::Msg),
+    SetStratagemConfig(Arc<StratagemConfiguration>),
 }
 
 pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
@@ -194,6 +207,16 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                 stratagem::update(msg, model, &mut orders.proxy(Msg::Stratagem))
             }
         }
+        Msg::SetStratagemConfig(stratagem_config) => {
+            if let Some(model) = &mut model.stratagem {
+                model.stratagem_config = stratagem_config;
+                stratagem::update(
+                    stratagem::Msg::ConfigStateUpdated,
+                    model,
+                    &mut orders.proxy(Msg::SetStratagemConfig),
+                )
+            }
+        }
     }
 }
 
@@ -231,7 +254,31 @@ pub(crate) fn view(cache: &ArcCache, model: &Model, all_locks: &Locks) -> Node<M
             &model.osts[model.ost_paging.range()],
             paging_view(&model.ost_paging).map_msg(Msg::OstPaging)
         ),
+        stratagem_config(&model),
     ]
+}
+
+fn stratagem_config(model: &Model) -> Node<Msg> {
+    if let Some(config) = &model.stratagem {
+        div![
+            class![
+                C.bg_white,
+                C.border,
+                C.border_b,
+                C.border_t,
+                C.mt_24,
+                C.rounded_lg,
+                C.shadow,
+            ],
+            div![
+                class![C.flex, C.justify_between, C.px_6, C._mb_px, C.bg_gray_200],
+                h3![class![C.py_4, C.font_normal, C.text_lg], "Configure Scanning Interval"]
+            ],
+            stratagem::config_view(&config).map_msg(|x| Msg::Stratagem(x)),
+        ]
+    } else {
+        div![]
+    }
 }
 
 fn details_table(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg> {
