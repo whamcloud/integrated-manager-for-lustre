@@ -66,7 +66,7 @@ pub struct FsUsage {
 
 #[derive(Clone)]
 pub enum Msg {
-    DataFetched(seed::fetch::ResponseDataResult<InfluxResults>),
+    DataFetched(Box<seed::fetch::ResponseDataResult<InfluxResults>>),
     FetchData,
     Noop,
 }
@@ -74,7 +74,7 @@ pub enum Msg {
 async fn fetch_metrics(db: &str, query: &str) -> Result<Msg, Msg> {
     let url = format!("/influx?db={}&q={}", db, query);
 
-    Request::new(url).fetch_json_data(Msg::DataFetched).await
+    Request::new(url).fetch_json_data(|x| Msg::DataFetched(Box::new(x))).await
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -83,7 +83,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             orders.skip().perform_cmd(fetch_metrics(DB_NAME, FS_USAGE_QUERY));
         }
         Msg::DataFetched(influx_data) => {
-            match influx_data {
+            match *influx_data {
                 Ok(influx_data) => {
                     let result: &InfluxResult = &influx_data.results[0];
 

@@ -1,7 +1,7 @@
 use crate::{
     components::{
         dashboard::dashboard_container,
-        grafana_chart::{self, ServerDashboardChart, IML_METRICS_DASHBOARD_ID, IML_METRICS_DASHBOARD_NAME},
+        grafana_chart::{self, create_chart_params, IML_METRICS_DASHBOARD_ID, IML_METRICS_DASHBOARD_NAME},
     },
     generated::css_classes::C,
     Msg,
@@ -25,12 +25,7 @@ pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
-                        vec![ServerDashboardChart {
-                            org_id: 1,
-                            refresh: "10s",
-                            var_host_name: &model.host_name,
-                            panel_id: 6,
-                        }],
+                        create_chart_params(6, vec![("host_name", &model.host_name)]),
                         "90%",
                     ),
                 ],
@@ -42,12 +37,7 @@ pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
-                        vec![ServerDashboardChart {
-                            org_id: 1,
-                            refresh: "10s",
-                            var_host_name: &model.host_name,
-                            panel_id: 10,
-                        }],
+                        create_chart_params(10, vec![("host_name", &model.host_name)]),
                         "90%",
                     ),
                 ],
@@ -59,12 +49,7 @@ pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
-                        vec![ServerDashboardChart {
-                            org_id: 1,
-                            refresh: "10s",
-                            var_host_name: &model.host_name,
-                            panel_id: 8,
-                        }],
+                        create_chart_params(8, vec![("host_name", &model.host_name)]),
                         "90%",
                     ),
                 ],
@@ -76,12 +61,7 @@ pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
-                        vec![ServerDashboardChart {
-                            org_id: 1,
-                            refresh: "10s",
-                            var_host_name: &model.host_name,
-                            panel_id: 36,
-                        }],
+                        create_chart_params(36, vec![("host_name", &model.host_name)]),
                         "90%",
                     ),
                 ],

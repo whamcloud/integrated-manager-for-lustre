@@ -3,7 +3,7 @@ use crate::{
         chart::fs_usage,
         dashboard::{dashboard_container, dashboard_fs_usage},
         datepicker::datepicker,
-        grafana_chart::{self, FsDashboardChart, IML_METRICS_DASHBOARD_ID, IML_METRICS_DASHBOARD_NAME},
+        grafana_chart::{self, create_chart_params, IML_METRICS_DASHBOARD_ID, IML_METRICS_DASHBOARD_NAME},
     },
     generated::css_classes::C,
     GMsg,
@@ -41,12 +41,7 @@ pub fn view<T: 'static>(model: &Model) -> impl View<T> {
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
-                        vec![FsDashboardChart {
-                            org_id: 1,
-                            refresh: "10s",
-                            var_fs_name: &model.fs_name,
-                            panel_id: 31,
-                        }],
+                        create_chart_params(31, vec![("fs_name", &model.fs_name)]),
                         "90%",
                     ),
                     datepicker(),
@@ -59,12 +54,7 @@ pub fn view<T: 'static>(model: &Model) -> impl View<T> {
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
-                        vec![FsDashboardChart {
-                            org_id: 1,
-                            refresh: "10s",
-                            var_fs_name: &model.fs_name,
-                            panel_id: 35,
-                        }],
+                        create_chart_params(35, vec![("fs_name", &model.fs_name)]),
                         "90%",
                     ),
                 ],
@@ -76,12 +66,7 @@ pub fn view<T: 'static>(model: &Model) -> impl View<T> {
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
-                        vec![FsDashboardChart {
-                            org_id: 1,
-                            refresh: "10s",
-                            var_fs_name: &model.fs_name,
-                            panel_id: 32,
-                        }],
+                        create_chart_params(32, vec![("fs_name", &model.fs_name)]),
                         "90%",
                     ),
                     datepicker(),

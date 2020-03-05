@@ -1,7 +1,7 @@
 use crate::{
     components::{
-        dashboard::dashboard_container,
-        grafana_chart::{self, TargetDashboardChart, IML_METRICS_DASHBOARD_ID, IML_METRICS_DASHBOARD_NAME},
+        dashboard::{dashboard_container, performance_container},
+        grafana_chart::{self, create_chart_params, IML_METRICS_DASHBOARD_ID, IML_METRICS_DASHBOARD_NAME},
     },
     generated::css_classes::C,
     Msg,
@@ -43,12 +43,7 @@ pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
                         grafana_chart::view(
                             IML_METRICS_DASHBOARD_ID,
                             IML_METRICS_DASHBOARD_NAME,
-                            vec![TargetDashboardChart {
-                                org_id: 1,
-                                refresh: "10s",
-                                var_target_name: &model.target_name,
-                                panel_id: 37,
-                            }],
+                            create_chart_params(37, vec![("target_name", &model.target_name)]),
                             "90%",
                         ),
                     ],
@@ -60,12 +55,7 @@ pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
                         grafana_chart::view(
                             IML_METRICS_DASHBOARD_ID,
                             IML_METRICS_DASHBOARD_NAME,
-                            vec![TargetDashboardChart {
-                                org_id: 1,
-                                refresh: "10s",
-                                var_target_name: &model.target_name,
-                                panel_id: 14,
-                            }],
+                            create_chart_params(14, vec![("target_name", &model.target_name)]),
                             "90%",
                         ),
                     ],
@@ -77,12 +67,7 @@ pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
                         grafana_chart::view(
                             IML_METRICS_DASHBOARD_ID,
                             IML_METRICS_DASHBOARD_NAME,
-                            vec![TargetDashboardChart {
-                                org_id: 1,
-                                refresh: "10s",
-                                var_target_name: &model.target_name,
-                                panel_id: 16,
-                            }],
+                            create_chart_params(16, vec![("target_name", &model.target_name)]),
                             "90%",
                         ),
                     ],
@@ -91,59 +76,7 @@ pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
             TargetDashboard::OstDashboard => vec![
                 dashboard_container::view(
                     "I/O Performance",
-                    div![
-                        class![C.h_80, C.p_2],
-                        div![
-                            class![C.text_center],
-                            p![
-                                class![
-                                    C.inline_block,
-                                    C.bg_throughput_background,
-                                    C.rounded_full,
-                                    C.px_2,
-                                    C.text_xs,
-                                    C.text_white
-                                ],
-                                "Throughput"
-                            ],
-                        ],
-                        grafana_chart::view(
-                            IML_METRICS_DASHBOARD_ID,
-                            IML_METRICS_DASHBOARD_NAME,
-                            vec![TargetDashboardChart {
-                                org_id: 1,
-                                refresh: "10s",
-                                var_target_name: &model.target_name,
-                                panel_id: 39,
-                            }],
-                            "38%",
-                        ),
-                        div![
-                            class![C.text_center],
-                            p![
-                                class![
-                                    C.inline_block,
-                                    C.bg_green_400,
-                                    C.rounded_full,
-                                    C.px_2,
-                                    C.text_xs,
-                                    C.text_white
-                                ],
-                                "IOPS"
-                            ],
-                        ],
-                        grafana_chart::view(
-                            IML_METRICS_DASHBOARD_ID,
-                            IML_METRICS_DASHBOARD_NAME,
-                            vec![TargetDashboardChart {
-                                org_id: 1,
-                                refresh: "10s",
-                                var_target_name: &model.target_name,
-                                panel_id: 38,
-                            }],
-                            "38%",
-                        ),
-                    ],
+                    performance_container(39, 38, vec![("target_name", &model.target_name)]),
                 ),
                 dashboard_container::view(
                     "Space Usage",
@@ -152,12 +85,7 @@ pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
                         grafana_chart::view(
                             IML_METRICS_DASHBOARD_ID,
                             IML_METRICS_DASHBOARD_NAME,
-                            vec![TargetDashboardChart {
-                                org_id: 1,
-                                refresh: "10s",
-                                var_target_name: &model.target_name,
-                                panel_id: 14,
-                            }],
+                            create_chart_params(14, vec![("target_name", &model.target_name)]),
                             "90%",
                         ),
                     ],
@@ -169,12 +97,7 @@ pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
                         grafana_chart::view(
                             IML_METRICS_DASHBOARD_ID,
                             IML_METRICS_DASHBOARD_NAME,
-                            vec![TargetDashboardChart {
-                                org_id: 1,
-                                refresh: "10s",
-                                var_target_name: &model.target_name,
-                                panel_id: 16,
-                            }],
+                            create_chart_params(16, vec![("target_name", &model.target_name)]),
                             "90%",
                         ),
                     ],
