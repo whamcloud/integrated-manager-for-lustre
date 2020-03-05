@@ -46,7 +46,7 @@ pub(crate) enum Page {
     Servers(servers::Model),
     Server(server::Model),
     Targets,
-    Target(target::Model),
+    Target(Box<target::Model>),
     Users,
     User(user::Model),
     Volumes,
@@ -101,7 +101,9 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
             Route::Targets => Self::Targets,
             Route::Target(id) => id
                 .parse()
-                .map(|id| Self::Target(target::Model { id }))
+                .ok()
+                .and_then(|x| cache.target.get(&x))
+                .map(|x| Self::Target(Box::new(target::Model::new(Arc::clone(x)))))
                 .unwrap_or_default(),
             Route::Users => Self::Users,
             Route::User(id) => id.parse().map(|id| Self::User(user::Model { id })).unwrap_or_default(),
@@ -133,10 +135,10 @@ impl Page {
             | (Route::Volumes, Self::Volumes) => true,
             (Route::OstPool(route_id), Self::OstPool(ostpool::Model { id }))
             | (Route::Server(route_id), Self::Server(server::Model { id }))
-            | (Route::Target(route_id), Self::Target(target::Model { id }))
             | (Route::User(route_id), Self::User(user::Model { id }))
             | (Route::Volume(route_id), Self::Volume(volume::Model { id })) => route_id == &RouteId::from(id),
             (Route::Filesystem(route_id), Self::Filesystem(x)) => route_id == &RouteId::from(x.fs.id),
+            (Route::Target(route_id), Self::Target(x)) => route_id == &RouteId::from(x.target.id),
             _ => false,
         }
     }

@@ -193,6 +193,8 @@ pub fn update(msg: IdMsg, cache: &ArcCache, model: &mut Model, orders: &mut impl
         Msg::ActionSelected(x, y) => {
             model.abort_request();
 
+            orders.send_msg(IdMsg(id, Msg::Dropdown(dropdown::Msg::Close)));
+
             model.state = State::Confirming(confirm_action_modal::Action::Loading);
 
             if x.class_name.is_some() {
@@ -299,9 +301,9 @@ pub fn unstyled_view<'a>(
     let disabled_cls = class![C.opacity_50, C.cursor_not_allowed];
 
     if has_locks(all_locks, &model.composite_ids) {
-        return span![
+        return div![
             attrs::container(),
-            class![C.inline_block, C.z_0],
+            class![C.inline_block],
             button![
                 cls,
                 disabled_cls,
@@ -313,23 +315,23 @@ pub fn unstyled_view<'a>(
     }
 
     match &model.state {
-        State::Activating => button![
+        State::Activating => div![button![
             cls.merge_attrs(disabled_cls),
             "Actions",
             font_awesome(class![C.w_4, C.h_4, C.inline, C.ml_1, C.pulse], "spinner"),
-        ],
-        State::Inactive => button![
+        ]],
+        State::Inactive => div![button![
             cls,
             "Actions",
             font_awesome(class![C.w_4, C.h_4, C.inline, C.ml_1], "chevron-down"),
             simple_ev(Ev::MouseMove, IdMsg(id, Msg::StartFetch))
-        ],
+        ]],
         State::Active => {
             if model.actions.is_empty() {
                 button![cls.merge_attrs(disabled_cls), "No Actions"]
             } else {
-                span![
-                    class![C.relative, C.inline_block, C.z_0],
+                div![
+                    class![C.relative],
                     button![
                         cls,
                         "Actions",

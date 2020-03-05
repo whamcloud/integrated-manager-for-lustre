@@ -2,6 +2,7 @@ pub mod dropdown;
 pub mod lnet_status;
 pub mod modal;
 pub mod paging;
+pub mod panel;
 pub mod popover;
 pub mod progress_circle;
 pub mod resource_links;
