@@ -74,7 +74,9 @@ pub enum Msg {
 async fn fetch_metrics(db: &str, query: &str) -> Result<Msg, Msg> {
     let url = format!("/influx?db={}&q={}", db, query);
 
-    Request::new(url).fetch_json_data(|x| Msg::DataFetched(Box::new(x))).await
+    Request::new(url)
+        .fetch_json_data(|x| Msg::DataFetched(Box::new(x)))
+        .await
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
