@@ -9,6 +9,7 @@ pub mod page;
 mod auth;
 mod breakpoints;
 mod ctx_help;
+mod environment;
 mod event_source;
 mod extensions;
 mod generated;
@@ -23,8 +24,8 @@ mod watch_state;
 mod test_utils;
 
 use components::{
-    breadcrumbs::BreadCrumbs, font_awesome, font_awesome_outline, loading, restrict, tree, update_activity_health,
-    ActivityHealth,
+    breadcrumbs::BreadCrumbs, font_awesome, font_awesome_outline, loading, restrict, stratagem, tree,
+    update_activity_health, ActivityHealth,
 };
 pub(crate) use extensions::*;
 use futures::channel::oneshot;
@@ -403,6 +404,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     model.records.target.values().cloned().collect(),
                 ));
 
+            orders
+                .proxy(Msg::FilesystemPage)
+                .proxy(page::filesystem::Msg::Stratagem)
+                .send_msg(stratagem::Msg::CheckStratagem)
+                .send_msg(stratagem::Msg::SetStratagemConfig(
+                    model.records.stratagem_config.values().cloned().collect(),
+                ));
+
             orders.proxy(Msg::MgtsPage).send_msg(page::mgts::Msg::SetTargets(
                 model.records.target.values().cloned().collect(),
             ));
@@ -421,6 +430,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                         model.records.host.arc_values().cloned().collect(),
                         model.records.lnet_configuration.clone(),
                     ));
+
+                    orders
+                        .proxy(Msg::FilesystemPage)
+                        .proxy(page::filesystem::Msg::Stratagem)
+                        .send_msg(stratagem::Msg::CheckStratagem);
                 }
                 warp_drive::RecordId::Filesystem(x) => {
                     orders
@@ -433,6 +447,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                         .send_msg(page::filesystem::Msg::RemoveTarget(x));
 
                     orders.proxy(Msg::MgtsPage).send_msg(page::mgts::Msg::RemoveTarget(x));
+
+                    orders
+                        .proxy(Msg::FilesystemPage)
+                        .proxy(page::filesystem::Msg::Stratagem)
+                        .send_msg(stratagem::Msg::CheckStratagem);
                 }
                 _ => {}
             }
@@ -609,6 +628,11 @@ fn handle_record_change(
                     model.records.host.arc_values().cloned().collect(),
                     model.records.lnet_configuration.clone(),
                 ));
+
+                orders
+                    .proxy(Msg::FilesystemPage)
+                    .proxy(page::filesystem::Msg::Stratagem)
+                    .send_msg(stratagem::Msg::CheckStratagem);
             }
             warp_drive::Record::ManagedTargetMount(x) => {
                 model.records.managed_target_mount.insert(x.id, Arc::new(x));
@@ -625,7 +649,19 @@ fn handle_record_change(
                 };
             }
             warp_drive::Record::StratagemConfig(x) => {
-                model.records.stratagem_config.insert(x.id, Arc::new(x));
+                let x = Arc::new(x);
+
+                model.records.stratagem_config.insert(x.id, Arc::clone(&x));
+
+                orders
+                    .proxy(Msg::FilesystemPage)
+                    .proxy(page::filesystem::Msg::Stratagem)
+                    .send_msg(stratagem::Msg::CheckStratagem);
+
+                orders
+                    .proxy(Msg::FilesystemPage)
+                    .proxy(page::filesystem::Msg::Stratagem)
+                    .send_msg(stratagem::Msg::UpdateStratagemConfig(x));
             }
             warp_drive::Record::Target(x) => {
                 let id = x.id;
@@ -646,6 +682,11 @@ fn handle_record_change(
                     .send_msg(page::target::Msg::UpdateTarget(Arc::clone(&x)));
 
                 orders.proxy(Msg::MgtsPage).send_msg(page::mgts::Msg::AddTarget(x));
+
+                orders
+                    .proxy(Msg::FilesystemPage)
+                    .proxy(page::filesystem::Msg::Stratagem)
+                    .send_msg(stratagem::Msg::CheckStratagem);
             }
             warp_drive::Record::User(x) => {
                 model.records.user.insert(x.id, Arc::new(x));
@@ -676,6 +717,12 @@ fn handle_record_change(
                 | warp_drive::RecordId::OstPoolOsts(_)
                 | warp_drive::RecordId::Target(_) => {
                     orders.proxy(Msg::Tree).send_msg(tree::Msg::Remove(record_id));
+                }
+                warp_drive::RecordId::StratagemConfig(_) => {
+                    orders
+                        .proxy(Msg::FilesystemPage)
+                        .proxy(page::filesystem::Msg::Stratagem)
+                        .send_msg(stratagem::Msg::DeleteStratagemConfig);
                 }
                 _ => {}
             };
