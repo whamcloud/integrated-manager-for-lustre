@@ -55,7 +55,7 @@ pub(crate) fn alert_indicator<T>(
     if compact {
         span![
             class![C.inline_block],
-            span![attrs::container(), icon, tooltip::view(&msg, tt_placement)],
+            span![attrs::container(), icon, tooltip::hover_view(&msg, tt_placement)],
             sup![class![cls], count.to_string()]
         ]
     } else {

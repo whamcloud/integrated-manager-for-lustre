@@ -18,6 +18,7 @@ pub(crate) mod breadcrumbs;
 pub(crate) mod chart;
 pub(crate) mod dashboard;
 pub(crate) mod datepicker;
+pub(crate) mod duration_picker;
 pub(crate) mod font_awesome;
 pub(crate) mod grafana_chart;
 pub(crate) mod loading;
