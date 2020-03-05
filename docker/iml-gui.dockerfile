@@ -7,7 +7,7 @@ RUN cd /build/iml-gui && \
     curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
     apt-get install -y yarn nodejs && \
     rustup target add wasm32-unknown-unknown && \
-    cargo install wasm-pack && \
+    curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh && \
     yarn install && \
     yarn build:release;
 
