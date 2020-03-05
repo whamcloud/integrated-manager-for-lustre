@@ -52,9 +52,7 @@ impl Model {
 
         if stratagem_enabled {
             if self.stratagem.is_none() {
-                self.stratagem = Some(stratagem::Model {
-                    inode_table: stratagem::inode_table::Model::new(&self.fs.name),
-                });
+                self.stratagem = Some(stratagem::Model::new(&self.fs));
                 return true;
             }
         } else {

@@ -36,7 +36,7 @@ module.exports = (env, argv) => {
       },
       proxy: [
         {
-          context: ["/api", "/help", "/influx"],
+          context: [ "/api", "/grafana", "/help", "/influx" ],
           target: "https://localhost:8443/",
           secure: false
         }
