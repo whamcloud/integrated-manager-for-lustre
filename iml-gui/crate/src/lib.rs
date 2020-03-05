@@ -57,7 +57,7 @@ const MAX_SIDE_PERCENTAGE: f32 = 35_f32;
 /// }
 /// ```
 /// help url becomes `https://localhost:8443/help/docs/Graphical_User_Interface_9_0.html`
-const CTX_HELP: &str = "/help/docs/Graphical_User_Interface_9_0.html";
+const HELP_PATH: &str = "help";
 
 lazy_static! {
     static ref IS_PRODUCTION: bool = window()
@@ -216,8 +216,10 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
 // ------ ------
 
 pub fn routes(url: Url) -> Option<Msg> {
+    let pth = url.get_path();
+
     // Urls which start with `static` are files => treat them as external links.
-    if url.get_path().starts_with(&[STATIC_PATH.into()]) {
+    if pth.starts_with(&[STATIC_PATH.into()]) || pth.starts_with(&[HELP_PATH.into()]) {
         return None;
     }
     Some(Msg::RouteChanged(url))
