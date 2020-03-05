@@ -15,8 +15,11 @@ fn font_awesome_base<T>(sprite_sheet: &str, more_attrs: Attrs, icon_name: &str) 
 
     svg![
         attrs,
-        r#use![attrs! {
-            At::Href => format!("sprites/{}.svg#{}", sprite_sheet, icon_name),
-        }]
+        r#use![
+            class![C.pointer_events_none],
+            attrs! {
+                At::Href => format!("sprites/{}.svg#{}", sprite_sheet, icon_name),
+            }
+        ]
     ]
 }

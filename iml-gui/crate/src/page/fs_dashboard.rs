@@ -1,22 +1,19 @@
-// Copyright (c) 2020 DDN. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 use crate::{
     components::{
         chart::fs_usage,
-        dashboard::{dashboard_container, dashboard_fs_usage, performance_container},
+        dashboard::{dashboard_container, dashboard_fs_usage},
         datepicker::datepicker,
-        grafana_chart::{self, create_chart_params, no_vars, IML_METRICS_DASHBOARD_ID, IML_METRICS_DASHBOARD_NAME},
+        grafana_chart::{self, create_chart_params, IML_METRICS_DASHBOARD_ID, IML_METRICS_DASHBOARD_NAME},
     },
     generated::css_classes::C,
     GMsg,
 };
-use seed::{class, prelude::*, *};
+use seed::{prelude::*, *};
 
 #[derive(Default)]
 pub struct Model {
     pub fs_usage: fs_usage::Model,
+    pub fs_name: String,
 }
 
 #[derive(Clone)]
@@ -32,12 +29,24 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
     }
 }
 
-pub fn view<T: 'static>(model: &Model) -> Node<T> {
+pub fn view<T: 'static>(model: &Model) -> impl View<T> {
     div![
         class![C.grid, C.lg__grid_cols_2, C.gap_6],
         vec![
             dashboard_fs_usage::view(&model.fs_usage),
-            dashboard_container::view("I/O Performance", performance_container(18, 20, no_vars())),
+            dashboard_container::view(
+                "Filesystem Usage",
+                div![
+                    class![C.h_80, C.p_2],
+                    grafana_chart::view(
+                        IML_METRICS_DASHBOARD_ID,
+                        IML_METRICS_DASHBOARD_NAME,
+                        create_chart_params(31, vec![("fs_name", &model.fs_name)]),
+                        "90%",
+                    ),
+                    datepicker(),
+                ],
+            ),
             dashboard_container::view(
                 "OST Balance",
                 div![
@@ -45,23 +54,23 @@ pub fn view<T: 'static>(model: &Model) -> Node<T> {
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
-                        create_chart_params(26, no_vars()),
+                        create_chart_params(35, vec![("fs_name", &model.fs_name)]),
                         "90%",
-                    )
-                ]
+                    ),
+                ],
             ),
             dashboard_container::view(
-                "LNET Performance",
+                "MDT Usage",
                 div![
                     class![C.h_80, C.p_2],
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
-                        create_chart_params(34, no_vars()),
+                        create_chart_params(32, vec![("fs_name", &model.fs_name)]),
                         "90%",
                     ),
                     datepicker(),
-                ]
+                ],
             ),
         ]
     ]

@@ -1,4 +1,4 @@
-use crate::{components::grafana_chart, extensions::MergeAttrs, generated::css_classes::C, GMsg};
+use crate::{components::grafana_chart, generated::css_classes::C, GMsg};
 use iml_wire_types::Filesystem;
 use seed::{prelude::*, *};
 use std::collections::HashMap;
@@ -46,29 +46,28 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
         caption_wrapper(
             "inode Usage Distribution",
             Some(&last_scan),
-            stratagem_chart(&grafana_chart::GrafanaChartData {
+            stratagem_chart(grafana_chart::GrafanaChartData {
                 org_id: 1,
                 refresh: "1m",
                 panel_id: 2,
-                vars: &model.grafana_vars
+                vars: model.grafana_vars.clone()
             })
         ),
         caption_wrapper(
             "Space Usage Distribution",
             Some(&last_scan),
-            stratagem_chart(&grafana_chart::GrafanaChartData {
+            stratagem_chart(grafana_chart::GrafanaChartData {
                 org_id: 1,
                 refresh: "1m",
                 panel_id: 3,
-                vars: &model.grafana_vars
+                vars: model.grafana_vars.clone()
             })
         )
     ]
 }
 
-fn stratagem_chart<T>(data: &grafana_chart::GrafanaChartData) -> Node<T> {
-    grafana_chart::view("OBdCS5IWz", "stratagem", data).merge_attrs(attrs! {At::Width => "100%",
-    At::Height => 400})
+fn stratagem_chart<T>(data: grafana_chart::GrafanaChartData) -> Node<T> {
+    grafana_chart::view("OBdCS5IWz", "stratagem", data, "400")
 }
 
 //TODO: move to the table module and use it where the tables are used as well:

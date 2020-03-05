@@ -40,6 +40,8 @@ services:
     restart: on-failure
   iml-ostpool:
     restart: on-failure
+  iml-stats:
+    restart: on-failure
   iml-warp-drive:
     restart: on-failure
   setup:
