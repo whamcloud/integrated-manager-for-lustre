@@ -39,10 +39,10 @@ pub fn no_vars() -> Vec<(String, String)> {
 }
 
 /// Create an iframe that loads the specified stratagem chart
-pub(crate) fn view<T>(
+pub(crate) fn view<'a, T>(
     dashboard_id: &str,
     dashboard_name: &str,
-    chart_data: impl serde::Serialize,
+    chart_data: GrafanaChartData<'a>,
     height: &str,
 ) -> Node<T> {
     iframe![attrs! {

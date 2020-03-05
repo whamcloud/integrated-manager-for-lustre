@@ -46,7 +46,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
         caption_wrapper(
             "inode Usage Distribution",
             Some(&last_scan),
-            stratagem_chart(&grafana_chart::GrafanaChartData {
+            stratagem_chart(grafana_chart::GrafanaChartData {
                 org_id: 1,
                 refresh: "1m",
                 panel_id: 2,
@@ -56,7 +56,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
         caption_wrapper(
             "Space Usage Distribution",
             Some(&last_scan),
-            stratagem_chart(&grafana_chart::GrafanaChartData {
+            stratagem_chart(grafana_chart::GrafanaChartData {
                 org_id: 1,
                 refresh: "1m",
                 panel_id: 3,
@@ -66,7 +66,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
     ]
 }
 
-fn stratagem_chart<T>(data: &grafana_chart::GrafanaChartData) -> Node<T> {
+fn stratagem_chart<T>(data: grafana_chart::GrafanaChartData) -> Node<T> {
     grafana_chart::view("OBdCS5IWz", "stratagem", data, "400")
 }
 
