@@ -234,6 +234,7 @@ install_production: reset_cluster
 # set NOSE_ARGS="-x" to stop on the first failure
 ssi_tests: substs
 	echo ${repourl}
+	echo $@
 	tests/framework/integration/shared_storage_configuration/full_cluster/jenkins_steps/main $@
 
 upgrade_tests: substs
