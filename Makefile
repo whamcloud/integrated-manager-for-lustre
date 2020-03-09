@@ -233,6 +233,7 @@ install_production: reset_cluster
 # make TESTS=tests/integration/shared_storage_configuration/test_example_api_client.py:TestExampleApiClient.test_login ssi_tests
 # set NOSE_ARGS="-x" to stop on the first failure
 ssi_tests: substs
+	echo ${repourl}
 	tests/framework/integration/shared_storage_configuration/full_cluster/jenkins_steps/main $@
 
 upgrade_tests: substs
