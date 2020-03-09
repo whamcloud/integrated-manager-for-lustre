@@ -10,7 +10,7 @@ from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
 from chroma_core.models import ManagedFilesystem, ManagedTarget
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs
-from chroma_core.models import Volume, VolumeNode
+from chroma_core.models import Device, DeviceHost
 from chroma_core.models import Command, OstPool
 from chroma_core.models.filesystem import HSM_CONTROL_KEY, HSM_CONTROL_PARAMS
 
@@ -56,12 +56,12 @@ class FilesystemValidation(Validation):
         # a record of targets which will be formatted
         try:
             # Check that client hasn't specified an existing MGT
-            # *and* a volume to format.
-            if "id" in bundle.data["mgt"] and "volume_id" in bundle.data["mgt"]:
-                errors["mgt"].append("id and volume_id are mutually exclusive")
+            # *and* a device to format.
+            if "id" in bundle.data["mgt"] and "device_id" in bundle.data["mgt"]:
+                errors["mgt"].append("id and device_id are mutually exclusive")
 
             mgt = bundle.data["mgt"]
-            if "volume_id" in mgt:
+            if "device_id" in mgt:
                 targets["mgt"].append(mgt)
         except KeyError:
             errors["mgt"].append("This field is mandatory")
@@ -97,35 +97,35 @@ class FilesystemValidation(Validation):
         if bundle.data["name"].find(" ") != -1:
             errors["name"].append("Name may not contain spaces")
 
-        # Check volume IDs are present and correct
-        used_volume_ids = set()
+        # Check device IDs are present and correct
+        used_device_ids = set()
 
-        def check_volume(field, volume_id):
-            # Check we haven't tried to use the same volume twice
-            if volume_id in used_volume_ids:
-                return "Volume ID %s specified for multiple targets!" % volume_id
+        def check_device(field, device_id):
+            # Check we haven't tried to use the same device twice
+            if device_id in used_device_ids:
+                return "Device ID %s specified for multiple targets!" % device_id
 
             try:
-                # Check the volume exists
-                volume = Volume.objects.get(id=volume_id)
+                # Check the device exists
+                device = Device.objects.get(id=device_id)
                 try:
-                    # Check the volume isn't in use
-                    target = ManagedTarget.objects.get(volume=volume)
-                    return "Volume with ID %s is already in use by target %s" % (volume_id, target)
+                    # Check the device isn't in use
+                    target = ManagedTarget.objects.get(device=device)
+                    return "Device with ID %s is already in use by target %s" % (device_id, target)
                 except ManagedTarget.DoesNotExist:
                     pass
-            except Volume.DoesNotExist:
-                return "Volume with ID %s not found" % volume_id
+            except Device.DoesNotExist:
+                return "Device with ID %s not found" % device_id
 
-            used_volume_ids.add(volume_id)
+            used_device_ids.add(device_id)
 
         try:
-            mgt_volume_id = bundle.data["mgt"]["volume_id"]
-            error = check_volume("mgt", mgt_volume_id)
+            mgt_device_id = bundle.data["mgt"]["device_id"]
+            error = check_device("mgt", mgt_device_id)
             if error:
-                errors["mgt"]["volume_id"].append(error)
+                errors["mgt"]["device_id"].append(error)
         except KeyError:
-            mgt_volume_id = None
+            mgt_device_id = None
 
             try:
                 mgt = ManagedMgs.objects.get(id=bundle.data["mgt"]["id"])
@@ -140,42 +140,42 @@ class FilesystemValidation(Validation):
                 except ManagedFilesystem.DoesNotExist:
                     pass
             except KeyError:
-                errors["mgt"]["id"].append("One of id or volume_id must be set")
+                errors["mgt"]["id"].append("One of id or device_id must be set")
         except ManagedMgs.DoesNotExist:
             errors["mgt"]["id"].append("MGT with ID %s not found" % (bundle.data["mgt"]["id"]))
 
         for mdt in bundle.data["mdts"]:
             try:
-                mdt_volume_id = mdt["volume_id"]
-                check_volume("mdts", mdt_volume_id)
+                mdt_device_id = mdt["device_id"]
+                check_device("mdts", mdt_device_id)
             except KeyError:
-                errors["mdts"]["volume_id"].append("volume_id attribute is mandatory for mdt " % mdt["id"])
+                errors["mdts"]["device_id"].append("device_id attribute is mandatory for mdt " % mdt["id"])
 
         for ost in bundle.data["osts"]:
             try:
-                volume_id = ost["volume_id"]
-                check_volume("osts", volume_id)
+                device_id = ost["device_id"]
+                check_device("osts", device_id)
             except KeyError:
-                errors["osts"]["volume_id"].append("volume_id attribute is mandatory for ost " % ost["id"])
+                errors["osts"]["device_id"].append("device_id attribute is mandatory for ost " % ost["id"])
 
         # If formatting an MGS, check its not on a host already used as an MGS
         # If this is an MGS, there may not be another MGS on
         # this host
-        if mgt_volume_id:
-            mgt_volume = Volume.objects.get(id=mgt_volume_id)
-            hosts = [vn.host for vn in VolumeNode.objects.filter(volume=mgt_volume, use=True)]
+        if mgt_device_id:
+            mgt_device = Device.objects.get(id=mgt_device_id)
+            hosts = [vn.host for vn in DeviceHost.objects.filter(device=mgt_device, use=True)]
             conflicting_mgs_count = ManagedTarget.objects.filter(
                 ~Q(managedmgs=None), managedtargetmount__host__in=hosts
             ).count()
             if conflicting_mgs_count > 0:
-                errors["mgt"]["volume_id"].append(
-                    "Volume %s cannot be used for MGS (only one MGS is allowed per server)" % mgt_volume.label
+                errors["mgt"]["device_id"].append(
+                    "Device %s cannot be used for MGS (only one MGS is allowed per server)" % mgt_device.label
                 )
 
         def validate_target(klass, target):
             target_errors = defaultdict(list)
 
-            volume = Volume.objects.get(id=target["volume_id"])
+            device = Device.objects.get(id=target["device_id"])
             if "inode_count" in target and "bytes_per_inode" in target:
                 target_errors["inode_count"].append("inode_count and bytes_per_inode are mutually exclusive")
 
@@ -214,9 +214,9 @@ class FilesystemValidation(Validation):
                     inode_size = {ManagedMgs: 128, ManagedMdt: 512, ManagedOst: 256}[klass]
 
                 if inode_size is not None and inode_count is not None:
-                    if inode_count * inode_size > volume.size:
+                    if inode_count * inode_size > device.size:
                         target_errors["inode_count"].append(
-                            "%d %d-byte inodes too large for %s-byte device" % (inode_count, inode_size, volume.size)
+                            "%d %d-byte inodes too large for %s-byte device" % (inode_count, inode_size, device.size)
                         )
 
             return target_errors
@@ -274,12 +274,12 @@ class FilesystemResource(MetricResource, ConfParamResource):
     When using POST to create a file system, specify volumes to use like this:
     ::
 
-        {osts: [{volume_id: 22}],
-        mdt: {volume_id: 23},
-        mgt: {volume_id: 24}}
+        {osts: [{device_id: 22}],
+        mdt: {device_id: 23},
+        mgt: {device_id: 24}}
 
     To create a file system using an existing MGT instead of creating a new
-    MGT, set the `id` attribute instead of the `volume_id` attribute for
+    MGT, set the `id` attribute instead of the `device_id` attribute for
     that target (i.e. `mgt: {id: 123}`).
 
     Note: A Lustre file system is owned by an MGT, and the ``name`` of the file system
