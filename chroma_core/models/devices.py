@@ -14,6 +14,7 @@ class Device(models.Model):
     parents = ArrayField(models.CharField(max_length=255), help_text="A list of parent devices")
     children = ArrayField(models.CharField(max_length=255), help_text="A list of child devices")
     max_depth = models.SmallIntegerField(help_text="Maximum depth where the device is nested")
+    record_id = models.IntegerField(help_text="A simple ID for warpdrive cache to use")
 
 
 class DeviceHost(models.Model):
