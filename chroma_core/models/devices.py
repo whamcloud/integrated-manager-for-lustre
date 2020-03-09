@@ -26,3 +26,6 @@ class DeviceHost(models.Model):
     fs_type = models.CharField(null=True, help_text="The fs type of the device", max_length=255)
     fs_label = models.CharField(null=True, help_text="The fs label on the device", max_length=255)
     fs_uuid = models.CharField(null=True, help_text="The fs uuid on the device", max_length=255)
+
+    class Meta:
+        unique_together = ("device_id", "fqdn")
