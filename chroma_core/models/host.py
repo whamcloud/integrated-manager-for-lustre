@@ -35,6 +35,9 @@ from chroma_core.models import Job
 from chroma_core.models import AdvertisedJob
 from chroma_core.models import StateLock
 from chroma_core.models import AlertEvent
+from chroma_core.models.devices import DeviceHost
+
+# from chroma_core.models import DeviceHost
 from chroma_core.lib.job import job_log
 from chroma_core.lib.job import DependOn
 from chroma_core.lib.job import DependAll
@@ -947,17 +950,16 @@ class DetectTargetsStep(Step):
         host_target_devices = defaultdict(list)
 
         for host in ManagedHost.objects.filter(id__in=kwargs["host_ids"]):
-            volume_nodes = VolumeNode.objects.filter(host=host)
+            device_host = DeviceHost.objects.filter(fqdn=host.fqdn)
 
-            for volume_node in volume_nodes:
-                resource = volume_node.volume.storage_resource.to_resource()
+            for device_host in device_host:
                 try:
-                    uuid = resource.uuid
+                    uuid = device_host.fs_uuid
                 except AttributeError:
                     uuid = None
 
                 host_target_devices[host].append(
-                    {"path": volume_node.path, "type": resource.device_type(), "uuid": uuid}
+                    {"path": device_host.paths[0], "type": device_host.fs_type, "uuid": uuid}
                 )
 
             self.log("Scanning server %s..." % host)
@@ -988,7 +990,10 @@ class DetectTargetsJob(HostListMixin):
     def get_steps(self):
         return [
             (UpdateDevicesStep, {"hosts": self.hosts}),
-            (DetectTargetsStep, {"host_ids": [h.id for h in self.hosts]}),
+            (
+                DetectTargetsStep,
+                {"host_ids": [h.id for h in self.hosts], "host_ids_fqdns": [(h.id, h.fqdn) for h in self.hosts]},
+            ),
         ]
 
 
