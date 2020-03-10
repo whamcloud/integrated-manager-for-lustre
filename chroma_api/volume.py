@@ -105,11 +105,6 @@ class VolumeResource(ChromaModelResource):
         #  Join in these three models to dehydrate_kind without big penalties
         queryset = (
             Volume.objects.all()
-            .select_related(
-                "storage_resource",
-                "storage_resource__resource_class",
-                "storage_resource__resource_class__storage_plugin",
-            )
             .prefetch_related("volumenode_set", "volumenode_set__host")
         )
         resource_name = "volume"

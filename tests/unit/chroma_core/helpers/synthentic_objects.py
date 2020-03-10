@@ -1,61 +1,51 @@
 import mock
 
-from chroma_core.models import Volume, VolumeNode, ManagedHost, LNetConfiguration
+from chroma_core.models import Device, DeviceHost, Volume, VolumeNode, ManagedHost, LNetConfiguration
 from chroma_core.models import NetworkInterface, Nid, ServerProfile
 from chroma_core.models import NTPConfiguration
 from chroma_core.models import CorosyncConfiguration
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import Command
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models import StorageResourceRecord
 from chroma_core.services.log import log_register
 from tests.unit.chroma_core.helpers import random_str
 
 log = log_register("synthetic_objects")
 
 
-def synthetic_volume(serial=None, with_storage=True, usable_for_lustre=True):
+def synthetic_device(serial=None, with_storage=True, usable_for_lustre=True):
     """
-    Create a Volume and an underlying StorageResourceRecord
+    Create a device
     """
-    volume = Volume.objects.create()
+    device = Device.objects.create()
 
     if not serial:
-        serial = "foobar%d" % volume.id
+        serial = "foobar%d" % device.id
 
     attrs = {"serial": serial, "size": 8192000}
 
-    if with_storage:
-        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+    device.usable_for_lustre = usable_for_lustre
 
-        resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class("linux", "ScsiDevice")
+    device.save()
 
-        storage_resource, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, attrs)
-
-        volume.storage_resource = storage_resource
-
-    volume.usable_for_lustre = usable_for_lustre
-
-    volume.save()
-
-    return volume
+    return device
 
 
-def synthetic_volume_full(primary_host, secondary_hosts=None, usable_for_lustre=True):
+def synthetic_device_full(primary_host, secondary_hosts=None, usable_for_lustre=True):
     """
-    Create a Volume and some VolumeNodes
+    Create a Device and some DeviceHost
     """
     secondary_hosts = [] if secondary_hosts is None else secondary_hosts
 
-    volume = synthetic_volume(usable_for_lustre=usable_for_lustre)
-    path = "/fake/path/%s" % volume.id
+    device = synthetic_device(usable_for_lustre=usable_for_lustre)
+    path = "/fake/path/%s" % device.id
 
-    VolumeNode.objects.create(volume=volume, host=primary_host, path=path, primary=True)
+    DeviceHost.objects.create(device=device, fqdn=primary_host.fqdn, paths=[path], primary=True)
 
     for host in secondary_hosts:
-        VolumeNode.objects.create(volume=volume, host=host, path=path, primary=False)
+        DeviceHost.objects.create(device=device, fqdn=host.fqdn, paths=[path], primary=False)
 
-    return volume
+    return device
 
 
 def synthetic_host(

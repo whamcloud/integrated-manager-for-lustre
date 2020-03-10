@@ -6,7 +6,6 @@
 import threading
 from django.db import transaction
 from chroma_core.services import ChromaService, ServiceThread
-from chroma_core.services.plugin_runner.resource_manager import ResourceManager
 
 
 class AgentPluginHandlerCollection(object):
@@ -60,18 +59,13 @@ class Service(ChromaService):
             raise RuntimeError("Some plugins could not be loaded: %s" % errors)
 
         resource_manager = ResourceManager()
-        scan_daemon = ScanDaemon(resource_manager)
 
         # For each plugin, start a thread which will consume its agent RX queue
         agent_handlers = AgentPluginHandlerCollection(resource_manager)
         for handler in agent_handlers.handlers.values():
             self.threads.append(ServiceThread(handler))
 
-        scan_daemon_thread = ServiceThread(scan_daemon)
-        scan_rpc_thread = ServiceThread(ScanDaemonRpcInterface(scan_daemon))
-        agent_rpc_thread = ServiceThread(AgentDaemonRpcInterface(agent_handlers))
-
-        self.threads.extend([scan_daemon_thread, scan_rpc_thread, agent_rpc_thread])
+        # TODO: self.threads is now empty, going to remove that
         for thread in self.threads:
             thread.start()
 

@@ -9,8 +9,7 @@ from chroma_core.services.job_scheduler.agent_rpc import AgentException
 from chroma_core.models import ManagedFilesystem
 from chroma_core.models import Nid
 from chroma_core.models import ManagedHost
-from chroma_core.models import Volume
-from chroma_core.models import VolumeNode
+from chroma_core.models import Device, DeviceHost
 from chroma_core.models import DetectTargetsJob
 from chroma_core.models import ManagedOst
 from chroma_core.models import ManagedTargetMount
@@ -41,7 +40,7 @@ class TestDetection(IMLUnitTestCase):
             data = json.load(open(path))["result"]
             host_data[ManagedHost.objects.get(address=address)] = data
 
-        # Simplified volume construction:
+        # Simplified device construction:
         #  * Assume all device paths referenced in detection exist
         #  * Assume all devices visible on all hosts
         #  * Assume device node paths are identical on all hosts
@@ -51,9 +50,9 @@ class TestDetection(IMLUnitTestCase):
                 for d in lt["device_paths"]:
                     if not d in devpaths:
                         devpaths.add(d)
-                        volume = Volume.objects.create()
+                        device = Device.objects.create()
                         for host in host_data.keys():
-                            VolumeNode.objects.create(volume=volume, path=d, host=host)
+                            DeviceHost.objects.create(device=device, path=d, host=host)
 
         def _detect_scan_device_plugin(host, command, args=None):
             self.assertIn(command, ["detect_scan", "device_plugin"])

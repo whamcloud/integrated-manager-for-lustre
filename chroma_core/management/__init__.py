@@ -34,7 +34,6 @@ def setup_groups(sender, **kwargs):
         grant_write(fsadmin_group, chroma_core.models.ManagedTarget)
         grant_write(fsadmin_group, chroma_core.models.ManagedHost)
         grant_write(fsadmin_group, chroma_core.models.ManagedFilesystem)
-        grant_write(fsadmin_group, chroma_core.models.StorageResourceRecord)
         grant_write(fsadmin_group, chroma_core.models.Job)
         grant_write(fsadmin_group, chroma_core.models.Command)
         grant_write(fsadmin_group, chroma_core.models.Volume)
