@@ -203,16 +203,6 @@ class StorageResourceRecord(models.Model):
         return klass._meta.storage_statistics[stat_name]
 
 
-class SimpleHistoStoreBin(models.Model):
-    histo_store_time = models.ForeignKey("SimpleHistoStoreTime", on_delete=CASCADE)
-    bin_idx = models.IntegerField()
-    value = models.PositiveIntegerField()
-
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-
-
 class SimpleHistoStoreTime(models.Model):
     storage_resource_statistic = models.ForeignKey("StorageResourceStatistic", on_delete=CASCADE)
     time = models.PositiveIntegerField()
