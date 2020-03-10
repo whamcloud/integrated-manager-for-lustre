@@ -50,7 +50,6 @@ from chroma_core.models import LNetConfiguration, NetworkInterface, Nid
 
 from chroma_core.models.storage_plugin import (
     StorageResourceAttributeSerialized,
-    StorageResourceLearnEvent,
     StorageResourceAttributeReference,
     StorageAlertPropagated,
 )

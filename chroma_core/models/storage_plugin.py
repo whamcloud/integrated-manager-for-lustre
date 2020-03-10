@@ -419,29 +419,3 @@ class StorageAlertPropagated(models.Model):
         unique_together = ("storage_resource", "alert_state")
         app_label = "chroma_core"
         ordering = ["id"]
-
-
-class StorageResourceLearnEvent(AlertStateBase):
-    variant_fields = [
-        VariantDescriptor(
-            "storage_resource",
-            StorageResourceRecord,
-            lambda self_: StorageResourceRecord.objects.get(id=self_.get_variant("storage_resource_id", None, int)),
-            lambda self_, value: self_.set_variant("storage_resource_id", int, value.id),
-            None,
-        )
-    ]
-
-    @staticmethod
-    def type_name():
-        return "Storage resource detection"
-
-    def alert_message(self):
-        from chroma_core.lib.storage_plugin.query import ResourceQuery
-
-        class_name, instance_name = ResourceQuery().record_class_and_instance_string(self.storage_resource)
-        return "Discovered %s '%s'" % (class_name, instance_name)
-
-    class Meta:
-        app_label = "chroma_core"
-        proxy = True
