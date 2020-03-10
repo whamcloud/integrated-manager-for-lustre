@@ -9,7 +9,7 @@ from tastypie.validation import Validation
 from chroma_core.lib.storage_plugin.api import attributes, statistics
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
-from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
+from chroma_core.models import StorageResourceRecord
 
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from tastypie import fields

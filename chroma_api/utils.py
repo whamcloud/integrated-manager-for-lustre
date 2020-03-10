@@ -25,7 +25,7 @@ from tastypie.exceptions import ImmediateHttpResponse
 
 from chroma_core.models.command import Command
 from chroma_core.models.target import ManagedMgs
-from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
+from chroma_core.models import StorageResourceRecord
 from chroma_core.services import log_register
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_api.chroma_model_resource import ChromaModelResource
