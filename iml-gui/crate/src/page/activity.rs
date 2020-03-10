@@ -1,7 +1,7 @@
 use crate::{
     components::{action_dropdown, font_awesome, loading},
     generated::css_classes::C,
-    sleep_with_handle, GMsg, MergeAttrs as _, RequestExt as _,
+    sleep_with_handle, GMsg, MergeAttrs as _, RequestExt as _, ServerDate,
 };
 use futures::channel::oneshot;
 use iml_wire_types::{
@@ -124,7 +124,7 @@ fn update_rows(alerts: &mut ApiList<Alert>, rows: &mut HashMap<u32, Row>) {
     }
 }
 
-pub(crate) fn view(model: &Model, session: Option<&Session>, all_locks: &Locks) -> impl View<Msg> {
+pub(crate) fn view(model: &Model, session: Option<&Session>, all_locks: &Locks, sd: &ServerDate) -> impl View<Msg> {
     div![match &model.state {
         State::Loading => loading::view(),
         State::Loaded(alerts, rows) => div![
@@ -152,7 +152,7 @@ pub(crate) fn view(model: &Model, session: Option<&Session>, all_locks: &Locks) 
             alerts.objects.iter().map(|x| {
                 let row = rows.get(&x.id);
 
-                alert_item_view(all_locks, session, x, row)
+                alert_item_view(all_locks, sd, session, x, row)
             })
         ],
     }]
@@ -195,7 +195,13 @@ fn alert_item_classes(alert: &Alert) -> (&str, &str, &str) {
     }
 }
 
-fn alert_item_view(all_locks: &Locks, session: Option<&Session>, alert: &Alert, row: Option<&Row>) -> Node<Msg> {
+fn alert_item_view(
+    all_locks: &Locks,
+    sd: &ServerDate,
+    session: Option<&Session>,
+    alert: &Alert,
+    row: Option<&Row>,
+) -> Node<Msg> {
     let (border_color, icon_color, bg_color) = alert_item_classes(alert);
 
     let is_active = alert.active.unwrap_or_default();
@@ -224,7 +230,10 @@ fn alert_item_view(all_locks: &Locks, session: Option<&Session>, alert: &Alert, 
         ],
         div![
             class![C.row_span_1, C.col_span_2],
-            format!("Started {}", timeago(&alert.begin).unwrap_or_default())
+            format!(
+                "Started {}",
+                sd.timeago(chrono::DateTime::parse_from_rfc3339(&alert.begin).unwrap())
+            )
         ],
         div![
             class![C.row_span_1, C.col_span_1, C.grid, C.justify_end],
@@ -244,16 +253,13 @@ fn alert_item_view(all_locks: &Locks, session: Option<&Session>, alert: &Alert, 
         if let Some(end) = alert.end.as_ref() {
             div![
                 class![C.row_span_1, C.col_span_2],
-                format!("Ended {}", timeago(end).unwrap_or_default())
+                format!(
+                    "Ended {}",
+                    sd.timeago(chrono::DateTime::parse_from_rfc3339(end).unwrap())
+                )
             ]
         } else {
             empty![]
         }
     ]
-}
-
-fn timeago(x: &str) -> Option<String> {
-    let dt = chrono::DateTime::parse_from_rfc3339(x).unwrap();
-
-    Some(format!("{}", chrono_humanize::HumanTime::from(dt)))
 }

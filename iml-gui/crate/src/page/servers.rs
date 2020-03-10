@@ -2,7 +2,7 @@ use crate::{
     components::{action_dropdown, alert_indicator, lnet_status, lock_indicator, paging, table, Placement},
     extract_id,
     generated::css_classes::C,
-    GMsg, MergeAttrs, Route,
+    GMsg, MergeAttrs, Route, ServerDate,
 };
 use iml_wire_types::{
     db::LnetConfigurationRecord,
@@ -143,7 +143,13 @@ fn lnet_by_server(
     lnet_configs.get(&id).cloned()
 }
 
-pub fn view(cache: &ArcCache, session: Option<&Session>, model: &Model, all_locks: &Locks) -> impl View<Msg> {
+pub fn view(
+    cache: &ArcCache,
+    session: Option<&Session>,
+    model: &Model,
+    all_locks: &Locks,
+    sd: &ServerDate,
+) -> impl View<Msg> {
     div![
         class![C.bg_white],
         div![
@@ -177,8 +183,14 @@ pub fn view(cache: &ArcCache, session: Option<&Session>, model: &Model, all_lock
                                     alert_indicator(&cache.active_alert, &x, true, Placement::Top)
                                 ])
                                 .merge_attrs(class![C.text_center]),
-                                table::td_view(span![timeago(x).unwrap_or_else(|| "".into())])
-                                    .merge_attrs(class![C.text_center]),
+                                table::td_view(plain!(x
+                                    .boot_time
+                                    .as_ref()
+                                    .map(|bt| sd.timeago(
+                                        chrono::DateTime::parse_from_rfc3339(&format!("{}-00:00", bt)).unwrap()
+                                    ))
+                                    .unwrap_or_else(|| "N/A".into())))
+                                .merge_attrs(class![C.text_center]),
                                 table::td_view(span![x.server_profile.ui_name]).merge_attrs(class![C.text_center]),
                                 table::td_view(
                                     div![lnet_by_server_view(x, cache, all_locks).unwrap_or_else(|| vec![])]
@@ -212,14 +224,6 @@ fn lnet_by_server_view<T>(x: &Host, cache: &ArcCache, all_locks: &Locks) -> Opti
         lnet_status::view(&config, all_locks).merge_attrs(class![C.mr_2]),
         alert_indicator(&cache.active_alert, &config, true, Placement::Top,),
     ])
-}
-
-fn timeago(x: &Host) -> Option<String> {
-    let boot_time = x.boot_time.as_ref()?;
-
-    let dt = chrono::DateTime::parse_from_rfc3339(&format!("{}-00:00", boot_time)).unwrap();
-
-    Some(format!("{}", chrono_humanize::HumanTime::from(dt)))
 }
 
 fn sort_header(label: &str, sort_field: SortField, model: &Model) -> Node<Msg> {

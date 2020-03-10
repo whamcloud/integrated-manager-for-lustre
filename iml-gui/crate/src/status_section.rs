@@ -1,6 +1,6 @@
 use crate::{
     components::activity_indicator, ctx_help::CtxHelp, extensions::MergeAttrs as _, font_awesome, font_awesome_outline,
-    generated::css_classes::C, page::activity, route::Route, GMsg, HELP_PATH,
+    generated::css_classes::C, page::activity, route::Route, GMsg, ServerDate, HELP_PATH,
 };
 use iml_wire_types::{
     warp_drive::{ArcCache, Locks},
@@ -101,6 +101,7 @@ pub fn view(
     activity_health: &activity_indicator::ActivityHealth,
     session: Option<&Session>,
     all_locks: &Locks,
+    sd: &ServerDate,
 ) -> Node<Msg> {
     div![
         class![
@@ -125,7 +126,7 @@ pub fn view(
         match model.section.as_ref() {
             Some(Section::Activity(x)) => {
                 section_container(
-                    activity::view(x, session, all_locks)
+                    activity::view(x, session, all_locks, sd)
                         .els()
                         .map_msg(Msg::ActivitySection),
                 )

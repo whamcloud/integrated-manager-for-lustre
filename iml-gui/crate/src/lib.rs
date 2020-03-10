@@ -14,6 +14,7 @@ mod extensions;
 mod generated;
 mod notification;
 mod route;
+mod server_date;
 mod sleep;
 mod status_section;
 mod watch_state;
@@ -37,6 +38,7 @@ use page::{login, Page};
 use regex::Regex;
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, EventHandler, *};
+pub(crate) use server_date::ServerDate;
 pub(crate) use sleep::sleep_with_handle;
 use std::{cmp, sync::Arc};
 pub use watch_state::*;
@@ -147,6 +149,7 @@ pub struct Model {
     status_section: status_section::Model,
     track_slider: bool,
     tree: tree::Model,
+    server_date: ServerDate,
 }
 
 // ------ ------
@@ -208,6 +211,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
         status_section: status_section::Model::default(),
         track_slider: false,
         tree: tree::Model::default(),
+        server_date: ServerDate::default(),
     })
 }
 
@@ -233,9 +237,10 @@ pub fn routes(url: Url) -> Option<Msg> {
 pub enum GMsg {
     RouteChange(Url),
     AuthProxy(Box<auth::Msg>),
+    ServerDate(chrono::DateTime<chrono::offset::FixedOffset>),
 }
 
-fn sink(g_msg: GMsg, _model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
+fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match g_msg {
         GMsg::RouteChange(url) => {
             seed::push_route(url.clone());
@@ -244,6 +249,7 @@ fn sink(g_msg: GMsg, _model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
         GMsg::AuthProxy(msg) => {
             orders.proxy(Msg::Auth).send_msg(msg);
         }
+        GMsg::ServerDate(d) => model.server_date.set(d),
     }
 }
 
@@ -781,7 +787,8 @@ pub fn main_panels(model: &Model, children: impl View<Msg>) -> impl View<Msg> {
                 &model.route,
                 &model.activity_health,
                 model.auth.get_session(),
-                &model.locks
+                &model.locks,
+                &model.server_date
             )
             .els()
             .map_msg(Msg::StatusSection)
@@ -827,9 +834,15 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::PowerControl => main_panels(model, page::power_control::view(model)).els(),
         Page::Servers(page) => main_panels(
             model,
-            page::servers::view(&model.records, model.auth.get_session(), page, &model.locks)
-                .els()
-                .map_msg(Msg::ServersPage),
+            page::servers::view(
+                &model.records,
+                model.auth.get_session(),
+                page,
+                &model.locks,
+                &model.server_date,
+            )
+            .els()
+            .map_msg(Msg::ServersPage),
         )
         .els(),
         Page::Server(x) => main_panels(model, page::server::view(x)).els(),
