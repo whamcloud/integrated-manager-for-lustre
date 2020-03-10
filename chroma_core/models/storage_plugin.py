@@ -333,13 +333,3 @@ class StorageResourceAttributeReference(StorageResourceAttribute):
             return value.to_resource()
         else:
             return None
-
-
-class StorageResourceClassStatistic(models.Model):
-    resource_class = models.ForeignKey(StorageResourceClass, on_delete=CASCADE)
-    name = models.CharField(max_length=64)
-
-    class Meta:
-        unique_together = ("resource_class", "name")
-        app_label = "chroma_core"
-        ordering = ["id"]
