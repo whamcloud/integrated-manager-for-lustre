@@ -46,7 +46,7 @@ pub(crate) fn view<'a, T>(
     height: &str,
 ) -> Node<T> {
     iframe![attrs! {
-        At::Src => format!("/grafana/d-solo/{}/{}?{}", dashboard_id, dashboard_name, serde_urlencoded::to_string(chart_data).unwrap()),
+        At::Src => format!("/grafana/d-solo/{}/{}?kiosk&{}", dashboard_id, dashboard_name, serde_urlencoded::to_string(chart_data).unwrap()),
         At::Width => "100%",
         At::Height => height,
         "frameborder" => 0
