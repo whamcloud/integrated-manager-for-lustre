@@ -33,24 +33,3 @@ class StoragePluginRecord(models.Model):
         unique_together = ("module_name",)
         app_label = "chroma_core"
         ordering = ["id"]
-
-
-class StorageResourceClass(models.Model):
-    """Reference to a BaseStorageResource subclass"""
-
-    storage_plugin = models.ForeignKey(StoragePluginRecord, on_delete=models.PROTECT)
-    class_name = models.CharField(max_length=MAX_NAME_LENGTH)
-    user_creatable = models.BooleanField(default=False)
-
-    def __str__(self):
-        return "%s/%s" % (self.storage_plugin.module_name, self.class_name)
-
-    def get_class(self):
-        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-
-        return storage_plugin_manager.get_resource_class_by_id(self.pk)
-
-    class Meta:
-        unique_together = ("storage_plugin", "class_name")
-        app_label = "chroma_core"
-        ordering = ["id"]
