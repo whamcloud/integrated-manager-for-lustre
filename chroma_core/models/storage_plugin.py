@@ -260,34 +260,3 @@ class StorageResourceStatistic(models.Model):
         for i in stat_data:
             i["value"] = float(i["value"])
         return self.metrics.serialize(stat_name, stat_properties, stat_data)
-
-
-class StorageResourceAttribute(models.Model):
-    """An attribute of a BaseStorageResource instance.
-
-    Note that we store the denormalized key name of the attribute
-    for each storageresource instance, to support schemaless attribute
-    dictionaries.  If we made the executive decision to remove this
-    and only allow explicitly declared fields, then we would normalize
-    out the attribute names.
-    """
-
-    @classmethod
-    def encode(cls, value):
-        return value
-
-    @classmethod
-    def decode(cls, value):
-        return value
-
-    resource = models.ForeignKey(StorageResourceRecord, on_delete=CASCADE)
-    # TODO: normalize this field (store a list of attributes
-    # with StorageResourceClass, that list would also be useful
-    # for comparing against at plugin load time to e.g. complain
-    # about new fields and/or mung existing records
-    key = models.CharField(max_length=64)
-
-    class Meta:
-        abstract = True
-        unique_together = ("resource", "key")
-        app_label = "chroma_core"
