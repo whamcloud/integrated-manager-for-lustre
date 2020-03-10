@@ -203,15 +203,6 @@ class StorageResourceRecord(models.Model):
         return klass._meta.storage_statistics[stat_name]
 
 
-class SimpleHistoStoreTime(models.Model):
-    storage_resource_statistic = models.ForeignKey("StorageResourceStatistic", on_delete=CASCADE)
-    time = models.PositiveIntegerField()
-
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-
-
 class StorageResourceStatistic(models.Model):
     class Meta:
         unique_together = ("storage_resource", "name")
