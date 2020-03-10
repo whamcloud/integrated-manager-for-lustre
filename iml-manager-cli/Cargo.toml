@@ -21,7 +21,7 @@ spinners = "1.0.0"
 structopt = "0.3"
 tokio = { version = "0.2", features = ["macros", "io-std", "io-util"] }
 tracing = "0.1"
-tracing-subscriber = "0.1"
+tracing-subscriber = "0.2"
 number-formatter = { path = "../number-formatter", version = "0.1" }
 dialoguer = "0.5.0"
 
