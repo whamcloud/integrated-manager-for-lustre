@@ -291,19 +291,3 @@ class StorageResourceAttribute(models.Model):
         abstract = True
         unique_together = ("resource", "key")
         app_label = "chroma_core"
-
-
-class StorageResourceAttributeSerialized(StorageResourceAttribute):
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-
-    value = models.TextField()
-
-    @classmethod
-    def encode(cls, value):
-        return json.dumps(value)
-
-    @classmethod
-    def decode(cls, value):
-        return json.loads(value)

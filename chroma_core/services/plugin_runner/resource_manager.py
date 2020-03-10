@@ -47,10 +47,6 @@ from chroma_core.models import HaCluster
 from chroma_core.models.alert import AlertState
 from chroma_core.models import LNetConfiguration, NetworkInterface, Nid
 
-from chroma_core.models.storage_plugin import (
-    StorageResourceAttributeSerialized,
-)
-
 
 class PluginSession(object):
     def __init__(self, plugin_instance, scannable_id, update_period):

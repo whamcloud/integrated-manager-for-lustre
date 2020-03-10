@@ -3,9 +3,6 @@
 # license that can be found in the LICENSE file.
 
 
-from chroma_core.models.storage_plugin import StorageResourceAttributeSerialized
-
-
 class BaseResourceAttribute(object):
     """Base class for declared attributes of BaseStorageResource.  This is
     to BaseStorageResource as models.fields.Field is to models.Model
@@ -16,8 +13,6 @@ class BaseResourceAttribute(object):
     # that I can sort the BaseStorageResource attribute dict for presentation in the same order
     # as the plugin author declared the attributes.
     creation_counter = 0
-
-    model_class = StorageResourceAttributeSerialized
 
     def __init__(self, optional=False, label=None, hidden=False, user_read_only=False, default=None):
         """
