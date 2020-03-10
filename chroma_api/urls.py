@@ -43,10 +43,8 @@ import chroma_api.session
 import chroma_api.user
 import chroma_api.group
 
-import chroma_api.volume
-import chroma_api.volume_node
-import chroma_api.storage_resource
-import chroma_api.storage_resource_class
+import chroma_api.device
+import chroma_api.device_host
 import chroma_api.network_interface
 import chroma_api.corosync
 
@@ -74,10 +72,8 @@ api.register(chroma_api.registration_token.RegistrationTokenResource())
 api.register(chroma_api.filesystem.FilesystemResource())
 api.register(chroma_api.filesystem.OstPoolResource())
 api.register(chroma_api.target.TargetResource())
-api.register(chroma_api.volume.VolumeResource())
-api.register(chroma_api.volume_node.VolumeNodeResource())
-api.register(chroma_api.storage_resource.StorageResourceResource())
-api.register(chroma_api.storage_resource_class.StorageResourceClassResource())
+api.register(chroma_api.device.DeviceResource())
+api.register(chroma_api.device_host.DeviceHostResource())
 api.register(chroma_api.session.SessionResource())
 api.register(chroma_api.session.AuthResource())
 api.register(chroma_api.user.UserResource())

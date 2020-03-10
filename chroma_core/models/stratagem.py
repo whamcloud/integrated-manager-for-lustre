@@ -35,8 +35,7 @@ from chroma_core.models import (
     ManagedMdt,
     ManagedTarget,
     ManagedTargetMount,
-    Volume,
-    VolumeNode,
+    DeviceHost,
     StorageResourceRecord,
 )
 
@@ -528,15 +527,14 @@ class RunStratagemJob(Job):
         else:
             mdt = ManagedMdt.objects.get(id=kwargs["mdt_id"])
             target_mount = ManagedTargetMount.objects.get(id=mdt.active_mount_id)
-            volume_node = VolumeNode.objects.get(id=target_mount.volume_node_id)
-            volume = Volume.objects.get(id=mdt.volume_id)
+            device_host = DeviceHost.objects.get(id=target_mount.device_host_id)
             host = ManagedHost.objects.get(id=target_mount.host_id)
 
             kwargs["fqdn"] = host.fqdn
             kwargs["target_name"] = mdt.name
-            kwargs["filesystem_type"] = volume.filesystem_type
+            kwargs["filesystem_type"] = device_host.fs_type
             kwargs["target_mount_point"] = target_mount.mount_point
-            kwargs["device_path"] = volume_node.path
+            kwargs["device_path"] = device_host.paths[0]
 
             super(RunStratagemJob, self).__init__(*args, **kwargs)
 

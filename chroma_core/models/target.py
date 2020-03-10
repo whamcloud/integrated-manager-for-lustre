@@ -16,7 +16,7 @@ from chroma_core.lib.job import DependOn, DependAny, DependAll, Step, job_log
 from chroma_core.models import AlertEvent
 from chroma_core.models import AlertStateBase
 from chroma_core.models import StateChangeJob, StateLock, AdvertisedJob
-from chroma_core.models import ManagedHost, VolumeNode, Volume, HostContactAlert
+from chroma_core.models import ManagedHost, Device, DeviceHost, HostContactAlert
 from chroma_core.models import StatefulObject
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
@@ -92,14 +92,14 @@ class ManagedTarget(StatefulObject):
         max_length=64, null=True, blank=True, help_text="Label used for HA layer; human readable but unique"
     )
 
-    volume = models.ForeignKey("Volume", on_delete=CASCADE)
+    device = models.ForeignKey("Device", on_delete=CASCADE)
 
     inode_size = models.IntegerField(null=True, blank=True, help_text="Size in bytes per inode")
     bytes_per_inode = models.IntegerField(
         null=True,
         blank=True,
         help_text="Constant used during formatting to "
-        "determine inode count by dividing the volume size by ``bytes_per_inode``",
+        "determine inode count by dividing the device size by ``bytes_per_inode``",
     )
     inode_count = models.BigIntegerField(
         null=True, blank=True, help_text="The number of inodes in this target's" "backing store"
@@ -108,33 +108,17 @@ class ManagedTarget(StatefulObject):
     reformat = models.BooleanField(
         default=False,
         help_text="Only used during formatting, indicates that when formatting this target \
-        any existing filesystem on the Volume should be overwritten",
+        any existing filesystem on the Device should be overwritten",
     )
 
     @property
-    def full_volume(self):
+    def full_device(self):
         """
-        Used in API Resource that want the Volume and all related objects
-
-        This results in a join query to get data with fewer DB hits
-
-        If the volume was picked up using a simple join from the targets table then we would not need to work
-        around the not_deleted (it would pick up the record deleted or not) but because we effectively hardcode
-        it we have to ignore not deleted by use of the _base_manager.
-
-        Sadly the storage_resources do return empty because they are actually deleted, meaning we have Volume records
-        that have no resource records to go with them.
+        Used in API Resource that want the Device and all related objects
         """
 
         return (
-            Volume._base_manager.all()
-            .select_related(
-                "storage_resource",
-                "storage_resource__resource_class",
-                "storage_resource__resource_class__storage_plugin",
-            )
-            .prefetch_related("volumenode_set", "volumenode_set__host")
-            .get(pk=self.volume.pk)
+            Device._base_manager.all().prefetch_related("devicehost_set", "devicehost_set__host").get(pk=self.device.pk)
         )
 
     def update_active_mount(self, nodename):
@@ -338,19 +322,19 @@ class ManagedTarget(StatefulObject):
 
     @classmethod
     @transaction.atomic
-    def create_for_volume(cls_, volume_id, create_target_mounts=True, **kwargs):
+    def create_for_device(cls_, device_id, create_target_mounts=True, **kwargs):
         # Local imports to avoid inter-model import dependencies
-        volume = Volume.objects.get(pk=volume_id)
+        device = device.objects.get(pk=device_id)
 
         try:
-            primary_volume_node = volume.volumenode_set.get(primary=True, host__not_deleted=True)
+            primary_device_host = device.devicehost_set.get(primary=True, host__not_deleted=True)
 
-        except VolumeNode.DoesNotExist:
-            raise RuntimeError("No primary lun_node exists for volume %s, cannot create target" % volume.id)
-        except VolumeNode.MultipleObjectsReturned:
-            raise RuntimeError("Multiple primary lun_nodes exist for volume %s, internal error" % volume.id)
+        except DeviceHost.DoesNotExist:
+            raise RuntimeError("No primary lun_node exists for device %s, cannot create target" % device.id)
+        except DeviceHost.MultipleObjectsReturned:
+            raise RuntimeError("Multiple primary lun_nodes exist for device %s, internal error" % device.id)
 
-        host = primary_volume_node.host
+        host = primary_device_host.host
         corosync_configuration = host.corosync_configuration
         stonith_not_enabled = (
             len(StonithNotEnabledAlert.filter_by_item_id(corosync_configuration.__class__, corosync_configuration.id))
@@ -361,7 +345,7 @@ class ManagedTarget(StatefulObject):
             raise RuntimeError("Stonith not enabled for host %s, cannot create target" % host.fqdn)
 
         target = cls_(**kwargs)
-        target.volume = volume
+        target.device = device
 
         # Acquire a target index for FilesystemMember targets, and populate `name`
         if issubclass(cls_, FilesystemMember):
@@ -390,22 +374,22 @@ class ManagedTarget(StatefulObject):
 
         target_mounts = []
 
-        def create_target_mount(volume_node):
+        def create_target_mount(device_host):
             mount = ManagedTargetMount(
-                volume_node=volume_node,
+                device_host=device_host,
                 target=target,
-                host=volume_node.host,
+                host=device_host.host,
                 mount_point=target.default_mount_point,
-                primary=volume_node.primary,
+                primary=device_host.primary,
             )
             mount.save()
             target_mounts.append(mount)
 
         if create_target_mounts:
-            create_target_mount(primary_volume_node)
+            create_target_mount(primary_device_host)
 
-            for secondary_volume_node in volume.volumenode_set.filter(use=True, primary=False, host__not_deleted=True):
-                create_target_mount(secondary_volume_node)
+            for secondary_device_host in device.devicehost_set.filter(use=True, primary=False, host__not_deleted=True):
+                create_target_mount(secondary_device_host)
 
         return target, target_mounts
 
@@ -1442,7 +1426,7 @@ class MkfsStep(Step):
 
 class UpdateManagedTargetMount(Step):
     """
-    This step will update the volume and volume_node relationships with
+    This step will update the device and device_host relationships with
     manage target mounts and managed targets to reflect changes during
     MkfsStep and device mounting/unmounting.
     """
@@ -1456,35 +1440,35 @@ class UpdateManagedTargetMount(Step):
     def run(self, kwargs):
         target = kwargs["target"]
         device_type = kwargs["device_type"]
-        job_log.info("Updating mtm volume_nodes for target %s" % target)
+        job_log.info("Updating mtm device_hosts for target %s" % target)
 
         for mtm in target.managedtargetmount_set.all():
             host = mtm.host
-            current_volume_node = mtm.volume_node
+            current_device_host = mtm.device_host
 
             # represent underlying zpool as blockdevice if path is zfs dataset
             # todo: move this constraint into BlockDeviceZfs class
             block_device = BlockDevice(
                 device_type,
-                current_volume_node.path.split("/")[0] if device_type == "zfs" else current_volume_node.path,
+                current_device_host.path.split("/")[0] if device_type == "zfs" else current_device_host.path,
             )
 
             filesystem = FileSystem(block_device.preferred_fstype, block_device.device_path)
-            job_log.info("Looking for volume_nodes for host %s , path %s" % (host, filesystem.mount_path(target.name)))
-            job_log.info("Current volume_nodes for host %s = %s" % (host, VolumeNode.objects.filter(host=host)))
+            job_log.info("Looking for device_hosts for host %s , path %s" % (host, filesystem.mount_path(target.name)))
+            job_log.info("Current device_hosts for host %s = %s" % (host, DeviceHost.objects.filter(fqdn=host.fqdn)))
 
-            mtm.volume_node = util.wait_for_result(
-                lambda: VolumeNode.objects.get(host=host, path=filesystem.mount_path(target.name)),
+            mtm.device_host = util.wait_for_result(
+                lambda: DeviceHost.objects.get(fqdn=host.fqdn, path=filesystem.mount_path(target.name)),
                 logger=job_log,
                 timeout=60 * 10,
-                expected_exception_classes=[VolumeNode.DoesNotExist],
+                expected_exception_classes=[DeviceHost.DoesNotExist],
             )
 
-            mtm.volume_node.primary = current_volume_node.primary
-            mtm.volume_node.save()
+            mtm.device_host.primary = current_device_host.primary
+            mtm.device_host.save()
             mtm.save()
 
-            target.volume = mtm.volume_node.volume
+            target.device = mtm.device_host.device
 
         target.save()
 
@@ -1781,10 +1765,10 @@ class ManagedTargetMount(models.Model):
 
     __metaclass__ = DeletableMetaclass
 
-    # FIXME: both VolumeNode and TargetMount refer to the host
+    # FIXME: both DeviceHost and TargetMount refer to the host
     host = models.ForeignKey("ManagedHost", on_delete=CASCADE)
     mount_point = models.CharField(max_length=512, null=True, blank=True)
-    volume_node = models.ForeignKey("VolumeNode", on_delete=CASCADE)
+    device_host = models.ForeignKey("DeviceHost", on_delete=CASCADE)
     primary = models.BooleanField(default=False)
     target = models.ForeignKey("ManagedTarget", on_delete=CASCADE)
 
@@ -1815,7 +1799,7 @@ class ManagedTargetMount(models.Model):
         return super(ManagedTargetMount, self).save(force_insert, force_update, using, update_fields)
 
     def device(self):
-        return self.volume_node.path
+        return self.device_host.paths[0]
 
     class Meta:
         app_label = "chroma_core"
@@ -1824,7 +1808,7 @@ class ManagedTargetMount(models.Model):
     def __str__(self):
         if self.primary:
             kind_string = "primary"
-        elif not self.volume_node:
+        elif not self.device_host:
             kind_string = "failover_nodev"
         else:
             kind_string = "failover"
