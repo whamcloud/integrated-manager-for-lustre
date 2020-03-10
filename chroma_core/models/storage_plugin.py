@@ -409,13 +409,3 @@ class StorageResourceAlert(AlertStateBase):
                 tms = ManagedTargetMount.objects.filter(volume_node=ln)
                 for tm in tms:
                     affect_target(tm.target)
-
-
-class StorageAlertPropagated(models.Model):
-    storage_resource = models.ForeignKey(StorageResourceRecord, on_delete=CASCADE)
-    alert_state = models.ForeignKey(StorageResourceAlert, on_delete=CASCADE)
-
-    class Meta:
-        unique_together = ("storage_resource", "alert_state")
-        app_label = "chroma_core"
-        ordering = ["id"]
