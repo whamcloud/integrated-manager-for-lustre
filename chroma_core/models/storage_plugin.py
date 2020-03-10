@@ -307,29 +307,3 @@ class StorageResourceAttributeSerialized(StorageResourceAttribute):
     @classmethod
     def decode(cls, value):
         return json.loads(value)
-
-
-class StorageResourceAttributeReference(StorageResourceAttribute):
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-
-    value = models.ForeignKey(
-        StorageResourceRecord, blank=True, null=True, related_name="value_resource", on_delete=models.PROTECT
-    )
-
-    # NB no 'encode' impl here because it has to be a special case to
-    # resolve a local resource to a global ID
-
-    def __setattr__(self, k, v):
-        if k == "value" and isinstance(v, int):
-            return super(StorageResourceAttributeReference, self).__setattr__("value_id", v)
-        else:
-            return super(StorageResourceAttributeReference, self).__setattr__(k, v)
-
-    @classmethod
-    def decode(cls, value):
-        if value:
-            return value.to_resource()
-        else:
-            return None

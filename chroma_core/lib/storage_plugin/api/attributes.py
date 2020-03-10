@@ -13,7 +13,6 @@ import re
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 from chroma_core.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
-from chroma_core.models.storage_plugin import StorageResourceAttributeReference
 
 
 class String(BaseResourceAttribute):
@@ -175,8 +174,6 @@ class ResourceReference(BaseResourceAttribute):
        this attribute has undefined (most likely fatal) behaviour.
 
     """
-
-    model_class = StorageResourceAttributeReference
 
     def to_markup(self, value):
         from chroma_core.models import StorageResourceRecord
