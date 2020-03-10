@@ -218,7 +218,7 @@ fn alert_item_view(
             C.grid,
             C.items_center,
             C.mx_4,
-            C.my_6
+            C.my_6,
             C.p_4,
             C.rounded,
             C.text_white,

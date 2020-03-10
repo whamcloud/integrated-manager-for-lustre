@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use serde_json;
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{
     cmp::{Ord, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap},
@@ -1111,6 +1112,71 @@ impl FlatQuery for Alert {
 impl EndpointName for Alert {
     fn endpoint_name() -> &'static str {
         "alert"
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct Substitution {
+    pub start: String,
+    pub end: String,
+    pub label: String,
+    pub resource_uri: String,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum MessageClass {
+    Normal,
+    Lustre,
+    LustreError,
+    Copytool,
+    CopytoolError,
+}
+
+/// Severities from syslog protocol
+///
+/// | Code | Severity                                 |
+/// |------|------------------------------------------|
+/// | 0    | Emergency: system is unusable            |
+/// | 1    | Alert: action must be taken immediately  |
+/// | 2    | Critical: critical conditions            |
+/// | 3    | Error: error conditions                  |
+/// | 4    | Warning: warning conditions              |
+/// | 5    | Notice: normal but significant condition |
+/// | 6    | Informational: informational messages    |
+/// | 7    | Debug: debug-level messages              |
+///
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Debug)]
+#[repr(u8)]
+pub enum LogSeverity {
+    Emergency = 0,
+    Alert = 1,
+    Critical = 2,
+    Error = 3,
+    Warning = 4,
+    Notice = 5,
+    Informational = 6,
+    Debug = 7,
+}
+
+/// An Log record from /api/log/
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct Log {
+    pub datetime: String,
+    pub facility: u32,
+    pub fqdn: String,
+    pub id: u32,
+    pub message: String,
+    pub message_class: MessageClass,
+    pub resource_uri: String,
+    pub severity: LogSeverity,
+    pub substitutions: Vec<Substitution>,
+    pub tag: String,
+}
+
+impl EndpointName for Log {
+    fn endpoint_name() -> &'static str {
+        "log"
     }
 }
 

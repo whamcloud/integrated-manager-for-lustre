@@ -43,7 +43,6 @@ pub(crate) enum Page {
     TargetDashboard(target_dashboard::Model),
     Jobstats,
     Login(login::Model),
-    Logs,
     Mgts(mgts::Model),
     NotFound,
     OstPools,
@@ -102,7 +101,6 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
             }),
             Route::Jobstats => Self::Jobstats,
             Route::Login => Self::Login(login::Model::default()),
-            Route::Logs => Self::Logs,
             Route::Mgt => Self::Mgts(mgts::Model::default()),
             Route::NotFound => Self::NotFound,
             Route::OstPools => Self::OstPools,
@@ -143,7 +141,6 @@ impl Page {
             | (Route::Dashboard, Self::Dashboard(dashboard::Model { .. }))
             | (Route::Jobstats, Self::Jobstats)
             | (Route::Login, Self::Login(_))
-            | (Route::Logs, Self::Logs)
             | (Route::Mgt, Self::Mgts(_))
             | (Route::NotFound, Self::NotFound)
             | (Route::OstPools, Self::OstPools)

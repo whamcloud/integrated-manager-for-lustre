@@ -1,6 +1,12 @@
 use crate::{
-    components::activity_indicator, ctx_help::CtxHelp, extensions::MergeAttrs as _, font_awesome, font_awesome_outline,
-    generated::css_classes::C, page::activity, route::Route, GMsg, ServerDate, HELP_PATH,
+    components::activity_indicator,
+    ctx_help::CtxHelp,
+    extensions::MergeAttrs as _,
+    font_awesome, font_awesome_outline,
+    generated::css_classes::C,
+    page::{activity, logs},
+    route::Route,
+    GMsg, ServerDate, HELP_PATH,
 };
 use iml_wire_types::{
     warp_drive::{ArcCache, Locks},
@@ -15,7 +21,7 @@ pub struct Model {
 
 pub enum Section {
     Activity(activity::Model),
-    Logs,
+    Logs(logs::Model),
 }
 
 #[derive(Clone, PartialEq)]
@@ -28,7 +34,7 @@ impl From<SectionSelector> for Section {
     fn from(section: SectionSelector) -> Self {
         match section {
             SectionSelector::Activity => Self::Activity(activity::Model::default()),
-            SectionSelector::Logs => Self::Logs,
+            SectionSelector::Logs => Self::Logs(logs::Model::default()),
         }
     }
 }
@@ -37,7 +43,7 @@ impl From<&Section> for SectionSelector {
     fn from(section: &Section) -> Self {
         match section {
             Section::Activity(_) => Self::Activity,
-            Section::Logs => Self::Logs,
+            Section::Logs(_) => Self::Logs,
         }
     }
 }
@@ -45,6 +51,7 @@ impl From<&Section> for SectionSelector {
 #[derive(Clone)]
 pub enum Msg {
     ActivitySection(activity::Msg),
+    LogsSection(logs::Msg),
     Open(SectionSelector),
     Close,
 }
@@ -60,10 +67,8 @@ pub fn update(msg: Msg, records: &ArcCache, model: &mut Model, orders: &mut impl
             let section = section.into();
 
             match &section {
-                Section::Activity(_) => {
-                    activity::init(&mut orders.proxy(Msg::ActivitySection));
-                }
-                Section::Logs => {}
+                Section::Activity(_) => activity::init(&mut orders.proxy(Msg::ActivitySection)),
+                Section::Logs(_) => logs::init(&mut orders.proxy(Msg::LogsSection)),
             }
 
             model.section = Some(section);
@@ -74,6 +79,11 @@ pub fn update(msg: Msg, records: &ArcCache, model: &mut Model, orders: &mut impl
         Msg::ActivitySection(msg) => {
             if let Some(Section::Activity(x)) = &mut model.section {
                 activity::update(msg, records, x, &mut orders.proxy(Msg::ActivitySection))
+            }
+        }
+        Msg::LogsSection(msg) => {
+            if let Some(Section::Logs(x)) = &mut model.section {
+                logs::update(msg, x, &mut orders.proxy(Msg::LogsSection))
             }
         }
     }
@@ -98,6 +108,7 @@ fn toggle_section(model: &Model) -> Node<Msg> {
 pub fn view(
     model: &Model,
     route: &Route,
+    cache: &ArcCache,
     activity_health: &activity_indicator::ActivityHealth,
     session: Option<&Session>,
     all_locks: &Locks,
@@ -131,15 +142,8 @@ pub fn view(
                         .map_msg(Msg::ActivitySection),
                 )
             }
-            Some(Section::Logs) => {
-                div![
-                    class![C.flex, C.flex_col, C.bg_blue_1000, C.lg__h_main_content],
-                    div![
-                        class![C.font_medium, C.text_lg, C.text_gray_500, C.pt_6, C.leading_none],
-                        "Logs"
-                    ],
-                    div![class![C.w_64]]
-                ]
+            Some(Section::Logs(x)) => {
+                section_container(logs::view(x, cache).els().map_msg(Msg::LogsSection))
             }
             None => empty![],
         }
@@ -163,8 +167,8 @@ fn side_panel_buttons(route: &Route, activity_health: &activity_indicator::Activ
             ],
             a![
                 class![C.cursor_pointer],
+                simple_ev(Ev::Click, Msg::Open(SectionSelector::Activity)),
                 activity_indicator::view(activity_health),
-                simple_ev(Ev::Click, Msg::Open(SectionSelector::Activity))
             ],
             a![
                 class![C.text_sm, C.group_hover__text_active, C.pt_2, C.cursor_pointer],
@@ -181,9 +185,14 @@ fn side_panel_buttons(route: &Route, activity_health: &activity_indicator::Activ
                 C.items_center,
                 C.justify_center,
             ],
-            a![font_awesome(class![C.h_8, C.w_8, C.text_pink_600], "book")],
+            a![
+                class![C.cursor_pointer],
+                simple_ev(Ev::Click, Msg::Open(SectionSelector::Logs)),
+                font_awesome(class![C.h_8, C.w_8, C.text_pink_600], "book"),
+            ],
             a![
                 class![C.text_sm, C.group_hover__text_active, C.text_gray_500, C.pt_2],
+                simple_ev(Ev::Click, Msg::Open(SectionSelector::Logs)),
                 "Logs"
             ]
         ],
@@ -203,7 +212,8 @@ fn section_container(children: impl View<Msg>) -> Node<Msg> {
             C.lg__h_main_content,
             C.pt_6,
             C.overflow_y_scroll,
-            C.flex_grow
+            C.flex_grow,
+            C.w_132
         ],
         children.els()
     ]
