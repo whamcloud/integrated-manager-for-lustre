@@ -15,4 +15,4 @@ seed = "=0.4.1"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"
-insta = "0.11"
+insta = "0.12"

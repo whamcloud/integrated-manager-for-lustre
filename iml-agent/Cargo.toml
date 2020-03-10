@@ -27,7 +27,7 @@ inotify = "0.8"
 lazy_static = "1.4.0"
 libc = "0.2"
 liblustreapi = { path = "../liblustreapi", version = "0.1" }
-lustre_collector = "0.2.11"
+lustre_collector = "0.2.12"
 native-tls = "0.2"
 parking_lot = "0.9"
 prettytable-rs = "0.8"
@@ -39,7 +39,7 @@ stream-cancel = "0.5"
 strfmt = "0.1.6"
 structopt = "0.3"
 tokio = { version = "0.2", features = ["fs", "process", "macros", "net"] }
-tokio-util = { version = "0.2", features = ["codec"] }
+tokio-util = { version = "0.3", features = ["codec"] }
 tracing = "0.1"
 tracing-subscriber = "0.2"
 url = "2.1"

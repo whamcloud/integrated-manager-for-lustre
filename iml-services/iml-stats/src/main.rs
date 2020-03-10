@@ -395,9 +395,20 @@ async fn main() -> Result<(), ImlStatsError> {
                         .add_tag("target", &*x.target)
                         .add_field("threads_started", x.value)])
                     }
-                    _ => {
-                        tracing::debug!("Received target stat type that is not implemented yet.");
+                    TargetStats::ConnectedClients(x) => {
+                        tracing::debug!("ConnectedClients - {:?}", x);
 
+                        Some(vec![Query::write_query(
+                            Timestamp::Nanoseconds(ts),
+                            "target",
+                        )
+                        .add_tag("host", host.0.as_ref())
+                        .add_tag("kind", x.kind.to_string())
+                        .add_tag("target", &*x.target)
+                        .add_field("connected_clients", x.value)])
+                    }
+                    TargetStats::JobStatsOst(_) => {
+                        // Not storing jobstats... yet.
                         None
                     }
                 },
