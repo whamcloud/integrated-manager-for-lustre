@@ -324,7 +324,43 @@ class ServiceConfig(CommandLine):
         log.info("Creating InfluxDB database...")
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_IML_DB)])
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_STRATAGEM_SCAN_DB)])
+        self.try_shell(
+            [
+                "influx",
+                "-execute",
+                'ALTER RETENTION POLICY "autogen" ON "{}" DURATION 90d SHARD DURATION 9d'.format(
+                    settings.INFLUXDB_STRATAGEM_SCAN_DB
+                ),
+            ]
+        )
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_IML_STATS_DB)])
+        self.try_shell(
+            [
+                "influx",
+                "-execute",
+                'CREATE RETENTION POLICY "a_quarter" ON "{}" DURATION 90d REPLICATION 1 SHARD DURATION 5d'.format(
+                    settings.INFLUXDB_IML_STATS_DB
+                ),
+            ]
+        )
+        self.try_shell(
+            [
+                "influx",
+                "-execute",
+                'CREATE CONTINUOUS QUERY "downsample" ON "{}" BEGIN SELECT mean(*) INTO "{}"."a_quarter".:MEASUREMENT FROM /.*/ GROUP BY time(30m) END'.format(
+                    settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_DB
+                ),
+            ]
+        )
+        self.try_shell(
+            [
+                "influx",
+                "-execute",
+                'ALTER RETENTION POLICY "autogen" ON "{}" DURATION 1d  REPLICATION 1 SHARD DURATION 2h DEFAULT'.format(
+                    settings.INFLUXDB_IML_STATS_DB
+                ),
+            ]
+        )
 
     def _setup_grafana(self):
         # grafana needs daemon-reload before enable and start
