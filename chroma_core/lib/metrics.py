@@ -10,7 +10,6 @@ from datetime import datetime
 from chroma_core.services import log_register
 from django.utils.timezone import utc
 from chroma_core.models import Point, Series, Stats, ManagedHost, ManagedTarget, ManagedFilesystem
-from chroma_core.lib.storage_plugin.api import statistics
 from chroma_core.lib import scheduler
 
 metrics_log = log_register("metrics")

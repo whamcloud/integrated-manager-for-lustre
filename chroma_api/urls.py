@@ -45,8 +45,6 @@ import chroma_api.group
 
 import chroma_api.volume
 import chroma_api.volume_node
-import chroma_api.storage_resource
-import chroma_api.storage_resource_class
 import chroma_api.network_interface
 import chroma_api.corosync
 
