@@ -21,7 +21,7 @@ from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 from chroma_core.lib.storage_plugin.log import storage_plugin_log
 from chroma_core.lib.util import all_subclasses
 from chroma_core.models.storage_plugin import StoragePluginRecord
-from chroma_core.models.storage_plugin import StorageResourceRecord, StorageResourceClass
+from chroma_core.models.storage_plugin import StorageResourceClass
 
 
 class PluginNotFound(Exception):

@@ -37,7 +37,6 @@ from chroma_core.models import (
     ManagedTargetMount,
     Volume,
     VolumeNode,
-    StorageResourceRecord,
 )
 
 

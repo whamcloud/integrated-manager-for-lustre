@@ -315,8 +315,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
 
 class Volume(models.Model):
-    storage_resource = models.ForeignKey("StorageResourceRecord", blank=True, null=True, on_delete=models.PROTECT)
-
     # Size may be null for VolumeNodes created when setting up
     # from a JSON file which just tells us a path.
     size = models.BigIntegerField(
@@ -339,7 +337,6 @@ class Volume(models.Model):
     __metaclass__ = DeletableMetaclass
 
     class Meta:
-        unique_together = ("storage_resource",)
         app_label = "chroma_core"
         ordering = ["id"]
 
@@ -454,8 +451,6 @@ class VolumeNode(models.Model):
     path = models.CharField(max_length=512, help_text="Device node path, e.g. '/dev/sda/'")
 
     __metaclass__ = DeletableMetaclass
-
-    storage_resource = models.ForeignKey("StorageResourceRecord", blank=True, null=True, on_delete=CASCADE)
 
     primary = models.BooleanField(
         default=False,
