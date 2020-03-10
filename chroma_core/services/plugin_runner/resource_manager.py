@@ -43,7 +43,7 @@ from chroma_core.models import ManagedHost, ManagedTarget
 from chroma_core.models import LNetNidsChangedAlert
 from chroma_core.models import Volume, VolumeNode
 from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
-from chroma_core.models import StorageResourceAlert, StorageResourceOffline
+from chroma_core.models import StorageResourceOffline
 from chroma_core.models import HaCluster
 from chroma_core.models.alert import AlertState
 from chroma_core.models import LNetConfiguration, NetworkInterface, Nid
