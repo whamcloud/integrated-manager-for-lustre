@@ -343,26 +343,3 @@ class StorageResourceClassStatistic(models.Model):
         unique_together = ("resource_class", "name")
         app_label = "chroma_core"
         ordering = ["id"]
-
-
-class StorageResourceOffline(AlertStateBase):
-    # Inability to contact a storage controller
-    # does not directly impact the availability of
-    # a filesystem, but it might hide issues which reduce it's performance,
-    # such as a RAID rebuild.  Be pessimistic, say WARNING.
-    default_severity = logging.WARNING
-
-    class Meta:
-        app_label = "chroma_core"
-        proxy = True
-
-    def alert_message(self):
-        return "%s not contactable" % self.alert_item.alias_or_name()
-
-    def end_event(self):
-        return AlertEvent(
-            message_str="Re-established contact with %s" % self.alert_item.alias_or_name(),
-            alert_item=self.alert_item,
-            alert=self,
-            severity=logging.INFO,
-        )
