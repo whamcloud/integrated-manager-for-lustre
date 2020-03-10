@@ -21,15 +21,3 @@ from chroma_core.models.sparse_model import VariantDescriptor
 # them in CharFields -- python doesn't impose a limit, so this
 # is pretty arbitrary
 MAX_NAME_LENGTH = 128
-
-
-class StoragePluginRecord(models.Model):
-    """Reference to a module defining a BaseStoragePlugin subclass"""
-
-    module_name = models.CharField(max_length=MAX_NAME_LENGTH)
-    internal = models.BooleanField(default=False)
-
-    class Meta:
-        unique_together = ("module_name",)
-        app_label = "chroma_core"
-        ordering = ["id"]
