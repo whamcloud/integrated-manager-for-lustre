@@ -1,57 +1,46 @@
-// Copyright (c) 2019 DDN. All rights reserved.
+// Copyright (c) 2020 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
 use crate::{
-    auth::csrf_token,
     components::{font_awesome_outline, stratagem::Command},
-    extensions::MergeAttrs,
+    extensions::{MergeAttrs, NodeExt, RequestExt},
     generated::css_classes::C,
 };
-use seed::{class, fetch, i, prelude::*, *};
+use iml_wire_types::{EndpointName, StratagemConfiguration};
+use seed::{prelude::*, *};
 
 pub async fn delete_stratagem<T: serde::de::DeserializeOwned + 'static>(
     config_id: u32,
 ) -> Result<fetch::FetchObject<T>, fetch::FetchObject<T>> {
-    let url = format!("/api/stratagem_configuration/{}/", config_id);
-
-    seed::fetch::Request::new(url)
-        .method(seed::fetch::Method::Delete)
-        .header("X-CSRFToken", &csrf_token().expect("Couldn't get csrf token."))
+    Request::api_item(StratagemConfiguration::endpoint_name(), config_id)
+        .method(fetch::Method::Delete)
+        .with_auth()
         .fetch_json(std::convert::identity)
         .await
 }
 
 pub fn view(is_valid: bool, disabled: bool) -> Node<Command> {
-    let cls = class![
-        C.bg_red_500,
-        C.hover__bg_red_700,
-        C.text_white,
-        C.font_bold,
-        C.py_2,
-        C.px_2,
-        C.rounded,
-        C.w_full,
-        C.text_sm,
-        C.col_span_2,
-    ];
-
-    let mut btn = button![
-        cls,
+    let btn = button![
+        class![
+            C.bg_red_500,
+            C.hover__bg_red_700,
+            C.text_white,
+            C.font_bold,
+            C.p_2,
+            C.rounded,
+            C.w_full,
+            C.text_sm,
+            C.col_span_2,
+        ],
         "Delete",
-        i![
-            class![C.px_3],
-            font_awesome_outline(class![C.inline, C.h_4, C.w_4], "times-circle")
-        ]
+        font_awesome_outline(class![C.inline, C.h_4, C.w_4, C.px_3], "times-circle")
     ];
 
     if is_valid && !disabled {
-        btn.add_listener(simple_ev(Ev::Click, Command::Delete));
+        btn.with_listener(simple_ev(Ev::Click, Command::Delete))
     } else {
-        btn = btn
-            .merge_attrs(attrs! {At::Disabled => "disabled"})
-            .merge_attrs(class![C.opacity_50, C.cursor_not_allowed]);
+        btn.merge_attrs(attrs! {At::Disabled => "disabled"})
+            .merge_attrs(class![C.opacity_50, C.cursor_not_allowed])
     }
-
-    btn
 }

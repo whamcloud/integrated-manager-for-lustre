@@ -84,7 +84,7 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
                         osts: Default::default(),
                         ost_paging: Default::default(),
                         rows: Default::default(),
-                        stratagem: stratagem::Model::new(Arc::clone(&x)),
+                        stratagem: stratagem::Model::new(Arc::clone(x)),
                     }))
                 })
                 .unwrap_or_default(),
