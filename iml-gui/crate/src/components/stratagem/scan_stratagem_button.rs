@@ -1,4 +1,4 @@
-// Copyright (c) 2019 DDN. All rights reserved.
+// Copyright (c) 2020 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -31,24 +31,17 @@ impl Model {
 #[derive(Clone)]
 pub enum Msg {
     ScanStratagemModal(Box<scan_stratagem_modal::Msg>),
-    ShowModal,
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::ScanStratagemModal(msg) => {
-            log!("Got scan staragem modal message");
             scan_stratagem_modal::update(
                 *msg,
                 &mut model.scan_stratagem_modal,
                 &mut orders.proxy(|x| Msg::ScanStratagemModal(Box::new(x))),
             );
         }
-        Msg::ShowModal => scan_stratagem_modal::update(
-            scan_stratagem_modal::Msg::Modal(modal::Msg::Open),
-            &mut model.scan_stratagem_modal,
-            &mut orders.proxy(|_| Msg::ShowModal),
-        ),
     }
 }
 
@@ -71,7 +64,9 @@ pub fn view(model: &Model) -> Vec<Node<Msg>> {
     ];
 
     if !model.disabled && !model.locked && !model.scan_stratagem_modal.scanning {
-        scan_stratagem_button.add_listener(ev(Ev::Click, |_| Msg::ShowModal));
+        scan_stratagem_button.add_listener(ev(Ev::Click, |_| {
+            Msg::ScanStratagemModal(Box::new(scan_stratagem_modal::Msg::Modal(modal::Msg::Open)))
+        }));
     } else {
         scan_stratagem_button = scan_stratagem_button
             .merge_attrs(attrs! {At::Disabled => "disabled"})

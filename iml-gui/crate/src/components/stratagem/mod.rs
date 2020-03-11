@@ -8,8 +8,7 @@ use crate::{
 use futures::TryFutureExt;
 use iml_wire_types::{db::StratagemConfiguration, warp_drive::ArcCache, warp_drive::Locks, Filesystem, ToCompositeId};
 use seed::{prelude::*, *};
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 pub(crate) mod delete_stratagem_button;
 pub(crate) mod enable_stratagem_button;
@@ -47,6 +46,13 @@ pub struct StratagemEnable {
     pub purge_duration: Option<u64>,
 }
 
+#[derive(Debug, serde::Serialize)]
+pub struct StratagemScan {
+    pub filesystem: u32,
+    pub report_duration: Option<u64>,
+    pub purge_duration: Option<u64>,
+}
+
 #[derive(Clone, Debug)]
 pub enum Command {
     Update,
@@ -57,13 +63,6 @@ pub enum Command {
 enum State {
     Disabled,
     Enabled(Box<Config>),
-}
-
-#[derive(Debug, serde::Serialize)]
-pub struct StratagemScan {
-    pub filesystem: u32,
-    pub report_duration: Option<u64>,
-    pub purge_duration: Option<u64>,
 }
 
 pub struct Model {
@@ -372,7 +371,7 @@ pub(crate) fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut
                 };
 
                 if let Some(conf) = &model.stratagem_config {
-                    handle_stratagem_config_update(&mut cfg, &conf);
+                    handle_stratagem_config_update(&mut cfg, conf);
                 }
 
                 cfg.validate();
@@ -394,7 +393,7 @@ pub(crate) fn view(model: &Model, all_locks: &Locks) -> Node<Msg> {
     match &model.state {
         State::Disabled => empty![],
         State::Enabled(config) => {
-            let locked = filesystem_locked(&model.fs, &all_locks);
+            let locked = filesystem_locked(&model.fs, all_locks);
 
             let last_scan = format!(
                 "Last Scanned: {}",
@@ -428,7 +427,7 @@ pub(crate) fn view(model: &Model, all_locks: &Locks) -> Node<Msg> {
                         vars: config.grafana_vars.clone()
                     })
                 ),
-                stratagem_config(&config, locked)
+                stratagem_config(config, locked)
             ]
         }
     }
