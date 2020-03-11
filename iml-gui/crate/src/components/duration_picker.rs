@@ -28,7 +28,7 @@ impl fmt::Display for Unit {
 
 impl Default for Unit {
     fn default() -> Self {
-        Unit::Days
+        Self::Days
     }
 }
 
@@ -201,7 +201,7 @@ pub fn view(model: &Model, mut input: Node<Msg>) -> Node<Msg> {
 
     let validation_message = &model.validation_message;
     let el = if let (Some(msg), false) = (validation_message, model.disabled) {
-        tooltip::error_view(&msg, Placement::Left).merge_attrs(class![C.block])
+        tooltip::error_view(msg, Placement::Left).merge_attrs(class![C.block])
     } else {
         empty![]
     };
