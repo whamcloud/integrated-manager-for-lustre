@@ -785,6 +785,7 @@ pub fn main_panels(model: &Model, children: impl View<Msg>) -> impl View<Msg> {
             status_section::view(
                 &model.status_section,
                 &model.route,
+                &model.records,
                 &model.activity_health,
                 model.auth.get_session(),
                 &model.locks,
@@ -820,7 +821,6 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::FsDashboard(page) => main_panels(model, page::fs_dashboard::view(page)).els(),
         Page::Jobstats => main_panels(model, page::jobstats::view(model)).els(),
         Page::Login(x) => page::login::view(x).els().map_msg(Msg::Login),
-        Page::Logs => main_panels(model, page::logs::view(model)).els(),
         Page::Mgts(x) => main_panels(
             model,
             page::mgts::view(&model.records, x, &model.locks, model.auth.get_session())

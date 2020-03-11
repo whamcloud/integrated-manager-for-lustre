@@ -11,7 +11,7 @@ pub fn server_link<T>(uri: Option<&String>, txt: &str) -> Node<T> {
             txt
         ]
     } else {
-        plain!("N/A")
+        plain!["N/A"]
     }
 }
 
