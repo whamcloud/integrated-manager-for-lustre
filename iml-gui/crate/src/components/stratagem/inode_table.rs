@@ -63,7 +63,7 @@ pub(crate) fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, 
     match msg {
         Msg::FetchInodes => {
             model.cancel = None;
-            let url:String = format!("influx?db=iml_stratagem_scans&epoch=ns&q=SELECT%20counter_name,%20count,%20size%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27%20and%20fs_name=%27{}%27%20limit%2020", &model.fs_name);
+            let url:String = format!("/influx?db=iml_stratagem_scans&epoch=ns&q=SELECT%20counter_name,%20count,%20size%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27%20and%20fs_name=%27{}%27%20limit%2020", &model.fs_name);
             let request = seed::fetch::Request::new(url);
 
             orders

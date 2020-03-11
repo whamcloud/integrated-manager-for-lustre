@@ -57,7 +57,8 @@ pub fn view(model: &Model) -> Vec<Node<Msg>> {
             C.px_2,
             C.rounded,
             C.w_full,
-            C.text_sm
+            C.text_sm,
+            C.ml_2,
         ],
         "Scan Filesystem Now",
         font_awesome_outline(class![C.inline, C.h_4, C.w_4], "clock")

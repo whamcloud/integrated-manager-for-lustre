@@ -36,6 +36,7 @@ pub fn view(is_valid: bool, disabled: bool) -> Node<Command> {
             C.w_full,
             C.text_sm,
             C.col_span_2,
+            C.ml_2,
         ],
         "Enable Scan Interval",
         font_awesome_outline(class![C.inline, C.h_4, C.w_4, C.px_3], "clock")
