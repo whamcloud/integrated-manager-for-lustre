@@ -1,12 +1,11 @@
-// Copyright (c) 2019 DDN. All rights reserved.
+// Copyright (c) 2020 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in th e LICENSE file.
 
-use super::super::environment::MAX_SAFE_INTEGER;
 use crate::{
     components::{dropdown, font_awesome, tooltip, Placement},
-    extensions::MergeAttrs,
-    extensions::NodeExt as _,
+    environment::MAX_SAFE_INTEGER,
+    extensions::{MergeAttrs as _, NodeExt as _},
     generated::css_classes::C,
 };
 use seed::{prelude::*, *};
@@ -81,7 +80,6 @@ pub fn update(msg: Msg, model: &mut Model) {
             let value = input_el.value_as_number();
 
             model.value = if value.is_nan() { None } else { Some(value as u64) };
-            log!(input_el.validation_message());
             model.validation_message = input_el.validation_message().ok().filter(|x| x != "");
         }
         Msg::Dropdown(msg) => {
@@ -122,44 +120,34 @@ fn get_unit_value(unit: Unit, val: u64) -> f64 {
 
 pub fn convert_ms_to_max_unit(val: u64) -> Option<(Unit, u64)> {
     let days = get_unit_value(Unit::Days, val);
-    let mut result = if days.fract() == 0.0 {
-        Some((Unit::Days, days as u64))
-    } else {
-        None
+
+    if days.fract() == 0.0 {
+        return Some((Unit::Days, days as u64));
     };
 
-    if result == None {
-        let hours = get_unit_value(Unit::Hours, val);
-        result = if hours.fract() == 0.0 {
-            Some((Unit::Hours, hours as u64))
-        } else {
-            None
-        };
-    }
+    let hours = get_unit_value(Unit::Hours, val);
 
-    if result == None {
-        let minutes = get_unit_value(Unit::Minutes, val);
-        result = if minutes.fract() == 0.0 {
-            Some((Unit::Minutes, minutes as u64))
-        } else {
-            None
-        };
-    }
+    if hours.fract() == 0.0 {
+        return Some((Unit::Hours, hours as u64));
+    };
 
-    if result == None {
-        let seconds = get_unit_value(Unit::Seconds, val);
-        result = if seconds.fract() == 0.0 {
-            Some((Unit::Seconds, seconds as u64))
-        } else {
-            None
-        };
-    }
+    let minutes = get_unit_value(Unit::Minutes, val);
 
-    result
+    if minutes.fract() == 0.0 {
+        return Some((Unit::Minutes, minutes as u64));
+    };
+
+    let seconds = get_unit_value(Unit::Seconds, val);
+
+    if seconds.fract() == 0.0 {
+        return Some((Unit::Seconds, seconds as u64));
+    };
+
+    None
 }
 
 fn dropdown_items(unit: Unit, exclude_units: &[Unit]) -> impl View<Msg> {
-    let xs = vec![Unit::Days, Unit::Hours, Unit::Minutes, Unit::Seconds]
+    vec![Unit::Days, Unit::Hours, Unit::Minutes, Unit::Seconds]
         .into_iter()
         .filter(|x| x != &unit)
         .filter(|x| !exclude_units.contains(x))
@@ -171,17 +159,14 @@ fn dropdown_items(unit: Unit, exclude_units: &[Unit]) -> impl View<Msg> {
                 }))
                 .with_listener(mouse_ev(Ev::Click, move |_| Msg::Dropdown(dropdown::Msg::Close)))
         })
-        .collect::<Vec<_>>();
-
-    nodes![xs]
+        .collect::<Vec<_>>()
 }
 
 pub fn view(model: &Model, mut input: Node<Msg>) -> Node<Msg> {
     let button_cls = class![
         C.text_white,
         C.font_bold,
-        C.py_2,
-        C.px_2,
+        C.p_2,
         C.rounded,
         C.rounded_l_none,
         C.w_full,
