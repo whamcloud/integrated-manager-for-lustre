@@ -3,7 +3,7 @@ use crate::{
         font_awesome, modal,
         stratagem::{duration_picker, ActionResponse, StratagemScan},
     },
-    extensions::{MergeAttrs, NodeExt},
+    extensions::{MergeAttrs as _, NodeExt as _},
     generated::css_classes::C,
     key_codes, GMsg, RequestExt,
 };
@@ -32,7 +32,6 @@ pub enum Msg {
     ReportDurationPicker(duration_picker::Msg),
     PurgeDurationPicker(duration_picker::Msg),
     SubmitScan,
-    Scanning,
     Scanned(Box<fetch::ResponseDataResult<ActionResponse>>),
     Modal(modal::Msg),
     Noop,
@@ -55,24 +54,17 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .method(fetch::Method::Post)
                 .send_json(&data);
 
-            orders
-                .perform_cmd(req.fetch_json_data(|x| Msg::Scanned(Box::new(x))))
-                .send_msg(Msg::Scanning);
+            orders.perform_cmd(req.fetch_json_data(|x| Msg::Scanned(Box::new(x))));
+        }
+        Msg::Scanned(_msg) => {
+            //@TODO: Launch command modal here
 
-            log!("fetch scan stratagem endpoint", model.fs_id);
-        }
-        Msg::Scanning => {
-            // Launch command modal here
-        }
-        Msg::Scanned(msg) => {
-            log!("Finished scanning. Received msg:", msg);
             model.scanning = false;
             model.report_duration.reset();
             model.purge_duration.reset();
             orders.proxy(Msg::Modal).send_msg(modal::Msg::Close);
         }
         Msg::Modal(msg) => {
-            log!("Sending close message to modal");
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
         }
         Msg::Noop => {}
@@ -97,7 +89,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
         Msg::Modal,
         modal::content_view(
             Msg::Modal,
-            div![vec![
+            div![
                 modal::title_view(
                     Msg::Modal,
                     span![
@@ -131,7 +123,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
                 .merge_attrs(class![C.grid, C.grid_cols_6])
                 .map_msg(Msg::PurgeDurationPicker),
                 modal::footer_view(vec![scan_now_button(model.scanning), cancel_button()]).merge_attrs(class![C.pt_8]),
-            ]],
+            ],
         )
         .with_listener(keyboard_ev(Ev::KeyDown, move |ev| match ev.key_code() {
             key_codes::ESC => Msg::Modal(modal::Msg::Close),

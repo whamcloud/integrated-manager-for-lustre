@@ -4,7 +4,7 @@
 
 use crate::{
     components::{font_awesome_outline, modal, stratagem::scan_stratagem_modal},
-    extensions::MergeAttrs,
+    extensions::{MergeAttrs as _, NodeExt as _},
     generated::css_classes::C,
     GMsg,
 };
@@ -46,7 +46,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 }
 
 pub fn view(model: &Model) -> Vec<Node<Msg>> {
-    let mut scan_stratagem_button = button![
+    let scan_stratagem_button = button![
         class![
             C.bg_blue_500,
             C.hover__bg_blue_700,
@@ -60,21 +60,20 @@ pub fn view(model: &Model) -> Vec<Node<Msg>> {
             C.text_sm
         ],
         "Scan Filesystem Now",
-        font_awesome_outline(class![C.inline, C.h_4, C.w_4], "")
+        font_awesome_outline(class![C.inline, C.h_4, C.w_4], "clock")
     ];
 
-    if !model.disabled && !model.locked && !model.scan_stratagem_modal.scanning {
-        scan_stratagem_button.add_listener(ev(Ev::Click, |_| {
-            Msg::ScanStratagemModal(Box::new(scan_stratagem_modal::Msg::Modal(modal::Msg::Open)))
-        }));
+    let scan_stratagem_button = if !model.disabled && !model.locked && !model.scan_stratagem_modal.scanning {
+        scan_stratagem_button.with_listener(ev(Ev::Click, |_| scan_stratagem_modal::Msg::Modal(modal::Msg::Open)))
     } else {
-        scan_stratagem_button = scan_stratagem_button
+        scan_stratagem_button
             .merge_attrs(attrs! {At::Disabled => "disabled"})
-            .merge_attrs(class![C.cursor_not_allowed, C.opacity_50]);
-    }
+            .merge_attrs(class![C.cursor_not_allowed, C.opacity_50])
+    };
 
-    vec![
+    nodes![
         scan_stratagem_button,
-        scan_stratagem_modal::view(&model.scan_stratagem_modal).map_msg(|x| Msg::ScanStratagemModal(Box::new(x))),
+        scan_stratagem_modal::view(&model.scan_stratagem_modal),
     ]
+    .map_msg(|x| Msg::ScanStratagemModal(Box::new(x)))
 }
