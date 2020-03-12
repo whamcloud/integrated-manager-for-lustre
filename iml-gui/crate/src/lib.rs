@@ -25,14 +25,14 @@ mod test_utils;
 
 use components::{
     breadcrumbs::BreadCrumbs, font_awesome, font_awesome_outline, loading, restrict, stratagem, tree,
-    update_activity_health, ActivityHealth,
+    update_activity_health, ActivityHealth, command_modal,
 };
 pub(crate) use extensions::*;
 use futures::channel::oneshot;
 use generated::css_classes::C;
 use iml_wire_types::{
     warp_drive::{self, ArcRecord},
-    Conf, GroupType, Session,
+    Conf, GroupType, Session, Command
 };
 use lazy_static::lazy_static;
 use page::{Page, RecordChange};
@@ -130,6 +130,7 @@ pub struct Model {
     auth: auth::Model,
     breadcrumbs: BreadCrumbs<Route<'static>>,
     breakpoint_size: breakpoints::Size,
+    command_modal: command_modal::Model,
     conf: Conf,
     loading: Loading,
     locks: warp_drive::Locks,
@@ -193,6 +194,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
         auth: auth::Model::default(),
         breadcrumbs: BreadCrumbs::default(),
         breakpoint_size: breakpoints::size(),
+        command_modal: command_modal::Model::default(),
         conf: Conf::default(),
         loading: Loading {
             session: Some(session_tx),
@@ -239,6 +241,7 @@ pub enum GMsg {
     RouteChange(Url),
     AuthProxy(Box<auth::Msg>),
     ServerDate(chrono::DateTime<chrono::offset::FixedOffset>),
+    OpenCommandModal(Command),
 }
 
 fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -251,6 +254,9 @@ fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
             orders.proxy(Msg::Auth).send_msg(msg);
         }
         GMsg::ServerDate(d) => model.server_date.set(d),
+        GMsg::OpenCommandModal(c) => {
+            log!("GMsg::OpenCommandModal", c);
+        }
     }
 }
 

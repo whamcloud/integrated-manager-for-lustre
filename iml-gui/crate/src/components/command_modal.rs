@@ -9,7 +9,6 @@ use crate::{
 };
 use iml_wire_types::{warp_drive::ErasedRecord, AvailableAction, Command, EndpointName};
 use seed::{prelude::*, *};
-use std::sync::Arc;
 
 #[derive(Default, Debug)]
 pub struct Model {

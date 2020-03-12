@@ -1,4 +1,3 @@
-pub mod command_action_modal;
 pub mod confirm_action_modal;
 
 use crate::{
@@ -15,7 +14,6 @@ use iml_wire_types::{
 use seed::{prelude::*, *};
 use serde_json::json;
 use std::{collections::BTreeMap, iter, sync::Arc, time::Duration};
-use gloo_timers::future::TimeoutFuture;
 
 type ActionMap = BTreeMap<String, Vec<(Arc<AvailableAction>, Arc<dyn ErasedRecord>)>>;
 
@@ -61,7 +59,6 @@ pub enum State {
     Activating,
     Active,
     Confirming(confirm_action_modal::Action),
-    RunningCommand,
 }
 
 impl Default for State {
@@ -88,7 +85,6 @@ pub struct Model {
     dropdown_state: dropdown::Model,
     pub cancel: Option<oneshot::Sender<()>>,
     pub confirm_modal: confirm_action_modal::Model,
-    pub command_modal: command_action_modal::Model,
 }
 
 impl Model {
@@ -101,7 +97,6 @@ impl Model {
             dropdown_state: dropdown::Model::default(),
             cancel: None,
             confirm_modal: confirm_action_modal::Model::default(),
-            command_modal: command_action_modal::Model::default(),
         }
     }
     fn abort_request(&mut self) {
@@ -130,7 +125,6 @@ pub enum Msg {
     Fetched(Box<fetch::ResponseDataResult<AvailableActions>>),
     ActionSelected(Arc<AvailableAction>, Arc<dyn ErasedRecord>),
     ConfirmJobModal(confirm_action_modal::Msg),
-    CommandJobModal(command_action_modal::Msg),
     DryRunSent(
         Box<fetch::ResponseDataResult<DryRun>>,
         Arc<AvailableAction>,
@@ -238,15 +232,7 @@ pub fn update(msg: IdMsg, cache: &ArcCache, model: &mut Model, orders: &mut impl
                     &mut model.confirm_modal,
                     &mut orders.proxy(move |m| IdMsg(id, Msg::ConfirmJobModal(m))),
                 );
-                if model.confirm_modal.ready_to_command {
-                    orders.send_msg(IdMsg(id, Msg::CommandJobModal(command_action_modal::Msg::RunCommand)));
-                };
             }
-        }
-        Msg::CommandJobModal(msg) => {
-            model.confirm_modal.ready_to_command = false;
-            model.state = State::RunningCommand;
-            log!("action_dropdown.CommandJobModal", msg);
         }
         Msg::Dropdown(msg) => {
             dropdown::update(msg, &mut model.dropdown_state);
@@ -372,17 +358,6 @@ pub fn unstyled_view<'a>(
                     font_awesome(class![C.w_4, C.h_4, C.inline, C.ml_1, C.pulse], "spinner"),
                 ],
                 con_view,
-            ]
-        }
-        State::RunningCommand => {
-            let com_view = command_action_modal::view(&model.command_modal).map_msg(move |x| IdMsg(id, Msg::CommandJobModal(x)));
-            div![
-                button![
-                    cls.merge_attrs(disabled_cls),
-                    "Command",
-                    font_awesome(class![C.w_4, C.h_4, C.inline, C.ml_1, C.pulse], "spinner"),
-                ],
-                com_view,
             ]
         }
     }

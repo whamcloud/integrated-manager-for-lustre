@@ -1,6 +1,6 @@
 use crate::{
     components::{
-        action_dropdown::{state_change, DryRun, command_action_modal},
+        action_dropdown::{state_change, DryRun},
         font_awesome, modal,
     },
     extensions::{MergeAttrs, NodeExt},
@@ -26,7 +26,6 @@ pub struct SendCmd<'a, T> {
 #[derive(Default, Debug)]
 pub struct Model {
     pub modal: modal::Model,
-    pub ready_to_command: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -68,7 +67,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .send_msg(Msg::Modal(modal::Msg::Close));
         }
         Msg::JobSent(_) => {
-            //@TODO: Open command modal here
             log!("TODO: Open command modal here, JobSent");
         }
         Msg::SendStateChange(action, erased_record) => {
@@ -78,10 +76,18 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .perform_cmd(req.fetch_json_data(|x| Msg::StateChangeSent(Box::new(x))))
                 .send_msg(Msg::Modal(modal::Msg::Close));
         }
-        Msg::StateChangeSent(_) => {
-            //@TODO: Open command modal here
+        Msg::StateChangeSent(data_result) => {
             log!("TODO: Open command modal here, StateChangeSent");
-            model.ready_to_command = true;
+            let data_result: Box<fetch::ResponseDataResult<Command>> = data_result;
+            match *data_result {
+                Ok(command) => {
+                    orders.send_g_msg(GMsg::OpenCommandModal(command));
+                }
+                Err(err) => {
+                    error!("An error has occurred {:?}", err);
+                    orders.skip();
+                }
+            }
         }
         Msg::Modal(msg) => {
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
