@@ -594,6 +594,9 @@ fn handle_record_change(
             warp_drive::Record::ContentType(x) => {
                 model.records.content_type.insert(x.id, Arc::new(x));
             }
+            warp_drive::Record::Group(x) => {
+                model.records.group.insert(x.id, Arc::new(x));
+            }
             warp_drive::Record::Host(x) => {
                 let id = x.id;
                 if model.records.host.insert(x.id, Arc::new(x)).is_none() {
@@ -643,6 +646,12 @@ fn handle_record_change(
                     .send_msg(page::target::Msg::UpdateTarget(Arc::clone(&x)));
 
                 orders.proxy(Msg::MgtsPage).send_msg(page::mgts::Msg::AddTarget(x));
+            }
+            warp_drive::Record::User(x) => {
+                model.records.user.insert(x.id, Arc::new(x));
+            }
+            warp_drive::Record::UserGroup(x) => {
+                model.records.user_group.insert(x.id, Arc::new(x));
             }
             warp_drive::Record::Volume(x) => {
                 model.records.volume.insert(x.id, Arc::new(x));
@@ -854,7 +863,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
                 .map_msg(Msg::TargetPage),
         )
         .els(),
-        Page::Users => main_panels(model, page::users::view(model)).els(),
+        Page::Users => main_panels(model, page::users::view(&model.records)).els(),
         Page::User(x) => main_panels(model, page::user::view(x)).els(),
         Page::Volumes => main_panels(model, page::volumes::view(model)).els(),
         Page::Volume(x) => main_panels(model, page::volume::view(x)).els(),
