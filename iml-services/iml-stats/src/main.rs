@@ -7,7 +7,7 @@ use iml_manager_env::{get_influxdb_addr, get_influxdb_metrics_db};
 use iml_service_queue::service_queue::consume_data;
 use iml_stats::error::ImlStatsError;
 use influxdb::{Client, Query, Timestamp};
-use lustre_collector::{HostStats, LNetStats, NodeStats, Record, TargetStats};
+use lustre_collector::{HostStats, LNetStats, NodeStats, Record, Target, TargetStats};
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 #[tokio::main]
@@ -129,6 +129,7 @@ async fn main() -> Result<(), ImlStatsError> {
                         .add_tag("host", host.0.as_ref())
                         .add_tag("target", &*x.target)
                         .add_tag("kind", x.kind.to_string())
+                        .add_tag("fs", fs_name(&x.target))
                         .add_field("files_free", x.value)])
                     }
                     TargetStats::FilesTotal(x) => {
@@ -140,6 +141,7 @@ async fn main() -> Result<(), ImlStatsError> {
                         .add_tag("host", host.0.as_ref())
                         .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
+                        .add_tag("fs", fs_name(&x.target))
                         .add_field("files_total", x.value)])
                     }
                     TargetStats::FsType(x) => {
@@ -162,6 +164,7 @@ async fn main() -> Result<(), ImlStatsError> {
                         .add_tag("host", host.0.as_ref())
                         .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
+                        .add_tag("fs", fs_name(&x.target))
                         .add_field("bytes_avail", x.value)])
                     }
                     TargetStats::BytesFree(x) => {
@@ -173,6 +176,7 @@ async fn main() -> Result<(), ImlStatsError> {
                         .add_tag("host", host.0.as_ref())
                         .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
+                        .add_tag("fs", fs_name(&x.target))
                         .add_field("bytes_free", x.value)])
                     }
                     TargetStats::BytesTotal(x) => {
@@ -184,6 +188,7 @@ async fn main() -> Result<(), ImlStatsError> {
                         .add_tag("host", host.0.as_ref())
                         .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
+                        .add_tag("fs", fs_name(&x.target))
                         .add_field("bytes_total", x.value)])
                     }
                     TargetStats::NumExports(x) => {
@@ -283,6 +288,7 @@ async fn main() -> Result<(), ImlStatsError> {
                         .add_tag("host", host.0.as_ref())
                         .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
+                        .add_tag("fs", fs_name(&x.target))
                         .add_field("lock_count", x.value)])
                     }
                     TargetStats::LockTimeouts(x) => {
@@ -405,6 +411,7 @@ async fn main() -> Result<(), ImlStatsError> {
                         .add_tag("host", host.0.as_ref())
                         .add_tag("kind", x.kind.to_string())
                         .add_tag("target", &*x.target)
+                        .add_tag("fs", fs_name(&x.target))
                         .add_field("connected_clients", x.value)])
                     }
                     TargetStats::JobStatsOst(_) => {
@@ -516,4 +523,10 @@ async fn main() -> Result<(), ImlStatsError> {
     }
 
     Ok(())
+}
+
+fn fs_name(t: &Target) -> &str {
+    let s = &*t;
+
+    s.split_at(s.rfind('-').unwrap_or(0)).0
 }
