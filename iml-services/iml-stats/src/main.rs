@@ -23,13 +23,13 @@ async fn main() -> Result<(), ImlStatsError> {
     tracing::debug!("influx_url: {}", &influx_url);
 
     while let Some((host, xs)) = s.try_next().await? {
-        tracing::info!("Incoming stats: {}: {:?}", host, xs);
-        tracing::info!("host: {:?}", host.0);
+        tracing::debug!("Incoming stats: {}: {:?}", host, xs);
+        tracing::debug!("host: {:?}", host.0);
         let client = Client::new(&influx_url, get_influxdb_metrics_db());
         let ts = std::time::SystemTime::now()
             .duration_since(std::time::SystemTime::UNIX_EPOCH)?
             .as_nanos() as usize;
-        tracing::info!("ts: {}", ts);
+        tracing::debug!("ts: {}", ts);
 
         //Write the entry into the influxdb database
         for record in xs {

@@ -321,7 +321,7 @@ fn targets(
             },
             vec![
                 t::thead_view(vec![
-                    t::th_left(plain!["Name"]).merge_attrs(class![C.w_48]),
+                    t::th_left(plain!["Name"]).merge_attrs(class![C.w_32]),
                     t::th_left(plain!["Volume"]),
                     t::th_left(plain!["Primary Server"]).merge_attrs(class![C.w_48]),
                     t::th_left(plain!["Failover Server"]).merge_attrs(class![C.w_48]),
