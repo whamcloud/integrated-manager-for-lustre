@@ -327,6 +327,8 @@ class ServiceConfig(CommandLine):
         self.try_shell(
             [
                 "influx",
+                "-database",
+                settings.INFLUXDB_STRATAGEM_SCAN_DB,
                 "-execute",
                 'ALTER RETENTION POLICY "autogen" ON "{}" DURATION 90d SHARD DURATION 9d'.format(
                     settings.INFLUXDB_STRATAGEM_SCAN_DB
@@ -337,17 +339,21 @@ class ServiceConfig(CommandLine):
         self.try_shell(
             [
                 "influx",
+                "-database",
+                settings.INFLUXDB_IML_STATS_DB,
                 "-execute",
-                'CREATE RETENTION POLICY "a_quarter" ON "{}" DURATION 90d REPLICATION 1 SHARD DURATION 5d'.format(
-                    settings.INFLUXDB_IML_STATS_DB
+                'CREATE RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
+                    settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_LONG_DURATION,
                 ),
             ]
         )
         self.try_shell(
             [
                 "influx",
+                "-database",
+                settings.INFLUXDB_IML_STATS_DB,
                 "-execute",
-                'CREATE CONTINUOUS QUERY "downsample" ON "{}" BEGIN SELECT mean(*) INTO "{}"."a_quarter".:MEASUREMENT FROM /.*/ GROUP BY time(30m) END'.format(
+                'CREATE CONTINUOUS QUERY "downsample" ON "{}" BEGIN SELECT mean(*) INTO "{}"."long_term".:MEASUREMENT FROM /.*/ GROUP BY time(30m),* END'.format(
                     settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_DB
                 ),
             ]
@@ -355,6 +361,8 @@ class ServiceConfig(CommandLine):
         self.try_shell(
             [
                 "influx",
+                "-database",
+                settings.INFLUXDB_IML_STATS_DB,
                 "-execute",
                 'ALTER RETENTION POLICY "autogen" ON "{}" DURATION 1d  REPLICATION 1 SHARD DURATION 2h DEFAULT'.format(
                     settings.INFLUXDB_IML_STATS_DB
