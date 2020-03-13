@@ -51,7 +51,7 @@ fn indicator<T>(lcks: &HashSet<LockChange>) -> Node<T> {
         class![C.cursor_pointer],
         attrs! {At::TabIndex => 0},
         font_awesome(class![C.inline, C.w_4, C.h_4], "lock"),
-        tooltip::hover_view(&tooltip.join(", "), Placement::Top),
+        tooltip::view(&tooltip.join(", "), Placement::Top),
         popover::view(popup, Placement::Bottom)
     ]
 }

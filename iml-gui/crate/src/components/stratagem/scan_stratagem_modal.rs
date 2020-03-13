@@ -107,12 +107,16 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
                         font_awesome(class![C.w_4, C.h_4, C.inline, C.ml_2], "chart-bar")
                     ]
                 ),
-                label!["Generate report for files older than:"],
+                label![
+                    attrs! {At::For => "report_duration"},
+                    "Generate report for files older than:"
+                ],
                 duration_picker::view(
                     &model.report_duration,
                     input![
                         &input_cls,
                         attrs! {
+                            At::Id => "report_duration",
                             At::AutoFocus => true,
                             At::Placeholder => "Optional",
                         },
@@ -120,12 +124,13 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
                 )
                 .merge_attrs(class![C.grid, C.grid_cols_6, C.mb_2])
                 .map_msg(Msg::ReportDurationPicker),
-                label!["Purge files older than:"],
+                label![attrs! {At::For => "purge_duration"}, "Purge files older than:"],
                 duration_picker::view(
                     &model.purge_duration,
                     input![
                         &input_cls,
                         attrs! {
+                            At::Id => "purge_duration",
                             At::Placeholder => "Optional",
                         },
                     ],

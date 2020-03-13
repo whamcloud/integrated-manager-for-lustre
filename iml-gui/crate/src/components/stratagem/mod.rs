@@ -286,14 +286,12 @@ pub(crate) fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut
                 }
             }
             Msg::CmdSent(fetch_object) => match fetch_object.response() {
-                Ok(response) => {
-                    log!("Response data: {:#?}", response.data);
-                    // Give feedback that stratagem has been set
+                Ok(_) => {
                     orders.skip();
                 }
                 Err(fail_reason) => {
                     config.disabled = false;
-                    log!("Fetch error: {:#?}", fail_reason);
+                    error!("Fetch error", fail_reason);
                 }
             },
             Msg::SetStratagemConfig(conf) => {
@@ -481,55 +479,52 @@ pub fn config_view(model: &Config, locked: bool) -> Node<Msg> {
     ];
 
     let mut configuration_component = vec![
-        span!["Scan filesystem every"],
-        div![
-            class!["input-group"],
-            duration_picker::view(
-                &model.scan_duration_picker,
-                input![
-                    &input_cls,
-                    attrs! {
-                        At::AutoFocus => true,
-                        At::Required => true,
-                        At::Placeholder => "Required",
-                    },
-                ],
-            )
-            .merge_attrs(class![C.grid, C.grid_cols_6])
-            .map_msg(Msg::ScanDurationPicker)
+        label![attrs! {At::For => "scan_duration"}, "Scan filesystem every"],
+        duration_picker::view(
+            &model.scan_duration_picker,
+            input![
+                &input_cls,
+                attrs! {
+                    At::Id => "scan_duration",
+                    At::AutoFocus => true,
+                    At::Required => true,
+                    At::Placeholder => "Required",
+                },
+            ],
+        )
+        .merge_attrs(class![C.grid, C.grid_cols_6])
+        .map_msg(Msg::ScanDurationPicker),
+        label![
+            attrs! {At::For => "report_duration"},
+            "Generate report on files older than"
         ],
-        span!["Generate report on files older than"],
-        div![
-            class!["input-group"],
-            duration_picker::view(
-                &model.report_duration_picker,
-                input![
-                    &input_cls,
-                    attrs! {
-                        At::AutoFocus => false,
-                        At::Placeholder => "Optional",
-                    },
-                ]
-            )
-            .merge_attrs(class![C.grid, C.grid_cols_6])
-            .map_msg(Msg::ReportDurationPicker)
-        ],
-        span!["Purge Files older than"],
-        div![
-            class!["input-group"],
-            duration_picker::view(
-                &model.purge_duration_picker,
-                input![
-                    &input_cls,
-                    attrs! {
-                        At::AutoFocus => false,
-                        At::Placeholder => "Optional",
-                    },
-                ],
-            )
-            .merge_attrs(class![C.grid, C.grid_cols_6])
-            .map_msg(Msg::PurgeDurationPicker)
-        ],
+        duration_picker::view(
+            &model.report_duration_picker,
+            input![
+                &input_cls,
+                attrs! {
+                    At::Id => "report_duration",
+                    At::AutoFocus => false,
+                    At::Placeholder => "Optional",
+                },
+            ],
+        )
+        .merge_attrs(class![C.grid, C.grid_cols_6])
+        .map_msg(Msg::ReportDurationPicker),
+        label![attrs! {At::For => "purge_duration"}, "Purge Files older than"],
+        duration_picker::view(
+            &model.purge_duration_picker,
+            input![
+                &input_cls,
+                attrs! {
+                    At::Id => "purge_duration",
+                    At::AutoFocus => false,
+                    At::Placeholder => "Optional",
+                },
+            ],
+        )
+        .merge_attrs(class![C.grid, C.grid_cols_6])
+        .map_msg(Msg::PurgeDurationPicker),
     ];
 
     if model.id.is_some() {
