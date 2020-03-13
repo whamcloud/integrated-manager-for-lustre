@@ -96,11 +96,11 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
 
     let mut scan_btn = scan_now_button(model.scanning);
     if model.report_duration.validation_message.is_some() || model.purge_duration.validation_message.is_some() {
-        scan_btn = scan_btn.merge_attrs(attrs!{
-            At::Disabled => "disabled"
-        }).merge_attrs(class![
-            C.opacity_50
-        ]);
+        scan_btn = scan_btn
+            .merge_attrs(attrs! {
+                At::Disabled => "disabled"
+            })
+            .merge_attrs(class![C.opacity_50]);
     }
 
     modal::bg_view(
