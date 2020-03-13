@@ -6,7 +6,7 @@ mod action;
 mod error;
 
 use iml_rabbit::{self, create_connection_filter};
-use iml_wire_types::Conf;
+use iml_wire_types::{Conf};
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::Filter;
 
@@ -19,6 +19,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         build: iml_manager_env::get_build(),
         version: iml_manager_env::get_version(),
         is_release: iml_manager_env::get_is_release(),
+        branding: iml_manager_env::get_branding().into(),
+        use_stratagem: iml_manager_env::get_use_stratagem(),
     };
 
     let subscriber = Subscriber::builder()

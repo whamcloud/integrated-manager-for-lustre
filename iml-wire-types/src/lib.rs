@@ -416,12 +416,27 @@ impl<T> ApiList<T> {
     }
 }
 
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Conf {
     pub allow_anonymous_read: bool,
     pub build: String,
     pub version: String,
     pub is_release: bool,
+    pub branding: Branding,
+    pub use_stratagem: bool,
+}
+
+impl Default for Conf {
+    fn default() -> Self {
+        Self {
+            allow_anonymous_read: true,
+            build: "Not Loaded".into(),
+            version: "0".into(),
+            is_release: false,
+            branding: Branding::default(),
+            use_stratagem: false,
+        }
+    }
 }
 
 impl EndpointName for Conf {
@@ -1506,6 +1521,30 @@ impl PartialOrd for OstPool {
 impl PartialEq for OstPool {
     fn eq(&self, other: &Self) -> bool {
         self.filesystem == other.filesystem && self.name == other.name
+    }
+}
+
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+pub enum Branding {
+    Whamcloud,
+    Ddn,
+    DdnAi400,
+}
+
+impl Default for Branding {
+    fn default() -> Self {
+        Self::Whamcloud
+    }
+}
+
+impl From<String> for Branding {
+    fn from(x: String) -> Self {
+        match x.to_lowercase().as_str() {
+            "whamcloud" => Branding::Whamcloud,
+            "ddn" => Branding::Ddn,
+            "ddnai400" => Branding::DdnAi400,
+            _ => Branding::Whamcloud,
+        }
     }
 }
 
