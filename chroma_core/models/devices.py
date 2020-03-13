@@ -7,7 +7,8 @@ from django.contrib.postgres.fields import ArrayField
 
 
 class Device(models.Model):
-    id = models.CharField(primary_key=True, help_text="Unique identifer per-device", max_length=255)
+    record_id = models.AutoField(primary_key=True, help_text="Integer id for warp-drive to use")
+    id = models.CharField(help_text="Unique identifer per-device", max_length=255)
     size = models.CharField(help_text="The size of the device in bytes", max_length=64)
     usable_for_lustre = models.BooleanField(help_text="Is this storage device usable for Lustre")
     device_type = models.CharField(help_text="The type of block or virtual device", max_length=64)
