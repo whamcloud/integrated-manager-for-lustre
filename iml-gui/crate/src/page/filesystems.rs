@@ -4,14 +4,30 @@ use crate::{
     generated::css_classes::C,
     page::filesystem,
     route::RouteId,
-    GMsg, Route,
+    sleep_with_handle, GMsg, Route,
 };
+use futures::channel::oneshot;
 use iml_wire_types::{
     warp_drive::{ArcCache, Locks},
     Filesystem, Session, ToCompositeId,
 };
+use number_formatter as nf;
 use seed::{prelude::*, *};
+use std::time::Duration;
 use std::{collections::HashMap, sync::Arc};
+
+const INFLUX_QUERY: &str = r#"
+SELECT SUM(b_total), SUM(b_free), SUM(clients)
+FROM (SELECT LAST(bytes_total) AS b_total
+           , LAST(bytes_avail) AS b_free
+      FROM target
+      WHERE "kind" = '"OST"'
+      GROUP BY target)
+   , (SELECT LAST(connected_clients) AS clients
+      FROM target
+      WHERE kind='"MDT"'
+      GROUP BY target)
+GROUP BY fs"#;
 
 struct Row {
     dropdown: action_dropdown::Model,
@@ -20,25 +36,94 @@ struct Row {
 #[derive(Default)]
 pub struct Model {
     filesystems: Vec<Arc<Filesystem>>,
+    stats: HashMap<String, filesystem::Stats>,
     pager: paging::Model,
     rows: HashMap<u32, Row>,
+    stats_cancel: Option<oneshot::Sender<()>>,
 }
 
+type StatsTuple = (String, Option<u64>, Option<u64>, Option<u64>);
+
+#[derive(serde::Deserialize, Clone, Debug)]
+pub struct InfluxSeries {
+    tags: Option<HashMap<String, String>>,
+    values: Vec<StatsTuple>,
+}
+
+#[derive(serde::Deserialize, Clone, Debug)]
+pub struct InfluxResult {
+    series: Option<Vec<InfluxSeries>>,
+}
+
+#[derive(serde::Deserialize, Clone, Debug)]
+pub struct InfluxResponse {
+    results: Vec<InfluxResult>,
+}
 #[derive(Clone)]
 pub enum Msg {
+    FetchStats,
+    StatsFetched(Box<fetch::ResponseDataResult<InfluxResponse>>),
     ActionDropdown(Box<action_dropdown::IdMsg>),
     AddFilesystem(Arc<Filesystem>),
     Page(paging::Msg),
     RemoveFilesystem(u32),
     SetFilesystems(Vec<Arc<Filesystem>>),
+    Noop,
 }
 
 pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
     orders.send_msg(Msg::SetFilesystems(cache.filesystem.values().cloned().collect()));
+    orders.send_msg(Msg::FetchStats);
 }
 
 pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
+        Msg::FetchStats => {
+            model.stats_cancel = None;
+            let request = seed::fetch::Request::new(format!("/influx?db=iml_stats&q={}", INFLUX_QUERY));
+            orders
+                .skip()
+                .perform_cmd(request.fetch_json_data(|x| Msg::StatsFetched(Box::new(x))));
+        }
+        Msg::StatsFetched(res) => {
+            match *res {
+                Ok(response) => {
+                    model.stats = response
+                        .results
+                        .into_iter()
+                        .take(1)
+                        .filter_map(|result| result.series)
+                        .flatten()
+                        .filter_map(|s| {
+                            let mfs = s
+                                .tags
+                                .and_then(|h| h.get("fs").map(|fs| fs.trim_matches('"').to_string()));
+
+                            s.values.into_iter().next().and_then(|v| {
+                                mfs.map(|fs| {
+                                    (
+                                        fs,
+                                        filesystem::Stats {
+                                            bytes_total: v.1,
+                                            bytes_free: v.2,
+                                            clients: v.3,
+                                            ..Default::default()
+                                        },
+                                    )
+                                })
+                            })
+                        })
+                        .collect();
+                }
+                Err(e) => {
+                    error!(e);
+                    orders.skip();
+                }
+            }
+            let (cancel, fut) = sleep_with_handle(Duration::from_secs(30), Msg::FetchStats, Msg::Noop);
+            model.stats_cancel = Some(cancel);
+            orders.perform_cmd(fut);
+        }
         Msg::ActionDropdown(x) => {
             let action_dropdown::IdMsg(id, msg) = *x;
 
@@ -105,6 +190,7 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                 .proxy(Msg::Page)
                 .send_msg(paging::Msg::SetTotal(model.filesystems.len()));
         }
+        Msg::Noop => {}
     }
 }
 
@@ -134,6 +220,7 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<
                     .map(|f| match model.rows.get(&f.id) {
                         None => empty![],
                         Some(row) => {
+                            let stats = model.stats.get(&f.name).cloned().unwrap_or_default();
                             let xs: Vec<_> = cache.target.values().cloned().collect();
 
                             tr![
@@ -145,8 +232,12 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<
                                 .merge_attrs(class![C.text_center]),
                                 t::td_center(filesystem::mgs(&xs, f)),
                                 t::td_center(plain![f.mdts.len().to_string()]),
-                                t::td_center(filesystem::clients_view(f)),
-                                t::td_center(filesystem::size_view(f)),
+                                t::td_center(filesystem::clients_view(stats.clients)),
+                                t::td_center(filesystem::chart_view(
+                                    stats.bytes_free,
+                                    stats.bytes_total,
+                                    nf::format_bytes
+                                )),
                                 td![
                                     class![C.p_3, C.text_center],
                                     action_dropdown::view(f.id, &row.dropdown, all_locks, session)
