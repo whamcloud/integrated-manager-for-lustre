@@ -43,6 +43,8 @@ impl TryFrom<(TableName<'_>, serde_json::Value)> for DbRecord {
     /// Performs the conversion. It would be simpler to deserialize from an untagged representation,
     /// but need to check the perf characteristics of it.
     fn try_from((table_name, x): (TableName, serde_json::Value)) -> Result<Self, Self::Error> {
+        tracing::debug!("Incoming NOTIFY on {}: {:?}", table_name, x);
+
         match table_name {
             MANAGED_FILESYSTEM_TABLE_NAME => {
                 serde_json::from_value(x).map(DbRecord::ManagedFilesystem)

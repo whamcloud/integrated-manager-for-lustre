@@ -291,6 +291,7 @@ pub enum Msg {
     TargetPage(page::target::Msg),
     ToggleMenu,
     Tree(tree::Msg),
+    User(page::user::Msg),
     UpdatePageTitle,
     WindowClick,
     WindowResize,
@@ -541,6 +542,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::Tree(msg) => {
             tree::update(&model.records, msg, &mut model.tree, &mut orders.proxy(Msg::Tree));
         }
+        Msg::User(msg) => {
+            if let Page::User(page) = &mut model.page {
+                page::user::update(msg, page, &mut orders.proxy(Msg::User));
+            }
+        }
         Msg::Login(msg) => {
             if let Page::Login(page) = &mut model.page {
                 login::update(msg, page, &mut orders.proxy(Msg::Login));
@@ -648,7 +654,11 @@ fn handle_record_change(
                 orders.proxy(Msg::MgtsPage).send_msg(page::mgts::Msg::AddTarget(x));
             }
             warp_drive::Record::User(x) => {
-                model.records.user.insert(x.id, Arc::new(x));
+                let x = Arc::new(x);
+
+                model.records.user.insert(x.id, Arc::clone(&x));
+
+                orders.proxy(Msg::User).send_msg(page::user::Msg::SetUser(x));
             }
             warp_drive::Record::UserGroup(x) => {
                 model.records.user_group.insert(x.id, Arc::new(x));
@@ -864,7 +874,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         )
         .els(),
         Page::Users => main_panels(model, page::users::view(&model.records)).els(),
-        Page::User(x) => main_panels(model, page::user::view(x)).els(),
+        Page::User(x) => main_panels(model, page::user::view(x).els().map_msg(Msg::User)).els(),
         Page::Volumes => main_panels(model, page::volumes::view(model)).els(),
         Page::Volume(x) => main_panels(model, page::volume::view(x)).els(),
     }

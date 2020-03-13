@@ -140,7 +140,7 @@ impl<'a> From<Url> for Route<'a> {
     fn from(url: Url) -> Self {
         let mut path = url.get_path().into_iter();
 
-        match path.next().as_ref().map(String::as_str) {
+        match path.next().as_deref() {
             Some("about") => Self::About,
             Some("dashboard") => match path.next() {
                 None => Self::Dashboard,

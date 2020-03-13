@@ -56,7 +56,7 @@ class UserValidation(Validation):
 
     def is_valid(self, bundle, request=None):
         data = bundle.data or {}
-        if request.method == "PUT":
+        if request.method in ["PUT", "PATCH"]:
             errors = {}
             try:
                 user = get_object_or_404(User, pk=data["id"])
@@ -64,7 +64,7 @@ class UserValidation(Validation):
                 errors["id"] = ["id attribute is mandatory"]
             else:
                 change_pw_fields = ["new_password1", "new_password2"]
-                if any((True for k in change_pw_fields if data[k] is not None)):
+                if any((True for k in change_pw_fields if data.get(k) is not None)):
                     from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
 
                     # Non-superusers always require old_password
@@ -80,6 +80,7 @@ class UserValidation(Validation):
                     return errors
 
                 form = ChromaUserChangeForm(data, instance=user)
+
                 if not form.is_valid():
                     errors.update(form.errors)
 
@@ -109,7 +110,8 @@ class UserResource(ChromaModelResource):
         attribute="groups",
         full=True,
         null=True,
-        help_text="List of groups that this user is a member of.  May " "only be modified by superusers",
+        readonly=True,
+        help_text="List of groups that this user is a member of.",
     )
     alert_subscriptions = fields.ToManyField(
         "chroma_api.alert.AlertSubscriptionResource",
@@ -137,6 +139,8 @@ class UserResource(ChromaModelResource):
                 return group["resource_uri"]
             elif isinstance(group, basestring):
                 return group
+            elif isinstance(group, Bundle):
+                return group
             else:
                 raise NotImplementedError(group.__class__)
 
@@ -152,6 +156,7 @@ class UserResource(ChromaModelResource):
         if not bundle.request.user.is_superuser:
             if "groups" in bundle.data:
                 group_ids = []
+
                 for group in bundle.data["groups"]:
                     if isinstance(group, dict):
                         group_ids.append(int(group["id"]))
@@ -163,8 +168,10 @@ class UserResource(ChromaModelResource):
                         raise NotImplementedError(group.__class__)
 
                 user_group_ids = [int(group.pk) for group in bundle.request.user.groups.all()]
+                
                 if not set(group_ids) == set(user_group_ids):
                     raise ImmediateHttpResponse(HttpForbidden())
+
         return bundle
 
     # This seems wrong. Without it, the hydration goes awry with what
@@ -237,5 +244,5 @@ class UserResource(ChromaModelResource):
         ]
         ordering = ["username", "email"]
         list_allowed_methods = ["get", "post"]
-        detail_allowed_methods = ["get", "put", "delete"]
+        detail_allowed_methods = ["get", "put", "patch", "delete"]
         always_return_data = True
