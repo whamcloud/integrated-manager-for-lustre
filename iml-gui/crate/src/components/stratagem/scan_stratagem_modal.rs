@@ -94,6 +94,15 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
         C.col_span_5,
     ];
 
+    let mut scan_btn = scan_now_button(model.scanning);
+    if model.report_duration.validation_message.is_some() || model.purge_duration.validation_message.is_some() {
+        scan_btn = scan_btn.merge_attrs(attrs!{
+            At::Disabled => "disabled"
+        }).merge_attrs(class![
+            C.opacity_50
+        ]);
+    }
+
     modal::bg_view(
         model.modal.open,
         Msg::Modal,
@@ -137,7 +146,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
                 )
                 .merge_attrs(class![C.grid, C.grid_cols_6])
                 .map_msg(Msg::PurgeDurationPicker),
-                modal::footer_view(vec![scan_now_button(model.scanning), cancel_button()]).merge_attrs(class![C.pt_8]),
+                modal::footer_view(vec![scan_btn, cancel_button()]).merge_attrs(class![C.pt_8]),
             ],
         )
         .with_listener(keyboard_ev(Ev::KeyDown, move |ev| match ev.key_code() {
