@@ -34,6 +34,9 @@ class Ticket(StatefulObject):
     def ticket(self):
         return Ticket.objects.get(id=self.id)
 
+    def __str__(self):
+        return self.name
+
 
 class MasterTicket(Ticket):
     """
@@ -64,13 +67,19 @@ class FilesystemTicket(Ticket):
 
     def get_deps(self, state=None):
         deps = []
-        mt = MasterTicket.objects.filter(mgs=self.filesystem.mgs)
         if state == "granted":
+            mt = MasterTicket.objects.filter(mgs=self.filesystem.mgs)[0]
             deps.append(DependOn(mt, "granted"))
         return DependAll(deps)
 
     def get_host(self):
         return self.filesystem.mgs.best_available_host()
+
+    @classmethod
+    def filter_by_fs(cls, fs):
+        return FilesystemTicket.objects.filter(filesystem=fs)
+
+    reverse_deps = {"ManagedFilesystem": lambda fs: FilesystemTicket.filter_by_fs(fs)}
 
 
 class GrantRevokedTicketJob(StateChangeJob):
@@ -140,3 +149,25 @@ class StopResourceStep(Step):
         host = kwargs["host"]
         label = kwargs["ha_label"]
         self.invoke_agent_expect_result(host, "stop_target", {"ha_label": label})
+
+
+class ForgetTicketJob(StateChangeJob):
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    state_transition = StateChangeJob.StateTransition(Ticket, ["granted", "revoked"], "forgotten")
+    stateful_object = "ticket"
+    state_verb = "Forget"
+    ticket = models.ForeignKey(Ticket, on_delete=CASCADE)
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["forget_ticket"]
+
+    def description(self):
+        return "Forget ticket %s" % self.ticket
+
+    def on_success(self):
+        self.ticket.mark_deleted()
+        super(ForgetTicketJob, self).on_success()

@@ -37,6 +37,7 @@ cp iml-devices %{buildroot}%{_bindir}
 cp iml-mailbox %{buildroot}%{_bindir}
 cp iml-ostpool %{buildroot}%{_bindir}
 cp iml-postoffice %{buildroot}%{_bindir}
+cp iml-stats %{buildroot}%{_bindir}
 cp iml-warp-drive %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
@@ -46,6 +47,7 @@ cp iml-devices.service %{buildroot}%{_unitdir}
 cp iml-mailbox.service %{buildroot}%{_unitdir}
 cp iml-ostpool.service %{buildroot}%{_unitdir}
 cp iml-postoffice.service %{buildroot}%{_unitdir}
+cp iml-rust-stats.service %{buildroot}%{_unitdir}
 cp iml-warp-drive.service %{buildroot}%{_unitdir}
 cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_tmpfilesdir}
@@ -206,6 +208,28 @@ systemctl preset iml-ostpool.service
 %files ostpool
 %{_bindir}/iml-ostpool
 %attr(0644,root,root)%{_unitdir}/iml-ostpool.service
+
+%package stats
+Summary: Consumer of IML stats
+License: MIT
+Group: System Environment/Libraries
+Requires: rust-iml-agent-comms
+
+%description stats
+%{summary}
+
+%post stats
+systemctl preset iml-rust-stats.service
+
+%preun stats
+%systemd_preun iml-rust-stats.service
+
+%postun stats
+%systemd_postun_with_restart iml-rust-stats.service
+
+%files stats
+%{_bindir}/iml-stats
+%attr(0644,root,root)%{_unitdir}/iml-rust-stats.service
 
 %package warp-drive
 Summary: Streaming IML messages with Server-Sent Events

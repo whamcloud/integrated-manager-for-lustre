@@ -18,6 +18,7 @@ use bytes::BytesMut;
 use postgres_types::{to_sql_checked, FromSql, IsNull, ToSql, Type};
 #[cfg(feature = "postgres-interop")]
 use std::io;
+use std::time::SystemTime;
 #[cfg(feature = "postgres-interop")]
 use tokio_postgres::Row;
 
@@ -665,6 +666,12 @@ impl ToCompositeId for LnetConfigurationRecord {
     }
 }
 
+impl ToCompositeId for &LnetConfigurationRecord {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id.unwrap(), self.id)
+    }
+}
+
 pub const LNET_CONFIGURATION_TABLE_NAME: TableName = TableName("chroma_core_lnetconfiguration");
 
 impl Name for LnetConfigurationRecord {
@@ -1095,5 +1102,118 @@ pub struct DeviceHostRecord {
 impl Id for DeviceHostRecord {
     fn id(&self) -> u32 {
         self.record_id
+    }
+}
+
+/// Record from the `auth_user` table
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct AuthUserRecord {
+    pub id: u32,
+    pub password: String,
+    pub last_login: Option<SystemTime>,
+    pub is_superuser: bool,
+    pub username: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub email: String,
+    pub is_staff: bool,
+    pub is_active: bool,
+    pub date_joined: SystemTime,
+}
+
+pub const AUTH_USER_TABLE_NAME: TableName = TableName("auth_user");
+
+impl Name for AuthUserRecord {
+    fn table_name() -> TableName<'static> {
+        AUTH_USER_TABLE_NAME
+    }
+}
+
+impl Id for AuthUserRecord {
+    fn id(&self) -> u32 {
+        self.id
+    }
+}
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for AuthUserRecord {
+    fn from(row: Row) -> Self {
+        Self {
+            id: row.get::<_, i32>("id") as u32,
+            password: row.get("password"),
+            last_login: row.get::<_, Option<SystemTime>>("last_login"),
+            is_superuser: row.get("is_superuser"),
+            username: row.get("username"),
+            first_name: row.get("first_name"),
+            last_name: row.get("last_name"),
+            email: row.get("email"),
+            is_staff: row.get("is_staff"),
+            is_active: row.get("is_active"),
+            date_joined: row.get("date_joined"),
+        }
+    }
+}
+
+/// Record from the `auth_user_groups` table
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct AuthUserGroupRecord {
+    pub id: u32,
+    pub user_id: u32,
+    pub group_id: u32,
+}
+
+pub const AUTH_USER_GROUP_TABLE_NAME: TableName = TableName("auth_user_groups");
+
+impl Name for AuthUserGroupRecord {
+    fn table_name() -> TableName<'static> {
+        AUTH_USER_GROUP_TABLE_NAME
+    }
+}
+
+impl Id for AuthUserGroupRecord {
+    fn id(&self) -> u32 {
+        self.id
+    }
+}
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for AuthUserGroupRecord {
+    fn from(row: Row) -> Self {
+        Self {
+            id: row.get::<_, i32>("id") as u32,
+            user_id: row.get::<_, i32>("user_id") as u32,
+            group_id: row.get::<_, i32>("group_id") as u32,
+        }
+    }
+}
+
+/// Record from the `auth_group` table
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct AuthGroupRecord {
+    pub id: u32,
+    pub name: String,
+}
+
+pub const AUTH_GROUP_TABLE_NAME: TableName = TableName("auth_group");
+
+impl Name for AuthGroupRecord {
+    fn table_name() -> TableName<'static> {
+        AUTH_GROUP_TABLE_NAME
+    }
+}
+
+impl Id for AuthGroupRecord {
+    fn id(&self) -> u32 {
+        self.id
+    }
+}
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for AuthGroupRecord {
+    fn from(row: Row) -> Self {
+        Self {
+            id: row.get::<_, i32>("id") as u32,
+            name: row.get("name"),
+        }
     }
 }

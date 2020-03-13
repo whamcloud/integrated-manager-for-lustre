@@ -3,11 +3,14 @@
 // license that can be found in the LICENSE file.
 
 use serde_json;
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{
     cmp::{Ord, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap},
     convert::TryFrom,
     fmt,
+    ops::Deref,
+    sync::Arc,
 };
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -313,18 +316,24 @@ pub trait ToCompositeId {
     fn composite_id(&self) -> CompositeId;
 }
 
+impl<T: ToCompositeId> ToCompositeId for &Arc<T> {
+    fn composite_id(&self) -> CompositeId {
+        let t: &T = self.deref();
+
+        t.composite_id()
+    }
+}
+
+impl<T: ToCompositeId> ToCompositeId for Arc<T> {
+    fn composite_id(&self) -> CompositeId {
+        let t: &T = self.deref();
+
+        t.composite_id()
+    }
+}
+
 pub trait Label {
     fn label(&self) -> &str;
-}
-
-pub trait ResourceUri {
-    fn resource_uri(&self) -> &str;
-}
-
-impl ResourceUri for String {
-    fn resource_uri(&self) -> &str {
-        self
-    }
 }
 
 pub trait EndpointName {
@@ -379,9 +388,9 @@ impl ToCompositeId for LockChange {
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct Meta {
     pub limit: u32,
-    pub next: Option<u32>,
+    pub next: Option<String>,
     pub offset: u32,
-    pub previous: Option<u32>,
+    pub previous: Option<String>,
     pub total_count: u32,
 }
 
@@ -505,6 +514,12 @@ impl ToCompositeId for Host {
     }
 }
 
+impl ToCompositeId for &Host {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id, self.id)
+    }
+}
+
 impl Label for Host {
     fn label(&self) -> &str {
         &self.label
@@ -514,12 +529,6 @@ impl Label for Host {
 impl Label for &Host {
     fn label(&self) -> &str {
         &self.label
-    }
-}
-
-impl ResourceUri for Host {
-    fn resource_uri(&self) -> &str {
-        &self.resource_uri
     }
 }
 
@@ -911,18 +920,6 @@ impl<T> Label for &Target<T> {
     }
 }
 
-impl<T> ResourceUri for Target<T> {
-    fn resource_uri(&self) -> &str {
-        &self.resource_uri
-    }
-}
-
-impl<T> ResourceUri for &Target<T> {
-    fn resource_uri(&self) -> &str {
-        &self.resource_uri
-    }
-}
-
 impl<T> EndpointName for Target<T> {
     fn endpoint_name() -> &'static str {
         "target"
@@ -996,15 +993,15 @@ impl ToCompositeId for Filesystem {
     }
 }
 
-impl Label for Filesystem {
-    fn label(&self) -> &str {
-        &self.label
+impl ToCompositeId for &Filesystem {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id, self.id)
     }
 }
 
-impl ResourceUri for Filesystem {
-    fn resource_uri(&self) -> &str {
-        &self.resource_uri
+impl Label for Filesystem {
+    fn label(&self) -> &str {
+        &self.label
     }
 }
 
@@ -1038,7 +1035,7 @@ pub struct FilesystemShort {
     pub name: String,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Debug)]
 pub enum AlertRecordType {
     AlertState,
     LearnEvent,
@@ -1089,6 +1086,7 @@ pub struct Alert {
     pub _message: Option<String>,
     pub active: Option<bool>,
     pub affected: Option<Vec<String>>,
+    pub affected_composite_ids: Option<Vec<CompositeId>>,
     pub alert_item: String,
     pub alert_item_id: Option<i32>,
     pub alert_item_str: String,
@@ -1114,6 +1112,71 @@ impl FlatQuery for Alert {
 impl EndpointName for Alert {
     fn endpoint_name() -> &'static str {
         "alert"
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct Substitution {
+    pub start: String,
+    pub end: String,
+    pub label: String,
+    pub resource_uri: String,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum MessageClass {
+    Normal,
+    Lustre,
+    LustreError,
+    Copytool,
+    CopytoolError,
+}
+
+/// Severities from syslog protocol
+///
+/// | Code | Severity                                 |
+/// |------|------------------------------------------|
+/// | 0    | Emergency: system is unusable            |
+/// | 1    | Alert: action must be taken immediately  |
+/// | 2    | Critical: critical conditions            |
+/// | 3    | Error: error conditions                  |
+/// | 4    | Warning: warning conditions              |
+/// | 5    | Notice: normal but significant condition |
+/// | 6    | Informational: informational messages    |
+/// | 7    | Debug: debug-level messages              |
+///
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Debug)]
+#[repr(u8)]
+pub enum LogSeverity {
+    Emergency = 0,
+    Alert = 1,
+    Critical = 2,
+    Error = 3,
+    Warning = 4,
+    Notice = 5,
+    Informational = 6,
+    Debug = 7,
+}
+
+/// An Log record from /api/log/
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct Log {
+    pub datetime: String,
+    pub facility: u32,
+    pub fqdn: String,
+    pub id: u32,
+    pub message: String,
+    pub message_class: MessageClass,
+    pub resource_uri: String,
+    pub severity: LogSeverity,
+    pub substitutions: Vec<Substitution>,
+    pub tag: String,
+}
+
+impl EndpointName for Log {
+    fn endpoint_name() -> &'static str {
+        "log"
     }
 }
 

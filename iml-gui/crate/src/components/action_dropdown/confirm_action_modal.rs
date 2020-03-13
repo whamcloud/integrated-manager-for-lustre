@@ -142,6 +142,7 @@ pub(crate) fn view(action: &Action) -> Node<Msg> {
         key_codes::ENTER => confirm_msg2,
         _ => Msg::Noop,
     }))
+    .merge_attrs(class![C.text_black])
 }
 
 fn state_change_body_view<T>(dry_run: &DryRun) -> Node<T> {
@@ -154,7 +155,7 @@ fn state_change_body_view<T>(dry_run: &DryRun) -> Node<T> {
     };
 
     div![
-        desc,
+        El::from_html(desc),
         if dep_jobs.is_empty() {
             empty![]
         } else {

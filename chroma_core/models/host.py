@@ -940,12 +940,17 @@ class DetectTargetsStep(Step):
     def detect_scan(self, host, host_data, target_devices):
         host_data[host] = self.invoke_agent(host, "detect_scan", {"target_devices": target_devices})
 
+    def detect_ha(self, host, ha_data):
+        ha_list = self.invoke_rust_agent_expect_result(host.fqdn, "get_ha_resource_list", args=None)
+        ha_data[host] = dict([(x["id"], x) for x in ha_list])
+
     def run(self, kwargs):
         from chroma_core.models import ManagedHost
         from chroma_core.lib.detection import DetectScan
 
         # Get all the host data
         host_data = {}
+        ha_data = {}
         threads = []
         host_target_devices = defaultdict(list)
 
@@ -968,9 +973,19 @@ class DetectTargetsStep(Step):
             thread.start()
             threads.append(thread)
 
+            thread = ExceptionThrowingThread(target=self.detect_ha, args=(host, ha_data))
+            thread.start()
+            threads.append(thread)
+
         ExceptionThrowingThread.wait_for_threads(
             threads
         )  # This will raise an exception if any of the threads raise an exception
+
+        for host in host_data:
+            if host in ha_data:
+                host_data[host]["ha_list"] = ha_data[host]
+            else:
+                host_data[host]["ha_list"] = {}
 
         DetectScan(self).run(host_data)
 

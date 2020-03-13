@@ -1,14 +1,12 @@
 use crate::{
     auth, breakpoints,
-    components::{activity_indicator, breadcrumbs, ddn_logo, font_awesome, restrict},
-    ctx_help::CtxHelp,
+    components::{breadcrumbs, ddn_logo, font_awesome, restrict},
     generated::css_classes::C,
     MergeAttrs, Model, Msg, Route, SessionExt,
     Visibility::*,
-    CTX_HELP,
 };
 use iml_wire_types::GroupType;
-use seed::{prelude::*, virtual_dom::Attrs, *};
+use seed::{prelude::*, *};
 
 fn menu_icon<T>(icon_name: &str) -> Node<T> {
     font_awesome(
@@ -56,23 +54,9 @@ fn nav_manage_dropdown(open: bool) -> Node<Msg> {
                 },
             ]],
             li![
-                a![&cls, Route::PowerControl.to_string()],
-                attrs! {
-                    At::Href => Route::PowerControl.to_href(),
-                },
-            ],
-            li![
                 a![&cls, Route::Filesystems.to_string()],
                 attrs! {
                     At::Href => Route::Filesystems.to_href(),
-                },
-            ],
-            li![a![&cls, "HSM"]],
-            li![a![&cls, "Storage"]],
-            li![
-                a![&cls, Route::Users.to_string()],
-                attrs! {
-                    At::Href => Route::Users.to_href(),
                 },
             ],
             li![
@@ -86,7 +70,13 @@ fn nav_manage_dropdown(open: bool) -> Node<Msg> {
                 attrs! {
                     At::Href => Route::Mgt.to_href(),
                 },
-            ]
+            ],
+            li![
+                a![&cls, Route::Users.to_string()],
+                attrs! {
+                    At::Href => Route::Users.to_href(),
+                },
+            ],
         ]
     ]
 }
@@ -151,68 +141,6 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                 nav_manage_dropdown(model.manage_menu_state.is_open()),
             ]
         ),
-        a![
-            &menu_class,
-            class![C.bg_menu_active => model.route == Route::Jobstats],
-            attrs! {
-                At::Href => Route::Jobstats.to_href(),
-            },
-            span![
-                menu_icon("signal"),
-                span![
-                    class![C.group_hover__text_active, C.text_active => model.route == Route::Jobstats],
-                    Route::Jobstats.to_string(),
-                ],
-            ]
-        ],
-        a![
-            &menu_class,
-            class![C.bg_menu_active => model.route == Route::Logs],
-            attrs! {
-                At::Href => Route::Logs.to_href()
-            },
-            span![
-                menu_icon("book"),
-                span![
-                    class![C.group_hover__text_active, C.bg_menu_active => model.route == Route::Logs],
-                    Route::Logs.to_string(),
-                ]
-            ]
-        ],
-        context_sensitive_help_link(model, &menu_class),
-        a![
-            &menu_class,
-            class![C.bg_menu_active => model.route == Route::Activity],
-            attrs! {
-                At::Href => Route::Activity.to_href(),
-            },
-            span![
-                activity_indicator(&model.activity_health),
-                span![
-                    class![C.group_hover__text_active, C.bg_menu_active => model.route == Route::Activity],
-                    Route::Activity.to_string(),
-                ]
-            ]
-        ],
-    ]
-}
-
-fn context_sensitive_help_link(model: &Model, menu_class: &Attrs) -> Node<Msg> {
-    let attrs = attrs! {
-       At::Target => "_blank", // open the link in a new tab
-       At::Href => format!(
-           "{}{}",
-           CTX_HELP,
-           model.route.help_link().unwrap_or_else(|| "".into())
-       )
-    };
-    a![
-        menu_class,
-        attrs,
-        span![
-            menu_icon("question-circle"),
-            span![class![C.group_hover__text_active], "Help"]
-        ]
     ]
 }
 
@@ -257,7 +185,7 @@ fn logo_nav_view<T>() -> Node<T> {
             C.lg__my_0,
             C.ml_6,
             C.my_2,
-            C.text_red_500,
+            C.text_red_600,
             C.xl__mr_12
         ],
         ddn_logo().merge_attrs(class![C.h_12, C.w_24, C.mr_3]),

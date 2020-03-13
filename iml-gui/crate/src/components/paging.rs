@@ -1,7 +1,8 @@
 use crate::{
     components::{dropdown, font_awesome, Placement},
+    extensions::NodeExt as _,
     generated::css_classes::C,
-    WatchState,
+    GMsg,
 };
 use seed::{prelude::*, virtual_dom::Attrs, *};
 use std::{cmp::Eq, fmt::Debug, ops::Range};
@@ -13,7 +14,7 @@ pub struct Model {
     pub total: usize,
     limit: usize,
     offset: usize,
-    pub dropdown: WatchState,
+    dropdown: dropdown::Model,
 }
 
 impl Default for Model {
@@ -22,7 +23,7 @@ impl Default for Model {
             limit: ROW_OPTS[0],
             total: 0,
             offset: 0,
-            dropdown: WatchState::default(),
+            dropdown: dropdown::Model::default(),
         }
     }
 }
@@ -69,15 +70,16 @@ impl Model {
 
 #[derive(Clone)]
 pub enum Msg {
-    SetTotal(usize),
-    SetOffset(usize),
-    SetLimit(usize),
-    Dropdown(WatchState),
+    Dropdown(dropdown::Msg),
     Next,
+    Noop,
     Prev,
+    SetLimit(usize),
+    SetOffset(usize),
+    SetTotal(usize),
 }
 
-pub fn update(msg: Msg, model: &mut Model) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::SetTotal(total) => {
             model.total = total;
@@ -87,6 +89,7 @@ pub fn update(msg: Msg, model: &mut Model) {
         }
         Msg::SetLimit(limit) => {
             model.limit = limit;
+            orders.send_msg(Msg::Dropdown(dropdown::Msg::Close));
         }
         Msg::Next => {
             model.next_page();
@@ -94,9 +97,10 @@ pub fn update(msg: Msg, model: &mut Model) {
         Msg::Prev => {
             model.prev_page();
         }
-        Msg::Dropdown(state) => {
-            model.dropdown = state;
+        Msg::Dropdown(msg) => {
+            dropdown::update(msg, &mut model.dropdown);
         }
+        Msg::Noop => {}
     }
 }
 
@@ -133,34 +137,34 @@ pub fn dir_toggle_view<T>(dir: Dir, more_attrs: Attrs) -> Node<T> {
     font_awesome(more_attrs, x)
 }
 
-pub(crate) fn limit_selection_view(p: &Model) -> Node<Msg> {
-    if !p.has_pages() {
+pub(crate) fn limit_selection_view(model: &Model) -> Node<Msg> {
+    if !model.has_pages() {
         return empty![];
     }
 
-    let mut btn = button![
+    let btn = button![
         class![
-            C.bg_transparent,
+            C.bg_blue_700 => model.dropdown.is_open(),
+            C.bg_transparent => model.dropdown.is_closed(),
+            C.border_blue_500 => model.dropdown.is_closed(),
+            C.border_transparent => model.dropdown.is_open(),
             C.border,
-            C.border_blue_500,
-            C.text_blue_500,
-            C.text_sm,
-            C.py_1,
-            C.px_3,
-            C.rounded_full,
             C.focus__outline_none,
-            C.focus__border_transparent,
-            C.focus__bg_blue_700,
-            C.focus__text_white,
-            C.hover__border_transparent,
             C.hover__bg_blue_700,
+            C.hover__border_transparent,
             C.hover__text_white
+            C.px_3,
+            C.py_1,
+            C.rounded_full,
+            C.text_blue_500 => model.dropdown.is_closed(),
+            C.text_sm,
+            C.text_white => model.dropdown.is_open(),
         ],
-        p.limit.to_string(),
+        model.limit.to_string(),
+        simple_ev(Ev::Blur, Msg::Dropdown(dropdown::Msg::Close)),
+        simple_ev(Ev::Click, Msg::Dropdown(dropdown::Msg::Toggle)),
         font_awesome(class![C.w_3, C.h_3, C.inline, C._mt_1], "chevron-up")
     ];
-
-    btn.add_listener(mouse_ev(Ev::Click, |_| Msg::Dropdown(WatchState::Watching)));
 
     div![
         class![C.mr_3],
@@ -169,12 +173,18 @@ pub(crate) fn limit_selection_view(p: &Model) -> Node<Msg> {
             class![C.relative],
             btn,
             dropdown::wrapper_view(
-                class![],
                 Placement::Top,
-                p.dropdown.is_open(),
+                model.dropdown.is_open(),
                 ROW_OPTS
                     .iter()
-                    .map(|x| { dropdown::item_view(a![x.to_string(), simple_ev(Ev::Click, Msg::SetLimit(*x))]) })
+                    .map(|x| {
+                        dropdown::item_view(a![x.to_string()])
+                            .with_listener(ev(Ev::MouseDown, move |ev| {
+                                ev.prevent_default();
+                                Msg::Noop
+                            }))
+                            .with_listener(simple_ev(Ev::Click, Msg::SetLimit(*x)))
+                    })
                     .collect::<Vec<_>>()
             )
         ],
@@ -209,7 +219,7 @@ pub fn next_prev_view(paging: &Model) -> Vec<Node<Msg>> {
                 C.px_5,
                 C.pointer_events_none => !paging.has_less(),
             ],
-            font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chevron-left",),
+            font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chevron-left"),
             simple_ev(Ev::Click, Msg::Prev),
             "prev"
         ],
@@ -220,7 +230,7 @@ pub fn next_prev_view(paging: &Model) -> Vec<Node<Msg>> {
             ],
             "next",
             simple_ev(Ev::Click, Msg::Next),
-            font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chevron-right",)
+            font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chevron-right")
         ],
     ]
 }

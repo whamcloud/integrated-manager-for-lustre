@@ -147,10 +147,10 @@ def validate_mdt_profile(bundle):
         ManagedHost.objects.filter(id__in=host_ids).values_list("server_profile_id", flat=True).distinct()
     )
 
-    if not all(map(lambda name: name == "stratagem_server", installed_profiles)):
+    if not all(map(lambda name: name in ["stratagem_server", "exascaler_server"], installed_profiles)):
         return {
             "code": "stratagem_server_profile_not_installed",
-            "message": "'stratagem_server' profile must be installed on all MDT servers.",
+            "message": "'stratagem_server' or 'exascaler_server' profile must be installed on all MDT servers.",
         }
 
 

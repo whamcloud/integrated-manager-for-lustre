@@ -41,7 +41,9 @@ services:
       - 8086:8086
     environment:
       - INFLUXDB_BIND_ADDRESS=influxdb:8088
+      - INFLUXDB_REPORTING_DISABLED=true
       - INFLUXDB_HTTP_BIND_ADDRESS=influxdb:8086
+      - INFLUXDB_HTTP_LOG_ENABLED=false
   grafana:
     image: "imlteam/grafana:5.1.1-dev"
     build:
@@ -178,6 +180,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
       - "mailbox:/var/spool/iml/mailbox"
+      - "/root/.ssh:/root/.ssh"
     environment:
       - PROXY_HOST=iml-action-runner
       - INFLUXDB_SERVER_FQDN=influxdb
@@ -300,6 +303,18 @@ services:
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
       - "mailbox_run:/run"
       - "manager-config:/var/lib/chroma"
+  iml-stats:
+    image: "imlteam/iml-stats:5.1.1-dev"
+    hostname: "iml-stats"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-stats.dockerfile
+    deploy: *default-deploy
+    volumes:
+      - "manager-config:/var/lib/chroma"
+    environment:
+      - RUST_LOG=info
+      - PROXY_HOST=influxdb
   iml-postoffice:
     image: "imlteam/iml-postoffice:5.1.1-dev"
     hostname: "iml-postoffice"
@@ -332,6 +347,7 @@ services:
       dockerfile: ./setup.dockerfile
     volumes:
       - "manager-config:/var/lib/chroma"
+      - "/etc/iml-docker/setup:/var/lib/chroma-setup"
     secrets:
       - iml_pw
     deploy: *default-deploy

@@ -1,15 +1,15 @@
 mod confirm_action_modal;
 
 use crate::{
-    components::{attrs, dropdown, font_awesome, modal, tooltip, Placement},
+    components::{attrs, dropdown, font_awesome, modal, restrict, tooltip, Placement},
     generated::css_classes::C,
     sleep::sleep_with_handle,
-    GMsg, MergeAttrs as _, RequestExt, WatchState,
+    GMsg, MergeAttrs as _, RequestExt,
 };
 use futures::channel::oneshot;
 use iml_wire_types::{
     warp_drive::{ArcCache, ErasedRecord, Locks},
-    ApiList, AvailableAction, CompositeId, LockChange,
+    ApiList, AvailableAction, CompositeId, GroupType, LockChange, Session,
 };
 use seed::{prelude::*, *};
 use serde_json::json;
@@ -84,7 +84,7 @@ pub struct Model {
     pub composite_ids: Vec<CompositeId>,
     pub request_controller: Option<fetch::RequestController>,
     pub actions: ActionMap,
-    pub watching: WatchState,
+    dropdown_state: dropdown::Model,
     pub cancel: Option<oneshot::Sender<()>>,
     pub confirm_modal: confirm_action_modal::Model,
 }
@@ -96,7 +96,7 @@ impl Model {
             composite_ids,
             request_controller: None,
             actions: BTreeMap::new(),
-            watching: WatchState::default(),
+            dropdown_state: dropdown::Model::default(),
             cancel: None,
             confirm_modal: confirm_action_modal::Model::default(),
         }
@@ -120,7 +120,7 @@ impl Drop for Model {
 pub enum Msg {
     StartFetch,
     SendFetch,
-    WatchChange,
+    Dropdown(dropdown::Msg),
     Fetched(Box<fetch::ResponseDataResult<AvailableActions>>),
     ActionSelected(Arc<AvailableAction>, Arc<dyn ErasedRecord>),
     ConfirmJobModal(confirm_action_modal::Msg),
@@ -193,11 +193,16 @@ pub fn update(msg: IdMsg, cache: &ArcCache, model: &mut Model, orders: &mut impl
         Msg::ActionSelected(x, y) => {
             model.abort_request();
 
+            orders.send_msg(IdMsg(id, Msg::Dropdown(dropdown::Msg::Close)));
+
             model.state = State::Confirming(confirm_action_modal::Action::Loading);
 
             if x.class_name.is_some() {
                 if let Some(body) = &x.confirmation {
                     model.state = State::Confirming(confirm_action_modal::Action::Job(body.to_string(), x, y));
+                } else {
+                    model.state =
+                        State::Confirming(confirm_action_modal::Action::Job(x.long_description.clone(), x, y));
                 }
             } else {
                 let req = state_change(&x, &y, true);
@@ -229,7 +234,9 @@ pub fn update(msg: IdMsg, cache: &ArcCache, model: &mut Model, orders: &mut impl
                 &mut orders.proxy(move |m| IdMsg(id, Msg::ConfirmJobModal(m))),
             );
         }
-        Msg::WatchChange => model.watching.update(),
+        Msg::Dropdown(msg) => {
+            dropdown::update(msg, &mut model.dropdown_state);
+        }
         Msg::Noop => {}
     };
 }
@@ -260,21 +267,41 @@ fn sort_actions<T>(actions: &mut Vec<(Arc<AvailableAction>, T)>) {
     actions.sort_by(|a, b| a.0.display_order.cmp(&b.0.display_order));
 }
 
-pub fn view(id: u32, model: &Model, all_locks: &Locks) -> Node<IdMsg> {
+pub fn view<'a>(id: u32, model: &Model, all_locks: &Locks, session: impl Into<Option<&'a Session>>) -> Node<IdMsg> {
+    unstyled_view(
+        id,
+        model,
+        all_locks,
+        session,
+        class![C.bg_blue_500, C.hover__bg_blue_700],
+    )
+}
+
+pub fn unstyled_view<'a>(
+    id: u32,
+    model: &Model,
+    all_locks: &Locks,
+    session: impl Into<Option<&'a Session>>,
+    btn_styles: Attrs,
+) -> Node<IdMsg> {
+    if !restrict::is_allowed(session, GroupType::FilesystemAdministrators) {
+        return empty![];
+    }
+
     let cls = class![
-        C.bg_blue_500,
-        C.hover__bg_blue_700,
-        C.text_white,
+        C.focus__outline_none,
         C.font_bold,
-        C.py_2,
         C.px_4,
+        C.py_2,
         C.rounded,
-    ];
+        C.text_white,
+    ]
+    .merge_attrs(btn_styles);
 
     let disabled_cls = class![C.opacity_50, C.cursor_not_allowed];
 
     if has_locks(all_locks, &model.composite_ids) {
-        return span![
+        return div![
             attrs::container(),
             class![C.inline_block],
             button![
@@ -288,35 +315,36 @@ pub fn view(id: u32, model: &Model, all_locks: &Locks) -> Node<IdMsg> {
     }
 
     match &model.state {
-        State::Activating => button![
+        State::Activating => div![button![
             cls.merge_attrs(disabled_cls),
             "Actions",
             font_awesome(class![C.w_4, C.h_4, C.inline, C.ml_1, C.pulse], "spinner"),
-        ],
-        State::Inactive => button![
+        ]],
+        State::Inactive => div![button![
             cls,
             "Actions",
             font_awesome(class![C.w_4, C.h_4, C.inline, C.ml_1], "chevron-down"),
             simple_ev(Ev::MouseMove, IdMsg(id, Msg::StartFetch))
-        ],
+        ]],
         State::Active => {
             if model.actions.is_empty() {
                 button![cls.merge_attrs(disabled_cls), "No Actions"]
             } else {
-                span![
-                    class![C.relative, C.inline_block],
+                div![
+                    class![C.relative],
                     button![
                         cls,
                         "Actions",
                         font_awesome(class![C.w_4, C.h_4, C.inline, C.ml_1], "chevron-down"),
-                        simple_ev(Ev::Click, IdMsg(id, Msg::WatchChange))
+                        simple_ev(Ev::Blur, IdMsg(id, Msg::Dropdown(dropdown::Msg::Close))),
+                        simple_ev(Ev::Click, IdMsg(id, Msg::Dropdown(dropdown::Msg::Toggle))),
                     ],
                     dropdown::wrapper_view(
-                        class![C.z_30, C.w_64],
                         Placement::Bottom,
-                        model.watching.is_open(),
+                        model.dropdown_state.is_open(),
                         items_view(id, &model.actions)
                     )
+                    .merge_attrs(class![C.z_30, C.w_56])
                 ]
             }
         }
@@ -343,6 +371,10 @@ fn items_view(id: u32, x: &ActionMap) -> impl View<IdMsg> {
                     attrs::container(),
                     dropdown::item_view(a![y.verb]),
                     tooltip::view(&y.long_description, Placement::Left),
+                    ev(Ev::MouseDown, move |ev| {
+                        ev.prevent_default();
+                        IdMsg(id, Msg::Noop)
+                    }),
                     mouse_ev(Ev::Click, move |_| IdMsg(id, Msg::ActionSelected(y2, z2)))
                 ]
             });

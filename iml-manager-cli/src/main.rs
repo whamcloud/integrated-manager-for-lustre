@@ -14,8 +14,7 @@ use structopt::StructOpt;
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "iml")]
-#[structopt(raw(setting = "structopt::clap::AppSettings::ColoredHelp"))]
+#[structopt(name = "iml", setting = structopt::clap::AppSettings::ColoredHelp)]
 /// The Integrated Manager for Lustre CLI
 pub enum App {
     #[structopt(name = "stratagem")]

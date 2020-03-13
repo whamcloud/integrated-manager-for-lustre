@@ -48,6 +48,11 @@ copr-rpms:
 	$(MAKE) -f .copr/Makefile srpm outdir=.
 	rpmbuild --rebuild -D "_topdir $(CURDIR)/_topdir" _topdir/SRPMS/rust-iml-*.src.rpm
 
+docker-rpms:
+	$(MAKE) -C docker save
+	$(MAKE) -f .copr/Makefile iml-docker-srpm outdir=.
+	rpmbuild --rebuild -D "_topdir $(CURDIR)/_topdir" _topdir/SRPMS/iml-docker-*.src.rpm
+
 cleandist:
 	rm -rf dist
 	mkdir dist

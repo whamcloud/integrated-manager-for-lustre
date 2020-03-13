@@ -292,6 +292,12 @@ class ServiceConfig(CommandLine):
     def _setup_influxdb(self):
         influx_service = ServiceControlEL7("influxdb")
 
+        # Disable reporting
+        # Disable influx http logging (of every write and every query)
+        with open("/etc/default/influxdb", "w") as f:
+            f.write("INFLUXDB_REPORTING_DISABLED=true\n")
+            f.write("INFLUXDB_HTTP_LOG_ENABLED=false\n")
+
         log.info("Starting InfluxDB...")
         error = influx_service.enable()
         if error:
@@ -317,6 +323,7 @@ class ServiceConfig(CommandLine):
         log.info("Creating InfluxDB database...")
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_IML_DB)])
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_STRATAGEM_SCAN_DB)])
+        self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_IML_STATS_DB)])
 
     def _setup_grafana(self):
         # grafana needs daemon-reload before enable and start

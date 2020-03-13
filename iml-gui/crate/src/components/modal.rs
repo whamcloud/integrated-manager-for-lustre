@@ -86,13 +86,14 @@ pub fn bg_view<T>(open: bool, p_msg: ParentMsg<T>, children: impl View<T>) -> No
     div![
         class![
             C.fixed,
-            C.w_full,
-            C.h_full,
-            C.top_0,
-            C.left_0,
             C.flex,
+            C.h_full,
             C.items_center,
             C.justify_center,
+            C.left_0,
+            C.top_0,
+            C.w_full,
+            C.z_50
         ],
         attrs! {At::TabIndex => 0, At::AutoFocus => true},
         keyboard_ev("keydown", move |ev| p_msg(Msg::KeyDown(ev.key_code()))),

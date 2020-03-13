@@ -4,9 +4,9 @@
 
 use crate::{
     db::{
-        ContentTypeRecord, DeviceHostRecord, DeviceRecord, Id, LnetConfigurationRecord,
-        ManagedTargetMountRecord, OstPoolOstsRecord, OstPoolRecord, StratagemConfiguration,
-        VolumeNodeRecord,
+        AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord, Id,
+        LnetConfigurationRecord, ManagedTargetMountRecord, OstPoolOstsRecord, OstPoolRecord,
+        StratagemConfiguration, VolumeNodeRecord, DeviceHostRecord, DeviceRecord,
     },
     Alert, CompositeId, EndpointNameSelf, Filesystem, Host, Label, LockChange, Target,
     TargetConfParam, ToCompositeId, Volume,
@@ -94,6 +94,7 @@ pub struct Cache {
     pub device: HashMap<u32, DeviceRecord>,
     pub device_host: HashMap<u32, DeviceHostRecord>,
     pub filesystem: HashMap<u32, Filesystem>,
+    pub group: HashMap<u32, AuthGroupRecord>,
     pub host: HashMap<u32, Host>,
     pub lnet_configuration: HashMap<u32, LnetConfigurationRecord>,
     pub managed_target_mount: HashMap<u32, ManagedTargetMountRecord>,
@@ -101,6 +102,8 @@ pub struct Cache {
     pub ost_pool_osts: HashMap<u32, OstPoolOstsRecord>,
     pub stratagem_config: HashMap<u32, StratagemConfiguration>,
     pub target: HashMap<u32, Target<TargetConfParam>>,
+    pub user: HashMap<u32, AuthUserRecord>,
+    pub user_group: HashMap<u32, AuthUserGroupRecord>,
     pub volume: HashMap<u32, Volume>,
     pub volume_node: HashMap<u32, VolumeNodeRecord>,
 }
@@ -112,6 +115,7 @@ pub struct ArcCache {
     pub device: HashMap<u32, Arc<DeviceRecord>>,
     pub device_host: HashMap<u32, Arc<DeviceHostRecord>>,
     pub filesystem: HashMap<u32, Arc<Filesystem>>,
+    pub group: HashMap<u32, Arc<AuthGroupRecord>>,
     pub host: HashMap<u32, Arc<Host>>,
     pub lnet_configuration: HashMap<u32, Arc<LnetConfigurationRecord>>,
     pub managed_target_mount: HashMap<u32, Arc<ManagedTargetMountRecord>>,
@@ -119,6 +123,8 @@ pub struct ArcCache {
     pub ost_pool_osts: HashMap<u32, Arc<OstPoolOstsRecord>>,
     pub stratagem_config: HashMap<u32, Arc<StratagemConfiguration>>,
     pub target: HashMap<u32, Arc<Target<TargetConfParam>>>,
+    pub user: HashMap<u32, Arc<AuthUserRecord>>,
+    pub user_group: HashMap<u32, Arc<AuthUserGroupRecord>>,
     pub volume: HashMap<u32, Arc<Volume>>,
     pub volume_node: HashMap<u32, Arc<VolumeNodeRecord>>,
 }
@@ -132,6 +138,7 @@ impl Cache {
             RecordId::Device(id) => self.device.remove(&id).is_some(),
             RecordId::DeviceHost(id) => self.device.remove(&id).is_some(),
             RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
+            RecordId::Group(id) => self.group.remove(&id).is_some(),
             RecordId::Host(id) => self.host.remove(&id).is_some(),
             RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
             RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(&id).is_some(),
@@ -139,6 +146,8 @@ impl Cache {
             RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(&id).is_some(),
             RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
             RecordId::Target(id) => self.target.remove(&id).is_some(),
+            RecordId::User(id) => self.user.remove(&id).is_some(),
+            RecordId::UserGroup(id) => self.user_group.remove(&id).is_some(),
             RecordId::Volume(id) => self.volume.remove(&id).is_some(),
             RecordId::VolumeNode(id) => self.volume_node.remove(&id).is_some(),
         }
@@ -164,7 +173,9 @@ impl Cache {
             Record::Host(x) => {
                 self.host.insert(x.id, x);
             }
-
+            Record::Group(x) => {
+                self.group.insert(x.id, x);
+            }
             Record::LnetConfiguration(x) => {
                 self.lnet_configuration.insert(x.id(), x);
             }
@@ -182,6 +193,12 @@ impl Cache {
             }
             Record::Target(x) => {
                 self.target.insert(x.id, x);
+            }
+            Record::User(x) => {
+                self.user.insert(x.id, x);
+            }
+            Record::UserGroup(x) => {
+                self.user_group.insert(x.id, x);
             }
             Record::Volume(x) => {
                 self.volume.insert(x.id, x);
@@ -212,6 +229,7 @@ impl ArcCache {
             RecordId::Device(id) => self.device.remove(&id).is_some(),
             RecordId::DeviceHost(id) => self.device_host.remove(&id).is_some(),
             RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
+            RecordId::Group(id) => self.group.remove(&id).is_some(),
             RecordId::Host(id) => self.host.remove(&id).is_some(),
             RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
             RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(&id).is_some(),
@@ -219,6 +237,8 @@ impl ArcCache {
             RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(&id).is_some(),
             RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
             RecordId::Target(id) => self.target.remove(&id).is_some(),
+            RecordId::User(id) => self.user.remove(&id).is_some(),
+            RecordId::UserGroup(id) => self.user_group.remove(&id).is_some(),
             RecordId::Volume(id) => self.volume.remove(&id).is_some(),
             RecordId::VolumeNode(id) => self.volume_node.remove(&id).is_some(),
         }
@@ -241,6 +261,9 @@ impl ArcCache {
             Record::Filesystem(x) => {
                 self.filesystem.insert(x.id, Arc::new(x));
             }
+            Record::Group(x) => {
+                self.group.insert(x.id, Arc::new(x));
+            }
             Record::Host(x) => {
                 self.host.insert(x.id, Arc::new(x));
             }
@@ -261,6 +284,12 @@ impl ArcCache {
             }
             Record::Target(x) => {
                 self.target.insert(x.id, Arc::new(x));
+            }
+            Record::User(x) => {
+                self.user.insert(x.id, Arc::new(x));
+            }
+            Record::UserGroup(x) => {
+                self.user_group.insert(x.id, Arc::new(x));
             }
             Record::Volume(x) => {
                 self.volume.insert(x.id, Arc::new(x));
@@ -283,7 +312,9 @@ impl ArcCache {
                 .get(&composite_id.1)
                 .cloned()
                 .map(erase),
-            "managedtarget" => self.target.get(&composite_id.1).cloned().map(erase),
+            "managedtarget" | "managedost" | "managedmdt" | "managedmgt" | "managedmgs" => {
+                self.target.get(&composite_id.1).cloned().map(erase)
+            }
             _ => None,
         }
     }
@@ -297,6 +328,7 @@ impl From<&Cache> for ArcCache {
             device: hashmap_to_arc_hashmap(&cache.device),
             device_host: hashmap_to_arc_hashmap(&cache.device_host),
             filesystem: hashmap_to_arc_hashmap(&cache.filesystem),
+            group: hashmap_to_arc_hashmap(&cache.group),
             host: hashmap_to_arc_hashmap(&cache.host),
             lnet_configuration: hashmap_to_arc_hashmap(&cache.lnet_configuration),
             managed_target_mount: hashmap_to_arc_hashmap(&cache.managed_target_mount),
@@ -304,6 +336,8 @@ impl From<&Cache> for ArcCache {
             ost_pool_osts: hashmap_to_arc_hashmap(&cache.ost_pool_osts),
             stratagem_config: hashmap_to_arc_hashmap(&cache.stratagem_config),
             target: hashmap_to_arc_hashmap(&cache.target),
+            user: hashmap_to_arc_hashmap(&cache.user),
+            user_group: hashmap_to_arc_hashmap(&cache.user_group),
             volume: hashmap_to_arc_hashmap(&cache.volume),
             volume_node: hashmap_to_arc_hashmap(&cache.volume_node),
         }
@@ -318,6 +352,7 @@ impl From<&ArcCache> for Cache {
             device: arc_hashmap_to_hashmap(&cache.device),
             device_host: arc_hashmap_to_hashmap(&cache.device_host),
             filesystem: arc_hashmap_to_hashmap(&cache.filesystem),
+            group: arc_hashmap_to_hashmap(&cache.group),
             host: arc_hashmap_to_hashmap(&cache.host),
             lnet_configuration: arc_hashmap_to_hashmap(&cache.lnet_configuration),
             managed_target_mount: arc_hashmap_to_hashmap(&cache.managed_target_mount),
@@ -325,6 +360,8 @@ impl From<&ArcCache> for Cache {
             ost_pool_osts: arc_hashmap_to_hashmap(&cache.ost_pool_osts),
             stratagem_config: arc_hashmap_to_hashmap(&cache.stratagem_config),
             target: arc_hashmap_to_hashmap(&cache.target),
+            user: arc_hashmap_to_hashmap(&cache.user),
+            user_group: arc_hashmap_to_hashmap(&cache.user_group),
             volume: arc_hashmap_to_hashmap(&cache.volume),
             volume_node: arc_hashmap_to_hashmap(&cache.volume_node),
         }
@@ -340,6 +377,7 @@ pub enum Record {
     Device(DeviceRecord),
     DeviceHost(DeviceHostRecord),
     Filesystem(Filesystem),
+    Group(AuthGroupRecord),
     Host(Host),
     LnetConfiguration(LnetConfigurationRecord),
     ManagedTargetMount(ManagedTargetMountRecord),
@@ -347,6 +385,8 @@ pub enum Record {
     OstPoolOsts(OstPoolOstsRecord),
     StratagemConfig(StratagemConfiguration),
     Target(Target<TargetConfParam>),
+    User(AuthUserRecord),
+    UserGroup(AuthUserGroupRecord),
     Volume(Volume),
     VolumeNode(VolumeNodeRecord),
 }
@@ -359,6 +399,7 @@ pub enum RecordId {
     Device(u32),
     DeviceHost(u32),
     Filesystem(u32),
+    Group(u32),
     Host(u32),
     LnetConfiguration(u32),
     ManagedTargetMount(u32),
@@ -366,6 +407,8 @@ pub enum RecordId {
     OstPoolOsts(u32),
     StratagemConfig(u32),
     Target(u32),
+    User(u32),
+    UserGroup(u32),
     Volume(u32),
     VolumeNode(u32),
 }
@@ -380,6 +423,7 @@ impl Deref for RecordId {
             | Self::Device(x)
             | Self::DeviceHost(x)
             | Self::Filesystem(x)
+            | Self::Group(x)
             | Self::Host(x)
             | Self::LnetConfiguration(x)
             | Self::ManagedTargetMount(x)
@@ -387,6 +431,8 @@ impl Deref for RecordId {
             | Self::OstPoolOsts(x)
             | Self::StratagemConfig(x)
             | Self::Target(x)
+            | Self::User(x)
+            | Self::UserGroup(x)
             | Self::Volume(x)
             | Self::VolumeNode(x) => x,
         }

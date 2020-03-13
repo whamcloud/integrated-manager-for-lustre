@@ -9,9 +9,10 @@ use iml_manager_client::{get_client, get_retry, Client, ImlManagerClientError};
 use iml_postgres::Client as PgClient;
 use iml_wire_types::{
     db::{
-        AlertStateRecord, ContentTypeRecord, FsRecord, Id, LnetConfigurationRecord,
-        ManagedHostRecord, ManagedTargetMountRecord, ManagedTargetRecord, Name, NotDeleted,
-        OstPoolOstsRecord, OstPoolRecord, StratagemConfiguration, VolumeNodeRecord, VolumeRecord,
+        AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
+        FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord, ManagedTargetMountRecord,
+        ManagedTargetRecord, Name, NotDeleted, OstPoolOstsRecord, OstPoolRecord,
+        StratagemConfiguration, VolumeNodeRecord, VolumeRecord,
     },
     warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam, Volume,
@@ -98,6 +99,24 @@ pub async fn db_record_to_change_record(
                     .await
             }
         },
+        DbRecord::AuthGroup(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::Group(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::Group(x)))
+            }
+        },
+        DbRecord::AuthUser(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::User(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::User(x)))
+            }
+        },
+        DbRecord::AuthUserGroup(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::UserGroup(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::UserGroup(x)))
+            }
+        },
         DbRecord::ContentType(x) => match (msg_type, x) {
             (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::ContentType(x.id()))),
             (MessageType::Insert, x) | (MessageType::Update, x) => {
@@ -127,6 +146,17 @@ pub async fn db_record_to_change_record(
                 Ok(RecordChange::Update(Record::LnetConfiguration(x)))
             }
         },
+        DbRecord::ManagedTargetMount(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => {
+                Ok(RecordChange::Delete(RecordId::ManagedTargetMount(x.id())))
+            }
+            (_, ref x) if x.deleted() => {
+                Ok(RecordChange::Delete(RecordId::ManagedTargetMount(x.id())))
+            }
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::ManagedTargetMount(x)))
+            }
+        },
         DbRecord::ManagedHost(x) => {
             converter(client, msg_type, x, Record::Host, RecordId::Host).await
         }
@@ -143,17 +173,6 @@ pub async fn db_record_to_change_record(
         DbRecord::ManagedTarget(x) => {
             converter(client, msg_type, x, Record::Target, RecordId::Target).await
         }
-        DbRecord::ManagedTargetMount(x) => match (msg_type, x) {
-            (MessageType::Delete, x) => {
-                Ok(RecordChange::Delete(RecordId::ManagedTargetMount(x.id())))
-            }
-            (_, ref x) if x.deleted() => {
-                Ok(RecordChange::Delete(RecordId::ManagedTargetMount(x.id())))
-            }
-            (MessageType::Insert, x) | (MessageType::Update, x) => {
-                Ok(RecordChange::Update(Record::ManagedTargetMount(x)))
-            }
-        },
         DbRecord::OstPool(x) => match (msg_type, x) {
             (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::OstPool(x.id()))),
             (_, ref x) if x.deleted() => Ok(RecordChange::Delete(RecordId::OstPool(x.id()))),
@@ -287,10 +306,16 @@ pub async fn populate_from_db(
             "select * from {}",
             ContentTypeRecord::table_name()
         )),
+        client.prepare(&format!("select * from {}", AuthGroupRecord::table_name())),
+        client.prepare(&format!("select * from {}", AuthUserRecord::table_name())),
+        client.prepare(&format!(
+            "select * from {}",
+            AuthUserGroupRecord::table_name()
+        )),
     ])
     .await?;
 
-    let fut = future::try_join5(
+    let fut1 = future::try_join5(
         into_row(client.query_raw(&stmts[0], iter::empty()).await?),
         into_row(client.query_raw(&stmts[1], iter::empty()).await?),
         into_row(client.query_raw(&stmts[2], iter::empty()).await?),
@@ -298,16 +323,18 @@ pub async fn populate_from_db(
         into_row(client.query_raw(&stmts[4], iter::empty()).await?),
     );
 
-    let (
-        (managed_target_mount, stratagem_configuration, lnet_configuration, volume_node, ost_pool),
-        ost_pool_osts,
-        content_types,
-    ) = future::try_join3(
-        fut,
+    let fut2 = future::try_join5(
         into_row(client.query_raw(&stmts[5], iter::empty()).await?),
         into_row(client.query_raw(&stmts[6], iter::empty()).await?),
-    )
-    .await?;
+        into_row(client.query_raw(&stmts[7], iter::empty()).await?),
+        into_row(client.query_raw(&stmts[8], iter::empty()).await?),
+        into_row(client.query_raw(&stmts[9], iter::empty()).await?),
+    );
+
+    let (
+        (managed_target_mount, stratagem_configuration, lnet_configuration, volume_node, ost_pool),
+        (ost_pool_osts, content_types, groups, users, user_groups),
+    ) = future::try_join(fut1, fut2).await?;
 
     let mut cache = shared_api_cache.lock().await;
 
@@ -318,6 +345,9 @@ pub async fn populate_from_db(
     cache.ost_pool = ost_pool;
     cache.ost_pool_osts = ost_pool_osts;
     cache.content_type = content_types;
+    cache.group = groups;
+    cache.user = users;
+    cache.user_group = user_groups;
 
     tracing::debug!("Populated from db");
 

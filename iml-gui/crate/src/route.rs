@@ -39,13 +39,14 @@ impl<'a> Deref for RouteId<'a> {
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Route<'a> {
     About,
-    Activity,
     Dashboard,
+    FsDashboard(RouteId<'a>),
+    ServerDashboard(RouteId<'a>),
+    TargetDashboard(RouteId<'a>),
     Filesystems,
     Filesystem(RouteId<'a>),
     Jobstats,
     Login,
-    Logs,
     Mgt,
     NotFound,
     PowerControl,
@@ -65,13 +66,14 @@ impl<'a> Route<'a> {
     pub fn path(&self) -> Vec<&str> {
         let mut p = match self {
             Self::About => vec!["about"],
-            Self::Activity => vec!["activity"],
             Self::Dashboard => vec!["dashboard"],
+            Self::FsDashboard(id) => vec!["dashboard", "fs", id],
+            Self::ServerDashboard(id) => vec!["dashboard", "server", id],
+            Self::TargetDashboard(id) => vec!["dashboard", "target", id],
             Self::Filesystems => vec!["filesystems"],
             Self::Filesystem(id) => vec!["filesystems", id],
             Self::Jobstats => vec!["jobstats"],
             Self::Login => vec!["login"],
-            Self::Logs => vec!["logs"],
             Self::Mgt => vec!["mgt"],
             Self::NotFound => vec!["404"],
             Self::OstPools => vec!["ost_pools"],
@@ -103,13 +105,14 @@ impl<'a> ToString for Route<'a> {
     fn to_string(&self) -> String {
         match self {
             Self::About => "About".into(),
-            Self::Activity => "Activity".into(),
             Self::Dashboard => "Dashboard".into(),
+            Self::FsDashboard(_) => "Fs Dashboard".into(),
+            Self::ServerDashboard(_) => "Server Dashboard".into(),
+            Self::TargetDashboard(_) => "Target Dashboard".into(),
             Self::Filesystems => "Filesystems".into(),
             Self::Filesystem(_) => "Filesystem Detail".into(),
             Self::Jobstats => "Jobstats".into(),
             Self::Login => "Login".into(),
-            Self::Logs => "Logs".into(),
             Self::Mgt => "MGTs".into(),
             Self::NotFound => "404".into(),
             Self::OstPools => "OST Pool".into(),
@@ -139,8 +142,24 @@ impl<'a> From<Url> for Route<'a> {
 
         match path.next().as_ref().map(String::as_str) {
             Some("about") => Self::About,
-            Some("activity") => Self::Activity,
-            Some("dashboard") => Self::Dashboard,
+            Some("dashboard") => match path.next() {
+                None => Self::Dashboard,
+                Some(name) => match name.as_str() {
+                    "fs" => match path.next() {
+                        Some(name) => Self::FsDashboard(RouteId::from(name)),
+                        None => Self::Dashboard,
+                    },
+                    "server" => match path.next() {
+                        Some(name) => Self::ServerDashboard(RouteId::from(name)),
+                        None => Self::Dashboard,
+                    },
+                    "target" => match path.next() {
+                        Some(name) => Self::TargetDashboard(RouteId::from(name)),
+                        None => Self::Dashboard,
+                    },
+                    _ => Self::Dashboard,
+                },
+            },
             Some("filesystems") => match path.next() {
                 None => Self::Filesystems,
                 Some(id) => Self::Filesystem(RouteId::from(id)),
@@ -148,7 +167,6 @@ impl<'a> From<Url> for Route<'a> {
             None | Some("") => Self::Dashboard,
             Some("jobstats") => Self::Jobstats,
             Some("login") => Self::Login,
-            Some("logs") => Self::Logs,
             Some("mgt") => Self::Mgt,
             Some("ost_pools") => match path.next() {
                 None => Self::OstPools,

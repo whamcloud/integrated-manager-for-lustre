@@ -3,7 +3,9 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{get, get_all, get_one},
+    api_utils::{
+        create_command, get, get_all, get_hosts, get_one, wait_for_cmds, SendCmd, SendJob,
+    },
     display_utils::{generate_table, wrap_fut},
     error::ImlManagerCliError,
     ostpool::{ostpool_cli, OstPoolCommand},
@@ -12,6 +14,7 @@ use futures::future::{try_join, try_join_all};
 use iml_wire_types::{ApiList, Filesystem, FlatQuery, Mgt, Ost};
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
+use std::collections::{BTreeMap, HashMap};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -31,6 +34,12 @@ pub enum FilesystemCommand {
         #[structopt(subcommand)]
         command: OstPoolCommand,
     },
+    /// Detect existing filesystem
+    #[structopt(name = "detect")]
+    Detect {
+        #[structopt(short, long)]
+        hosts: Option<String>,
+    },
 }
 
 fn usage(
@@ -47,6 +56,54 @@ fn usage(
         (None, Some(total)) => format!("Calculating ... / {}", formatter(total, Some(0))),
         _ => "Calculating ...".to_string(),
     }
+}
+
+async fn detect_filesystem(hosts: Option<String>) -> Result<(), ImlManagerCliError> {
+    let hosts = if let Some(hl) = hosts {
+        let hostlist = hostlist_parser::parse(&hl)?;
+        tracing::debug!("Host Names: {:?}", hostlist);
+        let all_hosts = get_hosts().await?;
+
+        let hostmap: BTreeMap<&str, &str> = all_hosts
+            .objects
+            .iter()
+            .map(|h| {
+                vec![
+                    (h.nodename.as_str(), h.resource_uri.as_str()),
+                    (h.fqdn.as_str(), h.resource_uri.as_str()),
+                ]
+            })
+            .flatten()
+            .collect();
+
+        hostlist
+            .iter()
+            .filter_map(|h| hostmap.get(h.as_str()))
+            .map(|x| (*x).to_string())
+            .collect()
+    } else {
+        vec![]
+    };
+
+    tracing::debug!("Host APIs: {:?}", hosts);
+
+    let args = if hosts.is_empty() {
+        vec![]
+    } else {
+        vec![("hosts".to_string(), hosts)]
+    };
+
+    let cmd = SendCmd {
+        message: "Detecting filesystems".into(),
+        jobs: vec![SendJob::<HashMap<String, Vec<String>>> {
+            class_name: "DetectTargetsJob".into(),
+            args: args.into_iter().collect(),
+        }],
+    };
+    let cmd = wrap_fut("Detecting filesystems...", create_command(cmd)).await?;
+
+    wait_for_cmds(vec![cmd]).await?;
+    Ok(())
 }
 
 pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManagerCliError> {
@@ -120,6 +177,7 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
             table.printstd();
         }
         FilesystemCommand::Pool { command } => ostpool_cli(command).await?,
+        FilesystemCommand::Detect { hosts } => detect_filesystem(hosts).await?,
     };
 
     Ok(())
