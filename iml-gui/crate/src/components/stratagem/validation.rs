@@ -24,7 +24,7 @@ pub fn validate(
     scan_duration_picker.validation_message = match scan_duration_picker.value_as_ms() {
         Some(ms) => {
             if ms < 1 {
-                Some("Value must be greater than or equal to 1.".into())
+                Some("Value must be a positive integer.".into())
             } else {
                 max_value_validation(ms, scan_duration_picker.unit)
             }

@@ -186,7 +186,7 @@ pub fn view(model: &Model, mut input: Node<Msg>) -> Node<Msg> {
 
     let validation_message = &model.validation_message;
     let el = if let (Some(msg), false) = (validation_message, model.disabled) {
-        tooltip::base_error_view(msg, Placement::Left).merge_attrs(class![C.block])
+        tooltip::base_error_view(msg, Placement::Bottom).merge_attrs(class![C.block])
     } else {
         empty![]
     };
