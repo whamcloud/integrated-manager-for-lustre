@@ -1,6 +1,9 @@
+// Copyright (c) 2020 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 use crate::{
     components::{duration_picker, grafana_chart},
-    environment,
     extensions::MergeAttrs,
     generated::css_classes::C,
     GMsg,
@@ -16,6 +19,7 @@ pub(crate) mod inode_table;
 pub(crate) mod scan_stratagem_button;
 pub(crate) mod scan_stratagem_modal;
 pub(crate) mod update_stratagem_button;
+pub(crate) mod validation;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ActionResponse {
@@ -85,18 +89,6 @@ pub fn filesystem_locked(fs: &Filesystem, locks: &Locks) -> bool {
     locks.get(&fs.composite_id().to_string()).is_some()
 }
 
-pub fn max_value_validation(ms: u64, unit: duration_picker::Unit) -> Option<String> {
-    if ms > environment::MAX_SAFE_INTEGER {
-        Some(format!(
-            "Duration cannot be greater than {} {}",
-            duration_picker::convert_ms_to_unit(unit, environment::MAX_SAFE_INTEGER),
-            unit
-        ))
-    } else {
-        None
-    }
-}
-
 pub struct Config {
     inode_table: inode_table::Model,
     grafana_vars: HashMap<String, String>,
@@ -133,36 +125,6 @@ impl Config {
             report_duration: self.report_duration_picker.value_as_ms(),
             purge_duration: self.purge_duration_picker.value_as_ms(),
         })
-    }
-    /// Validates the input fields for the duration picker.
-    /// It would be much better if we relied on HTML5 validation,
-    /// but we need a solution to https://github.com/David-OConnor/seed/issues/82 first.
-    pub fn validate(&mut self) {
-        self.scan_duration_picker.validation_message = match self.scan_duration_picker.value_as_ms() {
-            Some(ms) => {
-                log!("ms: {}, max: {}", ms, environment::MAX_SAFE_INTEGER);
-
-                if ms < 1 {
-                    Some("Value must be greater than or equal to 1.".into())
-                } else {
-                    max_value_validation(ms, self.scan_duration_picker.unit)
-                }
-            }
-            None => Some("Please fill out this field.".into()),
-        };
-
-        let check = self
-            .report_duration_picker
-            .value
-            .and_then(|r| self.purge_duration_picker.value.map(|p| r >= p))
-            .unwrap_or(false);
-
-        if check {
-            self.report_duration_picker.validation_message =
-                Some("Report duration must be less than Purge duration.".into());
-        } else {
-            self.report_duration_picker.validation_message = None;
-        }
     }
 }
 
@@ -233,7 +195,11 @@ fn handle_stratagem_config_update(config: &mut Config, conf: &Arc<StratagemConfi
         config.disabled = false;
     }
 
-    config.validate();
+    validation::validate(
+        &mut config.scan_duration_picker,
+        &mut config.report_duration_picker,
+        &mut config.purge_duration_picker,
+    );
 }
 
 pub(crate) fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -242,15 +208,27 @@ pub(crate) fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut
             Msg::InodeTable(x) => inode_table::update(x, &mut config.inode_table, &mut orders.proxy(Msg::InodeTable)),
             Msg::ScanDurationPicker(msg) => {
                 duration_picker::update(msg, &mut config.scan_duration_picker);
-                config.validate();
+                validation::validate(
+                    &mut config.scan_duration_picker,
+                    &mut config.report_duration_picker,
+                    &mut config.purge_duration_picker,
+                );
             }
             Msg::ReportDurationPicker(msg) => {
                 duration_picker::update(msg, &mut config.report_duration_picker);
-                config.validate();
+                validation::validate(
+                    &mut config.scan_duration_picker,
+                    &mut config.report_duration_picker,
+                    &mut config.purge_duration_picker,
+                );
             }
             Msg::PurgeDurationPicker(msg) => {
                 duration_picker::update(msg, &mut config.purge_duration_picker);
-                config.validate();
+                validation::validate(
+                    &mut config.scan_duration_picker,
+                    &mut config.report_duration_picker,
+                    &mut config.purge_duration_picker,
+                );
             }
             Msg::CheckStratagem => {
                 if !can_enable(&model.fs, cache) {
@@ -335,7 +313,11 @@ pub(crate) fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut
                 config.report_duration_picker.value = None;
                 config.purge_duration_picker.value = None;
                 config.disabled = false;
-                config.validate();
+                validation::validate(
+                    &mut config.scan_duration_picker,
+                    &mut config.report_duration_picker,
+                    &mut config.purge_duration_picker,
+                );
             }
             Msg::ScanStratagemButton(msg) => {
                 scan_stratagem_button::update(
@@ -374,7 +356,11 @@ pub(crate) fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut
                     handle_stratagem_config_update(&mut cfg, conf);
                 }
 
-                cfg.validate();
+                validation::validate(
+                    &mut cfg.scan_duration_picker,
+                    &mut cfg.report_duration_picker,
+                    &mut cfg.purge_duration_picker,
+                );
 
                 model.state = State::Enabled(Box::new(cfg));
 

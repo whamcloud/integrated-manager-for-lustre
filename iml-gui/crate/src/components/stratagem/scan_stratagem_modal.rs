@@ -1,7 +1,11 @@
+// Copyright (c) 2020 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 use crate::{
     components::{
         font_awesome, modal,
-        stratagem::{duration_picker, ActionResponse, StratagemScan},
+        stratagem::{duration_picker, validation, ActionResponse, StratagemScan},
     },
     extensions::{MergeAttrs as _, NodeExt as _},
     generated::css_classes::C,
@@ -39,8 +43,14 @@ pub enum Msg {
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
-        Msg::ReportDurationPicker(msg) => duration_picker::update(msg, &mut model.report_duration),
-        Msg::PurgeDurationPicker(msg) => duration_picker::update(msg, &mut model.purge_duration),
+        Msg::ReportDurationPicker(msg) => {
+            duration_picker::update(msg, &mut model.report_duration);
+            validation::validate_report_and_purge(&mut model.report_duration, &mut model.purge_duration);
+        }
+        Msg::PurgeDurationPicker(msg) => {
+            duration_picker::update(msg, &mut model.purge_duration);
+            validation::validate_report_and_purge(&mut model.report_duration, &mut model.purge_duration);
+        }
         Msg::SubmitScan => {
             model.scanning = true;
             let data = StratagemScan {
