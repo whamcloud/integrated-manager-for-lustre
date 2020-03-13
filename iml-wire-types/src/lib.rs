@@ -422,6 +422,8 @@ pub struct Conf {
     pub build: String,
     pub version: String,
     pub is_release: bool,
+    pub branding: Branding,
+    pub use_stratagem: bool,
 }
 
 impl EndpointName for Conf {
@@ -1507,6 +1509,13 @@ impl PartialEq for OstPool {
     fn eq(&self, other: &Self) -> bool {
         self.filesystem == other.filesystem && self.name == other.name
     }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub enum Branding {
+    Whamcloud,
+    Ddn,
+    DdnAi400,
 }
 
 pub mod db;
