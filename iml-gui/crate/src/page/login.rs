@@ -147,8 +147,8 @@ pub fn view(model: &Model) -> impl View<Msg> {
                     input_ev(Ev::Input, Msg::UsernameChange),
                     &input_cls,
                     attrs! {
-                        At::AutoFocus => true,
-                        At::Required => true,
+                        At::AutoFocus => true.as_at_value(),
+                        At::Required => true.as_at_value(),
                         At::Placeholder => "Username",
                         At::AutoComplete => "username"
                     },

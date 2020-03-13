@@ -122,7 +122,12 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
                 .map(|x| Self::Target(Box::new(target::Model::new(Arc::clone(x)))))
                 .unwrap_or_default(),
             Route::Users => Self::Users,
-            Route::User(id) => id.parse().map(|id| Self::User(user::Model { id })).unwrap_or_default(),
+            Route::User(id) => id
+                .parse()
+                .ok()
+                .and_then(|x| cache.user.get(&x))
+                .map(|x| Self::User(user::Model::new(Arc::clone(x))))
+                .unwrap_or_default(),
             Route::Volumes => Self::Volumes,
             Route::Volume(id) => id
                 .parse()
@@ -151,8 +156,8 @@ impl Page {
             | (Route::Volumes, Self::Volumes) => true,
             (Route::OstPool(route_id), Self::OstPool(ostpool::Model { id }))
             | (Route::Server(route_id), Self::Server(server::Model { id }))
-            | (Route::User(route_id), Self::User(user::Model { id }))
             | (Route::Volume(route_id), Self::Volume(volume::Model { id })) => route_id == &RouteId::from(id),
+            (Route::User(route_id), Self::User(x)) => route_id == &RouteId::from(x.user.id),
             (Route::Filesystem(route_id), Self::Filesystem(x)) => route_id == &RouteId::from(x.fs.id),
             (Route::Target(route_id), Self::Target(x)) => route_id == &RouteId::from(x.target.id),
             (Route::FsDashboard(route_id), Self::FsDashboard(fs_dashboard::Model { fs_name, .. })) => {

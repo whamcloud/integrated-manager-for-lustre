@@ -20,7 +20,7 @@ chrono = { version = "0.4", features = ["wasmbind"] }
 chrono-humanize = "0.0.11"
 futures = "0.3"
 gloo-timers = { version = "0.2", features = ["futures"] }
-im = { version = "14.2", features = ["serde"] }
+im = { version = "14.3", features = ["serde"] }
 iml-wire-types = { path = "../../iml-wire-types", version = "0.2" }
 js-sys = "0.3"
 lazy_static = "1.4.0"

@@ -5,7 +5,7 @@
 use crate::CompositeId;
 use crate::ToCompositeId;
 use crate::{EndpointName, Fqdn, Label};
-use std::{collections::BTreeSet, fmt, ops::Deref, path::PathBuf, time::SystemTime};
+use std::{collections::BTreeSet, fmt, ops::Deref, path::PathBuf};
 
 #[cfg(feature = "postgres-interop")]
 use bytes::BytesMut;
@@ -1031,8 +1031,6 @@ impl From<Row> for DeviceHost {
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct AuthUserRecord {
     pub id: u32,
-    pub password: String,
-    pub last_login: Option<SystemTime>,
     pub is_superuser: bool,
     pub username: String,
     pub first_name: String,
@@ -1040,7 +1038,6 @@ pub struct AuthUserRecord {
     pub email: String,
     pub is_staff: bool,
     pub is_active: bool,
-    pub date_joined: SystemTime,
 }
 
 pub const AUTH_USER_TABLE_NAME: TableName = TableName("auth_user");
@@ -1062,8 +1059,6 @@ impl From<Row> for AuthUserRecord {
     fn from(row: Row) -> Self {
         Self {
             id: row.get::<_, i32>("id") as u32,
-            password: row.get("password"),
-            last_login: row.get::<_, Option<SystemTime>>("last_login"),
             is_superuser: row.get("is_superuser"),
             username: row.get("username"),
             first_name: row.get("first_name"),
@@ -1071,7 +1066,6 @@ impl From<Row> for AuthUserRecord {
             email: row.get("email"),
             is_staff: row.get("is_staff"),
             is_active: row.get("is_active"),
-            date_joined: row.get("date_joined"),
         }
     }
 }

@@ -7,6 +7,7 @@ pub mod popover;
 pub mod progress_circle;
 pub mod resource_links;
 pub mod table;
+pub mod toast;
 pub mod tooltip;
 
 pub(crate) mod action_dropdown;

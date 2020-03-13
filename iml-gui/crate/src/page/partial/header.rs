@@ -282,7 +282,10 @@ pub fn auth_view(auth: &auth::Model, logging_out: bool) -> Node<Msg> {
                     attrs! {
                         At::Href => Route::User(user.id.into()).to_href()
                     },
-                    user.username
+                    match (user.full_name.as_str(), user.username.as_str()) {
+                        ("", x) => x,
+                        (x, _) => x,
+                    }
                 ]
             }
             None => empty![],
