@@ -6,33 +6,100 @@ use crate::{
     extensions::MergeAttrs,
     generated::css_classes::C,
     route::RouteId,
-    GMsg, Route,
+    sleep_with_handle, GMsg, Route,
 };
+use futures::channel::oneshot;
 use iml_wire_types::{
     warp_drive::{ArcCache, Locks},
     Filesystem, Session, Target, TargetConfParam, TargetKind, ToCompositeId,
 };
 use number_formatter as nf;
 use seed::{prelude::*, *};
+use std::time::Duration;
 use std::{collections::HashMap, sync::Arc};
 
 pub struct Row {
     dropdown: action_dropdown::Model,
 }
 
+#[derive(Default, serde::Deserialize, Clone, Debug)]
+pub(crate) struct Stats {
+    pub(crate) bytes_total: Option<u64>,
+    pub(crate) bytes_free: Option<u64>,
+    pub(crate) files_total: Option<u64>,
+    pub(crate) files_free: Option<u64>,
+    pub(crate) clients: Option<u64>,
+}
+
 pub struct Model {
     pub fs: Arc<Filesystem>,
-    pub mdts: Vec<Arc<Target<TargetConfParam>>>,
-    pub mdt_paging: paging::Model,
-    pub mgt: Vec<Arc<Target<TargetConfParam>>>,
-    pub osts: Vec<Arc<Target<TargetConfParam>>>,
-    pub ost_paging: paging::Model,
-    pub rows: HashMap<u32, Row>,
-    pub stratagem: stratagem::Model,
+    mdts: Vec<Arc<Target<TargetConfParam>>>,
+    mdt_paging: paging::Model,
+    mgt: Vec<Arc<Target<TargetConfParam>>>,
+    osts: Vec<Arc<Target<TargetConfParam>>>,
+    ost_paging: paging::Model,
+    rows: HashMap<u32, Row>,
+    stratagem: stratagem::Model,
+    stats: Stats,
+    stats_cancel: Option<oneshot::Sender<()>>,
+    stats_url: String,
+}
+
+impl Model {
+    pub(crate) fn new(fs: &Arc<Filesystem>) -> Self {
+        let query = format!(
+            r#"SELECT SUM(b_total), SUM(b_free)
+                    , SUM(f_total), SUM(f_free)
+                    , SUM(clients)
+               FROM (SELECT LAST(bytes_total) AS b_total
+                          , LAST(bytes_free) AS b_free
+                          , LAST(files_total) AS f_total
+                          , LAST(files_free) AS f_free
+                      FROM target
+                      WHERE "kind" = '"OST"' AND "fs" = '"{fs_name}"' AND time > now() - 2m
+                      GROUP BY target)
+                   , (SELECT LAST(connected_clients) AS clients
+                      FROM target
+                      WHERE fs='"{fs_name}"' AND kind='"MDT"' AND time > now() - 2m
+                      GROUP BY target)"#,
+            fs_name = &fs.name
+        );
+
+        Model {
+            fs: Arc::clone(fs),
+            mdts: Default::default(),
+            mdt_paging: Default::default(),
+            mgt: Default::default(),
+            osts: Default::default(),
+            ost_paging: Default::default(),
+            rows: Default::default(),
+            stratagem: stratagem::Model::new(Arc::clone(fs)),
+            stats: Stats::default(),
+            stats_cancel: None,
+            stats_url: format!(r#"/influx?db=iml_stats&q={}"#, query),
+        }
+    }
+}
+
+#[derive(serde::Deserialize, Clone, Debug)]
+pub struct InfluxSeries {
+    values: Vec<(String, Option<u64>, Option<u64>, Option<u64>, Option<u64>, Option<u64>)>,
+}
+
+#[derive(serde::Deserialize, Clone, Debug)]
+pub struct InfluxResult {
+    series: Option<Vec<InfluxSeries>>,
+}
+
+#[derive(serde::Deserialize, Clone, Debug)]
+pub struct InfluxResponse {
+    results: Vec<InfluxResult>,
 }
 
 #[derive(Clone)]
 pub enum Msg {
+    FetchStats,
+    StatsFetched(Box<fetch::ResponseDataResult<InfluxResponse>>),
     ActionDropdown(Box<action_dropdown::IdMsg>),
     AddTarget(Arc<Target<TargetConfParam>>),
     RemoveTarget(u32),
@@ -41,21 +108,60 @@ pub enum Msg {
     MdtPaging(paging::Msg),
     UpdatePaging,
     Stratagem(stratagem::Msg),
+    Noop,
 }
 
 pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
     orders.send_msg(Msg::SetTargets(cache.target.values().cloned().collect()));
-
     orders
         .proxy(Msg::Stratagem)
         .send_msg(stratagem::Msg::CheckStratagem)
         .send_msg(stratagem::Msg::SetStratagemConfig(
             cache.stratagem_config.values().cloned().collect(),
         ));
+    orders.send_msg(Msg::FetchStats);
 }
 
 pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
+        Msg::FetchStats => {
+            model.stats_cancel = None;
+            let request = seed::fetch::Request::new(model.stats_url.clone());
+            orders
+                .skip()
+                .perform_cmd(request.fetch_json_data(|x| Msg::StatsFetched(Box::new(x))));
+        }
+        Msg::StatsFetched(res) => {
+            match *res {
+                Ok(response) => {
+                    let r = response
+                        .results
+                        .into_iter()
+                        .take(1)
+                        .filter_map(|result| result.series)
+                        .flatten()
+                        .take(1)
+                        .map(|v| v.values)
+                        .flatten()
+                        .next();
+
+                    if let Some((_, bt, bf, ft, ff, cc)) = r {
+                        model.stats.bytes_total = bt;
+                        model.stats.bytes_free = bf;
+                        model.stats.files_total = ft;
+                        model.stats.files_free = ff;
+                        model.stats.clients = cc;
+                    }
+                }
+                Err(e) => {
+                    error!(e);
+                    orders.skip();
+                }
+            }
+            let (cancel, fut) = sleep_with_handle(Duration::from_secs(30), Msg::FetchStats, Msg::Noop);
+            model.stats_cancel = Some(cancel);
+            orders.perform_cmd(fut);
+        }
         Msg::ActionDropdown(x) => {
             let action_dropdown::IdMsg(id, msg) = *x;
 
@@ -154,6 +260,7 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                 .send_msg(paging::Msg::SetTotal(model.osts.len()));
         }
         Msg::Stratagem(msg) => stratagem::update(msg, cache, &mut model.stratagem, &mut orders.proxy(Msg::Stratagem)),
+        Msg::Noop => {}
     }
 }
 
@@ -225,11 +332,19 @@ fn details_table(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg
         t::wrapper_view(vec![
             tr![
                 t::th_left(plain!("Space Used / Total")),
-                t::td_view(size_view(&model.fs))
+                t::td_view(chart_view(
+                    model.stats.bytes_free,
+                    model.stats.bytes_total,
+                    nf::format_bytes
+                ))
             ],
             tr![
                 t::th_left(plain!("Files Created / Maximum")),
-                t::td_view(files_view(&model.fs))
+                t::td_view(chart_view(
+                    model.stats.files_free,
+                    model.stats.files_total,
+                    nf::format_number
+                ))
             ],
             tr![
                 t::th_left(plain!("State")),
@@ -246,7 +361,7 @@ fn details_table(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg
             ],
             tr![
                 t::th_left(plain!["Number of Connected Clients"]),
-                t::td_view(clients_view(&model.fs))
+                t::td_view(clients_view(model.stats.clients))
             ],
             tr![
                 t::th_left(plain!["Status"]),
@@ -354,45 +469,8 @@ pub(crate) fn mgs<T>(xs: &[Arc<Target<TargetConfParam>>], f: &Filesystem) -> Nod
     }
 }
 
-pub(crate) fn clients_view<T>(f: &Filesystem) -> Node<T> {
-    plain!(match f.client_count {
-        Some(c) => c.round().to_string(),
-        None => "N/A".to_string(),
-    })
-}
-
-pub(crate) fn size_view<T>(f: &Filesystem) -> Node<T> {
-    if let Some((u, t)) = f.bytes_total.and_then(|t| f.bytes_free.map(|f| (t - f, t))) {
-        let pct = u / t;
-
-        span![
-            class![C.whitespace_no_wrap],
-            progress_circle::view((pct, progress_circle::used_to_color(pct)))
-                .merge_attrs(class![C.h_16, C.inline, C.mx_2]),
-            nf::format_bytes(u, None),
-            " / ",
-            nf::format_bytes(t, None)
-        ]
-    } else {
-        plain!("N/A")
-    }
-}
-
-fn files_view<T>(fs: &Filesystem) -> Node<T> {
-    if let Some((u, t)) = fs.files_total.and_then(|t| fs.files_free.map(|f| (t - f, t))) {
-        let pct = u / t;
-
-        span![
-            class![C.whitespace_no_wrap],
-            progress_circle::view((pct, progress_circle::used_to_color(pct)))
-                .merge_attrs(class![C.h_16, C.inline, C.mx_2]),
-            nf::format_number(u, None),
-            " / ",
-            nf::format_number(t, None)
-        ]
-    } else {
-        plain!("N/A")
-    }
+pub(crate) fn clients_view<T>(cc: impl Into<Option<u64>>) -> Node<T> {
+    plain![cc.into().map(|c| c.to_string()).unwrap_or_else(|| "N/A".to_string())]
 }
 
 fn is_fs_target(fs_id: u32, t: &Target<TargetConfParam>) -> bool {
@@ -401,4 +479,27 @@ fn is_fs_target(fs_id: u32, t: &Target<TargetConfParam>) -> bool {
             .as_ref()
             .and_then(|f| f.iter().find(|x| x.id == fs_id))
             .is_some()
+}
+
+pub(crate) fn chart_view<T>(
+    free: impl Into<Option<u64>>,
+    total: impl Into<Option<u64>>,
+    formatter: fn(f64, Option<usize>) -> String,
+) -> Node<T> {
+    if let Some((u, t)) = total
+        .into()
+        .and_then(|t| free.into().map(|f| (t.checked_sub(f).unwrap_or(0), t)))
+    {
+        let pct = u as f64 / t as f64;
+        span![
+            class![C.whitespace_no_wrap],
+            progress_circle::view((pct, progress_circle::used_to_color(pct)))
+                .merge_attrs(class![C.h_16, C.inline, C.mx_2]),
+            formatter(u as f64, None),
+            " / ",
+            formatter(t as f64, None)
+        ]
+    } else {
+        plain!("N/A")
+    }
 }
