@@ -3,7 +3,6 @@
 # license that can be found in the LICENSE file.
 
 
-import threading
 import sys
 import signal
 import linecache
@@ -87,7 +86,10 @@ class Command(BaseCommand):
         if options["gevent"]:
             from gevent.monkey import patch_all
 
+            # Workaround for https://stackoverflow.com/a/12639040
             patch_all(thread=True)
+            import threading
+
             # Gevent's implementation of select removes 'poll'
             import subprocess
 
@@ -96,6 +98,8 @@ class Command(BaseCommand):
             import django.db
 
             django.db.connections._connections = threading.local()
+        else:
+            import threading
 
         if options["trace"]:
 
