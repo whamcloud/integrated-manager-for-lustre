@@ -37,7 +37,6 @@ from chroma_core.models import StateLock
 from chroma_core.models import AlertEvent
 from chroma_core.models.devices import DeviceHost
 
-# from chroma_core.models import DeviceHost
 from chroma_core.lib.job import job_log
 from chroma_core.lib.job import DependOn
 from chroma_core.lib.job import DependAll
@@ -485,69 +484,6 @@ class RemoveServerConfStep(Step):
         self.invoke_agent(host, "deregister_server")
 
 
-class LearnDevicesStep(Step):
-    idempotent = True
-
-    # Require database to talk to storage_plugin_manager
-    database = True
-
-    def run(self, kwargs):
-        from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
-        from chroma_core.services.job_scheduler.agent_rpc import AgentException
-
-        # Get the device-scan output
-        host = kwargs["host"]
-
-        plugin_data = {}
-        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-
-        for plugin in storage_plugin_manager.loaded_plugin_names:
-            try:
-                plugin_data[plugin] = self.invoke_agent(host, "device_plugin", {"plugin": plugin})[plugin]
-            except AgentException:
-                self.log("No data for plugin %s from host %s" % (plugin, host))
-
-        AgentDaemonRpcInterface().setup_host(host.id, plugin_data)
-
-
-class UpdateDevicesStep(Step):
-    idempotent = True
-
-    # Require database to talk to plugin_manager
-    database = True
-
-    def update_devices(self, host, plugin_data):
-        from chroma_core.services.job_scheduler.agent_rpc import AgentException
-
-        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-
-        for plugin in storage_plugin_manager.loaded_plugin_names:
-            try:
-                plugin_data[plugin] = self.invoke_agent(host, "device_plugin", {"plugin": plugin})[plugin]
-            except AgentException as e:
-                self.log("No data for plugin %s from host %s due to exception %s" % (plugin, host, e))
-
-    def run(self, kwargs):
-        from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
-
-        threads = []
-        plugins_data = defaultdict(dict)
-
-        for host in kwargs["hosts"]:
-            thread = ExceptionThrowingThread(target=self.update_devices, args=(host, plugins_data[host]))
-            thread.start()
-            threads.append(thread)
-
-        ExceptionThrowingThread.wait_for_threads(
-            threads
-        )  # This will raise an exception if any of the threads raise an exception
-
-        for host, plugin_data in plugins_data.items():
-            # This enables services tests to run see - _handle_action_respond in test_agent_rpc.py for more info
-            if plugin_data != {}:
-                AgentDaemonRpcInterface().update_host_resources(host.id, plugin_data)
-
-
 class TriggerPluginUpdatesStep(Step):
     idempotent = True
 
@@ -768,7 +704,8 @@ class InstallHostPackagesJob(StateChangeJob):
         steps = [(SetHostProfileStep, {"host": self.managed_host, "server_profile": self.managed_host.server_profile})]
 
         if self.managed_host.is_lustre_server:
-            steps.append((LearnDevicesStep, {"host": self.managed_host}))
+            # We've called LearnDevicesStep previously
+            pass
 
         steps.extend(
             [
@@ -1004,7 +941,7 @@ class DetectTargetsJob(HostListMixin):
 
     def get_steps(self):
         return [
-            (UpdateDevicesStep, {"hosts": self.hosts}),
+            # We did UpdateDevicesStep previously
             (
                 DetectTargetsStep,
                 {"host_ids": [h.id for h in self.hosts], "host_ids_fqdns": [(h.id, h.fqdn) for h in self.hosts]},
@@ -1083,7 +1020,8 @@ class UpdateDevicesJob(HostListMixin):
         return [StateLock(job=self, locked_item=host, write=True) for host in self.hosts]
 
     def get_steps(self):
-        return [(UpdateDevicesStep, {"hosts": self.hosts})]
+        # We returned UpdateDevicesStep previously
+        return []
 
     class Meta:
         app_label = "chroma_core"
@@ -1155,13 +1093,6 @@ class DeleteHostStep(Step):
 
         from chroma_core.models import StorageResourceRecord
         from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
-
-        try:
-            AgentDaemonRpcInterface().remove_host_resources(host.id)
-        except StorageResourceRecord.DoesNotExist:
-            # This is allowed, to account for the case where we submit the request_remove_resource,
-            # then crash, then get restarted.
-            pass
 
         # Remove associated lustre mounts
         for mount in host.client_mounts.all():
