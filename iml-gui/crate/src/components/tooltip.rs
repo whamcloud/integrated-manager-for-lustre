@@ -6,7 +6,7 @@ use crate::{
 use seed::{prelude::*, *};
 
 /// Render a tooltip with vaild CSS color string.
-pub(crate) fn color_view<T>(content: &str, placement: Placement, color: &str) -> Node<T> {
+pub(crate) fn base_color_view<T>(content: &str, placement: Placement, color: &str) -> Node<T> {
     let tooltip_top_styles = style! {
         St::Transform => "translate(50%, -100%)",
         St::Top => 0,
@@ -64,16 +64,16 @@ pub(crate) fn color_view<T>(content: &str, placement: Placement, color: &str) ->
     ]
 }
 
-pub(crate) fn color_hover_view<T>(content: &str, placement: Placement, color: &str) -> Node<T> {
-    color_view(content, placement, color).merge_attrs(class![C.hidden, C.group_hover__block,])
+pub(crate) fn color_view<T>(content: &str, placement: Placement, color: &str) -> Node<T> {
+    base_color_view(content, placement, color).merge_attrs(class![C.hidden, C.group_hover__block,])
 }
 
 /// Render a hover tooltip.
-pub(crate) fn hover_view<T>(content: &str, direction: Placement) -> Node<T> {
-    color_hover_view(content, direction, "black")
+pub(crate) fn view<T>(content: &str, direction: Placement) -> Node<T> {
+    color_view(content, direction, "black")
 }
 
 /// Render a tooltip with a red error color.
-pub(crate) fn error_view<T>(content: &str, direction: Placement) -> Node<T> {
-    color_view(content, direction, "red")
+pub(crate) fn base_error_view<T>(content: &str, direction: Placement) -> Node<T> {
+    base_color_view(content, direction, "red")
 }
