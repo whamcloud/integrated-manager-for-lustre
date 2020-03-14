@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{delete, extract_api_id, get, get_all, get_one, post, put, wait_for_cmds},
+    api_utils::{delete, get, get_all, get_one, post, put, wait_for_cmds},
     display_utils::{generate_table, wrap_fut},
     error::ImlManagerCliError,
 };
@@ -120,7 +120,7 @@ async fn ostpool_list(fsname: Option<String>) -> Result<(), ImlManagerCliError> 
                 .objects
                 .iter()
                 .filter_map(|p| {
-                    let id = extract_api_id(&p.ost.filesystem);
+                    let id = iml_api_utils::extract_id(&p.ost.filesystem);
 
                     id.map(|x| x.to_string())
                 })

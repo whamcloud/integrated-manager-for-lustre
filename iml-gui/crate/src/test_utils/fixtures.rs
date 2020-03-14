@@ -4,6 +4,8 @@ pub(crate) fn get_cache() -> Cache {
     let data = r#"
     {
   "content_type": {},
+  "pacemaker_configuration": {},
+  "corosync_configuration": {},
   "group": {},
   "user": {},
   "user_group": {},

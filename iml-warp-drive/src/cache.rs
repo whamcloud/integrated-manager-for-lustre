@@ -10,9 +10,10 @@ use iml_postgres::Client as PgClient;
 use iml_wire_types::{
     db::{
         AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
-        FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord, ManagedTargetMountRecord,
-        ManagedTargetRecord, Name, NotDeleted, OstPoolOstsRecord, OstPoolRecord,
-        StratagemConfiguration, VolumeNodeRecord, VolumeRecord,
+        CorosyncConfigurationRecord, FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord,
+        ManagedTargetMountRecord, ManagedTargetRecord, Name, NotDeleted, OstPoolOstsRecord,
+        OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration, VolumeNodeRecord,
+        VolumeRecord,
     },
     warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam, Volume,
@@ -172,6 +173,28 @@ pub async fn db_record_to_change_record(
                 Ok(RecordChange::Update(Record::UserGroup(x)))
             }
         },
+        DbRecord::CorosyncConfiguration(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::CorosyncConfiguration(
+                x.id(),
+            ))),
+            (_, ref x) if x.deleted() => Ok(RecordChange::Delete(RecordId::CorosyncConfiguration(
+                x.id(),
+            ))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::CorosyncConfiguration(x)))
+            }
+        },
+        DbRecord::PacemakerConfiguration(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::PacemakerConfiguration(
+                x.id(),
+            ))),
+            (_, ref x) if x.deleted() => Ok(RecordChange::Delete(
+                RecordId::PacemakerConfiguration(x.id()),
+            )),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::PacemakerConfiguration(x)))
+            }
+        },
         DbRecord::ManagedTargetMount(x) => match (msg_type, x) {
             (MessageType::Delete, x) => {
                 Ok(RecordChange::Delete(RecordId::ManagedTargetMount(x.id())))
@@ -300,6 +323,14 @@ pub async fn populate_from_db(
             "select * from {}",
             AuthUserGroupRecord::table_name()
         )),
+        client.prepare(&format!(
+            "select * from {} where not_deleted = 't'",
+            CorosyncConfigurationRecord::table_name()
+        )),
+        client.prepare(&format!(
+            "select * from {} where not_deleted = 't'",
+            PacemakerConfigurationRecord::table_name()
+        )),
     ])
     .await?;
 
@@ -319,10 +350,16 @@ pub async fn populate_from_db(
         into_row(client.query_raw(&stmts[9], iter::empty()).await?),
     );
 
+    let fut3 = future::try_join(
+        into_row(client.query_raw(&stmts[10], iter::empty()).await?),
+        into_row(client.query_raw(&stmts[11], iter::empty()).await?),
+    );
+
     let (
         (managed_target_mount, stratagem_configuration, lnet_configuration, volume_node, ost_pool),
         (ost_pool_osts, content_types, groups, users, user_groups),
-    ) = future::try_join(fut1, fut2).await?;
+        (corosync_configuration, pacemaker_configuration),
+    ) = future::try_join3(fut1, fut2, fut3).await?;
 
     let mut cache = shared_api_cache.lock().await;
 
@@ -336,6 +373,8 @@ pub async fn populate_from_db(
     cache.group = groups;
     cache.user = users;
     cache.user_group = user_groups;
+    cache.corosync_configuration = corosync_configuration;
+    cache.pacemaker_configuration = pacemaker_configuration;
 
     tracing::debug!("Populated from db");
 

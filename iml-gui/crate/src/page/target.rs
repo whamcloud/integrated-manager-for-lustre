@@ -1,6 +1,6 @@
 use crate::{
     components::{action_dropdown, alert_indicator, lock_indicator, panel, resource_links, Placement},
-    extensions::MergeAttrs,
+    extensions::MergeAttrs as _,
     generated::css_classes::C,
     GMsg,
 };
