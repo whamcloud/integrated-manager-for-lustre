@@ -1091,9 +1091,6 @@ class DeleteHostStep(Step):
         for c in get_all_sub_classes(AlertStateBase):
             c.notify(host, False)
 
-        from chroma_core.models import StorageResourceRecord
-        from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
-
         # Remove associated lustre mounts
         for mount in host.client_mounts.all():
             mount.mark_deleted()
