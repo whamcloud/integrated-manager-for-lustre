@@ -1,12 +1,12 @@
 use crate::{
     components::{action_dropdown, alert_indicator, lnet_status, lock_indicator, paging, table, Placement},
-    extract_id,
     generated::css_classes::C,
     GMsg, MergeAttrs, Route, ServerDate,
 };
+use iml_wire_types::db::CorosyncConfigurationRecord;
 use iml_wire_types::{
-    db::LnetConfigurationRecord,
-    warp_drive::{ArcCache, ArcValuesExt, Locks},
+    db::{LnetConfigurationRecord, PacemakerConfigurationRecord},
+    warp_drive::{ArcCache, Locks},
     Host, Label, Session, ToCompositeId,
 };
 use seed::{prelude::*, *};
@@ -30,7 +30,7 @@ struct Row {
 
 #[derive(Default)]
 pub struct Model {
-    hosts: Vec<Host>,
+    hosts: Vec<Arc<Host>>,
     rows: HashMap<u32, Row>,
     pager: paging::Model,
     sort: (SortField, paging::Dir),
@@ -38,7 +38,12 @@ pub struct Model {
 
 #[derive(Clone)]
 pub enum Msg {
-    SetHosts(Vec<Host>, im::HashMap<u32, Arc<LnetConfigurationRecord>>), // @FIXME: This should be more granular so row state isn't lost.
+    SetHosts(
+        Vec<Arc<Host>>,
+        im::HashMap<u32, Arc<LnetConfigurationRecord>>,
+        im::HashMap<u32, Arc<PacemakerConfigurationRecord>>,
+        im::HashMap<u32, Arc<CorosyncConfigurationRecord>>,
+    ), // @FIXME: This should be more granular so row state isn't lost.
     Page(paging::Msg),
     Sort,
     SortBy(SortField),
@@ -47,8 +52,10 @@ pub enum Msg {
 
 pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
     orders.send_msg(Msg::SetHosts(
-        cache.host.arc_values().cloned().collect(),
+        cache.host.values().cloned().collect(),
         cache.lnet_configuration.clone(),
+        cache.pacemaker_configuration.clone(),
+        cache.corosync_configuration.clone(),
     ));
 }
 
@@ -68,36 +75,52 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
         Msg::Sort => {
             let sort_fn = match model.sort {
                 (SortField::Label, paging::Dir::Asc) => {
-                    Box::new(|a: &Host, b: &Host| natord::compare(a.label(), b.label()))
-                        as Box<dyn FnMut(&Host, &Host) -> Ordering>
+                    Box::new(|a: &Arc<Host>, b: &Arc<Host>| natord::compare(a.label(), b.label()))
+                        as Box<dyn FnMut(&Arc<Host>, &Arc<Host>) -> Ordering>
                 }
                 (SortField::Label, paging::Dir::Desc) => {
-                    Box::new(|a: &Host, b: &Host| natord::compare(b.label(), a.label()))
+                    Box::new(|a: &Arc<Host>, b: &Arc<Host>| natord::compare(b.label(), a.label()))
                 }
-                (SortField::Profile, paging::Dir::Asc) => {
-                    Box::new(|a: &Host, b: &Host| natord::compare(&a.server_profile.ui_name, &b.server_profile.ui_name))
-                }
-                (SortField::Profile, paging::Dir::Desc) => {
-                    Box::new(|a: &Host, b: &Host| natord::compare(&b.server_profile.ui_name, &a.server_profile.ui_name))
-                }
+                (SortField::Profile, paging::Dir::Asc) => Box::new(|a: &Arc<Host>, b: &Arc<Host>| {
+                    natord::compare(&a.server_profile.ui_name, &b.server_profile.ui_name)
+                }),
+                (SortField::Profile, paging::Dir::Desc) => Box::new(|a: &Arc<Host>, b: &Arc<Host>| {
+                    natord::compare(&b.server_profile.ui_name, &a.server_profile.ui_name)
+                }),
             };
 
             model.hosts.sort_by(sort_fn);
         }
-        Msg::SetHosts(hosts, lnet_configs) => {
+        Msg::SetHosts(hosts, lnet_configs, pacemaker_configs, corosync_configs) => {
             model.hosts = hosts;
 
             model.rows = model
                 .hosts
                 .iter()
                 .map(|x| {
-                    let mut config = lnet_by_server(x, &lnet_configs)
+                    let xs = x
+                        .lnet_id()
+                        .and_then(|x| lnet_configs.get(&x))
                         .map(|x| vec![x.composite_id()])
                         .unwrap_or_default();
 
-                    let mut actions = vec![x.composite_id()];
+                    let ys = x
+                        .pacemaker_id()
+                        .and_then(|x| pacemaker_configs.get(&x))
+                        .map(|x| vec![x.composite_id()])
+                        .unwrap_or_default();
 
-                    actions.append(&mut config);
+                    let zs = x
+                        .corosync_id()
+                        .and_then(|x| corosync_configs.get(&x))
+                        .map(|x| vec![x.composite_id()])
+                        .unwrap_or_default();
+
+                    let actions = std::iter::once(x.composite_id())
+                        .chain(xs)
+                        .chain(ys)
+                        .chain(zs)
+                        .collect();
 
                     (
                         x.id,
@@ -130,17 +153,6 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
             }
         }
     }
-}
-
-fn lnet_by_server(
-    x: &Host,
-    lnet_configs: &im::HashMap<u32, Arc<LnetConfigurationRecord>>,
-) -> Option<Arc<LnetConfigurationRecord>> {
-    let id = extract_id(&x.lnet_configuration)?;
-
-    let id = id.parse::<u32>().unwrap();
-
-    lnet_configs.get(&id).cloned()
 }
 
 pub fn view(
@@ -183,14 +195,8 @@ pub fn view(
                                     alert_indicator(&cache.active_alert, &x, true, Placement::Top)
                                 ])
                                 .merge_attrs(class![C.text_center]),
-                                table::td_view(plain!(x
-                                    .boot_time
-                                    .as_ref()
-                                    .map(|bt| sd.timeago(
-                                        chrono::DateTime::parse_from_rfc3339(&format!("{}-00:00", bt)).unwrap()
-                                    ))
-                                    .unwrap_or_else(|| "N/A".into())))
-                                .merge_attrs(class![C.text_center]),
+                                table::td_view(plain!(humanize_time(&x.boot_time, sd)))
+                                    .merge_attrs(class![C.text_center]),
                                 table::td_view(span![x.server_profile.ui_name]).merge_attrs(class![C.text_center]),
                                 table::td_view(
                                     div![lnet_by_server_view(x, cache, all_locks).unwrap_or_else(|| vec![])]
@@ -217,11 +223,19 @@ pub fn view(
     ]
 }
 
+pub fn humanize_time(x: &Option<String>, sd: &ServerDate) -> String {
+    x.as_ref()
+        .map(|bt| sd.timeago(chrono::DateTime::parse_from_rfc3339(&format!("{}-00:00", bt)).unwrap()))
+        .unwrap_or_else(|| "---".into())
+}
+
 fn lnet_by_server_view<T>(x: &Host, cache: &ArcCache, all_locks: &Locks) -> Option<Vec<Node<T>>> {
-    let config = lnet_by_server(x, &cache.lnet_configuration)?;
+    let id = x.lnet_id()?;
+
+    let config = cache.lnet_configuration.get(&id)?;
 
     Some(nodes![
-        lnet_status::view(&config, all_locks).merge_attrs(class![C.mr_2]),
+        lnet_status::view(config, all_locks).merge_attrs(class![C.mr_2]),
         alert_indicator(&cache.active_alert, &config, true, Placement::Top,),
     ])
 }

@@ -1,4 +1,5 @@
-use crate::{extensions::MergeAttrs as _, extract_id, generated::css_classes::C, route::RouteId, Route};
+use crate::{extensions::MergeAttrs as _, generated::css_classes::C, route::RouteId, Route};
+use iml_api_utils::extract_id;
 use iml_wire_types::{Filesystem, Target, TargetConfParam, VolumeOrResourceUri};
 use seed::{prelude::*, *};
 

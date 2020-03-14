@@ -29,13 +29,9 @@ use components::{
 pub(crate) use extensions::*;
 use futures::channel::oneshot;
 use generated::css_classes::C;
-use iml_wire_types::{
-    warp_drive::{self, ArcValuesExt},
-    GroupType, Session,
-};
+use iml_wire_types::{warp_drive, GroupType, Session};
 use lazy_static::lazy_static;
 use page::{login, Page};
-use regex::Regex;
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, EventHandler, *};
 pub(crate) use server_date::ServerDate;
@@ -84,15 +80,6 @@ fn ui_base() -> Option<String> {
         "" => None,
         _ => Some(base),
     }
-}
-
-pub fn extract_id(s: &str) -> Option<&str> {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"^/?api/[^/]+/(\d+)/?$").unwrap();
-    }
-    let x = RE.captures(s)?;
-
-    x.get(1).map(|x| x.as_str())
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
@@ -284,6 +271,7 @@ pub enum Msg {
     RemoveRecord(warp_drive::RecordId),
     RouteChanged(Url),
     ServersPage(page::servers::Msg),
+    ServerPage(page::server::Msg),
     StatusSection(status_section::Msg),
     SliderX(i32, f64),
     StartSliderTracking,
@@ -388,8 +376,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .send_msg(notification::generate(None, &old, &model.activity_health));
 
             orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::SetHosts(
-                model.records.host.arc_values().cloned().collect(),
+                model.records.host.values().cloned().collect(),
                 model.records.lnet_configuration.clone(),
+                model.records.pacemaker_configuration.clone(),
+                model.records.corosync_configuration.clone(),
             ));
 
             orders
@@ -419,8 +409,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             match id {
                 warp_drive::RecordId::Host(_) => {
                     orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::SetHosts(
-                        model.records.host.arc_values().cloned().collect(),
+                        model.records.host.values().cloned().collect(),
                         model.records.lnet_configuration.clone(),
+                        model.records.pacemaker_configuration.clone(),
+                        model.records.corosync_configuration.clone(),
                     ));
                 }
                 warp_drive::RecordId::Filesystem(x) => {
@@ -451,6 +443,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::ServersPage(msg) => {
             if let Page::Servers(page) = &mut model.page {
                 page::servers::update(msg, &model.records, page, &mut orders.proxy(Msg::ServersPage))
+            }
+        }
+        Msg::ServerPage(msg) => {
+            if let Page::Server(page) = &mut model.page {
+                page::server::update(msg, &model.records, page, &mut orders.proxy(Msg::ServerPage))
             }
         }
         Msg::FilesystemPage(msg) => {
@@ -612,8 +609,10 @@ fn handle_record_change(
                 };
 
                 orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::SetHosts(
-                    model.records.host.arc_values().cloned().collect(),
+                    model.records.host.values().cloned().collect(),
                     model.records.lnet_configuration.clone(),
+                    model.records.pacemaker_configuration.clone(),
+                    model.records.corosync_configuration.clone(),
                 ));
             }
             warp_drive::Record::ManagedTargetMount(x) => {
@@ -676,6 +675,12 @@ fn handle_record_change(
             }
             warp_drive::Record::LnetConfiguration(x) => {
                 model.records.lnet_configuration.insert(x.id, Arc::new(x));
+            }
+            warp_drive::Record::CorosyncConfiguration(x) => {
+                model.records.corosync_configuration.insert(x.id, Arc::new(x));
+            }
+            warp_drive::Record::PacemakerConfiguration(x) => {
+                model.records.pacemaker_configuration.insert(x.id, Arc::new(x));
             }
         },
         warp_drive::RecordChange::Delete(record_id) => {
@@ -864,7 +869,19 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
             .map_msg(Msg::ServersPage),
         )
         .els(),
-        Page::Server(x) => main_panels(model, page::server::view(x)).els(),
+        Page::Server(x) => main_panels(
+            model,
+            page::server::view(
+                &model.records,
+                x,
+                &model.locks,
+                model.auth.get_session(),
+                &model.server_date,
+            )
+            .els()
+            .map_msg(Msg::ServerPage),
+        )
+        .els(),
         Page::Targets => main_panels(model, page::targets::view(model)).els(),
         Page::Target(x) => main_panels(
             model,

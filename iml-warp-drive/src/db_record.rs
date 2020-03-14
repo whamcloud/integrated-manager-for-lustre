@@ -4,14 +4,15 @@
 
 use iml_wire_types::db::{
     AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
-    FsRecord, LnetConfigurationRecord, ManagedHostRecord, ManagedTargetMountRecord,
-    ManagedTargetRecord, OstPoolOstsRecord, OstPoolRecord, StratagemConfiguration, TableName,
-    VolumeNodeRecord, VolumeRecord, ALERT_STATE_TABLE_NAME, AUTH_GROUP_TABLE_NAME,
-    AUTH_USER_GROUP_TABLE_NAME, AUTH_USER_TABLE_NAME, CONTENT_TYPE_TABLE_NAME,
+    CorosyncConfigurationRecord, FsRecord, LnetConfigurationRecord, ManagedHostRecord,
+    ManagedTargetMountRecord, ManagedTargetRecord, OstPoolOstsRecord, OstPoolRecord,
+    PacemakerConfigurationRecord, StratagemConfiguration, TableName, VolumeNodeRecord,
+    VolumeRecord, ALERT_STATE_TABLE_NAME, AUTH_GROUP_TABLE_NAME, AUTH_USER_GROUP_TABLE_NAME,
+    AUTH_USER_TABLE_NAME, CONTENT_TYPE_TABLE_NAME, COROSYNC_CONFIGURATION_TABLE_NAME,
     LNET_CONFIGURATION_TABLE_NAME, MANAGED_FILESYSTEM_TABLE_NAME, MANAGED_HOST_TABLE_NAME,
     MANAGED_TARGET_MOUNT_TABLE_NAME, MANAGED_TARGET_TABLE_NAME, OSTPOOL_OSTS_TABLE_NAME,
-    OSTPOOL_TABLE_NAME, STRATAGEM_CONFIGURATION_TABLE_NAME, VOLUME_NODE_TABLE_NAME,
-    VOLUME_TABLE_NAME,
+    OSTPOOL_TABLE_NAME, PACEMAKER_CONFIGURATION_TABLE_NAME, STRATAGEM_CONFIGURATION_TABLE_NAME,
+    VOLUME_NODE_TABLE_NAME, VOLUME_TABLE_NAME,
 };
 use serde::de::Error;
 use std::convert::TryFrom;
@@ -25,6 +26,7 @@ pub enum DbRecord {
     AuthUserGroup(AuthUserGroupRecord),
     AlertState(AlertStateRecord),
     ContentType(ContentTypeRecord),
+    CorosyncConfiguration(CorosyncConfigurationRecord),
     LnetConfiguration(LnetConfigurationRecord),
     ManagedFilesystem(FsRecord),
     ManagedHost(ManagedHostRecord),
@@ -32,6 +34,7 @@ pub enum DbRecord {
     ManagedTargetMount(ManagedTargetMountRecord),
     OstPool(OstPoolRecord),
     OstPoolOsts(OstPoolOstsRecord),
+    PacemakerConfiguration(PacemakerConfigurationRecord),
     StratagemConfiguration(StratagemConfiguration),
     Volume(VolumeRecord),
     VolumeNode(VolumeNodeRecord),
@@ -69,6 +72,12 @@ impl TryFrom<(TableName<'_>, serde_json::Value)> for DbRecord {
             AUTH_GROUP_TABLE_NAME => serde_json::from_value(x).map(DbRecord::AuthGroup),
             AUTH_USER_GROUP_TABLE_NAME => serde_json::from_value(x).map(DbRecord::AuthUserGroup),
             AUTH_USER_TABLE_NAME => serde_json::from_value(x).map(DbRecord::AuthUser),
+            COROSYNC_CONFIGURATION_TABLE_NAME => {
+                serde_json::from_value(x).map(DbRecord::CorosyncConfiguration)
+            }
+            PACEMAKER_CONFIGURATION_TABLE_NAME => {
+                serde_json::from_value(x).map(DbRecord::PacemakerConfiguration)
+            }
             x => Err(serde_json::Error::custom(format!(
                 "No matching table representation for {}",
                 x

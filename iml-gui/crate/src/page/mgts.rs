@@ -1,11 +1,11 @@
 use crate::{
     components::{action_dropdown, alert_indicator, lock_indicator, resource_links, table, Placement},
     extensions::MergeAttrs,
-    extract_id,
     generated::css_classes::C,
     route::RouteId,
     GMsg, Route,
 };
+use iml_api_utils::extract_id;
 use iml_wire_types::{
     warp_drive::{ArcCache, ArcValuesExt, Locks},
     Session, Target, TargetConfParam, TargetKind, ToCompositeId,

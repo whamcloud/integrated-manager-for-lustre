@@ -506,6 +506,27 @@ pub struct Host {
     pub state_modified_at: String,
 }
 
+impl Host {
+    /// Get associated LNet configuration id
+    pub fn lnet_id(&self) -> Option<u32> {
+        let id = iml_api_utils::extract_id(&self.lnet_configuration)?;
+
+        id.parse::<u32>().ok()
+    }
+    /// Get associated Corosync configuration id
+    pub fn corosync_id(&self) -> Option<u32> {
+        let id = iml_api_utils::extract_id(self.corosync_configuration.as_ref()?)?;
+
+        id.parse::<u32>().ok()
+    }
+    /// Get associated Pacemaker configuration id
+    pub fn pacemaker_id(&self) -> Option<u32> {
+        let id = iml_api_utils::extract_id(self.pacemaker_configuration.as_ref()?)?;
+
+        id.parse::<u32>().ok()
+    }
+}
+
 impl FlatQuery for Host {}
 
 impl ToCompositeId for Host {

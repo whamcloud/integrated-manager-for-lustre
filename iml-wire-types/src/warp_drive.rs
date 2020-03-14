@@ -4,9 +4,10 @@
 
 use crate::{
     db::{
-        AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord, Id,
-        LnetConfigurationRecord, ManagedTargetMountRecord, OstPoolOstsRecord, OstPoolRecord,
-        StratagemConfiguration, VolumeNodeRecord,
+        AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
+        CorosyncConfigurationRecord, Id, LnetConfigurationRecord, ManagedTargetMountRecord,
+        OstPoolOstsRecord, OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration,
+        VolumeNodeRecord,
     },
     Alert, CompositeId, EndpointNameSelf, Filesystem, Host, Label, LockChange, Target,
     TargetConfParam, ToCompositeId, Volume,
@@ -90,6 +91,7 @@ pub type Locks = HashMap<String, HashSet<LockChange>>;
 #[derive(serde::Serialize, serde::Deserialize, Default, PartialEq, Clone, Debug)]
 pub struct Cache {
     pub content_type: HashMap<u32, ContentTypeRecord>,
+    pub corosync_configuration: HashMap<u32, CorosyncConfigurationRecord>,
     pub active_alert: HashMap<u32, Alert>,
     pub filesystem: HashMap<u32, Filesystem>,
     pub group: HashMap<u32, AuthGroupRecord>,
@@ -102,6 +104,7 @@ pub struct Cache {
     pub target: HashMap<u32, Target<TargetConfParam>>,
     pub user: HashMap<u32, AuthUserRecord>,
     pub user_group: HashMap<u32, AuthUserGroupRecord>,
+    pub pacemaker_configuration: HashMap<u32, PacemakerConfigurationRecord>,
     pub volume: HashMap<u32, Volume>,
     pub volume_node: HashMap<u32, VolumeNodeRecord>,
 }
@@ -109,6 +112,7 @@ pub struct Cache {
 #[derive(Default, PartialEq, Clone, Debug)]
 pub struct ArcCache {
     pub content_type: HashMap<u32, Arc<ContentTypeRecord>>,
+    pub corosync_configuration: HashMap<u32, Arc<CorosyncConfigurationRecord>>,
     pub active_alert: HashMap<u32, Arc<Alert>>,
     pub filesystem: HashMap<u32, Arc<Filesystem>>,
     pub group: HashMap<u32, Arc<AuthGroupRecord>>,
@@ -117,6 +121,7 @@ pub struct ArcCache {
     pub managed_target_mount: HashMap<u32, Arc<ManagedTargetMountRecord>>,
     pub ost_pool: HashMap<u32, Arc<OstPoolRecord>>,
     pub ost_pool_osts: HashMap<u32, Arc<OstPoolOstsRecord>>,
+    pub pacemaker_configuration: HashMap<u32, Arc<PacemakerConfigurationRecord>>,
     pub stratagem_config: HashMap<u32, Arc<StratagemConfiguration>>,
     pub target: HashMap<u32, Arc<Target<TargetConfParam>>>,
     pub user: HashMap<u32, Arc<AuthUserRecord>>,
@@ -130,6 +135,9 @@ impl Cache {
     pub fn remove_record(&mut self, x: RecordId) -> bool {
         match x {
             RecordId::ActiveAlert(id) => self.active_alert.remove(&id).is_some(),
+            RecordId::CorosyncConfiguration(id) => {
+                self.corosync_configuration.remove(&id).is_some()
+            }
             RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
             RecordId::Group(id) => self.group.remove(&id).is_some(),
             RecordId::Host(id) => self.host.remove(&id).is_some(),
@@ -138,6 +146,9 @@ impl Cache {
             RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(&id).is_some(),
             RecordId::OstPool(id) => self.ost_pool.remove(&id).is_some(),
             RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(&id).is_some(),
+            RecordId::PacemakerConfiguration(id) => {
+                self.pacemaker_configuration.remove(&id).is_some()
+            }
             RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
             RecordId::Target(id) => self.target.remove(&id).is_some(),
             RecordId::User(id) => self.user.remove(&id).is_some(),
@@ -151,6 +162,9 @@ impl Cache {
         match x {
             Record::ActiveAlert(x) => {
                 self.active_alert.insert(x.id, x);
+            }
+            Record::CorosyncConfiguration(x) => {
+                self.corosync_configuration.insert(x.id, x);
             }
             Record::Filesystem(x) => {
                 self.filesystem.insert(x.id, x);
@@ -175,6 +189,9 @@ impl Cache {
             }
             Record::OstPoolOsts(x) => {
                 self.ost_pool_osts.insert(x.id(), x);
+            }
+            Record::PacemakerConfiguration(x) => {
+                self.pacemaker_configuration.insert(x.id, x);
             }
             Record::StratagemConfig(x) => {
                 self.stratagem_config.insert(x.id(), x);
@@ -213,6 +230,9 @@ impl ArcCache {
     pub fn remove_record(&mut self, x: RecordId) -> bool {
         match x {
             RecordId::ActiveAlert(id) => self.active_alert.remove(&id).is_some(),
+            RecordId::CorosyncConfiguration(id) => {
+                self.corosync_configuration.remove(&id).is_some()
+            }
             RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
             RecordId::Group(id) => self.group.remove(&id).is_some(),
             RecordId::Host(id) => self.host.remove(&id).is_some(),
@@ -221,6 +241,9 @@ impl ArcCache {
             RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(&id).is_some(),
             RecordId::OstPool(id) => self.ost_pool.remove(&id).is_some(),
             RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(&id).is_some(),
+            RecordId::PacemakerConfiguration(id) => {
+                self.pacemaker_configuration.remove(&id).is_some()
+            }
             RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
             RecordId::Target(id) => self.target.remove(&id).is_some(),
             RecordId::User(id) => self.user.remove(&id).is_some(),
@@ -234,6 +257,9 @@ impl ArcCache {
         match x {
             Record::ActiveAlert(x) => {
                 self.active_alert.insert(x.id, Arc::new(x));
+            }
+            Record::CorosyncConfiguration(x) => {
+                self.corosync_configuration.insert(x.id, Arc::new(x));
             }
             Record::Filesystem(x) => {
                 self.filesystem.insert(x.id, Arc::new(x));
@@ -258,6 +284,9 @@ impl ArcCache {
             }
             Record::OstPoolOsts(x) => {
                 self.ost_pool_osts.insert(x.id(), Arc::new(x));
+            }
+            Record::PacemakerConfiguration(x) => {
+                self.pacemaker_configuration.insert(x.id, Arc::new(x));
             }
             Record::StratagemConfig(x) => {
                 self.stratagem_config.insert(x.id(), Arc::new(x));
@@ -292,6 +321,16 @@ impl ArcCache {
                 .get(&composite_id.1)
                 .cloned()
                 .map(erase),
+            "pacemakerconfiguration" => self
+                .pacemaker_configuration
+                .get(&composite_id.1)
+                .cloned()
+                .map(erase),
+            "corosync2configuration" => self
+                .corosync_configuration
+                .get(&composite_id.1)
+                .cloned()
+                .map(erase),
             "managedtarget" | "managedost" | "managedmdt" | "managedmgt" | "managedmgs" => {
                 self.target.get(&composite_id.1).cloned().map(erase)
             }
@@ -304,6 +343,7 @@ impl From<&Cache> for ArcCache {
     fn from(cache: &Cache) -> Self {
         Self {
             content_type: hashmap_to_arc_hashmap(&cache.content_type),
+            corosync_configuration: hashmap_to_arc_hashmap(&cache.corosync_configuration),
             active_alert: hashmap_to_arc_hashmap(&cache.active_alert),
             filesystem: hashmap_to_arc_hashmap(&cache.filesystem),
             group: hashmap_to_arc_hashmap(&cache.group),
@@ -312,6 +352,7 @@ impl From<&Cache> for ArcCache {
             managed_target_mount: hashmap_to_arc_hashmap(&cache.managed_target_mount),
             ost_pool: hashmap_to_arc_hashmap(&cache.ost_pool),
             ost_pool_osts: hashmap_to_arc_hashmap(&cache.ost_pool_osts),
+            pacemaker_configuration: hashmap_to_arc_hashmap(&cache.pacemaker_configuration),
             stratagem_config: hashmap_to_arc_hashmap(&cache.stratagem_config),
             target: hashmap_to_arc_hashmap(&cache.target),
             user: hashmap_to_arc_hashmap(&cache.user),
@@ -326,6 +367,7 @@ impl From<&ArcCache> for Cache {
     fn from(cache: &ArcCache) -> Self {
         Self {
             content_type: arc_hashmap_to_hashmap(&cache.content_type),
+            corosync_configuration: arc_hashmap_to_hashmap(&cache.corosync_configuration),
             active_alert: arc_hashmap_to_hashmap(&cache.active_alert),
             filesystem: arc_hashmap_to_hashmap(&cache.filesystem),
             group: arc_hashmap_to_hashmap(&cache.group),
@@ -334,6 +376,7 @@ impl From<&ArcCache> for Cache {
             managed_target_mount: arc_hashmap_to_hashmap(&cache.managed_target_mount),
             ost_pool: arc_hashmap_to_hashmap(&cache.ost_pool),
             ost_pool_osts: arc_hashmap_to_hashmap(&cache.ost_pool_osts),
+            pacemaker_configuration: arc_hashmap_to_hashmap(&cache.pacemaker_configuration),
             stratagem_config: arc_hashmap_to_hashmap(&cache.stratagem_config),
             target: arc_hashmap_to_hashmap(&cache.target),
             user: arc_hashmap_to_hashmap(&cache.user),
@@ -350,6 +393,7 @@ impl From<&ArcCache> for Cache {
 pub enum Record {
     ActiveAlert(Alert),
     ContentType(ContentTypeRecord),
+    CorosyncConfiguration(CorosyncConfigurationRecord),
     Filesystem(Filesystem),
     Group(AuthGroupRecord),
     Host(Host),
@@ -357,6 +401,7 @@ pub enum Record {
     ManagedTargetMount(ManagedTargetMountRecord),
     OstPool(OstPoolRecord),
     OstPoolOsts(OstPoolOstsRecord),
+    PacemakerConfiguration(PacemakerConfigurationRecord),
     StratagemConfig(StratagemConfiguration),
     Target(Target<TargetConfParam>),
     User(AuthUserRecord),
@@ -370,6 +415,7 @@ pub enum Record {
 pub enum RecordId {
     ActiveAlert(u32),
     ContentType(u32),
+    CorosyncConfiguration(u32),
     Filesystem(u32),
     Group(u32),
     Host(u32),
@@ -377,6 +423,7 @@ pub enum RecordId {
     ManagedTargetMount(u32),
     OstPool(u32),
     OstPoolOsts(u32),
+    PacemakerConfiguration(u32),
     StratagemConfig(u32),
     Target(u32),
     User(u32),
@@ -392,12 +439,14 @@ impl Deref for RecordId {
         match self {
             Self::ActiveAlert(x)
             | Self::ContentType(x)
+            | Self::CorosyncConfiguration(x)
             | Self::Filesystem(x)
             | Self::Group(x)
             | Self::Host(x)
             | Self::ManagedTargetMount(x)
             | Self::OstPool(x)
             | Self::OstPoolOsts(x)
+            | Self::PacemakerConfiguration(x)
             | Self::StratagemConfig(x)
             | Self::Target(x)
             | Self::User(x)

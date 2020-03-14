@@ -49,7 +49,7 @@ pub(crate) enum Page {
     OstPool(ostpool::Model),
     PowerControl,
     Servers(servers::Model),
-    Server(server::Model),
+    Server(Box<server::Model>),
     Targets,
     Target(Box<target::Model>),
     Users,
@@ -112,7 +112,18 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
             Route::Servers => Self::Servers(servers::Model::default()),
             Route::Server(id) => id
                 .parse()
-                .map(|id| Self::Server(server::Model { id }))
+                .ok()
+                .and_then(|x| cache.host.get(&x))
+                .map(|x| {
+                    Self::Server(Box::new(server::Model::new(
+                        Arc::clone(x),
+                        x.lnet_id().and_then(|x| cache.lnet_configuration.get(&x).cloned()),
+                        x.pacemaker_id()
+                            .and_then(|x| cache.pacemaker_configuration.get(&x).cloned()),
+                        x.corosync_id()
+                            .and_then(|x| cache.corosync_configuration.get(&x).cloned()),
+                    )))
+                })
                 .unwrap_or_default(),
             Route::Targets => Self::Targets,
             Route::Target(id) => id
@@ -155,8 +166,8 @@ impl Page {
             | (Route::Users, Self::Users)
             | (Route::Volumes, Self::Volumes) => true,
             (Route::OstPool(route_id), Self::OstPool(ostpool::Model { id }))
-            | (Route::Server(route_id), Self::Server(server::Model { id }))
             | (Route::Volume(route_id), Self::Volume(volume::Model { id })) => route_id == &RouteId::from(id),
+            (Route::Server(route_id), Self::Server(x)) => route_id == &RouteId::from(x.server.id),
             (Route::User(route_id), Self::User(x)) => route_id == &RouteId::from(x.user.id),
             (Route::Filesystem(route_id), Self::Filesystem(x)) => route_id == &RouteId::from(x.fs.id),
             (Route::Target(route_id), Self::Target(x)) => route_id == &RouteId::from(x.target.id),

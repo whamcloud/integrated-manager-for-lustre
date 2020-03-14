@@ -1260,6 +1260,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-api-utils"
+version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "regex",
+]
+
+[[package]]
 name = "iml-cmd"
 version = "0.1.0"
 dependencies = [
@@ -1322,12 +1330,12 @@ dependencies = [
  "dotenv",
  "futures",
  "hostlist-parser",
+ "iml-api-utils",
  "iml-manager-client",
  "iml-wire-types",
  "indicatif",
  "number-formatter",
  "prettytable-rs",
- "regex",
  "reqwest",
  "serde",
  "serde_json",
@@ -1519,6 +1527,7 @@ version = "0.2.0"
 dependencies = [
  "bytes",
  "im",
+ "iml-api-utils",
  "postgres-types",
  "serde",
  "serde_json",
