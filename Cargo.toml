@@ -31,5 +31,6 @@ members = [
 ]
 
 exclude = [
-    'iml-gui/crate'
+    'iml-gui/crate',
+    'iml-system-tests',
 ]
