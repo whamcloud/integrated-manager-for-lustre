@@ -63,7 +63,6 @@ from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache, lock_change_receiver, to_lock_json
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
 from chroma_core.services.job_scheduler.agent_rpc import AgentException
-from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
 from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import RpcError
 from chroma_core.services.log import log_register
