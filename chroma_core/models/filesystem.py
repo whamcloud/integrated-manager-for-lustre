@@ -251,7 +251,8 @@ class RemoveFilesystemJob(StateChangeJob):
                 {
                     "filesystem": self.filesystem,
                     "mgs_device_path": mgs_target.active_mount.volume_node.path,
-                    "mgs_device_type": mgs_target.active_mount.volume_node.volume.storage_resource.to_resource_class().device_type(),
+                    # TODO: Rewrite this
+                    "mgs_device_type": "unknown",
                     "host": mgs_target.active_mount.host,
                 },
             )

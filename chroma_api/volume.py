@@ -65,15 +65,6 @@ class VolumeResource(ChromaModelResource):
         help_text="Device nodes which point to this volume",
     )
 
-    storage_resource = fields.ToOneField(
-        "chroma_api.storage_resource.StorageResourceResource",
-        "storage_resource",
-        null=True,
-        blank=True,
-        full=False,
-        help_text="The `storage_resource` corresponding to the " "device which this Volume represents",
-    )
-
     def dehydrate_kind(self, bundle):
         #  Kind comes from the related storage_resource.
         return bundle.obj.get_kind()

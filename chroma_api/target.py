@@ -236,8 +236,6 @@ class TargetResource(MetricResource, ConfParamResource):
         queryset = ManagedTarget.objects.select_related(
             "content_type",
             "volume",
-            "volume__storage_resource__resource_class",
-            "volume__storage_resource__resource_class__storage_plugin",
             "managedost",
             "managedmdt",
             "managedmgs",

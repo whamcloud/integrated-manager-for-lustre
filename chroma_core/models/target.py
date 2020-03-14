@@ -1007,7 +1007,8 @@ class MountOrImportStep(Step):
             target_volume_info = TargetVolumeInfo(
                 volume_node.host,
                 volume_node.path,
-                volume_node.volume.storage_resource.to_resource_class().device_type(),
+                # TODO: Rewrite this
+                "unknown",
             )
 
             if host == volume_node.host:
@@ -1052,7 +1053,8 @@ class ConfigureTargetJob(StateChangeJob):
             steps.append((OpenLustreFirewallStep, {"host": target_mount.host}))
 
         for target_mount in target_mounts:
-            device_type = target_mount.volume_node.volume.storage_resource.to_resource_class().device_type()
+            # TODO: Rewrite this
+            device_type = "unknown"
             # retrieve the preferred fs type for this block device type to be used as backfstype for target
             backfstype = BlockDevice(device_type, target_mount.volume_node.path).preferred_fstype
 
@@ -1065,7 +1067,8 @@ class ConfigureTargetJob(StateChangeJob):
                         "target_mount": target_mount,
                         "backfstype": backfstype,
                         "volume_node": target_mount.volume_node,
-                        "device_type": target_mount.target.volume.storage_resource.to_resource_class().device_type(),
+                        # TODO: Rewrite this
+                        "device_type": "unknown",
                     },
                 )
             )
@@ -1131,7 +1134,8 @@ class RegisterTargetJob(StateChangeJob):
             mgs = ObjectCache.get_by_id(ManagedTarget, mgs_id)
 
             # retrieve the preferred fs type for this block device type to be used as backfstype for target
-            device_type = primary_mount.volume_node.volume.storage_resource.to_resource_class().device_type()
+            # TODO: Rewrite this
+            device_type = "unknown"
             backfstype = BlockDevice(device_type, primary_mount.volume_node.path).preferred_fstype
 
             # Check that the active mount of the MGS is its primary mount (HYD-233 Lustre limitation)
@@ -1530,7 +1534,8 @@ class FormatTargetJob(StateChangeJob):
         else:
             mgs_nids = None
 
-        device_type = self.target.volume.storage_resource.to_resource_class().device_type()
+        # TODO: Rewrite this
+        device_type = "unknown"
 
         steps = [(MountOrImportStep, MountOrImportStep.create_parameters(self.target, primary_mount.host, False))]
 

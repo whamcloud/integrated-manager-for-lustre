@@ -404,28 +404,23 @@ class Volume(models.Model):
     def _get_kind(self):
         """:return: A string or unicode string which is a human readable noun corresponding
         to the class of storage e.g. LVM LV, Linux partition, iSCSI LUN"""
-        if not self.storage_resource:
-            return "Unknown"
-
-        resource_klass = self.storage_resource.to_resource_class()
-        return resource_klass._meta.label
+        # TODO: Rewrite this
+        return "Unknown"
 
     def _get_label(self):
-        if not self.storage_resource_id:
-            if self.label:
-                return self.label
+        # TODO: Rewrite this
+        if self.label:
+            return self.label
+        else:
+            if self.volumenode_set.count():
+                volumenode = self.volumenode_set.all()[0]
+                return "%s:%s" % (volumenode.host, volumenode.path)
             else:
-                if self.volumenode_set.count():
-                    volumenode = self.volumenode_set.all()[0]
-                    return "%s:%s" % (volumenode.host, volumenode.path)
-                else:
-                    return ""
-
+                return ""
+        
         # TODO: this is a link to the local e.g. ScsiDevice resource: to get the
         # best possible name, we should follow back to VirtualDisk ancestors, and
         # if there is only one VirtualDisk in the ancestry then use its name
-
-        return self.storage_resource.alias_or_name()
 
     def save(self, *args, **kwargs):
         self.label = self._get_label()
