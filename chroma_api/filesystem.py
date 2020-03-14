@@ -20,7 +20,7 @@ from tastypie.exceptions import NotFound
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.chroma_model_resource import ChromaModelResource
-from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
+from chroma_api.utils import custom_response, ConfParamResource, dehydrate_command
 from chroma_api.validation_utils import validate
 from chroma_core.lib import conf_param
 
@@ -266,7 +266,7 @@ class FilesystemValidation(Validation):
             return {}
 
 
-class FilesystemResource(MetricResource, ConfParamResource):
+class FilesystemResource(ConfParamResource):
     """
     A Lustre file system, associated with exactly one MGT and consisting of
     one or mode MDTs and one or more OSTs.

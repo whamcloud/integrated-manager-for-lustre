@@ -14,7 +14,7 @@ from tastypie.validation import Validation
 
 from chroma_core.models import Copytool, CopytoolOperation, ManagedHost, ManagedFilesystem
 from chroma_core.models.copytool import resolve_key
-from chroma_api.utils import StatefulModelResource, MetricResource, custom_response
+from chroma_api.utils import StatefulModelResource, custom_response
 from chroma_api.validation_utils import validate
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.host import HostResource
@@ -118,7 +118,7 @@ class CopytoolValidation(Validation):
         return errors
 
 
-class CopytoolResource(StatefulModelResource, MetricResource):
+class CopytoolResource(StatefulModelResource):
     host = fields.ToOneField("chroma_api.host.HostResource", "host", full=True)
     filesystem = fields.ToOneField("chroma_api.filesystem.FilesystemResource", "filesystem")
     active_operations_count = fields.IntegerField()

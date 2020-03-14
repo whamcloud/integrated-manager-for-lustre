@@ -22,7 +22,7 @@ from tastypie.utils import dict_strip_unicode_keys
 from tastypie.validation import Validation
 from tastypie.resources import BadRequest, ImmediateHttpResponse
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
-from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
+from chroma_api.utils import custom_response, ConfParamResource, dehydrate_command
 from chroma_api.validation_utils import validate
 
 # Some lookups for the three 'kind' letter strings used
@@ -137,7 +137,7 @@ class TargetValidation(Validation):
             return {}
 
 
-class TargetResource(MetricResource, ConfParamResource):
+class TargetResource(ConfParamResource):
     """
     A Lustre target.
 
