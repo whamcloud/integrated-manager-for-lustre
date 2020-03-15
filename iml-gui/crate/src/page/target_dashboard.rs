@@ -4,10 +4,12 @@ use crate::{
         grafana_chart::{self, create_chart_params, IML_METRICS_DASHBOARD_ID, IML_METRICS_DASHBOARD_NAME},
     },
     generated::css_classes::C,
-    Msg,
 };
 use iml_wire_types::warp_drive::ArcCache;
 use seed::{prelude::*, *};
+
+#[derive(Clone)]
+pub enum Msg {}
 
 #[derive(Default)]
 pub struct Model {
