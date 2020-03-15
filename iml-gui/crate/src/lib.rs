@@ -29,18 +29,14 @@ use components::{
 pub(crate) use extensions::*;
 use futures::channel::oneshot;
 use generated::css_classes::C;
-use iml_wire_types::{
-    warp_drive,
-    GroupType, Session,
-    Branding,
-};
+use iml_wire_types::{warp_drive, Conf, GroupType, Session};
 use lazy_static::lazy_static;
 use page::{login, Page};
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, EventHandler, *};
 pub(crate) use server_date::ServerDate;
 pub(crate) use sleep::sleep_with_handle;
-use std::{cmp, sync::Arc, env};
+use std::{cmp, env, sync::Arc};
 pub use watch_state::*;
 use web_sys::MessageEvent;
 use Visibility::*;
@@ -105,21 +101,17 @@ struct Loading {
     session: Option<oneshot::Sender<()>>,
     messages: Option<oneshot::Sender<()>>,
     locks: Option<oneshot::Sender<()>>,
-    branding: Branding,
-    stratagem_enabled: bool,
+    conf: Option<oneshot::Sender<()>>,
 }
 
 impl Loading {
     /// Do we have enough data to load the app?
     fn loaded(&self) -> bool {
-        let xs = self.session
+        let xs = self
+            .session
             .as_ref()
             .or_else(|| self.messages.as_ref())
             .or_else(|| self.locks.as_ref());
-        
-        xs.is_none() && env::var("BRANDING").ok()
-            .or_else(|| env::var("STRATAGEM_ENABLED").ok())
-            .is_none()
     }
 }
 
@@ -132,6 +124,7 @@ pub struct Model {
     auth: auth::Model,
     breadcrumbs: BreadCrumbs<Route<'static>>,
     breakpoint_size: breakpoints::Size,
+    conf: Conf,
     loading: Loading,
     locks: warp_drive::Locks,
     logging_out: bool,
@@ -165,6 +158,8 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
 
     orders.send_msg(Msg::UpdatePageTitle);
 
+    orders.send_msg(Msg::FetchConf);
+
     orders.proxy(Msg::Notification).perform_cmd(notification::init());
 
     orders.proxy(Msg::Auth).send_msg(Box::new(auth::Msg::Fetch));
@@ -172,11 +167,12 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
     let (session_tx, session_rx) = oneshot::channel();
     let (messages_tx, messages_rx) = oneshot::channel();
     let (locks_tx, locks_rx) = oneshot::channel();
+    let (conf_tx, conf_rx) = oneshot::channel();
 
     let fut = async {
-        let (r1, r2, r3) = futures::join!(session_rx, messages_rx, locks_rx);
+        let (r1, r2, r3, r4) = futures::join!(session_rx, messages_rx, locks_rx, conf_rx);
 
-        if let Err(e) = r1.or(r2).or(r3) {
+        if let Err(e) = r1.or(r2).or(r3).or(r4) {
             error!(format!("Could not load initial data: {:?}", e));
         }
 
@@ -190,12 +186,12 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
         auth: auth::Model::default(),
         breadcrumbs: BreadCrumbs::default(),
         breakpoint_size: breakpoints::size(),
+        conf: Conf::default(),
         loading: Loading {
             session: Some(session_tx),
             messages: Some(messages_tx),
             locks: Some(locks_tx),
-            branding: env::var("BRANDING").unwrap().into(),
-            stratagem_enabled: env::var("STRATAGEM_ENABLED").unwrap().parse::<bool>().expect("couldn't parse stratagem_enabled"),
+            conf: Some(conf_tx),
         },
         locks: im::hashmap!(),
         logging_out: false,
@@ -264,6 +260,8 @@ pub enum Msg {
     EventSourceMessage(MessageEvent),
     FilesystemsPage(page::filesystems::Msg),
     FilesystemPage(page::filesystem::Msg),
+    FetchConf,
+    FetchedConf(fetch::ResponseDataResult<Conf>),
     GetSession,
     GotSession(fetch::ResponseDataResult<Session>),
     HideMenu,
@@ -322,6 +320,25 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::EventSourceConnect(_) => {
             log("EventSource connected.");
+        }
+        Msg::FetchConf => {
+            let fut = fetch::Request::api_call("conf").fetch_json_data(Msg::FetchedConf);
+
+            orders.perform_cmd(fut);
+        }
+        Msg::FetchedConf(r) => {
+            match r {
+                Ok(c) => {
+                    model.conf = c;
+
+                    if let Some(tx) = model.loading.conf.take() {
+                        let _ = tx.send(());
+                    }
+                }
+                Err(e) => {
+                    error!("Unable to fetch conf", e);
+                }
+            };
         }
         Msg::LoadPage => {
             if model.loading.loaded() && !model.page.is_active(&model.route) {

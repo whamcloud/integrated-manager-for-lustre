@@ -416,7 +416,7 @@ impl<T> ApiList<T> {
     }
 }
 
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Conf {
     pub allow_anonymous_read: bool,
     pub build: String,
@@ -424,6 +424,19 @@ pub struct Conf {
     pub is_release: bool,
     pub branding: Branding,
     pub use_stratagem: bool,
+}
+
+impl Default for Conf {
+    fn default() -> Self {
+        Self {
+            allow_anonymous_read: true,
+            build: "Not Loaded".into(),
+            version: "0".into(),
+            is_release: false,
+            branding: Branding::default(),
+            use_stratagem: false,
+        }
+    }
 }
 
 impl EndpointName for Conf {
@@ -1511,11 +1524,17 @@ impl PartialEq for OstPool {
     }
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub enum Branding {
     Whamcloud,
     Ddn,
     DdnAi400,
+}
+
+impl Default for Branding {
+    fn default() -> Self {
+        Self::Whamcloud
+    }
 }
 
 impl From<String> for Branding {
@@ -1525,16 +1544,6 @@ impl From<String> for Branding {
             "Ddn" | "ddn" | "DDN" => Branding::Ddn,
             "DdnAi400" | "ddnai400" | "DDNAI400" | "DDNAi400" => Branding::DdnAi400,
             _ => Branding::Whamcloud,
-        }
-    }
-}
-
-impl fmt::Display for Branding {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self {
-            Branding::Whamcloud => write!(f, "Whamcloud"),
-            Branding::Ddn => write!(f, "DDN"),
-            Branding::DdnAi400 => write!(f, "DDN AI400"),
         }
     }
 }

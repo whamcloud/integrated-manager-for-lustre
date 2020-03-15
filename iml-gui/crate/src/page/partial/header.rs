@@ -1,11 +1,11 @@
 use crate::{
     auth, breakpoints,
-    components::{breadcrumbs, ddn_logo, font_awesome, restrict},
+    components::{breadcrumbs, ddn_logo, font_awesome, restrict, whamcloud_logo},
     generated::css_classes::C,
     MergeAttrs, Model, Msg, Route, SessionExt,
     Visibility::*,
 };
-use iml_wire_types::GroupType;
+use iml_wire_types::{Branding, GroupType};
 use seed::{prelude::*, *};
 
 fn menu_icon<T>(icon_name: &str) -> Node<T> {
@@ -174,7 +174,16 @@ fn toggle_nav_view() -> Node<Msg> {
 }
 
 /// The navbar logo
-fn logo_nav_view<T>() -> Node<T> {
+fn logo_nav_view<T>(branding: Branding) -> Node<T> {
+    let (logo, txt) = match branding {
+        Branding::Whamcloud => (whamcloud_logo(), empty![]),
+        Branding::Ddn => (ddn_logo(), empty![]),
+        Branding::DdnAi400 => (
+            ddn_logo(),
+            span![class![C.font_semibold, C.text_3xl, C.tracking_tight], "AI400"],
+        ),
+    };
+
     div![
         class![
             C.flex_shrink_0,
@@ -188,8 +197,8 @@ fn logo_nav_view<T>() -> Node<T> {
             C.text_red_600,
             C.xl__mr_12
         ],
-        ddn_logo().merge_attrs(class![C.h_12, C.w_24, C.mr_3]),
-        span![class![C.font_semibold, C.text_3xl, C.tracking_tight], "AI400"],
+        logo.merge_attrs(class![C.h_12, C.w_24, C.mr_3]),
+        txt,
     ]
 }
 
@@ -206,7 +215,7 @@ fn nav(model: &Model) -> Node<Msg> {
             C.justify_between,
             C.flex_wrap
         ],
-        logo_nav_view(),
+        logo_nav_view(model.conf.branding),
         toggle_nav_view(),
         if model.menu_visibility == Visible || model.breakpoint_size >= breakpoints::Size::LG {
             div![
@@ -297,7 +306,6 @@ pub fn auth_view(auth: &auth::Model, logging_out: bool) -> Node<Msg> {
 pub fn view(model: &Model) -> impl View<Msg> {
     vec![
         header![nav(model)],
-        div![p![model.loading.branding.to_string()], p![model.loading.stratagem_enabled.to_string()]],
         div![
             class![C.bg_menu_active, C.text_gray_300, C.text_center, C.py_2],
             breadcrumbs::view(&model.breadcrumbs).els()
