@@ -295,6 +295,7 @@ class ServiceConfig(CommandLine):
         # Disable reporting
         # Disable influx http logging (of every write and every query)
         with open("/etc/default/influxdb", "w") as f:
+            f.write("INFLUXDB_DATA_QUERY_LOG_ENABLED=false\n")
             f.write("INFLUXDB_REPORTING_DISABLED=true\n")
             f.write("INFLUXDB_HTTP_LOG_ENABLED=false\n")
 
