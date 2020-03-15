@@ -19,9 +19,6 @@ After=iml-job-scheduler.service
 Requires=iml-lustre-audit.service
 After=iml-lustre-audit.service
 
-Requires=iml-plugin-runner.service
-After=iml-plugin-runner.service
-
 Requires=iml-power-control.service
 After=iml-power-control.service
 
@@ -101,7 +98,6 @@ Also=iml-http-agent.service
 Also=iml-job-scheduler.service
 Also=iml-lustre-audit.service
 Also=iml-mailbox.service
-Also=iml-plugin-runner.service
 Also=iml-power-control.service
 Also=iml-realtime.service
 Also=iml-stats.service

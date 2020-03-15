@@ -203,7 +203,6 @@ install -m 644 iml-gunicorn.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-http-agent.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-job-scheduler.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-lustre-audit.service $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-plugin-runner.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-power-control.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-settings-populator.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-stats.service $RPM_BUILD_ROOT%{_unitdir}/
@@ -276,7 +275,6 @@ rmdir %{python_sitelib}/iml_manager-5.0.*.egg-info 2> /dev/null || :
 %systemd_preun iml-http-agent.service
 %systemd_preun iml-job-scheduler.service
 %systemd_preun iml-lustre-audit.service
-%systemd_preun iml-plugin-runner.service
 %systemd_preun iml-power-control.service
 %systemd_preun iml-realtime.service
 %systemd_preun iml-settings-populator.service
