@@ -119,15 +119,15 @@ impl Name for FsRecord {
 }
 
 /// Record from the `chroma_core_volume` table
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct VolumeRecord {
-    id: u32,
-    storage_resource_id: Option<u32>,
-    size: Option<u64>,
-    label: String,
-    filesystem_type: Option<String>,
-    not_deleted: Option<bool>,
-    usable_for_lustre: bool,
+    pub id: u32,
+    pub storage_resource_id: Option<u32>,
+    pub size: Option<u64>,
+    pub label: String,
+    pub filesystem_type: Option<String>,
+    pub not_deleted: Option<bool>,
+    pub usable_for_lustre: bool,
 }
 
 impl Id for VolumeRecord {
@@ -147,6 +147,23 @@ pub const VOLUME_TABLE_NAME: TableName = TableName("chroma_core_volume");
 impl Name for VolumeRecord {
     fn table_name() -> TableName<'static> {
         VOLUME_TABLE_NAME
+    }
+}
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for VolumeRecord {
+    fn from(row: Row) -> Self {
+        VolumeRecord {
+            id: row.get::<_, i32>("id") as u32,
+            size: row.get::<_, Option<i64>>("size").map(|x| x as u64),
+            label: row.get("label"),
+            filesystem_type: row.get("filesystem_type"),
+            usable_for_lustre: row.get("usable_for_lustre"),
+            not_deleted: row.get("not_deleted"),
+            storage_resource_id: row
+                .get::<_, Option<i32>>("storage_resource_id")
+                .map(|x| x as u32),
+        }
     }
 }
 

@@ -46,7 +46,7 @@ pub enum Msg {
     ), // @FIXME: This should be more granular so row state isn't lost.
     Page(paging::Msg),
     Sort,
-    SortBy(SortField),
+    SortBy(table::SortBy<SortField>),
     ActionDropdown(Box<action_dropdown::IdMsg>),
 }
 
@@ -61,7 +61,7 @@ pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
 
 pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
-        Msg::SortBy(x) => {
+        Msg::SortBy(table::SortBy(x)) => {
             let dir = if x == model.sort.0 {
                 model.sort.1.next()
             } else {
@@ -174,9 +174,10 @@ pub fn view(
             div![
                 table::wrapper_view(vec![
                     table::thead_view(vec![
-                        sort_header("Host", SortField::Label, model),
+                        table::sort_header("Host", SortField::Label, model.sort.0, model.sort.1).map_msg(Msg::SortBy),
                         table::th_view(Node::new_text("Boot time")).merge_attrs(class![C.text_center]),
-                        sort_header("Profile", SortField::Profile, model),
+                        table::sort_header("Profile", SortField::Profile, model.sort.0, model.sort.1)
+                            .map_msg(Msg::SortBy),
                         table::th_view(Node::new_text("LNet")).merge_attrs(class![C.text_center]),
                     ]),
                     tbody![model.hosts[model.pager.range()].iter().map(|x| {
@@ -238,28 +239,4 @@ fn lnet_by_server_view<T>(x: &Host, cache: &ArcCache, all_locks: &Locks) -> Opti
         lnet_status::view(config, all_locks).merge_attrs(class![C.mr_2]),
         alert_indicator(&cache.active_alert, &config, true, Placement::Top,),
     ])
-}
-
-fn sort_header(label: &str, sort_field: SortField, model: &Model) -> Node<Msg> {
-    let is_active = model.sort.0 == sort_field;
-
-    let table_cls = class![C.text_center];
-
-    let table_cls = if is_active {
-        table_cls.merge_attrs(table::th_sortable_cls())
-    } else {
-        table_cls
-    };
-
-    table::th_view(a![
-        class![C.select_none, C.cursor_pointer, C.font_semibold],
-        mouse_ev(Ev::Click, move |_| Msg::SortBy(sort_field)),
-        label,
-        if is_active {
-            paging::dir_toggle_view(model.sort.1, class![C.w_5, C.h_4, C.inline, C.ml_1, C.text_blue_500])
-        } else {
-            empty![]
-        }
-    ])
-    .merge_attrs(table_cls)
 }
