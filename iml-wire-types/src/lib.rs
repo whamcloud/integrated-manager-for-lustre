@@ -1518,5 +1518,26 @@ pub enum Branding {
     DdnAi400,
 }
 
+impl From<String> for Branding {
+    fn from(x: String) -> Self {
+        match x.as_str() {
+            "Whamcloud" | "whamcloud" | "WHAMCLOUD" => Branding::Whamcloud,
+            "Ddn" | "ddn" | "DDN" => Branding::Ddn,
+            "DdnAi400" | "ddnai400" | "DDNAI400" | "DDNAi400" => Branding::DdnAi400,
+            _ => Branding::Whamcloud,
+        }
+    }
+}
+
+impl fmt::Display for Branding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            Branding::Whamcloud => write!(f, "Whamcloud"),
+            Branding::Ddn => write!(f, "DDN"),
+            Branding::DdnAi400 => write!(f, "DDN AI400"),
+        }
+    }
+}
+
 pub mod db;
 pub mod warp_drive;

@@ -29,14 +29,18 @@ use components::{
 pub(crate) use extensions::*;
 use futures::channel::oneshot;
 use generated::css_classes::C;
-use iml_wire_types::{warp_drive, GroupType, Session};
+use iml_wire_types::{
+    warp_drive,
+    GroupType, Session,
+    Branding,
+};
 use lazy_static::lazy_static;
 use page::{login, Page};
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, EventHandler, *};
 pub(crate) use server_date::ServerDate;
 pub(crate) use sleep::sleep_with_handle;
-use std::{cmp, sync::Arc};
+use std::{cmp, sync::Arc, env};
 pub use watch_state::*;
 use web_sys::MessageEvent;
 use Visibility::*;
@@ -101,15 +105,20 @@ struct Loading {
     session: Option<oneshot::Sender<()>>,
     messages: Option<oneshot::Sender<()>>,
     locks: Option<oneshot::Sender<()>>,
+    branding: Branding,
+    stratagem_enabled: bool,
 }
 
 impl Loading {
     /// Do we have enough data to load the app?
     fn loaded(&self) -> bool {
-        self.session
+        let xs = self.session
             .as_ref()
             .or_else(|| self.messages.as_ref())
-            .or_else(|| self.locks.as_ref())
+            .or_else(|| self.locks.as_ref());
+        
+        xs.is_none() && env::var("BRANDING").ok()
+            .or_else(|| env::var("STRATAGEM_ENABLED").ok())
             .is_none()
     }
 }
@@ -185,6 +194,8 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
             session: Some(session_tx),
             messages: Some(messages_tx),
             locks: Some(locks_tx),
+            branding: env::var("BRANDING").unwrap().into(),
+            stratagem_enabled: env::var("STRATAGEM_ENABLED").unwrap().parse::<bool>().expect("couldn't parse stratagem_enabled"),
         },
         locks: im::hashmap!(),
         logging_out: false,

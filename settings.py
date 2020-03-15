@@ -94,6 +94,10 @@ TIMER_PORT = 8892
 
 TIMER_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, TIMER_PORT)
 
+BRANDING = "Whamcloud"
+
+STRATAGEM_ENABLED = False
+
 ALLOWED_HOSTS = ["*"]
 
 ADMINS = (

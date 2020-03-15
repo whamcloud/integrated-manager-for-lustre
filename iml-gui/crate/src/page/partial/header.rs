@@ -297,6 +297,7 @@ pub fn auth_view(auth: &auth::Model, logging_out: bool) -> Node<Msg> {
 pub fn view(model: &Model) -> impl View<Msg> {
     vec![
         header![nav(model)],
+        div![p![model.loading.branding.to_string()], p![model.loading.stratagem_enabled.to_string()]],
         div![
             class![C.bg_menu_active, C.text_gray_300, C.text_center, C.py_2],
             breadcrumbs::view(&model.breadcrumbs).els()
