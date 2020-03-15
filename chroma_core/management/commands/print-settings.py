@@ -29,8 +29,8 @@ class Command(BaseCommand):
                 config[key_val[0]] = key_val[1]
 
             return config
-        else:
-            return {}
+
+        return {}
 
     def handle(self, *args, **kwargs):
         cursor = connection.cursor()
