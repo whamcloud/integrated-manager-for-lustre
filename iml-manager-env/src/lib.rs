@@ -201,6 +201,14 @@ pub fn get_db_password() -> Option<String> {
     empty_str_to_none(get_var("DB_PASSWORD"))
 }
 
+pub fn get_branding() -> String {
+    get_var("BRANDING")
+}
+
+pub fn get_stratagem_enabled() -> String {
+    get_var("STRATAGEM_ENABLED")
+}
+
 /// Gets a connection string from the IML env
 pub fn get_db_conn_string() -> String {
     let mut xs = vec![format!("user={}", get_db_user())];
