@@ -41,6 +41,7 @@ services:
       - 8086:8086
     environment:
       - INFLUXDB_BIND_ADDRESS=influxdb:8088
+      - INFLUXDB_DATA_QUERY_LOG_ENABLED=false
       - INFLUXDB_REPORTING_DISABLED=true
       - INFLUXDB_HTTP_BIND_ADDRESS=influxdb:8086
       - INFLUXDB_HTTP_LOG_ENABLED=false
