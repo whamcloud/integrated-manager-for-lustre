@@ -713,7 +713,8 @@ class JobScheduler(object):
 
             if "ha_cluster_peers" in updated_attrs:
                 try:
-                    AgentDaemonRpcInterface().rebalance_host_volumes(changed_item.id)
+                    # We were calling AgentDaemonRpcInterface
+                    pass
                 except RpcError:
                     log.error("Host volumes failed to rebalance: " + traceback.format_exc())
 

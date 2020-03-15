@@ -471,21 +471,16 @@ class GetLNetStateStep(Step):
     database = True
 
     def run(self, kwargs):
-        from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
-        from chroma_core.services.job_scheduler.agent_rpc import AgentException
-
         host_id = kwargs["host_id"]
         fqdn = kwargs["fqdn"]
 
         try:
             network_data = self.invoke_agent(fqdn, "device_plugin", {"plugin": "linux_network"})["linux_network"]
-            AgentDaemonRpcInterface().update_host_resources(host_id, {"linux_network": network_data})
+            # We were calling AgentDaemonRpcInterface previously
         except TypeError:
             self.log(
                 "Data received from old client. Host {} state cannot be updated until agent is updated".format(fqdn)
             )
-        except AgentException as e:
-            self.log("No data for plugin linux_network from host {} due to exception {}".format(fqdn, e))
 
 
 class GetLNetStateJob(Job):
