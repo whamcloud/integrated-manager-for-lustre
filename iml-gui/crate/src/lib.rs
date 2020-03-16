@@ -32,7 +32,7 @@ use futures::channel::oneshot;
 use generated::css_classes::C;
 use iml_wire_types::{
     warp_drive::{self, ArcRecord},
-    GroupType, Session,
+    Conf, GroupType, Session,
 };
 use lazy_static::lazy_static;
 use page::{Page, RecordChange};
@@ -105,6 +105,7 @@ struct Loading {
     session: Option<oneshot::Sender<()>>,
     messages: Option<oneshot::Sender<()>>,
     locks: Option<oneshot::Sender<()>>,
+    conf: Option<oneshot::Sender<()>>,
 }
 
 impl Loading {
@@ -114,6 +115,7 @@ impl Loading {
             .as_ref()
             .or_else(|| self.messages.as_ref())
             .or_else(|| self.locks.as_ref())
+            .or_else(|| self.conf.as_ref())
             .is_none()
     }
 }
@@ -127,6 +129,7 @@ pub struct Model {
     auth: auth::Model,
     breadcrumbs: BreadCrumbs<Route<'static>>,
     breakpoint_size: breakpoints::Size,
+    conf: Conf,
     loading: Loading,
     locks: warp_drive::Locks,
     logging_out: bool,
@@ -160,6 +163,8 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
 
     orders.send_msg(Msg::UpdatePageTitle);
 
+    orders.send_msg(Msg::FetchConf);
+
     orders.proxy(Msg::Notification).perform_cmd(notification::init());
 
     orders.proxy(Msg::Auth).send_msg(Box::new(auth::Msg::Fetch));
@@ -167,11 +172,12 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
     let (session_tx, session_rx) = oneshot::channel();
     let (messages_tx, messages_rx) = oneshot::channel();
     let (locks_tx, locks_rx) = oneshot::channel();
+    let (conf_tx, conf_rx) = oneshot::channel();
 
     let fut = async {
-        let (r1, r2, r3) = futures::join!(session_rx, messages_rx, locks_rx);
+        let (r1, r2, r3, r4) = futures::join!(session_rx, messages_rx, locks_rx, conf_rx);
 
-        if let Err(e) = r1.or(r2).or(r3) {
+        if let Err(e) = r1.or(r2).or(r3).or(r4) {
             error!(format!("Could not load initial data: {:?}", e));
         }
 
@@ -185,10 +191,12 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
         auth: auth::Model::default(),
         breadcrumbs: BreadCrumbs::default(),
         breakpoint_size: breakpoints::size(),
+        conf: Conf::default(),
         loading: Loading {
             session: Some(session_tx),
             messages: Some(messages_tx),
             locks: Some(locks_tx),
+            conf: Some(conf_tx),
         },
         locks: im::hashmap!(),
         logging_out: false,
@@ -255,6 +263,8 @@ pub enum Msg {
     EventSourceConnect(JsValue),
     EventSourceError(JsValue),
     EventSourceMessage(MessageEvent),
+    FetchConf,
+    FetchedConf(fetch::ResponseDataResult<Conf>),
     GetSession,
     GotSession(fetch::ResponseDataResult<Session>),
     HideMenu,
@@ -306,6 +316,25 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::EventSourceConnect(_) => {
             log("EventSource connected.");
+        }
+        Msg::FetchConf => {
+            let fut = fetch::Request::api_call("conf").fetch_json_data(Msg::FetchedConf);
+
+            orders.perform_cmd(fut);
+        }
+        Msg::FetchedConf(r) => {
+            match r {
+                Ok(c) => {
+                    model.conf = c;
+
+                    if let Some(tx) = model.loading.conf.take() {
+                        let _ = tx.send(());
+                    }
+                }
+                Err(e) => {
+                    error!("Unable to fetch conf", e);
+                }
+            };
         }
         Msg::LoadPage => {
             if model.loading.loaded() && !model.page.is_active(&model.route) {
@@ -875,9 +904,15 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         .els(),
         Page::Filesystem(page) => main_panels(
             model,
-            page::filesystem::view(&model.records, page, &model.locks, model.auth.get_session())
-                .els()
-                .map_msg(page::Msg::Filesystem),
+            page::filesystem::view(
+                &model.records,
+                page,
+                &model.locks,
+                model.auth.get_session(),
+                model.conf.use_stratagem,
+            )
+            .els()
+            .map_msg(page::Msg::Filesystem),
         )
         .els(),
         Page::ServerDashboard(page) => main_panels(
@@ -896,7 +931,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         .els(),
         Page::FsDashboard(page) => main_panels(model, page::fs_dashboard::view(page)).els(),
         Page::Jobstats => main_panels(model, page::jobstats::view(model).els().map_msg(page::Msg::Jobstats)).els(),
-        Page::Login(x) => page::login::view(x)
+        Page::Login(x) => page::login::view(x, model.conf.branding)
             .els()
             .map_msg(|x| page::Msg::Login(Box::new(x)))
             .map_msg(Msg::Page),

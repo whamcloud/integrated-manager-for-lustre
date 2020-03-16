@@ -166,10 +166,22 @@ fn paging_view(pager: &paging::Model) -> Node<paging::Msg> {
     ]
 }
 
-pub(crate) fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<&Session>) -> Node<Msg> {
+pub(crate) fn view(
+    cache: &ArcCache,
+    model: &Model,
+    all_locks: &Locks,
+    session: Option<&Session>,
+    use_stratagem: bool,
+) -> Node<Msg> {
+    let stratagem_content = if use_stratagem {
+        stratagem::view(&model.stratagem, all_locks).map_msg(Msg::Stratagem)
+    } else {
+        empty![]
+    };
+
     div![
         details_table(cache, all_locks, model),
-        stratagem::view(&model.stratagem, all_locks).map_msg(Msg::Stratagem),
+        stratagem_content,
         targets(
             "Management Target",
             cache,
