@@ -17,7 +17,7 @@ async fn update_user(x: AuthUserRecord) -> Result<Msg, Msg> {
         .await
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     Submit,
     SubmitResp(Box<fetch::FetchObject<()>>),

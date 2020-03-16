@@ -77,8 +77,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .send_msg(Msg::Modal(modal::Msg::Close));
         }
         Msg::StateChangeSent(data_result) => {
-            log!("TODO: Open command modal here, StateChangeSent");
-            let data_result: Box<fetch::ResponseDataResult<Command>> = data_result;
+            panic!("TODO data_result = {:?}", data_result);
+            log!("TODO: Open command modal here, StateChangeSent", data_result);
             match *data_result {
                 Ok(command) => {
                     orders.send_g_msg(GMsg::OpenCommandModal(command));

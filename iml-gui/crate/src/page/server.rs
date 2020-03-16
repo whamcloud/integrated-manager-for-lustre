@@ -15,7 +15,7 @@ use iml_wire_types::{
 use seed::{prelude::*, *};
 use std::sync::Arc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     ServerActionDropdown(action_dropdown::IdMsg),
     LnetActionDropdown(action_dropdown::IdMsg),
