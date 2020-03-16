@@ -43,8 +43,6 @@ class Command(BaseCommand):
         DB = settings.DATABASES.get("default")
 
         config = {
-            "REALTIME_PORT": settings.REALTIME_PORT,
-            "VIEW_SERVER_PORT": settings.VIEW_SERVER_PORT,
             "WARP_DRIVE_PORT": settings.WARP_DRIVE_PORT,
             "MAILBOX_PORT": settings.MAILBOX_PORT,
             "DEVICE_AGGREGATOR_PORT": settings.DEVICE_AGGREGATOR_PORT,

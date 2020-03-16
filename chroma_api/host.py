@@ -29,7 +29,6 @@ from tastypie import fields
 from chroma_api.utils import (
     custom_response,
     StatefulModelResource,
-    MetricResource,
     dehydrate_command,
     BulkResourceOperation,
 )
@@ -167,7 +166,7 @@ class ClientMountResource(ChromaModelResource):
         raise custom_response(self, request, http.HttpAccepted, args)
 
 
-class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation):
+class HostResource(StatefulModelResource, BulkResourceOperation):
     """
     Represents a Lustre server that is being monitored and managed from the manager server.
 

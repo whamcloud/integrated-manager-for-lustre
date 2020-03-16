@@ -36,7 +36,7 @@ module.exports = (env, argv) => {
       },
       proxy: [
         {
-          context: [ "/api", "/grafana", "/help", "/influx" ],
+          context: ["/api", "/grafana", "/help", "/influx"],
           target: "https://localhost:8443/",
           secure: false
         }
@@ -54,7 +54,7 @@ module.exports = (env, argv) => {
       }),
       // Add scripts, css, ... to html template.
       new HtmlWebpackPlugin({
-        base_path: argv.mode === "production" ? "/ui2/" : "/",
+        base_path: argv.mode === "production" ? "/ui/" : "/",
         is_production: argv.mode === "production",
         template: path.resolve(__dirname, "../entries/index.hbs")
       }),

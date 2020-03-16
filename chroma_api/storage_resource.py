@@ -14,7 +14,6 @@ from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from tastypie import fields
 from chroma_core.lib.storage_plugin.query import ResourceQuery
-from chroma_api.utils import MetricResource
 from chroma_api.validation_utils import validate
 
 from tastypie.exceptions import NotFound, ImmediateHttpResponse
@@ -58,7 +57,7 @@ class StorageResourceValidation(Validation):
         return errors
 
 
-class StorageResourceResource(MetricResource, ChromaModelResource):
+class StorageResourceResource(ChromaModelResource):
     """
     Storage resources are objects within the storage plugin
     framework.  Note: the term 'resource' is used to refer to

@@ -102,20 +102,6 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - "IML_CA_PATH=/var/lib/chroma/authority.crt"
-  realtime:
-    image: "imlteam/realtime:5.1"
-    hostname: "realtime"
-    deploy: *default-deploy
-    volumes:
-      - "manager-config:/var/lib/chroma"
-  view-server:
-    image: "imlteam/view-server:5.1"
-    hostname: "view-server"
-    deploy: *default-deploy
-    volumes:
-      - "manager-config:/var/lib/chroma"
-      - "static-config1:/usr/lib/iml-manager"
-      - "static-config2:/usr/lib/node_modules/@iml"
   device-aggregator:
     image: "imlteam/device-aggregator:5.1"
     hostname: "device-aggregator"
@@ -211,15 +197,6 @@ services:
     build:
       context: .
       dockerfile: ./power-control.dockerfile
-    deploy: *default-deploy
-    volumes:
-      - "manager-config:/var/lib/chroma"
-  stats:
-    image: "imlteam/manager-stats:5.1.1-dev"
-    hostname: "stats"
-    build:
-      context: .
-      dockerfile: ./stats.dockerfile
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"

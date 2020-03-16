@@ -5,9 +5,7 @@ import re
 vars = {
     "SSL_PATH": "/var/lib/chroma",
     "HTTPS_FRONTEND_PORT": "7443",
-    "VIEW_SERVER_PROXY_PASS": "http://view-server:8889",
     "HTTP_API_PROXY_PASS": "http://gunicorn:8001",
-    "REALTIME_PROXY_PASS": "http://realtime:8888",
     "HTTP_AGENT_PROXY_PASS": "http://http-agent:8002",
     "HTTP_AGENT2_PROXY_PASS": "http://iml-agent-comms:8003",
     "REPO_PATH": "/var/lib/chroma/repo",

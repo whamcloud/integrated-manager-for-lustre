@@ -2,11 +2,11 @@ import re
 
 from testconfig import config
 from tests.utils.http_requests import get_actions
-from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
 
 
-class TestFilesystemDetection(StatsTestCaseMixin):
+class TestFilesystemDetection(ChromaIntegrationTestCase):
     def setUp(self):
         super(TestFilesystemDetection, self).setUp()
 

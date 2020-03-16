@@ -1311,7 +1311,6 @@ class ResourceManager(object):
 
         with DelayedContextFrom(StorageResourceStatistic) as srs_delayed:
             for srs in StorageResourceStatistic.objects.filter(storage_resource__in=ordered_for_deletion):
-                srs.metrics.clear()
                 srs_delayed.delete(int(srs.id))
 
         for record_id in ordered_for_deletion:

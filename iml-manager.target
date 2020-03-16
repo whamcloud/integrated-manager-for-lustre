@@ -25,20 +25,11 @@ After=iml-plugin-runner.service
 Requires=iml-power-control.service
 After=iml-power-control.service
 
-Requires=iml-stats.service
-After=iml-stats.service
-
 Requires=iml-rust-stats.service
 After=iml-rust-stats.service
 
 Requires=iml-syslog.service
 After=iml-syslog.service
-
-Requires=iml-realtime.service
-After=iml-realtime.service
-
-Requires=iml-view-server.service
-After=iml-view-server.service
 
 Requires=iml-agent-comms.service
 After=iml-agent-comms.service
@@ -93,11 +84,8 @@ Also=iml-job-scheduler.service
 Also=iml-lustre-audit.service
 Also=iml-plugin-runner.service
 Also=iml-power-control.service
-Also=iml-stats.service
 Also=iml-rust-stats.service
 Also=iml-syslog.service
-Also=iml-realtime.service
-Also=iml-view-server.service
 Also=iml-agent-comms.service
 Also=iml-mailbox.service
 Also=iml-action-runner.service

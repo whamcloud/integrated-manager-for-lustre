@@ -2,10 +2,9 @@ from unittest import skip
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from tests.integration.core.failover_testcase_mixin import FailoverTestCaseMixin
-from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
 
 
-class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixin, ChromaIntegrationTestCase):
+class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, ChromaIntegrationTestCase):
     TESTS_NEED_POWER_CONTROL = True
 
     def _test_create_filesystem_with_failover(self):

@@ -86,7 +86,7 @@ server {
     }
 
     location ~ ^/$ {
-        return 307 https://$http_host/ui2;
+        return 301 https://$http_host/ui;
     }
 
     location /help {
@@ -98,53 +98,9 @@ server {
         index index.html;
     }
 
-    location /gui/node_modules/socket-worker/dist {
-        alias /usr/lib/node_modules/@iml/socket-worker/targetdir;
-
-        etag on;
-        expires 1y;
-        add_header Cache-Control "public";
-
-        gzip on;
-        gzip_types application/x-javascript application/javascript text/javascript;
-    }
-
-    location /gui {
-        alias /usr/lib/iml-manager/iml-gui;
-
-        etag on;
-        expires 1y;
-        add_header Cache-Control "public";
-
-        gzip on;
-        gzip_types text/plain text/xml text/css application/x-javascript application/javascript text/javascript application/json;
-    }
-
-    location /old-gui {
-        alias /usr/lib/node_modules/@iml/old-gui/static;
-
-        etag on;
-        expires 1y;
-        add_header Cache-Control "public";
-
-        gzip on;
-        gzip_types text/plain text/xml text/css application/x-javascript application/javascript text/javascript application/json;
-    }
-
-    location /ui {
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Server $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass {{VIEW_SERVER_PROXY_PASS}}/ui;
-
-        add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; ";
-
-        gzip on;
-    }
-
     # This is temporary until the /ui location has been ported
     # Then this will become /ui
-    location /ui2 {
+    location /ui {
         proxy_pass http://ui.fake/;
 
         etag on;
@@ -223,17 +179,6 @@ server {
         proxy_pass {{INFLUXDB_PROXY_PASS}}/query;
     }
 
-    location /wasm-components {
-        alias /usr/share/iml-manager/iml-wasm-components;
-
-        etag on;
-        expires 1y;
-        add_header Cache-Control "public";
-
-        gzip on;
-        gzip_types text/css application/x-javascript application/javascript text/javascript application/json application/wasm;
-    }
-
     location /api/conf {
         proxy_set_header Host $http_host;
         proxy_set_header X-Forwarded-Proto $scheme;
@@ -264,17 +209,6 @@ server {
 
         gzip on;
         gzip_types application/json;
-    }
-
-    location /socket.io {
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass {{REALTIME_PROXY_PASS}}/socket.io;
-
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
     }
 
     location /messaging {

@@ -8,27 +8,6 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
     def setUp(self):
         super(TestFilesystemDNE, self).setUp()
 
-    # List of MDT stats used to verify filesystem has been exercised
-    mdt_stats = ["stats_mkdir", "stats_open", "stats_rmdir", "stats_unlink"]
-
-    def get_mdt_stats(self, filesystem, index):
-        response = self.chroma_manager.get(
-            "/api/target/metric/",
-            params={
-                "metrics": ",".join(self.mdt_stats),
-                "latest": "true",
-                "reduce_fn": "sum",
-                "kind": "MDT",
-                "group_by": "filesystem",
-                "id": next(mdt["id"] for mdt in filesystem["mdts"] if mdt["index"] == index),
-            },
-        )
-
-        self.assertEqual(response.successful, True, response.text)
-        self.assertEqual(len(self.mdt_stats), len(response.json.values()[0][0].get("data")), response.json)
-
-        return response.json.values()[0][0].get("data")
-
     def _set_mount(self, volume):
         # FIXME: Should switch primary host for each volume based on even/odd id to mimic real-life distribution
         #        of volumes for load balancing purposes
@@ -108,55 +87,11 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
             3 * (n + 1) for n in range(0, len(mdt_indexes))
         ]  # Write a different number of files to each MDT
 
-        # Get the stats before
-        start_stats = {}
-        for mdt_index in mdt_indexes:
-            start_stats[mdt_index] = self.get_mdt_stats(filesystem, mdt_index)
-
         self.remote_operations.mount_filesystem(client, filesystem)
         try:
             self.remote_operations.exercise_filesystem(client, filesystem, mdt_indexes, no_of_files_per_mdt)
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
-
-        # Compare start_stats with stats after exercising filesystem, keep retrying until TEST_TIMEOUT expires
-        self.wait_for_assert(lambda: self._compare_stats(mdt_indexes, filesystem, start_stats, no_of_files_per_mdt))
-
-    def _compare_stats(self, mdt_indexes, filesystem, start_stats, no_of_files_per_mdt):
-        """ Compare starting stats with retrieved current stats for the relevant MDTs and validate expected change """
-        end_stats = {}
-        for mdt_index in mdt_indexes:
-            end_stats[mdt_index] = self.get_mdt_stats(filesystem, mdt_index)
-
-        # Now do the compare.
-        for index, mdt_index in enumerate(mdt_indexes):
-            diff_stat = {}
-
-            for stat in start_stats[mdt_index]:
-                diff_stat[stat] = float(end_stats[mdt_index][stat]) - float(start_stats[mdt_index][stat])
-
-            # Now check some sample values. smoke test really.
-            if index == 0:
-                # self.assertEqual(diff_stat['stats_mkdir'], len(mdt_indexes) + no_of_files_per_mdt[index] + sum(no_of_files_per_mdt))  # We created a directory for each MDT + 2 for each file (mkdir -p a/b counts as 2)
-                self.assertGreaterEqual(
-                    diff_stat["stats_open"], (2 * no_of_files_per_mdt[index]) + len(mdt_indexes)
-                )  # Directory creation is opened to create a file hence * 2
-                # I have yet to work out a calculation that works for rmdir. I'm not going to create a ticket because it isn't going to be important
-                # enough to get fix. There are lots of stats we could have chosen that might have been similar. But if someone wants to have a go
-                # at this calculation then it would be great. The calc works for 1 mdt.
-                # self.assertEqual(diff_stat['stats_rmdir'], len(mdt_indexes) + no_of_files_per_mdt[index])
-            else:
-                self.assertGreaterEqual(
-                    diff_stat["stats_mkdir"], 1 + no_of_files_per_mdt[index]
-                )  # We created one directories for each file, plus one lfs mkdir
-                self.assertGreaterEqual(
-                    diff_stat["stats_open"], (2 * no_of_files_per_mdt[index]) + 1
-                )  # Directory creation is a open
-                self.assertEqual(
-                    diff_stat["stats_rmdir"], 1 + no_of_files_per_mdt[index]
-                )  # We then remove the directory
-
-            self.assertEqual(diff_stat["stats_unlink"], no_of_files_per_mdt[index])  # And remove all the files.
 
     def test_create_dne_filesystem(self):
         """
