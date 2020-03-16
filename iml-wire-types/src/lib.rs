@@ -1540,10 +1540,10 @@ impl Default for Branding {
 impl From<String> for Branding {
     fn from(x: String) -> Self {
         match x.to_lowercase().as_str() {
-            "whamcloud" => Branding::Whamcloud,
-            "ddn" => Branding::Ddn,
-            "ddnai400" => Branding::DdnAi400,
-            _ => Branding::Whamcloud,
+            "whamcloud" => Self::Whamcloud,
+            "ddn" => Self::Ddn,
+            "ddnai400" => Self::DdnAi400,
+            _ => Self::Whamcloud,
         }
     }
 }
