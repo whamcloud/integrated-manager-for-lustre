@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         version: iml_manager_env::get_version(),
         is_release: iml_manager_env::get_is_release(),
         branding: iml_manager_env::get_branding().into(),
-        use_stratagem: iml_manager_env::get_stratagem_enabled().parse().expect("Couldn't parse stratagem_enabled"),
+        use_stratagem: iml_manager_env::get_use_stratagem().parse().expect("Couldn't parse use_stratagem"),
     };
 
     let subscriber = Subscriber::builder()

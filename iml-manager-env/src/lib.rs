@@ -205,8 +205,8 @@ pub fn get_branding() -> String {
     get_var("BRANDING")
 }
 
-pub fn get_stratagem_enabled() -> String {
-    get_var("STRATAGEM_ENABLED")
+pub fn get_use_stratagem() -> String {
+    get_var("USE_STRATAGEM")
 }
 
 /// Gets a connection string from the IML env

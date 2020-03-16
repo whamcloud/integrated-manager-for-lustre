@@ -82,7 +82,7 @@ class Command(BaseCommand):
             "AMQP_BROKER_PORT": settings.AMQP_BROKER_PORT,
             "AMQP_BROKER_URL": settings.BROKER_URL,
             "BRANDING": settings.BRANDING,
-            "STRATAGEM_ENABLED": settings.STRATAGEM_ENABLED,
+            "USE_STRATAGEM": settings.USE_STRATAGEM,
         }
 
         config.update(overrides)

@@ -865,7 +865,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         .els(),
         Page::Filesystem(page) => main_panels(
             model,
-            page::filesystem::view(&model.records, page, &model.locks, model.auth.get_session())
+            page::filesystem::view(&model.records, page, &model.locks, model.auth.get_session(), model.conf.use_stratagem)
                 .els()
                 .map_msg(Msg::FilesystemPage),
         )
