@@ -16,7 +16,7 @@ use iml_wire_types::{
         VolumeRecord,
     },
     warp_drive::{Cache, Record, RecordChange, RecordId},
-    Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam, Volume,
+    Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam,
 };
 use std::{fmt::Debug, iter, pin::Pin, sync::Arc};
 
@@ -206,9 +206,13 @@ pub async fn db_record_to_change_record(
                 Ok(RecordChange::Update(Record::ManagedTargetMount(x)))
             }
         },
-        DbRecord::Volume(x) => {
-            converter(client, msg_type, x, Record::Volume, RecordId::Volume).await
-        }
+        DbRecord::Volume(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::Volume(x.id()))),
+            (_, ref x) if x.deleted() => Ok(RecordChange::Delete(RecordId::Volume(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::Volume(x)))
+            }
+        },
         DbRecord::VolumeNode(x) => match (msg_type, x) {
             (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::VolumeNode(x.id()))),
             (_, ref x) if x.deleted() => Ok(RecordChange::Delete(RecordId::VolumeNode(x.id()))),
@@ -248,12 +252,8 @@ pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlM
         .map_ok(|x: ApiList<Host>| x.objects)
         .map_ok(|x: Vec<Host>| x.into_iter().map(|x| (x.id, x)).collect());
 
-    let volume_fut = get_retry(client, Volume::endpoint_name(), Volume::query())
-        .map_ok(|x: ApiList<Volume>| x.objects)
-        .map_ok(|x: Vec<Volume>| x.into_iter().map(|x| (x.id, x)).collect());
-
-    let (filesystem, target, alert, host, volume) =
-        future::try_join5(fs_fut, target_fut, active_alert_fut, host_fut, volume_fut).await?;
+    let (filesystem, target, alert, host) =
+        future::try_join4(fs_fut, target_fut, active_alert_fut, host_fut).await?;
 
     let mut api_cache = shared_api_cache.lock().await;
 
@@ -261,7 +261,6 @@ pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlM
     api_cache.target = target;
     api_cache.active_alert = alert;
     api_cache.host = host;
-    api_cache.volume = volume;
 
     tracing::debug!("Populated from api");
 
@@ -300,6 +299,10 @@ pub async fn populate_from_db(
         client.prepare(&format!(
             "select * from {} where not_deleted = 't'",
             LnetConfigurationRecord::table_name()
+        )),
+        client.prepare(&format!(
+            "select * from {} where not_deleted = 't'",
+            VolumeRecord::table_name(),
         )),
         client.prepare(&format!(
             "select * from {} where not_deleted = 't'",
@@ -350,15 +353,16 @@ pub async fn populate_from_db(
         into_row(client.query_raw(&stmts[9], iter::empty()).await?),
     );
 
-    let fut3 = future::try_join(
+    let fut3 = future::try_join3(
         into_row(client.query_raw(&stmts[10], iter::empty()).await?),
         into_row(client.query_raw(&stmts[11], iter::empty()).await?),
+        into_row(client.query_raw(&stmts[12], iter::empty()).await?),
     );
 
     let (
-        (managed_target_mount, stratagem_configuration, lnet_configuration, volume_node, ost_pool),
-        (ost_pool_osts, content_types, groups, users, user_groups),
-        (corosync_configuration, pacemaker_configuration),
+        (managed_target_mount, stratagem_configuration, lnet_configuration, volume, volume_node),
+        (ost_pool, ost_pool_osts, content_types, groups, users),
+        (user_groups, corosync_configuration, pacemaker_configuration),
     ) = future::try_join3(fut1, fut2, fut3).await?;
 
     let mut cache = shared_api_cache.lock().await;
@@ -366,6 +370,7 @@ pub async fn populate_from_db(
     cache.managed_target_mount = managed_target_mount;
     cache.stratagem_config = stratagem_configuration;
     cache.lnet_configuration = lnet_configuration;
+    cache.volume = volume;
     cache.volume_node = volume_node;
     cache.ost_pool = ost_pool;
     cache.ost_pool_osts = ost_pool_osts;

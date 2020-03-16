@@ -30,9 +30,12 @@ use components::{
 pub(crate) use extensions::*;
 use futures::channel::oneshot;
 use generated::css_classes::C;
-use iml_wire_types::{warp_drive, GroupType, Session};
+use iml_wire_types::{
+    warp_drive::{self, ArcRecord},
+    GroupType, Session,
+};
 use lazy_static::lazy_static;
-use page::{login, Page};
+use page::{Page, RecordChange};
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, EventHandler, *};
 pub(crate) use server_date::ServerDate;
@@ -252,35 +255,26 @@ pub enum Msg {
     EventSourceConnect(JsValue),
     EventSourceError(JsValue),
     EventSourceMessage(MessageEvent),
-    FilesystemsPage(page::filesystems::Msg),
-    FilesystemPage(page::filesystem::Msg),
     GetSession,
     GotSession(fetch::ResponseDataResult<Session>),
     HideMenu,
     LoadPage,
     Locks(warp_drive::Locks),
     LoggedOut(fetch::FetchObject<()>),
-    Login(login::Msg),
     Logout,
     ManageMenuState,
-    MgtsPage(page::mgts::Msg),
     Notification(notification::Msg),
     RecordChange(Box<warp_drive::RecordChange>),
-    DashboardPage(page::dashboard::Msg),
-    FsDashboardPage(page::fs_dashboard::Msg),
     Records(Box<warp_drive::Cache>),
     RemoveRecord(warp_drive::RecordId),
     RouteChanged(Url),
-    ServersPage(page::servers::Msg),
-    ServerPage(page::server::Msg),
     StatusSection(status_section::Msg),
     SliderX(i32, f64),
     StartSliderTracking,
     StopSliderTracking,
-    TargetPage(page::target::Msg),
     ToggleMenu,
     Tree(tree::Msg),
-    User(page::user::Msg),
+    Page(page::Msg),
     UpdatePageTitle,
     WindowClick,
     WindowResize,
@@ -316,7 +310,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::LoadPage => {
             if model.loading.loaded() && !model.page.is_active(&model.route) {
                 model.page = (&model.records, &model.route).into();
-                model.page.init(&model.records, orders);
+                model.page.init(&model.records, &mut orders.proxy(Msg::Page));
             } else {
                 orders.skip();
             }
@@ -369,6 +363,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::Records(records) => {
             model.records = (&*records).into();
 
+            model.page.set_records(&model.records, &mut orders.proxy(Msg::Page));
+
             let old = model.activity_health;
             model.activity_health = update_activity_health(&model.records.active_alert);
 
@@ -376,36 +372,45 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .proxy(Msg::Notification)
                 .send_msg(notification::generate(None, &old, &model.activity_health));
 
-            orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::SetHosts(
-                model.records.host.values().cloned().collect(),
-                model.records.lnet_configuration.clone(),
-                model.records.pacemaker_configuration.clone(),
-                model.records.corosync_configuration.clone(),
-            ));
+            orders
+                .proxy(Msg::Page)
+                .proxy(page::Msg::Servers)
+                .send_msg(page::servers::Msg::SetHosts(
+                    model.records.host.values().cloned().collect(),
+                    model.records.lnet_configuration.clone(),
+                    model.records.pacemaker_configuration.clone(),
+                    model.records.corosync_configuration.clone(),
+                ));
 
             orders
-                .proxy(Msg::FilesystemsPage)
+                .proxy(Msg::Page)
+                .proxy(page::Msg::Filesystems)
                 .send_msg(page::filesystems::Msg::SetFilesystems(
                     model.records.filesystem.values().cloned().collect(),
                 ));
 
             orders
-                .proxy(Msg::FilesystemPage)
+                .proxy(Msg::Page)
+                .proxy(page::Msg::Filesystem)
                 .send_msg(page::filesystem::Msg::SetTargets(
                     model.records.target.values().cloned().collect(),
                 ));
 
             orders
-                .proxy(Msg::FilesystemPage)
+                .proxy(Msg::Page)
+                .proxy(page::Msg::Filesystem)
                 .proxy(page::filesystem::Msg::Stratagem)
                 .send_msg(stratagem::Msg::CheckStratagem)
                 .send_msg(stratagem::Msg::SetStratagemConfig(
                     model.records.stratagem_config.values().cloned().collect(),
                 ));
 
-            orders.proxy(Msg::MgtsPage).send_msg(page::mgts::Msg::SetTargets(
-                model.records.target.values().cloned().collect(),
-            ));
+            orders
+                .proxy(Msg::Page)
+                .proxy(page::Msg::Mgts)
+                .send_msg(page::mgts::Msg::SetTargets(
+                    model.records.target.values().cloned().collect(),
+                ));
 
             orders.proxy(Msg::Tree).send_msg(tree::Msg::Reset);
         }
@@ -415,34 +420,48 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::RemoveRecord(id) => {
             model.records.remove_record(id);
 
+            model
+                .page
+                .remove_record(id, &model.records, &mut orders.proxy(Msg::Page));
+
             match id {
                 warp_drive::RecordId::Host(_) => {
-                    orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::SetHosts(
-                        model.records.host.values().cloned().collect(),
-                        model.records.lnet_configuration.clone(),
-                        model.records.pacemaker_configuration.clone(),
-                        model.records.corosync_configuration.clone(),
-                    ));
+                    orders
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Servers)
+                        .send_msg(page::servers::Msg::SetHosts(
+                            model.records.host.values().cloned().collect(),
+                            model.records.lnet_configuration.clone(),
+                            model.records.pacemaker_configuration.clone(),
+                            model.records.corosync_configuration.clone(),
+                        ));
 
                     orders
-                        .proxy(Msg::FilesystemPage)
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Filesystem)
                         .proxy(page::filesystem::Msg::Stratagem)
                         .send_msg(stratagem::Msg::CheckStratagem);
                 }
                 warp_drive::RecordId::Filesystem(x) => {
                     orders
-                        .proxy(Msg::FilesystemsPage)
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Filesystems)
                         .send_msg(page::filesystems::Msg::RemoveFilesystem(x));
                 }
                 warp_drive::RecordId::Target(x) => {
                     orders
-                        .proxy(Msg::FilesystemPage)
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Filesystem)
                         .send_msg(page::filesystem::Msg::RemoveTarget(x));
 
-                    orders.proxy(Msg::MgtsPage).send_msg(page::mgts::Msg::RemoveTarget(x));
+                    orders
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Mgts)
+                        .send_msg(page::mgts::Msg::RemoveTarget(x));
 
                     orders
-                        .proxy(Msg::FilesystemPage)
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Filesystem)
                         .proxy(page::filesystem::Msg::Stratagem)
                         .send_msg(stratagem::Msg::CheckStratagem);
                 }
@@ -459,46 +478,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::HideMenu => {
             model.menu_visibility = Hidden;
         }
-        Msg::ServersPage(msg) => {
-            if let Page::Servers(page) = &mut model.page {
-                page::servers::update(msg, &model.records, page, &mut orders.proxy(Msg::ServersPage))
-            }
-        }
-        Msg::ServerPage(msg) => {
-            if let Page::Server(page) = &mut model.page {
-                page::server::update(msg, &model.records, page, &mut orders.proxy(Msg::ServerPage))
-            }
-        }
-        Msg::FilesystemPage(msg) => {
-            if let Page::Filesystem(page) = &mut model.page {
-                page::filesystem::update(msg, &model.records, page, &mut orders.proxy(Msg::FilesystemPage))
-            }
-        }
-        Msg::FilesystemsPage(msg) => {
-            if let Page::Filesystems(page) = &mut model.page {
-                page::filesystems::update(msg, &model.records, page, &mut orders.proxy(Msg::FilesystemsPage))
-            }
-        }
-        Msg::MgtsPage(msg) => {
-            if let Page::Mgts(page) = &mut model.page {
-                page::mgts::update(msg, &model.records, page, &mut orders.proxy(Msg::MgtsPage))
-            }
-        }
-        Msg::TargetPage(msg) => {
-            if let Page::Target(page) = &mut model.page {
-                page::target::update(msg, &model.records, page, &mut orders.proxy(Msg::TargetPage))
-            }
-        }
-        Msg::DashboardPage(msg) => {
-            if let Page::Dashboard(page) = &mut model.page {
-                page::dashboard::update(msg, page, &mut orders.proxy(Msg::DashboardPage))
-            }
-        }
-        Msg::FsDashboardPage(msg) => {
-            if let Page::FsDashboard(page) = &mut model.page {
-                page::fs_dashboard::update(msg, page, &mut orders.proxy(Msg::FsDashboardPage))
-            }
-        }
+
         Msg::StartSliderTracking => {
             model.track_slider = true;
         }
@@ -558,22 +538,16 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::Tree(msg) => {
             tree::update(&model.records, msg, &mut model.tree, &mut orders.proxy(Msg::Tree));
         }
-        Msg::User(msg) => {
-            if let Page::User(page) = &mut model.page {
-                page::user::update(msg, page, &mut orders.proxy(Msg::User));
-            }
-        }
-        Msg::Login(msg) => {
-            if let Page::Login(page) = &mut model.page {
-                login::update(msg, page, &mut orders.proxy(Msg::Login));
-            }
-        }
+
         Msg::Auth(msg) => {
             if let (Some(_), Some(session)) = (model.auth.get_session(), model.loading.session.take()) {
                 let _ = session.send(());
             }
 
             auth::update(*msg, &mut model.auth, &mut orders.proxy(|x| Msg::Auth(Box::new(x))));
+        }
+        Msg::Page(msg) => {
+            page::update(msg, &mut model.page, &model.records, &mut orders.proxy(Msg::Page));
         }
     }
 }
@@ -584,146 +558,164 @@ fn handle_record_change(
     orders: &mut impl Orders<Msg, GMsg>,
 ) {
     match record_change {
-        warp_drive::RecordChange::Update(record) => match record {
-            warp_drive::Record::ActiveAlert(x) => {
-                let msg = x.message.clone();
+        warp_drive::RecordChange::Update(record) => {
+            let record = ArcRecord::from(record);
 
-                model.records.active_alert.insert(x.id, Arc::new(x));
+            model
+                .page
+                .update_record(record.clone(), &model.records, &mut orders.proxy(Msg::Page));
 
-                let old = model.activity_health;
+            match record {
+                ArcRecord::ActiveAlert(x) => {
+                    let msg = x.message.clone();
 
-                model.activity_health = update_activity_health(&model.records.active_alert);
-                orders.proxy(Msg::Notification).send_msg(notification::generate(
-                    Some(msg),
-                    &old,
-                    &model.activity_health,
-                ));
-            }
-            warp_drive::Record::Filesystem(x) => {
-                let id = x.id;
-                let fs = Arc::new(x);
+                    model.records.active_alert.insert(x.id, x);
 
-                if model.records.filesystem.insert(id, Arc::clone(&fs)).is_none() {
-                    orders
-                        .proxy(Msg::Tree)
-                        .send_msg(tree::Msg::Add(warp_drive::RecordId::Filesystem(id)));
+                    let old = model.activity_health;
+
+                    model.activity_health = update_activity_health(&model.records.active_alert);
+                    orders.proxy(Msg::Notification).send_msg(notification::generate(
+                        Some(msg),
+                        &old,
+                        &model.activity_health,
+                    ));
                 }
+                ArcRecord::Filesystem(x) => {
+                    let id = x.id;
 
-                orders
-                    .proxy(Msg::FilesystemsPage)
-                    .send_msg(page::filesystems::Msg::AddFilesystem(fs));
-            }
-            warp_drive::Record::ContentType(x) => {
-                model.records.content_type.insert(x.id, Arc::new(x));
-            }
-            warp_drive::Record::Group(x) => {
-                model.records.group.insert(x.id, Arc::new(x));
-            }
-            warp_drive::Record::Host(x) => {
-                let id = x.id;
-                if model.records.host.insert(x.id, Arc::new(x)).is_none() {
+                    if model.records.filesystem.insert(id, Arc::clone(&x)).is_none() {
+                        orders
+                            .proxy(Msg::Tree)
+                            .send_msg(tree::Msg::Add(warp_drive::RecordId::Filesystem(id)));
+                    }
+
                     orders
-                        .proxy(Msg::Tree)
-                        .send_msg(tree::Msg::Add(warp_drive::RecordId::Host(id)));
-                };
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Filesystems)
+                        .send_msg(page::filesystems::Msg::AddFilesystem(x));
+                }
+                ArcRecord::ContentType(x) => {
+                    model.records.content_type.insert(x.id, x);
+                }
+                ArcRecord::Group(x) => {
+                    model.records.group.insert(x.id, x);
+                }
+                ArcRecord::Host(x) => {
+                    let id = x.id;
+                    if model.records.host.insert(x.id, x).is_none() {
+                        orders
+                            .proxy(Msg::Tree)
+                            .send_msg(tree::Msg::Add(warp_drive::RecordId::Host(id)));
+                    };
 
-                orders.proxy(Msg::ServersPage).send_msg(page::servers::Msg::SetHosts(
-                    model.records.host.values().cloned().collect(),
-                    model.records.lnet_configuration.clone(),
-                    model.records.pacemaker_configuration.clone(),
-                    model.records.corosync_configuration.clone(),
-                ));
-
-                orders
-                    .proxy(Msg::FilesystemPage)
-                    .proxy(page::filesystem::Msg::Stratagem)
-                    .send_msg(stratagem::Msg::CheckStratagem);
-            }
-            warp_drive::Record::ManagedTargetMount(x) => {
-                model.records.managed_target_mount.insert(x.id, Arc::new(x));
-            }
-            warp_drive::Record::OstPool(x) => {
-                model.records.ost_pool.insert(x.id, Arc::new(x));
-            }
-            warp_drive::Record::OstPoolOsts(x) => {
-                let id = x.id;
-                if model.records.ost_pool_osts.insert(x.id, Arc::new(x)).is_none() {
                     orders
-                        .proxy(Msg::Tree)
-                        .send_msg(tree::Msg::Add(warp_drive::RecordId::OstPoolOsts(id)));
-                };
-            }
-            warp_drive::Record::StratagemConfig(x) => {
-                let x = Arc::new(x);
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Servers)
+                        .send_msg(page::servers::Msg::SetHosts(
+                            model.records.host.values().cloned().collect(),
+                            model.records.lnet_configuration.clone(),
+                            model.records.pacemaker_configuration.clone(),
+                            model.records.corosync_configuration.clone(),
+                        ));
 
-                model.records.stratagem_config.insert(x.id, Arc::clone(&x));
-
-                orders
-                    .proxy(Msg::FilesystemPage)
-                    .proxy(page::filesystem::Msg::Stratagem)
-                    .send_msg(stratagem::Msg::CheckStratagem);
-
-                orders
-                    .proxy(Msg::FilesystemPage)
-                    .proxy(page::filesystem::Msg::Stratagem)
-                    .send_msg(stratagem::Msg::UpdateStratagemConfig(x));
-            }
-            warp_drive::Record::Target(x) => {
-                let id = x.id;
-                let x = Arc::new(x);
-
-                if model.records.target.insert(x.id, Arc::clone(&x)).is_none() {
                     orders
-                        .proxy(Msg::Tree)
-                        .send_msg(tree::Msg::Add(warp_drive::RecordId::Target(id)));
-                };
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Filesystem)
+                        .proxy(page::filesystem::Msg::Stratagem)
+                        .send_msg(stratagem::Msg::CheckStratagem);
+                }
+                ArcRecord::ManagedTargetMount(x) => {
+                    model.records.managed_target_mount.insert(x.id, x);
+                }
+                ArcRecord::OstPool(x) => {
+                    model.records.ost_pool.insert(x.id, x);
+                }
+                ArcRecord::OstPoolOsts(x) => {
+                    let id = x.id;
+                    if model.records.ost_pool_osts.insert(x.id, x).is_none() {
+                        orders
+                            .proxy(Msg::Tree)
+                            .send_msg(tree::Msg::Add(warp_drive::RecordId::OstPoolOsts(id)));
+                    };
+                }
+                ArcRecord::StratagemConfig(x) => {
+                    model.records.stratagem_config.insert(x.id, Arc::clone(&x));
 
-                orders
-                    .proxy(Msg::FilesystemPage)
-                    .send_msg(page::filesystem::Msg::AddTarget(Arc::clone(&x)));
-
-                orders
-                    .proxy(Msg::TargetPage)
-                    .send_msg(page::target::Msg::UpdateTarget(Arc::clone(&x)));
-
-                orders.proxy(Msg::MgtsPage).send_msg(page::mgts::Msg::AddTarget(x));
-
-                orders
-                    .proxy(Msg::FilesystemPage)
-                    .proxy(page::filesystem::Msg::Stratagem)
-                    .send_msg(stratagem::Msg::CheckStratagem);
-            }
-            warp_drive::Record::User(x) => {
-                let x = Arc::new(x);
-
-                model.records.user.insert(x.id, Arc::clone(&x));
-
-                orders.proxy(Msg::User).send_msg(page::user::Msg::SetUser(x));
-            }
-            warp_drive::Record::UserGroup(x) => {
-                model.records.user_group.insert(x.id, Arc::new(x));
-            }
-            warp_drive::Record::Volume(x) => {
-                model.records.volume.insert(x.id, Arc::new(x));
-            }
-            warp_drive::Record::VolumeNode(x) => {
-                let id = x.id;
-                if model.records.volume_node.insert(x.id, Arc::new(x)).is_none() {
                     orders
-                        .proxy(Msg::Tree)
-                        .send_msg(tree::Msg::Add(warp_drive::RecordId::VolumeNode(id)));
-                };
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Filesystem)
+                        .proxy(page::filesystem::Msg::Stratagem)
+                        .send_msg(stratagem::Msg::CheckStratagem);
+
+                    orders
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Filesystem)
+                        .proxy(page::filesystem::Msg::Stratagem)
+                        .send_msg(stratagem::Msg::UpdateStratagemConfig(x));
+                }
+                ArcRecord::Target(x) => {
+                    let id = x.id;
+
+                    if model.records.target.insert(x.id, Arc::clone(&x)).is_none() {
+                        orders
+                            .proxy(Msg::Tree)
+                            .send_msg(tree::Msg::Add(warp_drive::RecordId::Target(id)));
+                    };
+
+                    orders
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Filesystem)
+                        .send_msg(page::filesystem::Msg::AddTarget(Arc::clone(&x)));
+
+                    orders
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Target)
+                        .send_msg(page::target::Msg::UpdateTarget(Arc::clone(&x)));
+
+                    orders
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Filesystem)
+                        .proxy(page::filesystem::Msg::Stratagem)
+                        .send_msg(stratagem::Msg::CheckStratagem);
+
+                    orders
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Mgts)
+                        .send_msg(page::mgts::Msg::AddTarget(x));
+                }
+                ArcRecord::User(x) => {
+                    model.records.user.insert(x.id, Arc::clone(&x));
+
+                    orders
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::User)
+                        .send_msg(page::user::Msg::SetUser(x));
+                }
+                ArcRecord::UserGroup(x) => {
+                    model.records.user_group.insert(x.id, x);
+                }
+                ArcRecord::Volume(x) => {
+                    model.records.volume.insert(x.id, x);
+                }
+                ArcRecord::VolumeNode(x) => {
+                    let id = x.id;
+                    if model.records.volume_node.insert(x.id, x).is_none() {
+                        orders
+                            .proxy(Msg::Tree)
+                            .send_msg(tree::Msg::Add(warp_drive::RecordId::VolumeNode(id)));
+                    };
+                }
+                ArcRecord::LnetConfiguration(x) => {
+                    model.records.lnet_configuration.insert(x.id, x);
+                }
+                ArcRecord::CorosyncConfiguration(x) => {
+                    model.records.corosync_configuration.insert(x.id, x);
+                }
+                ArcRecord::PacemakerConfiguration(x) => {
+                    model.records.pacemaker_configuration.insert(x.id, x);
+                }
             }
-            warp_drive::Record::LnetConfiguration(x) => {
-                model.records.lnet_configuration.insert(x.id, Arc::new(x));
-            }
-            warp_drive::Record::CorosyncConfiguration(x) => {
-                model.records.corosync_configuration.insert(x.id, Arc::new(x));
-            }
-            warp_drive::Record::PacemakerConfiguration(x) => {
-                model.records.pacemaker_configuration.insert(x.id, Arc::new(x));
-            }
-        },
+        }
         warp_drive::RecordChange::Delete(record_id) => {
             match record_id {
                 warp_drive::RecordId::Filesystem(_)
@@ -735,7 +727,8 @@ fn handle_record_change(
                 }
                 warp_drive::RecordId::StratagemConfig(_) => {
                     orders
-                        .proxy(Msg::FilesystemPage)
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Filesystem)
                         .proxy(page::filesystem::Msg::Stratagem)
                         .send_msg(stratagem::Msg::DeleteStratagemConfig);
                 }
@@ -751,7 +744,7 @@ fn handle_record_change(
 //     View
 // ------ ------
 
-pub fn main_panels(model: &Model, children: impl View<Msg>) -> impl View<Msg> {
+pub fn main_panels(model: &Model, children: impl View<page::Msg>) -> impl View<Msg> {
     div![
         class![
             C.fade_in,
@@ -848,7 +841,7 @@ pub fn main_panels(model: &Model, children: impl View<Msg>) -> impl View<Msg> {
                 // main content
                 div![
                     class![C.flex_grow, C.overflow_x_auto, C.overflow_y_auto, C.p_6],
-                    children.els()
+                    children.els().map_msg(Msg::Page)
                 ],
                 page::partial::footer::view().els(),
             ],
@@ -871,38 +864,57 @@ pub fn main_panels(model: &Model, children: impl View<Msg>) -> impl View<Msg> {
 fn view(model: &Model) -> Vec<Node<Msg>> {
     match &model.page {
         Page::AppLoading => loading::view().els(),
-        Page::About => main_panels(model, page::about::view(model)).els(),
+        Page::About => main_panels(model, page::about::view(model).els().map_msg(page::Msg::About)).els(),
         Page::Dashboard(page) => main_panels(model, page::dashboard::view(page)).els(),
         Page::Filesystems(page) => main_panels(
             model,
             page::filesystems::view(&model.records, page, &model.locks, model.auth.get_session())
                 .els()
-                .map_msg(Msg::FilesystemsPage),
+                .map_msg(page::Msg::Filesystems),
         )
         .els(),
         Page::Filesystem(page) => main_panels(
             model,
             page::filesystem::view(&model.records, page, &model.locks, model.auth.get_session())
                 .els()
-                .map_msg(Msg::FilesystemPage),
+                .map_msg(page::Msg::Filesystem),
         )
         .els(),
-        Page::ServerDashboard(page) => main_panels(model, page::server_dashboard::view(&model.records, page)).els(),
-        Page::TargetDashboard(page) => main_panels(model, page::target_dashboard::view(&model.records, page)).els(),
+        Page::ServerDashboard(page) => main_panels(
+            model,
+            page::server_dashboard::view(&model.records, page)
+                .els()
+                .map_msg(page::Msg::ServerDashboard),
+        )
+        .els(),
+        Page::TargetDashboard(page) => main_panels(
+            model,
+            page::target_dashboard::view(&model.records, page)
+                .els()
+                .map_msg(page::Msg::TargetDashboard),
+        )
+        .els(),
         Page::FsDashboard(page) => main_panels(model, page::fs_dashboard::view(page)).els(),
-        Page::Jobstats => main_panels(model, page::jobstats::view(model)).els(),
-        Page::Login(x) => page::login::view(x).els().map_msg(Msg::Login),
+        Page::Jobstats => main_panels(model, page::jobstats::view(model).els().map_msg(page::Msg::Jobstats)).els(),
+        Page::Login(x) => page::login::view(x)
+            .els()
+            .map_msg(|x| page::Msg::Login(Box::new(x)))
+            .map_msg(Msg::Page),
         Page::Mgts(x) => main_panels(
             model,
             page::mgts::view(&model.records, x, &model.locks, model.auth.get_session())
                 .els()
-                .map_msg(Msg::MgtsPage),
+                .map_msg(page::Msg::Mgts),
         )
         .els(),
         Page::NotFound => page::not_found::view(model).els(),
-        Page::OstPools => main_panels(model, page::ostpools::view(model)).els(),
-        Page::OstPool(x) => main_panels(model, page::ostpool::view(x)).els(),
-        Page::PowerControl => main_panels(model, page::power_control::view(model)).els(),
+        Page::OstPools => main_panels(model, page::ostpools::view(model).els().map_msg(page::Msg::OstPools)).els(),
+        Page::OstPool(x) => main_panels(model, page::ostpool::view(x).els().map_msg(page::Msg::OstPool)).els(),
+        Page::PowerControl => main_panels(
+            model,
+            page::power_control::view(model).els().map_msg(page::Msg::PowerControl),
+        )
+        .els(),
         Page::Servers(page) => main_panels(
             model,
             page::servers::view(
@@ -913,7 +925,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
                 &model.server_date,
             )
             .els()
-            .map_msg(Msg::ServersPage),
+            .map_msg(page::Msg::Servers),
         )
         .els(),
         Page::Server(x) => main_panels(
@@ -926,21 +938,21 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
                 &model.server_date,
             )
             .els()
-            .map_msg(Msg::ServerPage),
+            .map_msg(page::Msg::Server),
         )
         .els(),
-        Page::Targets => main_panels(model, page::targets::view(model)).els(),
+        Page::Targets => main_panels(model, page::targets::view(model).els().map_msg(page::Msg::Targets)).els(),
         Page::Target(x) => main_panels(
             model,
             page::target::view(&model.records, x, &model.locks, model.auth.get_session())
                 .els()
-                .map_msg(Msg::TargetPage),
+                .map_msg(page::Msg::Target),
         )
         .els(),
-        Page::Users => main_panels(model, page::users::view(&model.records)).els(),
-        Page::User(x) => main_panels(model, page::user::view(x).els().map_msg(Msg::User)).els(),
-        Page::Volumes => main_panels(model, page::volumes::view(model)).els(),
-        Page::Volume(x) => main_panels(model, page::volume::view(x)).els(),
+        Page::Users => main_panels(model, page::users::view(&model.records).els().map_msg(page::Msg::Users)).els(),
+        Page::User(x) => main_panels(model, page::user::view(x).els().map_msg(page::Msg::User)).els(),
+        Page::Volumes(x) => main_panels(model, page::volumes::view(x).els().map_msg(page::Msg::Volumes)).els(),
+        Page::Volume(x) => main_panels(model, page::volume::view(x).els().map_msg(page::Msg::Volume)).els(),
     }
 }
 

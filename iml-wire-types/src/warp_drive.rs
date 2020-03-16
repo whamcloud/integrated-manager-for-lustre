@@ -7,10 +7,10 @@ use crate::{
         AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
         CorosyncConfigurationRecord, Id, LnetConfigurationRecord, ManagedTargetMountRecord,
         OstPoolOstsRecord, OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration,
-        VolumeNodeRecord,
+        VolumeNodeRecord, VolumeRecord,
     },
     Alert, CompositeId, EndpointNameSelf, Filesystem, Host, Label, LockChange, Target,
-    TargetConfParam, ToCompositeId, Volume,
+    TargetConfParam, ToCompositeId,
 };
 use im::{HashMap, HashSet};
 use std::{
@@ -105,7 +105,7 @@ pub struct Cache {
     pub user: HashMap<u32, AuthUserRecord>,
     pub user_group: HashMap<u32, AuthUserGroupRecord>,
     pub pacemaker_configuration: HashMap<u32, PacemakerConfigurationRecord>,
-    pub volume: HashMap<u32, Volume>,
+    pub volume: HashMap<u32, VolumeRecord>,
     pub volume_node: HashMap<u32, VolumeNodeRecord>,
 }
 
@@ -126,7 +126,7 @@ pub struct ArcCache {
     pub target: HashMap<u32, Arc<Target<TargetConfParam>>>,
     pub user: HashMap<u32, Arc<AuthUserRecord>>,
     pub user_group: HashMap<u32, Arc<AuthUserGroupRecord>>,
-    pub volume: HashMap<u32, Arc<Volume>>,
+    pub volume: HashMap<u32, Arc<VolumeRecord>>,
     pub volume_node: HashMap<u32, Arc<VolumeNodeRecord>>,
 }
 
@@ -406,8 +406,53 @@ pub enum Record {
     Target(Target<TargetConfParam>),
     User(AuthUserRecord),
     UserGroup(AuthUserGroupRecord),
-    Volume(Volume),
+    Volume(VolumeRecord),
     VolumeNode(VolumeNodeRecord),
+}
+
+#[derive(Debug, Clone)]
+pub enum ArcRecord {
+    ActiveAlert(Arc<Alert>),
+    ContentType(Arc<ContentTypeRecord>),
+    CorosyncConfiguration(Arc<CorosyncConfigurationRecord>),
+    Filesystem(Arc<Filesystem>),
+    Group(Arc<AuthGroupRecord>),
+    Host(Arc<Host>),
+    LnetConfiguration(Arc<LnetConfigurationRecord>),
+    ManagedTargetMount(Arc<ManagedTargetMountRecord>),
+    OstPool(Arc<OstPoolRecord>),
+    OstPoolOsts(Arc<OstPoolOstsRecord>),
+    PacemakerConfiguration(Arc<PacemakerConfigurationRecord>),
+    StratagemConfig(Arc<StratagemConfiguration>),
+    Target(Arc<Target<TargetConfParam>>),
+    User(Arc<AuthUserRecord>),
+    UserGroup(Arc<AuthUserGroupRecord>),
+    Volume(Arc<VolumeRecord>),
+    VolumeNode(Arc<VolumeNodeRecord>),
+}
+
+impl From<Record> for ArcRecord {
+    fn from(record: Record) -> Self {
+        match record {
+            Record::ActiveAlert(x) => Self::ActiveAlert(Arc::new(x)),
+            Record::ContentType(x) => Self::ContentType(Arc::new(x)),
+            Record::CorosyncConfiguration(x) => Self::CorosyncConfiguration(Arc::new(x)),
+            Record::Filesystem(x) => Self::Filesystem(Arc::new(x)),
+            Record::Group(x) => Self::Group(Arc::new(x)),
+            Record::Host(x) => Self::Host(Arc::new(x)),
+            Record::LnetConfiguration(x) => Self::LnetConfiguration(Arc::new(x)),
+            Record::ManagedTargetMount(x) => Self::ManagedTargetMount(Arc::new(x)),
+            Record::OstPool(x) => Self::OstPool(Arc::new(x)),
+            Record::OstPoolOsts(x) => Self::OstPoolOsts(Arc::new(x)),
+            Record::PacemakerConfiguration(x) => Self::PacemakerConfiguration(Arc::new(x)),
+            Record::StratagemConfig(x) => Self::StratagemConfig(Arc::new(x)),
+            Record::Target(x) => Self::Target(Arc::new(x)),
+            Record::User(x) => Self::User(Arc::new(x)),
+            Record::UserGroup(x) => Self::UserGroup(Arc::new(x)),
+            Record::Volume(x) => Self::Volume(Arc::new(x)),
+            Record::VolumeNode(x) => Self::VolumeNode(Arc::new(x)),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, serde::Deserialize, serde::Serialize)]

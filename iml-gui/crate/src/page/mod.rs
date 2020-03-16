@@ -27,11 +27,21 @@ pub mod volumes;
 use crate::{
     components::stratagem,
     route::{Route, RouteId},
-    GMsg, Msg,
+    GMsg,
 };
-use iml_wire_types::warp_drive::ArcCache;
+use iml_wire_types::warp_drive::{ArcCache, ArcRecord, RecordId};
 use seed::prelude::Orders;
 use std::sync::Arc;
+
+/// Handles Cache changes on a per-page level.
+pub trait RecordChange<Msg: 'static> {
+    /// Called when a record is either added or updated
+    fn update_record(&mut self, record: ArcRecord, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>);
+    /// Called when a record is removed
+    fn remove_record(&mut self, id: RecordId, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>);
+    /// Called on initial load of all records, or on page initialization
+    fn set_records(&mut self, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>);
+}
 
 pub(crate) enum Page {
     About,
@@ -55,8 +65,26 @@ pub(crate) enum Page {
     Target(Box<target::Model>),
     Users,
     User(user::Model),
-    Volumes,
+    Volumes(volumes::Model),
     Volume(volume::Model),
+}
+
+impl RecordChange<Msg> for Page {
+    fn update_record(&mut self, record: ArcRecord, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+        if let Self::Volumes(x) = self {
+            x.update_record(record, cache, &mut orders.proxy(Msg::Volumes));
+        }
+    }
+    fn remove_record(&mut self, id: RecordId, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+        if let Self::Volumes(x) = self {
+            x.remove_record(id, cache, &mut orders.proxy(Msg::Volumes));
+        }
+    }
+    fn set_records(&mut self, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+        if let Self::Volumes(x) = self {
+            x.set_records(cache, &mut orders.proxy(Msg::Volumes));
+        }
+    }
 }
 
 impl Default for Page {
@@ -140,7 +168,7 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
                 .and_then(|x| cache.user.get(&x))
                 .map(|x| Self::User(user::Model::new(Arc::clone(x))))
                 .unwrap_or_default(),
-            Route::Volumes => Self::Volumes,
+            Route::Volumes => Self::Volumes(volumes::Model::default()),
             Route::Volume(id) => id
                 .parse()
                 .map(|id| Self::Volume(volume::Model { id }))
@@ -165,7 +193,7 @@ impl Page {
             | (Route::Servers, Self::Servers(_))
             | (Route::Targets, Self::Targets)
             | (Route::Users, Self::Users)
-            | (Route::Volumes, Self::Volumes) => true,
+            | (Route::Volumes, Self::Volumes(_)) => true,
             (Route::OstPool(route_id), Self::OstPool(ostpool::Model { id }))
             | (Route::Volume(route_id), Self::Volume(volume::Model { id })) => route_id == &RouteId::from(id),
             (Route::Server(route_id), Self::Server(x)) => route_id == &RouteId::from(x.server.id),
@@ -186,28 +214,124 @@ impl Page {
     }
     /// Initialize the page. This gives a chance to initialize data when a page is switched to.
     pub fn init(&mut self, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
-        if let Self::Servers(_) = self {
-            servers::init(cache, &mut orders.proxy(Msg::ServersPage))
+        match self {
+            Self::Servers(_) => {
+                servers::init(cache, &mut orders.proxy(Msg::Servers));
+            }
+            Self::Filesystems(_) => {
+                filesystems::init(cache, &mut orders.proxy(Msg::Filesystems));
+            }
+            Self::Filesystem(_) => {
+                filesystem::init(cache, &mut orders.proxy(Msg::Filesystem));
+            }
+            Self::Mgts(_) => {
+                mgts::init(cache, &mut orders.proxy(Msg::Mgts));
+            }
+            Self::FsDashboard(_) => {
+                fs_dashboard::init(&mut orders.proxy(Msg::FsDashboard));
+            }
+            Self::Dashboard(_) => {
+                dashboard::init(&mut orders.proxy(Msg::Dashboard));
+            }
+            Self::Volumes(x) => {
+                volumes::init(cache, x, &mut orders.proxy(Msg::Volumes));
+            }
+            _ => {}
         };
+    }
+}
 
-        if let Self::Filesystems(_) = self {
-            filesystems::init(cache, &mut orders.proxy(Msg::FilesystemsPage))
-        }
+#[derive(Clone)]
+pub enum Msg {
+    About(about::Msg),
+    Dashboard(dashboard::Msg),
+    Filesystem(filesystem::Msg),
+    Filesystems(filesystems::Msg),
+    FsDashboard(fs_dashboard::Msg),
+    Mgts(mgts::Msg),
+    Server(server::Msg),
+    ServerDashboard(server_dashboard::Msg),
+    Servers(servers::Msg),
+    Target(target::Msg),
+    Targets(targets::Msg),
+    TargetDashboard(target_dashboard::Msg),
+    Jobstats(jobstats::Msg),
+    OstPools(ostpools::Msg),
+    OstPool(ostpool::Msg),
+    PowerControl(power_control::Msg),
+    Login(Box<login::Msg>),
+    User(user::Msg),
+    Users(users::Msg),
+    Volume(volume::Msg),
+    Volumes(volumes::Msg),
+}
 
-        if let Self::Filesystem(_) = self {
-            filesystem::init(cache, &mut orders.proxy(Msg::FilesystemPage))
+pub(crate) fn update(msg: Msg, page: &mut Page, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+    match msg {
+        Msg::Servers(msg) => {
+            if let Page::Servers(page) = page {
+                servers::update(msg, cache, page, &mut orders.proxy(Msg::Servers))
+            }
         }
-
-        if let Self::Mgts(_) = self {
-            mgts::init(cache, &mut orders.proxy(Msg::MgtsPage))
+        Msg::Server(msg) => {
+            if let Page::Server(page) = page {
+                server::update(msg, cache, page, &mut orders.proxy(Msg::Server))
+            }
         }
-
-        if let Self::FsDashboard(_) = self {
-            fs_dashboard::init(&mut orders.proxy(Msg::FsDashboardPage))
+        Msg::Filesystem(msg) => {
+            if let Page::Filesystem(page) = page {
+                filesystem::update(msg, cache, page, &mut orders.proxy(Msg::Filesystem))
+            }
         }
-
-        if let Self::Dashboard(_) = self {
-            dashboard::init(&mut orders.proxy(Msg::DashboardPage))
+        Msg::Filesystems(msg) => {
+            if let Page::Filesystems(page) = page {
+                filesystems::update(msg, cache, page, &mut orders.proxy(Msg::Filesystems))
+            }
         }
+        Msg::Mgts(msg) => {
+            if let Page::Mgts(page) = page {
+                mgts::update(msg, cache, page, &mut orders.proxy(Msg::Mgts))
+            }
+        }
+        Msg::Target(msg) => {
+            if let Page::Target(page) = page {
+                target::update(msg, cache, page, &mut orders.proxy(Msg::Target))
+            }
+        }
+        Msg::Dashboard(msg) => {
+            if let Page::Dashboard(page) = page {
+                dashboard::update(msg, page, &mut orders.proxy(Msg::Dashboard))
+            }
+        }
+        Msg::FsDashboard(msg) => {
+            if let Page::FsDashboard(page) = page {
+                fs_dashboard::update(msg, page, &mut orders.proxy(Msg::FsDashboard))
+            }
+        }
+        Msg::User(msg) => {
+            if let Page::User(page) = page {
+                user::update(msg, page, &mut orders.proxy(Msg::User));
+            }
+        }
+        Msg::Volumes(msg) => {
+            if let Page::Volumes(page) = page {
+                volumes::update(msg, page, &mut orders.proxy(Msg::Volumes))
+            }
+        }
+        Msg::Login(msg) => {
+            if let Page::Login(page) = page {
+                login::update(*msg, page, &mut orders.proxy(|x| Msg::Login(Box::new(x))));
+            }
+        }
+        Msg::About(_)
+        | Msg::Jobstats(_)
+        | Msg::OstPool(_)
+        | Msg::OstPools(_)
+        | Msg::PowerControl(_)
+        | Msg::ServerDashboard(_)
+        | Msg::TargetDashboard(_)
+        | Msg::Targets(_)
+        | Msg::Users(_)
+        | Msg::Volume(_) => {}
     }
 }
