@@ -36,7 +36,7 @@ use route::Route;
 use seed::{app::MessageMapper, prelude::*, EventHandler, *};
 pub(crate) use server_date::ServerDate;
 pub(crate) use sleep::sleep_with_handle;
-use std::{cmp, env, sync::Arc};
+use std::{cmp, sync::Arc};
 pub use watch_state::*;
 use web_sys::MessageEvent;
 use Visibility::*;
@@ -107,11 +107,13 @@ struct Loading {
 impl Loading {
     /// Do we have enough data to load the app?
     fn loaded(&self) -> bool {
-        let xs = self
+        self
             .session
             .as_ref()
             .or_else(|| self.messages.as_ref())
-            .or_else(|| self.locks.as_ref());
+            .or_else(|| self.locks.as_ref())
+            .or_else(|| self.conf.as_ref())
+            .is_none()
     }
 }
 
