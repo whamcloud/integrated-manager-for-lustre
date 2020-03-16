@@ -128,7 +128,6 @@ impl Name for FsRecord {
 #[derive(serde::Deserialize, Debug)]
 pub struct VolumeRecord {
     id: u32,
-    storage_resource_id: Option<u32>,
     size: Option<u64>,
     label: String,
     filesystem_type: Option<String>,
@@ -163,7 +162,6 @@ pub struct VolumeNodeRecord {
     pub volume_id: u32,
     pub host_id: u32,
     pub path: String,
-    pub storage_resource_id: Option<u32>,
     pub primary: bool,
     #[serde(rename = "use")]
     pub _use: bool,
@@ -216,9 +214,6 @@ impl From<Row> for VolumeNodeRecord {
             volume_id: row.get::<_, i32>("volume_id") as u32,
             host_id: row.get::<_, i32>("host_id") as u32,
             path: row.get("path"),
-            storage_resource_id: row
-                .get::<_, Option<i32>>("storage_resource_id")
-                .map(|x| x as u32),
             primary: row.get("primary"),
             _use: row.get("use"),
             not_deleted: row.get("not_deleted"),

@@ -777,7 +777,6 @@ pub struct Volume {
     pub resource_uri: String,
     pub size: Option<i64>,
     pub status: Option<String>,
-    pub storage_resource: Option<String>,
     pub usable_for_lustre: bool,
     pub volume_nodes: Vec<VolumeNode>,
 }

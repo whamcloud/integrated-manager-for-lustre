@@ -1460,7 +1460,6 @@ pub struct ChromaCoreSimplehistostorebin {
 pub struct ChromaCoreSimplehistostoretime {
     pub id: i32,
     pub time: i32,
-    pub storage_resource_statistic_id: i32,
 }
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
@@ -1676,7 +1675,6 @@ pub struct ChromaCoreStopunavailablefilesystemjob {
 )]
 pub struct ChromaCoreStoragealertpropagated {
     pub id: i32,
-    pub storage_resource_id: i32,
     pub alert_state_id: i32,
 }
 
@@ -1791,7 +1789,6 @@ pub struct ChromaCoreStorageresourcestatistic {
     pub id: i32,
     pub sample_period: i32,
     pub name: String,
-    pub storage_resource_id: i32,
 }
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
@@ -2015,7 +2012,6 @@ pub struct ChromaCoreVolume {
     pub filesystem_type: Option<String>,
     pub usable_for_lustre: bool,
     pub not_deleted: Option<bool>,
-    pub storage_resource_id: Option<i32>,
 }
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
@@ -2028,7 +2024,6 @@ pub struct ChromaCoreVolumenode {
     pub use_: bool,
     pub not_deleted: Option<bool>,
     pub host_id: i32,
-    pub storage_resource_id: Option<i32>,
     pub volume_id: i32,
 }
 
