@@ -60,6 +60,8 @@ pub enum Route<'a> {
     User(RouteId<'a>),
     Volumes,
     Volume(RouteId<'a>),
+    Devices,
+    Device(RouteId<'a>),
 }
 
 impl<'a> Route<'a> {
@@ -87,6 +89,8 @@ impl<'a> Route<'a> {
             Self::User(id) => vec!["users", id],
             Self::Volumes => vec!["volumes"],
             Self::Volume(id) => vec!["volumes", id],
+            Self::Devices => vec!["devices"],
+            Self::Device(id) => vec!["devices", id],
         };
 
         if let Some(base) = crate::UI_BASE.as_ref() {
@@ -126,6 +130,8 @@ impl<'a> ToString for Route<'a> {
             Self::User(_) => "User".into(),
             Self::Volumes => "Volumes".into(),
             Self::Volume(_) => "Volume Detail".into(),
+            Self::Devices => "Devices".into(),
+            Self::Device(_) => "Device Detail".into(),
         }
     }
 }
@@ -188,6 +194,10 @@ impl<'a> From<Url> for Route<'a> {
             Some("volumes") => match path.next() {
                 None => Self::Volumes,
                 Some(id) => Self::Volume(RouteId::from(id)),
+            },
+            Some("devices") => match path.next() {
+                None => Self::Devices,
+                Some(id) => Self::Device(RouteId::from(id)),
             },
             _ => Self::NotFound,
         }

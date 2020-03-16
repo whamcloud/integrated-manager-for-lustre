@@ -23,6 +23,8 @@ pub mod user;
 pub mod users;
 pub mod volume;
 pub mod volumes;
+pub mod device;
+pub mod devices;
 
 use crate::{
     route::{Route, RouteId},
@@ -56,6 +58,8 @@ pub(crate) enum Page {
     User(user::Model),
     Volumes,
     Volume(volume::Model),
+    Devices,
+    Device(device::Model),
 }
 
 impl Default for Page {
@@ -127,6 +131,11 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
             Route::Volume(id) => id
                 .parse()
                 .map(|id| Self::Volume(volume::Model { id }))
+                .unwrap_or_default(),
+            Route::Devices => Self::Devices,
+            Route::Device(id) => id
+                .parse()
+                .map(|id| Self::Device(device::Model { id }))
                 .unwrap_or_default(),
         }
     }

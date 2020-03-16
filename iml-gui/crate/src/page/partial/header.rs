@@ -66,6 +66,12 @@ fn nav_manage_dropdown(open: bool) -> Node<Msg> {
                 },
             ],
             li![
+                a![&cls, Route::Devices.to_string()],
+                attrs! {
+                    At::Href => Route::Devices.to_href(),
+                },
+            ],
+            li![
                 a![&cls, Route::Mgt.to_string()],
                 attrs! {
                     At::Href => Route::Mgt.to_href(),
