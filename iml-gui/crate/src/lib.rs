@@ -261,6 +261,8 @@ fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
 #[derive(Clone)]
 pub enum Msg {
     Auth(Box<auth::Msg>),
+    Device(Box<page::device::Msg>),
+    Devices(Box<page::devices::Msg>),
     EventSourceConnect(JsValue),
     EventSourceError(JsValue),
     EventSourceMessage(MessageEvent),
@@ -874,7 +876,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::User(x) => main_panels(model, page::user::view(x)).els(),
         Page::Volumes => main_panels(model, page::volumes::view(model)).els(),
         Page::Volume(x) => main_panels(model, page::volume::view(x)).els(),
-        Page::Devices => main_panels(model, page::devices::view(model)).els(),
+        Page::Devices(x) => main_panels(model, page::devices::view(x)).els(),
         Page::Device(x) => main_panels(model, page::device::view(x)).els(),
     }
 }

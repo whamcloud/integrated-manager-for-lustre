@@ -151,7 +151,6 @@ impl Page {
             | (Route::Jobstats, Self::Jobstats)
             | (Route::Login, Self::Login(_))
             | (Route::Mgt, Self::Mgts(_))
-            | (Route::Device, Self::Devices(_))
             | (Route::NotFound, Self::NotFound)
             | (Route::OstPools, Self::OstPools)
             | (Route::PowerControl, Self::PowerControl)
@@ -160,6 +159,7 @@ impl Page {
             | (Route::Users, Self::Users)
             | (Route::Volumes, Self::Volumes) => true,
             (Route::OstPool(route_id), Self::OstPool(ostpool::Model { id }))
+            | (Route::Device(route_id), Self::Device(device::Model { id }))
             | (Route::Server(route_id), Self::Server(server::Model { id }))
             | (Route::User(route_id), Self::User(user::Model { id }))
             | (Route::Volume(route_id), Self::Volume(volume::Model { id })) => route_id == &RouteId::from(id),

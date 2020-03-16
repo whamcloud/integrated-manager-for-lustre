@@ -83,13 +83,6 @@ pub fn view(model: &Model) -> Node<Msg> {
                 tbody![model.devices.iter().map(|x| match model.rows.get(&x.record_id) {
                     None => empty![],
                     Some(row) => {
-                        let fs = cache.filesystem.arc_values().filter(|y| {
-                            extract_id(&y.mgt)
-                                .and_then(|y| y.parse::<u32>().ok())
-                                .filter(|y| y == &x.record_id)
-                                .is_some()
-                        });
-
                         tr![table::td_center(vec![a![
                             class![C.text_blue_500, C.hover__underline],
                             attrs! {At::Href => Route::Device(RouteId::from(x.record_id)).to_href()},

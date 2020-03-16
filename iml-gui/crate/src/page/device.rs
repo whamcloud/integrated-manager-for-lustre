@@ -1,5 +1,11 @@
-use crate::Msg;
 use seed::prelude::*;
+use iml_wire_types::db::DeviceRecord;
+use std::sync::Arc;
+
+#[derive(Clone)]
+pub enum Msg {
+    SetDevice(Arc<DeviceRecord>),
+}
 
 pub struct Model {
     pub id: u32,
