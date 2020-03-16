@@ -211,6 +211,14 @@ class TargetResource(ConfParamResource):
         "the target is not currently started",
     )
 
+    volume = fields.ToOneField(
+        "chroma_api.volume.VolumeResource",
+        "full_volume",
+        full=True,
+        help_text="\
+                             The volume on which this target is stored.",
+    )
+
     def content_type_id_to_kind(self, id):
         if not hasattr(self, "CONTENT_TYPE_ID_TO_KIND"):
             self.CONTENT_TYPE_ID_TO_KIND = dict(

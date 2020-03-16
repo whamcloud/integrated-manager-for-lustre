@@ -111,6 +111,27 @@ class ManagedTarget(StatefulObject):
         any existing filesystem on the Volume should be overwritten",
     )
 
+    @property
+    def full_volume(self):
+        """
+        Used in API Resource that want the Volume and all related objects
+
+        This results in a join query to get data with fewer DB hits
+
+        If the volume was picked up using a simple join from the targets table then we would not need to work
+        around the not_deleted (it would pick up the record deleted or not) but because we effectively hardcode
+        it we have to ignore not deleted by use of the _base_manager.
+
+        Sadly the storage_resources do return empty because they are actually deleted, meaning we have Volume records
+        that have no resource records to go with them.
+        """
+
+        return (
+            Volume._base_manager.all()
+            .prefetch_related("volumenode_set", "volumenode_set__host")
+            .get(pk=self.volume.pk)
+        )
+
     def update_active_mount(self, nodename):
         """Set the active_mount attribute from the nodename of a host, raising
         RuntimeErrors if the host doesn't exist or doesn't have a ManagedTargetMount"""
