@@ -261,8 +261,6 @@ fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
 #[derive(Clone)]
 pub enum Msg {
     Auth(Box<auth::Msg>),
-    Device(Box<page::device::Msg>),
-    Devices(Box<page::devices::Msg>),
     EventSourceConnect(JsValue),
     EventSourceError(JsValue),
     EventSourceMessage(MessageEvent),
@@ -470,6 +468,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 page::mgts::update(msg, &model.records, page, &mut orders.proxy(Msg::MgtsPage))
             }
         }
+        Msg::DevicesPage(msg) => {
+            if let Page::Devices(page) = &mut model.page {
+                page::devices::update(msg, &model.records, page, &mut orders.proxy(Msg::MgtsPage))
+            }
+        }
+
         Msg::TargetPage(msg) => {
             if let Page::Target(page) = &mut model.page {
                 page::target::update(msg, &model.records, page, &mut orders.proxy(Msg::TargetPage))
