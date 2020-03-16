@@ -156,7 +156,7 @@ pub fn view(model: &Model) -> impl View<Msg> {
                 ]),
                 tbody![model.rows[model.pager.range()].iter().map(|(v, vns, hs)| {
                     tr![
-                        table::td_center(resource_links::href_view(
+                        table::td_center(resource_links::label_view(
                             &vns[0].path,
                             Route::Volume(RouteId::from(v.id))
                         )),
