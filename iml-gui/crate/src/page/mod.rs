@@ -1,6 +1,8 @@
 pub mod about;
 pub mod activity;
 pub mod dashboard;
+pub mod device;
+pub mod devices;
 pub mod filesystem;
 pub mod filesystems;
 pub mod fs_dashboard;
@@ -23,8 +25,6 @@ pub mod user;
 pub mod users;
 pub mod volume;
 pub mod volumes;
-pub mod device;
-pub mod devices;
 
 use crate::{
     route::{Route, RouteId},
@@ -58,7 +58,7 @@ pub(crate) enum Page {
     User(user::Model),
     Volumes,
     Volume(volume::Model),
-    Devices,
+    Devices(devices::Model),
     Device(device::Model),
 }
 
@@ -132,7 +132,7 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
                 .parse()
                 .map(|id| Self::Volume(volume::Model { id }))
                 .unwrap_or_default(),
-            Route::Devices => Self::Devices,
+            Route::Devices => Self::Devices(devices::Model::default()),
             Route::Device(id) => id
                 .parse()
                 .map(|id| Self::Device(device::Model { id }))
@@ -151,6 +151,7 @@ impl Page {
             | (Route::Jobstats, Self::Jobstats)
             | (Route::Login, Self::Login(_))
             | (Route::Mgt, Self::Mgts(_))
+            | (Route::Device, Self::Devices(_))
             | (Route::NotFound, Self::NotFound)
             | (Route::OstPools, Self::OstPools)
             | (Route::PowerControl, Self::PowerControl)
@@ -200,6 +201,10 @@ impl Page {
 
         if let Self::Dashboard(_) = self {
             dashboard::init(&mut orders.proxy(Msg::DashboardPage))
+        }
+
+        if let Self::Devices(_) = self {
+            mgts::init(cache, &mut orders.proxy(Msg::DevicesPage))
         }
     }
 }

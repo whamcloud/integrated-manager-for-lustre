@@ -934,6 +934,7 @@ impl From<Row> for Device {
 pub struct DeviceRecord {
     pub device: Device,
     pub record_id: u32,
+    pub content_type_id: Option<u32>,
 }
 
 #[cfg(feature = "postgres-interop")]
@@ -950,6 +951,9 @@ impl From<Row> for DeviceRecord {
                 max_depth: row.get("max_depth"),
             },
             record_id: row.get("record_id"),
+            content_type_id: row
+                .get::<_, Option<i32>>("content_type_id")
+                .map(|x| x as u32),
         }
     }
 }
@@ -957,6 +961,18 @@ impl From<Row> for DeviceRecord {
 impl Id for DeviceRecord {
     fn id(&self) -> u32 {
         self.record_id
+    }
+}
+
+impl ToCompositeId for DeviceRecord {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id.unwrap(), self.record_id)
+    }
+}
+
+impl ToCompositeId for &DeviceRecord {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id.unwrap(), self.record_id)
     }
 }
 

@@ -291,6 +291,7 @@ pub enum Msg {
     TargetPage(page::target::Msg),
     ToggleMenu,
     Tree(tree::Msg),
+    DevicesPage(page::devices::Msg),
     UpdatePageTitle,
     WindowClick,
     WindowResize,

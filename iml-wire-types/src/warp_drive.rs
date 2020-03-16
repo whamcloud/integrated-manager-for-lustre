@@ -136,7 +136,7 @@ impl Cache {
             RecordId::ActiveAlert(id) => self.active_alert.remove(&id).is_some(),
             RecordId::ContentType(id) => self.content_type.remove(&id).is_some(),
             RecordId::Device(id) => self.device.remove(&id).is_some(),
-            RecordId::DeviceHost(id) => self.device.remove(&id).is_some(),
+            RecordId::DeviceHost(id) => self.device_host.remove(&id).is_some(),
             RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
             RecordId::Group(id) => self.group.remove(&id).is_some(),
             RecordId::Host(id) => self.host.remove(&id).is_some(),
