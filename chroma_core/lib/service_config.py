@@ -637,6 +637,7 @@ class ServiceConfig(CommandLine):
             "GRAFANA_PROXY_PASS",
             "INFLUXDB_PROXY_PASS",
             "TIMER_PROXY_PASS",
+            "INCLUDES",
         ]
 
         with open(conf_template, "r") as f:

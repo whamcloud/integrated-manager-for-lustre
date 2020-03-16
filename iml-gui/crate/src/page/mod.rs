@@ -25,6 +25,7 @@ pub mod volume;
 pub mod volumes;
 
 use crate::{
+    components::stratagem,
     route::{Route, RouteId},
     GMsg, Msg,
 };
@@ -82,7 +83,7 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
                         osts: Default::default(),
                         ost_paging: Default::default(),
                         rows: Default::default(),
-                        stratagem: None,
+                        stratagem: stratagem::Model::new(Arc::clone(x)),
                     }))
                 })
                 .unwrap_or_default(),

@@ -28,39 +28,7 @@ pub struct Model {
     pub osts: Vec<Arc<Target<TargetConfParam>>>,
     pub ost_paging: paging::Model,
     pub rows: HashMap<u32, Row>,
-    pub stratagem: Option<stratagem::Model>,
-}
-
-impl Model {
-    fn is_stratagem_ready(self: &mut Self, cache: &ArcCache) -> bool {
-        let server_resources: Vec<_> = self
-            .mdts
-            .iter()
-            .flat_map(|x| x.failover_servers.iter().chain(std::iter::once(&x.primary_server)))
-            .collect();
-
-        let servers: Vec<_> = cache
-            .host
-            .values()
-            .filter(|x| server_resources.contains(&&x.resource_uri))
-            .collect();
-
-        let stratagem_enabled = !servers.is_empty()
-            && servers
-                .iter()
-                .all(|x| x.server_profile.name == "stratagem_server" || x.server_profile.name == "exascaler_server");
-
-        if stratagem_enabled {
-            if self.stratagem.is_none() {
-                self.stratagem = Some(stratagem::Model::new(&self.fs));
-                return true;
-            }
-        } else {
-            self.stratagem = None;
-        }
-
-        false
-    }
+    pub stratagem: stratagem::Model,
 }
 
 #[derive(Clone)]
@@ -77,6 +45,13 @@ pub enum Msg {
 
 pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
     orders.send_msg(Msg::SetTargets(cache.target.values().cloned().collect()));
+
+    orders
+        .proxy(Msg::Stratagem)
+        .send_msg(stratagem::Msg::CheckStratagem)
+        .send_msg(stratagem::Msg::SetStratagemConfig(
+            cache.stratagem_config.values().cloned().collect(),
+        ));
 }
 
 pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -101,9 +76,6 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
             model.rows.remove(&id);
 
             orders.send_msg(Msg::UpdatePaging);
-            if model.is_stratagem_ready(cache) {
-                stratagem::init(&mut orders.proxy(Msg::Stratagem));
-            }
         }
         Msg::AddTarget(x) => {
             if !is_fs_target(model.fs.id, &x) {
@@ -132,9 +104,6 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
             }
 
             orders.send_msg(Msg::UpdatePaging);
-            if model.is_stratagem_ready(cache) {
-                stratagem::init(&mut orders.proxy(Msg::Stratagem));
-            }
         }
         Msg::SetTargets(xs) => {
             model.rows = xs
@@ -169,9 +138,6 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
             model.osts = osts;
 
             orders.send_msg(Msg::UpdatePaging);
-            if model.is_stratagem_ready(cache) {
-                stratagem::init(&mut orders.proxy(Msg::Stratagem));
-            }
         }
         Msg::MdtPaging(msg) => {
             paging::update(msg, &mut model.mdt_paging, &mut orders.proxy(Msg::MdtPaging));
@@ -187,11 +153,7 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                 .proxy(Msg::OstPaging)
                 .send_msg(paging::Msg::SetTotal(model.osts.len()));
         }
-        Msg::Stratagem(msg) => {
-            if let Some(model) = &mut model.stratagem {
-                stratagem::update(msg, model, &mut orders.proxy(Msg::Stratagem))
-            }
-        }
+        Msg::Stratagem(msg) => stratagem::update(msg, cache, &mut model.stratagem, &mut orders.proxy(Msg::Stratagem)),
     }
 }
 
@@ -207,11 +169,7 @@ fn paging_view(pager: &paging::Model) -> Node<paging::Msg> {
 pub(crate) fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<&Session>) -> Node<Msg> {
     div![
         details_table(cache, all_locks, model),
-        if let Some(model) = &model.stratagem {
-            stratagem::view(model).map_msg(Msg::Stratagem)
-        } else {
-            empty![]
-        },
+        stratagem::view(&model.stratagem, all_locks).map_msg(Msg::Stratagem),
         targets(
             "Management Target",
             cache,
@@ -286,7 +244,7 @@ fn details_table(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg
                 t::th_left(plain!["Client mount command"]),
                 t::td_view(plain![model.fs.mount_command.to_string()])
             ],
-        ])
+        ]),
     ]
 }
 

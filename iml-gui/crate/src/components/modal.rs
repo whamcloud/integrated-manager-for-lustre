@@ -12,6 +12,7 @@ type ParentMsg<T> = fn(Msg) -> T;
 pub enum Msg {
     KeyDown(u32),
     Close,
+    Open,
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -23,6 +24,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::Close => {
             model.open = false;
+        }
+        Msg::Open => {
+            model.open = true;
         }
     }
 }
@@ -53,7 +57,6 @@ pub fn content_view<T>(p_msg: ParentMsg<T>, children: impl View<T>) -> Node<T> {
             C.rounded,
             C.shadow_lg,
             C.z_50,
-            C.overflow_y_auto,
         ],
         div![
             class![
