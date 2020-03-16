@@ -168,7 +168,7 @@ class UserResource(ChromaModelResource):
                         raise NotImplementedError(group.__class__)
 
                 user_group_ids = [int(group.pk) for group in bundle.request.user.groups.all()]
-                
+
                 if not set(group_ids) == set(user_group_ids):
                     raise ImmediateHttpResponse(HttpForbidden())
 
