@@ -174,8 +174,18 @@ server {
         proxy_pass {{HTTP_API_PROXY_PASS}}/api/auth/;
     }
 
+    location /anon_auth {
+        internal;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_pass {{HTTP_API_PROXY_PASS}}/api/anon_auth/;
+    }
+
     location /grafana {
-        auth_request /auth;
+        auth_request /anon_auth;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-Host $host;
@@ -204,7 +214,7 @@ server {
 
     location /influx {
         limit_except GET { deny all; }
-        auth_request /auth;
+        auth_request /anon_auth;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-Host $host;

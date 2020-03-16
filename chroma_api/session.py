@@ -144,6 +144,32 @@ class Auth:
         self.user = user
 
 
+class Noop:
+    pass
+
+
+class AnonAuthResource(Resource):
+    """
+    Success / failure of current session being existant
+    """
+
+    class Meta:
+        class_object = Noop
+        authentication = AnonymousAuthentication()
+        authorization = ReadOnlyAuthorization()
+        list_allowed_methods = ["get"]
+        detail_allowed_methods = []
+        resource_name = "anon_auth"
+
+    def get_resource_uri(self, bundle=None, url_name=None):
+        return Resource.get_resource_uri(self)
+
+    def get_list(self, request=None, **kwargs):
+        bundle = self.build_bundle(obj=Noop(), request=request)
+        bundle = self.full_dehydrate(bundle)
+        return self.create_response(request, bundle)
+
+
 class AuthResource(Resource):
     """
     Success / failure of current session being existant
