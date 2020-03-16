@@ -6,7 +6,7 @@ mod action;
 mod error;
 
 use iml_rabbit::{self, create_connection_filter};
-use iml_wire_types::{Conf};
+use iml_wire_types::Conf;
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::Filter;
 
