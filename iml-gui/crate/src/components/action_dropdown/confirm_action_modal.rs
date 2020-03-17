@@ -66,8 +66,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .perform_cmd(req.fetch_json_data(|x| Msg::JobSent(Box::new(x))))
                 .send_msg(Msg::Modal(modal::Msg::Close));
         }
-        Msg::JobSent(_) => {
-            log!("TODO: Open command modal here, JobSent");
+        Msg::JobSent(data_result) => match *data_result {
+            Ok(command) => {
+                orders.send_g_msg(GMsg::OpenCommandModal(command));
+            }
+            Err(err) => {
+                error!("An error has occurred in Msg::JobSent: {:?}", err);
+                orders.skip();
+            }
         }
         Msg::SendStateChange(action, erased_record) => {
             let req = state_change(&action, &erased_record, false);
@@ -81,7 +87,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 orders.send_g_msg(GMsg::OpenCommandModal(holder.command));
             }
             Err(err) => {
-                error!("An error has occurred {:?}", err);
+                error!("An error has occurred in Msg::StateChangeSent: {:?}", err);
                 orders.skip();
             }
         },

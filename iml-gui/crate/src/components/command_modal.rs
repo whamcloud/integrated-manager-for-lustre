@@ -10,7 +10,7 @@ use seed::{prelude::*, *};
 use std::time::Duration;
 
 /// The component polls `/api/command` endpoint and this constant defines how often it does.
-const POLL_INTERVAL: Duration = Duration::from_millis(500);
+const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
 #[derive(Default, Debug)]
 pub struct Model {
@@ -60,7 +60,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
         }
         Msg::FireCommand(cmd) => {
-            log!("command_modal::Msg::FireCommand", cmd);
+            // start polling for the command status
             if !model.executing_ids.contains(&cmd.id) {
                 model.executing_ids.push(cmd.id);
                 model.modal.open = true;
@@ -68,7 +68,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
         }
         Msg::Fetch => {
-            // log!("command_modal::Msg::Fetch");
+            log!("command_modal::Msg::Fetch");
             if !model.executing_ids.is_empty() {
                 orders
                     .skip()
@@ -91,7 +91,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                         .filter(|cmd| !cmd.complete)
                         .map(|cmd| cmd.id)
                         .collect();
-                    // log!("command_modal::Msg::Fetched", result);
+                    log!("command_modal::Msg::Fetched", model.executing_ids);
                 }
                 Err(e) => {
                     error!("Failed to perform fetch_command_status {:#?}", e);
