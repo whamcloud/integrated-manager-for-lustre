@@ -204,7 +204,7 @@ impl Page {
         }
 
         if let Self::Devices(_) = self {
-            mgts::init(cache, &mut orders.proxy(Msg::DevicesPage))
+            devices::init(cache, &mut orders.proxy(Msg::DevicesPage))
         }
     }
 }

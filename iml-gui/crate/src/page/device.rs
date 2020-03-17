@@ -11,6 +11,6 @@ pub struct Model {
     pub id: u32,
 }
 
-pub fn view(_model: &Model) -> impl View<Msg> {
+pub fn view(_model: &Model) -> impl View<crate::Msg> {
     seed::empty()
 }

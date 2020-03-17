@@ -57,7 +57,7 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
     }
 }
 
-pub fn view(model: &Model) -> Node<Msg> {
+pub fn view(model: &Model) -> impl View<crate::Msg> {
     div![
         class![C.bg_white],
         div![
@@ -72,12 +72,7 @@ pub fn view(model: &Model) -> Node<Msg> {
         } else {
             table::wrapper_view(vec![
                 table::thead_view(vec![
-                    table::th_view(plain!["Name"]),
-                    table::th_view(plain!["Filesystems"]),
-                    table::th_view(plain!["Volume"]),
-                    table::th_view(plain!["Primary Server"]),
-                    table::th_view(plain!["Failover Server"]),
-                    table::th_view(plain!["Started on"]),
+                    table::th_view(plain!["Id"]),
                     th![],
                 ]),
                 tbody![model.devices.iter().map(|x| match model.rows.get(&x.record_id) {
