@@ -353,13 +353,22 @@ class ServiceConfig(CommandLine):
                 "-database",
                 settings.INFLUXDB_IML_STATS_DB,
                 "-execute",
-                'CREATE CONTINUOUS QUERY "downsample" ON "{}" BEGIN SELECT mean(*) INTO "{}"."long_term".:MEASUREMENT FROM "{}".."target","{}".."host" GROUP BY time(30m),*; SELECT (last("send_count") - first("send_count")) / count("send_count") AS "mean_diff_send", (last("recv_count") - first("recv_count")) / count("recv_count") AS "mean_diff_recv" INTO "{}"."long_term" FROM "lnet" WHERE "nid" != \'"0@lo"\' GROUP BY time(30m),"host","nid"; SELECT (last("samples") - first("samples") / count("samples") AS "mean_diff_samples" INTO "{}"."long_term" FROM "target" GROUP BY time(30m),*; SELECT (last("sum") - first("sum") / count("sum") AS "mean_diff_sum" INTO "{}"."long_term" FROM "target" WHERE "units"=\'"bytes"\' GROUP BY time(30m),* END'.format(
-                    settings.INFLUXDB_IML_STATS_DB,
-                    settings.INFLUXDB_IML_STATS_DB,
-                    settings.INFLUXDB_IML_STATS_DB,
-                    settings.INFLUXDB_IML_STATS_DB,
-                    settings.INFLUXDB_IML_STATS_DB,
-                    settings.INFLUXDB_IML_STATS_DB,
+                "{}; {}; {}; {}".format(
+                    'CREATE CONTINUOUS QUERY "downsample_means" ON "{}" BEGIN SELECT mean(*) INTO "{}"."long_term".:MEASUREMENT FROM "{}"."autogen"."target","{}"."autogen"."host" GROUP BY time(30m),* END'.format(
+                        settings.INFLUXDB_IML_STATS_DB,
+                        settings.INFLUXDB_IML_STATS_DB,
+                        settings.INFLUXDB_IML_STATS_DB,
+                        settings.INFLUXDB_IML_STATS_DB,
+                    ),
+                    'CREATE CONTINUOUS QUERY "downsample_lnet" ON "{}" BEGIN SELECT (last("send_count") - first("send_count")) / count("send_count") AS "mean_diff_send", (last("recv_count") - first("recv_count")) / count("recv_count") AS "mean_diff_recv" INTO "{}"."long_term"."lnet" FROM "lnet" WHERE "nid" != \'"0@lo"\' GROUP BY time(30m),"host","nid" END'.format(
+                        settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_DB,
+                    ),
+                    'CREATE CONTINUOUS QUERY "downsample_samples" ON "{}" BEGIN SELECT (last("samples") - first("samples")) / count("samples") AS "mean_diff_samples" INTO "{}"."long_term"."target" FROM "target" GROUP BY time(30m),* END'.format(
+                        settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_DB,
+                    ),
+                    'CREATE CONTINUOUS QUERY "downsample_sums" ON "{}" BEGIN SELECT (last("sum") - first("sum")) / count("sum") AS "mean_diff_sum" INTO "{}"."long_term"."target" FROM "target" WHERE "units"=\'"bytes"\' GROUP BY time(30m),* END'.format(
+                        settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_DB,
+                    ),
                 ),
             ]
         )
