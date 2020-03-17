@@ -106,10 +106,7 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
             Route::Dashboard => Self::Dashboard(dashboard::Model {
                 ..dashboard::Model::default()
             }),
-            Route::FsDashboard(id) => Self::FsDashboard(fs_dashboard::Model {
-                fs_name: id.to_string(),
-                ..fs_dashboard::Model::default()
-            }),
+            Route::FsDashboard(id) => Self::FsDashboard(fs_dashboard::Model::new(id.to_string())),
             Route::ServerDashboard(id) => Self::ServerDashboard(server_dashboard::Model {
                 host_name: id.to_string(),
             }),

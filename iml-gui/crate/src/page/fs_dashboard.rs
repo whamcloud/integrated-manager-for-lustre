@@ -16,6 +16,15 @@ pub struct Model {
     pub fs_name: String,
 }
 
+impl Model {
+    pub fn new(fs_name: String) -> Self {
+        Self {
+            fs_usage: fs_usage::Model::new(fs_name.clone()),
+            fs_name,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum Msg {
     FsUsage(fs_usage::Msg),
