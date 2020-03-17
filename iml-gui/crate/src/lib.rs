@@ -120,6 +120,14 @@ impl Loading {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct CommandId(pub u32);
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct CommandHolder {
+    pub command: Command,
+}
+
 // ------ ------
 //     Model
 // ------ ------
@@ -239,7 +247,7 @@ pub enum GMsg {
     RouteChange(Url),
     AuthProxy(Box<auth::Msg>),
     ServerDate(chrono::DateTime<chrono::offset::FixedOffset>),
-    OpenCommandModal(Command),
+    OpenCommandModal(CommandId),
 }
 
 fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -252,10 +260,10 @@ fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
             orders.proxy(Msg::Auth).send_msg(msg);
         }
         GMsg::ServerDate(d) => model.server_date.set(d),
-        GMsg::OpenCommandModal(c) => {
+        GMsg::OpenCommandModal(cmd_id) => {
             orders
                 .proxy(Msg::CommandModal)
-                .send_msg(command_modal::Msg::FireCommand(c));
+                .send_msg(command_modal::Msg::FireCommand(cmd_id));
         }
     }
 }

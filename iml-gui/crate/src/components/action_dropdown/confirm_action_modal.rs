@@ -1,12 +1,7 @@
-use crate::{
-    components::{
-        action_dropdown::{state_change, DryRun},
-        font_awesome, modal,
-    },
-    extensions::{MergeAttrs, NodeExt},
-    generated::css_classes::C,
-    key_codes, GMsg, RequestExt,
-};
+use crate::{components::{
+    action_dropdown::{state_change, DryRun},
+    font_awesome, modal,
+}, extensions::{MergeAttrs, NodeExt}, generated::css_classes::C, key_codes, GMsg, RequestExt, CommandHolder, CommandId};
 use iml_wire_types::{warp_drive::ErasedRecord, AvailableAction, Command, EndpointName};
 use seed::{prelude::*, *};
 use std::sync::Arc;
@@ -21,11 +16,6 @@ pub struct SendJob<'a, T> {
 pub struct SendCmd<'a, T> {
     pub jobs: Vec<SendJob<'a, T>>,
     pub message: String,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-pub struct CommandHolder {
-    pub command: Command,
 }
 
 #[derive(Default, Debug)]
@@ -83,7 +73,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::StateChangeSent(data_result) => match *data_result {
             Ok(holder) => {
-                orders.send_g_msg(GMsg::OpenCommandModal(holder.command));
+                orders.send_g_msg(GMsg::OpenCommandModal(CommandId(holder.command.id)));
             }
             Err(err) => {
                 error!("An error has occurred {:?}", err);

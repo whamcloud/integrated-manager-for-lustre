@@ -221,9 +221,11 @@ pub fn update(msg: IdMsg, cache: &ArcCache, model: &mut Model, orders: &mut impl
         Msg::ConfirmJobModal(msg) => {
             // Intercept the Close message to change dropdown state.
             if let confirm_action_modal::Msg::Modal(modal::Msg::Close) = msg {
+                log!("action_dropdown::Msg::ConfirmJobModal(if)", msg, model);
                 model.state = State::Active;
                 orders.send_msg(IdMsg(id, Msg::SendFetch));
             } else {
+                log!("action_dropdown::Msg::ConfirmJobModal(else)", msg, model);
                 confirm_action_modal::update(
                     msg,
                     &mut model.confirm_modal,
