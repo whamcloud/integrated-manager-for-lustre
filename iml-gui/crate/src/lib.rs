@@ -120,9 +120,6 @@ impl Loading {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct CommandId(pub u32);
-
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct CommandHolder {
     pub command: Command,
@@ -247,7 +244,7 @@ pub enum GMsg {
     RouteChange(Url),
     AuthProxy(Box<auth::Msg>),
     ServerDate(chrono::DateTime<chrono::offset::FixedOffset>),
-    OpenCommandModal(CommandId),
+    OpenCommandModal(Command),
 }
 
 fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {

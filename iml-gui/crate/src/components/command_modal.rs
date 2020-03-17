@@ -1,6 +1,6 @@
 use crate::{components::{
     font_awesome, modal,
-}, extensions::{MergeAttrs, NodeExt}, generated::css_classes::C, key_codes, sleep_with_handle, GMsg, CommandId};
+}, extensions::{MergeAttrs, NodeExt}, generated::css_classes::C, key_codes, sleep_with_handle, GMsg};
 use futures::channel::oneshot;
 use iml_wire_types::{ApiList, Command};
 use seed::{prelude::*, *};
@@ -33,7 +33,7 @@ pub struct Model {
 #[derive(Clone, Debug)]
 pub enum Msg {
     Modal(modal::Msg),
-    FireCommand(CommandId),
+    FireCommand(Command),
     Fetch,
     Fetched(Box<seed::fetch::ResponseDataResult<ApiList<Command>>>),
     Noop,
@@ -56,10 +56,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::Modal(msg) => {
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
         }
-        Msg::FireCommand(cmd_id) => {
-            log!("command_modal::Msg::FireCommand", cmd_id);
-            if !model.executing_ids.contains(&cmd_id.0) {
-                model.executing_ids.push(cmd_id.0);
+        Msg::FireCommand(cmd) => {
+            log!("command_modal::Msg::FireCommand", cmd);
+            if !model.executing_ids.contains(&cmd.id) {
+                model.executing_ids.push(cmd.id);
                 model.modal.open = true;
                 orders.send_msg(Msg::Fetch);
             }
@@ -77,11 +77,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             match *cmd_status_result {
                 Ok(cmd_status) => {
                     let cmd_status: ApiList<Command> = cmd_status;
-                    let result: Vec<(u32, bool, &str)> = cmd_status
-                        .objects
-                        .iter()
-                        .map(|cmd| (cmd.id, cmd.complete, &cmd.message[..]))
-                        .collect();
+                    // let result: Vec<(u32, bool, &str)> = cmd_status
+                    //     .objects
+                    //     .iter()
+                    //     .map(|cmd| (cmd.id, cmd.complete, &cmd.message[..]))
+                    //     .collect();
                     model.executing_ids = cmd_status
                         .objects
                         .iter()
