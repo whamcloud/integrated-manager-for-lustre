@@ -26,6 +26,7 @@ pub struct Row {
 pub(crate) struct Stats {
     pub(crate) bytes_total: Option<u64>,
     pub(crate) bytes_free: Option<u64>,
+    pub(crate) bytes_avail: Option<u64>,
     pub(crate) files_total: Option<u64>,
     pub(crate) files_free: Option<u64>,
     pub(crate) clients: Option<u64>,
@@ -48,11 +49,12 @@ pub struct Model {
 impl Model {
     pub(crate) fn new(fs: &Arc<Filesystem>) -> Self {
         let query = format!(
-            r#"SELECT SUM(b_total), SUM(b_free)
-                    , SUM(f_total), SUM(f_free)
-                    , SUM(clients)
+            r#"SELECT SUM(b_total), SUM(b_free), SUM(b_avail),
+                    SUM(f_total), SUM(f_free),
+                    SUM(clients)
                FROM (SELECT LAST(bytes_total) AS b_total
-                          , LAST(bytes_avail) AS b_free
+                          , LAST(bytes_free) AS b_free
+                          , LAST(bytes_avail) AS b_avail
                           , LAST(files_total) AS f_total
                           , LAST(files_free) AS f_free
                       FROM target
@@ -81,7 +83,15 @@ impl Model {
     }
 }
 
-type StatsTuple = (String, Option<u64>, Option<u64>, Option<u64>, Option<u64>, Option<u64>);
+type StatsTuple = (
+    String,
+    Option<u64>,
+    Option<u64>,
+    Option<u64>,
+    Option<u64>,
+    Option<u64>,
+    Option<u64>,
+);
 
 #[derive(serde::Deserialize, Clone, Debug)]
 pub struct InfluxSeries {
@@ -147,9 +157,10 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                         .flatten()
                         .next();
 
-                    if let Some((_, bt, bf, ft, ff, cc)) = r {
+                    if let Some((_, bt, bf, ba, ft, ff, cc)) = r {
                         model.stats.bytes_total = bt;
                         model.stats.bytes_free = bf;
+                        model.stats.bytes_avail = ba;
                         model.stats.files_total = ft;
                         model.stats.files_free = ff;
                         model.stats.clients = cc;
@@ -334,19 +345,15 @@ fn details_table(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg
         t::wrapper_view(vec![
             tr![
                 t::th_left(plain!("Space Used / Total")),
-                t::td_view(chart_view(
+                t::td_view(space_used_view(
                     model.stats.bytes_free,
                     model.stats.bytes_total,
-                    nf::format_bytes
+                    model.stats.bytes_avail
                 ))
             ],
             tr![
                 t::th_left(plain!("Files Created / Maximum")),
-                t::td_view(chart_view(
-                    model.stats.files_free,
-                    model.stats.files_total,
-                    nf::format_number
-                ))
+                t::td_view(files_created_view(model.stats.files_free, model.stats.files_total))
             ],
             tr![
                 t::th_left(plain!("State")),
@@ -483,22 +490,47 @@ fn is_fs_target(fs_id: u32, t: &Target<TargetConfParam>) -> bool {
             .is_some()
 }
 
-pub(crate) fn chart_view<T>(
+pub(crate) fn space_used_view<T>(
     free: impl Into<Option<u64>>,
     total: impl Into<Option<u64>>,
-    formatter: fn(f64, Option<usize>) -> String,
+    avail: impl Into<Option<u64>>,
 ) -> Node<T> {
-    if let Some((u, t)) = total.into().and_then(|t| free.into().map(|f| (t.saturating_sub(f), t))) {
-        let pct = u as f64 / t as f64;
-        span![
-            class![C.whitespace_no_wrap],
-            progress_circle::view((pct, progress_circle::used_to_color(pct)))
-                .merge_attrs(class![C.h_16, C.inline, C.mx_2]),
-            formatter(u as f64, None),
-            " / ",
-            formatter(t as f64, None)
-        ]
-    } else {
-        plain!("---")
-    }
+    total
+        .into()
+        .and_then(|total| {
+            let free = free.into()?;
+            let avail = avail.into()?;
+            let used = total.saturating_sub(free) as f64;
+            let pct = used / total as f64;
+
+            Some(span![
+                class![C.whitespace_no_wrap],
+                progress_circle::view((pct, progress_circle::used_to_color(pct)))
+                    .merge_attrs(class![C.h_16, C.inline, C.mx_2]),
+                nf::format_bytes(used as f64, None),
+                " / ",
+                nf::format_bytes(avail as f64, None)
+            ])
+        })
+        .unwrap_or_else(|| plain!["---"])
+}
+
+fn files_created_view<T>(free: impl Into<Option<u64>>, total: impl Into<Option<u64>>) -> Node<T> {
+    total
+        .into()
+        .and_then(|total| {
+            let free = free.into()?;
+            let used = total.saturating_sub(free) as f64;
+            let pct = used / total as f64;
+
+            Some(span![
+                class![C.whitespace_no_wrap],
+                progress_circle::view((pct, progress_circle::used_to_color(pct)))
+                    .merge_attrs(class![C.h_16, C.inline, C.mx_2]),
+                nf::format_number(used as f64, None),
+                " / ",
+                nf::format_number(total as f64, None)
+            ])
+        })
+        .unwrap_or_else(|| plain!["---"])
 }

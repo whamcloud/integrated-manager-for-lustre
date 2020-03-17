@@ -11,22 +11,23 @@ use iml_wire_types::{
     warp_drive::{ArcCache, Locks},
     Filesystem, Session, ToCompositeId,
 };
-use number_formatter as nf;
 use seed::{prelude::*, *};
 use std::time::Duration;
 use std::{collections::HashMap, sync::Arc};
 
 const INFLUX_QUERY: &str = r#"
-SELECT SUM(b_total), SUM(b_free), SUM(clients)
-FROM (SELECT LAST(bytes_total) AS b_total
-           , LAST(bytes_avail) AS b_free
-      FROM target
-      WHERE "kind" = '"OST"'
-      GROUP BY target)
-   , (SELECT LAST(connected_clients) AS clients
-      FROM target
-      WHERE kind='"MDT"'
-      GROUP BY target)
+SELECT SUM(b_total), SUM(b_free), SUM(b_avail), SUM(clients)
+FROM (
+ SELECT LAST(bytes_total) AS b_total,
+ LAST(bytes_free) AS b_free,
+ LAST(bytes_avail) AS b_avail
+ FROM target
+ WHERE "kind" = '"OST"'
+ GROUP BY target),
+ (SELECT LAST(connected_clients) AS clients
+ FROM target
+ WHERE kind='"MDT"'
+ GROUP BY target)
 GROUP BY fs"#;
 
 struct Row {
@@ -42,7 +43,7 @@ pub struct Model {
     stats_cancel: Option<oneshot::Sender<()>>,
 }
 
-type StatsTuple = (String, Option<u64>, Option<u64>, Option<u64>);
+type StatsTuple = (String, Option<u64>, Option<u64>, Option<u64>, Option<u64>);
 
 #[derive(serde::Deserialize, Clone, Debug)]
 pub struct InfluxSeries {
@@ -106,7 +107,8 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                                         filesystem::Stats {
                                             bytes_total: v.1,
                                             bytes_free: v.2,
-                                            clients: v.3,
+                                            bytes_avail: v.3,
+                                            clients: v.4,
                                             ..Default::default()
                                         },
                                     )
@@ -233,10 +235,10 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<
                                 t::td_center(filesystem::mgs(&xs, f)),
                                 t::td_center(plain![f.mdts.len().to_string()]),
                                 t::td_center(filesystem::clients_view(stats.clients)),
-                                t::td_center(filesystem::chart_view(
+                                t::td_center(filesystem::space_used_view(
                                     stats.bytes_free,
                                     stats.bytes_total,
-                                    nf::format_bytes
+                                    stats.bytes_avail
                                 )),
                                 td![
                                     class![C.p_3, C.text_center],
