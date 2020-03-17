@@ -59,7 +59,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 purge_duration: model.purge_duration.value_as_ms(),
             };
 
-            let req = fetch::Request::api_call("run_stratagem", None::<std::collections::HashMap<&str, &str>>)
+            let req = fetch::Request::api_call("run_stratagem")
                 .with_auth()
                 .method(fetch::Method::Post)
                 .send_json(&data);

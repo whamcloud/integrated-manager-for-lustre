@@ -16,15 +16,12 @@ use seed::{prelude::*, *};
 pub async fn enable_stratagem<T: serde::de::DeserializeOwned + 'static>(
     model: StratagemEnable,
 ) -> Result<fetch::FetchObject<T>, fetch::FetchObject<T>> {
-    fetch::Request::api_call(
-        StratagemConfiguration::endpoint_name(),
-        None::<std::collections::HashMap<&str, &str>>,
-    )
-    .method(fetch::Method::Post)
-    .with_auth()
-    .send_json(&model)
-    .fetch_json(std::convert::identity)
-    .await
+    fetch::Request::api_call(StratagemConfiguration::endpoint_name())
+        .method(fetch::Method::Post)
+        .with_auth()
+        .send_json(&model)
+        .fetch_json(std::convert::identity)
+        .await
 }
 
 pub fn view(is_valid: bool, disabled: bool) -> Node<Command> {

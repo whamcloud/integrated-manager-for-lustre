@@ -51,13 +51,16 @@ pub enum Msg {
 pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::FetchOffset => {
-            orders.skip().perform_cmd(
-                fetch::Request::api_call(
-                    Alert::endpoint_name(),
-                    Some(&[("limit", model.pager.limit()), ("offset", model.pager.offset())]),
-                )
-                .fetch_json_data(|x| Msg::ActionsFetched(Box::new(x))),
-            );
+            if let Ok(cmd) = fetch::Request::api_query(
+                Alert::endpoint_name(),
+                &[("limit", model.pager.limit()), ("offset", model.pager.offset())],
+            )
+            .map(|req| req.fetch_json_data(|x| Msg::ActionsFetched(Box::new(x))))
+            {
+                orders.skip().perform_cmd(cmd);
+            } else {
+                error!("Could not fetch alerts.");
+            };
         }
         Msg::ActionsFetched(r) => {
             let state = mem::replace(&mut model.state, State::Loading);

@@ -42,13 +42,16 @@ pub enum Msg {
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::FetchOffset => {
-            orders.skip().perform_cmd(
-                fetch::Request::api_call(
-                    Log::endpoint_name(),
-                    Some(&[("limit", model.pager.limit()), ("offset", model.pager.offset())]),
-                )
-                .fetch_json_data(|x| Msg::LogsFetched(Box::new(x))),
-            );
+            if let Ok(cmd) = fetch::Request::api_query(
+                Log::endpoint_name(),
+                &[("limit", model.pager.limit()), ("offset", model.pager.offset())],
+            )
+            .map(|req| req.fetch_json_data(|x| Msg::LogsFetched(Box::new(x))))
+            {
+                orders.skip().perform_cmd(cmd);
+            } else {
+                error!("Could not fetch logs.");
+            };
         }
         Msg::LogsFetched(r) => {
             match *r {

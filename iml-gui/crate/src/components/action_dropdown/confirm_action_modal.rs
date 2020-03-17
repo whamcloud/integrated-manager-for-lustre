@@ -55,7 +55,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 message,
             };
 
-            let req = fetch::Request::api_call(Command::endpoint_name(), None::<std::collections::HashMap<&str, &str>>)
+            let req = fetch::Request::api_call(Command::endpoint_name())
                 .with_auth()
                 .method(fetch::Method::Post)
                 .send_json(&x);

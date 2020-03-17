@@ -117,7 +117,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 }
 
 pub(crate) fn fetch_session() -> fetch::Request {
-    fetch::Request::api_call(Session::endpoint_name(), None::<std::collections::HashMap<&str, &str>>).with_auth()
+    fetch::Request::api_call(Session::endpoint_name()).with_auth()
 }
 
 /// Returns the CSRF token if one exists within the cookie.
