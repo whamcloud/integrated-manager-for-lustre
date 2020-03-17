@@ -23,7 +23,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
         }
         Msg::Close => {
-            log!("modal::Msg::Close", model);
             model.open = false;
         }
         Msg::Open => {

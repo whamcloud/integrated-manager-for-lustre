@@ -46,7 +46,6 @@ pub enum Action {
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
-    // log!("confirm_action_modal = ", msg, model);
     match msg {
         Msg::SendJob(message, action) => {
             let x = SendCmd {
@@ -74,7 +73,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 error!("An error has occurred in Msg::JobSent: {:?}", err);
                 orders.skip();
             }
-        }
+        },
         Msg::SendStateChange(action, erased_record) => {
             let req = state_change(&action, &erased_record, false);
 

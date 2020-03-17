@@ -912,7 +912,7 @@ pub fn main_panels(model: &Model, children: impl View<page::Msg>) -> impl View<M
 }
 
 fn view(model: &Model) -> Vec<Node<Msg>> {
-    match &model.page {
+    let nodes = match &model.page {
         Page::AppLoading => loading::view().els(),
         Page::About => main_panels(model, page::about::view(model).els().map_msg(page::Msg::About)).els(),
         Page::Dashboard(page) => main_panels(model, page::dashboard::view(page)).els(),
@@ -1009,7 +1009,16 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::User(x) => main_panels(model, page::user::view(x).els().map_msg(page::Msg::User)).els(),
         Page::Volumes(x) => main_panels(model, page::volumes::view(x).els().map_msg(page::Msg::Volumes)).els(),
         Page::Volume(x) => main_panels(model, page::volume::view(x).els().map_msg(page::Msg::Volume)).els(),
-    }
+    };
+
+    // command modal is the global singleton, therefore is being showed here
+    let modal = if model.command_modal.modal.open {
+        command_modal::view(&model.command_modal).map_msg(Msg::CommandModal)
+    } else {
+        empty![]
+    };
+
+    div![modal, nodes].els()
 }
 
 pub fn asset_path(asset: &str) -> String {
