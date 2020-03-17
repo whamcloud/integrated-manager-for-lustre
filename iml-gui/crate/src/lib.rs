@@ -1012,12 +1012,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
     };
 
     // command modal is the global singleton, therefore is being showed here
-    let modal = if model.command_modal.modal.open {
-        command_modal::view(&model.command_modal).map_msg(Msg::CommandModal)
-    } else {
-        empty![]
-    };
-
+    let modal = command_modal::view(&model.command_modal).map_msg(Msg::CommandModal);
     div![modal, nodes].els()
 }
 

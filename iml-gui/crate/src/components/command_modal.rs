@@ -6,17 +6,18 @@ use crate::{
     key_codes, sleep_with_handle, GMsg,
 };
 use futures::channel::oneshot;
-use iml_wire_types::{ApiList, Command};
+use iml_wire_types::{ApiList, Command, EndpointName};
 use seed::{prelude::*, *};
 use std::time::Duration;
 
-/// The component polls `/api/command` endpoint and this constant defines how often it does.
+/// The component polls `/api/command/` endpoint and this constant defines how often it does.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
 #[derive(Default, Debug)]
 pub struct Model {
     pub modal: modal::Model,
     pub commands: Vec<Command>,
+    pub commands_all: Vec<Command>,
     pub cancel: Option<oneshot::Sender<()>>,
 }
 
@@ -52,8 +53,12 @@ async fn fetch_command_status(command_ids: Vec<u32>) -> Result<Msg, Msg> {
         .collect::<Vec<String>>()
         .join("&");
     // TODO make it paged instead of being unlimited
-    let url = format!("/api/{}?{}&limit=0", Command::enpoint_name(), ids);
+    let url = format!("/api/{}/?{}&limit=0", Command::endpoint_name(), ids);
     Request::new(url).fetch_json_data(|x| Msg::Fetched(Box::new(x))).await
+}
+
+fn is_finished(cmd: &Command) -> bool {
+    cmd.complete || cmd.cancelled || cmd.errored
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -65,29 +70,30 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             // add the command to the list (if it isn't yet)
             // and start polling for the commands' status
             // use the (little) optimization: if the command
-            let ids: Vec<u32> = model.commands.iter().map(|x| x.id).collect();
-            let cmd_finished = cmd.complete || cmd.cancelled || cmd.errored;
-            if !cmd_finished && !ids.contains(&cmd.id) {
+            model.commands_all = vec![cmd.clone()];
+            model.commands = vec![cmd.clone()];
+            if !is_finished(&cmd) {
                 model.modal.open = true;
-                model.commands.push(cmd);
                 orders.send_msg(Msg::Fetch);
             }
         }
         Msg::Fetch => {
             log!("command_modal::Msg::Fetch");
             if !model.commands.is_empty() {
-                let ids = model.commands.iter().map(|x| x.id).collect();
+                let ids = model.commands_all.iter().map(|x| x.id).collect();
                 orders.skip().perform_cmd(fetch_command_status(ids));
             }
         }
         Msg::Fetched(cmd_status_result) => {
+            log!("command_modal::Msg::Fetched", cmd_status_result);
             match *cmd_status_result {
                 Ok(mut cmd_status) => {
-                    model.commands = cmd_status
-                        .objects
+                    model.commands_all = cmd_status.objects.clone();
+                    model.commands = cmd_status.objects
                         .into_iter()
-                        .filter(|x| !x.complete && !x.cancelled && !x.errored)
+                        .filter(|x| !is_finished(x))
                         .collect();
+
                     let ids: String = model
                         .commands
                         .iter()
@@ -105,8 +111,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 let (cancel, fut) = sleep_with_handle(POLL_INTERVAL, Msg::Fetch, Msg::Noop);
                 model.cancel = Some(cancel);
                 orders.perform_cmd(fut);
-            } else {
-                orders.send_msg(Msg::Modal(modal::Msg::Close));
             }
         }
         Msg::Noop => {
@@ -116,29 +120,72 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 }
 
 pub(crate) fn view(model: &Model) -> Node<Msg> {
-    modal::bg_view(
-        model.modal.open,
-        Msg::Modal,
-        modal::content_view(
+    if !model.modal.open {
+        empty![]
+    } else {
+        modal::bg_view(
+            model.modal.open,
             Msg::Modal,
-            vec![
-                modal::title_view(Msg::Modal, span!["Executing the commands"]),
-                div![
-                    div![
-                        class![C.my_12, C.text_center, C.text_gray_500],
-                        font_awesome(class![C.w_12, C.h_12, C.inline, C.pulse], "spinner"),
-                    ],
-                    div!["Commands"],
+            modal::content_view(
+                Msg::Modal,
+                vec![
+                    modal::title_view(Msg::Modal, span!["Executing the commands"]),
+                    commands_table(&model.commands_all),
+                    modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
                 ],
-                modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
-            ],
-        ),
-    )
-    .with_listener(keyboard_ev(Ev::KeyDown, move |ev| match ev.key_code() {
-        key_codes::ESC => Msg::Modal(modal::Msg::Close),
-        _ => Msg::Noop,
-    }))
-    .merge_attrs(class![C.text_black])
+            ),
+        )
+        .with_listener(keyboard_ev(Ev::KeyDown, move |ev| match ev.key_code() {
+            key_codes::ESC => Msg::Modal(modal::Msg::Close),
+            _ => Msg::Noop,
+        }))
+        .merge_attrs(class![C.text_black])
+    }
+}
+
+fn commands_table(commands: &[Command]) -> Node<Msg> {
+    div![
+        h3![class![C.py_4, C.font_normal, C.text_lg], "Commands"],
+        table::wrapper_view(vec![
+            table::thead_view(vec![
+                table::th_view(plain!["Id"]),
+                table::th_view(plain!["Message"]),
+                table::th_view(plain!["Status"]),
+            ]),
+            tbody![commands.iter().map(|x| {
+                    tr![
+                        table::td_view(plain![x.id.to_string()]),
+                        table::td_view(plain![x.message.clone()]),
+                        table::td_view(status(x)),
+                    ]
+                })],
+        ]),
+    ]
+}
+
+fn status(cmd: &Command) -> Node<Msg> {
+    // we suppose that the boolean flags are mutually exclusive
+    if cmd.complete {
+        span![
+            class![C.sm__mx_20, ],
+            font_awesome(class![C.w_4, C.h_4, C.inline, C.ml_2], "check"),
+        ]
+    } else if cmd.cancelled {
+        span![
+            class![C.my_12, C.text_center, C.text_gray_500],
+            font_awesome(class![C.w_4, C.h_4, C.inline, C.pulse, C.ml_2], "undo"),
+        ]
+    } else if cmd.errored {
+        span![
+            class![C.my_12, C.text_center, C.text_gray_500],
+            font_awesome(class![C.w_4, C.h_4, C.inline, C.pulse, C.ml_2], "spinner"),
+        ]
+    } else {
+        span![
+            class![C.my_12, C.text_center, C.text_gray_500],
+            font_awesome(class![C.w_4, C.h_4, C.inline, C.pulse, C.ml_2], "spinner"),
+        ]
+    }
 }
 
 fn close_button() -> Node<Msg> {
