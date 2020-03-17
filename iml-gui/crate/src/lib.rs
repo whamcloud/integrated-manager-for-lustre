@@ -24,15 +24,15 @@ mod watch_state;
 mod test_utils;
 
 use components::{
-    breadcrumbs::BreadCrumbs, font_awesome, font_awesome_outline, loading, restrict, stratagem, tree,
-    update_activity_health, ActivityHealth, command_modal,
+    breadcrumbs::BreadCrumbs, command_modal, font_awesome, font_awesome_outline, loading, restrict, stratagem, tree,
+    update_activity_health, ActivityHealth,
 };
 pub(crate) use extensions::*;
 use futures::channel::oneshot;
 use generated::css_classes::C;
 use iml_wire_types::{
     warp_drive::{self, ArcRecord},
-    Conf, GroupType, Session, Command
+    Conf, Command, GroupType, Session
 };
 use lazy_static::lazy_static;
 use page::{Page, RecordChange};
@@ -125,7 +125,6 @@ impl Loading {
 // ------ ------
 
 pub struct Model {
-    my_test: bool,
     activity_health: ActivityHealth,
     auth: auth::Model,
     breadcrumbs: BreadCrumbs<Route<'static>>,
@@ -189,7 +188,6 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
     orders.perform_cmd(fut);
 
     AfterMount::new(Model {
-        my_test: false,
         activity_health: ActivityHealth::default(),
         auth: auth::Model::default(),
         breadcrumbs: BreadCrumbs::default(),
@@ -255,7 +253,9 @@ fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
         }
         GMsg::ServerDate(d) => model.server_date.set(d),
         GMsg::OpenCommandModal(c) => {
-            orders.proxy(Msg::CommandModal).send_msg(command_modal::Msg::FireCommand(c));
+            orders
+                .proxy(Msg::CommandModal)
+                .send_msg(command_modal::Msg::FireCommand(c));
         }
     }
 }
@@ -588,7 +588,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             page::update(msg, &mut model.page, &model.records, &mut orders.proxy(Msg::Page));
         }
         Msg::CommandModal(msg) => {
-            command_modal::update(msg, &mut model.command_modal, &mut orders.proxy(|m| Msg::CommandModal(m)));
+            command_modal::update(
+                msg,
+                &mut model.command_modal,
+                &mut orders.proxy(|m| Msg::CommandModal(m)),
+            );
         }
     }
 }

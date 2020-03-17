@@ -42,7 +42,7 @@ pub fn composite_ids_to_query_string(xs: &[CompositeId]) -> String {
         .join("&")
 }
 
-fn locked_items<'a>(locks: &'a Locks, composite_ids: &'a [CompositeId]) -> impl Iterator<Item=&'a LockChange> {
+fn locked_items<'a>(locks: &'a Locks, composite_ids: &'a [CompositeId]) -> impl Iterator<Item = &'a LockChange> {
     composite_ids
         .iter()
         .filter_map(move |x| locks.get(&x.to_string()))
@@ -161,7 +161,7 @@ pub fn update(msg: IdMsg, cache: &ArcCache, model: &mut Model, orders: &mut impl
                 "/api/action/?limit=0&{}",
                 composite_ids_to_query_string(&model.composite_ids)
             ))
-                .controller(|controller| model.request_controller = Some(controller));
+            .controller(|controller| model.request_controller = Some(controller));
 
             orders
                 .skip()
@@ -221,11 +221,9 @@ pub fn update(msg: IdMsg, cache: &ArcCache, model: &mut Model, orders: &mut impl
         Msg::ConfirmJobModal(msg) => {
             // Intercept the Close message to change dropdown state.
             if let confirm_action_modal::Msg::Modal(modal::Msg::Close) = msg {
-                log!("action_dropdown.ConfirmJobModal('if')", msg);
                 model.state = State::Active;
                 orders.send_msg(IdMsg(id, Msg::SendFetch));
             } else {
-                log!("action_dropdown.ConfirmJobModal('else')", msg);
                 confirm_action_modal::update(
                     msg,
                     &mut model.confirm_modal,

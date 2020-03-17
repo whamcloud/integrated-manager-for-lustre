@@ -23,7 +23,6 @@ pub mod user;
 pub mod users;
 pub mod volume;
 pub mod volumes;
-pub mod test;
 
 use crate::{
     route::{Route, RouteId},

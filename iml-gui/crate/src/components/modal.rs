@@ -44,9 +44,7 @@ pub fn title_view<T>(p_msg: ParentMsg<T>, children: impl View<T>) -> Node<T> {
 }
 
 pub fn footer_view<T>(children: impl View<T>) -> Node<T> {
-    div![
-        class![C.flex, C.justify_end, C.pt_2,], children.els()
-    ]
+    div![class![C.flex, C.justify_end, C.pt_2,], children.els()]
 }
 
 pub fn content_view<T>(p_msg: ParentMsg<T>, children: impl View<T>) -> Node<T> {

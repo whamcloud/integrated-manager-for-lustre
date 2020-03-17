@@ -1,7 +1,12 @@
-use crate::{components::{
-    action_dropdown::{state_change, DryRun},
-    font_awesome, modal,
-}, extensions::{MergeAttrs, NodeExt}, generated::css_classes::C, key_codes, GMsg, RequestExt};
+use crate::{
+    components::{
+        action_dropdown::{state_change, DryRun},
+        font_awesome, modal,
+    },
+    extensions::{MergeAttrs, NodeExt},
+    generated::css_classes::C,
+    key_codes, GMsg, RequestExt,
+};
 use iml_wire_types::{warp_drive::ErasedRecord, AvailableAction, Command, EndpointName};
 use seed::{prelude::*, *};
 use std::sync::Arc;
@@ -20,7 +25,7 @@ pub struct SendCmd<'a, T> {
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct CommandHolder {
-    pub command: Command
+    pub command: Command,
 }
 
 #[derive(Default, Debug)]
@@ -76,17 +81,15 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .perform_cmd(req.fetch_json_data(|x| Msg::StateChangeSent(Box::new(x))))
                 .send_msg(Msg::Modal(modal::Msg::Close));
         }
-        Msg::StateChangeSent(data_result) => {
-            match *data_result {
-                Ok(holder) => {
-                    orders.send_g_msg(GMsg::OpenCommandModal(holder.command));
-                }
-                Err(err) => {
-                    error!("An error has occurred {:?}", err);
-                    orders.skip();
-                }
+        Msg::StateChangeSent(data_result) => match *data_result {
+            Ok(holder) => {
+                orders.send_g_msg(GMsg::OpenCommandModal(holder.command));
             }
-        }
+            Err(err) => {
+                error!("An error has occurred {:?}", err);
+                orders.skip();
+            }
+        },
         Msg::Modal(msg) => {
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
         }
@@ -142,9 +145,9 @@ pub(crate) fn view(action: &Action) -> Node<Msg> {
                             confirm_button().with_listener(simple_ev(Ev::Click, confirm_msg)),
                             cancel_button(),
                         ])
-                            .merge_attrs(class![C.pt_8]),
+                        .merge_attrs(class![C.pt_8]),
                     ]
-                },
+                }
             },
         ),
     )
