@@ -1,7 +1,12 @@
-use crate::{components::{
-    action_dropdown::{state_change, DryRun},
-    font_awesome, modal,
-}, extensions::{MergeAttrs, NodeExt}, generated::css_classes::C, key_codes, GMsg, RequestExt, CommandHolder};
+use crate::{
+    components::{
+        action_dropdown::{state_change, DryRun},
+        font_awesome, modal,
+    },
+    extensions::{MergeAttrs, NodeExt},
+    generated::css_classes::C,
+    key_codes, CommandHolder, GMsg, RequestExt,
+};
 use iml_wire_types::{warp_drive::ErasedRecord, AvailableAction, Command, EndpointName};
 use seed::{prelude::*, *};
 use std::sync::Arc;

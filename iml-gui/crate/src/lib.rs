@@ -32,7 +32,7 @@ use futures::channel::oneshot;
 use generated::css_classes::C;
 use iml_wire_types::{
     warp_drive::{self, ArcRecord},
-    Conf, Command, GroupType, Session
+    Command, Conf, GroupType, Session,
 };
 use lazy_static::lazy_static;
 use page::{Page, RecordChange};

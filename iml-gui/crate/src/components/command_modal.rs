@@ -1,6 +1,9 @@
-use crate::{components::{
-    font_awesome, modal,
-}, extensions::{MergeAttrs, NodeExt}, generated::css_classes::C, key_codes, sleep_with_handle, GMsg};
+use crate::{
+    components::{font_awesome, modal},
+    extensions::{MergeAttrs, NodeExt},
+    generated::css_classes::C,
+    key_codes, sleep_with_handle, GMsg,
+};
 use futures::channel::oneshot;
 use iml_wire_types::{ApiList, Command};
 use seed::{prelude::*, *};
