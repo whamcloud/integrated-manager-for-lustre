@@ -6,9 +6,10 @@ use futures::stream::TryStreamExt;
 use iml_manager_env::{get_influxdb_addr, get_influxdb_metrics_db};
 use iml_service_queue::service_queue::consume_data;
 use iml_stats::error::ImlStatsError;
-use influxdb::{Client, Query, Timestamp};
+use influx_db_client::{Client, Point, Points, Precision, Value};
 use lustre_collector::{HostStats, LNetStats, NodeStats, Record, Target, TargetStats};
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
+use url::Url;
 
 #[tokio::main]
 async fn main() -> Result<(), ImlStatsError> {
@@ -25,7 +26,10 @@ async fn main() -> Result<(), ImlStatsError> {
     while let Some((host, xs)) = s.try_next().await? {
         tracing::debug!("Incoming stats: {}: {:?}", host, xs);
         tracing::debug!("host: {:?}", host.0);
-        let client = Client::new(&influx_url, get_influxdb_metrics_db());
+        let client = Client::new(
+            Url::parse(&influx_url).expect("Influx URL is invalid."),
+            get_influxdb_metrics_db(),
+        );
         let ts = std::time::SystemTime::now()
             .duration_since(std::time::SystemTime::UNIX_EPOCH)?
             .as_nanos() as usize;
@@ -41,32 +45,34 @@ async fn main() -> Result<(), ImlStatsError> {
                             x.value
                                 .iter()
                                 .map(|stat| {
-                                    let mut query =
-                                        Query::write_query(Timestamp::Nanoseconds(ts), "target")
-                                            .add_tag("host", host.0.as_ref())
-                                            .add_tag("target", &*x.target)
-                                            .add_tag("kind", x.kind.to_string())
-                                            .add_tag("name", &*stat.name)
-                                            .add_tag("units", &*stat.units)
-                                            .add_field("samples", stat.samples);
+                                    let mut query = Point::new("target")
+                                        .add_tag("host", Value::String(host.0.to_string()))
+                                        .add_tag("target", Value::String(x.target.to_string()))
+                                        .add_tag("kind", Value::String(x.kind.to_string()))
+                                        .add_tag("name", Value::String(stat.name.to_string()))
+                                        .add_tag("units", Value::String(stat.units.to_string()))
+                                        .add_field("samples", Value::Integer(stat.samples as i64));
 
                                     if let Some(min) = stat.min {
-                                        query = query.add_field("min", min);
+                                        query = query.add_field("min", Value::Integer(min as i64));
                                         tracing::debug!("Target Stat - min: {}", min);
                                     }
 
                                     if let Some(max) = stat.max {
-                                        query = query.add_field("max", max);
+                                        query = query.add_field("max", Value::Integer(max as i64));
                                         tracing::debug!("Target Stat - max: {}", max);
                                     }
 
                                     if let Some(sum) = stat.sum {
-                                        query = query.add_field("sum", sum);
+                                        query = query.add_field("sum", Value::Integer(sum as i64));
                                         tracing::debug!("Target Stat - sum: {}", sum);
                                     }
 
                                     if let Some(sumsquare) = stat.sumsquare {
-                                        query = query.add_field("sumsquare", sumsquare);
+                                        query = query.add_field(
+                                            "sumsquare",
+                                            Value::Integer(sumsquare as i64),
+                                        );
                                         tracing::debug!("Target Stat - sumsquare: {}", sumsquare);
                                     }
                                     tracing::debug!(
@@ -91,18 +97,15 @@ async fn main() -> Result<(), ImlStatsError> {
                                     .buckets
                                     .iter()
                                     .map(|bucket| {
-                                        let query = Query::write_query(
-                                            Timestamp::Nanoseconds(ts),
-                                            "target",
-                                        )
-                                        .add_tag("host", host.0.as_ref())
-                                        .add_tag("target", &*x.target)
-                                        .add_tag("kind", x.kind.to_string())
-                                        .add_tag("name", &*brw_stat.name)
-                                        .add_tag("unit", &*brw_stat.unit)
-                                        .add_tag("bucket_name", bucket.name)
-                                        .add_field("read", bucket.read)
-                                        .add_field("write", bucket.write);
+                                        let query = Point::new("target")
+                                            .add_tag("host", Value::String(host.0.to_string()))
+                                            .add_tag("target", Value::String(x.target.to_string()))
+                                            .add_tag("kind", Value::String(x.kind.to_string()))
+                                            .add_tag("name", Value::String(brw_stat.name.to_string()))
+                                            .add_tag("unit", Value::String(brw_stat.unit.to_string()))
+                                            .add_tag("bucket_name", Value::Integer(bucket.name as i64))
+                                            .add_field("read", Value::Integer(bucket.read as i64))
+                                            .add_field("write", Value::Integer(bucket.write as i64));
 
                                         tracing::debug!(
                                             "BrwStat: target: {:?}, name: {}, unit: {}, bucket_name: {}, read: {}, write: {}",
@@ -122,297 +125,246 @@ async fn main() -> Result<(), ImlStatsError> {
                     }
                     TargetStats::FilesFree(x) => {
                         tracing::debug!("FilesFree - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("target", &*x.target)
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("fs", fs_name(&x.target))
-                        .add_field("files_free", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("fs", Value::String(fs_name(&x.target).to_string()))
+                            .add_field("files_free", Value::Integer(x.value as i64))])
                     }
                     TargetStats::FilesTotal(x) => {
                         tracing::debug!("FilesTotal - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_tag("fs", fs_name(&x.target))
-                        .add_field("files_total", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_tag("fs", Value::String(fs_name(&x.target).to_string()))
+                            .add_field("files_total", Value::Integer(x.value as i64))])
                     }
                     TargetStats::FsType(x) => {
                         tracing::debug!("FsType - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("fs_type", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field("fs_type", Value::String(x.value))])
                     }
                     TargetStats::BytesAvail(x) => {
                         tracing::debug!("BytesAvail - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_tag("fs", fs_name(&x.target))
-                        .add_field("bytes_avail", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_tag("fs", Value::String(fs_name(&x.target).to_string()))
+                            .add_field("bytes_avail", Value::Integer(x.value as i64))])
                     }
                     TargetStats::BytesFree(x) => {
                         tracing::debug!("BytesFree - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_tag("fs", fs_name(&x.target))
-                        .add_field("bytes_free", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_tag("fs", Value::String(fs_name(&x.target).to_string()))
+                            .add_field("bytes_free", Value::Integer(x.value as i64))])
                     }
                     TargetStats::BytesTotal(x) => {
                         tracing::debug!("BytesTotal - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_tag("fs", fs_name(&x.target))
-                        .add_field("bytes_total", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_tag("fs", Value::String(fs_name(&x.target).to_string()))
+                            .add_field("bytes_total", Value::Integer(x.value as i64))])
                     }
                     TargetStats::NumExports(x) => {
                         tracing::debug!("NumExports - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("num_exports", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field("num_exports", Value::Integer(x.value as i64))])
                     }
                     TargetStats::TotDirty(x) => {
                         tracing::debug!("TotDirty - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("tot_dirty", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field("tot_dirty", Value::Integer(x.value as i64))])
                     }
                     TargetStats::TotGranted(x) => {
                         tracing::debug!("TotGranted - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("tot_granted", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field("tot_granted", Value::Integer(x.value as i64))])
                     }
                     TargetStats::TotPending(x) => {
                         tracing::debug!("TotPending - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("tot_pending", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field("tot_pending", Value::Integer(x.value as i64))])
                     }
                     TargetStats::ContendedLocks(x) => {
                         tracing::debug!("ContendedLocks - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("contended_locks", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field(
+                                "contended_locks",
+                                Value::Integer(x.value as i64),
+                            )])
                     }
                     TargetStats::ContentionSeconds(x) => {
                         tracing::debug!("ContentionSeconds - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("contention_seconds", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field(
+                                "contention_seconds",
+                                Value::Integer(x.value as i64),
+                            )])
                     }
                     TargetStats::CtimeAgeLimit(x) => {
                         tracing::debug!("CtimeAgeLimit - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("ctime_age_limit", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field(
+                                "ctime_age_limit",
+                                Value::Integer(x.value as i64),
+                            )])
                     }
                     TargetStats::EarlyLockCancel(x) => {
                         tracing::debug!("EarlyLockCancel - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("early_lock_cancel", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field(
+                                "early_lock_cancel",
+                                Value::Integer(x.value as i64),
+                            )])
                     }
                     TargetStats::LockCount(x) => {
                         tracing::debug!("TargetStats - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_tag("fs", fs_name(&x.target))
-                        .add_field("lock_count", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_tag("fs", Value::String(fs_name(&x.target).to_string()))
+                            .add_field("lock_count", Value::Integer(x.value as i64))])
                     }
                     TargetStats::LockTimeouts(x) => {
                         tracing::debug!("LockTimeouts - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("lock_timeouts", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field("lock_timeouts", Value::Integer(x.value as i64))])
                     }
                     TargetStats::LockUnusedCount(x) => {
                         tracing::debug!("LockUnusedCount - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("lock_unused_count", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field(
+                                "lock_unused_count",
+                                Value::Integer(x.value as i64),
+                            )])
                     }
                     TargetStats::LruMaxAge(x) => {
                         tracing::debug!("LruMaxAge - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("lru_max_age", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field("lru_max_age", Value::Integer(x.value as i64))])
                     }
                     TargetStats::LruSize(x) => {
                         tracing::debug!("LruSize - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("lru_size", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field("lru_size", Value::Integer(x.value as i64))])
                     }
                     TargetStats::MaxNolockBytes(x) => {
                         tracing::debug!("MaxNolockBytes - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("max_no_lock_bytes", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field(
+                                "max_no_lock_bytes",
+                                Value::Integer(x.value as i64),
+                            )])
                     }
                     TargetStats::MaxParallelAst(x) => {
                         tracing::debug!("MaxParallelAst - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("max_parallel_ast", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field(
+                                "max_parallel_ast",
+                                Value::Integer(x.value as i64),
+                            )])
                     }
                     TargetStats::ResourceCount(x) => {
                         tracing::debug!("ResourceCount - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("resource_count", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field("resource_count", Value::Integer(x.value as i64))])
                     }
                     TargetStats::ThreadsMin(x) => {
                         tracing::debug!("ThreadsMin - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("threads_min", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field("threads_min", Value::Integer(x.value as i64))])
                     }
                     TargetStats::ThreadsMax(x) => {
                         tracing::debug!("ThreadsMax - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("threads_max", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field("threads_max", Value::Integer(x.value as i64))])
                     }
                     TargetStats::ThreadsStarted(x) => {
                         tracing::debug!("ThreadsStarted - {:?}", x);
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_field("threads_started", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_field(
+                                "threads_started",
+                                Value::Integer(x.value as i64),
+                            )])
                     }
                     TargetStats::ConnectedClients(x) => {
                         tracing::debug!("ConnectedClients - {:?}", x);
 
-                        Some(vec![Query::write_query(
-                            Timestamp::Nanoseconds(ts),
-                            "target",
-                        )
-                        .add_tag("host", host.0.as_ref())
-                        .add_tag("kind", x.kind.to_string())
-                        .add_tag("target", &*x.target)
-                        .add_tag("fs", fs_name(&x.target))
-                        .add_field("connected_clients", x.value)])
+                        Some(vec![Point::new("target")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("kind", Value::String(x.kind.to_string()))
+                            .add_tag("target", Value::String(x.target.to_string()))
+                            .add_tag("fs", Value::String(fs_name(&x.target).to_string()))
+                            .add_field(
+                                "connected_clients",
+                                Value::Integer(x.value as i64),
+                            )])
                     }
                     TargetStats::JobStatsOst(_) => {
                         // Not storing jobstats... yet.
@@ -422,101 +374,88 @@ async fn main() -> Result<(), ImlStatsError> {
                 Record::Host(host_stats) => match host_stats {
                     HostStats::MemusedMax(x) => {
                         tracing::debug!("MemusedMax - {:?}", x);
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "host")
-                            .add_tag("host", host.0.as_ref())
-                            .add_field("memused_max", x.value)])
+                        Some(vec![Point::new("host")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_field("memused_max", Value::Integer(x.value as i64))])
                     }
                     HostStats::Memused(x) => {
                         tracing::debug!("Memused - {:?}", x);
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "host")
-                            .add_tag("host", host.0.as_ref())
-                            .add_field("memused", x.value)])
+                        Some(vec![Point::new("host")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_field("memused", Value::Integer(x.value as i64))])
                     }
                     HostStats::LNetMemUsed(x) => {
                         tracing::debug!("LNetMemUsed - {:?}", x);
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "host")
-                            .add_tag("host", host.0.as_ref())
-                            .add_field("lnet_mem_used", x.value)])
+                        Some(vec![Point::new("host")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_field("lnet_mem_used", Value::Integer(x.value as i64))])
                     }
                     HostStats::HealthCheck(x) => {
                         tracing::debug!("HealthCheck - {:?}", x);
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "host")
-                            .add_tag("host", host.0.as_ref())
-                            .add_field("health_check", x.value)])
+                        Some(vec![Point::new("host")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_field("health_check", Value::String(x.value))])
                     }
                 },
                 Record::LNetStat(lnet_stats) => match lnet_stats {
                     LNetStats::SendCount(x) => {
                         tracing::debug!("SendCount - {:?}", x);
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "lnet")
-                            .add_tag("host", host.0.as_ref())
-                            .add_tag("nid", x.nid)
-                            .add_field("send_count", x.value)])
+                        Some(vec![Point::new("lnet")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("nid", Value::String(x.nid))
+                            .add_field("send_count", Value::Integer(x.value as i64))])
                     }
                     LNetStats::RecvCount(x) => {
                         tracing::debug!("RecvCount - {:?}", x);
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "lnet")
-                            .add_tag("host", host.0.as_ref())
-                            .add_tag("nid", x.nid)
-                            .add_field("recv_count", x.value)])
+                        Some(vec![Point::new("lnet")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("nid", Value::String(x.nid))
+                            .add_field("recv_count", Value::Integer(x.value as i64))])
                     }
                     LNetStats::DropCount(x) => {
                         tracing::debug!("DropCount - {:?}", x);
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "lnet")
-                            .add_tag("host", host.0.as_ref())
-                            .add_tag("nid", x.nid)
-                            .add_field("drop_count", x.value)])
+                        Some(vec![Point::new("lnet")
+                            .add_tag("host", Value::String(host.0.to_string()))
+                            .add_tag("nid", Value::String(x.nid))
+                            .add_field("drop_count", Value::Integer(x.value as i64))])
                     }
                 },
                 Record::Node(node) => match node {
-                    NodeStats::CpuUser(x) => {
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "node")
-                            .add_tag("host", host.0.as_ref())
-                            .add_field("cpu_user", x.value)])
-                    }
-                    NodeStats::CpuSystem(x) => {
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "node")
-                            .add_tag("host", host.0.as_ref())
-                            .add_field("cpu_system", x.value)])
-                    }
-                    NodeStats::CpuIowait(x) => {
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "node")
-                            .add_tag("host", host.0.as_ref())
-                            .add_field("cpu_iowait", x.value)])
-                    }
-                    NodeStats::CpuTotal(x) => {
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "node")
-                            .add_tag("host", host.0.as_ref())
-                            .add_field("cpu_total", x.value)])
-                    }
-                    NodeStats::MemTotal(x) => {
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "node")
-                            .add_tag("host", host.0.as_ref())
-                            .add_field("mem_total", x.value)])
-                    }
-                    NodeStats::MemFree(x) => {
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "node")
-                            .add_tag("host", host.0.as_ref())
-                            .add_field("mem_free", x.value)])
-                    }
-                    NodeStats::SwapTotal(x) => {
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "node")
-                            .add_tag("host", host.0.as_ref())
-                            .add_field("swap_total", x.value)])
-                    }
-                    NodeStats::SwapFree(x) => {
-                        Some(vec![Query::write_query(Timestamp::Nanoseconds(ts), "node")
-                            .add_tag("host", host.0.as_ref())
-                            .add_field("swap_free", x.value)])
-                    }
+                    NodeStats::CpuUser(x) => Some(vec![Point::new("node")
+                        .add_tag("host", Value::String(host.0.to_string()))
+                        .add_field("cpu_user", Value::Integer(x.value as i64))]),
+                    NodeStats::CpuSystem(x) => Some(vec![Point::new("node")
+                        .add_tag("host", Value::String(host.0.to_string()))
+                        .add_field("cpu_system", Value::Integer(x.value as i64))]),
+                    NodeStats::CpuIowait(x) => Some(vec![Point::new("node")
+                        .add_tag("host", Value::String(host.0.to_string()))
+                        .add_field("cpu_iowait", Value::Integer(x.value as i64))]),
+                    NodeStats::CpuTotal(x) => Some(vec![Point::new("node")
+                        .add_tag("host", Value::String(host.0.to_string()))
+                        .add_field("cpu_total", Value::Integer(x.value as i64))]),
+                    NodeStats::MemTotal(x) => Some(vec![Point::new("node")
+                        .add_tag("host", Value::String(host.0.to_string()))
+                        .add_field("mem_total", Value::Integer(x.value as i64))]),
+                    NodeStats::MemFree(x) => Some(vec![Point::new("node")
+                        .add_tag("host", Value::String(host.0.to_string()))
+                        .add_field("mem_free", Value::Integer(x.value as i64))]),
+                    NodeStats::SwapTotal(x) => Some(vec![Point::new("node")
+                        .add_tag("host", Value::String(host.0.to_string()))
+                        .add_field("swap_total", Value::Integer(x.value as i64))]),
+                    NodeStats::SwapFree(x) => Some(vec![Point::new("node")
+                        .add_tag("host", Value::String(host.0.to_string()))
+                        .add_field("swap_free", Value::Integer(x.value as i64))]),
                 },
             };
 
             if let Some(entries) = maybe_entries {
-                for entry in entries {
-                    let r = client.query(&entry).await?;
+                let points = Points::create_new(entries);
+                let r = client
+                    .write_points(points, Some(Precision::Nanoseconds), None)
+                    .await;
 
-                    tracing::debug!("Result of writing series to influxdb: {}", r);
+                if let Err(e) = r {
+                    tracing::error!("Error writing series to influxdb: {}", e);
                 }
             }
         }

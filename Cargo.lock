@@ -737,19 +737,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8529c2421efa3066a5cbd8063d2244603824daccb6936b079010bb2aa89464b"
 dependencies = [
  "backtrace",
- "failure_derive",
-]
-
-[[package]]
-name = "failure_derive"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "030a733c8287d6213886dd487564ff5c8f6aae10278b3588ed177f9d18f8d231"
-dependencies = [
- "proc-macro2 1.0.9",
- "quote 1.0.3",
- "syn 1.0.16",
- "synstructure",
 ]
 
 [[package]]
@@ -1464,11 +1451,12 @@ dependencies = [
  "iml-manager-env",
  "iml-service-queue",
  "iml-wire-types",
- "influxdb",
+ "influx_db_client",
  "lustre_collector",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "url",
 ]
 
 [[package]]
@@ -1557,15 +1545,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "influxdb"
-version = "0.0.6"
+name = "influx_db_client"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4701006cb67ca7b147445617edc2541daeb1bad06921476b9c5e5dfef1e6ea27"
+checksum = "02cc648b6e153e3e0b9ad4dec0303c8e1eddfa285226bb4247c0a09f895736d0"
 dependencies = [
- "failure",
+ "bytes",
  "futures",
  "reqwest",
  "serde",
+ "serde_derive",
  "serde_json",
 ]
 
@@ -3202,18 +3191,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a393066ed9010ebaed60b9eafa373d4b1baac186dd7e008555b0f702b51945b6"
 dependencies = [
  "unicode-xid 0.0.4",
-]
-
-[[package]]
-name = "synstructure"
-version = "0.12.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67656ea1dc1b41b1451851562ea232ec2e5a80242139f7e679ceccfb5d61f545"
-dependencies = [
- "proc-macro2 1.0.9",
- "quote 1.0.3",
- "syn 1.0.16",
- "unicode-xid 0.2.0",
 ]
 
 [[package]]
