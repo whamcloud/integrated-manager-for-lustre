@@ -1,12 +1,7 @@
-use crate::{
-    components::{
-        action_dropdown::{state_change, DryRun},
-        font_awesome, modal,
-    },
-    extensions::{MergeAttrs, NodeExt},
-    generated::css_classes::C,
-    key_codes, GMsg, RequestExt,
-};
+use crate::{components::{
+    action_dropdown::{state_change, DryRun},
+    font_awesome, modal,
+}, extensions::{MergeAttrs, NodeExt}, generated::css_classes::C, key_codes, GMsg, RequestExt};
 use iml_wire_types::{warp_drive::ErasedRecord, AvailableAction, Command, EndpointName};
 use seed::{prelude::*, *};
 use std::sync::Arc;
@@ -23,6 +18,11 @@ pub struct SendCmd<'a, T> {
     pub message: String,
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct CommandHolder {
+    pub command: Command
+}
+
 #[derive(Default, Debug)]
 pub struct Model {
     pub modal: modal::Model,
@@ -33,7 +33,7 @@ pub enum Msg {
     SendJob(String, Arc<AvailableAction>),
     JobSent(Box<fetch::ResponseDataResult<Command>>),
     SendStateChange(Arc<AvailableAction>, Arc<dyn ErasedRecord>),
-    StateChangeSent(Box<fetch::ResponseDataResult<Command>>),
+    StateChangeSent(Box<fetch::ResponseDataResult<CommandHolder>>),
     Modal(modal::Msg),
     Noop,
 }
@@ -77,11 +77,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .send_msg(Msg::Modal(modal::Msg::Close));
         }
         Msg::StateChangeSent(data_result) => {
-            panic!("TODO data_result = {:?}", data_result);
-            log!("TODO: Open command modal here, StateChangeSent", data_result);
             match *data_result {
-                Ok(command) => {
-                    orders.send_g_msg(GMsg::OpenCommandModal(command));
+                Ok(holder) => {
+                    orders.send_g_msg(GMsg::OpenCommandModal(holder.command));
                 }
                 Err(err) => {
                     error!("An error has occurred {:?}", err);

@@ -155,7 +155,6 @@ pub fn update(msg: IdMsg, cache: &ArcCache, model: &mut Model, orders: &mut impl
             }
         }
         Msg::SendFetch => {
-            log!("action_dropdown.SendFetch()", msg);
             model.cancel = None;
 
             let request = fetch::Request::new(format!(

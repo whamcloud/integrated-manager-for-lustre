@@ -255,7 +255,7 @@ fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
         }
         GMsg::ServerDate(d) => model.server_date.set(d),
         GMsg::OpenCommandModal(c) => {
-            log!("GMsg::OpenCommandModal", c);
+            orders.proxy(Msg::CommandModal).send_msg(command_modal::Msg::FireCommand(c));
         }
     }
 }
@@ -267,8 +267,8 @@ fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug)]
 pub enum Msg {
-    MyTest,
     Auth(Box<auth::Msg>),
+    CommandModal(command_modal::Msg),
     EventSourceConnect(JsValue),
     EventSourceError(JsValue),
     EventSourceMessage(MessageEvent),
@@ -301,9 +301,6 @@ pub enum Msg {
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
-        Msg::MyTest => {
-            model.my_test = !model.my_test;
-        }
         Msg::RouteChanged(url) => {
             model.route = Route::from(url);
 
@@ -589,6 +586,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::Page(msg) => {
             page::update(msg, &mut model.page, &model.records, &mut orders.proxy(Msg::Page));
+        }
+        Msg::CommandModal(msg) => {
+            command_modal::update(msg, &mut model.command_modal, &mut orders.proxy(|m| Msg::CommandModal(m)));
         }
     }
 }
