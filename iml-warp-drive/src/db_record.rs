@@ -8,9 +8,10 @@ use iml_wire_types::db::{
     ManagedTargetMountRecord, ManagedTargetRecord, OstPoolOstsRecord, OstPoolRecord,
     StratagemConfiguration, TableName, VolumeNodeRecord, VolumeRecord, ALERT_STATE_TABLE_NAME,
     AUTH_GROUP_TABLE_NAME, AUTH_USER_GROUP_TABLE_NAME, AUTH_USER_TABLE_NAME,
-    CONTENT_TYPE_TABLE_NAME, LNET_CONFIGURATION_TABLE_NAME, MANAGED_FILESYSTEM_TABLE_NAME,
-    MANAGED_HOST_TABLE_NAME, MANAGED_TARGET_MOUNT_TABLE_NAME, MANAGED_TARGET_TABLE_NAME,
-    OSTPOOL_OSTS_TABLE_NAME, OSTPOOL_TABLE_NAME, STRATAGEM_CONFIGURATION_TABLE_NAME,
+    CONTENT_TYPE_TABLE_NAME, DEVICE_HOST_TABLE_NAME, DEVICE_TABLE_NAME,
+    LNET_CONFIGURATION_TABLE_NAME, MANAGED_FILESYSTEM_TABLE_NAME, MANAGED_HOST_TABLE_NAME,
+    MANAGED_TARGET_MOUNT_TABLE_NAME, MANAGED_TARGET_TABLE_NAME, OSTPOOL_OSTS_TABLE_NAME,
+    OSTPOOL_TABLE_NAME, STRATAGEM_CONFIGURATION_TABLE_NAME,
 };
 use serde::de::Error;
 use std::convert::TryFrom;
@@ -66,6 +67,8 @@ impl TryFrom<(TableName<'_>, serde_json::Value)> for DbRecord {
             STRATAGEM_CONFIGURATION_TABLE_NAME => {
                 serde_json::from_value(x).map(DbRecord::StratagemConfiguration)
             }
+            DEVICE_TABLE_NAME => serde_json::from_value(x).map(DbRecord::Device),
+            DEVICE_HOST_TABLE_NAME => serde_json::from_value(x).map(DbRecord::DeviceHost),
             x => Err(serde_json::Error::custom(format!(
                 "No matching table representation for {}",
                 x

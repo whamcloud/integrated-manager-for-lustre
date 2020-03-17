@@ -10,9 +10,9 @@ use iml_postgres::Client as PgClient;
 use iml_wire_types::{
     db::{
         AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
-        FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord, ManagedTargetMountRecord,
-        ManagedTargetRecord, Name, NotDeleted, OstPoolOstsRecord, OstPoolRecord,
-        StratagemConfiguration, VolumeNodeRecord, VolumeRecord,
+        DeviceHostRecord, DeviceRecord, FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord,
+        ManagedTargetMountRecord, ManagedTargetRecord, Name, NotDeleted, OstPoolOstsRecord,
+        OstPoolRecord, StratagemConfiguration, VolumeNodeRecord, VolumeRecord,
     },
     warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam, Volume,
@@ -83,6 +83,8 @@ impl ToApiRecord for ManagedTargetRecord {}
 impl ToApiRecord for VolumeRecord {}
 impl ToApiRecord for VolumeNodeRecord {}
 impl ToApiRecord for AlertStateRecord {}
+impl ToApiRecord for DeviceRecord {}
+impl ToApiRecord for DeviceHostRecord {}
 
 pub async fn db_record_to_change_record(
     (msg_type, record): (MessageType, DbRecord),

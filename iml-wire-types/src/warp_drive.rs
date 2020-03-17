@@ -315,6 +315,12 @@ impl ArcCache {
             "managedtarget" | "managedost" | "managedmdt" | "managedmgt" | "managedmgs" => {
                 self.target.get(&composite_id.1).cloned().map(erase)
             }
+            "device" => {
+                self.device.get(&composite_id.1).cloned().map(erase)
+            }
+            "devicehost" => {
+                self.device_host.get(&composite_id.1).cloned().map(erase)
+            }
             _ => None,
         }
     }

@@ -976,6 +976,18 @@ impl ToCompositeId for &DeviceRecord {
     }
 }
 
+impl Label for DeviceRecord {
+    fn label(&self) -> &str {
+        &self.device.id
+    }
+}
+
+impl EndpointName for DeviceRecord {
+    fn endpoint_name() -> &'static str {
+        "device"
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Paths(pub BTreeSet<PathBuf>);
 
@@ -1108,11 +1120,36 @@ impl From<Row> for DeviceHost {
 pub struct DeviceHostRecord {
     pub device_host: DeviceHost,
     pub record_id: u32,
+    pub content_type_id: Option<u32>,
 }
 
 impl Id for DeviceHostRecord {
     fn id(&self) -> u32 {
         self.record_id
+    }
+}
+
+impl ToCompositeId for DeviceHostRecord {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id.unwrap(), self.record_id)
+    }
+}
+
+impl ToCompositeId for &DeviceHostRecord {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id.unwrap(), self.record_id)
+    }
+}
+
+impl Label for DeviceHostRecord {
+    fn label(&self) -> &str {
+        &self.device_host.device_id
+    }
+}
+
+impl EndpointName for DeviceHostRecord {
+    fn endpoint_name() -> &'static str {
+        "devicehost"
     }
 }
 
