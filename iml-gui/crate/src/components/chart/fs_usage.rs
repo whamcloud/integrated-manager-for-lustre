@@ -96,7 +96,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
     SELECT LAST("bytes_total") AS bytes_total,
     LAST("bytes_free") as bytes_free,
     LAST("bytes_avail") as bytes_avail
-    FROM "target" WHERE "kind" = '"OST"' {} GROUP BY target
+    FROM "target" WHERE "kind" = 'OST' {} GROUP BY target
     )
 "#,
                 part
