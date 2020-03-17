@@ -41,6 +41,9 @@ impl Model {
     pub const fn total(&self) -> usize {
         self.total
     }
+    pub const fn limit(&self) -> usize {
+        self.limit
+    }
     pub const fn has_less(&self) -> bool {
         self.offset != 0
     }
