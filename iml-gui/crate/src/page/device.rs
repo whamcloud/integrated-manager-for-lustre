@@ -1,5 +1,5 @@
-use seed::prelude::*;
 use iml_wire_types::db::DeviceRecord;
+use seed::prelude::*;
 use std::sync::Arc;
 
 #[derive(Clone)]

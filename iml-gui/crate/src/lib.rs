@@ -470,7 +470,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::DevicesPage(msg) => {
             if let Page::Devices(page) = &mut model.page {
-                // page::devices::update(msg, &model.records, page, &mut orders.proxy(Msg::MgtsPage))
+                page::devices::update(msg, &model.records, page, &mut orders.proxy(Msg::DevicesPage))
             }
         }
 
