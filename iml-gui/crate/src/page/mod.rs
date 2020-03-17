@@ -25,7 +25,6 @@ pub mod volume;
 pub mod volumes;
 
 use crate::{
-    components::stratagem,
     route::{Route, RouteId},
     GMsg,
 };
@@ -102,26 +101,12 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
                 .parse()
                 .ok()
                 .and_then(|x| cache.filesystem.get(&x))
-                .map(|x| {
-                    Self::Filesystem(Box::new(filesystem::Model {
-                        fs: Arc::clone(x),
-                        mdts: Default::default(),
-                        mdt_paging: Default::default(),
-                        mgt: Default::default(),
-                        osts: Default::default(),
-                        ost_paging: Default::default(),
-                        rows: Default::default(),
-                        stratagem: stratagem::Model::new(Arc::clone(x)),
-                    }))
-                })
+                .map(|x| Self::Filesystem(Box::new(filesystem::Model::new(x))))
                 .unwrap_or_default(),
             Route::Dashboard => Self::Dashboard(dashboard::Model {
                 ..dashboard::Model::default()
             }),
-            Route::FsDashboard(id) => Self::FsDashboard(fs_dashboard::Model {
-                fs_name: id.to_string(),
-                ..fs_dashboard::Model::default()
-            }),
+            Route::FsDashboard(id) => Self::FsDashboard(fs_dashboard::Model::new(id.to_string())),
             Route::ServerDashboard(id) => Self::ServerDashboard(server_dashboard::Model {
                 host_name: id.to_string(),
             }),
