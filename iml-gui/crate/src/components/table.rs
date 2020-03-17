@@ -56,7 +56,7 @@ pub fn td_center<T>(children: impl View<T>) -> Node<T> {
     td_view(children).merge_attrs(class![C.text_center])
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct SortBy<T>(pub T);
 
 pub fn sort_header<T: PartialEq + Copy>(label: &str, sort_by: T, current_sort: T, dir: paging::Dir) -> Node<SortBy<T>> {

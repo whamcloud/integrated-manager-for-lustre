@@ -57,7 +57,7 @@ impl Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     SetUnit(Unit),
     InputChange(web_sys::Event),

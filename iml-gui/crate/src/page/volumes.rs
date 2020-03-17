@@ -99,7 +99,7 @@ pub fn init(cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, G
     model.set_records(cache, orders);
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     Page(paging::Msg),
     Sort,

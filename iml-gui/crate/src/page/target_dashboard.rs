@@ -8,7 +8,7 @@ use crate::{
 use iml_wire_types::warp_drive::ArcCache;
 use seed::{prelude::*, *};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {}
 
 #[derive(Default)]

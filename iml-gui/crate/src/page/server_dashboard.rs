@@ -13,7 +13,7 @@ pub struct Model {
     pub host_name: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {}
 
 pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {

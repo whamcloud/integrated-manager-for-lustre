@@ -31,7 +31,7 @@ impl Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     ReportDurationPicker(duration_picker::Msg),
     PurgeDurationPicker(duration_picker::Msg),
