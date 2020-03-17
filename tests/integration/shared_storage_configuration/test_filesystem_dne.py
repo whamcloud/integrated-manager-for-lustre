@@ -77,22 +77,6 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
 
         return self.chroma_manager.get("/api/filesystem", params={"id": self.filesystem_id}).json["objects"][0]
 
-    def _check_stats(self, filesystem):
-        """ Check that after exercising file system, relevant stats show expected change after given timeout """
-
-        mdt_indexes = [mdt["index"] for mdt in filesystem["mdts"]]
-        client = config["lustre_clients"][0]["address"]
-
-        no_of_files_per_mdt = [
-            3 * (n + 1) for n in range(0, len(mdt_indexes))
-        ]  # Write a different number of files to each MDT
-
-        self.remote_operations.mount_filesystem(client, filesystem)
-        try:
-            self.remote_operations.exercise_filesystem(client, filesystem, mdt_indexes, no_of_files_per_mdt)
-        finally:
-            self.remote_operations.unmount_filesystem(client, filesystem)
-
     def test_create_dne_filesystem(self):
         """
         Test that we can create a DNE file system with 2 MDTs
@@ -100,7 +84,6 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
         filesystem = self._create_filesystem(2)
         self.assertEqual(len(filesystem["mdts"]), 2)
         self.assertEqual(len(filesystem["osts"]), 1)
-        self._check_stats(filesystem)
 
     @skip("Remove while we fix HYD-4520")
     def test_create_single_filesystem_add_mdt(self):
@@ -110,17 +93,14 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
         filesystem = self._create_filesystem(1)
         self.assertEqual(len(filesystem["mdts"]), 1)
         self.assertEqual(len(filesystem["osts"]), 1)
-        self._check_stats(filesystem)
 
         filesystem = self._add_mdt(1, 1)
         self.assertEqual(len(filesystem["mdts"]), 2)
         self.assertEqual(len(filesystem["osts"]), 1)
-        self._check_stats(filesystem)
 
         filesystem = self._add_mdt(2, 1)
         self.assertEqual(len(filesystem["mdts"]), 3)
         self.assertEqual(len(filesystem["osts"]), 1)
-        self._check_stats(filesystem)
 
     def test_mdt0_undeletable(self):
         """
@@ -129,20 +109,17 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
         filesystem = self._create_filesystem(3)
         self.assertEqual(len(filesystem["mdts"]), 3)
         self.assertEqual(len(filesystem["osts"]), 1)
-        self._check_stats(filesystem)
 
         filesystem = self._delete_mdt(
             filesystem, next(mdt for mdt in filesystem["mdts"] if mdt["index"] == 0), fail=True
         )
         self.assertEqual(len(filesystem["mdts"]), 3)
         self.assertEqual(len(filesystem["osts"]), 1)
-        self._check_stats(filesystem)
 
         # Remove for HYD-4419 which removed the ability to remove an MDT
         # filesystem = self._delete_mdt(filesystem, next(mdt for mdt in filesystem['mdts'] if mdt['index'] != 0), fail = False)
         # self.assertEqual(len(filesystem['mdts']), 2)
         # self.assertEqual(len(filesystem['osts']), 1)
-        # self._check_stats(filesystem)
 
         # For HYD-4419 check that an INDEX != 0 also can't be removed.
         filesystem = self._delete_mdt(
@@ -150,7 +127,6 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
         )
         self.assertEqual(len(filesystem["mdts"]), 3)
         self.assertEqual(len(filesystem["osts"]), 1)
-        self._check_stats(filesystem)
 
     @skip("LU-6586 Prevents DNE Removal Working")
     def test_mdt_add_delete_add(self):
@@ -160,24 +136,20 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
         filesystem = self._create_filesystem(1)
         self.assertEqual(len(filesystem["mdts"]), 1)
         self.assertEqual(len(filesystem["osts"]), 1)
-        self._check_stats(filesystem)
 
         filesystem = self._add_mdt(1, 2)
         self.assertEqual(len(filesystem["mdts"]), 3)
         self.assertEqual(len(filesystem["osts"]), 1)
-        self._check_stats(filesystem)
 
         filesystem = self._delete_mdt(
             filesystem, next(mdt for mdt in filesystem["mdts"] if mdt["index"] == 2), fail=False
         )
         self.assertEqual(len(filesystem["mdts"]), 2)
         self.assertEqual(len(filesystem["osts"]), 1)
-        self._check_stats(filesystem)
 
         filesystem = self._add_mdt(1, 1)
         self.assertEqual(len(filesystem["mdts"]), 3)
         self.assertEqual(len(filesystem["osts"]), 1)
-        self._check_stats(filesystem)
 
         # The new one should have an index of 3 (being the 4th added) so check by finding.
         # This will exception if there is no index == 3

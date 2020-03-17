@@ -20,7 +20,7 @@ from chroma_core.lib.storage_plugin.base_resource import (
 from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 from chroma_core.lib.storage_plugin.log import storage_plugin_log
 from chroma_core.lib.util import all_subclasses
-from chroma_core.models.storage_plugin import StoragePluginRecord, StorageResourceClassStatistic
+from chroma_core.models.storage_plugin import StoragePluginRecord
 from chroma_core.models.storage_plugin import StorageResourceRecord, StorageResourceClass
 
 
@@ -94,8 +94,6 @@ class LoadedPlugin(object):
             if created:
                 vrc.user_creatable = issubclass(cls, BaseScannableResource)
                 vrc.save()
-            for name, stat_obj in cls._meta.storage_statistics.items():
-                class_stat, created = StorageResourceClassStatistic.objects.get_or_create(resource_class=vrc, name=name)
 
             plugin_manager.resource_class_id_to_class[vrc.id] = cls
             plugin_manager.resource_class_class_to_id[cls] = vrc.id

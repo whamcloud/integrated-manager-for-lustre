@@ -142,27 +142,6 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
         # Forget the filesystem and forget the MGT
         self._forget_filesystem()
 
-    def test_filesystem_detection_verify_stats(self):
-        self._detect_filesystem()
-
-        filesystem = self._filesystem
-
-        client = config["lustre_clients"][0]["address"]
-        self.remote_operations.mount_filesystem(client, filesystem)
-        try:
-            self.remote_command(
-                client,
-                "rm -rf /mnt/%s/*" % filesystem["name"],
-                expected_return_code=None,  # may not exist - don't care, move along.
-            )
-            self.remote_operations.exercise_filesystem(client, filesystem)
-            self.check_stats(filesystem["id"])
-        finally:
-            self.remote_operations.unmount_filesystem(client, filesystem)
-
-        # Forget the filesystem and forget the MGT
-        self._forget_filesystem()
-
     def test_filesystem_detection_verify_mountable(self):
         self._detect_filesystem()
 
@@ -181,7 +160,6 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
                 expected_return_code=None,  # may not exist - dont care, move along.
             )
             self.remote_operations.exercise_filesystem(client, filesystem)
-            self.check_stats(filesystem["id"])
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
 

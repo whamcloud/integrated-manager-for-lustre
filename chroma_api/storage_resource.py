@@ -6,10 +6,10 @@
 from collections import defaultdict
 from django.contrib.contenttypes.models import ContentType
 from tastypie.validation import Validation
-from chroma_core.lib.storage_plugin.api import attributes, statistics
+from chroma_core.lib.storage_plugin.api import attributes
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
-from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
+from chroma_core.models import StorageResourceRecord
 
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from tastypie import fields
@@ -77,28 +77,6 @@ class StorageResourceResource(ChromaModelResource):
     alias = fields.CharField(help_text="The human readable name of the resource (may be set by user)")
 
     alerts = fields.ListField(help_text="List of active ``alert`` objects which are associated with this resource")
-    stats = fields.DictField(
-        help_text="""List of statistics defined by the plugin, with recent data for each.
-    Each statistic has the format:
-    ::
-
-        {'name': <internal name of the statistic>,
-         'label': <human readable name of the statistic>,
-         'type': <'histogram' or 'timeseries'>,
-         'unit_name': <human readable unit>,
-         'data': <for histograms only>}
-
-    The data format for histograms is:
-    ::
-
-        {'bin_labels': <list of strings>,
-         'values': <list of floats>}
-
-    For time series statistics, fetch the data separately with a call for the ``/metrics/`` sub-URL of the resource.
-
-    """
-    )
-    charts = fields.ListField(help_text="List of charts for this resource (defined by the plugin as Meta.charts)")
     propagated_alerts = fields.ListField(
         help_text="List of active ``alert`` objects which are associated with " "ancestors of this resource"
     )
@@ -187,46 +165,6 @@ class StorageResourceResource(ChromaModelResource):
 
     def dehydrate_propagated_alerts(self, bundle):
         return [a.to_dict() for a in ResourceQuery().resource_get_propagated_alerts(bundle.obj.to_resource())]
-
-    def dehydrate_stats(self, bundle):
-        from chroma_core.models import SimpleHistoStoreTime
-        from chroma_core.models import SimpleHistoStoreBin
-
-        stats = {}
-        for s in StorageResourceStatistic.objects.filter(storage_resource=bundle.obj):
-            stat_props = s.storage_resource.get_statistic_properties(s.name)
-            if isinstance(stat_props, statistics.BytesHistogram):
-                time = SimpleHistoStoreTime.objects.filter(storage_resource_statistic=s).latest("time")
-                bins = SimpleHistoStoreBin.objects.filter(histo_store_time=time).order_by("bin_idx")
-
-                type_name = "histogram"
-                # Composite type
-                data = {
-                    "bin_labels": [u"\u2264%s" % (bin[1:] or "") for bin in stat_props.bins],
-                    "values": [bin.value for bin in bins],
-                }
-            else:
-                type_name = "timeseries"
-                # Go get the data from <resource>/metrics/
-                data = None
-
-            label = stat_props.label
-            if not label:
-                label = s.name
-
-            stat_data = {
-                "name": s.name,
-                "label": label,
-                "type": type_name,
-                "unit_name": stat_props.get_unit_name(),
-                "data": data,
-            }
-            stats[s.name] = stat_data
-
-        return stats
-
-    def dehydrate_charts(self, bundle):
-        return bundle.obj.to_resource().get_charts()
 
     def dehydrate_deletable(self, bundle):
         return bundle.obj.resource_class.user_creatable

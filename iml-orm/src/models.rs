@@ -1440,31 +1440,6 @@ pub struct ChromaCoreShutdownhostjob {
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
 #[derive(serde::Serialize, serde::Deserialize)]
-#[cfg_attr(
-    feature = "postgres-interop",
-    table_name = "chroma_core_simplehistostorebin"
-)]
-pub struct ChromaCoreSimplehistostorebin {
-    pub id: i32,
-    pub bin_idx: i32,
-    pub value: i32,
-    pub histo_store_time_id: i32,
-}
-
-#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
-#[derive(serde::Serialize, serde::Deserialize)]
-#[cfg_attr(
-    feature = "postgres-interop",
-    table_name = "chroma_core_simplehistostoretime"
-)]
-pub struct ChromaCoreSimplehistostoretime {
-    pub id: i32,
-    pub time: i32,
-    pub storage_resource_statistic_id: i32,
-}
-
-#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
-#[derive(serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "postgres-interop", primary_key(job_ptr_id))]
 #[cfg_attr(
     feature = "postgres-interop",
@@ -1779,19 +1754,6 @@ pub struct ChromaCoreStorageresourcerecordReportedBy {
     pub id: i32,
     pub from_storageresourcerecord_id: i32,
     pub to_storageresourcerecord_id: i32,
-}
-
-#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
-#[derive(serde::Serialize, serde::Deserialize)]
-#[cfg_attr(
-    feature = "postgres-interop",
-    table_name = "chroma_core_storageresourcestatistic"
-)]
-pub struct ChromaCoreStorageresourcestatistic {
-    pub id: i32,
-    pub sample_period: i32,
-    pub name: String,
-    pub storage_resource_id: i32,
 }
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]

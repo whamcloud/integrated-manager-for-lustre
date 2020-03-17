@@ -42,7 +42,7 @@ from chroma_core.lib.util import all_subclasses
 from chroma_core.models import ManagedHost, ManagedTarget
 from chroma_core.models import LNetNidsChangedAlert
 from chroma_core.models import Volume, VolumeNode
-from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
+from chroma_core.models import StorageResourceRecord
 from chroma_core.models import StorageResourceAlert, StorageResourceOffline
 from chroma_core.models import HaCluster
 from chroma_core.models.alert import AlertState
@@ -995,37 +995,6 @@ class ResourceManager(object):
             self._edges.remove_parent(record_pk, parent_pk)
             self._resource_modify_parent(record_pk, parent_pk, True)
 
-    def session_get_stats(self, scannable_id, local_resource_id, update_data):
-        """Get global ID for a resource, look up the StoreageResourceStatistic for
-           each stat in the update, and invoke its .metrics.update with the data"""
-        # FIXME: definitely could be doing finer grained locking here as although
-        # we need the coarse one for protecting local_id_to_global_id etc, the later
-        # part of actually updating stats just needs to be locked on a per-statistic basis
-        with self._instance_lock:
-            session = self._sessions[scannable_id]
-            record_pk = session.local_id_to_global_id[local_resource_id]
-            return self._get_stats(record_pk, update_data)
-
-    @transaction.atomic
-    def _get_stats(self, record_pk, update_data):
-        record = StorageResourceRecord.objects.get(pk=record_pk)
-        samples = []
-        for stat_name, stat_data in update_data.items():
-            stat_properties = record.get_statistic_properties(stat_name)
-            try:
-                stat_record = StorageResourceStatistic.objects.get(storage_resource=record, name=stat_name)
-                if stat_record.sample_period != stat_properties.sample_period:
-                    log.warning("Plugin stat period for '%s' changed, expunging old statistics", stat_name)
-                    stat_record.delete()
-                    raise StorageResourceStatistic.DoesNotExist
-
-            except StorageResourceStatistic.DoesNotExist:
-                stat_record = StorageResourceStatistic.objects.create(
-                    storage_resource=record, name=stat_name, sample_period=stat_properties.sample_period
-                )
-            samples += stat_record.update(stat_name, stat_properties, stat_data)
-        return samples
-
     def _resource_modify_parent(self, record_pk, parent_pk, remove):
         record = StorageResourceRecord.objects.get(pk=record_pk)
         if remove:
@@ -1308,10 +1277,6 @@ class ResourceManager(object):
                     attribute=storage_resource_alert.attribute,
                     alert_type=storage_resource_alert.alert_type,
                 )
-
-        with DelayedContextFrom(StorageResourceStatistic) as srs_delayed:
-            for srs in StorageResourceStatistic.objects.filter(storage_resource__in=ordered_for_deletion):
-                srs_delayed.delete(int(srs.id))
 
         for record_id in ordered_for_deletion:
             self._subscriber_index.remove_resource(record_id, self._class_index.get(record_id))

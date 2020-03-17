@@ -171,8 +171,8 @@ class Handler(object):
 
     def _run_advertised_job(self, job_class, ns):
         subject = self.api_endpoint.show(ns.subject)
-        resp = self.api.endpoints["action"].get(
-            data={"composite_ids": ["{}:{}".format(subject.content_type_id, subject.id)], "limit": 0}
+        resp = self.api.api_client.get(
+            "/api/action", data={"composite_ids": ["{}:{}".format(subject.content_type_id, subject.id)], "limit": 0}
         )
         actions = json.loads(resp.content)["objects"]
         try:
@@ -243,8 +243,8 @@ class Handler(object):
     def change_state(self, subject, end_state, force=False):
         x = self.api_endpoint.show(subject)
 
-        resp = self.api.endpoints["action"].get(
-            data={"composite_ids": ["{}:{}".format(x.content_type_id, x.id)], "limit": 0}
+        resp = self.api.api_client.get(
+            "/api/action", data={"composite_ids": ["{}:{}".format(x.content_type_id, x.id)], "limit": 0}
         )
         actions = json.loads(resp.content)["objects"]
 

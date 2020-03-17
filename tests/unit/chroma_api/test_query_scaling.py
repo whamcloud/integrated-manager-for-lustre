@@ -249,4 +249,3 @@ class TestQueryScaling(ChromaApiTestCase):
 
         filesystem_scaling = self._measure_scaling(self._create_filesystem_n_osts, FilesystemResource, TargetResource)
         self.assertIsInstance(filesystem_scaling, Order1)
-        self.assertEqual(filesystem_scaling.queries_per_object, QUERIES_PER_FILESYSTEM_TARGET)

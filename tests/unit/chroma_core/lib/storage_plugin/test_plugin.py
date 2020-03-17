@@ -310,6 +310,3 @@ class TestAddRemove(IMLUnitTestCase):
         self.resource_manager.session_update_resource.assert_called_once_with(
             self.plugin._scannable_id, self.plugin.resource._handle, {"extra_info": "bar"}
         )
-
-    def test_update_statistics(self):
-        pass

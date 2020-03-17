@@ -193,74 +193,6 @@ class StorageResourceRecord(models.Model):
         )
         return klass
 
-    def get_statistic_properties(self, stat_name):
-        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-
-        klass, klass_id = storage_plugin_manager.get_plugin_resource_class(
-            self.resource_class.storage_plugin.module_name, self.resource_class.class_name
-        )
-
-        return klass._meta.storage_statistics[stat_name]
-
-
-class SimpleHistoStoreBin(models.Model):
-    histo_store_time = models.ForeignKey("SimpleHistoStoreTime", on_delete=CASCADE)
-    bin_idx = models.IntegerField()
-    value = models.PositiveIntegerField()
-
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-
-
-class SimpleHistoStoreTime(models.Model):
-    storage_resource_statistic = models.ForeignKey("StorageResourceStatistic", on_delete=CASCADE)
-    time = models.PositiveIntegerField()
-
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-
-
-class StorageResourceStatistic(models.Model):
-    class Meta:
-        unique_together = ("storage_resource", "name")
-        app_label = "chroma_core"
-        ordering = ["id"]
-
-    storage_resource = models.ForeignKey(StorageResourceRecord, on_delete=models.PROTECT)
-    sample_period = models.IntegerField()
-    name = models.CharField(max_length=64)
-
-    @property
-    def metrics(self):
-        from chroma_core.lib.metrics import VendorMetricStore
-
-        if not hasattr(self, "_metrics"):
-            self._metrics = VendorMetricStore(self)
-        return self._metrics
-
-    def update(self, stat_name, stat_properties, stat_data):
-        from chroma_core.lib.storage_plugin.api import statistics
-
-        if isinstance(stat_properties, statistics.BytesHistogram):
-            # Histograms
-            for dp in stat_data:
-                ts = dp["timestamp"]
-                bin_vals = dp["value"]
-                from django.db import transaction
-
-                with transaction.atomic():
-                    time = SimpleHistoStoreTime.objects.create(time=ts, storage_resource_statistic=self)
-                    for i in range(0, len(stat_properties.bins)):
-                        SimpleHistoStoreBin.objects.create(bin_idx=i, value=bin_vals[i], histo_store_time=time)
-                    # Only keep latest time
-                    SimpleHistoStoreTime.objects.filter(~Q(id=time.id), storage_resource_statistic=self).delete()
-            return []
-        for i in stat_data:
-            i["value"] = float(i["value"])
-        return self.metrics.serialize(stat_name, stat_properties, stat_data)
-
 
 class StorageResourceAttribute(models.Model):
     """An attribute of a BaseStorageResource instance.
@@ -333,16 +265,6 @@ class StorageResourceAttributeReference(StorageResourceAttribute):
             return value.to_resource()
         else:
             return None
-
-
-class StorageResourceClassStatistic(models.Model):
-    resource_class = models.ForeignKey(StorageResourceClass, on_delete=CASCADE)
-    name = models.CharField(max_length=64)
-
-    class Meta:
-        unique_together = ("resource_class", "name")
-        app_label = "chroma_core"
-        ordering = ["id"]
 
 
 class StorageResourceOffline(AlertStateBase):

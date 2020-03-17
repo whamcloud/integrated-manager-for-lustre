@@ -116,8 +116,6 @@ pub async fn run_vm_command(node: &str, cmd: &str) -> Result<Command, io::Error>
 }
 
 pub async fn setup_bare(hosts: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
-    destroy().await?.checked_status().await?;
-
     up().await?.args(hosts).checked_status().await?;
 
     provision("yum-update")

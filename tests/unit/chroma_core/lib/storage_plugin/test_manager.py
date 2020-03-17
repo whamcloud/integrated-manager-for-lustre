@@ -77,13 +77,12 @@ class TestLoad(IMLUnitTestCase):
         all_resource_classes = [a[1].__name__ for a in all_resources]
         self.assertSetEqual(set(all_resource_classes), set(["TestResource", "TestScannableResource"]))
 
-        # Check we populated the database elements for plugin, resources, and statistics
-        from chroma_core.models import StoragePluginRecord, StorageResourceClass, StorageResourceClassStatistic
+        # Check we populated the database elements for plugin and resources
+        from chroma_core.models import StoragePluginRecord, StorageResourceClass
 
         plugin = StoragePluginRecord.objects.get(module_name="loadable_plugin")
         resource = StorageResourceClass.objects.get(storage_plugin=plugin, class_name="TestResource")
         self.assertEqual(self.manager.get_resource_class_by_id(resource.pk).__name__, "TestResource")
-        StorageResourceClassStatistic.objects.get(resource_class=resource, name="thing_count")
         resource = StorageResourceClass.objects.get(storage_plugin=plugin, class_name="TestScannableResource")
         self.assertEqual(self.manager.get_resource_class_by_id(resource.pk).__name__, "TestScannableResource")
 

@@ -38,7 +38,6 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, ChromaIntegration
         self.remote_operations.mount_filesystem(client, filesystem)
         try:
             self.remote_operations.exercise_filesystem(client, filesystem)
-            self.check_stats(filesystem_id)
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
 
