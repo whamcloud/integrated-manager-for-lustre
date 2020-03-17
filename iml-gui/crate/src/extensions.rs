@@ -1,6 +1,7 @@
 use crate::auth::csrf_token;
 use iml_wire_types::{GroupType, Session};
 use seed::{fetch, prelude::*, *};
+use serde_urlencoded;
 
 /// Extension methods for the Session API object.
 pub(crate) trait SessionExt {
@@ -45,17 +46,28 @@ impl SessionExt for Session {
 
 /// Extension methods for`fetch::Request`
 pub(crate) trait RequestExt {
-    fn api_call(path: impl ToString) -> Self;
+    fn api_call(path: impl ToString, args: Option<impl serde::Serialize>) -> Self;
     fn api_item(path: impl ToString, item: impl ToString) -> Self;
     fn with_auth(self: Self) -> Self;
 }
 
 impl RequestExt for fetch::Request {
-    fn api_call(path: impl ToString) -> Self {
-        Self::new(format!("/api/{}/", path.to_string()))
+    fn api_call(path: impl ToString, args: Option<impl serde::Serialize>) -> Self {
+        if let Some(qs_args) = args {
+            let qs = format!(
+                "?{}",
+                serde_urlencoded::to_string(qs_args).expect("couldn't serialize api args.")
+            );
+            Self::new(format!("/api/{}/{}", path.to_string(), qs))
+        } else {
+            Self::new(format!("/api/{}/", path.to_string()))
+        }
     }
     fn api_item(path: impl ToString, item: impl ToString) -> Self {
-        Self::api_call(format!("{}/{}", path.to_string(), item.to_string()))
+        Self::api_call(
+            format!("{}/{}", path.to_string(), item.to_string()),
+            None::<std::collections::HashMap<&str, &str>>,
+        )
     }
     fn with_auth(self) -> Self {
         match csrf_token() {

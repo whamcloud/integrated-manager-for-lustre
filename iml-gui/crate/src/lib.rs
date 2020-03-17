@@ -318,7 +318,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             log("EventSource connected.");
         }
         Msg::FetchConf => {
-            let fut = fetch::Request::api_call("conf").fetch_json_data(Msg::FetchedConf);
+            let fut = fetch::Request::api_call("conf", None::<std::collections::HashMap<&str, &str>>)
+                .fetch_json_data(Msg::FetchedConf);
 
             orders.perform_cmd(fut);
         }

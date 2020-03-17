@@ -1,7 +1,8 @@
 use crate::{
-    components::{action_dropdown, font_awesome, loading},
+    components::{action_dropdown, font_awesome, loading, paging},
+    extensions::*,
     generated::css_classes::C,
-    sleep_with_handle, GMsg, MergeAttrs as _, RequestExt as _, ServerDate,
+    sleep_with_handle, GMsg, ServerDate,
 };
 use futures::channel::oneshot;
 use iml_wire_types::{
@@ -13,6 +14,7 @@ use std::{collections::HashMap, mem, time::Duration};
 
 enum State {
     Loading,
+    Fetching,
     Loaded(ApiList<Alert>, HashMap<u32, Row>),
 }
 
@@ -23,6 +25,7 @@ struct Row {
 pub struct Model {
     state: State,
     cancel: Option<oneshot::Sender<()>>,
+    pager: paging::Model,
 }
 
 impl Default for Model {
@@ -30,6 +33,7 @@ impl Default for Model {
         Self {
             state: State::Loading,
             cancel: None,
+            pager: paging::Model::default(),
         }
     }
 }
@@ -38,16 +42,21 @@ impl Default for Model {
 pub enum Msg {
     ActionDropdown(Box<action_dropdown::IdMsg>),
     ActionsFetched(Box<fetch::ResponseDataResult<ApiList<Alert>>>),
-    FetchActions,
+    FetchOffset,
     Loop,
+    Page(paging::Msg),
     Noop,
 }
 
 pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
-        Msg::FetchActions => {
+        Msg::FetchOffset => {
             orders.skip().perform_cmd(
-                fetch::Request::api_call(Alert::endpoint_name()).fetch_json_data(|x| Msg::ActionsFetched(Box::new(x))),
+                fetch::Request::api_call(
+                    Alert::endpoint_name(),
+                    Some(&[("limit", model.pager.limit()), ("offset", model.pager.offset())]),
+                )
+                .fetch_json_data(|x| Msg::ActionsFetched(Box::new(x))),
             );
         }
         Msg::ActionsFetched(r) => {
@@ -57,12 +66,27 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                 (Ok(mut resp), State::Loaded(_, mut rows)) => {
                     update_rows(&mut resp, &mut rows);
 
+                    orders
+                        .proxy(Msg::Page)
+                        .send_msg(paging::Msg::SetTotal(resp.meta.total_count as usize));
+
+                    State::Loaded(resp, rows)
+                }
+                (Ok(mut resp), State::Fetching) => {
+                    let mut rows = HashMap::new();
+
+                    update_rows(&mut resp, &mut rows);
+
                     State::Loaded(resp, rows)
                 }
                 (Ok(mut resp), State::Loading) => {
                     let mut rows = HashMap::new();
 
                     update_rows(&mut resp, &mut rows);
+
+                    orders
+                        .proxy(Msg::Page)
+                        .send_msg(paging::Msg::SetTotal(resp.meta.total_count as usize));
 
                     State::Loaded(resp, rows)
                 }
@@ -90,10 +114,26 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                 }
             }
         }
+        Msg::Page(msg) => match model.state {
+            State::Fetching => {
+                orders.skip();
+            }
+            _ => {
+                paging::update(msg.clone(), &mut model.pager, &mut orders.proxy(Msg::Page));
+
+                match msg {
+                    paging::Msg::Next | paging::Msg::Prev => {
+                        model.state = State::Fetching;
+                        orders.send_msg(Msg::FetchOffset);
+                    }
+                    _ => {}
+                }
+            }
+        },
         Msg::Loop => {
             orders.skip();
 
-            let (cancel, fut) = sleep_with_handle(Duration::from_secs(10), Msg::FetchActions, Msg::Noop);
+            let (cancel, fut) = sleep_with_handle(Duration::from_secs(10), Msg::FetchOffset, Msg::Noop);
 
             model.cancel = Some(cancel);
 
@@ -104,7 +144,10 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
 }
 
 pub(crate) fn init(orders: &mut impl Orders<Msg, GMsg>) {
-    orders.send_msg(Msg::FetchActions);
+    orders
+        .proxy(Msg::Page)
+        .send_msg(paging::Msg::SetLimit(paging::ROW_OPTS[1]));
+    orders.send_msg(Msg::FetchOffset);
 }
 
 fn update_rows(alerts: &mut ApiList<Alert>, rows: &mut HashMap<u32, Row>) {
@@ -127,6 +170,25 @@ fn update_rows(alerts: &mut ApiList<Alert>, rows: &mut HashMap<u32, Row>) {
 pub(crate) fn view(model: &Model, session: Option<&Session>, all_locks: &Locks, sd: &ServerDate) -> impl View<Msg> {
     div![match &model.state {
         State::Loading => loading::view(),
+        State::Fetching => div![
+            class![C.bg_menu_active],
+            div![
+                class![C.px_6, C.py_4, C.bg_blue_1000],
+                div![class![C.font_medium, C.text_lg, C.text_gray_500], "Activities"],
+                div![
+                    class![C.grid, C.grid_cols_2, C.items_center, C.text_white],
+                    div![
+                        class![C.col_span_1],
+                        paging::page_count_view(&model.pager).map_msg(Msg::Page)
+                    ],
+                    div![
+                        class![C.grid, C.grid_cols_2, C.justify_end],
+                        paging::next_prev_view(&model.pager).map_msg(Msg::Page)
+                    ],
+                ],
+            ],
+            div![loading::view()]
+        ],
         State::Loaded(alerts, rows) => div![
             class![C.bg_menu_active],
             div![
@@ -136,16 +198,11 @@ pub(crate) fn view(model: &Model, session: Option<&Session>, all_locks: &Locks, 
                     class![C.grid, C.grid_cols_2, C.items_center, C.text_white],
                     div![
                         class![C.col_span_1],
-                        format!(
-                            "Showing {} - {} of {} total",
-                            alerts.meta.offset + 1,
-                            alerts.meta.offset + alerts.meta.limit,
-                            alerts.meta.total_count
-                        )
+                        paging::page_count_view(&model.pager).map_msg(Msg::Page)
                     ],
                     div![
-                        class![C.grid, C.justify_end],
-                        font_awesome(class![C.inline, C.w_4, C.h_4, C.text_green_400], "filter")
+                        class![C.grid, C.grid_cols_2, C.justify_end],
+                        paging::next_prev_view(&model.pager).map_msg(Msg::Page)
                     ]
                 ],
             ],
