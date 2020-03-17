@@ -915,6 +915,12 @@ impl Name for Device {
     }
 }
 
+impl Name for DeviceRecord {
+    fn table_name() -> TableName<'static> {
+        DEVICE_TABLE_NAME
+    }
+}
+
 #[cfg(feature = "postgres-interop")]
 impl From<Row> for Device {
     fn from(row: Row) -> Self {
