@@ -26,18 +26,14 @@ async fn main() -> Result<(), ImlStatsError> {
     while let Some((host, xs)) = s.try_next().await? {
         tracing::debug!("Incoming stats: {}: {:?}", host, xs);
         tracing::debug!("host: {:?}", host.0);
+
         let client = Client::new(
             Url::parse(&influx_url).expect("Influx URL is invalid."),
             get_influxdb_metrics_db(),
         );
-        let ts = std::time::SystemTime::now()
-            .duration_since(std::time::SystemTime::UNIX_EPOCH)?
-            .as_nanos() as usize;
-        tracing::debug!("ts: {}", ts);
 
-        //Write the entry into the influxdb database
-        for record in xs {
-            let maybe_entries = match record {
+        let entries:Vec<_> = xs.into_iter().filter_map(|record| {
+            match record {
                 Record::Target(target_stats) => match target_stats {
                     TargetStats::Stats(x) => {
                         tracing::debug!("Stats: {:?}", x);
@@ -446,17 +442,21 @@ async fn main() -> Result<(), ImlStatsError> {
                         .add_tag("host", Value::String(host.0.to_string()))
                         .add_field("swap_free", Value::Integer(x.value as i64))]),
                 },
-            };
+            }
+        })
+            .flatten().collect();
 
-            if let Some(entries) = maybe_entries {
-                let points = Points::create_new(entries);
-                let r = client
-                    .write_points(points, Some(Precision::Nanoseconds), None)
-                    .await;
+        if !entries.is_empty() {
+            let points = Points::create_new(entries);
 
-                if let Err(e) = r {
-                    tracing::error!("Error writing series to influxdb: {}", e);
-                }
+            tracing::debug!("Points: {:?}", points);
+
+            let r = client
+                .write_points(points, Some(Precision::Nanoseconds), None)
+                .await;
+
+            if let Err(e) = r {
+                tracing::error!("Error writing series to influxdb: {}", e);
             }
         }
     }
