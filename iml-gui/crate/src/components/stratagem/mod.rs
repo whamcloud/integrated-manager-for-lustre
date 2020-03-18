@@ -385,7 +385,7 @@ pub(crate) fn view(model: &Model, all_locks: &Locks) -> Node<Msg> {
                     .inode_table
                     .last_known_scan
                     .as_ref()
-                    .unwrap_or(&"N/A".to_string())
+                    .unwrap_or(&"---".to_string())
             );
 
             div![
