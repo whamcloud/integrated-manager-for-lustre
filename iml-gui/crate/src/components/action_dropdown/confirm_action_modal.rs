@@ -5,9 +5,9 @@ use crate::{
     },
     extensions::{MergeAttrs, NodeExt},
     generated::css_classes::C,
-    key_codes, CommandHolder, GMsg, RequestExt,
+    key_codes, GMsg, RequestExt,
 };
-use iml_wire_types::{warp_drive::ErasedRecord, AvailableAction, Command, EndpointName};
+use iml_wire_types::{warp_drive::ErasedRecord, AvailableAction, CmdWrapper, Command, EndpointName};
 use seed::{prelude::*, *};
 use std::sync::Arc;
 
@@ -33,7 +33,7 @@ pub enum Msg {
     SendJob(String, Arc<AvailableAction>),
     JobSent(Box<fetch::ResponseDataResult<Command>>),
     SendStateChange(Arc<AvailableAction>, Arc<dyn ErasedRecord>),
-    StateChangeSent(Box<fetch::ResponseDataResult<CommandHolder>>),
+    StateChangeSent(Box<fetch::ResponseDataResult<CmdWrapper>>),
     Modal(modal::Msg),
     Noop,
 }

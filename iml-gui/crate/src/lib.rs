@@ -120,11 +120,6 @@ impl Loading {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-pub struct CommandHolder {
-    pub command: Command,
-}
-
 // ------ ------
 //     Model
 // ------ ------
@@ -593,11 +588,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             page::update(msg, &mut model.page, &model.records, &mut orders.proxy(Msg::Page));
         }
         Msg::CommandModal(msg) => {
-            command_modal::update(
-                msg,
-                &mut model.command_modal,
-                &mut orders.proxy(|m| Msg::CommandModal(m)),
-            );
+            command_modal::update(msg, &mut model.command_modal, &mut orders.proxy(Msg::CommandModal));
         }
     }
 }

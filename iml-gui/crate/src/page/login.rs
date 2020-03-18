@@ -48,7 +48,7 @@ pub enum Msg {
 impl fmt::Debug for Msg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Msg::PasswordChange(_) => f.write_str("*****"),
+            Self::PasswordChange(_) => f.write_str("*****"),
             _ => write!(f, "{:?}", self),
         }
     }

@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{get, get_all, get_hosts, post, put, wait_for_cmds, CmdWrapper},
+    api_utils::{get, get_all, get_hosts, post, put, wait_for_cmds},
     display_utils::{
         display_cancelled, display_error, format_error, format_success, generate_table, wrap_fut,
     },
@@ -13,8 +13,8 @@ use console::{style, Term};
 use dialoguer::Confirmation;
 use futures::future;
 use iml_wire_types::{
-    ApiList, AvailableAction, Command, EndpointName, Host, HostProfile, HostProfileWrapper,
-    ProfileTest, ServerProfile, TestHostJob, ToCompositeId,
+    ApiList, AvailableAction, CmdWrapper, Command, EndpointName, Host, HostProfile,
+    HostProfileWrapper, ProfileTest, ServerProfile, TestHostJob, ToCompositeId,
 };
 use std::{
     collections::{BTreeSet, HashMap},

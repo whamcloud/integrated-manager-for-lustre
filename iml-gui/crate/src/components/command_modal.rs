@@ -87,12 +87,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::Fetched(cmd_status_result) => {
             log!("command_modal::Msg::Fetched", cmd_status_result);
             match *cmd_status_result {
-                Ok(mut cmd_status) => {
+                Ok(cmd_status) => {
                     model.commands_all = cmd_status.objects.clone();
-                    model.commands = cmd_status.objects
-                        .into_iter()
-                        .filter(|x| !is_finished(x))
-                        .collect();
+                    model.commands = cmd_status.objects.into_iter().filter(|x| !is_finished(x)).collect();
 
                     let ids: String = model
                         .commands
@@ -153,12 +150,12 @@ fn commands_table(commands: &[Command]) -> Node<Msg> {
                 table::th_view(plain!["Status"]),
             ]),
             tbody![commands.iter().map(|x| {
-                    tr![
-                        table::td_view(plain![x.id.to_string()]),
-                        table::td_view(plain![x.message.clone()]),
-                        table::td_view(status(x)),
-                    ]
-                })],
+                tr![
+                    table::td_view(plain![x.id.to_string()]),
+                    table::td_view(plain![x.message.clone()]),
+                    table::td_view(status(x)),
+                ]
+            })],
         ]),
     ]
 }
@@ -167,7 +164,7 @@ fn status(cmd: &Command) -> Node<Msg> {
     // we suppose that the boolean flags are mutually exclusive
     if cmd.complete {
         span![
-            class![C.sm__mx_20, ],
+            class![C.sm__mx_20,],
             font_awesome(class![C.w_4, C.h_4, C.inline, C.ml_2], "check"),
         ]
     } else if cmd.cancelled {
