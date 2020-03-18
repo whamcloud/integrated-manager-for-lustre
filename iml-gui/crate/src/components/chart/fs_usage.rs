@@ -83,7 +83,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
     match msg {
         Msg::FetchData => {
             let part = if let Some(fs_name) = &model.fs_name {
-                format!(r#"AND "fs" = '"{}"'"#, fs_name)
+                format!(r#"AND "fs" = '{}'"#, fs_name)
             } else {
                 "".into()
             };
