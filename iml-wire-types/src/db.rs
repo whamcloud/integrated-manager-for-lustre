@@ -958,7 +958,7 @@ impl From<Row> for DeviceRecord {
         DeviceRecord {
             device: Device {
                 id: row.get("id"),
-                size: row.get("size"),
+                size: Size(row.get::<_, i64>("size") as u64),
                 usable_for_lustre: row.get("usable_for_lustre"),
                 device_type: row.get("device_type"),
                 parents: row.get("parents"),
