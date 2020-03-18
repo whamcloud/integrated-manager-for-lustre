@@ -155,17 +155,7 @@ server {
         expires 1y;
         add_header Cache-Control $cache_control;
 
-        gzip on;
-        gzip_types
-            application/javascript
-            application/json
-            application/manifest+json
-            application/wasm
-            application/x-javascript
-            application/x-web-app-manifest+json
-            image/*
-            text/css
-            text/javascript;
+        gzip_proxied any;
     }
 
     location /influx {
@@ -177,6 +167,8 @@ server {
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_pass {{INFLUXDB_PROXY_PASS}}/query;
+
+        gzip_proxied any;
     }
 
     location /api/conf {
