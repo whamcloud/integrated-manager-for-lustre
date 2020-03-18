@@ -22,11 +22,11 @@ FROM (
  LAST(bytes_free) AS b_free,
  LAST(bytes_avail) AS b_avail
  FROM target
- WHERE "kind" = '"OST"'
+ WHERE "kind" = 'OST'
  GROUP BY target),
  (SELECT LAST(connected_clients) AS clients
  FROM target
- WHERE kind='"MDT"'
+ WHERE "kind"='MDT'
  GROUP BY target)
 GROUP BY fs"#;
 
@@ -96,9 +96,7 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                         .filter_map(|result| result.series)
                         .flatten()
                         .filter_map(|s| {
-                            let mfs = s
-                                .tags
-                                .and_then(|h| h.get("fs").map(|fs| fs.trim_matches('"').to_string()));
+                            let mfs = s.tags.and_then(|h| h.get("fs").map(|fs| fs.to_string()));
 
                             s.values.into_iter().next().and_then(|v| {
                                 mfs.map(|fs| {

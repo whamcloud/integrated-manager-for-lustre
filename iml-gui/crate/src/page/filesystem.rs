@@ -58,11 +58,11 @@ impl Model {
                           , LAST(files_total) AS f_total
                           , LAST(files_free) AS f_free
                       FROM target
-                      WHERE "kind" = '"OST"' AND "fs" = '"{fs_name}"'
+                      WHERE "kind" = 'OST' AND "fs" = '{fs_name}'
                       GROUP BY target)
                    , (SELECT LAST(connected_clients) AS clients
                       FROM target
-                      WHERE fs='"{fs_name}"' AND kind='"MDT"'
+                      WHERE "fs"='{fs_name}' AND "kind"='MDT'
                       GROUP BY target)"#,
             fs_name = &fs.name
         );

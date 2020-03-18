@@ -8,7 +8,7 @@ use std::{error::Error, fmt};
 #[derive(Debug)]
 pub enum ImlStatsError {
     ImlServiceQueueError(ImlServiceQueueError),
-    InfluxDbError(influxdb::Error),
+    InfluxDbError(influx_db_client::Error),
     SystemTimeError(std::time::SystemTimeError),
 }
 
@@ -38,8 +38,8 @@ impl From<ImlServiceQueueError> for ImlStatsError {
     }
 }
 
-impl From<influxdb::Error> for ImlStatsError {
-    fn from(err: influxdb::Error) -> Self {
+impl From<influx_db_client::Error> for ImlStatsError {
+    fn from(err: influx_db_client::Error) -> Self {
         ImlStatsError::InfluxDbError(err)
     }
 }
