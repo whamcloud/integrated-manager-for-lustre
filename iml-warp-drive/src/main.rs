@@ -73,7 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(
         notify_stream.map(|r: Result<(), error::ImlWarpDriveError>| match r {
             Ok(_) => tracing::info!("LISTEN / NOTIFY loop exited"),
-            Err(e) => tracing::error!("Unhandled error {}", e),
+            Err(e) => tracing::error!("Unhandled error in LISTEN / NOTIFY loop {}", e),
         }),
     );
 
@@ -136,7 +136,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map_err(exit.trigger_fn())
         .map(|r: Result<(), error::ImlWarpDriveError>| match r {
             Ok(_) => tracing::info!("Rabbit client stream exited"),
-            Err(e) => tracing::error!("Unhandled error {}", e),
+            Err(e) => tracing::error!("Unhandled error in Rabbit client {}", e),
         }),
     );
 
