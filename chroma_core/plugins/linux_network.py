@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 
-from chroma_core.lib.storage_plugin.api import attributes, statistics
+from chroma_core.lib.storage_plugin.api import attributes
 from chroma_core.lib.storage_plugin.api.identifiers import ScopedId
 from chroma_core.lib.storage_plugin.api import resources
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
@@ -22,11 +22,8 @@ version = 1
 class NetworkInterface(resources.Resource):
     class Meta:
         identifier = ScopedId("name")
-        charts = [{"title": "Bandwidth", "series": ["rx_bytes", "tx_bytes"]}]
 
     name = attributes.String()
-    rx_bytes = statistics.Counter(units="Bytes/s")
-    tx_bytes = statistics.Counter(units="Bytes/s")
 
 
 class HostNetworkInterface(resources.NetworkInterface):
@@ -41,9 +38,6 @@ class HostNetworkInterface(resources.NetworkInterface):
     inet4_prefix = attributes.Integer(default=0)
     type = attributes.String()
     up = attributes.Boolean()
-
-    rx_bytes = statistics.Counter(units="Bytes/s")
-    tx_bytes = statistics.Counter(units="Bytes/s")
 
 
 class Nid(resources.LNETInterface):

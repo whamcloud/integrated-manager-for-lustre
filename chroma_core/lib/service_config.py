@@ -682,8 +682,6 @@ class ServiceConfig(CommandLine):
             "HTTP_AGENT2_PROXY_PASS",
             "HTTP_API_PROXY_PASS",
             "IML_API_PROXY_PASS",
-            "REALTIME_PROXY_PASS",
-            "VIEW_SERVER_PROXY_PASS",
             "WARP_DRIVE_PROXY_PASS",
             "MAILBOX_PATH",
             "MAILBOX_PROXY_PASS",

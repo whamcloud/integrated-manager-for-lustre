@@ -15,15 +15,7 @@ from tests.services.systemd_test_case import SystemdTestCase
 
 class NginxTestCase(SystemdTestCase):
     # Require job_scheduler because it is queried for available_transitions when rendering /ui/
-    SERVICES = ["nginx", "iml-gunicorn", "iml-job-scheduler", "iml-view-server"]
-
-
-class TestUi(NginxTestCase):
-    def test_simple_access(self):
-        """Test passthrough for /ui/ to gunicorn"""
-
-        response = requests.get("https://localhost:{}/ui/".format(settings.HTTPS_FRONTEND_PORT), verify=False)
-        self.assertEqual(response.status_code, 200)
+    SERVICES = ["nginx", "iml-gunicorn", "iml-job-scheduler"]
 
 
 class TestInsecureUrls(NginxTestCase):
@@ -50,12 +42,7 @@ class TestInsecureUrls(NginxTestCase):
         self.assertEqual(response.headers["location"], without_slash + "/")
 
     def test_simple_access(self):
-        """Test passthrough for /api/, /old-gui/"""
-
-        response = requests.get(
-            "https://localhost:{}/old-gui/js/router.js".format(settings.HTTPS_FRONTEND_PORT), verify=False
-        )
-        self.assertEqual(response.status_code, 200)
+        """Test passthrough for /api/"""
 
         response = requests.get("https://localhost:%s/api/session/" % settings.HTTPS_FRONTEND_PORT, verify=False)
         self.assertEqual(response.status_code, 200)
@@ -83,13 +70,6 @@ class TestInsecureUrls(NginxTestCase):
         without_slash = "https://localhost:%s/certificate/" % settings.HTTPS_FRONTEND_PORT
         response = requests.get(without_slash, verify=False, allow_redirects=False)
         self.assertEqual(response.status_code, 301)
-
-    def test_socketio(self):
-        """Test socket.io path sends upgrade header"""
-        with HttpListener(settings.REALTIME_PORT) as listener:
-            uri = "https://localhost:%s/socket.io/" % settings.HTTPS_FRONTEND_PORT
-            requests.get(uri, verify=False, allow_redirects=False)
-            self.assertEqual(listener.last_request.headers.getheader("Connection"), "upgrade")
 
 
 class TestSecureUrls(NginxTestCase):

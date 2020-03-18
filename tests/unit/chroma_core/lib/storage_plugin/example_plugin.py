@@ -1,4 +1,4 @@
-from chroma_core.lib.storage_plugin.api import attributes, identifiers, plugin, relations, resources, statistics
+from chroma_core.lib.storage_plugin.api import attributes, identifiers, plugin, relations, resources
 
 version = 1
 
@@ -24,7 +24,6 @@ class HardDrive(resources.PhysicalDisk):
 
     serial_number = attributes.String()
     capacity = attributes.Bytes()
-    temperature = statistics.Gauge(units="C")
 
 
 class RaidPool(resources.StoragePool):
@@ -62,7 +61,6 @@ class ExamplePlugin(plugin.Plugin):
 
     def update_scan(self, scannable_resource):
         # Update any changed or added/removed resources
-        # Update any statistics
         pass
 
     def teardown(self):

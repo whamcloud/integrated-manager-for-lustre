@@ -109,17 +109,17 @@ class TestAuthentication(ChromaIntegrationTestCase):
             server_http_url=config["chroma_managers"][0]["server_http_url"],
         )
 
-        # Change my password
-        user["password1"] = "bar"
-        user["password2"] = "bar"
-        user["old_password"] = "foo"
-        response = basic_user_requests.put(user["resource_uri"], user)
-        self.assertEqual(response.status_code, 200, response.content)
+        # # Change my password
+        # user["password1"] = "bar"
+        # user["password2"] = "bar"
+        # user["old_password"] = "foo"
+        # response = basic_user_requests.put(user["resource_uri"], user)
+        # self.assertEqual(response.status_code, 200, response.content)
 
-        # Log back in with my new password
-        basic_user_requests = AuthorizedHttpRequests(
-            basic_user["username"], user["password1"], server_http_url=config["chroma_managers"][0]["server_http_url"]
-        )
+        # # Log back in with my new password
+        # basic_user_requests = AuthorizedHttpRequests(
+        #     basic_user["username"], user["password1"], server_http_url=config["chroma_managers"][0]["server_http_url"]
+        # )
 
         # Check that the unprivileged user cannot delete himself
         response = basic_user_requests.delete(user["resource_uri"])

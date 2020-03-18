@@ -154,7 +154,7 @@ class UserResource(ChromaModelResource):
 
         # Prevent non-superusers from modifying their groups
         if not bundle.request.user.is_superuser:
-            if "groups" in bundle.data:
+            if bundle.data.get("groups") is not None:
                 group_ids = []
 
                 for group in bundle.data["groups"]:

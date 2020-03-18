@@ -1021,23 +1021,6 @@ table! {
 }
 
 table! {
-    chroma_core_simplehistostorebin (id) {
-        id -> Int4,
-        bin_idx -> Int4,
-        value -> Int4,
-        histo_store_time_id -> Int4,
-    }
-}
-
-table! {
-    chroma_core_simplehistostoretime (id) {
-        id -> Int4,
-        time -> Int4,
-        storage_resource_statistic_id -> Int4,
-    }
-}
-
-table! {
     chroma_core_startcopytooljob (job_ptr_id) {
         job_ptr_id -> Int4,
         old_state -> Varchar,
@@ -1219,14 +1202,6 @@ table! {
 }
 
 table! {
-    chroma_core_storageresourceclassstatistic (id) {
-        id -> Int4,
-        name -> Varchar,
-        resource_class_id -> Int4,
-    }
-}
-
-table! {
     chroma_core_storageresourcerecord (id) {
         id -> Int4,
         storage_id_str -> Varchar,
@@ -1249,15 +1224,6 @@ table! {
         id -> Int4,
         from_storageresourcerecord_id -> Int4,
         to_storageresourcerecord_id -> Int4,
-    }
-}
-
-table! {
-    chroma_core_storageresourcestatistic (id) {
-        id -> Int4,
-        sample_period -> Int4,
-        name -> Varchar,
-        storage_resource_id -> Int4,
     }
 }
 
@@ -1667,8 +1633,6 @@ joinable!(chroma_core_setupworkerjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_setupworkerjob -> chroma_core_managedhost (target_object_id));
 joinable!(chroma_core_shutdownhostjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_shutdownhostjob -> chroma_core_managedhost (host_id));
-joinable!(chroma_core_simplehistostorebin -> chroma_core_simplehistostoretime (histo_store_time_id));
-joinable!(chroma_core_simplehistostoretime -> chroma_core_storageresourcestatistic (storage_resource_statistic_id));
 joinable!(chroma_core_startcopytooljob -> chroma_core_copytool (copytool_id));
 joinable!(chroma_core_startcopytooljob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_startcorosync2job -> chroma_core_corosync2configuration (corosync_configuration_id));
@@ -1704,10 +1668,7 @@ joinable!(chroma_core_storagealertpropagated -> chroma_core_alertstate (alert_st
 joinable!(chroma_core_storagealertpropagated -> chroma_core_storageresourcerecord (storage_resource_id));
 joinable!(chroma_core_storageresourceattributeserialized -> chroma_core_storageresourcerecord (resource_id));
 joinable!(chroma_core_storageresourceclass -> chroma_core_storagepluginrecord (storage_plugin_id));
-joinable!(chroma_core_storageresourceclassstatistic -> chroma_core_storageresourceclass (resource_class_id));
 joinable!(chroma_core_storageresourcerecord -> chroma_core_storageresourceclass (resource_class_id));
-joinable!(chroma_core_storageresourcestatistic -> chroma_core_storageresourcerecord (storage_resource_id));
-joinable!(chroma_core_stratagemconfiguration -> chroma_core_managedfilesystem (filesystem_id));
 joinable!(chroma_core_targetrecoveryinfo -> chroma_core_managedtarget (target_id));
 joinable!(chroma_core_testhostconnectionjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_triggerpluginupdatesjob -> chroma_core_job (job_ptr_id));
@@ -1851,8 +1812,6 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_setupmonitoredhostjob,
     chroma_core_setupworkerjob,
     chroma_core_shutdownhostjob,
-    chroma_core_simplehistostorebin,
-    chroma_core_simplehistostoretime,
     chroma_core_startcopytooljob,
     chroma_core_startcorosync2job,
     chroma_core_startcorosyncjob,
@@ -1874,11 +1833,9 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_storageresourceattributereference,
     chroma_core_storageresourceattributeserialized,
     chroma_core_storageresourceclass,
-    chroma_core_storageresourceclassstatistic,
     chroma_core_storageresourcerecord,
     chroma_core_storageresourcerecord_parents,
     chroma_core_storageresourcerecord_reported_by,
-    chroma_core_storageresourcestatistic,
     chroma_core_stratagemconfiguration,
     chroma_core_targetrecoveryinfo,
     chroma_core_testhostconnectionjob,

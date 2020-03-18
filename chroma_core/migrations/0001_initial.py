@@ -188,7 +188,6 @@ class Migration(migrations.Migration):
                 ("not_deleted", models.NullBooleanField(default=True)),
             ],
             options={"ordering": ["id"]},
-            bases=(models.Model, chroma_core.models.utils.MeasuredEntity),
         ),
         migrations.CreateModel(
             name="CopytoolOperation",
@@ -421,7 +420,6 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={"ordering": ["id"]},
-            bases=(models.Model, chroma_core.models.utils.MeasuredEntity),
         ),
         migrations.CreateModel(
             name="ManagedHost",
@@ -481,7 +479,6 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={"ordering": ["id"]},
-            bases=(models.Model, chroma_core.models.utils.MeasuredEntity),
         ),
         migrations.CreateModel(
             name="ManagedTarget",
@@ -1929,7 +1926,7 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={"ordering": ["id"]},
-            bases=("chroma_core.managedtarget", models.Model, chroma_core.models.utils.MeasuredEntity),
+            bases=("chroma_core.managedtarget", models.Model),
         ),
         migrations.CreateModel(
             name="ManagedMgs",
@@ -1949,7 +1946,7 @@ class Migration(migrations.Migration):
                 ("conf_param_version_applied", models.IntegerField(default=0)),
             ],
             options={"ordering": ["id"]},
-            bases=("chroma_core.managedtarget", chroma_core.models.utils.MeasuredEntity),
+            bases=("chroma_core.managedtarget", models.Model),
         ),
         migrations.CreateModel(
             name="ManagedOst",
@@ -1972,7 +1969,7 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={"ordering": ["id"]},
-            bases=("chroma_core.managedtarget", models.Model, chroma_core.models.utils.MeasuredEntity),
+            bases=("chroma_core.managedtarget", models.Model),
         ),
         migrations.CreateModel(
             name="MdtConfParam",

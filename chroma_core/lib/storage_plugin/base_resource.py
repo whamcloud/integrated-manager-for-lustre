@@ -8,7 +8,6 @@ from collections import defaultdict
 from exceptions import KeyError, AttributeError, RuntimeError, ValueError
 import threading
 from chroma_core.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
-from chroma_core.lib.storage_plugin.base_statistic import BaseStatistic
 from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 
 
@@ -57,10 +56,6 @@ class StorageResourceMetaclass(type):
             meta.alert_classes = {}
         if not hasattr(meta, "storage_attributes"):
             meta.storage_attributes = {}
-        if not hasattr(meta, "storage_statistics"):
-            meta.storage_statistics = {}
-        if not hasattr(meta, "charts"):
-            meta.charts = []
         if not hasattr(meta, "label"):
             meta.label = name
 
@@ -69,18 +64,13 @@ class StorageResourceMetaclass(type):
         for base in bases:
             if name != "BaseStorageResource" and issubclass(base, BaseStorageResource):
                 meta.storage_attributes.update(base._meta.storage_attributes)
-                meta.storage_statistics.update(base._meta.storage_statistics)
                 meta.alert_conditions.extend(base._meta.alert_conditions)
                 meta.alert_classes.update(base._meta.alert_classes)
                 meta.relations.extend(base._meta.relations)
-                meta.charts.extend(base._meta.charts)
 
         for field_name, field_obj in dct.items():
             if isinstance(field_obj, BaseResourceAttribute):
                 meta.storage_attributes[field_name] = field_obj
-                del dct[field_name]
-            elif isinstance(field_obj, BaseStatistic):
-                meta.storage_statistics[field_name] = field_obj
                 del dct[field_name]
 
         if hasattr(meta, "identifier") and isinstance(meta.identifier, BaseAutoId):
@@ -125,10 +115,6 @@ class BaseStorageResource(object):
         self._delta_parents = []
         self._calc_changes_delta = kwargs.pop("calc_changes_delta", lambda: True)
 
-        # Accumulate in between calls to flush_stats()
-        self._delta_stats_lock = threading.Lock()
-        self._delta_stats = defaultdict(list)
-
         for k, v in kwargs.items():
             if not k in self._meta.storage_attributes:
                 raise KeyError("Unknown attribute %s (not one of %s)" % (k, self._meta.storage_attributes.keys()))
@@ -168,14 +154,6 @@ class BaseStorageResource(object):
         attr_name_pairs = cls._meta.storage_attributes.items()
         attr_name_pairs.sort(lambda a, b: cmp(a[1].creation_counter, b[1].creation_counter))
         return [pair for pair in attr_name_pairs if not pair[1].hidden]
-
-    @classmethod
-    def get_charts(cls):
-        charts = [
-            {"title": stat_props.label or name, "series": [name]}
-            for name, stat_props in cls._meta.storage_statistics.items()
-        ]
-        return cls._meta.charts or charts
 
     @classmethod
     def get_attribute_properties(cls, name):
@@ -224,20 +202,9 @@ class BaseStorageResource(object):
             self._storage_dict[key] = value
             with self._delta_lock:
                 self._delta_attrs[key] = value
-        elif key in self._meta.storage_statistics:
-            stat_obj = self._meta.storage_statistics[key]
-            stat_obj.validate(value)
 
-            with self._delta_stats_lock:
-                self._delta_stats[key].append({"timestamp": time.time(), "value": value})
         else:
             object.__setattr__(self, key, value)
-
-    def flush_stats(self):
-        with self._delta_stats_lock:
-            tmp = self._delta_stats
-            self._delta_stats = defaultdict(list)
-        return tmp
 
     def __getattr__(self, key):
         if key.startswith("_") or not key in self._meta.storage_attributes:

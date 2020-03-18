@@ -25,14 +25,13 @@ from tastypie.exceptions import ImmediateHttpResponse
 
 from chroma_core.models.command import Command
 from chroma_core.models.target import ManagedMgs
-from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
+from chroma_core.models import StorageResourceRecord
 from chroma_core.services import log_register
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_api.chroma_model_resource import ChromaModelResource
 import chroma_core.lib.conf_param
 from chroma_core.models import utils as conversion_util
 from iml_common.lib.date_time import IMLDateTime
-from chroma_core.lib.metrics import MetricStore, Counter
 
 from collections import defaultdict
 from django.db.models.query import QuerySet
@@ -303,184 +302,6 @@ class ConfParamResource(StatefulModelResource):
                 return super(ConfParamResource, self).obj_update(bundle, **kwargs)
 
         return bundle
-
-
-class MetricResource:
-    def prepend_urls(self):
-        from django.conf.urls import url
-
-        return [
-            url(
-                r"^(?P<resource_name>%s)/metric/$" % self._meta.resource_name,
-                self.wrap_view("metric_dispatch"),
-                name="metric_dispatch",
-            ),
-            url(
-                r"^(?P<resource_name>%s)/(?P<pk>\d+)/metric/$" % self._meta.resource_name,
-                self.wrap_view("metric_dispatch"),
-                name="metric_dispatch",
-            ),
-        ]
-
-    def metric_dispatch(self, request, **kwargs):
-        """
-        GET parameters:
-        :metrics: Comma separated list of strings (e.g. kbytesfree,kbytestotal)
-        :job: 'id', 'user', or 'name'.
-                only supply one metric of 'read_bytes', 'write_bytes', 'read_iops', 'write_iops', 'metadata_iops'
-        :begin: Time ISO8601 string, e.g. '2008-09-03T20:56:35.450686Z'
-        :end: Time ISO8601 string, e.g. '2008-09-03T20:56:35.450686Z'
-        :latest: boolean -- if true, you are asking for a single time point, the latest value
-        :max_points: maximum number of datapoints returned, may result in lower resolution samples
-        :num_points: return exact number of data points scaled for the date range
-        :reduce_fn: one of 'average', 'sum'
-        :group_by: an attribute name of the object you're fetching.  For example, to get
-                   the total OST stats for a filesystem, when requesting from
-                   the target resource, use reduce_fn=sum, group_by=filesystem.
-                   If the group_by attribute is absent from a record in the results,
-                   that record is discarded.
-        """
-        errors = defaultdict(list)
-
-        if request.method != "GET":
-            return self.create_response(request, "", response_class=HttpMethodNotAllowed)
-
-        latest, update = (request.GET.get(name, "").lower() in ("true", "1") for name in ("latest", "update"))
-        if update and latest:
-            errors["update"].append("update and latest are mutually exclusive")
-
-        metrics = filter(None, request.GET.get("metrics", "").split(","))
-        job = request.GET.get("job", "")
-        if job:
-            if len(metrics) != 1:
-                errors["job"].append("Job metrics must be a single string")
-            if latest:
-                errors["job"].append("Job metrics and latest are incompatible")
-
-        num_points = 0
-        if "num_points" in request.GET:
-            try:
-                num_points = int(request.GET["num_points"])
-            except ValueError:
-                errors["num_points"].append("num_points must be a valid integer")
-            if latest or update:
-                errors["num_points"].append("num_points requires a fixed begin and end")
-
-        begin = end = None
-        if not latest:
-            try:
-                begin = IMLDateTime.parse(request.GET["begin"])
-            except KeyError:
-                errors["begin"].append("This field is mandatory when latest=false")
-            except ValueError:
-                errors["begin"].append("Malformed time string")
-            try:
-                end = IMLDateTime.parse(request.GET["end"])
-            except KeyError:
-                if update or num_points:
-                    errors["end"].append("This field is mandatory when latest=false")
-                else:
-                    end = timezone.now()
-            except ValueError:
-                errors["end"].append("Malformed time string")
-        if update:
-            begin, end = end, timezone.now()
-
-        try:
-            max_points = int(request.GET.get("max_points", 1000))
-        except ValueError:
-            errors["max_points"].append("max_points must be a valid integer")
-        if errors:
-            return self.create_response(request, errors, response_class=HttpBadRequest)
-
-        if "pk" in kwargs:
-            return self.get_metric_detail(request, metrics, begin, end, job, max_points, num_points, **kwargs)
-        return self.get_metric_list(request, metrics, begin, end, job, max_points, num_points, **kwargs)
-
-    def _format(self, stats):
-        return [{"ts": dt.isoformat(), "data": stats[dt]} for dt in sorted(stats)]
-
-    def _fetch(self, metrics_obj, metrics, begin, end, job, max_points, num_points):
-        if job:
-            return metrics_obj.fetch_jobs(metrics[0], begin, end, job, max_points, num_points)
-        if begin and end:
-            return metrics_obj.fetch(metrics, begin, end, max_points, num_points)
-        return dict([metrics_obj.fetch_last(metrics)])
-
-    def get_metric_detail(self, request, metrics, begin, end, job, max_points, num_points, **kwargs):
-        bundle = self.build_bundle(request=request)
-        obj = self.cached_obj_get(bundle, **self.remove_api_resource_names(kwargs))
-        metrics = metrics or MetricStore(obj).names
-        if isinstance(obj, StorageResourceRecord):
-            # FIXME: there is a level of indirection here to go from a StorageResourceRecord to individual time series.
-            # Although no longer necessary, time series are still stored in separate resources.
-            stats = defaultdict(dict)
-            for stat in StorageResourceStatistic.objects.filter(storage_resource=obj, name__in=metrics):
-                for dt, data in self._fetch(stat.metrics, metrics, begin, end, job, max_points, num_points).items():
-                    stats[dt].update(data)
-        else:
-            stats = self._fetch(MetricStore(obj), metrics, begin, end, job, max_points, num_points)
-        if not job:
-            for data in stats.values():
-                data.update(dict.fromkeys(set(metrics).difference(data), 0.0))
-        return self.create_response(request, self._format(stats))
-
-    def _reduce(self, metrics, results, reduce_fn):
-        # Want an overall reduction into one series
-        if reduce_fn not in ("sum", "average"):
-            raise NotImplementedError
-        datetimes = dict((obj_id, sorted(data)) for obj_id, data in results.items())
-        result = {}
-        for dt in set(itertools.chain(*datetimes.values())):
-            result[dt] = counter = Counter.fromkeys(metrics, 0.0)
-            for obj_id, stats in results.items():
-                data = stats.get(dt, {})
-                dts = datetimes[obj_id]
-                if dts and not data:  # Didn't have one for this exact timestamp, do we have one before?
-                    data = stats[dts[max(bisect.bisect(dts, dt) - 1, 0)]]
-                counter.update(data)
-            if reduce_fn == "average":
-                for name in counter:
-                    counter[name] /= len(results)
-        return result
-
-    def get_metric_list(self, request, metrics, begin, end, job, max_points, num_points, **kwargs):
-        errors = {}
-        reduce_fn, group_by = map(request.GET.get, ("reduce_fn", "group_by"))
-        if not reduce_fn and group_by:
-            errors["reduce_fn"] = "This field is mandatory if 'group_by' is specified"
-        if errors:
-            return self.create_response(request, errors, response_class=HttpBadRequest)
-
-        try:
-            base_bundle = self.build_bundle(request=request)
-            objs = self.obj_get_list(bundle=base_bundle, **self.remove_api_resource_names(kwargs))
-        except Http404 as exc:
-            raise custom_response(self, request, http.HttpNotFound, {"metrics": exc})
-        metrics = metrics or set(itertools.chain.from_iterable(MetricStore(obj).names for obj in objs))
-
-        result = dict(
-            (obj.id, self._fetch(MetricStore(obj), metrics, begin, end, job, max_points, num_points)) for obj in objs
-        )
-        if not reduce_fn:
-            for obj_id, stats in result.items():
-                result[obj_id] = self._format(stats)
-            return self.create_response(request, result)
-        if not group_by:
-            stats = self._reduce(metrics, result, reduce_fn)
-            return self.create_response(request, self._format(stats))
-        # Want to reduce into groups, one series per group
-        groups = defaultdict(dict)
-        for obj in objs:
-            if hasattr(obj, "content_type"):
-                obj = obj.downcast()
-            if hasattr(obj, group_by):
-                group_val = getattr(obj, group_by)
-                groups[getattr(group_val, "id", group_val)][obj.id] = result[obj.id]
-        for key in groups:
-            stats = self._reduce(metrics, groups[key], reduce_fn)
-            groups[key] = self._format(stats)
-        return self.create_response(request, groups)
 
 
 class SeverityResource(ChromaModelResource):

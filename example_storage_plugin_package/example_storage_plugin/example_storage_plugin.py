@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 
-from chroma_core.lib.storage_plugin.api import attributes, statistics
+from chroma_core.lib.storage_plugin.api import attributes
 from chroma_core.lib.storage_plugin.api.identifiers import GlobalId, ScopedId
 from chroma_core.lib.storage_plugin.api.resources import ScannableResource
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
@@ -28,7 +28,6 @@ class Resource2(Controller):
 class Resource3(PhysicalDisk):
     serial_number = attributes.String()
     capacity = attributes.Bytes()
-    temperature = statistics.Gauge(units="C")
 
     class Meta:
         identifier = ScopedId("serial_number")

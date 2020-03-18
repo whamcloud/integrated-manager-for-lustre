@@ -23,7 +23,6 @@ from chroma_core.models.jobs import Job
 from chroma_core.models.jobs import AdvertisedJob
 from chroma_core.models.utils import DeletableDowncastableMetaclass
 from chroma_core.models.utils import CHARFIELD_MAX_LENGTH
-from chroma_core.models.utils import MeasuredEntity
 from chroma_help.help import help_text
 from iml_common.lib.date_time import IMLDateTime
 
@@ -144,7 +143,7 @@ class CopytoolEvent(object):
         return "%s" % self.__dict__
 
 
-class Copytool(StatefulObject, MeasuredEntity):
+class Copytool(StatefulObject):
     __metaclass__ = DeletableDowncastableMetaclass
 
     # Fixed, minimum size (RH6.5) for HYD-3244, so that no matter what

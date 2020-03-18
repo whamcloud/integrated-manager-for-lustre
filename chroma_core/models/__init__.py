@@ -26,7 +26,6 @@ from filesystem import *
 from conf_param import *
 from storage_plugin import *
 from registration_token import *
-from stats import *
 from ha_cluster import *
 from power_control import *
 from repo import *

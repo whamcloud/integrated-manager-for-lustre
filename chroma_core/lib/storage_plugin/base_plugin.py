@@ -9,7 +9,6 @@ import settings
 import threading
 
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
-from chroma_core.services.stats import StatsQueue
 from chroma_core.lib.storage_plugin.api import identifiers
 
 
@@ -194,7 +193,6 @@ class BaseStoragePlugin(object):
 
         # Creates, deletes, attrs, parents are all handled in session_open
         # the rest we do manually.
-        self._commit_resource_statistics()
         self._check_alert_conditions()
         self._commit_alerts()
 
@@ -214,7 +212,6 @@ class BaseStoragePlugin(object):
             self._commit_resource_deletes()
             self._commit_resource_creates()
             self._commit_resource_updates()
-            self._commit_resource_statistics()
             self._check_alert_conditions()
             self._commit_alerts()
 
@@ -277,16 +274,6 @@ class BaseStoragePlugin(object):
                     self._scannable_id, resource._handle, active, severity, alert_class, attribute
                 )
             self._delta_alerts.clear()
-
-    def _commit_resource_statistics(self):
-        samples = []
-        for resource in self._index.all():
-            r_stats = resource.flush_stats()
-            if r_stats and settings.STORAGE_PLUGIN_ENABLE_STATS:
-                samples += self._resource_manager.session_get_stats(self._scannable_id, resource._handle, r_stats)
-        if samples:
-            StatsQueue().put(samples)
-        return len(samples)
 
     def _notify_alert(self, active, severity, resource, alert_name, attribute=None):
         # This will be flushed through to the database by update_scan

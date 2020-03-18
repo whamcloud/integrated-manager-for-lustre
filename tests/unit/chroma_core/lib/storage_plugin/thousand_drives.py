@@ -1,4 +1,4 @@
-from chroma_core.lib.storage_plugin.api import attributes, statistics
+from chroma_core.lib.storage_plugin.api import attributes
 from chroma_core.lib.storage_plugin.api.identifiers import GlobalId, ScopedId
 from chroma_core.lib.storage_plugin.api import resources
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
@@ -21,11 +21,8 @@ class Controller(resources.ScannableResource):
 class DiskDrive(resources.Resource):
     class Meta:
         identifier = ScopedId("serial")
-        charts = [{"title": "Bandwidth", "series": ["read_bytes_sec", "write_bytes_sec"]}]
 
     serial = attributes.String()
-    read_bytes_sec = statistics.Gauge(units="B/s", label="Read bandwidth")
-    write_bytes_sec = statistics.Counter(units="B/s", label="Write bandwidth")
 
 
 class TestPlugin(Plugin):

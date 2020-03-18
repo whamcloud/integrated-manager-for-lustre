@@ -70,15 +70,9 @@ Requires(post): selinux-policy-targeted
 # IML Repo
 Requires:       python2-django-picklefield >= 1.0.0
 Requires:       iml-device-scanner-aggregator >= 3.0.0
-Requires:       iml-gui >= 6.6.0
-Requires:       iml-old-gui >= 3.1.3
 Requires:       iml-online-help >= 2.6.0
-Requires:       iml-realtime >= 7.0.2
 Requires:       iml_sos_plugin >= 2.3
-Requires:       iml-socket-worker >= 4.0.3
 Requires:       iml-update-handler >= 1.0.3, iml-update-handler < 2
-Requires:       iml-view-server >= 8.0.5
-Requires:       iml-wasm-components >= 0.1.2
 Requires:       python2-gevent >= 1.0.1
 Requires:       python2-httpagentparser >= 1.5
 Requires:       python2-iml-manager-cli = %{version}-%{release}
@@ -205,7 +199,6 @@ install -m 644 iml-lustre-audit.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-plugin-runner.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-power-control.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-settings-populator.service $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-stats.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-syslog.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 10-device-aggregator.service.conf $RPM_BUILD_ROOT%{_unitdir}/device-aggregator.service.d/
 mkdir -p $RPM_BUILD_ROOT/var/log/chroma
@@ -277,11 +270,8 @@ rmdir %{python_sitelib}/iml_manager-5.0.*.egg-info 2> /dev/null || :
 %systemd_preun iml-lustre-audit.service
 %systemd_preun iml-plugin-runner.service
 %systemd_preun iml-power-control.service
-%systemd_preun iml-realtime.service
 %systemd_preun iml-settings-populator.service
-%systemd_preun iml-stats.service
 %systemd_preun iml-syslog.service
-%systemd_preun iml-view-server.service
 %systemd_preun iml-warp-drive.service
 
 %postun -n python2-%{pypi_name}
