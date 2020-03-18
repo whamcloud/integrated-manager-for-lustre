@@ -47,6 +47,7 @@ async fn main() -> Result<(), ImlStatsError> {
                                         .add_tag("kind", Value::String(x.kind.to_string()))
                                         .add_tag("name", Value::String(stat.name.to_string()))
                                         .add_tag("units", Value::String(stat.units.to_string()))
+                                        .add_tag("fs", Value::String(fs_name(&x.target).to_string()))
                                         .add_field("samples", Value::Integer(stat.samples as i64));
 
                                     if let Some(min) = stat.min {
@@ -100,6 +101,7 @@ async fn main() -> Result<(), ImlStatsError> {
                                             .add_tag("name", Value::String(brw_stat.name.to_string()))
                                             .add_tag("unit", Value::String(brw_stat.unit.to_string()))
                                             .add_tag("bucket_name", Value::Integer(bucket.name as i64))
+                                            .add_tag("fs", Value::String(fs_name(&x.target).to_string()))
                                             .add_field("read", Value::Integer(bucket.read as i64))
                                             .add_field("write", Value::Integer(bucket.write as i64));
 
