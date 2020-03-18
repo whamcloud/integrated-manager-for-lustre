@@ -67,6 +67,7 @@ class Command(BaseCommand):
             "INFLUXDB_IML_DB": settings.INFLUXDB_IML_DB,
             "INFLUXDB_STRATAGEM_SCAN_DB": settings.INFLUXDB_STRATAGEM_SCAN_DB,
             "INFLUXDB_IML_STATS_DB": settings.INFLUXDB_IML_STATS_DB,
+            "INFLUXDB_IML_STATS_LONG_DURATION": settings.INFLUXDB_IML_STATS_LONG_DURATION,
             "INFLUXDB_PORT": settings.INFLUXDB_PORT,
             "DB_HOST": DB.get("HOST"),
             "DB_NAME": DB.get("NAME"),
