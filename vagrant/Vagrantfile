@@ -750,6 +750,7 @@ def install_ldiskfs_no_iml(config)
   config.vm.provision 'install-ldiskfs-no-iml',
                       type: 'shell',
                       run: 'never',
+                      reboot: true,
                       path: './scripts/install_ldiskfs_no_iml.sh'
 end
 
@@ -757,6 +758,7 @@ def install_zfs_no_iml(config)
   config.vm.provision 'install-zfs-no-iml',
                       type: 'shell',
                       run: 'never',
+                      reboot: true,
                       path: './scripts/install_zfs_no_iml.sh'
 end
 
