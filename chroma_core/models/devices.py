@@ -4,6 +4,7 @@
 
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
+from django.contrib.contenttypes.models import ContentType
 
 
 class Device(models.Model):
@@ -15,6 +16,7 @@ class Device(models.Model):
     parents = ArrayField(models.CharField(max_length=255), help_text="A list of parent devices")
     children = ArrayField(models.CharField(max_length=255), help_text="A list of child devices")
     max_depth = models.SmallIntegerField(help_text="Maximum depth where the device is nested")
+    content_type = models.ForeignKey(ContentType, null=True, on_delete=models.deletion.CASCADE)
 
 
 class DeviceHost(models.Model):
@@ -26,3 +28,4 @@ class DeviceHost(models.Model):
     fs_type = models.CharField(null=True, help_text="The fs type of the device", max_length=255)
     fs_label = models.CharField(null=True, help_text="The fs label on the device", max_length=255)
     fs_uuid = models.CharField(null=True, help_text="The fs uuid on the device", max_length=255)
+    content_type = models.ForeignKey(ContentType, null=True, on_delete=models.deletion.CASCADE)

@@ -1125,7 +1125,7 @@ impl From<Row> for DeviceHost {
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct DeviceHostRecord {
     pub device_host: DeviceHost,
-    pub record_id: u32,
+    pub id: u32,
     pub content_type_id: Option<u32>,
 }
 
@@ -1137,19 +1137,19 @@ impl Name for DeviceHostRecord {
 
 impl Id for DeviceHostRecord {
     fn id(&self) -> u32 {
-        self.record_id
+        self.id
     }
 }
 
 impl ToCompositeId for DeviceHostRecord {
     fn composite_id(&self) -> CompositeId {
-        CompositeId(self.content_type_id.unwrap(), self.record_id)
+        CompositeId(self.content_type_id.unwrap(), self.id)
     }
 }
 
 impl ToCompositeId for &DeviceHostRecord {
     fn composite_id(&self) -> CompositeId {
-        CompositeId(self.content_type_id.unwrap(), self.record_id)
+        CompositeId(self.content_type_id.unwrap(), self.id)
     }
 }
 
@@ -1182,7 +1182,7 @@ impl From<Row> for DeviceHostRecord {
                 fs_label: row.get::<_, Option<String>>("fs_label"),
                 fs_uuid: row.get::<_, Option<String>>("fs_uuid"),
             },
-            record_id: row.get::<_, i32>("record_id") as u32,
+            id: row.get::<_, i32>("id") as u32,
             content_type_id: row
                 .get::<_, Option<i32>>("content_type_id")
                 .map(|x| x as u32),

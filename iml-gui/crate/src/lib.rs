@@ -591,7 +591,7 @@ fn handle_record_change(
                 model.records.device.insert(x.record_id, Arc::new(x));
             }
             warp_drive::Record::DeviceHost(x) => {
-                model.records.device_host.insert(x.record_id, Arc::new(x));
+                model.records.device_host.insert(x.id, Arc::new(x));
             }
             warp_drive::Record::Filesystem(x) => {
                 let id = x.id;
