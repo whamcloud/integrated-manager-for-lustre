@@ -1129,6 +1129,12 @@ pub struct DeviceHostRecord {
     pub content_type_id: Option<u32>,
 }
 
+impl Name for DeviceHostRecord {
+    fn table_name() -> TableName<'static> {
+        DEVICE_HOST_TABLE_NAME
+    }
+}
+
 impl Id for DeviceHostRecord {
     fn id(&self) -> u32 {
         self.record_id
@@ -1156,6 +1162,31 @@ impl Label for DeviceHostRecord {
 impl EndpointName for DeviceHostRecord {
     fn endpoint_name() -> &'static str {
         "devicehost"
+    }
+}
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for DeviceHostRecord {
+    fn from(row: Row) -> Self {
+        DeviceHostRecord {
+            device_host: DeviceHost {
+                device_id: row.get("device_id"),
+                fqdn: Fqdn(row.get::<_, String>("fqdn")),
+                local: row.get("local"),
+                paths: row.get("paths"),
+                mount_path: MountPath(
+                    row.get::<_, Option<String>>("mount_path")
+                        .map(PathBuf::from),
+                ),
+                fs_type: row.get::<_, Option<String>>("fs_type"),
+                fs_label: row.get::<_, Option<String>>("fs_label"),
+                fs_uuid: row.get::<_, Option<String>>("fs_uuid"),
+            },
+            record_id: row.get("record_id"),
+            content_type_id: row
+                .get::<_, Option<i32>>("content_type_id")
+                .map(|x| x as u32),
+        }
     }
 }
 

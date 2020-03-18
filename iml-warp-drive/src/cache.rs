@@ -314,6 +314,8 @@ pub async fn populate_from_db(
             "select * from {}",
             AuthUserGroupRecord::table_name()
         )),
+        client.prepare(&format!("select * from {}", DeviceRecord::table_name())),
+        client.prepare(&format!("select * from {}", DeviceHostRecord::table_name())),
     ])
     .await?;
 
@@ -333,10 +335,16 @@ pub async fn populate_from_db(
         into_row(client.query_raw(&stmts[9], iter::empty()).await?),
     );
 
+    let fut3 = future::try_join(
+        into_row(client.query_raw(&stmts[10], iter::empty()).await?),
+        into_row(client.query_raw(&stmts[11], iter::empty()).await?),
+    );
+
     let (
         (managed_target_mount, stratagem_configuration, lnet_configuration, volume_node, ost_pool),
         (ost_pool_osts, content_types, groups, users, user_groups),
-    ) = future::try_join(fut1, fut2).await?;
+        (devices, device_hosts),
+    ) = future::try_join3(fut1, fut2, fut3).await?;
 
     let mut cache = shared_api_cache.lock().await;
 
@@ -350,6 +358,8 @@ pub async fn populate_from_db(
     cache.group = groups;
     cache.user = users;
     cache.user_group = user_groups;
+    cache.device = devices;
+    cache.device_host = device_hosts;
 
     tracing::debug!("Populated from db");
 
