@@ -938,6 +938,7 @@ impl From<Row> for Device {
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct DeviceRecord {
+    #[serde(flatten)]
     pub device: Device,
     pub record_id: u32,
     pub content_type_id: Option<u32>,
@@ -1124,6 +1125,7 @@ impl From<Row> for DeviceHost {
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct DeviceHostRecord {
+    #[serde(flatten)]
     pub device_host: DeviceHost,
     pub id: u32,
     pub content_type_id: Option<u32>,
