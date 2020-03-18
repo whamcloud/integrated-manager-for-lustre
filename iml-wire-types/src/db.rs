@@ -956,7 +956,7 @@ impl From<Row> for DeviceRecord {
                 children: row.get("children"),
                 max_depth: row.get("max_depth"),
             },
-            record_id: row.get("record_id"),
+            record_id: row.get::<_, i32>("record_id") as u32,
             content_type_id: row
                 .get::<_, Option<i32>>("content_type_id")
                 .map(|x| x as u32),
@@ -1182,7 +1182,7 @@ impl From<Row> for DeviceHostRecord {
                 fs_label: row.get::<_, Option<String>>("fs_label"),
                 fs_uuid: row.get::<_, Option<String>>("fs_uuid"),
             },
-            record_id: row.get("record_id"),
+            record_id: row.get::<_, i32>("record_id") as u32,
             content_type_id: row
                 .get::<_, Option<i32>>("content_type_id")
                 .map(|x| x as u32),
