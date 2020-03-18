@@ -252,10 +252,10 @@ fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
             orders.proxy(Msg::Auth).send_msg(msg);
         }
         GMsg::ServerDate(d) => model.server_date.set(d),
-        GMsg::OpenCommandModal(cmd_id) => {
+        GMsg::OpenCommandModal(cmd) => {
             orders
                 .proxy(Msg::CommandModal)
-                .send_msg(command_modal::Msg::FireCommand(cmd_id));
+                .send_msg(command_modal::Msg::FireCommand(cmd));
         }
     }
 }

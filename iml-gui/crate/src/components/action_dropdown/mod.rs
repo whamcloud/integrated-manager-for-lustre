@@ -348,7 +348,6 @@ pub fn unstyled_view<'a>(
         State::Confirming(action) => {
             let con_view = confirm_action_modal::view(action).map_msg(move |x| IdMsg(id, Msg::ConfirmJobModal(x)));
             div![
-                id!["con_view"],
                 button![
                     cls.merge_attrs(disabled_cls),
                     "Actions",

@@ -1,7 +1,7 @@
 use crate::components::table;
 use crate::{
     components::{font_awesome, modal},
-    extensions::{MergeAttrs, NodeExt},
+    extensions::{MergeAttrs as _, NodeExt as _, RequestExt as _},
     generated::css_classes::C,
     key_codes, sleep_with_handle, GMsg,
 };
@@ -47,14 +47,14 @@ pub enum Msg {
 
 async fn fetch_command_status(command_ids: Vec<u32>) -> Result<Msg, Msg> {
     // e.g. GET /api/command/?id__in=1&id__in=2&id__in=11&limit=0
-    let ids = command_ids
-        .iter()
-        .map(|x| format!("id__in={}", x))
-        .collect::<Vec<String>>()
-        .join("&");
-    // TODO make it paged instead of being unlimited
-    let url = format!("/api/{}/?{}&limit=0", Command::endpoint_name(), ids);
-    Request::new(url).fetch_json_data(|x| Msg::Fetched(Box::new(x))).await
+    let mut ids: Vec<_> = command_ids.into_iter().map(|x| ("id__in", x)).collect();
+
+    ids.push(("limit", 0));
+
+    Request::api_query(Command::endpoint_name(), &ids)
+        .expect("Bad query for command")
+        .fetch_json_data(|x| Msg::Fetched(Box::new(x)))
+        .await
 }
 
 fn is_finished(cmd: &Command) -> bool {
@@ -126,7 +126,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
             modal::content_view(
                 Msg::Modal,
                 vec![
-                    modal::title_view(Msg::Modal, span!["Executing the commands"]),
+                    modal::title_view(Msg::Modal, plain!["Commands"]),
                     commands_table(&model.commands_all),
                     modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
                 ],
