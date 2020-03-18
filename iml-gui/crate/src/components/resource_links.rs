@@ -21,7 +21,7 @@ pub fn server_link<T>(uri: Option<&String>, txt: &str) -> Node<T> {
 
         href_view(txt, Route::Server(RouteId::from(srv_id))).merge_attrs(class![C.block])
     } else {
-        plain!["N/A"]
+        plain!["---"]
     }
 }
 

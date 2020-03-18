@@ -137,7 +137,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
             p![
                 class![C.py_4, C.text_gray_600],
                 "Last Scanned: ",
-                model.last_known_scan.as_ref().unwrap_or(&"N/A".to_string())
+                model.last_known_scan.as_ref().unwrap_or(&"---".to_string())
             ]
         ],
         table![
