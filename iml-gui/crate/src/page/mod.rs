@@ -216,5 +216,9 @@ impl Page {
         if let Self::Devices(_) = self {
             devices::init(cache, &mut orders.proxy(Msg::DevicesPage))
         }
+
+        if let Self::DeviceHosts(_) = self {
+            device_hosts::init(cache, &mut orders.proxy(Msg::DeviceHostsPage))
+        }
     }
 }

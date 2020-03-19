@@ -292,6 +292,7 @@ pub enum Msg {
     ToggleMenu,
     Tree(tree::Msg),
     DevicesPage(page::devices::Msg),
+    DeviceHostsPage(page::device_hosts::Msg),
     UpdatePageTitle,
     WindowClick,
     WindowResize,
@@ -473,7 +474,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 page::devices::update(msg, &model.records, page, &mut orders.proxy(Msg::DevicesPage))
             }
         }
-
+        Msg::DeviceHostsPage(msg) => {
+            if let Page::DeviceHosts(page) = &mut model.page {
+                page::device_hosts::update(msg, &model.records, page, &mut orders.proxy(Msg::DeviceHostsPage))
+            }
+        }
         Msg::TargetPage(msg) => {
             if let Page::Target(page) = &mut model.page {
                 page::target::update(msg, &model.records, page, &mut orders.proxy(Msg::TargetPage))
