@@ -48,7 +48,7 @@ pub(crate) enum Page {
     Filesystems(filesystems::Model),
     Filesystem(Box<filesystem::Model>),
     Dashboard(dashboard::Model),
-    FsDashboard(fs_dashboard::Model),
+    FsDashboard(Box<fs_dashboard::Model>),
     ServerDashboard(server_dashboard::Model),
     TargetDashboard(target_dashboard::Model),
     Jobstats,
@@ -106,12 +106,13 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
             Route::Dashboard => Self::Dashboard(dashboard::Model {
                 ..dashboard::Model::default()
             }),
-            Route::FsDashboard(id) => Self::FsDashboard(fs_dashboard::Model::new(id.to_string())),
+            Route::FsDashboard(id) => Self::FsDashboard(Box::new(fs_dashboard::Model::new(id.to_string()))),
             Route::ServerDashboard(id) => Self::ServerDashboard(server_dashboard::Model {
                 host_name: id.to_string(),
             }),
             Route::TargetDashboard(id) => Self::TargetDashboard(target_dashboard::Model {
                 target_name: id.to_string(),
+                ..target_dashboard::Model::default()
             }),
             Route::Jobstats => Self::Jobstats,
             Route::Login => Self::Login(login::Model::default()),
@@ -185,13 +186,14 @@ impl Page {
             (Route::User(route_id), Self::User(x)) => route_id == &RouteId::from(x.user.id),
             (Route::Filesystem(route_id), Self::Filesystem(x)) => route_id == &RouteId::from(x.fs.id),
             (Route::Target(route_id), Self::Target(x)) => route_id == &RouteId::from(x.target.id),
-            (Route::FsDashboard(route_id), Self::FsDashboard(fs_dashboard::Model { fs_name, .. })) => {
+            (Route::FsDashboard(route_id), Self::FsDashboard(x)) => {
+                let fs_dashboard::Model { fs_name, .. } = &**x;
                 &route_id.to_string() == fs_name
             }
             (Route::ServerDashboard(route_id), Self::ServerDashboard(server_dashboard::Model { host_name })) => {
                 &route_id.to_string() == host_name
             }
-            (Route::TargetDashboard(route_id), Self::TargetDashboard(target_dashboard::Model { target_name })) => {
+            (Route::TargetDashboard(route_id), Self::TargetDashboard(target_dashboard::Model { target_name, .. })) => {
                 &route_id.to_string() == target_name
             }
             _ => false,
@@ -293,6 +295,11 @@ pub(crate) fn update(msg: Msg, page: &mut Page, cache: &ArcCache, orders: &mut i
                 fs_dashboard::update(msg, page, &mut orders.proxy(Msg::FsDashboard))
             }
         }
+        Msg::TargetDashboard(msg) => {
+            if let Page::TargetDashboard(page) = page {
+                target_dashboard::update(msg, page, &mut orders.proxy(Msg::TargetDashboard))
+            }
+        }
         Msg::User(msg) => {
             if let Page::User(page) = page {
                 user::update(msg, page, &mut orders.proxy(Msg::User));
@@ -314,7 +321,6 @@ pub(crate) fn update(msg: Msg, page: &mut Page, cache: &ArcCache, orders: &mut i
         | Msg::OstPools(_)
         | Msg::PowerControl(_)
         | Msg::ServerDashboard(_)
-        | Msg::TargetDashboard(_)
         | Msg::Targets(_)
         | Msg::Users(_)
         | Msg::Volume(_) => {}

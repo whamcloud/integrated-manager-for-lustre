@@ -3,13 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use seed::{attrs, iframe, prelude::*};
-use serde_with::with_prefix;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 pub static IML_METRICS_DASHBOARD_ID: &str = "8Klek6wZz";
 pub static IML_METRICS_DASHBOARD_NAME: &str = "iml-metrics";
-
-with_prefix!(grafana_var "var-");
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -17,15 +14,26 @@ pub(crate) struct GrafanaChartData<'a> {
     pub org_id: u16,
     pub refresh: &'a str,
     pub panel_id: u16,
-    #[serde(flatten, with = "grafana_var")]
-    pub vars: HashMap<String, String>,
+    #[serde(flatten)]
+    pub vars: BTreeMap<String, String>,
 }
 
 pub(crate) fn create_chart_params<'a>(
     panel_id: u16,
     vars: impl IntoIterator<Item = (impl ToString, impl ToString)>,
 ) -> GrafanaChartData<'a> {
-    let hm: HashMap<String, String> = vars.into_iter().map(|(x, y)| (x.to_string(), y.to_string())).collect();
+    let hm: BTreeMap<String, String> = vars
+        .into_iter()
+        .map(|(x, y)| {
+            let var = x.to_string();
+            let key = match var.as_str() {
+                "to" | "from" => var.to_string(),
+                _ => format!("var-{}", var),
+            };
+
+            (key, y.to_string())
+        })
+        .collect();
     GrafanaChartData {
         org_id: 1,
         refresh: "10s",
