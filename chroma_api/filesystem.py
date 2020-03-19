@@ -287,12 +287,6 @@ class FilesystemResource(ConfParamResource):
     for a file system in your application.
     """
 
-    bytes_free = fields.IntegerField()
-    bytes_total = fields.IntegerField()
-    files_free = fields.IntegerField()
-    files_total = fields.IntegerField()
-    client_count = fields.IntegerField(help_text="Number of Lustre clients which are connected to this file system")
-
     mount_command = fields.CharField(
         null=True,
         help_text='Example command for\
@@ -326,12 +320,6 @@ class FilesystemResource(ConfParamResource):
         help_text="The MGT on which this file system is registered",
     )
 
-    def _get_stat_simple(self, bundle, klass, stat_name, factor=1.0):
-        try:
-            return bundle.obj.metrics.fetch_last(klass, fetch_metrics=[stat_name])[1][stat_name] * factor
-        except (KeyError, IndexError, TypeError):
-            return None
-
     def dehydrate_mount_path(self, bundle):
         return bundle.obj.mount_path()
 
@@ -341,18 +329,6 @@ class FilesystemResource(ConfParamResource):
             return "mount -t lustre %s /mnt/%s" % (path, bundle.obj.name)
         else:
             return None
-
-    def dehydrate_bytes_free(self, bundle):
-        return self._get_stat_simple(bundle, ManagedOst, "kbytesfree", 1024)
-
-    def dehydrate_bytes_total(self, bundle):
-        return self._get_stat_simple(bundle, ManagedOst, "kbytestotal", 1024)
-
-    def dehydrate_files_free(self, bundle):
-        return self._get_stat_simple(bundle, ManagedMdt, "filesfree")
-
-    def dehydrate_files_total(self, bundle):
-        return self._get_stat_simple(bundle, ManagedMdt, "filestotal")
 
     def get_hsm_control_params(self, mdt, bundle):
         all_params = set(HSM_CONTROL_PARAMS.keys())
@@ -388,16 +364,6 @@ class FilesystemResource(ConfParamResource):
         except StopIteration:
             pass
 
-        # Now the number of MDT's is known calculate the client count. The client count is calculated by the number of connections
-        # divided by the number of MDT's. In the case, that is possible durring creation and deletion of filesystems, where the mdt
-        # count is 0 then the connected clients must be zero.
-        if len(bundle.data["mdts"]) == 0:
-            bundle.data["client_count"] = 0
-        else:
-            bundle.data["client_count"] = self._get_stat_simple(
-                bundle, ManagedMdt, "client_count", factor=1.0 / len(bundle.data["mdts"])
-            )
-
         return bundle
 
     class Meta:
@@ -411,11 +377,6 @@ class FilesystemResource(ConfParamResource):
         list_allowed_methods = ["get", "post"]
         detail_allowed_methods = ["get", "delete", "put"]
         readonly = [
-            "bytes_free",
-            "bytes_total",
-            "files_free",
-            "files_total",
-            "client_count",
             "mount_command",
             "mount_path",
         ]

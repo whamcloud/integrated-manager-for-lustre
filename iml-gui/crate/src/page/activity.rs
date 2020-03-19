@@ -1,9 +1,11 @@
 use crate::{
-    components::{action_dropdown, font_awesome, loading},
+    components::{action_dropdown, command_modal, font_awesome, loading, paging},
+    extensions::*,
     generated::css_classes::C,
-    sleep_with_handle, GMsg, MergeAttrs as _, RequestExt as _, ServerDate,
+    sleep_with_handle, GMsg, ServerDate,
 };
 use futures::channel::oneshot;
+use iml_api_utils::extract_id;
 use iml_wire_types::{
     warp_drive::{ArcCache, Locks},
     Alert, AlertRecordType, AlertSeverity, ApiList, EndpointName as _, Session,
@@ -13,6 +15,7 @@ use std::{collections::HashMap, mem, time::Duration};
 
 enum State {
     Loading,
+    Fetching,
     Loaded(ApiList<Alert>, HashMap<u32, Row>),
 }
 
@@ -23,6 +26,7 @@ struct Row {
 pub struct Model {
     state: State,
     cancel: Option<oneshot::Sender<()>>,
+    pager: paging::Model,
 }
 
 impl Default for Model {
@@ -30,25 +34,35 @@ impl Default for Model {
         Self {
             state: State::Loading,
             cancel: None,
+            pager: paging::Model::default(),
         }
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     ActionDropdown(Box<action_dropdown::IdMsg>),
     ActionsFetched(Box<fetch::ResponseDataResult<ApiList<Alert>>>),
-    FetchActions,
+    OpenCommandModal(u32),
+    FetchOffset,
     Loop,
+    Page(paging::Msg),
     Noop,
 }
 
 pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
-        Msg::FetchActions => {
-            orders.skip().perform_cmd(
-                fetch::Request::api_call(Alert::endpoint_name()).fetch_json_data(|x| Msg::ActionsFetched(Box::new(x))),
-            );
+        Msg::FetchOffset => {
+            if let Ok(cmd) = fetch::Request::api_query(
+                Alert::endpoint_name(),
+                &[("limit", model.pager.limit()), ("offset", model.pager.offset())],
+            )
+            .map(|req| req.fetch_json_data(|x| Msg::ActionsFetched(Box::new(x))))
+            {
+                orders.skip().perform_cmd(cmd);
+            } else {
+                error!("Could not fetch alerts.");
+            };
         }
         Msg::ActionsFetched(r) => {
             let state = mem::replace(&mut model.state, State::Loading);
@@ -57,12 +71,27 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                 (Ok(mut resp), State::Loaded(_, mut rows)) => {
                     update_rows(&mut resp, &mut rows);
 
+                    orders
+                        .proxy(Msg::Page)
+                        .send_msg(paging::Msg::SetTotal(resp.meta.total_count as usize));
+
+                    State::Loaded(resp, rows)
+                }
+                (Ok(mut resp), State::Fetching) => {
+                    let mut rows = HashMap::new();
+
+                    update_rows(&mut resp, &mut rows);
+
                     State::Loaded(resp, rows)
                 }
                 (Ok(mut resp), State::Loading) => {
                     let mut rows = HashMap::new();
 
                     update_rows(&mut resp, &mut rows);
+
+                    orders
+                        .proxy(Msg::Page)
+                        .send_msg(paging::Msg::SetTotal(resp.meta.total_count as usize));
 
                     State::Loaded(resp, rows)
                 }
@@ -90,10 +119,29 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                 }
             }
         }
+        Msg::OpenCommandModal(id) => {
+            orders.send_g_msg(GMsg::OpenCommandModal(command_modal::Input::Ids(vec![id])));
+        }
+        Msg::Page(msg) => match model.state {
+            State::Fetching => {
+                orders.skip();
+            }
+            _ => {
+                paging::update(msg.clone(), &mut model.pager, &mut orders.proxy(Msg::Page));
+
+                match msg {
+                    paging::Msg::Next | paging::Msg::Prev => {
+                        model.state = State::Fetching;
+                        orders.send_msg(Msg::FetchOffset);
+                    }
+                    _ => {}
+                }
+            }
+        },
         Msg::Loop => {
             orders.skip();
 
-            let (cancel, fut) = sleep_with_handle(Duration::from_secs(10), Msg::FetchActions, Msg::Noop);
+            let (cancel, fut) = sleep_with_handle(Duration::from_secs(10), Msg::FetchOffset, Msg::Noop);
 
             model.cancel = Some(cancel);
 
@@ -104,7 +152,10 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
 }
 
 pub(crate) fn init(orders: &mut impl Orders<Msg, GMsg>) {
-    orders.send_msg(Msg::FetchActions);
+    orders
+        .proxy(Msg::Page)
+        .send_msg(paging::Msg::SetLimit(paging::ROW_OPTS[1]));
+    orders.send_msg(Msg::FetchOffset);
 }
 
 fn update_rows(alerts: &mut ApiList<Alert>, rows: &mut HashMap<u32, Row>) {
@@ -127,6 +178,25 @@ fn update_rows(alerts: &mut ApiList<Alert>, rows: &mut HashMap<u32, Row>) {
 pub(crate) fn view(model: &Model, session: Option<&Session>, all_locks: &Locks, sd: &ServerDate) -> impl View<Msg> {
     div![match &model.state {
         State::Loading => loading::view(),
+        State::Fetching => div![
+            class![C.bg_menu_active],
+            div![
+                class![C.px_6, C.py_4, C.bg_blue_1000],
+                div![class![C.font_medium, C.text_lg, C.text_gray_500], "Activities"],
+                div![
+                    class![C.grid, C.grid_cols_2, C.items_center, C.text_white],
+                    div![
+                        class![C.col_span_1],
+                        paging::page_count_view(&model.pager).map_msg(Msg::Page)
+                    ],
+                    div![
+                        class![C.grid, C.grid_cols_2, C.justify_end],
+                        paging::next_prev_view(&model.pager).map_msg(Msg::Page)
+                    ],
+                ],
+            ],
+            div![loading::view()]
+        ],
         State::Loaded(alerts, rows) => div![
             class![C.bg_menu_active],
             div![
@@ -136,16 +206,11 @@ pub(crate) fn view(model: &Model, session: Option<&Session>, all_locks: &Locks, 
                     class![C.grid, C.grid_cols_2, C.items_center, C.text_white],
                     div![
                         class![C.col_span_1],
-                        format!(
-                            "Showing {} - {} of {} total",
-                            alerts.meta.offset + 1,
-                            alerts.meta.offset + alerts.meta.limit,
-                            alerts.meta.total_count
-                        )
+                        paging::page_count_view(&model.pager).map_msg(Msg::Page)
                     ],
                     div![
-                        class![C.grid, C.justify_end],
-                        font_awesome(class![C.inline, C.w_4, C.h_4, C.text_green_400], "filter")
+                        class![C.grid, C.grid_cols_2, C.justify_end],
+                        paging::next_prev_view(&model.pager).map_msg(Msg::Page)
                     ]
                 ],
             ],
@@ -251,15 +316,43 @@ fn alert_item_view(
             }
         ],
         if let Some(end) = alert.end.as_ref() {
-            div![
-                class![C.row_span_1, C.col_span_2],
-                format!(
-                    "Ended {}",
-                    sd.timeago(chrono::DateTime::parse_from_rfc3339(end).unwrap())
-                )
+            vec![
+                div![
+                    class![C.row_span_1, C.col_span_2],
+                    format!(
+                        "Ended {}",
+                        sd.timeago(chrono::DateTime::parse_from_rfc3339(end).unwrap())
+                    )
+                ],
+                command_details_button(alert),
             ]
         } else {
-            empty![]
+            vec![]
         }
     ]
+}
+
+fn command_details_button(alert: &Alert) -> Node<Msg> {
+    if !is_cmd(alert.record_type) {
+        return empty![];
+    }
+
+    if let Some(id) = extract_id(&alert.alert_item) {
+        button![
+            class![
+                C.border_white,
+                C.border,
+                C.focus__outline_none,
+                C.font_bold,
+                C.px_4,
+                C.py_2,
+                C.rounded,
+                C.text_white
+            ],
+            simple_ev(Ev::Click, Msg::OpenCommandModal(id.parse().unwrap())),
+            "Details",
+        ]
+    } else {
+        empty![]
+    }
 }

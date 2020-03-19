@@ -26,7 +26,6 @@ class SystemdTestCase(TestCase):
     PORTS = {  # service ports to wait on binding
         "iml-http-agent": [settings.HTTP_AGENT_PORT],
         "nginx": [settings.HTTPS_FRONTEND_PORT, settings.HTTP_FRONTEND_PORT],
-        "iml-view-server": [settings.VIEW_SERVER_PORT],
     }
     TIMEOUT = 5  # default timeout to wait for services to start
 

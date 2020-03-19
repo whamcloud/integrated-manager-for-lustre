@@ -24,7 +24,7 @@ pub enum Section {
     Logs(logs::Model),
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum SectionSelector {
     Activity,
     Logs,
@@ -48,7 +48,7 @@ impl From<&Section> for SectionSelector {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     ActivitySection(activity::Msg),
     LogsSection(logs::Msg),

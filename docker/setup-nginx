@@ -5,9 +5,7 @@ import re
 vars = {
     "SSL_PATH": "/var/lib/chroma",
     "HTTPS_FRONTEND_PORT": "7443",
-    "VIEW_SERVER_PROXY_PASS": "http://view-server:8889",
     "HTTP_API_PROXY_PASS": "http://gunicorn:8001",
-    "REALTIME_PROXY_PASS": "http://realtime:8888",
     "HTTP_AGENT_PROXY_PASS": "http://http-agent:8002",
     "HTTP_AGENT2_PROXY_PASS": "http://iml-agent-comms:8003",
     "REPO_PATH": "/var/lib/chroma/repo",
@@ -18,7 +16,8 @@ vars = {
     "MAILBOX_PROXY_PASS": "http://iml-mailbox:8891",
     "GRAFANA_PROXY_PASS": "http://grafana:3000",
     "INFLUXDB_PROXY_PASS": "http://influxdb:8086",
-    "IML_API_PROXY_PASS": "http://iml-api:8004"
+    "IML_API_PROXY_PASS": "http://iml-api:8004",
+    "INCLUDES": "include /etc/nginx/conf.d/iml-timer.extras;",
 }
 
 conf_template = "./chroma-manager.conf.template"
@@ -42,8 +41,6 @@ with open(conf_template, "r") as f:
         config = config.replace("{{%s}}" % k, v)
 
     config = re.sub(r"{{(.+)}}", r"{{ .Env.\g<1> }}", config)
-
-    config = re.sub(r"^}\s\Z", "\n    include /etc/nginx/conf.d/iml-timer.extras;\n}", config, 0, re.MULTILINE)
 
     with open("iml.template", "w") as f2:
         f2.write(config)

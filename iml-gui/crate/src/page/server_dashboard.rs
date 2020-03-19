@@ -4,7 +4,6 @@ use crate::{
         grafana_chart::{self, create_chart_params, IML_METRICS_DASHBOARD_ID, IML_METRICS_DASHBOARD_NAME},
     },
     generated::css_classes::C,
-    Msg,
 };
 use iml_wire_types::warp_drive::ArcCache;
 use seed::{class, div, prelude::*};
@@ -13,6 +12,9 @@ use seed::{class, div, prelude::*};
 pub struct Model {
     pub host_name: String,
 }
+
+#[derive(Clone, Debug)]
+pub enum Msg {}
 
 pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
     div![

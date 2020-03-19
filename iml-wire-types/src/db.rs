@@ -18,7 +18,6 @@ use bytes::BytesMut;
 use postgres_types::{to_sql_checked, FromSql, IsNull, ToSql, Type};
 #[cfg(feature = "postgres-interop")]
 use std::io;
-use std::time::SystemTime;
 #[cfg(feature = "postgres-interop")]
 use tokio_postgres::Row;
 
@@ -125,14 +124,15 @@ impl Name for FsRecord {
 }
 
 /// Record from the `chroma_core_volume` table
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct VolumeRecord {
-    id: u32,
-    size: Option<u64>,
-    label: String,
-    filesystem_type: Option<String>,
-    not_deleted: Option<bool>,
-    usable_for_lustre: bool,
+    pub id: u32,
+    pub storage_resource_id: Option<u32>,
+    pub size: Option<u64>,
+    pub label: String,
+    pub filesystem_type: Option<String>,
+    pub not_deleted: Option<bool>,
+    pub usable_for_lustre: bool,
 }
 
 impl Id for VolumeRecord {
@@ -152,6 +152,23 @@ pub const VOLUME_TABLE_NAME: TableName = TableName("chroma_core_volume");
 impl Name for VolumeRecord {
     fn table_name() -> TableName<'static> {
         VOLUME_TABLE_NAME
+    }
+}
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for VolumeRecord {
+    fn from(row: Row) -> Self {
+        VolumeRecord {
+            id: row.get::<_, i32>("id") as u32,
+            size: row.get::<_, Option<i64>>("size").map(|x| x as u64),
+            label: row.get("label"),
+            filesystem_type: row.get("filesystem_type"),
+            usable_for_lustre: row.get("usable_for_lustre"),
+            not_deleted: row.get("not_deleted"),
+            storage_resource_id: row
+                .get::<_, Option<i32>>("storage_resource_id")
+                .map(|x| x as u32),
+        }
     }
 }
 
@@ -1204,8 +1221,6 @@ impl From<Row> for DeviceHostRecord {
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct AuthUserRecord {
     pub id: u32,
-    pub password: String,
-    pub last_login: Option<SystemTime>,
     pub is_superuser: bool,
     pub username: String,
     pub first_name: String,
@@ -1213,7 +1228,6 @@ pub struct AuthUserRecord {
     pub email: String,
     pub is_staff: bool,
     pub is_active: bool,
-    pub date_joined: SystemTime,
 }
 
 pub const AUTH_USER_TABLE_NAME: TableName = TableName("auth_user");
@@ -1235,8 +1249,6 @@ impl From<Row> for AuthUserRecord {
     fn from(row: Row) -> Self {
         Self {
             id: row.get::<_, i32>("id") as u32,
-            password: row.get("password"),
-            last_login: row.get::<_, Option<SystemTime>>("last_login"),
             is_superuser: row.get("is_superuser"),
             username: row.get("username"),
             first_name: row.get("first_name"),
@@ -1244,7 +1256,6 @@ impl From<Row> for AuthUserRecord {
             email: row.get("email"),
             is_staff: row.get("is_staff"),
             is_active: row.get("is_active"),
-            date_joined: row.get("date_joined"),
         }
     }
 }
@@ -1309,6 +1320,154 @@ impl From<Row> for AuthGroupRecord {
         Self {
             id: row.get::<_, i32>("id") as u32,
             name: row.get("name"),
+        }
+    }
+}
+
+/// Record from the `chroma_core_pacemakerconfiguration` table
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct PacemakerConfigurationRecord {
+    pub id: u32,
+    pub state: String,
+    pub immutable_state: bool,
+    pub not_deleted: Option<bool>,
+    pub content_type_id: Option<u32>,
+    pub host_id: u32,
+}
+
+pub const PACEMAKER_CONFIGURATION_TABLE_NAME: TableName =
+    TableName("chroma_core_pacemakerconfiguration");
+
+impl Name for PacemakerConfigurationRecord {
+    fn table_name() -> TableName<'static> {
+        PACEMAKER_CONFIGURATION_TABLE_NAME
+    }
+}
+
+impl Id for PacemakerConfigurationRecord {
+    fn id(&self) -> u32 {
+        self.id
+    }
+}
+
+impl NotDeleted for PacemakerConfigurationRecord {
+    fn not_deleted(&self) -> bool {
+        not_deleted(self.not_deleted)
+    }
+}
+
+impl EndpointName for PacemakerConfigurationRecord {
+    fn endpoint_name() -> &'static str {
+        "pacemaker_configuration"
+    }
+}
+
+impl Label for PacemakerConfigurationRecord {
+    fn label(&self) -> &str {
+        "pacemaker configuration"
+    }
+}
+
+impl ToCompositeId for PacemakerConfigurationRecord {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id.unwrap(), self.id)
+    }
+}
+
+impl ToCompositeId for &PacemakerConfigurationRecord {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id.unwrap(), self.id)
+    }
+}
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for PacemakerConfigurationRecord {
+    fn from(row: Row) -> Self {
+        Self {
+            id: row.get::<_, i32>("id") as u32,
+            state: row.get("state"),
+            immutable_state: row.get("immutable_state"),
+            not_deleted: row.get("not_deleted"),
+            content_type_id: row
+                .get::<_, Option<i32>>("content_type_id")
+                .map(|x| x as u32),
+            host_id: row.get::<_, i32>("host_id") as u32,
+        }
+    }
+}
+
+/// Record from the `chroma_core_corosyncconfiguration` table
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct CorosyncConfigurationRecord {
+    pub id: u32,
+    pub state: String,
+    pub immutable_state: bool,
+    pub not_deleted: Option<bool>,
+    pub mcast_port: Option<u32>,
+    pub corosync_reported_up: bool,
+    pub content_type_id: Option<u32>,
+    pub host_id: u32,
+}
+
+pub const COROSYNC_CONFIGURATION_TABLE_NAME: TableName =
+    TableName("chroma_core_corosyncconfiguration");
+
+impl Name for CorosyncConfigurationRecord {
+    fn table_name() -> TableName<'static> {
+        COROSYNC_CONFIGURATION_TABLE_NAME
+    }
+}
+
+impl Id for CorosyncConfigurationRecord {
+    fn id(&self) -> u32 {
+        self.id
+    }
+}
+
+impl NotDeleted for CorosyncConfigurationRecord {
+    fn not_deleted(&self) -> bool {
+        not_deleted(self.not_deleted)
+    }
+}
+
+impl EndpointName for CorosyncConfigurationRecord {
+    fn endpoint_name() -> &'static str {
+        "corosync_configuration"
+    }
+}
+
+impl Label for CorosyncConfigurationRecord {
+    fn label(&self) -> &str {
+        "corosync configuration"
+    }
+}
+
+impl ToCompositeId for CorosyncConfigurationRecord {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id.unwrap(), self.id)
+    }
+}
+
+impl ToCompositeId for &CorosyncConfigurationRecord {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id.unwrap(), self.id)
+    }
+}
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for CorosyncConfigurationRecord {
+    fn from(row: Row) -> Self {
+        Self {
+            id: row.get::<_, i32>("id") as u32,
+            state: row.get("state"),
+            immutable_state: row.get("immutable_state"),
+            not_deleted: row.get("not_deleted"),
+            mcast_port: row.get::<_, Option<i32>>("mcast_port").map(|x| x as u32),
+            corosync_reported_up: row.get("corosync_reported_up"),
+            content_type_id: row
+                .get::<_, Option<i32>>("content_type_id")
+                .map(|x| x as u32),
+            host_id: row.get::<_, i32>("host_id") as u32,
         }
     }
 }

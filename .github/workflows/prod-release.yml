@@ -23,24 +23,6 @@ jobs:
           RUSTUP_TOOLCHAIN: stable-x86_64-unknown-linux-gnu
           KEY: ${{ secrets.key }}
           IV: ${{ secrets.iv }}
-  push_iml_wasm:
-    name: Push to Copr prod (WASM)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v1
-
-      - name: Push RPM
-        uses: ./.github/actions/copr-wasm
-        env:
-          PROD: true
-          OWNER: managerforlustre
-          PROJECT: manager-for-lustre-5.1
-          PACKAGE: iml-wasm-components
-          SPEC: iml-wasm-components/iml-wasm-components.spec
-          WORKSPACE: ${{ github.workspace }}/iml-wasm-components
-          KEY: ${{ secrets.key }}
-          IV: ${{ secrets.iv }}
   push_iml_docker:
     name: Push to Copr prod (iml-docker)
     runs-on: ubuntu-latest

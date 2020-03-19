@@ -1,4 +1,4 @@
-use crate::{extensions::MergeAttrs, generated::css_classes::C};
+use crate::{components::paging, extensions::MergeAttrs, generated::css_classes::C};
 use seed::{prelude::*, Attrs, *};
 
 pub fn wrapper_cls() -> Attrs {
@@ -54,4 +54,31 @@ pub fn td_right<T>(children: impl View<T>) -> Node<T> {
 
 pub fn td_center<T>(children: impl View<T>) -> Node<T> {
     td_view(children).merge_attrs(class![C.text_center])
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SortBy<T>(pub T);
+
+pub fn sort_header<T: PartialEq + Copy>(label: &str, sort_by: T, current_sort: T, dir: paging::Dir) -> Node<SortBy<T>> {
+    let is_active = current_sort == sort_by;
+
+    let table_cls = class![C.text_center];
+
+    let table_cls = if is_active {
+        table_cls.merge_attrs(th_sortable_cls())
+    } else {
+        table_cls
+    };
+
+    th_view(a![
+        class![C.select_none, C.cursor_pointer, C.font_semibold],
+        mouse_ev(Ev::Click, move |_| SortBy(sort_by)),
+        label,
+        if is_active {
+            paging::dir_toggle_view(dir, class![C.w_5, C.h_4, C.inline, C.ml_1, C.text_blue_500])
+        } else {
+            empty![]
+        }
+    ])
+    .merge_attrs(table_cls)
 }

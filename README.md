@@ -6,16 +6,10 @@
 
 ![iml-rust](https://github.com/whamcloud/integrated-manager-for-lustre/workflows/iml-rust/badge.svg)
 
-![iml-wasm-components](https://github.com/whamcloud/integrated-manager-for-lustre/workflows/iml-wasm-components/badge.svg)
-
 ![IML GUI](https://github.com/whamcloud/integrated-manager-for-lustre/workflows/IML%20GUI/badge.svg)
 
 Simple, but powerful, management tools that provide a unified, consistent view of Lustre storage systems and simplify the installation, configuration, monitoring, and overall management of Lustre.
 
-## IML Intro Video
+## Docs
 
-[![IML Intro Video](media/iml_overview_title_and_play.png)](https://vimeo.com/300826941)
-
-## Online Help
-
-https://whamcloud.github.io/Online-Help/
+<https://whamcloud.github.io/Online-Help/>

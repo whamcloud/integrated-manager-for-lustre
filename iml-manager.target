@@ -22,20 +22,11 @@ After=iml-lustre-audit.service
 Requires=iml-power-control.service
 After=iml-power-control.service
 
-Requires=iml-stats.service
-After=iml-stats.service
-
 Requires=iml-rust-stats.service
 After=iml-rust-stats.service
 
 Requires=iml-syslog.service
 After=iml-syslog.service
-
-Requires=iml-realtime.service
-After=iml-realtime.service
-
-Requires=iml-view-server.service
-After=iml-view-server.service
 
 Requires=iml-agent-comms.service
 After=iml-agent-comms.service

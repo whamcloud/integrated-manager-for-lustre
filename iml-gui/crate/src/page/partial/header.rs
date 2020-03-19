@@ -1,11 +1,11 @@
 use crate::{
     auth, breakpoints,
-    components::{breadcrumbs, ddn_logo, font_awesome, restrict},
+    components::{breadcrumbs, ddn_logo, font_awesome, restrict, whamcloud_logo},
     generated::css_classes::C,
     MergeAttrs, Model, Msg, Route, SessionExt,
     Visibility::*,
 };
-use iml_wire_types::GroupType;
+use iml_wire_types::{Branding, GroupType};
 use seed::{prelude::*, *};
 
 fn menu_icon<T>(icon_name: &str) -> Node<T> {
@@ -186,7 +186,17 @@ fn toggle_nav_view() -> Node<Msg> {
 }
 
 /// The navbar logo
-fn logo_nav_view<T>() -> Node<T> {
+fn logo_nav_view<T>(branding: Branding) -> Node<T> {
+    let (logo, txt, color) = match branding {
+        Branding::Whamcloud => (whamcloud_logo(), empty![], C.text_white),
+        Branding::Ddn => (ddn_logo(), empty![], C.text_red_600),
+        Branding::DdnAi400 => (
+            ddn_logo(),
+            span![class![C.font_semibold, C.text_3xl, C.tracking_tight], "AI400"],
+            C.text_red_600,
+        ),
+    };
+
     div![
         class![
             C.flex_shrink_0,
@@ -197,11 +207,11 @@ fn logo_nav_view<T>() -> Node<T> {
             C.lg__my_0,
             C.ml_6,
             C.my_2,
-            C.text_red_600,
+            color,
             C.xl__mr_12
         ],
-        ddn_logo().merge_attrs(class![C.h_12, C.w_24, C.mr_3]),
-        span![class![C.font_semibold, C.text_3xl, C.tracking_tight], "AI400"],
+        logo.merge_attrs(class![C.h_12, C.w_24, C.mr_3]),
+        txt,
     ]
 }
 
@@ -218,7 +228,7 @@ fn nav(model: &Model) -> Node<Msg> {
             C.justify_between,
             C.flex_wrap
         ],
-        logo_nav_view(),
+        logo_nav_view(model.conf.branding),
         toggle_nav_view(),
         if model.menu_visibility == Visible || model.breakpoint_size >= breakpoints::Size::LG {
             div![
@@ -294,7 +304,10 @@ pub fn auth_view(auth: &auth::Model, logging_out: bool) -> Node<Msg> {
                     attrs! {
                         At::Href => Route::User(user.id.into()).to_href()
                     },
-                    user.username
+                    match (user.full_name.as_str(), user.username.as_str()) {
+                        ("", x) => x,
+                        (x, _) => x,
+                    }
                 ]
             }
             None => empty![],

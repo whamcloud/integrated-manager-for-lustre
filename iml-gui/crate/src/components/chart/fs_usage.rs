@@ -7,20 +7,10 @@ use futures::channel::oneshot;
 use seed::{prelude::*, Request, *};
 use std::time::Duration;
 
-pub static DB_NAME: &str = "iml_stats";
-pub static FS_USAGE_QUERY: &str = r#"
-SELECT SUM(bytes_total) as bytes_total,
- SUM(bytes_free) as bytes_free,
- SUM("bytes_avail") as bytes_avail
- FROM (
-    SELECT LAST("bytes_total") AS bytes_total,
-    LAST("bytes_free") as bytes_free,
-    LAST("bytes_avail") as bytes_avail
-    FROM "target" WHERE "kind" = '"OST"' GROUP BY target
-    )
-"#;
+static DB_NAME: &str = "iml_stats";
 
 pub struct Model {
+    fs_name: Option<String>,
     cancel: Option<oneshot::Sender<()>>,
     pub metric_data: Option<FsUsage>,
     pub percent_used: f64,
@@ -29,9 +19,19 @@ pub struct Model {
 impl Default for Model {
     fn default() -> Self {
         Self {
+            fs_name: None,
             cancel: None,
             metric_data: None,
             percent_used: f64::default(),
+        }
+    }
+}
+
+impl Model {
+    pub fn new(fs_name: impl Into<Option<String>>) -> Self {
+        Self {
+            fs_name: fs_name.into(),
+            ..Default::default()
         }
     }
 }
@@ -64,14 +64,14 @@ pub struct FsUsage {
     pub bytes_total: f64,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     DataFetched(Box<seed::fetch::ResponseDataResult<InfluxResults>>),
     FetchData,
     Noop,
 }
 
-async fn fetch_metrics(db: &str, query: &str) -> Result<Msg, Msg> {
+async fn fetch_metrics(db: &str, query: String) -> Result<Msg, Msg> {
     let url = format!("/influx?db={}&q={}", db, query);
 
     Request::new(url)
@@ -82,7 +82,27 @@ async fn fetch_metrics(db: &str, query: &str) -> Result<Msg, Msg> {
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::FetchData => {
-            orders.skip().perform_cmd(fetch_metrics(DB_NAME, FS_USAGE_QUERY));
+            let part = if let Some(fs_name) = &model.fs_name {
+                format!(r#"AND "fs" = '{}'"#, fs_name)
+            } else {
+                "".into()
+            };
+
+            let query = format!(
+                r#"SELECT SUM(bytes_total) as bytes_total,
+ SUM(bytes_free) as bytes_free,
+ SUM("bytes_avail") as bytes_avail
+ FROM (
+    SELECT LAST("bytes_total") AS bytes_total,
+    LAST("bytes_free") as bytes_free,
+    LAST("bytes_avail") as bytes_avail
+    FROM "target" WHERE "kind" = 'OST' {} GROUP BY target
+    )
+"#,
+                part
+            );
+
+            orders.skip().perform_cmd(fetch_metrics(DB_NAME, query));
         }
         Msg::DataFetched(influx_data) => {
             match *influx_data {

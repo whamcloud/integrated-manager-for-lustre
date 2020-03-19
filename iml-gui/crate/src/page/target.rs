@@ -1,6 +1,6 @@
 use crate::{
     components::{action_dropdown, alert_indicator, lock_indicator, panel, resource_links, Placement},
-    extensions::MergeAttrs,
+    extensions::MergeAttrs as _,
     generated::css_classes::C,
     GMsg,
 };
@@ -25,7 +25,7 @@ impl Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     ActionDropdown(action_dropdown::IdMsg),
     UpdateTarget(Arc<Target<TargetConfParam>>),

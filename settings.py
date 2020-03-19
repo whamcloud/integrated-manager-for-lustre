@@ -46,14 +46,6 @@ IML_API_PORT = 8004
 
 IML_API_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, IML_API_PORT)
 
-REALTIME_PORT = 8888
-
-REALTIME_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, REALTIME_PORT)
-
-VIEW_SERVER_PORT = 8889
-
-VIEW_SERVER_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, VIEW_SERVER_PORT)
-
 WARP_DRIVE_PORT = 8890
 
 WARP_DRIVE_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, WARP_DRIVE_PORT)
@@ -65,6 +57,8 @@ INFLUXDB_IML_DB = "iml"
 INFLUXDB_STRATAGEM_SCAN_DB = "iml_stratagem_scans"
 
 INFLUXDB_IML_STATS_DB = "iml_stats"
+
+INFLUXDB_IML_STATS_LONG_DURATION = "52w"
 
 MAILBOX_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, MAILBOX_PORT)
 
@@ -93,6 +87,12 @@ GRAFANA_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, GRAFANA_PORT)
 TIMER_PORT = 8892
 
 TIMER_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, TIMER_PORT)
+
+INCLUDES = ""
+
+BRANDING = "Whamcloud"
+
+USE_STRATAGEM = False
 
 ALLOWED_HOSTS = ["*"]
 
@@ -299,19 +299,6 @@ STORAGE_API_VERSION = 1
 STORAGE_PLUGIN_DEBUG = DEBUG
 #: List of plugins to enable debug-level logging for
 STORAGE_PLUGIN_DEBUG_PLUGINS = []
-
-STORAGE_PLUGIN_ENABLE_STATS = True
-
-# Control of the statistics storage
-STATS_SIMPLE_WIPE = (
-    True  # True means we simple delete everything that is older than the expiration, data not rolled up is lost.
-)
-STATS_10_SECOND_EXPIRATION = {"days": 1}  # Expiration must be multiple of 10 seconds.
-STATS_1_MINUTE_EXPIRATION = {"days": 3}  # Expiration must be multiple of 1 minute.
-STATS_5_MINUTE_EXPIRATION = {"days": 7}  # Expiration must be multiple of 5 minute.
-STATS_1_HOUR_EXPIRATION = {"days": 30}  # Expiration must be multiple of 1 hour.
-STATS_1_DAY_EXPIRATION = {"weeks": 10000}  # Expiration must be multiple of 1 day
-STATS_FLUSH_RATE = 20  # Flush 20 times per expiration interval - for 10 seconds sample flush every 1day/20.
 
 # When agent sends VPD 0x80 and 0x83 serial numbers, which do we prefer to use
 # for the canonical device serial on the manager?  Favorite first.

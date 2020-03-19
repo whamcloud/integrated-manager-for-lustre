@@ -12,10 +12,6 @@ services:
     restart: on-failure
   update-handler:
     restart: on-failure
-  realtime:
-    restart: on-failure
-  view-server:
-    restart: on-failure
   device-aggregator:
     restart: on-failure
   corosync:
@@ -33,8 +29,6 @@ services:
   plugin-runner:
     restart: on-failure
   power-control:
-    restart: on-failure
-  stats:
     restart: on-failure
   syslog:
     restart: on-failure

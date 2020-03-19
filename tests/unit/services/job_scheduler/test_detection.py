@@ -25,7 +25,10 @@ class TestDetection(IMLUnitTestCase):
 
         load_default_profile()
 
-    def test_combined_mgs_mdt(self):
+    @mock.patch("chroma_core.lib.job.Step.invoke_rust_agent", return_value=mock.MagicMock())
+    def test_combined_mgs_mdt(self, invoke):
+        invoke.return_value = '{"Ok": []}'
+
         def fixture_glob(g):
             return glob.glob(os.path.join(os.path.dirname(__file__), "fixtures/test_combined_mgs_mdt", g))
 

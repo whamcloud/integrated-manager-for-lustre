@@ -19,7 +19,7 @@ from chroma_core.models import StateChangeJob, StateLock, AdvertisedJob
 from chroma_core.models import ManagedHost, VolumeNode, Volume, HostContactAlert
 from chroma_core.models import StatefulObject
 from chroma_core.models import PacemakerConfiguration
-from chroma_core.models import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
+from chroma_core.models import DeletableMetaclass, DeletableDowncastableMetaclass
 from chroma_core.models import StonithNotEnabledAlert
 from chroma_help.help import help_text
 from iml_common.blockdevices.blockdevice import BlockDevice
@@ -442,7 +442,7 @@ class ManagedTarget(StatefulObject):
         return mkfs_options
 
 
-class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
+class ManagedOst(ManagedTarget, FilesystemMember):
     class Meta:
         app_label = "chroma_core"
         ordering = ["id"]
@@ -470,7 +470,7 @@ class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
         return mkfs_options
 
 
-class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
+class ManagedMdt(ManagedTarget, FilesystemMember):
     class Meta:
         app_label = "chroma_core"
         ordering = ["id"]
@@ -499,7 +499,7 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
         return mkfs_options
 
 
-class ManagedMgs(ManagedTarget, MeasuredEntity):
+class ManagedMgs(ManagedTarget):
     conf_param_version = models.IntegerField(default=0)
     conf_param_version_applied = models.IntegerField(default=0)
 

@@ -1,7 +1,6 @@
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
 from chroma_core.lib.storage_plugin.api.identifiers import ScopedId, AutoId, GlobalId
 from chroma_core.lib.storage_plugin.api import attributes
-from chroma_core.lib.storage_plugin.api import statistics
 from chroma_core.lib.storage_plugin.api import resources
 from chroma_core.lib.storage_plugin.api import relations
 
@@ -24,33 +23,9 @@ class Couplet(resources.ScannableResource):
 class Lun(resources.LogicalDrive):
     class Meta:
         identifier = ScopedId("lun_id")
-        charts = [
-            {"title": "Bandwidth", "series": ["read_bytes_sec", "write_bytes_sec"]},
-            {"title": "Latency distribution", "series": ["write_latency_hist"]},
-        ]
 
     lun_id = attributes.String()
     couplet = attributes.ResourceReference()
-
-    read_bytes_sec = statistics.Gauge(units="B/s", label="Read bandwidth")
-    write_bytes_sec = statistics.Gauge(units="B/s", label="Write bandwidth")
-    write_latency_hist = statistics.BytesHistogram(
-        label="Write latency",
-        bins=[
-            (0, 16),
-            (17, 32),
-            (33, 64),
-            (65, 128),
-            (129, 256),
-            (257, 512),
-            (513, 1024),
-            (1024, 2048),
-            (2049, 4096),
-            (4097, 8192),
-            (8193, 16384),
-            (16385, 32768),
-        ],
-    )
 
     def get_label(self):
         return self.lun_id

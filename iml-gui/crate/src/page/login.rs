@@ -1,5 +1,11 @@
-use crate::{auth, components::ddn_logo, generated::css_classes::C, FailReasonExt, GMsg, MergeAttrs, Route};
-use iml_wire_types::Session;
+use crate::{
+    auth,
+    components::{ddn_logo, whamcloud_logo},
+    generated::css_classes::C,
+    FailReasonExt, GMsg, MergeAttrs, Route,
+};
+use core::fmt;
+use iml_wire_types::{Branding, Session};
 use seed::{browser::service::fetch, prelude::*, *};
 
 #[derive(Clone, Default, serde::Serialize)]
@@ -37,6 +43,15 @@ pub enum Msg {
     Submit,
     GetSession,
     GotSession(fetch::ResponseDataResult<Session>),
+}
+
+impl fmt::Debug for Msg {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::PasswordChange(_) => f.write_str("*****"),
+            _ => write!(f, "{:?}", self),
+        }
+    }
 }
 
 async fn login(form: Form) -> Result<Msg, Msg> {
@@ -101,7 +116,7 @@ fn err_item<T>(x: &str) -> Node<T> {
     p![class![C.text_red_500, C.text_xs, C.italic,], x]
 }
 
-pub fn view(model: &Model) -> impl View<Msg> {
+pub fn view(model: &Model, branding: Branding) -> impl View<Msg> {
     let input_cls = class![
         C.appearance_none,
         C.focus__outline_none,
@@ -116,6 +131,18 @@ pub fn view(model: &Model) -> impl View<Msg> {
     let errs = Errors::default();
 
     let errs = model.errors.as_ref().unwrap_or_else(|| &errs);
+    let (border_color, text_color, logo) = match branding {
+        Branding::Whamcloud => (
+            C.border_teal_500,
+            C.text_teal_500,
+            whamcloud_logo().merge_attrs(class![C.h_16, C.w_16]),
+        ),
+        Branding::Ddn | Branding::DdnAi400 => (
+            C.border_red_700,
+            C.text_red_700,
+            ddn_logo().merge_attrs(class![C.h_16, C.w_32]),
+        ),
+    };
 
     div![
         class![
@@ -127,15 +154,12 @@ pub fn view(model: &Model) -> impl View<Msg> {
             C.min_h_screen,
         ],
         form![
-            class![C.bg_white, C.shadow_md, C.px_16, C.py_8, C.border_b_8, C.border_red_700],
+            class![C.bg_white, C.shadow_md, C.px_16, C.py_8, C.border_b_8, border_color],
             ev(Ev::Submit, move |event| {
                 event.prevent_default();
                 Msg::Submit
             }),
-            div![
-                class![C.text_red_700, C.flex, C.justify_center, C.mb_6],
-                ddn_logo().merge_attrs(class![C.h_16, C.w_32])
-            ],
+            div![class![text_color, C.flex, C.justify_center, C.mb_6], logo],
             match errs.__all__.as_ref() {
                 Some(x) => err_item(x),
                 None => empty![],
@@ -147,8 +171,8 @@ pub fn view(model: &Model) -> impl View<Msg> {
                     input_ev(Ev::Input, Msg::UsernameChange),
                     &input_cls,
                     attrs! {
-                        At::AutoFocus => true,
-                        At::Required => true,
+                        At::AutoFocus => true.as_at_value(),
+                        At::Required => true.as_at_value(),
                         At::Placeholder => "Username",
                         At::AutoComplete => "username"
                     },

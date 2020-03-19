@@ -20,7 +20,6 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 from chroma_core.models import ManagedTargetMount
 from iml_common.lib.date_time import IMLDateTime
 from iml_common.lib.package_version_info import VersionInfo
-from chroma_core.services.stats import StatsQueue
 
 
 log = log_register(__name__)
@@ -59,7 +58,6 @@ class UpdateScan(object):
         log.debug("UpdateScan.run: %s" % self.host)
 
         self.audit_host()
-        self.store_metrics()
 
     def update_properties(self, properties):
         if properties is not None:
@@ -283,52 +281,3 @@ class UpdateScan(object):
                     },
                     ["mounted", "unmounted"],
                 )
-
-    def store_lustre_target_metrics(self, target_name, metrics):
-        # TODO: Re-enable MGS metrics storage if it turns out it's useful.
-        if target_name == "MGS":
-            return []
-
-        try:
-            target = ManagedTarget.objects.get(name=target_name).downcast()
-
-            if target.immutable_state and (target.active_host == target.primary_host):
-                # in monitored mode we want to make sure the target volume is accessible on current host
-                target.volume.volumenode_set.get(host=self.host, not_deleted=True)
-            else:
-                target.managedtargetmount_set.get(host=self.host, not_deleted=True)
-        except (ManagedTarget.DoesNotExist, VolumeNode.DoesNotExist) as e:
-            # Unknown target -- ignore metrics
-            log.warning("Discarding metrics for unknown target: %s (%s)" % (target_name, e))
-            return []
-
-        return target.metrics.serialize(metrics, jobid_var=self.jobid_var)
-
-    @transaction.atomic
-    def store_metrics(self):
-        """
-        Pass the received metrics into the metrics library for storage.
-        """
-        raw_metrics = self.host_data["metrics"]["raw"]
-        self.jobid_var = raw_metrics.get("lustre", {}).get("jobid_var", "disable")
-        samples = []
-
-        try:
-            node_metrics = raw_metrics["node"]
-            try:
-                node_metrics["lnet"] = raw_metrics["lustre"]["lnet"]
-            except KeyError:
-                pass
-
-            samples += self.host.metrics.serialize(node_metrics)
-        except KeyError:
-            pass
-
-        try:
-            for target, target_metrics in raw_metrics["lustre"]["target"].items():
-                samples += self.store_lustre_target_metrics(target, target_metrics)
-        except KeyError:
-            pass
-
-        StatsQueue().put(samples)
-        return len(samples)

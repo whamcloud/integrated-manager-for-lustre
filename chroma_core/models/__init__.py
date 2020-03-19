@@ -25,7 +25,6 @@ from target import *
 from filesystem import *
 from conf_param import *
 from registration_token import *
-from stats import *
 from ha_cluster import *
 from power_control import *
 from repo import *

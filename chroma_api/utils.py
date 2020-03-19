@@ -31,7 +31,6 @@ from chroma_api.chroma_model_resource import ChromaModelResource
 import chroma_core.lib.conf_param
 from chroma_core.models import utils as conversion_util
 from iml_common.lib.date_time import IMLDateTime
-from chroma_core.lib.metrics import MetricStore, Counter
 
 from collections import defaultdict
 from django.db.models.query import QuerySet

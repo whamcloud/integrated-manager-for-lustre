@@ -10,7 +10,7 @@ from chroma_core.lib.job import DependOn, DependAll, Step, job_log
 from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, FilesystemMember, ManagedTarget
 from chroma_core.models import NoNidsPresent
 from chroma_core.models import StatefulObject, StateChangeJob, StateLock, Job, AdvertisedJob
-from chroma_core.models import DeletableDowncastableMetaclass, MeasuredEntity
+from chroma_core.models import DeletableDowncastableMetaclass
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.util import target_label_split
 from django.db.models import Q
@@ -38,7 +38,7 @@ def get_fs_id_from_identifier(fs_identifier):
         return ManagedFilesystem.objects.filter(name=fs_identifier).values_list("id", flat=True).first()
 
 
-class ManagedFilesystem(StatefulObject, MeasuredEntity):
+class ManagedFilesystem(StatefulObject):
     __metaclass__ = DeletableDowncastableMetaclass
 
     name = models.CharField(

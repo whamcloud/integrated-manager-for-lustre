@@ -2,7 +2,6 @@ use crate::{
     components::{panel, resource_links, table},
     generated::css_classes::C,
     route::{Route, RouteId},
-    Msg,
 };
 use iml_wire_types::{
     db::{AuthGroupRecord, AuthUserRecord},
@@ -10,6 +9,9 @@ use iml_wire_types::{
 };
 use seed::{prelude::*, *};
 use std::sync::Arc;
+
+#[derive(Clone, Debug)]
+pub enum Msg {}
 
 fn full_name(x: &AuthUserRecord) -> String {
     match (x.first_name.as_str(), x.last_name.as_str()) {

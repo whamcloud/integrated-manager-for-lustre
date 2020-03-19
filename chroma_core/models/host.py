@@ -42,7 +42,6 @@ from chroma_core.lib.job import DependOn
 from chroma_core.lib.job import DependAll
 from chroma_core.lib.job import DependAny
 from chroma_core.lib.job import Step
-from chroma_core.models.utils import MeasuredEntity
 from chroma_core.models.utils import DeletableMetaclass
 from chroma_core.models.utils import get_all_sub_classes
 from chroma_help.help import help_text
@@ -87,7 +86,7 @@ class HostListMixin(Job):
         return self._hosts
 
 
-class ManagedHost(DeletableStatefulObject, MeasuredEntity):
+class ManagedHost(DeletableStatefulObject):
     address = models.CharField(max_length=255, help_text="A URI like 'user@myhost.net:22'")
 
     # A fully qualified domain name like flint02.testnet

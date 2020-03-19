@@ -57,12 +57,12 @@ systemctl restart postgresql
 
 
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/@MFL_COPR_REPO@/repo/epel-7/@MFL_COPR_NAME@-epel-7.repo
-yum -y install nodejs ed npm nginx libuv iml-gui iml-online-help iml-view-server iml-old-gui iml-realtime
+yum -y install ed npm nginx libuv iml-gui iml-online-help
 
 cd /integrated-manager-for-lustre
 cp iml-corosync.service iml-gunicorn.service iml-http-agent.service iml-job-scheduler.service /lib/systemd/system
-cp iml-lustre-audit.service iml-manager.target iml-power-control.service /lib/systemd/system
-cp iml-settings-populator.service iml-stats.service iml-syslog.service /lib/systemd/system
+cp iml-lustre-audit.service iml-manager.target iml-plugin-runner.service iml-power-control.service /lib/systemd/system
+cp iml-settings-populator.service iml-syslog.service /lib/systemd/system
 pip install -r requirements.txt
 pip install -r requirements.test
 echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py

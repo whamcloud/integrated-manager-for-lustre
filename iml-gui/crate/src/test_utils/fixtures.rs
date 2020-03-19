@@ -6,6 +6,8 @@ pub(crate) fn get_cache() -> Cache {
   "content_type": {},
   "device": {},
   "device_host": {},
+  "pacemaker_configuration": {},
+  "corosync_configuration": {},
   "group": {},
   "user": {},
   "user_group": {},

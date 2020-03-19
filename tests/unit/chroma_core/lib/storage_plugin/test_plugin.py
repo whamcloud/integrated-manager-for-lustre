@@ -57,9 +57,6 @@ class TestPlugin(Plugin):
     def update_scan(self, root_resource):
         self.update_scan_called = True
 
-    def _commit_resource_statistics(self):
-        self._commit_resource_statistics_called = True
-
     def teardown(self):
         self.teardown_called = True
 
@@ -313,6 +310,3 @@ class TestAddRemove(IMLUnitTestCase):
         self.resource_manager.session_update_resource.assert_called_once_with(
             self.plugin._scannable_id, self.plugin.resource._handle, {"extra_info": "bar"}
         )
-
-    def test_update_statistics(self):
-        pass

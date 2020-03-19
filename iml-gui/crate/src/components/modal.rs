@@ -1,17 +1,18 @@
 use crate::{components::font_awesome, generated::css_classes::C, key_codes, GMsg};
 use seed::{prelude::*, *};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Model {
     pub open: bool,
 }
 
 type ParentMsg<T> = fn(Msg) -> T;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Msg {
     KeyDown(u32),
     Close,
+    Open,
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -23,6 +24,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::Close => {
             model.open = false;
+        }
+        Msg::Open => {
+            model.open = true;
         }
     }
 }
@@ -53,7 +57,6 @@ pub fn content_view<T>(p_msg: ParentMsg<T>, children: impl View<T>) -> Node<T> {
             C.rounded,
             C.shadow_lg,
             C.z_50,
-            C.overflow_y_auto,
         ],
         div![
             class![

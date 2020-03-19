@@ -1,3 +1,7 @@
+// Copyright (c) 2020 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 use crate::{components::table as t, generated::css_classes::C, sleep_with_handle, GMsg};
 use chrono::offset::{TimeZone, Utc};
 use futures::channel::oneshot;
@@ -13,7 +17,7 @@ pub(crate) struct INodeCount {
     timestamp: i64,
 }
 
-pub(crate) struct Model {
+pub struct Model {
     pub(crate) fs_name: String,
     pub(crate) last_known_scan: Option<String>,
     inodes: Vec<INodeCount>,
@@ -31,7 +35,7 @@ impl Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     FetchInodes,
     InodesFetched(Box<fetch::ResponseDataResult<InfluxResults>>),
@@ -63,7 +67,7 @@ pub(crate) fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, 
     match msg {
         Msg::FetchInodes => {
             model.cancel = None;
-            let url:String = format!("influx?db=iml_stratagem_scans&epoch=ns&q=SELECT%20counter_name,%20count,%20size%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27%20and%20fs_name=%27{}%27%20limit%2020", &model.fs_name);
+            let url:String = format!("/influx?db=iml_stratagem_scans&epoch=ns&q=SELECT%20counter_name,%20count,%20size%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27%20and%20fs_name=%27{}%27%20limit%2020", &model.fs_name);
             let request = seed::fetch::Request::new(url);
 
             orders
@@ -133,7 +137,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
             p![
                 class![C.py_4, C.text_gray_600],
                 "Last Scanned: ",
-                model.last_known_scan.as_ref().unwrap_or(&"N/A".to_string())
+                model.last_known_scan.as_ref().unwrap_or(&"---".to_string())
             ]
         ],
         table![

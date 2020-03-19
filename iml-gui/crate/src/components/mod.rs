@@ -7,6 +7,7 @@ pub mod popover;
 pub mod progress_circle;
 pub mod resource_links;
 pub mod table;
+pub mod toast;
 pub mod tooltip;
 
 pub(crate) mod action_dropdown;
@@ -16,8 +17,10 @@ pub(crate) mod arrow;
 pub(crate) mod attrs;
 pub(crate) mod breadcrumbs;
 pub(crate) mod chart;
+pub(crate) mod command_modal;
 pub(crate) mod dashboard;
 pub(crate) mod datepicker;
+pub(crate) mod duration_picker;
 pub(crate) mod font_awesome;
 pub(crate) mod grafana_chart;
 pub(crate) mod loading;

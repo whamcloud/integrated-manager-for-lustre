@@ -6,14 +6,8 @@ use crate::{display_utils, error::ImlManagerCliError};
 use futures::{future, FutureExt, TryFutureExt};
 use iml_wire_types::{ApiList, AvailableAction, Command, EndpointName, FlatQuery, Host};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use regex::Regex;
 use std::{collections::HashMap, fmt::Debug, iter, time::Duration};
 use tokio::{task::spawn_blocking, time::delay_for};
-
-#[derive(serde::Deserialize, Debug)]
-pub struct CmdWrapper {
-    pub command: Command,
-}
 
 #[derive(serde::Serialize)]
 pub struct SendJob<T> {
@@ -210,12 +204,4 @@ pub async fn get_one<T: EndpointName + FlatQuery + Debug + serde::de::Deserializ
     let mut q = T::query();
     q.extend(query);
     first(get(T::endpoint_name(), q).await?)
-}
-
-pub fn extract_api_id(s: &str) -> Option<&str> {
-    let re = Regex::new(r"^/?api/[^/]+/(\d+)/?$").unwrap();
-
-    let x = re.captures(s)?;
-
-    x.get(1).map(|x| x.as_str())
 }

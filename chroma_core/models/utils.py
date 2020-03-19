@@ -142,18 +142,6 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
         return super(DeletableDowncastableMetaclass, cls).__new__(cls, name, bases, dct)
 
 
-class MeasuredEntity(object):
-    """Provides mix-in access to metrics specific to the instance."""
-
-    @property
-    def metrics(self):
-        from chroma_core.lib.metrics import MetricStore
-
-        if not hasattr(self, "_metrics"):
-            self._metrics = MetricStore.new(self)
-        return self._metrics
-
-
 class Version(tuple):
     "Version string as a comparable tuple, similar to sys.version_info."
 

@@ -422,12 +422,27 @@ impl<T> ApiList<T> {
     }
 }
 
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Conf {
     pub allow_anonymous_read: bool,
     pub build: String,
     pub version: String,
     pub is_release: bool,
+    pub branding: Branding,
+    pub use_stratagem: bool,
+}
+
+impl Default for Conf {
+    fn default() -> Self {
+        Self {
+            allow_anonymous_read: true,
+            build: "Not Loaded".into(),
+            version: "0".into(),
+            is_release: false,
+            branding: Branding::default(),
+            use_stratagem: false,
+        }
+    }
 }
 
 impl EndpointName for Conf {
@@ -510,6 +525,27 @@ pub struct Host {
     pub server_profile: ServerProfile,
     pub state: String,
     pub state_modified_at: String,
+}
+
+impl Host {
+    /// Get associated LNet configuration id
+    pub fn lnet_id(&self) -> Option<u32> {
+        let id = iml_api_utils::extract_id(&self.lnet_configuration)?;
+
+        id.parse::<u32>().ok()
+    }
+    /// Get associated Corosync configuration id
+    pub fn corosync_id(&self) -> Option<u32> {
+        let id = iml_api_utils::extract_id(self.corosync_configuration.as_ref()?)?;
+
+        id.parse::<u32>().ok()
+    }
+    /// Get associated Pacemaker configuration id
+    pub fn pacemaker_id(&self) -> Option<u32> {
+        let id = iml_api_utils::extract_id(self.pacemaker_configuration.as_ref()?)?;
+
+        id.parse::<u32>().ok()
+    }
 }
 
 impl FlatQuery for Host {}
@@ -611,6 +647,11 @@ pub struct ProfileTest {
     pub error: String,
     pub pass: bool,
     pub test: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct CmdWrapper {
+    pub command: Command,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -1490,6 +1531,30 @@ impl PartialOrd for OstPool {
 impl PartialEq for OstPool {
     fn eq(&self, other: &Self) -> bool {
         self.filesystem == other.filesystem && self.name == other.name
+    }
+}
+
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+pub enum Branding {
+    Whamcloud,
+    Ddn,
+    DdnAi400,
+}
+
+impl Default for Branding {
+    fn default() -> Self {
+        Self::Whamcloud
+    }
+}
+
+impl From<String> for Branding {
+    fn from(x: String) -> Self {
+        match x.to_lowercase().as_str() {
+            "whamcloud" => Self::Whamcloud,
+            "ddn" => Self::Ddn,
+            "ddnai400" => Self::DdnAi400,
+            _ => Self::Whamcloud,
+        }
     }
 }
 

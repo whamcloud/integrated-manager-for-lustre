@@ -41,6 +41,9 @@ impl Model {
     pub const fn total(&self) -> usize {
         self.total
     }
+    pub const fn limit(&self) -> usize {
+        self.limit
+    }
     pub const fn has_less(&self) -> bool {
         self.offset != 0
     }
@@ -68,7 +71,7 @@ impl Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     Dropdown(dropdown::Msg),
     Next,
@@ -218,6 +221,7 @@ pub fn next_prev_view(paging: &Model) -> Vec<Node<Msg>> {
             class![
                 C.px_5,
                 C.pointer_events_none => !paging.has_less(),
+                C.text_gray_700 => !paging.has_less(),
             ],
             font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chevron-left"),
             simple_ev(Ev::Click, Msg::Prev),
@@ -227,6 +231,7 @@ pub fn next_prev_view(paging: &Model) -> Vec<Node<Msg>> {
             &cls,
             class![
                 C.pointer_events_none => !paging.has_more(),
+                C.text_gray_700 => !paging.has_more(),
             ],
             "next",
             simple_ev(Ev::Click, Msg::Next),

@@ -1,10 +1,11 @@
-# Copyright (c) 2018 DDN. All rights reserved.
+# Copyright (c) 2020 DDN. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
 import settings
 import glob
 import json
+import os
 from django.db import connection
 from django.core.management.commands.runserver import Command as BaseCommand
 
@@ -16,6 +17,18 @@ class Command(BaseCommand):
 
     help = """Prints out selected settings in env variable format"""
 
+    def _load_config(self, config_file):
+        config = {}
+        if os.path.exists(config_file):
+            with open(config_file) as file:
+                content = file.read()
+
+                for line in content.splitlines():
+                    key_val = line.split("=", 1)
+                    config[key_val[0]] = key_val[1]
+
+        return config
+
     def handle(self, *args, **kwargs):
         cursor = connection.cursor()
         cursor.execute("SELECT * from api_key()")
@@ -25,46 +38,50 @@ class Command(BaseCommand):
         source_map_paths = glob.glob("/usr/share/iml-manager/iml-gui/main*.map")
         SOURCE_MAP_PATH = next(iter(source_map_paths), None)
 
+        overrides = self._load_config(os.path.join("/var/lib/chroma-setup", "config"))
+
         DB = settings.DATABASES.get("default")
-        xs = map(
-            lambda x: "{0}={1}".format(x[0], x[1]),
-            [
-                ("REALTIME_PORT", settings.REALTIME_PORT),
-                ("VIEW_SERVER_PORT", settings.VIEW_SERVER_PORT),
-                ("WARP_DRIVE_PORT", settings.WARP_DRIVE_PORT),
-                ("MAILBOX_PORT", settings.MAILBOX_PORT),
-                ("DEVICE_AGGREGATOR_PORT", settings.DEVICE_AGGREGATOR_PORT),
-                ("HTTP_AGENT2_PORT", settings.HTTP_AGENT2_PORT),
-                ("HTTP_AGENT2_PROXY_PASS", settings.HTTP_AGENT2_PROXY_PASS),
-                ("IML_API_PORT", settings.IML_API_PORT),
-                ("IML_API_PROXY_PASS", settings.IML_API_PROXY_PASS),
-                ("ALLOW_ANONYMOUS_READ", json.dumps(settings.ALLOW_ANONYMOUS_READ)),
-                ("BUILD", settings.BUILD),
-                ("IS_RELEASE", json.dumps(settings.IS_RELEASE)),
-                ("LOG_PATH", settings.LOG_PATH),
-                ("SERVER_HTTP_URL", settings.SERVER_HTTP_URL),
-                ("SITE_ROOT", settings.SITE_ROOT),
-                ("VERSION", settings.VERSION),
-                ("API_USER", API_USER),
-                ("API_KEY", API_KEY),
-                ("SOURCE_MAP_PATH", SOURCE_MAP_PATH),
-                ("MAILBOX_PATH", settings.MAILBOX_PATH),
-                ("PROXY_HOST", settings.PROXY_HOST),
-                ("INFLUXDB_IML_DB", settings.INFLUXDB_IML_DB),
-                ("INFLUXDB_STRATAGEM_SCAN_DB", settings.INFLUXDB_STRATAGEM_SCAN_DB),
-                ("INFLUXDB_IML_STATS_DB", settings.INFLUXDB_IML_STATS_DB),
-                ("INFLUXDB_PORT", settings.INFLUXDB_PORT),
-                ("DB_HOST", DB.get("HOST")),
-                ("DB_NAME", DB.get("NAME")),
-                ("DB_USER", DB.get("USER")),
-                ("DB_PASSWORD", DB.get("PASSWORD")),
-                ("AMQP_BROKER_USER", settings.AMQP_BROKER_USER),
-                ("AMQP_BROKER_PASSWORD", settings.AMQP_BROKER_PASSWORD),
-                ("AMQP_BROKER_VHOST", settings.AMQP_BROKER_VHOST),
-                ("AMQP_BROKER_HOST", settings.AMQP_BROKER_HOST),
-                ("AMQP_BROKER_PORT", settings.AMQP_BROKER_PORT),
-                ("AMQP_BROKER_URL", settings.BROKER_URL),
-            ],
-        )
+
+        config = {
+            "WARP_DRIVE_PORT": settings.WARP_DRIVE_PORT,
+            "MAILBOX_PORT": settings.MAILBOX_PORT,
+            "DEVICE_AGGREGATOR_PORT": settings.DEVICE_AGGREGATOR_PORT,
+            "HTTP_AGENT2_PORT": settings.HTTP_AGENT2_PORT,
+            "HTTP_AGENT2_PROXY_PASS": settings.HTTP_AGENT2_PROXY_PASS,
+            "IML_API_PORT": settings.IML_API_PORT,
+            "IML_API_PROXY_PASS": settings.IML_API_PROXY_PASS,
+            "ALLOW_ANONYMOUS_READ": json.dumps(settings.ALLOW_ANONYMOUS_READ),
+            "BUILD": settings.BUILD,
+            "IS_RELEASE": json.dumps(settings.IS_RELEASE),
+            "LOG_PATH": settings.LOG_PATH,
+            "SERVER_HTTP_URL": settings.SERVER_HTTP_URL,
+            "SITE_ROOT": settings.SITE_ROOT,
+            "VERSION": settings.VERSION,
+            "API_USER": API_USER,
+            "API_KEY": API_KEY,
+            "SOURCE_MAP_PATH": SOURCE_MAP_PATH,
+            "MAILBOX_PATH": settings.MAILBOX_PATH,
+            "PROXY_HOST": settings.PROXY_HOST,
+            "INFLUXDB_IML_DB": settings.INFLUXDB_IML_DB,
+            "INFLUXDB_STRATAGEM_SCAN_DB": settings.INFLUXDB_STRATAGEM_SCAN_DB,
+            "INFLUXDB_IML_STATS_DB": settings.INFLUXDB_IML_STATS_DB,
+            "INFLUXDB_IML_STATS_LONG_DURATION": settings.INFLUXDB_IML_STATS_LONG_DURATION,
+            "INFLUXDB_PORT": settings.INFLUXDB_PORT,
+            "DB_HOST": DB.get("HOST"),
+            "DB_NAME": DB.get("NAME"),
+            "DB_USER": DB.get("USER"),
+            "DB_PASSWORD": DB.get("PASSWORD"),
+            "AMQP_BROKER_USER": settings.AMQP_BROKER_USER,
+            "AMQP_BROKER_PASSWORD": settings.AMQP_BROKER_PASSWORD,
+            "AMQP_BROKER_VHOST": settings.AMQP_BROKER_VHOST,
+            "AMQP_BROKER_HOST": settings.AMQP_BROKER_HOST,
+            "AMQP_BROKER_PORT": settings.AMQP_BROKER_PORT,
+            "AMQP_BROKER_URL": settings.BROKER_URL,
+            "BRANDING": settings.BRANDING,
+            "USE_STRATAGEM": json.dumps(settings.USE_STRATAGEM),
+        }
+
+        config.update(overrides)
+        xs = map(lambda x: "{0}={1}".format(x[0], x[1]), config.items())
 
         print("\n".join(xs))

@@ -377,7 +377,7 @@ fn remove_item(
     Some(())
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     Add(RecordId),
     Remove(RecordId),
@@ -548,6 +548,14 @@ fn item_view(icon: &str, label: &str, route: Route) -> Node<Msg> {
     ]
 }
 
+fn item_label_view(icon: &str, label: &str, _: Route) -> Node<Msg> {
+    span![
+        class![C.mr_1, C.break_all],
+        font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], icon),
+        label
+    ]
+}
+
 fn tree_host_item_view(cache: &ArcCache, model: &Model, host: &Host) -> Option<Node<Msg>> {
     let address = Address::new(vec![Step::HostCollection, Step::Host(host.id)]);
 
@@ -581,7 +589,7 @@ fn tree_pool_item_view(cache: &ArcCache, model: &Model, address: &Address, pool:
     Some(li![
         class![C.py_1],
         toggle_view(address.clone(), tree_node.open),
-        item_view("swimming-pool", pool.label(), Route::OstPool(pool.id.into())),
+        item_label_view("swimming-pool", pool.label(), Route::OstPool(pool.id.into())),
         if tree_node.open {
             tree_target_collection_view(cache, model, &address, TargetKind::Ost)
         } else {
@@ -691,7 +699,7 @@ fn tree_pools_collection_view(cache: &ArcCache, model: &Model, parent_address: &
     tree_collection_view(
         model,
         addr.clone(),
-        |x| item_view("folder", &format!("OST Pools ({})", x.paging.total()), Route::OstPools),
+        |x| item_label_view("folder", &format!("OST Pools ({})", x.paging.total()), Route::OstPools),
         |x| {
             slice_page(&x.paging, &x.items)
                 .filter_map(|x| cache.ost_pool.get(x))
@@ -720,7 +728,7 @@ fn tree_volume_collection_view(cache: &ArcCache, model: &Model, parent_address: 
 
                     li![
                         class![C.py_1],
-                        item_view("hdd", &format!("{}{}", x.label(), size), Route::Volume(v.id.into())),
+                        item_label_view("hdd", &format!("{}{}", x.label(), size), Route::Volume(v.id.into())),
                     ]
                 })
                 .collect()
@@ -744,7 +752,13 @@ fn tree_target_collection_view(
     tree_collection_view(
         model,
         parent_address.extend(kind),
-        |x| item_view("folder", &format!("{} ({})", label, x.paging.total()), Route::Targets),
+        |x| {
+            if kind == TargetKind::Mgt {
+                item_view("folder", &format!("{} ({})", label, x.paging.total()), Route::Mgt)
+            } else {
+                item_label_view("folder", &format!("{} ({})", label, x.paging.total()), Route::Targets)
+            }
+        },
         |x| {
             slice_page(&x.paging, &x.items)
                 .filter_map(|x| cache.target.get(x))
