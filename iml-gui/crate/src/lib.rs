@@ -588,7 +588,12 @@ fn handle_record_change(
                 model.records.content_type.insert(x.id, Arc::new(x));
             }
             warp_drive::Record::Device(x) => {
-                model.records.device.insert(x.record_id, Arc::new(x));
+                let d = Arc::new(x);
+                model.records.device.insert(d.record_id, d.clone());
+
+                orders
+                    .proxy(Msg::DevicesPage)
+                    .send_msg(page::devices::Msg::UpdateDevice(d));
             }
             warp_drive::Record::DeviceHost(x) => {
                 model.records.device_host.insert(x.id, Arc::new(x));
@@ -689,6 +694,11 @@ fn handle_record_change(
                 | warp_drive::RecordId::OstPoolOsts(_)
                 | warp_drive::RecordId::Target(_) => {
                     orders.proxy(Msg::Tree).send_msg(tree::Msg::Remove(record_id));
+                }
+                warp_drive::RecordId::Device(_) => {
+                    orders
+                        .proxy(Msg::DevicesPage)
+                        .send_msg(page::devices::Msg::Remove(record_id));
                 }
                 _ => {}
             };

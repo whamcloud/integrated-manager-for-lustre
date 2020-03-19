@@ -1,5 +1,8 @@
 use crate::{components::table, generated::css_classes::C, route::RouteId, GMsg, Route};
-use iml_wire_types::{db::DeviceRecord, warp_drive::ArcCache};
+use iml_wire_types::{
+    db::DeviceRecord,
+    warp_drive::{ArcCache, RecordId},
+};
 use seed::{prelude::*, *};
 use std::sync::Arc;
 
@@ -8,9 +11,11 @@ pub struct Model {
     pub device: Vec<Arc<DeviceRecord>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     SetDevices(Vec<Arc<DeviceRecord>>),
+    UpdateDevice(Arc<DeviceRecord>),
+    Remove(RecordId),
 }
 
 pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
@@ -19,12 +24,30 @@ pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
 
 pub fn update(msg: Msg, _cache: &ArcCache, model: &mut Model, _orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
-        Msg::SetDevices(xs) => {
-            let mut devices: Vec<_> = xs;
-
+        Msg::SetDevices(mut devices) => {
             devices.sort_by(|a, b| natord::compare(&a.device.id, &b.device.id));
 
             model.device = devices;
+        }
+        Msg::UpdateDevice(d) => {
+            let devices = &mut model.device;
+
+            devices.push(d);
+
+            devices.sort_by(|a, b| natord::compare(&a.device.id, &b.device.id));
+        }
+        Msg::Remove(d) => {
+            let devices = &mut model.device;
+
+            let i = devices.iter().position(|x| RecordId::Device(x.record_id) == d);
+
+            if let Some(i) = i {
+                devices.remove(i);
+            } else {
+                seed::log!("Element to remove not found");
+            }
+
+            devices.sort_by(|a, b| natord::compare(&a.device.id, &b.device.id));
         }
     }
 }
