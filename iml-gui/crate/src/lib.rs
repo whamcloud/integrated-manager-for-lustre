@@ -755,17 +755,22 @@ fn handle_record_change(
                     model.records.pacemaker_configuration.insert(x.id, x);
                 }
                 ArcRecord::Device(x) => {
-                    let d = Arc::new(x);
-                    model.records.device.insert(d.record_id, d.clone());
-    
+                    model.records.device.insert(x.record_id, x.clone());
+
                     orders
-                        .proxy(Msg::DevicesPage)
-                        .send_msg(page::devices::Msg::UpdateDevice(d));
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Devices)
+                        .send_msg(page::devices::Msg::UpdateDevice(x));
                 }
                 ArcRecord::DeviceHost(x) => {
-                    model.records.device_host.insert(x.id, Arc::new(x));
+                    let x2 = x.clone();
+                    model.records.device_host.insert(x.id, x);
+
+                    orders
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::DeviceHosts)
+                        .send_msg(page::device_hosts::Msg::UpdateDeviceHost(x2));
                 }
-    
             }
         }
         warp_drive::RecordChange::Delete(record_id) => {
@@ -779,8 +784,15 @@ fn handle_record_change(
                 }
                 warp_drive::RecordId::Device(_) => {
                     orders
-                        .proxy(Msg::DevicesPage)
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::Devices)
                         .send_msg(page::devices::Msg::Remove(record_id));
+                }
+                warp_drive::RecordId::DeviceHost(_) => {
+                    orders
+                        .proxy(Msg::Page)
+                        .proxy(page::Msg::DeviceHosts)
+                        .send_msg(page::device_hosts::Msg::Remove(record_id));
                 }
                 warp_drive::RecordId::StratagemConfig(_) => {
                     orders
@@ -1018,10 +1030,14 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::User(x) => main_panels(model, page::user::view(x).els().map_msg(page::Msg::User)).els(),
         Page::Volumes(x) => main_panels(model, page::volumes::view(x).els().map_msg(page::Msg::Volumes)).els(),
         Page::Volume(x) => main_panels(model, page::volume::view(x).els().map_msg(page::Msg::Volume)).els(),
-        Page::Devices(x) => main_panels(model, page::devices::view(x)).els(),
-        Page::Device(x) => main_panels(model, page::device::view(x)).els(),
-        Page::DeviceHosts(x) => main_panels(model, page::device_hosts::view(x)).els(),
-        Page::DeviceHost(x) => main_panels(model, page::device_host::view(x)).els(),
+        Page::Devices(x) => main_panels(model, page::devices::view(x).els().map_msg(page::Msg::Devices)).els(),
+        Page::Device(x) => main_panels(model, page::device::view(x).els().map_msg(page::Msg::Device)).els(),
+        Page::DeviceHosts(x) => {
+            main_panels(model, page::device_hosts::view(x).els().map_msg(page::Msg::DeviceHosts)).els()
+        }
+        Page::DeviceHost(x) => {
+            main_panels(model, page::device_host::view(x).els().map_msg(page::Msg::DeviceHost)).els()
+        }
     };
 
     // command modal is the global singleton, therefore is being showed here

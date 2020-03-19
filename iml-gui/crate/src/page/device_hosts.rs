@@ -1,4 +1,4 @@
-use crate::{components::table, generated::css_classes::C, route::RouteId, GMsg, Route};
+use crate::{components::table, generated::css_classes::C, GMsg};
 use iml_wire_types::{
     db::DeviceHostRecord,
     warp_drive::{ArcCache, RecordId},
@@ -23,7 +23,7 @@ pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
     orders.send_msg(Msg::SetDeviceHosts(cache.device_host.values().cloned().collect()));
 }
 
-pub fn update(msg: Msg, _cache: &ArcCache, model: &mut Model, _orders: &mut impl Orders<Msg, GMsg>) {
+pub fn update(msg: Msg, model: &mut Model, _orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::SetDeviceHosts(mut devices) => {
             devices.sort_by(|a, b| natord::compare(a.device_host.fqdn.as_ref(), b.device_host.fqdn.as_ref()));
@@ -51,7 +51,7 @@ pub fn update(msg: Msg, _cache: &ArcCache, model: &mut Model, _orders: &mut impl
     }
 }
 
-pub fn view(model: &Model) -> impl View<crate::Msg> {
+pub fn view(model: &Model) -> impl View<Msg> {
     div![
         class![C.bg_white],
         div![

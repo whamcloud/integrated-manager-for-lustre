@@ -22,7 +22,7 @@ pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
     orders.send_msg(Msg::SetDevices(cache.device.values().cloned().collect()));
 }
 
-pub fn update(msg: Msg, _cache: &ArcCache, model: &mut Model, _orders: &mut impl Orders<Msg, GMsg>) {
+pub fn update(msg: Msg, model: &mut Model, _orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::SetDevices(mut devices) => {
             devices.sort_by(|a, b| natord::compare(&a.device.id, &b.device.id));
@@ -50,7 +50,7 @@ pub fn update(msg: Msg, _cache: &ArcCache, model: &mut Model, _orders: &mut impl
     }
 }
 
-pub fn view(model: &Model) -> impl View<crate::Msg> {
+pub fn view(model: &Model) -> impl View<Msg> {
     div![
         class![C.bg_white],
         div![

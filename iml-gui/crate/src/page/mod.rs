@@ -243,12 +243,8 @@ impl Page {
             Self::Volumes(x) => {
                 volumes::init(cache, x, &mut orders.proxy(Msg::Volumes));
             }
-            Self::Devices(_) => {
-                devices::init(cache, &mut orders.proxy(Msg::DevicesPage))
-            }
-            Self::DeviceHosts(_) => {
-                device_hosts::init(cache, &mut orders.proxy(Msg::DeviceHostsPage))
-            }
+            Self::Devices(_) => devices::init(cache, &mut orders.proxy(Msg::Devices)),
+            Self::DeviceHosts(_) => device_hosts::init(cache, &mut orders.proxy(Msg::DeviceHosts)),
             _ => {}
         };
     }
@@ -258,8 +254,10 @@ impl Page {
 pub enum Msg {
     About(about::Msg),
     Dashboard(dashboard::Msg),
-    DevicesPage(devices::Msg),
-    DeviceHostsPage(device_hosts::Msg),
+    Device(device::Msg),
+    Devices(devices::Msg),
+    DeviceHost(device_host::Msg),
+    DeviceHosts(device_hosts::Msg),
     Filesystem(filesystem::Msg),
     Filesystems(filesystems::Msg),
     FsDashboard(fs_dashboard::Msg),
@@ -343,16 +341,18 @@ pub(crate) fn update(msg: Msg, page: &mut Page, cache: &ArcCache, orders: &mut i
                 login::update(*msg, page, &mut orders.proxy(|x| Msg::Login(Box::new(x))));
             }
         }
-        Msg::DevicesPage(msg) => {
-            if let Page::Devices(page) = &mut model.page {
-                devices::update(msg, &model.records, page, &mut orders.proxy(Msg::DevicesPage))
+        Msg::Devices(msg) => {
+            if let Page::Devices(page) = page {
+                devices::update(msg, page, &mut orders.proxy(Msg::Devices))
             }
         }
-        Msg::DeviceHostsPage(msg) => {
-            if let Page::DeviceHosts(page) = &mut model.page {
-                device_hosts::update(msg, &model.records, page, &mut orders.proxy(Msg::DeviceHostsPage))
+        Msg::Device(msg) => {}
+        Msg::DeviceHosts(msg) => {
+            if let Page::DeviceHosts(page) = page {
+                device_hosts::update(msg, page, &mut orders.proxy(Msg::DeviceHosts))
             }
         }
+        Msg::DeviceHost(msg) => {}
         Msg::About(_)
         | Msg::Jobstats(_)
         | Msg::OstPool(_)
