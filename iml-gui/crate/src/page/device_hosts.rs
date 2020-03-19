@@ -4,6 +4,7 @@ use iml_wire_types::{
     warp_drive::{ArcCache, RecordId},
 };
 use seed::{prelude::*, *};
+use std::borrow::Cow;
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -64,10 +65,13 @@ pub fn view(model: &Model) -> impl View<crate::Msg> {
             ]
         } else {
             table::wrapper_view(vec![
-                table::thead_view(vec![table::th_view(plain!["Id"]), th![]]),
+                table::thead_view(vec![
+                    table::th_view(plain!["Device Id"]),
+                    table::th_view(plain!["Host"]),
+                ]),
                 tbody![model.device_host.iter().map(|x| tr![
-                    table::td_center(vec![text![&x.device_host.device_id],]),
-                    table::td_center(vec![text![x.device_host.fqdn.as_ref()],])
+                    table::td_view(vec![plain![Cow::from(x.device_host.device_id.0.clone())],]),
+                    table::td_view(vec![plain![Cow::from(x.device_host.fqdn.0.clone())],])
                 ])],
             ])
         }
