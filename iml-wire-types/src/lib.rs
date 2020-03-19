@@ -10,7 +10,7 @@ use std::{
     convert::TryFrom,
     fmt,
     ops::Deref,
-    sync::Arc,
+    sync::Arc, 
 };
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -50,6 +50,12 @@ impl From<Fqdn> for String {
 impl fmt::Display for Fqdn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl AsRef<str> for Fqdn {
+    fn as_ref(&self) -> &str {
+        &self.0
     }
 }
 

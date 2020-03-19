@@ -3,6 +3,8 @@ pub mod activity;
 pub mod dashboard;
 pub mod device;
 pub mod devices;
+pub mod device_host;
+pub mod device_hosts;
 pub mod filesystem;
 pub mod filesystems;
 pub mod fs_dashboard;
@@ -60,6 +62,8 @@ pub(crate) enum Page {
     Volume(volume::Model),
     Devices(devices::Model),
     Device(device::Model),
+    DeviceHosts(device_hosts::Model),
+    DeviceHost(device_host::Model),
 }
 
 impl Default for Page {
@@ -136,6 +140,11 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
             Route::Device(id) => id
                 .parse()
                 .map(|id| Self::Device(device::Model { id }))
+                .unwrap_or_default(),
+            Route::DeviceHosts => Self::DeviceHosts(device_hosts::Model::default()),
+            Route::DeviceHost(id) => id
+                .parse()
+                .map(|id| Self::DeviceHost(device_host::Model { id }))
                 .unwrap_or_default(),
         }
     }

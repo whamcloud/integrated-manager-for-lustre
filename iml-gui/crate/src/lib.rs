@@ -892,6 +892,8 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::Volume(x) => main_panels(model, page::volume::view(x)).els(),
         Page::Devices(x) => main_panels(model, page::devices::view(x)).els(),
         Page::Device(x) => main_panels(model, page::device::view(x)).els(),
+        Page::DeviceHosts(x) => main_panels(model, page::device_hosts::view(x)).els(),
+        Page::DeviceHost(x) => main_panels(model, page::device_host::view(x)).els(),
     }
 }
 

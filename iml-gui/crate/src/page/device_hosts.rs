@@ -1,0 +1,75 @@
+use crate::{components::table, generated::css_classes::C, route::RouteId, GMsg, Route};
+use iml_wire_types::{
+    db::DeviceHostRecord,
+    warp_drive::{ArcCache, RecordId},
+};
+use seed::{prelude::*, *};
+use std::sync::Arc;
+
+#[derive(Default)]
+pub struct Model {
+    pub device_host: Vec<Arc<DeviceHostRecord>>,
+}
+
+#[derive(Clone, Debug)]
+pub enum Msg {
+    SetDeviceHosts(Vec<Arc<DeviceHostRecord>>),
+    UpdateDeviceHost(Arc<DeviceHostRecord>),
+    Remove(RecordId),
+}
+
+pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+    orders.send_msg(Msg::SetDeviceHosts(cache.device_host.values().cloned().collect()));
+}
+
+pub fn update(msg: Msg, _cache: &ArcCache, model: &mut Model, _orders: &mut impl Orders<Msg, GMsg>) {
+    match msg {
+        Msg::SetDeviceHosts(mut devices) => {
+            devices.sort_by(|a, b| natord::compare(a.device_host.fqdn.as_ref(), b.device_host.fqdn.as_ref()));
+
+            model.device_host = devices;
+        }
+        Msg::UpdateDeviceHost(d) => {
+            let devices = &mut model.device_host;
+
+            devices.push(d);
+
+            devices.sort_by(|a, b| natord::compare(a.device_host.fqdn.as_ref(), b.device_host.fqdn.as_ref()));
+        }
+        Msg::Remove(d) => {
+            let devices = &mut model.device_host;
+
+            let i = devices.iter().position(|x| RecordId::DeviceHost(x.id) == d);
+
+            if let Some(i) = i {
+                devices.remove(i);
+            } else {
+                seed::log!("Element to remove not found");
+            }
+        }
+    }
+}
+
+pub fn view(model: &Model) -> impl View<crate::Msg> {
+    div![
+        class![C.bg_white],
+        div![
+            class![C.px_6, C.bg_gray_200],
+            h3![class![C.py_4, C.font_normal, C.text_lg], "devices"]
+        ],
+        if model.device_host.is_empty() {
+            div![
+                class![C.text_3xl, C.text_center],
+                h1![class![C.m_2, C.text_gray_600], "No devices found"],
+            ]
+        } else {
+            table::wrapper_view(vec![
+                table::thead_view(vec![table::th_view(plain!["Id"]), th![]]),
+                tbody![model.device_host.iter().map(|x| tr![
+                    table::td_center(vec![text![&x.device_host.device_id],]),
+                    table::td_center(vec![text![x.device_host.fqdn.as_ref()],])
+                ])],
+            ])
+        }
+    ]
+}

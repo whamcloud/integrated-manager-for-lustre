@@ -62,6 +62,8 @@ pub enum Route<'a> {
     Volume(RouteId<'a>),
     Devices,
     Device(RouteId<'a>),
+    DeviceHosts,
+    DeviceHost(RouteId<'a>),
 }
 
 impl<'a> Route<'a> {
@@ -91,6 +93,8 @@ impl<'a> Route<'a> {
             Self::Volume(id) => vec!["volumes", id],
             Self::Devices => vec!["devices"],
             Self::Device(id) => vec!["devices", id],
+            Self::DeviceHosts => vec!["device_hosts"],
+            Self::DeviceHost(id) => vec!["device_hosts", id],
         };
 
         if let Some(base) = crate::UI_BASE.as_ref() {
@@ -132,6 +136,8 @@ impl<'a> ToString for Route<'a> {
             Self::Volume(_) => "Volume Detail".into(),
             Self::Devices => "Devices".into(),
             Self::Device(_) => "Device Detail".into(),
+            Self::DeviceHosts => "Device Hosts".into(),
+            Self::DeviceHost(_) => "Device Host Detail".into(),
         }
     }
 }
