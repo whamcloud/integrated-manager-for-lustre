@@ -59,6 +59,7 @@ pub enum Msg {
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
+    // log!("command_modal::update", msg);
     match msg {
         Msg::Modal(msg) => {
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
@@ -110,7 +111,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 }
                 Err(e) => {
                     error!("Failed to perform fetch_command_status {:#?}", e);
-
                     orders.skip();
                 }
             }
@@ -264,7 +264,7 @@ fn status_icon<T>(cmd: &Command) -> Node<T> {
     } else if cmd.complete {
         font_awesome(cls, "check").merge_attrs(class![C.text_green_500])
     } else {
-        font_awesome(cls, "spinner").merge_attrs(class![C.text_gray_500])
+        font_awesome(cls, "spinner").merge_attrs(class![C.text_gray_500, C.pulse])
     }
 }
 
