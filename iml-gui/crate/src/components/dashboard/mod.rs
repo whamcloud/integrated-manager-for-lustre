@@ -39,7 +39,7 @@ pub(crate) fn performance_container(
         grafana_chart::view(
             IML_METRICS_DASHBOARD_ID,
             IML_METRICS_DASHBOARD_NAME,
-            create_chart_params(bw_id, vars.clone()),
+            create_chart_params(bw_id, "10s", vars.clone()),
             "38%",
         ),
         div![
@@ -59,7 +59,7 @@ pub(crate) fn performance_container(
         grafana_chart::view(
             IML_METRICS_DASHBOARD_ID,
             IML_METRICS_DASHBOARD_NAME,
-            create_chart_params(iops_id, vars),
+            create_chart_params(iops_id, "10s", vars),
             "38%",
         ),
         datepicker::view(model),

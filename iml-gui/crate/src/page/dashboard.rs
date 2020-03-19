@@ -64,7 +64,7 @@ pub fn view(model: &Model) -> Node<Msg> {
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
-                        create_chart_params(26, no_vars()),
+                        create_chart_params(26, "10s", no_vars()),
                         "90%",
                     )
                 ]
@@ -78,6 +78,7 @@ pub fn view(model: &Model) -> Node<Msg> {
                         IML_METRICS_DASHBOARD_NAME,
                         create_chart_params(
                             34,
+                            "10s",
                             vec![
                                 ("from", &model.lnet_date_picker.from),
                                 ("to", &model.lnet_date_picker.to)
