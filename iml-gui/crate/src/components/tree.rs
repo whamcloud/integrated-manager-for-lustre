@@ -377,7 +377,7 @@ fn remove_item(
     Some(())
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     Add(RecordId),
     Remove(RecordId),

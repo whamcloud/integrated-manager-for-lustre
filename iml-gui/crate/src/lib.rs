@@ -24,7 +24,7 @@ mod watch_state;
 mod test_utils;
 
 use components::{
-    breadcrumbs::BreadCrumbs, font_awesome, font_awesome_outline, loading, restrict, stratagem, tree,
+    breadcrumbs::BreadCrumbs, command_modal, font_awesome, font_awesome_outline, loading, restrict, stratagem, tree,
     update_activity_health, ActivityHealth,
 };
 pub(crate) use extensions::*;
@@ -129,6 +129,7 @@ pub struct Model {
     auth: auth::Model,
     breadcrumbs: BreadCrumbs<Route<'static>>,
     breakpoint_size: breakpoints::Size,
+    command_modal: command_modal::Model,
     conf: Conf,
     loading: Loading,
     locks: warp_drive::Locks,
@@ -191,6 +192,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
         auth: auth::Model::default(),
         breadcrumbs: BreadCrumbs::default(),
         breakpoint_size: breakpoints::size(),
+        command_modal: command_modal::Model::default(),
         conf: Conf::default(),
         loading: Loading {
             session: Some(session_tx),
@@ -237,6 +239,7 @@ pub enum GMsg {
     RouteChange(Url),
     AuthProxy(Box<auth::Msg>),
     ServerDate(chrono::DateTime<chrono::offset::FixedOffset>),
+    OpenCommandModal(command_modal::Input),
 }
 
 fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -249,6 +252,11 @@ fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
             orders.proxy(Msg::Auth).send_msg(msg);
         }
         GMsg::ServerDate(d) => model.server_date.set(d),
+        GMsg::OpenCommandModal(x) => {
+            orders
+                .proxy(Msg::CommandModal)
+                .send_msg(command_modal::Msg::FireCommands(x));
+        }
     }
 }
 
@@ -257,9 +265,10 @@ fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
 // ------ ------
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     Auth(Box<auth::Msg>),
+    CommandModal(command_modal::Msg),
     EventSourceConnect(JsValue),
     EventSourceError(JsValue),
     EventSourceMessage(MessageEvent),
@@ -578,6 +587,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::Page(msg) => {
             page::update(msg, &mut model.page, &model.records, &mut orders.proxy(Msg::Page));
         }
+        Msg::CommandModal(msg) => {
+            command_modal::update(msg, &mut model.command_modal, &mut orders.proxy(Msg::CommandModal));
+        }
     }
 }
 
@@ -891,7 +903,7 @@ pub fn main_panels(model: &Model, children: impl View<page::Msg>) -> impl View<M
 }
 
 fn view(model: &Model) -> Vec<Node<Msg>> {
-    match &model.page {
+    let nodes = match &model.page {
         Page::AppLoading => loading::view().els(),
         Page::About => main_panels(model, page::about::view(model).els().map_msg(page::Msg::About)).els(),
         Page::Dashboard(page) => main_panels(model, page::dashboard::view(page)).els(),
@@ -988,7 +1000,11 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::User(x) => main_panels(model, page::user::view(x).els().map_msg(page::Msg::User)).els(),
         Page::Volumes(x) => main_panels(model, page::volumes::view(x).els().map_msg(page::Msg::Volumes)).els(),
         Page::Volume(x) => main_panels(model, page::volume::view(x).els().map_msg(page::Msg::Volume)).els(),
-    }
+    };
+
+    // command modal is the global singleton, therefore is being showed here
+    let modal = command_modal::view(&model.command_modal).map_msg(Msg::CommandModal);
+    div![modal, nodes].els()
 }
 
 pub fn asset_path(asset: &str) -> String {

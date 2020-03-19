@@ -226,7 +226,7 @@ impl Page {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     About(about::Msg),
     Dashboard(dashboard::Msg),

@@ -25,7 +25,7 @@ impl Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     FsUsage(fs_usage::Msg),
 }

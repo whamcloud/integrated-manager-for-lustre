@@ -4,6 +4,7 @@ use crate::{
     generated::css_classes::C,
     FailReasonExt, GMsg, MergeAttrs, Route,
 };
+use core::fmt;
 use iml_wire_types::{Branding, Session};
 use seed::{browser::service::fetch, prelude::*, *};
 
@@ -42,6 +43,15 @@ pub enum Msg {
     Submit,
     GetSession,
     GotSession(fetch::ResponseDataResult<Session>),
+}
+
+impl fmt::Debug for Msg {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::PasswordChange(_) => f.write_str("*****"),
+            _ => write!(f, "{:?}", self),
+        }
+    }
 }
 
 async fn login(form: Form) -> Result<Msg, Msg> {

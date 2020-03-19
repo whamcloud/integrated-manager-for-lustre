@@ -644,6 +644,11 @@ pub struct ProfileTest {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct CmdWrapper {
+    pub command: Command,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Command {
     pub cancelled: bool,
     pub complete: bool,

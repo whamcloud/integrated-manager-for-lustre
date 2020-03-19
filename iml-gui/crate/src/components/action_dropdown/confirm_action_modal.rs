@@ -1,13 +1,13 @@
 use crate::{
     components::{
         action_dropdown::{state_change, DryRun},
-        font_awesome, modal,
+        command_modal, font_awesome, modal,
     },
     extensions::{MergeAttrs, NodeExt},
     generated::css_classes::C,
     key_codes, GMsg, RequestExt,
 };
-use iml_wire_types::{warp_drive::ErasedRecord, AvailableAction, Command, EndpointName};
+use iml_wire_types::{warp_drive::ErasedRecord, AvailableAction, CmdWrapper, Command, EndpointName};
 use seed::{prelude::*, *};
 use std::sync::Arc;
 
@@ -23,21 +23,22 @@ pub struct SendCmd<'a, T> {
     pub message: String,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Model {
     pub modal: modal::Model,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     SendJob(String, Arc<AvailableAction>),
     JobSent(Box<fetch::ResponseDataResult<Command>>),
     SendStateChange(Arc<AvailableAction>, Arc<dyn ErasedRecord>),
-    StateChangeSent(Box<fetch::ResponseDataResult<Command>>),
+    StateChangeSent(Box<fetch::ResponseDataResult<CmdWrapper>>),
     Modal(modal::Msg),
     Noop,
 }
 
+#[derive(Debug)]
 pub enum Action {
     Loading,
     Job(String, Arc<AvailableAction>, Arc<dyn ErasedRecord>),
@@ -64,9 +65,17 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .perform_cmd(req.fetch_json_data(|x| Msg::JobSent(Box::new(x))))
                 .send_msg(Msg::Modal(modal::Msg::Close));
         }
-        Msg::JobSent(_) => {
-            //@TODO: Open command modal here
-        }
+        Msg::JobSent(data_result) => match *data_result {
+            Ok(command) => {
+                let x = command_modal::Input::Commands(vec![Arc::new(command)]);
+
+                orders.send_g_msg(GMsg::OpenCommandModal(x));
+            }
+            Err(err) => {
+                error!("An error has occurred in Msg::JobSent: {:?}", err);
+                orders.skip();
+            }
+        },
         Msg::SendStateChange(action, erased_record) => {
             let req = state_change(&action, &erased_record, false);
 
@@ -74,9 +83,17 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .perform_cmd(req.fetch_json_data(|x| Msg::StateChangeSent(Box::new(x))))
                 .send_msg(Msg::Modal(modal::Msg::Close));
         }
-        Msg::StateChangeSent(_) => {
-            //@TODO: Open command modal here
-        }
+        Msg::StateChangeSent(data_result) => match *data_result {
+            Ok(holder) => {
+                let x = command_modal::Input::Commands(vec![Arc::new(holder.command)]);
+
+                orders.send_g_msg(GMsg::OpenCommandModal(x));
+            }
+            Err(err) => {
+                error!("An error has occurred in Msg::StateChangeSent: {:?}", err);
+                orders.skip();
+            }
+        },
         Msg::Modal(msg) => {
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
         }
@@ -90,7 +107,6 @@ pub(crate) fn view(action: &Action) -> Node<Msg> {
         Action::Job(_, action, erased_record) => {
             Msg::SendJob(format!("{} {}", action.verb, erased_record.label()), Arc::clone(action))
         }
-
         Action::StateChange(_, action, erased_record) => {
             Msg::SendStateChange(Arc::clone(action), Arc::clone(erased_record))
         }
@@ -114,7 +130,6 @@ pub(crate) fn view(action: &Action) -> Node<Msg> {
                 ],
                 Action::Job(body, action, erased_record) => {
                     let title = format!("{} {}", action.verb, erased_record.label());
-
                     vec![
                         modal::title_view(Msg::Modal, span![title]),
                         span![El::from_html(body)],
@@ -125,15 +140,18 @@ pub(crate) fn view(action: &Action) -> Node<Msg> {
                         .merge_attrs(class![C.pt_8]),
                     ]
                 }
-                Action::StateChange(dry_run, action, erased_record) => vec![
-                    modal::title_view(Msg::Modal, span![format!("{}: {}", action.verb, erased_record.label())]),
-                    state_change_body_view(dry_run),
-                    modal::footer_view(vec![
-                        confirm_button().with_listener(simple_ev(Ev::Click, confirm_msg)),
-                        cancel_button(),
-                    ])
-                    .merge_attrs(class![C.pt_8]),
-                ],
+                Action::StateChange(dry_run, action, erased_record) => {
+                    let title = format!("{}: {}", action.verb, erased_record.label());
+                    vec![
+                        modal::title_view(Msg::Modal, span![title]),
+                        state_change_body_view(dry_run),
+                        modal::footer_view(vec![
+                            confirm_button().with_listener(simple_ev(Ev::Click, confirm_msg)),
+                            cancel_button(),
+                        ])
+                        .merge_attrs(class![C.pt_8]),
+                    ]
+                }
             },
         ),
     )
@@ -178,7 +196,7 @@ fn state_change_body_view<T>(dry_run: &DryRun) -> Node<T> {
 }
 
 fn cancel_button() -> Node<Msg> {
-    button![
+    seed::button![
         class![
             C.bg_transparent,
             C.py_2,
@@ -195,7 +213,7 @@ fn cancel_button() -> Node<Msg> {
 }
 
 fn confirm_button() -> Node<Msg> {
-    button![
+    seed::button![
         class![
             C.bg_blue_500,
             C.py_2,

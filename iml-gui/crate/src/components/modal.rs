@@ -1,14 +1,14 @@
 use crate::{components::font_awesome, generated::css_classes::C, key_codes, GMsg};
 use seed::{prelude::*, *};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Model {
     pub open: bool,
 }
 
 type ParentMsg<T> = fn(Msg) -> T;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Msg {
     KeyDown(u32),
     Close,

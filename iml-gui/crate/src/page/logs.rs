@@ -30,7 +30,7 @@ impl Default for State {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     LogsFetched(Box<fetch::ResponseDataResult<ApiList<Log>>>),
     FetchOffset,

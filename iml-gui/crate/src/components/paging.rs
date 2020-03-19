@@ -71,7 +71,7 @@ impl Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     Dropdown(dropdown::Msg),
     Next,

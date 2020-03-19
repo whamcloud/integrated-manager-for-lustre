@@ -1,7 +1,7 @@
 use crate::{components::font_awesome_outline, extensions::NodeExt, generated::css_classes::C};
 use seed::{prelude::*, *};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Msg {
     Close,
 }

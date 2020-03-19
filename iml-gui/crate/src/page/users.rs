@@ -10,7 +10,7 @@ use iml_wire_types::{
 use seed::{prelude::*, *};
 use std::sync::Arc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {}
 
 fn full_name(x: &AuthUserRecord) -> String {

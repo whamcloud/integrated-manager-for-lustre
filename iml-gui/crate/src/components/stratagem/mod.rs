@@ -128,7 +128,7 @@ impl Config {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     UpdateStratagemConfig(Arc<StratagemConfiguration>),
     SetStratagemConfig(Vec<Arc<StratagemConfiguration>>),

@@ -3928,6 +3928,381 @@ pub struct CssClasses<'a> {
     pub border_l: &'a str,
 
     /**
+        border-width: 0;
+    */
+    pub last__border_0: &'a str,
+
+    /**
+        border-width: 2px;
+    */
+    pub last__border_2: &'a str,
+
+    /**
+        border-width: 4px;
+    */
+    pub last__border_4: &'a str,
+
+    /**
+        border-width: 8px;
+    */
+    pub last__border_8: &'a str,
+
+    /**
+        border-width: 1px;
+    */
+    pub last__border: &'a str,
+
+    /**
+        border-top-width: 0;
+    */
+    pub last__border_t_0: &'a str,
+
+    /**
+        border-right-width: 0;
+    */
+    pub last__border_r_0: &'a str,
+
+    /**
+        border-bottom-width: 0;
+    */
+    pub last__border_b_0: &'a str,
+
+    /**
+        border-left-width: 0;
+    */
+    pub last__border_l_0: &'a str,
+
+    /**
+        border-top-width: 2px;
+    */
+    pub last__border_t_2: &'a str,
+
+    /**
+        border-right-width: 2px;
+    */
+    pub last__border_r_2: &'a str,
+
+    /**
+        border-bottom-width: 2px;
+    */
+    pub last__border_b_2: &'a str,
+
+    /**
+        border-left-width: 2px;
+    */
+    pub last__border_l_2: &'a str,
+
+    /**
+        border-top-width: 4px;
+    */
+    pub last__border_t_4: &'a str,
+
+    /**
+        border-right-width: 4px;
+    */
+    pub last__border_r_4: &'a str,
+
+    /**
+        border-bottom-width: 4px;
+    */
+    pub last__border_b_4: &'a str,
+
+    /**
+        border-left-width: 4px;
+    */
+    pub last__border_l_4: &'a str,
+
+    /**
+        border-top-width: 8px;
+    */
+    pub last__border_t_8: &'a str,
+
+    /**
+        border-right-width: 8px;
+    */
+    pub last__border_r_8: &'a str,
+
+    /**
+        border-bottom-width: 8px;
+    */
+    pub last__border_b_8: &'a str,
+
+    /**
+        border-left-width: 8px;
+    */
+    pub last__border_l_8: &'a str,
+
+    /**
+        border-top-width: 1px;
+    */
+    pub last__border_t: &'a str,
+
+    /**
+        border-right-width: 1px;
+    */
+    pub last__border_r: &'a str,
+
+    /**
+        border-bottom-width: 1px;
+    */
+    pub last__border_b: &'a str,
+
+    /**
+        border-left-width: 1px;
+    */
+    pub last__border_l: &'a str,
+
+    /**
+        border-width: 0;
+    */
+    pub hover__border_0: &'a str,
+
+    /**
+        border-width: 2px;
+    */
+    pub hover__border_2: &'a str,
+
+    /**
+        border-width: 4px;
+    */
+    pub hover__border_4: &'a str,
+
+    /**
+        border-width: 8px;
+    */
+    pub hover__border_8: &'a str,
+
+    /**
+        border-width: 1px;
+    */
+    pub hover__border: &'a str,
+
+    /**
+        border-top-width: 0;
+    */
+    pub hover__border_t_0: &'a str,
+
+    /**
+        border-right-width: 0;
+    */
+    pub hover__border_r_0: &'a str,
+
+    /**
+        border-bottom-width: 0;
+    */
+    pub hover__border_b_0: &'a str,
+
+    /**
+        border-left-width: 0;
+    */
+    pub hover__border_l_0: &'a str,
+
+    /**
+        border-top-width: 2px;
+    */
+    pub hover__border_t_2: &'a str,
+
+    /**
+        border-right-width: 2px;
+    */
+    pub hover__border_r_2: &'a str,
+
+    /**
+        border-bottom-width: 2px;
+    */
+    pub hover__border_b_2: &'a str,
+
+    /**
+        border-left-width: 2px;
+    */
+    pub hover__border_l_2: &'a str,
+
+    /**
+        border-top-width: 4px;
+    */
+    pub hover__border_t_4: &'a str,
+
+    /**
+        border-right-width: 4px;
+    */
+    pub hover__border_r_4: &'a str,
+
+    /**
+        border-bottom-width: 4px;
+    */
+    pub hover__border_b_4: &'a str,
+
+    /**
+        border-left-width: 4px;
+    */
+    pub hover__border_l_4: &'a str,
+
+    /**
+        border-top-width: 8px;
+    */
+    pub hover__border_t_8: &'a str,
+
+    /**
+        border-right-width: 8px;
+    */
+    pub hover__border_r_8: &'a str,
+
+    /**
+        border-bottom-width: 8px;
+    */
+    pub hover__border_b_8: &'a str,
+
+    /**
+        border-left-width: 8px;
+    */
+    pub hover__border_l_8: &'a str,
+
+    /**
+        border-top-width: 1px;
+    */
+    pub hover__border_t: &'a str,
+
+    /**
+        border-right-width: 1px;
+    */
+    pub hover__border_r: &'a str,
+
+    /**
+        border-bottom-width: 1px;
+    */
+    pub hover__border_b: &'a str,
+
+    /**
+        border-left-width: 1px;
+    */
+    pub hover__border_l: &'a str,
+
+    /**
+        border-width: 0;
+    */
+    pub focus__border_0: &'a str,
+
+    /**
+        border-width: 2px;
+    */
+    pub focus__border_2: &'a str,
+
+    /**
+        border-width: 4px;
+    */
+    pub focus__border_4: &'a str,
+
+    /**
+        border-width: 8px;
+    */
+    pub focus__border_8: &'a str,
+
+    /**
+        border-width: 1px;
+    */
+    pub focus__border: &'a str,
+
+    /**
+        border-top-width: 0;
+    */
+    pub focus__border_t_0: &'a str,
+
+    /**
+        border-right-width: 0;
+    */
+    pub focus__border_r_0: &'a str,
+
+    /**
+        border-bottom-width: 0;
+    */
+    pub focus__border_b_0: &'a str,
+
+    /**
+        border-left-width: 0;
+    */
+    pub focus__border_l_0: &'a str,
+
+    /**
+        border-top-width: 2px;
+    */
+    pub focus__border_t_2: &'a str,
+
+    /**
+        border-right-width: 2px;
+    */
+    pub focus__border_r_2: &'a str,
+
+    /**
+        border-bottom-width: 2px;
+    */
+    pub focus__border_b_2: &'a str,
+
+    /**
+        border-left-width: 2px;
+    */
+    pub focus__border_l_2: &'a str,
+
+    /**
+        border-top-width: 4px;
+    */
+    pub focus__border_t_4: &'a str,
+
+    /**
+        border-right-width: 4px;
+    */
+    pub focus__border_r_4: &'a str,
+
+    /**
+        border-bottom-width: 4px;
+    */
+    pub focus__border_b_4: &'a str,
+
+    /**
+        border-left-width: 4px;
+    */
+    pub focus__border_l_4: &'a str,
+
+    /**
+        border-top-width: 8px;
+    */
+    pub focus__border_t_8: &'a str,
+
+    /**
+        border-right-width: 8px;
+    */
+    pub focus__border_r_8: &'a str,
+
+    /**
+        border-bottom-width: 8px;
+    */
+    pub focus__border_b_8: &'a str,
+
+    /**
+        border-left-width: 8px;
+    */
+    pub focus__border_l_8: &'a str,
+
+    /**
+        border-top-width: 1px;
+    */
+    pub focus__border_t: &'a str,
+
+    /**
+        border-right-width: 1px;
+    */
+    pub focus__border_r: &'a str,
+
+    /**
+        border-bottom-width: 1px;
+    */
+    pub focus__border_b: &'a str,
+
+    /**
+        border-left-width: 1px;
+    */
+    pub focus__border_l: &'a str,
+
+    /**
         box-sizing: border-box;
     */
     pub box_border: &'a str,
@@ -20164,6 +20539,381 @@ pub struct CssClasses<'a> {
     pub sm__border_l: &'a str,
 
     /**
+        border-width: 0;    @media (min-width: 569px)
+    */
+    pub sm__last__border_0: &'a str,
+
+    /**
+        border-width: 2px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_2: &'a str,
+
+    /**
+        border-width: 4px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_4: &'a str,
+
+    /**
+        border-width: 8px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_8: &'a str,
+
+    /**
+        border-width: 1px;    @media (min-width: 569px)
+    */
+    pub sm__last__border: &'a str,
+
+    /**
+        border-top-width: 0;    @media (min-width: 569px)
+    */
+    pub sm__last__border_t_0: &'a str,
+
+    /**
+        border-right-width: 0;    @media (min-width: 569px)
+    */
+    pub sm__last__border_r_0: &'a str,
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 569px)
+    */
+    pub sm__last__border_b_0: &'a str,
+
+    /**
+        border-left-width: 0;    @media (min-width: 569px)
+    */
+    pub sm__last__border_l_0: &'a str,
+
+    /**
+        border-top-width: 2px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_t_2: &'a str,
+
+    /**
+        border-right-width: 2px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_r_2: &'a str,
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_b_2: &'a str,
+
+    /**
+        border-left-width: 2px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_l_2: &'a str,
+
+    /**
+        border-top-width: 4px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_t_4: &'a str,
+
+    /**
+        border-right-width: 4px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_r_4: &'a str,
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_b_4: &'a str,
+
+    /**
+        border-left-width: 4px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_l_4: &'a str,
+
+    /**
+        border-top-width: 8px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_t_8: &'a str,
+
+    /**
+        border-right-width: 8px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_r_8: &'a str,
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_b_8: &'a str,
+
+    /**
+        border-left-width: 8px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_l_8: &'a str,
+
+    /**
+        border-top-width: 1px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_t: &'a str,
+
+    /**
+        border-right-width: 1px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_r: &'a str,
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_b: &'a str,
+
+    /**
+        border-left-width: 1px;    @media (min-width: 569px)
+    */
+    pub sm__last__border_l: &'a str,
+
+    /**
+        border-width: 0;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_0: &'a str,
+
+    /**
+        border-width: 2px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_2: &'a str,
+
+    /**
+        border-width: 4px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_4: &'a str,
+
+    /**
+        border-width: 8px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_8: &'a str,
+
+    /**
+        border-width: 1px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border: &'a str,
+
+    /**
+        border-top-width: 0;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_t_0: &'a str,
+
+    /**
+        border-right-width: 0;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_r_0: &'a str,
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_b_0: &'a str,
+
+    /**
+        border-left-width: 0;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_l_0: &'a str,
+
+    /**
+        border-top-width: 2px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_t_2: &'a str,
+
+    /**
+        border-right-width: 2px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_r_2: &'a str,
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_b_2: &'a str,
+
+    /**
+        border-left-width: 2px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_l_2: &'a str,
+
+    /**
+        border-top-width: 4px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_t_4: &'a str,
+
+    /**
+        border-right-width: 4px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_r_4: &'a str,
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_b_4: &'a str,
+
+    /**
+        border-left-width: 4px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_l_4: &'a str,
+
+    /**
+        border-top-width: 8px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_t_8: &'a str,
+
+    /**
+        border-right-width: 8px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_r_8: &'a str,
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_b_8: &'a str,
+
+    /**
+        border-left-width: 8px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_l_8: &'a str,
+
+    /**
+        border-top-width: 1px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_t: &'a str,
+
+    /**
+        border-right-width: 1px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_r: &'a str,
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_b: &'a str,
+
+    /**
+        border-left-width: 1px;    @media (min-width: 569px)
+    */
+    pub sm__hover__border_l: &'a str,
+
+    /**
+        border-width: 0;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_0: &'a str,
+
+    /**
+        border-width: 2px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_2: &'a str,
+
+    /**
+        border-width: 4px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_4: &'a str,
+
+    /**
+        border-width: 8px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_8: &'a str,
+
+    /**
+        border-width: 1px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border: &'a str,
+
+    /**
+        border-top-width: 0;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_t_0: &'a str,
+
+    /**
+        border-right-width: 0;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_r_0: &'a str,
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_b_0: &'a str,
+
+    /**
+        border-left-width: 0;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_l_0: &'a str,
+
+    /**
+        border-top-width: 2px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_t_2: &'a str,
+
+    /**
+        border-right-width: 2px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_r_2: &'a str,
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_b_2: &'a str,
+
+    /**
+        border-left-width: 2px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_l_2: &'a str,
+
+    /**
+        border-top-width: 4px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_t_4: &'a str,
+
+    /**
+        border-right-width: 4px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_r_4: &'a str,
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_b_4: &'a str,
+
+    /**
+        border-left-width: 4px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_l_4: &'a str,
+
+    /**
+        border-top-width: 8px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_t_8: &'a str,
+
+    /**
+        border-right-width: 8px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_r_8: &'a str,
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_b_8: &'a str,
+
+    /**
+        border-left-width: 8px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_l_8: &'a str,
+
+    /**
+        border-top-width: 1px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_t: &'a str,
+
+    /**
+        border-right-width: 1px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_r: &'a str,
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_b: &'a str,
+
+    /**
+        border-left-width: 1px;    @media (min-width: 569px)
+    */
+    pub sm__focus__border_l: &'a str,
+
+    /**
         box-sizing: border-box;    @media (min-width: 569px)
     */
     pub sm__box_border: &'a str,
@@ -34136,6 +34886,381 @@ pub struct CssClasses<'a> {
         border-left-width: 1px;    @media (min-width: 769px)
     */
     pub md__border_l: &'a str,
+
+    /**
+        border-width: 0;    @media (min-width: 769px)
+    */
+    pub md__last__border_0: &'a str,
+
+    /**
+        border-width: 2px;    @media (min-width: 769px)
+    */
+    pub md__last__border_2: &'a str,
+
+    /**
+        border-width: 4px;    @media (min-width: 769px)
+    */
+    pub md__last__border_4: &'a str,
+
+    /**
+        border-width: 8px;    @media (min-width: 769px)
+    */
+    pub md__last__border_8: &'a str,
+
+    /**
+        border-width: 1px;    @media (min-width: 769px)
+    */
+    pub md__last__border: &'a str,
+
+    /**
+        border-top-width: 0;    @media (min-width: 769px)
+    */
+    pub md__last__border_t_0: &'a str,
+
+    /**
+        border-right-width: 0;    @media (min-width: 769px)
+    */
+    pub md__last__border_r_0: &'a str,
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 769px)
+    */
+    pub md__last__border_b_0: &'a str,
+
+    /**
+        border-left-width: 0;    @media (min-width: 769px)
+    */
+    pub md__last__border_l_0: &'a str,
+
+    /**
+        border-top-width: 2px;    @media (min-width: 769px)
+    */
+    pub md__last__border_t_2: &'a str,
+
+    /**
+        border-right-width: 2px;    @media (min-width: 769px)
+    */
+    pub md__last__border_r_2: &'a str,
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 769px)
+    */
+    pub md__last__border_b_2: &'a str,
+
+    /**
+        border-left-width: 2px;    @media (min-width: 769px)
+    */
+    pub md__last__border_l_2: &'a str,
+
+    /**
+        border-top-width: 4px;    @media (min-width: 769px)
+    */
+    pub md__last__border_t_4: &'a str,
+
+    /**
+        border-right-width: 4px;    @media (min-width: 769px)
+    */
+    pub md__last__border_r_4: &'a str,
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 769px)
+    */
+    pub md__last__border_b_4: &'a str,
+
+    /**
+        border-left-width: 4px;    @media (min-width: 769px)
+    */
+    pub md__last__border_l_4: &'a str,
+
+    /**
+        border-top-width: 8px;    @media (min-width: 769px)
+    */
+    pub md__last__border_t_8: &'a str,
+
+    /**
+        border-right-width: 8px;    @media (min-width: 769px)
+    */
+    pub md__last__border_r_8: &'a str,
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 769px)
+    */
+    pub md__last__border_b_8: &'a str,
+
+    /**
+        border-left-width: 8px;    @media (min-width: 769px)
+    */
+    pub md__last__border_l_8: &'a str,
+
+    /**
+        border-top-width: 1px;    @media (min-width: 769px)
+    */
+    pub md__last__border_t: &'a str,
+
+    /**
+        border-right-width: 1px;    @media (min-width: 769px)
+    */
+    pub md__last__border_r: &'a str,
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 769px)
+    */
+    pub md__last__border_b: &'a str,
+
+    /**
+        border-left-width: 1px;    @media (min-width: 769px)
+    */
+    pub md__last__border_l: &'a str,
+
+    /**
+        border-width: 0;    @media (min-width: 769px)
+    */
+    pub md__hover__border_0: &'a str,
+
+    /**
+        border-width: 2px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_2: &'a str,
+
+    /**
+        border-width: 4px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_4: &'a str,
+
+    /**
+        border-width: 8px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_8: &'a str,
+
+    /**
+        border-width: 1px;    @media (min-width: 769px)
+    */
+    pub md__hover__border: &'a str,
+
+    /**
+        border-top-width: 0;    @media (min-width: 769px)
+    */
+    pub md__hover__border_t_0: &'a str,
+
+    /**
+        border-right-width: 0;    @media (min-width: 769px)
+    */
+    pub md__hover__border_r_0: &'a str,
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 769px)
+    */
+    pub md__hover__border_b_0: &'a str,
+
+    /**
+        border-left-width: 0;    @media (min-width: 769px)
+    */
+    pub md__hover__border_l_0: &'a str,
+
+    /**
+        border-top-width: 2px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_t_2: &'a str,
+
+    /**
+        border-right-width: 2px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_r_2: &'a str,
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_b_2: &'a str,
+
+    /**
+        border-left-width: 2px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_l_2: &'a str,
+
+    /**
+        border-top-width: 4px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_t_4: &'a str,
+
+    /**
+        border-right-width: 4px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_r_4: &'a str,
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_b_4: &'a str,
+
+    /**
+        border-left-width: 4px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_l_4: &'a str,
+
+    /**
+        border-top-width: 8px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_t_8: &'a str,
+
+    /**
+        border-right-width: 8px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_r_8: &'a str,
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_b_8: &'a str,
+
+    /**
+        border-left-width: 8px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_l_8: &'a str,
+
+    /**
+        border-top-width: 1px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_t: &'a str,
+
+    /**
+        border-right-width: 1px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_r: &'a str,
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_b: &'a str,
+
+    /**
+        border-left-width: 1px;    @media (min-width: 769px)
+    */
+    pub md__hover__border_l: &'a str,
+
+    /**
+        border-width: 0;    @media (min-width: 769px)
+    */
+    pub md__focus__border_0: &'a str,
+
+    /**
+        border-width: 2px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_2: &'a str,
+
+    /**
+        border-width: 4px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_4: &'a str,
+
+    /**
+        border-width: 8px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_8: &'a str,
+
+    /**
+        border-width: 1px;    @media (min-width: 769px)
+    */
+    pub md__focus__border: &'a str,
+
+    /**
+        border-top-width: 0;    @media (min-width: 769px)
+    */
+    pub md__focus__border_t_0: &'a str,
+
+    /**
+        border-right-width: 0;    @media (min-width: 769px)
+    */
+    pub md__focus__border_r_0: &'a str,
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 769px)
+    */
+    pub md__focus__border_b_0: &'a str,
+
+    /**
+        border-left-width: 0;    @media (min-width: 769px)
+    */
+    pub md__focus__border_l_0: &'a str,
+
+    /**
+        border-top-width: 2px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_t_2: &'a str,
+
+    /**
+        border-right-width: 2px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_r_2: &'a str,
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_b_2: &'a str,
+
+    /**
+        border-left-width: 2px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_l_2: &'a str,
+
+    /**
+        border-top-width: 4px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_t_4: &'a str,
+
+    /**
+        border-right-width: 4px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_r_4: &'a str,
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_b_4: &'a str,
+
+    /**
+        border-left-width: 4px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_l_4: &'a str,
+
+    /**
+        border-top-width: 8px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_t_8: &'a str,
+
+    /**
+        border-right-width: 8px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_r_8: &'a str,
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_b_8: &'a str,
+
+    /**
+        border-left-width: 8px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_l_8: &'a str,
+
+    /**
+        border-top-width: 1px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_t: &'a str,
+
+    /**
+        border-right-width: 1px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_r: &'a str,
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_b: &'a str,
+
+    /**
+        border-left-width: 1px;    @media (min-width: 769px)
+    */
+    pub md__focus__border_l: &'a str,
 
     /**
         box-sizing: border-box;    @media (min-width: 769px)
@@ -48112,6 +49237,381 @@ pub struct CssClasses<'a> {
     pub lg__border_l: &'a str,
 
     /**
+        border-width: 0;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_0: &'a str,
+
+    /**
+        border-width: 2px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_2: &'a str,
+
+    /**
+        border-width: 4px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_4: &'a str,
+
+    /**
+        border-width: 8px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_8: &'a str,
+
+    /**
+        border-width: 1px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border: &'a str,
+
+    /**
+        border-top-width: 0;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_t_0: &'a str,
+
+    /**
+        border-right-width: 0;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_r_0: &'a str,
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_b_0: &'a str,
+
+    /**
+        border-left-width: 0;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_l_0: &'a str,
+
+    /**
+        border-top-width: 2px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_t_2: &'a str,
+
+    /**
+        border-right-width: 2px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_r_2: &'a str,
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_b_2: &'a str,
+
+    /**
+        border-left-width: 2px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_l_2: &'a str,
+
+    /**
+        border-top-width: 4px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_t_4: &'a str,
+
+    /**
+        border-right-width: 4px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_r_4: &'a str,
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_b_4: &'a str,
+
+    /**
+        border-left-width: 4px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_l_4: &'a str,
+
+    /**
+        border-top-width: 8px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_t_8: &'a str,
+
+    /**
+        border-right-width: 8px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_r_8: &'a str,
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_b_8: &'a str,
+
+    /**
+        border-left-width: 8px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_l_8: &'a str,
+
+    /**
+        border-top-width: 1px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_t: &'a str,
+
+    /**
+        border-right-width: 1px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_r: &'a str,
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_b: &'a str,
+
+    /**
+        border-left-width: 1px;    @media (min-width: 1025px)
+    */
+    pub lg__last__border_l: &'a str,
+
+    /**
+        border-width: 0;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_0: &'a str,
+
+    /**
+        border-width: 2px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_2: &'a str,
+
+    /**
+        border-width: 4px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_4: &'a str,
+
+    /**
+        border-width: 8px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_8: &'a str,
+
+    /**
+        border-width: 1px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border: &'a str,
+
+    /**
+        border-top-width: 0;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_t_0: &'a str,
+
+    /**
+        border-right-width: 0;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_r_0: &'a str,
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_b_0: &'a str,
+
+    /**
+        border-left-width: 0;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_l_0: &'a str,
+
+    /**
+        border-top-width: 2px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_t_2: &'a str,
+
+    /**
+        border-right-width: 2px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_r_2: &'a str,
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_b_2: &'a str,
+
+    /**
+        border-left-width: 2px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_l_2: &'a str,
+
+    /**
+        border-top-width: 4px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_t_4: &'a str,
+
+    /**
+        border-right-width: 4px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_r_4: &'a str,
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_b_4: &'a str,
+
+    /**
+        border-left-width: 4px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_l_4: &'a str,
+
+    /**
+        border-top-width: 8px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_t_8: &'a str,
+
+    /**
+        border-right-width: 8px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_r_8: &'a str,
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_b_8: &'a str,
+
+    /**
+        border-left-width: 8px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_l_8: &'a str,
+
+    /**
+        border-top-width: 1px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_t: &'a str,
+
+    /**
+        border-right-width: 1px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_r: &'a str,
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_b: &'a str,
+
+    /**
+        border-left-width: 1px;    @media (min-width: 1025px)
+    */
+    pub lg__hover__border_l: &'a str,
+
+    /**
+        border-width: 0;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_0: &'a str,
+
+    /**
+        border-width: 2px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_2: &'a str,
+
+    /**
+        border-width: 4px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_4: &'a str,
+
+    /**
+        border-width: 8px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_8: &'a str,
+
+    /**
+        border-width: 1px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border: &'a str,
+
+    /**
+        border-top-width: 0;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_t_0: &'a str,
+
+    /**
+        border-right-width: 0;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_r_0: &'a str,
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_b_0: &'a str,
+
+    /**
+        border-left-width: 0;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_l_0: &'a str,
+
+    /**
+        border-top-width: 2px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_t_2: &'a str,
+
+    /**
+        border-right-width: 2px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_r_2: &'a str,
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_b_2: &'a str,
+
+    /**
+        border-left-width: 2px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_l_2: &'a str,
+
+    /**
+        border-top-width: 4px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_t_4: &'a str,
+
+    /**
+        border-right-width: 4px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_r_4: &'a str,
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_b_4: &'a str,
+
+    /**
+        border-left-width: 4px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_l_4: &'a str,
+
+    /**
+        border-top-width: 8px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_t_8: &'a str,
+
+    /**
+        border-right-width: 8px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_r_8: &'a str,
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_b_8: &'a str,
+
+    /**
+        border-left-width: 8px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_l_8: &'a str,
+
+    /**
+        border-top-width: 1px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_t: &'a str,
+
+    /**
+        border-right-width: 1px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_r: &'a str,
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_b: &'a str,
+
+    /**
+        border-left-width: 1px;    @media (min-width: 1025px)
+    */
+    pub lg__focus__border_l: &'a str,
+
+    /**
         box-sizing: border-box;    @media (min-width: 1025px)
     */
     pub lg__box_border: &'a str,
@@ -62084,6 +63584,381 @@ pub struct CssClasses<'a> {
         border-left-width: 1px;    @media (min-width: 1701px)
     */
     pub xl__border_l: &'a str,
+
+    /**
+        border-width: 0;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_0: &'a str,
+
+    /**
+        border-width: 2px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_2: &'a str,
+
+    /**
+        border-width: 4px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_4: &'a str,
+
+    /**
+        border-width: 8px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_8: &'a str,
+
+    /**
+        border-width: 1px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border: &'a str,
+
+    /**
+        border-top-width: 0;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_t_0: &'a str,
+
+    /**
+        border-right-width: 0;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_r_0: &'a str,
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_b_0: &'a str,
+
+    /**
+        border-left-width: 0;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_l_0: &'a str,
+
+    /**
+        border-top-width: 2px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_t_2: &'a str,
+
+    /**
+        border-right-width: 2px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_r_2: &'a str,
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_b_2: &'a str,
+
+    /**
+        border-left-width: 2px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_l_2: &'a str,
+
+    /**
+        border-top-width: 4px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_t_4: &'a str,
+
+    /**
+        border-right-width: 4px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_r_4: &'a str,
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_b_4: &'a str,
+
+    /**
+        border-left-width: 4px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_l_4: &'a str,
+
+    /**
+        border-top-width: 8px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_t_8: &'a str,
+
+    /**
+        border-right-width: 8px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_r_8: &'a str,
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_b_8: &'a str,
+
+    /**
+        border-left-width: 8px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_l_8: &'a str,
+
+    /**
+        border-top-width: 1px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_t: &'a str,
+
+    /**
+        border-right-width: 1px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_r: &'a str,
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_b: &'a str,
+
+    /**
+        border-left-width: 1px;    @media (min-width: 1701px)
+    */
+    pub xl__last__border_l: &'a str,
+
+    /**
+        border-width: 0;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_0: &'a str,
+
+    /**
+        border-width: 2px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_2: &'a str,
+
+    /**
+        border-width: 4px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_4: &'a str,
+
+    /**
+        border-width: 8px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_8: &'a str,
+
+    /**
+        border-width: 1px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border: &'a str,
+
+    /**
+        border-top-width: 0;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_t_0: &'a str,
+
+    /**
+        border-right-width: 0;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_r_0: &'a str,
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_b_0: &'a str,
+
+    /**
+        border-left-width: 0;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_l_0: &'a str,
+
+    /**
+        border-top-width: 2px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_t_2: &'a str,
+
+    /**
+        border-right-width: 2px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_r_2: &'a str,
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_b_2: &'a str,
+
+    /**
+        border-left-width: 2px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_l_2: &'a str,
+
+    /**
+        border-top-width: 4px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_t_4: &'a str,
+
+    /**
+        border-right-width: 4px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_r_4: &'a str,
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_b_4: &'a str,
+
+    /**
+        border-left-width: 4px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_l_4: &'a str,
+
+    /**
+        border-top-width: 8px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_t_8: &'a str,
+
+    /**
+        border-right-width: 8px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_r_8: &'a str,
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_b_8: &'a str,
+
+    /**
+        border-left-width: 8px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_l_8: &'a str,
+
+    /**
+        border-top-width: 1px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_t: &'a str,
+
+    /**
+        border-right-width: 1px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_r: &'a str,
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_b: &'a str,
+
+    /**
+        border-left-width: 1px;    @media (min-width: 1701px)
+    */
+    pub xl__hover__border_l: &'a str,
+
+    /**
+        border-width: 0;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_0: &'a str,
+
+    /**
+        border-width: 2px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_2: &'a str,
+
+    /**
+        border-width: 4px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_4: &'a str,
+
+    /**
+        border-width: 8px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_8: &'a str,
+
+    /**
+        border-width: 1px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border: &'a str,
+
+    /**
+        border-top-width: 0;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_t_0: &'a str,
+
+    /**
+        border-right-width: 0;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_r_0: &'a str,
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_b_0: &'a str,
+
+    /**
+        border-left-width: 0;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_l_0: &'a str,
+
+    /**
+        border-top-width: 2px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_t_2: &'a str,
+
+    /**
+        border-right-width: 2px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_r_2: &'a str,
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_b_2: &'a str,
+
+    /**
+        border-left-width: 2px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_l_2: &'a str,
+
+    /**
+        border-top-width: 4px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_t_4: &'a str,
+
+    /**
+        border-right-width: 4px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_r_4: &'a str,
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_b_4: &'a str,
+
+    /**
+        border-left-width: 4px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_l_4: &'a str,
+
+    /**
+        border-top-width: 8px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_t_8: &'a str,
+
+    /**
+        border-right-width: 8px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_r_8: &'a str,
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_b_8: &'a str,
+
+    /**
+        border-left-width: 8px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_l_8: &'a str,
+
+    /**
+        border-top-width: 1px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_t: &'a str,
+
+    /**
+        border-right-width: 1px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_r: &'a str,
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_b: &'a str,
+
+    /**
+        border-left-width: 1px;    @media (min-width: 1701px)
+    */
+    pub xl__focus__border_l: &'a str,
 
     /**
         box-sizing: border-box;    @media (min-width: 1701px)
@@ -76069,6 +77944,381 @@ pub static C: CssClasses = CssClasses {
         border-left-width: 1px;
     */
     border_l: "border-l",
+
+    /**
+        border-width: 0;
+    */
+    last__border_0: "last:border-0",
+
+    /**
+        border-width: 2px;
+    */
+    last__border_2: "last:border-2",
+
+    /**
+        border-width: 4px;
+    */
+    last__border_4: "last:border-4",
+
+    /**
+        border-width: 8px;
+    */
+    last__border_8: "last:border-8",
+
+    /**
+        border-width: 1px;
+    */
+    last__border: "last:border",
+
+    /**
+        border-top-width: 0;
+    */
+    last__border_t_0: "last:border-t-0",
+
+    /**
+        border-right-width: 0;
+    */
+    last__border_r_0: "last:border-r-0",
+
+    /**
+        border-bottom-width: 0;
+    */
+    last__border_b_0: "last:border-b-0",
+
+    /**
+        border-left-width: 0;
+    */
+    last__border_l_0: "last:border-l-0",
+
+    /**
+        border-top-width: 2px;
+    */
+    last__border_t_2: "last:border-t-2",
+
+    /**
+        border-right-width: 2px;
+    */
+    last__border_r_2: "last:border-r-2",
+
+    /**
+        border-bottom-width: 2px;
+    */
+    last__border_b_2: "last:border-b-2",
+
+    /**
+        border-left-width: 2px;
+    */
+    last__border_l_2: "last:border-l-2",
+
+    /**
+        border-top-width: 4px;
+    */
+    last__border_t_4: "last:border-t-4",
+
+    /**
+        border-right-width: 4px;
+    */
+    last__border_r_4: "last:border-r-4",
+
+    /**
+        border-bottom-width: 4px;
+    */
+    last__border_b_4: "last:border-b-4",
+
+    /**
+        border-left-width: 4px;
+    */
+    last__border_l_4: "last:border-l-4",
+
+    /**
+        border-top-width: 8px;
+    */
+    last__border_t_8: "last:border-t-8",
+
+    /**
+        border-right-width: 8px;
+    */
+    last__border_r_8: "last:border-r-8",
+
+    /**
+        border-bottom-width: 8px;
+    */
+    last__border_b_8: "last:border-b-8",
+
+    /**
+        border-left-width: 8px;
+    */
+    last__border_l_8: "last:border-l-8",
+
+    /**
+        border-top-width: 1px;
+    */
+    last__border_t: "last:border-t",
+
+    /**
+        border-right-width: 1px;
+    */
+    last__border_r: "last:border-r",
+
+    /**
+        border-bottom-width: 1px;
+    */
+    last__border_b: "last:border-b",
+
+    /**
+        border-left-width: 1px;
+    */
+    last__border_l: "last:border-l",
+
+    /**
+        border-width: 0;
+    */
+    hover__border_0: "hover:border-0",
+
+    /**
+        border-width: 2px;
+    */
+    hover__border_2: "hover:border-2",
+
+    /**
+        border-width: 4px;
+    */
+    hover__border_4: "hover:border-4",
+
+    /**
+        border-width: 8px;
+    */
+    hover__border_8: "hover:border-8",
+
+    /**
+        border-width: 1px;
+    */
+    hover__border: "hover:border",
+
+    /**
+        border-top-width: 0;
+    */
+    hover__border_t_0: "hover:border-t-0",
+
+    /**
+        border-right-width: 0;
+    */
+    hover__border_r_0: "hover:border-r-0",
+
+    /**
+        border-bottom-width: 0;
+    */
+    hover__border_b_0: "hover:border-b-0",
+
+    /**
+        border-left-width: 0;
+    */
+    hover__border_l_0: "hover:border-l-0",
+
+    /**
+        border-top-width: 2px;
+    */
+    hover__border_t_2: "hover:border-t-2",
+
+    /**
+        border-right-width: 2px;
+    */
+    hover__border_r_2: "hover:border-r-2",
+
+    /**
+        border-bottom-width: 2px;
+    */
+    hover__border_b_2: "hover:border-b-2",
+
+    /**
+        border-left-width: 2px;
+    */
+    hover__border_l_2: "hover:border-l-2",
+
+    /**
+        border-top-width: 4px;
+    */
+    hover__border_t_4: "hover:border-t-4",
+
+    /**
+        border-right-width: 4px;
+    */
+    hover__border_r_4: "hover:border-r-4",
+
+    /**
+        border-bottom-width: 4px;
+    */
+    hover__border_b_4: "hover:border-b-4",
+
+    /**
+        border-left-width: 4px;
+    */
+    hover__border_l_4: "hover:border-l-4",
+
+    /**
+        border-top-width: 8px;
+    */
+    hover__border_t_8: "hover:border-t-8",
+
+    /**
+        border-right-width: 8px;
+    */
+    hover__border_r_8: "hover:border-r-8",
+
+    /**
+        border-bottom-width: 8px;
+    */
+    hover__border_b_8: "hover:border-b-8",
+
+    /**
+        border-left-width: 8px;
+    */
+    hover__border_l_8: "hover:border-l-8",
+
+    /**
+        border-top-width: 1px;
+    */
+    hover__border_t: "hover:border-t",
+
+    /**
+        border-right-width: 1px;
+    */
+    hover__border_r: "hover:border-r",
+
+    /**
+        border-bottom-width: 1px;
+    */
+    hover__border_b: "hover:border-b",
+
+    /**
+        border-left-width: 1px;
+    */
+    hover__border_l: "hover:border-l",
+
+    /**
+        border-width: 0;
+    */
+    focus__border_0: "focus:border-0",
+
+    /**
+        border-width: 2px;
+    */
+    focus__border_2: "focus:border-2",
+
+    /**
+        border-width: 4px;
+    */
+    focus__border_4: "focus:border-4",
+
+    /**
+        border-width: 8px;
+    */
+    focus__border_8: "focus:border-8",
+
+    /**
+        border-width: 1px;
+    */
+    focus__border: "focus:border",
+
+    /**
+        border-top-width: 0;
+    */
+    focus__border_t_0: "focus:border-t-0",
+
+    /**
+        border-right-width: 0;
+    */
+    focus__border_r_0: "focus:border-r-0",
+
+    /**
+        border-bottom-width: 0;
+    */
+    focus__border_b_0: "focus:border-b-0",
+
+    /**
+        border-left-width: 0;
+    */
+    focus__border_l_0: "focus:border-l-0",
+
+    /**
+        border-top-width: 2px;
+    */
+    focus__border_t_2: "focus:border-t-2",
+
+    /**
+        border-right-width: 2px;
+    */
+    focus__border_r_2: "focus:border-r-2",
+
+    /**
+        border-bottom-width: 2px;
+    */
+    focus__border_b_2: "focus:border-b-2",
+
+    /**
+        border-left-width: 2px;
+    */
+    focus__border_l_2: "focus:border-l-2",
+
+    /**
+        border-top-width: 4px;
+    */
+    focus__border_t_4: "focus:border-t-4",
+
+    /**
+        border-right-width: 4px;
+    */
+    focus__border_r_4: "focus:border-r-4",
+
+    /**
+        border-bottom-width: 4px;
+    */
+    focus__border_b_4: "focus:border-b-4",
+
+    /**
+        border-left-width: 4px;
+    */
+    focus__border_l_4: "focus:border-l-4",
+
+    /**
+        border-top-width: 8px;
+    */
+    focus__border_t_8: "focus:border-t-8",
+
+    /**
+        border-right-width: 8px;
+    */
+    focus__border_r_8: "focus:border-r-8",
+
+    /**
+        border-bottom-width: 8px;
+    */
+    focus__border_b_8: "focus:border-b-8",
+
+    /**
+        border-left-width: 8px;
+    */
+    focus__border_l_8: "focus:border-l-8",
+
+    /**
+        border-top-width: 1px;
+    */
+    focus__border_t: "focus:border-t",
+
+    /**
+        border-right-width: 1px;
+    */
+    focus__border_r: "focus:border-r",
+
+    /**
+        border-bottom-width: 1px;
+    */
+    focus__border_b: "focus:border-b",
+
+    /**
+        border-left-width: 1px;
+    */
+    focus__border_l: "focus:border-l",
 
     /**
         box-sizing: border-box;
@@ -92307,6 +94557,381 @@ pub static C: CssClasses = CssClasses {
     sm__border_l: "sm:border-l",
 
     /**
+        border-width: 0;    @media (min-width: 569px)
+    */
+    sm__last__border_0: "sm:last:border-0",
+
+    /**
+        border-width: 2px;    @media (min-width: 569px)
+    */
+    sm__last__border_2: "sm:last:border-2",
+
+    /**
+        border-width: 4px;    @media (min-width: 569px)
+    */
+    sm__last__border_4: "sm:last:border-4",
+
+    /**
+        border-width: 8px;    @media (min-width: 569px)
+    */
+    sm__last__border_8: "sm:last:border-8",
+
+    /**
+        border-width: 1px;    @media (min-width: 569px)
+    */
+    sm__last__border: "sm:last:border",
+
+    /**
+        border-top-width: 0;    @media (min-width: 569px)
+    */
+    sm__last__border_t_0: "sm:last:border-t-0",
+
+    /**
+        border-right-width: 0;    @media (min-width: 569px)
+    */
+    sm__last__border_r_0: "sm:last:border-r-0",
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 569px)
+    */
+    sm__last__border_b_0: "sm:last:border-b-0",
+
+    /**
+        border-left-width: 0;    @media (min-width: 569px)
+    */
+    sm__last__border_l_0: "sm:last:border-l-0",
+
+    /**
+        border-top-width: 2px;    @media (min-width: 569px)
+    */
+    sm__last__border_t_2: "sm:last:border-t-2",
+
+    /**
+        border-right-width: 2px;    @media (min-width: 569px)
+    */
+    sm__last__border_r_2: "sm:last:border-r-2",
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 569px)
+    */
+    sm__last__border_b_2: "sm:last:border-b-2",
+
+    /**
+        border-left-width: 2px;    @media (min-width: 569px)
+    */
+    sm__last__border_l_2: "sm:last:border-l-2",
+
+    /**
+        border-top-width: 4px;    @media (min-width: 569px)
+    */
+    sm__last__border_t_4: "sm:last:border-t-4",
+
+    /**
+        border-right-width: 4px;    @media (min-width: 569px)
+    */
+    sm__last__border_r_4: "sm:last:border-r-4",
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 569px)
+    */
+    sm__last__border_b_4: "sm:last:border-b-4",
+
+    /**
+        border-left-width: 4px;    @media (min-width: 569px)
+    */
+    sm__last__border_l_4: "sm:last:border-l-4",
+
+    /**
+        border-top-width: 8px;    @media (min-width: 569px)
+    */
+    sm__last__border_t_8: "sm:last:border-t-8",
+
+    /**
+        border-right-width: 8px;    @media (min-width: 569px)
+    */
+    sm__last__border_r_8: "sm:last:border-r-8",
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 569px)
+    */
+    sm__last__border_b_8: "sm:last:border-b-8",
+
+    /**
+        border-left-width: 8px;    @media (min-width: 569px)
+    */
+    sm__last__border_l_8: "sm:last:border-l-8",
+
+    /**
+        border-top-width: 1px;    @media (min-width: 569px)
+    */
+    sm__last__border_t: "sm:last:border-t",
+
+    /**
+        border-right-width: 1px;    @media (min-width: 569px)
+    */
+    sm__last__border_r: "sm:last:border-r",
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 569px)
+    */
+    sm__last__border_b: "sm:last:border-b",
+
+    /**
+        border-left-width: 1px;    @media (min-width: 569px)
+    */
+    sm__last__border_l: "sm:last:border-l",
+
+    /**
+        border-width: 0;    @media (min-width: 569px)
+    */
+    sm__hover__border_0: "sm:hover:border-0",
+
+    /**
+        border-width: 2px;    @media (min-width: 569px)
+    */
+    sm__hover__border_2: "sm:hover:border-2",
+
+    /**
+        border-width: 4px;    @media (min-width: 569px)
+    */
+    sm__hover__border_4: "sm:hover:border-4",
+
+    /**
+        border-width: 8px;    @media (min-width: 569px)
+    */
+    sm__hover__border_8: "sm:hover:border-8",
+
+    /**
+        border-width: 1px;    @media (min-width: 569px)
+    */
+    sm__hover__border: "sm:hover:border",
+
+    /**
+        border-top-width: 0;    @media (min-width: 569px)
+    */
+    sm__hover__border_t_0: "sm:hover:border-t-0",
+
+    /**
+        border-right-width: 0;    @media (min-width: 569px)
+    */
+    sm__hover__border_r_0: "sm:hover:border-r-0",
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 569px)
+    */
+    sm__hover__border_b_0: "sm:hover:border-b-0",
+
+    /**
+        border-left-width: 0;    @media (min-width: 569px)
+    */
+    sm__hover__border_l_0: "sm:hover:border-l-0",
+
+    /**
+        border-top-width: 2px;    @media (min-width: 569px)
+    */
+    sm__hover__border_t_2: "sm:hover:border-t-2",
+
+    /**
+        border-right-width: 2px;    @media (min-width: 569px)
+    */
+    sm__hover__border_r_2: "sm:hover:border-r-2",
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 569px)
+    */
+    sm__hover__border_b_2: "sm:hover:border-b-2",
+
+    /**
+        border-left-width: 2px;    @media (min-width: 569px)
+    */
+    sm__hover__border_l_2: "sm:hover:border-l-2",
+
+    /**
+        border-top-width: 4px;    @media (min-width: 569px)
+    */
+    sm__hover__border_t_4: "sm:hover:border-t-4",
+
+    /**
+        border-right-width: 4px;    @media (min-width: 569px)
+    */
+    sm__hover__border_r_4: "sm:hover:border-r-4",
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 569px)
+    */
+    sm__hover__border_b_4: "sm:hover:border-b-4",
+
+    /**
+        border-left-width: 4px;    @media (min-width: 569px)
+    */
+    sm__hover__border_l_4: "sm:hover:border-l-4",
+
+    /**
+        border-top-width: 8px;    @media (min-width: 569px)
+    */
+    sm__hover__border_t_8: "sm:hover:border-t-8",
+
+    /**
+        border-right-width: 8px;    @media (min-width: 569px)
+    */
+    sm__hover__border_r_8: "sm:hover:border-r-8",
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 569px)
+    */
+    sm__hover__border_b_8: "sm:hover:border-b-8",
+
+    /**
+        border-left-width: 8px;    @media (min-width: 569px)
+    */
+    sm__hover__border_l_8: "sm:hover:border-l-8",
+
+    /**
+        border-top-width: 1px;    @media (min-width: 569px)
+    */
+    sm__hover__border_t: "sm:hover:border-t",
+
+    /**
+        border-right-width: 1px;    @media (min-width: 569px)
+    */
+    sm__hover__border_r: "sm:hover:border-r",
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 569px)
+    */
+    sm__hover__border_b: "sm:hover:border-b",
+
+    /**
+        border-left-width: 1px;    @media (min-width: 569px)
+    */
+    sm__hover__border_l: "sm:hover:border-l",
+
+    /**
+        border-width: 0;    @media (min-width: 569px)
+    */
+    sm__focus__border_0: "sm:focus:border-0",
+
+    /**
+        border-width: 2px;    @media (min-width: 569px)
+    */
+    sm__focus__border_2: "sm:focus:border-2",
+
+    /**
+        border-width: 4px;    @media (min-width: 569px)
+    */
+    sm__focus__border_4: "sm:focus:border-4",
+
+    /**
+        border-width: 8px;    @media (min-width: 569px)
+    */
+    sm__focus__border_8: "sm:focus:border-8",
+
+    /**
+        border-width: 1px;    @media (min-width: 569px)
+    */
+    sm__focus__border: "sm:focus:border",
+
+    /**
+        border-top-width: 0;    @media (min-width: 569px)
+    */
+    sm__focus__border_t_0: "sm:focus:border-t-0",
+
+    /**
+        border-right-width: 0;    @media (min-width: 569px)
+    */
+    sm__focus__border_r_0: "sm:focus:border-r-0",
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 569px)
+    */
+    sm__focus__border_b_0: "sm:focus:border-b-0",
+
+    /**
+        border-left-width: 0;    @media (min-width: 569px)
+    */
+    sm__focus__border_l_0: "sm:focus:border-l-0",
+
+    /**
+        border-top-width: 2px;    @media (min-width: 569px)
+    */
+    sm__focus__border_t_2: "sm:focus:border-t-2",
+
+    /**
+        border-right-width: 2px;    @media (min-width: 569px)
+    */
+    sm__focus__border_r_2: "sm:focus:border-r-2",
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 569px)
+    */
+    sm__focus__border_b_2: "sm:focus:border-b-2",
+
+    /**
+        border-left-width: 2px;    @media (min-width: 569px)
+    */
+    sm__focus__border_l_2: "sm:focus:border-l-2",
+
+    /**
+        border-top-width: 4px;    @media (min-width: 569px)
+    */
+    sm__focus__border_t_4: "sm:focus:border-t-4",
+
+    /**
+        border-right-width: 4px;    @media (min-width: 569px)
+    */
+    sm__focus__border_r_4: "sm:focus:border-r-4",
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 569px)
+    */
+    sm__focus__border_b_4: "sm:focus:border-b-4",
+
+    /**
+        border-left-width: 4px;    @media (min-width: 569px)
+    */
+    sm__focus__border_l_4: "sm:focus:border-l-4",
+
+    /**
+        border-top-width: 8px;    @media (min-width: 569px)
+    */
+    sm__focus__border_t_8: "sm:focus:border-t-8",
+
+    /**
+        border-right-width: 8px;    @media (min-width: 569px)
+    */
+    sm__focus__border_r_8: "sm:focus:border-r-8",
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 569px)
+    */
+    sm__focus__border_b_8: "sm:focus:border-b-8",
+
+    /**
+        border-left-width: 8px;    @media (min-width: 569px)
+    */
+    sm__focus__border_l_8: "sm:focus:border-l-8",
+
+    /**
+        border-top-width: 1px;    @media (min-width: 569px)
+    */
+    sm__focus__border_t: "sm:focus:border-t",
+
+    /**
+        border-right-width: 1px;    @media (min-width: 569px)
+    */
+    sm__focus__border_r: "sm:focus:border-r",
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 569px)
+    */
+    sm__focus__border_b: "sm:focus:border-b",
+
+    /**
+        border-left-width: 1px;    @media (min-width: 569px)
+    */
+    sm__focus__border_l: "sm:focus:border-l",
+
+    /**
         box-sizing: border-box;    @media (min-width: 569px)
     */
     sm__box_border: "sm:box-border",
@@ -106279,6 +108904,381 @@ pub static C: CssClasses = CssClasses {
         border-left-width: 1px;    @media (min-width: 769px)
     */
     md__border_l: "md:border-l",
+
+    /**
+        border-width: 0;    @media (min-width: 769px)
+    */
+    md__last__border_0: "md:last:border-0",
+
+    /**
+        border-width: 2px;    @media (min-width: 769px)
+    */
+    md__last__border_2: "md:last:border-2",
+
+    /**
+        border-width: 4px;    @media (min-width: 769px)
+    */
+    md__last__border_4: "md:last:border-4",
+
+    /**
+        border-width: 8px;    @media (min-width: 769px)
+    */
+    md__last__border_8: "md:last:border-8",
+
+    /**
+        border-width: 1px;    @media (min-width: 769px)
+    */
+    md__last__border: "md:last:border",
+
+    /**
+        border-top-width: 0;    @media (min-width: 769px)
+    */
+    md__last__border_t_0: "md:last:border-t-0",
+
+    /**
+        border-right-width: 0;    @media (min-width: 769px)
+    */
+    md__last__border_r_0: "md:last:border-r-0",
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 769px)
+    */
+    md__last__border_b_0: "md:last:border-b-0",
+
+    /**
+        border-left-width: 0;    @media (min-width: 769px)
+    */
+    md__last__border_l_0: "md:last:border-l-0",
+
+    /**
+        border-top-width: 2px;    @media (min-width: 769px)
+    */
+    md__last__border_t_2: "md:last:border-t-2",
+
+    /**
+        border-right-width: 2px;    @media (min-width: 769px)
+    */
+    md__last__border_r_2: "md:last:border-r-2",
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 769px)
+    */
+    md__last__border_b_2: "md:last:border-b-2",
+
+    /**
+        border-left-width: 2px;    @media (min-width: 769px)
+    */
+    md__last__border_l_2: "md:last:border-l-2",
+
+    /**
+        border-top-width: 4px;    @media (min-width: 769px)
+    */
+    md__last__border_t_4: "md:last:border-t-4",
+
+    /**
+        border-right-width: 4px;    @media (min-width: 769px)
+    */
+    md__last__border_r_4: "md:last:border-r-4",
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 769px)
+    */
+    md__last__border_b_4: "md:last:border-b-4",
+
+    /**
+        border-left-width: 4px;    @media (min-width: 769px)
+    */
+    md__last__border_l_4: "md:last:border-l-4",
+
+    /**
+        border-top-width: 8px;    @media (min-width: 769px)
+    */
+    md__last__border_t_8: "md:last:border-t-8",
+
+    /**
+        border-right-width: 8px;    @media (min-width: 769px)
+    */
+    md__last__border_r_8: "md:last:border-r-8",
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 769px)
+    */
+    md__last__border_b_8: "md:last:border-b-8",
+
+    /**
+        border-left-width: 8px;    @media (min-width: 769px)
+    */
+    md__last__border_l_8: "md:last:border-l-8",
+
+    /**
+        border-top-width: 1px;    @media (min-width: 769px)
+    */
+    md__last__border_t: "md:last:border-t",
+
+    /**
+        border-right-width: 1px;    @media (min-width: 769px)
+    */
+    md__last__border_r: "md:last:border-r",
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 769px)
+    */
+    md__last__border_b: "md:last:border-b",
+
+    /**
+        border-left-width: 1px;    @media (min-width: 769px)
+    */
+    md__last__border_l: "md:last:border-l",
+
+    /**
+        border-width: 0;    @media (min-width: 769px)
+    */
+    md__hover__border_0: "md:hover:border-0",
+
+    /**
+        border-width: 2px;    @media (min-width: 769px)
+    */
+    md__hover__border_2: "md:hover:border-2",
+
+    /**
+        border-width: 4px;    @media (min-width: 769px)
+    */
+    md__hover__border_4: "md:hover:border-4",
+
+    /**
+        border-width: 8px;    @media (min-width: 769px)
+    */
+    md__hover__border_8: "md:hover:border-8",
+
+    /**
+        border-width: 1px;    @media (min-width: 769px)
+    */
+    md__hover__border: "md:hover:border",
+
+    /**
+        border-top-width: 0;    @media (min-width: 769px)
+    */
+    md__hover__border_t_0: "md:hover:border-t-0",
+
+    /**
+        border-right-width: 0;    @media (min-width: 769px)
+    */
+    md__hover__border_r_0: "md:hover:border-r-0",
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 769px)
+    */
+    md__hover__border_b_0: "md:hover:border-b-0",
+
+    /**
+        border-left-width: 0;    @media (min-width: 769px)
+    */
+    md__hover__border_l_0: "md:hover:border-l-0",
+
+    /**
+        border-top-width: 2px;    @media (min-width: 769px)
+    */
+    md__hover__border_t_2: "md:hover:border-t-2",
+
+    /**
+        border-right-width: 2px;    @media (min-width: 769px)
+    */
+    md__hover__border_r_2: "md:hover:border-r-2",
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 769px)
+    */
+    md__hover__border_b_2: "md:hover:border-b-2",
+
+    /**
+        border-left-width: 2px;    @media (min-width: 769px)
+    */
+    md__hover__border_l_2: "md:hover:border-l-2",
+
+    /**
+        border-top-width: 4px;    @media (min-width: 769px)
+    */
+    md__hover__border_t_4: "md:hover:border-t-4",
+
+    /**
+        border-right-width: 4px;    @media (min-width: 769px)
+    */
+    md__hover__border_r_4: "md:hover:border-r-4",
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 769px)
+    */
+    md__hover__border_b_4: "md:hover:border-b-4",
+
+    /**
+        border-left-width: 4px;    @media (min-width: 769px)
+    */
+    md__hover__border_l_4: "md:hover:border-l-4",
+
+    /**
+        border-top-width: 8px;    @media (min-width: 769px)
+    */
+    md__hover__border_t_8: "md:hover:border-t-8",
+
+    /**
+        border-right-width: 8px;    @media (min-width: 769px)
+    */
+    md__hover__border_r_8: "md:hover:border-r-8",
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 769px)
+    */
+    md__hover__border_b_8: "md:hover:border-b-8",
+
+    /**
+        border-left-width: 8px;    @media (min-width: 769px)
+    */
+    md__hover__border_l_8: "md:hover:border-l-8",
+
+    /**
+        border-top-width: 1px;    @media (min-width: 769px)
+    */
+    md__hover__border_t: "md:hover:border-t",
+
+    /**
+        border-right-width: 1px;    @media (min-width: 769px)
+    */
+    md__hover__border_r: "md:hover:border-r",
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 769px)
+    */
+    md__hover__border_b: "md:hover:border-b",
+
+    /**
+        border-left-width: 1px;    @media (min-width: 769px)
+    */
+    md__hover__border_l: "md:hover:border-l",
+
+    /**
+        border-width: 0;    @media (min-width: 769px)
+    */
+    md__focus__border_0: "md:focus:border-0",
+
+    /**
+        border-width: 2px;    @media (min-width: 769px)
+    */
+    md__focus__border_2: "md:focus:border-2",
+
+    /**
+        border-width: 4px;    @media (min-width: 769px)
+    */
+    md__focus__border_4: "md:focus:border-4",
+
+    /**
+        border-width: 8px;    @media (min-width: 769px)
+    */
+    md__focus__border_8: "md:focus:border-8",
+
+    /**
+        border-width: 1px;    @media (min-width: 769px)
+    */
+    md__focus__border: "md:focus:border",
+
+    /**
+        border-top-width: 0;    @media (min-width: 769px)
+    */
+    md__focus__border_t_0: "md:focus:border-t-0",
+
+    /**
+        border-right-width: 0;    @media (min-width: 769px)
+    */
+    md__focus__border_r_0: "md:focus:border-r-0",
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 769px)
+    */
+    md__focus__border_b_0: "md:focus:border-b-0",
+
+    /**
+        border-left-width: 0;    @media (min-width: 769px)
+    */
+    md__focus__border_l_0: "md:focus:border-l-0",
+
+    /**
+        border-top-width: 2px;    @media (min-width: 769px)
+    */
+    md__focus__border_t_2: "md:focus:border-t-2",
+
+    /**
+        border-right-width: 2px;    @media (min-width: 769px)
+    */
+    md__focus__border_r_2: "md:focus:border-r-2",
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 769px)
+    */
+    md__focus__border_b_2: "md:focus:border-b-2",
+
+    /**
+        border-left-width: 2px;    @media (min-width: 769px)
+    */
+    md__focus__border_l_2: "md:focus:border-l-2",
+
+    /**
+        border-top-width: 4px;    @media (min-width: 769px)
+    */
+    md__focus__border_t_4: "md:focus:border-t-4",
+
+    /**
+        border-right-width: 4px;    @media (min-width: 769px)
+    */
+    md__focus__border_r_4: "md:focus:border-r-4",
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 769px)
+    */
+    md__focus__border_b_4: "md:focus:border-b-4",
+
+    /**
+        border-left-width: 4px;    @media (min-width: 769px)
+    */
+    md__focus__border_l_4: "md:focus:border-l-4",
+
+    /**
+        border-top-width: 8px;    @media (min-width: 769px)
+    */
+    md__focus__border_t_8: "md:focus:border-t-8",
+
+    /**
+        border-right-width: 8px;    @media (min-width: 769px)
+    */
+    md__focus__border_r_8: "md:focus:border-r-8",
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 769px)
+    */
+    md__focus__border_b_8: "md:focus:border-b-8",
+
+    /**
+        border-left-width: 8px;    @media (min-width: 769px)
+    */
+    md__focus__border_l_8: "md:focus:border-l-8",
+
+    /**
+        border-top-width: 1px;    @media (min-width: 769px)
+    */
+    md__focus__border_t: "md:focus:border-t",
+
+    /**
+        border-right-width: 1px;    @media (min-width: 769px)
+    */
+    md__focus__border_r: "md:focus:border-r",
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 769px)
+    */
+    md__focus__border_b: "md:focus:border-b",
+
+    /**
+        border-left-width: 1px;    @media (min-width: 769px)
+    */
+    md__focus__border_l: "md:focus:border-l",
 
     /**
         box-sizing: border-box;    @media (min-width: 769px)
@@ -120255,6 +123255,381 @@ pub static C: CssClasses = CssClasses {
     lg__border_l: "lg:border-l",
 
     /**
+        border-width: 0;    @media (min-width: 1025px)
+    */
+    lg__last__border_0: "lg:last:border-0",
+
+    /**
+        border-width: 2px;    @media (min-width: 1025px)
+    */
+    lg__last__border_2: "lg:last:border-2",
+
+    /**
+        border-width: 4px;    @media (min-width: 1025px)
+    */
+    lg__last__border_4: "lg:last:border-4",
+
+    /**
+        border-width: 8px;    @media (min-width: 1025px)
+    */
+    lg__last__border_8: "lg:last:border-8",
+
+    /**
+        border-width: 1px;    @media (min-width: 1025px)
+    */
+    lg__last__border: "lg:last:border",
+
+    /**
+        border-top-width: 0;    @media (min-width: 1025px)
+    */
+    lg__last__border_t_0: "lg:last:border-t-0",
+
+    /**
+        border-right-width: 0;    @media (min-width: 1025px)
+    */
+    lg__last__border_r_0: "lg:last:border-r-0",
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 1025px)
+    */
+    lg__last__border_b_0: "lg:last:border-b-0",
+
+    /**
+        border-left-width: 0;    @media (min-width: 1025px)
+    */
+    lg__last__border_l_0: "lg:last:border-l-0",
+
+    /**
+        border-top-width: 2px;    @media (min-width: 1025px)
+    */
+    lg__last__border_t_2: "lg:last:border-t-2",
+
+    /**
+        border-right-width: 2px;    @media (min-width: 1025px)
+    */
+    lg__last__border_r_2: "lg:last:border-r-2",
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 1025px)
+    */
+    lg__last__border_b_2: "lg:last:border-b-2",
+
+    /**
+        border-left-width: 2px;    @media (min-width: 1025px)
+    */
+    lg__last__border_l_2: "lg:last:border-l-2",
+
+    /**
+        border-top-width: 4px;    @media (min-width: 1025px)
+    */
+    lg__last__border_t_4: "lg:last:border-t-4",
+
+    /**
+        border-right-width: 4px;    @media (min-width: 1025px)
+    */
+    lg__last__border_r_4: "lg:last:border-r-4",
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 1025px)
+    */
+    lg__last__border_b_4: "lg:last:border-b-4",
+
+    /**
+        border-left-width: 4px;    @media (min-width: 1025px)
+    */
+    lg__last__border_l_4: "lg:last:border-l-4",
+
+    /**
+        border-top-width: 8px;    @media (min-width: 1025px)
+    */
+    lg__last__border_t_8: "lg:last:border-t-8",
+
+    /**
+        border-right-width: 8px;    @media (min-width: 1025px)
+    */
+    lg__last__border_r_8: "lg:last:border-r-8",
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 1025px)
+    */
+    lg__last__border_b_8: "lg:last:border-b-8",
+
+    /**
+        border-left-width: 8px;    @media (min-width: 1025px)
+    */
+    lg__last__border_l_8: "lg:last:border-l-8",
+
+    /**
+        border-top-width: 1px;    @media (min-width: 1025px)
+    */
+    lg__last__border_t: "lg:last:border-t",
+
+    /**
+        border-right-width: 1px;    @media (min-width: 1025px)
+    */
+    lg__last__border_r: "lg:last:border-r",
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 1025px)
+    */
+    lg__last__border_b: "lg:last:border-b",
+
+    /**
+        border-left-width: 1px;    @media (min-width: 1025px)
+    */
+    lg__last__border_l: "lg:last:border-l",
+
+    /**
+        border-width: 0;    @media (min-width: 1025px)
+    */
+    lg__hover__border_0: "lg:hover:border-0",
+
+    /**
+        border-width: 2px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_2: "lg:hover:border-2",
+
+    /**
+        border-width: 4px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_4: "lg:hover:border-4",
+
+    /**
+        border-width: 8px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_8: "lg:hover:border-8",
+
+    /**
+        border-width: 1px;    @media (min-width: 1025px)
+    */
+    lg__hover__border: "lg:hover:border",
+
+    /**
+        border-top-width: 0;    @media (min-width: 1025px)
+    */
+    lg__hover__border_t_0: "lg:hover:border-t-0",
+
+    /**
+        border-right-width: 0;    @media (min-width: 1025px)
+    */
+    lg__hover__border_r_0: "lg:hover:border-r-0",
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 1025px)
+    */
+    lg__hover__border_b_0: "lg:hover:border-b-0",
+
+    /**
+        border-left-width: 0;    @media (min-width: 1025px)
+    */
+    lg__hover__border_l_0: "lg:hover:border-l-0",
+
+    /**
+        border-top-width: 2px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_t_2: "lg:hover:border-t-2",
+
+    /**
+        border-right-width: 2px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_r_2: "lg:hover:border-r-2",
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_b_2: "lg:hover:border-b-2",
+
+    /**
+        border-left-width: 2px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_l_2: "lg:hover:border-l-2",
+
+    /**
+        border-top-width: 4px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_t_4: "lg:hover:border-t-4",
+
+    /**
+        border-right-width: 4px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_r_4: "lg:hover:border-r-4",
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_b_4: "lg:hover:border-b-4",
+
+    /**
+        border-left-width: 4px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_l_4: "lg:hover:border-l-4",
+
+    /**
+        border-top-width: 8px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_t_8: "lg:hover:border-t-8",
+
+    /**
+        border-right-width: 8px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_r_8: "lg:hover:border-r-8",
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_b_8: "lg:hover:border-b-8",
+
+    /**
+        border-left-width: 8px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_l_8: "lg:hover:border-l-8",
+
+    /**
+        border-top-width: 1px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_t: "lg:hover:border-t",
+
+    /**
+        border-right-width: 1px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_r: "lg:hover:border-r",
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_b: "lg:hover:border-b",
+
+    /**
+        border-left-width: 1px;    @media (min-width: 1025px)
+    */
+    lg__hover__border_l: "lg:hover:border-l",
+
+    /**
+        border-width: 0;    @media (min-width: 1025px)
+    */
+    lg__focus__border_0: "lg:focus:border-0",
+
+    /**
+        border-width: 2px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_2: "lg:focus:border-2",
+
+    /**
+        border-width: 4px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_4: "lg:focus:border-4",
+
+    /**
+        border-width: 8px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_8: "lg:focus:border-8",
+
+    /**
+        border-width: 1px;    @media (min-width: 1025px)
+    */
+    lg__focus__border: "lg:focus:border",
+
+    /**
+        border-top-width: 0;    @media (min-width: 1025px)
+    */
+    lg__focus__border_t_0: "lg:focus:border-t-0",
+
+    /**
+        border-right-width: 0;    @media (min-width: 1025px)
+    */
+    lg__focus__border_r_0: "lg:focus:border-r-0",
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 1025px)
+    */
+    lg__focus__border_b_0: "lg:focus:border-b-0",
+
+    /**
+        border-left-width: 0;    @media (min-width: 1025px)
+    */
+    lg__focus__border_l_0: "lg:focus:border-l-0",
+
+    /**
+        border-top-width: 2px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_t_2: "lg:focus:border-t-2",
+
+    /**
+        border-right-width: 2px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_r_2: "lg:focus:border-r-2",
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_b_2: "lg:focus:border-b-2",
+
+    /**
+        border-left-width: 2px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_l_2: "lg:focus:border-l-2",
+
+    /**
+        border-top-width: 4px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_t_4: "lg:focus:border-t-4",
+
+    /**
+        border-right-width: 4px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_r_4: "lg:focus:border-r-4",
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_b_4: "lg:focus:border-b-4",
+
+    /**
+        border-left-width: 4px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_l_4: "lg:focus:border-l-4",
+
+    /**
+        border-top-width: 8px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_t_8: "lg:focus:border-t-8",
+
+    /**
+        border-right-width: 8px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_r_8: "lg:focus:border-r-8",
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_b_8: "lg:focus:border-b-8",
+
+    /**
+        border-left-width: 8px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_l_8: "lg:focus:border-l-8",
+
+    /**
+        border-top-width: 1px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_t: "lg:focus:border-t",
+
+    /**
+        border-right-width: 1px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_r: "lg:focus:border-r",
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_b: "lg:focus:border-b",
+
+    /**
+        border-left-width: 1px;    @media (min-width: 1025px)
+    */
+    lg__focus__border_l: "lg:focus:border-l",
+
+    /**
         box-sizing: border-box;    @media (min-width: 1025px)
     */
     lg__box_border: "lg:box-border",
@@ -134227,6 +137602,381 @@ pub static C: CssClasses = CssClasses {
         border-left-width: 1px;    @media (min-width: 1701px)
     */
     xl__border_l: "xl:border-l",
+
+    /**
+        border-width: 0;    @media (min-width: 1701px)
+    */
+    xl__last__border_0: "xl:last:border-0",
+
+    /**
+        border-width: 2px;    @media (min-width: 1701px)
+    */
+    xl__last__border_2: "xl:last:border-2",
+
+    /**
+        border-width: 4px;    @media (min-width: 1701px)
+    */
+    xl__last__border_4: "xl:last:border-4",
+
+    /**
+        border-width: 8px;    @media (min-width: 1701px)
+    */
+    xl__last__border_8: "xl:last:border-8",
+
+    /**
+        border-width: 1px;    @media (min-width: 1701px)
+    */
+    xl__last__border: "xl:last:border",
+
+    /**
+        border-top-width: 0;    @media (min-width: 1701px)
+    */
+    xl__last__border_t_0: "xl:last:border-t-0",
+
+    /**
+        border-right-width: 0;    @media (min-width: 1701px)
+    */
+    xl__last__border_r_0: "xl:last:border-r-0",
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 1701px)
+    */
+    xl__last__border_b_0: "xl:last:border-b-0",
+
+    /**
+        border-left-width: 0;    @media (min-width: 1701px)
+    */
+    xl__last__border_l_0: "xl:last:border-l-0",
+
+    /**
+        border-top-width: 2px;    @media (min-width: 1701px)
+    */
+    xl__last__border_t_2: "xl:last:border-t-2",
+
+    /**
+        border-right-width: 2px;    @media (min-width: 1701px)
+    */
+    xl__last__border_r_2: "xl:last:border-r-2",
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 1701px)
+    */
+    xl__last__border_b_2: "xl:last:border-b-2",
+
+    /**
+        border-left-width: 2px;    @media (min-width: 1701px)
+    */
+    xl__last__border_l_2: "xl:last:border-l-2",
+
+    /**
+        border-top-width: 4px;    @media (min-width: 1701px)
+    */
+    xl__last__border_t_4: "xl:last:border-t-4",
+
+    /**
+        border-right-width: 4px;    @media (min-width: 1701px)
+    */
+    xl__last__border_r_4: "xl:last:border-r-4",
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 1701px)
+    */
+    xl__last__border_b_4: "xl:last:border-b-4",
+
+    /**
+        border-left-width: 4px;    @media (min-width: 1701px)
+    */
+    xl__last__border_l_4: "xl:last:border-l-4",
+
+    /**
+        border-top-width: 8px;    @media (min-width: 1701px)
+    */
+    xl__last__border_t_8: "xl:last:border-t-8",
+
+    /**
+        border-right-width: 8px;    @media (min-width: 1701px)
+    */
+    xl__last__border_r_8: "xl:last:border-r-8",
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 1701px)
+    */
+    xl__last__border_b_8: "xl:last:border-b-8",
+
+    /**
+        border-left-width: 8px;    @media (min-width: 1701px)
+    */
+    xl__last__border_l_8: "xl:last:border-l-8",
+
+    /**
+        border-top-width: 1px;    @media (min-width: 1701px)
+    */
+    xl__last__border_t: "xl:last:border-t",
+
+    /**
+        border-right-width: 1px;    @media (min-width: 1701px)
+    */
+    xl__last__border_r: "xl:last:border-r",
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 1701px)
+    */
+    xl__last__border_b: "xl:last:border-b",
+
+    /**
+        border-left-width: 1px;    @media (min-width: 1701px)
+    */
+    xl__last__border_l: "xl:last:border-l",
+
+    /**
+        border-width: 0;    @media (min-width: 1701px)
+    */
+    xl__hover__border_0: "xl:hover:border-0",
+
+    /**
+        border-width: 2px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_2: "xl:hover:border-2",
+
+    /**
+        border-width: 4px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_4: "xl:hover:border-4",
+
+    /**
+        border-width: 8px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_8: "xl:hover:border-8",
+
+    /**
+        border-width: 1px;    @media (min-width: 1701px)
+    */
+    xl__hover__border: "xl:hover:border",
+
+    /**
+        border-top-width: 0;    @media (min-width: 1701px)
+    */
+    xl__hover__border_t_0: "xl:hover:border-t-0",
+
+    /**
+        border-right-width: 0;    @media (min-width: 1701px)
+    */
+    xl__hover__border_r_0: "xl:hover:border-r-0",
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 1701px)
+    */
+    xl__hover__border_b_0: "xl:hover:border-b-0",
+
+    /**
+        border-left-width: 0;    @media (min-width: 1701px)
+    */
+    xl__hover__border_l_0: "xl:hover:border-l-0",
+
+    /**
+        border-top-width: 2px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_t_2: "xl:hover:border-t-2",
+
+    /**
+        border-right-width: 2px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_r_2: "xl:hover:border-r-2",
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_b_2: "xl:hover:border-b-2",
+
+    /**
+        border-left-width: 2px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_l_2: "xl:hover:border-l-2",
+
+    /**
+        border-top-width: 4px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_t_4: "xl:hover:border-t-4",
+
+    /**
+        border-right-width: 4px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_r_4: "xl:hover:border-r-4",
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_b_4: "xl:hover:border-b-4",
+
+    /**
+        border-left-width: 4px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_l_4: "xl:hover:border-l-4",
+
+    /**
+        border-top-width: 8px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_t_8: "xl:hover:border-t-8",
+
+    /**
+        border-right-width: 8px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_r_8: "xl:hover:border-r-8",
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_b_8: "xl:hover:border-b-8",
+
+    /**
+        border-left-width: 8px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_l_8: "xl:hover:border-l-8",
+
+    /**
+        border-top-width: 1px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_t: "xl:hover:border-t",
+
+    /**
+        border-right-width: 1px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_r: "xl:hover:border-r",
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_b: "xl:hover:border-b",
+
+    /**
+        border-left-width: 1px;    @media (min-width: 1701px)
+    */
+    xl__hover__border_l: "xl:hover:border-l",
+
+    /**
+        border-width: 0;    @media (min-width: 1701px)
+    */
+    xl__focus__border_0: "xl:focus:border-0",
+
+    /**
+        border-width: 2px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_2: "xl:focus:border-2",
+
+    /**
+        border-width: 4px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_4: "xl:focus:border-4",
+
+    /**
+        border-width: 8px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_8: "xl:focus:border-8",
+
+    /**
+        border-width: 1px;    @media (min-width: 1701px)
+    */
+    xl__focus__border: "xl:focus:border",
+
+    /**
+        border-top-width: 0;    @media (min-width: 1701px)
+    */
+    xl__focus__border_t_0: "xl:focus:border-t-0",
+
+    /**
+        border-right-width: 0;    @media (min-width: 1701px)
+    */
+    xl__focus__border_r_0: "xl:focus:border-r-0",
+
+    /**
+        border-bottom-width: 0;    @media (min-width: 1701px)
+    */
+    xl__focus__border_b_0: "xl:focus:border-b-0",
+
+    /**
+        border-left-width: 0;    @media (min-width: 1701px)
+    */
+    xl__focus__border_l_0: "xl:focus:border-l-0",
+
+    /**
+        border-top-width: 2px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_t_2: "xl:focus:border-t-2",
+
+    /**
+        border-right-width: 2px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_r_2: "xl:focus:border-r-2",
+
+    /**
+        border-bottom-width: 2px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_b_2: "xl:focus:border-b-2",
+
+    /**
+        border-left-width: 2px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_l_2: "xl:focus:border-l-2",
+
+    /**
+        border-top-width: 4px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_t_4: "xl:focus:border-t-4",
+
+    /**
+        border-right-width: 4px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_r_4: "xl:focus:border-r-4",
+
+    /**
+        border-bottom-width: 4px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_b_4: "xl:focus:border-b-4",
+
+    /**
+        border-left-width: 4px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_l_4: "xl:focus:border-l-4",
+
+    /**
+        border-top-width: 8px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_t_8: "xl:focus:border-t-8",
+
+    /**
+        border-right-width: 8px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_r_8: "xl:focus:border-r-8",
+
+    /**
+        border-bottom-width: 8px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_b_8: "xl:focus:border-b-8",
+
+    /**
+        border-left-width: 8px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_l_8: "xl:focus:border-l-8",
+
+    /**
+        border-top-width: 1px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_t: "xl:focus:border-t",
+
+    /**
+        border-right-width: 1px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_r: "xl:focus:border-r",
+
+    /**
+        border-bottom-width: 1px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_b: "xl:focus:border-b",
+
+    /**
+        border-left-width: 1px;    @media (min-width: 1701px)
+    */
+    xl__focus__border_l: "xl:focus:border-l",
 
     /**
         box-sizing: border-box;    @media (min-width: 1701px)

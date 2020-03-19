@@ -1,4 +1,4 @@
-mod confirm_action_modal;
+pub mod confirm_action_modal;
 
 use crate::{
     components::{attrs, dropdown, font_awesome, modal, restrict, tooltip, Placement},
@@ -53,9 +53,7 @@ fn has_locks(locks: &Locks, composite_ids: &[CompositeId]) -> bool {
     locked_items(locks, composite_ids).next().is_some()
 }
 
-#[derive(Clone)]
-pub struct IdMsg(pub u32, pub Msg);
-
+#[derive(Debug)]
 pub enum State {
     Inactive,
     Activating,
@@ -78,7 +76,7 @@ impl State {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Model {
     pub state: State,
     pub composite_ids: Vec<CompositeId>,
@@ -116,7 +114,10 @@ impl Drop for Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
+pub struct IdMsg(pub u32, pub Msg);
+
+#[derive(Clone, Debug)]
 pub enum Msg {
     StartFetch,
     SendFetch,
@@ -196,7 +197,6 @@ pub fn update(msg: IdMsg, cache: &ArcCache, model: &mut Model, orders: &mut impl
             orders.send_msg(IdMsg(id, Msg::Dropdown(dropdown::Msg::Close)));
 
             model.state = State::Confirming(confirm_action_modal::Action::Loading);
-
             if x.class_name.is_some() {
                 if let Some(body) = &x.confirmation {
                     model.state = State::Confirming(confirm_action_modal::Action::Job(body.to_string(), x, y));
@@ -206,7 +206,6 @@ pub fn update(msg: IdMsg, cache: &ArcCache, model: &mut Model, orders: &mut impl
                 }
             } else {
                 let req = state_change(&x, &y, true);
-
                 orders.perform_cmd(req.fetch_json_data(move |z| IdMsg(id, Msg::DryRunSent(Box::new(z), x, y))));
             }
         }
@@ -224,15 +223,13 @@ pub fn update(msg: IdMsg, cache: &ArcCache, model: &mut Model, orders: &mut impl
             if let confirm_action_modal::Msg::Modal(modal::Msg::Close) = msg {
                 model.state = State::Active;
                 orders.send_msg(IdMsg(id, Msg::SendFetch));
-
-                return;
+            } else {
+                confirm_action_modal::update(
+                    msg,
+                    &mut model.confirm_modal,
+                    &mut orders.proxy(move |m| IdMsg(id, Msg::ConfirmJobModal(m))),
+                );
             }
-
-            confirm_action_modal::update(
-                msg,
-                &mut model.confirm_modal,
-                &mut orders.proxy(move |m| IdMsg(id, Msg::ConfirmJobModal(m))),
-            );
         }
         Msg::Dropdown(msg) => {
             dropdown::update(msg, &mut model.dropdown_state);
@@ -328,7 +325,7 @@ pub fn unstyled_view<'a>(
         ]],
         State::Active => {
             if model.actions.is_empty() {
-                button![cls.merge_attrs(disabled_cls), "No Actions"]
+                seed::button![cls.merge_attrs(disabled_cls), "No Actions"]
             } else {
                 div![
                     class![C.relative],
@@ -348,14 +345,17 @@ pub fn unstyled_view<'a>(
                 ]
             }
         }
-        State::Confirming(action) => div![
-            button![
-                cls.merge_attrs(disabled_cls),
-                "Actions",
-                font_awesome(class![C.w_4, C.h_4, C.inline, C.ml_1, C.pulse], "spinner"),
-            ],
-            confirm_action_modal::view(action).map_msg(move |x| IdMsg(id, Msg::ConfirmJobModal(x))),
-        ],
+        State::Confirming(action) => {
+            let con_view = confirm_action_modal::view(action).map_msg(move |x| IdMsg(id, Msg::ConfirmJobModal(x)));
+            div![
+                button![
+                    cls.merge_attrs(disabled_cls),
+                    "Actions",
+                    font_awesome(class![C.w_4, C.h_4, C.inline, C.ml_1, C.pulse], "spinner"),
+                ],
+                con_view,
+            ]
+        }
     }
 }
 

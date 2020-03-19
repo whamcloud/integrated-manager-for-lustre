@@ -28,7 +28,7 @@ impl Model {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
     ScanStratagemModal(Box<scan_stratagem_modal::Msg>),
 }

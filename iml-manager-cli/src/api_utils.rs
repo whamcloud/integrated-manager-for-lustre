@@ -9,11 +9,6 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::{collections::HashMap, fmt::Debug, iter, time::Duration};
 use tokio::{task::spawn_blocking, time::delay_for};
 
-#[derive(serde::Deserialize, Debug)]
-pub struct CmdWrapper {
-    pub command: Command,
-}
-
 #[derive(serde::Serialize)]
 pub struct SendJob<T> {
     pub class_name: String,

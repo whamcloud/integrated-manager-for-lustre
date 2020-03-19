@@ -1,6 +1,6 @@
 use seed::prelude::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {}
 
 pub struct Model {

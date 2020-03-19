@@ -1,7 +1,7 @@
 use crate::Model;
 use seed::prelude::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {}
 
 pub fn view(_model: &Model) -> impl View<Msg> {

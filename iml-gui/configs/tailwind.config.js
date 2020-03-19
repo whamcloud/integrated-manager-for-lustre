@@ -225,7 +225,8 @@ module.exports = {
   },
   variants: {
     display: ["group-hover", "group-focus", "responsive"],
-    textColor: ["hover", "group-hover", "focus"]
+    textColor: ["hover", "group-hover", "focus"],
+    borderWidth: ["responsive", "last", "hover", "focus"]
   },
   plugins: [
     function({ addVariant }) {

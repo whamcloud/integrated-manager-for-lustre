@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{delete, first, get, post, put, wait_for_cmd, CmdWrapper},
+    api_utils::{delete, first, get, post, put, wait_for_cmd},
     display_utils::{display_cmd_state, generate_table, start_spinner},
     error::{
         DurationParseError, ImlManagerCliError, RunStratagemCommandResult,
@@ -11,7 +11,7 @@ use crate::{
     },
 };
 use iml_manager_client::ImlManagerClientError;
-use iml_wire_types::{ApiList, EndpointName, Filesystem, StratagemConfiguration};
+use iml_wire_types::{ApiList, CmdWrapper, EndpointName, Filesystem, StratagemConfiguration};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
