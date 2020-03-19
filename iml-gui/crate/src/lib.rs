@@ -32,7 +32,7 @@ use futures::channel::oneshot;
 use generated::css_classes::C;
 use iml_wire_types::{
     warp_drive::{self, ArcRecord},
-    Command, Conf, GroupType, Session,
+    Conf, GroupType, Session,
 };
 use lazy_static::lazy_static;
 use page::{Page, RecordChange};
@@ -239,7 +239,7 @@ pub enum GMsg {
     RouteChange(Url),
     AuthProxy(Box<auth::Msg>),
     ServerDate(chrono::DateTime<chrono::offset::FixedOffset>),
-    OpenCommandModal(Command),
+    OpenCommandModal(command_modal::Input),
 }
 
 fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -252,10 +252,10 @@ fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
             orders.proxy(Msg::Auth).send_msg(msg);
         }
         GMsg::ServerDate(d) => model.server_date.set(d),
-        GMsg::OpenCommandModal(cmd) => {
+        GMsg::OpenCommandModal(x) => {
             orders
                 .proxy(Msg::CommandModal)
-                .send_msg(command_modal::Msg::FireCommand(cmd));
+                .send_msg(command_modal::Msg::FireCommands(x));
         }
     }
 }

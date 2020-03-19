@@ -1,4 +1,3 @@
-use crate::components::table;
 use crate::{
     components::{font_awesome, modal},
     extensions::{MergeAttrs as _, NodeExt as _, RequestExt as _},
@@ -8,20 +7,28 @@ use crate::{
 use futures::channel::oneshot;
 use iml_wire_types::{ApiList, Command, EndpointName};
 use seed::{prelude::*, *};
-use std::time::Duration;
+use std::{collections::HashSet, sync::Arc, time::Duration};
 
 /// The component polls `/api/command/` endpoint and this constant defines how often it does.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
 #[derive(Default, Debug)]
 pub struct Model {
+    cancel: Option<oneshot::Sender<()>>,
+    loading: bool,
+    opens: HashSet<u32>,
+    pub commands_all: Vec<Arc<Command>>,
+    pub commands: Vec<Arc<Command>>,
     pub modal: modal::Model,
-    pub commands: Vec<Command>,
-    pub commands_all: Vec<Command>,
-    pub cancel: Option<oneshot::Sender<()>>,
 }
 
-/// `Msg::FireCommand(..)` adds the new command to the polling list
+#[derive(Clone, Debug)]
+pub enum Input {
+    Commands(Vec<Arc<Command>>),
+    Ids(Vec<u32>),
+}
+
+/// `Msg::FireCommands(..)` adds new commands to the polling list
 /// `Msg::Fetch` spawns a future to make the api call
 /// `Msg::Fetched(..)` wraps the result like
 /// ```norun
@@ -39,10 +46,85 @@ pub struct Model {
 #[derive(Clone, Debug)]
 pub enum Msg {
     Modal(modal::Msg),
-    FireCommand(Command),
+    FireCommands(Input),
     Fetch,
-    Fetched(Box<seed::fetch::ResponseDataResult<ApiList<Command>>>),
+    Fetched(Box<fetch::ResponseDataResult<ApiList<Command>>>),
+    Open(u32),
+    Close(u32),
     Noop,
+}
+
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
+    match msg {
+        Msg::Modal(msg) => {
+            modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
+        }
+        Msg::FireCommands(cmds) => {
+            model.modal.open = true;
+
+            match cmds {
+                Input::Commands(cmds) => {
+                    // add the command to the list (if it isn't yet)
+                    // and start polling for the commands' status
+                    // use the (little) optimization: if the command
+                    model.commands_all = cmds.clone();
+                    model.commands = cmds;
+
+                    let not_finished = model.commands.iter().any(|cmd| !is_finished(cmd));
+
+                    if not_finished {
+                        orders.send_msg(Msg::Fetch);
+                    }
+                }
+                Input::Ids(ids) => {
+                    model.loading = true;
+
+                    orders.perform_cmd(fetch_command_status(ids));
+                }
+            }
+        }
+        Msg::Fetch => {
+            model.cancel = None;
+
+            if !model.commands.is_empty() {
+                let ids = model.commands_all.iter().map(|x| x.id).collect();
+                orders.skip().perform_cmd(fetch_command_status(ids));
+            }
+        }
+        Msg::Fetched(cmd_status_result) => {
+            model.loading = false;
+
+            match *cmd_status_result {
+                Ok(cmd_status) => {
+                    model.commands_all = cmd_status.objects.into_iter().map(Arc::new).collect();
+                    model.commands = model
+                        .commands_all
+                        .clone()
+                        .into_iter()
+                        .filter(|x| !is_finished(x))
+                        .collect();
+                }
+                Err(e) => {
+                    error!("Failed to perform fetch_command_status {:#?}", e);
+
+                    orders.skip();
+                }
+            }
+            if !model.commands.is_empty() {
+                let (cancel, fut) = sleep_with_handle(POLL_INTERVAL, Msg::Fetch, Msg::Noop);
+
+                model.cancel = Some(cancel);
+                orders.perform_cmd(fut);
+            }
+        }
+        Msg::Open(x) => {
+            model.opens.insert(x);
+        }
+        Msg::Close(x) => {
+            model.opens.remove(&x);
+        }
+        Msg::Noop => {}
+    }
 }
 
 async fn fetch_command_status(command_ids: Vec<u32>) -> Result<Msg, Msg> {
@@ -57,63 +139,8 @@ async fn fetch_command_status(command_ids: Vec<u32>) -> Result<Msg, Msg> {
         .await
 }
 
-fn is_finished(cmd: &Command) -> bool {
-    cmd.complete || cmd.cancelled || cmd.errored
-}
-
-pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
-    match msg {
-        Msg::Modal(msg) => {
-            modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
-        }
-        Msg::FireCommand(cmd) => {
-            // add the command to the list (if it isn't yet)
-            // and start polling for the commands' status
-            // use the (little) optimization: if the command
-            model.commands_all = vec![cmd.clone()];
-            model.commands = vec![cmd.clone()];
-            if !is_finished(&cmd) {
-                model.modal.open = true;
-                orders.send_msg(Msg::Fetch);
-            }
-        }
-        Msg::Fetch => {
-            log!("command_modal::Msg::Fetch");
-            if !model.commands.is_empty() {
-                let ids = model.commands_all.iter().map(|x| x.id).collect();
-                orders.skip().perform_cmd(fetch_command_status(ids));
-            }
-        }
-        Msg::Fetched(cmd_status_result) => {
-            log!("command_modal::Msg::Fetched", cmd_status_result);
-            match *cmd_status_result {
-                Ok(cmd_status) => {
-                    model.commands_all = cmd_status.objects.clone();
-                    model.commands = cmd_status.objects.into_iter().filter(|x| !is_finished(x)).collect();
-
-                    let ids: String = model
-                        .commands
-                        .iter()
-                        .map(|x| x.id.to_string())
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    log!("command_modal::Msg::Fetched:", ids);
-                }
-                Err(e) => {
-                    error!("Failed to perform fetch_command_status {:#?}", e);
-                    orders.skip();
-                }
-            }
-            if !model.commands.is_empty() {
-                let (cancel, fut) = sleep_with_handle(POLL_INTERVAL, Msg::Fetch, Msg::Noop);
-                model.cancel = Some(cancel);
-                orders.perform_cmd(fut);
-            }
-        }
-        Msg::Noop => {
-            log!("command_modal::Msg::Noop");
-        }
-    }
+const fn is_finished(cmd: &Command) -> bool {
+    cmd.complete
 }
 
 pub(crate) fn view(model: &Model) -> Node<Msg> {
@@ -121,15 +148,32 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
         empty![]
     } else {
         modal::bg_view(
-            model.modal.open,
+            true,
             Msg::Modal,
             modal::content_view(
                 Msg::Modal,
-                vec![
-                    modal::title_view(Msg::Modal, plain!["Commands"]),
-                    commands_table(&model.commands_all),
-                    modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
-                ],
+                if model.loading {
+                    vec![
+                        modal::title_view(Msg::Modal, span!["Loading Command"]),
+                        div![
+                            class![C.my_12, C.text_center, C.text_gray_500],
+                            font_awesome(class![C.w_12, C.h_12, C.inline, C.pulse], "spinner")
+                        ],
+                        modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
+                    ]
+                } else {
+                    vec![
+                        modal::title_view(Msg::Modal, plain!["Commands"]),
+                        div![
+                            class![C.py_8],
+                            model
+                                .commands_all
+                                .iter()
+                                .map(|x| { command_item_view(x, model.opens.contains(&x.id)) })
+                        ],
+                        modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
+                    ]
+                },
             ),
         )
         .with_listener(keyboard_ev(Ev::KeyDown, move |ev| match ev.key_code() {
@@ -140,53 +184,88 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
     }
 }
 
-fn commands_table(commands: &[Command]) -> Node<Msg> {
+fn command_item_view(x: &Command, open: bool) -> Node<Msg> {
+    let border = if !open {
+        C.border_transparent
+    } else if x.cancelled {
+        C.border_gray_500
+    } else if x.errored {
+        C.border_red_500
+    } else if x.complete {
+        C.border_green_500
+    } else {
+        C.border_transparent
+    };
+
+    let (open_icon, m) = if open {
+        ("chevron-circle-up", Msg::Close(x.id))
+    } else {
+        ("chevron-circle-down", Msg::Open(x.id))
+    };
+
     div![
-        h3![class![C.py_4, C.font_normal, C.text_lg], "Commands"],
-        table::wrapper_view(vec![
-            table::thead_view(vec![
-                table::th_view(plain!["Id"]),
-                table::th_view(plain!["Message"]),
-                table::th_view(plain!["Status"]),
-            ]),
-            tbody![commands.iter().map(|x| {
-                tr![
-                    table::td_view(plain![x.id.to_string()]),
-                    table::td_view(plain![x.message.clone()]),
-                    table::td_view(status(x)),
-                ]
-            })],
-        ]),
+        class![C.border_b, C.last__border_b_0],
+        div![
+            class![
+                border,
+                C.border_l_2,
+                C.px_2
+                C.py_5,
+                C.text_gray_700,
+            ],
+            header![
+                class![
+                    C.flex,
+                    C.justify_between,
+                    C.items_center,
+                    C.cursor_pointer,
+                    C.select_none,
+                    C.py_5
+                ],
+                simple_ev(Ev::Click, m),
+                span![class![C.font_thin, C.text_xl], status_icon(x), &x.message],
+                font_awesome(
+                    class![C.w_4, C.h_4, C.inline, C.text_gray_700, C.text_blue_500],
+                    open_icon
+                ),
+            ],
+            ul![
+                class![C.pl_8, C.hidden => !open],
+                li![class![C.pb_2], "Started at: ", x.created_at],
+                li![class![C.pb_2], "Status: ", status_text(x)],
+            ]
+        ]
     ]
 }
 
-fn status(cmd: &Command) -> Node<Msg> {
-    // we suppose that the boolean flags are mutually exclusive
-    if cmd.complete {
-        span![
-            class![C.sm__mx_20,],
-            font_awesome(class![C.w_4, C.h_4, C.inline, C.ml_2], "check"),
-        ]
-    } else if cmd.cancelled {
-        span![
-            class![C.my_12, C.text_center, C.text_gray_500],
-            font_awesome(class![C.w_4, C.h_4, C.inline, C.pulse, C.ml_2], "undo"),
-        ]
+fn status_text(cmd: &Command) -> &'static str {
+    if cmd.cancelled {
+        "Cancelled"
     } else if cmd.errored {
-        span![
-            class![C.my_12, C.text_center, C.text_gray_500],
-            font_awesome(class![C.w_4, C.h_4, C.inline, C.pulse, C.ml_2], "spinner"),
-        ]
+        "Errored"
+    } else if cmd.complete {
+        "Complete"
     } else {
-        span![
-            class![C.my_12, C.text_center, C.text_gray_500],
-            font_awesome(class![C.w_4, C.h_4, C.inline, C.pulse, C.ml_2], "spinner"),
-        ]
+        "Running"
+    }
+}
+
+fn status_icon<T>(cmd: &Command) -> Node<T> {
+    let cls = class![C.w_4, C.h_4, C.inline, C.mr_4];
+
+    if cmd.cancelled {
+        font_awesome(cls, "ban").merge_attrs(class![C.text_gray_500])
+    } else if cmd.errored {
+        font_awesome(cls, "bell").merge_attrs(class![C.text_red_500])
+    } else if cmd.complete {
+        font_awesome(cls, "check").merge_attrs(class![C.text_green_500])
+    } else {
+        font_awesome(cls, "spinner").merge_attrs(class![C.text_gray_500])
     }
 }
 
 fn close_button() -> Node<Msg> {
-    seed::button![
+    button![
         class![
             C.bg_transparent,
             C.py_2,

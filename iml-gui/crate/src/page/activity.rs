@@ -1,10 +1,11 @@
 use crate::{
-    components::{action_dropdown, font_awesome, loading, paging},
+    components::{action_dropdown, command_modal, font_awesome, loading, paging},
     extensions::*,
     generated::css_classes::C,
     sleep_with_handle, GMsg, ServerDate,
 };
 use futures::channel::oneshot;
+use iml_api_utils::extract_id;
 use iml_wire_types::{
     warp_drive::{ArcCache, Locks},
     Alert, AlertRecordType, AlertSeverity, ApiList, EndpointName as _, Session,
@@ -42,6 +43,7 @@ impl Default for Model {
 pub enum Msg {
     ActionDropdown(Box<action_dropdown::IdMsg>),
     ActionsFetched(Box<fetch::ResponseDataResult<ApiList<Alert>>>),
+    OpenCommandModal(u32),
     FetchOffset,
     Loop,
     Page(paging::Msg),
@@ -116,6 +118,9 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                     );
                 }
             }
+        }
+        Msg::OpenCommandModal(id) => {
+            orders.send_g_msg(GMsg::OpenCommandModal(command_modal::Input::Ids(vec![id])));
         }
         Msg::Page(msg) => match model.state {
             State::Fetching => {
@@ -311,15 +316,43 @@ fn alert_item_view(
             }
         ],
         if let Some(end) = alert.end.as_ref() {
-            div![
-                class![C.row_span_1, C.col_span_2],
-                format!(
-                    "Ended {}",
-                    sd.timeago(chrono::DateTime::parse_from_rfc3339(end).unwrap())
-                )
+            vec![
+                div![
+                    class![C.row_span_1, C.col_span_2],
+                    format!(
+                        "Ended {}",
+                        sd.timeago(chrono::DateTime::parse_from_rfc3339(end).unwrap())
+                    )
+                ],
+                command_details_button(alert),
             ]
         } else {
-            empty![]
+            vec![]
         }
     ]
+}
+
+fn command_details_button(alert: &Alert) -> Node<Msg> {
+    if !is_cmd(alert.record_type) {
+        return empty![];
+    }
+
+    if let Some(id) = extract_id(&alert.alert_item) {
+        button![
+            class![
+                C.border_white,
+                C.border,
+                C.focus__outline_none,
+                C.font_bold,
+                C.px_4,
+                C.py_2,
+                C.rounded,
+                C.text_white
+            ],
+            simple_ev(Ev::Click, Msg::OpenCommandModal(id.parse().unwrap())),
+            "Details",
+        ]
+    } else {
+        empty![]
+    }
 }

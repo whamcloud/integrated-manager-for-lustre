@@ -1,7 +1,7 @@
 use crate::{
     components::{
         action_dropdown::{state_change, DryRun},
-        font_awesome, modal,
+        command_modal, font_awesome, modal,
     },
     extensions::{MergeAttrs, NodeExt},
     generated::css_classes::C,
@@ -67,7 +67,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::JobSent(data_result) => match *data_result {
             Ok(command) => {
-                orders.send_g_msg(GMsg::OpenCommandModal(command));
+                let x = command_modal::Input::Commands(vec![Arc::new(command)]);
+
+                orders.send_g_msg(GMsg::OpenCommandModal(x));
             }
             Err(err) => {
                 error!("An error has occurred in Msg::JobSent: {:?}", err);
@@ -83,7 +85,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::StateChangeSent(data_result) => match *data_result {
             Ok(holder) => {
-                orders.send_g_msg(GMsg::OpenCommandModal(holder.command));
+                let x = command_modal::Input::Commands(vec![Arc::new(holder.command)]);
+
+                orders.send_g_msg(GMsg::OpenCommandModal(x));
             }
             Err(err) => {
                 error!("An error has occurred in Msg::StateChangeSent: {:?}", err);
