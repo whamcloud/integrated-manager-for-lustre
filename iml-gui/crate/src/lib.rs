@@ -906,7 +906,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
     let nodes = match &model.page {
         Page::AppLoading => loading::view().els(),
         Page::About => main_panels(model, page::about::view(model).els().map_msg(page::Msg::About)).els(),
-        Page::Dashboard(page) => main_panels(model, page::dashboard::view(page)).els(),
+        Page::Dashboard(page) => main_panels(model, page::dashboard::view(page).map_msg(page::Msg::Dashboard)).els(),
         Page::Filesystems(page) => main_panels(
             model,
             page::filesystems::view(&model.records, page, &model.locks, model.auth.get_session())
@@ -941,7 +941,9 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
                 .map_msg(page::Msg::TargetDashboard),
         )
         .els(),
-        Page::FsDashboard(page) => main_panels(model, page::fs_dashboard::view(page)).els(),
+        Page::FsDashboard(page) => {
+            main_panels(model, page::fs_dashboard::view(page).map_msg(page::Msg::FsDashboard)).els()
+        }
         Page::Jobstats => main_panels(model, page::jobstats::view(model).els().map_msg(page::Msg::Jobstats)).els(),
         Page::Login(x) => page::login::view(x, model.conf.branding)
             .els()

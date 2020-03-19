@@ -11,7 +11,7 @@ use crate::{
 use futures::TryFutureExt;
 use iml_wire_types::{db::StratagemConfiguration, warp_drive::ArcCache, warp_drive::Locks, Filesystem, ToCompositeId};
 use seed::{prelude::*, *};
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 
 pub(crate) mod delete_stratagem_button;
 pub(crate) mod enable_stratagem_button;
@@ -91,7 +91,7 @@ pub fn filesystem_locked(fs: &Filesystem, locks: &Locks) -> bool {
 
 pub struct Config {
     inode_table: inode_table::Model,
-    grafana_vars: HashMap<String, String>,
+    grafana_vars: BTreeMap<String, String>,
     pub scan_duration_picker: duration_picker::Model,
     pub report_duration_picker: duration_picker::Model,
     pub purge_duration_picker: duration_picker::Model,
@@ -334,7 +334,7 @@ pub(crate) fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut
                 }
             }
             Msg::EnableStratagem => {
-                let mut grafana_vars = HashMap::new();
+                let mut grafana_vars = BTreeMap::new();
                 grafana_vars.insert("fs_name".into(), model.fs.name.clone());
 
                 let mut cfg = Config {

@@ -1,19 +1,24 @@
 use crate::{
     components::{
         dashboard::{dashboard_container, performance_container},
+        datepicker,
         grafana_chart::{self, create_chart_params, IML_METRICS_DASHBOARD_ID, IML_METRICS_DASHBOARD_NAME},
     },
     generated::css_classes::C,
+    GMsg,
 };
 use iml_wire_types::warp_drive::ArcCache;
 use seed::{prelude::*, *};
 
-#[derive(Clone, Debug)]
-pub enum Msg {}
-
 #[derive(Default)]
 pub struct Model {
     pub target_name: String,
+    pub io_date_picker: datepicker::Model,
+}
+
+#[derive(Clone, Debug)]
+pub enum Msg {
+    IoChart(datepicker::Msg),
 }
 
 pub enum TargetDashboard {
@@ -31,7 +36,15 @@ impl From<&str> for TargetDashboard {
     }
 }
 
-pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
+    match msg {
+        Msg::IoChart(msg) => {
+            datepicker::update(msg, &mut model.io_date_picker, &mut orders.proxy(Msg::IoChart));
+        }
+    }
+}
+
+pub fn view(_: &ArcCache, model: &Model) -> Node<Msg> {
     let dashboard_type: TargetDashboard = (model.target_name.as_str()).into();
 
     div![
@@ -78,7 +91,17 @@ pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
             TargetDashboard::OstDashboard => vec![
                 dashboard_container::view(
                     "I/O Performance",
-                    performance_container(39, 38, vec![("target_name", &model.target_name)]),
+                    performance_container(
+                        &model.io_date_picker,
+                        39,
+                        38,
+                        vec![
+                            ("target_name", &model.target_name),
+                            ("from", &model.io_date_picker.from),
+                            ("to", &model.io_date_picker.to)
+                        ]
+                    )
+                    .map_msg(Msg::IoChart),
                 ),
                 dashboard_container::view(
                     "Space Usage",
