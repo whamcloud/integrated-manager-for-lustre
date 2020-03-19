@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use seed::{attrs, iframe, prelude::*};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 pub static IML_METRICS_DASHBOARD_ID: &str = "8Klek6wZz";
 pub static IML_METRICS_DASHBOARD_NAME: &str = "iml-metrics";
@@ -15,14 +15,14 @@ pub(crate) struct GrafanaChartData<'a> {
     pub refresh: &'a str,
     pub panel_id: u16,
     #[serde(flatten)]
-    pub vars: HashMap<String, String>,
+    pub vars: BTreeMap<String, String>,
 }
 
 pub(crate) fn create_chart_params<'a>(
     panel_id: u16,
     vars: impl IntoIterator<Item = (impl ToString, impl ToString)>,
 ) -> GrafanaChartData<'a> {
-    let hm: HashMap<String, String> = vars
+    let hm: BTreeMap<String, String> = vars
         .into_iter()
         .map(|(x, y)| {
             let var = x.to_string();
