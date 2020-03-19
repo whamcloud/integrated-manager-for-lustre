@@ -394,22 +394,12 @@ pub(crate) fn view(model: &Model, all_locks: &Locks) -> Node<Msg> {
                 caption_wrapper(
                     "inode Usage Distribution",
                     Some(&last_scan),
-                    stratagem_chart(grafana_chart::GrafanaChartData {
-                        org_id: 1,
-                        refresh: "1m",
-                        panel_id: 2,
-                        vars: config.grafana_vars.clone()
-                    })
+                    stratagem_chart(grafana_chart::create_chart_params(2, "1m", config.grafana_vars.clone()))
                 ),
                 caption_wrapper(
                     "Space Usage Distribution",
                     Some(&last_scan),
-                    stratagem_chart(grafana_chart::GrafanaChartData {
-                        org_id: 1,
-                        refresh: "1m",
-                        panel_id: 3,
-                        vars: config.grafana_vars.clone()
-                    })
+                    stratagem_chart(grafana_chart::create_chart_params(3, "1m", config.grafana_vars.clone()))
                 ),
                 stratagem_config(config, locked)
             ]

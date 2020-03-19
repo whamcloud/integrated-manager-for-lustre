@@ -27,7 +27,7 @@ pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
-                        create_chart_params(6, vec![("host_name", &model.host_name)]),
+                        create_chart_params(6, "10s", vec![("host_name", &model.host_name)]),
                         "90%",
                     ),
                 ],
@@ -39,7 +39,7 @@ pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
-                        create_chart_params(10, vec![("host_name", &model.host_name)]),
+                        create_chart_params(10, "10s", vec![("host_name", &model.host_name)]),
                         "90%",
                     ),
                 ],
@@ -51,7 +51,7 @@ pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
-                        create_chart_params(8, vec![("host_name", &model.host_name)]),
+                        create_chart_params(8, "10s", vec![("host_name", &model.host_name)]),
                         "90%",
                     ),
                 ],
@@ -63,7 +63,7 @@ pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
-                        create_chart_params(36, vec![("host_name", &model.host_name)]),
+                        create_chart_params(36, "10s", vec![("host_name", &model.host_name)]),
                         "90%",
                     ),
                 ],
