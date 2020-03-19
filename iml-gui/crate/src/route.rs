@@ -205,6 +205,10 @@ impl<'a> From<Url> for Route<'a> {
                 None => Self::Devices,
                 Some(id) => Self::Device(RouteId::from(id)),
             },
+            Some("device_hosts") => match path.next() {
+                None => Self::DeviceHosts,
+                Some(id) => Self::DeviceHost(RouteId::from(id)),
+            },
             _ => Self::NotFound,
         }
     }

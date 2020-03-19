@@ -60,7 +60,7 @@ pub fn view(model: &Model) -> impl View<crate::Msg> {
         if model.device_host.is_empty() {
             div![
                 class![C.text_3xl, C.text_center],
-                h1![class![C.m_2, C.text_gray_600], "No devices found"],
+                h1![class![C.m_2, C.text_gray_600], "No devices hosts found"],
             ]
         } else {
             table::wrapper_view(vec![

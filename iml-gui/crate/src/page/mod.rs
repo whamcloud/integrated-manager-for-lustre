@@ -2,9 +2,9 @@ pub mod about;
 pub mod activity;
 pub mod dashboard;
 pub mod device;
-pub mod devices;
 pub mod device_host;
 pub mod device_hosts;
+pub mod devices;
 pub mod filesystem;
 pub mod filesystems;
 pub mod fs_dashboard;
@@ -169,6 +169,7 @@ impl Page {
             | (Route::Volumes, Self::Volumes) => true,
             (Route::OstPool(route_id), Self::OstPool(ostpool::Model { id }))
             | (Route::Device(route_id), Self::Device(device::Model { id }))
+            | (Route::DeviceHost(route_id), Self::DeviceHost(device_host::Model { id }))
             | (Route::Server(route_id), Self::Server(server::Model { id }))
             | (Route::User(route_id), Self::User(user::Model { id }))
             | (Route::Volume(route_id), Self::Volume(volume::Model { id })) => route_id == &RouteId::from(id),
