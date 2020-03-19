@@ -25,6 +25,7 @@ pub mod volume;
 pub mod volumes;
 
 use crate::{
+    components::datepicker,
     route::{Route, RouteId},
     GMsg,
 };
@@ -112,6 +113,7 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
             }),
             Route::TargetDashboard(id) => Self::TargetDashboard(target_dashboard::Model {
                 target_name: id.to_string(),
+                ..target_dashboard::Model::default()
             }),
             Route::Jobstats => Self::Jobstats,
             Route::Login => Self::Login(login::Model::default()),
@@ -191,7 +193,7 @@ impl Page {
             (Route::ServerDashboard(route_id), Self::ServerDashboard(server_dashboard::Model { host_name })) => {
                 &route_id.to_string() == host_name
             }
-            (Route::TargetDashboard(route_id), Self::TargetDashboard(target_dashboard::Model { target_name })) => {
+            (Route::TargetDashboard(route_id), Self::TargetDashboard(target_dashboard::Model { target_name, .. })) => {
                 &route_id.to_string() == target_name
             }
             _ => false,
@@ -239,7 +241,7 @@ pub enum Msg {
     Servers(servers::Msg),
     Target(target::Msg),
     Targets(targets::Msg),
-    TargetDashboard(target_dashboard::Msg),
+    TargetDashboard(datepicker::Msg),
     Jobstats(jobstats::Msg),
     OstPools(ostpools::Msg),
     OstPool(ostpool::Msg),

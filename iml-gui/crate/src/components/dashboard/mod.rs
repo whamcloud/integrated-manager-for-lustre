@@ -4,7 +4,7 @@
 
 use crate::{
     components::{
-        datepicker::datepicker,
+        datepicker,
         grafana_chart::{self, create_chart_params, IML_METRICS_DASHBOARD_ID, IML_METRICS_DASHBOARD_NAME},
     },
     generated::css_classes::C,
@@ -14,11 +14,12 @@ use seed::{prelude::*, *};
 pub(crate) mod dashboard_container;
 pub(crate) mod dashboard_fs_usage;
 
-pub(crate) fn performance_container<T>(
+pub(crate) fn performance_container(
+    model: &datepicker::Model,
     bw_id: u16,
     iops_id: u16,
     vars: impl IntoIterator<Item = (impl ToString, impl ToString)> + Clone,
-) -> Node<T> {
+) -> Node<datepicker::Msg> {
     div![
         class![C.h_80, C.px_2],
         div![
@@ -61,6 +62,6 @@ pub(crate) fn performance_container<T>(
             create_chart_params(iops_id, vars),
             "38%",
         ),
-        datepicker(),
+        datepicker::view(&model),
     ]
 }

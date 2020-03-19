@@ -1,6 +1,7 @@
 use crate::{
     components::{
         dashboard::{dashboard_container, performance_container},
+        datepicker,
         grafana_chart::{self, create_chart_params, IML_METRICS_DASHBOARD_ID, IML_METRICS_DASHBOARD_NAME},
     },
     generated::css_classes::C,
@@ -8,12 +9,10 @@ use crate::{
 use iml_wire_types::warp_drive::ArcCache;
 use seed::{prelude::*, *};
 
-#[derive(Clone)]
-pub enum Msg {}
-
 #[derive(Default)]
 pub struct Model {
     pub target_name: String,
+    pub io_date_picker: datepicker::Model,
 }
 
 pub enum TargetDashboard {
@@ -31,7 +30,7 @@ impl From<&str> for TargetDashboard {
     }
 }
 
-pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
+pub fn view(_: &ArcCache, model: &Model) -> impl View<datepicker::Msg> {
     let dashboard_type: TargetDashboard = (model.target_name.as_str()).into();
 
     div![
@@ -78,7 +77,7 @@ pub fn view(_: &ArcCache, model: &Model) -> impl View<Msg> {
             TargetDashboard::OstDashboard => vec![
                 dashboard_container::view(
                     "I/O Performance",
-                    performance_container(39, 38, vec![("target_name", &model.target_name)]),
+                    performance_container(&model.io_date_picker, 39, 38, vec![("target_name", &model.target_name)]),
                 ),
                 dashboard_container::view(
                     "Space Usage",

@@ -2,7 +2,7 @@ use crate::{
     components::{
         chart::fs_usage,
         dashboard::{dashboard_container, dashboard_fs_usage},
-        datepicker::datepicker,
+        datepicker,
         grafana_chart::{self, create_chart_params, IML_METRICS_DASHBOARD_ID, IML_METRICS_DASHBOARD_NAME},
     },
     generated::css_classes::C,
@@ -14,6 +14,8 @@ use seed::{prelude::*, *};
 pub struct Model {
     pub fs_usage: fs_usage::Model,
     pub fs_name: String,
+    pub fs_usage_date_picker: datepicker::Model,
+    pub mdt_usage_date_picker: datepicker::Model,
 }
 
 impl Model {
@@ -21,6 +23,7 @@ impl Model {
         Self {
             fs_usage: fs_usage::Model::new(fs_name.clone()),
             fs_name,
+            ..Default::default()
         }
     }
 }
@@ -28,6 +31,8 @@ impl Model {
 #[derive(Clone)]
 pub enum Msg {
     FsUsage(fs_usage::Msg),
+    FsUsageChart(datepicker::Msg),
+    MdtUsageChart(datepicker::Msg),
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -35,10 +40,24 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::FsUsage(msg) => {
             fs_usage::update(msg, &mut model.fs_usage, &mut orders.proxy(Msg::FsUsage));
         }
+        Msg::FsUsageChart(msg) => {
+            datepicker::update(
+                msg,
+                &mut model.fs_usage_date_picker,
+                &mut orders.proxy(Msg::FsUsageChart),
+            );
+        }
+        Msg::MdtUsageChart(msg) => {
+            datepicker::update(
+                msg,
+                &mut model.mdt_usage_date_picker,
+                &mut orders.proxy(Msg::MdtUsageChart),
+            );
+        }
     }
 }
 
-pub fn view<T: 'static>(model: &Model) -> impl View<T> {
+pub fn view(model: &Model) -> Node<Msg> {
     div![
         class![C.grid, C.lg__grid_cols_2, C.gap_6],
         vec![
@@ -53,7 +72,7 @@ pub fn view<T: 'static>(model: &Model) -> impl View<T> {
                         create_chart_params(31, vec![("fs_name", &model.fs_name)]),
                         "90%",
                     ),
-                    datepicker(),
+                    datepicker::view(&model.fs_usage_date_picker).map_msg(Msg::FsUsageChart),
                 ],
             ),
             dashboard_container::view(
@@ -78,7 +97,7 @@ pub fn view<T: 'static>(model: &Model) -> impl View<T> {
                         create_chart_params(32, vec![("fs_name", &model.fs_name)]),
                         "90%",
                     ),
-                    datepicker(),
+                    datepicker::view(&model.mdt_usage_date_picker).map_msg(Msg::MdtUsageChart),
                 ],
             ),
         ]
