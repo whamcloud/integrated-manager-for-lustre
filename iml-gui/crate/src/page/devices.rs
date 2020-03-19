@@ -46,8 +46,6 @@ pub fn update(msg: Msg, _cache: &ArcCache, model: &mut Model, _orders: &mut impl
             } else {
                 seed::log!("Element to remove not found");
             }
-
-            devices.sort_by(|a, b| natord::compare(&a.device.id, &b.device.id));
         }
     }
 }
