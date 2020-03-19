@@ -4,9 +4,9 @@
 
 use crate::{
     db::{
-        AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord, Id,
-        LnetConfigurationRecord, ManagedTargetMountRecord, OstPoolOstsRecord, OstPoolRecord,
-        StratagemConfiguration, VolumeNodeRecord, DeviceHostRecord, DeviceRecord,
+        AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord, DeviceHostRecord,
+        DeviceRecord, Id, LnetConfigurationRecord, ManagedTargetMountRecord, OstPoolOstsRecord,
+        OstPoolRecord, StratagemConfiguration, VolumeNodeRecord,
     },
     Alert, CompositeId, EndpointNameSelf, Filesystem, Host, Label, LockChange, Target,
     TargetConfParam, ToCompositeId, Volume,
@@ -315,12 +315,8 @@ impl ArcCache {
             "managedtarget" | "managedost" | "managedmdt" | "managedmgt" | "managedmgs" => {
                 self.target.get(&composite_id.1).cloned().map(erase)
             }
-            "device" => {
-                self.device.get(&composite_id.1).cloned().map(erase)
-            }
-            "devicehost" => {
-                self.device_host.get(&composite_id.1).cloned().map(erase)
-            }
+            "device" => self.device.get(&composite_id.1).cloned().map(erase),
+            "devicehost" => self.device_host.get(&composite_id.1).cloned().map(erase),
             _ => None,
         }
     }
