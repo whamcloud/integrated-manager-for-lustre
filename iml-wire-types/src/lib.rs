@@ -1350,6 +1350,7 @@ pub enum UnitFileState {
 pub enum ActiveState {
     Inactive,
     Active,
+    Activating,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1358,6 +1359,7 @@ pub enum RunState {
     Enabled,
     Started,
     Setup, // Enabled + Started
+    Activating,
 }
 
 impl Default for RunState {
