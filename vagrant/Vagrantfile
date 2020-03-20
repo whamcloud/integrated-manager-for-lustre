@@ -263,6 +263,14 @@ Vagrant.configure('2') do |config|
 
       configure_docker_network mds
 
+      configure_ntp mds
+
+      configure_ntp_docker mds
+
+      wait_for_ntp mds
+
+      wait_for_ntp_docker mds
+
       if i == 1
         mds.vm.provision 'create-pools',
                          type: 'shell',
@@ -482,6 +490,14 @@ Vagrant.configure('2') do |config|
       configure_lustre_network oss
 
       configure_docker_network oss
+
+      configure_ntp oss
+
+      configure_ntp_docker oss
+
+      wait_for_ntp oss
+
+      wait_for_ntp_docker oss
 
       if i == 1
         oss.vm.provision 'create-pools',
@@ -1024,4 +1040,36 @@ def configure_docker_network(config)
   config.vm.provision 'configure-docker-network', type: 'shell', run: 'never', inline: <<-SHELL
     echo "10.73.10.1 nginx" >> /etc/hosts
   SHELL
+end
+
+def configure_ntp(config)
+  config.vm.provision 'configure-ntp',
+                         type: 'shell',
+                         run: 'never',
+                         path: 'scripts/configure_ntp.sh',
+                         args: ["adm.local"]
+end
+
+def configure_ntp_docker(config)
+  config.vm.provision 'configure-ntp-docker',
+                         type: 'shell',
+                         run: 'never',
+                         path: 'scripts/configure_ntp.sh',
+                         args: ["10.73.10.1"]
+end
+
+def wait_for_ntp(config)
+  config.vm.provision 'wait-for-ntp',
+                          type: 'shell',
+                          run: 'never',
+                          path: 'scripts/wait_for_ntp.sh',
+                          args: ["adm.local"]
+end
+
+def wait_for_ntp_docker(config)
+  config.vm.provision 'wait-for-ntp-docker',
+                          type: 'shell',
+                          run: 'never',
+                          path: 'scripts/wait_for_ntp.sh',
+                          args: ["10.73.10.1"]
 end

@@ -9,6 +9,7 @@ use elementtree::Element;
 use futures::{future::try_join_all, try_join};
 use iml_cmd::{CheckedCommandExt, Command};
 use iml_fs::file_exists;
+use iml_systemd;
 use iml_wire_types::{
     ComponentState, ConfigState, ResourceAgentInfo, ResourceAgentType, ServiceState,
 };
