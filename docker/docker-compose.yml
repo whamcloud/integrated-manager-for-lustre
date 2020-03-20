@@ -1,7 +1,7 @@
 version: "3.7"
 x-deploy: &default-deploy
   restart_policy:
-    condition: on-failure
+    condition: any
     delay: 5s
     window: 5s
 services:
@@ -332,7 +332,11 @@ services:
       - "/etc/iml-docker/setup:/var/lib/chroma-setup"
     secrets:
       - iml_pw
-    deploy: *default-deploy
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        window: 5s
 volumes:
   manager-config:
   db-data:

@@ -22,6 +22,7 @@ members = [
     'iml-services/iml-postoffice',
     'iml-services/iml-service-queue',
     'iml-services/iml-stats',
+    'iml-systemd',
     'iml-timer',
     'iml-util',
     'iml-warp-drive',
@@ -35,5 +36,7 @@ members = [
 
 exclude = [
     'iml-gui/crate',
-    'iml-system-tests',
+    'iml-system-test-utils',
+    'iml-system-rpm-tests',
+    'iml-system-docker-tests',
 ]

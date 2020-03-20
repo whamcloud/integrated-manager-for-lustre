@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-mod vagrant;
+use iml_system_test_utils::{docker, iml, vagrant};
 
 #[tokio::test]
 async fn test_setup() -> Result<(), Box<dyn std::error::Error>> {
