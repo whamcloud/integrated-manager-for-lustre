@@ -1350,6 +1350,8 @@ pub enum UnitFileState {
 pub enum ActiveState {
     Inactive,
     Active,
+    Activating,
+    Failed,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1358,6 +1360,8 @@ pub enum RunState {
     Enabled,
     Started,
     Setup, // Enabled + Started
+    Activating,
+    Failed,
 }
 
 impl Default for RunState {
@@ -1548,6 +1552,16 @@ impl From<String> for Branding {
             "ddn" => Self::Ddn,
             "ddnai400" => Self::DdnAi400,
             _ => Self::Whamcloud,
+        }
+    }
+}
+
+impl fmt::Display for Branding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Ddn => write!(f, "ddn"),
+            Self::Whamcloud => write!(f, "whamcloud"),
+            Self::DdnAi400 => write!(f, "ddnai400"),
         }
     }
 }
