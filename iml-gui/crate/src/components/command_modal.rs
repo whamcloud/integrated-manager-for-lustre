@@ -21,7 +21,6 @@ pub struct Model {
     cancel: Option<oneshot::Sender<()>>,
     loading: bool,
     opens: HashSet<u32>,
-    pub commands_all: Vec<Arc<Command>>,
     pub commands: Vec<Arc<Command>>,
     pub modal: modal::Model,
 }
@@ -69,30 +68,24 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
             match cmds {
                 Input::Commands(cmds) => {
-                    // add the command to the list (if it isn't yet)
-                    // and start polling for the commands' status
-                    // use the (little) optimization: if the command
-                    model.commands_all = cmds.clone();
+                    // use the (little) optimization: if the commands all finished,
+                    // then don't fetch anything
                     model.commands = cmds;
-
-                    let not_finished = model.commands.iter().any(|cmd| !is_finished(cmd));
-
-                    if not_finished {
+                    if !is_all_finished(&model.commands) {
                         orders.send_msg(Msg::Fetch);
                     }
                 }
                 Input::Ids(ids) => {
+                    // we have ids only, so we need to populate
                     model.loading = true;
-
                     orders.perform_cmd(fetch_command_status(ids));
                 }
             }
         }
         Msg::Fetch => {
             model.cancel = None;
-
-            if !model.commands.is_empty() {
-                let ids = model.commands_all.iter().map(|x| x.id).collect();
+            if !is_all_finished(&model.commands) {
+                let ids = model.commands.iter().map(|x| x.id).collect();
                 orders.skip().perform_cmd(fetch_command_status(ids));
             }
         }
@@ -101,22 +94,15 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
             match *cmd_status_result {
                 Ok(cmd_status) => {
-                    model.commands_all = cmd_status.objects.into_iter().map(Arc::new).collect();
-                    model.commands = model
-                        .commands_all
-                        .clone()
-                        .into_iter()
-                        .filter(|x| !is_finished(x))
-                        .collect();
+                    model.commands = cmd_status.objects.into_iter().map(Arc::new).collect();
                 }
                 Err(e) => {
                     error!("Failed to perform fetch_command_status {:#?}", e);
                     orders.skip();
                 }
             }
-            if !model.commands.is_empty() {
+            if !is_all_finished(&model.commands) {
                 let (cancel, fut) = sleep_with_handle(POLL_INTERVAL, Msg::Fetch, Msg::Noop);
-
                 model.cancel = Some(cancel);
                 orders.perform_cmd(fut);
             }
@@ -147,6 +133,10 @@ const fn is_finished(cmd: &Command) -> bool {
     cmd.complete
 }
 
+fn is_all_finished(cmds: &[Arc<Command>]) -> bool {
+    cmds.iter().all(|cmd| is_finished(cmd))
+}
+
 pub(crate) fn view(model: &Model) -> Node<Msg> {
     if !model.modal.open {
         empty![]
@@ -171,7 +161,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
                         div![
                             class![C.py_8],
                             model
-                                .commands_all
+                                .commands
                                 .iter()
                                 .map(|x| { command_item_view(x, model.opens.contains(&x.id)) })
                         ],
