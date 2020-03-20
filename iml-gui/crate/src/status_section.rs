@@ -131,8 +131,9 @@ pub fn view(
                 C.bg_blue_1000,
                 C.lg__w_24,
                 C.lg__h_main_content,
-                C.grid,
-                C.grid_rows_4,
+                C.hidden,
+                C.lg__grid,
+                C.lg__grid_rows_4,
             ],
             toggle_section(model),
             side_panel_buttons(route, activity_health).merge_attrs(class![C.row_span_2])
