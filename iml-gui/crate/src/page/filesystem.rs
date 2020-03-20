@@ -1,3 +1,7 @@
+// Copyright (c) 2020 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 use crate::{
     components::{
         action_dropdown, alert_indicator, lock_indicator, paging, progress_circle, resource_links, stratagem,
