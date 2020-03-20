@@ -31,8 +31,8 @@ After=iml-syslog.service
 Requires=iml-agent-comms.service
 After=iml-agent-comms.service
 
-# Requires=iml-devices.service
-# After=iml-devices.service
+Requires=iml-devices.service
+After=iml-devices.service
 
 Requires=iml-api.service
 After=iml-api.service
