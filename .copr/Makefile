@@ -37,19 +37,19 @@ srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/release/rust-iml
 	cargo build --release
-	cp target/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,devices,mailbox,postoffice,ostpool,stats,warp-drive} \
+	cp target/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,devices,mailbox,ostpool,postoffice,stats,warp-drive} \
+		iml-agent-comms.service \
+		iml-devices.service \
+		iml-mailbox.service \
+		iml-postoffice.service \
+		iml-ostpool.service \
+		iml-api.service \
+		iml-rust-stats.service \
 		iml-action-runner.service \
 		iml-action-runner.socket \
-		iml-agent-comms.service \
 		iml-agent/systemd-units/* \
-		iml-api.service \
-		iml-devices.service \
-		iml-mailbox.conf \
-		iml-mailbox.service \
-		iml-ostpool.service \
-		iml-postoffice.service \
-		iml-rust-stats.service \
 		iml-warp-drive/systemd-units/* \
+		iml-mailbox.conf \
 		${TMPDIR}/release/rust-iml
 	cp target/release/iml ${TMPDIR}/release/rust-iml
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/rust-iml.tar.gz -C ${TMPDIR}/release/rust-iml .
