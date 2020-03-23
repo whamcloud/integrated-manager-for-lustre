@@ -733,6 +733,26 @@ class InstallPackagesStep(Step):
             host, "install_packages", {"repos": kwargs["enablerepos"], "packages": kwargs["packages"]}
         )
 
+        old_session_id = AgentRpc.get_session_id(host.fqdn)
+
+        try:
+            old_rust_session_id = self.invoke_rust_local_action_expect_result("get_session", host.fqdn)
+        except LocalActionException:
+            old_rust_session_id = None
+
+        # If we have installed any updates at all, then assume it is necessary to restart the agent, as
+        # they could be things the agent uses/imports or API changes, specifically to kernel_status() below
+        self.invoke_agent(host, "restart_agent")
+
+        AgentRpc.await_restart(
+            kwargs["host"].fqdn, timeout=settings.AGENT_RESTART_TIMEOUT, old_session_id=old_session_id
+        )
+
+        if old_rust_session_id:
+            self.invoke_rust_local_action_expect_result(
+                "await_next_session", (host.fqdn, old_rust_session_id, settings.AGENT_RESTART_TIMEOUT)
+            )
+
 
 class InstallHostPackagesJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(ManagedHost, "unconfigured", "packages_installed")
@@ -1028,17 +1048,6 @@ class SetHostProfileStep(Step):
         job_scheduler_notify.notify(host, tznow(), {"server_profile_id": server_profile.id})
 
         job_scheduler_notify.notify(host, tznow(), {"immutable_state": not server_profile.managed})
-
-        # If we have installed any updates at all, then assume it is necessary to restart the agent, as
-        # they could be things the agent uses/imports or API changes, specifically to kernel_status() below
-        old_rust_session_id = self.invoke_rust_local_action_expect_result("get_session", host.fqdn)
-        old_session_id = AgentRpc.get_session_id(host.fqdn)
-        self.invoke_agent(host, "restart_agent")
-        AgentRpc.await_restart(host.fqdn, timeout=settings.AGENT_RESTART_TIMEOUT, old_session_id=old_session_id)
-        if old_rust_session_id:
-            self.invoke_rust_local_action_expect_result(
-                "await_next_session", (host.fqdn, old_rust_session_id, settings.AGENT_RESTART_TIMEOUT)
-            )
 
     @classmethod
     def describe(cls, kwargs):
