@@ -1002,6 +1002,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::Users => main_panels(model, page::users::view(&model.records).els().map_msg(page::Msg::Users)).els(),
         Page::User(x) => main_panels(model, page::user::view(x).els().map_msg(page::Msg::User)).els(),
         Page::Volumes(x) => main_panels(model, page::volumes::view(x).els().map_msg(page::Msg::Volumes)).els(),
+        Page::ServerVolumes(x) => main_panels(model, page::volumes::view(x).els().map_msg(page::Msg::Volumes)).els(),
         Page::Volume(x) => main_panels(model, page::volume::view(x).els().map_msg(page::Msg::Volume)).els(),
     };
 
