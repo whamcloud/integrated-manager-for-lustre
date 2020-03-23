@@ -62,6 +62,9 @@ pub async fn wait_for_cmd(cmd: Command) -> Result<Command, ImlManagerCliError> {
     }
 }
 
+/// Waits for command completion and prints progress messages
+/// This *does not* error on command failure, it only tracks command
+/// completion
 pub async fn wait_for_cmds(cmds: Vec<Command>) -> Result<Vec<Command>, ImlManagerCliError> {
     let m = MultiProgress::new();
 
@@ -116,6 +119,21 @@ pub async fn wait_for_cmds(cmds: Vec<Command>) -> Result<Vec<Command>, ImlManage
     future::try_join(fut.err_into(), fut2).await?;
 
     Ok(cmds)
+}
+
+/// Waits for command completion and prints progress messages.
+/// This will error on command failure and print failed commands in the error message.
+pub async fn wait_for_cmds_success(cmds: Vec<Command>) -> Result<Vec<Command>, ImlManagerCliError> {
+    let cmds = wait_for_cmds(cmds).await?;
+
+    let (failed, passed): (Vec<_>, Vec<_>) =
+        cmds.into_iter().partition(|x| x.errored || x.cancelled);
+
+    if !failed.is_empty() {
+        Err(failed.into())
+    } else {
+        Ok(passed)
+    }
 }
 
 pub async fn get_available_actions(
