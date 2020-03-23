@@ -791,11 +791,11 @@ impl ToSql for Size {
         ty: &Type,
         w: &mut BytesMut,
     ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
-        <&str as ToSql>::to_sql(&&*self.0.to_string(), ty, w)
+        <i64 as ToSql>::to_sql(&(self.0 as i64), ty, w)
     }
 
     fn accepts(ty: &Type) -> bool {
-        <&str as ToSql>::accepts(ty)
+        <i64 as ToSql>::accepts(ty)
     }
 
     to_sql_checked!();
@@ -881,10 +881,10 @@ impl<'a> FromSql<'a> for DeviceType {
             "LogicalVolume" => Ok(DeviceType::LogicalVolume),
             "Zpool" => Ok(DeviceType::Zpool),
             "Dataset" => Ok(DeviceType::Dataset),
-            _ => {
+            x => {
                 let e: Box<dyn std::error::Error + Sync + Send> = Box::new(io::Error::new(
                     io::ErrorKind::InvalidInput,
-                    "Unknown DeviceType variant",
+                    format!("Unknown DeviceType variant: {}", x),
                 ));
 
                 Err(e)
