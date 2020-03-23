@@ -824,35 +824,27 @@ impl<'a> FromSql<'a> for Size {
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
 pub enum DeviceType {
-    #[serde(rename = "scsi")]
     ScsiDevice,
-    #[serde(rename = "partition")]
     Partition,
-    #[serde(rename = "mdraid")]
     MdRaid,
-    #[serde(rename = "mpath")]
     Mpath,
-    #[serde(rename = "vg")]
     VolumeGroup,
-    #[serde(rename = "lv")]
     LogicalVolume,
-    #[serde(rename = "zpool")]
     Zpool,
-    #[serde(rename = "dataset")]
     Dataset,
 }
 
 impl std::fmt::Display for DeviceType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Self::ScsiDevice => write!(f, "scsi"),
-            Self::Partition => write!(f, "partition"),
-            Self::MdRaid => write!(f, "mdraid"),
-            Self::Mpath => write!(f, "mpath"),
-            Self::VolumeGroup => write!(f, "vg"),
-            Self::LogicalVolume => write!(f, "lv"),
-            Self::Zpool => write!(f, "zpool"),
-            Self::Dataset => write!(f, "dataset"),
+            Self::ScsiDevice => write!(f, "ScsiDevice"),
+            Self::Partition => write!(f, "Partition"),
+            Self::MdRaid => write!(f, "MdRaid"),
+            Self::Mpath => write!(f, "Mpath"),
+            Self::VolumeGroup => write!(f, "VolumeGroup"),
+            Self::LogicalVolume => write!(f, "LogicalVolume"),
+            Self::Zpool => write!(f, "Zpool"),
+            Self::Dataset => write!(f, "Dataset"),
         }
     }
 }
@@ -881,14 +873,14 @@ impl<'a> FromSql<'a> for DeviceType {
         raw: &'a [u8],
     ) -> Result<DeviceType, Box<dyn std::error::Error + Sync + Send>> {
         FromSql::from_sql(ty, raw).and_then(|x| match x {
-            "scsi" => Ok(DeviceType::ScsiDevice),
-            "partition" => Ok(DeviceType::Partition),
-            "mdraid" => Ok(DeviceType::MdRaid),
-            "mpath" => Ok(DeviceType::Mpath),
-            "vg" => Ok(DeviceType::VolumeGroup),
-            "lv" => Ok(DeviceType::LogicalVolume),
-            "zpool" => Ok(DeviceType::Zpool),
-            "dataset" => Ok(DeviceType::Dataset),
+            "ScsiDevice" => Ok(DeviceType::ScsiDevice),
+            "Partition" => Ok(DeviceType::Partition),
+            "MdRaid" => Ok(DeviceType::MdRaid),
+            "Mpath" => Ok(DeviceType::Mpath),
+            "VolumeGroup" => Ok(DeviceType::VolumeGroup),
+            "LogicalVolume" => Ok(DeviceType::LogicalVolume),
+            "Zpool" => Ok(DeviceType::Zpool),
+            "Dataset" => Ok(DeviceType::Dataset),
             _ => {
                 let e: Box<dyn std::error::Error + Sync + Send> = Box::new(io::Error::new(
                     io::ErrorKind::InvalidInput,
