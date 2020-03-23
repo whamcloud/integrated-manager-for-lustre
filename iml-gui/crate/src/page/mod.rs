@@ -74,6 +74,7 @@ pub(crate) enum Page {
 
 impl Page {
     pub(crate) fn title(self: &Self) -> String {
+        // FIXME: delegate to a model where possible, e. g. Self::User(m) => m.title()?
         match self {
             Self::About => "About".into(),
             Self::AppLoading => "Loading...".into(),
@@ -96,7 +97,13 @@ impl Page {
             Self::Target(m) => format!("Target: {}", &m.target.name),
             Self::Users => "Users".into(),
             Self::User(m) => format!("User: {}", &m.user.username),
-            Self::Volumes(_) => "Volumes".into(),
+            Self::Volumes(m) => {
+                if let Some(h) = &m.host {
+                    format!("Volumes on {}", &h.fqdn)
+                } else {
+                    "Volumes".into()
+                }
+            }
             Self::Volume(m) => format!("Volume: {}", &m.id),
         }
     }
@@ -187,6 +194,12 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
                 .ok()
                 .and_then(|x| cache.user.get(&x))
                 .map(|x| Self::User(user::Model::new(Arc::clone(x))))
+                .unwrap_or_default(),
+            Route::ServerVolumes(id) => id
+                .parse()
+                .ok()
+                .and_then(|x| cache.host.get(&x))
+                .map(|h| Self::Volumes(volumes::Model::from(h)))
                 .unwrap_or_default(),
             Route::Volumes => Self::Volumes(volumes::Model::default()),
             Route::Volume(id) => id
