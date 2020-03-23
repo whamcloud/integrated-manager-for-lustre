@@ -157,7 +157,7 @@ pub async fn get_available_actions(
 pub fn first<T: EndpointName>(x: ApiList<T>) -> Result<T, ImlManagerCliError> {
     x.objects
         .into_iter()
-        .nth(0)
+        .next()
         .ok_or_else(|| ImlManagerCliError::DoesNotExist(T::endpoint_name()))
 }
 

@@ -298,7 +298,7 @@ fn list_server(hosts: ApiList<Host>) {
 
 fn get_profile_by_name<'a>(xs: &'a [ServerProfile], name: &str) -> Option<&'a ServerProfile> {
     let profile_opt = xs
-        .into_iter()
+        .iter()
         .filter(|x| x.user_selectable)
         .find(|x| x.name == name);
 
@@ -537,7 +537,7 @@ fn get_commands_from_wrapper(objects: Vec<HostProfileCmdWrapper>) -> Vec<Command
 
 async fn process_addhosts(
     config: &AddHosts,
-    api_hosts: &Vec<Host>,
+    api_hosts: &[Host],
     new_hosts: BTreeSet<String>,
 ) -> Result<(BTreeSet<String>, AuthType), ImlManagerCliError> {
     let (known_hosts, new_hosts) = filter_known_hosts(new_hosts, &api_hosts);
@@ -688,7 +688,7 @@ async fn add_server(config: AddHosts) -> Result<(), ImlManagerCliError> {
 /// figures out the profile that should be used to deploy the agents
 fn get_agent_profile<'a>(
     profile: &ServerProfile,
-    xs: &'a Vec<ServerProfile>,
+    xs: &'a [ServerProfile],
 ) -> Result<&'a ServerProfile, Error> {
     let name = if profile.repolist.is_empty() {
         "default_baseless"
