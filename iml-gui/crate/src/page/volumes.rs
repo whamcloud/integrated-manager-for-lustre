@@ -34,6 +34,7 @@ type Row = (Arc<VolumeRecord>, Vec<Arc<VolumeNodeRecord>>, Vec<Arc<Host>>);
 
 #[derive(Default)]
 pub struct Model {
+    pub(crate) host: Option<Arc<Host>>,
     pager: paging::Model,
     sort: (SortField, paging::Dir),
     rows: Vec<Row>,
@@ -43,7 +44,7 @@ impl RecordChange<Msg> for Model {
     fn update_record(&mut self, record: ArcRecord, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
         match record {
             ArcRecord::Volume(_) | ArcRecord::VolumeNode(_) | ArcRecord::Host(_) => {
-                self.rows = build_rows(cache);
+                self.rows = build_rows(cache, &self.host);
 
                 orders.proxy(Msg::Page).send_msg(paging::Msg::SetTotal(self.rows.len()));
 
@@ -55,7 +56,7 @@ impl RecordChange<Msg> for Model {
     fn remove_record(&mut self, id: RecordId, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
         match id {
             RecordId::Volume(_) | RecordId::VolumeNode(_) | RecordId::Host(_) => {
-                self.rows = build_rows(cache);
+                self.rows = build_rows(cache, &self.host);
 
                 orders.proxy(Msg::Page).send_msg(paging::Msg::SetTotal(self.rows.len()));
 
@@ -65,7 +66,7 @@ impl RecordChange<Msg> for Model {
         }
     }
     fn set_records(&mut self, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
-        self.rows = build_rows(cache);
+        self.rows = build_rows(cache, &self.host);
 
         orders.proxy(Msg::Page).send_msg(paging::Msg::SetTotal(self.rows.len()));
 
@@ -73,7 +74,16 @@ impl RecordChange<Msg> for Model {
     }
 }
 
-fn build_rows(cache: &ArcCache) -> Vec<Row> {
+impl From<&Arc<Host>> for Model {
+    fn from(host: &Arc<Host>) -> Self {
+        Self {
+            host: Some(Arc::clone(host)),
+            ..Default::default()
+        }
+    }
+}
+
+fn build_rows(cache: &ArcCache, host: &Option<Arc<Host>>) -> Vec<Row> {
     let x: im::HashMap<u32, Vec<_>> = cache.volume_node.values().fold(im::hashmap! {}, |mut acc, x| {
         acc.entry(x.volume_id)
             .and_modify(|xs| {
@@ -85,8 +95,8 @@ fn build_rows(cache: &ArcCache) -> Vec<Row> {
     });
 
     x.into_iter()
-        .filter_map(|(v, xs)| {
-            let v = cache.volume.get(&v)?;
+        .filter_map(|(vid, xs)| {
+            let v = cache.volume.get(&vid)?;
 
             let hs = xs
                 .iter()
@@ -96,6 +106,7 @@ fn build_rows(cache: &ArcCache) -> Vec<Row> {
 
             Some((Arc::clone(v), xs, hs))
         })
+        .filter(|(_, _, hs): &Row| hs.iter().any(|h| host.as_ref().map(|h0| h0.id == h.id).unwrap_or(true)))
         .collect()
 }
 
