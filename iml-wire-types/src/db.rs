@@ -807,15 +807,11 @@ impl<'a> FromSql<'a> for Size {
         ty: &Type,
         raw: &'a [u8],
     ) -> Result<Size, Box<dyn std::error::Error + Sync + Send>> {
-        <String as FromSql>::from_sql(ty, raw).and_then(|x| {
-            x.parse::<u64>()
-                .map(Size)
-                .map_err(|e| -> Box<dyn std::error::Error + Sync + Send> { Box::new(e) })
-        })
+        <i64 as FromSql>::from_sql(ty, raw).map(|x| Size(x as u64))
     }
 
     fn accepts(ty: &Type) -> bool {
-        <String as FromSql>::accepts(ty)
+        <i64 as FromSql>::accepts(ty)
     }
 }
 
