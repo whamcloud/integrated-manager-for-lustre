@@ -127,7 +127,6 @@ impl Name for FsRecord {
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct VolumeRecord {
     pub id: u32,
-    pub storage_resource_id: Option<u32>,
     pub size: Option<u64>,
     pub label: String,
     pub filesystem_type: Option<String>,
@@ -165,9 +164,6 @@ impl From<Row> for VolumeRecord {
             filesystem_type: row.get("filesystem_type"),
             usable_for_lustre: row.get("usable_for_lustre"),
             not_deleted: row.get("not_deleted"),
-            storage_resource_id: row
-                .get::<_, Option<i32>>("storage_resource_id")
-                .map(|x| x as u32),
         }
     }
 }
