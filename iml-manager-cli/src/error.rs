@@ -80,7 +80,7 @@ impl std::fmt::Display for ImlManagerCliError {
             ImlManagerCliError::DoesNotExist(ref err) => write!(f, "{} does not exist", err),
             ImlManagerCliError::FailedCommandError(ref xs) => {
                 let failed_msg = xs.iter().fold(
-                    String::from("The Following commands have failed:\n"),
+                    String::from("The following commands have failed:\n"),
                     |acc, x| format!("{}{}\n", acc, x.message),
                 );
 
