@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{create_command, get_hosts, wait_for_cmds, SendCmd, SendJob},
+    api_utils::{create_command, get_hosts, wait_for_cmds_success, SendCmd, SendJob},
     display_utils::{display_cancelled, display_error, wrap_fut},
     error::ImlManagerCliError,
 };
@@ -73,7 +73,7 @@ pub async fn update_repo_file_cli(config: UpdateRepoFileHosts) -> Result<(), Iml
 
     let cmd = wrap_fut("Updating Repo files...", create_command(cmd)).await?;
 
-    wait_for_cmds(vec![cmd]).await?;
+    wait_for_cmds_success(vec![cmd]).await?;
 
     Ok(())
 }

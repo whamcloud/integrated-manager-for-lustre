@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{get, get_all, get_hosts, post, put, wait_for_cmds},
+    api_utils::{get, get_all, get_hosts, post, put, wait_for_cmds, wait_for_cmds_success},
     display_utils::{
         display_cancelled, display_error, format_error, format_success, generate_table, wrap_fut,
     },
@@ -71,6 +71,9 @@ pub enum ServerCommand {
     /// Remove servers from IML
     #[structopt(name = "remove")]
     Remove(RemoveHosts),
+    /// List all profiles
+    #[structopt(name = "profile")]
+    Profile,
 }
 
 #[derive(Debug)]
@@ -125,7 +128,7 @@ impl<'a> TestHostConfig<'a> {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 struct AgentConfig<'a> {
-    server_profile: String,
+    server_profile: &'a str,
     #[serde(flatten, borrow)]
     info: TestHostConfig<'a>,
 }
@@ -293,15 +296,14 @@ fn list_server(hosts: ApiList<Host>) {
     table.printstd();
 }
 
-fn get_profile(config: &AddHosts, profiles: ApiList<ServerProfile>) -> Option<ServerProfile> {
-    let profile_opt = profiles
-        .objects
-        .into_iter()
+fn get_profile_by_name<'a>(xs: &'a [ServerProfile], name: &str) -> Option<&'a ServerProfile> {
+    let profile_opt = xs
+        .iter()
         .filter(|x| x.user_selectable)
-        .find(|x| x.name == config.profile);
+        .find(|x| x.name == name);
 
     if profile_opt.is_none() {
-        display_error(format!("Unknown profile {}", config.profile));
+        display_error(format!("Unknown profile {}", name));
     }
 
     profile_opt
@@ -406,13 +408,14 @@ fn handle_test_host_failure(all_passed: bool, config: &AddHosts) -> Result<(), I
 
 fn get_agent_config_objects<'a>(
     new_hosts: &'a BTreeSet<String>,
+    agent_profile: &'a ServerProfile,
     auth: &AuthType,
 ) -> Vec<AgentConfig<'a>> {
     new_hosts
         .iter()
         .map(|address| AgentConfig {
             info: TestHostConfig::new(&address, &auth),
-            server_profile: "/api/server_profile/default/".into(),
+            server_profile: &agent_profile.resource_uri,
         })
         .collect()
 }
@@ -534,20 +537,10 @@ fn get_commands_from_wrapper(objects: Vec<HostProfileCmdWrapper>) -> Vec<Command
 
 async fn process_addhosts(
     config: &AddHosts,
+    api_hosts: &[Host],
     new_hosts: BTreeSet<String>,
-) -> Result<(ServerProfile, BTreeSet<String>, AuthType), ImlManagerCliError> {
-    let (profiles, api_hosts): (ApiList<ServerProfile>, ApiList<Host>) =
-        future::try_join(get_all(), get_all()).await?;
-
-    let profile_name = config.profile.clone();
-    let profile = get_profile(&config, profiles).ok_or_else(|| {
-        Error::new(
-            ErrorKind::NotFound,
-            format!("{} profile not found.", profile_name),
-        )
-    })?;
-
-    let (known_hosts, new_hosts) = filter_known_hosts(new_hosts, &api_hosts.objects);
+) -> Result<(BTreeSet<String>, AuthType), ImlManagerCliError> {
+    let (known_hosts, new_hosts) = filter_known_hosts(new_hosts, &api_hosts);
 
     show_known_host_messages(known_hosts);
 
@@ -560,15 +553,11 @@ async fn process_addhosts(
         }
         "password" => AuthType::Password(config.password.clone().unwrap_or_default()),
         bad => {
-            return Err(Error::new(
-                ErrorKind::NotFound,
-                format!("{} not a valid auth type", bad),
-            )
-            .into());
+            return Err(not_found_err(format!("{} not a valid auth type", bad)));
         }
     };
 
-    Ok((profile, new_hosts, auth))
+    Ok((new_hosts, auth))
 }
 
 async fn get_test_host_commands_and_jobs(
@@ -599,13 +588,14 @@ async fn get_test_host_commands_and_jobs(
     Ok(all_passed)
 }
 
-async fn handle_agents(
+async fn deploy_agents(
     term: &Term,
     new_hosts: &BTreeSet<String>,
-    profile: &ServerProfile,
+    agent_profile: &ServerProfile,
+    server_profile: &ServerProfile,
     auth: &AuthType,
 ) -> Result<Vec<Host>, ImlManagerCliError> {
-    let objects = get_agent_config_objects(new_hosts, auth);
+    let objects = get_agent_config_objects(new_hosts, agent_profile, auth);
 
     let Objects { objects }: Objects<CommandAndHostWrapper> = post_command_to_host(objects).await?;
 
@@ -615,11 +605,11 @@ async fn handle_agents(
 
     term.write_line(&format!("{} agents...", style("Deploying").green()))?;
 
-    wait_for_cmds(commands).await?;
+    wait_for_cmds_success(commands).await?;
 
     wrap_fut(
         "Waiting for agents to restart...",
-        wait_till_agent_starts(&hosts, &profile.name),
+        wait_till_agent_starts(&hosts, &server_profile.name),
     )
     .await?;
 
@@ -665,10 +655,18 @@ async fn add_server(config: AddHosts) -> Result<(), ImlManagerCliError> {
 
     tracing::debug!("Parsed hosts {:?}", new_hosts);
 
-    let (profile, new_hosts, auth) = process_addhosts(&config, new_hosts).await?;
+    let (profiles, api_hosts): (ApiList<ServerProfile>, ApiList<Host>) =
+        future::try_join(get_all(), get_all()).await?;
+
+    let server_profile = get_profile_by_name(&profiles.objects, &config.profile)
+        .ok_or_else(|| not_found_err(format!("{} profile not found.", &config.profile)))?;
+
+    let agent_profile = get_agent_profile(server_profile, &profiles.objects)?;
+
+    let (new_hosts, auth) = process_addhosts(&config, &api_hosts.objects, new_hosts).await?;
 
     if new_hosts.is_empty() {
-        return Ok(());
+        return Err(not_found_err("No new hosts found"));
     }
 
     tracing::debug!("AUTH: {:?}", auth);
@@ -677,12 +675,33 @@ async fn add_server(config: AddHosts) -> Result<(), ImlManagerCliError> {
 
     handle_test_host_failure(all_passed, &config)?;
 
-    let hosts = handle_agents(&term, &new_hosts, &profile, &auth).await?;
+    let hosts = deploy_agents(&term, &new_hosts, &agent_profile, &server_profile, &auth).await?;
 
-    let cmds = handle_profiles(&term, &config, &hosts, &profile).await?;
+    let cmds = handle_profiles(&term, &config, &hosts, &server_profile).await?;
 
-    wait_for_cmds(cmds).await?;
+    wait_for_cmds_success(cmds).await?;
+
     Ok(())
+}
+
+/// Given a server_profile to deploy,
+/// figures out the profile that should be used to deploy the agents
+fn get_agent_profile<'a>(
+    profile: &ServerProfile,
+    xs: &'a [ServerProfile],
+) -> Result<&'a ServerProfile, Error> {
+    let name = if profile.repolist.is_empty() {
+        "default_baseless"
+    } else {
+        "default"
+    };
+
+    let x = xs
+        .into_iter()
+        .find(|x| x.name == name)
+        .ok_or_else(|| Error::new(ErrorKind::NotFound, format!("{} profile not found.", name)))?;
+
+    Ok(x)
 }
 
 pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError> {
@@ -762,9 +781,30 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
             let commands: Vec<Command> =
                 wrap_fut("Removing Servers...", future::try_join_all(xs)).await?;
 
-            wait_for_cmds(commands).await?;
+            wait_for_cmds_success(commands).await?;
+        }
+        ServerCommand::Profile => {
+            let profiles: ApiList<ServerProfile> =
+                wrap_fut("Fetching profiles...", get_all()).await?;
+
+            tracing::debug!("profiles: {:?}", profiles);
+
+            let table = generate_table(
+                &["Profile", "Name", "Description"],
+                profiles
+                    .objects
+                    .into_iter()
+                    .filter(|x| x.user_selectable)
+                    .map(|x| vec![x.name, x.ui_name, x.ui_description]),
+            );
+
+            table.printstd();
         }
     };
 
     Ok(())
+}
+
+fn not_found_err(x: impl Into<String>) -> ImlManagerCliError {
+    Error::new(ErrorKind::NotFound, x.into()).into()
 }

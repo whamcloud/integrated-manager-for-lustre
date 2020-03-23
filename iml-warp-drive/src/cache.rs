@@ -337,6 +337,8 @@ pub async fn populate_from_db(
     ])
     .await?;
 
+    tracing::debug!("Built initial db statements");
+
     let fut1 = future::try_join5(
         into_row(client.query_raw(&stmts[0], iter::empty()).await?),
         into_row(client.query_raw(&stmts[1], iter::empty()).await?),

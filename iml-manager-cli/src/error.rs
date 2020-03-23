@@ -2,6 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use iml_wire_types::Command;
+
 #[derive(Debug)]
 pub enum DurationParseError {
     NoUnit,
@@ -54,35 +56,44 @@ impl std::error::Error for DurationParseError {}
 
 #[derive(Debug)]
 pub enum ImlManagerCliError {
+    ApiError(String),
     ClientRequestError(iml_manager_client::ImlManagerClientError),
-    TokioTimerError(tokio::time::Error),
-    TokioJoinError(tokio::task::JoinError),
+    CombineEasyError(combine::stream::easy::Errors<char, &'static str, usize>),
+    DoesNotExist(&'static str),
+    FailedCommandError(Vec<Command>),
     IntParseError(std::num::ParseIntError),
+    IoError(std::io::Error),
     ParseDurationError(DurationParseError),
+    ReqwestError(reqwest::Error),
     RunStratagemValidationError(RunStratagemValidationError),
     SerdeJsonError(serde_json::error::Error),
-    DoesNotExist(&'static str),
-    ApiError(String),
-    IoError(std::io::Error),
-    CombineEasyError(combine::stream::easy::Errors<char, &'static str, usize>),
-    ReqwestError(reqwest::Error),
+    TokioJoinError(tokio::task::JoinError),
+    TokioTimerError(tokio::time::Error),
 }
 
 impl std::fmt::Display for ImlManagerCliError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
+            ImlManagerCliError::ApiError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::ClientRequestError(ref err) => write!(f, "{}", err),
-            ImlManagerCliError::TokioTimerError(ref err) => write!(f, "{}", err),
-            ImlManagerCliError::TokioJoinError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::CombineEasyError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::DoesNotExist(ref err) => write!(f, "{} does not exist", err),
+            ImlManagerCliError::FailedCommandError(ref xs) => {
+                let failed_msg = xs.iter().fold(
+                    String::from("The following commands have failed:\n"),
+                    |acc, x| format!("{}{}\n", acc, x.message),
+                );
+
+                write!(f, "{}", failed_msg)
+            }
             ImlManagerCliError::IntParseError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::IoError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::ParseDurationError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::ReqwestError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::RunStratagemValidationError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::SerdeJsonError(ref err) => write!(f, "{}", err),
-            ImlManagerCliError::DoesNotExist(ref err) => write!(f, "{} does not exist", err),
-            ImlManagerCliError::ApiError(ref err) => write!(f, "{}", err),
-            ImlManagerCliError::IoError(ref err) => write!(f, "{}", err),
-            ImlManagerCliError::CombineEasyError(ref err) => write!(f, "{}", err),
-            ImlManagerCliError::ReqwestError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::TokioJoinError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::TokioTimerError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -96,18 +107,19 @@ impl std::fmt::Display for RunStratagemValidationError {
 impl std::error::Error for ImlManagerCliError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
+            ImlManagerCliError::ApiError(_) => None,
             ImlManagerCliError::ClientRequestError(ref err) => Some(err),
-            ImlManagerCliError::TokioTimerError(ref err) => Some(err),
-            ImlManagerCliError::TokioJoinError(ref err) => Some(err),
+            ImlManagerCliError::CombineEasyError(ref err) => Some(err),
+            ImlManagerCliError::DoesNotExist(_) => None,
+            ImlManagerCliError::FailedCommandError(_) => None,
             ImlManagerCliError::IntParseError(ref err) => Some(err),
+            ImlManagerCliError::IoError(ref err) => Some(err),
             ImlManagerCliError::ParseDurationError(ref err) => Some(err),
+            ImlManagerCliError::ReqwestError(ref err) => Some(err),
             ImlManagerCliError::RunStratagemValidationError(ref err) => Some(err),
             ImlManagerCliError::SerdeJsonError(ref err) => Some(err),
-            ImlManagerCliError::DoesNotExist(_) => None,
-            ImlManagerCliError::ApiError(_) => None,
-            ImlManagerCliError::IoError(ref err) => Some(err),
-            ImlManagerCliError::CombineEasyError(ref err) => Some(err),
-            ImlManagerCliError::ReqwestError(ref err) => Some(err),
+            ImlManagerCliError::TokioJoinError(ref err) => Some(err),
+            ImlManagerCliError::TokioTimerError(ref err) => Some(err),
         }
     }
 }
@@ -169,6 +181,12 @@ impl From<std::io::Error> for ImlManagerCliError {
 impl From<combine::stream::easy::Errors<char, &str, usize>> for ImlManagerCliError {
     fn from(err: combine::stream::easy::Errors<char, &str, usize>) -> Self {
         ImlManagerCliError::CombineEasyError(err.map_range(|_| ""))
+    }
+}
+
+impl From<Vec<Command>> for ImlManagerCliError {
+    fn from(xs: Vec<Command>) -> Self {
+        ImlManagerCliError::FailedCommandError(xs)
     }
 }
 

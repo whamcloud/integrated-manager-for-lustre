@@ -4,7 +4,7 @@
 
 use crate::{
     api_utils::{
-        create_command, get, get_all, get_hosts, get_one, wait_for_cmds, SendCmd, SendJob,
+        create_command, get, get_all, get_hosts, get_one, wait_for_cmds_success, SendCmd, SendJob,
     },
     display_utils::{generate_table, wrap_fut},
     error::ImlManagerCliError,
@@ -102,7 +102,7 @@ async fn detect_filesystem(hosts: Option<String>) -> Result<(), ImlManagerCliErr
     };
     let cmd = wrap_fut("Detecting filesystems...", create_command(cmd)).await?;
 
-    wait_for_cmds(vec![cmd]).await?;
+    wait_for_cmds_success(vec![cmd]).await?;
     Ok(())
 }
 

@@ -129,10 +129,10 @@ def reg_manager():
         raise
 
 
-def create_repo():
+def create_repo(contents):
     tmp = tempfile.NamedTemporaryFile()
     # this format needs to match chroma_agent.action_plugins.agent_setup.configure_repo
-    tmp.write(REPO_CONTENT.format(AUTHORITY_CERT, PRIVATE_KEY, AGENT_CERT))
+    tmp.write(contents)
 
     tmp.flush()
     launch_command("cp %s %s" % (tmp.name, REPO_PATH))
@@ -183,9 +183,12 @@ def main():
         setup_keys()
         registration_response = reg_manager()
 
-        # Now that we're registered, we can download packages
-        create_repo()
-        install_agent()
+        contents = REPO_CONTENT.format(AUTHORITY_CERT, PRIVATE_KEY, AGENT_CERT).strip()
+
+        if len(contents) > 0:
+            # Now that we're registered, we can download packages
+            create_repo(contents)
+            install_agent()
 
         # Persist the agent configuration file so that it can connect
         # to the manager
