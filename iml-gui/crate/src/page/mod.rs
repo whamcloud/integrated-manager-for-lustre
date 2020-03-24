@@ -29,11 +29,7 @@ pub mod users;
 pub mod volume;
 pub mod volumes;
 
-use crate::{
-    components::sfa_overview,
-    route::{Route, RouteId},
-    GMsg,
-};
+use crate::{components::sfa_overview, route::Route, GMsg};
 use iml_wire_types::{
     warp_drive::{ArcCache, ArcRecord, RecordId},
     Conf,
@@ -230,41 +226,6 @@ impl<'a> From<(&ArcCache, &Conf, &Route<'a>)> for Page {
 }
 
 impl Page {
-    /// Is the given `Route` equivalent to the current page?
-    pub fn is_active<'a>(&self, route: &Route<'a>) -> bool {
-        match (route, self) {
-            (Route::About, Self::About)
-            | (Route::Filesystems, Self::Filesystems(_))
-            | (Route::Dashboard, Self::Dashboard(dashboard::Model { .. }))
-            | (Route::Jobstats, Self::Jobstats)
-            | (Route::Login, Self::Login(_))
-            | (Route::Mgt, Self::Mgts(_))
-            | (Route::NotFound, Self::NotFound)
-            | (Route::OstPools, Self::OstPools)
-            | (Route::PowerControl, Self::PowerControl)
-            | (Route::Servers, Self::Servers(_))
-            | (Route::Targets, Self::Targets)
-            | (Route::Users, Self::Users)
-            | (Route::Volumes, Self::Volumes(_)) => true,
-            (Route::OstPool(route_id), Self::OstPool(ostpool::Model { id }))
-            | (Route::Volume(route_id), Self::Volume(volume::Model { id })) => route_id == &RouteId::from(id),
-            (Route::Server(route_id), Self::Server(x)) => route_id == &RouteId::from(x.server.id),
-            (Route::User(route_id), Self::User(x)) => route_id == &RouteId::from(x.user.id),
-            (Route::Filesystem(route_id), Self::Filesystem(x)) => route_id == &RouteId::from(x.fs.id),
-            (Route::Target(route_id), Self::Target(x)) => route_id == &RouteId::from(x.target.id),
-            (Route::FsDashboard(route_id), Self::FsDashboard(x)) => {
-                let fs_dashboard::Model { fs_name, .. } = &**x;
-                &route_id.to_string() == fs_name
-            }
-            (Route::ServerDashboard(route_id), Self::ServerDashboard(server_dashboard::Model { host_name })) => {
-                &route_id.to_string() == host_name
-            }
-            (Route::TargetDashboard(route_id), Self::TargetDashboard(target_dashboard::Model { target_name, .. })) => {
-                &route_id.to_string() == target_name
-            }
-            _ => false,
-        }
-    }
     /// Initialize the page. This gives a chance to initialize data when a page is switched to.
     pub fn init(&mut self, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
         match self {
