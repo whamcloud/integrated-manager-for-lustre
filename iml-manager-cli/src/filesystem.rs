@@ -102,7 +102,7 @@ async fn detect_filesystem(hosts: Option<String>) -> Result<(), ImlManagerCliErr
     };
     let cmd = wrap_fut("Detecting filesystems...", create_command(cmd)).await?;
 
-    wait_for_cmds_success(vec![cmd]).await?;
+    wait_for_cmds_success(&[cmd]).await?;
     Ok(())
 }
 
