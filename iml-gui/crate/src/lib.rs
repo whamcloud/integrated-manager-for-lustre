@@ -345,7 +345,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             };
         }
         Msg::LoadPage => {
-            if model.loading.loaded() && !model.page.is_active(&model.route) {
+            if model.loading.loaded() {
                 model.page = (&model.records, &model.route).into();
                 model.breadcrumbs.push((model.route.to_href(), model.page.title()));
                 orders.send_msg(Msg::UpdatePageTitle);
