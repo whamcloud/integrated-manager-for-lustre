@@ -579,7 +579,7 @@ fn tree_host_item_view(cache: &ArcCache, model: &Model, host: &Host) -> Option<N
         ],
         alert_indicator(&cache.active_alert, &host, true, Placement::Bottom),
         if tree_node.open {
-            tree_volume_collection_view(cache, model, &address, &host)
+            tree_volume_collection_view(cache, model, &address, host)
         } else {
             empty![]
         }
