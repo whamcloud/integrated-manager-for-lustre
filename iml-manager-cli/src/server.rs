@@ -575,7 +575,7 @@ async fn get_test_host_commands_and_jobs(
 
     term.write_line(&format!("{} preflight checks...", style("Running").green()))?;
 
-    let cmds = wait_for_cmds(cmds).await?;
+    let cmds = wait_for_cmds(&cmds).await?;
 
     let jobs = get_jobs_from_commands(cmds);
 
@@ -605,7 +605,7 @@ async fn deploy_agents(
 
     term.write_line(&format!("{} agents...", style("Deploying").green()))?;
 
-    wait_for_cmds_success(commands).await?;
+    wait_for_cmds_success(&commands).await?;
 
     wrap_fut(
         "Waiting for agents to restart...",
@@ -679,7 +679,7 @@ async fn add_server(config: AddHosts) -> Result<(), ImlManagerCliError> {
 
     let cmds = handle_profiles(&term, &config, &hosts, &server_profile).await?;
 
-    wait_for_cmds_success(cmds).await?;
+    wait_for_cmds_success(&cmds).await?;
 
     Ok(())
 }
@@ -781,7 +781,7 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
             let commands: Vec<Command> =
                 wrap_fut("Removing Servers...", future::try_join_all(xs)).await?;
 
-            wait_for_cmds_success(commands).await?;
+            wait_for_cmds_success(&commands).await?;
         }
         ServerCommand::Profile => {
             let profiles: ApiList<ServerProfile> =
