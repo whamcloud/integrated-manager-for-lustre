@@ -1,3 +1,7 @@
+// Copyright (c) 2020 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 #![allow(clippy::used_underscore_binding)]
 #![allow(clippy::non_ascii_literal)]
 #![allow(clippy::enum_glob_use)]
@@ -127,7 +131,7 @@ impl Loading {
 pub struct Model {
     activity_health: ActivityHealth,
     auth: auth::Model,
-    breadcrumbs: BreadCrumbs<Route<'static>>,
+    breadcrumbs: BreadCrumbs<(String, String)>,
     breakpoint_size: breakpoints::Size,
     command_modal: command_modal::Model,
     conf: Conf,
@@ -304,8 +308,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::RouteChanged(url) => {
             model.route = Route::from(url);
 
-            orders.send_msg(Msg::UpdatePageTitle);
-
             if model.route == Route::Login {
                 orders.send_msg(Msg::Logout);
             }
@@ -314,13 +316,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 model.breadcrumbs.clear();
             }
 
-            model.breadcrumbs.push(model.route.clone());
-
             orders.send_msg(Msg::LoadPage);
         }
         Msg::UpdatePageTitle => {
-            let title = format!("{} - {}", model.route.to_string(), TITLE_SUFFIX);
-
+            let title = format!("{} - {}", model.page.title(), TITLE_SUFFIX);
             document().set_title(&title);
         }
         Msg::EventSourceConnect(_) => {
@@ -348,6 +347,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::LoadPage => {
             if model.loading.loaded() && !model.page.is_active(&model.route) {
                 model.page = (&model.records, &model.route).into();
+                model.breadcrumbs.push((model.route.to_href(), model.page.title()));
+                orders.send_msg(Msg::UpdatePageTitle);
                 model.page.init(&model.records, &mut orders.proxy(Msg::Page));
             } else {
                 orders.skip();

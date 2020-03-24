@@ -1,4 +1,4 @@
-// Copyright (c) 2019 DDN. All rights reserved.
+// Copyright (c) 2020 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -167,8 +167,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .with(warp::log("iml-warp-drive::api"));
 
+    let addr = iml_manager_env::get_warp_drive_addr();
+
+    tracing::info!("Listening on {}", addr);
+
     let (_, fut) = warp::serve(routes).bind_with_graceful_shutdown(
-        iml_manager_env::get_warp_drive_addr(),
+        addr,
         tokio_runtime_shutdown::when_finished(&valve)
             .then(move |_| users::disconnect_all_users(user_state3)),
     );

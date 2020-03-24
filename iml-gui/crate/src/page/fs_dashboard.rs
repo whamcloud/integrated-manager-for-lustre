@@ -1,3 +1,7 @@
+// Copyright (c) 2020 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 use crate::{
     components::{
         chart::fs_usage,
@@ -71,6 +75,7 @@ pub fn view(model: &Model) -> Node<Msg> {
                         IML_METRICS_DASHBOARD_NAME,
                         create_chart_params(
                             31,
+                            "10s",
                             vec![
                                 ("fs_name", &model.fs_name),
                                 ("from", &model.fs_usage_date_picker.from),
@@ -89,7 +94,7 @@ pub fn view(model: &Model) -> Node<Msg> {
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
-                        create_chart_params(35, vec![("fs_name", &model.fs_name)]),
+                        create_chart_params(35, "10s", vec![("fs_name", &model.fs_name)]),
                         "90%",
                     ),
                 ],
@@ -103,6 +108,7 @@ pub fn view(model: &Model) -> Node<Msg> {
                         IML_METRICS_DASHBOARD_NAME,
                         create_chart_params(
                             32,
+                            "10s",
                             vec![
                                 ("fs_name", &model.fs_name),
                                 ("from", &model.mdt_usage_date_picker.from),

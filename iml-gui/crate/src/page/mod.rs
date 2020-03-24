@@ -1,3 +1,7 @@
+// Copyright (c) 2020 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 pub mod about;
 pub mod activity;
 pub mod dashboard;
@@ -74,6 +78,40 @@ pub(crate) enum Page {
     Device(device::Model),
     DeviceHosts(device_hosts::Model),
     DeviceHost(device_host::Model),
+}
+
+impl Page {
+    pub(crate) fn title(self: &Self) -> String {
+        match self {
+            Self::About => "About".into(),
+            Self::AppLoading => "Loading...".into(),
+            Self::Filesystems(_) => "Filesystems".into(),
+            Self::Filesystem(m) => format!("Filesystem: {}", &m.fs.name),
+            Self::Dashboard(_) => "Dashboard".into(),
+            Self::FsDashboard(m) => format!("{} Filesystem Dashboard", &m.fs_name),
+            Self::ServerDashboard(m) => format!("{} Server Dashboard", &m.host_name),
+            Self::TargetDashboard(m) => format!("{} Target Dashboard", &m.target_name),
+            Self::Jobstats => "Jobstats".into(),
+            Self::Login(_) => "Login".into(),
+            Self::Mgts(_) => "MGTs".into(),
+            Self::NotFound => "Page not found".into(),
+            Self::OstPools => "OST Pools".into(),
+            Self::OstPool(m) => format!("OST Pool: {}", &m.id),
+            Self::PowerControl => "Power Control".into(),
+            Self::Servers(_) => "Servers".into(),
+            Self::Server(m) => format!("Server: {}", &m.server.fqdn),
+            Self::Targets => "Targets".into(),
+            Self::Target(m) => format!("Target: {}", &m.target.name),
+            Self::Users => "Users".into(),
+            Self::User(m) => format!("User: {}", &m.user.username),
+            Self::Volumes(_) => "Volumes".into(),
+            Self::Volume(m) => format!("Volume: {}", &m.id),
+            Self::Devices(_) => "Devices".into(),
+            Self::Device(m) => format!("Device: {}", &m.id),
+            Self::DeviceHosts(_) => "Device Hosts".into(),
+            Self::DeviceHost(m) => format!("Device Host: {}", &m.id),
+        }
+    }
 }
 
 impl RecordChange<Msg> for Page {

@@ -1,3 +1,7 @@
+// Copyright (c) 2020 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 use crate::{
     auth, breakpoints,
     components::{breadcrumbs, ddn_logo, font_awesome, restrict, whamcloud_logo},
@@ -48,43 +52,43 @@ fn nav_manage_dropdown(open: bool) -> Node<Msg> {
         ul![
             li![a![
                 &cls,
-                Route::Servers.to_string(),
+                "Servers",
                 attrs! {
                     At::Href => Route::Servers.to_href(),
                 },
             ]],
             li![
-                a![&cls, Route::Filesystems.to_string()],
+                a![&cls, "Filesystems"],
                 attrs! {
                     At::Href => Route::Filesystems.to_href(),
                 },
             ],
             li![
-                a![&cls, Route::Volumes.to_string()],
+                a![&cls, "Volumes"],
                 attrs! {
                     At::Href => Route::Volumes.to_href(),
                 },
             ],
             li![
-                a![&cls, Route::Devices.to_string()],
+                a![&cls, "Devices"],
                 attrs! {
                     At::Href => Route::Devices.to_href(),
                 },
             ],
             li![
-                a![&cls, Route::DeviceHosts.to_string()],
+                a![&cls, "Device Hosts"],
                 attrs! {
                     At::Href => Route::DeviceHosts.to_href(),
                 },
             ],
             li![
-                a![&cls, Route::Mgt.to_string()],
+                a![&cls, "MGTs"],
                 attrs! {
                     At::Href => Route::Mgt.to_href(),
                 },
             ],
             li![
-                a![&cls, Route::Users.to_string()],
+                a![&cls, "Users"],
                 attrs! {
                     At::Href => Route::Users.to_href(),
                 },
@@ -125,7 +129,7 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                 menu_icon("tachometer-alt"),
                 span![
                     class![C.group_hover__text_active, C.text_active => model.route == Route::Dashboard],
-                    Route::Dashboard.to_string(),
+                    "Dashboard",
                 ],
             ]
         ],

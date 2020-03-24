@@ -1,4 +1,7 @@
-use crate::{generated::css_classes::C, route::Route, Msg};
+// Copyright (c) 2020 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+use crate::{generated::css_classes::C, Msg};
 use seed::{prelude::*, *};
 use std::{cmp::PartialEq, collections::LinkedList};
 
@@ -42,22 +45,18 @@ impl<Crumb: PartialEq> BreadCrumbs<Crumb> {
     }
 }
 
-pub fn view(bc: &BreadCrumbs<Route>) -> impl View<Msg> {
+pub fn view(bc: &BreadCrumbs<(String, String)>) -> impl View<Msg> {
     let mut ol = ol![class![C.justify_center, C.truncate, C.mx_4, C.rtl]];
 
     // XXX the list has "direction: rtl" to put ellipsis to the left on overflow,
     // XXX need to reverse the crumbs to show them in the correct left-to-right order:
-    for (n, p) in bc.iter().rev().enumerate() {
+    for (n, (href, title)) in bc.iter().rev().enumerate() {
         let mut cr = li![
             class![C.inline],
-            a![
-                class![C.hover__underline],
-                attrs! {At::Href => p.to_href()},
-                p.to_string(),
-            ]
+            a![class![C.hover__underline], attrs! {At::Href => href}, title,]
         ];
         if n == 0 {
-            cr.add_class(C.font_bold);
+            cr.add_class(C.text_blue_500);
         } else {
             ol.add_child(i!["/", class![C.px_2]]);
         }

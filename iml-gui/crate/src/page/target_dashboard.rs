@@ -1,3 +1,7 @@
+// Copyright (c) 2020 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 use crate::{
     components::{
         dashboard::{dashboard_container, performance_container},
@@ -58,7 +62,7 @@ pub fn view(_: &ArcCache, model: &Model) -> Node<Msg> {
                         grafana_chart::view(
                             IML_METRICS_DASHBOARD_ID,
                             IML_METRICS_DASHBOARD_NAME,
-                            create_chart_params(37, vec![("target_name", &model.target_name)]),
+                            create_chart_params(37, "10s", vec![("target_name", &model.target_name)]),
                             "90%",
                         ),
                     ],
@@ -70,7 +74,7 @@ pub fn view(_: &ArcCache, model: &Model) -> Node<Msg> {
                         grafana_chart::view(
                             IML_METRICS_DASHBOARD_ID,
                             IML_METRICS_DASHBOARD_NAME,
-                            create_chart_params(14, vec![("target_name", &model.target_name)]),
+                            create_chart_params(14, "10s", vec![("target_name", &model.target_name)]),
                             "90%",
                         ),
                     ],
@@ -82,7 +86,7 @@ pub fn view(_: &ArcCache, model: &Model) -> Node<Msg> {
                         grafana_chart::view(
                             IML_METRICS_DASHBOARD_ID,
                             IML_METRICS_DASHBOARD_NAME,
-                            create_chart_params(16, vec![("target_name", &model.target_name)]),
+                            create_chart_params(16, "10s", vec![("target_name", &model.target_name)]),
                             "90%",
                         ),
                     ],
@@ -110,7 +114,7 @@ pub fn view(_: &ArcCache, model: &Model) -> Node<Msg> {
                         grafana_chart::view(
                             IML_METRICS_DASHBOARD_ID,
                             IML_METRICS_DASHBOARD_NAME,
-                            create_chart_params(14, vec![("target_name", &model.target_name)]),
+                            create_chart_params(14, "10s", vec![("target_name", &model.target_name)]),
                             "90%",
                         ),
                     ],
@@ -122,7 +126,7 @@ pub fn view(_: &ArcCache, model: &Model) -> Node<Msg> {
                         grafana_chart::view(
                             IML_METRICS_DASHBOARD_ID,
                             IML_METRICS_DASHBOARD_NAME,
-                            create_chart_params(16, vec![("target_name", &model.target_name)]),
+                            create_chart_params(16, "10s", vec![("target_name", &model.target_name)]),
                             "90%",
                         ),
                     ],

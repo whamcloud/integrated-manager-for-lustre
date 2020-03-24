@@ -1,4 +1,4 @@
-// Copyright (c) 2019 DDN. All rights reserved.
+// Copyright (c) 2020 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -349,6 +349,8 @@ pub async fn populate_from_db(
         client.prepare(&format!("select * from {}", DeviceHostRecord::table_name())),
     ])
     .await?;
+
+    tracing::debug!("Built initial db statements");
 
     let fut1 = future::try_join5(
         into_row(client.query_raw(&stmts[0], iter::empty()).await?),

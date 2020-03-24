@@ -1,9 +1,9 @@
-// Copyright (c) 2019 DDN. All rights reserved.
+// Copyright (c) 2020 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{delete, get, get_all, get_one, post, put, wait_for_cmds},
+    api_utils::{delete, get, get_all, get_one, post, put, wait_for_cmds_success},
     display_utils::{generate_table, wrap_fut},
     error::ImlManagerCliError,
 };
@@ -176,7 +176,7 @@ async fn ostpool_destroy(
     let resp = delete(&pool.resource_uri, "").await?;
     term.write_line(&format!("{} ost pool...", style("Destroying").green()))?;
     let objs: ObjCommands = resp.json().await?;
-    wait_for_cmds(objs.commands).await?;
+    wait_for_cmds_success(objs.commands).await?;
 
     Ok(())
 }
@@ -204,7 +204,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
 
             term.write_line(&format!("{} ost pool...", style("Creating").green()))?;
             let objs: ObjCommand = resp.json().await?;
-            wait_for_cmds(vec![objs.command]).await?;
+            wait_for_cmds_success(vec![objs.command]).await?;
         }
         OstPoolCommand::Destroy { fsname, poolname } => {
             ostpool_destroy(&term, fsname, poolname).await?;
@@ -226,7 +226,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
             let uri = pool.resource_uri.clone();
             let resp = put(&uri, pool).await?;
             let objs: ObjCommand = resp.json().await?;
-            wait_for_cmds(vec![objs.command]).await?;
+            wait_for_cmds_success(vec![objs.command]).await?;
         }
         OstPoolCommand::Shrink {
             fsname,
@@ -243,7 +243,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
             let resp = put(&uri, pool).await?;
 
             let objs: ObjCommand = resp.json().await?;
-            wait_for_cmds(vec![objs.command]).await?;
+            wait_for_cmds_success(vec![objs.command]).await?;
         }
     };
 

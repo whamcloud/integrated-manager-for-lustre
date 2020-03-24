@@ -18,10 +18,11 @@ pub(crate) struct GrafanaChartData<'a> {
     pub vars: BTreeMap<String, String>,
 }
 
-pub(crate) fn create_chart_params<'a>(
+pub(crate) fn create_chart_params(
     panel_id: u16,
+    refresh: &str,
     vars: impl IntoIterator<Item = (impl ToString, impl ToString)>,
-) -> GrafanaChartData<'a> {
+) -> GrafanaChartData {
     let hm: BTreeMap<String, String> = vars
         .into_iter()
         .map(|(x, y)| {
@@ -34,9 +35,10 @@ pub(crate) fn create_chart_params<'a>(
             (key, y.to_string())
         })
         .collect();
+
     GrafanaChartData {
         org_id: 1,
-        refresh: "10s",
+        refresh,
         panel_id,
         vars: hm,
     }

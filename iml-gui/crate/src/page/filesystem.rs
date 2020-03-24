@@ -1,3 +1,7 @@
+// Copyright (c) 2020 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 use crate::{
     components::{
         action_dropdown, alert_indicator, lock_indicator, paging, progress_circle, resource_links, stratagem,
@@ -408,7 +412,7 @@ fn targets(
             h3![class![C.py_4, C.font_normal, C.text_lg], title]
         ],
         table![
-            class![C.table_fixed, C.w_full],
+            class![C.table_auto, C.w_full],
             style! {
                 St::BorderSpacing => px(10),
                 St::BorderCollapse => "initial"
@@ -417,8 +421,8 @@ fn targets(
                 t::thead_view(vec![
                     t::th_left(plain!["Name"]).merge_attrs(class![C.w_32]),
                     t::th_left(plain!["Volume"]),
-                    t::th_left(plain!["Primary Server"]).merge_attrs(class![C.w_48]),
-                    t::th_left(plain!["Failover Server"]).merge_attrs(class![C.w_48]),
+                    t::th_left(plain!["Primary Server"]).merge_attrs(class![C.w_48, C.hidden, C.md__table_cell]),
+                    t::th_left(plain!["Failover Server"]).merge_attrs(class![C.w_48, C.hidden, C.md__table_cell]),
                     t::th_left(plain!["Started on"]).merge_attrs(class![C.w_48]),
                     th![class![C.w_48]]
                 ]),
@@ -439,11 +443,13 @@ fn targets(
                         t::td_view(resource_links::server_link(
                             Some(&x.primary_server),
                             &x.primary_server_name
-                        )),
+                        ))
+                        .merge_attrs(class![C.hidden, C.md__table_cell]),
                         t::td_view(resource_links::server_link(
                             x.failover_servers.first(),
                             &x.failover_server_name
-                        )),
+                        ))
+                        .merge_attrs(class![C.hidden, C.md__table_cell]),
                         t::td_view(resource_links::server_link(x.active_host.as_ref(), &x.active_host_name)),
                         td![
                             class![C.p_3, C.text_center],

@@ -1,3 +1,7 @@
+// Copyright (c) 2020 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 use crate::extensions::UrlExt;
 use seed::prelude::*;
 use std::{borrow::Cow, ops::Deref};
@@ -106,39 +110,6 @@ impl<'a> Route<'a> {
 
     pub fn to_href(&self) -> String {
         format!("/{}", self.path().join("/"))
-    }
-}
-
-impl<'a> ToString for Route<'a> {
-    fn to_string(&self) -> String {
-        match self {
-            Self::About => "About".into(),
-            Self::Dashboard => "Dashboard".into(),
-            Self::FsDashboard(_) => "Fs Dashboard".into(),
-            Self::ServerDashboard(_) => "Server Dashboard".into(),
-            Self::TargetDashboard(_) => "Target Dashboard".into(),
-            Self::Filesystems => "Filesystems".into(),
-            Self::Filesystem(_) => "Filesystem Detail".into(),
-            Self::Jobstats => "Jobstats".into(),
-            Self::Login => "Login".into(),
-            Self::Mgt => "MGTs".into(),
-            Self::NotFound => "404".into(),
-            Self::OstPools => "OST Pool".into(),
-            Self::OstPool(_) => "OST Pool Detail".into(),
-            Self::PowerControl => "Power Control".into(),
-            Self::Servers => "Servers".into(),
-            Self::Server(_) => "Server Detail".into(),
-            Self::Targets => "Target".into(),
-            Self::Target(_) => "Target Detail".into(),
-            Self::Users => "Users".into(),
-            Self::User(_) => "User".into(),
-            Self::Volumes => "Volumes".into(),
-            Self::Volume(_) => "Volume Detail".into(),
-            Self::Devices => "Devices".into(),
-            Self::Device(_) => "Device Detail".into(),
-            Self::DeviceHosts => "Device Hosts".into(),
-            Self::DeviceHost(_) => "Device Host Detail".into(),
-        }
     }
 }
 
