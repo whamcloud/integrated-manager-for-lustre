@@ -5,7 +5,6 @@
 use crate::auth::csrf_token;
 use iml_wire_types::{GroupType, Session};
 use seed::{fetch, prelude::*, *};
-use serde_urlencoded;
 
 /// Extension methods for the Session API object.
 pub(crate) trait SessionExt {
