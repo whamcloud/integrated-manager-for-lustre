@@ -746,9 +746,7 @@ class InstallPackagesStep(Step):
         # they could be things the agent uses/imports or API changes, specifically to kernel_status() below
         self.invoke_agent(host, "restart_agent")
 
-        AgentRpc.await_restart(
-            host.fqdn, timeout=settings.AGENT_RESTART_TIMEOUT, old_session_id=old_session_id
-        )
+        AgentRpc.await_restart(host.fqdn, timeout=settings.AGENT_RESTART_TIMEOUT, old_session_id=old_session_id)
 
         if old_rust_session_id:
             self.invoke_rust_local_action_expect_result(
