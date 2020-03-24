@@ -662,6 +662,7 @@ class InstallPackagesStep(Step):
             host, "install_packages", {"repos": kwargs["enablerepos"], "packages": kwargs["packages"]}
         )
 
+        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
         old_session_id = AgentRpc.get_session_id(host.fqdn)
 
         try:
