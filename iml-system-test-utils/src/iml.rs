@@ -2,11 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::CheckedStatus;
-use std::io;
+use crate::{try_command_n_times, CheckedStatus};
+use std::{io, collections::HashMap};
 use tokio::{fs, process::Command};
 
-const IML_DOCKER_PATH: &str = "/etc/iml-docker";
+pub const IML_DOCKER_PATH: &str = "/etc/iml-docker";
 
 async fn iml() -> Result<Command, io::Error> {
     let mut x = Command::new("/usr/bin/iml");
@@ -26,17 +26,19 @@ pub async fn list_servers() -> Result<Command, io::Error> {
     Ok(x)
 }
 
-pub async fn server_add(hosts: &[&str], profile: &str) -> Result<(), io::Error> {
-    let mut x = iml().await?;
+pub async fn server_add<S: std::hash::BuildHasher>(host_map: &HashMap<String, &[String], S>) -> Result<(), io::Error> {
+    for (profile, hosts) in host_map {
+        let mut x = iml().await?;
+        let mut cmd = x
+            .arg("server")
+            .arg("add")
+            .arg("-h")
+            .arg(hosts.join(","))
+            .arg("-p")
+            .arg(profile);
 
-    x.arg("server")
-        .arg("add")
-        .arg("-h")
-        .arg(hosts.join(","))
-        .arg("-p")
-        .arg(profile)
-        .checked_status()
-        .await?;
+        try_command_n_times(3, &mut cmd).await?;
+    }
 
     Ok(())
 }
