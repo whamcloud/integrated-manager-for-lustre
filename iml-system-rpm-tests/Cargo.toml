@@ -1,12 +1,9 @@
 [package]
-name = "iml-system-tests"
+name = "iml-system-rpm-tests"
 version = "0.1.0"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dev-dependencies]
-iml-cmd = { version = "0.1.0", path = "../iml-cmd" }
 iml-system-test-utils = { version = "0.1.0", path = "../iml-system-test-utils" }
-futures = "0.3"
-tokio = {version="0.2", features=["process", "macros", "fs"]}
-tokio-test = "0.2"
+tokio = {version="0.2", features=["macros"]}
