@@ -339,33 +339,24 @@ pub async fn populate_from_db(
 
     tracing::debug!("Built initial db statements");
 
-    let fut1 = future::try_join5(
-        into_row(client.query_raw(&stmts[0], iter::empty()).await?),
-        into_row(client.query_raw(&stmts[1], iter::empty()).await?),
-        into_row(client.query_raw(&stmts[2], iter::empty()).await?),
-        into_row(client.query_raw(&stmts[3], iter::empty()).await?),
-        into_row(client.query_raw(&stmts[4], iter::empty()).await?),
-    );
+    let managed_target_mount = into_row(client.query_raw(&stmts[0], iter::empty()).await?).await?;
+    let stratagem_configuration =
+        into_row(client.query_raw(&stmts[1], iter::empty()).await?).await?;
+    let lnet_configuration = into_row(client.query_raw(&stmts[2], iter::empty()).await?).await?;
+    let volume = into_row(client.query_raw(&stmts[3], iter::empty()).await?).await?;
+    let volume_node = into_row(client.query_raw(&stmts[4], iter::empty()).await?).await?;
 
-    let fut2 = future::try_join5(
-        into_row(client.query_raw(&stmts[5], iter::empty()).await?),
-        into_row(client.query_raw(&stmts[6], iter::empty()).await?),
-        into_row(client.query_raw(&stmts[7], iter::empty()).await?),
-        into_row(client.query_raw(&stmts[8], iter::empty()).await?),
-        into_row(client.query_raw(&stmts[9], iter::empty()).await?),
-    );
+    let ost_pool = into_row(client.query_raw(&stmts[5], iter::empty()).await?).await?;
+    let ost_pool_osts = into_row(client.query_raw(&stmts[6], iter::empty()).await?).await?;
+    let content_types = into_row(client.query_raw(&stmts[7], iter::empty()).await?).await?;
+    let groups = into_row(client.query_raw(&stmts[8], iter::empty()).await?).await?;
+    let users = into_row(client.query_raw(&stmts[9], iter::empty()).await?).await?;
 
-    let fut3 = future::try_join3(
-        into_row(client.query_raw(&stmts[10], iter::empty()).await?),
-        into_row(client.query_raw(&stmts[11], iter::empty()).await?),
-        into_row(client.query_raw(&stmts[12], iter::empty()).await?),
-    );
-
-    let (
-        (managed_target_mount, stratagem_configuration, lnet_configuration, volume, volume_node),
-        (ost_pool, ost_pool_osts, content_types, groups, users),
-        (user_groups, corosync_configuration, pacemaker_configuration),
-    ) = future::try_join3(fut1, fut2, fut3).await?;
+    let user_groups = into_row(client.query_raw(&stmts[10], iter::empty()).await?).await?;
+    let corosync_configuration =
+        into_row(client.query_raw(&stmts[11], iter::empty()).await?).await?;
+    let pacemaker_configuration =
+        into_row(client.query_raw(&stmts[12], iter::empty()).await?).await?;
 
     let mut cache = shared_api_cache.lock().await;
 
