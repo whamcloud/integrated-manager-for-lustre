@@ -65,7 +65,7 @@ pub async fn wait_for_cmd(cmd: Command) -> Result<Command, ImlManagerCliError> {
 /// Waits for command completion and prints progress messages
 /// This *does not* error on command failure, it only tracks command
 /// completion
-pub async fn wait_for_cmds(cmds: Vec<Command>) -> Result<Vec<Command>, ImlManagerCliError> {
+pub async fn wait_for_cmds(cmds: &[Command]) -> Result<Vec<Command>, ImlManagerCliError> {
     let m = MultiProgress::new();
 
     let num_cmds = cmds.len() as u64;
@@ -83,6 +83,8 @@ pub async fn wait_for_cmds(cmds: Vec<Command>) -> Result<Vec<Command>, ImlManage
         pb.set_message(&cmd.message);
         cmd_spinners.insert(cmd.id, pb);
     }
+
+    let mut settled_commands = vec![];
 
     let fut = spawn_blocking(move || m.join())
         .map(|x| x.map_err(|e| e.into()).and_then(std::convert::identity));
@@ -108,6 +110,7 @@ pub async fn wait_for_cmds(cmds: Vec<Command>) -> Result<Vec<Command>, ImlManage
                 if cmd_finished(&cmd) {
                     let pb = cmd_spinners.remove(&cmd.id).unwrap();
                     pb.finish_with_message(&display_utils::format_cmd_state(&cmd));
+                    settled_commands.push(cmd);
                 } else {
                     let pb = cmd_spinners.get(&cmd.id).unwrap();
                     pb.inc(1);
@@ -118,12 +121,12 @@ pub async fn wait_for_cmds(cmds: Vec<Command>) -> Result<Vec<Command>, ImlManage
 
     future::try_join(fut.err_into(), fut2).await?;
 
-    Ok(cmds)
+    Ok(settled_commands)
 }
 
 /// Waits for command completion and prints progress messages.
 /// This will error on command failure and print failed commands in the error message.
-pub async fn wait_for_cmds_success(cmds: Vec<Command>) -> Result<Vec<Command>, ImlManagerCliError> {
+pub async fn wait_for_cmds_success(cmds: &[Command]) -> Result<Vec<Command>, ImlManagerCliError> {
     let cmds = wait_for_cmds(cmds).await?;
 
     let (failed, passed): (Vec<_>, Vec<_>) =

@@ -73,7 +73,7 @@ pub async fn update_repo_file_cli(config: UpdateRepoFileHosts) -> Result<(), Iml
 
     let cmd = wrap_fut("Updating Repo files...", create_command(cmd)).await?;
 
-    wait_for_cmds_success(vec![cmd]).await?;
+    wait_for_cmds_success(&[cmd]).await?;
 
     Ok(())
 }

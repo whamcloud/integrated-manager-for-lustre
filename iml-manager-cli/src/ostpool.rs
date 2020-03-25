@@ -176,7 +176,7 @@ async fn ostpool_destroy(
     let resp = delete(&pool.resource_uri, "").await?;
     term.write_line(&format!("{} ost pool...", style("Destroying").green()))?;
     let objs: ObjCommands = resp.json().await?;
-    wait_for_cmds_success(objs.commands).await?;
+    wait_for_cmds_success(&objs.commands).await?;
 
     Ok(())
 }
@@ -204,7 +204,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
 
             term.write_line(&format!("{} ost pool...", style("Creating").green()))?;
             let objs: ObjCommand = resp.json().await?;
-            wait_for_cmds_success(vec![objs.command]).await?;
+            wait_for_cmds_success(&[objs.command]).await?;
         }
         OstPoolCommand::Destroy { fsname, poolname } => {
             ostpool_destroy(&term, fsname, poolname).await?;
@@ -226,7 +226,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
             let uri = pool.resource_uri.clone();
             let resp = put(&uri, pool).await?;
             let objs: ObjCommand = resp.json().await?;
-            wait_for_cmds_success(vec![objs.command]).await?;
+            wait_for_cmds_success(&[objs.command]).await?;
         }
         OstPoolCommand::Shrink {
             fsname,
@@ -243,7 +243,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
             let resp = put(&uri, pool).await?;
 
             let objs: ObjCommand = resp.json().await?;
-            wait_for_cmds_success(vec![objs.command]).await?;
+            wait_for_cmds_success(&[objs.command]).await?;
         }
     };
 
