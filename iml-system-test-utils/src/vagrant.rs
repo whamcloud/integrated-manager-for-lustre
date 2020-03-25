@@ -2,8 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{iml, CheckedStatus};
-use std::{collections::HashMap, io, str, thread, time};
+use crate::{iml, CheckedStatus, try_command_n_times};
+use std::{collections::HashMap, io, str};
 use tokio::{fs, process::Command};
 
 pub enum NtpServer {
@@ -21,32 +21,22 @@ async fn vagrant() -> Result<Command, io::Error> {
     Ok(x)
 }
 
-async fn ssh() -> Result<Command, io::Error> {
-    let mut x = Command::new("ssh");
-
-    let path = fs::canonicalize("../vagrant").await?;
-    let mut private_key = path.clone();
-    private_key.push("id_rsa");
-
-    x.current_dir(&path).arg("-i").arg(private_key);
-
-    Ok(x)
-}
-
 pub async fn up<'a>() -> Result<Command, io::Error> {
     let mut x = vagrant().await?;
 
-    x.arg("up").arg("--provision");
+    x.arg("up");
 
     Ok(x)
 }
 
-pub async fn destroy<'a>() -> Result<Command, io::Error> {
+pub async fn destroy<'a>() -> Result<(), io::Error> {
     let mut x = vagrant().await?;
 
     x.arg("destroy").arg("-f");
 
-    Ok(x)
+    try_command_n_times(3, &mut x).await?;
+
+    Ok(())
 }
 
 pub async fn halt() -> Result<Command, io::Error> {
@@ -58,7 +48,7 @@ pub async fn halt() -> Result<Command, io::Error> {
 
 pub async fn reload() -> Result<Command, io::Error> {
     let mut x = vagrant().await?;
-    x.arg("reload").arg("--provision");
+    x.arg("reload");
 
     Ok(x)
 }
@@ -106,7 +96,7 @@ pub async fn provision(name: &str) -> Result<Command, io::Error> {
 pub async fn run_vm_command(node: &str, cmd: &str) -> Result<Command, io::Error> {
     let mut x = vagrant().await?;
 
-    x.arg("ssh").arg("-c").arg(&format!("{}", cmd)).arg(node);
+    x.arg("ssh").arg("-c").arg(&cmd).arg(node);
 
     Ok(x)
 }
@@ -127,7 +117,7 @@ pub async fn get_snapshots() -> Result<HashMap<String, Vec<String>>, io::Error> 
             } else {
                 let v = map
                     .get_mut(key)
-                    .expect(format!("Couldn't find key {} in snapshot map.", key).as_str());
+                    .unwrap_or_else(|| panic!("Couldn't find key {} in snapshot map.", key));
                 v.push(x.to_string());
                 (&key, map)
             }
@@ -137,7 +127,6 @@ pub async fn get_snapshots() -> Result<HashMap<String, Vec<String>>, io::Error> 
 }
 
 pub async fn setup_bare(hosts: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
-    println!("snapshots doesn't contain bare");
     up().await?.args(hosts).checked_status().await?;
 
     provision("yum-update")
@@ -300,13 +289,17 @@ pub async fn create_monitored_ldiskfs(config: &ClusterConfig) -> Result<(), io::
         .args(hosts)
         .checked_status()
         .await?;
-    provision("install-ldiskfs-no-imlconfigure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2").await?.checked_status().await?;
+
+    provision("install-ldiskfs-no-iml,configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2").await?.checked_status().await?;
 
     Ok(())
 }
 
 pub async fn create_monitored_zfs() -> Result<(), io::Error> {
-    provision("vagrant provision --provision-with=install-zfs-no-iml,configure-lustre-network,create-pools,zfs-params,create-zfs-fs").await?.checked_status().await?;
+    provision("install-zfs-no-iml,configure-lustre-network,create-pools,zfs-params,create-zfs-fs")
+        .await?
+        .checked_status()
+        .await?;
 
     Ok(())
 }

@@ -173,6 +173,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-system-docker-tests"
+version = "0.1.0"
+dependencies = [
+ "iml-system-test-utils",
+ "iml-systemd",
+ "tokio",
+]
+
+[[package]]
 name = "iml-system-test-utils"
 version = "0.1.0"
 dependencies = [

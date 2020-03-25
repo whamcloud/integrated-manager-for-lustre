@@ -1,0 +1,10 @@
+[package]
+name = "iml-system-docker-tests"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dev-dependencies]
+iml-system-test-utils = { version = "0.1.0", path = "../iml-system-test-utils" }
+iml-systemd = { version = "0.1.0", path = "../iml-systemd" }
+tokio = {version="0.2", features=["macros"]}

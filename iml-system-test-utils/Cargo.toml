@@ -5,8 +5,6 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-iml-cmd = { version = "0.1.0", path = "../iml-cmd" }
-iml-systemd = { version = "0.1.0", path = "../iml-systemd" }
 futures = "0.3"
+iml-systemd = { version = "0.1.0", path = "../iml-systemd" }
 tokio = {version="0.2", features=["process", "macros", "fs"]}
-tokio-test = "0.2"

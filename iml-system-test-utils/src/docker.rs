@@ -1,6 +1,6 @@
 use crate::{iml, CheckedStatus};
 use iml_systemd;
-use std::{io, process::ExitStatus, thread, time};
+use std::{io, thread, time};
 use tokio::{
     fs::{canonicalize, File},
     io::AsyncWriteExt,
@@ -20,7 +20,7 @@ pub async fn docker() -> Result<Command, io::Error> {
 }
 
 pub async fn deploy_iml_stack() -> Result<(), io::Error> {
-    iml_systemd::start_unit_with_time("iml-docker.service".into(), 200).await?;
+    iml_systemd::start_unit_with_time("iml-docker.service".into(), 400).await?;
 
     Ok(())
 }
@@ -35,24 +35,25 @@ pub async fn remove_iml_stack() -> Result<Command, io::Error> {
     Ok(x)
 }
 
-pub async fn volume_prune() -> Result<(), io::Error> {
+pub async fn system_prune() -> Result<(), io::Error> {
     let mut x = docker().await?;
 
-    x.arg("volume")
+    x.arg("system")
         .arg("prune")
-        .arg("-f")
+        .arg("--force")
+        .arg("--all")
         .checked_status()
         .await?;
 
     Ok(())
 }
 
-pub async fn network_prune() -> Result<(), io::Error> {
+pub async fn volume_prune() -> Result<(), io::Error> {
     let mut x = docker().await?;
 
-    x.arg("network")
+    x.arg("volume")
         .arg("prune")
-        .arg("-f")
+        .arg("--force")
         .checked_status()
         .await?;
 

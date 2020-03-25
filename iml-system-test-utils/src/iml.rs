@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::CheckedStatus;
+use crate::{try_command_n_times, CheckedStatus};
 use std::io;
 use tokio::{fs, process::Command};
 
@@ -29,14 +29,15 @@ pub async fn list_servers() -> Result<Command, io::Error> {
 pub async fn server_add(hosts: &[&str], profile: &str) -> Result<(), io::Error> {
     let mut x = iml().await?;
 
-    x.arg("server")
+    let mut r = x
+        .arg("server")
         .arg("add")
         .arg("-h")
         .arg(hosts.join(","))
         .arg("-p")
-        .arg(profile)
-        .checked_status()
-        .await?;
+        .arg(profile);
+
+    try_command_n_times(3, &mut r).await?;
 
     Ok(())
 }
