@@ -959,7 +959,10 @@ class DetectTargetsStep(Step):
         return True
 
     def detect_scan(self, host, host_data, target_devices):
-        host_data[host] = self.invoke_agent(host, "detect_scan", {"target_devices": target_devices})
+        opts = {}
+        if target_devices:
+            opts["target_devices"] = target_devices
+        host_data[host] = self.invoke_agent(host, "detect_scan", opts)
 
     def detect_ha(self, host, ha_data):
         ha_list = self.invoke_rust_agent_expect_result(host.fqdn, "get_ha_resource_list", args=None)
