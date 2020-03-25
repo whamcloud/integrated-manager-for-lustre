@@ -361,7 +361,7 @@ where
         .collect()
 }
 
-fn all_jobs_passed(jobs: ApiList<TestHostJob>) -> bool {
+fn all_jobs_passed(jobs: ApiList<TestHostJob>, term: &Term) -> bool {
     jobs.objects
         .into_iter()
         .flat_map(|x| x.step_results.into_iter().map(|(_, b)| b))
@@ -372,18 +372,24 @@ fn all_jobs_passed(jobs: ApiList<TestHostJob>) -> bool {
                     check.address,
                 ));
 
-                generate_table(
+                let table = generate_table(
                     &["Check", "Passed"],
-                    check.status.iter().map(|x| {
+                    check.status.into_iter().map(|x| {
                         let v = if x.value {
                             format_success("Pass")
                         } else {
                             format_error("Fail")
                         };
 
-                        vec![x.name.clone(), v]
+                        vec![x.name, v]
                     }),
                 );
+
+                term.write_line("\n").unwrap();
+
+                table.printstd();
+
+                term.write_line("\n").unwrap();
 
                 false
             } else {
@@ -583,7 +589,7 @@ async fn get_test_host_commands_and_jobs(
 
     tracing::debug!("jobs {:?}", jobs);
 
-    let all_passed = all_jobs_passed(jobs);
+    let all_passed = all_jobs_passed(jobs, term);
 
     Ok(all_passed)
 }
