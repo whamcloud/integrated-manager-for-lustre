@@ -5,6 +5,7 @@
 use crate::{
     components::{alert_indicator, font_awesome, paging, Placement},
     generated::css_classes::C,
+    route::RouteId,
     GMsg, Route,
 };
 use iml_wire_types::{
@@ -578,7 +579,7 @@ fn tree_host_item_view(cache: &ArcCache, model: &Model, host: &Host) -> Option<N
         ],
         alert_indicator(&cache.active_alert, &host, true, Placement::Bottom),
         if tree_node.open {
-            tree_volume_collection_view(cache, model, &address)
+            tree_volume_collection_view(cache, model, &address, host)
         } else {
             empty![]
         }
@@ -714,11 +715,17 @@ fn tree_pools_collection_view(cache: &ArcCache, model: &Model, parent_address: &
     .unwrap_or(empty![])
 }
 
-fn tree_volume_collection_view(cache: &ArcCache, model: &Model, parent_address: &Address) -> Node<Msg> {
+fn tree_volume_collection_view(cache: &ArcCache, model: &Model, parent_address: &Address, host: &Host) -> Node<Msg> {
     tree_collection_view(
         model,
         parent_address.extend(Step::VolumeCollection),
-        |x| item_view("folder", &format!("Volumes ({})", x.paging.total()), Route::Volumes),
+        |x| {
+            item_view(
+                "folder",
+                &format!("Volumes ({})", x.paging.total()),
+                Route::ServerVolumes(RouteId::from(&host.id)),
+            )
+        },
         |x| {
             slice_page(&x.paging, &x.items)
                 .filter_map(|x| cache.volume_node.get(x))
