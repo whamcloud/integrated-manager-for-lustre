@@ -38,6 +38,8 @@ def setup_groups(sender, **kwargs):
         grant_write(fsadmin_group, chroma_core.models.Command)
         grant_write(fsadmin_group, chroma_core.models.Volume)
         grant_write(fsadmin_group, chroma_core.models.VolumeNode)
+        grant_write(fsadmin_group, chroma_core.models.Device)
+        grant_write(fsadmin_group, chroma_core.models.DeviceNode)
         grant_write(fsadmin_group, django.contrib.auth.models.User)
         grant_write(fsadmin_group, chroma_core.models.RegistrationToken)
 

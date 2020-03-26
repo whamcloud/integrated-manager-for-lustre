@@ -16,7 +16,7 @@ from chroma_core.lib.job import DependOn, DependAny, DependAll, Step, job_log
 from chroma_core.models import AlertEvent
 from chroma_core.models import AlertStateBase
 from chroma_core.models import StateChangeJob, StateLock, AdvertisedJob
-from chroma_core.models import ManagedHost, VolumeNode, Volume, HostContactAlert
+from chroma_core.models import ManagedHost, VolumeNode, Volume, HostContactAlert, Device
 from chroma_core.models import StatefulObject
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import DeletableMetaclass, DeletableDowncastableMetaclass
@@ -93,6 +93,7 @@ class ManagedTarget(StatefulObject):
     )
 
     volume = models.ForeignKey("Volume", on_delete=CASCADE)
+    device = models.ForeignKey("Device", on_delete=CASCADE, null=True)
 
     inode_size = models.IntegerField(null=True, blank=True, help_text="Size in bytes per inode")
     bytes_per_inode = models.IntegerField(
@@ -127,9 +128,8 @@ class ManagedTarget(StatefulObject):
         """
 
         return (
-            Volume._base_manager.all()
-            .prefetch_related("volumenode_set", "volumenode_set__host")
-            .get(pk=self.volume.pk)
+            Device._base_manager.all()
+            .get(pk=self.device.pk)
         )
 
     def update_active_mount(self, nodename):

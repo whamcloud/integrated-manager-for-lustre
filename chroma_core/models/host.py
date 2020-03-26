@@ -35,7 +35,7 @@ from chroma_core.models import Job
 from chroma_core.models import AdvertisedJob
 from chroma_core.models import StateLock
 from chroma_core.models import AlertEvent
-from chroma_core.models.devices import DeviceHost
+from chroma_core.models.devices import Device, DeviceHost
 
 from chroma_core.lib.job import job_log
 from chroma_core.lib.job import DependOn
@@ -443,6 +443,7 @@ class Volume(models.Model):
 
 class VolumeNode(models.Model):
     volume = models.ForeignKey(Volume, on_delete=CASCADE)
+    device = models.ForeignKey(Device, on_delete=CASCADE, null=True)
     host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
     path = models.CharField(max_length=512, help_text="Device node path, e.g. '/dev/sda/'")
 
