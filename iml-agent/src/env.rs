@@ -69,25 +69,23 @@ lazy_static! {
 
         let pfx_path = get_pfx_path();
 
-        if !path_exists(&pfx_path) {
-            Command::new("openssl")
-                .args(&[
-                    "pkcs12",
-                    "-export",
-                    "-out",
-                    &pfx_path,
-                    "-inkey",
-                    &private_pem_path,
-                    "-in",
-                    &cert_path,
-                    "-certfile",
-                    &authority_cert_path,
-                    "-passout",
-                    "pass:",
-                ])
-                .status()
-                .expect("Error creating pfx");
-        }
+        Command::new("openssl")
+            .args(&[
+                "pkcs12",
+                "-export",
+                "-out",
+                &pfx_path,
+                "-inkey",
+                &private_pem_path,
+                "-in",
+                &cert_path,
+                "-certfile",
+                &authority_cert_path,
+                "-passout",
+                "pass:",
+            ])
+            .status()
+            .expect("Error creating pfx");
 
         std::fs::read(&pfx_path).expect("Could not read pfx")
     };
