@@ -443,7 +443,6 @@ class Volume(models.Model):
 
 class VolumeNode(models.Model):
     volume = models.ForeignKey(Volume, on_delete=CASCADE)
-    device = models.ForeignKey(Device, on_delete=CASCADE, null=True)
     host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
     path = models.CharField(max_length=512, help_text="Device node path, e.g. '/dev/sda/'")
 

@@ -1467,35 +1467,36 @@ class UpdateManagedTargetMount(Step):
     def run(self, kwargs):
         target = kwargs["target"]
         device_type = kwargs["device_type"]
-        job_log.info("Updating mtm volume_nodes for target %s" % target)
+        job_log.info("Updating mtm device_hosts for target %s" % target)
 
         for mtm in target.managedtargetmount_set.all():
             host = mtm.host
-            current_volume_node = mtm.volume_node
+            current_device_host = mtm.device_host
 
             # represent underlying zpool as blockdevice if path is zfs dataset
             # todo: move this constraint into BlockDeviceZfs class
             block_device = BlockDevice(
                 device_type,
-                current_volume_node.path.split("/")[0] if device_type == "zfs" else current_volume_node.path,
+                current_device_host.path.split("/")[0] if device_type == "zfs" else current_device_host.paths[0],
             )
 
             filesystem = FileSystem(block_device.preferred_fstype, block_device.device_path)
-            job_log.info("Looking for volume_nodes for host %s , path %s" % (host, filesystem.mount_path(target.name)))
-            job_log.info("Current volume_nodes for host %s = %s" % (host, VolumeNode.objects.filter(host=host)))
+            job_log.info("Looking for device_hosts for host %s , path %s" % (host, filesystem.mount_path(target.name)))
+            job_log.info("Current device_hosts for host %s = %s" % (host, DeviceHost.objects.filter(fqdn=host.fqdn)))
 
-            mtm.volume_node = util.wait_for_result(
-                lambda: VolumeNode.objects.get(host=host, path=filesystem.mount_path(target.name)),
+            mtm.device_host = util.wait_for_result(
+                lambda: DeviceHost.objects.get(fqdn=host.fqdn, paths__0=filesystem.mount_path(target.name)),
                 logger=job_log,
                 timeout=60 * 10,
-                expected_exception_classes=[VolumeNode.DoesNotExist],
+                expected_exception_classes=[DeviceHost.DoesNotExist],
             )
 
-            mtm.volume_node.primary = current_volume_node.primary
-            mtm.volume_node.save()
+            # TODO: When device host is primary?
+            # mtm.device_host.primary = current_device_host.primary
+            mtm.device_host.save()
             mtm.save()
 
-            target.volume = mtm.volume_node.volume
+            target.device = mtm.device_host.device
 
         target.save()
 
@@ -1793,10 +1794,10 @@ class ManagedTargetMount(models.Model):
 
     __metaclass__ = DeletableMetaclass
 
-    # FIXME: both VolumeNode and TargetMount refer to the host
+    # FIXME: both DeviceHost and TargetMount refer to the host
     host = models.ForeignKey("ManagedHost", on_delete=CASCADE)
     mount_point = models.CharField(max_length=512, null=True, blank=True)
-    volume_node = models.ForeignKey("VolumeNode", on_delete=CASCADE)
+    device_host = models.ForeignKey("DeviceHost", on_delete=CASCADE, null=True)
     primary = models.BooleanField(default=False)
     target = models.ForeignKey("ManagedTarget", on_delete=CASCADE)
 
@@ -1827,7 +1828,7 @@ class ManagedTargetMount(models.Model):
         return super(ManagedTargetMount, self).save(force_insert, force_update, using, update_fields)
 
     def device(self):
-        return self.volume_node.path
+        return self.device_host.paths[0]
 
     class Meta:
         app_label = "chroma_core"

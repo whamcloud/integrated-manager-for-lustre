@@ -18,9 +18,4 @@ class Migration(migrations.Migration):
             name='device',
             field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='chroma_core.Device'),
         ),
-        migrations.AddField(
-            model_name='volumenode',
-            name='device',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='chroma_core.Device'),
-        ),
     ]
