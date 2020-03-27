@@ -92,7 +92,6 @@ class ManagedTarget(StatefulObject):
         max_length=64, null=True, blank=True, help_text="Label used for HA layer; human readable but unique"
     )
 
-    volume = models.ForeignKey("Volume", on_delete=CASCADE)
     device = models.ForeignKey("Device", on_delete=CASCADE, null=True)
 
     inode_size = models.IntegerField(null=True, blank=True, help_text="Size in bytes per inode")
@@ -100,7 +99,7 @@ class ManagedTarget(StatefulObject):
         null=True,
         blank=True,
         help_text="Constant used during formatting to "
-        "determine inode count by dividing the volume size by ``bytes_per_inode``",
+        "determine inode count by dividing the device size by ``bytes_per_inode``",
     )
     inode_count = models.BigIntegerField(
         null=True, blank=True, help_text="The number of inodes in this target's" "backing store"
@@ -109,22 +108,13 @@ class ManagedTarget(StatefulObject):
     reformat = models.BooleanField(
         default=False,
         help_text="Only used during formatting, indicates that when formatting this target \
-        any existing filesystem on the Volume should be overwritten",
+        any existing filesystem on the Device should be overwritten",
     )
 
     @property
     def full_volume(self):
         """
-        Used in API Resource that want the Volume and all related objects
-
-        This results in a join query to get data with fewer DB hits
-
-        If the volume was picked up using a simple join from the targets table then we would not need to work
-        around the not_deleted (it would pick up the record deleted or not) but because we effectively hardcode
-        it we have to ignore not deleted by use of the _base_manager.
-
-        Sadly the storage_resources do return empty because they are actually deleted, meaning we have Volume records
-        that have no resource records to go with them.
+        Used in API Resource that want the Device and all related objects
         """
 
         return Device._base_manager.all().get(pk=self.device.pk)
@@ -841,18 +831,18 @@ class ConfigureTargetStoreStep(Step):
     def run(self, kwargs):
         target = kwargs["target"]
         target_mount = kwargs["target_mount"]
-        volume_node = kwargs["volume_node"]
+        device_host = kwargs["device_host"]
         host = kwargs["host"]
         backfstype = kwargs["backfstype"]
         device_type = kwargs["device_type"]
 
-        assert volume_node is not None
+        assert device_host is not None
 
         self.invoke_agent(
             host,
             "configure_target_store",
             {
-                "device": volume_node.path,
+                "device": device_host.paths[0],
                 "uuid": target.uuid,
                 "mount_point": target_mount.mount_point,
                 "backfstype": backfstype,
@@ -877,16 +867,16 @@ class AddTargetToPacemakerConfigStep(Step):
     def run(self, kwargs):
         target = kwargs["target"]
         target_mount = kwargs["target_mount"]
-        volume_node = kwargs["volume_node"]
+        device_host = kwargs["device_host"]
         host = kwargs["host"]
 
-        assert volume_node is not None
+        assert device_host is not None
 
         self.invoke_agent_expect_result(
             host,
             "configure_target_ha",
             {
-                "device": volume_node.path,
+                "device": device_host.paths[0],
                 "ha_label": target.ha_label,
                 "uuid": target.uuid,
                 "primary": target_mount.primary,
@@ -928,8 +918,8 @@ class MountOrImportStep(Step):
 
     Three parameters
     target: The target in question, this allows a good user message.
-    inactive_volume_nodes: Is the volume_nodes that are not active on.
-    active_volume_node: Is the volume_nodes that are active on.
+    inactive_device_hosts: Is the device_hosts that are not active on.
+    active_device_hosts: Is the device_hosts that are active on.
 
     These parameters can be created using the create_parameters function, which allows the more complex building
     functionality to lie within the Step code but without the run itself requiring database access.
@@ -940,7 +930,7 @@ class MountOrImportStep(Step):
 
     idempotent = True
 
-    def inactivate_volume_node(self, volume_node):
+    def inactivate_volume_node(self, device_host):
         # If the node cannot be contacted then this is not a failure, because the node might be broken, it is refuses
         # to export the node that is an error.
         # The first is not an issue because after doing this export we will only do a soft import and so will fail if
@@ -948,9 +938,11 @@ class MountOrImportStep(Step):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpcMessenger
 
+        device = Device.objects.get(device_host.device_id)
+
         try:
             self.invoke_agent_expect_result(
-                volume_node.host, "export_target", {"device_type": volume_node.device_type, "path": volume_node.path}
+                device_host.fqdn, "export_target", {"device_type": device.device_type, "path": device_host.paths[0]}
             )
         except AgentException as e:
             # TODO: When landing this on b4_0 for future code we will add a new exception AgentContactException to
@@ -961,33 +953,35 @@ class MountOrImportStep(Step):
     def run(self, kwargs):
         threads = []
 
-        for inactive_volume_node in kwargs["inactive_volume_nodes"]:
-            thread = util.ExceptionThrowingThread(target=self.inactivate_volume_node, args=(inactive_volume_node,))
+        for inactive_device_host in kwargs["inactive_device_hosts"]:
+            thread = util.ExceptionThrowingThread(target=self.inactivate_device_host, args=(inactive_device_host,))
             thread.start()
             threads.append(thread)
 
         # This will raise an exception if any of the threads raise an exception
         util.ExceptionThrowingThread.wait_for_threads(threads)
 
-        if kwargs["active_volume_node"] is None:
-            device_type = kwargs["target"].volume.filesystem_type
-            # in the case that the volume node is missing, attempt to import target volume
+        if kwargs["active_device_hosts"] is None:
+            label = DeviceHost.objects.get(fqdn=kwargs["host"], device_id=kwargs["target"].device.id).fs_label
+
+            device_type = kwargs["target"].device.device_type
+            # in the case that the device host is missing, attempt to import target device
             self.invoke_agent_expect_result(
                 kwargs["host"],
                 "import_target",
                 {
                     "device_type": ("linux" if device_type in ["ext4", "mpath_member", ""] else device_type),
-                    "path": kwargs["target"].volume.label,
+                    "path": label,
                     "pacemaker_ha_operation": False,
                 },
             )
         else:
             self.invoke_agent_expect_result(
-                kwargs["active_volume_node"].host,
+                kwargs["active_device_hosts"].host,
                 "import_target",
                 {
-                    "device_type": kwargs["active_volume_node"].device_type,
-                    "path": kwargs["active_volume_node"].path,
+                    "device_type": kwargs["active_device_hosts"].device_type,
+                    "path": kwargs["active_device_hosts"].paths[0],
                     "pacemaker_ha_operation": False,
                 },
             )
@@ -1001,13 +995,13 @@ class MountOrImportStep(Step):
 
     @classmethod
     def describe(cls, kwargs):
-        if kwargs["active_volume_node"] is None:
+        if kwargs["active_device_hosts"] is None:
             return help_text["export_target_from_nodes"] % kwargs["target"]
         else:
             if kwargs["start_target"] is True:
-                return help_text["mounting_target_on_node"] % (kwargs["target"], kwargs["active_volume_node"].host)
+                return help_text["mounting_target_on_node"] % (kwargs["target"], kwargs["active_device_hosts"].host)
             else:
-                return help_text["moving_target_to_node"] % (kwargs["target"], kwargs["active_volume_node"].host)
+                return help_text["moving_target_to_node"] % (kwargs["target"], kwargs["active_device_hosts"].host)
 
     @classmethod
     def create_parameters(cls, target, host, start_target):
@@ -1021,29 +1015,28 @@ class MountOrImportStep(Step):
         """
         assert host is not None
 
-        inactive_volume_nodes = []
-        active_volume_node = None
+        inactive_device_hosts = []
+        active_device_hosts = None
 
-        for volume_node in target.volume.volumenode_set.all():
+        for device_host in target.device.devicehost_set.all():
             target_volume_info = TargetVolumeInfo(
-                volume_node.host,
-                volume_node.path,
-                # TODO: Rewrite this
-                "unknown",
+                device_host.fqdn,
+                device_host.paths[0],
+                target.device.device_type,
             )
 
-            if host == volume_node.host:
-                active_volume_node = target_volume_info
+            if host == device_host.host:
+                active_device_hosts = target_volume_info
             else:
-                inactive_volume_nodes.append(target_volume_info)
+                inactive_device_hosts.append(target_volume_info)
 
-        job_log.info("create_parameters: host: '%s' active_volume_node: '%s'" % (host, active_volume_node))
+        job_log.info("create_parameters: host: '%s' active_device_hosts: '%s'" % (host, active_device_hosts))
 
         return {
             "target": target,
             "host": host,
-            "inactive_volume_nodes": inactive_volume_nodes,
-            "active_volume_node": active_volume_node,
+            "inactive_device_hosts": inactive_device_hosts,
+            "active_device_hosts": active_device_hosts,
             "start_target": start_target,
         }
 
