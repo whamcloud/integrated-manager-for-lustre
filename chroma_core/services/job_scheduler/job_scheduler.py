@@ -1087,13 +1087,14 @@ class JobScheduler(object):
     @classmethod
     def order_targets(cls, targets_data):
         "Return sorted sequence of target_data dicts, such that sequential MDTs/OSTs will be distributed across hosts."
-        volumes_ids = map(operator.itemgetter("volume_id"), targets_data)
-        host_ids = dict(
-            VolumeNode.objects.filter(volume_id__in=volumes_ids, primary=True).values_list("volume_id", "host_id")
+        devices_ids = map(operator.itemgetter("device_id"), targets_data)
+        fqdns = dict(
+            DeviceHost.objects.filter(device_id__in=devices_ids, local=True).values_list("device_id", "fqdn")
         )
+        host_ids = ManagedHost.objects.filter(fqdn_in=fqdns)
 
         def key(td):
-            return host_ids[int(td["volume_id"])]
+            return host_ids[int(td["device_id"])]
 
         for host_id, target_group in itertools.groupby(sorted(targets_data, key=key), key=key):
             for index, target_data in enumerate(target_group):
@@ -1279,9 +1280,9 @@ class JobScheduler(object):
         with self._lock:
             mounts = []
             mgt_data = fs_data["mgt"]
-            if "volume_id" in mgt_data:
-                mgt, mgt_mounts = ManagedMgs.create_for_volume(
-                    mgt_data["volume_id"], reformat=mgt_data.get("reformat", False), **_target_kwargs(mgt_data)
+            if "device_id" in mgt_data:
+                mgt, mgt_mounts = ManagedMgs.create_for_device(
+                    mgt_data["device_id"], reformat=mgt_data.get("reformat", False), **_target_kwargs(mgt_data)
                 )
                 mounts.extend(mgt_mounts)
                 ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
@@ -1302,8 +1303,8 @@ class JobScheduler(object):
 
                 mdts = []
                 for mdt_data in self.order_targets(fs_data["mdts"]):
-                    mdt, mdt_mounts = ManagedMdt.create_for_volume(
-                        mdt_data["volume_id"],
+                    mdt, mdt_mounts = ManagedMdt.create_for_device(
+                        mdt_data["device_id"],
                         reformat=mdt_data.get("reformat", False),
                         filesystem=fs,
                         **_target_kwargs(mdt_data)
@@ -1314,8 +1315,8 @@ class JobScheduler(object):
 
                 osts = []
                 for ost_data in self.order_targets(fs_data["osts"]):
-                    ost, ost_mounts = ManagedOst.create_for_volume(
-                        ost_data["volume_id"],
+                    ost, ost_mounts = ManagedOst.create_for_device(
+                        ost_data["device_id"],
                         reformat=ost_data.get("reformat", False),
                         filesystem=fs,
                         **_target_kwargs(ost_data)
@@ -1358,8 +1359,8 @@ class JobScheduler(object):
                     raise NotImplementedError(target_class)
 
                 with transaction.atomic():
-                    target, target_mounts = target_class.create_for_volume(
-                        target_data["volume_id"], reformat=target_data.get("reformat", False), **create_kwargs
+                    target, target_mounts = target_class.create_for_device(
+                        target_data["device_id"], reformat=target_data.get("reformat", False), **create_kwargs
                     )
 
                 ObjectCache.add(ManagedTarget, target.managedtarget_ptr)

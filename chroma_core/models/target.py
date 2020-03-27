@@ -127,10 +127,7 @@ class ManagedTarget(StatefulObject):
         that have no resource records to go with them.
         """
 
-        return (
-            Device._base_manager.all()
-            .get(pk=self.device.pk)
-        )
+        return Device._base_manager.all().get(pk=self.device.pk)
 
     def update_active_mount(self, nodename):
         """Set the active_mount attribute from the nodename of a host, raising
@@ -333,19 +330,19 @@ class ManagedTarget(StatefulObject):
 
     @classmethod
     @transaction.atomic
-    def create_for_volume(cls_, volume_id, create_target_mounts=True, **kwargs):
-        # Local imports to avoid inter-model import dependencies
-        volume = Volume.objects.get(pk=volume_id)
+    def create_for_device(cls_, device_id, create_target_mounts=True, **kwargs):
+        device = Device.objects.get(pk=device_id)
 
         try:
-            primary_volume_node = volume.volumenode_set.get(primary=True, host__not_deleted=True)
+            primary_device_host = device.devicehost_set.get(local=True)
 
-        except VolumeNode.DoesNotExist:
-            raise RuntimeError("No primary lun_node exists for volume %s, cannot create target" % volume.id)
-        except VolumeNode.MultipleObjectsReturned:
-            raise RuntimeError("Multiple primary lun_nodes exist for volume %s, internal error" % volume.id)
+        except DeviceHost.DoesNotExist:
+            raise RuntimeError("No primary lun_node exists for device %s, cannot create target" % device.id)
+        except DeviceHost.MultipleObjectsReturned:
+            raise RuntimeError("Multiple primary lun_nodes exist for device %s, internal error" % device.id)
 
-        host = primary_volume_node.host
+        fqdn = primary_device_host.fqdn
+        host = ManagedHost.objects.get(fqdn=fqdn)
         corosync_configuration = host.corosync_configuration
         stonith_not_enabled = (
             len(StonithNotEnabledAlert.filter_by_item_id(corosync_configuration.__class__, corosync_configuration.id))
@@ -356,7 +353,7 @@ class ManagedTarget(StatefulObject):
             raise RuntimeError("Stonith not enabled for host %s, cannot create target" % host.fqdn)
 
         target = cls_(**kwargs)
-        target.volume = volume
+        target.device = device
 
         # Acquire a target index for FilesystemMember targets, and populate `name`
         if issubclass(cls_, FilesystemMember):
@@ -385,22 +382,25 @@ class ManagedTarget(StatefulObject):
 
         target_mounts = []
 
-        def create_target_mount(volume_node):
+        def create_target_mount(device_host):
+            fqdn = device_host.fqdn
+            host = ManagedHost.objects.get(fqdn=fqdn)
+
             mount = ManagedTargetMount(
-                volume_node=volume_node,
+                device_host=device_host,
                 target=target,
-                host=volume_node.host,
+                host=host,
                 mount_point=target.default_mount_point,
-                primary=volume_node.primary,
+                primary=device_host.primary,
             )
             mount.save()
             target_mounts.append(mount)
 
         if create_target_mounts:
-            create_target_mount(primary_volume_node)
+            create_target_mount(primary_device_host)
 
-            for secondary_volume_node in volume.volumenode_set.filter(use=True, primary=False, host__not_deleted=True):
-                create_target_mount(secondary_volume_node)
+            for secondary_device_host in device.devicehost_set.filter(local=False):
+                create_target_mount(secondary_device_host)
 
         return target, target_mounts
 
