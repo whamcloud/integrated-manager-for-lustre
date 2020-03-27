@@ -28,7 +28,7 @@ mod watch_state;
 mod test_utils;
 
 use components::{
-    breadcrumbs::BreadCrumbs, command_modal, font_awesome, font_awesome_outline, loading, restrict, stratagem, tree,
+    breadcrumbs, command_modal, font_awesome, font_awesome_outline, loading, restrict, stratagem, tree,
     update_activity_health, ActivityHealth,
 };
 pub(crate) use extensions::*;
@@ -124,6 +124,26 @@ impl Loading {
     }
 }
 
+struct BreadCrumb {
+    href: String,
+    title: String,
+}
+
+impl breadcrumbs::BreadCrumb for BreadCrumb {
+    fn href(&self) -> &str {
+        &self.href
+    }
+    fn title(&self) -> &str {
+        &self.title
+    }
+}
+
+impl PartialEq for BreadCrumb {
+    fn eq(&self, other: &Self) -> bool {
+        self.href == other.href
+    }
+}
+
 // ------ ------
 //     Model
 // ------ ------
@@ -131,7 +151,7 @@ impl Loading {
 pub struct Model {
     activity_health: ActivityHealth,
     auth: auth::Model,
-    breadcrumbs: BreadCrumbs<(String, String)>,
+    breadcrumbs: breadcrumbs::BreadCrumbs<BreadCrumb>,
     breakpoint_size: breakpoints::Size,
     command_modal: command_modal::Model,
     conf: Conf,
@@ -194,7 +214,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
     AfterMount::new(Model {
         activity_health: ActivityHealth::default(),
         auth: auth::Model::default(),
-        breadcrumbs: BreadCrumbs::default(),
+        breadcrumbs: breadcrumbs::BreadCrumbs::default(),
         breakpoint_size: breakpoints::size(),
         command_modal: command_modal::Model::default(),
         conf: Conf::default(),
@@ -244,10 +264,14 @@ pub enum GMsg {
     AuthProxy(Box<auth::Msg>),
     ServerDate(chrono::DateTime<chrono::offset::FixedOffset>),
     OpenCommandModal(command_modal::Input),
+    UpdatePageTitle,
 }
 
 fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match g_msg {
+        GMsg::UpdatePageTitle => {
+            orders.send_msg(Msg::UpdatePageTitle);
+        }
         GMsg::RouteChange(url) => {
             seed::push_route(url.clone());
             orders.send_msg(Msg::RouteChanged(url));
@@ -319,8 +343,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             orders.send_msg(Msg::LoadPage);
         }
         Msg::UpdatePageTitle => {
-            let title = format!("{} - {}", model.page.title(), TITLE_SUFFIX);
-            document().set_title(&title);
+            let title = model.page.title();
+            document().set_title(&format!("{} - {}", &title, TITLE_SUFFIX));
+            model.breadcrumbs.push(BreadCrumb {
+                href: model.route.to_href(),
+                title,
+            });
         }
         Msg::EventSourceConnect(_) => {
             log("EventSource connected.");
@@ -347,7 +375,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::LoadPage => {
             if model.loading.loaded() && !model.page.is_active(&model.route) {
                 model.page = (&model.records, &model.route).into();
-                model.breadcrumbs.push((model.route.to_href(), model.page.title()));
                 orders.send_msg(Msg::UpdatePageTitle);
                 model.page.init(&model.records, &mut orders.proxy(Msg::Page));
             } else {

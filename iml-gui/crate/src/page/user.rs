@@ -46,6 +46,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             match x.response() {
                 Ok(_) => {
                     model.toast = Some(toast::Model::Success(format!("{} updated", model.user.username)));
+                    orders.send_g_msg(GMsg::UpdatePageTitle);
                 }
                 Err(e) => {
                     error!("An error has occurred {:?}", e);
@@ -65,6 +66,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::SetUser(user) => {
             model.edited_user = (*user).clone();
             model.user = user;
+            orders.send_g_msg(GMsg::UpdatePageTitle);
         }
         Msg::UsernameChange(x) => model.edited_user.username = x,
         Msg::FirstNameChange(x) => model.edited_user.first_name = x,
@@ -81,6 +83,14 @@ pub struct Model {
 }
 
 impl Model {
+    pub fn title(&self) -> String {
+        match (self.user.first_name.as_str(), self.user.last_name.as_str()) {
+            ("", "") => self.user.username.clone(),
+            ("", l) => l.into(),
+            (f, "") => f.into(),
+            (f, l) => format!("{} {}", f, l),
+        }
+    }
     pub fn new(user: Arc<AuthUserRecord>) -> Self {
         Self {
             edited_user: (*user).clone(),
