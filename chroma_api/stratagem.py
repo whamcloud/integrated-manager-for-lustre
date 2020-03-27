@@ -155,7 +155,7 @@ def validate_mdt_profile(bundle):
 
 
 def validate_client_profile(bundle):
-    if not ManagedHost.objects.filter(server_profile_id="stratagem_client").exists():
+    if not ManagedHost.objects.filter(server_profile_id__in=["stratagem_client", "stratagem_existing_client"]).exists():
         return {
             "code": "stratagem_client_profile_not_installed",
             "message": "A client must be added with the 'Stratagem Client' profile to run this command.",
