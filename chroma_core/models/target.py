@@ -1070,7 +1070,7 @@ class ConfigureTargetJob(StateChangeJob):
             # TODO: Rewrite this
             device_type = "unknown"
             # retrieve the preferred fs type for this block device type to be used as backfstype for target
-            backfstype = BlockDevice(device_type, target_mount.volume_node.path).preferred_fstype
+            backfstype = BlockDevice(device_type, target_mount.device_host.paths[0]).preferred_fstype
 
             steps.append(
                 (
@@ -1080,7 +1080,7 @@ class ConfigureTargetJob(StateChangeJob):
                         "target": target_mount.target,
                         "target_mount": target_mount,
                         "backfstype": backfstype,
-                        "volume_node": target_mount.volume_node,
+                        "device_host": target_mount.device_host,
                         # TODO: Rewrite this
                         "device_type": "unknown",
                     },
@@ -1095,7 +1095,7 @@ class ConfigureTargetJob(StateChangeJob):
                         "host": target_mount.host,
                         "target": target_mount.target,
                         "target_mount": target_mount,
-                        "volume_node": target_mount.volume_node,
+                        "device_host": target_mount.device_host,
                     },
                 )
             )
@@ -1142,7 +1142,7 @@ class RegisterTargetJob(StateChangeJob):
             steps = []
         elif issubclass(target_class, FilesystemMember):
             primary_mount = self.target.managedtargetmount_set.get(primary=True)
-            path = primary_mount.volume_node.path
+            path = primary_mount.device_host.paths[0]
 
             mgs_id = self.target.downcast().filesystem.mgs.id
             mgs = ObjectCache.get_by_id(ManagedTarget, mgs_id)
@@ -1150,7 +1150,7 @@ class RegisterTargetJob(StateChangeJob):
             # retrieve the preferred fs type for this block device type to be used as backfstype for target
             # TODO: Rewrite this
             device_type = "unknown"
-            backfstype = BlockDevice(device_type, primary_mount.volume_node.path).preferred_fstype
+            backfstype = BlockDevice(device_type, primary_mount.device_host.paths[0]).preferred_fstype
 
             # Check that the active mount of the MGS is its primary mount (HYD-233 Lustre limitation)
             if not mgs.active_mount == mgs.managedtargetmount_set.get(primary=True):
@@ -1262,7 +1262,7 @@ class StartTargetJob(StateChangeJob):
         return DependAny(deps)
 
     def get_steps(self):
-        device_type = self.target.volume.filesystem_type
+        device_type = self.target.device.device_type
         return [
             (
                 MountOrImportStep,
@@ -1324,7 +1324,7 @@ class StopTargetJob(StateChangeJob):
 
     def get_steps(self):
         # Update MTMs before attempting to stop/unmount
-        device_type = self.target.volume.filesystem_type
+        device_type = self.target.device.device_type
         return [
             (
                 UpdateManagedTargetMount,
@@ -1416,7 +1416,7 @@ class MkfsStep(Step):
         target.uuid = result["uuid"]
 
         if result["filesystem_type"] != "zfs":
-            target.volume.filesystem_type = result["filesystem_type"]
+            target.device.device_type = result["filesystem_type"]
 
             if result["inode_count"] is not None:
                 # Check that inode_size was applied correctly
@@ -1439,14 +1439,14 @@ class MkfsStep(Step):
                 target.inode_count = result["inode_count"]
                 target.inode_size = result["inode_size"]
 
-            target.volume.save()
+            target.device.save()
 
         target.save()
 
 
 class UpdateManagedTargetMount(Step):
     """
-    This step will update the volume and volume_node relationships with
+    This step will update the device and device_host relationships with
     manage target mounts and managed targets to reflect changes during
     MkfsStep and device mounting/unmounting.
     """
@@ -1555,7 +1555,7 @@ class FormatTargetJob(StateChangeJob):
         steps = [(MountOrImportStep, MountOrImportStep.create_parameters(self.target, primary_mount.host, False))]
 
         if not self.target.reformat:
-            # We are not expecting to need to reformat/overwrite this volume
+            # We are not expecting to need to reformat/overwrite this device
             # so before proceeding, check that it is indeed unoccupied
             steps.extend(
                 [
@@ -1563,7 +1563,7 @@ class FormatTargetJob(StateChangeJob):
                         PreFormatCheck,
                         {
                             "host": primary_mount.host,
-                            "path": primary_mount.volume_node.path,
+                            "path": primary_mount.device_host.paths[0],
                             "device_type": device_type,
                         },
                     ),
@@ -1571,11 +1571,11 @@ class FormatTargetJob(StateChangeJob):
                 ]
             )
 
-        # This line is key, because it causes the volume property to be filled so it can be access by the step
-        self.target.volume
+        # This line is key, because it causes the device property to be filled so it can be access by the step
+        self.target.device
 
-        block_device = BlockDevice(device_type, primary_mount.volume_node.path)
-        filesystem = FileSystem(block_device.preferred_fstype, primary_mount.volume_node.path)
+        block_device = BlockDevice(device_type, primary_mount.device_host.paths[0])
+        filesystem = FileSystem(block_device.preferred_fstype, primary_mount.device_host.paths[0])
 
         mkfsoptions = filesystem.mkfs_options(self.target)
 
@@ -1588,7 +1588,7 @@ class FormatTargetJob(StateChangeJob):
                     {
                         "primary_host": primary_mount.host,
                         "target": self.target,
-                        "device_path": primary_mount.volume_node.path,
+                        "device_path": primary_mount.device_host.paths[0],
                         "failover_nids": self.target.get_failover_nids(),
                         "mgs_nids": mgs_nids,
                         "reformat": self.target.reformat,
@@ -1605,7 +1605,7 @@ class FormatTargetJob(StateChangeJob):
 
     def on_success(self):
         super(FormatTargetJob, self).on_success()
-        self.target.volume.save()
+        self.target.device.save()
 
     def create_locks(self):
         locks = super(FormatTargetJob, self).create_locks()
@@ -1830,7 +1830,7 @@ class ManagedTargetMount(models.Model):
     def __str__(self):
         if self.primary:
             kind_string = "primary"
-        elif not self.volume_node:
+        elif not self.device_host:
             kind_string = "failover_nodev"
         else:
             kind_string = "failover"
