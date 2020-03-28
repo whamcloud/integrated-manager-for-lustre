@@ -12,7 +12,7 @@ from django.db import transaction
 from django.db.models import Q
 
 from chroma_core.models.target import ManagedTarget, TargetRecoveryInfo, TargetRecoveryAlert
-from chroma_core.models.host import ManagedHost, VolumeNode
+from chroma_core.models.host import ManagedHost
 from chroma_core.models.client_mount import LustreClientMount
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.services.job_scheduler import job_scheduler_notify

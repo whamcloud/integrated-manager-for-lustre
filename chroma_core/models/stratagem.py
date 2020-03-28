@@ -35,8 +35,6 @@ from chroma_core.models import (
     ManagedMdt,
     ManagedTarget,
     ManagedTargetMount,
-    Volume,
-    VolumeNode,
     Device,
     DeviceHost,
 )

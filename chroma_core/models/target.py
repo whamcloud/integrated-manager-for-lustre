@@ -16,7 +16,7 @@ from chroma_core.lib.job import DependOn, DependAny, DependAll, Step, job_log
 from chroma_core.models import AlertEvent
 from chroma_core.models import AlertStateBase
 from chroma_core.models import StateChangeJob, StateLock, AdvertisedJob
-from chroma_core.models import ManagedHost, VolumeNode, Volume, HostContactAlert, Device
+from chroma_core.models import ManagedHost, HostContactAlert, Device, DeviceHost
 from chroma_core.models import StatefulObject
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import DeletableMetaclass, DeletableDowncastableMetaclass
