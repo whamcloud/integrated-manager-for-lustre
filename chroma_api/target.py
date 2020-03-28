@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 
-from chroma_core.models.host import Volume, VolumeNode
+from chroma_core.models.devices import Device, DeviceHost
 from chroma_core.models.target import FilesystemMember, NotAFileSystemMember
 import chroma_core.lib.conf_param
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
@@ -36,21 +36,21 @@ class TargetValidation(Validation):
     def _validate_post(self, bundle, request):
         errors = defaultdict(list)
 
-        for mandatory_field in ["kind", "volume_id"]:
+        for mandatory_field in ["kind", "device_id"]:
             if mandatory_field not in bundle.data or bundle.data[mandatory_field] == None:
                 errors[mandatory_field].append("This field is mandatory")
 
         if errors:
             return errors
 
-        volume_id = bundle.data["volume_id"]
+        device_id = bundle.data["device_id"]
         try:
-            volume = Volume.objects.get(id=volume_id)
-        except Volume.DoesNotExist:
-            errors["volume_id"].append("Volume %s not found" % volume_id)
+            device = Device.objects.get(id=device_id)
+        except Device.DoesNotExist:
+            errors["device_id"].append("Device %s not found" % device_id)
         else:
-            if ManagedTarget.objects.filter(volume=volume).count():
-                errors["volume_id"].append("Volume %s in use" % volume_id)
+            if ManagedTarget.objects.filter(device=device).count():
+                errors["device_id"].append("Device %s in use" % device_id)
 
         kind = bundle.data["kind"]
         if not kind in KIND_TO_KLASS:
@@ -72,14 +72,14 @@ class TargetValidation(Validation):
                             errors["filesystem_id"].append("Filesystem %s is unmanaged" % filesystem.name)
 
             if KIND_TO_KLASS[kind] == ManagedMgs:
-                mgt_volume = Volume.objects.get(id=volume_id)
-                hosts = [vn.host for vn in VolumeNode.objects.filter(volume=mgt_volume, use=True)]
+                mgt_device = Device.objects.get(id=device_id)
+                hosts = [vn.host for vn in DeviceHost.objects.filter(device=mgt_device, use=True)]
                 conflicting_mgs_count = ManagedTarget.objects.filter(
                     ~Q(managedmgs=None), managedtargetmount__host__in=hosts
                 ).count()
                 if conflicting_mgs_count > 0:
                     errors["mgt"].append(
-                        "Volume %s cannot be used for MGS (only one MGS is allowed per server)" % mgt_volume.label
+                        "Device %s cannot be used for MGS (only one MGS is allowed per server)" % mgt_device.label
                     )
 
                 if "filesystem_id" in bundle.data:
@@ -184,8 +184,8 @@ class TargetResource(ConfParamResource):
 
     index = fields.IntegerField(help_text="Index of the target", null=True)
 
-    volume_name = fields.CharField(
-        attribute="volume__label", help_text="The ``label`` attribute of the volume on which this target exists"
+    device_name = fields.CharField(
+        attribute="device__label", help_text="The ``label`` attribute of the device on which this target exists"
     )
 
     primary_server = fields.ToOneField("chroma_api.host.HostResource", "primary_host", full=False)
@@ -211,12 +211,12 @@ class TargetResource(ConfParamResource):
         "the target is not currently started",
     )
 
-    volume = fields.ToOneField(
-        "chroma_api.volume.VolumeResource",
-        "full_volume",
+    device = fields.ToOneField(
+        "chroma_api.device.DeviceResource",
+        "full_device",
         full=True,
         help_text="\
-                             The volume on which this target is stored.",
+                             The device on which this target is stored.",
     )
 
     def content_type_id_to_kind(self, id):
@@ -243,7 +243,7 @@ class TargetResource(ConfParamResource):
         # to content_type in the __metaclass__
         queryset = ManagedTarget.objects.select_related(
             "content_type",
-            "volume",
+            "device",
             "managedost",
             "managedmdt",
             "managedmgs",
@@ -262,7 +262,7 @@ class TargetResource(ConfParamResource):
         }
         authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
-        ordering = ["volume_name", "name"]
+        ordering = ["device_name", "name"]
         list_allowed_methods = ["get", "post", "patch"]
         detail_allowed_methods = ["get", "put", "delete"]
         validation = TargetValidation()
@@ -270,7 +270,7 @@ class TargetResource(ConfParamResource):
         readonly = [
             "active_host",
             "failover_server_name",
-            "volume_name",
+            "device_name",
             "primary_server_name",
             "filesystems",
             "name",
