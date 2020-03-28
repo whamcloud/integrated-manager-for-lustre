@@ -7,6 +7,7 @@ from django.db import transaction
 from chroma_core.lib.util import normalize_nid
 from chroma_core.services import log_register
 from chroma_core.models import NoNidsPresent
+from chroma_core.models.devices import DeviceHost
 from chroma_core.models.event import LearnEvent
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost, VolumeNode
@@ -348,20 +349,20 @@ class DetectScan(object):
                         log.warning("Cannot set up target %s on %s until LNet is running" % (local_info["name"], host))
 
     def _get_volume_node(self, host, paths):
-        volume_nodes = VolumeNode.objects.filter(path__in=paths, host=host)
-        if not volume_nodes.count():
+        device_hosts = DeviceHost.objects.filter(paths__0__in=paths, host=host)
+        if not device_hosts.count():
             log.warning("No device nodes detected matching paths %s on host %s" % (paths, host))
-            raise VolumeNode.DoesNotExist
+            raise DeviceHost.DoesNotExist
         else:
-            if volume_nodes.count() > 1:
+            if device_hosts.count() > 1:
                 # On a sanely configured server you wouldn't have more than one, but if
                 # e.g. you formatted an mpath device and then stopped multipath, you
                 # might end up seeing the two underlying devices.  So we cope, but warn.
                 log.warning(
-                    "DetectScan: Multiple VolumeNodes found for paths %s on host %s, using %s"
-                    % (paths, host, volume_nodes[0].path)
+                    "DetectScan: Multiple DeviceHosts found for paths %s on host %s, using %s"
+                    % (paths, host, device_hosts[0].paths[0])
                 )
-            return volume_nodes[0]
+            return device_hosts[0]
 
     def learn_fs_targets(self):
         for host, host_data in self.all_hosts_data.items():
@@ -407,13 +408,13 @@ class DetectScan(object):
                     klass.objects.get(uuid=uuid)
                 except ManagedTarget.DoesNotExist:
                     # Fall through, no targets with that name exist on this MGS
-                    volumenode = self._get_volume_node(host, device_node_paths)
+                    device_host = self._get_volume_node(host, device_node_paths)
                     target = klass(
                         uuid=uuid,
                         name=name,
                         filesystem=filesystem,
                         state="mounted",
-                        volume=volumenode.volume,
+                        device=device_host.device,
                         index=index,
                         immutable_state=True,
                     )
@@ -432,9 +433,12 @@ class DetectScan(object):
     def learn_mgs_targets(self):
         for host, host_data in self.all_hosts_data.items():
             mgs_local_info = None
-            for volume in host_data["local_targets"]:
-                if volume["name"] == "MGS" and volume["mounted"] == True:
-                    mgs_local_info = volume
+            for device in host_data["local_targets"]:
+                device_host = DeviceHost.objects.get(device=device, fqdn=host.fqdn)
+                name = device_host.fs_label
+                mounted = device_host.mount_path
+                if name == "MGS" and mounted == True:
+                    mgs_local_info = device
             if not mgs_local_info:
                 log.debug("No MGS found on host %s" % host)
                 continue
@@ -443,8 +447,8 @@ class DetectScan(object):
                 ManagedMgs.objects.get(uuid=mgs_local_info["uuid"])
             except ManagedMgs.DoesNotExist:
                 try:
-                    volumenode = self._get_volume_node(host, mgs_local_info["device_paths"])
-                except VolumeNode.DoesNotExist:
+                    device_host = self._get_volume_node(host, mgs_local_info["device_paths"])
+                except DeviceHost.DoesNotExist:
                     continue
 
                 log.info("Learned MGS %s (%s)" % (host, mgs_local_info["device_paths"][0]))
@@ -453,7 +457,7 @@ class DetectScan(object):
                 mgs = ManagedMgs(
                     uuid=mgs_local_info["uuid"],
                     state="mounted",
-                    volume=volumenode.volume,
+                    device=device_host.device,
                     name="MGS",
                     immutable_state=True,
                 )
