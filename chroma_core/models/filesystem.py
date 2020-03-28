@@ -250,9 +250,8 @@ class RemoveFilesystemJob(StateChangeJob):
                 PurgeFilesystemStep,
                 {
                     "filesystem": self.filesystem,
-                    "mgs_device_path": mgs_target.active_mount.volume_node.path,
-                    # TODO: Rewrite this
-                    "mgs_device_type": "unknown",
+                    "mgs_device_path": mgs_target.active_mount.device_host.paths[0],
+                    "mgs_device_type": mgs_target.device.device_type,
                     "host": mgs_target.active_mount.host,
                 },
             )
