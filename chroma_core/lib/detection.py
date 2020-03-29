@@ -19,6 +19,7 @@ from chroma_core.models.target import (
     ManagedOst,
 )
 from chroma_core.models.ticket import FilesystemTicket, MasterTicket
+from chroma_core.plugins.block_devices import get_devices
 from chroma_core.lib.cache import ObjectCache
 from chroma_help.help import help_text
 import re
@@ -34,6 +35,7 @@ class DetectScan(object):
         self.created_mgss = []
         self.created_targets = []
         self.step = step
+        self.ha_targets = {}
 
     def log(self, message):
         self.step.log(message)
@@ -42,6 +44,9 @@ class DetectScan(object):
         """:param all_hosts_data: Dict of ManagedHost to detect-scan output"""
 
         logs = []
+
+        log.debug(">>ALL HOSTS DATA:")
+        log.debug(all_hosts_data)
 
         with transaction.atomic():
             self.all_hosts_data = all_hosts_data
@@ -61,6 +66,10 @@ class DetectScan(object):
             # Create ManagedTargetMount objects
             log.debug(">>learn_target_mounts")
             self.learn_target_mounts()
+
+            # Create ManagedTargetMount objects
+            log.debug(">>learn_failed_lustre_tunefs_secondary_lvm_mounts")
+            self.learn_failed_lustre_tunefs_secondary_lvm_mounts()
 
             # Assign a valid primary mount point,
             # and remove any targets which don't have a primary mount point
@@ -191,9 +200,13 @@ class DetectScan(object):
             if tm.host not in self.all_hosts_data:
                 continue
 
-            target_info = next(
-                dev for dev in self.all_hosts_data[tm.host]["local_targets"] if dev["uuid"] == managed_target.uuid
-            )
+            try:
+                target_info = next(
+                    dev for dev in self.all_hosts_data[tm.host]["local_targets"] if dev["uuid"] == managed_target.uuid
+                )
+            except:
+                # LV not in all_hosts_data
+                continue
             local_nids = set(tm.host.lnet_configuration.get_nids())
 
             if not local_nids:
@@ -340,12 +353,41 @@ class DetectScan(object):
                             if label:
                                 target.ha_label = label
                                 target.immutable_state = False
+                                self.ha_targets[local_info["uuid"]] = {
+                                    "mount": tm.mount_point,
+                                    "paths": local_info["device_paths"],
+                                }
 
                             target.save()
                             ObjectCache.update(target)
 
                     except NoNidsPresent:
                         log.warning("Cannot set up target %s on %s until LNet is running" % (local_info["name"], host))
+
+    def learn_failed_lustre_tunefs_secondary_lvm_mounts(self):
+        for host, host_data in self.all_hosts_data.items():
+            devices = get_devices(host.fqdn, timeout=30)
+            for vgname in devices["lvs"]:
+                for lvname in devices["lvs"][vgname]:
+                    lv = devices["lvs"][vgname][lvname]
+                    targets = ManagedTarget.objects.filter(uuid=lv["uuid"])
+                    if not targets.count():
+                        log.warning("Ignoring %s:%s (%s), target unknown" % debug_id)
+                        continue
+                    for target in targets:
+                        try:
+                            log.info("Target %s seen on %s" % (target, host))
+                            volumenode = self._get_volume_node(host, self.ha_targets[lv["uuid"]]["paths"])
+                            (tm, created) = ManagedTargetMount.objects.get_or_create(
+                                target=target, host=host, volume_node=volumenode
+                            )
+                            if created:
+                                tm.save()
+                                log.info("Learned association %d between %s and host %s" % (tm.id, lv["name"], host))
+                                self._learn_event(host, tm)
+                                ObjectCache.add(ManagedTargetMount, tm)
+                        except e:
+                            log.error("Could create target %s on %s: %s" % (target, host, e))
 
     def _get_volume_node(self, host, paths):
         volume_nodes = VolumeNode.objects.filter(path__in=paths, host=host)
