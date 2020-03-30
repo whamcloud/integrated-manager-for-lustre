@@ -1,7 +1,7 @@
-use crate::{iml, CheckedStatus, iml::IML_DOCKER_PATH};
-use iml_systemd;
+use crate::{iml::IML_DOCKER_PATH, CheckedStatus};
+use iml_systemd::SystemdError;
 use iml_wire_types::Branding;
-use std::{io, thread, time, str};
+use std::{io, str};
 use tokio::{
     fs::{canonicalize, File},
     io::AsyncWriteExt,
@@ -9,8 +9,8 @@ use tokio::{
 };
 
 pub struct DockerSetup {
-  pub use_stratagem: bool,
-  pub branding: Branding,
+    pub use_stratagem: bool,
+    pub branding: Branding,
 }
 
 pub async fn docker() -> Result<Command, io::Error> {
@@ -23,40 +23,23 @@ pub async fn docker() -> Result<Command, io::Error> {
     Ok(x)
 }
 
-pub async fn deploy_iml_stack() -> Result<(), io::Error> {
-    iml_systemd::start_unit_and_wait("iml-docker.service".into(), 400).await?;
-
-    Ok(())
+pub async fn deploy_iml_stack() -> Result<(), SystemdError> {
+    iml_systemd::start_unit_and_wait("iml-docker.service".into(), 400).await
 }
 
-pub async fn get_docker_service_count() -> Result<u16, io::Error> {
-  let mut x = docker().await?;
-
-  let services = x.arg("service").arg("ls").output().await?;
-
-  let output = str::from_utf8(&services.stdout).expect("Couldn't read docker service list.");
-  let cnt: u16 = output.lines().count() as u16 - 1; // subtract the header
-
-  Ok(cnt)
-} 
-
-pub async fn remove_iml_stack() -> Result<(), io::Error> {
-    iml_systemd::stop_unit("iml-docker.service".into()).await?;
-
+pub async fn get_docker_service_count() -> Result<usize, io::Error> {
     let mut x = docker().await?;
 
-    x.arg("stack").arg("rm").arg("iml").checked_status().await?;
+    let services = x.arg("service").arg("ls").output().await?;
 
-    // Make sure there are no services.
-    let one_sec = time::Duration::from_millis(1000);
-    let mut count = get_docker_service_count().await?;
-    while count > 0 {
-      println!("Waiting on all docker services to be shut down.");
-      thread::sleep(one_sec);
-      count = get_docker_service_count().await?;
-    }
-    
-    Ok(())
+    let output = str::from_utf8(&services.stdout).expect("Couldn't read docker service list.");
+    let cnt = output.lines().skip(1).count(); // subtract the header
+
+    Ok(cnt)
+}
+
+pub async fn remove_iml_stack() -> Result<(), iml_systemd::SystemdError> {
+    iml_systemd::stop_unit("iml-docker.service".into()).await
 }
 
 pub async fn system_prune() -> Result<(), io::Error> {
@@ -67,9 +50,7 @@ pub async fn system_prune() -> Result<(), io::Error> {
         .arg("--force")
         .arg("--all")
         .checked_status()
-        .await?;
-
-    Ok(())
+        .await
 }
 
 pub async fn volume_prune() -> Result<(), io::Error> {
@@ -79,48 +60,31 @@ pub async fn volume_prune() -> Result<(), io::Error> {
         .arg("prune")
         .arg("--force")
         .checked_status()
-        .await?;
-
-    Ok(())
-}
-
-pub async fn iml_stack_loaded() -> Result<bool, io::Error> {
-    let x = iml::list_servers().await?.status().await?;
-
-    Ok(x.success())
-}
-
-pub async fn wait_for_iml_stack() -> Result<(), io::Error> {
-    let mut x = iml_stack_loaded().await?;
-    let one_sec = time::Duration::from_millis(1000);
-
-    while !x {
-        println!("Waiting on the docker stack to load.");
-        thread::sleep(one_sec);
-        x = iml_stack_loaded().await?;
-    }
-
-    Ok(())
+        .await
 }
 
 pub async fn configure_docker_setup(setup: &DockerSetup) -> Result<(), io::Error> {
-  let config = format!(r#"USE_STRATAGEM={}
-BRANDING={}"#, setup.use_stratagem, setup.branding.to_string());
+    let config = format!(
+        r#"USE_STRATAGEM={}
+BRANDING={}"#,
+        setup.use_stratagem,
+        setup.branding.to_string()
+    );
 
-  let mut path = canonicalize(IML_DOCKER_PATH).await?;
-  path.push("setup");
+    let mut path = canonicalize(IML_DOCKER_PATH).await?;
+    path.push("setup");
 
-  let mut config_path = path.clone();
-  config_path.push("config");
+    let mut config_path = path.clone();
+    config_path.push("config");
 
-  let mut file = File::create(config_path).await?;
-  file.write_all(config.as_bytes()).await?;
+    let mut file = File::create(config_path).await?;
+    file.write_all(config.as_bytes()).await?;
 
-  if setup.use_stratagem {
-    let mut server_profile_path = path.clone();
-    server_profile_path.push("stratagem-server.profile");
+    if setup.use_stratagem {
+        let mut server_profile_path = path.clone();
+        server_profile_path.push("stratagem-server.profile");
 
-    let stratagem_server_profile = r#"{
+        let stratagem_server_profile = r#"{
   "ui_name": "Stratagem Policy Engine Server",
   "ui_description": "A server running the Stratagem Policy Engine",
   "managed": false,
@@ -143,13 +107,13 @@ BRANDING={}"#, setup.use_stratagem, setup.branding.to_string());
   ]
 }
 "#;
-    let mut file = File::create(server_profile_path).await?;
-    file.write_all(stratagem_server_profile.as_bytes()).await?;
+        let mut file = File::create(server_profile_path).await?;
+        file.write_all(stratagem_server_profile.as_bytes()).await?;
 
-    let mut client_profile_path = path.clone();
-    client_profile_path.push("stratagem-client.profile");
+        let mut client_profile_path = path.clone();
+        client_profile_path.push("stratagem-client.profile");
 
-    let stratagem_client_profile = r#"{
+        let stratagem_client_profile = r#"{
   "ui_name": "Stratagem Client Node",
   "managed": true,
   "worker": true,
@@ -170,11 +134,11 @@ BRANDING={}"#, setup.use_stratagem, setup.branding.to_string());
   ]
 }
 "#;
-    let mut file = File::create(client_profile_path).await?;
-    file.write_all(stratagem_client_profile.as_bytes()).await?;
-  }
+        let mut file = File::create(client_profile_path).await?;
+        file.write_all(stratagem_client_profile.as_bytes()).await?;
+    }
 
-  Ok(())
+    Ok(())
 }
 
 pub async fn configure_docker_overrides() -> Result<(), io::Error> {

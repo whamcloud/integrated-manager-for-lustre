@@ -3,8 +3,8 @@ pub mod iml;
 pub mod vagrant;
 
 use futures::{future::BoxFuture, FutureExt, TryFutureExt};
-use std::{io, process::ExitStatus, thread, time};
-use tokio::process::Command;
+use std::{io, process::ExitStatus, time::Duration};
+use tokio::{process::Command, time::delay_for};
 
 fn handle_status(x: ExitStatus) -> Result<(), io::Error> {
     if x.success() {
@@ -35,8 +35,6 @@ impl CheckedStatus for Command {
 
 pub async fn try_command_n_times(max_tries: u32, cmd: &mut Command) -> Result<(), io::Error> {
     let mut count = 0;
-    let one_sec = time::Duration::from_millis(1000);
-
     let mut r = cmd.status().await?;
 
     // try to run the command max_tries times until it succeeds. There is a delay of 1 second.
@@ -44,7 +42,7 @@ pub async fn try_command_n_times(max_tries: u32, cmd: &mut Command) -> Result<()
         println!("Trying command: {:?} - Attempt #{}", cmd, count + 1);
         count += 1;
 
-        thread::sleep(one_sec);
+        delay_for(Duration::from_secs(1)).await;
 
         r = cmd.status().await?;
     }
@@ -52,11 +50,17 @@ pub async fn try_command_n_times(max_tries: u32, cmd: &mut Command) -> Result<()
     if r.success() {
         Ok(())
     } else {
-        Err(io::Error::new(io::ErrorKind::Other, format!("Command {:?} failed to succeed after {} attempts.", cmd, max_tries)))
+        Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!(
+                "Command {:?} failed to succeed after {} attempts.",
+                cmd, max_tries
+            ),
+        ))
     }
 }
 
-pub fn get_local_server_names<'a>(servers: &'a[&'a str]) -> Vec<String> {
+pub fn get_local_server_names<'a>(servers: &'a [&'a str]) -> Vec<String> {
     servers
         .iter()
         .map(move |x| format!("{}.local", x))

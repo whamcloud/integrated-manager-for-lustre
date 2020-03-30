@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{try_command_n_times, CheckedStatus};
-use std::{io, collections::HashMap};
+use std::{collections::HashMap, io};
 use tokio::{fs, process::Command};
 
 pub const IML_DOCKER_PATH: &str = "/etc/iml-docker";
@@ -26,7 +26,9 @@ pub async fn list_servers() -> Result<Command, io::Error> {
     Ok(x)
 }
 
-pub async fn server_add<S: std::hash::BuildHasher>(host_map: &HashMap<String, &[String], S>) -> Result<(), io::Error> {
+pub async fn server_add<S: std::hash::BuildHasher>(
+    host_map: &HashMap<String, &[String], S>,
+) -> Result<(), io::Error> {
     for (profile, hosts) in host_map {
         let mut x = iml().await?;
         let mut cmd = x
