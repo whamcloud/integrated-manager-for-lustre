@@ -389,7 +389,8 @@ class ManagedTarget(StatefulObject):
         if create_target_mounts:
             create_target_mount(primary_device_host)
 
-            for secondary_device_host in device.devicehost_set.filter(local=False):
+            # we were filtering use=True, primary=False, host__not_deleted=True previously
+            for secondary_device_host in device.devicehost_set.filter():
                 create_target_mount(secondary_device_host)
 
         return target, target_mounts
@@ -942,7 +943,7 @@ class MountOrImportStep(Step):
 
         try:
             self.invoke_agent_expect_result(
-                device_host.fqdn, "export_target", {"device_type": device.device_type, "path": device_host.paths[0]}
+                device_host.fqdn, "export_target", {"device_type": device_host.fs_type, "path": device_host.paths[0]}
             )
         except AgentException as e:
             # TODO: When landing this on b4_0 for future code we will add a new exception AgentContactException to
@@ -1019,7 +1020,7 @@ class MountOrImportStep(Step):
         active_device_hosts = None
 
         for device_host in target.device.devicehost_set.all():
-            target_volume_info = TargetVolumeInfo(device_host.fqdn, device_host.paths[0], target.device.device_type,)
+            target_volume_info = TargetVolumeInfo(device_host.fqdn, device_host.paths[0], device.device_type,)
 
             if host == device_host.host:
                 active_device_hosts = target_volume_info
@@ -1063,7 +1064,7 @@ class ConfigureTargetJob(StateChangeJob):
             steps.append((OpenLustreFirewallStep, {"host": target_mount.host}))
 
         for target_mount in target_mounts:
-            device_type = self.target.device.device_type
+            device_type = target_mount.device_host.device.device_type
             # retrieve the preferred fs type for this block device type to be used as backfstype for target
             backfstype = BlockDevice(device_type, target_mount.device_host.paths[0]).preferred_fstype
 
@@ -1076,7 +1077,7 @@ class ConfigureTargetJob(StateChangeJob):
                         "target_mount": target_mount,
                         "backfstype": backfstype,
                         "device_host": target_mount.device_host,
-                        "device_type": device_type,
+                        "device_type": target_mount.target.device.device_type,
                     },
                 )
             )
@@ -1142,7 +1143,7 @@ class RegisterTargetJob(StateChangeJob):
             mgs = ObjectCache.get_by_id(ManagedTarget, mgs_id)
 
             # retrieve the preferred fs type for this block device type to be used as backfstype for target
-            device_type = self.target.device.device_type
+            device_type = primary_mount.device_host.device.device_type
             backfstype = BlockDevice(device_type, primary_mount.device_host.paths[0]).preferred_fstype
 
             # Check that the active mount of the MGS is its primary mount (HYD-233 Lustre limitation)
@@ -1255,7 +1256,8 @@ class StartTargetJob(StateChangeJob):
         return DependAny(deps)
 
     def get_steps(self):
-        device_type = self.target.device.device_type
+        device_host = DeviceHost.filter(device_id=self.target.device.id)[0]
+        device_type = device_host.fs_type
         return [
             (
                 MountOrImportStep,
@@ -1317,7 +1319,8 @@ class StopTargetJob(StateChangeJob):
 
     def get_steps(self):
         # Update MTMs before attempting to stop/unmount
-        device_type = self.target.device.device_type
+        device_host = DeviceHost.filter(device_id=self.target.device.id)[0]
+        device_type = device_host.fs_type
         return [
             (
                 UpdateManagedTargetMount,
@@ -1409,7 +1412,9 @@ class MkfsStep(Step):
         target.uuid = result["uuid"]
 
         if result["filesystem_type"] != "zfs":
-            target.device.device_type = result["filesystem_type"]
+            # This is just a stub, we need a concrete device host, not the first one
+            device_host = DeviceHost.filter(device_id=self.target.device.id)[0]
+            device_host.fs_type = result["filesystem_type"]
 
             if result["inode_count"] is not None:
                 # Check that inode_size was applied correctly
@@ -1432,7 +1437,7 @@ class MkfsStep(Step):
                 target.inode_count = result["inode_count"]
                 target.inode_size = result["inode_size"]
 
-            target.device.save()
+            device_host.save()
 
         target.save()
 

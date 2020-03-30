@@ -20,7 +20,7 @@ class Device(models.Model):
 
 
 class DeviceHost(models.Model):
-    device_id = models.CharField(help_text="Unique identifer per-device", max_length=255)
+    device_id = models.ForeignKey("Device")
     fqdn = models.CharField(help_text="The fqdn this device may reside on", max_length=255)
     local = models.BooleanField(help_text="Is the device local to this node")
     paths = ArrayField(models.CharField(max_length=255), help_text="A list of paths to access a device")
