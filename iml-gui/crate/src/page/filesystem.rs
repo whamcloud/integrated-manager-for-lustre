@@ -365,7 +365,7 @@ fn details_table(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg
             ],
             tr![t::th_left(plain!("MGS")), t::td_view(mgs(&model.mgt, &model.fs)),],
             tr![
-                t::th_left(plain!("Number of MGTs")),
+                t::th_left(plain!("Number of MDTs")),
                 t::td_view(plain!(model.mdts.len().to_string()))
             ],
             tr![
