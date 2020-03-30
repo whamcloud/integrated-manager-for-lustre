@@ -18,11 +18,6 @@ class Migration(migrations.Migration):
             name='volume',
         ),
         migrations.AlterField(
-            model_name='devicehost',
-            name='device_id',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='chroma_core.Device'),
-        ),
-        migrations.AlterField(
             model_name='managedtarget',
             name='bytes_per_inode',
             field=models.IntegerField(blank=True, help_text=b'Constant used during formatting to determine inode count by dividing the device size by ``bytes_per_inode``', null=True),

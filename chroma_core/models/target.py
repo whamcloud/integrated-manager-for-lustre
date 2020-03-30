@@ -939,7 +939,7 @@ class MountOrImportStep(Step):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpcMessenger
 
-        device = Device.objects.get(device_host.device_id)
+        device = Device.objects.get(id=device_host.device_id)
 
         try:
             self.invoke_agent_expect_result(
@@ -1064,7 +1064,8 @@ class ConfigureTargetJob(StateChangeJob):
             steps.append((OpenLustreFirewallStep, {"host": target_mount.host}))
 
         for target_mount in target_mounts:
-            device_type = target_mount.device_host.device.device_type
+            device = Device.objects.get(id=target_mount.device_host.device_id)
+            device_type = device.device_type
             # retrieve the preferred fs type for this block device type to be used as backfstype for target
             backfstype = BlockDevice(device_type, target_mount.device_host.paths[0]).preferred_fstype
 
@@ -1143,7 +1144,8 @@ class RegisterTargetJob(StateChangeJob):
             mgs = ObjectCache.get_by_id(ManagedTarget, mgs_id)
 
             # retrieve the preferred fs type for this block device type to be used as backfstype for target
-            device_type = primary_mount.device_host.device.device_type
+            device = Device.objects.get(id=device_host.device_id)
+            device_type = device.device_type
             backfstype = BlockDevice(device_type, primary_mount.device_host.paths[0]).preferred_fstype
 
             # Check that the active mount of the MGS is its primary mount (HYD-233 Lustre limitation)
@@ -1487,7 +1489,8 @@ class UpdateManagedTargetMount(Step):
             mtm.device_host.save()
             mtm.save()
 
-            target.device = mtm.device_host.device
+            device = Device.objects.get(id=mtm.device_host.device_id)
+            target.device = device
 
         target.save()
 
