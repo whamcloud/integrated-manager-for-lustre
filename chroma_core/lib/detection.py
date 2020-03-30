@@ -204,7 +204,7 @@ class DetectScan(object):
                 target_info = next(
                     dev for dev in self.all_hosts_data[tm.host]["local_targets"] if dev["uuid"] == managed_target.uuid
                 )
-            except:
+            except StopIteration:
                 # LV not in all_hosts_data
                 continue
             local_nids = set(tm.host.lnet_configuration.get_nids())
