@@ -9,7 +9,7 @@ from os import path
 from toolz.functoolz import pipe, partial, flip
 from settings import MAILBOX_PATH, SERVER_HTTP_URL
 from django.db import models
-from django.db.models import CASCADE
+from django.db.models import CASCADE, Q
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.models.utils import DeletableMetaclass
@@ -678,7 +678,9 @@ class SendStratagemResultsToClientJob(Job):
         return "Sending stratagem results to client"
 
     def get_steps(self):
-        client_host = ManagedHost.objects.get(server_profile_id="stratagem_client")
+        client_host = ManagedHost.objects.get(
+            Q(server_profile_id="stratagem_client") | Q(server_profile_id="stratagem_existing_client")
+        )
         client_mount = LustreClientMount.objects.get(host_id=client_host.id, filesystem_id=self.filesystem.id)
 
         return [
