@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{iml, CheckedStatus, try_command_n_times};
+use crate::{iml, try_command_n_times, CheckedStatus};
 use std::{collections::HashMap, io, str};
 use tokio::{fs, process::Command};
 
@@ -13,7 +13,7 @@ pub enum NtpServer {
 
 pub enum FsType {
     LDISKFS,
-    ZFS
+    ZFS,
 }
 
 async fn vagrant() -> Result<Command, io::Error> {
@@ -208,7 +208,7 @@ pub async fn setup_deploy_servers(
 
 pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
-    server_map: HashMap<String, &[String], S>
+    server_map: HashMap<String, &[String], S>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     setup_bare(&config.iscsi_and_storage_servers()).await?;
 
@@ -298,7 +298,11 @@ async fn create_monitored_ldiskfs(hosts: &[&str]) -> Result<(), io::Error> {
 }
 
 async fn create_monitored_zfs(hosts: &[&str]) -> Result<(), io::Error> {
-    create_monitored_fs(&hosts, "install-zfs-no-iml,configure-lustre-network,create-pools,zfs-params,create-zfs-fs").await?;
+    create_monitored_fs(
+        &hosts,
+        "install-zfs-no-iml,configure-lustre-network,create-pools,zfs-params,create-zfs-fs",
+    )
+    .await?;
 
     Ok(())
 }
@@ -306,7 +310,7 @@ async fn create_monitored_zfs(hosts: &[&str]) -> Result<(), io::Error> {
 pub async fn create_fs(fs_type: FsType, hosts: &[&str]) -> Result<(), io::Error> {
     match fs_type {
         FsType::LDISKFS => create_monitored_ldiskfs(&hosts).await?,
-        FsType::ZFS => create_monitored_zfs(&hosts).await?
+        FsType::ZFS => create_monitored_zfs(&hosts).await?,
     };
 
     Ok(())

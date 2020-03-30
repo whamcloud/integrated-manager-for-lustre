@@ -12,4 +12,3 @@ async fn test_setup() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-

@@ -186,6 +186,7 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "iml-systemd",
+ "iml-wire-types",
  "tokio",
 ]
 

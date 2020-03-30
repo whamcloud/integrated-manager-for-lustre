@@ -49,12 +49,6 @@ impl std::error::Error for SystemdError {
     }
 }
 
-impl From<SystemdError> for std::io::Error {
-    fn from(err: SystemdError) -> Self {
-        std::io::Error::new(std::io::ErrorKind::Other, err.to_string())
-    }
-}
-
 impl From<std::io::Error> for SystemdError {
     fn from(err: std::io::Error) -> Self {
         SystemdError::Io(err)

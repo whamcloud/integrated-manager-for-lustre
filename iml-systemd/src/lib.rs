@@ -4,7 +4,8 @@
 
 mod systemd_error;
 
-use crate::systemd_error::{RequiredError, SystemdError};
+use crate::systemd_error::RequiredError;
+pub use crate::systemd_error::SystemdError;
 use iml_cmd::{CheckedCommandExt, Command};
 use iml_wire_types::{ActiveState, RunState, UnitFileState};
 use std::{str, time::Duration};
