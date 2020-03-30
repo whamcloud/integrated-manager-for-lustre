@@ -24,7 +24,7 @@ pub async fn docker() -> Result<Command, io::Error> {
 }
 
 pub async fn deploy_iml_stack() -> Result<(), io::Error> {
-    iml_systemd::start_unit_with_time("iml-docker.service".into(), 400).await?;
+    iml_systemd::start_unit_and_wait("iml-docker.service".into(), 400).await?;
 
     Ok(())
 }

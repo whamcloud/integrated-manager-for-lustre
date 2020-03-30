@@ -4,8 +4,6 @@
 
 use std::{time, thread, collections::{HashMap, hash_map::RandomState}};
 use iml_system_test_utils::{docker, iml, vagrant, get_local_server_names};
-use iml_systemd;
-use iml_wire_types;
 
 async fn setup() -> Result<(), Box<dyn std::error::Error>> {
     // remove the stack if it is running and clean up volumes and network

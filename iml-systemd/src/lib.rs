@@ -107,7 +107,7 @@ async fn get_unit_states(unit_name: &str) -> Result<(UnitFileState, ActiveState)
 /// # Arguments
 ///
 /// * `unit_name` - The unit to start
-pub async fn start_unit_with_time(unit_name: String, time: u32) -> Result<(), SystemdError> {
+pub async fn start_unit_and_wait(unit_name: String, time: u32) -> Result<(), SystemdError> {
     let output = Command::new("busctl")
         .args(&[
             "--system",
@@ -133,7 +133,7 @@ pub async fn start_unit_with_time(unit_name: String, time: u32) -> Result<(), Sy
 }
 
 pub async fn start_unit(unit_name: String) -> Result<(), SystemdError> {
-    start_unit_with_time(unit_name, 30).await
+    start_unit_and_wait(unit_name, 30).await
 }
 
 /// Stops a unit
