@@ -66,11 +66,15 @@ class TestDetection(IMLUnitTestCase):
 
             raise AgentException(host, command, args, "No device plugin data available in unit tests")
 
+        def _get_devices(fqdn, timeout):
+            return {"lvs": {}}
+
         job = DetectTargetsJob.objects.create()
 
         with mock.patch("chroma_core.lib.job.Step.invoke_agent", new=mock.Mock(side_effect=_detect_scan_device_plugin)):
-            with mock.patch("chroma_core.models.Volume.storage_resource"):
-                synchronous_run_job(job)
+            with mock.patch("chroma_core.plugins.block_devices.get_devices", new=mock.Mock(side_effect=_get_devices)):
+                with mock.patch("chroma_core.models.Volume.storage_resource"):
+                    synchronous_run_job(job)
 
         self.assertEqual(ManagedFilesystem.objects.count(), 1)
         self.assertEqual(ManagedFilesystem.objects.get().name, "test18fs")
