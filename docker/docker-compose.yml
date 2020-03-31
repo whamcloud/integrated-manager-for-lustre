@@ -1,7 +1,7 @@
 version: "3.7"
 x-deploy: &default-deploy
   restart_policy:
-    condition: always
+    condition: any
     delay: 5s
     window: 5s
 services:
