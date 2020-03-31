@@ -103,7 +103,7 @@ services:
     environment:
       - "IML_CA_PATH=/var/lib/chroma/authority.crt"
   device-aggregator:
-    image: "imlteam/device-aggregator:5.1"
+    image: "imlteam/device-aggregator:latest"
     hostname: "device-aggregator"
     deploy: *default-deploy
     environment:
