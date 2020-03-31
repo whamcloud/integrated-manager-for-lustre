@@ -168,7 +168,7 @@ pub async fn setup_iml_install(hosts: &[&str]) -> Result<(), Box<dyn std::error:
     }
 
     up().await?.args(hosts).checked_status().await?;
-    delay_for(Duration::from_secs(15)).await;
+    delay_for(Duration::from_secs(30)).await;
 
     Ok(())
 }
