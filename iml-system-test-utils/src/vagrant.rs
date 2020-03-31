@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{iml, CheckedStatus};
+use crate::{iml, CheckedStatus, try_command_n_times};
 use std::{collections::HashMap, io, str, time::Duration};
 use tokio::{fs, process::Command, time::delay_for};
 
@@ -37,7 +37,9 @@ pub async fn up<'a>() -> Result<Command, io::Error> {
 pub async fn destroy<'a>() -> Result<(), io::Error> {
     let mut x = vagrant().await?;
 
-    x.arg("destroy").arg("-f").checked_status().await
+    x.arg("destroy").arg("-f");
+
+    try_command_n_times(3, &mut x).await
 }
 
 pub async fn halt() -> Result<Command, io::Error> {
