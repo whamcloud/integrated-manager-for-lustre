@@ -66,7 +66,7 @@ pub async fn volume_prune() -> Result<(), io::Error> {
 pub async fn stop_swarm() -> Result<(), io::Error> {
     let mut x = docker().await?;
 
-    x.arg("swarm").arg("leave").checked_status().await
+    x.arg("swarm").arg("leave").arg("--force").checked_status().await
 }
 
 pub async fn start_swarm() -> Result<(), io::Error> {
