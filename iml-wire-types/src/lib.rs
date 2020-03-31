@@ -721,6 +721,30 @@ impl<T> EndpointName for Job<T> {
     }
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Step {
+    pub args: HashMap<String, String>,
+    pub backtrace: String,
+    pub class_name: String,
+    pub console: String,
+    pub created_at: String,
+    pub description: String,
+    pub id: u32,
+    pub log: String,
+    pub modified_at: String,
+    pub resource_uri: String,
+    pub result: Option<String>,
+    pub state: String,
+    pub step_count: u32,
+    pub step_index: u32,
+}
+
+impl EndpointName for Step {
+    fn endpoint_name() -> &'static str {
+        "step"
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct FilesystemConfParams {
     #[serde(rename = "llite.max_cached_mb")]
