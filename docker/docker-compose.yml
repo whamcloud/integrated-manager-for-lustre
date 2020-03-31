@@ -320,10 +320,6 @@ services:
   setup:
     image: "imlteam/manager-setup:5.1.1-dev"
     command: ["tail", "-f", "/dev/null"]
-    restart_policy:
-      condition: on-failure
-      delay: 5s
-      window: 5s
     build:
       context: .
       dockerfile: ./setup.dockerfile
@@ -332,7 +328,11 @@ services:
       - "/etc/iml-docker/setup:/var/lib/chroma-setup"
     secrets:
       - iml_pw
-    deploy: *default-deploy
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        window: 5s
 volumes:
   manager-config:
   db-data:
