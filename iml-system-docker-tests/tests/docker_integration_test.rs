@@ -5,8 +5,9 @@
 use iml_system_test_utils::{docker, get_local_server_names, iml, vagrant};
 use std::{
     collections::{hash_map::RandomState, HashMap},
-    thread, time,
+    time::Duration,
 };
+use tokio::time::delay_for;
 
 async fn setup() -> Result<(), Box<dyn std::error::Error>> {
     // remove the stack if it is running and clean up volumes and network
@@ -38,8 +39,7 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
     vagrant::create_fs(fs_type, &config.storage_servers()[..]).await?;
 
     // Wait three seconds before detecting the filesystem
-    let three_secs = time::Duration::from_millis(3000);
-    thread::sleep(three_secs);
+    delay_for(Duration::from_secs(3)).await;
 
     iml::detect_fs().await?;
 

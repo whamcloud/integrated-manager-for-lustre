@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{try_command_n_times, CheckedStatus};
+use crate::CheckedStatus;
 use std::{collections::HashMap, io};
 use tokio::{fs, process::Command};
 
@@ -31,15 +31,14 @@ pub async fn server_add<S: std::hash::BuildHasher>(
 ) -> Result<(), io::Error> {
     for (profile, hosts) in host_map {
         let mut x = iml().await?;
-        let mut cmd = x
-            .arg("server")
+        x.arg("server")
             .arg("add")
             .arg("-h")
             .arg(hosts.join(","))
             .arg("-p")
-            .arg(profile);
-
-        try_command_n_times(3, &mut cmd).await?;
+            .arg(profile)
+            .checked_status()
+            .await?;
     }
 
     Ok(())

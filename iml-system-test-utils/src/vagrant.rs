@@ -2,9 +2,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{iml, try_command_n_times, CheckedStatus};
-use std::{collections::HashMap, io, str};
-use tokio::{fs, process::Command};
+use crate::{iml, CheckedStatus};
+use std::{collections::HashMap, io, str, time::Duration};
+use tokio::{fs, process::Command, time::delay_for};
 
 pub enum NtpServer {
     HostOnly,
@@ -37,11 +37,7 @@ pub async fn up<'a>() -> Result<Command, io::Error> {
 pub async fn destroy<'a>() -> Result<(), io::Error> {
     let mut x = vagrant().await?;
 
-    x.arg("destroy").arg("-f");
-
-    try_command_n_times(3, &mut x).await?;
-
-    Ok(())
+    x.arg("destroy").arg("-f").checked_status().await
 }
 
 pub async fn halt() -> Result<Command, io::Error> {
@@ -217,6 +213,7 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
         configure_docker_network(host).await?;
     }
 
+    delay_for(Duration::from_secs(3)).await;
     iml::server_add(&server_map).await?;
 
     halt().await?.args(config.all()).checked_status().await?;
