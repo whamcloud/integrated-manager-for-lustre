@@ -317,7 +317,12 @@ pub async fn basic_consume(
     let options = options.unwrap_or_default();
 
     channel
-        .basic_consume(&queue, &consumer_tag.into(), options, FieldTable::default())
+        .basic_consume(
+            queue.name().as_str(),
+            &consumer_tag.into(),
+            options,
+            FieldTable::default(),
+        )
         .await
         .map(|s| s.map(|x| x.map_err(|e| e.into())))
         .map_err(ImlRabbitError::from)
@@ -332,7 +337,12 @@ pub async fn basic_consume_one(
     let options = options.unwrap_or_default();
 
     let (x, _) = channel
-        .basic_consume(&queue, &consumer_tag.into(), options, FieldTable::default())
+        .basic_consume(
+            queue.name().as_str(),
+            &consumer_tag.into(),
+            options,
+            FieldTable::default(),
+        )
         .await?
         .map(|x| x.map_err(ImlRabbitError::from))
         .into_future()
