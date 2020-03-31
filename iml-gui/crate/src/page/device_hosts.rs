@@ -68,10 +68,30 @@ pub fn view(model: &Model) -> impl View<Msg> {
                 table::thead_view(vec![
                     table::th_view(plain!["Device Id"]),
                     table::th_view(plain!["Host"]),
+                    table::th_view(plain!["Mount Path"]),
+                    table::th_view(plain!["Paths"]),
                 ]),
                 tbody![model.device_host.iter().map(|x| tr![
                     table::td_view(vec![plain![Cow::from(x.device_host.device_id.0.clone())],]),
-                    table::td_view(vec![plain![Cow::from(x.device_host.fqdn.0.clone())],])
+                    table::td_view(vec![plain![Cow::from(x.device_host.fqdn.0.clone())],]),
+                    table::td_view(vec![plain![Cow::from(
+                        x.device_host
+                            .mount_path
+                            .0
+                            .as_ref()
+                            .map(|y| y.to_str().unwrap_or("Non-UTF-8 path").to_string())
+                            .unwrap_or("Not mounted".into())
+                    )],]),
+                    table::td_view(vec![plain![Cow::from({
+                        let s: Vec<_> = x
+                            .device_host
+                            .paths
+                            .0
+                            .iter()
+                            .map(|z| z.to_str().unwrap_or("Non-UTF-8 path").to_string())
+                            .collect();
+                        s.join(",")
+                    })],]),
                 ])],
             ])
         }
