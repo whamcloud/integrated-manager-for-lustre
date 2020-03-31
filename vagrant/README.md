@@ -75,6 +75,19 @@ From here you can decide what type of setup to run.
 
   1. https://whamcloud.github.io/Online-Help/docs/Contributor_Docs/cd_Managed_ZFS.html
 
+- Monitored Ldiskfs with LVM Metadata:
+
+  ```sh
+	vagrant provision --provision-with=install-ldiskfs-no-iml,configure-lustre-network,create-ldiskfs-lvm-fs,mount-ldiskfs-lvm-fs
+	```
+
+- Monitored Ldiskfs with LVM Metadata and HA:
+
+  ```sh
+	vagrant provision --provision-with=install-ldiskfs-no-iml,configure-lustre-network,create-ldiskfs-lvm-fs,ha-ldiskfs-lvm-fs-step1
+	vagrant provision --provision-with=ha-ldiskfs-lvm-fs-step2
+	```
+
 ### Windows
 
 This is tested on Windows 10 1909.
