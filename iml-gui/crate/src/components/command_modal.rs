@@ -19,8 +19,8 @@ const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 #[derive(Default, Debug)]
 pub struct Model {
     cancel: Option<oneshot::Sender<()>>,
-    loading: bool,
-    opens: HashSet<u32>,
+    commands_loading: bool,
+    commands_opens: HashSet<Idx>,
     pub commands: Vec<Arc<Command>>,
     pub modal: modal::Model,
 }
@@ -29,6 +29,13 @@ pub struct Model {
 pub enum Input {
     Commands(Vec<Arc<Command>>),
     Ids(Vec<u32>),
+}
+
+#[derive(Debug, Hash, PartialEq, Eq)]
+pub enum Idx {
+    Command(u32),
+    Job(u32),
+    Step(u32),
 }
 
 /// `Msg::FireCommands(..)` adds new commands to the polling list
@@ -50,8 +57,8 @@ pub enum Input {
 pub enum Msg {
     Modal(modal::Msg),
     FireCommands(Input),
-    Fetch,
-    Fetched(Box<fetch::ResponseDataResult<ApiList<Command>>>),
+    FetchCommands,
+    FetchedCommands(Box<fetch::ResponseDataResult<ApiList<Command>>>),
     Open(u32),
     Close(u32),
     Noop,
@@ -72,25 +79,25 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     // then don't fetch anything
                     model.commands = cmds;
                     if !is_all_finished(&model.commands) {
-                        orders.send_msg(Msg::Fetch);
+                        orders.send_msg(Msg::FetchCommands);
                     }
                 }
                 Input::Ids(ids) => {
                     // we have ids only, so we need to populate
-                    model.loading = true;
+                    model.commands_loading = true;
                     orders.perform_cmd(fetch_command_status(ids));
                 }
             }
         }
-        Msg::Fetch => {
+        Msg::FetchCommands => {
             model.cancel = None;
             if !is_all_finished(&model.commands) {
                 let ids = model.commands.iter().map(|x| x.id).collect();
                 orders.skip().perform_cmd(fetch_command_status(ids));
             }
         }
-        Msg::Fetched(cmd_status_result) => {
-            model.loading = false;
+        Msg::FetchedCommands(cmd_status_result) => {
+            model.commands_loading = false;
 
             match *cmd_status_result {
                 Ok(cmd_status) => {
@@ -102,16 +109,16 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 }
             }
             if !is_all_finished(&model.commands) {
-                let (cancel, fut) = sleep_with_handle(POLL_INTERVAL, Msg::Fetch, Msg::Noop);
+                let (cancel, fut) = sleep_with_handle(POLL_INTERVAL, Msg::FetchCommands, Msg::Noop);
                 model.cancel = Some(cancel);
                 orders.perform_cmd(fut);
             }
         }
         Msg::Open(x) => {
-            model.opens.insert(x);
+            model.commands_opens.insert(Idx::Command(x));
         }
         Msg::Close(x) => {
-            model.opens.remove(&x);
+            model.commands_opens.remove(&Idx::Command(x));
         }
         Msg::Noop => {}
     }
@@ -125,7 +132,7 @@ async fn fetch_command_status(command_ids: Vec<u32>) -> Result<Msg, Msg> {
 
     Request::api_query(Command::endpoint_name(), &ids)
         .expect("Bad query for command")
-        .fetch_json_data(|x| Msg::Fetched(Box::new(x)))
+        .fetch_json_data(|x| Msg::FetchedCommands(Box::new(x)))
         .await
 }
 
@@ -146,7 +153,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
             Msg::Modal,
             modal::content_view(
                 Msg::Modal,
-                if model.loading {
+                if model.commands_loading {
                     vec![
                         modal::title_view(Msg::Modal, span!["Loading Command"]),
                         div![
@@ -163,7 +170,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
                             model
                                 .commands
                                 .iter()
-                                .map(|x| { command_item_view(x, model.opens.contains(&x.id)) })
+                                .map(|x| { command_item_view(x, model.commands_opens.contains(&Idx::Command(x.id))) })
                         ],
                         modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
                     ]
