@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{iml, CheckedStatus, try_command_n_times};
+use crate::{iml, try_command_n_times, CheckedStatus};
 use std::{collections::HashMap, io, str, time::Duration};
 use tokio::{fs, process::Command, time::delay_for};
 

@@ -15,7 +15,12 @@ async fn setup() -> Result<(), Box<dyn std::error::Error>> {
     docker::system_prune().await?;
     docker::volume_prune().await?;
     docker::configure_docker_overrides().await?;
+    docker::stop_swarm().await?;
+    docker::remove_password().await?;
     iml_systemd::restart_unit("docker.service".into()).await?;
+
+    docker::start_swarm().await?;
+    docker::set_password().await?;
 
     // Destroy any vagrant nodes that are currently running
     vagrant::destroy().await?;

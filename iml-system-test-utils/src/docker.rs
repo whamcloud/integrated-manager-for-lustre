@@ -63,6 +63,50 @@ pub async fn volume_prune() -> Result<(), io::Error> {
         .await
 }
 
+pub async fn stop_swarm() -> Result<(), io::Error> {
+    let mut x = docker().await?;
+
+    x.arg("swarm").arg("leave").checked_status().await
+}
+
+pub async fn start_swarm() -> Result<(), io::Error> {
+    let mut x = docker().await?;
+
+    x.arg("swarm")
+        .arg("init")
+        .arg("--advertise-addr=127.0.0.1")
+        .arg("--listen-addr=127.0.0.1")
+        .checked_status()
+        .await
+}
+
+pub async fn set_password() -> Result<(), io::Error> {
+    let mut path = canonicalize(IML_DOCKER_PATH).await?;
+    path.push("setup");
+    path.push("password");
+
+    let mut file = File::create(&path).await?;
+    file.write_all(b"lustre").await?;
+
+    let mut x = docker().await?;
+    x.arg("secret")
+        .arg("create")
+        .arg("iml_pw")
+        .arg(&path.to_str().expect("Couldn't convert password path"))
+        .checked_status()
+        .await
+}
+
+pub async fn remove_password() -> Result<(), io::Error> {
+    let mut x = docker().await?;
+
+    x.arg("secret")
+        .arg("rm")
+        .arg("iml_pw")
+        .checked_status()
+        .await
+}
+
 pub async fn configure_docker_setup(setup: &DockerSetup) -> Result<(), io::Error> {
     let config = format!(
         r#"USE_STRATAGEM={}
