@@ -168,6 +168,7 @@ pub async fn setup_iml_install(hosts: &[&str]) -> Result<(), Box<dyn std::error:
     }
 
     up().await?.args(hosts).checked_status().await?;
+    delay_for(Duration::from_secs(15)).await;
 
     Ok(())
 }
@@ -215,7 +216,6 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
         configure_docker_network(host).await?;
     }
 
-    delay_for(Duration::from_secs(3)).await;
     iml::server_add(&server_map).await?;
 
     halt().await?.args(config.all()).checked_status().await?;
