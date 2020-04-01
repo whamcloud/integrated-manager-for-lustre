@@ -54,6 +54,7 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
         .expect("Couldn't retrieve snapshot list.")
         .to_vec();
     snapshots.sort_unstable();
+    println!("Snapshots: {:?}", snapshots);
 
     setup(&config, &snapshots).await?;
     docker::configure_docker_setup(&docker_setup).await?;

@@ -16,7 +16,7 @@ pub enum FsType {
     ZFS,
 }
 
-#[derive(Eq, PartialEq, PartialOrd, Clone)]
+#[derive(Eq, PartialEq, PartialOrd, Clone, Debug)]
 pub enum Snapshot {
     Bare,
     ImlInstalled,
