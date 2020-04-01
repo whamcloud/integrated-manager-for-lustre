@@ -10,19 +10,40 @@ use crate::{
 };
 use futures::channel::oneshot;
 use iml_wire_types::{ApiList, Command, EndpointName, Job, Step};
+use seed::fetch::FailReason;
 use seed::{prelude::*, *};
-use std::{collections::HashSet, sync::Arc, time::Duration};
 use std::collections::HashMap;
+use std::{collections::HashSet, sync::Arc, time::Duration};
+use crate::components::command_modal::Msg::FetchCommands;
+use serde::de::DeserializeOwned;
+use crate::components::datepicker::Msg::SelectDuration;
+use regex::{Regex, Captures};
 
 /// The component polls `/api/command/` endpoint and this constant defines how often it does.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
 type Job0 = Job<Option<()>>;
+
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub enum Idx {
     Command(u32),
     Job(u32),
     Step(u32),
+}
+
+#[derive(Clone, Debug)]
+pub enum Opens {
+    None,
+    Command(u32),
+    CommandJob(u32, u32),
+    // command, selected job
+    CommandJobSteps(u32, u32, Vec<u32>), // command, job, selected steps
+}
+
+impl Default for Opens {
+    fn default() -> Self {
+        Self::None
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -46,7 +67,7 @@ pub struct Model {
     pub steps_loading: bool,
     pub steps: Vec<Arc<Step>>,
 
-    pub opens: HashSet<Idx>,
+    pub opens: Opens,
     pub modal: modal::Model,
 }
 
@@ -62,9 +83,7 @@ pub enum Msg {
     FireCommands(Input),
     FetchCommands,
     FetchedCommands(Box<fetch::ResponseDataResult<ApiList<Command>>>),
-    FetchJobs,
     FetchedJobs(Box<fetch::ResponseDataResult<ApiList<Job0>>>),
-    FetchSteps,
     FetchedSteps(Box<fetch::ResponseDataResult<ApiList<Step>>>),
     Open(u32),
     Close(u32),
@@ -92,7 +111,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 Input::Ids(ids) => {
                     // we have ids only, so we need to populate the vector first
                     model.commands_loading = true;
-                    orders.perform_cmd(fetch_command_status(ids));
+                    orders.perform_cmd(fetch_the_batch(ids, |x| Msg::FetchedCommands(Box::new(x))));
                 }
             }
         }
@@ -100,7 +119,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             model.commands_cancel = None;
             if !is_all_finished(&model.commands) {
                 let ids = model.commands.iter().map(|x| x.id).collect();
-                orders.skip().perform_cmd(fetch_command_status(ids));
+                orders
+                    .skip()
+                    .perform_cmd(fetch_the_batch(ids, |x| Msg::FetchedCommands(Box::new(x))));
             }
         }
         Msg::FetchedCommands(cmd_status_result) => {
@@ -120,12 +141,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 orders.perform_cmd(fut);
             }
         }
-        Msg::FetchJobs => {
-            model.jobs_cancel = None;
-            model.jobs_loading = true;
-            let ids = model.jobs.iter().map(|x| x.id).collect();
-            orders.skip().perform_cmd(fetch_job_status(ids));
-        }
         Msg::FetchedJobs(job_status_result) => {
             model.jobs_loading = false;
             match *job_status_result {
@@ -137,12 +152,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     orders.skip();
                 }
             }
-        }
-        Msg::FetchSteps => {
-            model.steps_cancel = None;
-            model.steps_loading = true;
-            let ids = model.jobs.iter().map(|x| x.id).collect();
-            orders.skip().perform_cmd(fetch_job_status(ids));
         }
         Msg::FetchedSteps(step_status_result) => {
             model.steps_loading = false;
@@ -157,45 +166,58 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
         }
         Msg::Open(x) => {
-            model.opens.insert(Idx::Command(x));
+            model.opens = Opens::Command(x);
         }
         Msg::Close(x) => {
-            model.opens.remove(&Idx::Command(x));
+            model.opens = Opens::None;
         }
         Msg::Noop => {}
     }
 }
 
-async fn fetch_command_status(command_ids: Vec<u32>) -> Result<Msg, Msg> {
-    // e.g. GET /api/command/?id__in=1&id__in=2&id__in=11&limit=0
-    let err_msg = format!("Bad query for commands: {:?}", command_ids);
-    let mut ids: Vec<_> = command_ids.into_iter().map(|x| ("id__in", x)).collect();
-    ids.push(("limit", 0));
-    Request::api_query(Command::endpoint_name(), &ids)
-        .expect(&err_msg)
-        .fetch_json_data(|x| Msg::FetchedCommands(Box::new(x)))
-        .await
+async fn fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
+    match model.opens {
+        Opens::None => {
+            let ids = model.commands.iter().map(|x| x.id).collect();
+            orders
+                .skip()
+                .perform_cmd(fetch_the_batch(ids, |x| Msg::FetchedCommands(Box::new(x))));
+        }
+        Opens::Command(cmd_id) => {
+            let ids: Vec<u32> = model.commands.iter().map(|x| x.id).collect();
+            if let Some(i) = model.commands.iter().position(|cid| cid.id == cmd_id) {
+                let cmd = &model.commands[i];
+                let job_ids: Vec<u32> = cmd.jobs.iter().map(|s| extract_job_id(s)).filter(|x| x.is_some()).map(|x| x.unwrap()).collect();
+            }
+        }
+        Opens::CommandJob(_, _) => {}
+        Opens::CommandJobSteps(_, _, _) => {}
+    }
 }
 
-async fn fetch_job_status(job_ids: Vec<u32>) -> Result<Msg, Msg> {
-    // e.g. GET /api/job/?id__in=1&id__in=2&id__in=11&limit=0
-    let err_msg = format!("Bad query for commands: {:?}", job_ids);
-    let mut ids: Vec<_> = job_ids.into_iter().map(|x| ("id__in", x)).collect();
-    ids.push(("limit", 0));
-    Request::api_query(Job0::endpoint_name(), &ids)
-        .expect(&err_msg)
-        .fetch_json_data(|x| Msg::FetchedJobs(Box::new(x)))
-        .await
+fn extract_job_id(input: &str) -> Option<u32> {
+    lazy_static::lazy_static! {
+        static ref RE: Regex = Regex::new(r"/api/job/(\d+)/").unwrap();
+    }
+    RE.captures(input).and_then(|cap: Captures| {
+        let s = cap.get(1).unwrap().as_str();
+        s.parse::<u32>().ok()
+    })
 }
 
-async fn fetch_step_status(step_ids: Vec<u32>) -> Result<Msg, Msg> {
-    // e.g. GET /api/step/?id__in=1&id__in=2&id__in=11&limit=0
-    let err_msg = format!("Bad query for commands: {:?}", step_ids);
-    let mut ids: Vec<_> = step_ids.into_iter().map(|x| ("id__in", x)).collect();
+async fn fetch_the_batch<T, F, U>(ids: Vec<u32>, conv: F) -> Result<U, U>
+    where
+        T: DeserializeOwned + EndpointName + 'static,
+        F: FnOnce(ResponseDataResult<ApiList<T>>) -> U,
+        U: 'static
+{
+    // e.g. GET /api/something/?id__in=1&id__in=2&id__in=11&limit=0
+    let err_msg = format!("Bad query for {}: {:?}", T::endpoint_name(), ids);
+    let mut ids: Vec<_> = ids.into_iter().map(|x| ("id__in", x)).collect();
     ids.push(("limit", 0));
-    Request::api_query(Step::endpoint_name(), &ids)
+    Request::api_query(T::endpoint_name(), &ids)
         .expect(&err_msg)
-        .fetch_json_data(|x| Msg::FetchedSteps(Box::new(x)))
+        .fetch_json_data(conv)
         .await
 }
 
@@ -205,6 +227,15 @@ const fn is_finished(cmd: &Command) -> bool {
 
 fn is_all_finished(cmds: &[Arc<Command>]) -> bool {
     cmds.iter().all(|cmd| is_finished(cmd))
+}
+
+fn is_command_in_opens(cmd_id: u32, opens: &Opens) -> bool {
+    match opens {
+        Opens::None => false,
+        Opens::Command(cid) => cmd_id == *cid,
+        Opens::CommandJob(cid, _) => cmd_id == *cid,
+        Opens::CommandJobSteps(cid, _, _) => cmd_id == *cid,
+    }
 }
 
 pub(crate) fn view(model: &Model) -> Node<Msg> {
@@ -233,23 +264,23 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
                             model
                                 .commands
                                 .iter()
-                                .map(|x| { command_item_view(x, model.opens.contains(&Idx::Command(x.id))) })
+                                .map(|x| { command_item_view(x, is_command_in_opens(x.id, &model.opens)) })
                         ],
                         modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
                     ]
                 },
             ),
         )
-        .with_listener(keyboard_ev(Ev::KeyDown, move |ev| match ev.key_code() {
-            key_codes::ESC => Msg::Modal(modal::Msg::Close),
-            _ => Msg::Noop,
-        }))
-        .merge_attrs(class![C.text_black])
+            .with_listener(keyboard_ev(Ev::KeyDown, move |ev| match ev.key_code() {
+                key_codes::ESC => Msg::Modal(modal::Msg::Close),
+                _ => Msg::Noop,
+            }))
+            .merge_attrs(class![C.text_black])
     }
 }
 
-fn command_item_view(x: &Command, open: bool) -> Node<Msg> {
-    let border = if !open {
+fn command_item_view(x: &Command, is_open: bool) -> Node<Msg> {
+    let border = if !is_open {
         C.border_transparent
     } else if x.cancelled {
         C.border_gray_500
@@ -261,7 +292,7 @@ fn command_item_view(x: &Command, open: bool) -> Node<Msg> {
         C.border_transparent
     };
 
-    let (open_icon, m) = if open {
+    let (open_icon, m) = if is_open {
         ("chevron-circle-up", Msg::Close(x.id))
     } else {
         ("chevron-circle-down", Msg::Open(x.id))
@@ -294,7 +325,7 @@ fn command_item_view(x: &Command, open: bool) -> Node<Msg> {
                 ),
             ],
             ul![
-                class![C.pl_8, C.hidden => !open],
+                class![C.pl_8, C.hidden => !is_open],
                 li![class![C.pb_2], "Started at: ", x.created_at],
                 li![class![C.pb_2], "Status: ", status_text(x)],
             ]
@@ -342,5 +373,17 @@ fn close_button() -> Node<Msg> {
         simple_ev(Ev::Click, modal::Msg::Close),
         "Close",
     ]
-    .map_msg(Msg::Modal)
+        .map_msg(Msg::Modal)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_job() {
+        assert_eq!(extract_job_id("/api/job/39/"), Some(39));
+        assert_eq!(extract_job_id("/api/job/0/"), Some(0));
+        assert_eq!(extract_job_id("/api/job/xxx/"), None);
+    }
 }
