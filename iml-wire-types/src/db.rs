@@ -820,13 +820,21 @@ impl<'a> FromSql<'a> for Size {
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
 pub enum DeviceType {
+    #[serde(rename = "scsi")]
     ScsiDevice,
+    #[serde(rename = "partition")]
     Partition,
+    #[serde(rename = "mdraid")]
     MdRaid,
+    #[serde(rename = "mpath")]
     Mpath,
+    #[serde(rename = "vg")]
     VolumeGroup,
+    #[serde(rename = "lv")]
     LogicalVolume,
+    #[serde(rename = "zpool")]
     Zpool,
+    #[serde(rename = "dataset")]
     Dataset,
 }
 
