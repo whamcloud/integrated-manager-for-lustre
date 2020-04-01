@@ -21,8 +21,16 @@ async fn setup() -> Result<(), Box<dyn std::error::Error>> {
     docker::start_swarm().await?;
     docker::set_password().await?;
 
-    // Destroy any vagrant nodes that are currently running
-    vagrant::destroy().await?;
+    let snapshot_map = vagrant::get_snapshots().await?;
+    let snapshots = snapshot_map
+        .values()
+        .next()
+        .expect("Couldn't retrieve snapshot list.");
+    
+    if snapshots.len() == 0 {
+        // Destroy any vagrant nodes that are currently running
+        vagrant::destroy().await?;
+    }
 
     Ok(())
 }
