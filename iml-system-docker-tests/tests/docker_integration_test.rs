@@ -9,7 +9,10 @@ use std::{
 };
 use tokio::time::delay_for;
 
-async fn setup() -> Result<(), Box<dyn std::error::Error>> {
+async fn setup(
+    config: &vagrant::ClusterConfig,
+    snapshots: &[vagrant::Snapshot],
+) -> Result<(), Box<dyn std::error::Error>> {
     // remove the stack if it is running and clean up volumes and network
     docker::remove_iml_stack().await?;
     docker::system_prune().await?;
@@ -21,15 +24,18 @@ async fn setup() -> Result<(), Box<dyn std::error::Error>> {
     docker::start_swarm().await?;
     docker::set_password().await?;
 
-    let snapshot_map = vagrant::get_snapshots().await?;
-    let snapshots = snapshot_map
-        .values()
-        .next()
-        .expect("Couldn't retrieve snapshot list.");
-    
     if snapshots.len() == 0 {
         // Destroy any vagrant nodes that are currently running
         vagrant::destroy().await?;
+    } else {
+        // Restore to the latest snapshot point
+        let snapshot = snapshots
+            .iter()
+            .last()
+            .expect("Couldn't get last snapshot.");
+        for host in &config.iscsi_and_storage_servers() {
+            vagrant::snapshot_restore(&host, snapshot.to_string().as_ref()).await?;
+        }
     }
 
     Ok(())
@@ -41,7 +47,15 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
     server_map: HashMap<String, &[String], S>,
     fs_type: vagrant::FsType,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    setup().await?;
+    let snapshot_map = vagrant::get_snapshots().await?;
+    let mut snapshots: Vec<vagrant::Snapshot> = snapshot_map
+        .values()
+        .next()
+        .expect("Couldn't retrieve snapshot list.")
+        .to_vec();
+    snapshots.sort_unstable();
+
+    setup(&config, &snapshots).await?;
     docker::configure_docker_setup(&docker_setup).await?;
 
     docker::deploy_iml_stack().await?;

@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{iml, try_command_n_times, CheckedStatus};
-use std::{collections::HashMap, fmt, io, str, time::Duration};
+use std::{cmp::Ordering, collections::HashMap, fmt, io, str, time::Duration};
 use tokio::{fs, process::Command, time::delay_for};
 
 pub enum NtpServer {
@@ -16,12 +16,29 @@ pub enum FsType {
     ZFS,
 }
 
-#[derive(PartialEq)]
+#[derive(Eq, PartialEq, PartialOrd, Clone)]
 pub enum Snapshot {
     Bare,
     ImlInstalled,
-    ImlDeployed,
     ServersDeployed,
+    FilesystemCreated,
+}
+
+impl Snapshot {
+    pub fn ordinal(&self) -> usize {
+        match &*self {
+            Self::Bare => 0,
+            Self::ImlInstalled => 1,
+            Self::ServersDeployed => 2,
+            Self::FilesystemCreated => 3,
+        }
+    }
+}
+
+impl Ord for Snapshot {
+    fn cmp(&self, other: &Snapshot) -> Ordering {
+        self.ordinal().cmp(&other.ordinal())
+    }
 }
 
 impl From<&String> for Snapshot {
@@ -29,8 +46,8 @@ impl From<&String> for Snapshot {
         match s.to_lowercase().as_str() {
             "bare" => Self::Bare,
             "iml-installed" => Self::ImlInstalled,
-            "iml-deployed" => Self::ImlDeployed,
             "servers-deployed" => Self::ServersDeployed,
+            "filesystem-created" => Self::FilesystemCreated,
             _ => Self::Bare,
         }
     }
@@ -41,8 +58,8 @@ impl fmt::Display for Snapshot {
         match self {
             Self::Bare => write!(f, "bare"),
             Self::ImlInstalled => write!(f, "iml-installed"),
-            Self::ImlDeployed => write!(f, "iml-deployed"),
             Self::ServersDeployed => write!(f, "servers-deployed"),
+            Self::FilesystemCreated => write!(f, "filesystem-created"),
         }
     }
 }
@@ -135,7 +152,7 @@ pub async fn run_vm_command(node: &str, cmd: &str) -> Result<Command, io::Error>
     Ok(x)
 }
 
-pub async fn get_snapshots() -> Result<HashMap<String, Vec<String>>, io::Error> {
+pub async fn get_snapshots() -> Result<HashMap<String, Vec<Snapshot>>, io::Error> {
     let mut x = vagrant().await?;
 
     let snapshots: std::process::Output = x.arg("snapshot").arg("list").output().await?;
@@ -152,7 +169,7 @@ pub async fn get_snapshots() -> Result<HashMap<String, Vec<String>>, io::Error> 
                 let v = map
                     .get_mut(key)
                     .unwrap_or_else(|| panic!("Couldn't find key {} in snapshot map.", key));
-                v.push(x.to_string());
+                v.push(Snapshot::from(&x.to_string()));
                 (&key, map)
             }
         });
@@ -236,7 +253,7 @@ pub async fn setup_deploy_servers(
     halt().await?.args(config.all()).checked_status().await?;
 
     for host in config.all() {
-        snapshot_save(host, Snapshot::ImlDeployed.to_string().as_ref())
+        snapshot_save(host, Snapshot::ServersDeployed.to_string().as_ref())
             .await?
             .checked_status()
             .await?;
@@ -254,7 +271,7 @@ pub async fn has_snapshot(name: Snapshot) -> Result<bool, Box<dyn std::error::Er
         .next()
         .expect("Couldn't retrieve snapshot list.");
 
-    Ok(snapshots.iter().any(|x| Snapshot::from(x) == name))
+    Ok(snapshots.iter().any(|x| *x == name))
 }
 
 pub async fn add_servers<S: std::hash::BuildHasher>(
@@ -288,12 +305,6 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
 ) -> Result<(), Box<dyn std::error::Error>> {
     if !(has_snapshot(Snapshot::Bare).await?) {
         setup_bare(&config.iscsi_and_storage_servers(), &config).await?;
-    } else {
-        // Storage servers already updated, bring them up
-        up().await?
-            .args(&config.iscsi_and_storage_servers())
-            .checked_status()
-            .await?;
     }
 
     delay_for(Duration::from_secs(30)).await;
@@ -386,6 +397,17 @@ pub async fn create_fs(fs_type: FsType, hosts: &[&str]) -> Result<(), io::Error>
         FsType::LDISKFS => create_monitored_ldiskfs(&hosts).await?,
         FsType::ZFS => create_monitored_zfs(&hosts).await?,
     };
+
+    halt().await?.args(hosts).checked_status().await?;
+
+    for x in hosts {
+        snapshot_save(x, Snapshot::FilesystemCreated.to_string().as_str())
+            .await?
+            .checked_status()
+            .await?;
+    }
+
+    up().await?.args(hosts).checked_status().await?;
 
     Ok(())
 }
