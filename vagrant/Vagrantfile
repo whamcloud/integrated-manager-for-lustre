@@ -11,6 +11,8 @@ ISCSI_MEM = (ENV['ISCSI_MEM'] || 1024).freeze
 # Num CPUs allocated to the iSCSI server VM
 ISCSI_CPU = (ENV['ISCSI_CPU'] || 4).freeze
 
+REPO_URI = (ENV['REPO_URI'] || '').freeze
+
 require 'open3'
 require 'fileutils'
 
@@ -122,6 +124,15 @@ Vagrant.configure('2') do |config|
                               'target/',
                               'vagrant/'
                            ]
+
+    # Install IML onto the admin node
+    # Using a given repouri
+    adm.vm.provision 'install-iml-repouri',
+                     type: 'shell',
+                     run: 'never',
+                     path: 'scripts/install_iml_repouri.sh',
+                     args: REPO_URI
+
 
     # Install IML onto the admin node
     # Using the mfl devel repo
