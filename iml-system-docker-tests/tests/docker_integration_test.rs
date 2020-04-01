@@ -16,6 +16,7 @@ async fn setup() -> Result<(), Box<dyn std::error::Error>> {
     docker::volume_prune().await?;
     docker::configure_docker_overrides().await?;
     docker::stop_swarm().await?;
+    docker::remove_password().await?;
     iml_systemd::restart_unit("docker.service".into()).await?;
 
     docker::start_swarm().await?;

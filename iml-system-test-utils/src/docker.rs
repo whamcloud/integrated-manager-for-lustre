@@ -66,11 +66,7 @@ pub async fn volume_prune() -> Result<(), io::Error> {
 pub async fn stop_swarm() -> Result<(), io::Error> {
     let mut x = docker().await?;
 
-    x.arg("swarm")
-        .arg("leave")
-        .arg("--force")
-        .status()
-        .await?;
+    x.arg("swarm").arg("leave").arg("--force").status().await?;
 
     Ok(())
 }
@@ -106,11 +102,9 @@ pub async fn set_password() -> Result<(), io::Error> {
 pub async fn remove_password() -> Result<(), io::Error> {
     let mut x = docker().await?;
 
-    x.arg("secret")
-        .arg("rm")
-        .arg("iml_pw")
-        .checked_status()
-        .await
+    x.arg("secret").arg("rm").arg("iml_pw").status().await?;
+
+    Ok(())
 }
 
 pub async fn configure_docker_setup(setup: &DockerSetup) -> Result<(), io::Error> {

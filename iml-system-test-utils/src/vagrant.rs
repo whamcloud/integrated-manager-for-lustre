@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{iml, try_command_n_times, CheckedStatus};
-use std::{collections::HashMap, fmt, io, str, time::Duration};
+use std::{collections::HashMap, io, str, time::Duration};
 use tokio::{fs, process::Command, time::delay_for};
 
 pub enum NtpServer {
@@ -14,37 +14,6 @@ pub enum NtpServer {
 pub enum FsType {
     LDISKFS,
     ZFS,
-}
-
-#[derive(PartialEq)]
-pub enum Snapshot {
-    Bare,
-    ImlInstalled,
-    ImlDeployed,
-    ServersDeployed,
-}
-
-impl From<&String> for Snapshot {
-    fn from(s: &String) -> Self {
-        match s.to_lowercase().as_str() {
-            "bare" => Self::Bare,
-            "iml-installed" => Self::ImlInstalled,
-            "iml-deployed" => Self::ImlDeployed,
-            "servers-deployed" => Self::ServersDeployed,
-            _ => Self::Bare,
-        }
-    }
-}
-
-impl fmt::Display for Snapshot {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Bare => write!(f, "bare"),
-            Self::ImlInstalled => write!(f, "iml-installed"),
-            Self::ImlDeployed => write!(f, "iml-deployed"),
-            Self::ServersDeployed => write!(f, "servers-deployed"),
-        }
-    }
 }
 
 async fn vagrant() -> Result<Command, io::Error> {
@@ -135,31 +104,6 @@ pub async fn run_vm_command(node: &str, cmd: &str) -> Result<Command, io::Error>
     Ok(x)
 }
 
-pub async fn get_snapshots() -> Result<HashMap<String, Vec<String>>, io::Error> {
-    let mut x = vagrant().await?;
-
-    let snapshots: std::process::Output = x.arg("snapshot").arg("list").output().await?;
-
-    let (_, snapshot_map) = str::from_utf8(&snapshots.stdout)
-        .expect("Couldn't parse snapshot list.")
-        .lines()
-        .fold(("", HashMap::new()), |(key, mut map), x| {
-            if x.find("==>").is_some() {
-                let key = &x[4..];
-                map.insert(key.to_string(), vec![]);
-                (&key, map)
-            } else {
-                let v = map
-                    .get_mut(key)
-                    .unwrap_or_else(|| panic!("Couldn't find key {} in snapshot map.", key));
-                v.push(x.to_string());
-                (&key, map)
-            }
-        });
-
-    Ok(snapshot_map)
-}
-
 pub async fn setup_bare(
     hosts: &[&str],
     config: &ClusterConfig,
@@ -177,10 +121,7 @@ pub async fn setup_bare(
     halt().await?.args(hosts).checked_status().await?;
 
     for x in hosts {
-        snapshot_save(x, Snapshot::Bare.to_string().as_str())
-            .await?
-            .checked_status()
-            .await?;
+        snapshot_save(x, "bare").await?.checked_status().await?;
     }
 
     up().await?.args(hosts).checked_status().await?;
@@ -203,7 +144,7 @@ pub async fn setup_iml_install(
     halt().await?.args(hosts).checked_status().await?;
 
     for host in hosts {
-        snapshot_save(host, Snapshot::ImlInstalled.to_string().as_ref())
+        snapshot_save(host, "iml-installed")
             .await?
             .checked_status()
             .await?;
@@ -236,7 +177,7 @@ pub async fn setup_deploy_servers(
     halt().await?.args(config.all()).checked_status().await?;
 
     for host in config.all() {
-        snapshot_save(host, Snapshot::ImlDeployed.to_string().as_ref())
+        snapshot_save(host, "iml-deployed")
             .await?
             .checked_status()
             .await?;
@@ -245,16 +186,6 @@ pub async fn setup_deploy_servers(
     up().await?.args(config.all()).checked_status().await?;
 
     Ok(())
-}
-
-pub async fn has_snapshot(name: Snapshot) -> Result<bool, Box<dyn std::error::Error>> {
-    let snapshot_map = get_snapshots().await?;
-    let snapshots = snapshot_map
-        .values()
-        .next()
-        .expect("Couldn't retrieve snapshot list.");
-
-    Ok(snapshots.iter().any(|x| Snapshot::from(x) == name))
 }
 
 pub async fn add_servers<S: std::hash::BuildHasher>(
@@ -270,7 +201,7 @@ pub async fn add_servers<S: std::hash::BuildHasher>(
         .await?;
 
     for host in config.iscsi_and_storage_servers() {
-        snapshot_save(host, Snapshot::ServersDeployed.to_string().as_ref())
+        snapshot_save(host, "servers-deployed")
             .await?
             .checked_status()
             .await?;
@@ -286,15 +217,7 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     server_map: HashMap<String, &[String], S>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !(has_snapshot(Snapshot::Bare).await?) {
-        setup_bare(&config.iscsi_and_storage_servers(), &config).await?;
-    } else {
-        // Storage servers already updated, bring them up
-        up().await?
-            .args(&config.iscsi_and_storage_servers())
-            .checked_status()
-            .await?;
-    }
+    setup_bare(&config.iscsi_and_storage_servers(), &config).await?;
 
     delay_for(Duration::from_secs(30)).await;
 
@@ -303,9 +226,7 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
         configure_docker_network(host).await?;
     }
 
-    if !(has_snapshot(Snapshot::ServersDeployed).await?) {
-        add_servers(&config, &server_map).await?;
-    }
+    add_servers(&config, &server_map).await?;
 
     Ok(())
 }
