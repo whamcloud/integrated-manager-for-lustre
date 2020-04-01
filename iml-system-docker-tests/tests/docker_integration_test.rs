@@ -16,7 +16,6 @@ async fn setup() -> Result<(), Box<dyn std::error::Error>> {
     docker::volume_prune().await?;
     docker::configure_docker_overrides().await?;
     docker::stop_swarm().await?;
-    docker::remove_password().await?;
     iml_systemd::restart_unit("docker.service".into()).await?;
 
     docker::start_swarm().await?;
@@ -40,11 +39,10 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
     docker::deploy_iml_stack().await?;
 
     vagrant::setup_deploy_docker_servers(&config, server_map).await?;
-    vagrant::configure_ntp_for_host_only_if(&config).await?;
     vagrant::create_fs(fs_type, &config.storage_servers()[..]).await?;
 
     // Wait three seconds before detecting the filesystem
-    delay_for(Duration::from_secs(3)).await;
+    delay_for(Duration::from_secs(10)).await;
 
     iml::detect_fs().await?;
 

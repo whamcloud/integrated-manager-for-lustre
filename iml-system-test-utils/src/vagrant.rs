@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{iml, try_command_n_times, CheckedStatus};
-use std::{collections::HashMap, io, str, time::Duration};
+use std::{collections::HashMap, fmt, io, str, time::Duration};
 use tokio::{fs, process::Command, time::delay_for};
 
 pub enum NtpServer {
@@ -14,6 +14,37 @@ pub enum NtpServer {
 pub enum FsType {
     LDISKFS,
     ZFS,
+}
+
+#[derive(PartialEq)]
+pub enum Snapshot {
+    Bare,
+    ImlInstalled,
+    ImlDeployed,
+    ServersDeployed,
+}
+
+impl From<&String> for Snapshot {
+    fn from(s: &String) -> Self {
+        match s.to_lowercase().as_str() {
+            "bare" => Self::Bare,
+            "iml-installed" => Self::ImlInstalled,
+            "iml-deployed" => Self::ImlDeployed,
+            "servers-deployed" => Self::ServersDeployed,
+            _ => Self::Bare,
+        }
+    }
+}
+
+impl fmt::Display for Snapshot {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Bare => write!(f, "bare"),
+            Self::ImlInstalled => write!(f, "iml-installed"),
+            Self::ImlDeployed => write!(f, "iml-deployed"),
+            Self::ServersDeployed => write!(f, "servers-deployed"),
+        }
+    }
 }
 
 async fn vagrant() -> Result<Command, io::Error> {
@@ -129,7 +160,10 @@ pub async fn get_snapshots() -> Result<HashMap<String, Vec<String>>, io::Error> 
     Ok(snapshot_map)
 }
 
-pub async fn setup_bare(hosts: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn setup_bare(
+    hosts: &[&str],
+    config: &ClusterConfig,
+) -> Result<(), Box<dyn std::error::Error>> {
     up().await?.args(hosts).checked_status().await?;
 
     provision("yum-update")
@@ -138,10 +172,15 @@ pub async fn setup_bare(hosts: &[&str]) -> Result<(), Box<dyn std::error::Error>
         .checked_status()
         .await?;
 
+    configure_ntp_for_host_only_if(&config.storage_servers()).await?;
+
     halt().await?.args(hosts).checked_status().await?;
 
     for x in hosts {
-        snapshot_save(x, "bare").await?.checked_status().await?;
+        snapshot_save(x, Snapshot::Bare.to_string().as_str())
+            .await?
+            .checked_status()
+            .await?;
     }
 
     up().await?.args(hosts).checked_status().await?;
@@ -149,8 +188,11 @@ pub async fn setup_bare(hosts: &[&str]) -> Result<(), Box<dyn std::error::Error>
     Ok(())
 }
 
-pub async fn setup_iml_install(hosts: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
-    setup_bare(hosts).await?;
+pub async fn setup_iml_install(
+    hosts: &[&str],
+    config: &ClusterConfig,
+) -> Result<(), Box<dyn std::error::Error>> {
+    setup_bare(hosts, &config).await?;
 
     provision("install-iml-local")
         .await?
@@ -161,7 +203,7 @@ pub async fn setup_iml_install(hosts: &[&str]) -> Result<(), Box<dyn std::error:
     halt().await?.args(hosts).checked_status().await?;
 
     for host in hosts {
-        snapshot_save(host, "iml-installed")
+        snapshot_save(host, Snapshot::ImlInstalled.to_string().as_ref())
             .await?
             .checked_status()
             .await?;
@@ -177,7 +219,7 @@ pub async fn setup_deploy_servers(
     config: &ClusterConfig,
     profile: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    setup_iml_install(&config.all()).await?;
+    setup_iml_install(&config.all(), &config).await?;
 
     run_vm_command(
         "adm",
@@ -194,7 +236,7 @@ pub async fn setup_deploy_servers(
     halt().await?.args(config.all()).checked_status().await?;
 
     for host in config.all() {
-        snapshot_save(host, "iml-deployed")
+        snapshot_save(host, Snapshot::ImlDeployed.to_string().as_ref())
             .await?
             .checked_status()
             .await?;
@@ -205,23 +247,30 @@ pub async fn setup_deploy_servers(
     Ok(())
 }
 
-pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
+pub async fn has_snapshot(name: Snapshot) -> Result<bool, Box<dyn std::error::Error>> {
+    let snapshot_map = get_snapshots().await?;
+    let snapshots = snapshot_map
+        .values()
+        .next()
+        .expect("Couldn't retrieve snapshot list.");
+
+    Ok(snapshots.iter().any(|x| Snapshot::from(x) == name))
+}
+
+pub async fn add_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
-    server_map: HashMap<String, &[String], S>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    setup_bare(&config.iscsi_and_storage_servers()).await?;
-
-    let storage_servers: Vec<&str> = config.storage_servers();
-    for host in &storage_servers {
-        configure_docker_network(host).await?;
-    }
-
+    server_map: &HashMap<String, &[String], S>,
+) -> Result<(), io::Error> {
     iml::server_add(&server_map).await?;
 
-    halt().await?.args(config.all()).checked_status().await?;
+    halt()
+        .await?
+        .args(config.iscsi_and_storage_servers())
+        .checked_status()
+        .await?;
 
-    for host in config.all() {
-        snapshot_save(host, "servers-deployed")
+    for host in config.iscsi_and_storage_servers() {
+        snapshot_save(host, Snapshot::ServersDeployed.to_string().as_ref())
             .await?
             .checked_status()
             .await?;
@@ -230,7 +279,33 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     up().await?
         .args(&config.iscsi_and_storage_servers())
         .checked_status()
-        .await?;
+        .await
+}
+
+pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
+    config: &ClusterConfig,
+    server_map: HashMap<String, &[String], S>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if !(has_snapshot(Snapshot::Bare).await?) {
+        setup_bare(&config.iscsi_and_storage_servers(), &config).await?;
+    } else {
+        // Storage servers already updated, bring them up
+        up().await?
+            .args(&config.iscsi_and_storage_servers())
+            .checked_status()
+            .await?;
+    }
+
+    delay_for(Duration::from_secs(30)).await;
+
+    let storage_servers: Vec<&str> = config.storage_servers();
+    for host in &storage_servers {
+        configure_docker_network(host).await?;
+    }
+
+    if !(has_snapshot(Snapshot::ServersDeployed).await?) {
+        add_servers(&config, &server_map).await?;
+    }
 
     Ok(())
 }
@@ -245,19 +320,19 @@ pub async fn configure_docker_network(host: &str) -> Result<(), io::Error> {
     Ok(())
 }
 
-pub async fn configure_ntp(config: &ClusterConfig, ntp_server: NtpServer) -> Result<(), io::Error> {
+pub async fn configure_ntp(hosts: &[&str], ntp_server: NtpServer) -> Result<(), io::Error> {
     match ntp_server {
         NtpServer::HostOnly => {
             provision("configure-ntp-docker")
                 .await?
-                .args(&config.storage_servers())
+                .args(hosts)
                 .checked_status()
                 .await?
         }
         NtpServer::Adm => {
             provision("configure-ntp")
                 .await?
-                .args(&config.storage_servers())
+                .args(hosts)
                 .checked_status()
                 .await?
         }
@@ -266,14 +341,14 @@ pub async fn configure_ntp(config: &ClusterConfig, ntp_server: NtpServer) -> Res
     Ok(())
 }
 
-pub async fn configure_ntp_for_host_only_if(config: &ClusterConfig) -> Result<(), io::Error> {
-    configure_ntp(config, NtpServer::HostOnly).await?;
+pub async fn configure_ntp_for_host_only_if(hosts: &[&str]) -> Result<(), io::Error> {
+    configure_ntp(&hosts, NtpServer::HostOnly).await?;
 
     Ok(())
 }
 
-pub async fn configure_ntp_for_adm(config: &ClusterConfig) -> Result<(), io::Error> {
-    configure_ntp(config, NtpServer::Adm).await?;
+pub async fn configure_ntp_for_adm(hosts: &[&str]) -> Result<(), io::Error> {
+    configure_ntp(&hosts, NtpServer::Adm).await?;
 
     Ok(())
 }
