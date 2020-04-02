@@ -9,7 +9,7 @@ vars = {
     "HTTP_AGENT_PROXY_PASS": "http://http-agent:8002",
     "HTTP_AGENT2_PROXY_PASS": "http://iml-agent-comms:8003",
     "REPO_PATH": "/var/lib/chroma/repo",
-    "DEVICE_AGGREGATOR_PROXY_PASS": "http://device-aggregator:8008",
+    "DEVICE_AGGREGATOR_PROXY_PASS": "http://device:8008",
     "UPDATE_HANDLER_PROXY_PASS": "http://update-handler:8080",
     "WARP_DRIVE_PROXY_PASS": "http://iml-warp-drive:8890",
     "MAILBOX_PATH": "/var/spool/iml/mailbox",
@@ -29,11 +29,6 @@ with open(conf_template, "r") as f:
     config = re.sub(
         r"proxy_read_timeout (.+);",
         r"proxy_read_timeout \g<1>;\n    resolver 127.0.0.11 ipv6=off valid=5s;\n    resolver_timeout 5s;",
-        config,
-    )
-    config = re.sub(
-        r"location /iml-device-aggregator {",
-        r"location /iml-device-aggregator {\n\n         client_body_buffer_size 1m;\n        client_max_body_size 8m;\n",
         config,
     )
 

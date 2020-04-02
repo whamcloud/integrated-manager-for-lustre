@@ -11,6 +11,7 @@
 
 pub mod action_runner;
 pub mod daemon_plugin;
+pub mod device;
 pub mod ostpool;
 pub mod postoffice;
 pub mod stats;

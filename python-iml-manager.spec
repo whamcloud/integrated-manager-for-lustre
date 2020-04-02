@@ -69,7 +69,6 @@ Requires:       nodejs >= 1:6.16.0
 Requires(post): selinux-policy-targeted
 # IML Repo
 Requires:       python2-django-picklefield >= 1.0.0
-Requires:       iml-device-scanner-aggregator >= 3.0.0
 Requires:       iml-online-help >= 2.6.0
 Requires:       iml_sos_plugin >= 2.3
 Requires:       iml-update-handler >= 1.0.3, iml-update-handler < 2
@@ -88,6 +87,7 @@ Requires:       rust-iml-ostpool >= 0.1.2
 Requires:       rust-iml-postoffice >= 0.1.0
 Requires:       rust-iml-stats >= 0.1.2
 Requires:       rust-iml-warp-drive >= 0.1.2
+Requires:       rust-iml-device >= 0.1.2
 # Other Repos
 Requires:       influxdb
 Requires:       grafana
@@ -189,7 +189,6 @@ mkdir -p $RPM_BUILD_ROOT%{_mandir}/man1
 install chroma-config.1.gz $RPM_BUILD_ROOT%{_mandir}/man1
 install -m 644 logrotate.cfg $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/chroma-manager
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}/
-mkdir -p $RPM_BUILD_ROOT%{_unitdir}/device-aggregator.service.d/
 install -m 644 iml-manager.target $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-corosync.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-gunicorn.service $RPM_BUILD_ROOT%{_unitdir}/
@@ -200,7 +199,6 @@ install -m 644 iml-plugin-runner.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-power-control.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-settings-populator.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-syslog.service $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 10-device-aggregator.service.conf $RPM_BUILD_ROOT%{_unitdir}/device-aggregator.service.d/
 mkdir -p $RPM_BUILD_ROOT/var/log/chroma
 
 # only include modules in the main package
@@ -301,7 +299,6 @@ fi
 %attr(0644,root,grafana)%{_sysconfdir}/grafana/provisioning/datasources/influxdb-iml-datasource.yml
 %attr(0644,root,root)%{_unitdir}/iml-manager.target
 %attr(0644,root,root)%{_unitdir}/*.service
-%attr(0644,root,root)%{_unitdir}/device-aggregator.service.d/10-device-aggregator.service.conf
 %attr(0755,root,root)%{manager_root}/manage.py
 %{manager_root}/agent-bootstrap-script.template
 %{manager_root}/chroma-manager.conf.template

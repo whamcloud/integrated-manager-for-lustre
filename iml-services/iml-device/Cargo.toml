@@ -1,0 +1,25 @@
+[package]
+name = "iml-device"
+version = "0.1.2"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+device-types = "0.1"
+futures = "0.3"
+iml-rabbit = { path = "../../iml-rabbit", version = "0.1.0" }
+iml-manager-env = { path = "../../iml-manager-env", version = "0.1.0" }
+iml-service-queue = { path = "../iml-service-queue", version = "0.1.0" }
+iml-wire-types = { path = "../../iml-wire-types", version = "0.2", features = ["postgres-interop"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+tokio = { version = "0.2", features = ["macros"] }
+tokio-util = { version = "0.3", features = ["codec"] }
+tracing = "0.1"
+tracing-subscriber = "0.2"
+
+warp = "0.2"
+
+[dev-dependencies]
+insta = "0.15"

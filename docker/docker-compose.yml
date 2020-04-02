@@ -102,13 +102,16 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - "IML_CA_PATH=/var/lib/chroma/authority.crt"
-  device-aggregator:
-    image: "imlteam/device-aggregator:latest"
-    hostname: "device-aggregator"
+  device:
+    image: "imlteam/device:5.1.1-dev"
+    hostname: "device"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-device.dockerfile
     deploy: *default-deploy
     environment:
       - DEVICE_AGGREGATOR_PORT=8008
-      - PROXY_HOST=device-aggregator
+      - PROXY_HOST=device
       - RUST_LOG=info
     volumes:
       - "manager-config:/var/lib/chroma"
@@ -190,7 +193,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - DEVICE_AGGREGATOR_URL=http://device-aggregator:8008
+      - DEVICE_AGGREGATOR_URL=http://device:8008
   power-control:
     image: "imlteam/manager-power-control:5.1.1-dev"
     hostname: "power-control"

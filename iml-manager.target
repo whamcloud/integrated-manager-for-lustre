@@ -70,31 +70,31 @@ After=influxdb.service
 Requires=grafana-server.service
 After=grafana-server.service
 
-Requires=device-aggregator.service
-After=device-aggregator.service
+Requires=iml-device.service
+After=iml-device.service
 
 After=network.target
 
 [Install]
 WantedBy=multi-user.target
+Also=grafana-server.service
+Also=iml-action-runner.service
+Also=iml-agent-comms.service
+Also=iml-api.service
 Also=iml-corosync.service
+Also=iml-device.service
 Also=iml-gunicorn.service
 Also=iml-http-agent.service
 Also=iml-job-scheduler.service
 Also=iml-lustre-audit.service
+Also=iml-mailbox.service
 Also=iml-plugin-runner.service
 Also=iml-power-control.service
 Also=iml-rust-stats.service
 Also=iml-syslog.service
-Also=iml-agent-comms.service
-Also=iml-mailbox.service
-Also=iml-action-runner.service
 Also=iml-update-handler.socket
 Also=iml-warp-drive.service
-Also=iml-api.service
-Also=device-aggregator.service
-Also=nginx.service
-Also=rabbitmq-server.service
-Also=postgresql.service
 Also=influxdb.service
-Also=grafana-server.service
+Also=nginx.service
+Also=postgresql.service
+Also=rabbitmq-server.service

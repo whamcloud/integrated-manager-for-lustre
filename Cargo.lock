@@ -124,9 +124,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.27"
+version = "0.1.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "991d0a1a3e790c835fd54ab41742a59251338d8c7577fe7d7f0170c7072be708"
+checksum = "bab5c215748dc1ad11a145359b1067107ae0f8ca5e99844fa64067ed5bf198e3"
 dependencies = [
  "proc-macro2 1.0.10",
  "quote 1.0.3",
@@ -540,6 +540,18 @@ checksum = "47c5e5ac752e18207b12e16b10631ae5f7f68f8805f335f9b817ead83d9ffce1"
 dependencies = [
  "quote 1.0.3",
  "syn 1.0.17",
+]
+
+[[package]]
+name = "device-types"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17a837a40ad42813d6c811d407d8386d8a46ad9110d9b3f4b90dc6b05fc45bfa"
+dependencies = [
+ "im 13.0.0",
+ "libzfs-types",
+ "log 0.4.8",
+ "serde",
 ]
 
 [[package]]
@@ -1115,6 +1127,18 @@ dependencies = [
 
 [[package]]
 name = "im"
+version = "13.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8db49f8bc08d5cc4e2bb0f7d25a6d1db2c79bc6f7d7c86c96c657eb3d214125f"
+dependencies = [
+ "rustc_version",
+ "serde",
+ "sized-chunks 0.3.1",
+ "typenum",
+]
+
+[[package]]
+name = "im"
 version = "14.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "696059c87b83c5a258817ecd67c3af915e3ed141891fc35a1e79908801cf0ce7"
@@ -1123,7 +1147,7 @@ dependencies = [
  "rand_core 0.5.1",
  "rand_xoshiro",
  "serde",
- "sized-chunks",
+ "sized-chunks 0.5.3",
  "typenum",
  "version_check 0.9.1",
 ]
@@ -1248,6 +1272,27 @@ dependencies = [
  "futures",
  "tokio",
  "tracing",
+ "warp",
+]
+
+[[package]]
+name = "iml-device"
+version = "0.1.2"
+dependencies = [
+ "device-types",
+ "futures",
+ "iml-manager-env",
+ "iml-rabbit",
+ "iml-service-queue",
+ "iml-wire-types",
+ "insta",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
  "warp",
 ]
 
@@ -1480,7 +1525,7 @@ name = "iml-warp-drive"
 version = "0.1.0"
 dependencies = [
  "futures",
- "im",
+ "im 14.3.0",
  "iml-manager-client",
  "iml-manager-env",
  "iml-postgres",
@@ -1501,7 +1546,7 @@ name = "iml-wire-types"
 version = "0.2.0"
 dependencies = [
  "bytes",
- "im",
+ "im 14.3.0",
  "iml-api-utils",
  "postgres-types",
  "serde",
@@ -1645,9 +1690,9 @@ dependencies = [
 
 [[package]]
 name = "lapin"
-version = "0.34.0"
+version = "0.34.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d54f9cbd21fa2244844664466050072a014e89fe98dcf9c948882d7a0d95ba32"
+checksum = "8932074120af0ddaf77672e903101f2e939fba36fd43e875196e58f7589304ee"
 dependencies = [
  "amq-protocol",
  "amq-protocol-codegen",
@@ -1712,6 +1757,16 @@ version = "0.1.0"
 dependencies = [
  "bindgen",
  "libc",
+]
+
+[[package]]
+name = "libzfs-types"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "781e3a0e71718873e3fb34ba980a2ff855079c2685d36c78c3df5586a9379bca"
+dependencies = [
+ "serde",
+ "serde_derive",
 ]
 
 [[package]]
@@ -2294,9 +2349,9 @@ checksum = "5894c618ce612a3fa23881b152b608bafb8c56cfc22f434a3ba3120b40f7b587"
 
 [[package]]
 name = "pinky-swear"
-version = "1.6.0"
+version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6040dcc77fd156da026a8f00260820f693d0064e7ac4cc248e38462694782ee2"
+checksum = "ebd81d4c98559db07561aa46c79fa83c985efb7d60e5657ca9353c34774905e7"
 dependencies = [
  "doc-comment",
  "log 0.4.8",
@@ -2413,9 +2468,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro-hack"
-version = "0.5.14"
+version = "0.5.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcfdefadc3d57ca21cf17990a28ef4c0f7c61383a28cb7604cf4a18e6ede1420"
+checksum = "0d659fe7c6d27f25e9d80a1a094c223f5246f6a6596453e09d7229bf42750b63"
 
 [[package]]
 name = "proc-macro-nested"
@@ -2996,6 +3051,15 @@ checksum = "8e88f89a550c01e4cd809f3df4f52dc9e939f3273a2017eabd5c6d12fd98bb23"
 
 [[package]]
 name = "sized-chunks"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f01db57d7ee89c8e053245deb77040a6cc8508311f381c88749c33d4b9b78785"
+dependencies = [
+ "typenum",
+]
+
+[[package]]
+name = "sized-chunks"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d59044ea371ad781ff976f7b06480b9f0180e834eda94114f2afb4afc12b7718"
@@ -3027,9 +3091,9 @@ checksum = "5c2fb2ec9bcd216a5b0d0ccf31ab17b5ed1d627960edff65bbe95d3ce221cefc"
 
 [[package]]
 name = "socket2"
-version = "0.3.11"
+version = "0.3.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8b74de517221a2cb01a53349cf54182acdc31a074727d3079068448c0676d85"
+checksum = "03088793f677dce356f3ccc2edb1b314ad191ab702a5de3faf49304f7e104918"
 dependencies = [
  "cfg-if",
  "libc",
@@ -3284,6 +3348,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "thiserror"
+version = "1.0.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0570dc61221295909abdb95c739f2e74325e14293b2026b0a7e195091ec54ae"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "227362df41d566be41a28f64401e07a043157c21c14b9785a0d8e256f940a8fd"
+dependencies = [
+ "proc-macro2 1.0.10",
+ "quote 1.0.3",
+ "syn 1.0.17",
+]
+
+[[package]]
 name = "thread_local"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3305,9 +3389,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "0.2.13"
+version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fa5e81d6bc4e67fe889d5783bd2a128ab2e0cfa487e0be16b6a8d177b101616"
+checksum = "619cdb2245c40c42d563089b72e80c5df659513d667a017598439ef7a7b1ffe1"
 dependencies = [
  "bytes",
  "fnv",

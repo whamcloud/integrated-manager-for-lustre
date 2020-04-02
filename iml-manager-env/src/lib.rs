@@ -171,6 +171,15 @@ pub fn get_mailbox_path() -> PathBuf {
     get_var("MAILBOX_PATH").into()
 }
 
+/// Get the devices port or panic
+pub fn get_device_aggregator_port() -> String {
+    get_var("DEVICE_AGGREGATOR_PORT")
+}
+
+pub fn get_device_aggregator_addr() -> SocketAddr {
+    to_socket_addr(&get_server_host(), &get_device_aggregator_port())
+}
+
 /// Get the api key from the env or panic
 pub fn get_api_key() -> String {
     get_var("API_KEY")
