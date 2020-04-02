@@ -107,7 +107,7 @@ impl Page {
             Self::Volumes(_) => "Volumes".into(),
             Self::Volume(m) => format!("Volume: {}", &m.id),
             Self::Devices(_) => "Devices".into(),
-            Self::Device(m) => format!("Device: {}", &m.id),
+            Self::Device(m) => format!("Device: {}", &m.device.device.id.0),
             Self::DeviceHosts(_) => "Device Hosts".into(),
             Self::DeviceHost(m) => format!("Device Host: {}", &m.id),
         }
@@ -208,7 +208,11 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
             Route::Devices => Self::Devices(devices::Model::default()),
             Route::Device(id) => id
                 .parse()
-                .map(|id| Self::Device(device::Model { id }))
+                .map(|id| {
+                    Self::Device(device::Model {
+                        device: cache.device[&id].clone(),
+                    })
+                })
                 .unwrap_or_default(),
             Route::DeviceHosts => Self::DeviceHosts(device_hosts::Model::default()),
             Route::DeviceHost(id) => id
@@ -237,12 +241,12 @@ impl Page {
             | (Route::Users, Self::Users)
             | (Route::Volumes, Self::Volumes(_)) => true,
             (Route::OstPool(route_id), Self::OstPool(ostpool::Model { id }))
-            | (Route::Device(route_id), Self::Device(device::Model { id }))
             | (Route::DeviceHost(route_id), Self::DeviceHost(device_host::Model { id }))
             | (Route::Volume(route_id), Self::Volume(volume::Model { id })) => route_id == &RouteId::from(id),
             (Route::Server(route_id), Self::Server(x)) => route_id == &RouteId::from(x.server.id),
             (Route::User(route_id), Self::User(x)) => route_id == &RouteId::from(x.user.id),
             (Route::Filesystem(route_id), Self::Filesystem(x)) => route_id == &RouteId::from(x.fs.id),
+            (Route::Device(route_id), Self::Device(x)) => route_id == &RouteId::from(x.device.record_id),
             (Route::Target(route_id), Self::Target(x)) => route_id == &RouteId::from(x.target.id),
             (Route::FsDashboard(route_id), Self::FsDashboard(x)) => {
                 let fs_dashboard::Model { fs_name, .. } = &**x;
@@ -384,7 +388,11 @@ pub(crate) fn update(msg: Msg, page: &mut Page, cache: &ArcCache, orders: &mut i
                 devices::update(msg, page, &mut orders.proxy(Msg::Devices))
             }
         }
-        Msg::Device(msg) => {}
+        Msg::Device(msg) => {
+            if let Page::Device(page) = page {
+                device::update(msg, page, &mut orders.proxy(Msg::Device))
+            }
+        }
         Msg::DeviceHosts(msg) => {
             if let Page::DeviceHosts(page) = page {
                 device_hosts::update(msg, page, &mut orders.proxy(Msg::DeviceHosts))
