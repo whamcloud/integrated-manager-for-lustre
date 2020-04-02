@@ -4,7 +4,7 @@ use iml_wire_types::{
     warp_drive::{ArcCache, RecordId},
 };
 use seed::{prelude::*, *};
-use std::sync::Arc;
+use std::{mem, sync::Arc};
 
 #[derive(Default)]
 pub struct Model {
@@ -30,9 +30,14 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut impl Orders<Msg, GMsg>)
             model.device = devices;
         }
         Msg::UpdateDevice(d) => {
-            let devices = &mut model.device;
+            let i = { model.device.iter().position(|x| x.record_id == d.record_id) };
+            if let Some(i) = i {
+                mem::replace(&mut model.device[i], d);
+            } else {
+                model.device.push(d);
+            }
 
-            devices.push(d);
+            let devices = &mut model.device;
 
             devices.sort_by(|a, b| natord::compare(&a.device.id, &b.device.id));
         }
