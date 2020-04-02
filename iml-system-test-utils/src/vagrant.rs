@@ -19,7 +19,7 @@ pub enum FsType {
 async fn vagrant() -> Result<Command, io::Error> {
     let mut x = Command::new("vagrant");
 
-    let path = fs::canonicalize("../vagrant").await?;
+    let path = fs::canonicalize("../vagrant/").await?;
     println!("Setting current path for vagrant to {:?}", path);
 
     x.current_dir(path);
