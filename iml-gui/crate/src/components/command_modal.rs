@@ -10,14 +10,11 @@ use crate::{
 };
 use futures::channel::oneshot;
 use iml_wire_types::{ApiList, Command, EndpointName, Job, Step};
-use seed::fetch::FailReason;
+use regex::{Captures, Regex};
 use seed::{prelude::*, *};
-use std::collections::HashMap;
-use std::{collections::HashSet, sync::Arc, time::Duration};
-use crate::components::command_modal::Msg::FetchCommands;
 use serde::de::DeserializeOwned;
-use crate::components::datepicker::Msg::SelectDuration;
-use regex::{Regex, Captures};
+use std::collections::HashMap;
+use std::{sync::Arc, time::Duration};
 
 /// The component polls `/api/command/` endpoint and this constant defines how often it does.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
@@ -81,7 +78,7 @@ pub struct Model {
 pub enum Msg {
     Modal(modal::Msg),
     FireCommands(Input),
-    FetchCommands,
+    FetchTree,
     FetchedCommands(Box<fetch::ResponseDataResult<ApiList<Command>>>),
     FetchedJobs(Box<fetch::ResponseDataResult<ApiList<Job0>>>),
     FetchedSteps(Box<fetch::ResponseDataResult<ApiList<Step>>>),
@@ -105,7 +102,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     // then don't fetch anything
                     model.commands = cmds;
                     if !is_all_finished(&model.commands) {
-                        orders.send_msg(Msg::FetchCommands);
+                        orders.send_msg(Msg::FetchTree);
                     }
                 }
                 Input::Ids(ids) => {
@@ -115,13 +112,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 }
             }
         }
-        Msg::FetchCommands => {
+        Msg::FetchTree => {
             model.commands_cancel = None;
             if !is_all_finished(&model.commands) {
-                let ids = model.commands.iter().map(|x| x.id).collect();
-                orders
-                    .skip()
-                    .perform_cmd(fetch_the_batch(ids, |x| Msg::FetchedCommands(Box::new(x))));
+                schedule_fetch_tree(model, orders);
+                //let ids = model.commands.iter().map(|x| x.id).collect();
+                // orders
+                //     .skip()
+                //     .perform_cmd(fetch_the_batch(ids, |x| Msg::FetchedCommands(Box::new(x))));
             }
         }
         Msg::FetchedCommands(cmd_status_result) => {
@@ -136,7 +134,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 }
             }
             if !is_all_finished(&model.commands) {
-                let (cancel, fut) = sleep_with_handle(POLL_INTERVAL, Msg::FetchCommands, Msg::Noop);
+                let (cancel, fut) = sleep_with_handle(POLL_INTERVAL, Msg::FetchTree, Msg::Noop);
                 model.commands_cancel = Some(cancel);
                 orders.perform_cmd(fut);
             }
@@ -168,14 +166,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::Open(x) => {
             model.opens = Opens::Command(x);
         }
-        Msg::Close(x) => {
+        Msg::Close(_x) => {
             model.opens = Opens::None;
         }
         Msg::Noop => {}
     }
 }
 
-async fn fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
+fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match model.opens {
         Opens::None => {
             let ids = model.commands.iter().map(|x| x.id).collect();
@@ -187,7 +185,13 @@ async fn fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
             let ids: Vec<u32> = model.commands.iter().map(|x| x.id).collect();
             if let Some(i) = model.commands.iter().position(|cid| cid.id == cmd_id) {
                 let cmd = &model.commands[i];
-                let job_ids: Vec<u32> = cmd.jobs.iter().map(|s| extract_job_id(s)).filter(|x| x.is_some()).map(|x| x.unwrap()).collect();
+                let job_ids: Vec<u32> = cmd
+                    .jobs
+                    .iter()
+                    .map(|s| extract_uri_id::<Job0>(s))
+                    .filter(|x| x.is_some())
+                    .map(|x| x.unwrap())
+                    .collect();
             }
         }
         Opens::CommandJob(_, _) => {}
@@ -195,21 +199,11 @@ async fn fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     }
 }
 
-fn extract_job_id(input: &str) -> Option<u32> {
-    lazy_static::lazy_static! {
-        static ref RE: Regex = Regex::new(r"/api/job/(\d+)/").unwrap();
-    }
-    RE.captures(input).and_then(|cap: Captures| {
-        let s = cap.get(1).unwrap().as_str();
-        s.parse::<u32>().ok()
-    })
-}
-
 async fn fetch_the_batch<T, F, U>(ids: Vec<u32>, conv: F) -> Result<U, U>
-    where
-        T: DeserializeOwned + EndpointName + 'static,
-        F: FnOnce(ResponseDataResult<ApiList<T>>) -> U,
-        U: 'static
+where
+    T: DeserializeOwned + EndpointName + 'static,
+    F: FnOnce(ResponseDataResult<ApiList<T>>) -> U,
+    U: 'static,
 {
     // e.g. GET /api/something/?id__in=1&id__in=2&id__in=11&limit=0
     let err_msg = format!("Bad query for {}: {:?}", T::endpoint_name(), ids);
@@ -220,6 +214,22 @@ async fn fetch_the_batch<T, F, U>(ids: Vec<u32>, conv: F) -> Result<U, U>
         .fetch_json_data(conv)
         .await
 }
+
+fn extract_uri_id<T: EndpointName>(input: &str) -> Option<u32> {
+    lazy_static::lazy_static! {
+        static ref RE: Regex = Regex::new(r"/api/(\w+)/(\d+)/").unwrap();
+    }
+    RE.captures(input).and_then(|cap: Captures| {
+        let s = cap.get(1).unwrap().as_str();
+        let t = cap.get(2).unwrap().as_str();
+        if s == T::endpoint_name() {
+            t.parse::<u32>().ok()
+        } else {
+            None
+        }
+    })
+}
+
 
 const fn is_finished(cmd: &Command) -> bool {
     cmd.complete
@@ -271,11 +281,11 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
                 },
             ),
         )
-            .with_listener(keyboard_ev(Ev::KeyDown, move |ev| match ev.key_code() {
-                key_codes::ESC => Msg::Modal(modal::Msg::Close),
-                _ => Msg::Noop,
-            }))
-            .merge_attrs(class![C.text_black])
+        .with_listener(keyboard_ev(Ev::KeyDown, move |ev| match ev.key_code() {
+            key_codes::ESC => Msg::Modal(modal::Msg::Close),
+            _ => Msg::Noop,
+        }))
+        .merge_attrs(class![C.text_black])
     }
 }
 
@@ -373,7 +383,7 @@ fn close_button() -> Node<Msg> {
         simple_ev(Ev::Click, modal::Msg::Close),
         "Close",
     ]
-        .map_msg(Msg::Modal)
+    .map_msg(Msg::Modal)
 }
 
 #[cfg(test)]
@@ -382,8 +392,9 @@ mod tests {
 
     #[test]
     fn parse_job() {
-        assert_eq!(extract_job_id("/api/job/39/"), Some(39));
-        assert_eq!(extract_job_id("/api/job/0/"), Some(0));
-        assert_eq!(extract_job_id("/api/job/xxx/"), None);
+        assert_eq!(extract_uri_id::<Job0>("/api/job/39/"), Some(39));
+        assert_eq!(extract_uri_id::<Step>("/api/step/123/"), Some(123));
+        assert_eq!(extract_uri_id::<Command>("/api/command/12/"), Some(12));
+        assert_eq!(extract_uri_id::<Command>("/api/xxx/1/"), None);
     }
 }
