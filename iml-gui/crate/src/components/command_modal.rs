@@ -13,8 +13,9 @@ use iml_wire_types::{ApiList, Command, EndpointName, Job, Step};
 use regex::{Captures, Regex};
 use seed::{prelude::*, *};
 use serde::de::DeserializeOwned;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::{sync::Arc, time::Duration};
+use std::fmt;
 
 /// The component polls `/api/command/` endpoint and this constant defines how often it does.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
@@ -40,6 +41,29 @@ pub enum Opens {
 impl Default for Opens {
     fn default() -> Self {
         Self::None
+    }
+}
+
+#[derive(Debug)]
+pub enum CommandError {
+    UnknownCommand(u32),
+    UnknownJob(u32),
+    UnknownSteps(Vec<u32>),
+}
+
+impl fmt::Display for CommandError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CommandError::UnknownCommand(cmd_id) => {
+                write!(f, "Invariant violation, command_id={} is unknown", cmd_id)
+            }
+            CommandError::UnknownJob(job_id) => {
+                write!(f, "Invariant violation, job_id={} is unknown", job_id)
+            }
+            CommandError::UnknownSteps(step_ids) => {
+                write!(f, "Invariant violation, some of some_step_ids={:?} is unknown", step_ids)
+            }
+        }
     }
 }
 
@@ -173,29 +197,95 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
     }
 }
 
-fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
-    match model.opens {
+fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -> Result<(), CommandError> {
+    match &model.opens {
         Opens::None => {
-            let ids = model.commands.iter().map(|x| x.id).collect();
+            // the user has all the commands dropdowns closed
+            let ids = model.commands.iter().map(|c| c.id).collect();
             orders
                 .skip()
                 .perform_cmd(fetch_the_batch(ids, |x| Msg::FetchedCommands(Box::new(x))));
+            Ok(())
         }
         Opens::Command(cmd_id) => {
-            let ids: Vec<u32> = model.commands.iter().map(|x| x.id).collect();
-            if let Some(i) = model.commands.iter().position(|cid| cid.id == cmd_id) {
-                let cmd = &model.commands[i];
-                let job_ids: Vec<u32> = cmd
+            // the user has opened the info on the command
+            if let Some(i) = model.commands.iter().position(|c| c.id == *cmd_id) {
+                let cmd_ids: Vec<u32> = model.commands.iter().map(|c| c.id).collect();
+                let job_ids: Vec<u32> = model.commands[i]
                     .jobs
                     .iter()
-                    .map(|s| extract_uri_id::<Job0>(s))
-                    .filter(|x| x.is_some())
-                    .map(|x| x.unwrap())
+                    .filter_map(|s| extract_uri_id::<Job0>(s))
                     .collect();
+                orders
+                    .skip()
+                    .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))))
+                    .perform_cmd(fetch_the_batch(job_ids, |x| Msg::FetchedJobs(Box::new(x))));
+                Ok(())
+            } else {
+                Err(CommandError::UnknownCommand(*cmd_id))
             }
         }
-        Opens::CommandJob(_, _) => {}
-        Opens::CommandJobSteps(_, _, _) => {}
+        Opens::CommandJob(cmd_id, job_id) => {
+            // the user has opened the info on the command and selected the corresponding job
+            if let Some(i1) = model.commands.iter().position(|c| c.id == *cmd_id) {
+                if let Some(i2) = model.jobs.iter().position(|j| j.id == *job_id) {
+                    let cmd_ids: Vec<u32> = model.commands.iter().map(|c| c.id).collect();
+                    let job_ids: Vec<u32> = model.commands[i1]
+                        .jobs
+                        .iter()
+                        .filter_map(|s| extract_uri_id::<Job0>(s))
+                        .collect();
+                    let step_ids: Vec<u32> = model.jobs[i2]
+                        .steps
+                        .iter()
+                        .filter_map(|s| extract_uri_id::<Step>(s))
+                        .collect();
+                    orders
+                        .skip()
+                        .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))))
+                        .perform_cmd(fetch_the_batch(job_ids, |x| Msg::FetchedJobs(Box::new(x))))
+                        .perform_cmd(fetch_the_batch(step_ids, |x| Msg::FetchedSteps(Box::new(x))));
+                    Ok(())
+                } else {
+                    Err(CommandError::UnknownJob(*job_id))
+                }
+            } else {
+                Err(CommandError::UnknownCommand(*cmd_id))
+            }
+        }
+        Opens::CommandJobSteps(cmd_id, job_id, some_step_ids) => {
+            // the user has opened the info on the command, selected a job and expanded some of the steps
+            if let Some(i1) = model.commands.iter().position(|c| c.id == *cmd_id) {
+                if let Some(i2) = model.jobs.iter().position(|j| j.id == *job_id) {
+                    let step_ids: HashSet<u32> = model.jobs[i2]
+                        .steps
+                        .iter()
+                        .filter_map(|s| extract_uri_id::<Step>(s))
+                        .collect();
+                    if some_step_ids.iter().all(|id| step_ids.contains(id)) {
+                        let cmd_ids: Vec<u32> = model.commands.iter().map(|c| c.id).collect();
+                        let job_ids: Vec<u32> = model.commands[i1]
+                            .jobs
+                            .iter()
+                            .filter_map(|s| extract_uri_id::<Job0>(s))
+                            .collect();
+                        let the_step_ids = some_step_ids.clone();
+                        orders
+                            .skip()
+                            .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))))
+                            .perform_cmd(fetch_the_batch(job_ids, |x| Msg::FetchedJobs(Box::new(x))))
+                            .perform_cmd(fetch_the_batch(the_step_ids, |x| Msg::FetchedSteps(Box::new(x))));
+                        Ok(())
+                    } else {
+                        Err(CommandError::UnknownSteps(some_step_ids.clone()))
+                    }
+                } else {
+                    Err(CommandError::UnknownJob(*job_id))
+                }
+            } else {
+                Err(CommandError::UnknownCommand(*cmd_id))
+            }
+        }
     }
 }
 
@@ -229,7 +319,6 @@ fn extract_uri_id<T: EndpointName>(input: &str) -> Option<u32> {
         }
     })
 }
-
 
 const fn is_finished(cmd: &Command) -> bool {
     cmd.complete
@@ -370,7 +459,7 @@ fn status_icon<T>(cmd: &Command) -> Node<T> {
 }
 
 fn close_button() -> Node<Msg> {
-    button![
+    seed::button![
         class![
             C.bg_transparent,
             C.py_2,
