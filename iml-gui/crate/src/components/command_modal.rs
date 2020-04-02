@@ -22,8 +22,8 @@ const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
 type Job0 = Job<Option<()>>;
 
-#[derive(Debug, Hash, PartialEq, Eq)]
-pub enum Idx {
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum TypedId {
     Command(u32),
     Job(u32),
     Step(u32),
@@ -34,8 +34,7 @@ pub enum Opens {
     None,
     Command(u32),
     CommandJob(u32, u32),
-    // command, selected job
-    CommandJobSteps(u32, u32, Vec<u32>), // command, job, selected steps
+    CommandJobSteps(u32, u32, Vec<u32>),
 }
 
 impl Default for Opens {
@@ -75,16 +74,15 @@ pub enum Input {
 
 #[derive(Default, Debug)]
 pub struct Model {
-    pub commands_cancel: Option<oneshot::Sender<()>>,
+    pub tree_cancel: Option<oneshot::Sender<()>>,
+
     pub commands_loading: bool,
     pub commands: Vec<Arc<Command>>,
 
-    pub jobs_cancel: Option<oneshot::Sender<()>>,
     pub jobs_loading: bool,
     pub jobs: Vec<Arc<Job0>>,
-    pub jobs_children: HashMap<u32, Vec<u32>>,
+    pub jobs_wait_fors: HashMap<u32, Vec<u32>>,
 
-    pub steps_cancel: Option<oneshot::Sender<()>>,
     pub steps_loading: bool,
     pub steps: Vec<Arc<Step>>,
 
@@ -106,19 +104,31 @@ pub enum Msg {
     FetchedCommands(Box<fetch::ResponseDataResult<ApiList<Command>>>),
     FetchedJobs(Box<fetch::ResponseDataResult<ApiList<Job0>>>),
     FetchedSteps(Box<fetch::ResponseDataResult<ApiList<Step>>>),
-    Open(u32),
-    Close(u32),
+    Open(TypedId),
+    Close(TypedId),
     Noop,
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
-    // log!("command_modal::update", msg);
+    let msg_str = match msg {
+        Msg::Modal(_) =>           "Msg-Modal".to_string(),
+        Msg::FireCommands(_) =>    "Msg-FireCommands".to_string(),
+        Msg::FetchTree =>          "Msg-FetchTree".to_string(),
+        Msg::FetchedCommands(_) => "Msg-FetchedCommands".to_string(),
+        Msg::FetchedJobs(_) =>     "Msg-FetchedJobs".to_string(),
+        Msg::FetchedSteps(_) =>    "Msg-FetchedSteps".to_string(),
+        Msg::Open(_) =>            "Msg-Open".to_string(),
+        Msg::Close(_) =>           "Msg-Close".to_string(),
+        Msg::Noop =>               "Msg-Noop".to_string(),
+    };
+    log!("command_modal::update: ", msg_str, model);
     match msg {
         Msg::Modal(msg) => {
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
         }
         Msg::FireCommands(cmds) => {
             model.modal.open = true;
+            model.opens = Opens::None;
 
             match cmds {
                 Input::Commands(cmds) => {
@@ -137,18 +147,18 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
         }
         Msg::FetchTree => {
-            model.commands_cancel = None;
+            model.tree_cancel = None;
             if !is_all_finished(&model.commands) {
-                schedule_fetch_tree(model, orders);
+                schedule_fetch_tree(model, orders).map_err(|e| error!(e.to_string()));
                 //let ids = model.commands.iter().map(|x| x.id).collect();
                 // orders
                 //     .skip()
                 //     .perform_cmd(fetch_the_batch(ids, |x| Msg::FetchedCommands(Box::new(x))));
             }
         }
-        Msg::FetchedCommands(cmd_status_result) => {
+        Msg::FetchedCommands(commands_data_result) => {
             model.commands_loading = false;
-            match *cmd_status_result {
+            match *commands_data_result {
                 Ok(api_list) => {
                     model.commands = api_list.objects.into_iter().map(Arc::new).collect();
                 }
@@ -159,15 +169,21 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
             if !is_all_finished(&model.commands) {
                 let (cancel, fut) = sleep_with_handle(POLL_INTERVAL, Msg::FetchTree, Msg::Noop);
-                model.commands_cancel = Some(cancel);
+                model.tree_cancel = Some(cancel);
                 orders.perform_cmd(fut);
             }
         }
-        Msg::FetchedJobs(job_status_result) => {
+        Msg::FetchedJobs(jobs_data_result) => {
             model.jobs_loading = false;
-            match *job_status_result {
+            match *jobs_data_result {
                 Ok(api_list) => {
                     model.jobs = api_list.objects.into_iter().map(Arc::new).collect();
+                    model.jobs_wait_fors.clear();
+                    // we have `job.id` and `job.wait_for`, put everything into one data structure
+                    for job in &model.jobs {
+                        let jids: Vec<u32> = job.wait_for.iter().filter_map(|s| extract_uri_id::<Job0>(s)).collect();
+                        model.jobs_wait_fors.insert(job.id, jids);
+                    }
                 }
                 Err(e) => {
                     error!("Failed to perform fetch_job_status {:#?}", e);
@@ -175,9 +191,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 }
             }
         }
-        Msg::FetchedSteps(step_status_result) => {
+        Msg::FetchedSteps(steps_data_result) => {
             model.steps_loading = false;
-            match *step_status_result {
+            match *steps_data_result {
                 Ok(api_list) => {
                     model.steps = api_list.objects.into_iter().map(Arc::new).collect();
                 }
@@ -187,11 +203,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 }
             }
         }
-        Msg::Open(x) => {
-            model.opens = Opens::Command(x);
+        Msg::Open(the_id) => {
+            model.opens = perform_open_click(&model.opens, &the_id);
         }
-        Msg::Close(_x) => {
-            model.opens = Opens::None;
+        Msg::Close(the_id) => {
+            model.opens = perform_close_click(&model.opens, &the_id);
         }
         Msg::Noop => {}
     }
@@ -337,6 +353,71 @@ fn is_command_in_opens(cmd_id: u32, opens: &Opens) -> bool {
     }
 }
 
+fn is_job_in_opens(job_id: u32, opens: &Opens) -> bool {
+    match opens {
+        Opens::None => false,
+        Opens::Command(_) => false,
+        Opens::CommandJob(_, jid) => job_id == *jid,
+        Opens::CommandJobSteps(_, jid, _) => job_id == *jid,
+    }
+}
+
+fn perform_open_click(cur_opens: &Opens, the_id: &TypedId) -> Opens {
+    match the_id {
+        TypedId::Command(cmd_id) => Opens::Command(*cmd_id),
+        TypedId::Job(job_id) => match &cur_opens {
+            Opens::None => cur_opens.clone(),
+            Opens::Command(cmd_id_0) => Opens::CommandJob(*cmd_id_0, *job_id),
+            Opens::CommandJob(cmd_id_0, _) => Opens::CommandJob(*cmd_id_0, *job_id),
+            Opens::CommandJobSteps(cmd_id_0, _, _) => Opens::CommandJob(*cmd_id_0, *job_id),
+        },
+        TypedId::Step(step_id) => match &cur_opens {
+            Opens::None => cur_opens.clone(),
+            Opens::Command(_) => cur_opens.clone(),
+            Opens::CommandJob(cmd_id_0, job_id_0) => Opens::CommandJobSteps(*cmd_id_0, *job_id_0, vec![*step_id]),
+            Opens::CommandJobSteps(cmd_id_0, job_id_0, step_ids_0) => {
+                if step_ids_0.contains(&step_id) {
+                    Opens::CommandJobSteps(*cmd_id_0, *job_id_0, step_ids_0.clone())
+                } else {
+                    let mut step_ids = step_ids_0.clone();
+                    step_ids.push(*step_id);
+                    Opens::CommandJobSteps(*cmd_id_0, *job_id_0, step_ids)
+                }
+            },
+        },
+    }
+}
+
+fn perform_close_click(cur_opens: &Opens, the_id: &TypedId) -> Opens {
+    match the_id {
+        TypedId::Command(cmd_id) => Opens::None,
+        TypedId::Job(job_id) => match &cur_opens {
+            Opens::None => cur_opens.clone(),
+            Opens::Command(cmd_id_0) => cur_opens.clone(),
+            Opens::CommandJob(cmd_id_0, job_id_0) => if job_id == job_id_0 {
+                Opens::Command(*cmd_id_0)
+            } else {
+                cur_opens.clone()
+            },
+            Opens::CommandJobSteps(cmd_id_0, job_id_0, _) => if job_id == job_id_0 {
+                Opens::Command(*cmd_id_0)
+            } else {
+                cur_opens.clone()
+            },
+        },
+        TypedId::Step(step_id) => match &cur_opens {
+            Opens::None => cur_opens.clone(),
+            Opens::Command(_) => cur_opens.clone(),
+            Opens::CommandJob(_, _) => cur_opens.clone(),
+            Opens::CommandJobSteps(cmd_id_0, job_id_0, step_ids_0) => {
+                // if the clicked step_id is contained in the list of open steps, just remove it
+                let step_ids = step_ids_0.iter().map(|r| *r).filter(|sid| *sid != *step_id).collect();
+                Opens::CommandJobSteps(*cmd_id_0, *job_id_0, step_ids)
+            },
+        },
+    }
+}
+
 pub(crate) fn view(model: &Model) -> Node<Msg> {
     if !model.modal.open {
         empty![]
@@ -392,12 +473,13 @@ fn command_item_view(x: &Command, is_open: bool) -> Node<Msg> {
     };
 
     let (open_icon, m) = if is_open {
-        ("chevron-circle-up", Msg::Close(x.id))
+        ("chevron-circle-up", Msg::Close(TypedId::Command(x.id)))
     } else {
-        ("chevron-circle-down", Msg::Open(x.id))
+        ("chevron-circle-down", Msg::Open(TypedId::Command(x.id)))
     };
 
     div![
+        attrs!{ "cmd__id" => x.id.to_string() }, // todo revert
         class![C.border_b, C.last__border_b_0],
         div![
             class![
@@ -427,9 +509,27 @@ fn command_item_view(x: &Command, is_open: bool) -> Node<Msg> {
                 class![C.pl_8, C.hidden => !is_open],
                 li![class![C.pb_2], "Started at: ", x.created_at],
                 li![class![C.pb_2], "Status: ", status_text(x)],
+
             ]
         ]
     ]
+}
+
+fn job_item_view(x: &Job0, is_open: bool) {
+    let border = if !is_open {
+        C.border_transparent
+    } else if x.cancelled {
+        C.border_gray_500
+    } else if x.errored {
+        C.border_red_500
+    } else if x.state == "complete" {
+        C.border_green_500
+    } else {
+        C.border_transparent
+    };
+}
+
+fn step_item_view(x: &Step, is_open: bool) {
 }
 
 fn status_text(cmd: &Command) -> &'static str {
@@ -459,7 +559,7 @@ fn status_icon<T>(cmd: &Command) -> Node<T> {
 }
 
 fn close_button() -> Node<Msg> {
-    seed::button![
+    seed::button![ // todo revert
         class![
             C.bg_transparent,
             C.py_2,
