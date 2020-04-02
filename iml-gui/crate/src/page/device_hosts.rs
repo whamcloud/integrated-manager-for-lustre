@@ -5,7 +5,7 @@ use iml_wire_types::{
 };
 use seed::{prelude::*, *};
 use std::borrow::Cow;
-use std::{cmp::Ordering, sync::Arc};
+use std::{cmp::Ordering, mem, sync::Arc};
 
 #[derive(Default)]
 pub struct Model {
@@ -33,8 +33,8 @@ fn compose_comparisons(a: Ordering, b: Ordering) -> Ordering {
 
 pub fn update(msg: Msg, model: &mut Model, _orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
-        Msg::SetDeviceHosts(mut devices) => {
-            devices.sort_by(|a, b| {
+        Msg::SetDeviceHosts(mut device_hosts) => {
+            device_hosts.sort_by(|a, b| {
                 let a_paths = {
                     let s: Vec<_> = a
                         .device_host
@@ -61,14 +61,19 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut impl Orders<Msg, GMsg>)
                 )
             });
 
-            model.device_host = devices;
+            model.device_host = device_hosts;
         }
         Msg::UpdateDeviceHost(d) => {
-            let devices = &mut model.device_host;
+            let i = { model.device_host.iter().position(|x| x.id == d.id) };
+            if let Some(i) = i {
+                mem::replace(&mut model.device_host[i], d);
+            } else {
+                model.device_host.push(d);
+            }
 
-            devices.push(d);
+            let device_hosts = &mut model.device_host;
 
-            devices.sort_by(|a, b| {
+            device_hosts.sort_by(|a, b| {
                 let a_paths = {
                     let s: Vec<_> = a
                         .device_host
@@ -97,12 +102,12 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut impl Orders<Msg, GMsg>)
             });
         }
         Msg::Remove(d) => {
-            let devices = &mut model.device_host;
+            let device_hosts = &mut model.device_host;
 
-            let i = devices.iter().position(|x| RecordId::DeviceHost(x.id) == d);
+            let i = device_hosts.iter().position(|x| RecordId::DeviceHost(x.id) == d);
 
             if let Some(i) = i {
-                devices.remove(i);
+                device_hosts.remove(i);
             } else {
                 seed::log!("Element to remove not found");
             }
