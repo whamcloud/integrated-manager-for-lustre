@@ -11,7 +11,9 @@ ISCSI_MEM = (ENV['ISCSI_MEM'] || 1024).freeze
 # Num CPUs allocated to the iSCSI server VM
 ISCSI_CPU = (ENV['ISCSI_CPU'] || 4).freeze
 
-VBOX_USER   = (ENV['VBOX_USER']   || "").freeze
+# User is required (default to root)
+# need either password or sshkey (or will assume sshkey)
+VBOX_USER   = (ENV['VBOX_USER']   || "root").freeze
 VBOX_PASSWD = (ENV['VBOX_PASSWD'] || "").freeze
 VBOX_SSHKEY = (ENV['VBOX_SSHKEY'] || "").freeze
 
@@ -573,7 +575,7 @@ Vagrant.configure('2') do |config|
         oss.vm.provision 'ha-ldiskfs-lvm-fs-setup',
                          type: 'shell',
                          run: 'never',
-                         path: 'scripts/create_ldiskfs_lvm_mds_ha_setup.sh',
+                         path: 'scripts/create_ldiskfs_lvm_oss_ha_setup.sh',
                          args: [ "{a..e} {k..o}", 0, VBOX_USER, VBOX_PASSWD, VBOX_SSHKEY ]
                          
       else
