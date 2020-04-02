@@ -53,9 +53,8 @@ pub struct Model {
 impl Model {
     pub(crate) fn new(fs: &Arc<Filesystem>) -> Self {
         let query = format!(
-            r#"SELECT SUM(b_total), SUM(b_free), SUM(b_avail),
-                    SUM(f_total), SUM(f_free),
-                    SUM(clients)
+            r#"SELECT SUM(b_total), SUM(b_free), SUM(b_avail), SUM(f_total), SUM(f_free), SUM(clients)
+               FROM (SELECT *
                FROM (SELECT LAST(bytes_total) AS b_total
                           , LAST(bytes_free) AS b_free
                           , LAST(bytes_avail) AS b_avail
@@ -67,7 +66,7 @@ impl Model {
                    , (SELECT LAST(connected_clients) AS clients
                       FROM target
                       WHERE "fs"='{fs_name}' AND "kind"='MDT'
-                      GROUP BY target)"#,
+                      GROUP BY target))"#,
             fs_name = &fs.name
         );
 
