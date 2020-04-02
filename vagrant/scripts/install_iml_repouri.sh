@@ -47,6 +47,16 @@ cat <<EOF > /usr/share/chroma-manager/base.repo
 name=manager-for-lustre
 baseurl=$1
 enabled=1
+
+[managerforlustre-manager-for-lustre-devel]
+name=Copr repo for manager-for-lustre-devel owned by managerforlustre
+baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre-devel/epel-7-\$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre-devel/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
 EOF
 
 chroma-config setup admin lustre localhost --no-dbspace-check
