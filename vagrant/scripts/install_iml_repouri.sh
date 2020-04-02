@@ -40,7 +40,7 @@ sslverify=1
 sslcacert=/etc/pki/tls/certs/ca-bundle.crt
 EOF
 
-yum install -y python2-iml-manager
+yum install -y python2-iml-manager --nogpgcheck
 
 cat <<EOF > /usr/share/chroma-manager/base.repo
 [manager-for-lustre]
