@@ -584,9 +584,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::Logout => {
             model.logging_out = true;
-
-            orders.proxy(Msg::Auth).send_msg(Box::new(auth::Msg::Stop));
-
             orders.perform_cmd(
                 auth::fetch_session()
                     .method(fetch::Method::Delete)

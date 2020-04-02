@@ -14,7 +14,6 @@ use web_sys::HtmlDocument;
 #[derive(Default)]
 pub struct Model {
     session: Option<Session>,
-    pub state: State,
     request_controller: Option<fetch::RequestController>,
     cancel: Option<oneshot::Sender<()>>,
 }
@@ -25,18 +24,6 @@ impl Model {
     }
 }
 
-#[derive(PartialEq, Eq)]
-pub enum State {
-    Fetching,
-    Stopped,
-}
-
-impl Default for State {
-    fn default() -> Self {
-        Self::Fetching
-    }
-}
-
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug)]
 pub enum Msg {
@@ -44,14 +31,12 @@ pub enum Msg {
     Fetched(fetch::FetchObject<Session>),
     SetSession(Session),
     Loop,
-    Stop,
     Noop,
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::Fetch => {
-            model.state = State::Fetching;
             model.cancel = None;
 
             let request = fetch_session().controller(|controller| model.request_controller = Some(controller));
@@ -68,7 +53,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::Fetched(data) => {
             match data.response() {
                 Err(fail_reason) => {
-                    log!(format!("Error during session poll: {}", fail_reason.message()));
+                    error!(format!("Error during session poll: {}", fail_reason.message()));
                     orders.skip().send_msg(Msg::Loop);
                 }
                 Ok(resp) => {
@@ -98,23 +83,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::Loop => {
             orders.skip();
 
-            if model.state == State::Stopped {
-                return;
-            }
-
             let (cancel, fut) = sleep_with_handle(Duration::from_secs(10), Msg::Fetch, Msg::Noop);
 
             model.cancel = Some(cancel);
 
             orders.perform_cmd(fut);
-        }
-        Msg::Stop => {
-            model.state = State::Stopped;
-            model.cancel = None;
-
-            if let Some(c) = model.request_controller.take() {
-                c.abort();
-            }
         }
         Msg::Noop => {}
     };
