@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_system_test_utils::{docker, get_local_server_names, iml, vagrant};
+use iml_system_test_utils::{docker, get_local_server_names, iml, vagrant, CheckedStatus};
 use std::{
     collections::{hash_map::RandomState, HashMap},
     time::Duration,
@@ -18,7 +18,7 @@ async fn setup(
     docker::system_prune().await?;
     docker::volume_prune().await?;
     docker::configure_docker_overrides().await?;
-    docker::stop_swarm().await?;
+    docker::stop_swarm().await?;delay_for(Duration::from_secs(30)).await;
     iml_systemd::restart_unit("docker.service".into()).await?;
 
     docker::start_swarm().await?;
@@ -26,16 +26,23 @@ async fn setup(
 
     if snapshots.len() == 0 {
         // Destroy any vagrant nodes that are currently running
+        println!("Snapshots length is 0, destroying vagrant nodes");
         vagrant::destroy().await?;
     } else {
         // Restore to the latest snapshot point
         let snapshot = snapshots
             .iter()
             .last()
-            .expect("Couldn't get last snapshot.");
+            .expect("Couldn't get last snapshot.")
+            .to_string();
+        
+        println!("Restoring snapshots {}", &snapshot);
+        vagrant::halt().await?.args(&config.iscsi_and_storage_servers()).checked_status().await?;
         for host in &config.iscsi_and_storage_servers() {
-            vagrant::snapshot_restore(&host, snapshot.to_string().as_ref()).await?;
+            vagrant::snapshot_restore(&host, snapshot.as_str()).await?.checked_status().await?;
         }
+
+        delay_for(Duration::from_secs(15)).await;
     }
 
     Ok(())
@@ -48,6 +55,7 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
     fs_type: vagrant::FsType,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let snapshot_map = vagrant::get_snapshots().await?;
+    println!("Snapshot map: {:?}", &snapshot_map);
     let mut snapshots: Vec<vagrant::Snapshot> = snapshot_map
         .values()
         .next()

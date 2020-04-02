@@ -160,16 +160,20 @@ pub async fn get_snapshots() -> Result<HashMap<String, Vec<Snapshot>>, io::Error
     let (_, snapshot_map) = str::from_utf8(&snapshots.stdout)
         .expect("Couldn't parse snapshot list.")
         .lines()
-        .fold(("", HashMap::new()), |(key, mut map), x| {
+        .fold(("", HashMap::new()), |(mut key, mut map), x| {
             if x.find("==>").is_some() {
-                let key = &x[4..];
-                map.insert(key.to_string(), vec![]);
+                if x.trim().split(' ').count() == 2 {
+                    key = &x[4..];
+                    map.insert(key.to_string(), vec![]);
+                }
+            
                 (&key, map)
             } else {
                 let v = map
                     .get_mut(key)
                     .unwrap_or_else(|| panic!("Couldn't find key {} in snapshot map.", key));
                 v.push(Snapshot::from(&x.to_string()));
+                
                 (&key, map)
             }
         });
@@ -392,22 +396,24 @@ async fn create_monitored_zfs(hosts: &[&str]) -> Result<(), io::Error> {
     Ok(())
 }
 
-pub async fn create_fs(fs_type: FsType, hosts: &[&str]) -> Result<(), io::Error> {
+pub async fn create_fs(fs_type: FsType, hosts: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
     match fs_type {
         FsType::LDISKFS => create_monitored_ldiskfs(&hosts).await?,
         FsType::ZFS => create_monitored_zfs(&hosts).await?,
     };
 
-    halt().await?.args(hosts).checked_status().await?;
+    if !(has_snapshot(Snapshot::FilesystemCreated).await?) {
+        halt().await?.args(hosts).checked_status().await?;
 
-    for x in hosts {
-        snapshot_save(x, Snapshot::FilesystemCreated.to_string().as_str())
-            .await?
-            .checked_status()
-            .await?;
+        for x in hosts {
+            snapshot_save(x, Snapshot::FilesystemCreated.to_string().as_str())
+                .await?
+                .checked_status()
+                .await?;
+        }
+
+        up().await?.args(hosts).checked_status().await?;
     }
-
-    up().await?.args(hosts).checked_status().await?;
 
     Ok(())
 }
