@@ -14,7 +14,7 @@ enabled=1
 
 [managerforlustre-manager-for-lustre-devel]
 name=Copr repo for manager-for-lustre-devel owned by managerforlustre
-baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre-devel/epel-7-$basearch/
+baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre-devel/epel-7-\$basearch/
 type=rpm-md
 skip_if_unavailable=True
 gpgcheck=1
