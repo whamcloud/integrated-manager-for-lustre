@@ -11,6 +11,10 @@ ISCSI_MEM = (ENV['ISCSI_MEM'] || 1024).freeze
 # Num CPUs allocated to the iSCSI server VM
 ISCSI_CPU = (ENV['ISCSI_CPU'] || 4).freeze
 
+VBOX_USER   = (ENV['VBOX_USER']   || "").freeze
+VBOX_PASSWD = (ENV['VBOX_PASSWD'] || "").freeze
+VBOX_SSHKEY = (ENV['VBOX_SSHKEY'] || "").freeze
+
 require 'open3'
 require 'fileutils'
 
@@ -296,20 +300,11 @@ Vagrant.configure('2') do |config|
                            mount -t lustre /dev/mapper/mdt0_vg-mdt /mnt/mdt0
                          SHELL
 
-         mds.vm.provision 'ha-ldiskfs-lvm-fs-step2',
+         mds.vm.provision 'ha-ldiskfs-lvm-fs-setup',
                          type: 'shell',
                          run: 'never',
-                         inline: <<-SHELL
-                           pcs cluster auth mds1.local mds2.local -u hacluster -p lustre
-                           pcs cluster setup --start --name mds-cluster mds1.local mds2.local --enable --token 17000
-                           pcs stonith create vboxfence fence_vbox ipaddr=10.0.2.2 login=root passwd=lustre
-                           pcs resource create mgs-vg ocf:heartbeat:LVM volgrpname=mgt_vg exclusive=true op start timeout=120 op stop timeout=120 --group mgs-grp
-                           pcs resource create mgs ocf:lustre:Lustre target=/dev/mapper/mgt_vg-mgt mountpoint=/mnt/mgs op start timeout=900 op stop timeout=120 --group mgs-grp
-                           pcs resource create mdt0-vg ocf:heartbeat:LVM volgrpname=mdt0_vg exclusive=true op start timeout=120 op stop timeout=120 --group mdt0-grp
-                           pcs resource create mdt0 ocf:lustre:Lustre target=/dev/mapper/mdt0_vg-mdt mountpoint=/mnt/mdt0 op start timeout=900 op stop timeout=120 --group mdt0-grp
-                           pcs resource create mdt1-vg ocf:heartbeat:LVM volgrpname=mdt1_vg exclusive=true op start timeout=120 op stop timeout=120 --group mdt1-grp
-                           pcs resource create mdt1 ocf:lustre:Lustre target=/dev/mapper/mdt1_vg-mdt mountpoint=/mnt/mdt1 op start timeout=900 op stop timeout=120 --group mdt1-grp
-                         SHELL
+                         path: 'scripts/create_ldiskfs_lvm_mds_ha_setup.sh',
+                         args: [ VBOX_USER, VBOX_PASSWD, VBOX_SSHKEY ]
       else
         mds.vm.provision 'create-pools',
                          type: 'shell',
@@ -386,7 +381,7 @@ Vagrant.configure('2') do |config|
 
       end
 
-      mds.vm.provision 'ha-ldiskfs-lvm-fs-step1',
+      mds.vm.provision 'ha-ldiskfs-lvm-fs-prep',
                        type: 'shell',
                        run: 'never',
                        inline: <<-SHELL
@@ -575,20 +570,12 @@ Vagrant.configure('2') do |config|
                           mount -t lustre /dev/mapper/mpathe /mnt/ost4
                          SHELL
 
-        oss.vm.provision 'ha-ldiskfs-lvm-fs-step2',
+        oss.vm.provision 'ha-ldiskfs-lvm-fs-setup',
                          type: 'shell',
                          run: 'never',
-                         inline: <<-SHELL
-                           pcs cluster auth oss1.local oss2.local -u hacluster -p lustre
-                           pcs cluster setup --start --name mds-cluster oss1.local oss2.local --enable --token 17000
-                           pcs stonith create vboxfence fence_vbox ipaddr=10.0.2.2 login=root passwd=lustre
-                           IDX=0
-                           for x in {a..e} {k..o}; do
-                             pcs resource create ost$IDX ocf:lustre:Lustre target=/dev/mapper/mpath$x mountpoint=/mnt/ost$IDX op start timeout=900 op stop timeout=120
-                             ((IDX++))
-                           done
-                         SHELL
-
+                         path: 'scripts/create_ldiskfs_lvm_mds_ha_setup.sh',
+                         args: [ "{a..e} {k..o}", 0, VBOX_USER, VBOX_PASSWD, VBOX_SSHKEY ]
+                         
       else
         oss.vm.provision 'create-pools',
                          type: 'shell',
@@ -711,7 +698,7 @@ Vagrant.configure('2') do |config|
 
       end
 
-      oss.vm.provision 'ha-ldiskfs-lvm-fs-step1',
+      oss.vm.provision 'ha-ldiskfs-lvm-fs-prep',
                        type: 'shell',
                        run: 'never',
                        inline: <<-SHELL
