@@ -21,6 +21,7 @@ use std::{collections::HashMap, sync::Arc};
 
 const INFLUX_QUERY: &str = r#"
 SELECT SUM(b_total), SUM(b_free), SUM(b_avail), SUM(clients)
+FROM (SELECT *
 FROM (
  SELECT LAST(bytes_total) AS b_total,
  LAST(bytes_free) AS b_free,
@@ -31,7 +32,7 @@ FROM (
  (SELECT LAST(connected_clients) AS clients
  FROM target
  WHERE "kind"='MDT'
- GROUP BY target)
+ GROUP BY target))
 GROUP BY fs"#;
 
 struct Row {
