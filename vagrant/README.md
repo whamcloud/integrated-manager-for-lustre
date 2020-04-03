@@ -85,7 +85,7 @@ From here you can decide what type of setup to run.
 
   ```sh
 	vagrant provision --provision-with=install-ldiskfs-no-iml,configure-lustre-network,create-ldiskfs-lvm-fs,ha-ldiskfs-lvm-fs-prep
-	VBOX_PASSWD=lustre
+	VBOX_PASSWD=<ROOT_PW_HERE>
 	vagrant provision --provision-with=ha-ldiskfs-lvm-fs-setup
 	```
 
