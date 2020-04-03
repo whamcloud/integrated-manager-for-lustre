@@ -156,7 +156,9 @@ async fn ostpool_list(fsname: Option<String>) -> Result<(), ImlManagerCliError> 
 }
 
 async fn ostpool_show(fsname: String, poolname: String) -> Result<(), ImlManagerCliError> {
-    let pool = pool_lookup(&fsname, &poolname).await?;
+    let mut pool = pool_lookup(&fsname, &poolname).await?;
+
+    pool.ost.osts.sort_unstable();
 
     let mut table = Table::new();
     table.add_row(Row::from(&["Filesystem".to_string(), fsname]));
