@@ -22,7 +22,7 @@ services:
       retries: 5
       start_period: 10s
   influxdb:
-    image: "imlteam/influxdb:5.1.1-dev"
+    image: "imlteam/influxdb:6.1.0-dev"
     build:
       context: ../
       dockerfile: ./docker/influxdb.dockerfile
@@ -46,7 +46,7 @@ services:
       - INFLUXDB_HTTP_BIND_ADDRESS=influxdb:8086
       - INFLUXDB_HTTP_LOG_ENABLED=false
   grafana:
-    image: "imlteam/grafana:5.1.1-dev"
+    image: "imlteam/grafana:6.1.0-dev"
     build:
       context: ../
       dockerfile: ./docker/grafana.dockerfile
@@ -81,7 +81,7 @@ services:
       retries: 5
       start_period: 10s
   nginx:
-    image: "imlteam/manager-nginx:5.1.1-dev"
+    image: "imlteam/manager-nginx:6.1.0-dev"
     build:
       context: ../
       dockerfile: ./docker/nginx.dockerfile
@@ -113,7 +113,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   corosync:
-    image: "imlteam/manager-corosync:5.1.1-dev"
+    image: "imlteam/manager-corosync:6.1.0-dev"
     hostname: "corosync"
     build:
       context: .
@@ -122,7 +122,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   gunicorn:
-    image: "imlteam/manager-gunicorn:5.1.1-dev"
+    image: "imlteam/manager-gunicorn:6.1.0-dev"
     hostname: "gunicorn"
     build:
       context: .
@@ -134,7 +134,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   http-agent:
-    image: "imlteam/manager-http-agent:5.1.1-dev"
+    image: "imlteam/manager-http-agent:6.1.0-dev"
     volumes:
       - "manager-config:/var/lib/chroma"
     hostname: "http-agent"
@@ -145,7 +145,7 @@ services:
     environment:
       - PROXY_HOST=http-agent
   iml-agent-comms:
-    image: "imlteam/iml-agent-comms:5.1.1-dev"
+    image: "imlteam/iml-agent-comms:6.1.0-dev"
     volumes:
       - "manager-config:/var/lib/chroma"
     hostname: "iml-agent-comms"
@@ -158,7 +158,7 @@ services:
       - PROXY_HOST=iml-agent-comms
       - RUST_LOG=info
   job-scheduler:
-    image: "imlteam/manager-job-scheduler:5.1.1-dev"
+    image: "imlteam/manager-job-scheduler:6.1.0-dev"
     hostname: "job-scheduler"
     build:
       context: .
@@ -172,7 +172,7 @@ services:
       - PROXY_HOST=iml-action-runner
       - INFLUXDB_SERVER_FQDN=influxdb
   lustre-audit:
-    image: "imlteam/manager-lustre-audit:5.1.1-dev"
+    image: "imlteam/manager-lustre-audit:6.1.0-dev"
     hostname: "lustre-audit"
     build:
       context: .
@@ -181,7 +181,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   plugin-runner:
-    image: "imlteam/manager-plugin-runner:5.1.1-dev"
+    image: "imlteam/manager-plugin-runner:6.1.0-dev"
     hostname: "plugin-runner"
     build:
       context: .
@@ -192,7 +192,7 @@ services:
     environment:
       - DEVICE_AGGREGATOR_URL=http://device-aggregator:8008
   power-control:
-    image: "imlteam/manager-power-control:5.1.1-dev"
+    image: "imlteam/manager-power-control:6.1.0-dev"
     hostname: "power-control"
     build:
       context: .
@@ -201,7 +201,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   syslog:
-    image: "imlteam/manager-syslog:5.1.1-dev"
+    image: "imlteam/manager-syslog:6.1.0-dev"
     hostname: "syslog"
     build:
       context: .
@@ -210,7 +210,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   iml-warp-drive:
-    image: "imlteam/iml-warp-drive:5.1.1-dev"
+    image: "imlteam/iml-warp-drive:6.1.0-dev"
     hostname: "iml-warp-drive"
     build:
       context: ../
@@ -222,7 +222,7 @@ services:
       - PROXY_HOST=iml-warp-drive
       - RUST_LOG=info
   iml-action-runner:
-    image: "imlteam/iml-action-runner:5.1.1-dev"
+    image: "imlteam/iml-action-runner:6.1.0-dev"
     hostname: "iml-action-runner"
     build:
       context: ../
@@ -235,7 +235,7 @@ services:
       - ACTION_RUNNER_PORT=8009
       - RUST_LOG=info
   iml-api:
-    image: "imlteam/iml-api:5.1.1-dev"
+    image: "imlteam/iml-api:6.1.0-dev"
     hostname: "iml-api"
     build:
       context: ../
@@ -247,7 +247,7 @@ services:
       - PROXY_HOST=iml-api
       - RUST_LOG=info
   iml-manager-cli:
-    image: "imlteam/iml-manager-cli:5.1.1-dev"
+    image: "imlteam/iml-manager-cli:6.1.0-dev"
     stdin_open: true
     tty: true
     build:
@@ -259,7 +259,7 @@ services:
     environment:
       - SERVER_HTTP_URL=gunicorn
   iml-ostpool:
-    image: "imlteam/iml-ostpool:5.1.1-dev"
+    image: "imlteam/iml-ostpool:6.1.0-dev"
     hostname: "iml-ostpool"
     build:
       context: ../
@@ -270,7 +270,7 @@ services:
     environment:
       - RUST_LOG=info
   iml-mailbox:
-    image: "imlteam/iml-mailbox:5.1.1-dev"
+    image: "imlteam/iml-mailbox:6.1.0-dev"
     hostname: "iml-mailbox"
     build:
       context: ../
@@ -282,7 +282,7 @@ services:
       - "mailbox_run:/run"
       - "manager-config:/var/lib/chroma"
   iml-stats:
-    image: "imlteam/iml-stats:5.1.1-dev"
+    image: "imlteam/iml-stats:6.1.0-dev"
     hostname: "iml-stats"
     build:
       context: ../
@@ -294,7 +294,7 @@ services:
       - RUST_LOG=info
       - PROXY_HOST=influxdb
   iml-postoffice:
-    image: "imlteam/iml-postoffice:5.1.1-dev"
+    image: "imlteam/iml-postoffice:6.1.0-dev"
     hostname: "iml-postoffice"
     build:
       context: ../
@@ -305,7 +305,7 @@ services:
     environment:
       - PROXY_HOST=iml-postoffice
   iml-timer:
-    image: "imlteam/iml-timer:5.1.1-dev"
+    image: "imlteam/iml-timer:6.1.0-dev"
     hostname: "iml-timer"
     build:
       context: ../
@@ -318,7 +318,7 @@ services:
       - "timer_system:/etc/systemd/system"
       - "manager-config:/var/lib/chroma"
   setup:
-    image: "imlteam/manager-setup:5.1.1-dev"
+    image: "imlteam/manager-setup:6.1.0-dev"
     command: ["tail", "-f", "/dev/null"]
     build:
       context: .

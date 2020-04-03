@@ -1,5 +1,5 @@
 FROM rust-iml-base as builder
-FROM imlteam/rust-service-base:5.1.1-dev
+FROM imlteam/rust-service-base:6.1.0-dev
 
 COPY --from=builder /build/target/release/iml-ostpool /usr/local/bin
 COPY docker/wait-for-dependencies.sh /usr/local/bin/
