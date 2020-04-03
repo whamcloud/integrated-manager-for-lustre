@@ -78,7 +78,7 @@ From here you can decide what type of setup to run.
 - Monitored Ldiskfs with LVM Metadata:
 
   ```sh
-   vagrant provision --provision-with=install-ldiskfs-no-iml,configure-lustre-networkcreate-ldiskfs-lvm-fs,mount-ldiskfs-lvm-fs
+   vagrant provision --provision-with=install-ldiskfs-no-iml,configure-lustre-network,create-ldiskfs-lvm-fs,mount-ldiskfs-lvm-fs
   ```
 
 - Monitored Ldiskfs with LVM Metadata and HA:
