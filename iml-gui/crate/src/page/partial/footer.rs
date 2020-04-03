@@ -13,7 +13,7 @@ pub fn view() -> impl View<Msg> {
         class![C.h_5, C.flex, C.justify_center],
         div![
             class![C.px_5, C.text_sm, C.items_center,],
-            "Integrated Manager for Lustre software 5.1.0-1 is Copyright © ",
+            "Integrated Manager for Lustre software 6.0.0-1 is Copyright © ",
             &year.to_string(),
             " DDN. All rights reserved.",
         ]

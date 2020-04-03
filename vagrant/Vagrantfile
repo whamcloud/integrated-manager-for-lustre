@@ -164,6 +164,14 @@ Vagrant.configure('2') do |config|
                      path: 'scripts/install_iml.sh',
                      args: 'https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/v5.1.0/chroma_support.repo'
 
+        # Install IML 5.1 onto the admin node
+    # Using the mfl 5.1 repo
+    adm.vm.provision 'install-iml-6.0',
+                     type: 'shell',
+                     run: 'never',
+                     path: 'scripts/install_iml.sh',
+                     args: 'https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/v6.0.0/chroma_support.repo'
+
     # Install IML 4.0.10.x onto the admin node
     # Using the mfl 4.0.10 copr repo
     adm.vm.provision 'install-iml-4.0.10',
