@@ -2,7 +2,7 @@ name: prod-release
 on:
   push:
     tags:
-      - v*rust-r5.1
+      - v*rust-r6.0
 jobs:
   push_rust_iml:
     name: Push to Copr prod
@@ -16,11 +16,30 @@ jobs:
         env:
           PROD: true
           OWNER: managerforlustre
-          PROJECT: manager-for-lustre-5.1
+          PROJECT: manager-for-lustre-6.0
           PACKAGE: rust-iml
           SPEC: rust-iml.spec
           WORKSPACE: ${{ github.workspace }}
           RUSTUP_TOOLCHAIN: stable-x86_64-unknown-linux-gnu
+          KEY: ${{ secrets.key }}
+          IV: ${{ secrets.iv }}
+  push_iml_gui:
+    name: Push to Copr prod (GUI)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Push RPM
+        uses: ./.github/actions/copr-wasm
+        env:
+          PROD: true
+          OWNER: managerforlustre
+          PROJECT: manager-for-lustre-6.0
+          PACKAGE: rust-iml-gui
+          SPEC: iml-gui/rust-iml-gui.spec
+          SRPM_TASK: iml-gui-srpm
+          WORKSPACE: ${{ github.workspace }}
           KEY: ${{ secrets.key }}
           IV: ${{ secrets.iv }}
   push_iml_docker:
@@ -41,7 +60,7 @@ jobs:
         env:
           PROD: true
           OWNER: managerforlustre
-          PROJECT: manager-for-lustre-5.1
+          PROJECT: manager-for-lustre-6.0
           PACKAGE: iml-docker
           SRPM_TASK: iml-docker-srpm
           SPEC: iml-docker.spec
