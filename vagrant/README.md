@@ -73,21 +73,21 @@ From here you can decide what type of setup to run.
      vagrant provision --provision-with=deploy-managed-hosts adm
      ```
 
-  1. https://whamcloud.github.io/Online-Help/docs/Contributor_Docs/cd_Managed_ZFS.html
+  1. <https://whamcloud.github.io/Online-Help/docs/Contributor_Docs/cd_Managed_ZFS.html>
 
 - Monitored Ldiskfs with LVM Metadata:
 
   ```sh
-	vagrant provision --provision-with=install-ldiskfs-no-iml,configure-lustre-network,create-ldiskfs-lvm-fs,mount-ldiskfs-lvm-fs
-	```
+   vagrant provision --provision-with=install-ldiskfs-no-iml,configure-lustre-network,create-ldiskfs-lvm-fs,mount-ldiskfs-lvm-fs
+  ```
 
 - Monitored Ldiskfs with LVM Metadata and HA:
 
   ```sh
-	vagrant provision --provision-with=install-ldiskfs-no-iml,configure-lustre-network,create-ldiskfs-lvm-fs,ha-ldiskfs-lvm-fs-prep
-	VBOX_PASSWD=<ROOT_PW_HERE>
-	vagrant provision --provision-with=ha-ldiskfs-lvm-fs-setup
-	```
+   vagrant provision --provision-with=install-ldiskfs-no-iml,configure-lustre-network,create-ldiskfs-lvm-fs,ha-ldiskfs-lvm-fs-prep
+   VBOX_PASSWD=<ROOT_PW_HERE>
+   vagrant provision --provision-with=ha-ldiskfs-lvm-fs-setup
+  ```
 
 ### Windows
 

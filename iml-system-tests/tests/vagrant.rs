@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use futures::{future::BoxFuture, FutureExt, TryFutureExt};
-use std::{io, process::ExitStatus};
+use std::{env, io, process::ExitStatus};
 use tokio::{fs, process::Command};
 
 fn handle_status(x: ExitStatus) -> Result<(), io::Error> {
@@ -138,11 +138,22 @@ pub async fn setup_bare(hosts: &[&str]) -> Result<(), Box<dyn std::error::Error>
 pub async fn setup_iml_install(hosts: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
     setup_bare(hosts).await?;
 
-    provision("install-iml-local")
-        .await?
-        .args(hosts)
-        .checked_status()
-        .await?;
+    match env::var("REPO_URI") {
+        Ok(x) => {
+            provision("install-iml-repouri")
+                .await?
+                .env("REPO_URI", x)
+                .checked_status()
+                .await?;
+        }
+        _ => {
+            provision("install-iml-local")
+                .await?
+                .args(hosts)
+                .checked_status()
+                .await?;
+        }
+    };
 
     halt().await?.args(hosts).checked_status().await?;
 

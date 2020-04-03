@@ -17,6 +17,8 @@ VBOX_USER   = (ENV['VBOX_USER']   || "root").freeze
 VBOX_PASSWD = (ENV['VBOX_PASSWD'] || "").freeze
 VBOX_SSHKEY = (ENV['VBOX_SSHKEY'] || "").freeze
 
+REPO_URI = (ENV['REPO_URI'] || '').freeze
+
 require 'open3'
 require 'fileutils'
 
@@ -128,6 +130,15 @@ Vagrant.configure('2') do |config|
                               'target/',
                               'vagrant/'
                            ]
+
+    # Install IML onto the admin node
+    # Using a given repouri
+    adm.vm.provision 'install-iml-repouri',
+                     type: 'shell',
+                     run: 'never',
+                     path: 'scripts/install_iml_repouri.sh',
+                     env: {"REPO_URI" => REPO_URI}
+
 
     # Install IML onto the admin node
     # Using the mfl devel repo
