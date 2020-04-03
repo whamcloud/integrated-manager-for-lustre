@@ -8,7 +8,7 @@ edition = "2018"
 bytes = "0.5"
 futures = "0.3"
 iml-manager-env = { path = "../iml-manager-env", version = "0.2.0" }
-iml-fs = { path = "../iml-fs", version = "0.1" }
+iml-fs = { path = "../iml-fs", version = "0.2" }
 tokio = "0.2"
 warp = "0.2"
 tracing = "0.1"

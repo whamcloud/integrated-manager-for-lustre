@@ -15,8 +15,8 @@ uuid = { version = "0.7", features = ["v4"] }
 im = { version = "14.1", features = ["serde"] }
 warp = "0.2"
 iml-manager-env = { path = "../iml-manager-env", version = "0.2.0" }
-iml-rabbit = { path = "../iml-rabbit", version = "0.1.0" }
-iml-postgres = { path = "../iml-postgres", version = "0.1.0" }
+iml-rabbit = { path = "../iml-rabbit", version = "0.2.0" }
+iml-postgres = { path = "../iml-postgres", version = "0.2.0" }
 iml-wire-types = { path = "../iml-wire-types", version = "0.2", features = ["postgres-interop"] }
-iml-manager-client = { path = "../iml-manager-client", version = "0.1" }
-tokio-runtime-shutdown = { path = "../tokio-runtime-shutdown", version = "0.1" }
+iml-manager-client = { path = "../iml-manager-client", version = "0.2" }
+tokio-runtime-shutdown = { path = "../tokio-runtime-shutdown", version = "0.2" }

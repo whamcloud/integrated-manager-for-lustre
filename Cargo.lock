@@ -1130,7 +1130,7 @@ dependencies = [
 
 [[package]]
 name = "iml-action-runner"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "iml-agent-comms",
@@ -1152,7 +1152,7 @@ dependencies = [
 
 [[package]]
 name = "iml-agent"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "byte-unit",
  "bytes",
@@ -1201,7 +1201,7 @@ dependencies = [
 
 [[package]]
 name = "iml-agent-comms"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "iml-manager-env",
@@ -1218,7 +1218,7 @@ dependencies = [
 
 [[package]]
 name = "iml-api"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "iml-job-scheduler-rpc",
@@ -1235,7 +1235,7 @@ dependencies = [
 
 [[package]]
 name = "iml-api-utils"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "lazy_static",
  "regex",
@@ -1243,7 +1243,7 @@ dependencies = [
 
 [[package]]
 name = "iml-cmd"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "tokio",
@@ -1253,7 +1253,7 @@ dependencies = [
 
 [[package]]
 name = "iml-fs"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bytes",
  "futures",
@@ -1266,7 +1266,7 @@ dependencies = [
 
 [[package]]
 name = "iml-job-scheduler-rpc"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "iml-rabbit",
@@ -1280,7 +1280,7 @@ dependencies = [
 
 [[package]]
 name = "iml-mailbox"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bytes",
  "futures",
@@ -1296,7 +1296,7 @@ dependencies = [
 
 [[package]]
 name = "iml-manager-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "combine",
  "console 0.10.0",
@@ -1322,7 +1322,7 @@ dependencies = [
 
 [[package]]
 name = "iml-manager-client"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "iml-manager-env",
  "iml-request-retry",
@@ -1335,11 +1335,11 @@ dependencies = [
 
 [[package]]
 name = "iml-manager-env"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "iml-orm"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "diesel",
@@ -1351,7 +1351,7 @@ dependencies = [
 
 [[package]]
 name = "iml-ostpool"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "futures-util",
@@ -1365,7 +1365,7 @@ dependencies = [
 
 [[package]]
 name = "iml-postgres"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "iml-manager-env",
@@ -1375,7 +1375,7 @@ dependencies = [
 
 [[package]]
 name = "iml-postoffice"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "iml-rabbit",
@@ -1388,7 +1388,7 @@ dependencies = [
 
 [[package]]
 name = "iml-rabbit"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "iml-manager-env",
@@ -1402,7 +1402,7 @@ dependencies = [
 
 [[package]]
 name = "iml-request-retry"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "http",
@@ -1420,7 +1420,7 @@ dependencies = [
 
 [[package]]
 name = "iml-service-queue"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "iml-rabbit",
@@ -1432,7 +1432,7 @@ dependencies = [
 
 [[package]]
 name = "iml-stats"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "iml-manager-env",
@@ -1448,7 +1448,7 @@ dependencies = [
 
 [[package]]
 name = "iml-timer"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "iml-cmd",
@@ -1465,7 +1465,7 @@ dependencies = [
 
 [[package]]
 name = "iml-util"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "iml-wire-types",
@@ -1477,7 +1477,7 @@ dependencies = [
 
 [[package]]
 name = "iml-warp-drive"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "im",
@@ -1697,7 +1697,7 @@ dependencies = [
 
 [[package]]
 name = "liblustreapi"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "errno",
  "libc",
@@ -1708,7 +1708,7 @@ dependencies = [
 
 [[package]]
 name = "liblustreapi-types"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bindgen",
  "libc",
@@ -3361,7 +3361,7 @@ dependencies = [
 
 [[package]]
 name = "tokio-runtime-shutdown"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "stream-cancel",

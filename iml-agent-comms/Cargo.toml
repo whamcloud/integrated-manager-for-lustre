@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 futures = "0.3"
 iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
-iml-rabbit = { path = "../iml-rabbit", version = "0.1.0", features = ["warp-filters"]}
+iml-rabbit = { path = "../iml-rabbit", version = "0.2.0", features = ["warp-filters"]}
 iml-manager-env = { path = "../iml-manager-env", version = "0.2.0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
