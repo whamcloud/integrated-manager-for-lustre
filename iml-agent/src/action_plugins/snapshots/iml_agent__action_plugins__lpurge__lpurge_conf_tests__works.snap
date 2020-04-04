@@ -2,11 +2,11 @@
 source: iml-agent/src/action_plugins/lpurge.rs
 expression: cnt
 ---
-device=lima-montevideo
+device=lima-OST0010
 dryrun=true
 freehi=123
 freelo=60
-listen_socket=/run/lpurge-lima-montevideo-santiago.sock
+listen_socket=/run/iml/postman-foobar.sock
 max_jobs=0
 pool=lima.santiago
 
