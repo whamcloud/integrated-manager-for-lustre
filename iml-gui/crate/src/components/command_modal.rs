@@ -81,7 +81,6 @@ pub struct Model {
 
     pub jobs_loading: bool,
     pub jobs: Vec<Arc<Job0>>,
-    pub jobs_wait_fors: HashMap<u32, Vec<u32>>,
 
     pub steps_loading: bool,
     pub steps: Vec<Arc<Step>>,
@@ -127,8 +126,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
         }
         Msg::FireCommands(cmds) => {
+            let cmds = Input::Ids(vec![12, 54]); // todo revert
+            model.opens = Opens::Command(54);    // todo revert
+            // model.opens = Opens::None;
             model.modal.open = true;
-            model.opens = Opens::None;
 
             match cmds {
                 Input::Commands(cmds) => {
@@ -150,10 +151,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             model.tree_cancel = None;
             if !is_all_finished(&model.commands) {
                 schedule_fetch_tree(model, orders).map_err(|e| error!(e.to_string()));
-                //let ids = model.commands.iter().map(|x| x.id).collect();
-                // orders
-                //     .skip()
-                //     .perform_cmd(fetch_the_batch(ids, |x| Msg::FetchedCommands(Box::new(x))));
             }
         }
         Msg::FetchedCommands(commands_data_result) => {
@@ -178,12 +175,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             match *jobs_data_result {
                 Ok(api_list) => {
                     model.jobs = api_list.objects.into_iter().map(Arc::new).collect();
-                    model.jobs_wait_fors.clear();
-                    // we have `job.id` and `job.wait_for`, put everything into one data structure
-                    for job in &model.jobs {
-                        let jids: Vec<u32> = job.wait_for.iter().filter_map(|s| extract_uri_id::<Job0>(s)).collect();
-                        model.jobs_wait_fors.insert(job.id, jids);
-                    }
                 }
                 Err(e) => {
                     error!("Failed to perform fetch_job_status {:#?}", e);
@@ -462,12 +453,12 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
 fn command_item_view(x: &Command, is_open: bool) -> Node<Msg> {
     let border = if !is_open {
         C.border_transparent
-    } else if x.cancelled {
-        C.border_gray_500
-    } else if x.errored {
-        C.border_red_500
     } else if x.complete {
         C.border_green_500
+    } else if x.errored {
+        C.border_red_500
+    } else if x.cancelled {
+        C.border_gray_500
     } else {
         C.border_transparent
     };
@@ -477,6 +468,8 @@ fn command_item_view(x: &Command, is_open: bool) -> Node<Msg> {
     } else {
         ("chevron-circle-down", Msg::Open(TypedId::Command(x.id)))
     };
+
+    let job_tree = job_tree_view(model, 12, &vec![39, 40, 41, 42, 43, 44, 45]);
 
     div![
         attrs!{ "cmd__id" => x.id.to_string() }, // todo revert
@@ -509,13 +502,40 @@ fn command_item_view(x: &Command, is_open: bool) -> Node<Msg> {
                 class![C.pl_8, C.hidden => !is_open],
                 li![class![C.pb_2], "Started at: ", x.created_at],
                 li![class![C.pb_2], "Status: ", status_text(x)],
-
+                job_tree,
             ]
         ]
     ]
 }
 
-fn job_item_view(x: &Job0, is_open: bool) {
+fn job_tree_view(model: &Model, start: u32, children: &[u32]) -> Node<Msg> {
+    if children.contains(&start) {
+        // normally this should not happen, we check this to avoid potential loop
+        empty!()
+    } else {
+        let jobs = children
+            .iter()
+            .filter_map(|job_id| model.jobs.iter().find(|job| job.id == *job_id));
+        div![
+            class![C.mr_4],
+            ul![
+                class![ C.border_4 ],
+                jobs.map(|job| {
+                    let children: Vec<u32> = job.wait_for
+                        .iter()
+                        .filter_map(|s| extract_uri_id::<Job0>(s)).collect();
+                    li![
+                        "Job",
+                        job.id.to_string(),
+                        job_tree_view(model, start, &children)
+                    ]
+                })
+            ]
+        ]
+    }
+}
+
+fn job_item_view(x: &Job0, is_open: bool) -> Node<Msg> {
     let border = if !is_open {
         C.border_transparent
     } else if x.cancelled {
@@ -527,18 +547,31 @@ fn job_item_view(x: &Job0, is_open: bool) {
     } else {
         C.border_transparent
     };
+
+    let (open_icon, m) = if is_open {
+        ("chevron-circle-up", Msg::Close(TypedId::Job(x.id)))
+    } else {
+        ("chevron-circle-down", Msg::Open(TypedId::Job(x.id)))
+    };
+
+    div![
+        "job_item_view"
+    ]
 }
 
-fn step_item_view(x: &Step, is_open: bool) {
+fn step_item_view(x: &Step, is_open: bool) -> Node<Msg> {
+    div![
+        "step_item_view"
+    ]
 }
 
 fn status_text(cmd: &Command) -> &'static str {
-    if cmd.cancelled {
-        "Cancelled"
+    if cmd.complete {
+        "Complete"
     } else if cmd.errored {
         "Errored"
-    } else if cmd.complete {
-        "Complete"
+    } else if cmd.cancelled {
+        "Cancelled"
     } else {
         "Running"
     }
@@ -547,13 +580,13 @@ fn status_text(cmd: &Command) -> &'static str {
 fn status_icon<T>(cmd: &Command) -> Node<T> {
     let cls = class![C.w_4, C.h_4, C.inline, C.mr_4];
 
-    if cmd.cancelled {
+    if cmd.complete {
+        font_awesome(cls, "check").merge_attrs(class![C.text_green_500])
+    } else if cmd.cancelled {
         font_awesome(cls, "ban").merge_attrs(class![C.text_gray_500])
     } else if cmd.errored {
         font_awesome(cls, "bell").merge_attrs(class![C.text_red_500])
-    } else if cmd.complete {
-        font_awesome(cls, "check").merge_attrs(class![C.text_green_500])
-    } else {
+    } else  {
         font_awesome(cls, "spinner").merge_attrs(class![C.text_gray_500, C.pulse])
     }
 }
