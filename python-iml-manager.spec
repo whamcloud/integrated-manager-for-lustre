@@ -4,7 +4,7 @@ BuildRequires: systemd
 # The install directory for the manager
 %{?!manager_root: %global manager_root /usr/share/chroma-manager}
 %global pypi_name iml-manager
-%global version 5.1.0
+%global version 6.0.0
 %{?!python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
 %{?dist_version: %global source https://github.com/whamcloud/%{pypi_name}/archive/%{dist_version}.tar.gz}
@@ -54,7 +54,6 @@ Requires:       python-setuptools
 Requires:       python-requests >= 2.6.0
 Requires:       python-uuid
 Requires:       python-dateutil >= 1.5
-Requires:       python2-django-tastypie = 0.14.1
 Requires:       python2-jsonschema >= 2.5.1
 Requires:       python2-kombu >= 4.2.2
 Requires:       python2-mimeparse
@@ -68,26 +67,27 @@ Requires:       nginx >= 1:1.12.2
 Requires:       nodejs >= 1:6.16.0
 Requires(post): selinux-policy-targeted
 # IML Repo
+Requires:       python2-django-tastypie = 0.14.1
 Requires:       python2-django-picklefield >= 1.0.0
-Requires:       iml-device-scanner-aggregator >= 3.0.0
-Requires:       iml-online-help >= 2.6.0
-Requires:       iml_sos_plugin >= 2.3
-Requires:       iml-update-handler >= 1.0.3, iml-update-handler < 2
+Requires:       iml-device-scanner-aggregator >= 3.0.1
+Requires:       iml-online-help >= 3.0.0
+Requires:       iml_sos_plugin >= 2.3.1
+Requires:       iml-update-handler >= 1.0.4, iml-update-handler < 2
 Requires:       python2-gevent >= 1.0.1
 Requires:       python2-httpagentparser >= 1.5
 Requires:       python2-iml-manager-cli = %{version}-%{release}
-Requires:       python2-requests-unixsocket >= 0.1.5
+Requires:       python2-requests-unixsocket >= 0.2.0
 Requires:       python2-massiviu >= 0.1.0-2
-Requires:       rust-iml-action-runner >= 0.1.2
-Requires:       rust-iml-agent-comms >= 0.1.2
-Requires:       rust-iml-api >= 0.1.2
-Requires:       rust-iml-cli >= 0.1.2
+Requires:       rust-iml-action-runner >= 0.2.0
+Requires:       rust-iml-agent-comms >= 0.2.0
+Requires:       rust-iml-api >= 0.2.0
+Requires:       rust-iml-cli >= 0.2.0
 Requires:       rust-iml-gui >= 0.1.0
-Requires:       rust-iml-mailbox >= 0.1.2
-Requires:       rust-iml-ostpool >= 0.1.2
-Requires:       rust-iml-postoffice >= 0.1.0
-Requires:       rust-iml-stats >= 0.1.2
-Requires:       rust-iml-warp-drive >= 0.1.2
+Requires:       rust-iml-mailbox >= 0.2.0
+Requires:       rust-iml-ostpool >= 0.2.0
+Requires:       rust-iml-postoffice >= 0.2.0
+Requires:       rust-iml-stats >= 0.2.0
+Requires:       rust-iml-warp-drive >= 0.2.0
 # Other Repos
 Requires:       influxdb
 Requires:       grafana

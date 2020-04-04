@@ -1,6 +1,6 @@
 [package]
 name = "iml-manager-cli"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
@@ -11,8 +11,8 @@ dialoguer = "0.5"
 dotenv = "0.15"
 futures = "0.3"
 hostlist-parser = "0.1.2"
-iml-api-utils = { path = "../iml-api-utils", version = "0.1" }
-iml-manager-client = { path = "../iml-manager-client", version = "0.1.0" }
+iml-api-utils = { path = "../iml-api-utils", version = "0.2" }
+iml-manager-client = { path = "../iml-manager-client", version = "0.2.0" }
 iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
 indicatif = "0.14"
 number-formatter = { path = "../number-formatter", version = "0.1" }
