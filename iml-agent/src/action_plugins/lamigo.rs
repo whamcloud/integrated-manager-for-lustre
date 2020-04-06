@@ -87,7 +87,10 @@ fn format_lamigo_conf_file(c: &Config) -> Result<PathBuf, ImlAgentError> {
 }
 
 fn format_lamigo_unit_file(c: &Config) -> PathBuf {
-    PathBuf::from(format!("/etc/systemd/system/lamigo-{}-MDT{:04x}.service", c.fs, c.mdt))
+    PathBuf::from(format!(
+        "/etc/systemd/system/lamigo-{}-MDT{:04x}.service",
+        c.fs, c.mdt
+    ))
 }
 
 fn format_lamigo_unit_contents(c: &Config) -> Result<String, ImlAgentError> {
@@ -155,7 +158,7 @@ mod lamigo_tests {
 
         let fmt3 = "lamigo-{unknown_value}.service";
         assert!(expand_path_fmt(fmt3, &config).is_err());
-        
+
         env::set_var("LAMIGO_CONF_PATH", "/etc/lamigo/{fs}-{mdt}.conf");
         assert_eq!(
             format_lamigo_conf_file(&config).unwrap(),
