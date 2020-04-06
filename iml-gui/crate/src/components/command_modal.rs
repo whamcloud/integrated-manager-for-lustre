@@ -14,8 +14,8 @@ use regex::{Captures, Regex};
 use seed::{prelude::*, *};
 use serde::de::DeserializeOwned;
 use std::collections::{HashMap, HashSet};
-use std::{sync::Arc, time::Duration};
 use std::fmt;
+use std::{sync::Arc, time::Duration};
 
 /// The component polls `/api/command/` endpoint and this constant defines how often it does.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
@@ -53,15 +53,13 @@ pub enum CommandError {
 impl fmt::Display for CommandError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CommandError::UnknownCommand(cmd_id) => {
-                write!(f, "Invariant violation, command_id={} is unknown", cmd_id)
-            }
-            CommandError::UnknownJob(job_id) => {
-                write!(f, "Invariant violation, job_id={} is unknown", job_id)
-            }
-            CommandError::UnknownSteps(step_ids) => {
-                write!(f, "Invariant violation, some of some_step_ids={:?} is unknown", step_ids)
-            }
+            CommandError::UnknownCommand(cmd_id) => write!(f, "Invariant violation, command_id={} is unknown", cmd_id),
+            CommandError::UnknownJob(job_id) => write!(f, "Invariant violation, job_id={} is unknown", job_id),
+            CommandError::UnknownSteps(step_ids) => write!(
+                f,
+                "Invariant violation, some of some_step_ids={:?} is unknown",
+                step_ids
+            ),
         }
     }
 }
@@ -108,17 +106,21 @@ pub enum Msg {
     Noop,
 }
 
+pub struct DependencyTree {
+
+}
+
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     let msg_str = match msg {
-        Msg::Modal(_) =>           "Msg-Modal".to_string(),
-        Msg::FireCommands(_) =>    "Msg-FireCommands".to_string(),
-        Msg::FetchTree =>          "Msg-FetchTree".to_string(),
+        Msg::Modal(_) => "Msg-Modal".to_string(),
+        Msg::FireCommands(_) => "Msg-FireCommands".to_string(),
+        Msg::FetchTree => "Msg-FetchTree".to_string(),
         Msg::FetchedCommands(_) => "Msg-FetchedCommands".to_string(),
-        Msg::FetchedJobs(_) =>     "Msg-FetchedJobs".to_string(),
-        Msg::FetchedSteps(_) =>    "Msg-FetchedSteps".to_string(),
-        Msg::Open(_) =>            "Msg-Open".to_string(),
-        Msg::Close(_) =>           "Msg-Close".to_string(),
-        Msg::Noop =>               "Msg-Noop".to_string(),
+        Msg::FetchedJobs(_) => "Msg-FetchedJobs".to_string(),
+        Msg::FetchedSteps(_) => "Msg-FetchedSteps".to_string(),
+        Msg::Open(_) => "Msg-Open".to_string(),
+        Msg::Close(_) => "Msg-Close".to_string(),
+        Msg::Noop => "Msg-Noop".to_string(),
     };
     log!("command_modal::update: ", msg_str, model);
     match msg {
@@ -127,8 +129,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::FireCommands(cmds) => {
             let cmds = Input::Ids(vec![12, 54]); // todo revert
-            model.opens = Opens::Command(54);    // todo revert
-            // model.opens = Opens::None;
+            model.opens = Opens::Command(54); // todo revert
+                                              // model.opens = Opens::None;
             model.modal.open = true;
 
             match cmds {
@@ -264,18 +266,10 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -
             // the user has opened the info on the command, selected a job and expanded some of the steps
             if let Some(i1) = model.commands.iter().position(|c| c.id == *cmd_id) {
                 if let Some(i2) = model.jobs.iter().position(|j| j.id == *job_id) {
-                    let step_ids: HashSet<u32> = model.jobs[i2]
-                        .steps
-                        .iter()
-                        .filter_map(|s| extract_uri_id::<Step>(s))
-                        .collect();
+                    let step_ids = extract_ids::<Step>(&model.jobs[i2].steps);
                     if some_step_ids.iter().all(|id| step_ids.contains(id)) {
-                        let cmd_ids: Vec<u32> = model.commands.iter().map(|c| c.id).collect();
-                        let job_ids: Vec<u32> = model.commands[i1]
-                            .jobs
-                            .iter()
-                            .filter_map(|s| extract_uri_id::<Job0>(s))
-                            .collect();
+                        let cmd_ids = model.commands.iter().map(|c| c.id).collect();
+                        let job_ids = extract_ids::<Job0>(&model.commands[i1].jobs);
                         let the_step_ids = some_step_ids.clone();
                         orders
                             .skip()
@@ -327,6 +321,11 @@ fn extract_uri_id<T: EndpointName>(input: &str) -> Option<u32> {
     })
 }
 
+fn extract_ids<T: EndpointName>(uris: &[String]) -> Vec<u32> {
+    // uris is the slice of strings like ["/api/step/123/", .. , "/api/step/234/"]
+    uris.iter().filter_map(|s| extract_uri_id::<T>(s)).collect()
+}
+
 const fn is_finished(cmd: &Command) -> bool {
     cmd.complete
 }
@@ -374,7 +373,7 @@ fn perform_open_click(cur_opens: &Opens, the_id: &TypedId) -> Opens {
                     step_ids.push(*step_id);
                     Opens::CommandJobSteps(*cmd_id_0, *job_id_0, step_ids)
                 }
-            },
+            }
         },
     }
 }
@@ -385,16 +384,20 @@ fn perform_close_click(cur_opens: &Opens, the_id: &TypedId) -> Opens {
         TypedId::Job(job_id) => match &cur_opens {
             Opens::None => cur_opens.clone(),
             Opens::Command(cmd_id_0) => cur_opens.clone(),
-            Opens::CommandJob(cmd_id_0, job_id_0) => if job_id == job_id_0 {
-                Opens::Command(*cmd_id_0)
-            } else {
-                cur_opens.clone()
-            },
-            Opens::CommandJobSteps(cmd_id_0, job_id_0, _) => if job_id == job_id_0 {
-                Opens::Command(*cmd_id_0)
-            } else {
-                cur_opens.clone()
-            },
+            Opens::CommandJob(cmd_id_0, job_id_0) => {
+                if job_id == job_id_0 {
+                    Opens::Command(*cmd_id_0)
+                } else {
+                    cur_opens.clone()
+                }
+            }
+            Opens::CommandJobSteps(cmd_id_0, job_id_0, _) => {
+                if job_id == job_id_0 {
+                    Opens::Command(*cmd_id_0)
+                } else {
+                    cur_opens.clone()
+                }
+            }
         },
         TypedId::Step(step_id) => match &cur_opens {
             Opens::None => cur_opens.clone(),
@@ -404,7 +407,7 @@ fn perform_close_click(cur_opens: &Opens, the_id: &TypedId) -> Opens {
                 // if the clicked step_id is contained in the list of open steps, just remove it
                 let step_ids = step_ids_0.iter().map(|r| *r).filter(|sid| *sid != *step_id).collect();
                 Opens::CommandJobSteps(*cmd_id_0, *job_id_0, step_ids)
-            },
+            }
         },
     }
 }
@@ -469,10 +472,10 @@ fn command_item_view(x: &Command, is_open: bool) -> Node<Msg> {
         ("chevron-circle-down", Msg::Open(TypedId::Command(x.id)))
     };
 
-    let job_tree = job_tree_view(model, 12, &vec![39, 40, 41, 42, 43, 44, 45]);
+    let job_tree = empty!();
 
     div![
-        attrs!{ "cmd__id" => x.id.to_string() }, // todo revert
+        attrs! { "cmd__id" => x.id.to_string() }, // todo revert
         class![C.border_b, C.last__border_b_0],
         div![
             class![
@@ -519,16 +522,10 @@ fn job_tree_view(model: &Model, start: u32, children: &[u32]) -> Node<Msg> {
         div![
             class![C.mr_4],
             ul![
-                class![ C.border_4 ],
+                class![C.border_4],
                 jobs.map(|job| {
-                    let children: Vec<u32> = job.wait_for
-                        .iter()
-                        .filter_map(|s| extract_uri_id::<Job0>(s)).collect();
-                    li![
-                        "Job",
-                        job.id.to_string(),
-                        job_tree_view(model, start, &children)
-                    ]
+                    let children: Vec<u32> = job.wait_for.iter().filter_map(|s| extract_uri_id::<Job0>(s)).collect();
+                    li!["Job", job.id.to_string(), job_tree_view(model, start, &children)]
                 })
             ]
         ]
@@ -554,15 +551,11 @@ fn job_item_view(x: &Job0, is_open: bool) -> Node<Msg> {
         ("chevron-circle-down", Msg::Open(TypedId::Job(x.id)))
     };
 
-    div![
-        "job_item_view"
-    ]
+    div!["job_item_view"]
 }
 
 fn step_item_view(x: &Step, is_open: bool) -> Node<Msg> {
-    div![
-        "step_item_view"
-    ]
+    div!["step_item_view"]
 }
 
 fn status_text(cmd: &Command) -> &'static str {
@@ -586,13 +579,14 @@ fn status_icon<T>(cmd: &Command) -> Node<T> {
         font_awesome(cls, "ban").merge_attrs(class![C.text_gray_500])
     } else if cmd.errored {
         font_awesome(cls, "bell").merge_attrs(class![C.text_red_500])
-    } else  {
+    } else {
         font_awesome(cls, "spinner").merge_attrs(class![C.text_gray_500, C.pulse])
     }
 }
 
 fn close_button() -> Node<Msg> {
-    seed::button![ // todo revert
+    seed::button![
+        // todo revert
         class![
             C.bg_transparent,
             C.py_2,
@@ -619,4 +613,506 @@ mod tests {
         assert_eq!(extract_uri_id::<Command>("/api/command/12/"), Some(12));
         assert_eq!(extract_uri_id::<Command>("/api/xxx/1/"), None);
     }
+
+    pub struct Tree {
+        pub root: u32,
+        pub stuff: HashMap<u32, Vec<u32>>,
+    }
+
+    #[test]
+    fn build_tree() {
+        let api_list: ApiList<Job0> = serde_json::from_str(JOBS).unwrap();
+        let xs: Vec<(u32, Vec<u32>)> = api_list.objects.iter().map(|j| (j.id, extract_deps(j))).collect();
+
+        // build direct tree
+        let mut roots: Vec<u32> = Vec::new();
+        let mut tree: HashMap<u32, Vec<Arc<Job0>>> = HashMap::new();
+        for (id, ids_deps) in xs {
+            let job_deps: Vec<Arc<Job0>> = ids_deps
+                .iter()
+                .filter_map(|jid| api_list.objects.iter().find(|j| j.id == *jid))
+                .map(|j| Arc::new(j.clone()))
+                .collect();
+            if !roots.contains(&id) {
+                roots.push(id);
+            }
+            // remove any of the dependencies from the roots
+            for job in &job_deps {
+                if let Some(i) = roots.iter().position(|r| job.id == *r) {
+                    roots.remove(i);
+                }
+            }
+            tree.insert(id, job_deps);
+        }
+        print_tree(&roots, &tree);
+
+        //////////////////////////////////////////
+        // build reverse tree
+
+    }
+
+    trait Id {
+        fn id(&self) -> u32;
+        fn description(&self) -> &str;
+    }
+
+    impl Id for Job0 {
+        fn id(&self) -> u32 {
+            self.id
+        }
+        fn description(&self) -> &str {
+            &self.description
+        }
+    }
+
+    impl<T: Id> Id for Arc<T> {
+        fn id(&self) -> u32 {
+            (**self).id()
+        }
+        fn description(&self) -> &str {
+            (**self).description()
+        }
+    }
+
+    fn print_tree<T: fmt::Debug + Id>(roots: &Vec<u32>, tree: &HashMap<u32, Vec<T>>) {
+        fn print_tree_branch<T: fmt::Debug + Id>(node: u32, tree: &HashMap<u32, Vec<T>>, n: usize) {
+            if let Some(deps) = tree.get(&node) {
+                for d in deps {
+                    let indent = "  ".repeat(n);
+                    println!("{}{}: {}", indent, d.id(), d.description());
+                    print_tree_branch(d.id(), tree, n + 1);
+                }
+            }
+        }
+        for r in roots {
+            println!("============ root = {}", r);
+            println!("{}: ???", r);
+            print_tree_branch(*r, tree, 1);
+        }
+    }
+
+    fn extract_deps(job: &Job0) -> Vec<u32> {
+        let mut deps: Vec<u32> = job.wait_for.iter().filter_map(|s| extract_uri_id::<Job0>(&s)).collect();
+        deps.sort();
+        deps
+    }
+
+    const JOBS: &'static str = r#"{
+  "meta": {
+    "limit": 20,
+    "next": null,
+    "offset": 0,
+    "previous": null,
+    "total_count": 10
+  },
+  "objects": [
+    {
+      "available_transitions": [],
+      "cancelled": false,
+      "class_name": "InstallHostPackagesJob",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.491600",
+      "description": "Install packages on server oss2.local",
+      "errored": false,
+      "id": 39,
+      "modified_at": "2020-03-16T07:22:34.491573",
+      "read_locks": [],
+      "resource_uri": "/api/job/39/",
+      "state": "complete",
+      "step_results": {
+        "/api/step/12/": null,
+        "/api/step/16/": null,
+        "/api/step/20/": null,
+        "/api/step/22/": null,
+        "/api/step/25/": null
+      },
+      "steps": [
+        "/api/step/12/",
+        "/api/step/16/",
+        "/api/step/20/",
+        "/api/step/22/",
+        "/api/step/25/"
+      ],
+      "wait_for": [],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 17,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/host/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": false,
+      "class_name": "ConfigureNTPJob",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.516793",
+      "description": "Configure NTP on oss2.local",
+      "errored": false,
+      "id": 40,
+      "modified_at": "2020-03-16T07:22:34.516760",
+      "read_locks": [
+        {
+          "locked_item_content_type_id": 17,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/host/4/",
+          "resource_uri": ""
+        }
+      ],
+      "resource_uri": "/api/job/40/",
+      "state": "complete",
+      "step_results": {
+        "/api/step/55/": null,
+        "/api/step/57/": null,
+        "/api/step/60/": null,
+        "/api/step/62/": null,
+        "/api/step/63/": null
+      },
+      "steps": [
+        "/api/step/55/",
+        "/api/step/57/",
+        "/api/step/60/",
+        "/api/step/62/",
+        "/api/step/63/"
+      ],
+      "wait_for": [
+        "/api/job/39/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 21,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/ntp_configuration/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": false,
+      "class_name": "EnableLNetJob",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.554315",
+      "description": "Enable LNet on oss2.local",
+      "errored": false,
+      "id": 41,
+      "modified_at": "2020-03-16T07:22:34.554290",
+      "read_locks": [
+        {
+          "locked_item_content_type_id": 17,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/host/4/",
+          "resource_uri": ""
+        }
+      ],
+      "resource_uri": "/api/job/41/",
+      "state": "complete",
+      "step_results": {},
+      "steps": [],
+      "wait_for": [
+        "/api/job/39/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 53,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/lnet_configuration/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": false,
+      "class_name": "AutoConfigureCorosync2Job",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.591853",
+      "description": "Configure Corosync on oss2.local.",
+      "errored": false,
+      "id": 42,
+      "modified_at": "2020-03-16T07:22:34.591829",
+      "read_locks": [
+        {
+          "locked_item_content_type_id": 17,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/host/4/",
+          "resource_uri": ""
+        }
+      ],
+      "resource_uri": "/api/job/42/",
+      "state": "complete",
+      "step_results": {
+        "/api/step/56/": null
+      },
+      "steps": [
+        "/api/step/56/"
+      ],
+      "wait_for": [
+        "/api/job/39/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 75,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/corosync_configuration/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": false,
+      "class_name": "StartCorosync2Job",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.627692",
+      "description": "Start Corosync on oss2.local",
+      "errored": false,
+      "id": 43,
+      "modified_at": "2020-03-16T07:22:34.627667",
+      "read_locks": [],
+      "resource_uri": "/api/job/43/",
+      "state": "complete",
+      "step_results": {
+        "/api/step/74/": null
+      },
+      "steps": [
+        "/api/step/74/"
+      ],
+      "wait_for": [
+        "/api/job/42/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 75,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/corosync_configuration/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": true,
+      "class_name": "LoadLNetJob",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.648217",
+      "description": "Load the LNet kernel modules.",
+      "errored": false,
+      "id": 44,
+      "modified_at": "2020-03-16T07:22:34.648185",
+      "read_locks": [],
+      "resource_uri": "/api/job/44/",
+      "state": "complete",
+      "step_results": {
+        "/api/step/58/": null,
+        "/api/step/64/": null
+      },
+      "steps": [
+        "/api/step/58/",
+        "/api/step/64/"
+      ],
+      "wait_for": [
+        "/api/job/41/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 53,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/lnet_configuration/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": true,
+      "class_name": "StartLNetJob",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.672353",
+      "description": "Start the LNet networking layer.",
+      "errored": false,
+      "id": 45,
+      "modified_at": "2020-03-16T07:22:34.672291",
+      "read_locks": [],
+      "resource_uri": "/api/job/45/",
+      "state": "complete",
+      "step_results": {},
+      "steps": [],
+      "wait_for": [
+        "/api/job/44/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 53,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/lnet_configuration/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": false,
+      "class_name": "ConfigurePacemakerJob",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.695375",
+      "description": "Configure Pacemaker on oss2.local.",
+      "errored": false,
+      "id": 46,
+      "modified_at": "2020-03-16T07:22:34.695324",
+      "read_locks": [
+        {
+          "locked_item_content_type_id": 17,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/host/4/",
+          "resource_uri": ""
+        },
+        {
+          "locked_item_content_type_id": 75,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/corosync_configuration/4/",
+          "resource_uri": ""
+        }
+      ],
+      "resource_uri": "/api/job/46/",
+      "state": "complete",
+      "step_results": {
+        "/api/step/77/": null,
+        "/api/step/78/": null,
+        "/api/step/82/": null
+      },
+      "steps": [
+        "/api/step/77/",
+        "/api/step/78/",
+        "/api/step/82/"
+      ],
+      "wait_for": [
+        "/api/job/43/",
+        "/api/job/39/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 64,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/pacemaker_configuration/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": false,
+      "class_name": "StartPacemakerJob",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.755602",
+      "description": "Start Pacemaker on oss2.local",
+      "errored": false,
+      "id": 47,
+      "modified_at": "2020-03-16T07:22:34.755578",
+      "read_locks": [
+        {
+          "locked_item_content_type_id": 75,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/corosync_configuration/4/",
+          "resource_uri": ""
+        }
+      ],
+      "resource_uri": "/api/job/47/",
+      "state": "complete",
+      "step_results": {
+        "/api/step/85/": null
+      },
+      "steps": [
+        "/api/step/85/"
+      ],
+      "wait_for": [
+        "/api/job/43/",
+        "/api/job/46/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 64,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/pacemaker_configuration/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": true,
+      "class_name": "SetupHostJob",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.798434",
+      "description": "Setup managed host oss2.local",
+      "errored": false,
+      "id": 48,
+      "modified_at": "2020-03-16T07:22:34.798408",
+      "read_locks": [
+        {
+          "locked_item_content_type_id": 53,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/lnet_configuration/4/",
+          "resource_uri": ""
+        },
+        {
+          "locked_item_content_type_id": 64,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/pacemaker_configuration/4/",
+          "resource_uri": ""
+        },
+        {
+          "locked_item_content_type_id": 21,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/ntp_configuration/4/",
+          "resource_uri": ""
+        }
+      ],
+      "resource_uri": "/api/job/48/",
+      "state": "complete",
+      "step_results": {},
+      "steps": [],
+      "wait_for": [
+        "/api/job/39/",
+        "/api/job/40/",
+        "/api/job/41/",
+        "/api/job/42/",
+        "/api/job/45/",
+        "/api/job/46/",
+        "/api/job/47/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 17,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/host/4/",
+          "resource_uri": ""
+        }
+      ]
+    }
+  ]
+}
+"#;
 }
