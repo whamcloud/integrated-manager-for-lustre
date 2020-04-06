@@ -17,6 +17,9 @@ VBOX_USER   = (ENV['VBOX_USER']   || "root").freeze
 VBOX_PASSWD = (ENV['VBOX_PASSWD'] || "").freeze
 VBOX_SSHKEY = (ENV['VBOX_SSHKEY'] || "").freeze
 
+# Lustre version
+LUSTRE = (ENV['LUSTRE'] || "2.12.4").freeze
+
 REPO_URI = (ENV['REPO_URI'] || '').freeze
 
 require 'open3'
@@ -757,7 +760,7 @@ Vagrant.configure('2') do |config|
                      type: 'shell',
                      run: 'never',
                      inline: <<-SHELL
-                            yum-config-manager --add-repo https://downloads.whamcloud.com/public/lustre/lustre-2.12.4/el7/client/
+                            yum-config-manager --add-repo https://downloads.whamcloud.com/public/lustre/lustre-#{LUSTRE}/el7/client/
                             yum install -y --nogpgcheck lustre-client
                      SHELL
     end
@@ -878,7 +881,8 @@ def install_ldiskfs_no_iml(config)
                       type: 'shell',
                       run: 'never',
                       reboot: true,
-                      path: './scripts/install_ldiskfs_no_iml.sh'
+                      path: './scripts/install_ldiskfs_no_iml.sh',
+                      args: "#{LUSTRE}"
 end
 
 def install_zfs_no_iml(config)
@@ -886,7 +890,8 @@ def install_zfs_no_iml(config)
                       type: 'shell',
                       run: 'never',
                       reboot: true,
-                      path: './scripts/install_zfs_no_iml.sh'
+                      path: './scripts/install_zfs_no_iml.sh',
+                      args: "#{LUSTRE}"
 end
 
 def use_vault_7_6_1810(config)
