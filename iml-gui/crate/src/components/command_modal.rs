@@ -649,7 +649,7 @@ mod tests {
 
         let mut builder = String::new();
         write_tree(&mut builder, &roots, &tree);
-
+        assert_eq!(TREE, builder);
         println!("{}", builder);
         //////////////////////////////////////////
         // build reverse tree
@@ -689,7 +689,6 @@ mod tests {
             }
         }
         for r in roots {
-            writeln!(f, "============ root = {}", r.id());
             writeln!(f, "{}: {}", r.id(), r.description());
             print_tree_branch(f, r.id(), tree, 1);
         }
@@ -700,6 +699,34 @@ mod tests {
         deps.sort();
         deps
     }
+
+    const TREE: &'static str = r#"48: Setup managed host oss2.local
+  39: Install packages on server oss2.local
+  40: Configure NTP on oss2.local
+    39: Install packages on server oss2.local
+  41: Enable LNet on oss2.local
+    39: Install packages on server oss2.local
+  42: Configure Corosync on oss2.local.
+    39: Install packages on server oss2.local
+  45: Start the LNet networking layer.
+    44: Load the LNet kernel modules.
+      41: Enable LNet on oss2.local
+        39: Install packages on server oss2.local
+  46: Configure Pacemaker on oss2.local.
+    39: Install packages on server oss2.local
+    43: Start Corosync on oss2.local
+      42: Configure Corosync on oss2.local.
+        39: Install packages on server oss2.local
+  47: Start Pacemaker on oss2.local
+    43: Start Corosync on oss2.local
+      42: Configure Corosync on oss2.local.
+        39: Install packages on server oss2.local
+    46: Configure Pacemaker on oss2.local.
+      39: Install packages on server oss2.local
+      43: Start Corosync on oss2.local
+        42: Configure Corosync on oss2.local.
+          39: Install packages on server oss2.local
+"#;
 
     const JOBS: &'static str = r#"{
   "meta": {
