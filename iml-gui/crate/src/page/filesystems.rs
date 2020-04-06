@@ -32,7 +32,7 @@ FROM (
  (SELECT LAST(connected_clients) AS clients
  FROM target
  WHERE "kind"='MDT'
- GROUP BY target))
+ GROUP BY fs))
 GROUP BY fs"#;
 
 struct Row {
