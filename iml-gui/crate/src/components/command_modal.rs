@@ -106,9 +106,7 @@ pub enum Msg {
     Noop,
 }
 
-pub struct DependencyTree {
-
-}
+pub struct DependencyTree {}
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     let msg_str = match msg {
@@ -644,11 +642,17 @@ mod tests {
             }
             tree.insert(id, job_deps);
         }
-        print_tree(&roots, &tree);
+        let roots: Vec<Arc<Job0>> = roots.iter()
+            .filter_map(|jid| api_list.objects.iter().find(|j| j.id == *jid))
+            .map(|j| Arc::new(j.clone()))
+            .collect();
 
+        let mut builder = String::new();
+        write_tree(&mut builder, &roots, &tree);
+
+        println!("{}", builder);
         //////////////////////////////////////////
         // build reverse tree
-
     }
 
     trait Id {
@@ -674,20 +678,20 @@ mod tests {
         }
     }
 
-    fn print_tree<T: fmt::Debug + Id>(roots: &Vec<u32>, tree: &HashMap<u32, Vec<T>>) {
-        fn print_tree_branch<T: fmt::Debug + Id>(node: u32, tree: &HashMap<u32, Vec<T>>, n: usize) {
+    fn write_tree<W: fmt::Write, T: fmt::Debug + Id>(f: &mut W, roots: &Vec<T>, tree: &HashMap<u32, Vec<T>>) {
+        fn print_tree_branch<W: fmt::Write, T: fmt::Debug + Id>(f: &mut W, node: u32, tree: &HashMap<u32, Vec<T>>, n: usize) {
             if let Some(deps) = tree.get(&node) {
                 for d in deps {
                     let indent = "  ".repeat(n);
-                    println!("{}{}: {}", indent, d.id(), d.description());
-                    print_tree_branch(d.id(), tree, n + 1);
+                    writeln!(f, "{}{}: {}", indent, d.id(), d.description());
+                    print_tree_branch(f, d.id(), tree, n + 1);
                 }
             }
         }
         for r in roots {
-            println!("============ root = {}", r);
-            println!("{}: ???", r);
-            print_tree_branch(*r, tree, 1);
+            writeln!(f, "============ root = {}", r.id());
+            writeln!(f, "{}: {}", r.id(), r.description());
+            print_tree_branch(f, r.id(), tree, 1);
         }
     }
 
