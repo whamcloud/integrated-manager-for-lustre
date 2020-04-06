@@ -66,7 +66,7 @@ impl Model {
                    , (SELECT LAST(connected_clients) AS clients
                       FROM target
                       WHERE "fs"='{fs_name}' AND "kind"='MDT'
-                      GROUP BY target))"#,
+                      GROUP BY fs))"#,
             fs_name = &fs.name
         );
 
