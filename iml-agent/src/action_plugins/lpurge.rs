@@ -87,8 +87,8 @@ async fn write(file: PathBuf, c: &Config) -> std::io::Result<()> {
 mod lpurge_conf_tests {
     use super::*;
     use insta::assert_display_snapshot;
-    use tempfile::tempdir;
     use std::env;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn works() {
@@ -106,13 +106,10 @@ mod lpurge_conf_tests {
         let dir = tempdir().expect("could not create temp file");
         let file = dir.path().join("config");
         let file2 = file.clone();
-        
+
         write(file, &cfg).await.expect("could not write");
 
-        let cnt = String::from_utf8(
-            std::fs::read(&file2).expect("could not read file"),
-        )
-        .unwrap();
+        let cnt = String::from_utf8(std::fs::read(&file2).expect("could not read file")).unwrap();
 
         assert_display_snapshot!(cnt);
     }
@@ -130,6 +127,9 @@ mod lpurge_conf_tests {
         };
         let file = conf_name(&cfg).await.expect("name could not be created");
 
-        assert_eq!(file, PathBuf::from("/etc/lpurge/lima/OST0010-santiago.conf"));
+        assert_eq!(
+            file,
+            PathBuf::from("/etc/lpurge/lima/OST0010-santiago.conf")
+        );
     }
 }
