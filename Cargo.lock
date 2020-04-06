@@ -543,6 +543,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "device-types"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17a837a40ad42813d6c811d407d8386d8a46ad9110d9b3f4b90dc6b05fc45bfa"
+dependencies = [
+ "im 13.0.0",
+ "libzfs-types",
+ "log 0.4.8",
+ "serde",
+]
+
+[[package]]
 name = "dialoguer"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1115,6 +1127,18 @@ dependencies = [
 
 [[package]]
 name = "im"
+version = "13.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8db49f8bc08d5cc4e2bb0f7d25a6d1db2c79bc6f7d7c86c96c657eb3d214125f"
+dependencies = [
+ "rustc_version",
+ "serde",
+ "sized-chunks 0.3.1",
+ "typenum",
+]
+
+[[package]]
+name = "im"
 version = "14.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "696059c87b83c5a258817ecd67c3af915e3ed141891fc35a1e79908801cf0ce7"
@@ -1123,7 +1147,7 @@ dependencies = [
  "rand_core 0.5.1",
  "rand_xoshiro",
  "serde",
- "sized-chunks",
+ "sized-chunks 0.5.3",
  "typenum",
  "version_check 0.9.1",
 ]
@@ -1248,6 +1272,27 @@ dependencies = [
  "futures",
  "tokio",
  "tracing",
+ "warp",
+]
+
+[[package]]
+name = "iml-device"
+version = "0.2.0"
+dependencies = [
+ "device-types",
+ "futures",
+ "iml-manager-env",
+ "iml-rabbit",
+ "iml-service-queue",
+ "iml-wire-types",
+ "insta",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
  "warp",
 ]
 
@@ -1480,7 +1525,7 @@ name = "iml-warp-drive"
 version = "0.2.0"
 dependencies = [
  "futures",
- "im",
+ "im 14.3.0",
  "iml-manager-client",
  "iml-manager-env",
  "iml-postgres",
@@ -1501,7 +1546,7 @@ name = "iml-wire-types"
 version = "0.2.0"
 dependencies = [
  "bytes",
- "im",
+ "im 14.3.0",
  "iml-api-utils",
  "postgres-types",
  "serde",
@@ -1712,6 +1757,16 @@ version = "0.2.0"
 dependencies = [
  "bindgen",
  "libc",
+]
+
+[[package]]
+name = "libzfs-types"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "781e3a0e71718873e3fb34ba980a2ff855079c2685d36c78c3df5586a9379bca"
+dependencies = [
+ "serde",
+ "serde_derive",
 ]
 
 [[package]]
@@ -2869,18 +2924,18 @@ checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
 name = "serde"
-version = "1.0.105"
+version = "1.0.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e707fbbf255b8fc8c3b99abb91e7257a622caeb20a9818cbadbeeede4e0932ff"
+checksum = "36df6ac6412072f67cf767ebbde4133a5b2e88e76dc6187fa7104cd16f783399"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.105"
+version = "1.0.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac5d00fc561ba2724df6758a17de23df5914f20e41cb00f94d5b7ae42fffaff8"
+checksum = "9e549e3abf4fb8621bd1609f11dfc9f5e50320802273b12f3811a67e6716ea6c"
 dependencies = [
  "proc-macro2 1.0.10",
  "quote 1.0.3",
@@ -2993,6 +3048,15 @@ name = "siphasher"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e88f89a550c01e4cd809f3df4f52dc9e939f3273a2017eabd5c6d12fd98bb23"
+
+[[package]]
+name = "sized-chunks"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f01db57d7ee89c8e053245deb77040a6cc8508311f381c88749c33d4b9b78785"
+dependencies = [
+ "typenum",
+]
 
 [[package]]
 name = "sized-chunks"
@@ -3284,6 +3348,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "thiserror"
+version = "1.0.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0570dc61221295909abdb95c739f2e74325e14293b2026b0a7e195091ec54ae"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "227362df41d566be41a28f64401e07a043157c21c14b9785a0d8e256f940a8fd"
+dependencies = [
+ "proc-macro2 1.0.10",
+ "quote 1.0.3",
+ "syn 1.0.17",
+]
+
+[[package]]
 name = "thread_local"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3305,9 +3389,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "0.2.15"
+version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "619cdb2245c40c42d563089b72e80c5df659513d667a017598439ef7a7b1ffe1"
+checksum = "ee5a0dd887e37d37390c13ff8ac830f992307fe30a1fff0ab8427af67211ba28"
 dependencies = [
  "bytes",
  "fnv",

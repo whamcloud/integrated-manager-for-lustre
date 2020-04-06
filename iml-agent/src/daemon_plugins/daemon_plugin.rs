@@ -4,7 +4,7 @@
 
 use crate::{
     agent_error::{NoPluginError, Result},
-    daemon_plugins::{action_runner, ostpool, postoffice, stats},
+    daemon_plugins::{action_runner, device, ostpool, postoffice, stats},
 };
 use futures::{future, Future, FutureExt};
 use iml_wire_types::{AgentResult, PluginName};
@@ -70,6 +70,7 @@ pub fn plugin_registry() -> DaemonPlugins {
         ("ostpool".into(), mk_callback(ostpool::create)),
         ("postoffice".into(), mk_callback(postoffice::create)),
         ("stats".into(), mk_callback(stats::create)),
+        ("device".into(), mk_callback(device::create)),
     ]
     .into_iter()
     .collect();

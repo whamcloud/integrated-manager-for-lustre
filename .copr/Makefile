@@ -37,13 +37,14 @@ srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/release/rust-iml
 	cargo build --release
-	cp target/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,mailbox,ostpool,postoffice,stats,warp-drive} \
+	cp target/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,mailbox,ostpool,postoffice,stats,device,warp-drive} \
 		iml-agent-comms.service \
 		iml-mailbox.service \
 		iml-postoffice.service \
 		iml-ostpool.service \
 		iml-api.service \
 		iml-rust-stats.service \
+		iml-device.service \
 		iml-action-runner.service \
 		iml-action-runner.socket \
 		iml-agent/systemd-units/* \
@@ -94,7 +95,6 @@ iml-srpm: iml-deps substs
 		${BUILDROOT}/iml-manager.target \
 		${BUILDROOT}/chroma-config.1 \
 		${BUILDROOT}/logrotate.cfg \
-		${BUILDROOT}/10-device-aggregator.service.conf \
 		${TMPDIR}/configuration
 
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/configuration.tar.gz -C ${TMPDIR}/configuration .

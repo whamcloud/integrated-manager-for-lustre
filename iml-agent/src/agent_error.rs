@@ -6,6 +6,7 @@ use iml_cmd::CmdError;
 use iml_fs::ImlFsError;
 use iml_wire_types::PluginName;
 use std::{fmt, process::Output};
+use tokio_util::codec::LinesCodecError;
 
 pub type Result<T> = std::result::Result<T, ImlAgentError>;
 
@@ -71,67 +72,69 @@ impl std::error::Error for CibError {
 
 #[derive(Debug)]
 pub enum ImlAgentError {
+    AddrParseError(std::net::AddrParseError),
+    CibError(CibError),
+    CmdError(CmdError),
+    FmtError(strfmt::FmtError),
+    FromUtf8Error(std::string::FromUtf8Error),
     ImlFsError(ImlFsError),
+    InvalidHeaderValue(http::header::InvalidHeaderValue),
+    InvalidUri(http::uri::InvalidUri),
+    InvalidUriParts(http::uri::InvalidUriParts),
     Io(std::io::Error),
-    Serde(serde_json::Error),
+    LiblustreError(liblustreapi::error::LiblustreError),
+    LinesCodecError(LinesCodecError),
+    LustreCollectorError(lustre_collector::error::LustreCollectorError),
+    MarkerNotFound,
+    NativeTls(native_tls::Error),
+    NoPluginError(NoPluginError),
+    NoSessionError(NoSessionError),
+    OneshotCanceled(futures::channel::oneshot::Canceled),
+    ParseIntError(std::num::ParseIntError),
+    RequiredError(RequiredError),
     Reqwest(reqwest::Error),
+    SendError,
+    Serde(serde_json::Error),
+    TokioJoinError(tokio::task::JoinError),
+    TokioTimerError(tokio::time::Error),
+    UnexpectedStatusError,
     UrlParseError(url::ParseError),
     Utf8Error(std::str::Utf8Error),
-    FromUtf8Error(std::string::FromUtf8Error),
-    TokioTimerError(tokio::time::Error),
-    TokioJoinError(tokio::task::JoinError),
-    AddrParseError(std::net::AddrParseError),
-    ParseIntError(std::num::ParseIntError),
-    NoSessionError(NoSessionError),
-    NoPluginError(NoPluginError),
-    RequiredError(RequiredError),
-    OneshotCanceled(futures::channel::oneshot::Canceled),
-    LiblustreError(liblustreapi::error::LiblustreError),
-    LustreCollectorError(lustre_collector::error::LustreCollectorError),
-    CmdError(CmdError),
-    SendError,
-    InvalidUriParts(http::uri::InvalidUriParts),
-    InvalidUri(http::uri::InvalidUri),
-    InvalidHeaderValue(http::header::InvalidHeaderValue),
-    NativeTls(native_tls::Error),
     XmlError(elementtree::Error),
-    FmtError(strfmt::FmtError),
-    CibError(CibError),
-    UnexpectedStatusError,
-    MarkerNotFound,
 }
 
 impl std::fmt::Display for ImlAgentError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
+            ImlAgentError::AddrParseError(ref err) => write!(f, "{}", err),
+            ImlAgentError::CibError(ref err) => write!(f, "{}", err),
+            ImlAgentError::CmdError(ref err) => write!(f, "{}", err),
+            ImlAgentError::FmtError(ref err) => write!(f, "{}", err),
+            ImlAgentError::FromUtf8Error(ref err) => write!(f, "{}", err),
             ImlAgentError::ImlFsError(ref err) => write!(f, "{}", err),
+            ImlAgentError::InvalidHeaderValue(ref err) => write!(f, "{}", err),
+            ImlAgentError::InvalidUri(ref err) => write!(f, "{}", err),
+            ImlAgentError::InvalidUriParts(ref err) => write!(f, "{}", err),
             ImlAgentError::Io(ref err) => write!(f, "{}", err),
-            ImlAgentError::Serde(ref err) => write!(f, "{}", err),
+            ImlAgentError::LiblustreError(ref err) => write!(f, "{}", err),
+            ImlAgentError::LinesCodecError(ref err) => write!(f, "{}", err),
+            ImlAgentError::LustreCollectorError(ref err) => write!(f, "{}", err),
+            ImlAgentError::MarkerNotFound => write!(f, "Marker not found"),
+            ImlAgentError::NativeTls(ref err) => write!(f, "{}", err),
+            ImlAgentError::NoPluginError(ref err) => write!(f, "{}", err),
+            ImlAgentError::NoSessionError(ref err) => write!(f, "{}", err),
+            ImlAgentError::OneshotCanceled(ref err) => write!(f, "{}", err),
+            ImlAgentError::ParseIntError(ref err) => write!(f, "{}", err),
+            ImlAgentError::RequiredError(ref err) => write!(f, "{}", err),
             ImlAgentError::Reqwest(ref err) => write!(f, "{}", err),
+            ImlAgentError::SendError => write!(f, "Rx went away"),
+            ImlAgentError::Serde(ref err) => write!(f, "{}", err),
+            ImlAgentError::TokioJoinError(ref err) => write!(f, "{}", err),
+            ImlAgentError::TokioTimerError(ref err) => write!(f, "{}", err),
+            ImlAgentError::UnexpectedStatusError => write!(f, "Unexpected status code"),
             ImlAgentError::UrlParseError(ref err) => write!(f, "{}", err),
             ImlAgentError::Utf8Error(ref err) => write!(f, "{}", err),
-            ImlAgentError::FromUtf8Error(ref err) => write!(f, "{}", err),
-            ImlAgentError::TokioTimerError(ref err) => write!(f, "{}", err),
-            ImlAgentError::TokioJoinError(ref err) => write!(f, "{}", err),
-            ImlAgentError::AddrParseError(ref err) => write!(f, "{}", err),
-            ImlAgentError::ParseIntError(ref err) => write!(f, "{}", err),
-            ImlAgentError::NoSessionError(ref err) => write!(f, "{}", err),
-            ImlAgentError::NoPluginError(ref err) => write!(f, "{}", err),
-            ImlAgentError::RequiredError(ref err) => write!(f, "{}", err),
-            ImlAgentError::OneshotCanceled(ref err) => write!(f, "{}", err),
-            ImlAgentError::LiblustreError(ref err) => write!(f, "{}", err),
-            ImlAgentError::LustreCollectorError(ref err) => write!(f, "{}", err),
-            ImlAgentError::CmdError(ref err) => write!(f, "{}", err),
-            ImlAgentError::SendError => write!(f, "Rx went away"),
-            ImlAgentError::InvalidUriParts(ref err) => write!(f, "{}", err),
-            ImlAgentError::InvalidUri(ref err) => write!(f, "{}", err),
-            ImlAgentError::InvalidHeaderValue(ref err) => write!(f, "{}", err),
-            ImlAgentError::NativeTls(ref err) => write!(f, "{}", err),
             ImlAgentError::XmlError(ref err) => write!(f, "{}", err),
-            ImlAgentError::FmtError(ref err) => write!(f, "{}", err),
-            ImlAgentError::CibError(ref err) => write!(f, "{}", err),
-            ImlAgentError::UnexpectedStatusError => write!(f, "Unexpected status code"),
-            ImlAgentError::MarkerNotFound => write!(f, "Marker not found"),
         }
     }
 }
@@ -139,34 +142,35 @@ impl std::fmt::Display for ImlAgentError {
 impl std::error::Error for ImlAgentError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
+            ImlAgentError::AddrParseError(ref err) => Some(err),
+            ImlAgentError::CibError(ref err) => Some(err),
+            ImlAgentError::CmdError(ref err) => Some(err),
+            ImlAgentError::FmtError(ref err) => Some(err),
+            ImlAgentError::FromUtf8Error(ref err) => Some(err),
             ImlAgentError::ImlFsError(ref err) => Some(err),
+            ImlAgentError::InvalidHeaderValue(ref err) => Some(err),
+            ImlAgentError::InvalidUri(ref err) => Some(err),
+            ImlAgentError::InvalidUriParts(ref err) => Some(err),
             ImlAgentError::Io(ref err) => Some(err),
-            ImlAgentError::Serde(ref err) => Some(err),
+            ImlAgentError::LiblustreError(ref err) => Some(err),
+            ImlAgentError::LinesCodecError(ref err) => Some(err),
+            ImlAgentError::LustreCollectorError(ref err) => Some(err),
+            ImlAgentError::MarkerNotFound => None,
+            ImlAgentError::NativeTls(ref err) => Some(err),
+            ImlAgentError::NoPluginError(ref err) => Some(err),
+            ImlAgentError::NoSessionError(ref err) => Some(err),
+            ImlAgentError::OneshotCanceled(ref err) => Some(err),
+            ImlAgentError::ParseIntError(ref err) => Some(err),
+            ImlAgentError::RequiredError(ref err) => Some(err),
             ImlAgentError::Reqwest(ref err) => Some(err),
+            ImlAgentError::SendError => None,
+            ImlAgentError::Serde(ref err) => Some(err),
+            ImlAgentError::TokioJoinError(ref err) => Some(err),
+            ImlAgentError::TokioTimerError(ref err) => Some(err),
+            ImlAgentError::UnexpectedStatusError => None,
             ImlAgentError::UrlParseError(ref err) => Some(err),
             ImlAgentError::Utf8Error(ref err) => Some(err),
-            ImlAgentError::FromUtf8Error(ref err) => Some(err),
-            ImlAgentError::TokioTimerError(ref err) => Some(err),
-            ImlAgentError::TokioJoinError(ref err) => Some(err),
-            ImlAgentError::AddrParseError(ref err) => Some(err),
-            ImlAgentError::ParseIntError(ref err) => Some(err),
-            ImlAgentError::NoSessionError(ref err) => Some(err),
-            ImlAgentError::NoPluginError(ref err) => Some(err),
-            ImlAgentError::RequiredError(ref err) => Some(err),
-            ImlAgentError::OneshotCanceled(ref err) => Some(err),
-            ImlAgentError::LiblustreError(ref err) => Some(err),
-            ImlAgentError::LustreCollectorError(ref err) => Some(err),
-            ImlAgentError::CmdError(ref err) => Some(err),
-            ImlAgentError::SendError => None,
-            ImlAgentError::InvalidUriParts(ref err) => Some(err),
-            ImlAgentError::InvalidUri(ref err) => Some(err),
-            ImlAgentError::InvalidHeaderValue(ref err) => Some(err),
-            ImlAgentError::NativeTls(ref err) => Some(err),
             ImlAgentError::XmlError(ref err) => Some(err),
-            ImlAgentError::FmtError(ref err) => Some(err),
-            ImlAgentError::CibError(ref err) => Some(err),
-            ImlAgentError::UnexpectedStatusError => None,
-            ImlAgentError::MarkerNotFound => None,
         }
     }
 }
@@ -252,6 +256,12 @@ impl From<NoSessionError> for ImlAgentError {
 impl From<NoPluginError> for ImlAgentError {
     fn from(err: NoPluginError) -> Self {
         ImlAgentError::NoPluginError(err)
+    }
+}
+
+impl From<LinesCodecError> for ImlAgentError {
+    fn from(err: LinesCodecError) -> Self {
+        ImlAgentError::LinesCodecError(err)
     }
 }
 

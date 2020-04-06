@@ -16,6 +16,7 @@ members = [
     'iml-rabbit',
     'iml-request-retry',
     'iml-services/iml-action-runner',
+    'iml-services/iml-device',
     'iml-services/iml-ostpool',
     'iml-services/iml-postoffice',
     'iml-services/iml-service-queue',
