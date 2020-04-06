@@ -603,6 +603,7 @@ fn close_button() -> Node<Msg> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fmt::Write;
 
     #[test]
     fn parse_job() {
@@ -624,13 +625,10 @@ mod tests {
 
         // build direct tree
         let mut roots: Vec<u32> = Vec::new();
-        let mut tree: HashMap<u32, Vec<Arc<Job0>>> = HashMap::new();
+        let mut dependencies: HashMap<u32, Vec<Arc<Job0>>> = HashMap::new();
+
         for (id, ids_deps) in xs {
-            let job_deps: Vec<Arc<Job0>> = ids_deps
-                .iter()
-                .filter_map(|jid| api_list.objects.iter().find(|j| j.id == *jid))
-                .map(|j| Arc::new(j.clone()))
-                .collect();
+            let job_deps: Vec<Arc<Job0>> = convert_ids_to_jobs(&api_list.objects, &ids_deps);
             if !roots.contains(&id) {
                 roots.push(id);
             }
@@ -640,19 +638,17 @@ mod tests {
                     roots.remove(i);
                 }
             }
-            tree.insert(id, job_deps);
+            dependencies.insert(id, job_deps);
         }
-        let roots: Vec<Arc<Job0>> = roots.iter()
-            .filter_map(|jid| api_list.objects.iter().find(|j| j.id == *jid))
-            .map(|j| Arc::new(j.clone()))
-            .collect();
 
-        let mut builder = String::new();
-        write_tree(&mut builder, &roots, &tree);
-        assert_eq!(TREE, builder);
-        println!("{}", builder);
-        //////////////////////////////////////////
-        // build reverse tree
+        let roots: Vec<Arc<Job0>> = convert_ids_to_jobs(&api_list.objects, &roots);
+        let tree = DependencyTree {
+            roots: &roots,
+            dependencies: &dependencies,
+        };
+        let result = write_tree(&tree);
+        assert_eq!(TREE, result);
+        println!("{}", result);
     }
 
     trait Id {
@@ -678,20 +674,64 @@ mod tests {
         }
     }
 
-    fn write_tree<W: fmt::Write, T: fmt::Debug + Id>(f: &mut W, roots: &Vec<T>, tree: &HashMap<u32, Vec<T>>) {
-        fn print_tree_branch<W: fmt::Write, T: fmt::Debug + Id>(f: &mut W, node: u32, tree: &HashMap<u32, Vec<T>>, n: usize) {
-            if let Some(deps) = tree.get(&node) {
-                for d in deps {
-                    let indent = "  ".repeat(n);
-                    writeln!(f, "{}{}: {}", indent, d.id(), d.description());
-                    print_tree_branch(f, d.id(), tree, n + 1);
+    pub struct DependencyTree<'a, T> {
+        roots: &'a Vec<Arc<T>>,
+        dependencies: &'a HashMap<u32, Vec<Arc<T>>>,
+    }
+
+    pub struct Context {
+        visited: HashSet<u32>,
+        indent: usize,
+    }
+
+    fn write_tree<T: fmt::Debug + Id>(tree: &DependencyTree<T>) -> String {
+        fn write_subtree<T: fmt::Debug + Id>(tree: &DependencyTree<T>, ctx: &mut Context) -> String {
+            let mut res = String::new();
+            for r in tree.roots {
+                if let Some(deps) = tree.dependencies.get(&r.id()) {
+                    for d in deps {
+                        res.write_str(&write_node(tree, Arc::clone(d), ctx));
+                    }
                 }
             }
+            res
         }
-        for r in roots {
-            writeln!(f, "{}: {}", r.id(), r.description());
-            print_tree_branch(f, r.id(), tree, 1);
+        fn write_node<T: fmt::Debug + Id>(tree: &DependencyTree<T>, node: Arc<T>, ctx: &mut Context) -> String {
+            let mut res = String::new();
+            let is_new = ctx.visited.insert(node.id());
+            let ellipsis = if is_new { "" } else { "..." };
+            let indent = "  ".repeat(ctx.indent);
+            res.write_str(&format!(
+                "{}{}: {}{}\n",
+                indent,
+                node.id(),
+                node.description(),
+                ellipsis
+            ));
+            if is_new {
+                ctx.indent += 1;
+                let sub_tree = DependencyTree {
+                    dependencies: &tree.dependencies,
+                    roots: &vec![node.clone()],
+                };
+                res.write_str(&write_subtree(&sub_tree, ctx));
+                ctx.indent -= 1;
+            }
+            res
         }
+        let mut ctx = Context {
+            visited: HashSet::new(),
+            indent: 0,
+        };
+        write_subtree(tree, &mut ctx)
+    }
+
+    fn convert_ids_to_jobs(jobs: &[Job0], job_ids: &[u32]) -> Vec<Arc<Job0>> {
+        job_ids
+            .iter()
+            .filter_map(|jid| jobs.iter().find(|j| j.id == *jid))
+            .map(|j| Arc::new(j.clone()))
+            .collect()
     }
 
     fn extract_deps(job: &Job0) -> Vec<u32> {
@@ -700,32 +740,23 @@ mod tests {
         deps
     }
 
-    const TREE: &'static str = r#"48: Setup managed host oss2.local
-  39: Install packages on server oss2.local
-  40: Configure NTP on oss2.local
-    39: Install packages on server oss2.local
-  41: Enable LNet on oss2.local
-    39: Install packages on server oss2.local
-  42: Configure Corosync on oss2.local.
-    39: Install packages on server oss2.local
-  45: Start the LNet networking layer.
-    44: Load the LNet kernel modules.
-      41: Enable LNet on oss2.local
-        39: Install packages on server oss2.local
-  46: Configure Pacemaker on oss2.local.
-    39: Install packages on server oss2.local
-    43: Start Corosync on oss2.local
-      42: Configure Corosync on oss2.local.
-        39: Install packages on server oss2.local
-  47: Start Pacemaker on oss2.local
-    43: Start Corosync on oss2.local
-      42: Configure Corosync on oss2.local.
-        39: Install packages on server oss2.local
-    46: Configure Pacemaker on oss2.local.
-      39: Install packages on server oss2.local
-      43: Start Corosync on oss2.local
-        42: Configure Corosync on oss2.local.
-          39: Install packages on server oss2.local
+    const TREE: &'static str = r#"39: Install packages on server oss2.local
+40: Configure NTP on oss2.local
+  39: Install packages on server oss2.local...
+41: Enable LNet on oss2.local
+  39: Install packages on server oss2.local...
+42: Configure Corosync on oss2.local.
+  39: Install packages on server oss2.local...
+45: Start the LNet networking layer.
+  44: Load the LNet kernel modules.
+    41: Enable LNet on oss2.local...
+46: Configure Pacemaker on oss2.local.
+  39: Install packages on server oss2.local...
+  43: Start Corosync on oss2.local
+    42: Configure Corosync on oss2.local....
+47: Start Pacemaker on oss2.local
+  43: Start Corosync on oss2.local...
+  46: Configure Pacemaker on oss2.local....
 "#;
 
     const JOBS: &'static str = r#"{
