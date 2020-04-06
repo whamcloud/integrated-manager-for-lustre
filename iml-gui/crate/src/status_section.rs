@@ -9,12 +9,13 @@ use crate::{
     font_awesome, font_awesome_outline,
     generated::css_classes::C,
     page::{activity, logs},
+    restrict,
     route::Route,
     GMsg, ServerDate, HELP_PATH,
 };
 use iml_wire_types::{
     warp_drive::{ArcCache, Locks},
-    Session,
+    GroupType, Session,
 };
 use seed::{prelude::*, *};
 
@@ -136,7 +137,7 @@ pub fn view(
                 C.lg__grid_rows_4,
             ],
             toggle_section(model),
-            side_panel_buttons(route, activity_health).merge_attrs(class![C.row_span_2])
+            side_panel_buttons(session, route, activity_health).merge_attrs(class![C.row_span_2])
         ],
         // Status interaction panel
         match model.section.as_ref() {
@@ -155,7 +156,11 @@ pub fn view(
     ]
 }
 
-fn side_panel_buttons(route: &Route, activity_health: &activity_indicator::ActivityHealth) -> Node<Msg> {
+fn side_panel_buttons(
+    session: Option<&Session>,
+    route: &Route,
+    activity_health: &activity_indicator::ActivityHealth,
+) -> Node<Msg> {
     div![
         class![C.grid, C.grid_rows_3],
         div![
@@ -181,26 +186,30 @@ fn side_panel_buttons(route: &Route, activity_health: &activity_indicator::Activ
                 "Activity"
             ]
         ],
-        div![
-            class![
-                // C.bg_menu_active => model.route == Route::Logs,
-                C.flex,
-                C.flex_col,
-                C.group,
-                C.items_center,
-                C.justify_center,
-            ],
-            a![
-                class![C.cursor_pointer],
-                simple_ev(Ev::Click, Msg::Open(SectionSelector::Logs)),
-                font_awesome(class![C.h_8, C.w_8, C.text_pink_600], "book"),
-            ],
-            a![
-                class![C.text_sm, C.group_hover__text_active, C.text_gray_500, C.pt_2],
-                simple_ev(Ev::Click, Msg::Open(SectionSelector::Logs)),
-                "Logs"
+        restrict::view(
+            session,
+            GroupType::FilesystemAdministrators,
+            div![
+                class![
+                    // C.bg_menu_active => model.route == Route::Logs,
+                    C.flex,
+                    C.flex_col,
+                    C.group,
+                    C.items_center,
+                    C.justify_center,
+                ],
+                a![
+                    class![C.cursor_pointer],
+                    simple_ev(Ev::Click, Msg::Open(SectionSelector::Logs)),
+                    font_awesome(class![C.h_8, C.w_8, C.text_pink_600], "book"),
+                ],
+                a![
+                    class![C.text_sm, C.group_hover__text_active, C.text_gray_500, C.pt_2],
+                    simple_ev(Ev::Click, Msg::Open(SectionSelector::Logs)),
+                    "Logs"
+                ]
             ]
-        ],
+        ),
         div![
             class![C.flex, C.flex_col, C.group, C.justify_center, C.items_center],
             context_sensitive_help_link(route).els()
