@@ -19,22 +19,6 @@ use seed::{prelude::*, *};
 use std::time::Duration;
 use std::{collections::HashMap, sync::Arc};
 
-const INFLUX_QUERY: &str = r#"
-SELECT SUM(b_total), SUM(b_free), SUM(b_avail), SUM(clients)
-FROM (SELECT *
-FROM (
- SELECT LAST(bytes_total) AS b_total,
- LAST(bytes_free) AS b_free,
- LAST(bytes_avail) AS b_avail
- FROM target
- WHERE "kind" = 'OST'
- GROUP BY target),
- (SELECT LAST(connected_clients) AS clients
- FROM target
- WHERE "kind"='MDT'
- GROUP BY fs))
-GROUP BY fs"#;
-
 struct Row {
     dropdown: action_dropdown::Model,
 }
@@ -42,33 +26,16 @@ struct Row {
 #[derive(Default)]
 pub struct Model {
     filesystems: Vec<Arc<Filesystem>>,
-    stats: HashMap<String, filesystem::Stats>,
+    stats: iml_influx::filesystems::Response,
     pager: paging::Model,
     rows: HashMap<u32, Row>,
     stats_cancel: Option<oneshot::Sender<()>>,
 }
 
-type StatsTuple = (String, Option<u64>, Option<u64>, Option<u64>, Option<u64>);
-
-#[derive(serde::Deserialize, Clone, Debug)]
-pub struct InfluxSeries {
-    tags: Option<HashMap<String, String>>,
-    values: Vec<StatsTuple>,
-}
-
-#[derive(serde::Deserialize, Clone, Debug)]
-pub struct InfluxResult {
-    series: Option<Vec<InfluxSeries>>,
-}
-
-#[derive(serde::Deserialize, Clone, Debug)]
-pub struct InfluxResponse {
-    results: Vec<InfluxResult>,
-}
 #[derive(Clone, Debug)]
 pub enum Msg {
     FetchStats,
-    StatsFetched(Box<fetch::ResponseDataResult<InfluxResponse>>),
+    StatsFetched(Box<fetch::ResponseDataResult<iml_influx::filesystems::InfluxResponse>>),
     ActionDropdown(Box<action_dropdown::IdMsg>),
     AddFilesystem(Arc<Filesystem>),
     Page(paging::Msg),
@@ -86,7 +53,8 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
     match msg {
         Msg::FetchStats => {
             model.stats_cancel = None;
-            let request = seed::fetch::Request::new(format!("/influx?db=iml_stats&q={}", INFLUX_QUERY));
+            let request =
+                seed::fetch::Request::new(format!("/influx?db=iml_stats&q={}", iml_influx::filesystems::query()));
             orders
                 .skip()
                 .perform_cmd(request.fetch_json_data(|x| Msg::StatsFetched(Box::new(x))));
@@ -94,31 +62,7 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
         Msg::StatsFetched(res) => {
             match *res {
                 Ok(response) => {
-                    model.stats = response
-                        .results
-                        .into_iter()
-                        .take(1)
-                        .filter_map(|result| result.series)
-                        .flatten()
-                        .filter_map(|s| {
-                            let mfs = s.tags.and_then(|h| h.get("fs").map(|fs| fs.to_string()));
-
-                            s.values.into_iter().next().and_then(|v| {
-                                mfs.map(|fs| {
-                                    (
-                                        fs,
-                                        filesystem::Stats {
-                                            bytes_total: v.1,
-                                            bytes_free: v.2,
-                                            bytes_avail: v.3,
-                                            clients: v.4,
-                                            ..Default::default()
-                                        },
-                                    )
-                                })
-                            })
-                        })
-                        .collect();
+                    model.stats = response.into();
                 }
                 Err(e) => {
                     error!(e);

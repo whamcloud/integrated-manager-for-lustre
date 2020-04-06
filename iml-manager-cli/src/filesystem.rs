@@ -4,14 +4,15 @@
 
 use crate::{
     api_utils::{
-        create_command, get, get_all, get_hosts, get_one, wait_for_cmds_success, SendCmd, SendJob,
+        create_command, get, get_all, get_hosts, get_influx, get_one, wait_for_cmds_success,
+        SendCmd, SendJob,
     },
     display_utils::{generate_table, wrap_fut},
     error::ImlManagerCliError,
     ostpool::{ostpool_cli, OstPoolCommand},
 };
 use futures::future::{try_join, try_join_all};
-use iml_wire_types::{ApiList, Filesystem, FlatQuery, Mgt, Ost};
+use iml_wire_types::{Filesystem, FlatQuery, Mgt, Ost};
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
 use std::collections::{BTreeMap, HashMap};
@@ -43,17 +44,17 @@ pub enum FilesystemCommand {
 }
 
 fn usage(
-    free: Option<f64>,
-    total: Option<f64>,
+    free: Option<u64>,
+    total: Option<u64>,
     formatter: fn(f64, Option<usize>) -> String,
 ) -> String {
     match (free, total) {
         (Some(free), Some(total)) => format!(
             "{} / {}",
-            formatter(total - free, Some(0)),
-            formatter(total, Some(0))
+            formatter(total as f64 - free as f64, Some(0)),
+            formatter(total as f64, Some(0))
         ),
-        (None, Some(total)) => format!("Calculating ... / {}", formatter(total, Some(0))),
+        (None, Some(total)) => format!("Calculating ... / {}", formatter(total as f64, Some(0))),
         _ => "Calculating ...".to_string(),
     }
 }
@@ -109,22 +110,30 @@ async fn detect_filesystem(hosts: Option<String>) -> Result<(), ImlManagerCliErr
 pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManagerCliError> {
     match command {
         FilesystemCommand::List => {
-            let filesystems: ApiList<Filesystem> =
-                wrap_fut("Fetching filesystems...", get_all()).await?;
+            let fut_fs = get_all::<Filesystem>();
+            let query = iml_influx::filesystems::query();
+            let fut_st =
+                get_influx::<iml_influx::filesystems::InfluxResponse>("iml_stats", query.as_str());
+
+            let (filesystems, influx_resp) =
+                wrap_fut("Fetching filesystems...", try_join(fut_fs, fut_st)).await?;
+            let stats = iml_influx::filesystems::Response::from(influx_resp);
 
             tracing::debug!("FSs: {:?}", filesystems);
+            tracing::debug!("Stats: {:?}", stats);
 
             let table = generate_table(
                 &[
                     "Name", "State", "Space", "Inodes", "Clients", "MDTs", "OSTs",
                 ],
                 filesystems.objects.into_iter().map(|f| {
+                    let s = stats.get(&f.name).cloned().unwrap_or_default();
                     vec![
                         f.label,
                         f.state,
-                        usage(f.bytes_free, f.bytes_total, format_bytes),
-                        usage(f.files_free, f.files_total, format_number),
-                        format_number(f.client_count.unwrap_or(0.0), Some(0)),
+                        usage(s.bytes_free, s.bytes_total, format_bytes),
+                        usage(s.files_free, s.files_total, format_number),
+                        format!("{}", s.clients.unwrap_or(0)),
                         f.mdts.len().to_string(),
                         f.osts.len().to_string(),
                     ]
@@ -134,10 +143,17 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
             table.printstd();
         }
         FilesystemCommand::Show { fsname } => {
-            let fs: Filesystem =
-                wrap_fut("Fetching filesystem...", get_one(vec![("name", &fsname)])).await?;
+            let fut_fs = get_one::<Filesystem>(vec![("name", &fsname)]);
+            let query = iml_influx::filesystem::query(&fsname);
+            let fut_st =
+                get_influx::<iml_influx::filesystem::InfluxResponse>("iml_stats", query.as_str());
+
+            let (fs, influx_resp) =
+                wrap_fut("Fetching filesystem...", try_join(fut_fs, fut_st)).await?;
+            let st = iml_influx::filesystem::Response::from(influx_resp);
 
             tracing::debug!("FS: {:?}", fs);
+            tracing::debug!("ST: {:?}", st);
 
             let (mgt, osts): (Mgt, Vec<Ost>) = try_join(
                 wrap_fut("Fetching MGT...", get(&fs.mgt, Mgt::query())),
@@ -151,11 +167,11 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
             table.add_row(Row::from(&["Name".to_string(), fs.label]));
             table.add_row(Row::from(&[
                 "Space".to_string(),
-                usage(fs.bytes_free, fs.bytes_total, format_bytes),
+                usage(st.bytes_free, st.bytes_total, format_bytes),
             ]));
             table.add_row(Row::from(&[
                 "Inodes".to_string(),
-                usage(fs.files_free, fs.files_total, format_number),
+                usage(st.files_free, st.files_total, format_number),
             ]));
             table.add_row(Row::from(&["State".to_string(), fs.state]));
             table.add_row(Row::from(&[
@@ -171,7 +187,7 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
 
             table.add_row(Row::from(&[
                 "Clients".to_string(),
-                format!("{:0}", fs.client_count.unwrap_or(0.0)),
+                format!("{}", st.clients.unwrap_or(0)),
             ]));
             table.add_row(Row::from(&["Mount Path".to_string(), fs.mount_path]));
             table.printstd();

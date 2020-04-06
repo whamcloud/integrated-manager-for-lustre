@@ -1310,6 +1310,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-influx"
+version = "0.1.0"
+dependencies = [
+ "iml-wire-types",
+ "serde",
+]
+
+[[package]]
 name = "iml-job-scheduler-rpc"
 version = "0.2.0"
 dependencies = [
@@ -1350,6 +1358,7 @@ dependencies = [
  "futures",
  "hostlist-parser",
  "iml-api-utils",
+ "iml-influx",
  "iml-manager-client",
  "iml-wire-types",
  "indicatif",

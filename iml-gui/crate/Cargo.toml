@@ -22,6 +22,7 @@ futures = "0.3"
 gloo-timers = { version = "0.2", features = ["futures"] }
 im = { version = "14.3", features = ["serde"] }
 iml-api-utils = { path = "../../iml-api-utils", version = "0.2" }
+iml-influx = { path = "../../iml-influx", version = "0.1" }
 iml-wire-types = { path = "../../iml-wire-types", version = "0.2" }
 js-sys = "0.3"
 lazy_static = "1.4.0"

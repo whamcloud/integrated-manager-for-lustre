@@ -238,6 +238,7 @@ dependencies = [
  "gloo-timers 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "im 14.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "iml-api-utils 0.2.0",
+ "iml-influx 0.1.0",
  "iml-wire-types 0.2.0",
  "js-sys 0.3.37 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -252,6 +253,14 @@ dependencies = [
  "wasm-bindgen-futures 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen-test 0.3.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "web-sys 0.3.37 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "iml-influx"
+version = "0.1.0"
+dependencies = [
+ "iml-wire-types 0.2.0",
+ "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

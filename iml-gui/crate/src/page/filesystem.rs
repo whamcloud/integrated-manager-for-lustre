@@ -26,16 +26,6 @@ pub struct Row {
     dropdown: action_dropdown::Model,
 }
 
-#[derive(Default, serde::Deserialize, Clone, Debug)]
-pub(crate) struct Stats {
-    pub(crate) bytes_total: Option<u64>,
-    pub(crate) bytes_free: Option<u64>,
-    pub(crate) bytes_avail: Option<u64>,
-    pub(crate) files_total: Option<u64>,
-    pub(crate) files_free: Option<u64>,
-    pub(crate) clients: Option<u64>,
-}
-
 pub struct Model {
     pub fs: Arc<Filesystem>,
     mdts: Vec<Arc<Target<TargetConfParam>>>,
@@ -45,31 +35,13 @@ pub struct Model {
     ost_paging: paging::Model,
     rows: HashMap<u32, Row>,
     stratagem: stratagem::Model,
-    stats: Stats,
+    stats: iml_influx::filesystem::Response,
     stats_cancel: Option<oneshot::Sender<()>>,
     stats_url: String,
 }
 
 impl Model {
     pub(crate) fn new(fs: &Arc<Filesystem>) -> Self {
-        let query = format!(
-            r#"SELECT SUM(b_total), SUM(b_free), SUM(b_avail), SUM(f_total), SUM(f_free), SUM(clients)
-               FROM (SELECT *
-               FROM (SELECT LAST(bytes_total) AS b_total
-                          , LAST(bytes_free) AS b_free
-                          , LAST(bytes_avail) AS b_avail
-                          , LAST(files_total) AS f_total
-                          , LAST(files_free) AS f_free
-                      FROM target
-                      WHERE "kind" = 'OST' AND "fs" = '{fs_name}'
-                      GROUP BY target)
-                   , (SELECT LAST(connected_clients) AS clients
-                      FROM target
-                      WHERE "fs"='{fs_name}' AND "kind"='MDT'
-                      GROUP BY fs))"#,
-            fs_name = &fs.name
-        );
-
         Self {
             fs: Arc::clone(fs),
             mdts: Default::default(),
@@ -79,42 +51,17 @@ impl Model {
             ost_paging: Default::default(),
             rows: Default::default(),
             stratagem: stratagem::Model::new(Arc::clone(fs)),
-            stats: Stats::default(),
+            stats: iml_influx::filesystem::Response::default(),
             stats_cancel: None,
-            stats_url: format!(r#"/influx?db=iml_stats&q={}"#, query),
+            stats_url: format!(r#"/influx?db=iml_stats&q={}"#, iml_influx::filesystem::query(&fs.name)),
         }
     }
-}
-
-type StatsTuple = (
-    String,
-    Option<u64>,
-    Option<u64>,
-    Option<u64>,
-    Option<u64>,
-    Option<u64>,
-    Option<u64>,
-);
-
-#[derive(serde::Deserialize, Clone, Debug)]
-pub struct InfluxSeries {
-    values: Vec<StatsTuple>,
-}
-
-#[derive(serde::Deserialize, Clone, Debug)]
-pub struct InfluxResult {
-    series: Option<Vec<InfluxSeries>>,
-}
-
-#[derive(serde::Deserialize, Clone, Debug)]
-pub struct InfluxResponse {
-    results: Vec<InfluxResult>,
 }
 
 #[derive(Clone, Debug)]
 pub enum Msg {
     FetchStats,
-    StatsFetched(Box<fetch::ResponseDataResult<InfluxResponse>>),
+    StatsFetched(Box<fetch::ResponseDataResult<iml_influx::filesystem::InfluxResponse>>),
     ActionDropdown(Box<action_dropdown::IdMsg>),
     AddTarget(Arc<Target<TargetConfParam>>),
     RemoveTarget(u32),
@@ -149,25 +96,7 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
         Msg::StatsFetched(res) => {
             match *res {
                 Ok(response) => {
-                    let r = response
-                        .results
-                        .into_iter()
-                        .take(1)
-                        .filter_map(|result| result.series)
-                        .flatten()
-                        .take(1)
-                        .map(|v| v.values)
-                        .flatten()
-                        .next();
-
-                    if let Some((_, bt, bf, ba, ft, ff, cc)) = r {
-                        model.stats.bytes_total = bt;
-                        model.stats.bytes_free = bf;
-                        model.stats.bytes_avail = ba;
-                        model.stats.files_total = ft;
-                        model.stats.files_free = ff;
-                        model.stats.clients = cc;
-                    }
+                    model.stats = response.into();
                 }
                 Err(e) => {
                     error!(e);
