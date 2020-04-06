@@ -723,7 +723,11 @@ mod tests {
             visited: HashSet::new(),
             indent: 0,
         };
-        write_subtree(tree, &mut ctx)
+        let mut res = String::new();
+        for r in tree.roots {
+            res.write_str(&write_node(tree, Arc::clone(r), &mut ctx));
+        }
+        res
     }
 
     fn convert_ids_to_jobs(jobs: &[Job0], job_ids: &[u32]) -> Vec<Arc<Job0>> {
@@ -740,23 +744,24 @@ mod tests {
         deps
     }
 
-    const TREE: &'static str = r#"39: Install packages on server oss2.local
-40: Configure NTP on oss2.local
-  39: Install packages on server oss2.local...
-41: Enable LNet on oss2.local
-  39: Install packages on server oss2.local...
-42: Configure Corosync on oss2.local.
-  39: Install packages on server oss2.local...
-45: Start the LNet networking layer.
-  44: Load the LNet kernel modules.
-    41: Enable LNet on oss2.local...
-46: Configure Pacemaker on oss2.local.
-  39: Install packages on server oss2.local...
-  43: Start Corosync on oss2.local
-    42: Configure Corosync on oss2.local....
-47: Start Pacemaker on oss2.local
-  43: Start Corosync on oss2.local...
-  46: Configure Pacemaker on oss2.local....
+    const TREE: &'static str = r#"48: Setup managed host oss2.local
+  39: Install packages on server oss2.local
+  40: Configure NTP on oss2.local
+    39: Install packages on server oss2.local...
+  41: Enable LNet on oss2.local
+    39: Install packages on server oss2.local...
+  42: Configure Corosync on oss2.local.
+    39: Install packages on server oss2.local...
+  45: Start the LNet networking layer.
+    44: Load the LNet kernel modules.
+      41: Enable LNet on oss2.local...
+  46: Configure Pacemaker on oss2.local.
+    39: Install packages on server oss2.local...
+    43: Start Corosync on oss2.local
+      42: Configure Corosync on oss2.local....
+  47: Start Pacemaker on oss2.local
+    43: Start Corosync on oss2.local...
+    46: Configure Pacemaker on oss2.local....
 "#;
 
     const JOBS: &'static str = r#"{
