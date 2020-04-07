@@ -2,8 +2,9 @@
 
 NTP_SERVER=$1
 
+ntpdate -qu "$NTP_SERVER"
+
 until ntpstat;
 do
-  ntpdate -qu "$NTP_SERVER"
-  sleep 30
+  sleep 70
 done
