@@ -670,10 +670,9 @@ mod tests {
     #[test]
     fn build_tree_test() {
         let api_list: ApiList<Job0> = serde_json::from_str(JOBS).unwrap();
-        let xs: Vec<(u32, Vec<u32>)> = api_list.objects.iter().map(|j| (j.id(), j.deps())).collect();
 
         // build direct dag
-        let (roots, deps) = build_direct_dag(&xs);
+        let (roots, deps) = build_direct_dag(&api_list.objects);
         let forest = enhance(&api_list.objects, &roots, &deps);
         let forest_ref = DependencyForestRef {
             roots: &forest.roots,
@@ -682,7 +681,7 @@ mod tests {
         let result = write_tree(&forest_ref);
         assert_eq!(result, TREE_DIRECT);
 
-        let (roots, deps) = build_inverse_dag(&xs);
+        let (roots, deps) = build_inverse_dag(&api_list.objects);
         let forest = enhance(&api_list.objects, &roots, &deps);
         let forest_ref = DependencyForestRef {
             roots: &forest.roots,
@@ -705,20 +704,24 @@ mod tests {
         DependencyForest { roots, deps }
     }
 
-    // where T: Id + Clone + fmt::Debug
-    fn build_direct_dag(graph: &Vec<(u32, Vec<u32>)>) -> (Vec<u32>, Vec<(u32, Vec<u32>)>) {
+    fn build_direct_dag<T>(ts: &[T]) -> (Vec<u32>, Vec<(u32, Vec<u32>)>)
+    where
+        T: Id + Clone + fmt::Debug
+    {
         let mut roots: Vec<u32> = Vec::new();
-        let mut rdag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(graph.len());
-        for (x, ys) in graph {
+        let mut rdag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(ts.len());
+        for t in ts {
+            let x = t.id();
+            let ys = t.deps();
             if !ys.is_empty() {
                 // push the arcs `x -> y` for all `y \in xs` into the graph
-                rdag.push((*x, ys.clone()));
-                if !roots.contains(x) {
-                    roots.push(*x);
+                rdag.push((x, ys.clone()));
+                if !roots.contains(&x) {
+                    roots.push(x);
                 }
                 // remove any of the destinations from the roots
                 for y in ys {
-                    if let Some(i) = roots.iter().position(|r| *r == *y) {
+                    if let Some(i) = roots.iter().position(|r| *r == y) {
                         roots.remove(i);
                     }
                 }
@@ -727,19 +730,24 @@ mod tests {
         (roots, rdag)
     }
 
-    fn build_inverse_dag(graph: &Vec<(u32, Vec<u32>)>) -> (Vec<u32>, Vec<(u32, Vec<u32>)>) {
-        let mut roots: HashSet<u32> = graph.iter().map(|(x, _)| *x).collect();
-        let mut rdag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(graph.len());
-        for (y, xs) in graph {
+    fn build_inverse_dag<T>(ts: &[T]) -> (Vec<u32>, Vec<(u32, Vec<u32>)>)
+        where
+            T: Id + Clone + fmt::Debug
+    {
+        let mut roots: HashSet<u32> = ts.iter().map(|t| t.id()).collect();
+        let mut rdag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(ts.len());
+        for t in ts {
+            let y = t.id();
+            let xs = t.deps();
             for x in xs {
                 // push the arc `x -> y` into the graph
-                if let Some((_, ref mut ys)) = rdag.iter_mut().find(|(y, ys)| *y == *x) {
-                    ys.push(*y);
+                if let Some((_, ref mut ys)) = rdag.iter_mut().find(|(y, ys)| *y == x) {
+                    ys.push(y);
                 } else {
-                    rdag.push((*x, vec![*y]));
+                    rdag.push((x, vec![y]));
                 }
                 // any destination cannot be a root, so we need to remove any of these roots
-                roots.remove(y);
+                roots.remove(&y);
             }
         }
         let roots = roots.into_iter().collect();
