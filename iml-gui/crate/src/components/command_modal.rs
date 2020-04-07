@@ -605,60 +605,24 @@ mod tests {
     use super::*;
     use std::fmt::Write;
 
-    #[test]
-    fn parse_job() {
-        assert_eq!(extract_uri_id::<Job0>("/api/job/39/"), Some(39));
-        assert_eq!(extract_uri_id::<Step>("/api/step/123/"), Some(123));
-        assert_eq!(extract_uri_id::<Command>("/api/command/12/"), Some(12));
-        assert_eq!(extract_uri_id::<Command>("/api/xxx/1/"), None);
-    }
-
-    pub struct Tree {
-        pub root: u32,
-        pub stuff: HashMap<u32, Vec<u32>>,
-    }
-
-    #[test]
-    fn build_tree() {
-        let api_list: ApiList<Job0> = serde_json::from_str(JOBS).unwrap();
-        let xs: Vec<(u32, Vec<u32>)> = api_list.objects.iter().map(|j| (j.id, extract_deps(j))).collect();
-
-        // build direct tree
-        let mut roots: Vec<u32> = Vec::new();
-        let mut dependencies: HashMap<u32, Vec<Arc<Job0>>> = HashMap::new();
-
-        for (id, ids_deps) in xs {
-            let job_deps: Vec<Arc<Job0>> = convert_ids_to_jobs(&api_list.objects, &ids_deps);
-            if !roots.contains(&id) {
-                roots.push(id);
-            }
-            // remove any of the dependencies from the roots
-            for job in &job_deps {
-                if let Some(i) = roots.iter().position(|r| job.id == *r) {
-                    roots.remove(i);
-                }
-            }
-            dependencies.insert(id, job_deps);
-        }
-
-        let roots: Vec<Arc<Job0>> = convert_ids_to_jobs(&api_list.objects, &roots);
-        let tree = DependencyTree {
-            roots: &roots,
-            dependencies: &dependencies,
-        };
-        let result = write_tree(&tree);
-        assert_eq!(TREE, result);
-        println!("{}", result);
-    }
-
     trait Id {
         fn id(&self) -> u32;
+        fn deps(&self) -> Vec<u32>;
         fn description(&self) -> &str;
     }
 
     impl Id for Job0 {
         fn id(&self) -> u32 {
             self.id
+        }
+        fn deps(&self) -> Vec<u32> {
+            let mut deps: Vec<u32> = self
+                .wait_for
+                .iter()
+                .filter_map(|s| extract_uri_id::<Job0>(&s))
+                .collect();
+            deps.sort();
+            deps
         }
         fn description(&self) -> &str {
             &self.description
@@ -669,26 +633,124 @@ mod tests {
         fn id(&self) -> u32 {
             (**self).id()
         }
+        fn deps(&self) -> Vec<u32> {
+            (**self).deps()
+        }
         fn description(&self) -> &str {
             (**self).description()
         }
     }
 
-    pub struct DependencyTree<'a, T> {
-        roots: &'a Vec<Arc<T>>,
-        dependencies: &'a HashMap<u32, Vec<Arc<T>>>,
+    #[derive(Debug, Clone)]
+    pub struct DependencyForest<T> {
+        roots: Vec<Arc<T>>,
+        deps: HashMap<u32, Vec<Arc<T>>>,
     }
 
+    #[derive(Debug, Copy, Clone)]
+    pub struct DependencyForestRef<'a, T> {
+        roots: &'a Vec<Arc<T>>,
+        deps: &'a HashMap<u32, Vec<Arc<T>>>,
+    }
+
+    #[derive(Debug, Clone)]
     pub struct Context {
         visited: HashSet<u32>,
         indent: usize,
     }
 
-    fn write_tree<T: fmt::Debug + Id>(tree: &DependencyTree<T>) -> String {
-        fn write_subtree<T: fmt::Debug + Id>(tree: &DependencyTree<T>, ctx: &mut Context) -> String {
+    #[test]
+    fn parse_job() {
+        assert_eq!(extract_uri_id::<Job0>("/api/job/39/"), Some(39));
+        assert_eq!(extract_uri_id::<Step>("/api/step/123/"), Some(123));
+        assert_eq!(extract_uri_id::<Command>("/api/command/12/"), Some(12));
+        assert_eq!(extract_uri_id::<Command>("/api/xxx/1/"), None);
+    }
+
+    #[test]
+    fn build_tree_test() {
+        let api_list: ApiList<Job0> = serde_json::from_str(JOBS).unwrap();
+        let xs: Vec<(u32, Vec<u32>)> = api_list.objects.iter().map(|j| (j.id(), j.deps())).collect();
+
+        // build direct dag
+        let (roots, deps) = build_direct_dag(&xs);
+        let forest = enhance(&api_list.objects, &roots, &deps);
+        let forest_ref = DependencyForestRef {
+            roots: &forest.roots,
+            deps: &forest.deps,
+        };
+        let result = write_tree(&forest_ref);
+        assert_eq!(result, TREE_DIRECT);
+
+        let (roots, deps) = build_inverse_dag(&xs);
+        let forest = enhance(&api_list.objects, &roots, &deps);
+        let forest_ref = DependencyForestRef {
+            roots: &forest.roots,
+            deps: &forest.deps,
+        };
+        let result = write_tree(&forest_ref);
+        assert_eq!(result, TREE_INVERSE);
+    }
+
+    fn enhance<T: Id + Clone + fmt::Debug>(
+        objs: &[T],
+        int_roots: &[u32],
+        int_deps: &[(u32, Vec<u32>)],
+    ) -> DependencyForest<T> {
+        let roots: Vec<Arc<T>> = convert_ids_to_arcs(&objs, &int_roots);
+        let deps: HashMap<u32, Vec<Arc<T>>> = int_deps
+            .iter()
+            .map(|(id, ids)| (*id, convert_ids_to_arcs(&objs, ids)))
+            .collect();
+        DependencyForest { roots, deps }
+    }
+
+    // where T: Id + Clone + fmt::Debug
+    fn build_direct_dag(graph: &Vec<(u32, Vec<u32>)>) -> (Vec<u32>, Vec<(u32, Vec<u32>)>) {
+        let mut roots: Vec<u32> = Vec::new();
+        let mut rdag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(graph.len());
+        for (x, ys) in graph {
+            if !ys.is_empty() {
+                // push the arcs `x -> y` for all `y \in xs` into the graph
+                rdag.push((*x, ys.clone()));
+                if !roots.contains(x) {
+                    roots.push(*x);
+                }
+                // remove any of the destinations from the roots
+                for y in ys {
+                    if let Some(i) = roots.iter().position(|r| *r == *y) {
+                        roots.remove(i);
+                    }
+                }
+            }
+        }
+        (roots, rdag)
+    }
+
+    fn build_inverse_dag(graph: &Vec<(u32, Vec<u32>)>) -> (Vec<u32>, Vec<(u32, Vec<u32>)>) {
+        let mut roots: HashSet<u32> = graph.iter().map(|(x, _)| *x).collect();
+        let mut rdag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(graph.len());
+        for (y, xs) in graph {
+            for x in xs {
+                // push the arc `x -> y` into the graph
+                if let Some((_, ref mut ys)) = rdag.iter_mut().find(|(y, ys)| *y == *x) {
+                    ys.push(*y);
+                } else {
+                    rdag.push((*x, vec![*y]));
+                }
+                // any destination cannot be a root, so we need to remove any of these roots
+                roots.remove(y);
+            }
+        }
+        let roots = roots.into_iter().collect();
+        (roots, rdag)
+    }
+
+    fn write_tree<T: fmt::Debug + Id>(tree: &DependencyForestRef<T>) -> String {
+        fn write_subtree<T: fmt::Debug + Id>(tree: &DependencyForestRef<T>, ctx: &mut Context) -> String {
             let mut res = String::new();
             for r in tree.roots {
-                if let Some(deps) = tree.dependencies.get(&r.id()) {
+                if let Some(deps) = tree.deps.get(&r.id()) {
                     for d in deps {
                         res.write_str(&write_node(tree, Arc::clone(d), ctx));
                     }
@@ -696,7 +758,7 @@ mod tests {
             }
             res
         }
-        fn write_node<T: fmt::Debug + Id>(tree: &DependencyTree<T>, node: Arc<T>, ctx: &mut Context) -> String {
+        fn write_node<T: fmt::Debug + Id>(tree: &DependencyForestRef<T>, node: Arc<T>, ctx: &mut Context) -> String {
             let mut res = String::new();
             let is_new = ctx.visited.insert(node.id());
             let ellipsis = if is_new { "" } else { "..." };
@@ -710,8 +772,8 @@ mod tests {
             ));
             if is_new {
                 ctx.indent += 1;
-                let sub_tree = DependencyTree {
-                    dependencies: &tree.dependencies,
+                let sub_tree = DependencyForestRef {
+                    deps: &tree.deps,
                     roots: &vec![node.clone()],
                 };
                 res.write_str(&write_subtree(&sub_tree, ctx));
@@ -730,21 +792,14 @@ mod tests {
         res
     }
 
-    fn convert_ids_to_jobs(jobs: &[Job0], job_ids: &[u32]) -> Vec<Arc<Job0>> {
-        job_ids
-            .iter()
-            .filter_map(|jid| jobs.iter().find(|j| j.id == *jid))
-            .map(|j| Arc::new(j.clone()))
+    fn convert_ids_to_arcs<T: Id + Clone + fmt::Debug>(objs: &[T], ids: &[u32]) -> Vec<Arc<T>> {
+        ids.iter()
+            .filter_map(|id| objs.iter().find(|o| o.id() == *id))
+            .map(|o| Arc::new(o.clone()))
             .collect()
     }
 
-    fn extract_deps(job: &Job0) -> Vec<u32> {
-        let mut deps: Vec<u32> = job.wait_for.iter().filter_map(|s| extract_uri_id::<Job0>(&s)).collect();
-        deps.sort();
-        deps
-    }
-
-    const TREE: &'static str = r#"48: Setup managed host oss2.local
+    const TREE_DIRECT: &'static str = r#"48: Setup managed host oss2.local
   39: Install packages on server oss2.local
   40: Configure NTP on oss2.local
     39: Install packages on server oss2.local...
@@ -762,6 +817,26 @@ mod tests {
   47: Start Pacemaker on oss2.local
     43: Start Corosync on oss2.local...
     46: Configure Pacemaker on oss2.local....
+"#;
+
+    const TREE_INVERSE: &'static str = r#"39: Install packages on server oss2.local
+  40: Configure NTP on oss2.local
+    48: Setup managed host oss2.local
+  41: Enable LNet on oss2.local
+    44: Load the LNet kernel modules.
+      45: Start the LNet networking layer.
+        48: Setup managed host oss2.local...
+    48: Setup managed host oss2.local...
+  42: Configure Corosync on oss2.local.
+    43: Start Corosync on oss2.local
+      46: Configure Pacemaker on oss2.local.
+        47: Start Pacemaker on oss2.local
+          48: Setup managed host oss2.local...
+        48: Setup managed host oss2.local...
+      47: Start Pacemaker on oss2.local...
+    48: Setup managed host oss2.local...
+  46: Configure Pacemaker on oss2.local....
+  48: Setup managed host oss2.local...
 "#;
 
     const JOBS: &'static str = r#"{
