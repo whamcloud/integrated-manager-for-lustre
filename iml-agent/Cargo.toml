@@ -54,9 +54,9 @@ default-features = false
 features = ["std"]
 
 [dev-dependencies]
-mockito = "0.23"
+mockito = "0.25.1"
 pretty_assertions = "0.6.1"
-insta = "0.15"
+insta = "0.16"
 tempfile = "3.1.0"
 
 [[bin]]

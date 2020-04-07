@@ -1,0 +1,932 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CIM CIMVERSION="2.0" DTDVERSION="2.0">
+    <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+        <SIMPLERSP>
+            <IMETHODRESPONSE NAME="EnumerateInstances">
+                <IRETURNVALUE>
+                    <VALUE.NAMEDINSTANCE>
+                        <INSTANCENAME CLASSNAME="DDN_SFAEnclosure">
+                            <KEYBINDING NAME="Index">
+                                <KEYVALUE VALUETYPE="numeric">0</KEYVALUE>
+                            </KEYBINDING>
+                        </INSTANCENAME>
+                        <INSTANCE CLASSNAME="DDN_SFAEnclosure">
+                            <PROPERTY NAME="IELM" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BmcIPAddressAlt" TYPE="string">
+                                <VALUE>10.36.45.117</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BmcIPAddress" TYPE="string">
+                                <VALUE>10.36.46.226</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ConfigurationVersion" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="SCPFirmwareVersions" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="PSoCVersion" TYPE="string">
+                                <VALUE>20</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="FpgaVersion" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="FirmwareVersion" TYPE="string">
+                                <VALUE>11.8.b</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BmcConfig" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BmcVersion" TYPE="string">
+                                <VALUE>02.21</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BiosVersion" TYPE="string">
+                                <VALUE>DDN2.02.06</VALUE>
+                            </PROPERTY>
+                            <PROPERTY.ARRAY NAME="RiserDates" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="RiserVersions" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="RiserSerialNumbers" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="RiserPartNumbers" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY NAME="RiserCount" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ChassisSerialNumber" TYPE="string">
+                                <VALUE></VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ChassisPartNumber" TYPE="string">
+                                <VALUE>R0977-F0001-02      </VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardVersion" TYPE="string">
+                                <VALUE></VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardSerialNumber" TYPE="string">
+                                <VALUE>G0003CTH103AN9B600J </VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardPartNumber" TYPE="string">
+                                <VALUE>R1225-G0003-01      </VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardCPLDBRevision" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardCPLDARevision" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="MidplaneSerialNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="MidplanePartNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="Version" TYPE="string">
+                                <VALUE>01</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="SerialNumber" TYPE="string">
+                                <VALUE>F102CTH109AN9BF046</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="PartNumber" TYPE="string">
+                                <VALUE>07-01772-001</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ManufactureDate" TYPE="string">
+                                <VALUE>20191116</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Location" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY.ARRAY NAME="PathZones" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathRPs" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathRPIndices" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathIOCPorts" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathIOCHandles" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathIndices" TYPE="uint16">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathDiskChannelIndices" TYPE="uint16">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathControllerIndices" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathAllInfo" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY NAME="SESPagesRead" TYPE="string">
+                                <VALUE></VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="SESStatus" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="RedundantPSUDesign" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="LowPowerMode" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="LocateOn" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="PredictFailure" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Fault" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="OK" TYPE="boolean">
+                                <VALUE>TRUE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="PositionStatus" TYPE="string">
+                                <VALUE>Success</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Position" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="CoverOpen" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ZoningConfiguration" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Zones" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ChildHealthState" TYPE="uint16">
+                                <VALUE>1</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="HealthStateReason" TYPE="string">
+                                <VALUE></VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="HealthState" TYPE="uint16">
+                                <VALUE>1</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="CommunicationStatus" TYPE="uint16">
+                                <VALUE>2</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="CanisterLocation" TYPE="string">
+                                <VALUE>BOTTOM</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="PoweredOn" TYPE="boolean">
+                                <VALUE>TRUE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Revision" TYPE="string">
+                                <VALUE></VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Model" TYPE="string">
+                                <VALUE>SFA400NV</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Manufacturer" TYPE="string">
+                                <VALUE>DDN</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Type" TYPE="uint8">
+                                <VALUE>2</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ElementName" TYPE="string">
+                                <VALUE>Enclosure_00</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="LogicalIdentifier" TYPE="uint64">
+                                <VALUE>561910659743744</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="LogicalIndex" TYPE="uint64">
+                                <VALUE>561910659743744</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="OID" TYPE="uint32">
+                                <VALUE>1342177280</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Index" TYPE="uint16">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                        </INSTANCE>
+                    </VALUE.NAMEDINSTANCE>
+                    <VALUE.NAMEDINSTANCE>
+                        <INSTANCENAME CLASSNAME="DDN_SFAEnclosure">
+                            <KEYBINDING NAME="Index">
+                                <KEYVALUE VALUETYPE="numeric">1</KEYVALUE>
+                            </KEYBINDING>
+                        </INSTANCENAME>
+                        <INSTANCE CLASSNAME="DDN_SFAEnclosure">
+                            <PROPERTY NAME="IELM" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BmcIPAddressAlt" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BmcIPAddress" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="ConfigurationVersion" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="SCPFirmwareVersions" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="PSoCVersion" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="FpgaVersion" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="FirmwareVersion" TYPE="string">
+                                <VALUE>04050106</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BmcConfig" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BmcVersion" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BiosVersion" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY.ARRAY NAME="RiserDates" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="RiserVersions" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="RiserSerialNumbers" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="RiserPartNumbers" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY NAME="RiserCount" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ChassisSerialNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="ChassisPartNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardVersion" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardSerialNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardPartNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardCPLDBRevision" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardCPLDARevision" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="MidplaneSerialNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="MidplanePartNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="Version" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="SerialNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="PartNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="ManufactureDate" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="Location" TYPE="string">
+                                <VALUE>Enclosure</VALUE>
+                            </PROPERTY>
+                            <PROPERTY.ARRAY NAME="PathZones" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>2</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>2</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathRPs" TYPE="string">
+                                <VALUE.ARRAY>
+                                    <VALUE>0</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>0</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathRPIndices" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                    <VALUE>0</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>0</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathIOCPorts" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                    <VALUE>0</VALUE>
+                                    <VALUE>0</VALUE>
+                                    <VALUE>0</VALUE>
+                                    <VALUE>0</VALUE>
+                                    <VALUE>0</VALUE>
+                                    <VALUE>0</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathIOCHandles" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>2</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>2</VALUE>
+                                    <VALUE>1</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathIndices" TYPE="uint16">
+                                <VALUE.ARRAY>
+                                    <VALUE>192</VALUE>
+                                    <VALUE>32960</VALUE>
+                                    <VALUE>32768</VALUE>
+                                    <VALUE>192</VALUE>
+                                    <VALUE>32960</VALUE>
+                                    <VALUE>32768</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathDiskChannelIndices" TYPE="uint16">
+                                <VALUE.ARRAY>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>3</VALUE>
+                                    <VALUE>2</VALUE>
+                                    <VALUE>9</VALUE>
+                                    <VALUE>11</VALUE>
+                                    <VALUE>10</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathControllerIndices" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>0</VALUE>
+                                    <VALUE>0</VALUE>
+                                    <VALUE>0</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathAllInfo" TYPE="string">
+                                <VALUE.ARRAY>
+                                    <VALUE>1,0,1,1,0x00c0,1,0</VALUE>
+                                    <VALUE>1,1,3,1,0x80c0,2,0</VALUE>
+                                    <VALUE>1,1,2,2,0x8000,1,0</VALUE>
+                                    <VALUE>0,0,9,1,0x00c0,1,0</VALUE>
+                                    <VALUE>0,1,11,1,0x80c0,2,0</VALUE>
+                                    <VALUE>0,1,10,2,0x8000,1,0</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY NAME="SESPagesRead" TYPE="string">
+                                <VALUE>SUP:20,CFG:202,STS:816,SIN:32,DSC:5783,AES:1928,</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="SESStatus" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="RedundantPSUDesign" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="LowPowerMode" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="LocateOn" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="PredictFailure" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Fault" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="OK" TYPE="boolean">
+                                <VALUE>TRUE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="PositionStatus" TYPE="string">
+                                <VALUE>Success</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Position" TYPE="uint8">
+                                <VALUE>1</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="CoverOpen" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ZoningConfiguration" TYPE="uint8">
+                                <VALUE>255</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Zones" TYPE="uint8">
+                                <VALUE>1</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ChildHealthState" TYPE="uint16">
+                                <VALUE>1</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="HealthStateReason" TYPE="string">
+                                <VALUE></VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="HealthState" TYPE="uint16">
+                                <VALUE>1</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="CommunicationStatus" TYPE="uint16">
+                                <VALUE>2</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="CanisterLocation" TYPE="string">
+                                <VALUE>NOT APPLICABLE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="PoweredOn" TYPE="boolean">
+                                <VALUE>TRUE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Revision" TYPE="string">
+                                <VALUE>0451</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Model" TYPE="string">
+                                <VALUE>SS200NV</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Manufacturer" TYPE="string">
+                                <VALUE>DDN</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Type" TYPE="uint8">
+                                <VALUE>1</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ElementName" TYPE="string">
+                                <VALUE>Enclosure_01</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="LogicalIdentifier" TYPE="uint64">
+                                <VALUE>5764642651582873600</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="LogicalIndex" TYPE="uint64">
+                                <VALUE>5764642651582873600</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="OID" TYPE="uint32">
+                                <VALUE>1342177281</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Index" TYPE="uint16">
+                                <VALUE>1</VALUE>
+                            </PROPERTY>
+                        </INSTANCE>
+                    </VALUE.NAMEDINSTANCE>
+                    <VALUE.NAMEDINSTANCE>
+                        <INSTANCENAME CLASSNAME="DDN_SFAEnclosure">
+                            <KEYBINDING NAME="Index">
+                                <KEYVALUE VALUETYPE="numeric">2</KEYVALUE>
+                            </KEYBINDING>
+                        </INSTANCENAME>
+                        <INSTANCE CLASSNAME="DDN_SFAEnclosure">
+                            <PROPERTY NAME="IELM" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BmcIPAddressAlt" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BmcIPAddress" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="ConfigurationVersion" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="SCPFirmwareVersions" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="PSoCVersion" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="FpgaVersion" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="FirmwareVersion" TYPE="string">
+                                <VALUE>03070324</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BmcConfig" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BmcVersion" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BiosVersion" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY.ARRAY NAME="RiserDates" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="RiserVersions" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="RiserSerialNumbers" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="RiserPartNumbers" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY NAME="RiserCount" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ChassisSerialNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="ChassisPartNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardVersion" TYPE="string">
+                                <VALUE>08      </VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardSerialNumber" TYPE="string">
+                                <VALUE>F1016CTH108TJ99204C </VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardPartNumber" TYPE="string">
+                                <VALUE>R1066-F1016-01      </VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardCPLDBRevision" TYPE="string">
+                                <VALUE>0002</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardCPLDARevision" TYPE="string">
+                                <VALUE>0002</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="MidplaneSerialNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="MidplanePartNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="Version" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="SerialNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="PartNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="ManufactureDate" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="Location" TYPE="string">
+                                <VALUE>Enclosure</VALUE>
+                            </PROPERTY>
+                            <PROPERTY.ARRAY NAME="PathZones" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathRPs" TYPE="string">
+                                <VALUE.ARRAY>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathRPIndices" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathIOCPorts" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                    <VALUE>2</VALUE>
+                                    <VALUE>0</VALUE>
+                                    <VALUE>2</VALUE>
+                                    <VALUE>0</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathIOCHandles" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                    <VALUE>0</VALUE>
+                                    <VALUE>0</VALUE>
+                                    <VALUE>0</VALUE>
+                                    <VALUE>0</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathIndices" TYPE="uint16">
+                                <VALUE.ARRAY>
+                                    <VALUE>32976</VALUE>
+                                    <VALUE>32977</VALUE>
+                                    <VALUE>32976</VALUE>
+                                    <VALUE>32977</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathDiskChannelIndices" TYPE="uint16">
+                                <VALUE.ARRAY>
+                                    <VALUE>6</VALUE>
+                                    <VALUE>4</VALUE>
+                                    <VALUE>14</VALUE>
+                                    <VALUE>12</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathControllerIndices" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>1</VALUE>
+                                    <VALUE>0</VALUE>
+                                    <VALUE>0</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathAllInfo" TYPE="string">
+                                <VALUE.ARRAY>
+                                    <VALUE>1,1,6,1,0x80d0,0,2</VALUE>
+                                    <VALUE>1,1,4,1,0x80d1,0,0</VALUE>
+                                    <VALUE>0,1,14,1,0x80d0,0,2</VALUE>
+                                    <VALUE>0,1,12,1,0x80d1,0,0</VALUE>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY NAME="SESPagesRead" TYPE="string">
+                                <VALUE>SUP:15,CFG:251,STS:680,SIN:195,DSC:4936,AES:3960,</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="SESStatus" TYPE="uint8">
+                                <VALUE>1</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="RedundantPSUDesign" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="LowPowerMode" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="LocateOn" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="PredictFailure" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Fault" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="OK" TYPE="boolean">
+                                <VALUE>TRUE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="PositionStatus" TYPE="string">
+                                <VALUE>Success</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Position" TYPE="uint8">
+                                <VALUE>2</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="CoverOpen" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ZoningConfiguration" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Zones" TYPE="uint8">
+                                <VALUE>1</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ChildHealthState" TYPE="uint16">
+                                <VALUE>1</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="HealthStateReason" TYPE="string">
+                                <VALUE></VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="HealthState" TYPE="uint16">
+                                <VALUE>1</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="CommunicationStatus" TYPE="uint16">
+                                <VALUE>2</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="CanisterLocation" TYPE="string">
+                                <VALUE>NOT APPLICABLE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="PoweredOn" TYPE="boolean">
+                                <VALUE>TRUE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Revision" TYPE="string">
+                                <VALUE>0373</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Model" TYPE="string">
+                                <VALUE>SS9012</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Manufacturer" TYPE="string">
+                                <VALUE>DDN</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Type" TYPE="uint8">
+                                <VALUE>1</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ElementName" TYPE="string">
+                                <VALUE>Enclosure_02</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="LogicalIdentifier" TYPE="uint64">
+                                <VALUE>5764642649635590144</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="LogicalIndex" TYPE="uint64">
+                                <VALUE>5764642649635590144</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="OID" TYPE="uint32">
+                                <VALUE>1342177282</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Index" TYPE="uint16">
+                                <VALUE>2</VALUE>
+                            </PROPERTY>
+                        </INSTANCE>
+                    </VALUE.NAMEDINSTANCE>
+                    <VALUE.NAMEDINSTANCE>
+                        <INSTANCENAME CLASSNAME="DDN_SFAEnclosure">
+                            <KEYBINDING NAME="Index">
+                                <KEYVALUE VALUETYPE="numeric">3</KEYVALUE>
+                            </KEYBINDING>
+                        </INSTANCENAME>
+                        <INSTANCE CLASSNAME="DDN_SFAEnclosure">
+                            <PROPERTY NAME="IELM" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BmcIPAddressAlt" TYPE="string">
+                                <VALUE>10.36.45.116</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BmcIPAddress" TYPE="string">
+                                <VALUE>10.36.46.221</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ConfigurationVersion" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="SCPFirmwareVersions" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="PSoCVersion" TYPE="string">
+                                <VALUE>20</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="FpgaVersion" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="FirmwareVersion" TYPE="string">
+                                <VALUE>11.8.b</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BmcConfig" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BmcVersion" TYPE="string">
+                                <VALUE>02.21</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BiosVersion" TYPE="string">
+                                <VALUE>DDN2.02.06</VALUE>
+                            </PROPERTY>
+                            <PROPERTY.ARRAY NAME="RiserDates" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="RiserVersions" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="RiserSerialNumbers" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="RiserPartNumbers" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY NAME="RiserCount" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ChassisSerialNumber" TYPE="string">
+                                <VALUE></VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ChassisPartNumber" TYPE="string">
+                                <VALUE>R0977-F0001-02      </VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardVersion" TYPE="string">
+                                <VALUE></VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardSerialNumber" TYPE="string">
+                                <VALUE>G0003CTH103AN9B600J </VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardPartNumber" TYPE="string">
+                                <VALUE>R1225-G0003-01      </VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardCPLDBRevision" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="BaseboardCPLDARevision" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="MidplaneSerialNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="MidplanePartNumber" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY NAME="Version" TYPE="string">
+                                <VALUE>01</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="SerialNumber" TYPE="string">
+                                <VALUE>F102CTH109AN9BF047</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="PartNumber" TYPE="string">
+                                <VALUE>07-01772-001</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ManufactureDate" TYPE="string">
+                                <VALUE>20191116</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Location" TYPE="string">
+                            </PROPERTY>
+                            <PROPERTY.ARRAY NAME="PathZones" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathRPs" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathRPIndices" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathIOCPorts" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathIOCHandles" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathIndices" TYPE="uint16">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathDiskChannelIndices" TYPE="uint16">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathControllerIndices" TYPE="uint8">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY.ARRAY NAME="PathAllInfo" TYPE="string">
+                                <VALUE.ARRAY>
+                                </VALUE.ARRAY>
+                            </PROPERTY.ARRAY>
+                            <PROPERTY NAME="SESPagesRead" TYPE="string">
+                                <VALUE></VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="SESStatus" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="RedundantPSUDesign" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="LowPowerMode" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="LocateOn" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="PredictFailure" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Fault" TYPE="boolean">
+                                <VALUE>FALSE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="OK" TYPE="boolean">
+                                <VALUE>TRUE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="PositionStatus" TYPE="string">
+                                <VALUE>Success</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Position" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="CoverOpen" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ZoningConfiguration" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Zones" TYPE="uint8">
+                                <VALUE>0</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ChildHealthState" TYPE="uint16">
+                                <VALUE>1</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="HealthStateReason" TYPE="string">
+                                <VALUE></VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="HealthState" TYPE="uint16">
+                                <VALUE>1</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="CommunicationStatus" TYPE="uint16">
+                                <VALUE>2</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="CanisterLocation" TYPE="string">
+                                <VALUE>TOP</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="PoweredOn" TYPE="boolean">
+                                <VALUE>TRUE</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Revision" TYPE="string">
+                                <VALUE></VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Model" TYPE="string">
+                                <VALUE>SFA400NV</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Manufacturer" TYPE="string">
+                                <VALUE>DDN</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Type" TYPE="uint8">
+                                <VALUE>2</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="ElementName" TYPE="string">
+                                <VALUE>Enclosure_03</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="LogicalIdentifier" TYPE="uint64">
+                                <VALUE>561910678814720</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="LogicalIndex" TYPE="uint64">
+                                <VALUE>561910678814720</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="OID" TYPE="uint32">
+                                <VALUE>1342177283</VALUE>
+                            </PROPERTY>
+                            <PROPERTY NAME="Index" TYPE="uint16">
+                                <VALUE>3</VALUE>
+                            </PROPERTY>
+                        </INSTANCE>
+                    </VALUE.NAMEDINSTANCE>
+                </IRETURNVALUE>
+            </IMETHODRESPONSE>
+        </SIMPLERSP>
+    </MESSAGE>
+</CIM>
