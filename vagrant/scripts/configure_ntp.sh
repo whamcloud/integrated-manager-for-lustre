@@ -11,8 +11,3 @@ sed -i -e "$ a server $NTP_SERVER iburst" /etc/ntp.conf
 systemctl enable --now ntpd.service
 
 ntpdate -qu "$NTP_SERVER"
-
-until ntpstat;
-do
-  sleep 70
-done

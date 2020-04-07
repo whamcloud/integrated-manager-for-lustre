@@ -42,12 +42,6 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
 
     vagrant::setup_deploy_docker_servers(&config, server_map).await?;
 
-    vagrant::provision("wait-for-ntp-docker")
-        .await?
-        .args(&config.storage_servers()[..])
-        .checked_status()
-        .await?;
-
     vagrant::create_fs(fs_type).await?;
 
     delay_for(Duration::from_secs(10)).await;
