@@ -9,9 +9,11 @@ use crate::{
 use futures::{Future, FutureExt, TryFutureExt};
 use iml_wire_types::{AgentResult, Id, PluginName, Seq};
 use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use serde_json::Value;
 use std::{
     collections::HashMap,
     pin::Pin,
+    result,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -168,6 +170,17 @@ fn process_info(info: Arc<Mutex<SessionInfo>>) -> SessionInfo {
     info.clone()
 }
 
+fn process_info_wrapper(info: Arc<Mutex<SessionInfo>>, y: Value) -> (SessionInfo, Value) {
+    (process_info(info), y)
+}
+
+fn process_info_wrapper_2(
+    info: Arc<Mutex<SessionInfo>>,
+    y: result::Result<Value, String>,
+) -> (SessionInfo, result::Result<Value, String>) {
+    (process_info(info), y)
+}
+
 #[derive(Debug)]
 pub struct Session {
     pub info: Arc<Mutex<SessionInfo>>,
@@ -195,7 +208,7 @@ impl Session {
 
         self.plugin
             .start_session()
-            .map_ok(move |x| x.map(|y| (process_info(info), y)))
+            .map_ok(move |x| x.map(|y| process_info_wrapper(info, y)))
             .boxed()
     }
     pub fn poll(
@@ -206,7 +219,7 @@ impl Session {
 
         self.plugin
             .update_session()
-            .map_ok(move |x| x.map(|y| (process_info(info), y)))
+            .map_ok(move |x| x.map(|y| process_info_wrapper(info, y)))
             .boxed()
     }
     pub fn message(
@@ -217,7 +230,7 @@ impl Session {
 
         self.plugin
             .on_message(body)
-            .map_ok(move |x| (process_info(info), x))
+            .map_ok(move |x| process_info_wrapper_2(info, x))
             .boxed()
     }
     pub fn teardown(&mut self) -> Result<()> {
