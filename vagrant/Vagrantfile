@@ -1058,7 +1058,7 @@ def wait_for_ntp(config)
 end
 
 def wait_for_ntp_docker(config)
-  config.vm.provision 'wait-for-ntp',
+  config.vm.provision 'wait-for-ntp-docker',
                           type: 'shell',
                           run: 'never',
                           path: 'scripts/wait_for_ntp.sh',
