@@ -157,10 +157,8 @@ pub struct SessionInfo {
     pub seq: Seq,
 }
 
-fn addon_info<T>(info: &mut SessionInfo, output: T) -> (SessionInfo, T) {
+fn increment_session(info: &mut SessionInfo) {
     info.seq.increment();
-
-    (info.clone(), output)
 }
 
 #[derive(Debug)]
@@ -185,16 +183,22 @@ impl Session {
     pub fn start(&mut self) -> impl Future<Output = Result<Option<(SessionInfo, OutputValue)>>> {
         let info = Arc::clone(&self.info);
 
-        self.plugin
-            .start_session()
-            .map_ok(move |x| x.map(|y| addon_info(&mut info.lock(), y)))
+        self.plugin.start_session().map_ok(move |x| {
+            x.map(|y| {
+                increment_session(&mut info.lock());
+                (info.lock().clone(), y)
+            })
+        })
     }
     pub fn poll(&self) -> impl Future<Output = Result<Option<(SessionInfo, OutputValue)>>> {
         let info = Arc::clone(&self.info);
 
-        self.plugin
-            .update_session()
-            .map_ok(move |x| x.map(|y| addon_info(&mut info.lock(), y)))
+        self.plugin.update_session().map_ok(move |x| {
+            x.map(|y| {
+                increment_session(&mut info.lock());
+                (info.lock().clone(), y)
+            })
+        })
     }
     pub fn message(
         &self,
@@ -202,9 +206,10 @@ impl Session {
     ) -> impl Future<Output = Result<(SessionInfo, AgentResult)>> {
         let info = Arc::clone(&self.info);
 
-        self.plugin
-            .on_message(body)
-            .map_ok(move |x| addon_info(&mut info.lock(), x))
+        self.plugin.on_message(body).map_ok(move |x| {
+            increment_session(&mut info.lock());
+            (info.lock().clone(), x)
+        })
     }
     pub fn teardown(&mut self) -> Result<()> {
         let info = self.info.lock();
