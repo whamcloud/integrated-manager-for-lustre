@@ -6,11 +6,12 @@ use crate::{
     agent_error::Result,
     daemon_plugins::{DaemonBox, OutputValue},
 };
-use futures::{Future, TryFutureExt};
+use futures::{Future, FutureExt, TryFutureExt};
 use iml_wire_types::{AgentResult, Id, PluginName, Seq};
 use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::{
     collections::HashMap,
+    pin::Pin,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -180,36 +181,51 @@ impl Session {
             plugin,
         }
     }
-    pub fn start(&mut self) -> impl Future<Output = Result<Option<(SessionInfo, OutputValue)>>> {
+    pub fn start(
+        &mut self,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<(SessionInfo, OutputValue)>>> + Send + 'static>>
+    {
         let info = Arc::clone(&self.info);
 
-        self.plugin.start_session().map_ok(move |x| {
-            x.map(|y| {
-                increment_session(&mut info.lock());
-                (info.lock().clone(), y)
+        self.plugin
+            .start_session()
+            .map_ok(move |x| {
+                x.map(|y| {
+                    increment_session(&mut info.lock());
+                    (info.lock().clone(), y)
+                })
             })
-        })
+            .boxed()
     }
-    pub fn poll(&self) -> impl Future<Output = Result<Option<(SessionInfo, OutputValue)>>> {
+    pub fn poll(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<(SessionInfo, OutputValue)>>> + Send + 'static>>
+    {
         let info = Arc::clone(&self.info);
 
-        self.plugin.update_session().map_ok(move |x| {
-            x.map(|y| {
-                increment_session(&mut info.lock());
-                (info.lock().clone(), y)
+        self.plugin
+            .update_session()
+            .map_ok(move |x| {
+                x.map(|y| {
+                    increment_session(&mut info.lock());
+                    (info.lock().clone(), y)
+                })
             })
-        })
+            .boxed()
     }
     pub fn message(
         &self,
         body: serde_json::Value,
-    ) -> impl Future<Output = Result<(SessionInfo, AgentResult)>> {
+    ) -> Pin<Box<dyn Future<Output = Result<(SessionInfo, AgentResult)>> + Send + 'static>> {
         let info = Arc::clone(&self.info);
 
-        self.plugin.on_message(body).map_ok(move |x| {
-            increment_session(&mut info.lock());
-            (info.lock().clone(), x)
-        })
+        self.plugin
+            .on_message(body)
+            .map_ok(move |x| {
+                increment_session(&mut info.lock());
+                (info.lock().clone(), x)
+            })
+            .boxed()
     }
     pub fn teardown(&mut self) -> Result<()> {
         let info = self.info.lock();
