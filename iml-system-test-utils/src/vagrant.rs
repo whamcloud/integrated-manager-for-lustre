@@ -221,7 +221,13 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
 ) -> Result<(), Box<dyn std::error::Error>> {
     setup_bare(&config.iscsi_and_storage_servers(), &config).await?;
 
-    delay_for(Duration::from_secs(30)).await;
+    provision("wait-for-ntp-docker")
+        .await?
+        .args(&config.storage_servers()[..])
+        .checked_status()
+        .await?;
+
+    delay_for(Duration::from_secs(70)).await;
 
     let storage_servers: Vec<&str> = config.storage_servers();
     for host in &storage_servers {
