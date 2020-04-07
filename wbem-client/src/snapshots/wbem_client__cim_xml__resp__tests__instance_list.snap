@@ -1,0 +1,2442 @@
+---
+source: wbem-client/src/cim_xml.rs
+expression: r
+---
+Cim {
+    message: Message {
+        simplersp: SimpleRsp {
+            imethodresponse: IMethodResponse {
+                i_return_value: IReturnValue {
+                    named_instance: [
+                        NamedInstance {
+                            instance: Instance {
+                                class_name: "DDN_SFAEnclosure",
+                                properties: [
+                                    Single {
+                                        name: Some(
+                                            "IELM",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BmcIPAddressAlt",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "10.36.45.117",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BmcIPAddress",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "10.36.46.226",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ConfigurationVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "SCPFirmwareVersions",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PSoCVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "20",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "FpgaVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "FirmwareVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "11.8.b",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BmcConfig",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BmcVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "02.21",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BiosVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "DDN2.02.06",
+                                        ),
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "RiserDates",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "RiserVersions",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "RiserSerialNumbers",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "RiserPartNumbers",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "RiserCount",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ChassisSerialNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ChassisPartNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "R0977-F0001-02",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardSerialNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "G0003CTH103AN9B600J",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardPartNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "R1225-G0003-01",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardCPLDBRevision",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardCPLDARevision",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "MidplaneSerialNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "MidplanePartNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Version",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "01",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "SerialNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "F102CTH109AN9BF046",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PartNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "07-01772-001",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ManufactureDate",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "20191116",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Location",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathZones",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathRPs",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathRPIndices",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathIOCPorts",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathIOCHandles",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathIndices",
+                                        ),
+                                        prop_type: "uint16",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathDiskChannelIndices",
+                                        ),
+                                        prop_type: "uint16",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathControllerIndices",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathAllInfo",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "SESPagesRead",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "SESStatus",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "RedundantPSUDesign",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "LowPowerMode",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "LocateOn",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PredictFailure",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Fault",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "OK",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "TRUE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PositionStatus",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "Success",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Position",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "CoverOpen",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ZoningConfiguration",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Zones",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ChildHealthState",
+                                        ),
+                                        prop_type: "uint16",
+                                        value: Some(
+                                            "1",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "HealthStateReason",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "HealthState",
+                                        ),
+                                        prop_type: "uint16",
+                                        value: Some(
+                                            "1",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "CommunicationStatus",
+                                        ),
+                                        prop_type: "uint16",
+                                        value: Some(
+                                            "2",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "CanisterLocation",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "BOTTOM",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PoweredOn",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "TRUE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Revision",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Model",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "SFA400NV",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Manufacturer",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "DDN",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Type",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "2",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ElementName",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "Enclosure_00",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "LogicalIdentifier",
+                                        ),
+                                        prop_type: "uint64",
+                                        value: Some(
+                                            "561910659743744",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "LogicalIndex",
+                                        ),
+                                        prop_type: "uint64",
+                                        value: Some(
+                                            "561910659743744",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "OID",
+                                        ),
+                                        prop_type: "uint32",
+                                        value: Some(
+                                            "1342177280",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Index",
+                                        ),
+                                        prop_type: "uint16",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                ],
+                            },
+                        },
+                        NamedInstance {
+                            instance: Instance {
+                                class_name: "DDN_SFAEnclosure",
+                                properties: [
+                                    Single {
+                                        name: Some(
+                                            "IELM",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BmcIPAddressAlt",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BmcIPAddress",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ConfigurationVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "SCPFirmwareVersions",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PSoCVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "FpgaVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "FirmwareVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "04050106",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BmcConfig",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BmcVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BiosVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "RiserDates",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "RiserVersions",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "RiserSerialNumbers",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "RiserPartNumbers",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "RiserCount",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ChassisSerialNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ChassisPartNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardSerialNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardPartNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardCPLDBRevision",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardCPLDARevision",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "MidplaneSerialNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "MidplanePartNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Version",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "SerialNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PartNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ManufactureDate",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Location",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "Enclosure",
+                                        ),
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathZones",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [
+                                                "1",
+                                                "1",
+                                                "2",
+                                                "1",
+                                                "1",
+                                                "2",
+                                            ],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathRPs",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [
+                                                "0",
+                                                "1",
+                                                "1",
+                                                "0",
+                                                "1",
+                                                "1",
+                                            ],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathRPIndices",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [
+                                                "0",
+                                                "1",
+                                                "1",
+                                                "0",
+                                                "1",
+                                                "1",
+                                            ],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathIOCPorts",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [
+                                                "0",
+                                                "0",
+                                                "0",
+                                                "0",
+                                                "0",
+                                                "0",
+                                            ],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathIOCHandles",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [
+                                                "1",
+                                                "2",
+                                                "1",
+                                                "1",
+                                                "2",
+                                                "1",
+                                            ],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathIndices",
+                                        ),
+                                        prop_type: "uint16",
+                                        values: ValueArray {
+                                            inner: [
+                                                "192",
+                                                "32960",
+                                                "32768",
+                                                "192",
+                                                "32960",
+                                                "32768",
+                                            ],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathDiskChannelIndices",
+                                        ),
+                                        prop_type: "uint16",
+                                        values: ValueArray {
+                                            inner: [
+                                                "1",
+                                                "3",
+                                                "2",
+                                                "9",
+                                                "11",
+                                                "10",
+                                            ],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathControllerIndices",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [
+                                                "1",
+                                                "1",
+                                                "1",
+                                                "0",
+                                                "0",
+                                                "0",
+                                            ],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathAllInfo",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [
+                                                "1,0,1,1,0x00c0,1,0",
+                                                "1,1,3,1,0x80c0,2,0",
+                                                "1,1,2,2,0x8000,1,0",
+                                                "0,0,9,1,0x00c0,1,0",
+                                                "0,1,11,1,0x80c0,2,0",
+                                                "0,1,10,2,0x8000,1,0",
+                                            ],
+                                        },
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "SESPagesRead",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "SUP:20,CFG:202,STS:816,SIN:32,DSC:5783,AES:1928,",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "SESStatus",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "RedundantPSUDesign",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "LowPowerMode",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "LocateOn",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PredictFailure",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Fault",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "OK",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "TRUE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PositionStatus",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "Success",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Position",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "1",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "CoverOpen",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ZoningConfiguration",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "255",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Zones",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "1",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ChildHealthState",
+                                        ),
+                                        prop_type: "uint16",
+                                        value: Some(
+                                            "1",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "HealthStateReason",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "HealthState",
+                                        ),
+                                        prop_type: "uint16",
+                                        value: Some(
+                                            "1",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "CommunicationStatus",
+                                        ),
+                                        prop_type: "uint16",
+                                        value: Some(
+                                            "2",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "CanisterLocation",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "NOT APPLICABLE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PoweredOn",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "TRUE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Revision",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "0451",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Model",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "SS200NV",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Manufacturer",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "DDN",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Type",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "1",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ElementName",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "Enclosure_01",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "LogicalIdentifier",
+                                        ),
+                                        prop_type: "uint64",
+                                        value: Some(
+                                            "5764642651582873600",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "LogicalIndex",
+                                        ),
+                                        prop_type: "uint64",
+                                        value: Some(
+                                            "5764642651582873600",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "OID",
+                                        ),
+                                        prop_type: "uint32",
+                                        value: Some(
+                                            "1342177281",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Index",
+                                        ),
+                                        prop_type: "uint16",
+                                        value: Some(
+                                            "1",
+                                        ),
+                                    },
+                                ],
+                            },
+                        },
+                        NamedInstance {
+                            instance: Instance {
+                                class_name: "DDN_SFAEnclosure",
+                                properties: [
+                                    Single {
+                                        name: Some(
+                                            "IELM",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BmcIPAddressAlt",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BmcIPAddress",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ConfigurationVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "SCPFirmwareVersions",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PSoCVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "FpgaVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "FirmwareVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "03070324",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BmcConfig",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BmcVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BiosVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "RiserDates",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "RiserVersions",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "RiserSerialNumbers",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "RiserPartNumbers",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "RiserCount",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ChassisSerialNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ChassisPartNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "08",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardSerialNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "F1016CTH108TJ99204C",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardPartNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "R1066-F1016-01",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardCPLDBRevision",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "0002",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardCPLDARevision",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "0002",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "MidplaneSerialNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "MidplanePartNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Version",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "SerialNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PartNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ManufactureDate",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Location",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "Enclosure",
+                                        ),
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathZones",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [
+                                                "1",
+                                                "1",
+                                                "1",
+                                                "1",
+                                            ],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathRPs",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [
+                                                "1",
+                                                "1",
+                                                "1",
+                                                "1",
+                                            ],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathRPIndices",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [
+                                                "1",
+                                                "1",
+                                                "1",
+                                                "1",
+                                            ],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathIOCPorts",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [
+                                                "2",
+                                                "0",
+                                                "2",
+                                                "0",
+                                            ],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathIOCHandles",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [
+                                                "0",
+                                                "0",
+                                                "0",
+                                                "0",
+                                            ],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathIndices",
+                                        ),
+                                        prop_type: "uint16",
+                                        values: ValueArray {
+                                            inner: [
+                                                "32976",
+                                                "32977",
+                                                "32976",
+                                                "32977",
+                                            ],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathDiskChannelIndices",
+                                        ),
+                                        prop_type: "uint16",
+                                        values: ValueArray {
+                                            inner: [
+                                                "6",
+                                                "4",
+                                                "14",
+                                                "12",
+                                            ],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathControllerIndices",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [
+                                                "1",
+                                                "1",
+                                                "0",
+                                                "0",
+                                            ],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathAllInfo",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [
+                                                "1,1,6,1,0x80d0,0,2",
+                                                "1,1,4,1,0x80d1,0,0",
+                                                "0,1,14,1,0x80d0,0,2",
+                                                "0,1,12,1,0x80d1,0,0",
+                                            ],
+                                        },
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "SESPagesRead",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "SUP:15,CFG:251,STS:680,SIN:195,DSC:4936,AES:3960,",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "SESStatus",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "1",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "RedundantPSUDesign",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "LowPowerMode",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "LocateOn",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PredictFailure",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Fault",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "OK",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "TRUE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PositionStatus",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "Success",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Position",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "2",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "CoverOpen",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ZoningConfiguration",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Zones",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "1",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ChildHealthState",
+                                        ),
+                                        prop_type: "uint16",
+                                        value: Some(
+                                            "1",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "HealthStateReason",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "HealthState",
+                                        ),
+                                        prop_type: "uint16",
+                                        value: Some(
+                                            "1",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "CommunicationStatus",
+                                        ),
+                                        prop_type: "uint16",
+                                        value: Some(
+                                            "2",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "CanisterLocation",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "NOT APPLICABLE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PoweredOn",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "TRUE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Revision",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "0373",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Model",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "SS9012",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Manufacturer",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "DDN",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Type",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "1",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ElementName",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "Enclosure_02",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "LogicalIdentifier",
+                                        ),
+                                        prop_type: "uint64",
+                                        value: Some(
+                                            "5764642649635590144",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "LogicalIndex",
+                                        ),
+                                        prop_type: "uint64",
+                                        value: Some(
+                                            "5764642649635590144",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "OID",
+                                        ),
+                                        prop_type: "uint32",
+                                        value: Some(
+                                            "1342177282",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Index",
+                                        ),
+                                        prop_type: "uint16",
+                                        value: Some(
+                                            "2",
+                                        ),
+                                    },
+                                ],
+                            },
+                        },
+                        NamedInstance {
+                            instance: Instance {
+                                class_name: "DDN_SFAEnclosure",
+                                properties: [
+                                    Single {
+                                        name: Some(
+                                            "IELM",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BmcIPAddressAlt",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "10.36.45.116",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BmcIPAddress",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "10.36.46.221",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ConfigurationVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "SCPFirmwareVersions",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PSoCVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "20",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "FpgaVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "FirmwareVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "11.8.b",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BmcConfig",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BmcVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "02.21",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BiosVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "DDN2.02.06",
+                                        ),
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "RiserDates",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "RiserVersions",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "RiserSerialNumbers",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "RiserPartNumbers",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "RiserCount",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ChassisSerialNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ChassisPartNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "R0977-F0001-02",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardVersion",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardSerialNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "G0003CTH103AN9B600J",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardPartNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "R1225-G0003-01",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardCPLDBRevision",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "BaseboardCPLDARevision",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "MidplaneSerialNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "MidplanePartNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Version",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "01",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "SerialNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "F102CTH109AN9BF047",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PartNumber",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "07-01772-001",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ManufactureDate",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "20191116",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Location",
+                                        ),
+                                        prop_type: "string",
+                                        value: None,
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathZones",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathRPs",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathRPIndices",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathIOCPorts",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathIOCHandles",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathIndices",
+                                        ),
+                                        prop_type: "uint16",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathDiskChannelIndices",
+                                        ),
+                                        prop_type: "uint16",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathControllerIndices",
+                                        ),
+                                        prop_type: "uint8",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Multiple {
+                                        name: Some(
+                                            "PathAllInfo",
+                                        ),
+                                        prop_type: "string",
+                                        values: ValueArray {
+                                            inner: [],
+                                        },
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "SESPagesRead",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "SESStatus",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "RedundantPSUDesign",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "LowPowerMode",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "LocateOn",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PredictFailure",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Fault",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "FALSE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "OK",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "TRUE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PositionStatus",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "Success",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Position",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "CoverOpen",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ZoningConfiguration",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Zones",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "0",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ChildHealthState",
+                                        ),
+                                        prop_type: "uint16",
+                                        value: Some(
+                                            "1",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "HealthStateReason",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "HealthState",
+                                        ),
+                                        prop_type: "uint16",
+                                        value: Some(
+                                            "1",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "CommunicationStatus",
+                                        ),
+                                        prop_type: "uint16",
+                                        value: Some(
+                                            "2",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "CanisterLocation",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "TOP",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "PoweredOn",
+                                        ),
+                                        prop_type: "boolean",
+                                        value: Some(
+                                            "TRUE",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Revision",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Model",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "SFA400NV",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Manufacturer",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "DDN",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Type",
+                                        ),
+                                        prop_type: "uint8",
+                                        value: Some(
+                                            "2",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "ElementName",
+                                        ),
+                                        prop_type: "string",
+                                        value: Some(
+                                            "Enclosure_03",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "LogicalIdentifier",
+                                        ),
+                                        prop_type: "uint64",
+                                        value: Some(
+                                            "561910678814720",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "LogicalIndex",
+                                        ),
+                                        prop_type: "uint64",
+                                        value: Some(
+                                            "561910678814720",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "OID",
+                                        ),
+                                        prop_type: "uint32",
+                                        value: Some(
+                                            "1342177283",
+                                        ),
+                                    },
+                                    Single {
+                                        name: Some(
+                                            "Index",
+                                        ),
+                                        prop_type: "uint16",
+                                        value: Some(
+                                            "3",
+                                        ),
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+            },
+        },
+    },
+}
