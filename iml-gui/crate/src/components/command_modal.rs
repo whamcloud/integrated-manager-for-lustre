@@ -3,12 +3,13 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    components::{font_awesome, modal},
+    components::{dependency_tree::Deps, font_awesome, modal},
     extensions::{MergeAttrs as _, NodeExt as _, RequestExt as _},
     generated::css_classes::C,
     key_codes, sleep_with_handle, GMsg,
 };
 use futures::channel::oneshot;
+use futures::future;
 use iml_wire_types::{ApiList, Command, EndpointName, Job, Step};
 use regex::{Captures, Regex};
 use seed::{prelude::*, *};
@@ -21,6 +22,24 @@ use std::{sync::Arc, time::Duration};
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
 type Job0 = Job<Option<()>>;
+
+impl Deps for Job0 {
+    fn id(&self) -> u32 {
+        self.id
+    }
+    fn deps(&self) -> Vec<u32> {
+        let mut deps: Vec<u32> = self
+            .wait_for
+            .iter()
+            .filter_map(|s| extract_uri_id::<Job0>(&s))
+            .collect();
+        deps.sort();
+        deps
+    }
+    fn description(&self) -> String {
+        self.description.clone()
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum TypedId {
@@ -126,9 +145,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
         }
         Msg::FireCommands(cmds) => {
-            let cmds = Input::Ids(vec![12, 54]); // todo revert
-            model.opens = Opens::Command(54); // todo revert
-                                              // model.opens = Opens::None;
+            model.opens = Opens::None;
             model.modal.open = true;
 
             match cmds {
@@ -223,6 +240,7 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -
                     .iter()
                     .filter_map(|s| extract_uri_id::<Job0>(s))
                     .collect();
+                // NOTE: we can try to use future::select_all(futs.into_iter()) here
                 orders
                     .skip()
                     .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))))
@@ -583,8 +601,8 @@ fn status_icon<T>(cmd: &Command) -> Node<T> {
 }
 
 fn close_button() -> Node<Msg> {
+    // todo revert
     seed::button![
-        // todo revert
         class![
             C.bg_transparent,
             C.py_2,
@@ -603,61 +621,6 @@ fn close_button() -> Node<Msg> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fmt::Write;
-
-    trait Id {
-        fn id(&self) -> u32;
-        fn deps(&self) -> Vec<u32>;
-        fn description(&self) -> &str;
-    }
-
-    impl Id for Job0 {
-        fn id(&self) -> u32 {
-            self.id
-        }
-        fn deps(&self) -> Vec<u32> {
-            let mut deps: Vec<u32> = self
-                .wait_for
-                .iter()
-                .filter_map(|s| extract_uri_id::<Job0>(&s))
-                .collect();
-            deps.sort();
-            deps
-        }
-        fn description(&self) -> &str {
-            &self.description
-        }
-    }
-
-    impl<T: Id> Id for Arc<T> {
-        fn id(&self) -> u32 {
-            (**self).id()
-        }
-        fn deps(&self) -> Vec<u32> {
-            (**self).deps()
-        }
-        fn description(&self) -> &str {
-            (**self).description()
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct DependencyForest<T> {
-        roots: Vec<Arc<T>>,
-        deps: HashMap<u32, Vec<Arc<T>>>,
-    }
-
-    #[derive(Debug, Copy, Clone)]
-    pub struct DependencyForestRef<'a, T> {
-        roots: &'a Vec<Arc<T>>,
-        deps: &'a HashMap<u32, Vec<Arc<T>>>,
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct Context {
-        visited: HashSet<u32>,
-        indent: usize,
-    }
 
     #[test]
     fn parse_job() {
@@ -666,603 +629,4 @@ mod tests {
         assert_eq!(extract_uri_id::<Command>("/api/command/12/"), Some(12));
         assert_eq!(extract_uri_id::<Command>("/api/xxx/1/"), None);
     }
-
-    #[test]
-    fn build_tree_test() {
-        let api_list: ApiList<Job0> = serde_json::from_str(JOBS).unwrap();
-
-        // build direct dag
-        let (roots, deps) = build_direct_dag(&api_list.objects);
-        let forest = enhance(&api_list.objects, &roots, &deps);
-        let forest_ref = DependencyForestRef {
-            roots: &forest.roots,
-            deps: &forest.deps,
-        };
-        let result = write_tree(&forest_ref);
-        assert_eq!(result, TREE_DIRECT);
-
-        let (roots, deps) = build_inverse_dag(&api_list.objects);
-        let forest = enhance(&api_list.objects, &roots, &deps);
-        let forest_ref = DependencyForestRef {
-            roots: &forest.roots,
-            deps: &forest.deps,
-        };
-        let result = write_tree(&forest_ref);
-        assert_eq!(result, TREE_INVERSE);
-    }
-
-    fn enhance<T: Id + Clone + fmt::Debug>(
-        objs: &[T],
-        int_roots: &[u32],
-        int_deps: &[(u32, Vec<u32>)],
-    ) -> DependencyForest<T> {
-        let roots: Vec<Arc<T>> = convert_ids_to_arcs(&objs, &int_roots);
-        let deps: HashMap<u32, Vec<Arc<T>>> = int_deps
-            .iter()
-            .map(|(id, ids)| (*id, convert_ids_to_arcs(&objs, ids)))
-            .collect();
-        DependencyForest { roots, deps }
-    }
-
-    fn build_direct_dag<T>(ts: &[T]) -> (Vec<u32>, Vec<(u32, Vec<u32>)>)
-    where
-        T: Id + Clone + fmt::Debug
-    {
-        let mut roots: Vec<u32> = Vec::new();
-        let mut rdag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(ts.len());
-        for t in ts {
-            let x = t.id();
-            let ys = t.deps();
-            if !ys.is_empty() {
-                // push the arcs `x -> y` for all `y \in xs` into the graph
-                rdag.push((x, ys.clone()));
-                if !roots.contains(&x) {
-                    roots.push(x);
-                }
-                // remove any of the destinations from the roots
-                for y in ys {
-                    if let Some(i) = roots.iter().position(|r| *r == y) {
-                        roots.remove(i);
-                    }
-                }
-            }
-        }
-        (roots, rdag)
-    }
-
-    fn build_inverse_dag<T>(ts: &[T]) -> (Vec<u32>, Vec<(u32, Vec<u32>)>)
-        where
-            T: Id + Clone + fmt::Debug
-    {
-        let mut roots: HashSet<u32> = ts.iter().map(|t| t.id()).collect();
-        let mut rdag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(ts.len());
-        for t in ts {
-            let y = t.id();
-            let xs = t.deps();
-            for x in xs {
-                // push the arc `x -> y` into the graph
-                if let Some((_, ref mut ys)) = rdag.iter_mut().find(|(y, ys)| *y == x) {
-                    ys.push(y);
-                } else {
-                    rdag.push((x, vec![y]));
-                }
-                // any destination cannot be a root, so we need to remove any of these roots
-                roots.remove(&y);
-            }
-        }
-        let roots = roots.into_iter().collect();
-        (roots, rdag)
-    }
-
-    fn write_tree<T: fmt::Debug + Id>(tree: &DependencyForestRef<T>) -> String {
-        fn write_subtree<T: fmt::Debug + Id>(tree: &DependencyForestRef<T>, ctx: &mut Context) -> String {
-            let mut res = String::new();
-            for r in tree.roots {
-                if let Some(deps) = tree.deps.get(&r.id()) {
-                    for d in deps {
-                        res.write_str(&write_node(tree, Arc::clone(d), ctx));
-                    }
-                }
-            }
-            res
-        }
-        fn write_node<T: fmt::Debug + Id>(tree: &DependencyForestRef<T>, node: Arc<T>, ctx: &mut Context) -> String {
-            let mut res = String::new();
-            let is_new = ctx.visited.insert(node.id());
-            let ellipsis = if is_new { "" } else { "..." };
-            let indent = "  ".repeat(ctx.indent);
-            res.write_str(&format!(
-                "{}{}: {}{}\n",
-                indent,
-                node.id(),
-                node.description(),
-                ellipsis
-            ));
-            if is_new {
-                ctx.indent += 1;
-                let sub_tree = DependencyForestRef {
-                    deps: &tree.deps,
-                    roots: &vec![node.clone()],
-                };
-                res.write_str(&write_subtree(&sub_tree, ctx));
-                ctx.indent -= 1;
-            }
-            res
-        }
-        let mut ctx = Context {
-            visited: HashSet::new(),
-            indent: 0,
-        };
-        let mut res = String::new();
-        for r in tree.roots {
-            res.write_str(&write_node(tree, Arc::clone(r), &mut ctx));
-        }
-        res
-    }
-
-    fn convert_ids_to_arcs<T: Id + Clone + fmt::Debug>(objs: &[T], ids: &[u32]) -> Vec<Arc<T>> {
-        ids.iter()
-            .filter_map(|id| objs.iter().find(|o| o.id() == *id))
-            .map(|o| Arc::new(o.clone()))
-            .collect()
-    }
-
-    const TREE_DIRECT: &'static str = r#"48: Setup managed host oss2.local
-  39: Install packages on server oss2.local
-  40: Configure NTP on oss2.local
-    39: Install packages on server oss2.local...
-  41: Enable LNet on oss2.local
-    39: Install packages on server oss2.local...
-  42: Configure Corosync on oss2.local.
-    39: Install packages on server oss2.local...
-  45: Start the LNet networking layer.
-    44: Load the LNet kernel modules.
-      41: Enable LNet on oss2.local...
-  46: Configure Pacemaker on oss2.local.
-    39: Install packages on server oss2.local...
-    43: Start Corosync on oss2.local
-      42: Configure Corosync on oss2.local....
-  47: Start Pacemaker on oss2.local
-    43: Start Corosync on oss2.local...
-    46: Configure Pacemaker on oss2.local....
-"#;
-
-    const TREE_INVERSE: &'static str = r#"39: Install packages on server oss2.local
-  40: Configure NTP on oss2.local
-    48: Setup managed host oss2.local
-  41: Enable LNet on oss2.local
-    44: Load the LNet kernel modules.
-      45: Start the LNet networking layer.
-        48: Setup managed host oss2.local...
-    48: Setup managed host oss2.local...
-  42: Configure Corosync on oss2.local.
-    43: Start Corosync on oss2.local
-      46: Configure Pacemaker on oss2.local.
-        47: Start Pacemaker on oss2.local
-          48: Setup managed host oss2.local...
-        48: Setup managed host oss2.local...
-      47: Start Pacemaker on oss2.local...
-    48: Setup managed host oss2.local...
-  46: Configure Pacemaker on oss2.local....
-  48: Setup managed host oss2.local...
-"#;
-
-    const JOBS: &'static str = r#"{
-  "meta": {
-    "limit": 20,
-    "next": null,
-    "offset": 0,
-    "previous": null,
-    "total_count": 10
-  },
-  "objects": [
-    {
-      "available_transitions": [],
-      "cancelled": false,
-      "class_name": "InstallHostPackagesJob",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.491600",
-      "description": "Install packages on server oss2.local",
-      "errored": false,
-      "id": 39,
-      "modified_at": "2020-03-16T07:22:34.491573",
-      "read_locks": [],
-      "resource_uri": "/api/job/39/",
-      "state": "complete",
-      "step_results": {
-        "/api/step/12/": null,
-        "/api/step/16/": null,
-        "/api/step/20/": null,
-        "/api/step/22/": null,
-        "/api/step/25/": null
-      },
-      "steps": [
-        "/api/step/12/",
-        "/api/step/16/",
-        "/api/step/20/",
-        "/api/step/22/",
-        "/api/step/25/"
-      ],
-      "wait_for": [],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 17,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/host/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": false,
-      "class_name": "ConfigureNTPJob",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.516793",
-      "description": "Configure NTP on oss2.local",
-      "errored": false,
-      "id": 40,
-      "modified_at": "2020-03-16T07:22:34.516760",
-      "read_locks": [
-        {
-          "locked_item_content_type_id": 17,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/host/4/",
-          "resource_uri": ""
-        }
-      ],
-      "resource_uri": "/api/job/40/",
-      "state": "complete",
-      "step_results": {
-        "/api/step/55/": null,
-        "/api/step/57/": null,
-        "/api/step/60/": null,
-        "/api/step/62/": null,
-        "/api/step/63/": null
-      },
-      "steps": [
-        "/api/step/55/",
-        "/api/step/57/",
-        "/api/step/60/",
-        "/api/step/62/",
-        "/api/step/63/"
-      ],
-      "wait_for": [
-        "/api/job/39/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 21,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/ntp_configuration/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": false,
-      "class_name": "EnableLNetJob",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.554315",
-      "description": "Enable LNet on oss2.local",
-      "errored": false,
-      "id": 41,
-      "modified_at": "2020-03-16T07:22:34.554290",
-      "read_locks": [
-        {
-          "locked_item_content_type_id": 17,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/host/4/",
-          "resource_uri": ""
-        }
-      ],
-      "resource_uri": "/api/job/41/",
-      "state": "complete",
-      "step_results": {},
-      "steps": [],
-      "wait_for": [
-        "/api/job/39/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 53,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/lnet_configuration/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": false,
-      "class_name": "AutoConfigureCorosync2Job",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.591853",
-      "description": "Configure Corosync on oss2.local.",
-      "errored": false,
-      "id": 42,
-      "modified_at": "2020-03-16T07:22:34.591829",
-      "read_locks": [
-        {
-          "locked_item_content_type_id": 17,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/host/4/",
-          "resource_uri": ""
-        }
-      ],
-      "resource_uri": "/api/job/42/",
-      "state": "complete",
-      "step_results": {
-        "/api/step/56/": null
-      },
-      "steps": [
-        "/api/step/56/"
-      ],
-      "wait_for": [
-        "/api/job/39/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 75,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/corosync_configuration/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": false,
-      "class_name": "StartCorosync2Job",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.627692",
-      "description": "Start Corosync on oss2.local",
-      "errored": false,
-      "id": 43,
-      "modified_at": "2020-03-16T07:22:34.627667",
-      "read_locks": [],
-      "resource_uri": "/api/job/43/",
-      "state": "complete",
-      "step_results": {
-        "/api/step/74/": null
-      },
-      "steps": [
-        "/api/step/74/"
-      ],
-      "wait_for": [
-        "/api/job/42/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 75,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/corosync_configuration/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": true,
-      "class_name": "LoadLNetJob",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.648217",
-      "description": "Load the LNet kernel modules.",
-      "errored": false,
-      "id": 44,
-      "modified_at": "2020-03-16T07:22:34.648185",
-      "read_locks": [],
-      "resource_uri": "/api/job/44/",
-      "state": "complete",
-      "step_results": {
-        "/api/step/58/": null,
-        "/api/step/64/": null
-      },
-      "steps": [
-        "/api/step/58/",
-        "/api/step/64/"
-      ],
-      "wait_for": [
-        "/api/job/41/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 53,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/lnet_configuration/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": true,
-      "class_name": "StartLNetJob",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.672353",
-      "description": "Start the LNet networking layer.",
-      "errored": false,
-      "id": 45,
-      "modified_at": "2020-03-16T07:22:34.672291",
-      "read_locks": [],
-      "resource_uri": "/api/job/45/",
-      "state": "complete",
-      "step_results": {},
-      "steps": [],
-      "wait_for": [
-        "/api/job/44/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 53,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/lnet_configuration/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": false,
-      "class_name": "ConfigurePacemakerJob",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.695375",
-      "description": "Configure Pacemaker on oss2.local.",
-      "errored": false,
-      "id": 46,
-      "modified_at": "2020-03-16T07:22:34.695324",
-      "read_locks": [
-        {
-          "locked_item_content_type_id": 17,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/host/4/",
-          "resource_uri": ""
-        },
-        {
-          "locked_item_content_type_id": 75,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/corosync_configuration/4/",
-          "resource_uri": ""
-        }
-      ],
-      "resource_uri": "/api/job/46/",
-      "state": "complete",
-      "step_results": {
-        "/api/step/77/": null,
-        "/api/step/78/": null,
-        "/api/step/82/": null
-      },
-      "steps": [
-        "/api/step/77/",
-        "/api/step/78/",
-        "/api/step/82/"
-      ],
-      "wait_for": [
-        "/api/job/43/",
-        "/api/job/39/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 64,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/pacemaker_configuration/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": false,
-      "class_name": "StartPacemakerJob",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.755602",
-      "description": "Start Pacemaker on oss2.local",
-      "errored": false,
-      "id": 47,
-      "modified_at": "2020-03-16T07:22:34.755578",
-      "read_locks": [
-        {
-          "locked_item_content_type_id": 75,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/corosync_configuration/4/",
-          "resource_uri": ""
-        }
-      ],
-      "resource_uri": "/api/job/47/",
-      "state": "complete",
-      "step_results": {
-        "/api/step/85/": null
-      },
-      "steps": [
-        "/api/step/85/"
-      ],
-      "wait_for": [
-        "/api/job/43/",
-        "/api/job/46/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 64,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/pacemaker_configuration/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": true,
-      "class_name": "SetupHostJob",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.798434",
-      "description": "Setup managed host oss2.local",
-      "errored": false,
-      "id": 48,
-      "modified_at": "2020-03-16T07:22:34.798408",
-      "read_locks": [
-        {
-          "locked_item_content_type_id": 53,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/lnet_configuration/4/",
-          "resource_uri": ""
-        },
-        {
-          "locked_item_content_type_id": 64,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/pacemaker_configuration/4/",
-          "resource_uri": ""
-        },
-        {
-          "locked_item_content_type_id": 21,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/ntp_configuration/4/",
-          "resource_uri": ""
-        }
-      ],
-      "resource_uri": "/api/job/48/",
-      "state": "complete",
-      "step_results": {},
-      "steps": [],
-      "wait_for": [
-        "/api/job/39/",
-        "/api/job/40/",
-        "/api/job/41/",
-        "/api/job/42/",
-        "/api/job/45/",
-        "/api/job/46/",
-        "/api/job/47/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 17,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/host/4/",
-          "resource_uri": ""
-        }
-      ]
-    }
-  ]
-}
-"#;
 }
