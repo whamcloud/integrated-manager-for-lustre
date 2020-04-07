@@ -8,7 +8,7 @@ use crate::{
 };
 use futures::{Future, FutureExt, TryFutureExt};
 use iml_wire_types::{AgentResult, Id, PluginName, Seq};
-use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use serde_json::Value;
 use std::{
     collections::HashMap,
@@ -17,6 +17,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
+use tokio::sync::Mutex;
 use tracing::{info, warn};
 
 /// Takes a `Duration` and figures out the next duration
@@ -160,25 +161,28 @@ pub struct SessionInfo {
     pub seq: Seq,
 }
 
-fn increment_session(info: &mut SessionInfo) {
-    info.seq.increment();
+fn increment_session<'a>(info: impl Future<Output = &'a mut SessionInfo>) {
+    info.map(|i| i.seq.increment());
 }
 
-fn process_info(info: Arc<Mutex<SessionInfo>>) -> SessionInfo {
-    let info = &mut info.lock();
+fn process_info(info: Arc<Mutex<SessionInfo>>) -> impl Future<Output = SessionInfo> {
+    let info = info.lock().map(|x| &mut *x);
     increment_session(info);
-    info.clone()
+    info.map(|i| i.clone())
 }
 
-fn process_info_wrapper(info: Arc<Mutex<SessionInfo>>, y: Value) -> (SessionInfo, Value) {
-    (process_info(info), y)
+fn process_info_wrapper(
+    info: Arc<Mutex<SessionInfo>>,
+    y: Value,
+) -> impl Future<Output = (SessionInfo, Value)> {
+    process_info(info).map(|x| (x, y))
 }
 
 fn process_info_wrapper_2(
     info: Arc<Mutex<SessionInfo>>,
     y: result::Result<Value, String>,
-) -> (SessionInfo, result::Result<Value, String>) {
-    (process_info(info), y)
+) -> impl Future<Output = (SessionInfo, result::Result<Value, String>)> {
+    process_info(info).map(|x| (x, y))
 }
 
 #[derive(Debug)]
@@ -208,7 +212,7 @@ impl Session {
 
         self.plugin
             .start_session()
-            .map_ok(move |x| x.map(|y| process_info_wrapper(info, y)))
+            .map_ok(move |x| { x.map(|y| process_info_wrapper(info, y)) }.flatten())
             .boxed()
     }
     pub fn poll(
