@@ -2,19 +2,17 @@
 
 NTP_SERVER=$1
 
-sudo systemctl disable --now chronyd
-sudo yum install -y ntp
+systemctl disable --now chronyd
+yum install -y ntp
 # delete all server entries
-sudo sed -i -e "/^server /d" /etc/ntp.conf
+sed -i -e "/^server /d" /etc/ntp.conf
 # Append ntp server address 
-sudo sed -i -e "$ a server $NTP_SERVER iburst" /etc/ntp.conf
-sudo systemctl restart ntpd.service
-sudo systemctl enable ntpd.service
+sed -i -e "$ a server $NTP_SERVER iburst" /etc/ntp.conf
+systemctl enable --now ntpd.service
 
-sleep 30
+ntpdate -qu "$NTP_SERVER"
 
 until ntpstat;
 do
-  ntpdate -qu "$NTP_SERVER"
-  sleep 30
+  sleep 70
 done
