@@ -163,8 +163,9 @@ fn increment_session(info: &mut SessionInfo) {
 }
 
 fn process_info(info: Arc<Mutex<SessionInfo>>) -> SessionInfo {
-    increment_session(&mut info.lock());
-    info.lock().clone()
+    let info = &mut info.lock();
+    increment_session(info);
+    info.clone()
 }
 
 #[derive(Debug)]
