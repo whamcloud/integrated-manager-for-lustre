@@ -162,6 +162,11 @@ fn increment_session(info: &mut SessionInfo) {
     info.seq.increment();
 }
 
+fn process_info(info: Arc<Mutex<SessionInfo>>) -> SessionInfo {
+    increment_session(&mut info.lock());
+    info.lock().clone()
+}
+
 #[derive(Debug)]
 pub struct Session {
     pub info: Arc<Mutex<SessionInfo>>,
@@ -189,12 +194,7 @@ impl Session {
 
         self.plugin
             .start_session()
-            .map_ok(move |x| {
-                x.map(|y| {
-                    increment_session(&mut info.lock());
-                    (info.lock().clone(), y)
-                })
-            })
+            .map_ok(move |x| x.map(|y| (process_info(info), y)))
             .boxed()
     }
     pub fn poll(
@@ -205,12 +205,7 @@ impl Session {
 
         self.plugin
             .update_session()
-            .map_ok(move |x| {
-                x.map(|y| {
-                    increment_session(&mut info.lock());
-                    (info.lock().clone(), y)
-                })
-            })
+            .map_ok(move |x| x.map(|y| (process_info(info), y)))
             .boxed()
     }
     pub fn message(
@@ -221,10 +216,7 @@ impl Session {
 
         self.plugin
             .on_message(body)
-            .map_ok(move |x| {
-                increment_session(&mut info.lock());
-                (info.lock().clone(), x)
-            })
+            .map_ok(move |x| (process_info(info), x))
             .boxed()
     }
     pub fn teardown(&mut self) -> Result<()> {
