@@ -20,35 +20,35 @@ impl<T: Deps> Deps for Arc<T> {
 
 #[derive(Debug, Clone)]
 pub struct DependencyForest<T> {
-    roots: Vec<Arc<T>>,
-    deps: HashMap<u32, Vec<Arc<T>>>,
+    pub roots: Vec<Arc<T>>,
+    pub deps: HashMap<u32, Vec<Arc<T>>>,
 }
 
 #[derive(Debug, Copy, Clone)]
 pub struct DependencyForestRef<'a, T> {
-    roots: &'a Vec<Arc<T>>,
-    deps: &'a HashMap<u32, Vec<Arc<T>>>,
+    pub roots: &'a Vec<Arc<T>>,
+    pub deps: &'a HashMap<u32, Vec<Arc<T>>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Context {
-    visited: HashSet<u32>,
-    indent: usize,
-    is_new: bool,
+    pub visited: HashSet<u32>,
+    pub indent: usize,
+    pub is_new: bool,
 }
 
-fn build_direct_dag<T>(ts: &[T]) -> (Vec<u32>, Vec<(u32, Vec<u32>)>)
+pub fn build_direct_dag<T>(ts: &[T]) -> DependencyForest<T>
     where
         T: Deps + Clone + Debug,
 {
     let mut roots: Vec<u32> = Vec::new();
-    let mut rdag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(ts.len());
+    let mut dag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(ts.len());
     for t in ts {
         let x = t.id();
         let ys = t.deps();
         if !ys.is_empty() {
             // push the arcs `x -> y` for all `y \in xs` into the graph
-            rdag.push((x, ys.to_vec()));
+            dag.push((x, ys.to_vec()));
             if !roots.contains(&x) {
                 roots.push(x);
             }
@@ -60,34 +60,56 @@ fn build_direct_dag<T>(ts: &[T]) -> (Vec<u32>, Vec<(u32, Vec<u32>)>)
             }
         }
     }
-    (roots, rdag)
+    build_forest(ts, &roots, &dag)
 }
 
-fn build_inverse_dag<T>(ts: &[T]) -> (Vec<u32>, Vec<(u32, Vec<u32>)>)
+pub fn build_inverse_dag<T>(ts: &[T]) -> DependencyForest<T>
     where
         T: Deps + Clone + Debug,
 {
     let mut roots: HashSet<u32> = ts.iter().map(|t| t.id()).collect();
-    let mut rdag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(ts.len());
+    let mut dag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(ts.len());
     for t in ts {
         let y = t.id();
         let xs = t.deps();
         for x in xs {
             // push the arc `x -> y` into the graph
-            if let Some((_, ref mut ys)) = rdag.iter_mut().find(|(y, _)| *y == x) {
+            if let Some((_, ref mut ys)) = dag.iter_mut().find(|(y, _)| *y == x) {
                 ys.push(y);
             } else {
-                rdag.push((x, vec![y]));
+                dag.push((x, vec![y]));
             }
             // any destination cannot be a root, so we need to remove any of these roots
             roots.remove(&y);
         }
     }
-    let roots = roots.into_iter().collect();
-    (roots, rdag)
+    let roots: Vec<u32> = roots.into_iter().collect();
+    build_forest(ts, &roots, &dag)
 }
 
-fn write_tree<T, F>(tree: &DependencyForestRef<T>, node_to_str: &F) -> String
+pub fn build_forest<T>(objs: &[T], int_roots: &[u32], int_deps: &[(u32, Vec<u32>)]) -> DependencyForest<T>
+    where
+        T: Deps + Clone + Debug,
+{
+    let roots: Vec<Arc<T>> = convert_ids_to_arcs(&objs, &int_roots);
+    let deps: HashMap<u32, Vec<Arc<T>>> = int_deps
+        .iter()
+        .map(|(id, ids)| (*id, convert_ids_to_arcs(&objs, ids)))
+        .collect();
+    DependencyForest { roots, deps }
+}
+
+pub fn convert_ids_to_arcs<T>(objs: &[T], ids: &[u32]) -> Vec<Arc<T>>
+    where
+        T: Deps + Clone + Debug,
+{
+    ids.iter()
+        .filter_map(|id| objs.iter().find(|o| o.id() == *id))
+        .map(|o| Arc::new(o.clone()))
+        .collect()
+}
+
+pub fn write_tree<T, F>(tree: &DependencyForestRef<T>, node_to_str: &F) -> String
     where
         T: Deps,
         F: Fn(Arc<T>, &mut Context) -> String,
@@ -139,31 +161,10 @@ fn write_tree<T, F>(tree: &DependencyForestRef<T>, node_to_str: &F) -> String
     res
 }
 
-fn build_forest<T>(objs: &[T], int_roots: &[u32], int_deps: &[(u32, Vec<u32>)]) -> DependencyForest<T>
-    where
-        T: Deps + Clone + Debug,
-{
-    let roots: Vec<Arc<T>> = convert_ids_to_arcs(&objs, &int_roots);
-    let deps: HashMap<u32, Vec<Arc<T>>> = int_deps
-        .iter()
-        .map(|(id, ids)| (*id, convert_ids_to_arcs(&objs, ids)))
-        .collect();
-    DependencyForest { roots, deps }
-}
-
-fn convert_ids_to_arcs<T>(objs: &[T], ids: &[u32]) -> Vec<Arc<T>>
-    where
-        T: Deps + Clone + Debug,
-{
-    ids.iter()
-        .filter_map(|id| objs.iter().find(|o| o.id() == *id))
-        .map(|o| Arc::new(o.clone()))
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use iml_wire_types::{ApiList, Job};
 
     #[derive(Debug, Clone)]
     struct X {
@@ -207,8 +208,7 @@ mod tests {
         ];
 
         // build direct dag
-        let (roots, deps) = build_direct_dag(&x_list);
-        let forest = build_forest(&x_list, &roots, &deps);
+        let forest = build_direct_dag(&x_list);
         let forest_ref = DependencyForestRef {
             roots: &forest.roots,
             deps: &forest.deps,
@@ -219,7 +219,7 @@ mod tests {
             format!(
                 "{}{}: {}{}\n",
                 indent,
-                node.id(),
+                node.id,
                 node.description,
                 ellipsis,
             )
@@ -227,8 +227,7 @@ mod tests {
         let result = write_tree(&forest_ref, &node_to_string_f);
         assert_eq!(result, TREE_DIRECT);
 
-        let (roots, deps) = build_inverse_dag(&x_list);
-        let forest = build_forest(&x_list, &roots, &deps);
+        let forest = build_inverse_dag(&x_list);
         let forest_ref = DependencyForestRef {
             roots: &forest.roots,
             deps: &forest.deps,
@@ -276,4 +275,5 @@ mod tests {
   46: Configure Pacemaker on oss2.local....
   48: Setup managed host oss2.local...
 "#;
+
 }
