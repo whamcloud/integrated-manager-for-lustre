@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_system_test_utils::{docker, get_local_server_names, iml, vagrant};
+use iml_system_test_utils::{docker, get_local_server_names, iml, vagrant, SetupConfig};
 use std::{
     collections::{hash_map::RandomState, HashMap},
     time::Duration,
@@ -30,7 +30,7 @@ async fn setup() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn run_fs_test<S: std::hash::BuildHasher>(
     config: &vagrant::ClusterConfig,
-    docker_setup: &docker::DockerSetup,
+    docker_setup: &SetupConfig,
     server_map: HashMap<String, &[String], S>,
     fs_type: vagrant::FsType,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -56,7 +56,7 @@ async fn test_docker_ldiskfs_setup() -> Result<(), Box<dyn std::error::Error>> {
     let server_names = get_local_server_names(&config.storage_servers());
     run_fs_test(
         &config,
-        &docker::DockerSetup {
+        &SetupConfig {
             use_stratagem: false,
             branding: iml_wire_types::Branding::Whamcloud,
         },
@@ -76,7 +76,7 @@ async fn test_docker_zfs_setup() -> Result<(), Box<dyn std::error::Error>> {
     let server_names = get_local_server_names(&config.storage_servers());
     run_fs_test(
         &config,
-        &docker::DockerSetup {
+        &SetupConfig {
             use_stratagem: false,
             branding: iml_wire_types::Branding::Whamcloud,
         },
@@ -95,7 +95,7 @@ async fn test_docker_stratagem_setup() -> Result<(), Box<dyn std::error::Error>>
     let config = vagrant::ClusterConfig::default();
     run_fs_test(
         &config,
-        &docker::DockerSetup {
+        &SetupConfig {
             use_stratagem: true,
             branding: iml_wire_types::Branding::DdnAi400,
         },

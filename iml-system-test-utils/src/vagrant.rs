@@ -2,10 +2,17 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{iml, try_command_n_times};
+use crate::{
+    iml, try_command_n_times, SetupConfig, STRATAGEM_CLIENT_PROFILE, STRATAGEM_SERVER_PROFILE,
+};
 use iml_cmd::{CheckedCommandExt, CmdError};
 use std::{collections::HashMap, io, str, time::Duration};
-use tokio::{fs, process::Command, time::delay_for};
+use tokio::{
+    fs::{canonicalize, File},
+    io::AsyncWriteExt,
+    process::Command,
+    time::delay_for,
+};
 
 pub enum NtpServer {
     HostOnly,
@@ -20,7 +27,7 @@ pub enum FsType {
 async fn vagrant() -> Result<Command, io::Error> {
     let mut x = Command::new("vagrant");
 
-    let path = fs::canonicalize("../vagrant/").await?;
+    let path = canonicalize("../vagrant/").await?;
     println!("Setting current path for vagrant to {:?}", path);
 
     x.current_dir(path);
@@ -101,8 +108,7 @@ pub async fn provision(name: &str) -> Result<Command, io::Error> {
 pub async fn provision_nodes(nodes: &[&str], name: &str) -> Result<Command, io::Error> {
     let mut x = vagrant().await?;
 
-    x
-        .arg("provision")
+    x.arg("provision")
         .arg(nodes.join(","))
         .arg("--provision-with")
         .arg(name);
@@ -116,6 +122,12 @@ pub async fn run_vm_command(node: &str, cmd: &str) -> Result<Command, io::Error>
     x.arg("ssh").arg("-c").arg(&cmd).arg(node);
 
     Ok(x)
+}
+
+pub async fn rsync() -> Result<(), CmdError> {
+    let mut x = vagrant().await?;
+
+    x.arg("rsync").checked_status().await
 }
 
 pub async fn setup_bare(
@@ -149,15 +161,17 @@ pub async fn setup_bare(
 
 pub async fn setup_iml_install(
     hosts: &[&str],
+    setup_config: &SetupConfig,
     config: &ClusterConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    setup_bare(hosts, &config, NtpServer::Adm).await?;
-
-    provision("install-iml-local")
+    provision_nodes(&["adm"], "yum-update,install-iml-local")
         .await?
-        .args(hosts)
         .checked_status()
         .await?;
+
+    setup_bare(hosts, &config, NtpServer::Adm).await?;
+
+    configure_rpm_setup(setup_config).await?;
 
     halt().await?.args(hosts).checked_status().await?;
 
@@ -175,9 +189,10 @@ pub async fn setup_iml_install(
 
 pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
+    setup_config: &SetupConfig,
     server_map: HashMap<String, &[String], S>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    setup_iml_install(&config.all(), &config).await?;
+    setup_iml_install(&config.all(), &setup_config, &config).await?;
 
     provision("wait-for-ntp")
         .await?
@@ -188,11 +203,7 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
     for (profile, hosts) in server_map {
         run_vm_command(
             "adm",
-            &format!(
-                "iml server add -h {} -p {}",
-                hosts.join(","),
-                profile
-            ),
+            &format!("iml server add -h {} -p {}", hosts.join(","), profile),
         )
         .await?
         .checked_status()
@@ -248,7 +259,12 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     server_map: HashMap<String, &[String], S>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    setup_bare(&config.iscsi_and_storage_servers(), &config, NtpServer::HostOnly).await?;
+    setup_bare(
+        &config.iscsi_and_storage_servers(),
+        &config,
+        NtpServer::HostOnly,
+    )
+    .await?;
 
     provision("wait-for-ntp-docker")
         .await?
@@ -336,6 +352,51 @@ pub async fn create_fs(fs_type: FsType) -> Result<(), CmdError> {
         FsType::LDISKFS => create_monitored_ldiskfs().await?,
         FsType::ZFS => create_monitored_zfs().await?,
     };
+
+    Ok(())
+}
+
+pub async fn configure_rpm_setup(setup: &SetupConfig) -> Result<(), CmdError> {
+    let config = format!(
+        r#"USE_STRATAGEM={}
+BRANDING={}"#,
+        setup.use_stratagem,
+        setup.branding.to_string()
+    );
+
+    let vagrant_path = canonicalize("../vagrant/").await?;
+    let mut config_path = vagrant_path.clone();
+    config_path.push("local_settings.py");
+
+    let mut file = File::create(config_path).await?;
+    file.write_all(config.as_bytes()).await?;
+
+    if setup.use_stratagem {
+        let mut server_profile_path = vagrant_path.clone();
+        server_profile_path.push("stratagem-server.profile");
+
+        let mut file = File::create(server_profile_path).await?;
+        file.write_all(STRATAGEM_SERVER_PROFILE.as_bytes()).await?;
+
+        let mut client_profile_path = vagrant_path.clone();
+        client_profile_path.push("stratagem-client.profile");
+
+        let mut file = File::create(client_profile_path).await?;
+        file.write_all(STRATAGEM_CLIENT_PROFILE.as_bytes()).await?;
+    }
+
+    rsync().await?;
+
+    run_vm_command(
+        "adm",
+        "cp /vagrant/local_settings.py /usr/share/chroma-manager/ \
+            && chroma-config profile register /vagrant/stratagem-server.profile \
+            && chroma-config profile register /vagrant/stratagem-client.profile \
+            && systemctl restart iml-manager.target",
+    )
+    .await?
+    .checked_status()
+    .await?;
 
     Ok(())
 }

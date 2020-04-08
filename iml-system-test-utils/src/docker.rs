@@ -1,18 +1,14 @@
-use crate::iml::IML_DOCKER_PATH;
+use crate::{
+    iml::IML_DOCKER_PATH, SetupConfig, STRATAGEM_CLIENT_PROFILE, STRATAGEM_SERVER_PROFILE,
+};
 use iml_cmd::{CheckedCommandExt, CmdError};
 use iml_systemd::SystemdError;
-use iml_wire_types::Branding;
 use std::{io, str};
 use tokio::{
     fs::{canonicalize, File},
     io::AsyncWriteExt,
     process::Command,
 };
-
-pub struct DockerSetup {
-    pub use_stratagem: bool,
-    pub branding: Branding,
-}
 
 pub async fn docker() -> Result<Command, io::Error> {
     let mut x = Command::new("docker");
@@ -108,7 +104,7 @@ pub async fn remove_password() -> Result<(), io::Error> {
     Ok(())
 }
 
-pub async fn configure_docker_setup(setup: &DockerSetup) -> Result<(), io::Error> {
+pub async fn configure_docker_setup(setup: &SetupConfig) -> Result<(), io::Error> {
     let config = format!(
         r#"USE_STRATAGEM={}
 BRANDING={}"#,
@@ -129,58 +125,14 @@ BRANDING={}"#,
         let mut server_profile_path = path.clone();
         server_profile_path.push("stratagem-server.profile");
 
-        let stratagem_server_profile = r#"{
-  "ui_name": "Stratagem Policy Engine Server",
-  "ui_description": "A server running the Stratagem Policy Engine",
-  "managed": false,
-  "worker": false,
-  "name": "stratagem_server",
-  "initial_state": "monitored",
-  "ntp": false,
-  "corosync": false,
-  "corosync2": false,
-  "pacemaker": false,
-  "repolist": [
-    "base"
-  ],
-  "packages": [],
-  "validation": [
-    {
-      "description": "A server running the Stratagem Policy Engine",
-      "test": "distro_version < 8 and distro_version >= 7"
-    }
-  ]
-}
-"#;
         let mut file = File::create(server_profile_path).await?;
-        file.write_all(stratagem_server_profile.as_bytes()).await?;
+        file.write_all(STRATAGEM_SERVER_PROFILE.as_bytes()).await?;
 
         let mut client_profile_path = path.clone();
         client_profile_path.push("stratagem-client.profile");
 
-        let stratagem_client_profile = r#"{
-  "ui_name": "Stratagem Client Node",
-  "managed": true,
-  "worker": true,
-  "name": "stratagem_client",
-  "initial_state": "managed",
-  "ntp": true,
-  "corosync": false,
-  "corosync2": false,
-  "pacemaker": false,
-  "ui_description": "A client that can receive stratagem data",
-  "packages": [
-    "python2-iml-agent-management",
-    "lustre-client"
-  ],
-  "repolist": [
-    "base",
-    "lustre-client"
-  ]
-}
-"#;
         let mut file = File::create(client_profile_path).await?;
-        file.write_all(stratagem_client_profile.as_bytes()).await?;
+        file.write_all(STRATAGEM_CLIENT_PROFILE.as_bytes()).await?;
     }
 
     Ok(())
