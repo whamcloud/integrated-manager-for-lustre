@@ -172,6 +172,7 @@ services:
       - "mailbox:/var/spool/iml/mailbox"
       - "/root/.ssh:/root/.ssh"
     environment:
+      - DEVICE_AGGREGATOR_URL=http://device:8008
       - PROXY_HOST=iml-action-runner
       - INFLUXDB_SERVER_FQDN=influxdb
   lustre-audit:
