@@ -616,6 +616,7 @@ fn close_button() -> Node<Msg> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::components::dependency_tree::{build_direct_dag, build_forest, Context};
 
     #[test]
     fn parse_job() {
@@ -624,4 +625,441 @@ mod tests {
         assert_eq!(extract_uri_id::<Command>("/api/command/12/"), Some(12));
         assert_eq!(extract_uri_id::<Command>("/api/xxx/1/"), None);
     }
+
+    #[test]
+    fn build_node_tree() {
+        let api_list: ApiList<Job0> = serde_json::from_str(JOBS).unwrap();
+        let forest = build_direct_dag(&api_list.objects);
+        let node_to_string_f = |node: Arc<Job0>, ctx: &mut Context| {
+            let ellipsis = if ctx.is_new { "" } else { "..." };
+            let indent = "  ".repeat(ctx.indent);
+            format!(
+                "{}{}: {}{}\n",
+                indent,
+                node.id,
+                node.description,
+                ellipsis,
+            )
+        };
+
+    }
+
+    const JOBS: &'static str = r#"{
+  "meta": {
+    "limit": 20,
+    "next": null,
+    "offset": 0,
+    "previous": null,
+    "total_count": 10
+  },
+  "objects": [
+    {
+      "available_transitions": [],
+      "cancelled": false,
+      "class_name": "InstallHostPackagesJob",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.491600",
+      "description": "Install packages on server oss2.local",
+      "errored": false,
+      "id": 39,
+      "modified_at": "2020-03-16T07:22:34.491573",
+      "read_locks": [],
+      "resource_uri": "/api/job/39/",
+      "state": "complete",
+      "step_results": {
+        "/api/step/12/": null,
+        "/api/step/16/": null,
+        "/api/step/20/": null,
+        "/api/step/22/": null,
+        "/api/step/25/": null
+      },
+      "steps": [
+        "/api/step/12/",
+        "/api/step/16/",
+        "/api/step/20/",
+        "/api/step/22/",
+        "/api/step/25/"
+      ],
+      "wait_for": [],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 17,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/host/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": false,
+      "class_name": "ConfigureNTPJob",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.516793",
+      "description": "Configure NTP on oss2.local",
+      "errored": false,
+      "id": 40,
+      "modified_at": "2020-03-16T07:22:34.516760",
+      "read_locks": [
+        {
+          "locked_item_content_type_id": 17,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/host/4/",
+          "resource_uri": ""
+        }
+      ],
+      "resource_uri": "/api/job/40/",
+      "state": "complete",
+      "step_results": {
+        "/api/step/55/": null,
+        "/api/step/57/": null,
+        "/api/step/60/": null,
+        "/api/step/62/": null,
+        "/api/step/63/": null
+      },
+      "steps": [
+        "/api/step/55/",
+        "/api/step/57/",
+        "/api/step/60/",
+        "/api/step/62/",
+        "/api/step/63/"
+      ],
+      "wait_for": [
+        "/api/job/39/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 21,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/ntp_configuration/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": false,
+      "class_name": "EnableLNetJob",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.554315",
+      "description": "Enable LNet on oss2.local",
+      "errored": false,
+      "id": 41,
+      "modified_at": "2020-03-16T07:22:34.554290",
+      "read_locks": [
+        {
+          "locked_item_content_type_id": 17,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/host/4/",
+          "resource_uri": ""
+        }
+      ],
+      "resource_uri": "/api/job/41/",
+      "state": "complete",
+      "step_results": {},
+      "steps": [],
+      "wait_for": [
+        "/api/job/39/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 53,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/lnet_configuration/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": false,
+      "class_name": "AutoConfigureCorosync2Job",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.591853",
+      "description": "Configure Corosync on oss2.local.",
+      "errored": false,
+      "id": 42,
+      "modified_at": "2020-03-16T07:22:34.591829",
+      "read_locks": [
+        {
+          "locked_item_content_type_id": 17,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/host/4/",
+          "resource_uri": ""
+        }
+      ],
+      "resource_uri": "/api/job/42/",
+      "state": "complete",
+      "step_results": {
+        "/api/step/56/": null
+      },
+      "steps": [
+        "/api/step/56/"
+      ],
+      "wait_for": [
+        "/api/job/39/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 75,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/corosync_configuration/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": false,
+      "class_name": "StartCorosync2Job",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.627692",
+      "description": "Start Corosync on oss2.local",
+      "errored": false,
+      "id": 43,
+      "modified_at": "2020-03-16T07:22:34.627667",
+      "read_locks": [],
+      "resource_uri": "/api/job/43/",
+      "state": "complete",
+      "step_results": {
+        "/api/step/74/": null
+      },
+      "steps": [
+        "/api/step/74/"
+      ],
+      "wait_for": [
+        "/api/job/42/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 75,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/corosync_configuration/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": true,
+      "class_name": "LoadLNetJob",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.648217",
+      "description": "Load the LNet kernel modules.",
+      "errored": false,
+      "id": 44,
+      "modified_at": "2020-03-16T07:22:34.648185",
+      "read_locks": [],
+      "resource_uri": "/api/job/44/",
+      "state": "complete",
+      "step_results": {
+        "/api/step/58/": null,
+        "/api/step/64/": null
+      },
+      "steps": [
+        "/api/step/58/",
+        "/api/step/64/"
+      ],
+      "wait_for": [
+        "/api/job/41/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 53,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/lnet_configuration/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": true,
+      "class_name": "StartLNetJob",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.672353",
+      "description": "Start the LNet networking layer.",
+      "errored": false,
+      "id": 45,
+      "modified_at": "2020-03-16T07:22:34.672291",
+      "read_locks": [],
+      "resource_uri": "/api/job/45/",
+      "state": "complete",
+      "step_results": {},
+      "steps": [],
+      "wait_for": [
+        "/api/job/44/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 53,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/lnet_configuration/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": false,
+      "class_name": "ConfigurePacemakerJob",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.695375",
+      "description": "Configure Pacemaker on oss2.local.",
+      "errored": false,
+      "id": 46,
+      "modified_at": "2020-03-16T07:22:34.695324",
+      "read_locks": [
+        {
+          "locked_item_content_type_id": 17,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/host/4/",
+          "resource_uri": ""
+        },
+        {
+          "locked_item_content_type_id": 75,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/corosync_configuration/4/",
+          "resource_uri": ""
+        }
+      ],
+      "resource_uri": "/api/job/46/",
+      "state": "complete",
+      "step_results": {
+        "/api/step/77/": null,
+        "/api/step/78/": null,
+        "/api/step/82/": null
+      },
+      "steps": [
+        "/api/step/77/",
+        "/api/step/78/",
+        "/api/step/82/"
+      ],
+      "wait_for": [
+        "/api/job/43/",
+        "/api/job/39/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 64,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/pacemaker_configuration/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": false,
+      "class_name": "StartPacemakerJob",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.755602",
+      "description": "Start Pacemaker on oss2.local",
+      "errored": false,
+      "id": 47,
+      "modified_at": "2020-03-16T07:22:34.755578",
+      "read_locks": [
+        {
+          "locked_item_content_type_id": 75,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/corosync_configuration/4/",
+          "resource_uri": ""
+        }
+      ],
+      "resource_uri": "/api/job/47/",
+      "state": "complete",
+      "step_results": {
+        "/api/step/85/": null
+      },
+      "steps": [
+        "/api/step/85/"
+      ],
+      "wait_for": [
+        "/api/job/43/",
+        "/api/job/46/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 64,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/pacemaker_configuration/4/",
+          "resource_uri": ""
+        }
+      ]
+    },
+    {
+      "available_transitions": [],
+      "cancelled": true,
+      "class_name": "SetupHostJob",
+      "commands": [
+        "/api/command/12/"
+      ],
+      "created_at": "2020-03-16T07:22:34.798434",
+      "description": "Setup managed host oss2.local",
+      "errored": false,
+      "id": 48,
+      "modified_at": "2020-03-16T07:22:34.798408",
+      "read_locks": [
+        {
+          "locked_item_content_type_id": 53,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/lnet_configuration/4/",
+          "resource_uri": ""
+        },
+        {
+          "locked_item_content_type_id": 64,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/pacemaker_configuration/4/",
+          "resource_uri": ""
+        },
+        {
+          "locked_item_content_type_id": 21,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/ntp_configuration/4/",
+          "resource_uri": ""
+        }
+      ],
+      "resource_uri": "/api/job/48/",
+      "state": "complete",
+      "step_results": {},
+      "steps": [],
+      "wait_for": [
+        "/api/job/39/",
+        "/api/job/40/",
+        "/api/job/41/",
+        "/api/job/42/",
+        "/api/job/45/",
+        "/api/job/46/",
+        "/api/job/47/"
+      ],
+      "write_locks": [
+        {
+          "locked_item_content_type_id": 17,
+          "locked_item_id": 4,
+          "locked_item_uri": "/api/host/4/",
+          "resource_uri": ""
+        }
+      ]
+    }
+  ]
+}
+"#;
 }
