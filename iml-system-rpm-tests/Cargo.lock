@@ -177,6 +177,7 @@ name = "iml-system-rpm-tests"
 version = "0.1.0"
 dependencies = [
  "iml-system-test-utils",
+ "iml-wire-types",
  "tokio",
 ]
 

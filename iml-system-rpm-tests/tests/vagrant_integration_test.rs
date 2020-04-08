@@ -2,13 +2,53 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_system_test_utils::{docker, iml, vagrant};
+use iml_system_test_utils::{get_local_server_names, iml, vagrant};
+use std::{
+    collections::{hash_map::RandomState, HashMap},
+    time::Duration,
+};
+use tokio::time::delay_for;
+
+async fn setup() -> Result<(), Box<dyn std::error::Error>> {
+    vagrant::destroy().await?;
+
+    Ok(())
+}
+
+async fn run_fs_test<S: std::hash::BuildHasher>(
+    config: &vagrant::ClusterConfig,
+    server_map: HashMap<String, &[String], S>,
+    fs_type: vagrant::FsType,
+) -> Result<(), Box<dyn std::error::Error>> {
+    setup().await?;
+
+    vagrant::setup_deploy_servers(
+        &config, 
+        server_map,
+    ).await?;
+
+    vagrant::create_fs(fs_type).await?;
+
+    delay_for(Duration::from_secs(10)).await;
+
+    iml::detect_fs().await?;
+
+    Ok(())
+}
 
 #[tokio::test]
 async fn test_setup() -> Result<(), Box<dyn std::error::Error>> {
     let config = vagrant::ClusterConfig::default();
+    let server_names = get_local_server_names(&config.storage_servers());
 
-    vagrant::setup_deploy_servers(&config, "base_managed_patchless").await?;
+    run_fs_test(
+        &config,
+        vec![("base_monitored".into(), &server_names[..])]
+            .into_iter()
+            .collect::<HashMap<String, &[String], RandomState>>(),
+        vagrant::FsType::LDISKFS,
+    )
+    .await?;
 
     Ok(())
 }
