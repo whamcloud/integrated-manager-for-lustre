@@ -198,6 +198,16 @@ fn process_info_wrapper_2(
     process_info(info).map(|x| (x, y))
 }
 
+fn process_info_wrapper_2_wrapper(
+    info: Arc<Mutex<SessionInfo>>,
+    y: result::Result<Value, String>,
+) -> impl Future<Output = Result<(SessionInfo, result::Result<Value, String>)>> {
+    process_info_wrapper_2(info, y).map(|(session_info, maybe_value)| match maybe_value {
+        Ok(value) => Ok((session_info, Ok(value))),
+        Err(e) => Ok(session_info, Err(e)),
+    })
+}
+
 #[derive(Debug)]
 pub struct Session {
     pub info: Arc<Mutex<SessionInfo>>,
@@ -230,7 +240,6 @@ impl Session {
                 process_info_wrapper_wrapper(info, maybe_value)
                 // futures::future::ok(Option::<(SessionInfo, OutputValue)>::None)
             })
-            // .and_then(move |x| process_info_wrapper(info, x))
             .boxed();
         r
     }
@@ -242,7 +251,10 @@ impl Session {
 
         self.plugin
             .update_session()
-            .map_ok(move |x| x.map(|y| process_info_wrapper(info, y)))
+            .and_then(move |maybe_value| {
+                process_info_wrapper_wrapper(info, maybe_value)
+                // futures::future::ok(Option::<(SessionInfo, OutputValue)>::None)
+            })
             .boxed()
     }
     pub fn message(
@@ -253,7 +265,10 @@ impl Session {
 
         self.plugin
             .on_message(body)
-            .map_ok(move |x| process_info_wrapper_2(info, x))
+            .and_then(move |maybe_value| {
+                process_info_wrapper_2_wrapper(info, maybe_value)
+                // futures::future::ok(Option::<(SessionInfo, OutputValue)>::None)
+            })
             .boxed()
     }
     pub fn teardown(&mut self) -> Result<()> {
