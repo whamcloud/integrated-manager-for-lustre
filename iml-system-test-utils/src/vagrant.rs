@@ -124,10 +124,10 @@ pub async fn run_vm_command(node: &str, cmd: &str) -> Result<Command, io::Error>
     Ok(x)
 }
 
-pub async fn rsync() -> Result<(), CmdError> {
+pub async fn rsync(host: &str) -> Result<(), CmdError> {
     let mut x = vagrant().await?;
 
-    x.arg("rsync").checked_status().await
+    x.arg("rsync").arg(host).checked_status().await
 }
 
 pub async fn setup_bare(
@@ -164,15 +164,15 @@ pub async fn setup_iml_install(
     setup_config: &SetupConfig,
     config: &ClusterConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    up().await?.arg("adm").checked_status().await?;
-    provision_node("adm", "yum-update,install-iml-local")
+    up().await?.arg(config.manager).checked_status().await?;
+    provision_node(config.manager, "yum-update,install-iml-local")
         .await?
         .checked_status()
         .await?;
 
     setup_bare(hosts, &config, NtpServer::Adm).await?;
 
-    configure_rpm_setup(setup_config).await?;
+    configure_rpm_setup(setup_config, &config).await?;
 
     halt().await?.args(hosts).checked_status().await?;
 
@@ -203,7 +203,7 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
 
     for (profile, hosts) in server_map {
         run_vm_command(
-            "adm",
+            config.manager,
             &format!("iml server add -h {} -p {}", hosts.join(","), profile),
         )
         .await?
@@ -357,7 +357,10 @@ pub async fn create_fs(fs_type: FsType) -> Result<(), CmdError> {
     Ok(())
 }
 
-pub async fn configure_rpm_setup(setup: &SetupConfig) -> Result<(), CmdError> {
+pub async fn configure_rpm_setup(
+    setup: &SetupConfig,
+    cluster_config: &ClusterConfig,
+) -> Result<(), CmdError> {
     let config = format!(
         r#"USE_STRATAGEM={}
 BRANDING={}"#,
@@ -386,10 +389,10 @@ BRANDING={}"#,
         file.write_all(STRATAGEM_CLIENT_PROFILE.as_bytes()).await?;
     }
 
-    rsync().await?;
+    rsync(cluster_config.manager).await?;
 
     run_vm_command(
-        "adm",
+        cluster_config.manager,
         "cp /vagrant/local_settings.py /usr/share/chroma-manager/ \
             && chroma-config profile register /vagrant/stratagem-server.profile \
             && chroma-config profile register /vagrant/stratagem-client.profile \
