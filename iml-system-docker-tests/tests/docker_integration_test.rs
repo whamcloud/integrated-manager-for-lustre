@@ -2,7 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_cmd::CheckedCommandExt;
 use iml_system_test_utils::{docker, get_local_server_names, iml, vagrant};
 use std::{
     collections::{hash_map::RandomState, HashMap},
