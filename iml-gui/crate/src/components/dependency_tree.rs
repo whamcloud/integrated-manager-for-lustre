@@ -103,24 +103,25 @@ pub fn convert_ids_to_arcs<T>(objs: &[T], ids: &[u32]) -> Vec<Arc<T>>
         .collect()
 }
 
-pub fn write_tree<T, F>(tree: &DependencyForest<T>, node_to_str: &F) -> String
+pub fn build_tree_str<T, F>(tree: &DependencyForest<T>, node_to_str: &F) -> String
     where
         T: Deps,
         F: Fn(Arc<T>, &mut Context) -> String,
 {
-    fn write_node<T, F>(tree: &DependencyForest<T>, node_to_str: &F, n: Arc<T>, ctx: &mut Context) -> String
+    fn build_node_str<T, F>(tree: &DependencyForest<T>, node_to_str: &F, n: Arc<T>, ctx: &mut Context) -> String
         where
             T: Deps,
             F: Fn(Arc<T>, &mut Context) -> String,
     {
         let mut res = String::new();
         ctx.is_new = ctx.visited.insert(n.id());
-        res.write_str(&node_to_str(Arc::clone(&n), ctx));
+        let _ = res.write_str(&node_to_str(Arc::clone(&n), ctx));
+
         if let Some(deps) = tree.deps.get(&n.id()) {
             ctx.indent += 1;
             if ctx.is_new {
                 for d in deps {
-                    res.write_str(&write_node(tree, node_to_str, Arc::clone(d), ctx));
+                    let _ = res.write_str(&build_node_str(tree, node_to_str, Arc::clone(d), ctx));
                 }
             }
             ctx.indent -= 1;
@@ -134,7 +135,7 @@ pub fn write_tree<T, F>(tree: &DependencyForest<T>, node_to_str: &F) -> String
     };
     let mut res = String::new();
     for r in &tree.roots {
-        let _ = res.write_str(&write_node(tree, node_to_str, Arc::clone(r), &mut ctx));
+        let _ = res.write_str(&build_node_str(tree, node_to_str, Arc::clone(r), &mut ctx));
     }
     res
 }
@@ -185,8 +186,6 @@ mod tests {
             X::new(48, &[39, 40, 41, 42, 45, 46, 47], "Setup managed host oss2.local"),
         ];
 
-        // build direct dag
-        let forest = build_direct_dag(&x_list);
         let node_to_string_f = |node: Arc<X>, ctx: &mut Context| {
             let ellipsis = if ctx.is_new { "" } else { "..." };
             let indent = "  ".repeat(ctx.indent);
@@ -198,11 +197,13 @@ mod tests {
                 ellipsis,
             )
         };
-        let result = write_tree(&forest, &node_to_string_f);
+
+        let forest = build_direct_dag(&x_list);
+        let result = build_tree_str(&forest, &node_to_string_f);
         assert_eq!(result, TREE_DIRECT);
 
         let forest = build_inverse_dag(&x_list);
-        let result = write_tree(&forest, &node_to_string_f);
+        let result = build_tree_str(&forest, &node_to_string_f);
         assert_eq!(result, TREE_INVERSE);
     }
 

@@ -616,7 +616,8 @@ fn close_button() -> Node<Msg> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::dependency_tree::{build_direct_dag, build_forest, Context};
+    use crate::components::dependency_tree::{build_direct_dag, build_forest, Context, DependencyForest};
+    use std::collections::HashSet;
 
     #[test]
     fn parse_job() {
@@ -626,13 +627,56 @@ mod tests {
         assert_eq!(extract_uri_id::<Command>("/api/xxx/1/"), None);
     }
 
+    pub fn build_tree_dom<T, F>(tree: &DependencyForest<T>, node_to_str: &F) -> Node<Msg>
+        where
+            T: Deps,
+            F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
+    {
+        fn build_node_str<T, F>(tree: &DependencyForest<T>, node_to_str: &F, n: Arc<T>, ctx: &mut Context) -> Node<Msg>
+            where
+                T: Deps,
+                F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
+        {
+            empty!()
+        }
+        //     ctx.is_new = ctx.visited.insert(n.id());
+        //     let cap = node_to_str(Arc::clone(&n), ctx);
+        //     let list = div![];
+        //     let mut node = ul![
+        //         cap
+        //     ];
+        //     if let Some(deps) = tree.deps.get(&n.id()) {
+        //         ctx.indent += 1;
+        //         if ctx.is_new {
+        //             for d in deps {
+        //                 res.write_str(&build_node_str(tree, node_to_str, Arc::clone(d), ctx));
+        //             }
+        //         }
+        //         ctx.indent -= 1;
+        //     }
+        //     res
+        // }
+        // let mut ctx = Context {
+        //     visited: HashSet::new(),
+        //     indent: 0,
+        //     is_new: false,
+        // };
+        // let mut res = String::new();
+        // for r in &tree.roots {
+        //     let _ = build_node_str(tree, node_to_str, Arc::clone(r), &mut ctx);
+        // }
+        // res
+        empty!()
+    }
+
+
     #[test]
     fn build_node_tree() {
         let api_list: ApiList<Job0> = serde_json::from_str(JOBS).unwrap();
         let forest = build_direct_dag(&api_list.objects);
-        let job_to_node: fn(Arc<Job<Option<()>>>, &mut Context) -> Node<Msg> = |job: Arc<Job0>, ctx: &mut Context| {
+        let job_to_node = |job: Arc<Job0>, ctx: &mut Context| {
             let ellipsis = if ctx.is_new { class![] } else { class![] };
-            li![
+            let this: Node<Msg> = li![
                 class![C.pl_2, C.justify_between, C.items_center],
                 div![
                     span![ job.id.to_string() ],
@@ -641,8 +685,18 @@ mod tests {
                         format!("{}{}", job.description, ellipsis),
                     ]
                 ]
-            ]
+            ];
+            this
         };
+        let node: Node<Msg> = ul! [
+            class!["my-class"],
+            vec![
+                li! ["1"],
+                li! ["2"],
+                li! ["3"],
+            ],
+        ];
+        println!("{:#?}", node);
         // let cls = class![C.w_4, C.h_4, C.inline, C.mr_4];
         // let li: Node<Msg> = li! [
         //     class![ C.pl_2, C.justify_between, C.items_center ],
