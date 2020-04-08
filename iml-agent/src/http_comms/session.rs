@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    agent_error::Result,
+    agent_error::{ImlAgentError, Result},
     daemon_plugins::{DaemonBox, OutputValue},
 };
 use futures::{Future, FutureExt, TryFutureExt};
@@ -173,9 +173,22 @@ fn process_info(info: Arc<Mutex<SessionInfo>>) -> impl Future<Output = SessionIn
 
 fn process_info_wrapper(
     info: Arc<Mutex<SessionInfo>>,
-    y: Value,
-) -> impl Future<Output = (SessionInfo, Value)> {
+    y: Option<Value>,
+) -> impl Future<Output = (SessionInfo, Option<Value>)> {
     process_info(info).map(|x| (x, y))
+}
+
+fn process_info_wrapper_wrapper(
+    info: Arc<Mutex<SessionInfo>>,
+    y: Option<Value>,
+) -> impl Future<Output = Result<Option<(SessionInfo, Value)>>> {
+    process_info_wrapper(info, y).map(|(session_info, maybe_value)| {
+        if let Some(value) = maybe_value {
+            Ok(Some((session_info, value)))
+        } else {
+            Ok(None)
+        }
+    })
 }
 
 fn process_info_wrapper_2(
@@ -210,10 +223,16 @@ impl Session {
     {
         let info = Arc::clone(&self.info);
 
-        self.plugin
+        let r = self
+            .plugin
             .start_session()
-            .map_ok(move |x| { x.map(|y| process_info_wrapper(info, y)) }.flatten())
-            .boxed()
+            .and_then(move |maybe_value| {
+                process_info_wrapper_wrapper(info, maybe_value)
+                // futures::future::ok(Option::<(SessionInfo, OutputValue)>::None)
+            })
+            // .and_then(move |x| process_info_wrapper(info, x))
+            .boxed();
+        r
     }
     pub fn poll(
         &self,
