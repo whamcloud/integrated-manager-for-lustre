@@ -2,8 +2,60 @@ pub mod docker;
 pub mod iml;
 pub mod vagrant;
 
+use iml_wire_types::Branding;
 use std::{io, time::Duration};
 use tokio::{process::Command, time::delay_for};
+
+pub struct SetupConfig {
+    pub use_stratagem: bool,
+    pub branding: Branding,
+}
+
+pub const STRATAGEM_SERVER_PROFILE: &str = r#"{
+    "ui_name": "Stratagem Policy Engine Server",
+    "ui_description": "A server running the Stratagem Policy Engine",
+    "managed": false,
+    "worker": false,
+    "name": "stratagem_server",
+    "initial_state": "monitored",
+    "ntp": false,
+    "corosync": false,
+    "corosync2": false,
+    "pacemaker": false,
+    "repolist": [
+      "base"
+    ],
+    "packages": [],
+    "validation": [
+      {
+        "description": "A server running the Stratagem Policy Engine",
+        "test": "distro_version < 8 and distro_version >= 7"
+      }
+    ]
+  }
+  "#;
+
+pub const STRATAGEM_CLIENT_PROFILE: &str = r#"{
+    "ui_name": "Stratagem Client Node",
+    "managed": true,
+    "worker": true,
+    "name": "stratagem_client",
+    "initial_state": "managed",
+    "ntp": true,
+    "corosync": false,
+    "corosync2": false,
+    "pacemaker": false,
+    "ui_description": "A client that can receive stratagem data",
+    "packages": [
+      "python2-iml-agent-management",
+      "lustre-client"
+    ],
+    "repolist": [
+      "base",
+      "lustre-client"
+    ]
+  }
+  "#;
 
 pub async fn try_command_n_times(max_tries: u32, cmd: &mut Command) -> Result<(), io::Error> {
     let mut count = 1;
