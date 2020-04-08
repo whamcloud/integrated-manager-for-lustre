@@ -98,6 +98,18 @@ pub async fn provision(name: &str) -> Result<Command, io::Error> {
     Ok(x)
 }
 
+pub async fn provision_nodes(nodes: &[&str], name: &str) -> Result<Command, io::Error> {
+    let mut x = vagrant().await?;
+
+    x
+        .arg("provision")
+        .arg(nodes.join(","))
+        .arg("--provision-with")
+        .arg(name);
+
+    Ok(x)
+}
+
 pub async fn run_vm_command(node: &str, cmd: &str) -> Result<Command, io::Error> {
     let mut x = vagrant().await?;
 
@@ -109,6 +121,7 @@ pub async fn run_vm_command(node: &str, cmd: &str) -> Result<Command, io::Error>
 pub async fn setup_bare(
     hosts: &[&str],
     config: &ClusterConfig,
+    ntp_server: NtpServer,
 ) -> Result<(), Box<dyn std::error::Error>> {
     up().await?.args(hosts).checked_status().await?;
 
@@ -118,7 +131,10 @@ pub async fn setup_bare(
         .checked_status()
         .await?;
 
-    configure_ntp_for_host_only_if(&config.storage_servers()).await?;
+    match ntp_server {
+        NtpServer::HostOnly => configure_ntp_for_host_only_if(&config.storage_servers()).await?,
+        NtpServer::Adm => configure_ntp_for_adm(&config.storage_servers()).await?,
+    };
 
     halt().await?.args(hosts).checked_status().await?;
 
@@ -135,7 +151,7 @@ pub async fn setup_iml_install(
     hosts: &[&str],
     config: &ClusterConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    setup_bare(hosts, &config).await?;
+    setup_bare(hosts, &config, NtpServer::Adm).await?;
 
     provision("install-iml-local")
         .await?
@@ -153,39 +169,52 @@ pub async fn setup_iml_install(
     }
 
     up().await?.args(hosts).checked_status().await?;
-    delay_for(Duration::from_secs(30)).await;
 
     Ok(())
 }
 
-pub async fn setup_deploy_servers(
+pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
-    profile: &str,
+    server_map: HashMap<String, &[String], S>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     setup_iml_install(&config.all(), &config).await?;
 
-    run_vm_command(
-        "adm",
-        &format!(
-            "iml server add -h {} -p {}",
-            config.storage_servers().join(","),
-            profile
-        ),
-    )
-    .await?
-    .checked_status()
-    .await?;
+    provision("wait-for-ntp")
+        .await?
+        .args(&config.storage_servers()[..])
+        .checked_status()
+        .await?;
+
+    for (profile, hosts) in server_map {
+        run_vm_command(
+            "adm",
+            &format!(
+                "iml server add -h {} -p {}",
+                hosts.join(","),
+                profile
+            ),
+        )
+        .await?
+        .checked_status()
+        .await?;
+    }
 
     halt().await?.args(config.all()).checked_status().await?;
 
     for host in config.all() {
-        snapshot_save(host, "iml-deployed")
+        snapshot_save(host, "servers-deployed")
             .await?
             .checked_status()
             .await?;
     }
 
     up().await?.args(config.all()).checked_status().await?;
+
+    provision("wait-for-ntp")
+        .await?
+        .args(&config.storage_servers()[..])
+        .checked_status()
+        .await?;
 
     Ok(())
 }
@@ -219,7 +248,7 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     server_map: HashMap<String, &[String], S>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    setup_bare(&config.iscsi_and_storage_servers(), &config).await?;
+    setup_bare(&config.iscsi_and_storage_servers(), &config, NtpServer::HostOnly).await?;
 
     provision("wait-for-ntp-docker")
         .await?
@@ -227,24 +256,30 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
         .checked_status()
         .await?;
 
-    delay_for(Duration::from_secs(70)).await;
+    delay_for(Duration::from_secs(30)).await;
 
-    let storage_servers: Vec<&str> = config.storage_servers();
-    for host in &storage_servers {
-        configure_docker_network(host).await?;
-    }
+    configure_docker_network(&config.storage_servers()[..]).await?;
 
     add_servers(&config, &server_map).await?;
+
+    provision("wait-for-ntp-docker")
+        .await?
+        .args(&config.storage_servers()[..])
+        .checked_status()
+        .await?;
 
     Ok(())
 }
 
-pub async fn configure_docker_network(host: &str) -> Result<(), CmdError> {
-    provision("configure-docker-network")
-        .await?
-        .arg(host)
-        .checked_status()
-        .await?;
+pub async fn configure_docker_network(hosts: &[&str]) -> Result<(), CmdError> {
+    // The configure-docker-network provisioner must be run individually on
+    // each server node.
+    for host in hosts {
+        provision_nodes(&[host], "configure-docker-network")
+            .await?
+            .checked_status()
+            .await?;
+    }
 
     Ok(())
 }
