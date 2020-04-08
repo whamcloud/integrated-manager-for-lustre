@@ -105,11 +105,11 @@ pub async fn provision(name: &str) -> Result<Command, io::Error> {
     Ok(x)
 }
 
-pub async fn provision_nodes(nodes: &[&str], name: &str) -> Result<Command, io::Error> {
+pub async fn provision_node(node: &str, name: &str) -> Result<Command, io::Error> {
     let mut x = vagrant().await?;
 
     x.arg("provision")
-        .arg(nodes.join(","))
+        .arg(node)
         .arg("--provision-with")
         .arg(name);
 
@@ -164,7 +164,8 @@ pub async fn setup_iml_install(
     setup_config: &SetupConfig,
     config: &ClusterConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    provision_nodes(&["adm"], "yum-update,install-iml-local")
+    up().await?.arg("adm").checked_status().await?;
+    provision_node("adm", "yum-update,install-iml-local")
         .await?
         .checked_status()
         .await?;
@@ -291,7 +292,7 @@ pub async fn configure_docker_network(hosts: &[&str]) -> Result<(), CmdError> {
     // The configure-docker-network provisioner must be run individually on
     // each server node.
     for host in hosts {
-        provision_nodes(&[host], "configure-docker-network")
+        provision_node(host, "configure-docker-network")
             .await?
             .checked_status()
             .await?;
