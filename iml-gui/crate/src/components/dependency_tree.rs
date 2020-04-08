@@ -24,12 +24,6 @@ pub struct DependencyForest<T> {
     pub deps: HashMap<u32, Vec<Arc<T>>>,
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct DependencyForestRef<'a, T> {
-    pub roots: &'a Vec<Arc<T>>,
-    pub deps: &'a HashMap<u32, Vec<Arc<T>>>,
-}
-
 #[derive(Debug, Clone)]
 pub struct Context {
     pub visited: HashSet<u32>,
@@ -109,12 +103,12 @@ pub fn convert_ids_to_arcs<T>(objs: &[T], ids: &[u32]) -> Vec<Arc<T>>
         .collect()
 }
 
-pub fn write_tree<T, F>(tree: &DependencyForestRef<T>, node_to_str: &F) -> String
+pub fn write_tree<T, F>(tree: &DependencyForest<T>, node_to_str: &F) -> String
     where
         T: Deps,
         F: Fn(Arc<T>, &mut Context) -> String,
 {
-    fn write_node<T, F>(tree: &DependencyForestRef<T>, node_to_str: &F, n: Arc<T>, ctx: &mut Context) -> String
+    fn write_node<T, F>(tree: &DependencyForest<T>, node_to_str: &F, n: Arc<T>, ctx: &mut Context) -> String
         where
             T: Deps,
             F: Fn(Arc<T>, &mut Context) -> String,
@@ -139,8 +133,7 @@ pub fn write_tree<T, F>(tree: &DependencyForestRef<T>, node_to_str: &F) -> Strin
         is_new: false,
     };
     let mut res = String::new();
-    // let _ = res.write_str(&write_subtree(tree, node_to_str, &mut ctx));
-    for r in tree.roots {
+    for r in &tree.roots {
         let _ = res.write_str(&write_node(tree, node_to_str, Arc::clone(r), &mut ctx));
     }
     res
@@ -194,10 +187,6 @@ mod tests {
 
         // build direct dag
         let forest = build_direct_dag(&x_list);
-        let forest_ref = DependencyForestRef {
-            roots: &forest.roots,
-            deps: &forest.deps,
-        };
         let node_to_string_f = |node: Arc<X>, ctx: &mut Context| {
             let ellipsis = if ctx.is_new { "" } else { "..." };
             let indent = "  ".repeat(ctx.indent);
@@ -209,15 +198,11 @@ mod tests {
                 ellipsis,
             )
         };
-        let result = write_tree(&forest_ref, &node_to_string_f);
+        let result = write_tree(&forest, &node_to_string_f);
         assert_eq!(result, TREE_DIRECT);
 
         let forest = build_inverse_dag(&x_list);
-        let forest_ref = DependencyForestRef {
-            roots: &forest.roots,
-            deps: &forest.deps,
-        };
-        let result = write_tree(&forest_ref, &node_to_string_f);
+        let result = write_tree(&forest, &node_to_string_f);
         assert_eq!(result, TREE_INVERSE);
     }
 
