@@ -7,7 +7,6 @@ use std::sync::Arc;
 pub trait Deps {
     fn id(&self) -> u32;
     fn deps(&self) -> Vec<u32>;
-    fn description(&self) -> String;
 }
 
 impl<T: Deps> Deps for Arc<T> {
@@ -16,9 +15,6 @@ impl<T: Deps> Deps for Arc<T> {
     }
     fn deps(&self) -> Vec<u32> {
         (**self).deps()
-    }
-    fn description(&self) -> String {
-        (**self).description()
     }
 }
 
@@ -38,6 +34,7 @@ pub struct DependencyForestRef<'a, T> {
 pub struct Context {
     visited: HashSet<u32>,
     indent: usize,
+    is_new: bool,
 }
 
 fn build_direct_dag<T>(ts: &[T]) -> (Vec<u32>, Vec<(u32, Vec<u32>)>)
@@ -77,7 +74,7 @@ fn build_inverse_dag<T>(ts: &[T]) -> (Vec<u32>, Vec<(u32, Vec<u32>)>)
         let xs = t.deps();
         for x in xs {
             // push the arc `x -> y` into the graph
-            if let Some((_, ref mut ys)) = rdag.iter_mut().find(|(y, ys)| *y == x) {
+            if let Some((_, ref mut ys)) = rdag.iter_mut().find(|(y, _)| *y == x) {
                 ys.push(y);
             } else {
                 rdag.push((x, vec![y]));
@@ -90,37 +87,42 @@ fn build_inverse_dag<T>(ts: &[T]) -> (Vec<u32>, Vec<(u32, Vec<u32>)>)
     (roots, rdag)
 }
 
-fn write_tree<T: Deps>(tree: &DependencyForestRef<T>) -> String {
-    fn write_subtree<T: Deps>(tree: &DependencyForestRef<T>, ctx: &mut Context) -> String {
+fn write_tree<T, F>(tree: &DependencyForestRef<T>, node_to_str: &F) -> String
+    where
+        T: Deps,
+        F: Fn(Arc<T>, &mut Context) -> String,
+{
+    fn write_subtree<T, F>(tree: &DependencyForestRef<T>, node_to_str: &F, ctx: &mut Context) -> String
+        where
+            T: Deps,
+            F: Fn(Arc<T>, &mut Context) -> String,
+    {
         let mut res = String::new();
         for r in tree.roots {
             if let Some(deps) = tree.deps.get(&r.id()) {
                 for d in deps {
-                    res.write_str(&write_node(tree, Arc::clone(d), ctx));
+                    res.write_str(&write_node(tree, node_to_str, Arc::clone(d), ctx));
                 }
             }
         }
         res
     }
-    fn write_node<T: Deps>(tree: &DependencyForestRef<T>, node: Arc<T>, ctx: &mut Context) -> String {
+    fn write_node<T, F>(tree: &DependencyForestRef<T>, node_to_str: &F, node: Arc<T>, ctx: &mut Context) -> String
+        where
+            T: Deps,
+            F: Fn(Arc<T>, &mut Context) -> String,
+    {
         let mut res = String::new();
         let is_new = ctx.visited.insert(node.id());
-        let ellipsis = if is_new { "" } else { "..." };
-        let indent = "  ".repeat(ctx.indent);
-        res.write_str(&format!(
-            "{}{}: {}{}\n",
-            indent,
-            node.id(),
-            node.description(),
-            ellipsis
-        ));
+        ctx.is_new = is_new;
+        res.write_str(&node_to_str(Arc::clone(&node), ctx));
         if is_new {
             ctx.indent += 1;
             let sub_tree = DependencyForestRef {
                 deps: &tree.deps,
                 roots: &vec![node.clone()],
             };
-            res.write_str(&write_subtree(&sub_tree, ctx));
+            res.write_str(&write_subtree(&sub_tree, node_to_str, ctx));
             ctx.indent -= 1;
         }
         res
@@ -128,10 +130,11 @@ fn write_tree<T: Deps>(tree: &DependencyForestRef<T>) -> String {
     let mut ctx = Context {
         visited: HashSet::new(),
         indent: 0,
+        is_new: false,
     };
     let mut res = String::new();
     for r in tree.roots {
-        res.write_str(&write_node(tree, Arc::clone(r), &mut ctx));
+        let _ = res.write_str(&write_node(tree, node_to_str, Arc::clone(r), &mut ctx));
     }
     res
 }
@@ -186,9 +189,6 @@ mod tests {
         fn deps(&self) -> Vec<u32> {
             self.deps.clone()
         }
-        fn description(&self) -> String {
-            self.description.clone()
-        }
     }
 
     #[test]
@@ -213,7 +213,18 @@ mod tests {
             roots: &forest.roots,
             deps: &forest.deps,
         };
-        let result = write_tree(&forest_ref);
+        let node_to_string_f = |node: Arc<X>, ctx: &mut Context| {
+            let ellipsis = if ctx.is_new { "" } else { "..." };
+            let indent = "  ".repeat(ctx.indent);
+            format!(
+                "{}{}: {}{}\n",
+                indent,
+                node.id(),
+                node.description,
+                ellipsis,
+            )
+        };
+        let result = write_tree(&forest_ref, &node_to_string_f);
         assert_eq!(result, TREE_DIRECT);
 
         let (roots, deps) = build_inverse_dag(&x_list);
@@ -222,7 +233,7 @@ mod tests {
             roots: &forest.roots,
             deps: &forest.deps,
         };
-        let result = write_tree(&forest_ref);
+        let result = write_tree(&forest_ref, &node_to_string_f);
         assert_eq!(result, TREE_INVERSE);
     }
 

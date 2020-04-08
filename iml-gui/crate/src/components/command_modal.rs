@@ -9,12 +9,10 @@ use crate::{
     key_codes, sleep_with_handle, GMsg,
 };
 use futures::channel::oneshot;
-use futures::future;
 use iml_wire_types::{ApiList, Command, EndpointName, Job, Step};
 use regex::{Captures, Regex};
 use seed::{prelude::*, *};
 use serde::de::DeserializeOwned;
-use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::{sync::Arc, time::Duration};
 
@@ -35,9 +33,6 @@ impl Deps for Job0 {
             .collect();
         deps.sort();
         deps
-    }
-    fn description(&self) -> String {
-        self.description.clone()
     }
 }
 
@@ -125,8 +120,6 @@ pub enum Msg {
     Noop,
 }
 
-pub struct DependencyTree {}
-
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     let msg_str = match msg {
         Msg::Modal(_) => "Msg-Modal".to_string(),
@@ -188,12 +181,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
         }
         Msg::FetchedJobs(jobs_data_result) => {
-            model.jobs_loading = false;
             match *jobs_data_result {
                 Ok(api_list) => {
+                    // check that api_list.objects are consistent with the commands
+                    // if
                     model.jobs = api_list.objects.into_iter().map(Arc::new).collect();
                 }
                 Err(e) => {
+                    model.jobs_loading = false;
                     error!("Failed to perform fetch_job_status {:#?}", e);
                     orders.skip();
                 }
@@ -396,10 +391,10 @@ fn perform_open_click(cur_opens: &Opens, the_id: &TypedId) -> Opens {
 
 fn perform_close_click(cur_opens: &Opens, the_id: &TypedId) -> Opens {
     match the_id {
-        TypedId::Command(cmd_id) => Opens::None,
+        TypedId::Command(_cmd_id) => Opens::None,
         TypedId::Job(job_id) => match &cur_opens {
             Opens::None => cur_opens.clone(),
-            Opens::Command(cmd_id_0) => cur_opens.clone(),
+            Opens::Command(_cmd_id_0) => cur_opens.clone(),
             Opens::CommandJob(cmd_id_0, job_id_0) => {
                 if job_id == job_id_0 {
                     Opens::Command(*cmd_id_0)
