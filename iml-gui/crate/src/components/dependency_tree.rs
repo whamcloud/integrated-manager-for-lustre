@@ -114,37 +114,21 @@ pub fn write_tree<T, F>(tree: &DependencyForestRef<T>, node_to_str: &F) -> Strin
         T: Deps,
         F: Fn(Arc<T>, &mut Context) -> String,
 {
-    fn write_subtree<T, F>(tree: &DependencyForestRef<T>, node_to_str: &F, ctx: &mut Context) -> String
+    fn write_node<T, F>(tree: &DependencyForestRef<T>, node_to_str: &F, n: Arc<T>, ctx: &mut Context) -> String
         where
             T: Deps,
             F: Fn(Arc<T>, &mut Context) -> String,
     {
         let mut res = String::new();
-        for r in tree.roots {
-            if let Some(deps) = tree.deps.get(&r.id()) {
+        ctx.is_new = ctx.visited.insert(n.id());
+        res.write_str(&node_to_str(Arc::clone(&n), ctx));
+        if let Some(deps) = tree.deps.get(&n.id()) {
+            ctx.indent += 1;
+            if ctx.is_new {
                 for d in deps {
                     res.write_str(&write_node(tree, node_to_str, Arc::clone(d), ctx));
                 }
             }
-        }
-        res
-    }
-    fn write_node<T, F>(tree: &DependencyForestRef<T>, node_to_str: &F, node: Arc<T>, ctx: &mut Context) -> String
-        where
-            T: Deps,
-            F: Fn(Arc<T>, &mut Context) -> String,
-    {
-        let mut res = String::new();
-        let is_new = ctx.visited.insert(node.id());
-        ctx.is_new = is_new;
-        res.write_str(&node_to_str(Arc::clone(&node), ctx));
-        if is_new {
-            ctx.indent += 1;
-            let sub_tree = DependencyForestRef {
-                deps: &tree.deps,
-                roots: &vec![node.clone()],
-            };
-            res.write_str(&write_subtree(&sub_tree, node_to_str, ctx));
             ctx.indent -= 1;
         }
         res
@@ -155,6 +139,7 @@ pub fn write_tree<T, F>(tree: &DependencyForestRef<T>, node_to_str: &F) -> Strin
         is_new: false,
     };
     let mut res = String::new();
+    // let _ = res.write_str(&write_subtree(tree, node_to_str, &mut ctx));
     for r in tree.roots {
         let _ = res.write_str(&write_node(tree, node_to_str, Arc::clone(r), &mut ctx));
     }
