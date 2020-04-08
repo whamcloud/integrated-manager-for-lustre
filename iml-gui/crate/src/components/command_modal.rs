@@ -630,17 +630,29 @@ mod tests {
     fn build_node_tree() {
         let api_list: ApiList<Job0> = serde_json::from_str(JOBS).unwrap();
         let forest = build_direct_dag(&api_list.objects);
-        let node_to_string_f = |node: Arc<Job0>, ctx: &mut Context| {
-            let ellipsis = if ctx.is_new { "" } else { "..." };
-            let indent = "  ".repeat(ctx.indent);
-            format!(
-                "{}{}: {}{}\n",
-                indent,
-                node.id,
-                node.description,
-                ellipsis,
-            )
+        let job_to_node: fn(Arc<Job<Option<()>>>, &mut Context) -> Node<Msg> = |job: Arc<Job0>, ctx: &mut Context| {
+            let ellipsis = if ctx.is_new { class![] } else { class![] };
+            li![
+                class![C.pl_2, C.justify_between, C.items_center],
+                div![
+                    span![ job.id.to_string() ],
+                    a! [
+                        class![ C.pointer_events_none ],
+                        format!("{}{}", job.description, ellipsis),
+                    ]
+                ]
+            ]
         };
+        // let cls = class![C.w_4, C.h_4, C.inline, C.mr_4];
+        // let li: Node<Msg> = li! [
+        //     class![ C.pl_2, C.justify_between, C.items_center ],
+        //     font_awesome(cls, "check").merge_attrs(class![C.text_green_500]),
+        //     span![ "1" ],
+        //     a! [
+        //         class![ C.pointer_events_none ],
+        //         "Install packages on server oss2.local"
+        //     ]
+        // ];
 
     }
 
