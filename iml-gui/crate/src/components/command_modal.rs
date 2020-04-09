@@ -19,6 +19,7 @@ use serde::de::DeserializeOwned;
 use std::collections::HashSet;
 use std::fmt;
 use std::{sync::Arc, time::Duration};
+use crate::components::dependency_tree::{build_direct_dag, build_inverse_dag};
 
 /// The component polls `/api/command/` endpoint and this constant defines how often it does.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
@@ -97,6 +98,8 @@ pub struct Model {
 
     pub jobs_loading: bool,
     pub jobs: Vec<Arc<Job0>>,
+    pub dag: DependencyDAG<Job0>,
+    pub is_inverse_dag: bool,
 
     pub steps_loading: bool,
     pub steps: Vec<Arc<Step>>,
@@ -136,7 +139,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::Close(_) => "Msg-Close".to_string(),
         Msg::Noop => "Msg-Noop".to_string(),
     };
-    log!("command_modal::update: ", msg_str, model);
+    log!("command_modal::update: ", msg_str);
+
     match msg {
         Msg::Modal(msg) => {
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
@@ -187,9 +191,15 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::FetchedJobs(jobs_data_result) => {
             match *jobs_data_result {
                 Ok(api_list) => {
-                    // check that api_list.objects are consistent with the commands
-                    // if
-                    model.jobs = api_list.objects.into_iter().map(Arc::new).collect();
+                    if are_jobs_consistent(&model, &api_list.objects) {
+                        model.jobs_loading = false;
+                        if model.is_inverse_dag {
+                            model.dag = build_inverse_dag(&api_list.objects);
+                        } else {
+                            model.dag = build_direct_dag(&api_list.objects);
+                        }
+                        model.jobs = api_list.objects.into_iter().map(Arc::new).collect();
+                    }
                 }
                 Err(e) => {
                     model.jobs_loading = false;
@@ -212,6 +222,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::Open(the_id) => {
             model.opens = perform_open_click(&model.opens, the_id);
+            let _ = schedule_fetch_tree(model, orders).map_err(|e| error!(e.to_string()));
         }
         Msg::Close(the_id) => {
             model.opens = perform_close_click(&model.opens, the_id);
@@ -234,11 +245,7 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -
             // the user has opened the info on the command
             if let Some(i) = model.commands.iter().position(|c| c.id == *cmd_id) {
                 let cmd_ids: Vec<u32> = model.commands.iter().map(|c| c.id).collect();
-                let job_ids: Vec<u32> = model.commands[i]
-                    .jobs
-                    .iter()
-                    .filter_map(|s| extract_uri_id::<Job0>(s))
-                    .collect();
+                let job_ids: Vec<u32> = extract_ids::<Job0>(&model.commands[i].jobs);
                 // NOTE: we can try to use future::select_all(futs.into_iter()) here
                 orders
                     .skip()
@@ -254,16 +261,8 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -
             if let Some(i1) = model.commands.iter().position(|c| c.id == *cmd_id) {
                 if let Some(i2) = model.jobs.iter().position(|j| j.id == *job_id) {
                     let cmd_ids: Vec<u32> = model.commands.iter().map(|c| c.id).collect();
-                    let job_ids: Vec<u32> = model.commands[i1]
-                        .jobs
-                        .iter()
-                        .filter_map(|s| extract_uri_id::<Job0>(s))
-                        .collect();
-                    let step_ids: Vec<u32> = model.jobs[i2]
-                        .steps
-                        .iter()
-                        .filter_map(|s| extract_uri_id::<Step>(s))
-                        .collect();
+                    let job_ids: Vec<u32> = extract_ids::<Job0>(&model.commands[i1].jobs);
+                    let step_ids: Vec<u32> = extract_ids::<Step>(&model.jobs[i2].steps);
                     orders
                         .skip()
                         .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))))
@@ -349,21 +348,31 @@ fn is_all_finished(cmds: &[Arc<Command>]) -> bool {
     cmds.iter().all(|cmd| is_finished(cmd))
 }
 
+fn are_jobs_consistent(model: &Model, jobs: &[Job0]) -> bool {
+    let check = |cid: u32| {
+        if let Some(cmd) = model.commands.iter().find(|cmd| cmd.id == cid) {
+            let cmd_job_ids = extract_ids::<Job0>(&cmd.jobs);
+            let jobs_ids = jobs.iter().map(|j| j.id).collect::<Vec<u32>>();
+            // the order are guaranteed to be the same
+            cmd_job_ids == jobs_ids
+        } else {
+            false
+        }
+    };
+    match model.opens {
+        Opens::None => true,
+        Opens::Command(cid) => check(cid),
+        Opens::CommandJob(cid, _) => check(cid),
+        Opens::CommandJobSteps(cid, _, _) => check(cid),
+    }
+}
+
 fn is_command_in_opens(cmd_id: u32, opens: &Opens) -> bool {
     match opens {
         Opens::None => false,
         Opens::Command(cid) => cmd_id == *cid,
         Opens::CommandJob(cid, _) => cmd_id == *cid,
         Opens::CommandJobSteps(cid, _, _) => cmd_id == *cid,
-    }
-}
-
-fn is_job_in_opens(job_id: u32, opens: &Opens) -> bool {
-    match opens {
-        Opens::None => false,
-        Opens::Command(_) => false,
-        Opens::CommandJob(_, jid) => job_id == *jid,
-        Opens::CommandJobSteps(_, jid, _) => job_id == *jid,
     }
 }
 
@@ -428,6 +437,7 @@ fn perform_close_click(cur_opens: &Opens, the_id: TypedId) -> Opens {
 }
 
 pub(crate) fn view(model: &Model) -> Node<Msg> {
+    log!(model);
     if !model.modal.open {
         empty![]
     } else {
@@ -453,7 +463,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
                             model
                                 .commands
                                 .iter()
-                                .map(|x| { command_item_view(x, is_command_in_opens(x.id, &model.opens)) })
+                                .map(|x| { command_item_view(x, &model.dag, is_command_in_opens(x.id, &model.opens)) })
                         ],
                         modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
                     ]
@@ -468,7 +478,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
     }
 }
 
-fn command_item_view(x: &Command, is_open: bool) -> Node<Msg> {
+fn command_item_view(x: &Command, dag: &DependencyDAG<Job0>, is_open: bool) -> Node<Msg> {
     let border = if !is_open {
         C.border_transparent
     } else if x.complete {
@@ -487,7 +497,8 @@ fn command_item_view(x: &Command, is_open: bool) -> Node<Msg> {
         ("chevron-circle-down", Msg::Open(TypedId::Command(x.id)))
     };
 
-    let job_tree = empty!();
+    log!(dag);
+    let job_tree = build_dag_view(&dag, &job_to_node);
 
     div![
         attrs! { "cmd__id" => x.id.to_string() }, // todo revert
@@ -532,28 +543,34 @@ pub struct Context {
     pub is_new: bool,
 }
 
-pub fn build_dag_view<T, F>(dag: &DependencyDAG<T>, node_to_dom: &F) -> Node<Msg>
+pub fn build_dag_view<T, F>(dag: &DependencyDAG<T>, node_view: &F) -> Node<Msg>
 where
     T: Deps,
     F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
 {
-    fn build_node_view<T, F>(dag: &DependencyDAG<T>, node_to_dom: &F, n: Arc<T>, ctx: &mut Context) -> Node<Msg>
+    fn build_node_view<T, F>(dag: &DependencyDAG<T>, node_view: &F, n: Arc<T>, ctx: &mut Context) -> Node<Msg>
     where
         T: Deps,
         F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
     {
         ctx.is_new = ctx.visited.insert(n.id());
-        let caption = node_to_dom(Arc::clone(&n), ctx);
+        let caption = node_view(Arc::clone(&n), ctx);
         let mut list: Vec<Node<Msg>> = Vec::with_capacity(n.deps().len());
         if let Some(deps) = dag.deps.get(&n.id()) {
             if ctx.is_new {
                 for d in deps {
-                    let piece = build_node_view(dag, node_to_dom, Arc::clone(d), ctx);
+                    let piece = build_node_view(dag, node_view, Arc::clone(d), ctx);
                     list.push(piece);
                 }
             }
         }
-        div![caption, ul![list],]
+        div![
+            caption,
+            ul![
+                class![C.pl_2, C.justify_between, C.items_center],
+                list,
+            ]
+        ]
     }
     let mut ctx = Context {
         visited: HashSet::new(),
@@ -561,7 +578,7 @@ where
     };
     let mut list: Vec<Node<Msg>> = Vec::with_capacity(dag.roots.len());
     for r in &dag.roots {
-        list.push(build_node_view(dag, node_to_dom, Arc::clone(r), &mut ctx));
+        list.push(build_node_view(dag, node_view, Arc::clone(r), &mut ctx));
     }
     div![list]
 }
