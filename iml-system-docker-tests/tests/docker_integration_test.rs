@@ -46,7 +46,7 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
 
     vagrant::create_fs(fs_type).await?;
 
-    delay_for(Duration::from_secs(10)).await;
+    delay_for(Duration::from_secs(30)).await;
 
     iml::detect_fs().await?;
 
