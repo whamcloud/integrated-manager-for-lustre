@@ -1,5 +1,6 @@
 use crate::{
-    iml::IML_DOCKER_PATH, SetupConfig, STRATAGEM_CLIENT_PROFILE, STRATAGEM_SERVER_PROFILE,
+    iml::IML_DOCKER_PATH, SetupConfig, SetupConfigType, STRATAGEM_CLIENT_PROFILE,
+    STRATAGEM_SERVER_PROFILE,
 };
 use iml_cmd::{CheckedCommandExt, CmdError};
 use iml_systemd::SystemdError;
@@ -104,14 +105,8 @@ pub async fn remove_password() -> Result<(), io::Error> {
     Ok(())
 }
 
-pub async fn configure_docker_setup(setup: &SetupConfig) -> Result<(), io::Error> {
-    let config = format!(
-        r#"USE_STRATAGEM={}
-BRANDING={}"#,
-        setup.use_stratagem,
-        setup.branding.to_string()
-    );
-
+pub async fn configure_docker_setup(setup: &SetupConfigType) -> Result<(), io::Error> {
+    let config: String = setup.into();
     let mut path = canonicalize(IML_DOCKER_PATH).await?;
     path.push("setup");
 
@@ -121,7 +116,8 @@ BRANDING={}"#,
     let mut file = File::create(config_path).await?;
     file.write_all(config.as_bytes()).await?;
 
-    if setup.use_stratagem {
+    let setup_config: &SetupConfig = setup.into();
+    if setup_config.use_stratagem {
         let mut server_profile_path = path.clone();
         server_profile_path.push("stratagem-server.profile");
 
