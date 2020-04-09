@@ -77,7 +77,6 @@ fn expand_path_fmt(path_fmt: &str, c: &Config) -> strfmt::Result<String> {
     vars.insert("cold_pool".to_string(), &c.cold_pool);
     vars.insert("min_age".to_string(), &min_age_str);
     vars.insert("mailbox".to_string(), &c.mailbox);
-    // path_fmt is like "/etc/lustre/lamigo/lamigo-{fs}-MDT{mdt:04x}.service"
     strfmt::strfmt(&path_fmt, &vars)
 }
 
@@ -158,7 +157,20 @@ mod lamigo_tests {
 
         let fmt3 = "lamigo-{unknown_value}.service";
         assert!(expand_path_fmt(fmt3, &config).is_err());
+    }
 
+    #[test]
+    fn test_expand_path_fmt_env() {
+        let config = Config {
+            fs: "LU_TEST1".into(),
+            mdt: 16,
+            user: "nick".into(),
+            hot_pool: "FAST_POOL".into(),
+            cold_pool: "SLOW_POOL".into(),
+            min_age: 35353,
+            mountpoint: "/mnt/spfs".into(),
+            mailbox: "mailbox".into(),
+        };
         env::set_var("LAMIGO_CONF_PATH", "/etc/lamigo/{fs}-{mdt}.conf");
         assert_eq!(
             format_lamigo_conf_file(&config).unwrap(),
