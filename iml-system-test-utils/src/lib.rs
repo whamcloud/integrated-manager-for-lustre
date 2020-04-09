@@ -11,6 +11,39 @@ pub struct SetupConfig {
     pub branding: Branding,
 }
 
+pub enum SetupConfigType {
+    RpmSetup(SetupConfig),
+    DockerSetup(SetupConfig),
+}
+
+impl From<&SetupConfigType> for String {
+    fn from(config: &SetupConfigType) -> Self {
+        match config {
+            SetupConfigType::RpmSetup(c) => format!(
+                r#"USE_STRATAGEM = {}
+BRANDING = "{}""#,
+                if c.use_stratagem { "True" } else { "False" },
+                c.branding.to_string()
+            ),
+            SetupConfigType::DockerSetup(c) => format!(
+                r#"USE_STRATAGEM={}
+            BRANDING={}"#,
+                c.use_stratagem,
+                c.branding.to_string()
+            ),
+        }
+    }
+}
+
+impl<'a> From<&'a SetupConfigType> for &'a SetupConfig {
+    fn from(config: &'a SetupConfigType) -> Self {
+        match config {
+            SetupConfigType::RpmSetup(x) => x,
+            SetupConfigType::DockerSetup(x) => x,
+        }
+    }
+}
+
 pub const STRATAGEM_SERVER_PROFILE: &str = r#"{
     "ui_name": "Stratagem Policy Engine Server",
     "ui_description": "A server running the Stratagem Policy Engine",
