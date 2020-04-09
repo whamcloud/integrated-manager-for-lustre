@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_system_test_utils::{get_local_server_names, iml, vagrant, SetupConfig};
+use iml_system_test_utils::{get_local_server_names, iml, vagrant, SetupConfig, SetupConfigType};
 use std::{
     collections::{hash_map::RandomState, HashMap},
     time::Duration,
@@ -17,7 +17,7 @@ async fn setup() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn run_fs_test<S: std::hash::BuildHasher>(
     config: &vagrant::ClusterConfig,
-    setup_config: &SetupConfig,
+    setup_config: &SetupConfigType,
     server_map: HashMap<String, &[String], S>,
     fs_type: vagrant::FsType,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -41,10 +41,10 @@ async fn test_ldiskfs_setup() -> Result<(), Box<dyn std::error::Error>> {
 
     run_fs_test(
         &config,
-        &SetupConfig {
+        &SetupConfigType::RpmSetup(SetupConfig {
             use_stratagem: false,
             branding: iml_wire_types::Branding::Whamcloud,
-        },
+        }),
         vec![("base_monitored".into(), &server_names[..])]
             .into_iter()
             .collect::<HashMap<String, &[String], RandomState>>(),
@@ -62,10 +62,10 @@ async fn test_zfs_setup() -> Result<(), Box<dyn std::error::Error>> {
 
     run_fs_test(
         &config,
-        &SetupConfig {
+        &SetupConfigType::RpmSetup(SetupConfig {
             use_stratagem: false,
             branding: iml_wire_types::Branding::Whamcloud,
-        },
+        }),
         vec![("base_monitored".into(), &server_names[..])]
             .into_iter()
             .collect::<HashMap<String, &[String], RandomState>>(),
@@ -81,10 +81,10 @@ async fn test_stratagem_setup() -> Result<(), Box<dyn std::error::Error>> {
     let config = vagrant::ClusterConfig::default();
     run_fs_test(
         &config,
-        &SetupConfig {
+        &SetupConfigType::RpmSetup(SetupConfig {
             use_stratagem: true,
             branding: iml_wire_types::Branding::Whamcloud,
-        },
+        }),
         vec![
             (
                 "stratagem_server".into(),
