@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use iml_cmd::{CheckedCommandExt, CmdError};
 use iml_system_test_utils::{get_local_server_names, iml, vagrant, SetupConfig, SetupConfigType};
 use std::{
     collections::{hash_map::RandomState, HashMap},
@@ -34,6 +35,16 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
     Ok(())
 }
 
+async fn wait_for_ntp(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {
+    vagrant::provision("wait-for-ntp")
+        .await?
+        .args(&config.storage_servers()[..])
+        .checked_status()
+        .await?;
+
+    Ok(())
+}
+
 #[tokio::test]
 async fn test_ldiskfs_setup() -> Result<(), Box<dyn std::error::Error>> {
     let config = vagrant::ClusterConfig::default();
@@ -51,6 +62,8 @@ async fn test_ldiskfs_setup() -> Result<(), Box<dyn std::error::Error>> {
         vagrant::FsType::LDISKFS,
     )
     .await?;
+
+    wait_for_ntp(&config).await?;
 
     Ok(())
 }
@@ -72,6 +85,8 @@ async fn test_zfs_setup() -> Result<(), Box<dyn std::error::Error>> {
         vagrant::FsType::ZFS,
     )
     .await?;
+
+    wait_for_ntp(&config).await?;
 
     Ok(())
 }
@@ -104,6 +119,8 @@ async fn test_stratagem_setup() -> Result<(), Box<dyn std::error::Error>> {
         vagrant::FsType::LDISKFS,
     )
     .await?;
+
+    wait_for_ntp(&config).await?;
 
     Ok(())
 }
