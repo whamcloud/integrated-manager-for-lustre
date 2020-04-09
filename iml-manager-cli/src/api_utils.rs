@@ -226,3 +226,14 @@ pub async fn get_one<T: EndpointName + FlatQuery + Debug + serde::de::Deserializ
     q.extend(query);
     first(get(T::endpoint_name(), q).await?)
 }
+
+pub async fn get_influx<T: serde::de::DeserializeOwned + std::fmt::Debug>(
+    db: &str,
+    influxql: &str,
+) -> Result<T, ImlManagerCliError> {
+    let client = iml_manager_client::get_client()?;
+
+    iml_manager_client::get_influx(client, db, influxql)
+        .await
+        .map_err(|e| e.into())
+}

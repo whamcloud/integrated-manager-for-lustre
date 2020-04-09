@@ -1,0 +1,10 @@
+[package]
+name = "iml-influx"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+description = "Shared functions and data types related to influx"
+edition = "2018"
+
+[dependencies]
+iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
+serde = { version = "1", features = ['derive'] }

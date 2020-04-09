@@ -129,6 +129,27 @@ pub async fn get<T: DeserializeOwned + Debug>(
     Ok(json)
 }
 
+/// Performs a GET to the influxdb
+pub async fn get_influx<T: DeserializeOwned + Debug>(
+    client: Client,
+    db: &str,
+    q: &str,
+) -> Result<T, ImlManagerClientError> {
+    let url = Url::parse(&iml_manager_env::get_manager_url())?.join("/influx")?;
+    let resp = client
+        .get(url)
+        .query(&[("db", db), ("q", q)])
+        .send()
+        .await?
+        .error_for_status()?;
+
+    let json = resp.json().await?;
+
+    tracing::debug!("Resp: {:?}", json);
+
+    Ok(json)
+}
+
 fn create_policy<E: Debug>() -> impl RetryPolicy<E> + Send {
     |k: u32, e| match k {
         0 => RetryAction::RetryNow,
