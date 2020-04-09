@@ -50,7 +50,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
 pub fn view(model: &Model) -> Node<Msg> {
     let b = seed::button![
-        class![C.p_8, C.border_2, C.rounded_28px, C.justify_start, C.bg_red_800, C.text_white],
+        class![
+            C.p_8,
+            C.border_2,
+            C.rounded_28px,
+            C.justify_start,
+            C.bg_red_800,
+            C.text_white
+        ],
         "Test command!",
         simple_ev(Ev::Click, Msg::Test),
     ];
@@ -102,7 +109,7 @@ pub fn view(model: &Model) -> Node<Msg> {
             ),
         ]
     ];
-    div![ b, c ]
+    div![b, c]
 }
 
 pub fn init(orders: &mut impl Orders<Msg, GMsg>) {
