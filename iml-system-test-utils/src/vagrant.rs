@@ -196,12 +196,6 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
 ) -> Result<(), Box<dyn std::error::Error>> {
     setup_iml_install(&config.all(), &setup_config, &config).await?;
 
-    provision("wait-for-ntp")
-        .await?
-        .args(&config.storage_servers()[..])
-        .checked_status()
-        .await?;
-
     for (profile, hosts) in server_map {
         run_vm_command(
             config.manager,
@@ -222,12 +216,6 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
     }
 
     up().await?.args(config.all()).checked_status().await?;
-
-    provision("wait-for-ntp")
-        .await?
-        .args(&config.storage_servers()[..])
-        .checked_status()
-        .await?;
 
     Ok(())
 }
@@ -268,23 +256,11 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     )
     .await?;
 
-    provision("wait-for-ntp-docker")
-        .await?
-        .args(&config.storage_servers()[..])
-        .checked_status()
-        .await?;
-
     delay_for(Duration::from_secs(30)).await;
 
     configure_docker_network(&config.storage_servers()[..]).await?;
 
     add_servers(&config, &server_map).await?;
-
-    provision("wait-for-ntp-docker")
-        .await?
-        .args(&config.storage_servers()[..])
-        .checked_status()
-        .await?;
 
     Ok(())
 }
