@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use iml_cmd::{CheckedCommandExt, CmdError};
-use iml_system_test_utils::{get_local_server_names, iml, vagrant, SetupConfig, SetupConfigType};
+use iml_system_test_utils::{iml, vagrant, SetupConfig, SetupConfigType};
 use std::{
     collections::{hash_map::RandomState, HashMap},
     time::Duration,
@@ -19,7 +19,7 @@ async fn setup() -> Result<(), Box<dyn std::error::Error>> {
 async fn run_fs_test<S: std::hash::BuildHasher>(
     config: &vagrant::ClusterConfig,
     setup_config: &SetupConfigType,
-    server_map: HashMap<String, &[String], S>,
+    server_map: HashMap<String, &[&str], S>,
     fs_type: vagrant::FsType,
 ) -> Result<(), Box<dyn std::error::Error>> {
     setup().await?;
@@ -48,7 +48,6 @@ async fn wait_for_ntp(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {
 #[tokio::test]
 async fn test_ldiskfs_setup() -> Result<(), Box<dyn std::error::Error>> {
     let config = vagrant::ClusterConfig::default();
-    let server_names = get_local_server_names(&config.storage_servers());
 
     run_fs_test(
         &config,
@@ -56,9 +55,9 @@ async fn test_ldiskfs_setup() -> Result<(), Box<dyn std::error::Error>> {
             use_stratagem: false,
             branding: iml_wire_types::Branding::Whamcloud,
         }),
-        vec![("base_monitored".into(), &server_names[..])]
+        vec![("base_monitored".into(), &config.storage_servers()[..])]
             .into_iter()
-            .collect::<HashMap<String, &[String], RandomState>>(),
+            .collect::<HashMap<String, &[&str], RandomState>>(),
         vagrant::FsType::LDISKFS,
     )
     .await?;
@@ -71,7 +70,6 @@ async fn test_ldiskfs_setup() -> Result<(), Box<dyn std::error::Error>> {
 #[tokio::test]
 async fn test_zfs_setup() -> Result<(), Box<dyn std::error::Error>> {
     let config = vagrant::ClusterConfig::default();
-    let server_names = get_local_server_names(&config.storage_servers());
 
     run_fs_test(
         &config,
@@ -79,9 +77,9 @@ async fn test_zfs_setup() -> Result<(), Box<dyn std::error::Error>> {
             use_stratagem: false,
             branding: iml_wire_types::Branding::Whamcloud,
         }),
-        vec![("base_monitored".into(), &server_names[..])]
+        vec![("base_monitored".into(), &config.storage_servers()[..])]
             .into_iter()
-            .collect::<HashMap<String, &[String], RandomState>>(),
+            .collect::<HashMap<String, &[&str], RandomState>>(),
         vagrant::FsType::ZFS,
     )
     .await?;
@@ -101,21 +99,12 @@ async fn test_stratagem_setup() -> Result<(), Box<dyn std::error::Error>> {
             branding: iml_wire_types::Branding::Whamcloud,
         }),
         vec![
-            (
-                "stratagem_server".into(),
-                &get_local_server_names(&config.get_mds_servers())[..],
-            ),
-            (
-                "base_monitored".into(),
-                &get_local_server_names(&config.get_oss_servers())[..],
-            ),
-            (
-                "stratagem_client".into(),
-                &get_local_server_names(&config.get_client_servers())[..],
-            ),
+            ("stratagem_server".into(), &config.get_mds_servers()[..]),
+            ("base_monitored".into(), &config.get_oss_servers()[..]),
+            ("stratagem_client".into(), &config.get_client_servers()[..]),
         ]
         .into_iter()
-        .collect::<HashMap<String, &[String], RandomState>>(),
+        .collect::<HashMap<String, &[&str], RandomState>>(),
         vagrant::FsType::LDISKFS,
     )
     .await?;
