@@ -192,7 +192,7 @@ pub async fn setup_iml_install(
 pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     setup_config: &SetupConfigType,
-    server_map: HashMap<String, &[String], S>,
+    server_map: HashMap<String, &[&str], S>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     setup_iml_install(&config.all(), &setup_config, &config).await?;
 
@@ -222,7 +222,7 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
 
 pub async fn add_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
-    server_map: &HashMap<String, &[String], S>,
+    server_map: &HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
     iml::server_add(&server_map).await?;
 
@@ -247,7 +247,7 @@ pub async fn add_servers<S: std::hash::BuildHasher>(
 
 pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
-    server_map: HashMap<String, &[String], S>,
+    server_map: HashMap<String, &[&str], S>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let server_list = server_map_to_server_set(&server_map);
     setup_bare(&config.all_but_adm()[..], &config, NtpServer::HostOnly).await?;

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use crate::get_local_server_names;
 use iml_cmd::{CheckedCommandExt, CmdError};
 use std::{collections::HashMap, io};
 use tokio::{fs, process::Command};
@@ -27,14 +28,14 @@ pub async fn list_servers() -> Result<Command, io::Error> {
 }
 
 pub async fn server_add<S: std::hash::BuildHasher>(
-    host_map: &HashMap<String, &[String], S>,
+    host_map: &HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
     for (profile, hosts) in host_map {
         let mut x = iml().await?;
         x.arg("server")
             .arg("add")
             .arg("-h")
-            .arg(hosts.join(","))
+            .arg(get_local_server_names(hosts).join(","))
             .arg("-p")
             .arg(profile)
             .checked_status()
