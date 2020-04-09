@@ -3,8 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    iml, try_command_n_times, SetupConfig, SetupConfigType, STRATAGEM_CLIENT_PROFILE,
-    STRATAGEM_SERVER_PROFILE,
+    iml, server_map_to_server_set, try_command_n_times, SetupConfig, SetupConfigType,
+    STRATAGEM_CLIENT_PROFILE, STRATAGEM_SERVER_PROFILE,
 };
 use iml_cmd::{CheckedCommandExt, CmdError};
 use std::{collections::HashMap, io, str, time::Duration};
@@ -228,11 +228,11 @@ pub async fn add_servers<S: std::hash::BuildHasher>(
 
     halt()
         .await?
-        .args(config.iscsi_and_storage_servers())
+        .args(&config.all_but_adm())
         .checked_status()
         .await?;
 
-    for host in config.iscsi_and_storage_servers() {
+    for host in config.all_but_adm() {
         snapshot_save(host, "servers-deployed")
             .await?
             .checked_status()
@@ -240,7 +240,7 @@ pub async fn add_servers<S: std::hash::BuildHasher>(
     }
 
     up().await?
-        .args(&config.iscsi_and_storage_servers())
+        .args(&config.all_but_adm())
         .checked_status()
         .await
 }
@@ -249,16 +249,12 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     server_map: HashMap<String, &[String], S>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    setup_bare(
-        &config.iscsi_and_storage_servers(),
-        &config,
-        NtpServer::HostOnly,
-    )
-    .await?;
+    let server_list = server_map_to_server_set(&server_map);
+    setup_bare(&config.all_but_adm()[..], &config, NtpServer::HostOnly).await?;
 
     delay_for(Duration::from_secs(30)).await;
 
-    configure_docker_network(&config.storage_servers()[..]).await?;
+    configure_docker_network(&server_list[..]).await?;
 
     add_servers(&config, &server_map).await?;
 
@@ -268,6 +264,10 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
 pub async fn configure_docker_network(hosts: &[&str]) -> Result<(), CmdError> {
     // The configure-docker-network provisioner must be run individually on
     // each server node.
+    println!(
+        "Configuring docker network for the following servers: {:?}",
+        hosts
+    );
     for host in hosts {
         provision_node(host, "configure-docker-network")
             .await?
@@ -407,11 +407,16 @@ impl ClusterConfig {
 
         xs
     }
+    pub fn all_but_adm(&self) -> Vec<&str> {
+        let mut xs = vec![self.iscsi];
+
+        xs.extend(self.storage_servers());
+        xs.extend(&self.clients);
+
+        xs
+    }
     pub fn storage_servers(&self) -> Vec<&str> {
         [&self.mds[..], &self.oss[..]].concat()
-    }
-    pub fn iscsi_and_storage_servers(&self) -> Vec<&str> {
-        [&[self.iscsi][..], &self.storage_servers()].concat()
     }
     pub fn get_mds_servers(&self) -> Vec<&str> {
         [&self.mds[..]].concat()

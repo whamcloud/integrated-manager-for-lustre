@@ -3,7 +3,7 @@ pub mod iml;
 pub mod vagrant;
 
 use iml_wire_types::Branding;
-use std::{io, time::Duration};
+use std::{collections::HashMap, io, time::Duration};
 use tokio::{process::Command, time::delay_for};
 
 pub struct SetupConfig {
@@ -122,4 +122,20 @@ pub fn get_local_server_names<'a>(servers: &'a [&'a str]) -> Vec<String> {
         .iter()
         .map(move |x| format!("{}.local", x))
         .collect()
+}
+
+pub fn server_map_to_server_set<'a, S: std::hash::BuildHasher>(
+    server_map: &'a HashMap<String, &[String], S>,
+) -> Vec<&'a str> {
+    let mut set = server_map
+        .values()
+        .cloned()
+        .flatten()
+        .map(|x| x.as_str())
+        .collect::<Vec<&str>>();
+
+    set.sort();
+    set.dedup();
+
+    set
 }
