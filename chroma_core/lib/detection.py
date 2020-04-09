@@ -372,7 +372,7 @@ class DetectScan(object):
                     lv = devices["lvs"][vgname][lvname]
                     targets = ManagedTarget.objects.filter(uuid=lv["uuid"])
                     if not targets.count():
-                        log.warning("Ignoring %s:%s (%s), target unknown" % debug_id)
+                        log.warning("Ignoring lv {}, no matching ManagedTarget".format(lv["uuid"]))
                         continue
                     for target in targets:
                         try:
