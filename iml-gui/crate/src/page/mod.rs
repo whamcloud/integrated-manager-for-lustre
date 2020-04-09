@@ -75,7 +75,6 @@ pub(crate) enum Page {
 
 impl Page {
     pub(crate) fn title(self: &Self) -> String {
-        // FIXME: delegate to a model where possible, e. g. Self::User(m) => m.title()?
         match self {
             Self::About => "About".into(),
             Self::AppLoading => "Loading...".into(),
@@ -97,7 +96,7 @@ impl Page {
             Self::Targets => "Targets".into(),
             Self::Target(m) => format!("Target: {}", &m.target.name),
             Self::Users => "Users".into(),
-            Self::User(m) => format!("User: {}", &m.user.username),
+            Self::User(m) => format!("User: {}", m.title()),
             Self::Volumes(_) => "Volumes".into(),
             Self::ServerVolumes(m) => format!("Volumes on {}", &m.host.as_ref().unwrap().fqdn),
             Self::Volume(m) => format!("Volume: {}", &m.id),

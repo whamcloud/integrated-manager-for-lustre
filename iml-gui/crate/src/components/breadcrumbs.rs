@@ -5,7 +5,6 @@ use crate::{generated::css_classes::C, Msg};
 use seed::{prelude::*, *};
 use std::{cmp::PartialEq, collections::LinkedList};
 
-#[derive(Debug)]
 pub struct BreadCrumbs<Crumb> {
     crumbs: LinkedList<Crumb>,
 }
@@ -16,6 +15,11 @@ impl<Crumb> Default for BreadCrumbs<Crumb> {
             crumbs: LinkedList::new(),
         }
     }
+}
+
+pub trait BreadCrumb {
+    fn title(&self) -> &str;
+    fn href(&self) -> &str;
 }
 
 impl<Crumb: PartialEq> BreadCrumbs<Crumb> {
@@ -45,15 +49,15 @@ impl<Crumb: PartialEq> BreadCrumbs<Crumb> {
     }
 }
 
-pub fn view(bc: &BreadCrumbs<(String, String)>) -> impl View<Msg> {
+pub fn view<Crumb: BreadCrumb + PartialEq>(bc: &BreadCrumbs<Crumb>) -> impl View<Msg> {
     let mut ol = ol![class![C.justify_center, C.truncate, C.mx_4, C.rtl]];
 
     // XXX the list has "direction: rtl" to put ellipsis to the left on overflow,
     // XXX need to reverse the crumbs to show them in the correct left-to-right order:
-    for (n, (href, title)) in bc.iter().rev().enumerate() {
+    for (n, c) in bc.iter().rev().enumerate() {
         let mut cr = li![
             class![C.inline],
-            a![class![C.hover__underline], attrs! {At::Href => href}, title,]
+            a![class![C.hover__underline], attrs! {At::Href => c.href()}, c.title()]
         ];
         if n == 0 {
             cr.add_class(C.text_blue_500);
