@@ -2,7 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::components::command_modal;
 use crate::{
     components::{
         chart::fs_usage,
@@ -24,7 +23,6 @@ pub struct Model {
 
 #[derive(Clone, Debug)]
 pub enum Msg {
-    Test,
     FsUsage(fs_usage::Msg),
     IoChart(datepicker::Msg),
     LNetChart(datepicker::Msg),
@@ -32,10 +30,6 @@ pub enum Msg {
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
-        Msg::Test => {
-            // todo remove
-            orders.send_g_msg(GMsg::OpenCommandModal(command_modal::Input::Ids(vec![12, 54])));
-        }
         Msg::FsUsage(msg) => {
             fs_usage::update(msg, &mut model.fs_usage, &mut orders.proxy(Msg::FsUsage));
         }
@@ -49,19 +43,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 }
 
 pub fn view(model: &Model) -> Node<Msg> {
-    let b = seed::button![
-        class![
-            C.p_8,
-            C.border_2,
-            C.rounded_28px,
-            C.justify_start,
-            C.bg_red_800,
-            C.text_white
-        ],
-        "Test command!",
-        simple_ev(Ev::Click, Msg::Test),
-    ];
-    let c = div![
+    div![
         class![C.grid, C.lg__grid_cols_2, C.gap_6],
         vec![
             dashboard_fs_usage::view(&model.fs_usage),
@@ -108,8 +90,7 @@ pub fn view(model: &Model) -> Node<Msg> {
                 ]
             ),
         ]
-    ];
-    div![b, c]
+    ]
 }
 
 pub fn init(orders: &mut impl Orders<Msg, GMsg>) {

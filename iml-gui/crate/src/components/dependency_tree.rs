@@ -23,6 +23,15 @@ pub struct DependencyDAG<T> {
     pub deps: HashMap<u32, Vec<Arc<T>>>,
 }
 
+impl<T> Default for DependencyDAG<T> {
+    fn default() -> Self {
+        Self {
+            roots: Vec::new(),
+            deps: HashMap::new(),
+        }
+    }
+}
+
 pub fn build_direct_dag<T>(ts: &[T]) -> DependencyDAG<T>
 where
     T: Deps + Clone + Debug,
