@@ -3,7 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    iml, try_command_n_times, SetupConfig, STRATAGEM_CLIENT_PROFILE, STRATAGEM_SERVER_PROFILE,
+    iml, try_command_n_times, SetupConfig, SetupConfigType, STRATAGEM_CLIENT_PROFILE,
+    STRATAGEM_SERVER_PROFILE,
 };
 use iml_cmd::{CheckedCommandExt, CmdError};
 use std::{collections::HashMap, io, str, time::Duration};
@@ -161,7 +162,7 @@ pub async fn setup_bare(
 
 pub async fn setup_iml_install(
     hosts: &[&str],
-    setup_config: &SetupConfig,
+    setup_config: &SetupConfigType,
     config: &ClusterConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
     up().await?.arg(config.manager).checked_status().await?;
@@ -190,7 +191,7 @@ pub async fn setup_iml_install(
 
 pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
-    setup_config: &SetupConfig,
+    setup_config: &SetupConfigType,
     server_map: HashMap<String, &[String], S>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     setup_iml_install(&config.all(), &setup_config, &config).await?;
@@ -358,15 +359,10 @@ pub async fn create_fs(fs_type: FsType) -> Result<(), CmdError> {
 }
 
 pub async fn configure_rpm_setup(
-    setup: &SetupConfig,
+    setup: &SetupConfigType,
     cluster_config: &ClusterConfig,
 ) -> Result<(), CmdError> {
-    let config = format!(
-        r#"USE_STRATAGEM={}
-BRANDING={}"#,
-        setup.use_stratagem,
-        setup.branding.to_string()
-    );
+    let config: String = setup.into();
 
     let vagrant_path = canonicalize("../vagrant/").await?;
     let mut config_path = vagrant_path.clone();
@@ -375,7 +371,8 @@ BRANDING={}"#,
     let mut file = File::create(config_path).await?;
     file.write_all(config.as_bytes()).await?;
 
-    if setup.use_stratagem {
+    let setup_config: &SetupConfig = setup.into();
+    if setup_config.use_stratagem {
         let mut server_profile_path = vagrant_path.clone();
         server_profile_path.push("stratagem-server.profile");
 
@@ -393,10 +390,10 @@ BRANDING={}"#,
 
     run_vm_command(
         cluster_config.manager,
-        "cp /vagrant/local_settings.py /usr/share/chroma-manager/ \
-            && chroma-config profile register /vagrant/stratagem-server.profile \
-            && chroma-config profile register /vagrant/stratagem-client.profile \
-            && systemctl restart iml-manager.target",
+        "sudo cp /vagrant/local_settings.py /usr/share/chroma-manager/ \
+            && sudo chroma-config profile register /vagrant/stratagem-server.profile \
+            && sudo chroma-config profile register /vagrant/stratagem-client.profile \
+            && sudo systemctl restart iml-manager.target",
     )
     .await?
     .checked_status()
