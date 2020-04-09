@@ -3,7 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    components::{dependency_tree::Deps, font_awesome, modal},
+    components::{
+        dependency_tree::{DependencyDAG, Deps},
+        font_awesome, modal,
+    },
     extensions::{MergeAttrs as _, NodeExt as _, RequestExt as _},
     generated::css_classes::C,
     key_codes, sleep_with_handle, GMsg,
@@ -13,6 +16,7 @@ use iml_wire_types::{ApiList, Command, EndpointName, Job, Step};
 use regex::{Captures, Regex};
 use seed::{prelude::*, *};
 use serde::de::DeserializeOwned;
+use std::collections::HashSet;
 use std::fmt;
 use std::{sync::Arc, time::Duration};
 
@@ -160,7 +164,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::FetchTree => {
             model.tree_cancel = None;
             if !is_all_finished(&model.commands) {
-                schedule_fetch_tree(model, orders).map_err(|e| error!(e.to_string()));
+                let _ = schedule_fetch_tree(model, orders).map_err(|e| error!(e.to_string()));
             }
         }
         Msg::FetchedCommands(commands_data_result) => {
@@ -207,10 +211,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
         }
         Msg::Open(the_id) => {
-            model.opens = perform_open_click(&model.opens, &the_id);
+            model.opens = perform_open_click(&model.opens, the_id);
         }
         Msg::Close(the_id) => {
-            model.opens = perform_close_click(&model.opens, &the_id);
+            model.opens = perform_close_click(&model.opens, the_id);
         }
         Msg::Noop => {}
     }
@@ -363,25 +367,25 @@ fn is_job_in_opens(job_id: u32, opens: &Opens) -> bool {
     }
 }
 
-fn perform_open_click(cur_opens: &Opens, the_id: &TypedId) -> Opens {
+fn perform_open_click(cur_opens: &Opens, the_id: TypedId) -> Opens {
     match the_id {
-        TypedId::Command(cmd_id) => Opens::Command(*cmd_id),
+        TypedId::Command(cmd_id) => Opens::Command(cmd_id),
         TypedId::Job(job_id) => match &cur_opens {
             Opens::None => cur_opens.clone(),
-            Opens::Command(cmd_id_0) => Opens::CommandJob(*cmd_id_0, *job_id),
-            Opens::CommandJob(cmd_id_0, _) => Opens::CommandJob(*cmd_id_0, *job_id),
-            Opens::CommandJobSteps(cmd_id_0, _, _) => Opens::CommandJob(*cmd_id_0, *job_id),
+            Opens::Command(cmd_id_0) => Opens::CommandJob(*cmd_id_0, job_id),
+            Opens::CommandJob(cmd_id_0, _) => Opens::CommandJob(*cmd_id_0, job_id),
+            Opens::CommandJobSteps(cmd_id_0, _, _) => Opens::CommandJob(*cmd_id_0, job_id),
         },
         TypedId::Step(step_id) => match &cur_opens {
             Opens::None => cur_opens.clone(),
             Opens::Command(_) => cur_opens.clone(),
-            Opens::CommandJob(cmd_id_0, job_id_0) => Opens::CommandJobSteps(*cmd_id_0, *job_id_0, vec![*step_id]),
+            Opens::CommandJob(cmd_id_0, job_id_0) => Opens::CommandJobSteps(*cmd_id_0, *job_id_0, vec![step_id]),
             Opens::CommandJobSteps(cmd_id_0, job_id_0, step_ids_0) => {
                 if step_ids_0.contains(&step_id) {
                     Opens::CommandJobSteps(*cmd_id_0, *job_id_0, step_ids_0.clone())
                 } else {
                     let mut step_ids = step_ids_0.clone();
-                    step_ids.push(*step_id);
+                    step_ids.push(step_id);
                     Opens::CommandJobSteps(*cmd_id_0, *job_id_0, step_ids)
                 }
             }
@@ -389,22 +393,22 @@ fn perform_open_click(cur_opens: &Opens, the_id: &TypedId) -> Opens {
     }
 }
 
-fn perform_close_click(cur_opens: &Opens, the_id: &TypedId) -> Opens {
+fn perform_close_click(cur_opens: &Opens, the_id: TypedId) -> Opens {
     match the_id {
         TypedId::Command(_cmd_id) => Opens::None,
         TypedId::Job(job_id) => match &cur_opens {
             Opens::None => cur_opens.clone(),
             Opens::Command(_cmd_id_0) => cur_opens.clone(),
             Opens::CommandJob(cmd_id_0, job_id_0) => {
-                if job_id == job_id_0 {
-                    Opens::Command(*cmd_id_0)
+                if job_id == *job_id_0 {
+                    Opens::Command(cmd_id_0.clone())
                 } else {
                     cur_opens.clone()
                 }
             }
             Opens::CommandJobSteps(cmd_id_0, job_id_0, _) => {
-                if job_id == job_id_0 {
-                    Opens::Command(*cmd_id_0)
+                if job_id == *job_id_0 {
+                    Opens::Command(cmd_id_0.clone())
                 } else {
                     cur_opens.clone()
                 }
@@ -416,7 +420,7 @@ fn perform_close_click(cur_opens: &Opens, the_id: &TypedId) -> Opens {
             Opens::CommandJob(_, _) => cur_opens.clone(),
             Opens::CommandJobSteps(cmd_id_0, job_id_0, step_ids_0) => {
                 // if the clicked step_id is contained in the list of open steps, just remove it
-                let step_ids = step_ids_0.iter().map(|r| *r).filter(|sid| *sid != *step_id).collect();
+                let step_ids = step_ids_0.iter().map(|r| *r).filter(|sid| *sid != step_id).collect();
                 Opens::CommandJobSteps(*cmd_id_0, *job_id_0, step_ids)
             }
         },
@@ -522,29 +526,60 @@ fn command_item_view(x: &Command, is_open: bool) -> Node<Msg> {
     ]
 }
 
-fn job_tree_view(model: &Model, start: u32, children: &[u32]) -> Node<Msg> {
-    if children.contains(&start) {
-        // normally this should not happen, we check this to avoid potential loop
-        empty!()
-    } else {
-        let jobs = children
-            .iter()
-            .filter_map(|job_id| model.jobs.iter().find(|job| job.id == *job_id));
+#[derive(Debug, Clone)]
+pub struct Context {
+    pub visited: HashSet<u32>,
+    pub is_new: bool,
+}
+
+pub fn build_dag_view<T, F>(dag: &DependencyDAG<T>, node_to_dom: &F) -> Node<Msg>
+where
+    T: Deps,
+    F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
+{
+    fn build_node_view<T, F>(dag: &DependencyDAG<T>, node_to_dom: &F, n: Arc<T>, ctx: &mut Context) -> Node<Msg>
+    where
+        T: Deps,
+        F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
+    {
+        ctx.is_new = ctx.visited.insert(n.id());
+        let caption = node_to_dom(Arc::clone(&n), ctx);
+        let mut list: Vec<Node<Msg>> = Vec::with_capacity(n.deps().len());
+        if let Some(deps) = dag.deps.get(&n.id()) {
+            if ctx.is_new {
+                for d in deps {
+                    let piece = build_node_view(dag, node_to_dom, Arc::clone(d), ctx);
+                    list.push(piece);
+                }
+            }
+        }
+        div![caption, ul![list],]
+    }
+    let mut ctx = Context {
+        visited: HashSet::new(),
+        is_new: false,
+    };
+    let mut list: Vec<Node<Msg>> = Vec::with_capacity(dag.roots.len());
+    for r in &dag.roots {
+        list.push(build_node_view(dag, node_to_dom, Arc::clone(r), &mut ctx));
+    }
+    div![list]
+}
+
+fn job_to_node(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
+    if ctx.is_new {
         div![
-            class![C.mr_4],
-            ul![
-                class![C.border_4],
-                jobs.map(|job| {
-                    let children: Vec<u32> = job.wait_for.iter().filter_map(|s| extract_uri_id::<Job0>(s)).collect();
-                    li!["Job", job.id.to_string(), job_tree_view(model, start, &children)]
-                })
-            ]
+            class![C.pl_2, C.justify_between, C.items_center],
+            job.id.to_string(),
+            a![class![C.pointer_events_none], job.description,]
         ]
+    } else {
+        div![format!("{} skipped", job.id)]
     }
 }
 
 fn job_item_view(x: &Job0, is_open: bool) -> Node<Msg> {
-    let border = if !is_open {
+    let _border = if !is_open {
         C.border_transparent
     } else if x.cancelled {
         C.border_gray_500
@@ -556,7 +591,7 @@ fn job_item_view(x: &Job0, is_open: bool) -> Node<Msg> {
         C.border_transparent
     };
 
-    let (open_icon, m) = if is_open {
+    let (_open_icon, _m) = if is_open {
         ("chevron-circle-up", Msg::Close(TypedId::Job(x.id)))
     } else {
         ("chevron-circle-down", Msg::Open(TypedId::Job(x.id)))
@@ -565,7 +600,7 @@ fn job_item_view(x: &Job0, is_open: bool) -> Node<Msg> {
     div!["job_item_view"]
 }
 
-fn step_item_view(x: &Step, is_open: bool) -> Node<Msg> {
+fn step_item_view(_x: &Step, _is_open: bool) -> Node<Msg> {
     div!["step_item_view"]
 }
 
@@ -616,7 +651,7 @@ fn close_button() -> Node<Msg> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::dependency_tree::{build_direct_dag, build_forest, Context, DependencyForest};
+    use crate::components::dependency_tree::{build_direct_dag, DependencyDAG};
     use std::collections::HashSet;
 
     #[test]
@@ -627,505 +662,344 @@ mod tests {
         assert_eq!(extract_uri_id::<Command>("/api/xxx/1/"), None);
     }
 
-    pub fn build_tree_dom<T, F>(tree: &DependencyForest<T>, node_to_str: &F) -> Node<Msg>
-        where
-            T: Deps,
-            F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
-    {
-        fn build_node_str<T, F>(tree: &DependencyForest<T>, node_to_str: &F, n: Arc<T>, ctx: &mut Context) -> Node<Msg>
-            where
-                T: Deps,
-                F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
-        {
-            empty!()
-        }
-        //     ctx.is_new = ctx.visited.insert(n.id());
-        //     let cap = node_to_str(Arc::clone(&n), ctx);
-        //     let list = div![];
-        //     let mut node = ul![
-        //         cap
-        //     ];
-        //     if let Some(deps) = tree.deps.get(&n.id()) {
-        //         ctx.indent += 1;
-        //         if ctx.is_new {
-        //             for d in deps {
-        //                 res.write_str(&build_node_str(tree, node_to_str, Arc::clone(d), ctx));
-        //             }
-        //         }
-        //         ctx.indent -= 1;
-        //     }
-        //     res
-        // }
-        // let mut ctx = Context {
-        //     visited: HashSet::new(),
-        //     indent: 0,
-        //     is_new: false,
-        // };
-        // let mut res = String::new();
-        // for r in &tree.roots {
-        //     let _ = build_node_str(tree, node_to_str, Arc::clone(r), &mut ctx);
-        // }
-        // res
-        empty!()
-    }
-
-
     #[test]
-    fn build_node_tree() {
-        let api_list: ApiList<Job0> = serde_json::from_str(JOBS).unwrap();
-        let forest = build_direct_dag(&api_list.objects);
-        let job_to_node = |job: Arc<Job0>, ctx: &mut Context| {
-            let ellipsis = if ctx.is_new { class![] } else { class![] };
-            let this: Node<Msg> = li![
-                class![C.pl_2, C.justify_between, C.items_center],
-                div![
-                    span![ job.id.to_string() ],
-                    a! [
-                        class![ C.pointer_events_none ],
-                        format!("{}{}", job.description, ellipsis),
-                    ]
-                ]
-            ];
-            this
-        };
-        let node: Node<Msg> = ul! [
-            class!["my-class"],
-            vec![
-                li! ["1"],
-                li! ["2"],
-                li! ["3"],
-            ],
+    fn build_dependency_dom() {
+        let jobs = vec![
+            make_job(1, &[2, 3], "One"),
+            make_job(2, &[], "Two"),
+            make_job(3, &[], "Three"),
         ];
-        println!("{:#?}", node);
-        // let cls = class![C.w_4, C.h_4, C.inline, C.mr_4];
-        // let li: Node<Msg> = li! [
-        //     class![ C.pl_2, C.justify_between, C.items_center ],
-        //     font_awesome(cls, "check").merge_attrs(class![C.text_green_500]),
-        //     span![ "1" ],
-        //     a! [
-        //         class![ C.pointer_events_none ],
-        //         "Install packages on server oss2.local"
-        //     ]
-        // ];
-
+        let dag = build_direct_dag(&jobs);
+        let dom = build_dag_view(&dag, &job_to_node);
+        let dom_str = format!("{:#?}", dom);
+        assert_eq!(dom_str, JOBS_TREE_DOM);
     }
 
-    const JOBS: &'static str = r#"{
-  "meta": {
-    "limit": 20,
-    "next": null,
-    "offset": 0,
-    "previous": null,
-    "total_count": 10
-  },
-  "objects": [
-    {
-      "available_transitions": [],
-      "cancelled": false,
-      "class_name": "InstallHostPackagesJob",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.491600",
-      "description": "Install packages on server oss2.local",
-      "errored": false,
-      "id": 39,
-      "modified_at": "2020-03-16T07:22:34.491573",
-      "read_locks": [],
-      "resource_uri": "/api/job/39/",
-      "state": "complete",
-      "step_results": {
-        "/api/step/12/": null,
-        "/api/step/16/": null,
-        "/api/step/20/": null,
-        "/api/step/22/": null,
-        "/api/step/25/": null
-      },
-      "steps": [
-        "/api/step/12/",
-        "/api/step/16/",
-        "/api/step/20/",
-        "/api/step/22/",
-        "/api/step/25/"
-      ],
-      "wait_for": [],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 17,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/host/4/",
-          "resource_uri": ""
+    fn make_job(id: u32, deps: &[u32], descr: &str) -> Job0 {
+        Job0 {
+            available_transitions: vec![],
+            cancelled: false,
+            class_name: "".to_string(),
+            commands: vec!["/api/command/111/".to_string()],
+            created_at: "2020-03-16T07:22:34.491600".to_string(),
+            description: descr.to_string(),
+            errored: false,
+            id,
+            modified_at: "".to_string(),
+            read_locks: vec![],
+            resource_uri: format!("/api/job/{}/", id),
+            state: "complete".to_string(),
+            step_results: Default::default(),
+            steps: vec![],
+            wait_for: deps.iter().map(|x| format!("/api/job/{}/", x)).collect(),
+            write_locks: vec![],
         }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": false,
-      "class_name": "ConfigureNTPJob",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.516793",
-      "description": "Configure NTP on oss2.local",
-      "errored": false,
-      "id": 40,
-      "modified_at": "2020-03-16T07:22:34.516760",
-      "read_locks": [
-        {
-          "locked_item_content_type_id": 17,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/host/4/",
-          "resource_uri": ""
-        }
-      ],
-      "resource_uri": "/api/job/40/",
-      "state": "complete",
-      "step_results": {
-        "/api/step/55/": null,
-        "/api/step/57/": null,
-        "/api/step/60/": null,
-        "/api/step/62/": null,
-        "/api/step/63/": null
-      },
-      "steps": [
-        "/api/step/55/",
-        "/api/step/57/",
-        "/api/step/60/",
-        "/api/step/62/",
-        "/api/step/63/"
-      ],
-      "wait_for": [
-        "/api/job/39/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 21,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/ntp_configuration/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": false,
-      "class_name": "EnableLNetJob",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.554315",
-      "description": "Enable LNet on oss2.local",
-      "errored": false,
-      "id": 41,
-      "modified_at": "2020-03-16T07:22:34.554290",
-      "read_locks": [
-        {
-          "locked_item_content_type_id": 17,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/host/4/",
-          "resource_uri": ""
-        }
-      ],
-      "resource_uri": "/api/job/41/",
-      "state": "complete",
-      "step_results": {},
-      "steps": [],
-      "wait_for": [
-        "/api/job/39/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 53,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/lnet_configuration/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": false,
-      "class_name": "AutoConfigureCorosync2Job",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.591853",
-      "description": "Configure Corosync on oss2.local.",
-      "errored": false,
-      "id": 42,
-      "modified_at": "2020-03-16T07:22:34.591829",
-      "read_locks": [
-        {
-          "locked_item_content_type_id": 17,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/host/4/",
-          "resource_uri": ""
-        }
-      ],
-      "resource_uri": "/api/job/42/",
-      "state": "complete",
-      "step_results": {
-        "/api/step/56/": null
-      },
-      "steps": [
-        "/api/step/56/"
-      ],
-      "wait_for": [
-        "/api/job/39/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 75,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/corosync_configuration/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": false,
-      "class_name": "StartCorosync2Job",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.627692",
-      "description": "Start Corosync on oss2.local",
-      "errored": false,
-      "id": 43,
-      "modified_at": "2020-03-16T07:22:34.627667",
-      "read_locks": [],
-      "resource_uri": "/api/job/43/",
-      "state": "complete",
-      "step_results": {
-        "/api/step/74/": null
-      },
-      "steps": [
-        "/api/step/74/"
-      ],
-      "wait_for": [
-        "/api/job/42/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 75,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/corosync_configuration/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": true,
-      "class_name": "LoadLNetJob",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.648217",
-      "description": "Load the LNet kernel modules.",
-      "errored": false,
-      "id": 44,
-      "modified_at": "2020-03-16T07:22:34.648185",
-      "read_locks": [],
-      "resource_uri": "/api/job/44/",
-      "state": "complete",
-      "step_results": {
-        "/api/step/58/": null,
-        "/api/step/64/": null
-      },
-      "steps": [
-        "/api/step/58/",
-        "/api/step/64/"
-      ],
-      "wait_for": [
-        "/api/job/41/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 53,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/lnet_configuration/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": true,
-      "class_name": "StartLNetJob",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.672353",
-      "description": "Start the LNet networking layer.",
-      "errored": false,
-      "id": 45,
-      "modified_at": "2020-03-16T07:22:34.672291",
-      "read_locks": [],
-      "resource_uri": "/api/job/45/",
-      "state": "complete",
-      "step_results": {},
-      "steps": [],
-      "wait_for": [
-        "/api/job/44/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 53,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/lnet_configuration/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": false,
-      "class_name": "ConfigurePacemakerJob",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.695375",
-      "description": "Configure Pacemaker on oss2.local.",
-      "errored": false,
-      "id": 46,
-      "modified_at": "2020-03-16T07:22:34.695324",
-      "read_locks": [
-        {
-          "locked_item_content_type_id": 17,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/host/4/",
-          "resource_uri": ""
-        },
-        {
-          "locked_item_content_type_id": 75,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/corosync_configuration/4/",
-          "resource_uri": ""
-        }
-      ],
-      "resource_uri": "/api/job/46/",
-      "state": "complete",
-      "step_results": {
-        "/api/step/77/": null,
-        "/api/step/78/": null,
-        "/api/step/82/": null
-      },
-      "steps": [
-        "/api/step/77/",
-        "/api/step/78/",
-        "/api/step/82/"
-      ],
-      "wait_for": [
-        "/api/job/43/",
-        "/api/job/39/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 64,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/pacemaker_configuration/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": false,
-      "class_name": "StartPacemakerJob",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.755602",
-      "description": "Start Pacemaker on oss2.local",
-      "errored": false,
-      "id": 47,
-      "modified_at": "2020-03-16T07:22:34.755578",
-      "read_locks": [
-        {
-          "locked_item_content_type_id": 75,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/corosync_configuration/4/",
-          "resource_uri": ""
-        }
-      ],
-      "resource_uri": "/api/job/47/",
-      "state": "complete",
-      "step_results": {
-        "/api/step/85/": null
-      },
-      "steps": [
-        "/api/step/85/"
-      ],
-      "wait_for": [
-        "/api/job/43/",
-        "/api/job/46/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 64,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/pacemaker_configuration/4/",
-          "resource_uri": ""
-        }
-      ]
-    },
-    {
-      "available_transitions": [],
-      "cancelled": true,
-      "class_name": "SetupHostJob",
-      "commands": [
-        "/api/command/12/"
-      ],
-      "created_at": "2020-03-16T07:22:34.798434",
-      "description": "Setup managed host oss2.local",
-      "errored": false,
-      "id": 48,
-      "modified_at": "2020-03-16T07:22:34.798408",
-      "read_locks": [
-        {
-          "locked_item_content_type_id": 53,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/lnet_configuration/4/",
-          "resource_uri": ""
-        },
-        {
-          "locked_item_content_type_id": 64,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/pacemaker_configuration/4/",
-          "resource_uri": ""
-        },
-        {
-          "locked_item_content_type_id": 21,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/ntp_configuration/4/",
-          "resource_uri": ""
-        }
-      ],
-      "resource_uri": "/api/job/48/",
-      "state": "complete",
-      "step_results": {},
-      "steps": [],
-      "wait_for": [
-        "/api/job/39/",
-        "/api/job/40/",
-        "/api/job/41/",
-        "/api/job/42/",
-        "/api/job/45/",
-        "/api/job/46/",
-        "/api/job/47/"
-      ],
-      "write_locks": [
-        {
-          "locked_item_content_type_id": 17,
-          "locked_item_id": 4,
-          "locked_item_uri": "/api/host/4/",
-          "resource_uri": ""
-        }
-      ]
     }
-  ]
-}
-"#;
+
+    // FIXME It seems there is no another way, https://github.com/seed-rs/seed/issues/414
+    const JOBS_TREE_DOM: &'static str = r#"Element(
+    El {
+        tag: Div,
+        attrs: Attrs {
+            vals: {},
+        },
+        style: Style {
+            vals: {},
+        },
+        event_handler_manager: EventHandlerManager {
+            groups: {},
+        },
+        children: [
+            Element(
+                El {
+                    tag: Div,
+                    attrs: Attrs {
+                        vals: {},
+                    },
+                    style: Style {
+                        vals: {},
+                    },
+                    event_handler_manager: EventHandlerManager {
+                        groups: {},
+                    },
+                    children: [
+                        Element(
+                            El {
+                                tag: Div,
+                                attrs: Attrs {
+                                    vals: {
+                                        Class: Some(
+                                            "pl-2 justify-between items-center",
+                                        ),
+                                    },
+                                },
+                                style: Style {
+                                    vals: {},
+                                },
+                                event_handler_manager: EventHandlerManager {
+                                    groups: {},
+                                },
+                                children: [
+                                    Text(
+                                        Text {
+                                            text: "1",
+                                            node_ws: None,
+                                        },
+                                    ),
+                                    Element(
+                                        El {
+                                            tag: A,
+                                            attrs: Attrs {
+                                                vals: {
+                                                    Class: Some(
+                                                        "pointer-events-none",
+                                                    ),
+                                                },
+                                            },
+                                            style: Style {
+                                                vals: {},
+                                            },
+                                            event_handler_manager: EventHandlerManager {
+                                                groups: {},
+                                            },
+                                            children: [
+                                                Text(
+                                                    Text {
+                                                        text: "One",
+                                                        node_ws: None,
+                                                    },
+                                                ),
+                                            ],
+                                            namespace: None,
+                                            node_ws: None,
+                                            refs: [],
+                                        },
+                                    ),
+                                ],
+                                namespace: None,
+                                node_ws: None,
+                                refs: [],
+                            },
+                        ),
+                        Element(
+                            El {
+                                tag: Ul,
+                                attrs: Attrs {
+                                    vals: {},
+                                },
+                                style: Style {
+                                    vals: {},
+                                },
+                                event_handler_manager: EventHandlerManager {
+                                    groups: {},
+                                },
+                                children: [
+                                    Element(
+                                        El {
+                                            tag: Div,
+                                            attrs: Attrs {
+                                                vals: {},
+                                            },
+                                            style: Style {
+                                                vals: {},
+                                            },
+                                            event_handler_manager: EventHandlerManager {
+                                                groups: {},
+                                            },
+                                            children: [
+                                                Element(
+                                                    El {
+                                                        tag: Div,
+                                                        attrs: Attrs {
+                                                            vals: {
+                                                                Class: Some(
+                                                                    "pl-2 justify-between items-center",
+                                                                ),
+                                                            },
+                                                        },
+                                                        style: Style {
+                                                            vals: {},
+                                                        },
+                                                        event_handler_manager: EventHandlerManager {
+                                                            groups: {},
+                                                        },
+                                                        children: [
+                                                            Text(
+                                                                Text {
+                                                                    text: "2",
+                                                                    node_ws: None,
+                                                                },
+                                                            ),
+                                                            Element(
+                                                                El {
+                                                                    tag: A,
+                                                                    attrs: Attrs {
+                                                                        vals: {
+                                                                            Class: Some(
+                                                                                "pointer-events-none",
+                                                                            ),
+                                                                        },
+                                                                    },
+                                                                    style: Style {
+                                                                        vals: {},
+                                                                    },
+                                                                    event_handler_manager: EventHandlerManager {
+                                                                        groups: {},
+                                                                    },
+                                                                    children: [
+                                                                        Text(
+                                                                            Text {
+                                                                                text: "Two",
+                                                                                node_ws: None,
+                                                                            },
+                                                                        ),
+                                                                    ],
+                                                                    namespace: None,
+                                                                    node_ws: None,
+                                                                    refs: [],
+                                                                },
+                                                            ),
+                                                        ],
+                                                        namespace: None,
+                                                        node_ws: None,
+                                                        refs: [],
+                                                    },
+                                                ),
+                                                Element(
+                                                    El {
+                                                        tag: Ul,
+                                                        attrs: Attrs {
+                                                            vals: {},
+                                                        },
+                                                        style: Style {
+                                                            vals: {},
+                                                        },
+                                                        event_handler_manager: EventHandlerManager {
+                                                            groups: {},
+                                                        },
+                                                        children: [],
+                                                        namespace: None,
+                                                        node_ws: None,
+                                                        refs: [],
+                                                    },
+                                                ),
+                                            ],
+                                            namespace: None,
+                                            node_ws: None,
+                                            refs: [],
+                                        },
+                                    ),
+                                    Element(
+                                        El {
+                                            tag: Div,
+                                            attrs: Attrs {
+                                                vals: {},
+                                            },
+                                            style: Style {
+                                                vals: {},
+                                            },
+                                            event_handler_manager: EventHandlerManager {
+                                                groups: {},
+                                            },
+                                            children: [
+                                                Element(
+                                                    El {
+                                                        tag: Div,
+                                                        attrs: Attrs {
+                                                            vals: {
+                                                                Class: Some(
+                                                                    "pl-2 justify-between items-center",
+                                                                ),
+                                                            },
+                                                        },
+                                                        style: Style {
+                                                            vals: {},
+                                                        },
+                                                        event_handler_manager: EventHandlerManager {
+                                                            groups: {},
+                                                        },
+                                                        children: [
+                                                            Text(
+                                                                Text {
+                                                                    text: "3",
+                                                                    node_ws: None,
+                                                                },
+                                                            ),
+                                                            Element(
+                                                                El {
+                                                                    tag: A,
+                                                                    attrs: Attrs {
+                                                                        vals: {
+                                                                            Class: Some(
+                                                                                "pointer-events-none",
+                                                                            ),
+                                                                        },
+                                                                    },
+                                                                    style: Style {
+                                                                        vals: {},
+                                                                    },
+                                                                    event_handler_manager: EventHandlerManager {
+                                                                        groups: {},
+                                                                    },
+                                                                    children: [
+                                                                        Text(
+                                                                            Text {
+                                                                                text: "Three",
+                                                                                node_ws: None,
+                                                                            },
+                                                                        ),
+                                                                    ],
+                                                                    namespace: None,
+                                                                    node_ws: None,
+                                                                    refs: [],
+                                                                },
+                                                            ),
+                                                        ],
+                                                        namespace: None,
+                                                        node_ws: None,
+                                                        refs: [],
+                                                    },
+                                                ),
+                                                Element(
+                                                    El {
+                                                        tag: Ul,
+                                                        attrs: Attrs {
+                                                            vals: {},
+                                                        },
+                                                        style: Style {
+                                                            vals: {},
+                                                        },
+                                                        event_handler_manager: EventHandlerManager {
+                                                            groups: {},
+                                                        },
+                                                        children: [],
+                                                        namespace: None,
+                                                        node_ws: None,
+                                                        refs: [],
+                                                    },
+                                                ),
+                                            ],
+                                            namespace: None,
+                                            node_ws: None,
+                                            refs: [],
+                                        },
+                                    ),
+                                ],
+                                namespace: None,
+                                node_ws: None,
+                                refs: [],
+                            },
+                        ),
+                    ],
+                    namespace: None,
+                    node_ws: None,
+                    refs: [],
+                },
+            ),
+        ],
+        namespace: None,
+        node_ws: None,
+        refs: [],
+    },
+)"#;
 }

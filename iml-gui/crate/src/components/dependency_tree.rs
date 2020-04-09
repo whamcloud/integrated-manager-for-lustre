@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
-use std::fmt::Write;
 use std::iter::Iterator;
 use std::sync::Arc;
 
@@ -19,21 +18,14 @@ impl<T: Deps> Deps for Arc<T> {
 }
 
 #[derive(Debug, Clone)]
-pub struct DependencyForest<T> {
+pub struct DependencyDAG<T> {
     pub roots: Vec<Arc<T>>,
     pub deps: HashMap<u32, Vec<Arc<T>>>,
 }
 
-#[derive(Debug, Clone)]
-pub struct Context {
-    pub visited: HashSet<u32>,
-    pub indent: usize,
-    pub is_new: bool,
-}
-
-pub fn build_direct_dag<T>(ts: &[T]) -> DependencyForest<T>
-    where
-        T: Deps + Clone + Debug,
+pub fn build_direct_dag<T>(ts: &[T]) -> DependencyDAG<T>
+where
+    T: Deps + Clone + Debug,
 {
     let mut roots: Vec<u32> = Vec::new();
     let mut dag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(ts.len());
@@ -54,12 +46,12 @@ pub fn build_direct_dag<T>(ts: &[T]) -> DependencyForest<T>
             }
         }
     }
-    build_forest(ts, &roots, &dag)
+    enrich_dag(ts, &roots, &dag)
 }
 
-pub fn build_inverse_dag<T>(ts: &[T]) -> DependencyForest<T>
-    where
-        T: Deps + Clone + Debug,
+pub fn build_inverse_dag<T>(ts: &[T]) -> DependencyDAG<T>
+where
+    T: Deps + Clone + Debug,
 {
     let mut roots: HashSet<u32> = ts.iter().map(|t| t.id()).collect();
     let mut dag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(ts.len());
@@ -78,24 +70,24 @@ pub fn build_inverse_dag<T>(ts: &[T]) -> DependencyForest<T>
         }
     }
     let roots: Vec<u32> = roots.into_iter().collect();
-    build_forest(ts, &roots, &dag)
+    enrich_dag(ts, &roots, &dag)
 }
 
-pub fn build_forest<T>(objs: &[T], int_roots: &[u32], int_deps: &[(u32, Vec<u32>)]) -> DependencyForest<T>
-    where
-        T: Deps + Clone + Debug,
+pub fn enrich_dag<T>(objs: &[T], int_roots: &[u32], int_deps: &[(u32, Vec<u32>)]) -> DependencyDAG<T>
+where
+    T: Deps + Clone + Debug,
 {
     let roots: Vec<Arc<T>> = convert_ids_to_arcs(&objs, &int_roots);
     let deps: HashMap<u32, Vec<Arc<T>>> = int_deps
         .iter()
         .map(|(id, ids)| (*id, convert_ids_to_arcs(&objs, ids)))
         .collect();
-    DependencyForest { roots, deps }
+    DependencyDAG { roots, deps }
 }
 
 pub fn convert_ids_to_arcs<T>(objs: &[T], ids: &[u32]) -> Vec<Arc<T>>
-    where
-        T: Deps + Clone + Debug,
+where
+    T: Deps + Clone + Debug,
 {
     ids.iter()
         .filter_map(|id| objs.iter().find(|o| o.id() == *id))
@@ -103,47 +95,9 @@ pub fn convert_ids_to_arcs<T>(objs: &[T], ids: &[u32]) -> Vec<Arc<T>>
         .collect()
 }
 
-pub fn build_tree_str<T, F>(tree: &DependencyForest<T>, node_to_str: &F) -> String
-    where
-        T: Deps,
-        F: Fn(Arc<T>, &mut Context) -> String,
-{
-    fn build_node_str<T, F>(tree: &DependencyForest<T>, node_to_str: &F, n: Arc<T>, ctx: &mut Context) -> String
-        where
-            T: Deps,
-            F: Fn(Arc<T>, &mut Context) -> String,
-    {
-        let mut res = String::new();
-        ctx.is_new = ctx.visited.insert(n.id());
-        let _ = res.write_str(&node_to_str(Arc::clone(&n), ctx));
-
-        if let Some(deps) = tree.deps.get(&n.id()) {
-            ctx.indent += 1;
-            if ctx.is_new {
-                for d in deps {
-                    let _ = res.write_str(&build_node_str(tree, node_to_str, Arc::clone(d), ctx));
-                }
-            }
-            ctx.indent -= 1;
-        }
-        res
-    }
-    let mut ctx = Context {
-        visited: HashSet::new(),
-        indent: 0,
-        is_new: false,
-    };
-    let mut res = String::new();
-    for r in &tree.roots {
-        let _ = res.write_str(&build_node_str(tree, node_to_str, Arc::clone(r), &mut ctx));
-    }
-    res
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use iml_wire_types::{ApiList, Job};
 
     #[derive(Debug, Clone)]
     struct X {
@@ -171,80 +125,131 @@ mod tests {
         }
     }
 
+    #[derive(Debug, Clone)]
+    struct Context {
+        visited: HashSet<u32>,
+        indent: usize,
+        is_new: bool,
+    }
+
+    fn build_dag_str<T, U, F>(dag: &DependencyDAG<T>, node_to_str: &F) -> Vec<U>
+    where
+        T: Deps,
+        F: Fn(Arc<T>, &mut Context) -> U,
+    {
+        fn build_node_str<T, U, F>(
+            dag: &DependencyDAG<T>,
+            node_to_str: &F,
+            n: Arc<T>,
+            ctx: &mut Context,
+            res: &mut Vec<U>,
+        ) where
+            T: Deps,
+            F: Fn(Arc<T>, &mut Context) -> U,
+        {
+            ctx.is_new = ctx.visited.insert(n.id());
+            res.push(node_to_str(Arc::clone(&n), ctx));
+            if let Some(deps) = dag.deps.get(&n.id()) {
+                ctx.indent += 1;
+                if ctx.is_new {
+                    for d in deps {
+                        build_node_str(dag, node_to_str, Arc::clone(d), ctx, res);
+                    }
+                }
+                ctx.indent -= 1;
+            }
+        }
+        let mut ctx = Context {
+            visited: HashSet::new(),
+            indent: 0,
+            is_new: false,
+        };
+        let mut res: Vec<U> = Vec::new();
+        for r in &dag.roots {
+            build_node_str(dag, node_to_str, Arc::clone(r), &mut ctx, &mut res);
+        }
+        res
+    }
+
     #[test]
-    fn build_tree_test() {
+    fn build_dependency_tree_test() {
         let x_list: Vec<X> = vec![
-            X::new(39, &[], "Install packages on server oss2.local"),
-            X::new(40, &[39], "Configure NTP on oss2.local"),
-            X::new(41, &[39], "Enable LNet on oss2.local"),
+            X::new(39, &[], "Install packages on server oss2.local."),
+            X::new(40, &[39], "Configure NTP on oss2.local."),
+            X::new(41, &[39], "Enable LNet on oss2.local."),
             X::new(42, &[39], "Configure Corosync on oss2.local."),
             X::new(43, &[42], "Start Corosync on oss2.local"),
             X::new(44, &[41], "Load the LNet kernel modules."),
             X::new(45, &[44], "Start the LNet networking layer."),
             X::new(46, &[39, 43], "Configure Pacemaker on oss2.local."),
-            X::new(47, &[43, 46], "Start Pacemaker on oss2.local"),
-            X::new(48, &[39, 40, 41, 42, 45, 46, 47], "Setup managed host oss2.local"),
+            X::new(47, &[43, 46], "Start Pacemaker on oss2.local."),
+            X::new(48, &[39, 40, 41, 42, 45, 46, 47], "Setup managed host oss2.local."),
         ];
 
-        let node_to_string_f = |node: Arc<X>, ctx: &mut Context| {
-            let ellipsis = if ctx.is_new { "" } else { "..." };
-            let indent = "  ".repeat(ctx.indent);
-            format!(
-                "{}{}: {}{}\n",
-                indent,
-                node.id,
-                node.description,
-                ellipsis,
-            )
-        };
-
-        let forest = build_direct_dag(&x_list);
-        let result = build_tree_str(&forest, &node_to_string_f);
+        let dag = build_direct_dag(&x_list);
+        let result = build_dag_str(&dag, &node_to_string).join("\n");
         assert_eq!(result, TREE_DIRECT);
 
-        let forest = build_inverse_dag(&x_list);
-        let result = build_tree_str(&forest, &node_to_string_f);
+        let dag = build_inverse_dag(&x_list);
+        let result = build_dag_str(&dag, &node_to_string).join("\n");
         assert_eq!(result, TREE_INVERSE);
     }
 
-    const TREE_DIRECT: &'static str = r#"48: Setup managed host oss2.local
-  39: Install packages on server oss2.local
-  40: Configure NTP on oss2.local
-    39: Install packages on server oss2.local...
-  41: Enable LNet on oss2.local
-    39: Install packages on server oss2.local...
+    #[test]
+    fn cyclic_dependency() {
+        // it shouldn't be stack overflow anyway even if there is an invariant violation
+        let x_list: Vec<X> = vec![X::new(1, &[2], "One"), X::new(2, &[3], "Two"), X::new(3, &[2], "Three")];
+
+        let dag = build_direct_dag(&x_list);
+        let result = build_dag_str(&dag, &node_to_string).join("\n");
+        assert_eq!(result, "1: One\n  2: Two\n    3: Three\n      2: Two...\n3: Three...");
+
+        let dag = build_inverse_dag(&x_list);
+        let result = build_dag_str(&dag, &node_to_string).join("\n");
+        assert_eq!(result, "");
+    }
+
+    fn node_to_string(node: Arc<X>, ctx: &mut Context) -> String {
+        let ellipsis = if ctx.is_new { "" } else { "..." };
+        let indent = "  ".repeat(ctx.indent);
+        format!("{}{}: {}{}", indent, node.id, node.description, ellipsis,)
+    }
+
+    const TREE_DIRECT: &'static str = r#"48: Setup managed host oss2.local.
+  39: Install packages on server oss2.local.
+  40: Configure NTP on oss2.local.
+    39: Install packages on server oss2.local....
+  41: Enable LNet on oss2.local.
+    39: Install packages on server oss2.local....
   42: Configure Corosync on oss2.local.
-    39: Install packages on server oss2.local...
+    39: Install packages on server oss2.local....
   45: Start the LNet networking layer.
     44: Load the LNet kernel modules.
-      41: Enable LNet on oss2.local...
+      41: Enable LNet on oss2.local....
   46: Configure Pacemaker on oss2.local.
-    39: Install packages on server oss2.local...
+    39: Install packages on server oss2.local....
     43: Start Corosync on oss2.local
       42: Configure Corosync on oss2.local....
-  47: Start Pacemaker on oss2.local
+  47: Start Pacemaker on oss2.local.
     43: Start Corosync on oss2.local...
-    46: Configure Pacemaker on oss2.local....
-"#;
+    46: Configure Pacemaker on oss2.local...."#;
 
-    const TREE_INVERSE: &'static str = r#"39: Install packages on server oss2.local
-  40: Configure NTP on oss2.local
-    48: Setup managed host oss2.local
-  41: Enable LNet on oss2.local
+    const TREE_INVERSE: &'static str = r#"39: Install packages on server oss2.local.
+  40: Configure NTP on oss2.local.
+    48: Setup managed host oss2.local.
+  41: Enable LNet on oss2.local.
     44: Load the LNet kernel modules.
       45: Start the LNet networking layer.
-        48: Setup managed host oss2.local...
-    48: Setup managed host oss2.local...
+        48: Setup managed host oss2.local....
+    48: Setup managed host oss2.local....
   42: Configure Corosync on oss2.local.
     43: Start Corosync on oss2.local
       46: Configure Pacemaker on oss2.local.
-        47: Start Pacemaker on oss2.local
-          48: Setup managed host oss2.local...
-        48: Setup managed host oss2.local...
-      47: Start Pacemaker on oss2.local...
-    48: Setup managed host oss2.local...
+        47: Start Pacemaker on oss2.local.
+          48: Setup managed host oss2.local....
+        48: Setup managed host oss2.local....
+      47: Start Pacemaker on oss2.local....
+    48: Setup managed host oss2.local....
   46: Configure Pacemaker on oss2.local....
-  48: Setup managed host oss2.local...
-"#;
-
+  48: Setup managed host oss2.local...."#;
 }
