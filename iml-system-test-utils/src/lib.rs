@@ -125,13 +125,13 @@ pub fn get_local_server_names<'a>(servers: &'a [&'a str]) -> Vec<String> {
 }
 
 pub fn server_map_to_server_set<'a, S: std::hash::BuildHasher>(
-    server_map: &'a HashMap<String, &[String], S>,
+    server_map: &'a HashMap<String, &[&str], S>,
 ) -> Vec<&'a str> {
     let mut set = server_map
         .values()
         .cloned()
         .flatten()
-        .map(|x| x.as_str())
+        .cloned()
         .collect::<Vec<&str>>();
 
     set.sort();
