@@ -13,7 +13,6 @@ use serde_json::Value;
 use std::{
     collections::HashMap,
     pin::Pin,
-    result,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -176,8 +175,8 @@ fn process_info_wrapper_wrapper(
 
 fn process_info_wrapper_2_wrapper(
     info: Arc<Mutex<SessionInfo>>,
-    y: result::Result<Value, String>,
-) -> impl Future<Output = Result<(SessionInfo, result::Result<Value, String>)>> {
+    y: AgentResult,
+) -> impl Future<Output = Result<(SessionInfo, AgentResult)>> {
     process_info(info).map(|session_info| Ok((session_info, y)))
 }
 
