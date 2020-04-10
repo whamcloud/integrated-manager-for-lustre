@@ -4,13 +4,14 @@
 
 use iml_cmd::{CheckedCommandExt, CmdError};
 use iml_system_test_utils::{docker, iml, vagrant, SetupConfig, SetupConfigType};
+use iml_systemd::SystemdError;
 use std::{
     collections::{hash_map::RandomState, HashMap},
     time::Duration,
 };
 use tokio::time::delay_for;
 
-async fn setup() -> Result<(), Box<dyn std::error::Error>> {
+async fn setup() -> Result<(), SystemdError> {
     // remove the stack if it is running and clean up volumes and network
     docker::remove_iml_stack().await?;
     docker::system_prune().await?;
@@ -34,7 +35,7 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
     docker_setup: &SetupConfigType,
     server_map: HashMap<String, &[&str], S>,
     fs_type: vagrant::FsType,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), SystemdError> {
     setup().await?;
     docker::configure_docker_setup(&docker_setup).await?;
 
@@ -62,7 +63,7 @@ async fn wait_for_ntp(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {
 }
 
 #[tokio::test]
-async fn test_docker_ldiskfs_setup() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_docker_ldiskfs_setup() -> Result<(), SystemdError> {
     let config = vagrant::ClusterConfig::default();
     run_fs_test(
         &config,
@@ -83,7 +84,7 @@ async fn test_docker_ldiskfs_setup() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[tokio::test]
-async fn test_docker_zfs_setup() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_docker_zfs_setup() -> Result<(), SystemdError> {
     let config = vagrant::ClusterConfig::default();
     run_fs_test(
         &config,
@@ -104,7 +105,7 @@ async fn test_docker_zfs_setup() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[tokio::test]
-async fn test_docker_stratagem_setup() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_docker_stratagem_setup() -> Result<(), SystemdError> {
     let config = vagrant::ClusterConfig::default();
     run_fs_test(
         &config,

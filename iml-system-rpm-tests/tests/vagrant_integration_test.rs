@@ -3,14 +3,14 @@
 // license that can be found in the LICENSE file.
 
 use iml_cmd::{CheckedCommandExt, CmdError};
-use iml_system_test_utils::{iml, vagrant, SetupConfig, SetupConfigType};
+use iml_system_test_utils::{pdsh, vagrant, SetupConfig, SetupConfigType};
 use std::{
     collections::{hash_map::RandomState, HashMap},
     time::Duration,
 };
 use tokio::time::delay_for;
 
-async fn setup() -> Result<(), Box<dyn std::error::Error>> {
+async fn setup() -> Result<(), CmdError> {
     vagrant::destroy().await?;
 
     Ok(())
@@ -21,7 +21,7 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
     setup_config: &SetupConfigType,
     server_map: HashMap<String, &[&str], S>,
     fs_type: vagrant::FsType,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), CmdError> {
     setup().await?;
 
     vagrant::setup_deploy_servers(&config, &setup_config, server_map).await?;
@@ -30,7 +30,7 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
 
     delay_for(Duration::from_secs(30)).await;
 
-    iml::detect_fs().await?;
+    vagrant::detect_fs(&config).await?;
 
     Ok(())
 }
@@ -46,7 +46,7 @@ async fn wait_for_ntp(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {
 }
 
 #[tokio::test]
-async fn test_ldiskfs_setup() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_ldiskfs_setup() -> Result<(), CmdError> {
     let config = vagrant::ClusterConfig::default();
 
     run_fs_test(
@@ -68,7 +68,7 @@ async fn test_ldiskfs_setup() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[tokio::test]
-async fn test_zfs_setup() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_zfs_setup() -> Result<(), CmdError> {
     let config = vagrant::ClusterConfig::default();
 
     run_fs_test(
@@ -90,7 +90,7 @@ async fn test_zfs_setup() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[tokio::test]
-async fn test_stratagem_setup() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_stratagem_setup() -> Result<(), CmdError> {
     let config = vagrant::ClusterConfig::default();
     run_fs_test(
         &config,
@@ -110,6 +110,17 @@ async fn test_stratagem_setup() -> Result<(), Box<dyn std::error::Error>> {
     .await?;
 
     wait_for_ntp(&config).await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_install_ldiskfs_no_iml() -> Result<(), CmdError> {
+    pdsh::install_ldiskfs_no_iml(
+        &vec!["10.73.10.11", "10.73.10.12", "10.73.10.21", "10.73.10.22"][..],
+        "2.12.4",
+    )
+    .await?;
 
     Ok(())
 }

@@ -1,7 +1,9 @@
 pub mod docker;
 pub mod iml;
+pub mod pdsh;
 pub mod vagrant;
 
+use iml_cmd::CmdError;
 use iml_wire_types::Branding;
 use std::{collections::HashMap, io, time::Duration};
 use tokio::{process::Command, time::delay_for};
@@ -90,7 +92,7 @@ pub const STRATAGEM_CLIENT_PROFILE: &str = r#"{
   }
   "#;
 
-pub async fn try_command_n_times(max_tries: u32, cmd: &mut Command) -> Result<(), io::Error> {
+pub async fn try_command_n_times(max_tries: u32, cmd: &mut Command) -> Result<(), CmdError> {
     let mut count = 1;
     let mut r = cmd.status().await?;
 
@@ -113,7 +115,8 @@ pub async fn try_command_n_times(max_tries: u32, cmd: &mut Command) -> Result<()
                 "Command {:?} failed to succeed after {} attempts.",
                 cmd, max_tries
             ),
-        ))
+        )
+        .into())
     }
 }
 
