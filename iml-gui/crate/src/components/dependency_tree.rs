@@ -18,6 +18,34 @@ impl<T: Deps> Deps for Arc<T> {
 }
 
 #[derive(Debug, Clone)]
+struct DepsWrapper<T> {
+    id: u32,
+    deps: Vec<u32>,
+    underlying: T,
+}
+
+impl<T: Deps> DepsWrapper<T> {
+    fn new(origin: T) -> Self {
+        Self {
+            id: origin.id(),
+            deps: origin.deps(),
+            underlying: origin,
+        }
+    }
+}
+
+impl<T: Deps> Deps for DepsWrapper<T> {
+    fn id(&self) -> u32 {
+        self.underlying.id()
+    }
+
+    fn deps(&self) -> Vec<u32> {
+        self.underlying.deps()
+    }
+}
+
+
+#[derive(Debug, Clone)]
 pub struct DependencyDAG<T> {
     pub roots: Vec<Arc<T>>,
     pub deps: HashMap<u32, Vec<Arc<T>>>,
@@ -146,23 +174,23 @@ mod tests {
         T: Deps,
         F: Fn(Arc<T>, &mut Context) -> U,
     {
-        fn build_node_str<T, U, F>(
+        fn build_dag_str_inner<T, U, F>(
             dag: &DependencyDAG<T>,
             node_to_str: &F,
             n: Arc<T>,
             ctx: &mut Context,
-            res: &mut Vec<U>,
+            acc: &mut Vec<U>,
         ) where
             T: Deps,
             F: Fn(Arc<T>, &mut Context) -> U,
         {
             ctx.is_new = ctx.visited.insert(n.id());
-            res.push(node_to_str(Arc::clone(&n), ctx));
+            acc.push(node_to_str(Arc::clone(&n), ctx));
             if let Some(deps) = dag.deps.get(&n.id()) {
                 ctx.indent += 1;
                 if ctx.is_new {
                     for d in deps {
-                        build_node_str(dag, node_to_str, Arc::clone(d), ctx, res);
+                        build_dag_str_inner(dag, node_to_str, Arc::clone(d), ctx, acc);
                     }
                 }
                 ctx.indent -= 1;
@@ -173,11 +201,11 @@ mod tests {
             indent: 0,
             is_new: false,
         };
-        let mut res: Vec<U> = Vec::new();
+        let mut acc: Vec<U> = Vec::new();
         for r in &dag.roots {
-            build_node_str(dag, node_to_str, Arc::clone(r), &mut ctx, &mut res);
+            build_dag_str_inner(dag, node_to_str, Arc::clone(r), &mut ctx, &mut acc);
         }
-        res
+        acc
     }
 
     #[test]

@@ -83,6 +83,13 @@ impl fmt::Display for CommandError {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Context {
+    pub visited: HashSet<u32>,
+    pub is_new: bool,
+    pub is_first: bool,
+}
+
 #[derive(Clone, Debug)]
 pub enum Input {
     Commands(Vec<Arc<Command>>),
@@ -98,8 +105,8 @@ pub struct Model {
 
     pub jobs_loading: bool,
     pub jobs: Vec<Arc<Job0>>,
-    pub dag: DependencyDAG<Job0>,
-    pub is_inverse_dag: bool,
+    pub jobs_dag: DependencyDAG<Job0>,
+    pub is_dag_inverse: bool,
 
     pub steps_loading: bool,
     pub steps: Vec<Arc<Step>>,
@@ -193,10 +200,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 Ok(api_list) => {
                     if are_jobs_consistent(&model, &api_list.objects) {
                         model.jobs_loading = false;
-                        if model.is_inverse_dag {
-                            model.dag = build_inverse_dag(&api_list.objects);
+                        if model.is_dag_inverse {
+                            model.jobs_dag = build_inverse_dag(&api_list.objects);
                         } else {
-                            model.dag = build_direct_dag(&api_list.objects);
+                            model.jobs_dag = build_direct_dag(&api_list.objects);
                         }
                         model.jobs = api_list.objects.into_iter().map(Arc::new).collect();
                     }
@@ -437,7 +444,6 @@ fn perform_close_click(cur_opens: &Opens, the_id: TypedId) -> Opens {
 }
 
 pub(crate) fn view(model: &Model) -> Node<Msg> {
-    log!(model);
     if !model.modal.open {
         empty![]
     } else {
@@ -463,7 +469,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
                             model
                                 .commands
                                 .iter()
-                                .map(|x| { command_item_view(x, &model.dag, is_command_in_opens(x.id, &model.opens)) })
+                                .map(|x| { command_item_view(x, is_command_in_opens(x.id, &model.opens), &model) })
                         ],
                         modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
                     ]
@@ -478,7 +484,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
     }
 }
 
-fn command_item_view(x: &Command, dag: &DependencyDAG<Job0>, is_open: bool) -> Node<Msg> {
+fn command_item_view(x: &Command, is_open: bool, model: &Model) -> Node<Msg> {
     let border = if !is_open {
         C.border_transparent
     } else if x.complete {
@@ -496,10 +502,7 @@ fn command_item_view(x: &Command, dag: &DependencyDAG<Job0>, is_open: bool) -> N
     } else {
         ("chevron-circle-down", Msg::Open(TypedId::Command(x.id)))
     };
-
-    log!(dag);
-    let job_tree = build_dag_view(&dag, &job_to_node);
-
+    let job_tree = job_tree_view(&model);
     div![
         attrs! { "cmd__id" => x.id.to_string() }, // todo revert
         class![C.border_b, C.last__border_b_0],
@@ -531,16 +534,22 @@ fn command_item_view(x: &Command, dag: &DependencyDAG<Job0>, is_open: bool) -> N
                 class![C.pl_8, C.hidden => !is_open],
                 li![class![C.pb_2], "Started at: ", x.created_at],
                 li![class![C.pb_2], "Status: ", status_text(x)],
-                job_tree,
+                li![job_tree],
             ]
         ]
     ]
 }
 
-#[derive(Debug, Clone)]
-pub struct Context {
-    pub visited: HashSet<u32>,
-    pub is_new: bool,
+pub fn job_tree_view(model: &Model) -> Node<Msg> {
+    log!("job_tree_view: ", &model.jobs.len());
+    div![
+        class![C.box_border, C.font_ordinary, C.text_gray_700],
+        h4![ class![C.text_lg, C.font_medium], "Jobs" ],
+        div![
+            class![C.p_1, C.pb_2, C.mb_1, C.bg_gray_100, C.border, C.rounded, C.shadow_sm, C.overflow_auto, C.max_h_screen],
+            build_dag_view(&model.jobs_dag, &job_node_view),
+        ]
+    ]
 }
 
 pub fn build_dag_view<T, F>(dag: &DependencyDAG<T>, node_view: &F) -> Node<Msg>
@@ -548,74 +557,72 @@ where
     T: Deps,
     F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
 {
-    fn build_node_view<T, F>(dag: &DependencyDAG<T>, node_view: &F, n: Arc<T>, ctx: &mut Context) -> Node<Msg>
+    fn build_node_view<T, F>(dag: &DependencyDAG<T>, node_view: &F, n: Arc<T>, ctx: &mut Context, acc: &mut Vec<Node<Msg>>)
     where
         T: Deps,
         F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
     {
+        let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
+
         ctx.is_new = ctx.visited.insert(n.id());
-        let caption = node_view(Arc::clone(&n), ctx);
-        let mut list: Vec<Node<Msg>> = Vec::with_capacity(n.deps().len());
+        let parent = node_view(Arc::clone(&n), ctx);
+        let mut children: Vec<Node<Msg>> = Vec::with_capacity(n.deps().len());
         if let Some(deps) = dag.deps.get(&n.id()) {
             if ctx.is_new {
                 for d in deps {
-                    let piece = build_node_view(dag, node_view, Arc::clone(d), ctx);
-                    list.push(piece);
+                    build_node_view(dag, node_view, Arc::clone(d), ctx, &mut children);
                 }
             }
         }
-        div![
-            caption,
-            ul![
-                class![C.pl_2, C.justify_between, C.items_center],
-                list,
-            ]
-        ]
+        acc.push(div![ parent, children ]);
     }
+
     let mut ctx = Context {
         visited: HashSet::new(),
         is_new: false,
+        is_first: false,
     };
-    let mut list: Vec<Node<Msg>> = Vec::with_capacity(dag.roots.len());
+    let mut acc: Vec<Node<Msg>> = Vec::with_capacity(dag.roots.len());
+    let mut is_first = true;
     for r in &dag.roots {
-        list.push(build_node_view(dag, node_view, Arc::clone(r), &mut ctx));
+        ctx.is_first = is_first;
+        build_node_view(dag, node_view, Arc::clone(r), &mut ctx, &mut acc);
+        is_first = false;
     }
-    div![list]
+    div![ acc ]
 }
 
-fn job_to_node(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
+fn job_node_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
     if ctx.is_new {
-        div![
-            class![C.pl_2, C.justify_between, C.items_center],
-            job.id.to_string(),
-            a![class![C.pointer_events_none], job.description,]
-        ]
+        let border = if job.cancelled {
+            C.border_gray_500
+        } else if job.errored {
+            C.border_red_500
+        } else if job.state == "complete" {
+            C.border_green_500
+        } else {
+            C.border_transparent
+        };
+        let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
+        let spans = vec![
+            span![ class![C.mr_1], font_awesome(awesome_style, "exclamation").merge_attrs(class![C.text_red_500]) ],
+            span![ job.description ],
+            span![ class![C.text_gray_500], format!("({})", job.id) ],
+        ];
+        if ctx.is_first {
+            span![ spans ]
+        } else {
+            div![
+                class![ C.ml_2, C.mt_1 ],
+                a![ spans ],
+            ]
+        }
     } else {
-        div![format!("{} skipped", job.id)]
+        empty!()
     }
 }
 
-fn job_item_view(x: &Job0, is_open: bool) -> Node<Msg> {
-    let _border = if !is_open {
-        C.border_transparent
-    } else if x.cancelled {
-        C.border_gray_500
-    } else if x.errored {
-        C.border_red_500
-    } else if x.state == "complete" {
-        C.border_green_500
-    } else {
-        C.border_transparent
-    };
 
-    let (_open_icon, _m) = if is_open {
-        ("chevron-circle-up", Msg::Close(TypedId::Job(x.id)))
-    } else {
-        ("chevron-circle-down", Msg::Open(TypedId::Job(x.id)))
-    };
-
-    div!["job_item_view"]
-}
 
 fn step_item_view(_x: &Step, _is_open: bool) -> Node<Msg> {
     div!["step_item_view"]
@@ -687,9 +694,14 @@ mod tests {
             make_job(3, &[], "Three"),
         ];
         let dag = build_direct_dag(&jobs);
-        let dom = build_dag_view(&dag, &job_to_node);
-        let dom_str = format!("{:#?}", dom);
-        assert_eq!(dom_str, JOBS_TREE_DOM);
+        let dom = build_dag_view(&dag, &job_node_view);
+        let expected_dom: Node<Msg> = div! [
+            span![],
+            div![],
+            div![],
+        ];
+        // FIXME It seems there is no any other way, https://github.com/seed-rs/seed/issues/414
+        assert_eq!(format!("{:#?}", dom), format!("{:#?}", expected_dom));
     }
 
     fn make_job(id: u32, deps: &[u32], descr: &str) -> Job0 {
@@ -712,311 +724,4 @@ mod tests {
             write_locks: vec![],
         }
     }
-
-    // FIXME It seems there is no another way, https://github.com/seed-rs/seed/issues/414
-    const JOBS_TREE_DOM: &'static str = r#"Element(
-    El {
-        tag: Div,
-        attrs: Attrs {
-            vals: {},
-        },
-        style: Style {
-            vals: {},
-        },
-        event_handler_manager: EventHandlerManager {
-            groups: {},
-        },
-        children: [
-            Element(
-                El {
-                    tag: Div,
-                    attrs: Attrs {
-                        vals: {},
-                    },
-                    style: Style {
-                        vals: {},
-                    },
-                    event_handler_manager: EventHandlerManager {
-                        groups: {},
-                    },
-                    children: [
-                        Element(
-                            El {
-                                tag: Div,
-                                attrs: Attrs {
-                                    vals: {
-                                        Class: Some(
-                                            "pl-2 justify-between items-center",
-                                        ),
-                                    },
-                                },
-                                style: Style {
-                                    vals: {},
-                                },
-                                event_handler_manager: EventHandlerManager {
-                                    groups: {},
-                                },
-                                children: [
-                                    Text(
-                                        Text {
-                                            text: "1",
-                                            node_ws: None,
-                                        },
-                                    ),
-                                    Element(
-                                        El {
-                                            tag: A,
-                                            attrs: Attrs {
-                                                vals: {
-                                                    Class: Some(
-                                                        "pointer-events-none",
-                                                    ),
-                                                },
-                                            },
-                                            style: Style {
-                                                vals: {},
-                                            },
-                                            event_handler_manager: EventHandlerManager {
-                                                groups: {},
-                                            },
-                                            children: [
-                                                Text(
-                                                    Text {
-                                                        text: "One",
-                                                        node_ws: None,
-                                                    },
-                                                ),
-                                            ],
-                                            namespace: None,
-                                            node_ws: None,
-                                            refs: [],
-                                        },
-                                    ),
-                                ],
-                                namespace: None,
-                                node_ws: None,
-                                refs: [],
-                            },
-                        ),
-                        Element(
-                            El {
-                                tag: Ul,
-                                attrs: Attrs {
-                                    vals: {},
-                                },
-                                style: Style {
-                                    vals: {},
-                                },
-                                event_handler_manager: EventHandlerManager {
-                                    groups: {},
-                                },
-                                children: [
-                                    Element(
-                                        El {
-                                            tag: Div,
-                                            attrs: Attrs {
-                                                vals: {},
-                                            },
-                                            style: Style {
-                                                vals: {},
-                                            },
-                                            event_handler_manager: EventHandlerManager {
-                                                groups: {},
-                                            },
-                                            children: [
-                                                Element(
-                                                    El {
-                                                        tag: Div,
-                                                        attrs: Attrs {
-                                                            vals: {
-                                                                Class: Some(
-                                                                    "pl-2 justify-between items-center",
-                                                                ),
-                                                            },
-                                                        },
-                                                        style: Style {
-                                                            vals: {},
-                                                        },
-                                                        event_handler_manager: EventHandlerManager {
-                                                            groups: {},
-                                                        },
-                                                        children: [
-                                                            Text(
-                                                                Text {
-                                                                    text: "2",
-                                                                    node_ws: None,
-                                                                },
-                                                            ),
-                                                            Element(
-                                                                El {
-                                                                    tag: A,
-                                                                    attrs: Attrs {
-                                                                        vals: {
-                                                                            Class: Some(
-                                                                                "pointer-events-none",
-                                                                            ),
-                                                                        },
-                                                                    },
-                                                                    style: Style {
-                                                                        vals: {},
-                                                                    },
-                                                                    event_handler_manager: EventHandlerManager {
-                                                                        groups: {},
-                                                                    },
-                                                                    children: [
-                                                                        Text(
-                                                                            Text {
-                                                                                text: "Two",
-                                                                                node_ws: None,
-                                                                            },
-                                                                        ),
-                                                                    ],
-                                                                    namespace: None,
-                                                                    node_ws: None,
-                                                                    refs: [],
-                                                                },
-                                                            ),
-                                                        ],
-                                                        namespace: None,
-                                                        node_ws: None,
-                                                        refs: [],
-                                                    },
-                                                ),
-                                                Element(
-                                                    El {
-                                                        tag: Ul,
-                                                        attrs: Attrs {
-                                                            vals: {},
-                                                        },
-                                                        style: Style {
-                                                            vals: {},
-                                                        },
-                                                        event_handler_manager: EventHandlerManager {
-                                                            groups: {},
-                                                        },
-                                                        children: [],
-                                                        namespace: None,
-                                                        node_ws: None,
-                                                        refs: [],
-                                                    },
-                                                ),
-                                            ],
-                                            namespace: None,
-                                            node_ws: None,
-                                            refs: [],
-                                        },
-                                    ),
-                                    Element(
-                                        El {
-                                            tag: Div,
-                                            attrs: Attrs {
-                                                vals: {},
-                                            },
-                                            style: Style {
-                                                vals: {},
-                                            },
-                                            event_handler_manager: EventHandlerManager {
-                                                groups: {},
-                                            },
-                                            children: [
-                                                Element(
-                                                    El {
-                                                        tag: Div,
-                                                        attrs: Attrs {
-                                                            vals: {
-                                                                Class: Some(
-                                                                    "pl-2 justify-between items-center",
-                                                                ),
-                                                            },
-                                                        },
-                                                        style: Style {
-                                                            vals: {},
-                                                        },
-                                                        event_handler_manager: EventHandlerManager {
-                                                            groups: {},
-                                                        },
-                                                        children: [
-                                                            Text(
-                                                                Text {
-                                                                    text: "3",
-                                                                    node_ws: None,
-                                                                },
-                                                            ),
-                                                            Element(
-                                                                El {
-                                                                    tag: A,
-                                                                    attrs: Attrs {
-                                                                        vals: {
-                                                                            Class: Some(
-                                                                                "pointer-events-none",
-                                                                            ),
-                                                                        },
-                                                                    },
-                                                                    style: Style {
-                                                                        vals: {},
-                                                                    },
-                                                                    event_handler_manager: EventHandlerManager {
-                                                                        groups: {},
-                                                                    },
-                                                                    children: [
-                                                                        Text(
-                                                                            Text {
-                                                                                text: "Three",
-                                                                                node_ws: None,
-                                                                            },
-                                                                        ),
-                                                                    ],
-                                                                    namespace: None,
-                                                                    node_ws: None,
-                                                                    refs: [],
-                                                                },
-                                                            ),
-                                                        ],
-                                                        namespace: None,
-                                                        node_ws: None,
-                                                        refs: [],
-                                                    },
-                                                ),
-                                                Element(
-                                                    El {
-                                                        tag: Ul,
-                                                        attrs: Attrs {
-                                                            vals: {},
-                                                        },
-                                                        style: Style {
-                                                            vals: {},
-                                                        },
-                                                        event_handler_manager: EventHandlerManager {
-                                                            groups: {},
-                                                        },
-                                                        children: [],
-                                                        namespace: None,
-                                                        node_ws: None,
-                                                        refs: [],
-                                                    },
-                                                ),
-                                            ],
-                                            namespace: None,
-                                            node_ws: None,
-                                            refs: [],
-                                        },
-                                    ),
-                                ],
-                                namespace: None,
-                                node_ws: None,
-                                refs: [],
-                            },
-                        ),
-                    ],
-                    namespace: None,
-                    node_ws: None,
-                    refs: [],
-                },
-            ),
-        ],
-        namespace: None,
-        node_ws: None,
-        refs: [],
-    },
-)"#;
 }
