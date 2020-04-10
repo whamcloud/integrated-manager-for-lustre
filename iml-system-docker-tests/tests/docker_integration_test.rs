@@ -2,8 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_cmd::{CheckedCommandExt, CmdError};
-use iml_system_test_utils::{docker, iml, vagrant, SetupConfig, SetupConfigType};
+use iml_cmd::CmdError;
+use iml_system_test_utils::{docker, iml, pdsh, vagrant, SetupConfig, SetupConfigType};
 use iml_systemd::SystemdError;
 use std::{
     collections::{hash_map::RandomState, HashMap},
@@ -43,7 +43,7 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
 
     vagrant::setup_deploy_docker_servers(&config, server_map).await?;
 
-    vagrant::create_fs(fs_type).await?;
+    vagrant::create_fs(fs_type, &config).await?;
 
     delay_for(Duration::from_secs(30)).await;
 
@@ -53,11 +53,7 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
 }
 
 async fn wait_for_ntp(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {
-    vagrant::provision("wait-for-ntp-docker")
-        .await?
-        .args(&config.storage_servers()[..])
-        .checked_status()
-        .await?;
+    pdsh::wait_for_ntp_for_host_only_if(&config.storage_server_ips()).await?;
 
     Ok(())
 }
@@ -114,9 +110,9 @@ async fn test_docker_stratagem_setup() -> Result<(), SystemdError> {
             branding: iml_wire_types::Branding::DdnAi400,
         }),
         vec![
-            ("stratagem_server".into(), &config.get_mds_servers()[..]),
-            ("base_monitored".into(), &config.get_oss_servers()[..]),
-            ("stratagem_client".into(), &config.get_client_servers()[..]),
+            ("stratagem_server".into(), &config.mds_servers()[..]),
+            ("base_monitored".into(), &config.oss_servers()[..]),
+            ("stratagem_client".into(), &config.client_servers()[..]),
         ]
         .into_iter()
         .collect::<HashMap<String, &[&str], RandomState>>(),

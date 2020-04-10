@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    iml, server_map_to_server_set, try_command_n_times, SetupConfig, SetupConfigType,
+    iml, pdsh, server_map_to_server_set, try_command_n_times, SetupConfig, SetupConfigType,
     STRATAGEM_CLIENT_PROFILE, STRATAGEM_SERVER_PROFILE,
 };
 use iml_cmd::{CheckedCommandExt, CmdError};
@@ -144,15 +144,13 @@ pub async fn setup_bare(
 ) -> Result<(), CmdError> {
     up().await?.args(hosts).checked_status().await?;
 
-    provision("yum-update")
-        .await?
-        .args(hosts)
-        .checked_status()
-        .await?;
+    pdsh::yum_update(&config.server_and_client_ips()).await?;
 
     match ntp_server {
-        NtpServer::HostOnly => configure_ntp_for_host_only_if(&config.storage_servers()).await?,
-        NtpServer::Adm => configure_ntp_for_adm(&config.storage_servers()).await?,
+        NtpServer::HostOnly => {
+            pdsh::configure_ntp_for_host_only_if(&config.storage_server_ips()).await?
+        }
+        NtpServer::Adm => pdsh::configure_ntp_for_adm(&config.storage_server_ips()).await?,
     };
 
     halt().await?.args(hosts).checked_status().await?;
@@ -226,7 +224,7 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
     Ok(())
 }
 
-pub async fn add_servers<S: std::hash::BuildHasher>(
+pub async fn add_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     server_map: &HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
@@ -262,7 +260,7 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
 
     configure_docker_network(&server_list[..]).await?;
 
-    add_servers(&config, &server_map).await?;
+    add_docker_servers(&config, &server_map).await?;
 
     Ok(())
 }
@@ -284,57 +282,40 @@ pub async fn configure_docker_network(hosts: &[&str]) -> Result<(), CmdError> {
     Ok(())
 }
 
-pub async fn configure_ntp(hosts: &[&str], ntp_server: NtpServer) -> Result<(), CmdError> {
-    match ntp_server {
-        NtpServer::HostOnly => {
-            provision("configure-ntp-docker")
-                .await?
-                .args(hosts)
-                .checked_status()
-                .await?
-        }
-        NtpServer::Adm => {
-            provision("configure-ntp")
-                .await?
-                .args(hosts)
-                .checked_status()
-                .await?
-        }
-    };
+async fn create_monitored_ldiskfs(config: &ClusterConfig) -> Result<(), CmdError> {
+    pdsh::install_ldiskfs_no_iml(&config.storage_server_ips(), config.lustre_version()).await?;
 
-    Ok(())
-}
+    reload()
+        .await?
+        .args(config.storage_servers())
+        .checked_status()
+        .await?;
 
-pub async fn configure_ntp_for_host_only_if(hosts: &[&str]) -> Result<(), CmdError> {
-    configure_ntp(&hosts, NtpServer::HostOnly).await?;
-
-    Ok(())
-}
-
-pub async fn configure_ntp_for_adm(hosts: &[&str]) -> Result<(), CmdError> {
-    configure_ntp(&hosts, NtpServer::Adm).await?;
-
-    Ok(())
-}
-
-async fn create_monitored_ldiskfs() -> Result<(), CmdError> {
-    provision("install-ldiskfs-no-iml,configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2")
+    provision("configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2")
         .await?
         .checked_status()
         .await
 }
 
-async fn create_monitored_zfs() -> Result<(), CmdError> {
-    provision("install-zfs-no-iml,configure-lustre-network,create-pools,zfs-params,create-zfs-fs")
+async fn create_monitored_zfs(config: &ClusterConfig) -> Result<(), CmdError> {
+    pdsh::install_zfs_no_iml(&config.storage_server_ips(), config.lustre_version()).await?;
+
+    reload()
+        .await?
+        .args(config.storage_servers())
+        .checked_status()
+        .await?;
+
+    provision("configure-lustre-network,create-pools,zfs-params,create-zfs-fs")
         .await?
         .checked_status()
         .await
 }
 
-pub async fn create_fs(fs_type: FsType) -> Result<(), CmdError> {
+pub async fn create_fs(fs_type: FsType, config: &ClusterConfig) -> Result<(), CmdError> {
     match fs_type {
-        FsType::LDISKFS => create_monitored_ldiskfs().await?,
-        FsType::ZFS => create_monitored_zfs().await?,
+        FsType::LDISKFS => create_monitored_ldiskfs(&config).await?,
+        FsType::ZFS => create_monitored_zfs(&config).await?,
     };
 
     Ok(())
@@ -387,9 +368,13 @@ pub async fn configure_rpm_setup(
 pub struct ClusterConfig {
     manager: &'static str,
     mds: Vec<&'static str>,
+    mds_ips: Vec<&'static str>,
     oss: Vec<&'static str>,
+    oss_ips: Vec<&'static str>,
     clients: Vec<&'static str>,
+    client_ips: Vec<&'static str>,
     iscsi: &'static str,
+    lustre_version: &'static str,
 }
 
 impl Default for ClusterConfig {
@@ -397,9 +382,13 @@ impl Default for ClusterConfig {
         ClusterConfig {
             manager: "adm",
             mds: vec!["mds1", "mds2"],
+            mds_ips: vec!["10.73.10.11", "10.73.10.12"],
             oss: vec!["oss1", "oss2"],
+            oss_ips: vec!["10.73.10.21", "10.73.10.22"],
             clients: vec!["c1"],
+            client_ips: vec!["10.73.10.31"],
             iscsi: "iscsi",
+            lustre_version: "2.12.4",
         }
     }
 }
@@ -421,16 +410,25 @@ impl ClusterConfig {
 
         xs
     }
+    pub fn server_and_client_ips(&self) -> Vec<&str> {
+        [&self.storage_servers()[..], &self.client_ips[..]].concat()
+    }
     pub fn storage_servers(&self) -> Vec<&str> {
         [&self.mds[..], &self.oss[..]].concat()
     }
-    pub fn get_mds_servers(&self) -> Vec<&str> {
+    pub fn storage_server_ips(&self) -> Vec<&str> {
+        [&self.mds_ips[..], &self.oss_ips[..]].concat()
+    }
+    pub fn mds_servers(&self) -> Vec<&str> {
         [&self.mds[..]].concat()
     }
-    pub fn get_oss_servers(&self) -> Vec<&str> {
+    pub fn oss_servers(&self) -> Vec<&str> {
         [&self.oss[..]].concat()
     }
-    pub fn get_client_servers(&self) -> Vec<&str> {
+    pub fn client_servers(&self) -> Vec<&str> {
         [&self.clients[..]].concat()
+    }
+    pub fn lustre_version(&self) -> &str {
+        self.lustre_version
     }
 }
