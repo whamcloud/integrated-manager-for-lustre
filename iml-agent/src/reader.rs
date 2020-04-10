@@ -86,7 +86,7 @@ async fn get_delivery(
             ManagerMessage::SessionTerminate { plugin, .. } => {
                 sessions.terminate_session(&plugin).await?
             }
-            ManagerMessage::SessionTerminateAll { .. } => sessions.terminate_all_sessions()?,
+            ManagerMessage::SessionTerminateAll { .. } => sessions.terminate_all_sessions().await?,
         }
     }
 
@@ -105,7 +105,7 @@ pub async fn create_reader(
             Err(ImlAgentError::Reqwest(e)) => {
                 warn!("Got a manager read Error {:?}. Will retry in 5 seconds.", e);
 
-                if let Err(e) = sessions.terminate_all_sessions() {
+                if let Err(e) = sessions.terminate_all_sessions().await {
                     return Err(e);
                 };
 

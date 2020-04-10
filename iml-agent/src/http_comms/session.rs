@@ -45,14 +45,16 @@ pub enum State {
 }
 
 impl State {
-    pub fn teardown(&mut self) -> Result<()> {
-        if let State::Active(a) = self {
-            a.session.teardown()?;
-        }
+    pub fn teardown(&mut self) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
+        let f = if let State::Active(a) = self {
+            a.session.teardown().boxed()
+        } else {
+            futures::future::ok(()).boxed()
+        };
 
         std::mem::replace(self, State::Empty(Instant::now()));
 
-        Ok(())
+        f
     }
     pub fn reset_active(&mut self) {
         if let State::Active(a) = self {
@@ -121,25 +123,41 @@ impl Sessions {
             None
         }
     }
-    pub fn terminate_session(&mut self, name: &PluginName) -> impl Future<Output = Result<()>> {
+    pub fn terminate_session(
+        &mut self,
+        name: &PluginName,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         match self.0.write().get_mut(name) {
-            Some(s) => futures::future::ready(s.teardown()),
+            Some(s) => s.teardown(),
             None => {
                 warn!("Plugin {:?} not found in sessions", name);
-                futures::future::ok(())
+                futures::future::ok(()).boxed()
             }
         }
     }
+
+    fn terminate_all_sessions_impl(&mut self) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
+        let mut futures: Vec<Pin<Box<dyn Future<Output = Result<()>>>>> = vec![];
+
+        for (_, v) in self.0.write().iter_mut() {
+            futures.push(v.teardown());
+        }
+
+        let results_future = futures::future::join_all(futures);
+
+        results_future
+            .map(|results| {
+                let rr: Result<()> = results.into_iter().collect();
+                rr
+            })
+            .boxed()
+    }
+
     /// Terminates all held sessions.
-    pub fn terminate_all_sessions(&mut self) -> Result<()> {
+    pub fn terminate_all_sessions(&mut self) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         info!("Terminating all sessions");
 
-        self.0
-            .write()
-            .iter_mut()
-            .map(|(_, v)| v.teardown())
-            .collect::<Result<Vec<()>>>()
-            .map(|_| ())
+        self.terminate_all_sessions_impl()
     }
     pub fn write(&mut self) -> RwLockWriteGuard<'_, HashMap<PluginName, State>> {
         self.0.write()
@@ -224,12 +242,12 @@ impl Session {
             })
             .boxed()
     }
-    pub fn teardown(&mut self) -> Result<()> {
+    pub fn teardown(&mut self) -> impl Future<Output = Result<()>> {
         let info = self.info.lock();
 
         // info!("Terminating session {:?}/{:?}", info.name, info.id);
 
-        self.plugin.teardown()
+        futures::future::ready(self.plugin.teardown())
     }
 }
 
