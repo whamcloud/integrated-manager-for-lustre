@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_cmd::{CheckedCommandExt, CmdError};
+use iml_cmd::CmdError;
 use iml_system_test_utils::{pdsh, vagrant, SetupConfig, SetupConfigType};
 use std::{
     collections::{hash_map::RandomState, HashMap},
@@ -26,7 +26,7 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
 
     vagrant::setup_deploy_servers(&config, &setup_config, server_map).await?;
 
-    vagrant::create_fs(fs_type).await?;
+    vagrant::create_fs(fs_type, &config).await?;
 
     delay_for(Duration::from_secs(30)).await;
 
@@ -36,11 +36,7 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
 }
 
 async fn wait_for_ntp(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {
-    vagrant::provision("wait-for-ntp")
-        .await?
-        .args(&config.storage_servers()[..])
-        .checked_status()
-        .await?;
+    pdsh::wait_for_ntp_for_adm(&config.storage_server_ips()).await?;
 
     Ok(())
 }
@@ -99,9 +95,9 @@ async fn test_stratagem_setup() -> Result<(), CmdError> {
             branding: iml_wire_types::Branding::Whamcloud,
         }),
         vec![
-            ("stratagem_server".into(), &config.get_mds_servers()[..]),
-            ("base_monitored".into(), &config.get_oss_servers()[..]),
-            ("stratagem_client".into(), &config.get_client_servers()[..]),
+            ("stratagem_server".into(), &config.mds_servers()[..]),
+            ("base_monitored".into(), &config.oss_servers()[..]),
+            ("stratagem_client".into(), &config.client_servers()[..]),
         ]
         .into_iter()
         .collect::<HashMap<String, &[&str], RandomState>>(),
@@ -110,17 +106,6 @@ async fn test_stratagem_setup() -> Result<(), CmdError> {
     .await?;
 
     wait_for_ntp(&config).await?;
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_install_ldiskfs_no_iml() -> Result<(), CmdError> {
-    pdsh::install_ldiskfs_no_iml(
-        &vec!["10.73.10.11", "10.73.10.12", "10.73.10.21", "10.73.10.22"][..],
-        "2.12.4",
-    )
-    .await?;
 
     Ok(())
 }
