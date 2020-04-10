@@ -136,28 +136,11 @@ impl Sessions {
         }
     }
 
-    fn terminate_all_sessions_impl(&mut self) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
-        let mut futures: Vec<Pin<Box<dyn Future<Output = Result<()>>>>> = vec![];
-
-        for (_, v) in self.0.write().iter_mut() {
-            futures.push(v.teardown());
-        }
-
-        let results_future = futures::future::join_all(futures);
-
-        results_future
-            .map(|results| {
-                let rr: Result<()> = results.into_iter().collect();
-                rr
-            })
-            .boxed()
-    }
-
     /// Terminates all held sessions.
-    pub fn terminate_all_sessions(&mut self) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
+    pub fn terminate_all_sessions(self) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         info!("Terminating all sessions");
 
-        self.terminate_all_sessions_impl()
+        terminate_all_sessions_impl(self).boxed()
     }
     pub fn write(&mut self) -> RwLockWriteGuard<'_, HashMap<PluginName, State>> {
         self.0.write()
@@ -165,6 +148,18 @@ impl Sessions {
     pub fn read(&mut self) -> RwLockReadGuard<'_, HashMap<PluginName, State>> {
         self.0.read()
     }
+}
+
+async fn terminate_all_sessions_impl(sessions: Sessions) -> Result<()> {
+    let _guard = sessions.0.write();
+    let fs = _guard.iter_mut().map(|(_, v)| v.teardown());
+
+    let mut results = vec![];
+    for i in fs {
+        results.push(i.await);
+    }
+
+    results.into_iter().collect()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
