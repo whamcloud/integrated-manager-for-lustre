@@ -167,19 +167,12 @@ async fn process_info(info: Arc<Mutex<SessionInfo>>) -> SessionInfo {
     info.clone()
 }
 
-fn process_info_wrapper<T>(
-    info: Arc<Mutex<SessionInfo>>,
-    y: T,
-) -> impl Future<Output = (SessionInfo, T)> {
-    process_info(info).map(|x| (x, y))
-}
-
 fn process_info_wrapper_wrapper(
     info: Arc<Mutex<SessionInfo>>,
     y: Option<Value>,
 ) -> impl Future<Output = Result<Option<(SessionInfo, Value)>>> {
-    process_info_wrapper(info, y).map(|(session_info, maybe_value)| {
-        if let Some(value) = maybe_value {
+    process_info(info).map(|session_info| {
+        if let Some(value) = y {
             Ok(Some((session_info, value)))
         } else {
             Ok(None)
@@ -191,7 +184,7 @@ fn process_info_wrapper_2_wrapper(
     info: Arc<Mutex<SessionInfo>>,
     y: result::Result<Value, String>,
 ) -> impl Future<Output = Result<(SessionInfo, result::Result<Value, String>)>> {
-    process_info_wrapper(info, y).map(|(session_info, maybe_value)| match maybe_value {
+    process_info(info).map(|session_info| match y {
         Ok(value) => Ok((session_info, Ok(value))),
         Err(e) => Ok((session_info, Err(e))),
     })
