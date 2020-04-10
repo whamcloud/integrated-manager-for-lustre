@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    agent_error::{ImlAgentError, Result},
+    agent_error::Result,
     daemon_plugins::{DaemonBox, OutputValue},
 };
 use futures::{Future, FutureExt, TryFutureExt};
