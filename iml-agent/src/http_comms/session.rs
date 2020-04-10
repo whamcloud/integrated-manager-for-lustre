@@ -121,17 +121,14 @@ impl Sessions {
             None
         }
     }
-    pub fn terminate_session(&mut self, name: &PluginName) -> Result<()> {
+    pub fn terminate_session(&mut self, name: &PluginName) -> impl Future<Output = Result<()>> {
         match self.0.write().get_mut(name) {
-            Some(s) => {
-                s.teardown()?;
-            }
+            Some(s) => futures::future::ready(s.teardown()),
             None => {
                 warn!("Plugin {:?} not found in sessions", name);
+                futures::future::ok(())
             }
-        };
-
-        Ok(())
+        }
     }
     /// Terminates all held sessions.
     pub fn terminate_all_sessions(&mut self) -> Result<()> {

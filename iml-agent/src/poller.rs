@@ -47,9 +47,9 @@ fn handle_state(
                 .then(move |r| match r {
                     Ok(_) => {
                         sessions.reset_active(&name);
-                        future::ok(())
+                        future::ok(()).boxed()
                     }
-                    Err(_) => future::ready(sessions.terminate_session(&name)),
+                    Err(_) => sessions.terminate_session(&name).boxed(),
                 }),
         ),
         _ => Either::Right(future::ok(())),

@@ -50,13 +50,17 @@ async fn get_delivery(
                         Ok(())
                     }
                     .map(move |r: Result<(), ImlAgentError>| match r {
-                        Ok(_) => (),
-                        Err(e) => {
+                        Ok(_) => async move { () }.boxed(),
+                        Err(e) => async move {
                             tracing::warn!("Error during session start {:?}", e);
-                            sessions2.terminate_session(&plugin).unwrap_or_else(|e| {
-                                tracing::warn!("Error terminating session, {}", e)
-                            });
+                            sessions2
+                                .terminate_session(&plugin)
+                                .unwrap_or_else(|e| {
+                                    tracing::warn!("Error terminating session, {}", e)
+                                })
+                                .await;
                         }
+                        .boxed(),
                     }),
                 );
             }
@@ -80,7 +84,7 @@ async fn get_delivery(
                 };
             }
             ManagerMessage::SessionTerminate { plugin, .. } => {
-                sessions.terminate_session(&plugin)?
+                sessions.terminate_session(&plugin).await?
             }
             ManagerMessage::SessionTerminateAll { .. } => sessions.terminate_all_sessions()?,
         }
