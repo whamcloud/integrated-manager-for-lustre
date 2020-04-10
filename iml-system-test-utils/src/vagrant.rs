@@ -7,7 +7,7 @@ use crate::{
     STRATAGEM_CLIENT_PROFILE, STRATAGEM_SERVER_PROFILE,
 };
 use iml_cmd::{CheckedCommandExt, CmdError};
-use std::{collections::HashMap, io, str, time::Duration};
+use std::{collections::HashMap, str, time::Duration};
 use tokio::{
     fs::{canonicalize, File},
     io::AsyncWriteExt,
@@ -25,18 +25,17 @@ pub enum FsType {
     ZFS,
 }
 
-async fn vagrant() -> Result<Command, io::Error> {
+async fn vagrant() -> Result<Command, CmdError> {
     let mut x = Command::new("vagrant");
 
     let path = canonicalize("../vagrant/").await?;
-    println!("Setting current path for vagrant to {:?}", path);
 
     x.current_dir(path);
 
     Ok(x)
 }
 
-pub async fn up<'a>() -> Result<Command, io::Error> {
+pub async fn up<'a>() -> Result<Command, CmdError> {
     let mut x = vagrant().await?;
 
     x.arg("up");
@@ -44,7 +43,7 @@ pub async fn up<'a>() -> Result<Command, io::Error> {
     Ok(x)
 }
 
-pub async fn destroy<'a>() -> Result<(), io::Error> {
+pub async fn destroy<'a>() -> Result<(), CmdError> {
     let mut x = vagrant().await?;
 
     x.arg("destroy").arg("-f");
@@ -52,21 +51,21 @@ pub async fn destroy<'a>() -> Result<(), io::Error> {
     try_command_n_times(3, &mut x).await
 }
 
-pub async fn halt() -> Result<Command, io::Error> {
+pub async fn halt() -> Result<Command, CmdError> {
     let mut x = vagrant().await?;
     x.arg("halt");
 
     Ok(x)
 }
 
-pub async fn reload() -> Result<Command, io::Error> {
+pub async fn reload() -> Result<Command, CmdError> {
     let mut x = vagrant().await?;
     x.arg("reload");
 
     Ok(x)
 }
 
-async fn snapshot() -> Result<Command, io::Error> {
+async fn snapshot() -> Result<Command, CmdError> {
     let mut x = vagrant().await?;
 
     x.arg("snapshot");
@@ -74,7 +73,7 @@ async fn snapshot() -> Result<Command, io::Error> {
     Ok(x)
 }
 
-pub async fn snapshot_save(host: &str, name: &str) -> Result<Command, io::Error> {
+pub async fn snapshot_save(host: &str, name: &str) -> Result<Command, CmdError> {
     let mut x = snapshot().await?;
 
     x.arg("save").arg("-f").arg(host).arg(name);
@@ -82,7 +81,7 @@ pub async fn snapshot_save(host: &str, name: &str) -> Result<Command, io::Error>
     Ok(x)
 }
 
-pub async fn snapshot_restore(host: &str, name: &str) -> Result<Command, io::Error> {
+pub async fn snapshot_restore(host: &str, name: &str) -> Result<Command, CmdError> {
     let mut x = snapshot().await?;
 
     x.arg("restore").arg(host).arg(name);
@@ -90,7 +89,7 @@ pub async fn snapshot_restore(host: &str, name: &str) -> Result<Command, io::Err
     Ok(x)
 }
 
-pub async fn snapshot_delete(host: &str, name: &str) -> Result<Command, io::Error> {
+pub async fn snapshot_delete(host: &str, name: &str) -> Result<Command, CmdError> {
     let mut x = snapshot().await?;
 
     x.arg("delete").arg("-f").arg(host).arg(name);
@@ -98,7 +97,7 @@ pub async fn snapshot_delete(host: &str, name: &str) -> Result<Command, io::Erro
     Ok(x)
 }
 
-pub async fn provision(name: &str) -> Result<Command, io::Error> {
+pub async fn provision(name: &str) -> Result<Command, CmdError> {
     let mut x = vagrant().await?;
 
     x.arg("provision").arg("--provision-with").arg(name);
@@ -106,7 +105,7 @@ pub async fn provision(name: &str) -> Result<Command, io::Error> {
     Ok(x)
 }
 
-pub async fn provision_node(node: &str, name: &str) -> Result<Command, io::Error> {
+pub async fn provision_node(node: &str, name: &str) -> Result<Command, CmdError> {
     let mut x = vagrant().await?;
 
     x.arg("provision")
@@ -117,7 +116,7 @@ pub async fn provision_node(node: &str, name: &str) -> Result<Command, io::Error
     Ok(x)
 }
 
-pub async fn run_vm_command(node: &str, cmd: &str) -> Result<Command, io::Error> {
+pub async fn run_vm_command(node: &str, cmd: &str) -> Result<Command, CmdError> {
     let mut x = vagrant().await?;
 
     x.arg("ssh").arg("-c").arg(&cmd).arg(node);
@@ -131,11 +130,18 @@ pub async fn rsync(host: &str) -> Result<(), CmdError> {
     x.arg("rsync").arg(host).checked_status().await
 }
 
+pub async fn detect_fs(config: &ClusterConfig) -> Result<(), CmdError> {
+    run_vm_command(config.manager, "iml filesystem detect")
+        .await?
+        .checked_status()
+        .await
+}
+
 pub async fn setup_bare(
     hosts: &[&str],
     config: &ClusterConfig,
     ntp_server: NtpServer,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), CmdError> {
     up().await?.args(hosts).checked_status().await?;
 
     provision("yum-update")
@@ -164,7 +170,7 @@ pub async fn setup_iml_install(
     hosts: &[&str],
     setup_config: &SetupConfigType,
     config: &ClusterConfig,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), CmdError> {
     up().await?.arg(config.manager).checked_status().await?;
     provision_node(config.manager, "yum-update,install-iml-local")
         .await?
@@ -193,7 +199,7 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     setup_config: &SetupConfigType,
     server_map: HashMap<String, &[&str], S>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), CmdError> {
     setup_iml_install(&config.all(), &setup_config, &config).await?;
 
     for (profile, hosts) in server_map {
@@ -248,7 +254,7 @@ pub async fn add_servers<S: std::hash::BuildHasher>(
 pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     server_map: HashMap<String, &[&str], S>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), CmdError> {
     let server_list = server_map_to_server_set(&server_map);
     setup_bare(&config.all_but_adm()[..], &config, NtpServer::HostOnly).await?;
 
