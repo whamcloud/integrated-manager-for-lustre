@@ -161,14 +161,14 @@ pub struct SessionInfo {
     pub seq: Seq,
 }
 
-fn increment_session<'a>(info: impl Future<Output = &'a mut SessionInfo>) {
-    info.map(|i| i.seq.increment());
+fn increment_session(info: &mut SessionInfo) {
+    info.seq.increment();
 }
 
-fn process_info(info: Arc<Mutex<SessionInfo>>) -> impl Future<Output = SessionInfo> {
-    let info = info.lock().map(|x| &mut *x);
-    increment_session(info);
-    info.map(|i| i.clone())
+async fn process_info(info: Arc<Mutex<SessionInfo>>) -> SessionInfo {
+    let mut info = info.lock().await;
+    increment_session(&mut *info);
+    info.clone()
 }
 
 fn process_info_wrapper(
@@ -274,7 +274,7 @@ impl Session {
     pub fn teardown(&mut self) -> Result<()> {
         let info = self.info.lock();
 
-        info!("Terminating session {:?}/{:?}", info.name, info.id);
+        // info!("Terminating session {:?}/{:?}", info.name, info.id);
 
         self.plugin.teardown()
     }
