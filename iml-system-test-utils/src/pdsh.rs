@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_cmd::CmdError;
+use iml_cmd::{CheckedCommandExt, CmdError};
 use std::str;
 use tokio::{fs::canonicalize, process::Command};
 
@@ -27,7 +27,8 @@ pub async fn pdsh(hosts: &[&str], cmd: &str) -> Result<Command, CmdError> {
         "PDSH_SSH_ARGS_APPEND",
         "-i id_rsa -o StrictHostKeyChecking=no",
     );
-    x.arg("-R")
+    x.arg("-S")
+        .arg("-R")
         .arg("ssh")
         .arg("-u")
         .arg("root")
@@ -38,6 +39,13 @@ pub async fn pdsh(hosts: &[&str], cmd: &str) -> Result<Command, CmdError> {
     Ok(x)
 }
 
+async fn run_script_on_remote_hosts(hosts: &[&str], output: &[u8]) -> Result<(), CmdError> {
+    let script = str::from_utf8(output).expect("Couldn't get output of script.");
+    pdsh(&hosts, script).await?.checked_status().await?;
+
+    Ok(())
+}
+
 pub async fn install_ldiskfs_no_iml(hosts: &[&str], lustre_version: &str) -> Result<(), CmdError> {
     let out = sed("../vagrant")
         .await?
@@ -46,10 +54,69 @@ pub async fn install_ldiskfs_no_iml(hosts: &[&str], lustre_version: &str) -> Res
         .output()
         .await?;
 
-    let script = str::from_utf8(&out.stdout)
-        .expect("Couldn't get output of sed command on install_ldiskfs_no_iml.sh.");
+    run_script_on_remote_hosts(&hosts, &out.stdout).await
+}
 
-    pdsh(&hosts, script).await?;
+pub async fn install_zfs_no_iml(hosts: &[&str], lustre_version: &str) -> Result<(), CmdError> {
+    let out = sed("../vagrant")
+        .await?
+        .arg(format!(r#"s/\$1/{}/"#, lustre_version))
+        .arg("scripts/install_zfs_no_iml.sh")
+        .output()
+        .await?;
+
+    run_script_on_remote_hosts(&hosts, &out.stdout).await
+}
+
+pub async fn yum_update(hosts: &[&str]) -> Result<(), CmdError> {
+    pdsh(&hosts, "yum clean metadata; yum update -y")
+        .await?
+        .checked_status()
+        .await?;
 
     Ok(())
+}
+
+pub async fn configure_ntp_for_host_only_if(hosts: &[&str]) -> Result<(), CmdError> {
+    let out = sed("../vagrant")
+        .await?
+        .arg(r#"s/\$1/10.73.10.1/"#)
+        .arg("scripts/configure_ntp.sh")
+        .output()
+        .await?;
+
+    run_script_on_remote_hosts(&hosts, &out.stdout).await
+}
+
+pub async fn configure_ntp_for_adm(hosts: &[&str]) -> Result<(), CmdError> {
+    let out = sed("../vagrant")
+        .await?
+        .arg(r#"s/\$1/adm.local/"#)
+        .arg("scripts/configure_ntp.sh")
+        .output()
+        .await?;
+
+    run_script_on_remote_hosts(&hosts, &out.stdout).await
+}
+
+pub async fn wait_for_ntp_for_host_only_if(hosts: &[&str]) -> Result<(), CmdError> {
+    let out = sed("../vagrant")
+        .await?
+        .arg(r#"s/\$1/10.73.10.1/"#)
+        .arg("scripts/wait_for_ntp.sh")
+        .output()
+        .await?;
+
+    run_script_on_remote_hosts(&hosts, &out.stdout).await
+}
+
+pub async fn wait_for_ntp_for_adm(hosts: &[&str]) -> Result<(), CmdError> {
+    let out = sed("../vagrant")
+        .await?
+        .arg(r#"s/\$1/adm.local/"#)
+        .arg("scripts/wait_for_ntp.sh")
+        .output()
+        .await?;
+
+    run_script_on_remote_hosts(&hosts, &out.stdout).await
 }
