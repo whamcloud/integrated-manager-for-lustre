@@ -14,7 +14,10 @@ use futures::{
     Future, FutureExt, TryFutureExt,
 };
 use iml_wire_types::PluginName;
-use std::time::{Duration, Instant};
+use std::{
+    pin::Pin,
+    time::{Duration, Instant},
+};
 use tokio::time::interval;
 use tracing::error;
 
@@ -27,7 +30,7 @@ fn handle_state(
     mut sessions: Sessions,
     name: PluginName,
     now: Instant,
-) -> impl Future<Output = Result<(), ImlAgentError>> {
+) -> Pin<Box<dyn Future<Output = Result<(), ImlAgentError>> + Send>> {
     tracing::trace!("handling state for {:?}: {:?}, ", name, state);
 
     match state {
@@ -51,6 +54,7 @@ fn handle_state(
         ),
         _ => Either::Right(future::ok(())),
     }
+    .boxed()
 }
 
 /// Given some `Sessions`, this fn will poll them once per second.
