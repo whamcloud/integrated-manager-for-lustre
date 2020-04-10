@@ -178,10 +178,7 @@ fn process_info_wrapper_2_wrapper(
     info: Arc<Mutex<SessionInfo>>,
     y: result::Result<Value, String>,
 ) -> impl Future<Output = Result<(SessionInfo, result::Result<Value, String>)>> {
-    process_info(info).map(|session_info| match y {
-        Ok(value) => Ok((session_info, Ok(value))),
-        Err(e) => Ok((session_info, Err(e))),
-    })
+    process_info(info).map(|session_info| Ok((session_info, y)))
 }
 
 #[derive(Debug)]
