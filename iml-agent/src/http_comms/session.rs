@@ -171,13 +171,7 @@ fn process_info_wrapper_wrapper(
     info: Arc<Mutex<SessionInfo>>,
     y: Option<Value>,
 ) -> impl Future<Output = Result<Option<(SessionInfo, Value)>>> {
-    process_info(info).map(|session_info| {
-        if let Some(value) = y {
-            Ok(Some((session_info, value)))
-        } else {
-            Ok(None)
-        }
-    })
+    process_info(info).map(|session_info| Ok(y.map(|value| (session_info, value))))
 }
 
 fn process_info_wrapper_2_wrapper(
