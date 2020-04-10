@@ -4,14 +4,14 @@ use crate::{
 };
 use iml_cmd::{CheckedCommandExt, CmdError};
 use iml_systemd::SystemdError;
-use std::{io, str};
+use std::str;
 use tokio::{
     fs::{canonicalize, File},
     io::AsyncWriteExt,
     process::Command,
 };
 
-pub async fn docker() -> Result<Command, io::Error> {
+pub async fn docker() -> Result<Command, CmdError> {
     let mut x = Command::new("docker");
 
     let path = canonicalize(IML_DOCKER_PATH).await?;
@@ -25,7 +25,7 @@ pub async fn deploy_iml_stack() -> Result<(), SystemdError> {
     iml_systemd::start_unit_and_wait("iml-docker.service".into(), 400).await
 }
 
-pub async fn get_docker_service_count() -> Result<usize, io::Error> {
+pub async fn get_docker_service_count() -> Result<usize, CmdError> {
     let mut x = docker().await?;
 
     let services = x.arg("service").arg("ls").output().await?;
@@ -61,7 +61,7 @@ pub async fn volume_prune() -> Result<(), CmdError> {
         .await
 }
 
-pub async fn stop_swarm() -> Result<(), io::Error> {
+pub async fn stop_swarm() -> Result<(), CmdError> {
     let mut x = docker().await?;
 
     x.arg("swarm").arg("leave").arg("--force").status().await?;
@@ -97,7 +97,7 @@ pub async fn set_password() -> Result<(), CmdError> {
         .await
 }
 
-pub async fn remove_password() -> Result<(), io::Error> {
+pub async fn remove_password() -> Result<(), CmdError> {
     let mut x = docker().await?;
 
     x.arg("secret").arg("rm").arg("iml_pw").status().await?;
@@ -105,7 +105,7 @@ pub async fn remove_password() -> Result<(), io::Error> {
     Ok(())
 }
 
-pub async fn configure_docker_setup(setup: &SetupConfigType) -> Result<(), io::Error> {
+pub async fn configure_docker_setup(setup: &SetupConfigType) -> Result<(), CmdError> {
     let config: String = setup.into();
     let mut path = canonicalize(IML_DOCKER_PATH).await?;
     path.push("setup");
@@ -134,7 +134,7 @@ pub async fn configure_docker_setup(setup: &SetupConfigType) -> Result<(), io::E
     Ok(())
 }
 
-pub async fn configure_docker_overrides() -> Result<(), io::Error> {
+pub async fn configure_docker_overrides() -> Result<(), CmdError> {
     let overrides = r#"version: "3.7"
 
 services:

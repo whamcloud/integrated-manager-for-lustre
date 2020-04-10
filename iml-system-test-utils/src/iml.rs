@@ -4,12 +4,12 @@
 
 use crate::get_local_server_names;
 use iml_cmd::{CheckedCommandExt, CmdError};
-use std::{collections::HashMap, io};
+use std::collections::HashMap;
 use tokio::{fs, process::Command};
 
 pub const IML_DOCKER_PATH: &str = "/etc/iml-docker";
 
-async fn iml() -> Result<Command, io::Error> {
+async fn iml() -> Result<Command, CmdError> {
     let mut x = Command::new("/usr/bin/iml");
 
     let path = fs::canonicalize(IML_DOCKER_PATH).await?;
@@ -19,7 +19,7 @@ async fn iml() -> Result<Command, io::Error> {
     Ok(x)
 }
 
-pub async fn list_servers() -> Result<Command, io::Error> {
+pub async fn list_servers() -> Result<Command, CmdError> {
     let mut x = iml().await?;
 
     x.arg("server").arg("list");
