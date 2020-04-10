@@ -161,13 +161,9 @@ pub struct SessionInfo {
     pub seq: Seq,
 }
 
-fn increment_session(info: &mut SessionInfo) {
-    info.seq.increment();
-}
-
 async fn process_info(info: Arc<Mutex<SessionInfo>>) -> SessionInfo {
     let mut info = info.lock().await;
-    increment_session(&mut *info);
+    info.seq.increment();
     info.clone()
 }
 
