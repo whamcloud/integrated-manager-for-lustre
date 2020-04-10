@@ -9,7 +9,6 @@ use crate::{
 use futures::{Future, FutureExt, TryFutureExt};
 use iml_wire_types::{AgentResult, Id, PluginName, Seq};
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
-use serde_json::Value;
 use std::{
     collections::HashMap,
     pin::Pin,
@@ -166,20 +165,6 @@ async fn process_info(info: Arc<Mutex<SessionInfo>>) -> SessionInfo {
     info.clone()
 }
 
-fn process_info_wrapper_1(
-    info: Arc<Mutex<SessionInfo>>,
-    y: Option<Value>,
-) -> impl Future<Output = Result<Option<(SessionInfo, Value)>>> {
-    process_info(info).map(|session_info| Ok(y.map(|value| (session_info, value))))
-}
-
-fn process_info_wrapper_2(
-    info: Arc<Mutex<SessionInfo>>,
-    y: AgentResult,
-) -> impl Future<Output = Result<(SessionInfo, AgentResult)>> {
-    process_info(info).map(|session_info| Ok((session_info, y)))
-}
-
 #[derive(Debug)]
 pub struct Session {
     pub info: Arc<Mutex<SessionInfo>>,
@@ -209,8 +194,8 @@ impl Session {
             .plugin
             .start_session()
             .and_then(move |maybe_value| {
-                process_info_wrapper_1(info, maybe_value)
-                // futures::future::ok(Option::<(SessionInfo, OutputValue)>::None)
+                process_info(info)
+                    .map(|session_info| Ok(maybe_value.map(|value| (session_info, value))))
             })
             .boxed();
         r
@@ -224,8 +209,8 @@ impl Session {
         self.plugin
             .update_session()
             .and_then(move |maybe_value| {
-                process_info_wrapper_1(info, maybe_value)
-                // futures::future::ok(Option::<(SessionInfo, OutputValue)>::None)
+                process_info(info)
+                    .map(|session_info| Ok(maybe_value.map(|value| (session_info, value))))
             })
             .boxed()
     }
@@ -238,8 +223,7 @@ impl Session {
         self.plugin
             .on_message(body)
             .and_then(move |maybe_value| {
-                process_info_wrapper_2(info, maybe_value)
-                // futures::future::ok(Option::<(SessionInfo, OutputValue)>::None)
+                process_info(info).map(|session_info| Ok((session_info, maybe_value)))
             })
             .boxed()
     }
