@@ -124,7 +124,6 @@ pub async fn create_lamigo_service_unit(c: Config) -> Result<(), ImlAgentError> 
     write(path, cnt).await
 }
 
-// @@
 #[cfg(test)]
 mod lamigo_tests {
     use super::*;
