@@ -204,7 +204,7 @@ fn process_info_wrapper_2_wrapper(
 ) -> impl Future<Output = Result<(SessionInfo, result::Result<Value, String>)>> {
     process_info_wrapper_2(info, y).map(|(session_info, maybe_value)| match maybe_value {
         Ok(value) => Ok((session_info, Ok(value))),
-        Err(e) => Ok(session_info, Err(e)),
+        Err(e) => Ok((session_info, Err(e))),
     })
 }
 
