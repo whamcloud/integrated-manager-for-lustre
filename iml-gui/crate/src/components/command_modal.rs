@@ -540,7 +540,6 @@ fn command_item_view(x: &Command, is_open: bool, model: &Model) -> Node<Msg> {
 }
 
 pub fn job_tree_view(model: &Model) -> Node<Msg> {
-    log!("job_tree_view: ", &model.jobs.len());
     div![
         class![C.box_border, C.font_ordinary, C.text_gray_700],
         h4![ class![C.text_lg, C.font_medium], "Jobs" ],
@@ -562,22 +561,18 @@ where
         F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
     {
         ctx.is_new = ctx.visited.insert(n.id());
-
+        let parent: Node<Msg> = node_view(Arc::clone(&n), ctx);
         let mut acc: Vec<Node<Msg>> = Vec::new();
-        acc.push(node_view(Arc::clone(&n), ctx));
-
         if let Some(deps) = dag.deps.get(&n.id()) {
-            if deps.is_empty() && ctx.is_new {
+            if ctx.is_new {
                 for d in deps {
                     let rec_node = build_node_view(dag, node_view, Arc::clone(d), ctx);
-                    acc.push(div![
-                        class![ C.ml_2, C.mt_1 ],
-                        rec_node,
-                    ]);
+                    // all the dependencies are shifted with the indent
+                    acc.push(rec_node.merge_attrs(class![ C.ml_3, C.mt_1 ]));
                 }
             }
         }
-        div![ acc ]
+        div![ parent, acc ]
     }
 
     let mut ctx = Context {
@@ -606,7 +601,8 @@ fn job_node_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
         a![
             span![ class![C.mr_1], icon ],
             span![ job.description ],
-            span![ class![C.text_gray_500], format!("({})", job.id) ],
+            span![ class![C.ml_1, C.text_gray_500], format!("({})", job.id) ],
+            simple_ev(Ev::Click, Msg::Open(TypedId::Job(job.id))),
         ]
     } else {
         empty!()
