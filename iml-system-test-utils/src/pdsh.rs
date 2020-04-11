@@ -28,6 +28,9 @@ pub async fn pdsh(hosts: &[&str], cmd: &str) -> Result<Command, CmdError> {
         "-i id_rsa -o StrictHostKeyChecking=no",
     );
     x.arg("-S")
+        .arg("-d")
+        .arg("-t")
+        .arg("100")
         .arg("-R")
         .arg("ssh")
         .arg("-u")
