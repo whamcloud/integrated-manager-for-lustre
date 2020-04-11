@@ -3,11 +3,9 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    components::{action_dropdown, alert_indicator, font_awesome, lnet_status, lock_indicator, panel, Placement},
+    components::{action_dropdown, alert_indicator, date, font_awesome, lnet_status, lock_indicator, panel, Placement},
     extensions::MergeAttrs as _,
     generated::css_classes::C,
-    page::servers,
-    server_date::ServerDate,
     GMsg,
 };
 
@@ -99,7 +97,7 @@ pub fn view(
     model: &Model,
     all_locks: &Locks,
     session: Option<&Session>,
-    sd: &ServerDate,
+    sd: &date::Model,
 ) -> impl View<Msg> {
     nodes![
         panel::view(
@@ -116,7 +114,7 @@ pub fn view(
                 div![class![C.px_6, C.py_4], "Boot time"],
                 div![
                     class![C.px_6, C.py_4],
-                    servers::humanize_time(&model.server.boot_time, sd)
+                    date_view(sd, &model.server.boot_time)
                 ],
                 action_dropdown::view(model.server.id, &model.server_dropdown, all_locks, session)
                     .merge_attrs(class![C.px_6, C.py_4, C.grid, C.col_span_2])
@@ -222,5 +220,19 @@ fn state<T>(state: &str) -> Node<T> {
         ],
         "unconfigured" => span!["Unconfigured"],
         _ => span!["---"],
+    }
+}
+
+pub(crate) fn date_view<T>(sd: &date::Model, date: &Option<String>) -> Node<T> {
+    if let Some(s) = date {
+        match chrono::DateTime::parse_from_rfc3339(&format!("{}-00:00", s)) {
+            Ok(d) => date::view(sd, &d),
+            Err(e) => {
+                error!(format!("could not parse the date: '{}': {}", s, e));
+                plain![s.to_string()]
+            }
+        }
+    } else {
+        plain!["---"]
     }
 }
