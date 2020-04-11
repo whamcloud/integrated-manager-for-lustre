@@ -144,7 +144,7 @@ pub async fn setup_bare(
 ) -> Result<(), CmdError> {
     up().await?.args(hosts).checked_status().await?;
 
-    pdsh::yum_update(&config.server_and_client_ips()).await?;
+    pdsh::yum_update(&config.storage_server_ips()).await?;
 
     match ntp_server {
         NtpServer::HostOnly => {
@@ -158,8 +158,6 @@ pub async fn setup_bare(
     for x in hosts {
         snapshot_save(x, "bare").await?.checked_status().await?;
     }
-
-    up().await?.args(hosts).checked_status().await?;
 
     Ok(())
 }
@@ -177,9 +175,18 @@ pub async fn setup_iml_install(
 
     setup_bare(hosts, &config, NtpServer::Adm).await?;
 
+    up().await?
+        .args(&vec![config.manager][..])
+        .checked_status()
+        .await?;
+
     configure_rpm_setup(setup_config, &config).await?;
 
-    halt().await?.args(hosts).checked_status().await?;
+    halt()
+        .await?
+        .args(&vec![config.manager][..])
+        .checked_status()
+        .await?;
 
     for host in hosts {
         snapshot_save(host, "iml-installed")
@@ -255,6 +262,11 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
 ) -> Result<(), CmdError> {
     let server_list = server_map_to_server_set(&server_map);
     setup_bare(&config.all_but_adm()[..], &config, NtpServer::HostOnly).await?;
+
+    up().await?
+        .args(&config.all_but_adm())
+        .checked_status()
+        .await?;
 
     delay_for(Duration::from_secs(30)).await;
 
@@ -372,7 +384,6 @@ pub struct ClusterConfig {
     oss: Vec<&'static str>,
     oss_ips: Vec<&'static str>,
     clients: Vec<&'static str>,
-    client_ips: Vec<&'static str>,
     iscsi: &'static str,
     lustre_version: &'static str,
 }
@@ -386,7 +397,6 @@ impl Default for ClusterConfig {
             oss: vec!["oss1", "oss2"],
             oss_ips: vec!["10.73.10.21", "10.73.10.22"],
             clients: vec!["c1"],
-            client_ips: vec!["10.73.10.31"],
             iscsi: "iscsi",
             lustre_version: "2.12.4",
         }
@@ -409,9 +419,6 @@ impl ClusterConfig {
         xs.extend(&self.clients);
 
         xs
-    }
-    pub fn server_and_client_ips(&self) -> Vec<&str> {
-        [&self.storage_servers()[..], &self.client_ips[..]].concat()
     }
     pub fn storage_servers(&self) -> Vec<&str> {
         [&self.mds[..], &self.oss[..]].concat()
