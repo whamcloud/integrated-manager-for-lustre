@@ -3,10 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    components::{action_dropdown, command_modal, font_awesome, loading, paging},
+    components::{action_dropdown, command_modal, date_view, font_awesome, loading, paging},
     extensions::*,
     generated::css_classes::C,
-    sleep_with_handle, GMsg, ServerDate,
+    sleep_with_handle, GMsg,
 };
 use futures::channel::oneshot;
 use iml_api_utils::extract_id;
@@ -179,7 +179,12 @@ fn update_rows(alerts: &mut ApiList<Alert>, rows: &mut HashMap<u32, Row>) {
     }
 }
 
-pub(crate) fn view(model: &Model, session: Option<&Session>, all_locks: &Locks, sd: &ServerDate) -> impl View<Msg> {
+pub(crate) fn view(
+    model: &Model,
+    session: Option<&Session>,
+    all_locks: &Locks,
+    sd: &date_view::Model,
+) -> impl View<Msg> {
     div![match &model.state {
         State::Loading => loading::view(),
         State::Fetching => div![
@@ -266,7 +271,7 @@ fn alert_item_classes(alert: &Alert) -> (&str, &str, &str) {
 
 fn alert_item_view(
     all_locks: &Locks,
-    sd: &ServerDate,
+    sd: &date_view::Model,
     session: Option<&Session>,
     alert: &Alert,
     row: Option<&Row>,
@@ -298,11 +303,10 @@ fn alert_item_view(
             alert_icon_view(alert).merge_attrs(class![icon_color])
         ],
         div![
-            class![C.row_span_1, C.col_span_2],
-            format!(
-                "Started {}",
-                sd.timeago(chrono::DateTime::parse_from_rfc3339(&alert.begin).unwrap())
-            )
+            class![C.row_span_1, C.col_span_2, C.whitespace_no_wrap],
+            "Started",
+            " ",
+            date_view(sd, &alert.begin)
         ],
         div![
             class![C.row_span_1, C.col_span_1, C.grid, C.justify_end],
@@ -322,11 +326,10 @@ fn alert_item_view(
         if let Some(end) = alert.end.as_ref() {
             vec![
                 div![
-                    class![C.row_span_1, C.col_span_2],
-                    format!(
-                        "Ended {}",
-                        sd.timeago(chrono::DateTime::parse_from_rfc3339(end).unwrap())
-                    )
+                    class![C.row_span_1, C.col_span_2, C.whitespace_no_wrap],
+                    "Ended",
+                    " ",
+                    date_view(sd, end)
                 ],
                 command_details_button(alert),
             ]
@@ -334,6 +337,16 @@ fn alert_item_view(
             vec![]
         }
     ]
+}
+
+fn date_view<T>(sd: &date_view::Model, date: &str) -> Node<T> {
+    match chrono::DateTime::parse_from_rfc3339(date) {
+        Ok(d) => sd.date_view(&d),
+        Err(e) => {
+            error!(format!("could not parse the date: '{}': {}", date, e));
+            plain![date.to_string()]
+        }
+    }
 }
 
 fn command_details_button(alert: &Alert) -> Node<Msg> {

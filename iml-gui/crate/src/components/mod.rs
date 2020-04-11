@@ -23,6 +23,7 @@ pub(crate) mod breadcrumbs;
 pub(crate) mod chart;
 pub(crate) mod command_modal;
 pub(crate) mod dashboard;
+pub(crate) mod date_view;
 pub(crate) mod datepicker;
 pub(crate) mod duration_picker;
 pub(crate) mod font_awesome;
