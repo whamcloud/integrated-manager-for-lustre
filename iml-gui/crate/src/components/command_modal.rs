@@ -87,7 +87,6 @@ impl fmt::Display for CommandError {
 pub struct Context {
     pub visited: HashSet<u32>,
     pub is_new: bool,
-    pub is_first: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -557,66 +556,58 @@ where
     T: Deps,
     F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
 {
-    fn build_node_view<T, F>(dag: &DependencyDAG<T>, node_view: &F, n: Arc<T>, ctx: &mut Context, acc: &mut Vec<Node<Msg>>)
+    fn build_node_view<T, F>(dag: &DependencyDAG<T>, node_view: &F, n: Arc<T>, ctx: &mut Context) -> Node<Msg>
     where
         T: Deps,
         F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
     {
-        let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
-
         ctx.is_new = ctx.visited.insert(n.id());
-        let parent = node_view(Arc::clone(&n), ctx);
-        let mut children: Vec<Node<Msg>> = Vec::with_capacity(n.deps().len());
+
+        let mut acc: Vec<Node<Msg>> = Vec::new();
+        acc.push(node_view(Arc::clone(&n), ctx));
+
         if let Some(deps) = dag.deps.get(&n.id()) {
-            if ctx.is_new {
+            if deps.is_empty() && ctx.is_new {
                 for d in deps {
-                    build_node_view(dag, node_view, Arc::clone(d), ctx, &mut children);
+                    let rec_node = build_node_view(dag, node_view, Arc::clone(d), ctx);
+                    acc.push(div![
+                        class![ C.ml_2, C.mt_1 ],
+                        rec_node,
+                    ]);
                 }
             }
         }
-        acc.push(div![ parent, children ]);
+        div![ acc ]
     }
 
     let mut ctx = Context {
         visited: HashSet::new(),
         is_new: false,
-        is_first: false,
     };
     let mut acc: Vec<Node<Msg>> = Vec::with_capacity(dag.roots.len());
-    let mut is_first = true;
     for r in &dag.roots {
-        ctx.is_first = is_first;
-        build_node_view(dag, node_view, Arc::clone(r), &mut ctx, &mut acc);
-        is_first = false;
+        acc.push(build_node_view(dag, node_view, Arc::clone(r), &mut ctx));
     }
     div![ acc ]
 }
 
 fn job_node_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
     if ctx.is_new {
-        let border = if job.cancelled {
-            C.border_gray_500
-        } else if job.errored {
-            C.border_red_500
-        } else if job.state == "complete" {
-            C.border_green_500
-        } else {
-            C.border_transparent
-        };
         let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
-        let spans = vec![
-            span![ class![C.mr_1], font_awesome(awesome_style, "exclamation").merge_attrs(class![C.text_red_500]) ],
+        let (border, icon) = if job.cancelled {
+            (C.border_gray_500, font_awesome(awesome_style, "ban").merge_attrs(class![C.text_red_500]))
+        } else if job.errored {
+            (C.border_red_500, font_awesome(awesome_style, "exclamation").merge_attrs(class![C.text_red_500]))
+        } else if job.state == "complete" {
+            (C.border_green_500, font_awesome(awesome_style, "check").merge_attrs(class![C.text_green_500]))
+        } else {
+            (C.border_transparent, font_awesome(awesome_style, "wind").merge_attrs(class![C.text_red_500]))
+        };
+        a![
+            span![ class![C.mr_1], icon ],
             span![ job.description ],
             span![ class![C.text_gray_500], format!("({})", job.id) ],
-        ];
-        if ctx.is_first {
-            span![ spans ]
-        } else {
-            div![
-                class![ C.ml_2, C.mt_1 ],
-                a![ spans ],
-            ]
-        }
+        ]
     } else {
         empty!()
     }
