@@ -19,7 +19,6 @@ mod extensions;
 mod generated;
 mod notification;
 mod route;
-mod server_date;
 mod sleep;
 mod status_section;
 mod watch_state;
@@ -28,7 +27,7 @@ mod watch_state;
 mod test_utils;
 
 use components::{
-    breadcrumbs, command_modal, font_awesome, font_awesome_outline, loading, restrict, stratagem, tree,
+    breadcrumbs, command_modal, date, font_awesome, font_awesome_outline, loading, restrict, stratagem, tree,
     update_activity_health, ActivityHealth,
 };
 pub(crate) use extensions::*;
@@ -42,7 +41,6 @@ use lazy_static::lazy_static;
 use page::{Page, RecordChange};
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, EventHandler, *};
-pub(crate) use server_date::ServerDate;
 pub(crate) use sleep::sleep_with_handle;
 use std::{cmp, sync::Arc};
 pub use watch_state::*;
@@ -168,7 +166,7 @@ pub struct Model {
     status_section: status_section::Model,
     track_slider: bool,
     tree: tree::Model,
-    server_date: ServerDate,
+    server_date: date::Model,
 }
 
 // ------ ------
@@ -236,7 +234,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
         status_section: status_section::Model::default(),
         track_slider: false,
         tree: tree::Model::default(),
-        server_date: ServerDate::default(),
+        server_date: date::Model::default(),
     })
 }
 
@@ -279,7 +277,7 @@ fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
         GMsg::AuthProxy(msg) => {
             orders.proxy(Msg::Auth).send_msg(msg);
         }
-        GMsg::ServerDate(d) => model.server_date.set(d),
+        GMsg::ServerDate(d) => model.server_date.basedate = Some(d),
         GMsg::OpenCommandModal(x) => {
             orders
                 .proxy(Msg::CommandModal)
