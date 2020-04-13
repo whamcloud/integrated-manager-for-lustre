@@ -44,7 +44,6 @@ impl<T: Deps> Deps for DepsWrapper<T> {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct DependencyDAG<T> {
     pub roots: Vec<Arc<T>>,
