@@ -35,6 +35,16 @@ async fn vagrant() -> Result<Command, CmdError> {
     Ok(x)
 }
 
+async fn vbox_manage() -> Result<Command, CmdError> {
+    let mut x = Command::new("vboxmanage");
+
+    let path = canonicalize("../vagrant/").await?;
+
+    x.current_dir(path);
+
+    Ok(x)
+}
+
 pub async fn up<'a>() -> Result<Command, CmdError> {
     let mut x = vagrant().await?;
 
@@ -135,6 +145,67 @@ pub async fn detect_fs(config: &ClusterConfig) -> Result<(), CmdError> {
         .await?
         .checked_status()
         .await
+}
+
+pub async fn global_prune() -> Result<(), CmdError> {
+    let mut x = vagrant().await?;
+
+    x.arg("global-status").arg("--prune").checked_status().await
+}
+
+fn vm_list_from_output(output: &str) -> Vec<String> {
+    output
+        .lines()
+        .filter_map(|s| {
+            s.split(" ")
+                .last()
+                .map(|s| s.replace("{", "").replace("}", ""))
+        })
+        .collect()
+}
+
+pub async fn poweroff_running_vms() -> Result<(), CmdError> {
+    let mut x = vbox_manage().await?;
+
+    let out = x.arg("list").arg("runningvms").output().await?;
+
+    let running_vms = str::from_utf8(&out.stdout).expect("Couldn't get output.");
+
+    let vm_list = vm_list_from_output(running_vms);
+
+    for vm in vm_list {
+        let mut y = vbox_manage().await?;
+
+        y.arg("controlvm")
+            .arg(vm)
+            .arg("poweroff")
+            .checked_status()
+            .await?;
+    }
+
+    Ok(())
+}
+
+pub async fn unregister_vms() -> Result<(), CmdError> {
+    let mut x = vbox_manage().await?;
+
+    let out = x.arg("list").arg("vms").output().await?;
+
+    let vms = str::from_utf8(&out.stdout).expect("Couldn't get output.");
+
+    let vm_list: Vec<String> = vm_list_from_output(vms);
+
+    for vm in vm_list {
+        let mut y = vbox_manage().await?;
+
+        y.arg("unregistervm")
+            .arg(vm)
+            .arg("--delete")
+            .checked_status()
+            .await?;
+    }
+
+    Ok(())
 }
 
 pub async fn setup_bare(
