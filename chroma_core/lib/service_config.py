@@ -418,19 +418,19 @@ class ServiceConfig(CommandLine):
             raise RuntimeError(error)
 
     def _init_pgsql(self, database):
-        rc, out, err = self.shell(["service", "postgresql", "initdb"])
+        rc, out, err = self.shell(["/usr/pgsql-9.6/bin/postgresql96-setup", "initdb"])
         if rc != 0:
             if "is not empty" not in out:
-                log.error("Failed to initialize postgresql service")
+                log.error("Failed to initialize postgresql 9.6 database")
                 log.error("stdout:\n%s" % out)
                 log.error("stderr:\n%s" % err)
-                raise CommandError("service postgresql initdb", rc, out, err)
+                raise CommandError("/usr/pgsql-9.6/bin/postgresql96-setup initdb", rc, out, err)
         # Always fixup postgres auth
         self._config_pgsql_auth(database)
 
     @staticmethod
     def _config_pgsql_auth(database):
-        auth_cfg_file = "/var/lib/pgsql/data/pg_hba.conf"
+        auth_cfg_file = "/var/lib/pgsql/9.6/data/pg_hba.conf"
         if not os.path.exists("%s.dist" % auth_cfg_file):
             os.rename(auth_cfg_file, "%s.dist" % auth_cfg_file)
         with open(auth_cfg_file, "w") as cfg:
@@ -477,7 +477,7 @@ class ServiceConfig(CommandLine):
             return error_msg
 
     def _restart_pgsql(self):
-        postgresql_service = ServiceControl.create("postgresql")
+        postgresql_service = ServiceControl.create("postgresql-9.6")
         if postgresql_service.running:
             postgresql_service.reload()
         else:

@@ -6,7 +6,7 @@ x-deploy: &default-deploy
     window: 5s
 services:
   postgres:
-    image: "postgres:9.2.23-alpine"
+    image: "postgres:9.6.17-alpine"
     hostname: "postgres"
     deploy:
       <<: *default-deploy
