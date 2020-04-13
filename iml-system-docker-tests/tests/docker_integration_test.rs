@@ -26,6 +26,9 @@ async fn setup() -> Result<(), SystemdError> {
 
     // Destroy any vagrant nodes that are currently running
     vagrant::destroy().await?;
+    vagrant::global_prune().await?;
+    vagrant::poweroff_running_vms().await?;
+    vagrant::unregister_vms().await?;
 
     Ok(())
 }
