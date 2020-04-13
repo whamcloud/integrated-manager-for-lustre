@@ -245,7 +245,7 @@ pub fn view(
             ]
         }
     ];
-    div![ b, c ]
+    div![b, c]
 }
 
 pub fn humanize_time(x: &Option<String>, sd: &ServerDate) -> String {

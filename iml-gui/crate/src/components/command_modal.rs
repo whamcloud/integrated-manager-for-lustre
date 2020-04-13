@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use crate::components::dependency_tree::{build_direct_dag, build_inverse_dag};
 use crate::{
     components::{
         dependency_tree::{DependencyDAG, Deps},
@@ -16,10 +17,10 @@ use iml_wire_types::{ApiList, Command, EndpointName, Job, Step};
 use regex::{Captures, Regex};
 use seed::{prelude::*, *};
 use serde::de::DeserializeOwned;
+use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::fmt;
 use std::{sync::Arc, time::Duration};
-use crate::components::dependency_tree::{build_direct_dag, build_inverse_dag};
 
 /// The component polls `/api/command/` endpoint and this constant defines how often it does.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
@@ -130,6 +131,7 @@ pub enum Msg {
     FetchedSteps(Box<fetch::ResponseDataResult<ApiList<Step>>>),
     Open(TypedId),
     Close(TypedId),
+    InverseClick,
     Noop,
 }
 
@@ -143,10 +145,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::FetchedSteps(_) => "Msg-FetchedSteps".to_string(),
         Msg::Open(_) => "Msg-Open".to_string(),
         Msg::Close(_) => "Msg-Close".to_string(),
+        Msg::InverseClick => "Msg-InverseClick".to_string(),
         Msg::Noop => "Msg-Noop".to_string(),
     };
-    log!("command_modal::update: ", msg_str);
-
+    log!("command_modal::update", msg_str, model.opens);
     match msg {
         Msg::Modal(msg) => {
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
@@ -182,6 +184,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             match *commands_data_result {
                 Ok(api_list) => {
                     model.commands = api_list.objects.into_iter().map(Arc::new).collect();
+                    // model.jobs.clear();
+                    // model.jobs_dag.deps.clear();
+                    // model.jobs_dag.roots.clear();
+                    // model.steps.clear();
                 }
                 Err(e) => {
                     error!("Failed to perform fetch_command_status {:#?}", e);
@@ -194,44 +200,55 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 orders.perform_cmd(fut);
             }
         }
-        Msg::FetchedJobs(jobs_data_result) => {
-            match *jobs_data_result {
-                Ok(api_list) => {
-                    if are_jobs_consistent(&model, &api_list.objects) {
-                        model.jobs_loading = false;
-                        if model.is_dag_inverse {
-                            model.jobs_dag = build_inverse_dag(&api_list.objects);
-                        } else {
-                            model.jobs_dag = build_direct_dag(&api_list.objects);
-                        }
-                        model.jobs = api_list.objects.into_iter().map(Arc::new).collect();
-                    }
-                }
-                Err(e) => {
+        Msg::FetchedJobs(jobs_data_result) => match *jobs_data_result {
+            Ok(api_list) => {
+                if are_jobs_consistent(&model, &api_list.objects) {
                     model.jobs_loading = false;
-                    error!("Failed to perform fetch_job_status {:#?}", e);
-                    orders.skip();
+                    if model.is_dag_inverse {
+                        model.jobs_dag = build_inverse_dag(&api_list.objects);
+                    } else {
+                        model.jobs_dag = build_direct_dag(&api_list.objects);
+                    }
+                    model.jobs = api_list.objects.into_iter().map(Arc::new).collect();
                 }
             }
-        }
-        Msg::FetchedSteps(steps_data_result) => {
-            model.steps_loading = false;
-            match *steps_data_result {
-                Ok(api_list) => {
+            Err(e) => {
+                model.jobs_loading = false;
+                error!("Failed to perform fetch_job_status {:#?}", e);
+                orders.skip();
+            }
+        },
+        Msg::FetchedSteps(steps_data_result) => match *steps_data_result {
+            Ok(api_list) => {
+                if are_steps_consistent(&model, &api_list.objects) {
+                    model.steps_loading = false;
                     model.steps = api_list.objects.into_iter().map(Arc::new).collect();
                 }
-                Err(e) => {
-                    error!("Failed to perform fetch_job_status {:#?}", e);
-                    orders.skip();
-                }
             }
-        }
+            Err(e) => {
+                model.steps_loading = false;
+                error!("Failed to perform fetch_job_status {:#?}", e);
+                orders.skip();
+            }
+        },
         Msg::Open(the_id) => {
             model.opens = perform_open_click(&model.opens, the_id);
             let _ = schedule_fetch_tree(model, orders).map_err(|e| error!(e.to_string()));
         }
         Msg::Close(the_id) => {
             model.opens = perform_close_click(&model.opens, the_id);
+        }
+        Msg::InverseClick => {
+            if !model.jobs_loading {
+                model.is_dag_inverse = !model.is_dag_inverse;
+                // TODO avoid temporary clones
+                let jobs: Vec<Job0> = model.jobs.iter().map(|a| (**a).clone()).collect();
+                if model.is_dag_inverse {
+                    model.jobs_dag = build_inverse_dag(&jobs);
+                } else {
+                    model.jobs_dag = build_direct_dag(&jobs);
+                }
+            }
         }
         Msg::Noop => {}
     }
@@ -255,8 +272,8 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -
                 // NOTE: we can try to use future::select_all(futs.into_iter()) here
                 orders
                     .skip()
-                    .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))))
-                    .perform_cmd(fetch_the_batch(job_ids, |x| Msg::FetchedJobs(Box::new(x))));
+                    .perform_cmd(fetch_the_batch(job_ids, |x| Msg::FetchedJobs(Box::new(x))))
+                    .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))));
                 Ok(())
             } else {
                 Err(CommandError::UnknownCommand(*cmd_id))
@@ -271,9 +288,9 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -
                     let step_ids: Vec<u32> = extract_ids::<Step>(&model.jobs[i2].steps);
                     orders
                         .skip()
-                        .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))))
+                        .perform_cmd(fetch_the_batch(step_ids, |x| Msg::FetchedSteps(Box::new(x))))
                         .perform_cmd(fetch_the_batch(job_ids, |x| Msg::FetchedJobs(Box::new(x))))
-                        .perform_cmd(fetch_the_batch(step_ids, |x| Msg::FetchedSteps(Box::new(x))));
+                        .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))));
                     Ok(())
                 } else {
                     Err(CommandError::UnknownJob(*job_id))
@@ -293,9 +310,9 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -
                         let the_step_ids = some_step_ids.clone();
                         orders
                             .skip()
-                            .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))))
+                            .perform_cmd(fetch_the_batch(the_step_ids, |x| Msg::FetchedSteps(Box::new(x))))
                             .perform_cmd(fetch_the_batch(job_ids, |x| Msg::FetchedJobs(Box::new(x))))
-                            .perform_cmd(fetch_the_batch(the_step_ids, |x| Msg::FetchedSteps(Box::new(x))));
+                            .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))));
                         Ok(())
                     } else {
                         Err(CommandError::UnknownSteps(some_step_ids.clone()))
@@ -370,6 +387,26 @@ fn are_jobs_consistent(model: &Model, jobs: &[Job0]) -> bool {
         Opens::Command(cid) => check(cid),
         Opens::CommandJob(cid, _) => check(cid),
         Opens::CommandJobSteps(cid, _, _) => check(cid),
+    }
+}
+
+fn are_steps_consistent(model: &Model, jobs: &[Step]) -> bool {
+    let check = |jid: u32| {
+        if let Some(job) = model.jobs.iter().find(|job| job.id == jid) {
+            let job_step_ids = extract_ids::<Step>(&job.steps);
+            let step_ids = jobs.iter().map(|j| j.id).collect::<Vec<u32>>();
+            // the order are guaranteed to be the same are_jobs_consistent
+            job_step_ids == step_ids
+        } else {
+            false
+        }
+    };
+    // the consistency on the upper levels are checked in
+    match model.opens {
+        Opens::None => true,
+        Opens::Command(_) => true,
+        Opens::CommandJob(_, jid) => check(jid),
+        Opens::CommandJobSteps(_, jid, _) => check(jid),
     }
 }
 
@@ -465,10 +502,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
                         modal::title_view(Msg::Modal, plain!["Commands"]),
                         div![
                             class![C.py_8],
-                            model
-                                .commands
-                                .iter()
-                                .map(|x| { command_item_view(x, is_command_in_opens(x.id, &model.opens), &model) })
+                            model.commands.iter().map(|x| { command_item_view(&model, x) })
                         ],
                         modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
                     ]
@@ -483,7 +517,8 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
     }
 }
 
-fn command_item_view(x: &Command, is_open: bool, model: &Model) -> Node<Msg> {
+fn command_item_view(model: &Model, x: &Command) -> Node<Msg> {
+    let is_open = is_command_in_opens(x.id, &model.opens);
     let border = if !is_open {
         C.border_transparent
     } else if x.complete {
@@ -501,9 +536,9 @@ fn command_item_view(x: &Command, is_open: bool, model: &Model) -> Node<Msg> {
     } else {
         ("chevron-circle-down", Msg::Open(TypedId::Command(x.id)))
     };
-    let job_tree = job_tree_view(&model);
+    let job_tree = job_tree_view(&model.jobs_dag);
+    let step_list = step_list_view(&model.steps);
     div![
-        attrs! { "cmd__id" => x.id.to_string() }, // todo revert
         class![C.border_b, C.last__border_b_0],
         div![
             class![
@@ -534,18 +569,34 @@ fn command_item_view(x: &Command, is_open: bool, model: &Model) -> Node<Msg> {
                 li![class![C.pb_2], "Started at: ", x.created_at],
                 li![class![C.pb_2], "Status: ", status_text(x)],
                 li![job_tree],
+                li![step_list],
             ]
         ]
     ]
 }
 
-pub fn job_tree_view(model: &Model) -> Node<Msg> {
+pub fn job_tree_view(jobs_dag: &DependencyDAG<Job0>) -> Node<Msg> {
     div![
         class![C.box_border, C.font_ordinary, C.text_gray_700],
-        h4![ class![C.text_lg, C.font_medium], "Jobs" ],
+        h4![class![C.text_lg, C.font_medium], "Jobs"],
+        input![
+            attrs![ At::Type => "checkbox" ],
+            simple_ev(Ev::Click, Msg::InverseClick),
+        ],
+        span![class![C.mx_1, C.border], "Switch job dependency view"],
         div![
-            class![C.p_1, C.pb_2, C.mb_1, C.bg_gray_100, C.border, C.rounded, C.shadow_sm, C.overflow_auto, C.max_h_screen],
-            build_dag_view(&model.jobs_dag, &job_node_view),
+            class![
+                C.p_1,
+                C.pb_2,
+                C.mb_1,
+                C.bg_gray_100,
+                C.border,
+                C.rounded,
+                C.shadow_sm,
+                C.overflow_auto,
+                C.max_h_screen
+            ],
+            build_dag_view(jobs_dag, &job_node_view),
         ]
     ]
 }
@@ -568,12 +619,12 @@ where
                 for d in deps {
                     let rec_node = build_node_view(dag, node_view, Arc::clone(d), ctx);
                     // all the dependencies are shifted with the indent
-                    acc.push(rec_node.merge_attrs(class![ C.ml_3, C.mt_1 ]));
+                    acc.push(rec_node.merge_attrs(class![C.ml_3, C.mt_1]));
                 }
             }
         }
         if !parent.is_empty() {
-            div![ parent, acc ]
+            div![parent, acc]
         } else {
             // to remove redundant empty dom elements
             empty!()
@@ -587,33 +638,45 @@ where
     for r in &dag.roots {
         acc.push(build_node_view(dag, &node_view, Arc::clone(r), &mut ctx));
     }
-    div![ acc ]
+    div![acc]
 }
 
 fn job_node_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
     if ctx.is_new {
         let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
         let (border, icon) = if job.cancelled {
-            (C.border_gray_500, font_awesome(awesome_style, "ban").merge_attrs(class![C.text_red_500]))
+            (
+                C.border_gray_500,
+                font_awesome(awesome_style, "ban").merge_attrs(class![C.text_red_500]),
+            )
         } else if job.errored {
-            (C.border_red_500, font_awesome(awesome_style, "exclamation").merge_attrs(class![C.text_red_500]))
+            (
+                C.border_red_500,
+                font_awesome(awesome_style, "exclamation").merge_attrs(class![C.text_red_500]),
+            )
         } else if job.state == "complete" {
-            (C.border_green_500, font_awesome(awesome_style, "check").merge_attrs(class![C.text_green_500]))
+            (
+                C.border_green_500,
+                font_awesome(awesome_style, "check").merge_attrs(class![C.text_green_500]),
+            )
         } else {
-            (C.border_transparent, font_awesome(awesome_style, "spinner").merge_attrs(class![C.text_gray_500, C.pulse]))
+            (
+                C.border_transparent,
+                font_awesome(awesome_style, "spinner").merge_attrs(class![C.text_gray_500, C.pulse]),
+            )
         };
 
         if job.steps.is_empty() {
             span![
-                span![ class![C.mr_1], icon ],
-                span![ job.description ],
-                span![ class![C.ml_1, C.text_gray_500], format!("({})", job.id) ],
+                span![class![C.mr_1], icon],
+                span![job.description],
+                span![class![C.ml_1, C.text_gray_500], format!("({})", job.id)],
             ]
         } else {
             a![
-                span![ class![C.mr_1], icon ],
-                span![ job.description ],
-                span![ class![C.ml_1, C.text_gray_500], format!("({})", job.id) ],
+                span![class![C.mr_1], icon],
+                span![class![C.cursor_pointer, C.underline], job.description,],
+                span![class![C.ml_1, C.text_gray_500], format!("({})", job.id)],
                 simple_ev(Ev::Click, Msg::Open(TypedId::Job(job.id))),
             ]
         }
@@ -622,9 +685,48 @@ fn job_node_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
     }
 }
 
-
-fn step_list_view(is_open: bool) -> Node<Msg> {
-    div!["step_item_view"]
+fn step_list_view(steps: &Vec<Arc<Step>>) -> Node<Msg> {
+    if steps.is_empty() {
+        empty!()
+    } else {
+        fn get_icon(state: &str) -> Node<Msg> {
+            let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
+            match state {
+                "incomplete" => font_awesome(awesome_style, "spinner").merge_attrs(class![C.text_gray_500, C.pulse]),
+                "failed" => font_awesome(awesome_style, "exclamation").merge_attrs(class![C.text_red_500]),
+                "success" => font_awesome(awesome_style, "check").merge_attrs(class![C.text_green_500]),
+                _ => font_awesome(awesome_style, "question").merge_attrs(class![C.text_pink_500]),
+            }
+        }
+        let steps_list: Vec<Node<Msg>> = steps
+            .iter()
+            .map(|step| {
+                li![
+                    span![class![C.mr_1], get_icon(&step.state)],
+                    span![class![C.cursor_pointer, C.underline], step.class_name,],
+                    span![class![C.ml_1, C.text_gray_500], format!("({})", step.id)],
+                    simple_ev(Ev::Click, Msg::Open(TypedId::Step(step.id))),
+                ]
+            })
+            .collect();
+        div![
+            h4![class![C.text_lg, C.font_medium], "Steps"],
+            ul![
+                class![
+                    C.p_1,
+                    C.pb_2,
+                    C.mb_1,
+                    C.bg_gray_100,
+                    C.border,
+                    C.rounded,
+                    C.shadow_sm,
+                    C.overflow_auto,
+                    C.max_h_screen
+                ],
+                steps_list
+            ]
+        ]
+    }
 }
 
 fn status_text(cmd: &Command) -> &'static str {
@@ -696,35 +798,33 @@ mod tests {
         let dom = build_dag_view(&dag, &job_node_view);
         let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline, C.text_green_500];
         let icon = font_awesome(awesome_style, "check");
-        let expected_dom: Node<Msg> = div! [
+        let expected_dom: Node<Msg> = div![div![
+            // class![ C.ml_3, C.mt_1 ],
+            a![
+                span![class![C.mr_1], icon.clone()],
+                span![class![C.cursor_pointer, C.underline], "One"],
+                span![class![C.ml_1, C.text_gray_500], "(1)"],
+                simple_ev(Ev::Click, Msg::Open(TypedId::Job(1))),
+            ],
             div![
-                // class![ C.ml_3, C.mt_1 ],
+                class![C.ml_3, C.mt_1],
                 a![
-                    span![ class![C.mr_1], icon.clone() ],
-                    span![ "One" ],
-                    span![ class![C.ml_1, C.text_gray_500], "(1)" ],
-                    simple_ev(Ev::Click, Msg::Open(TypedId::Job(1))),
-                ],
-                div![
-                    class![ C.ml_3, C.mt_1 ],
-                    a![
-                        span![ class![C.mr_1], icon.clone() ],
-                        span![ "Two" ],
-                        span![ class![C.ml_1, C.text_gray_500], "(2)" ],
-                        simple_ev(Ev::Click, Msg::Open(TypedId::Job(2))),
-                    ],
-                ],
-                div![
-                    class![ C.ml_3, C.mt_1 ],
-                    a![
-                        span![ class![C.mr_1], icon.clone() ],
-                        span![ "Three" ],
-                        span![ class![C.ml_1, C.text_gray_500], "(3)" ],
-                        simple_ev(Ev::Click, Msg::Open(TypedId::Job(3))),
-                    ]
+                    span![class![C.mr_1], icon.clone()],
+                    span![class![C.cursor_pointer, C.underline], "Two"],
+                    span![class![C.ml_1, C.text_gray_500], "(2)"],
+                    simple_ev(Ev::Click, Msg::Open(TypedId::Job(2))),
                 ],
             ],
-        ];
+            div![
+                class![C.ml_3, C.mt_1],
+                a![
+                    span![class![C.mr_1], icon.clone()],
+                    span![class![C.cursor_pointer, C.underline], "Three"],
+                    span![class![C.ml_1, C.text_gray_500], "(3)"],
+                    simple_ev(Ev::Click, Msg::Open(TypedId::Job(3))),
+                ]
+            ],
+        ]];
         // FIXME It seems there is no any other way, https://github.com/seed-rs/seed/issues/414
         assert_eq!(format!("{:#?}", dom), format!("{:#?}", expected_dom));
     }
