@@ -136,7 +136,7 @@ pub enum Msg {
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     let msg_str = match msg {
         Msg::Modal(_) => "Msg-Modal".to_string(),
-        Msg::FireCommands(_) => "Msg-FireCommands".to_string(),
+        Msg::FireCommands(ref cmds) => format!("Msg-FireCommands: {:?}", cmds),
         Msg::FetchTree => "Msg-FetchTree".to_string(),
         Msg::FetchedCommands(_) => "Msg-FetchedCommands".to_string(),
         Msg::FetchedJobs(_) => "Msg-FetchedJobs".to_string(),
@@ -496,7 +496,7 @@ fn command_item_view(x: &Command, is_open: bool, model: &Model) -> Node<Msg> {
         C.border_transparent
     };
 
-    let (open_icon, m) = if is_open {
+    let (open_icon, msg) = if is_open {
         ("chevron-circle-up", Msg::Close(TypedId::Command(x.id)))
     } else {
         ("chevron-circle-down", Msg::Open(TypedId::Command(x.id)))
@@ -522,7 +522,7 @@ fn command_item_view(x: &Command, is_open: bool, model: &Model) -> Node<Msg> {
                     C.select_none,
                     C.py_5
                 ],
-                simple_ev(Ev::Click, m),
+                simple_ev(Ev::Click, msg),
                 span![class![C.font_thin, C.text_xl], status_icon(x), &x.message],
                 font_awesome(
                     class![C.w_4, C.h_4, C.inline, C.text_gray_700, C.text_blue_500],
@@ -572,16 +572,20 @@ where
                 }
             }
         }
-        div![ parent, acc ]
+        if !parent.is_empty() {
+            div![ parent, acc ]
+        } else {
+            // to remove redundant empty dom elements
+            empty!()
+        }
     }
-
     let mut ctx = Context {
         visited: HashSet::new(),
         is_new: false,
     };
     let mut acc: Vec<Node<Msg>> = Vec::with_capacity(dag.roots.len());
     for r in &dag.roots {
-        acc.push(build_node_view(dag, node_view, Arc::clone(r), &mut ctx));
+        acc.push(build_node_view(dag, &node_view, Arc::clone(r), &mut ctx));
     }
     div![ acc ]
 }
@@ -596,22 +600,30 @@ fn job_node_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
         } else if job.state == "complete" {
             (C.border_green_500, font_awesome(awesome_style, "check").merge_attrs(class![C.text_green_500]))
         } else {
-            (C.border_transparent, font_awesome(awesome_style, "wind").merge_attrs(class![C.text_red_500]))
+            (C.border_transparent, font_awesome(awesome_style, "spinner").merge_attrs(class![C.text_gray_500, C.pulse]))
         };
-        a![
-            span![ class![C.mr_1], icon ],
-            span![ job.description ],
-            span![ class![C.ml_1, C.text_gray_500], format!("({})", job.id) ],
-            simple_ev(Ev::Click, Msg::Open(TypedId::Job(job.id))),
-        ]
+
+        if job.steps.is_empty() {
+            span![
+                span![ class![C.mr_1], icon ],
+                span![ job.description ],
+                span![ class![C.ml_1, C.text_gray_500], format!("({})", job.id) ],
+            ]
+        } else {
+            a![
+                span![ class![C.mr_1], icon ],
+                span![ job.description ],
+                span![ class![C.ml_1, C.text_gray_500], format!("({})", job.id) ],
+                simple_ev(Ev::Click, Msg::Open(TypedId::Job(job.id))),
+            ]
+        }
     } else {
         empty!()
     }
 }
 
 
-
-fn step_item_view(_x: &Step, _is_open: bool) -> Node<Msg> {
+fn step_list_view(is_open: bool) -> Node<Msg> {
     div!["step_item_view"]
 }
 
@@ -682,10 +694,36 @@ mod tests {
         ];
         let dag = build_direct_dag(&jobs);
         let dom = build_dag_view(&dag, &job_node_view);
+        let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline, C.text_green_500];
+        let icon = font_awesome(awesome_style, "check");
         let expected_dom: Node<Msg> = div! [
-            span![],
-            div![],
-            div![],
+            div![
+                // class![ C.ml_3, C.mt_1 ],
+                a![
+                    span![ class![C.mr_1], icon.clone() ],
+                    span![ "One" ],
+                    span![ class![C.ml_1, C.text_gray_500], "(1)" ],
+                    simple_ev(Ev::Click, Msg::Open(TypedId::Job(1))),
+                ],
+                div![
+                    class![ C.ml_3, C.mt_1 ],
+                    a![
+                        span![ class![C.mr_1], icon.clone() ],
+                        span![ "Two" ],
+                        span![ class![C.ml_1, C.text_gray_500], "(2)" ],
+                        simple_ev(Ev::Click, Msg::Open(TypedId::Job(2))),
+                    ],
+                ],
+                div![
+                    class![ C.ml_3, C.mt_1 ],
+                    a![
+                        span![ class![C.mr_1], icon.clone() ],
+                        span![ "Three" ],
+                        span![ class![C.ml_1, C.text_gray_500], "(3)" ],
+                        simple_ev(Ev::Click, Msg::Open(TypedId::Job(3))),
+                    ]
+                ],
+            ],
         ];
         // FIXME It seems there is no any other way, https://github.com/seed-rs/seed/issues/414
         assert_eq!(format!("{:#?}", dom), format!("{:#?}", expected_dom));
@@ -706,7 +744,11 @@ mod tests {
             resource_uri: format!("/api/job/{}/", id),
             state: "complete".to_string(),
             step_results: Default::default(),
-            steps: vec![],
+            steps: vec![
+                "/api/step/11/".to_string(),
+                "/api/step/12/".to_string(),
+                "/api/step/13/".to_string(),
+            ],
             wait_for: deps.iter().map(|x| format!("/api/job/{}/", x)).collect(),
             write_locks: vec![],
         }
