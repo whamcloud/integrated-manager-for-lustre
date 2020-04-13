@@ -723,7 +723,7 @@ impl<T> EndpointName for Job<T> {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Step {
-    pub args: HashMap<String, String>,
+    pub args: HashMap<String, serde_json::value::Value>,
     pub backtrace: String,
     pub class_name: String,
     pub console: String,

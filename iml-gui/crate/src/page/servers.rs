@@ -245,7 +245,7 @@ pub fn view(
             ]
         }
     ];
-    div![ b, c ]
+    div![b, c]
 }
 
 fn lnet_by_server_view<T>(x: &Host, cache: &ArcCache, all_locks: &Locks) -> Option<Vec<Node<T>>> {
