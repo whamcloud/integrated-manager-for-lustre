@@ -205,9 +205,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 if are_jobs_consistent(&model, &api_list.objects) {
                     model.jobs_loading = false;
                     if model.is_dag_inverse {
-                        model.jobs_dag = build_inverse_dag(&api_list.objects);
+                        model.jobs_dag = build_inverse_dag(&model.jobs);
                     } else {
-                        model.jobs_dag = build_direct_dag(&api_list.objects);
+                        model.jobs_dag = build_direct_dag(&model.jobs);
                     }
                     model.jobs = api_list.objects.into_iter().map(Arc::new).collect();
                 }
@@ -241,12 +241,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::InverseClick => {
             if !model.jobs_loading {
                 model.is_dag_inverse = !model.is_dag_inverse;
-                // TODO avoid temporary clones
-                let jobs: Vec<Job0> = model.jobs.iter().map(|a| (**a).clone()).collect();
                 if model.is_dag_inverse {
-                    model.jobs_dag = build_inverse_dag(&jobs);
+                    model.jobs_dag = build_inverse_dag(&model.jobs);
                 } else {
-                    model.jobs_dag = build_direct_dag(&jobs);
+                    model.jobs_dag = build_direct_dag(&model.jobs);
                 }
             }
         }
@@ -794,7 +792,8 @@ mod tests {
             make_job(2, &[], "Two"),
             make_job(3, &[], "Three"),
         ];
-        let dag = build_direct_dag(&jobs);
+        let arc_jobs: Vec<Arc<Job0>> = jobs.into_iter().map(|j| Arc::new(j)).collect();
+        let dag = build_direct_dag(&arc_jobs);
         let dom = build_dag_view(&dag, &job_node_view);
         let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline, C.text_green_500];
         let icon = font_awesome(awesome_style, "check");
