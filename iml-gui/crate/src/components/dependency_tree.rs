@@ -59,7 +59,7 @@ impl<T> Default for DependencyDAG<T> {
     }
 }
 
-pub fn build_direct_dag<T>(ts: &[T]) -> DependencyDAG<T>
+pub fn build_direct_dag<T>(ts: &[Arc<T>]) -> DependencyDAG<T>
 where
     T: Deps + Clone + Debug,
 {
@@ -85,7 +85,7 @@ where
     enrich_dag(ts, &roots, &dag)
 }
 
-pub fn build_inverse_dag<T>(ts: &[T]) -> DependencyDAG<T>
+pub fn build_inverse_dag<T>(ts: &[Arc<T>]) -> DependencyDAG<T>
 where
     T: Deps + Clone + Debug,
 {
@@ -109,7 +109,7 @@ where
     enrich_dag(ts, &roots, &dag)
 }
 
-pub fn enrich_dag<T>(objs: &[T], int_roots: &[u32], int_deps: &[(u32, Vec<u32>)]) -> DependencyDAG<T>
+pub fn enrich_dag<T>(objs: &[Arc<T>], int_roots: &[u32], int_deps: &[(u32, Vec<u32>)]) -> DependencyDAG<T>
 where
     T: Deps + Clone + Debug,
 {
@@ -121,13 +121,13 @@ where
     DependencyDAG { roots, deps }
 }
 
-pub fn convert_ids_to_arcs<T>(objs: &[T], ids: &[u32]) -> Vec<Arc<T>>
-where
-    T: Deps + Clone + Debug,
+pub fn convert_ids_to_arcs<T>(objs: &[Arc<T>], ids: &[u32]) -> Vec<Arc<T>>
+    where
+        T: Deps + Clone + Debug,
 {
     ids.iter()
         .filter_map(|id| objs.iter().find(|o| o.id() == *id))
-        .map(|o| Arc::new(o.clone()))
+        .map(|a| Arc::clone(a))
         .collect()
 }
 
@@ -221,12 +221,13 @@ mod tests {
             X::new(47, &[43, 46], "Start Pacemaker on oss2.local."),
             X::new(48, &[39, 40, 41, 42, 45, 46, 47], "Setup managed host oss2.local."),
         ];
+        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(|x| Arc::new(x)).collect();
 
-        let dag = build_direct_dag(&x_list);
+        let dag = build_direct_dag(&x_arcs);
         let result = build_dag_str(&dag, &node_to_string).join("\n");
         assert_eq!(result, TREE_DIRECT);
 
-        let dag = build_inverse_dag(&x_list);
+        let dag = build_inverse_dag(&x_arcs);
         let result = build_dag_str(&dag, &node_to_string).join("\n");
         assert_eq!(result, TREE_INVERSE);
     }
@@ -235,12 +236,13 @@ mod tests {
     fn cyclic_dependency() {
         // it shouldn't be stack overflow anyway even if there is an invariant violation
         let x_list: Vec<X> = vec![X::new(1, &[2], "One"), X::new(2, &[3], "Two"), X::new(3, &[2], "Three")];
+        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(|x| Arc::new(x)).collect();
 
-        let dag = build_direct_dag(&x_list);
+        let dag = build_direct_dag(&x_arcs);
         let result = build_dag_str(&dag, &node_to_string).join("\n");
         assert_eq!(result, "1: One\n  2: Two\n    3: Three\n      2: Two...\n3: Three...");
 
-        let dag = build_inverse_dag(&x_list);
+        let dag = build_inverse_dag(&x_arcs);
         let result = build_dag_str(&dag, &node_to_string).join("\n");
         assert_eq!(result, "");
     }
