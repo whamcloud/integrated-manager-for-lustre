@@ -421,7 +421,7 @@ class ServiceConfig(CommandLine):
         rc, out, err = self.shell(["postgresql-12-setup", "initdb"])
         if rc != 0:
             if "is not empty" not in out:
-                log.error("Failed to initialize postgresql service")
+                log.error("Failed to initialize postgresql 9.6 database")
                 log.error("stdout:\n%s" % out)
                 log.error("stderr:\n%s" % err)
                 raise CommandError("postgresql-12-setup initdb", rc, out, err)
