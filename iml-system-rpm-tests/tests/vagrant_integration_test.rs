@@ -15,6 +15,7 @@ async fn setup() -> Result<(), CmdError> {
     vagrant::global_prune().await?;
     vagrant::poweroff_running_vms().await?;
     vagrant::unregister_vms().await?;
+    vagrant::clear_vbox_machine_folder().await?;
 
     Ok(())
 }
