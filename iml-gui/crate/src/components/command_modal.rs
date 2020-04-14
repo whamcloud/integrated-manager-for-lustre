@@ -175,7 +175,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::FetchTree => {
             model.tree_cancel = None;
             if !is_all_finished(&model.commands) {
-                let _ = schedule_fetch_tree(model, orders).map_err(|e| error!(e.to_string()));
+                match schedule_fetch_tree(model, orders) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        error!(e.to_string())
+                    }
+                }
             }
         }
         Msg::FetchedCommands(commands_data_result) => {
@@ -417,6 +422,24 @@ fn is_command_in_opens(cmd_id: u32, opens: &Opens) -> bool {
     }
 }
 
+fn is_job_in_opens(opens: &Opens, job_id: u32) -> bool {
+    match opens {
+        Opens::None => false,
+        Opens::Command(_) => false,
+        Opens::CommandJob(_, jid) => job_id == *jid,
+        Opens::CommandJobSteps(_, jid, _) => job_id == *jid,
+    }
+}
+
+fn is_step_in_opens(opens: &Opens, step_id: u32) -> bool {
+    match opens {
+        Opens::None => false,
+        Opens::Command(_) => false,
+        Opens::CommandJob(_, _) => false,
+        Opens::CommandJobSteps(_, _, sids) => sids.contains(&step_id),
+    }
+}
+
 fn perform_open_click(cur_opens: &Opens, the_id: TypedId) -> Opens {
     match the_id {
         TypedId::Command(cmd_id) => Opens::Command(cmd_id),
@@ -451,14 +474,14 @@ fn perform_close_click(cur_opens: &Opens, the_id: TypedId) -> Opens {
             Opens::Command(_cmd_id_0) => cur_opens.clone(),
             Opens::CommandJob(cmd_id_0, job_id_0) => {
                 if job_id == *job_id_0 {
-                    Opens::Command(cmd_id_0.clone())
+                    Opens::Command(*cmd_id_0)
                 } else {
                     cur_opens.clone()
                 }
             }
             Opens::CommandJobSteps(cmd_id_0, job_id_0, _) => {
                 if job_id == *job_id_0 {
-                    Opens::Command(cmd_id_0.clone())
+                    Opens::Command(*cmd_id_0)
                 } else {
                     cur_opens.clone()
                 }
@@ -470,7 +493,7 @@ fn perform_close_click(cur_opens: &Opens, the_id: TypedId) -> Opens {
             Opens::CommandJob(_, _) => cur_opens.clone(),
             Opens::CommandJobSteps(cmd_id_0, job_id_0, step_ids_0) => {
                 // if the clicked step_id is contained in the list of open steps, just remove it
-                let step_ids = step_ids_0.iter().map(|r| *r).filter(|sid| *sid != step_id).collect();
+                let step_ids = step_ids_0.iter().copied().filter(|sid| *sid != step_id).collect();
                 Opens::CommandJobSteps(*cmd_id_0, *job_id_0, step_ids)
             }
         },
@@ -535,7 +558,7 @@ fn command_item_view(model: &Model, x: &Command) -> Node<Msg> {
         ("chevron-circle-down", Msg::Open(TypedId::Command(x.id)))
     };
     let job_tree = job_tree_view(&model.jobs_dag);
-    let step_list = step_list_view(&model.steps);
+    let step_list = step_list_view(&model.opens, &model.steps);
     div![
         class![C.border_b, C.last__border_b_0],
         div![
@@ -594,7 +617,7 @@ pub fn job_tree_view(jobs_dag: &DependencyDAG<Job0>) -> Node<Msg> {
                 C.overflow_auto,
                 C.max_h_screen
             ],
-            build_dag_view(jobs_dag, &job_node_view),
+            build_dag_view(jobs_dag, &job_item_view),
         ]
     ]
 }
@@ -639,7 +662,7 @@ where
     div![acc]
 }
 
-fn job_node_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
+fn job_item_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
     if ctx.is_new {
         let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
         let (_border, icon) = if job.cancelled {
@@ -683,7 +706,7 @@ fn job_node_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
     }
 }
 
-fn step_list_view(steps: &Vec<Arc<Step>>) -> Node<Msg> {
+fn step_list_view(opens: &Opens, steps: &[Arc<Step>]) -> Node<Msg> {
     if steps.is_empty() {
         empty!()
     } else {
@@ -704,6 +727,7 @@ fn step_list_view(steps: &Vec<Arc<Step>>) -> Node<Msg> {
                     span![class![C.cursor_pointer, C.underline], step.class_name,],
                     span![class![C.ml_1, C.text_gray_500], format!("({})", step.id)],
                     simple_ev(Ev::Click, Msg::Open(TypedId::Step(step.id))),
+                    step_item_view(opens, step),
                 ]
             })
             .collect();
@@ -722,6 +746,27 @@ fn step_list_view(steps: &Vec<Arc<Step>>) -> Node<Msg> {
                     C.max_h_screen
                 ],
                 steps_list
+            ]
+        ]
+    }
+}
+
+fn step_item_view(opens: &Opens, step: &Step) -> Node<Msg> {
+    let is_open = is_step_in_opens(opens, step.id);
+    if !is_open {
+        empty!()
+    } else {
+        div![
+            class![C.max_h_screen, C.scrolling_auto, C.overflow_auto],
+            h4![ "Arguments" ],
+            pre![
+                class![ C.text_white, C.bg_black, C.break_words],
+                format!("{:?}", step.args).chars().take(200).collect::<String>(),
+            ],
+            h4![ "Logs" ],
+            pre![
+                class![ C.text_white, C.bg_black, C.break_words],
+                step.console.chars().take(400).collect::<String>(),
             ]
         ]
     }
@@ -793,7 +838,7 @@ mod tests {
         ];
         let arc_jobs: Vec<Arc<Job0>> = jobs.into_iter().map(|j| Arc::new(j)).collect();
         let dag = build_direct_dag(&arc_jobs);
-        let dom = build_dag_view(&dag, &job_node_view);
+        let dom = build_dag_view(&dag, &job_item_view);
         let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline, C.text_green_500];
         let icon = font_awesome(awesome_style, "check");
         let expected_dom: Node<Msg> = div![div![
