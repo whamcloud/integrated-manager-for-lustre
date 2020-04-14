@@ -2,7 +2,7 @@
 
 yum install -y epel-release
 yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql96-server postgresql96-devel rabbitmq-server telnet python-ethtool erlang-inets patch gcc-c++ systemd-devel python-pip curl libcurl-devel nss
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql12-server postgresql12-devel rabbitmq-server telnet python-ethtool erlang-inets patch gcc-c++ systemd-devel python-pip curl libcurl-devel nss
 systemctl enable rabbitmq-server
 
 export PATH=$PATH:/usr/lib/rabbitmq/bin/
@@ -44,17 +44,17 @@ echo "counter: $COUNTER, trials: $MAX_TRIALS"
 
 
 # Configure postgres
-systemctl enable postgresql-9.6
-/usr/pgsql-9.6/bin/postgresql96-setup initdb
-systemctl start postgresql-9.6
+systemctl enable postgresql-12
+/usr/pgsql-12/bin/postgresql12-setup initdb
+systemctl start postgresql-12
 # TODO: sleeping is racy.  should check for up-ness, not just assume it
 #       will happen within 5 seconds
 sleep 5  # Unfortunately postgresql start seems to return before its truly up and ready for business
 su postgres -c 'createuser -R -S -d chroma'
 su postgres -c 'createdb -O chroma chroma'
 sed -i -e '/local[[:space:]]\+all/i\
-local   all         chroma                            trust' /var/lib/pgsql/9.6/data/pg_hba.conf
-systemctl restart postgresql-9.6
+local   all         chroma                            trust' /var/lib/pgsql/12/data/pg_hba.conf
+systemctl restart postgresql-12
 
 
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/@MFL_COPR_REPO@/repo/epel-7/@MFL_COPR_NAME@-epel-7.repo
