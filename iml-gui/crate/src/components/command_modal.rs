@@ -128,8 +128,7 @@ pub enum Msg {
     FetchedCommands(Box<fetch::ResponseDataResult<ApiList<Command>>>),
     FetchedJobs(Box<fetch::ResponseDataResult<ApiList<Job0>>>),
     FetchedSteps(Box<fetch::ResponseDataResult<ApiList<Step>>>),
-    Open(TypedId),
-    Close(TypedId),
+    Click(TypedId),
     InverseClick,
     Noop,
 }
@@ -142,8 +141,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::FetchedCommands(_) => "Msg-FetchedCommands".to_string(),
         Msg::FetchedJobs(_) => "Msg-FetchedJobs".to_string(),
         Msg::FetchedSteps(_) => "Msg-FetchedSteps".to_string(),
-        Msg::Open(_) => "Msg-Open".to_string(),
-        Msg::Close(_) => "Msg-Close".to_string(),
+        Msg::Click(_) => "Msg-Click".to_string(),
         Msg::InverseClick => "Msg-InverseClick".to_string(),
         Msg::Noop => "Msg-Noop".to_string(),
     };
@@ -175,11 +173,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::FetchTree => {
             model.tree_cancel = None;
             if !is_all_finished(&model.commands) {
-                match schedule_fetch_tree(model, orders) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        error!(e.to_string())
-                    }
+                if let Err(e) = schedule_fetch_tree(model, orders) {
+                    error!(e.to_string())
                 }
             }
         }
@@ -235,12 +230,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 orders.skip();
             }
         },
-        Msg::Open(the_id) => {
-            model.opens = perform_open_click(&model.opens, the_id);
-            let _ = schedule_fetch_tree(model, orders).map_err(|e| error!(e.to_string()));
-        }
-        Msg::Close(the_id) => {
-            model.opens = perform_close_click(&model.opens, the_id);
+        Msg::Click(the_id) => {
+            let (opens, do_fetch) = interpret_click(&model.opens, the_id);
+            model.opens = opens;
+            if do_fetch {
+                if let Err(e) = schedule_fetch_tree(model, orders) {
+                    error!(e.to_string())
+                }
+            }
         }
         Msg::InverseClick => {
             if !model.jobs_loading {
@@ -330,6 +327,341 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -
     }
 }
 
+pub(crate) fn view(model: &Model) -> Node<Msg> {
+    if !model.modal.open {
+        empty![]
+    } else {
+        modal::bg_view(
+            true,
+            Msg::Modal,
+            modal::content_view(
+                Msg::Modal,
+                if model.commands_loading {
+                    vec![
+                        modal::title_view(Msg::Modal, span!["Loading Command"]),
+                        div![
+                            class![C.my_12, C.text_center, C.text_gray_500],
+                            font_awesome(class![C.w_12, C.h_12, C.inline, C.pulse], "spinner")
+                        ],
+                        modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
+                    ]
+                } else {
+                    vec![
+                        modal::title_view(Msg::Modal, plain!["Commands"]),
+                        div![
+                            class![C.py_8],
+                            model.commands.iter().map(|x| { command_item_view(&model, x) })
+                        ],
+                        modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
+                    ]
+                },
+            ),
+        )
+        .with_listener(keyboard_ev(Ev::KeyDown, move |ev| match ev.key_code() {
+            key_codes::ESC => Msg::Modal(modal::Msg::Close),
+            _ => Msg::Noop,
+        }))
+        .merge_attrs(class![C.text_black])
+    }
+}
+
+fn command_item_view(model: &Model, x: &Command) -> Node<Msg> {
+    let is_open = is_typed_id_in_opens(&model.opens, TypedId::Command(x.id));
+    let border = if !is_open {
+        C.border_transparent
+    } else if x.complete {
+        C.border_green_500
+    } else if x.errored {
+        C.border_red_500
+    } else if x.cancelled {
+        C.border_gray_500
+    } else {
+        C.border_transparent
+    };
+
+    let (open_icon, msg) = if is_open {
+        ("chevron-circle-up", Msg::Click(TypedId::Command(x.id)))
+    } else {
+        ("chevron-circle-down", Msg::Click(TypedId::Command(x.id)))
+    };
+    let job_tree = job_tree_view(&model.jobs_dag);
+    let step_list = step_list_view(&model.opens, &model.steps);
+    div![
+        class![C.border_b, C.last__border_b_0],
+        div![
+            class![
+                border,
+                C.border_l_2,
+                C.px_2
+                C.py_5,
+                C.text_gray_700,
+            ],
+            header![
+                class![
+                    C.flex,
+                    C.justify_between,
+                    C.items_center,
+                    C.cursor_pointer,
+                    C.select_none,
+                    C.py_5
+                ],
+                simple_ev(Ev::Click, msg),
+                span![class![C.font_thin, C.text_xl], status_icon(x), &x.message],
+                font_awesome(
+                    class![C.w_4, C.h_4, C.inline, C.text_gray_700, C.text_blue_500],
+                    open_icon
+                ),
+            ],
+            ul![
+                class![C.pl_8, C.hidden => !is_open],
+                li![class![C.pb_2], "Started at: ", x.created_at],
+                li![class![C.pb_2], "Status: ", status_text(x)],
+                li![job_tree],
+                li![step_list],
+            ]
+        ]
+    ]
+}
+
+pub fn job_tree_view(jobs_dag: &DependencyDAG<Job0>) -> Node<Msg> {
+    div![
+        class![C.box_border, C.font_ordinary, C.text_gray_700],
+        h4![class![C.text_lg, C.font_medium], "Jobs"],
+        input![
+            attrs![ At::Type => "checkbox" ],
+            simple_ev(Ev::Click, Msg::InverseClick),
+        ],
+        span![class![C.mx_1, C.border], "Switch job dependency view"],
+        div![
+            class![
+                C.p_1,
+                C.pb_2,
+                C.mb_1,
+                C.bg_gray_100,
+                C.border,
+                C.rounded,
+                C.shadow_sm,
+                C.overflow_auto,
+                C.max_h_screen
+            ],
+            job_dag_view(jobs_dag, &job_item_view),
+        ]
+    ]
+}
+
+pub fn job_dag_view<T, F>(dag: &DependencyDAG<T>, node_view: &F) -> Node<Msg>
+where
+    T: Deps,
+    F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
+{
+    fn build_node_view<T, F>(dag: &DependencyDAG<T>, node_view: &F, n: Arc<T>, ctx: &mut Context) -> Node<Msg>
+    where
+        T: Deps,
+        F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
+    {
+        ctx.is_new = ctx.visited.insert(n.id());
+        let parent: Node<Msg> = node_view(Arc::clone(&n), ctx);
+        let mut acc: Vec<Node<Msg>> = Vec::new();
+        if let Some(deps) = dag.deps.get(&n.id()) {
+            if ctx.is_new {
+                for d in deps {
+                    let rec_node = build_node_view(dag, node_view, Arc::clone(d), ctx);
+                    // all the dependencies are shifted with the indent
+                    acc.push(rec_node.merge_attrs(class![C.ml_3, C.mt_1]));
+                }
+            }
+        }
+        if !parent.is_empty() {
+            div![parent, acc]
+        } else {
+            // to remove redundant empty dom elements
+            empty!()
+        }
+    }
+    let mut ctx = Context {
+        visited: HashSet::new(),
+        is_new: false,
+    };
+    let mut acc: Vec<Node<Msg>> = Vec::with_capacity(dag.roots.len());
+    for r in &dag.roots {
+        acc.push(build_node_view(dag, &node_view, Arc::clone(r), &mut ctx));
+    }
+    div![acc]
+}
+
+fn job_item_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
+    if ctx.is_new {
+        let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
+        let icon = if job.cancelled {
+            font_awesome(awesome_style, "ban").merge_attrs(class![C.text_red_500])
+        } else if job.errored {
+            font_awesome(awesome_style, "exclamation").merge_attrs(class![C.text_red_500])
+        } else if job.state == "complete" {
+            font_awesome(awesome_style, "check").merge_attrs(class![C.text_green_500])
+        } else {
+            font_awesome(awesome_style, "spinner").merge_attrs(class![C.text_gray_500, C.pulse])
+        };
+
+        if job.steps.is_empty() {
+            span![
+                span![class![C.mr_1], icon],
+                span![job.description],
+                span![class![C.ml_1, C.text_gray_500], format!("({})", job.id)],
+            ]
+        } else {
+            a![
+                span![class![C.mr_1], icon],
+                span![class![C.cursor_pointer, C.underline], job.description,],
+                span![class![C.ml_1, C.text_gray_500], format!("({})", job.id)],
+                simple_ev(Ev::Click, Msg::Click(TypedId::Job(job.id))),
+            ]
+        }
+    } else {
+        empty!()
+    }
+}
+
+fn step_list_view(opens: &Opens, steps: &[Arc<Step>]) -> Node<Msg> {
+    if steps.is_empty() {
+        empty!()
+    } else {
+        fn get_icon(state: &str) -> Node<Msg> {
+            let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
+            match state {
+                "incomplete" => font_awesome(awesome_style, "spinner").merge_attrs(class![C.text_gray_500, C.pulse]),
+                "failed" => font_awesome(awesome_style, "exclamation").merge_attrs(class![C.text_red_500]),
+                "success" => font_awesome(awesome_style, "check").merge_attrs(class![C.text_green_500]),
+                _ => font_awesome(awesome_style, "question").merge_attrs(class![C.text_pink_500]),
+            }
+        }
+        let steps_list: Vec<Node<Msg>> = steps
+            .iter()
+            .map(|step| {
+                li![
+                    span![class![C.mr_1], get_icon(&step.state)],
+                    span![
+                        class![C.cursor_pointer, C.underline],
+                        step.class_name,
+                        simple_ev(Ev::Click, Msg::Click(TypedId::Step(step.id))),
+                    ],
+                    span![class![C.ml_1, C.text_gray_500], format!("({})", step.id)],
+                    step_item_view(opens, step),
+                ]
+            })
+            .collect();
+        div![
+            h4![class![C.text_lg, C.font_medium], "Steps"],
+            ul![
+                class![
+                    C.p_1,
+                    C.pb_2,
+                    C.mb_1,
+                    C.bg_gray_100,
+                    C.border,
+                    C.rounded,
+                    C.shadow_sm,
+                    C.overflow_auto,
+                    C.max_h_screen
+                ],
+                steps_list
+            ]
+        ]
+    }
+}
+
+fn step_item_view(opens: &Opens, step: &Step) -> Node<Msg> {
+    let is_open = is_typed_id_in_opens(opens, TypedId::Step(step.id));
+    if !is_open {
+        empty!()
+    } else {
+        let mut arg_keys = step.args.keys().collect::<Vec<&String>>();
+        arg_keys.sort();
+        let mut arg_str = String::with_capacity(step.args.len() * 10);
+        for k in arg_keys {
+            arg_str.push_str(k);
+            arg_str.push_str(": ");
+            arg_str.push_str(&format!(
+                "{:?}\n",
+                step.args.get(k).unwrap_or(&serde_json::json!("null"))
+            ));
+        }
+        div![
+            h4![class![C.text_lg, C.font_medium], "Arguments"],
+            pre![
+                class![
+                    C.text_white,
+                    C.bg_black,
+                    C.break_words,
+                    C.overflow_x_hidden,
+                    C.max_w_full
+                ],
+                arg_str,
+            ],
+            if step.console.is_empty() {
+                vec![]
+            } else {
+                vec![
+                    h4![class![C.text_lg, C.font_medium], "Logs"],
+                    pre![
+                        class![
+                            C.text_white,
+                            C.bg_black,
+                            C.break_words,
+                            C.overflow_x_hidden,
+                            C.max_w_full
+                        ],
+                        step.console,
+                    ],
+                ]
+            }
+        ]
+    }
+}
+
+fn status_text(cmd: &Command) -> &'static str {
+    if cmd.complete {
+        "Complete"
+    } else if cmd.errored {
+        "Errored"
+    } else if cmd.cancelled {
+        "Cancelled"
+    } else {
+        "Running"
+    }
+}
+
+fn status_icon<T>(cmd: &Command) -> Node<T> {
+    let cls = class![C.w_4, C.h_4, C.inline, C.mr_4];
+
+    if cmd.complete {
+        font_awesome(cls, "check").merge_attrs(class![C.text_green_500])
+    } else if cmd.cancelled {
+        font_awesome(cls, "ban").merge_attrs(class![C.text_gray_500])
+    } else if cmd.errored {
+        font_awesome(cls, "bell").merge_attrs(class![C.text_red_500])
+    } else {
+        font_awesome(cls, "spinner").merge_attrs(class![C.text_gray_500, C.pulse])
+    }
+}
+
+fn close_button() -> Node<Msg> {
+    // todo revert
+    seed::button![
+        class![
+            C.bg_transparent,
+            C.py_2,
+            C.px_4,
+            C.rounded_full,
+            C.text_blue_500,
+            C.hover__bg_gray_100,
+            C.hover__text_blue_400,
+        ],
+        simple_ev(Ev::Click, modal::Msg::Close),
+        "Close",
+    ]
+    .map_msg(Msg::Modal)
+}
+
 async fn fetch_the_batch<T, F, U>(ids: Vec<u32>, data_to_msg: F) -> Result<U, U>
 where
     T: DeserializeOwned + EndpointName + 'static,
@@ -413,30 +745,37 @@ fn are_steps_consistent(model: &Model, jobs: &[Step]) -> bool {
     }
 }
 
-fn is_command_in_opens(cmd_id: u32, opens: &Opens) -> bool {
-    match opens {
-        Opens::None => false,
-        Opens::Command(cid) => cmd_id == *cid,
-        Opens::CommandJob(cid, _) => cmd_id == *cid,
-        Opens::CommandJobSteps(cid, _, _) => cmd_id == *cid,
+fn is_typed_id_in_opens(opens: &Opens, typed_id: TypedId) -> bool {
+    match typed_id {
+        TypedId::Command(cmd_id) => match opens {
+            Opens::None => false,
+            Opens::Command(cid) => cmd_id == *cid,
+            Opens::CommandJob(cid, _) => cmd_id == *cid,
+            Opens::CommandJobSteps(cid, _, _) => cmd_id == *cid,
+        },
+        TypedId::Job(job_id) => match opens {
+            Opens::None => false,
+            Opens::Command(_) => false,
+            Opens::CommandJob(_, jid) => job_id == *jid,
+            Opens::CommandJobSteps(_, jid, _) => job_id == *jid,
+        },
+        TypedId::Step(step_id) => match opens {
+            Opens::None => false,
+            Opens::Command(_) => false,
+            Opens::CommandJob(_, _) => false,
+            Opens::CommandJobSteps(_, _, sids) => sids.contains(&step_id),
+        },
     }
 }
 
-fn is_job_in_opens(opens: &Opens, job_id: u32) -> bool {
-    match opens {
-        Opens::None => false,
-        Opens::Command(_) => false,
-        Opens::CommandJob(_, jid) => job_id == *jid,
-        Opens::CommandJobSteps(_, jid, _) => job_id == *jid,
-    }
-}
-
-fn is_step_in_opens(opens: &Opens, step_id: u32) -> bool {
-    match opens {
-        Opens::None => false,
-        Opens::Command(_) => false,
-        Opens::CommandJob(_, _) => false,
-        Opens::CommandJobSteps(_, _, sids) => sids.contains(&step_id),
+fn interpret_click(cur_opens: &Opens, the_id: TypedId) -> (Opens, bool) {
+    // commands behave like radio-button with the
+    // jobs behave like radio button
+    // steps are set of independent elements
+    if is_typed_id_in_opens(cur_opens, the_id) {
+        (perform_close_click(cur_opens, the_id), false)
+    } else {
+        (perform_open_click(cur_opens, the_id), true)
     }
 }
 
@@ -500,322 +839,6 @@ fn perform_close_click(cur_opens: &Opens, the_id: TypedId) -> Opens {
     }
 }
 
-pub(crate) fn view(model: &Model) -> Node<Msg> {
-    if !model.modal.open {
-        empty![]
-    } else {
-        modal::bg_view(
-            true,
-            Msg::Modal,
-            modal::content_view(
-                Msg::Modal,
-                if model.commands_loading {
-                    vec![
-                        modal::title_view(Msg::Modal, span!["Loading Command"]),
-                        div![
-                            class![C.my_12, C.text_center, C.text_gray_500],
-                            font_awesome(class![C.w_12, C.h_12, C.inline, C.pulse], "spinner")
-                        ],
-                        modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
-                    ]
-                } else {
-                    vec![
-                        modal::title_view(Msg::Modal, plain!["Commands"]),
-                        div![
-                            class![C.py_8],
-                            model.commands.iter().map(|x| { command_item_view(&model, x) })
-                        ],
-                        modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
-                    ]
-                },
-            ),
-        )
-        .with_listener(keyboard_ev(Ev::KeyDown, move |ev| match ev.key_code() {
-            key_codes::ESC => Msg::Modal(modal::Msg::Close),
-            _ => Msg::Noop,
-        }))
-        .merge_attrs(class![C.text_black])
-    }
-}
-
-fn command_item_view(model: &Model, x: &Command) -> Node<Msg> {
-    let is_open = is_command_in_opens(x.id, &model.opens);
-    let border = if !is_open {
-        C.border_transparent
-    } else if x.complete {
-        C.border_green_500
-    } else if x.errored {
-        C.border_red_500
-    } else if x.cancelled {
-        C.border_gray_500
-    } else {
-        C.border_transparent
-    };
-
-    let (open_icon, msg) = if is_open {
-        ("chevron-circle-up", Msg::Close(TypedId::Command(x.id)))
-    } else {
-        ("chevron-circle-down", Msg::Open(TypedId::Command(x.id)))
-    };
-    let job_tree = job_tree_view(&model.jobs_dag);
-    let step_list = step_list_view(&model.opens, &model.steps);
-    div![
-        class![C.border_b, C.last__border_b_0],
-        div![
-            class![
-                border,
-                C.border_l_2,
-                C.px_2
-                C.py_5,
-                C.text_gray_700,
-            ],
-            header![
-                class![
-                    C.flex,
-                    C.justify_between,
-                    C.items_center,
-                    C.cursor_pointer,
-                    C.select_none,
-                    C.py_5
-                ],
-                simple_ev(Ev::Click, msg),
-                span![class![C.font_thin, C.text_xl], status_icon(x), &x.message],
-                font_awesome(
-                    class![C.w_4, C.h_4, C.inline, C.text_gray_700, C.text_blue_500],
-                    open_icon
-                ),
-            ],
-            ul![
-                class![C.pl_8, C.hidden => !is_open],
-                li![class![C.pb_2], "Started at: ", x.created_at],
-                li![class![C.pb_2], "Status: ", status_text(x)],
-                li![job_tree],
-                li![step_list],
-            ]
-        ]
-    ]
-}
-
-pub fn job_tree_view(jobs_dag: &DependencyDAG<Job0>) -> Node<Msg> {
-    div![
-        class![C.box_border, C.font_ordinary, C.text_gray_700],
-        h4![class![C.text_lg, C.font_medium], "Jobs"],
-        input![
-            attrs![ At::Type => "checkbox" ],
-            simple_ev(Ev::Click, Msg::InverseClick),
-        ],
-        span![class![C.mx_1, C.border], "Switch job dependency view"],
-        div![
-            class![
-                C.p_1,
-                C.pb_2,
-                C.mb_1,
-                C.bg_gray_100,
-                C.border,
-                C.rounded,
-                C.shadow_sm,
-                C.overflow_auto,
-                C.max_h_screen
-            ],
-            build_dag_view(jobs_dag, &job_item_view),
-        ]
-    ]
-}
-
-pub fn build_dag_view<T, F>(dag: &DependencyDAG<T>, node_view: &F) -> Node<Msg>
-where
-    T: Deps,
-    F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
-{
-    fn build_node_view<T, F>(dag: &DependencyDAG<T>, node_view: &F, n: Arc<T>, ctx: &mut Context) -> Node<Msg>
-    where
-        T: Deps,
-        F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
-    {
-        ctx.is_new = ctx.visited.insert(n.id());
-        let parent: Node<Msg> = node_view(Arc::clone(&n), ctx);
-        let mut acc: Vec<Node<Msg>> = Vec::new();
-        if let Some(deps) = dag.deps.get(&n.id()) {
-            if ctx.is_new {
-                for d in deps {
-                    let rec_node = build_node_view(dag, node_view, Arc::clone(d), ctx);
-                    // all the dependencies are shifted with the indent
-                    acc.push(rec_node.merge_attrs(class![C.ml_3, C.mt_1]));
-                }
-            }
-        }
-        if !parent.is_empty() {
-            div![parent, acc]
-        } else {
-            // to remove redundant empty dom elements
-            empty!()
-        }
-    }
-    let mut ctx = Context {
-        visited: HashSet::new(),
-        is_new: false,
-    };
-    let mut acc: Vec<Node<Msg>> = Vec::with_capacity(dag.roots.len());
-    for r in &dag.roots {
-        acc.push(build_node_view(dag, &node_view, Arc::clone(r), &mut ctx));
-    }
-    div![acc]
-}
-
-fn job_item_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
-    if ctx.is_new {
-        let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
-        let (_border, icon) = if job.cancelled {
-            (
-                C.border_gray_500,
-                font_awesome(awesome_style, "ban").merge_attrs(class![C.text_red_500]),
-            )
-        } else if job.errored {
-            (
-                C.border_red_500,
-                font_awesome(awesome_style, "exclamation").merge_attrs(class![C.text_red_500]),
-            )
-        } else if job.state == "complete" {
-            (
-                C.border_green_500,
-                font_awesome(awesome_style, "check").merge_attrs(class![C.text_green_500]),
-            )
-        } else {
-            (
-                C.border_transparent,
-                font_awesome(awesome_style, "spinner").merge_attrs(class![C.text_gray_500, C.pulse]),
-            )
-        };
-
-        if job.steps.is_empty() {
-            span![
-                span![class![C.mr_1], icon],
-                span![job.description],
-                span![class![C.ml_1, C.text_gray_500], format!("({})", job.id)],
-            ]
-        } else {
-            a![
-                span![class![C.mr_1], icon],
-                span![class![C.cursor_pointer, C.underline], job.description,],
-                span![class![C.ml_1, C.text_gray_500], format!("({})", job.id)],
-                simple_ev(Ev::Click, Msg::Open(TypedId::Job(job.id))),
-            ]
-        }
-    } else {
-        empty!()
-    }
-}
-
-fn step_list_view(opens: &Opens, steps: &[Arc<Step>]) -> Node<Msg> {
-    if steps.is_empty() {
-        empty!()
-    } else {
-        fn get_icon(state: &str) -> Node<Msg> {
-            let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
-            match state {
-                "incomplete" => font_awesome(awesome_style, "spinner").merge_attrs(class![C.text_gray_500, C.pulse]),
-                "failed" => font_awesome(awesome_style, "exclamation").merge_attrs(class![C.text_red_500]),
-                "success" => font_awesome(awesome_style, "check").merge_attrs(class![C.text_green_500]),
-                _ => font_awesome(awesome_style, "question").merge_attrs(class![C.text_pink_500]),
-            }
-        }
-        let steps_list: Vec<Node<Msg>> = steps
-            .iter()
-            .map(|step| {
-                li![
-                    span![class![C.mr_1], get_icon(&step.state)],
-                    span![class![C.cursor_pointer, C.underline], step.class_name,],
-                    span![class![C.ml_1, C.text_gray_500], format!("({})", step.id)],
-                    simple_ev(Ev::Click, Msg::Open(TypedId::Step(step.id))),
-                    step_item_view(opens, step),
-                ]
-            })
-            .collect();
-        div![
-            h4![class![C.text_lg, C.font_medium], "Steps"],
-            ul![
-                class![
-                    C.p_1,
-                    C.pb_2,
-                    C.mb_1,
-                    C.bg_gray_100,
-                    C.border,
-                    C.rounded,
-                    C.shadow_sm,
-                    C.overflow_auto,
-                    C.max_h_screen
-                ],
-                steps_list
-            ]
-        ]
-    }
-}
-
-fn step_item_view(opens: &Opens, step: &Step) -> Node<Msg> {
-    let is_open = is_step_in_opens(opens, step.id);
-    if !is_open {
-        empty!()
-    } else {
-        div![
-            class![C.max_h_screen, C.scrolling_auto, C.overflow_auto],
-            h4![ "Arguments" ],
-            pre![
-                class![ C.text_white, C.bg_black, C.break_words],
-                format!("{:?}", step.args).chars().take(200).collect::<String>(),
-            ],
-            h4![ "Logs" ],
-            pre![
-                class![ C.text_white, C.bg_black, C.break_words],
-                step.console.chars().take(400).collect::<String>(),
-            ]
-        ]
-    }
-}
-
-fn status_text(cmd: &Command) -> &'static str {
-    if cmd.complete {
-        "Complete"
-    } else if cmd.errored {
-        "Errored"
-    } else if cmd.cancelled {
-        "Cancelled"
-    } else {
-        "Running"
-    }
-}
-
-fn status_icon<T>(cmd: &Command) -> Node<T> {
-    let cls = class![C.w_4, C.h_4, C.inline, C.mr_4];
-
-    if cmd.complete {
-        font_awesome(cls, "check").merge_attrs(class![C.text_green_500])
-    } else if cmd.cancelled {
-        font_awesome(cls, "ban").merge_attrs(class![C.text_gray_500])
-    } else if cmd.errored {
-        font_awesome(cls, "bell").merge_attrs(class![C.text_red_500])
-    } else {
-        font_awesome(cls, "spinner").merge_attrs(class![C.text_gray_500, C.pulse])
-    }
-}
-
-fn close_button() -> Node<Msg> {
-    // todo revert
-    seed::button![
-        class![
-            C.bg_transparent,
-            C.py_2,
-            C.px_4,
-            C.rounded_full,
-            C.text_blue_500,
-            C.hover__bg_gray_100,
-            C.hover__text_blue_400,
-        ],
-        simple_ev(Ev::Click, modal::Msg::Close),
-        "Close",
-    ]
-    .map_msg(Msg::Modal)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -838,7 +861,7 @@ mod tests {
         ];
         let arc_jobs: Vec<Arc<Job0>> = jobs.into_iter().map(|j| Arc::new(j)).collect();
         let dag = build_direct_dag(&arc_jobs);
-        let dom = build_dag_view(&dag, &job_item_view);
+        let dom = job_dag_view(&dag, &job_item_view);
         let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline, C.text_green_500];
         let icon = font_awesome(awesome_style, "check");
         let expected_dom: Node<Msg> = div![div![
@@ -847,7 +870,7 @@ mod tests {
                 span![class![C.mr_1], icon.clone()],
                 span![class![C.cursor_pointer, C.underline], "One"],
                 span![class![C.ml_1, C.text_gray_500], "(1)"],
-                simple_ev(Ev::Click, Msg::Open(TypedId::Job(1))),
+                simple_ev(Ev::Click, Msg::Click(TypedId::Job(1))),
             ],
             div![
                 class![C.ml_3, C.mt_1],
@@ -855,7 +878,7 @@ mod tests {
                     span![class![C.mr_1], icon.clone()],
                     span![class![C.cursor_pointer, C.underline], "Two"],
                     span![class![C.ml_1, C.text_gray_500], "(2)"],
-                    simple_ev(Ev::Click, Msg::Open(TypedId::Job(2))),
+                    simple_ev(Ev::Click, Msg::Click(TypedId::Job(2))),
                 ],
             ],
             div![
@@ -864,7 +887,7 @@ mod tests {
                     span![class![C.mr_1], icon.clone()],
                     span![class![C.cursor_pointer, C.underline], "Three"],
                     span![class![C.ml_1, C.text_gray_500], "(3)"],
-                    simple_ev(Ev::Click, Msg::Open(TypedId::Job(3))),
+                    simple_ev(Ev::Click, Msg::Click(TypedId::Job(3))),
                 ]
             ],
         ]];
