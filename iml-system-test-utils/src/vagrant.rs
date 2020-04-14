@@ -9,7 +9,7 @@ use crate::{
 use iml_cmd::{CheckedCommandExt, CmdError};
 use std::{collections::HashMap, str, time::Duration};
 use tokio::{
-    fs::{canonicalize, File},
+    fs::{canonicalize, create_dir, remove_dir_all, File},
     io::AsyncWriteExt,
     process::Command,
     time::delay_for,
@@ -231,11 +231,8 @@ pub async fn clear_vbox_machine_folder() -> Result<(), CmdError> {
 
     if let Some(path) = machine_folder {
         println!("removing contents from machine folder: {}", path);
-        let mut rm = Command::new("rm");
-        let path = canonicalize(path).await?;
-        rm.current_dir(path);
-
-        rm.arg("-rf").arg("*").checked_status().await?;
+        remove_dir_all(path).await?;
+        create_dir(path).await?;
     } else {
         println!("Couldn't determine vbox machine folder. Contents of vms directory will not be cleaned.");
     }
