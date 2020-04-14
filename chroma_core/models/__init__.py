@@ -35,3 +35,4 @@ from lnet_configuration import *
 from sparse_model import *
 from stratagem import *
 from ticket import *
+from devices import *

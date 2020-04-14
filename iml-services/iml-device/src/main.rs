@@ -5,12 +5,14 @@
 use device_types::devices::Device;
 use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
 use iml_device::{
+    db,
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
     },
     ImlDeviceError,
 };
+use iml_postgres::connect;
 use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::Fqdn;
 use std::{
@@ -87,10 +89,24 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let mut s = consume_data("rust_agent_device_rx");
 
+    let (mut client, conn) = connect().await?;
+
+    tokio::spawn(async {
+        conn.await
+            .unwrap_or_else(|e| tracing::error!("DB connection error {}", e));
+    });
+
     while let Some((fqdn, device)) = s.try_next().await? {
         let mut cache = cache2.lock().await;
 
-        cache.insert(fqdn, device);
+        let device: Device = device;
+        let device2: Device = device.clone();
+
+        cache.insert(fqdn.clone(), device2);
+
+        let mut transaction = client.transaction().await?;
+
+        db::persist_local_device(&mut transaction, &fqdn, &device).await?;
     }
 
     Ok(())

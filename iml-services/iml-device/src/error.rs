@@ -4,12 +4,17 @@
 
 use iml_service_queue::service_queue::ImlServiceQueueError;
 use thiserror::Error;
+use tokio_postgres;
 use warp::reject;
 
 #[derive(Error, Debug)]
 pub enum ImlDeviceError {
     #[error(transparent)]
     ImlServiceQueueError(#[from] ImlServiceQueueError),
+    #[error(transparent)]
+    TokioPostgresError(#[from] tokio_postgres::error::Error),
+    #[error(transparent)]
+    SerdeError(#[from] serde_json::error::Error),
 }
 
 impl reject::Reject for ImlDeviceError {}
