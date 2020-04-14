@@ -374,10 +374,15 @@ async fn create_monitored_ldiskfs(config: &ClusterConfig) -> Result<(), CmdError
         .checked_status()
         .await?;
 
-    provision("configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2")
-        .await?
-        .checked_status()
-        .await
+    for node in config.storage_servers() {
+        println!("creating ldiskfs fs for {}", node);
+        provision_node(node, "configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2")
+            .await?
+            .checked_status()
+            .await?;
+    }
+
+    Ok(())
 }
 
 async fn create_monitored_zfs(config: &ClusterConfig) -> Result<(), CmdError> {
@@ -389,10 +394,18 @@ async fn create_monitored_zfs(config: &ClusterConfig) -> Result<(), CmdError> {
         .checked_status()
         .await?;
 
-    provision("configure-lustre-network,create-pools,zfs-params,create-zfs-fs")
+    for node in config.storage_servers() {
+        println!("creating zfs fs for {}", node);
+        provision_node(
+            node,
+            "configure-lustre-network,create-pools,zfs-params,create-zfs-fs",
+        )
         .await?
         .checked_status()
-        .await
+        .await?;
+    }
+
+    Ok(())
 }
 
 pub async fn create_fs(fs_type: FsType, config: &ClusterConfig) -> Result<(), CmdError> {
