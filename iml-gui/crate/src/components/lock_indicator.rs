@@ -59,5 +59,8 @@ fn indicator<T>(lcks: &HashSet<LockChange>) -> Node<T> {
 fn mk_lock_list<T>(locks: &HashSet<&LockChange>) -> Node<T> {
     let mut items: Vec<&String> = locks.iter().map(|x| &x.description).collect();
     items.sort_unstable();
-    ul![class![C.list_disc, C.px_4], items.iter().map(|x| li![x])]
+    ul![
+        class![C.list_disc, C.px_4, C.whitespace_no_wrap, C.text_left],
+        items.iter().map(|x| li![x])
+    ]
 }

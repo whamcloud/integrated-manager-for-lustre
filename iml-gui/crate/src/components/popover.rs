@@ -16,7 +16,7 @@ pub fn title_view<T>(content: &str) -> Node<T> {
 }
 
 pub fn content_view<T>(content: impl View<T>) -> Node<T> {
-    div![class![C.py_2, C.px_3, C.w_64, C.text_sm], content.els()]
+    div![class![C.py_2, C.px_3, C.text_sm], content.els()]
 }
 
 pub fn view<T>(content: impl View<T>, placement: Placement) -> Node<T> {
