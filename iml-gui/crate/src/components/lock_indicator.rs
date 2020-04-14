@@ -48,7 +48,7 @@ fn indicator<T>(lcks: &HashSet<LockChange>) -> Node<T> {
 
     span![
         attrs::container(),
-        class![C.cursor_pointer],
+        class![C.cursor_pointer, C.outline_none],
         attrs! {At::TabIndex => 0},
         font_awesome(class![C.inline, C.w_4, C.h_4], "lock"),
         tooltip::view(&tooltip.join(", "), Placement::Top),
@@ -59,5 +59,8 @@ fn indicator<T>(lcks: &HashSet<LockChange>) -> Node<T> {
 fn mk_lock_list<T>(locks: &HashSet<&LockChange>) -> Node<T> {
     let mut items: Vec<&String> = locks.iter().map(|x| &x.description).collect();
     items.sort_unstable();
-    ul![class![C.list_disc, C.px_4], items.iter().map(|x| li![x])]
+    ul![
+        class![C.list_disc, C.px_4, C.whitespace_no_wrap, C.text_left],
+        items.iter().map(|x| li![x])
+    ]
 }
