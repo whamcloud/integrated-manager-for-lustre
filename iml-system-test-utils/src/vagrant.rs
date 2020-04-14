@@ -157,7 +157,7 @@ fn vm_list_from_output(output: &str) -> Vec<String> {
     output
         .lines()
         .filter_map(|s| {
-            s.split(" ")
+            s.split(' ')
                 .last()
                 .map(|s| s.replace("{", "").replace("}", ""))
         })
@@ -434,6 +434,7 @@ pub async fn configure_rpm_setup(
     let mut file = File::create(config_path).await?;
     file.write_all(config.as_bytes()).await?;
 
+    let mut vm_cmd: String = "sudo cp /vagrant/local_settings.py /usr/share/chroma-manager/".into();
     let setup_config: &SetupConfig = setup.into();
     if setup_config.use_stratagem {
         let mut server_profile_path = vagrant_path.clone();
@@ -447,20 +448,22 @@ pub async fn configure_rpm_setup(
 
         let mut file = File::create(client_profile_path).await?;
         file.write_all(STRATAGEM_CLIENT_PROFILE.as_bytes()).await?;
+
+        vm_cmd = format!(
+            "{}{}",
+            vm_cmd,
+            "&& sudo chroma-config profile register /vagrant/stratagem-server.profile \
+        && sudo chroma-config profile register /vagrant/stratagem-client.profile \
+        && sudo systemctl restart iml-manager.target"
+        );
     }
 
     rsync(cluster_config.manager).await?;
 
-    run_vm_command(
-        cluster_config.manager,
-        "sudo cp /vagrant/local_settings.py /usr/share/chroma-manager/ \
-            && sudo chroma-config profile register /vagrant/stratagem-server.profile \
-            && sudo chroma-config profile register /vagrant/stratagem-client.profile \
-            && sudo systemctl restart iml-manager.target",
-    )
-    .await?
-    .checked_status()
-    .await?;
+    run_vm_command(cluster_config.manager, vm_cmd.as_str())
+        .await?
+        .checked_status()
+        .await?;
 
     Ok(())
 }
