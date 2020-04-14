@@ -14,6 +14,7 @@ use iml_wire_types::{
     db::{Device, DeviceHost, DeviceId, DeviceIds, DeviceType, MountPath, Name, Paths, Size},
     Fqdn,
 };
+use postgres_types;
 use std::{
     collections::{BTreeMap, BTreeSet},
     iter,
@@ -370,7 +371,10 @@ pub async fn persist_local_device<'a>(
     transaction
         .execute(
             "INSERT INTO chroma_core_device (fqdn, device) VALUES ($1, $2)",
-            &[&fqdn.0, &serde_json::to_string(incoming_device)?],
+            &[
+                &fqdn.0,
+                &postgres_types::Json::<&device_types::devices::Device>(incoming_device),
+            ],
         )
         .await?;
 

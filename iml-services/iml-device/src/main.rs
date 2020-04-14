@@ -107,6 +107,8 @@ async fn main() -> Result<(), ImlDeviceError> {
         let mut transaction = client.transaction().await?;
 
         db::persist_local_device(&mut transaction, &fqdn, &device).await?;
+
+        transaction.commit().await?;
     }
 
     Ok(())
