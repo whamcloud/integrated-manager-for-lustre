@@ -18,33 +18,6 @@ impl<T: Deps> Deps for Arc<T> {
 }
 
 #[derive(Debug, Clone)]
-struct DepsWrapper<T> {
-    id: u32,
-    deps: Vec<u32>,
-    underlying: T,
-}
-
-impl<T: Deps> DepsWrapper<T> {
-    fn new(origin: T) -> Self {
-        Self {
-            id: origin.id(),
-            deps: origin.deps(),
-            underlying: origin,
-        }
-    }
-}
-
-impl<T: Deps> Deps for DepsWrapper<T> {
-    fn id(&self) -> u32 {
-        self.underlying.id()
-    }
-
-    fn deps(&self) -> Vec<u32> {
-        self.underlying.deps()
-    }
-}
-
-#[derive(Debug, Clone)]
 pub struct DependencyDAG<T> {
     pub roots: Vec<Arc<T>>,
     pub deps: HashMap<u32, Vec<Arc<T>>>,
@@ -105,7 +78,7 @@ where
             roots.remove(&y);
         }
     }
-    let roots: Vec<u32> = roots.into_iter().collect();
+    let roots = roots.into_iter().collect::<Vec<u32>>();
     enrich_dag(ts, &roots, &dag)
 }
 
@@ -122,8 +95,8 @@ where
 }
 
 pub fn convert_ids_to_arcs<T>(objs: &[Arc<T>], ids: &[u32]) -> Vec<Arc<T>>
-    where
-        T: Deps + Clone + Debug,
+where
+    T: Deps + Clone + Debug,
 {
     ids.iter()
         .filter_map(|id| objs.iter().find(|o| o.id() == *id))
