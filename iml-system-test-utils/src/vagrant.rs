@@ -173,6 +173,8 @@ pub async fn poweroff_running_vms() -> Result<(), CmdError> {
 
     let vm_list = vm_list_from_output(running_vms);
 
+    println!("Powering off the following vm's: {:?}", vm_list);
+
     for vm in vm_list {
         let mut y = vbox_manage().await?;
 
@@ -194,6 +196,8 @@ pub async fn unregister_vms() -> Result<(), CmdError> {
     let vms = str::from_utf8(&out.stdout).expect("Couldn't get output.");
 
     let vm_list: Vec<String> = vm_list_from_output(vms);
+
+    println!("Unregistering the following vm's: {:?}", vm_list);
 
     for vm in vm_list {
         let mut y = vbox_manage().await?;
@@ -224,11 +228,11 @@ pub async fn setup_bare(
         NtpServer::Adm => pdsh::configure_ntp_for_adm(&config.storage_server_ips()).await?,
     };
 
-    halt().await?.args(hosts).checked_status().await?;
+    // halt().await?.args(hosts).checked_status().await?;
 
-    for x in hosts {
-        snapshot_save(x, "bare").await?.checked_status().await?;
-    }
+    // for x in hosts {
+    //     snapshot_save(x, "bare").await?.checked_status().await?;
+    // }
 
     Ok(())
 }
@@ -246,27 +250,27 @@ pub async fn setup_iml_install(
 
     setup_bare(hosts, &config, NtpServer::Adm).await?;
 
-    up().await?
-        .args(&vec![config.manager][..])
-        .checked_status()
-        .await?;
+    // up().await?
+    //     .args(&vec![config.manager][..])
+    //     .checked_status()
+    //     .await?;
 
     configure_rpm_setup(setup_config, &config).await?;
 
-    halt()
-        .await?
-        .args(&vec![config.manager][..])
-        .checked_status()
-        .await?;
+    // halt()
+    //     .await?
+    //     .args(&vec![config.manager][..])
+    //     .checked_status()
+    //     .await?;
 
-    for host in hosts {
-        snapshot_save(host, "iml-installed")
-            .await?
-            .checked_status()
-            .await?;
-    }
+    // for host in hosts {
+    //     snapshot_save(host, "iml-installed")
+    //         .await?
+    //         .checked_status()
+    //         .await?;
+    // }
 
-    up().await?.args(hosts).checked_status().await?;
+    // up().await?.args(hosts).checked_status().await?;
 
     Ok(())
 }
@@ -288,43 +292,43 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
         .await?;
     }
 
-    halt().await?.args(config.all()).checked_status().await?;
+    // halt().await?.args(config.all()).checked_status().await?;
 
-    for host in config.all() {
-        snapshot_save(host, "servers-deployed")
-            .await?
-            .checked_status()
-            .await?;
-    }
+    // for host in config.all() {
+    //     snapshot_save(host, "servers-deployed")
+    //         .await?
+    //         .checked_status()
+    //         .await?;
+    // }
 
-    up().await?.args(config.all()).checked_status().await?;
+    // up().await?.args(config.all()).checked_status().await?;
 
     Ok(())
 }
 
 pub async fn add_docker_servers<S: std::hash::BuildHasher>(
-    config: &ClusterConfig,
+    _: &ClusterConfig,
     server_map: &HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
-    iml::server_add(&server_map).await?;
+    iml::server_add(&server_map).await
 
-    halt()
-        .await?
-        .args(&config.all_but_adm())
-        .checked_status()
-        .await?;
+    // halt()
+    //     .await?
+    //     .args(&config.all_but_adm())
+    //     .checked_status()
+    //     .await?;
 
-    for host in config.all_but_adm() {
-        snapshot_save(host, "servers-deployed")
-            .await?
-            .checked_status()
-            .await?;
-    }
+    // for host in config.all_but_adm() {
+    //     snapshot_save(host, "servers-deployed")
+    //         .await?
+    //         .checked_status()
+    //         .await?;
+    // }
 
-    up().await?
-        .args(&config.all_but_adm())
-        .checked_status()
-        .await
+    // up().await?
+    //     .args(&config.all_but_adm())
+    //     .checked_status()
+    //     .await
 }
 
 pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
@@ -334,10 +338,10 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     let server_list = server_map_to_server_set(&server_map);
     setup_bare(&config.all_but_adm()[..], &config, NtpServer::HostOnly).await?;
 
-    up().await?
-        .args(&config.all_but_adm())
-        .checked_status()
-        .await?;
+    // up().await?
+    //     .args(&config.all_but_adm())
+    //     .checked_status()
+    //     .await?;
 
     delay_for(Duration::from_secs(30)).await;
 
