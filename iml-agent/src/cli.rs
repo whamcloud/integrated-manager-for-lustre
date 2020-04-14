@@ -3,13 +3,18 @@
 // license that can be found in the LICENSE file.
 
 use console::{style, Term};
-use iml_agent::action_plugins::stratagem::{
-    action_purge, action_warning,
-    server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
-};
-use iml_agent::action_plugins::{
-    check_kernel, check_stonith, high_availability, kernel_module, lamigo, lpurge, ltuer, lustre,
-    ostpool, package, postoffice,
+use iml_agent::{
+    action_plugins::{
+        check_kernel, check_stonith, high_availability, kernel_module, lamigo, lpurge, ltuer,
+        lustre,
+        ntp::{action_configure, is_ntp_configured},
+        ostpool, package, postoffice,
+        stratagem::{
+            action_purge, action_warning,
+            server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
+        },
+    },
+    systemd,
 };
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
@@ -221,6 +226,20 @@ pub enum StratagemClientCommand {
     },
 }
 
+#[derive(Debug, StructOpt)]
+pub enum NtpClientCommand {
+    #[structopt(name = "configure")]
+    /// Configure Ntp for IML
+    Configure {
+        #[structopt(short = "s")]
+        server: Option<String>,
+    },
+
+    #[structopt(name = "is_configured")]
+    /// Is Ntp configured for IML?
+    IsConfigured,
+}
+
 #[derive(StructOpt, Debug)]
 #[structopt(name = "iml-agent", setting = structopt::clap::AppSettings::ColoredHelp)]
 /// The Integrated Manager for Lustre Agent CLI
@@ -251,6 +270,11 @@ pub enum App {
     #[structopt(name = "ha_list")]
     HAResources,
 
+    #[structopt(name = "ntp")]
+    NtpClient {
+        #[structopt(subcommand)]
+        command: NtpClientCommand,
+    },
     #[structopt(name = "check_stonith")]
     CheckStonith,
 
@@ -507,6 +531,47 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             Err(e) => println!("{:?}", e),
+        },
+        App::NtpClient { command } => match command {
+            NtpClientCommand::Configure { server } => {
+                fn get_ntp_message(server: &Option<String>) -> String {
+                    if let Some(server) = &server {
+                        format!("Ntp configured with server {}", server)
+                    } else {
+                        "Ntp configuration reset".to_string()
+                    }
+                }
+
+                let msg = get_ntp_message(&server);
+                match action_configure::update_and_write_new_config(server).await {
+                    Ok(_) => {
+                        println!("{}", msg);
+                        println!("Restarting ntpd daemon.");
+                        match systemd::restart_unit("ntpd".into()).await {
+                            Ok(_) => {
+                                println!("ntpd service restarted successfully.");
+                            }
+                            Err(e) => {
+                                println!("{:?}", e);
+                            }
+                        }
+                    }
+                    Err(e) => println!("{:?}", e),
+                }
+            }
+
+            NtpClientCommand::IsConfigured => {
+                match is_ntp_configured::is_ntp_configured(()).await {
+                    Ok(configured) => {
+                        if configured == true {
+                            println!("Ntp is configured for IML on this server.");
+                        } else {
+                            println!("Ntp is not configured for IML on this server.");
+                        }
+                    }
+                    Err(e) => println!("{:?}", e),
+                }
+            }
         },
         App::CheckStonith => match check_stonith::check_stonith(()).await {
             Ok(cs) => {

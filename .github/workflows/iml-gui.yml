@@ -104,6 +104,7 @@ jobs:
         env:
           SPEC: iml-gui/rust-iml-gui.spec
           LOCAL_ONLY: true
+          SRPM_TASK: iml-gui-srpm
           WORKSPACE: ${{ github.workspace }}
       - name: Archive rpm
         uses: actions/upload-artifact@v1

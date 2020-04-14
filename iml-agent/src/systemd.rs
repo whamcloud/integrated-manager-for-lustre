@@ -24,7 +24,7 @@ async fn wait_for_state(
         delay_for(Duration::from_millis(500)).await;
     }
 
-    let x = get_run_state(unit_name.to_string()).await?;
+    let x = get_run_state(unit_name.into()).await?;
 
     Err(ImlAgentError::from(RequiredError(format!(
         "{} did not move into expected state after {} seconds. Current state: {:?}",
@@ -91,9 +91,14 @@ async fn get_unit_states(unit_name: &str) -> Result<(UnitFileState, ActiveState)
         ["enabled", "inactive"] => Ok((UnitFileState::Enabled, ActiveState::Inactive)),
         ["disabled", "active"] => Ok((UnitFileState::Disabled, ActiveState::Active)),
         ["enabled", "active"] => Ok((UnitFileState::Enabled, ActiveState::Active)),
+        ["disabled", "activating"] => Ok((UnitFileState::Disabled, ActiveState::Activating)),
+        ["enabled", "activating"] => Ok((UnitFileState::Enabled, ActiveState::Activating)),
+        ["disabled", "failed"] => Ok((UnitFileState::Disabled, ActiveState::Failed)),
+        ["enabled", "failed"] => Ok((UnitFileState::Enabled, ActiveState::Failed)),
         _ => Err(ImlAgentError::from(RequiredError(format!(
             "Unknown busctl ({}) output: {:?}",
-            s, output.stdout
+            s,
+            str::from_utf8(&output.stdout)
         )))),
     }
 }
@@ -208,12 +213,14 @@ pub async fn restart_unit(unit_name: String) -> Result<(), ImlAgentError> {
 /// `RunState` which is computed based on the current `UnitFileState` and `ActiveState`.
 ///
 ///
-/// | UnitFileState + ActiveState | RunState  |
-/// |-----------------------------|-----------|
-/// | disabled + inactive         | `Stopped` |
-/// | enabled + inactive          | `Enabled` |
-/// | disabled + active           | `Started` |
-/// | enabled + active            | `Setup`   |
+/// | UnitFileState + ActiveState | RunState     |
+/// |-----------------------------|--------------|
+/// | disabled + inactive         | `Stopped`    |
+/// | enabled + inactive          | `Enabled`    |
+/// | disabled + active           | `Started`    |
+/// | enabled + active            | `Setup`      |
+/// | disabled + activating       | `Activating` |
+/// | enabled + activating        | `Activating` |
 ///
 pub async fn get_run_state(unit_name: String) -> Result<RunState, ImlAgentError> {
     let x = get_unit_states(&unit_name).await?;
@@ -223,5 +230,9 @@ pub async fn get_run_state(unit_name: String) -> Result<RunState, ImlAgentError>
         (UnitFileState::Enabled, ActiveState::Inactive) => RunState::Enabled,
         (UnitFileState::Disabled, ActiveState::Active) => RunState::Started,
         (UnitFileState::Enabled, ActiveState::Active) => RunState::Setup,
+        (UnitFileState::Disabled, ActiveState::Activating) => RunState::Activating,
+        (UnitFileState::Enabled, ActiveState::Activating) => RunState::Activating,
+        (UnitFileState::Disabled, ActiveState::Failed) => RunState::Failed,
+        (UnitFileState::Enabled, ActiveState::Failed) => RunState::Failed,
     })
 }

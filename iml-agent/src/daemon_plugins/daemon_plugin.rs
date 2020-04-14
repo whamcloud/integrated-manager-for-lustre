@@ -4,7 +4,7 @@
 
 use crate::{
     agent_error::{NoPluginError, Result},
-    daemon_plugins::{action_runner, device, ostpool, postoffice, stats},
+    daemon_plugins::{action_runner, device, ntp, ostpool, postoffice, stats},
 };
 use futures::{future, Future, FutureExt};
 use iml_wire_types::{AgentResult, PluginName};
@@ -67,6 +67,7 @@ pub type DaemonPlugins = HashMap<PluginName, Callback>;
 pub fn plugin_registry() -> DaemonPlugins {
     let hm: DaemonPlugins = vec![
         ("action_runner".into(), mk_callback(action_runner::create)),
+        ("ntp".into(), mk_callback(ntp::create)),
         ("ostpool".into(), mk_callback(ostpool::create)),
         ("postoffice".into(), mk_callback(postoffice::create)),
         ("stats".into(), mk_callback(stats::create)),
