@@ -17,7 +17,6 @@ use iml_wire_types::{ApiList, Command, EndpointName, Job, Step};
 use regex::{Captures, Regex};
 use seed::{prelude::*, *};
 use serde::de::DeserializeOwned;
-use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::fmt;
 use std::{sync::Arc, time::Duration};
@@ -204,12 +203,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             Ok(api_list) => {
                 if are_jobs_consistent(&model, &api_list.objects) {
                     model.jobs_loading = false;
+                    model.jobs = api_list.objects.into_iter().map(Arc::new).collect();
                     if model.is_dag_inverse {
                         model.jobs_dag = build_inverse_dag(&model.jobs);
                     } else {
                         model.jobs_dag = build_direct_dag(&model.jobs);
                     }
-                    model.jobs = api_list.objects.into_iter().map(Arc::new).collect();
                 }
             }
             Err(e) => {
@@ -256,18 +255,18 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -
     match &model.opens {
         Opens::None => {
             // the user has all the commands dropdowns closed
-            let ids = model.commands.iter().map(|c| c.id).collect();
+            let ids = model.commands.iter().map(|c| c.id).collect::<Vec<u32>>();
             orders
                 .skip()
                 .perform_cmd(fetch_the_batch(ids, |x| Msg::FetchedCommands(Box::new(x))));
             Ok(())
         }
         Opens::Command(cmd_id) => {
-            // the user has opened the info on the command
+            // the user has opened the info on the command,
+            // we need the corresponding jobs to build the dependency DAG
             if let Some(i) = model.commands.iter().position(|c| c.id == *cmd_id) {
-                let cmd_ids: Vec<u32> = model.commands.iter().map(|c| c.id).collect();
-                let job_ids: Vec<u32> = extract_ids::<Job0>(&model.commands[i].jobs);
-                // NOTE: we can try to use future::select_all(futs.into_iter()) here
+                let cmd_ids = model.commands.iter().map(|c| c.id).collect::<Vec<u32>>();
+                let job_ids = extract_ids::<Job0>(&model.commands[i].jobs);
                 orders
                     .skip()
                     .perform_cmd(fetch_the_batch(job_ids, |x| Msg::FetchedJobs(Box::new(x))))
@@ -281,9 +280,9 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -
             // the user has opened the info on the command and selected the corresponding job
             if let Some(i1) = model.commands.iter().position(|c| c.id == *cmd_id) {
                 if let Some(i2) = model.jobs.iter().position(|j| j.id == *job_id) {
-                    let cmd_ids: Vec<u32> = model.commands.iter().map(|c| c.id).collect();
-                    let job_ids: Vec<u32> = extract_ids::<Job0>(&model.commands[i1].jobs);
-                    let step_ids: Vec<u32> = extract_ids::<Step>(&model.jobs[i2].steps);
+                    let cmd_ids = model.commands.iter().map(|c| c.id).collect::<Vec<u32>>();
+                    let job_ids = extract_ids::<Job0>(&model.commands[i1].jobs);
+                    let step_ids = extract_ids::<Step>(&model.jobs[i2].steps);
                     orders
                         .skip()
                         .perform_cmd(fetch_the_batch(step_ids, |x| Msg::FetchedSteps(Box::new(x))))
@@ -303,12 +302,13 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -
                 if let Some(i2) = model.jobs.iter().position(|j| j.id == *job_id) {
                     let step_ids = extract_ids::<Step>(&model.jobs[i2].steps);
                     if some_step_ids.iter().all(|id| step_ids.contains(id)) {
-                        let cmd_ids = model.commands.iter().map(|c| c.id).collect();
+                        let cmd_ids = model.commands.iter().map(|c| c.id).collect::<Vec<u32>>();
                         let job_ids = extract_ids::<Job0>(&model.commands[i1].jobs);
-                        let the_step_ids = some_step_ids.clone();
                         orders
                             .skip()
-                            .perform_cmd(fetch_the_batch(the_step_ids, |x| Msg::FetchedSteps(Box::new(x))))
+                            .perform_cmd(fetch_the_batch(some_step_ids.clone(), |x| {
+                                Msg::FetchedSteps(Box::new(x))
+                            }))
                             .perform_cmd(fetch_the_batch(job_ids, |x| Msg::FetchedJobs(Box::new(x))))
                             .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))));
                         Ok(())
@@ -325,7 +325,7 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -
     }
 }
 
-async fn fetch_the_batch<T, F, U>(ids: Vec<u32>, conv: F) -> Result<U, U>
+async fn fetch_the_batch<T, F, U>(ids: Vec<u32>, data_to_msg: F) -> Result<U, U>
 where
     T: DeserializeOwned + EndpointName + 'static,
     F: FnOnce(ResponseDataResult<ApiList<T>>) -> U,
@@ -337,7 +337,7 @@ where
     ids.push(("limit", 0));
     Request::api_query(T::endpoint_name(), &ids)
         .expect(&err_msg)
-        .fetch_json_data(conv)
+        .fetch_json_data(data_to_msg)
         .await
 }
 
@@ -642,7 +642,7 @@ where
 fn job_node_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
     if ctx.is_new {
         let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
-        let (border, icon) = if job.cancelled {
+        let (_border, icon) = if job.cancelled {
             (
                 C.border_gray_500,
                 font_awesome(awesome_style, "ban").merge_attrs(class![C.text_red_500]),
@@ -774,8 +774,7 @@ fn close_button() -> Node<Msg> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::dependency_tree::{build_direct_dag, DependencyDAG};
-    use std::collections::HashSet;
+    use crate::components::dependency_tree::build_direct_dag;
 
     #[test]
     fn parse_job() {
