@@ -531,6 +531,16 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                         .proxy(page::filesystem::Msg::Stratagem)
                         .send_msg(stratagem::Msg::CheckStratagem);
                 }
+                warp_drive::RecordId::ActiveAlert(_) => {
+                    let old = model.activity_health;
+                    model.activity_health = update_activity_health(&model.records.active_alert);
+
+                    orders.proxy(Msg::Notification).send_msg(notification::generate(
+                        None,
+                        &old,
+                        &model.activity_health,
+                    ));
+                }
                 _ => {}
             }
         }
