@@ -21,6 +21,7 @@ futures-util = "0.3"
 http = "0.2"
 iml-cmd = { path = "../iml-cmd", version = "0.2.0" }
 iml-fs = { path = "../iml-fs", version = "0.2.0" }
+iml-systemd = { path = "../iml-systemd", version = "0.1.0" }
 iml-util = { path = "../iml-util", version = "0.2.0" }
 iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
 inotify = "0.8"

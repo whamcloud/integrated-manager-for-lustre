@@ -1191,6 +1191,7 @@ dependencies = [
  "http",
  "iml-cmd",
  "iml-fs",
+ "iml-systemd",
  "iml-util",
  "iml-wire-types",
  "inotify",
@@ -1498,6 +1499,19 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
+]
+
+[[package]]
+name = "iml-systemd"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "iml-cmd",
+ "iml-wire-types",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
