@@ -393,7 +393,7 @@ pub async fn persist_local_device<'a>(
 
     transaction
         .execute(
-            "INSERT INTO chroma_core_device (fqdn, device) VALUES ($1, $2)",
+            "INSERT INTO chroma_core_device (fqdn, device) VALUES ($1, $2) ON CONFLICT (fqdn) DO UPDATE SET device = EXCLUDED.device",
             &[
                 &fqdn.0,
                 &postgres_types::Json::<&device_types::devices::Device>(incoming_device),
