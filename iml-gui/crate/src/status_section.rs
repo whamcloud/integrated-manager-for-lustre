@@ -121,6 +121,7 @@ pub fn view(
 ) -> Node<Msg> {
     div![
         class![
+            C.z_30,
             C.flex,
             C.lg__fixed => model.section.is_some(),
             C.lg__right_0 => model.section.is_some()

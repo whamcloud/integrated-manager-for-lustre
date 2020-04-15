@@ -345,7 +345,7 @@ pub fn unstyled_view<'a>(
                         model.dropdown_state.is_open(),
                         items_view(id, &model.actions)
                     )
-                    .merge_attrs(class![C.z_30, C.w_56])
+                    .merge_attrs(class![C.z_20, C.w_56])
                 ]
             }
         }
