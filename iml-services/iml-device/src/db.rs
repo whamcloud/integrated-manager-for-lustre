@@ -7,9 +7,9 @@ use crate::{
     error::ImlDeviceError,
     // virtual_device::virtual_device_changes,
 };
-use device_types;
+use device_types::{self, devices::Root};
 use futures::TryStreamExt;
-use iml_postgres::{select_all, Client, Transaction};
+use iml_postgres::{select_all, Client, Row, Transaction};
 use iml_wire_types::{
     db::{Device, DeviceHost, DeviceId, DeviceIds, DeviceType, MountPath, Name, Paths, Size},
     Fqdn,
@@ -357,6 +357,29 @@ pub async fn persist_local_devices<'a>(
             }
         }
     }
+
+    Ok(())
+}
+
+// impl From<Row> for device_types::devices::Device {
+//     fn from(w: Row) -> device_types::devices::Device {
+//         device_types::devices::Device::Root(Root::default())
+//     }
+// }
+
+pub async fn get_local_device(mut client: &mut Client, fqdn: &Fqdn) -> Result<(), ImlDeviceError> {
+    tracing::debug!("Getting device from host {} from DB", fqdn);
+
+    let device: Result<Vec<device_types::devices::Device>, iml_postgres::Error> = select_all(
+        &mut client,
+        "SELECT * from chroma_core_device",
+        iter::empty(),
+    )
+    .await?
+    // TODO: Properly construct Device out of Row
+    .map_ok(|_| device_types::devices::Device::Root(Root::default()))
+    .try_collect()
+    .await;
 
     Ok(())
 }
