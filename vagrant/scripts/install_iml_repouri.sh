@@ -39,6 +39,13 @@ gpgcheck=1
 gpgkey=https://packages.grafana.com/gpg.key
 sslverify=1
 sslcacert=/etc/pki/tls/certs/ca-bundle.crt
+
+[pgdg96]
+name=PostgreSQL 9.6 for RHEL/CentOS \$releasever - \$basearch
+baseurl=https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-\$releasever-\$basearch
+enabled=1
+gpgcheck=1
+gpgkey=https://download.postgresql.org/pub/repos/yum/RPM-GPG-KEY-PGDG-96
 EOF
 
 yum install -y python2-iml-manager

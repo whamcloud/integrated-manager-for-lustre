@@ -61,8 +61,8 @@ After=nginx.service
 Requires=rabbitmq-server.service
 After=rabbitmq-server.service
 
-Requires=postgresql.service
-After=postgresql.service
+Requires=postgresql-9.6.service
+After=postgresql-9.6.service
 
 Requires=influxdb.service
 After=influxdb.service
@@ -96,5 +96,5 @@ Also=iml-update-handler.socket
 Also=iml-warp-drive.service
 Also=influxdb.service
 Also=nginx.service
-Also=postgresql.service
+Also=postgresql-9.6.service
 Also=rabbitmq-server.service

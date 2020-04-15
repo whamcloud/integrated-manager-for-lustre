@@ -2,7 +2,7 @@
 Description=IML Job Scheduler Service
 PartOf=iml-manager.target
 After=rabbitmq-server.service
-After=postgresql.service
+After=postgresql-9.6.service
 
 [Service]
 Type=simple

@@ -42,14 +42,14 @@ Requires:       fence-agents
 Requires:       fence-agents-virsh
 Requires:       ntp
 Requires:       pygobject2
-Requires:       postgresql-server >= 9.2.24
+Requires:       postgresql96-server >= 9.6.17
 Requires:       python-daemon
 Requires:       python-gunicorn
 Requires:       python-networkx
 Requires:       python-ordereddict
 Requires:       python-paramiko
 Requires:       python-prettytable
-Requires:       python-psycopg2 >= 2.7.7
+Requires:       python-psycopg2 = 2.7.7
 Requires:       python-setuptools
 Requires:       python-requests >= 2.6.0
 Requires:       python-uuid

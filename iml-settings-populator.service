@@ -1,7 +1,7 @@
 [Unit]
 Description=IML Settings Populator
-Wants=postgresql.service
-After=postgresql.service
+Wants=postgresql-9.6.service
+After=postgresql-9.6.service
 
 [Service]
 WorkingDirectory=/usr/share/chroma-manager
