@@ -7,7 +7,7 @@ use crate::{
     STRATAGEM_CLIENT_PROFILE, STRATAGEM_SERVER_PROFILE,
 };
 use iml_cmd::{CheckedCommandExt, CmdError};
-use std::{collections::HashMap, str, time::Duration};
+use std::{collections::HashMap, str, time::Duration, env};
 use tokio::{
     fs::{canonicalize, create_dir, remove_dir_all, File},
     io::AsyncWriteExt,
@@ -271,10 +271,22 @@ pub async fn setup_iml_install(
     config: &ClusterConfig,
 ) -> Result<(), CmdError> {
     up().await?.arg(config.manager).checked_status().await?;
-    provision_node(config.manager, "yum-update,install-iml-local")
-        .await?
-        .checked_status()
-        .await?;
+
+    match env::var("REPO_URI") {
+        Ok(x) => {
+            provision_node(config.manager, "yum-update,install-iml-repouri")
+                .await?
+                .env("REPO_URI", x)
+                .checked_status()
+                .await?;
+        }
+        _ => {
+            provision_node(config.manager, "yum-update,install-iml-local")
+                .await?
+                .checked_status()
+                .await?;
+        }
+    };
 
     setup_bare(hosts, &config, NtpServer::Adm).await?;
 
