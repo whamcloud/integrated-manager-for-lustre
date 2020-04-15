@@ -33,6 +33,7 @@ from chroma_core.models import Corosync2Configuration
 from chroma_core.models import NTPConfiguration
 from chroma_core.models import TimeOutOfSyncAlert
 from chroma_core.models import NoTimeSyncAlert
+from chroma_core.models import UnknownTimeSyncAlert
 from chroma_core.models import MultipleTimeSyncAlert
 from chroma_core.models import Job
 from chroma_core.models import AdvertisedJob
@@ -1168,6 +1169,7 @@ class DeleteHostStep(Step):
         TimeOutOfSyncAlert.notify(host, False)
         MultipleTimeSyncAlert.notify(host, False)
         NoTimeSyncAlert.notify(host, False)
+        UnknownTimeSyncAlert.notify(host, False)
 
         from chroma_core.models import StorageResourceRecord
         from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
