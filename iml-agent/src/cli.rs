@@ -548,7 +548,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 println!("ntpd service restarted successfully.");
                             }
                             Err(e) => {
-                                println!("{:?}", e);
+                                eprintln!("{:?}", e);
                             }
                         }
                     }
