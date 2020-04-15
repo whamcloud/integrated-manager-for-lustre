@@ -23,6 +23,7 @@ members = [
     'iml-services/iml-service-queue',
     'iml-services/iml-stats',
     'iml-timer',
+    'iml-services/iml-ntp',
     'iml-util',
     'iml-warp-drive',
     'iml-wire-types',
