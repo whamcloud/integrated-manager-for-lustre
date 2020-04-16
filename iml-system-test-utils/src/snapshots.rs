@@ -1,4 +1,4 @@
-use crate::{vagrant, *};
+use crate::*;
 use futures::{Future, FutureExt};
 use iml_cmd::CmdError;
 use petgraph::{
@@ -63,6 +63,7 @@ pub enum SnapshotName {
     LdiskfsCreated,
     ZfsCreated,
     StratagemCreated,
+    FilesystemDetected,
 }
 
 impl SnapshotName {
@@ -80,6 +81,7 @@ impl SnapshotName {
             Self::LdiskfsCreated => 9,
             Self::ZfsCreated => 10,
             Self::StratagemCreated => 11,
+            Self::FilesystemDetected => 12,
         }
     }
 }
@@ -105,6 +107,7 @@ impl From<&String> for SnapshotName {
             "ldiskfs-created" => Self::LdiskfsCreated,
             "zfs-created" => Self::ZfsCreated,
             "stratagem-created" => Self::StratagemCreated,
+            "filesystem-detected" => Self::FilesystemDetected,
             _ => Self::Bare,
         }
     }
@@ -125,6 +128,7 @@ impl fmt::Display for SnapshotName {
             Self::LdiskfsCreated => write!(f, "ldiskfs-created"),
             Self::ZfsCreated => write!(f, "zfs-created"),
             Self::StratagemCreated => write!(f, "stratagem-created"),
+            Self::FilesystemDetected => write!(f, "filesystem-detected"),
         }
     }
 }
@@ -176,7 +180,7 @@ where
     Box::new(move |config| Box::pin(f(config).boxed()))
 }
 
-pub fn create_graph(snapshots: &[SnapshotName], config: &Config) -> DiGraph<Snapshot, Transition> {
+pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition> {
     let mut graph = DiGraph::<Snapshot, Transition>::new();
 
     let init = graph.add_node(Snapshot {
@@ -227,99 +231,62 @@ pub fn create_graph(snapshots: &[SnapshotName], config: &Config) -> DiGraph<Snap
         name: SnapshotName::StratagemCreated,
         available: snapshots.contains(&SnapshotName::StratagemCreated),
     });
+    let filesystem_detected = graph.add_node(Snapshot {
+        name: SnapshotName::FilesystemDetected,
+        available: snapshots.contains(&SnapshotName::FilesystemDetected),
+    });
 
     graph.add_edge(
         init,
         bare,
         Transition {
             path: SnapshotPath::All,
-            transition: mk_transition(vagrant::setup_bare),
+            transition: mk_transition(setup_bare),
         },
     );
 
-    match config.test_type {
-        TestType::Rpm => {
-            graph.add_edge(
-                bare,
-                iml_configured,
-                Transition {
-                    path: SnapshotPath::LdiskfsOrZfs,
-                    transition: mk_transition(vagrant::configure_iml),
-                },
-            );
+    graph.add_edge(
+        bare,
+        iml_configured,
+        Transition {
+            path: SnapshotPath::LdiskfsOrZfs,
+            transition: mk_transition(configure_iml),
+        },
+    );
 
-            graph.add_edge(
-                bare,
-                iml_stratagem_configured,
-                Transition {
-                    path: SnapshotPath::Stratagem,
-                    transition: mk_transition(vagrant::configure_iml),
-                },
-            );
+    graph.add_edge(
+        bare,
+        iml_stratagem_configured,
+        Transition {
+            path: SnapshotPath::Stratagem,
+            transition: mk_transition(configure_iml),
+        },
+    );
 
-            graph.add_edge(
-                iml_configured,
-                servers_deployed,
-                Transition {
-                    path: SnapshotPath::LdiskfsOrZfs,
-                    transition: mk_transition(vagrant::deploy_servers),
-                },
-            );
+    graph.add_edge(
+        iml_configured,
+        servers_deployed,
+        Transition {
+            path: SnapshotPath::LdiskfsOrZfs,
+            transition: mk_transition(deploy_servers),
+        },
+    );
 
-            graph.add_edge(
-                iml_stratagem_configured,
-                stratagem_servers_deployed,
-                Transition {
-                    path: SnapshotPath::Stratagem,
-                    transition: mk_transition(vagrant::deploy_servers),
-                },
-            );
-        }
-        TestType::Docker => {
-            graph.add_edge(
-                bare,
-                iml_configured,
-                Transition {
-                    path: SnapshotPath::LdiskfsOrZfs,
-                    transition: mk_transition(docker::configure_docker_setup),
-                },
-            );
-
-            graph.add_edge(
-                bare,
-                iml_stratagem_configured,
-                Transition {
-                    path: SnapshotPath::Stratagem,
-                    transition: mk_transition(docker::configure_docker_setup),
-                },
-            );
-
-            graph.add_edge(
-                iml_configured,
-                servers_deployed,
-                Transition {
-                    path: SnapshotPath::LdiskfsOrZfs,
-                    transition: mk_transition(vagrant::deploy_docker_servers),
-                },
-            );
-
-            graph.add_edge(
-                iml_stratagem_configured,
-                stratagem_servers_deployed,
-                Transition {
-                    path: SnapshotPath::Stratagem,
-                    transition: mk_transition(vagrant::deploy_docker_servers),
-                },
-            );
-        }
-    };
+    graph.add_edge(
+        iml_stratagem_configured,
+        stratagem_servers_deployed,
+        Transition {
+            path: SnapshotPath::Stratagem,
+            transition: mk_transition(deploy_servers),
+        },
+    );
 
     graph.add_edge(
         servers_deployed,
         ldiskfs_installed,
         Transition {
             path: SnapshotPath::Ldiskfs,
-            transition: mk_transition(vagrant::install_fs),
+            transition: mk_transition(install_fs),
         },
     );
 
@@ -328,7 +295,7 @@ pub fn create_graph(snapshots: &[SnapshotName], config: &Config) -> DiGraph<Snap
         zfs_installed,
         Transition {
             path: SnapshotPath::Zfs,
-            transition: mk_transition(vagrant::install_fs),
+            transition: mk_transition(install_fs),
         },
     );
 
@@ -337,7 +304,7 @@ pub fn create_graph(snapshots: &[SnapshotName], config: &Config) -> DiGraph<Snap
         stratagem_installed,
         Transition {
             path: SnapshotPath::Stratagem,
-            transition: mk_transition(vagrant::install_fs),
+            transition: mk_transition(install_fs),
         },
     );
 
@@ -346,7 +313,7 @@ pub fn create_graph(snapshots: &[SnapshotName], config: &Config) -> DiGraph<Snap
         ldiskfs_created,
         Transition {
             path: SnapshotPath::Ldiskfs,
-            transition: mk_transition(vagrant::create_fs),
+            transition: mk_transition(create_fs),
         },
     );
 
@@ -355,7 +322,7 @@ pub fn create_graph(snapshots: &[SnapshotName], config: &Config) -> DiGraph<Snap
         zfs_created,
         Transition {
             path: SnapshotPath::Zfs,
-            transition: mk_transition(vagrant::create_fs),
+            transition: mk_transition(create_fs),
         },
     );
 
@@ -364,7 +331,34 @@ pub fn create_graph(snapshots: &[SnapshotName], config: &Config) -> DiGraph<Snap
         stratagem_created,
         Transition {
             path: SnapshotPath::Stratagem,
-            transition: mk_transition(vagrant::create_fs),
+            transition: mk_transition(create_fs),
+        },
+    );
+
+    graph.add_edge(
+        ldiskfs_created,
+        filesystem_detected,
+        Transition {
+            path: SnapshotPath::All,
+            transition: mk_transition(detect_fs),
+        },
+    );
+
+    graph.add_edge(
+        zfs_created,
+        filesystem_detected,
+        Transition {
+            path: SnapshotPath::All,
+            transition: mk_transition(detect_fs),
+        },
+    );
+
+    graph.add_edge(
+        stratagem_created,
+        filesystem_detected,
+        Transition {
+            path: SnapshotPath::All,
+            transition: mk_transition(detect_fs),
         },
     );
 
@@ -505,7 +499,6 @@ pub fn parse_snapshots(snapshots: Output) -> SnapshotMap {
                 if line.find("==>").is_some() {
                     if line.split(' ').count() == 2 {
                         key = &line[4..line.len() - 1];
-                        println!("key: {}", key);
                         map.insert(key.to_string(), vec![]);
                     }
 
@@ -637,23 +630,20 @@ iml-stratagem-configured
         edge_info
     }
 
-    fn get_full_graph(config: &Config) -> DiGraph<Snapshot, Transition> {
-        create_graph(
-            &vec![
-                SnapshotName::Bare,
-                SnapshotName::ImlConfigured,
-                SnapshotName::ImlStratagemConfigured,
-                SnapshotName::ServersDeployed,
-                SnapshotName::StratagemServersDeployed,
-                SnapshotName::LdiskfsInstalled,
-                SnapshotName::ZfsInstalled,
-                SnapshotName::StratagemInstalled,
-                SnapshotName::LdiskfsCreated,
-                SnapshotName::ZfsCreated,
-                SnapshotName::StratagemCreated,
-            ],
-            config,
-        )
+    fn get_full_graph() -> DiGraph<Snapshot, Transition> {
+        create_graph(&vec![
+            SnapshotName::Bare,
+            SnapshotName::ImlConfigured,
+            SnapshotName::ImlStratagemConfigured,
+            SnapshotName::ServersDeployed,
+            SnapshotName::StratagemServersDeployed,
+            SnapshotName::LdiskfsInstalled,
+            SnapshotName::ZfsInstalled,
+            SnapshotName::StratagemInstalled,
+            SnapshotName::LdiskfsCreated,
+            SnapshotName::ZfsCreated,
+            SnapshotName::StratagemCreated,
+        ])
     }
 
     #[test]
@@ -751,7 +741,7 @@ iml-stratagem-configured
 
     #[test]
     fn test_get_ldiskfs_snapshots_from_graph() {
-        let graph = get_full_graph(&Config::default());
+        let graph = get_full_graph();
 
         let snapshots = get_snapshots_from_graph(&graph, &ldiskfs_filter)
             .iter()
@@ -773,11 +763,7 @@ iml-stratagem-configured
 
     #[test]
     fn test_get_rpm_zfs_snapshots_from_graph() {
-        let config = Config {
-            fs_type: FsType::ZFS,
-            ..Config::default()
-        };
-        let graph = get_full_graph(&config);
+        let graph = get_full_graph();
 
         let snapshots = get_snapshots_from_graph(&graph, &zfs_filter)
             .iter()
@@ -799,11 +785,7 @@ iml-stratagem-configured
 
     #[test]
     fn test_get_rpm_stratagem_snapshots_from_graph() {
-        let config = Config {
-            use_stratagem: true,
-            ..Config::default()
-        };
-        let graph = get_full_graph(&config);
+        let graph = get_full_graph();
 
         let snapshots = get_snapshots_from_graph(&graph, &stratagem_filter)
             .iter()
@@ -825,8 +807,7 @@ iml-stratagem-configured
 
     #[test]
     fn test_get_ldiskfs_test_path_from_graph() {
-        let config = Config::default();
-        let graph = create_graph(&vec![], &config);
+        let graph = create_graph(&vec![]);
 
         let edges = get_test_path(&graph, &SnapshotName::Init, &ldiskfs_filter);
 
@@ -835,11 +816,7 @@ iml-stratagem-configured
 
     #[test]
     fn test_get_zfs_test_path_from_graph() {
-        let config = Config {
-            fs_type: FsType::ZFS,
-            ..Config::default()
-        };
-        let graph = create_graph(&vec![], &config);
+        let graph = create_graph(&vec![]);
 
         let edges = get_test_path(&graph, &SnapshotName::Init, &zfs_filter);
 
@@ -848,11 +825,7 @@ iml-stratagem-configured
 
     #[test]
     fn test_get_stratagem_test_path_from_graph() {
-        let config = Config {
-            use_stratagem: true,
-            ..Config::default()
-        };
-        let graph = create_graph(&vec![], &config);
+        let graph = create_graph(&vec![]);
 
         let edges = get_test_path(&graph, &SnapshotName::Init, &stratagem_filter);
 
@@ -861,7 +834,7 @@ iml-stratagem-configured
 
     #[test]
     fn test_generate_graph_dot_file() {
-        let graph = get_full_graph(&Config::default());
+        let graph = get_full_graph();
         let dot = Dot::with_config(&graph, &[]);
         println!("graph {:?}", dot);
     }
