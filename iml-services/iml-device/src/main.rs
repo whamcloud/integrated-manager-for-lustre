@@ -117,7 +117,7 @@ async fn main() -> Result<(), ImlDeviceError> {
             .get_result::<ChromaCoreDevice>(&conn)
             .expect("Error saving new device");
 
-        tracing::info!("Inserted device from {} host", new_device.fqdn);
+        tracing::info!("Inserted device from host {}", new_device.fqdn);
         tracing::trace!("Inserted device {:?}", new_device);
     }
 
