@@ -2,12 +2,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::components::dependency_tree::{build_direct_dag, build_inverse_dag};
 use crate::{
-    components::{
-        dependency_tree::{DependencyDAG, Deps},
-        font_awesome, modal,
-    },
+    components::{font_awesome, modal},
+    dependency_tree::{build_direct_dag, build_inverse_dag, DependencyDAG, Deps},
     extensions::{MergeAttrs as _, NodeExt as _, RequestExt as _},
     generated::css_classes::C,
     key_codes, sleep_with_handle, GMsg,
@@ -425,7 +422,7 @@ fn command_item_view(model: &Model, x: &Command) -> Node<Msg> {
 
 pub fn job_tree_view(jobs_dag: &DependencyDAG<Job0>) -> Node<Msg> {
     div![
-        class![C.box_border, C.font_ordinary, C.text_gray_700],
+        class![C.font_ordinary, C.text_gray_700],
         h4![class![C.text_lg, C.font_medium], "Jobs"],
         input![
             attrs![ At::Type => "checkbox" ],
@@ -574,6 +571,8 @@ fn step_item_view(opens: &Opens, step: &Step) -> Node<Msg> {
     if !is_open {
         empty!()
     } else {
+        // note, we cannot just use the Debug instance for step.args,
+        // because the keys order changes every time the HashMap is traversed
         let mut arg_keys = step.args.keys().collect::<Vec<&String>>();
         arg_keys.sort();
         let mut arg_str = String::with_capacity(step.args.len() * 10);
@@ -581,37 +580,29 @@ fn step_item_view(opens: &Opens, step: &Step) -> Node<Msg> {
             arg_str.push_str(k);
             arg_str.push_str(": ");
             arg_str.push_str(&format!(
-                "{:?}\n",
-                step.args.get(k).unwrap_or(&serde_json::json!("null"))
+                "{}\n",
+                step.args.get(k).unwrap_or(&serde_json::value::Value::Null)
             ));
         }
+
+        let pre_class = class![
+            C.p_2, C.m_2
+            C.leading_tight,
+            C.text_gray_100,
+            C.bg_gray_900,
+            C.overflow_x_hidden,
+            C.whitespace_pre_line,
+            C.break_all,
+        ];
         div![
             h4![class![C.text_lg, C.font_medium], "Arguments"],
-            pre![
-                class![
-                    C.text_white,
-                    C.bg_black,
-                    C.break_words,
-                    C.overflow_x_hidden,
-                    C.max_w_full
-                ],
-                arg_str,
-            ],
+            pre![&pre_class, arg_str],
             if step.console.is_empty() {
                 vec![]
             } else {
                 vec![
                     h4![class![C.text_lg, C.font_medium], "Logs"],
-                    pre![
-                        class![
-                            C.text_white,
-                            C.bg_black,
-                            C.break_words,
-                            C.overflow_x_hidden,
-                            C.max_w_full
-                        ],
-                        step.console,
-                    ],
+                    pre![&pre_class, step.console],
                 ]
             }
         ]
@@ -842,7 +833,7 @@ fn perform_close_click(cur_opens: &Opens, the_id: TypedId) -> Opens {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::dependency_tree::build_direct_dag;
+    use crate::dependency_tree::build_direct_dag;
 
     #[test]
     fn parse_job() {
@@ -853,7 +844,7 @@ mod tests {
     }
 
     #[test]
-    fn build_dependency_dom() {
+    fn build_dependency_view() {
         let jobs = vec![
             make_job(1, &[2, 3], "One"),
             make_job(2, &[], "Two"),
