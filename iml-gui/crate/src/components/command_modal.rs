@@ -219,10 +219,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         },
         Msg::Click(the_id) => {
             let (opens, do_fetch, do_clear) = interpret_click(&model.opens, the_id);
-            log!(format!(
-                "{:?} =={:?}=> ({:?}, {:?}, {:?})",
-                model.opens, the_id, opens, do_fetch, do_clear
-            ));
             model.opens = opens;
 
             if let Some(clear_level) = do_clear {
@@ -504,16 +500,11 @@ fn job_item_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
         };
 
         if job.steps.is_empty() {
-            span![
-                span![class![C.mr_1], icon],
-                span![job.description],
-                span![class![C.ml_1, C.text_gray_500], format!("({})", job.id)],
-            ]
+            span![span![class![C.mr_1], icon], span![job.description],]
         } else {
             a![
                 span![class![C.mr_1], icon],
                 span![class![C.cursor_pointer, C.underline], job.description,],
-                span![class![C.ml_1, C.text_gray_500], format!("({})", job.id)],
                 simple_ev(Ev::Click, Msg::Click(TypedId::Job(job.id))),
             ]
         }
@@ -545,7 +536,6 @@ fn step_list_view(opens: &Opens, steps: &[Arc<Step>]) -> Node<Msg> {
                         step.class_name,
                         simple_ev(Ev::Click, Msg::Click(TypedId::Step(step.id))),
                     ],
-                    span![class![C.ml_1, C.text_gray_500], format!("({})", step.id)],
                     step_item_view(opens, step),
                 ]
             })
@@ -639,8 +629,7 @@ fn status_icon<T>(cmd: &Command) -> Node<T> {
 }
 
 fn close_button() -> Node<Msg> {
-    // todo revert
-    seed::button![
+    button![
         class![
             C.bg_transparent,
             C.py_2,
@@ -874,7 +863,6 @@ mod tests {
             a![
                 span![class![C.mr_1], icon.clone()],
                 span![class![C.cursor_pointer, C.underline], "One"],
-                span![class![C.ml_1, C.text_gray_500], "(1)"],
                 simple_ev(Ev::Click, Msg::Click(TypedId::Job(1))),
             ],
             div![
@@ -882,7 +870,6 @@ mod tests {
                 a![
                     span![class![C.mr_1], icon.clone()],
                     span![class![C.cursor_pointer, C.underline], "Two"],
-                    span![class![C.ml_1, C.text_gray_500], "(2)"],
                     simple_ev(Ev::Click, Msg::Click(TypedId::Job(2))),
                 ],
             ],
@@ -891,7 +878,6 @@ mod tests {
                 a![
                     span![class![C.mr_1], icon.clone()],
                     span![class![C.cursor_pointer, C.underline], "Three"],
-                    span![class![C.ml_1, C.text_gray_500], "(3)"],
                     simple_ev(Ev::Click, Msg::Click(TypedId::Job(3))),
                 ]
             ],
