@@ -14,11 +14,10 @@ use iml_device::{
 };
 use iml_orm::{
     models::{ChromaCoreDevice, NewChromaCoreDevice},
-    schema,
+    schema::chroma_core_device::{device, fqdn, table},
 };
 use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::Fqdn;
-use schema::chroma_core_device::{device, fqdn, table};
 use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
