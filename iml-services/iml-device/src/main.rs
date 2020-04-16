@@ -18,6 +18,7 @@ use iml_orm::{
 };
 use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::Fqdn;
+use schema::chroma_core_device::{device, fqdn, table};
 use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
@@ -94,29 +95,25 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let pool = iml_orm::pool().unwrap();
 
-    while let Some((fqdn, device)) = s.try_next().await? {
+    while let Some((f, d)) = s.try_next().await? {
         let mut cache = cache2.lock().await;
 
-        let device: Device = device;
-        let device2: Device = device.clone();
+        // Specify the type, otherwise inference fails on `.clone()`
+        let d: Device = d;
 
-        cache.insert(fqdn.clone(), device2);
+        cache.insert(f.clone(), d.clone());
 
-        tracing::debug!("Getting connection");
         let conn = pool.get().unwrap();
-        let device3 = NewChromaCoreDevice {
-            fqdn: fqdn.0.clone(),
-            device: serde_json::to_value(device.clone()).unwrap(),
+        let device_to_insert = NewChromaCoreDevice {
+            fqdn: f.0.clone(),
+            device: serde_json::to_value(d.clone()).unwrap(),
         };
 
-        tracing::debug!("Before insert");
-        let new_device = diesel::insert_into(schema::chroma_core_device::table)
-            .values(&device3)
-            .on_conflict(schema::chroma_core_device::fqdn)
+        let new_device = diesel::insert_into(table)
+            .values(&device_to_insert)
+            .on_conflict(fqdn)
             .do_update()
-            .set(
-                schema::chroma_core_device::device.eq(excluded(schema::chroma_core_device::device)),
-            )
+            .set(device.eq(excluded(device)))
             .get_result::<ChromaCoreDevice>(&conn)
             .expect("Error saving new device");
 
