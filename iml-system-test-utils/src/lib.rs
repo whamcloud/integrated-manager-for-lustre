@@ -1,5 +1,6 @@
 pub mod docker;
 pub mod iml;
+pub mod snapshots;
 pub mod ssh;
 pub mod vagrant;
 
@@ -8,45 +9,33 @@ use iml_cmd::CmdError;
 use iml_systemd::SystemdError;
 use iml_wire_types::Branding;
 use ssh::create_iml_diagnostics;
-use std::{io, time::Duration};
+use std::{collections::HashMap, io, time::Duration};
 use tokio::{process::Command, time::delay_for};
 
-pub struct SetupConfig {
-    pub use_stratagem: bool,
-    pub branding: Branding,
+#[derive(PartialEq, Clone)]
+pub enum TestType {
+    Rpm,
+    Docker,
 }
 
-pub enum SetupConfigType {
-    RpmSetup(SetupConfig),
-    DockerSetup(SetupConfig),
+#[derive(Clone)]
+pub enum NtpServer {
+    HostOnly,
+    Adm,
 }
 
-impl From<&SetupConfigType> for String {
-    fn from(config: &SetupConfigType) -> Self {
-        match config {
-            SetupConfigType::RpmSetup(c) => format!(
-                r#"USE_STRATAGEM = {}
-BRANDING = "{}""#,
-                if c.use_stratagem { "True" } else { "False" },
-                c.branding.to_string()
-            ),
-            SetupConfigType::DockerSetup(c) => format!(
-                r#"USE_STRATAGEM={}
-            BRANDING={}"#,
-                c.use_stratagem,
-                c.branding.to_string()
-            ),
-        }
-    }
+#[derive(Clone)]
+pub enum FsType {
+    LDISKFS,
+    ZFS,
 }
 
-impl<'a> From<&'a SetupConfigType> for &'a SetupConfig {
-    fn from(config: &'a SetupConfigType) -> Self {
-        match config {
-            SetupConfigType::RpmSetup(x) => x,
-            SetupConfigType::DockerSetup(x) => x,
-        }
-    }
+pub enum TestState {
+    Bare,
+    Configured,
+    ServersDeployed,
+    FsInstalled,
+    FsCreated,
 }
 
 pub const STRATAGEM_SERVER_PROFILE: &str = r#"{
@@ -148,9 +137,9 @@ pub trait ServerList {
     fn to_server_list(&self) -> Vec<&str>;
 }
 
-impl ServerList for Vec<(String, &[&str])> {
+impl ServerList for Vec<(&str, Vec<&str>)> {
     fn to_server_list(&self) -> Vec<&str> {
-        let server_set: Vec<_> = self.iter().flat_map(|(_, x)| *x).copied().collect();
+        let server_set: Vec<&str> = self.iter().flat_map(|(_, x)| x).copied().collect();
         let mut xs: Vec<&str> = server_set.into_iter().collect();
         xs.dedup();
 
@@ -160,15 +149,149 @@ impl ServerList for Vec<(String, &[&str])> {
 
 #[async_trait]
 pub trait WithSos {
-    async fn handle_test_result(self, hosts: &[&str], prefix: &str) -> Result<(), SystemTestError>;
+    async fn handle_test_result(
+        self,
+        hosts: Vec<&str>,
+        prefix: &str,
+    ) -> Result<(), SystemTestError>;
 }
 
 #[async_trait]
 impl<T: Into<SystemTestError> + Send> WithSos for Result<(), T> {
-    async fn handle_test_result(self, hosts: &[&str], prefix: &str) -> Result<(), SystemTestError> {
+    async fn handle_test_result(
+        self,
+        hosts: Vec<&str>,
+        prefix: &str,
+    ) -> Result<(), SystemTestError> {
         create_iml_diagnostics(hosts, prefix).await?;
 
         self.map_err(|e| e.into())
+    }
+}
+
+#[derive(Clone)]
+pub struct Config {
+    pub manager: &'static str,
+    pub manager_ip: &'static str,
+    pub mds: Vec<&'static str>,
+    pub mds_ips: Vec<&'static str>,
+    pub oss: Vec<&'static str>,
+    pub oss_ips: Vec<&'static str>,
+    pub client: Vec<&'static str>,
+    pub client_ips: Vec<&'static str>,
+    pub iscsi: &'static str,
+    pub lustre_version: &'static str,
+    pub server_map: HashMap<&'static str, &'static str>,
+    pub profile_map: Vec<(&'static str, Vec<&'static str>)>,
+    pub use_stratagem: bool,
+    pub branding: Branding,
+    pub test_type: TestType,
+    pub ntp_server: NtpServer,
+    pub fs_type: FsType,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            manager: "adm",
+            manager_ip: "10.73.10.10",
+            mds: vec!["mds1", "mds2"],
+            mds_ips: vec!["10.73.10.11", "10.73.10.12"],
+            oss: vec!["oss1", "oss2"],
+            oss_ips: vec!["10.73.10.21", "10.73.10.22"],
+            client: vec!["c1"],
+            client_ips: vec!["10.73.10.31"],
+            iscsi: "iscsi",
+            lustre_version: "2.12.4",
+            server_map: vec![
+                ("adm", "10.73.10.10"),
+                ("mds1", "10.73.10.11"),
+                ("mds2", "10.73.10.12"),
+                ("oss1", "10.73.10.21"),
+                ("oss2", "10.73.10.22"),
+                ("c1", "10.73.10.31"),
+            ]
+            .into_iter()
+            .collect::<HashMap<&'static str, &'static str>>(),
+            profile_map: vec![]
+                .into_iter()
+                .collect::<Vec<(&'static str, Vec<&'static str>)>>(),
+            use_stratagem: false,
+            branding: Branding::default(),
+            test_type: TestType::Rpm,
+            ntp_server: NtpServer::Adm,
+            fs_type: FsType::LDISKFS,
+        }
+    }
+}
+
+impl Config {
+    pub fn all_hosts(&self) -> Vec<&str> {
+        let storage_and_client_servers = self.profile_map.to_server_list();
+        let mut all_hosts = vec![self.iscsi];
+
+        if self.test_type == TestType::Rpm {
+            all_hosts.extend(&[self.manager]);
+        }
+
+        [&all_hosts[..], &storage_and_client_servers[..]].concat()
+    }
+    pub fn destroy_list(&self) -> Vec<&str> {
+        let mut to_destroy = self.all_hosts();
+        to_destroy.reverse();
+
+        to_destroy
+    }
+    pub fn manager_ip(&self) -> Vec<&'static str> {
+        vec![self.manager_ip]
+    }
+    pub fn storage_servers(&self) -> Vec<&'static str> {
+        [&self.mds[..], &self.oss[..]].concat()
+    }
+    pub fn storage_server_ips(&self) -> Vec<&'static str> {
+        [&self.mds_ips[..], &self.oss_ips[..]].concat()
+    }
+    pub fn mds_servers(&self) -> Vec<&'static str> {
+        [&self.mds[..]].concat()
+    }
+    pub fn oss_servers(&self) -> Vec<&'static str> {
+        [&self.oss[..]].concat()
+    }
+    pub fn client_servers(&self) -> Vec<&'static str> {
+        [&self.client[..]].concat()
+    }
+    pub fn client_server_ips(&self) -> Vec<&'static str> {
+        [&self.client_ips[..]].concat()
+    }
+    pub fn lustre_version(&self) -> &'static str {
+        self.lustre_version
+    }
+    pub fn hosts_to_ips(&self, hosts: &[&str]) -> Vec<&'static str> {
+        hosts
+            .iter()
+            .map(|host| {
+                self.server_map
+                    .get(host)
+                    .unwrap_or_else(|| panic!("Couldn't locate {} in server map.", host))
+            })
+            .copied()
+            .collect()
+    }
+    pub fn get_setup_config(&self) -> String {
+        match &self.test_type {
+            TestType::Rpm => format!(
+                r#"USE_STRATAGEM = {}
+BRANDING = "{}""#,
+                if self.use_stratagem { "True" } else { "False" },
+                self.branding.to_string()
+            ),
+            TestType::Docker => format!(
+                r#"USE_STRATAGEM={}
+            BRANDING={}"#,
+                self.use_stratagem,
+                self.branding.to_string()
+            ),
+        }
     }
 }
 
@@ -178,16 +301,18 @@ mod tests {
 
     #[test]
     fn test_to_server_list() {
-        let config = vagrant::ClusterConfig::default();
-        let mds_servers = &config.mds_servers()[..];
-        let oss_servers = &config.oss_servers()[..];
-        let client_servers = &config.client_servers()[..];
+        let config = Config::default();
+        let mds_servers = config.mds_servers();
+        let oss_servers = config.oss_servers();
+        let client_servers = config.client_servers();
 
-        let xs: Vec<(String, &[&str])> = vec![
+        let xs = vec![
             ("stratagem_server".into(), mds_servers),
             ("base_monitored".into(), oss_servers),
             ("stratagem_client".into(), client_servers),
-        ];
+        ]
+        .into_iter()
+        .collect::<Vec<(&str, Vec<&str>)>>();
 
         let servers = xs.to_server_list();
 
