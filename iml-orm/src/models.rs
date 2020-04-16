@@ -8,6 +8,7 @@ use crate::schema::*;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use ipnetwork::IpNetwork;
+use serde_json;
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -481,6 +482,19 @@ pub struct ChromaCoreDestroyostpooljob {
 pub struct ChromaCoreDetecttargetsjob {
     pub job_ptr_id: i32,
     pub host_ids: String,
+}
+
+#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "postgres-interop", primary_key(id))]
+#[cfg_attr(
+    feature = "postgres-interop",
+    table_name = "chroma_core_device"
+)]
+pub struct ChromaCoreDevice {
+    pub id: i32,
+    pub fqdn: String,
+    pub device: serde_json::Value,
 }
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
@@ -1312,17 +1326,6 @@ pub struct ChromaCoreSendstratagemresultstoclientjob {
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
 #[derive(serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_series")]
-pub struct ChromaCoreSery {
-    pub id: i32,
-    pub object_id: i32,
-    pub name: String,
-    pub type_: String,
-    pub content_type_id: i32,
-}
-
-#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
-#[derive(serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "postgres-interop", primary_key(name))]
 #[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_serverprofile")]
 pub struct ChromaCoreServerprofile {
@@ -1704,18 +1707,6 @@ pub struct ChromaCoreStorageresourceclas {
     pub class_name: String,
     pub user_creatable: bool,
     pub storage_plugin_id: i32,
-}
-
-#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
-#[derive(serde::Serialize, serde::Deserialize)]
-#[cfg_attr(
-    feature = "postgres-interop",
-    table_name = "chroma_core_storageresourceclassstatistic"
-)]
-pub struct ChromaCoreStorageresourceclassstatistic {
-    pub id: i32,
-    pub name: String,
-    pub resource_class_id: i32,
 }
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
