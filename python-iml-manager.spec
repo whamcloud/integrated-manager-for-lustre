@@ -231,8 +231,6 @@ done
 rm -rf $RPM_BUILD_ROOT
 
 %post -n python2-%{pypi_name}
-pip install psycopg2=2.8.5
-
 if [ $1 -eq 1 ]; then
     systemctl enable nginx
 
