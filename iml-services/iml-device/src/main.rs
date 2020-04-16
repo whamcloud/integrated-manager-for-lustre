@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use device_types::devices::Device;
-use diesel::{self, prelude::*};
+use diesel::{self, pg::upsert::excluded, prelude::*};
 use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
 use iml_device::{
     linux_plugin_transforms::{
@@ -102,14 +102,21 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         cache.insert(fqdn.clone(), device2);
 
+        tracing::debug!("Getting connection");
         let conn = pool.get().unwrap();
         let device3 = NewChromaCoreDevice {
             fqdn: fqdn.0.clone(),
             device: serde_json::to_value(device.clone()).unwrap(),
         };
 
+        tracing::debug!("Before insert");
         let new_device = diesel::insert_into(schema::chroma_core_device::table)
             .values(&device3)
+            .on_conflict(schema::chroma_core_device::fqdn)
+            .do_update()
+            .set(
+                schema::chroma_core_device::device.eq(excluded(schema::chroma_core_device::device)),
+            )
             .get_result::<ChromaCoreDevice>(&conn)
             .expect("Error saving new device");
 
