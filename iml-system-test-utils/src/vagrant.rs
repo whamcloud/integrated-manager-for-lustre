@@ -6,8 +6,9 @@ use crate::{
     iml, pdsh, server_map_to_server_set, try_command_n_times, SetupConfig, SetupConfigType,
     STRATAGEM_CLIENT_PROFILE, STRATAGEM_SERVER_PROFILE,
 };
+use futures::future::try_join_all;
 use iml_cmd::{CheckedCommandExt, CmdError};
-use std::{collections::HashMap, str, time::Duration, env};
+use std::{collections::HashMap, env, str, time::Duration};
 use tokio::{
     fs::{canonicalize, create_dir, remove_dir_all, File},
     io::AsyncWriteExt,
@@ -418,13 +419,22 @@ async fn create_monitored_ldiskfs(config: &ClusterConfig) -> Result<(), CmdError
         .checked_status()
         .await?;
 
-    for node in config.storage_servers() {
-        println!("creating ldiskfs fs for {}", node);
-        provision_node(node, "configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2")
-            .await?
-            .checked_status()
-            .await?;
-    }
+    let xs = config
+        .storage_servers()
+        .into_iter()
+        .map(|x| {
+            println!("creating ldiskfs fs for {}", x);
+            async move {
+                provision_node(x, "configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2")
+                    .await?
+                    .checked_status()
+                    .await?;
+
+                Ok::<_, CmdError>(())
+            }
+        });
+
+    try_join_all(xs).await?;
 
     Ok(())
 }
@@ -438,16 +448,22 @@ async fn create_monitored_zfs(config: &ClusterConfig) -> Result<(), CmdError> {
         .checked_status()
         .await?;
 
-    for node in config.storage_servers() {
-        println!("creating zfs fs for {}", node);
-        provision_node(
-            node,
-            "configure-lustre-network,create-pools,zfs-params,create-zfs-fs",
-        )
-        .await?
-        .checked_status()
-        .await?;
-    }
+    let xs = config.storage_servers().into_iter().map(|x| {
+        println!("creating zfs fs for {}", x);
+        async move {
+            provision_node(
+                x,
+                "configure-lustre-network,create-pools,zfs-params,create-zfs-fs",
+            )
+            .await?
+            .checked_status()
+            .await?;
+
+            Ok::<_, CmdError>(())
+        }
+    });
+
+    try_join_all(xs).await?;
 
     Ok(())
 }

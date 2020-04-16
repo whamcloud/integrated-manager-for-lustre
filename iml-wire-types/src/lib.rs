@@ -1394,12 +1394,10 @@ pub enum ActiveState {
 pub enum RunState {
     Stopped,
     Enabled,
-    Activating,
     Failed,
     Started,
     Setup, // Enabled + Started
     Activating,
-    Failed,
 }
 
 impl Default for RunState {
