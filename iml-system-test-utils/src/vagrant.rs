@@ -25,7 +25,7 @@ pub enum FsType {
     ZFS,
 }
 
-async fn vagrant() -> Result<Command, CmdError> {
+pub async fn vagrant() -> Result<Command, CmdError> {
     let mut x = Command::new("vagrant");
 
     let path = canonicalize("../vagrant/").await?;
