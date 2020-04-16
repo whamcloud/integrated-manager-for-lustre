@@ -9,7 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('chroma_core', '0013_auto_20200317_1809'),
+        ('chroma_core', '0014_multipletimesyncalert_notimesyncalert_timeoutofsyncalert'),
     ]
 
     operations = [
