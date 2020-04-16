@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use device_types::devices::Device;
+use diesel::{self, prelude::*};
 use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
 use iml_device::{
     linux_plugin_transforms::{
@@ -11,7 +12,10 @@ use iml_device::{
     },
     ImlDeviceError,
 };
-use iml_postgres::connect;
+use iml_orm::{
+    models::{ChromaCoreDevice, NewChromaCoreDevice},
+    schema,
+};
 use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::Fqdn;
 use std::{
@@ -88,12 +92,7 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let mut s = consume_data("rust_agent_device_rx");
 
-    let (mut client, conn) = connect().await?;
-
-    tokio::spawn(async {
-        conn.await
-            .unwrap_or_else(|e| tracing::error!("DB connection error {}", e));
-    });
+    let pool = iml_orm::pool().unwrap();
 
     while let Some((fqdn, device)) = s.try_next().await? {
         let mut cache = cache2.lock().await;
@@ -103,10 +102,18 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         cache.insert(fqdn.clone(), device2);
 
-        let mut transaction = client.transaction().await?;
+        let conn = pool.get().unwrap();
+        let device3 = NewChromaCoreDevice {
+            fqdn: fqdn.0.clone(),
+            device: serde_json::to_value(device.clone()).unwrap(),
+        };
 
+        let new_device = diesel::insert_into(schema::chroma_core_device::table)
+            .values(&device3)
+            .get_result::<ChromaCoreDevice>(&conn)
+            .expect("Error saving new device");
 
-        transaction.commit().await?;
+        tracing::info!("Inserted device {:?}", new_device);
     }
 
     Ok(())

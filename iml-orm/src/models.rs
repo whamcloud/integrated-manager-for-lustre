@@ -484,15 +484,20 @@ pub struct ChromaCoreDetecttargetsjob {
     pub host_ids: String,
 }
 
-#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
 #[derive(serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
 #[cfg_attr(feature = "postgres-interop", primary_key(id))]
-#[cfg_attr(
-    feature = "postgres-interop",
-    table_name = "chroma_core_device"
-)]
+#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_device")]
 pub struct ChromaCoreDevice {
     pub id: i32,
+    pub fqdn: String,
+    pub device: serde_json::Value,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "postgres-interop", derive(Insertable))]
+#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_device")]
+pub struct NewChromaCoreDevice {
     pub fqdn: String,
     pub device: serde_json::Value,
 }
