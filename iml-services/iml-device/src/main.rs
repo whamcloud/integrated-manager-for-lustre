@@ -5,7 +5,6 @@
 use device_types::devices::Device;
 use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
 use iml_device::{
-    db,
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
@@ -106,7 +105,6 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         let mut transaction = client.transaction().await?;
 
-        db::persist_local_device(&mut transaction, &fqdn, &device).await?;
 
         transaction.commit().await?;
     }
