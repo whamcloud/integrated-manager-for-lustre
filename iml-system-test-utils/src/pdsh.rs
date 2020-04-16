@@ -6,8 +6,6 @@ use iml_cmd::{CheckedCommandExt, CmdError};
 use std::str;
 use tokio::{fs::canonicalize, process::Command};
 
-// sed "s/\$1/2.12.4/" scripts/install_ldiskfs_no_iml.sh | pdsh -R ssh -u root -w 10.73.10.11,10.73.10.12
-
 pub async fn sed(base_path: &str) -> Result<Command, CmdError> {
     let mut x = Command::new("sed");
 

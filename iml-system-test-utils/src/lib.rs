@@ -2,6 +2,7 @@ pub mod docker;
 pub mod iml;
 pub mod pdsh;
 pub mod vagrant;
+pub mod snapshots;
 
 use iml_cmd::CmdError;
 use iml_wire_types::Branding;

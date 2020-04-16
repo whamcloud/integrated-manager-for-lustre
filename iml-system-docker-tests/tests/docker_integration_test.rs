@@ -3,15 +3,16 @@
 // license that can be found in the LICENSE file.
 
 use iml_cmd::CmdError;
-use iml_system_test_utils::{docker, iml, pdsh, vagrant, SetupConfig, SetupConfigType};
+use iml_system_test_utils::{docker, iml, pdsh, vagrant, snapshots, SetupConfig, SetupConfigType};
 use iml_systemd::SystemdError;
+use petgraph;
 use std::{
     collections::{hash_map::RandomState, HashMap},
     time::Duration,
 };
 use tokio::time::delay_for;
 
-async fn setup() -> Result<(), SystemdError> {
+async fn setup() -> Result<petgraph::graph::DiGraph::<snapshots::Snapshot, snapshots::TestType>, SystemdError> {
     // remove the stack if it is running and clean up volumes and network
     docker::remove_iml_stack().await?;
     docker::system_prune().await?;
@@ -32,7 +33,9 @@ async fn setup() -> Result<(), SystemdError> {
     vagrant::unregister_vms().await?;
     vagrant::clear_vbox_machine_folder().await?;
 
-    Ok(())
+    let graph = snapshots::init();
+
+    Ok(graph)
 }
 
 async fn run_fs_test<S: std::hash::BuildHasher>(
@@ -41,7 +44,7 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
     server_map: HashMap<String, &[&str], S>,
     fs_type: vagrant::FsType,
 ) -> Result<(), SystemdError> {
-    setup().await?;
+    let graph = setup().await?;
     docker::configure_docker_setup(&docker_setup).await?;
 
     docker::deploy_iml_stack().await?;
