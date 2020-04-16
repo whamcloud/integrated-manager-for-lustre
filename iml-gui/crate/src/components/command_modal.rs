@@ -45,7 +45,7 @@ pub enum TypedId {
     Step(u32),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Opens {
     None,
     Command(u32),
@@ -131,18 +131,6 @@ pub enum Msg {
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
-    let msg_str = match msg {
-        Msg::Modal(_) => "Msg-Modal".to_string(),
-        Msg::FireCommands(ref cmds) => format!("Msg-FireCommands: {:?}", cmds),
-        Msg::FetchTree => "Msg-FetchTree".to_string(),
-        Msg::FetchedCommands(_) => "Msg-FetchedCommands".to_string(),
-        Msg::FetchedJobs(_) => "Msg-FetchedJobs".to_string(),
-        Msg::FetchedSteps(_) => "Msg-FetchedSteps".to_string(),
-        Msg::Click(_) => "Msg-Click".to_string(),
-        Msg::InverseClick => "Msg-InverseClick".to_string(),
-        Msg::Noop => "Msg-Noop".to_string(),
-    };
-    log!("command_modal::update", msg_str, model.opens);
     match msg {
         Msg::Modal(msg) => {
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
@@ -151,10 +139,16 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             model.opens = Opens::None;
             model.modal.open = true;
 
+            // clear model from the previous command modal work
+            model.commands.clear();
+            model.jobs.clear();
+            model.jobs_dag.clear();
+            model.steps.clear();
+
             match cmds {
                 Input::Commands(cmds) => {
-                    // use the (little) optimization: if the commands all finished,
-                    // then don't fetch anything
+                    // use the (little) optimization:
+                    // if we already have the commands and they all finished, we don't need to poll them anymore
                     model.commands = cmds;
                     if !is_all_finished(&model.commands) {
                         orders.send_msg(Msg::FetchTree);
@@ -180,10 +174,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             match *commands_data_result {
                 Ok(api_list) => {
                     model.commands = api_list.objects.into_iter().map(Arc::new).collect();
-                    // model.jobs.clear();
-                    // model.jobs_dag.deps.clear();
-                    // model.jobs_dag.roots.clear();
-                    // model.steps.clear();
                 }
                 Err(e) => {
                     error!("Failed to perform fetch_command_status {:#?}", e);
@@ -228,8 +218,22 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
         },
         Msg::Click(the_id) => {
-            let (opens, do_fetch) = interpret_click(&model.opens, the_id);
+            let (opens, do_fetch, do_clear) = interpret_click(&model.opens, the_id);
+            log!(format!(
+                "{:?} =={:?}=> ({:?}, {:?}, {:?})",
+                model.opens, the_id, opens, do_fetch, do_clear
+            ));
             model.opens = opens;
+
+            if let Some(clear_level) = do_clear {
+                if clear_level == 2 {
+                    model.jobs.clear();
+                    model.jobs_dag.clear();
+                    model.steps.clear();
+                } else if clear_level == 1 {
+                    model.steps.clear();
+                }
+            }
             if do_fetch {
                 if let Err(e) = schedule_fetch_tree(model, orders) {
                     error!(e.to_string())
@@ -376,10 +380,10 @@ fn command_item_view(model: &Model, x: &Command) -> Node<Msg> {
         C.border_transparent
     };
 
-    let (open_icon, msg) = if is_open {
-        ("chevron-circle-up", Msg::Click(TypedId::Command(x.id)))
+    let open_icon = if is_open {
+        "chevron-circle-up"
     } else {
-        ("chevron-circle-down", Msg::Click(TypedId::Command(x.id)))
+        "chevron-circle-down"
     };
     let job_tree = job_tree_view(&model.jobs_dag);
     let step_list = step_list_view(&model.opens, &model.steps);
@@ -402,7 +406,7 @@ fn command_item_view(model: &Model, x: &Command) -> Node<Msg> {
                     C.select_none,
                     C.py_5
                 ],
-                simple_ev(Ev::Click, msg),
+                simple_ev(Ev::Click, Msg::Click(TypedId::Command(x.id))),
                 span![class![C.font_thin, C.text_xl], status_icon(x), &x.message],
                 font_awesome(
                     class![C.w_4, C.h_4, C.inline, C.text_gray_700, C.text_blue_500],
@@ -557,8 +561,7 @@ fn step_list_view(opens: &Opens, steps: &[Arc<Step>]) -> Node<Msg> {
                     C.border,
                     C.rounded,
                     C.shadow_sm,
-                    C.overflow_auto,
-                    C.max_h_screen
+                    C.overflow_auto
                 ],
                 steps_list
             ]
@@ -759,14 +762,25 @@ fn is_typed_id_in_opens(opens: &Opens, typed_id: TypedId) -> bool {
     }
 }
 
-fn interpret_click(cur_opens: &Opens, the_id: TypedId) -> (Opens, bool) {
+fn interpret_click(old_opens: &Opens, the_id: TypedId) -> (Opens, bool, Option<u8>) {
     // commands behave like radio-button with the
     // jobs behave like radio button
-    // steps are set of independent elements
-    if is_typed_id_in_opens(cur_opens, the_id) {
-        (perform_close_click(cur_opens, the_id), false)
+    // steps are set of independent checkboxes
+    let clear_level = match (old_opens, the_id) {
+        // clear more
+        (Opens::Command(c1), TypedId::Command(c2)) if *c1 != c2 => Some(2),
+        (Opens::CommandJob(c1, _), TypedId::Command(c2)) if *c1 != c2 => Some(2),
+        (Opens::CommandJobSteps(c1, _, _), TypedId::Command(c2)) if *c1 != c2 => Some(2),
+        // clear less than ^^^
+        (Opens::CommandJob(_, j1), TypedId::Job(j2)) if *j1 != j2 => Some(1),
+        (Opens::CommandJobSteps(_, j1, _), TypedId::Job(j2)) if *j1 != j2 => Some(1),
+        // clear nothing
+        _ => None,
+    };
+    if is_typed_id_in_opens(old_opens, the_id) {
+        (perform_close_click(old_opens, the_id), false, clear_level)
     } else {
-        (perform_open_click(cur_opens, the_id), true)
+        (perform_open_click(old_opens, the_id), true, clear_level)
     }
 }
 
@@ -884,6 +898,39 @@ mod tests {
         ]];
         // FIXME It seems there is no any other way, https://github.com/seed-rs/seed/issues/414
         assert_eq!(format!("{:#?}", dom), format!("{:#?}", expected_dom));
+    }
+
+    #[test]
+    fn interpret_click_test() {
+        let start = Opens::None;
+
+        // click on Command(12)
+        let triple = interpret_click(&start, TypedId::Command(12));
+        assert_eq!(&triple, &(Opens::Command(12), true, None));
+
+        // click on Job(40)
+        let triple = interpret_click(&triple.0, TypedId::Job(40));
+        assert_eq!(&triple, &(Opens::CommandJob(12, 40), true, None));
+
+        // click on Step(63)
+        let triple = interpret_click(&triple.0, TypedId::Step(63));
+        assert_eq!(&triple, &(Opens::CommandJobSteps(12, 40, vec![63]), true, None));
+
+        // click on Step(62)
+        let triple = interpret_click(&triple.0, TypedId::Step(62));
+        assert_eq!(&triple, &(Opens::CommandJobSteps(12, 40, vec![63, 62]), true, None));
+
+        // click on the different command, Command(54)
+        let triple = interpret_click(&triple.0, TypedId::Command(54));
+        assert_eq!(&triple, &(Opens::Command(54), true, Some(2)));
+
+        // click on the Job(91)
+        let triple = interpret_click(&triple.0, TypedId::Job(91));
+        assert_eq!(&triple, &(Opens::CommandJob(54, 91), true, None));
+
+        // click on the different command, Command(12)
+        let triple = interpret_click(&triple.0, TypedId::Command(12));
+        assert_eq!(&triple, &(Opens::Command(12), true, Some(2)));
     }
 
     fn make_job(id: u32, deps: &[u32], descr: &str) -> Job0 {
