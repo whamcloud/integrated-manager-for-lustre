@@ -44,7 +44,6 @@ pub struct Model {
 
 #[derive(Clone, Debug)]
 pub enum Msg {
-    Test,
     SetHosts(
         Vec<Arc<Host>>,
         im::HashMap<u32, Arc<LnetConfigurationRecord>>,
@@ -68,10 +67,6 @@ pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
 
 pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
-        Msg::Test => {
-            // todo remove
-            orders.send_g_msg(GMsg::OpenCommandModal(command_modal::Input::Ids(vec![12, 54])));
-        }
         Msg::SortBy(table::SortBy(x)) => {
             let dir = if x == model.sort.0 {
                 model.sort.1.next()
@@ -173,20 +168,7 @@ pub fn view(
     all_locks: &Locks,
     sd: &date::Model,
 ) -> impl View<Msg> {
-    let b = seed::button![
-        class![
-            C.p_8,
-            C.border_2,
-            C.rounded_28px,
-            C.justify_start,
-            C.bg_red_800,
-            C.text_white
-        ],
-        "Test command!",
-        simple_ev(Ev::Click, Msg::Test),
-    ];
-
-    let c = div![
+    div![
         class![C.bg_white],
         div![
             class![C.flex, C.justify_between, C.px_6, C._mb_px, C.bg_gray_200],
@@ -244,8 +226,7 @@ pub fn view(
                 ],
             ]
         }
-    ];
-    div![b, c]
+    ]
 }
 
 fn lnet_by_server_view<T>(x: &Host, cache: &ArcCache, all_locks: &Locks) -> Option<Vec<Node<T>>> {

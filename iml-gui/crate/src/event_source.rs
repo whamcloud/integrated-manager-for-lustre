@@ -12,7 +12,7 @@ pub fn init(orders: &mut impl Orders<Msg, GMsg>) {
     let uri = if *crate::IS_PRODUCTION {
         "/messaging"
     } else {
-        "https://tiv1:8443/messaging" // TODO exclude
+        "https://localhost:8443/messaging"
     };
 
     // FIXME: This should be proxied via webpack dev-server but there is an issue with buffering contents of SSE.
