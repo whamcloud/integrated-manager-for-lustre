@@ -13,6 +13,7 @@ pub mod page;
 mod auth;
 mod breakpoints;
 mod ctx_help;
+mod dependency_tree;
 mod environment;
 mod event_source;
 mod extensions;
