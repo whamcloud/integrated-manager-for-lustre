@@ -2,7 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::components::command_modal;
 use crate::{
     components::{action_dropdown, alert_indicator, lnet_status, lock_indicator, paging, table, Placement},
     generated::css_classes::C,
