@@ -15,6 +15,7 @@ services:
       - db-data:/var/lib/postgresql/data/
     environment:
       - POSTGRES_USER=chroma
+      - POSTGRES_HOST_AUTH_METHOD=trust
     healthcheck:
       test: ["CMD-SHELL", "psql -h 'postgres' -U 'chroma' -c '\\q'"]
       interval: 5s
