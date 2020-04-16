@@ -32,6 +32,13 @@ impl<T> Default for DependencyDAG<T> {
     }
 }
 
+impl<T> DependencyDAG<T> {
+    pub fn clear(&mut self) {
+        self.roots.clear();
+        self.deps.clear();
+    }
+}
+
 pub fn build_direct_dag<T>(ts: &[Arc<T>]) -> DependencyDAG<T>
 where
     T: Deps + Clone + Debug,
