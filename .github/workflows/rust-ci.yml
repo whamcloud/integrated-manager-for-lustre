@@ -68,6 +68,9 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v1
 
+      - name: Install PostgreSQL client
+        run: sudo apt-get -yqq install libpq-dev
+
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:

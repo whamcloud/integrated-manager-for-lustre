@@ -5,8 +5,8 @@ set -ex
 yum copr enable -y managerforlustre/manager-for-lustre-devel
 # Get latest rpmdevtools
 yum install -y https://copr-be.cloud.fedoraproject.org/results/managerforlustre/buildtools/epel-8-x86_64/01152137-rpmdevtools/rpmdevtools-8.10-7.el8.noarch.rpm
-yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-42.0-9.noarch.rpm | true
-yum install -y rpmdevtools git ed epel-release python-setuptools gcc openssl-devel postgresql12-devel
+yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+yum install -y rpmdevtools git ed epel-release python-setuptools gcc openssl-devel postgresql96-devel
 curl https://sh.rustup.rs -sSf | sh -s -- -y
 source $HOME/.cargo/env
 rustup update
@@ -33,7 +33,7 @@ yum autoremove -y rpmdevtools
 rm -rf /tmp/{manager,agent}-rpms
 mkdir -p /tmp/{manager,agent}-rpms
 
-cp /integrated-manager-for-lustre/_topdir/RPMS/x86_64/rust-iml-{action-runner,agent-comms,api,cli,mailbox,ostpool,postoffice,stats,device,warp-drive}-*.rpm /tmp/manager-rpms/
+cp /integrated-manager-for-lustre/_topdir/RPMS/x86_64/rust-iml-{action-runner,agent-comms,api,cli,mailbox,ntp,ostpool,postoffice,stats,device,warp-drive}-*.rpm /tmp/manager-rpms/
 cp /integrated-manager-for-lustre/_topdir/RPMS/noarch/python2-iml-manager-*.rpm /tmp/manager-rpms/
 cp /integrated-manager-for-lustre/_topdir/RPMS/x86_64/rust-iml-agent-[0-9]*.rpm /tmp/agent-rpms
 cp /integrated-manager-for-lustre/chroma_support.repo /etc/yum.repos.d/

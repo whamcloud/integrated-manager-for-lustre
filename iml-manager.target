@@ -37,6 +37,9 @@ After=iml-agent-comms.service
 Requires=iml-api.service
 After=iml-api.service
 
+Requires=iml-ntp.service
+After=iml-ntp.service
+
 Requires=iml-mailbox.service
 After=iml-mailbox.service
 
@@ -61,8 +64,8 @@ After=nginx.service
 Requires=rabbitmq-server.service
 After=rabbitmq-server.service
 
-Requires=postgresql-12.service
-After=postgresql-12.service
+Requires=postgresql-9.6.service
+After=postgresql-9.6.service
 
 Requires=influxdb.service
 After=influxdb.service
@@ -92,9 +95,10 @@ Also=iml-plugin-runner.service
 Also=iml-power-control.service
 Also=iml-rust-stats.service
 Also=iml-syslog.service
+Also=iml-ntp.service
 Also=iml-update-handler.socket
 Also=iml-warp-drive.service
 Also=influxdb.service
 Also=nginx.service
-Also=postgresql-12.service
+Also=postgresql-9.6.service
 Also=rabbitmq-server.service

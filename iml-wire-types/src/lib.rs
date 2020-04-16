@@ -1107,6 +1107,16 @@ pub enum AlertRecordType {
     LNetOfflineAlert,
     LNetNidsChangedAlert,
     StratagemUnconfiguredAlert,
+    TimeOutOfSyncAlert,
+    NoTimeSyncAlert,
+    MultipleTimeSyncAlert,
+    UnknownTimeSyncAlert,
+}
+
+impl ToString for AlertRecordType {
+    fn to_string(&self) -> String {
+        serde_json::to_string(self).unwrap().replace("\"", "")
+    }
 }
 
 #[derive(
@@ -1333,6 +1343,32 @@ impl EndpointName for Session {
     }
 }
 
+pub mod time {
+    #[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+    pub enum Synced {
+        Synced,
+        Unsynced,
+    }
+
+    #[derive(Debug, serde::Serialize, serde::Deserialize)]
+    pub enum State {
+        None,
+        Multiple,
+        Synced,
+        Unsynced(Option<Offset>),
+        Unknown,
+    }
+
+    #[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+    pub struct Offset(String);
+
+    impl<T: ToString> From<T> for Offset {
+        fn from(s: T) -> Self {
+            Self(s.to_string())
+        }
+    }
+}
+
 /// Types used for component checks
 #[derive(Debug, Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ElementState {
@@ -1350,12 +1386,16 @@ pub enum UnitFileState {
 pub enum ActiveState {
     Inactive,
     Active,
+    Activating,
+    Failed,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub enum RunState {
     Stopped,
     Enabled,
+    Activating,
+    Failed,
     Started,
     Setup, // Enabled + Started
 }

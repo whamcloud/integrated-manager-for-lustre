@@ -38,6 +38,7 @@ cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-action-runner %{buildroot}%{_bindir}
 cp iml-warp-drive %{buildroot}%{_bindir}
 cp iml-mailbox %{buildroot}%{_bindir}
+cp iml-ntp %{buildroot}%{_bindir}
 cp iml-postoffice %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp iml-api.service %{buildroot}%{_unitdir}
@@ -49,6 +50,7 @@ cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
 cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
 cp iml-warp-drive.service %{buildroot}%{_unitdir}
 cp iml-mailbox.service %{buildroot}%{_unitdir}
+cp iml-ntp.service %{buildroot}%{_unitdir}
 cp iml-postoffice.service %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_tmpfilesdir}
 cp iml-mailbox.conf %{buildroot}%{_tmpfilesdir}
@@ -252,6 +254,27 @@ systemctl preset iml-mailbox.service
 %attr(0644,root,root)%{_unitdir}/iml-mailbox.service
 %attr(0644,root,root)%{_tmpfilesdir}/iml-mailbox.conf
 
+%package ntp
+Summary: Consumer of IML Agent Ntp push queue
+License: MIT
+Group: System Environment/Libraries
+
+%description ntp
+%{summary}
+
+%post ntp
+systemctl preset iml-ntp.service
+
+%preun ntp
+%systemd_preun iml-ntp.service
+
+%postun ntp
+%systemd_postun_with_restart iml-ntp.service
+
+%files ntp
+%{_bindir}/iml-ntp
+%attr(0644,root,root)%{_unitdir}/iml-ntp.service
+
 %package postoffice
 Summary: Consumer of IML Agent Postoffice push queue
 License: MIT
@@ -297,5 +320,8 @@ systemctl preset iml-device.service
 %attr(0644,root,root)%{_unitdir}/iml-device.service
 
 %changelog
+* Wed Sep 18 2019 Will Johnson <wjohnson@whamcloud.com> - 0.2.0-1 
+- Add ntp service
+
 * Wed Mar 6 2019 Joe Grund <jgrund@whamcloud.com> - 0.1.0-1
 - Initial package

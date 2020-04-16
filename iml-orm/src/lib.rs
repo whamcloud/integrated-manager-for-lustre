@@ -13,6 +13,12 @@ pub mod models;
 pub mod schema;
 
 #[cfg(feature = "postgres-interop")]
+pub mod alerts;
+
+#[cfg(feature = "postgres-interop")]
+pub mod hosts;
+
+#[cfg(feature = "postgres-interop")]
 use diesel::{
     r2d2::{ConnectionManager, Pool},
     PgConnection,
@@ -21,8 +27,14 @@ use diesel::{
 use iml_manager_env::get_db_conn_string;
 
 #[cfg(feature = "postgres-interop")]
+pub type DbPool = Pool<ConnectionManager<diesel::PgConnection>>;
+
+#[cfg(feature = "postgres-interop")]
+pub use tokio_diesel;
+
+#[cfg(feature = "postgres-interop")]
 /// Get a new connection pool based on the envs connection string.
-pub fn pool() -> Result<Pool<ConnectionManager<diesel::PgConnection>>, r2d2::Error> {
+pub fn pool() -> Result<DbPool, r2d2::Error> {
     let manager = ConnectionManager::<PgConnection>::new(get_db_conn_string());
 
     Pool::builder().build(manager)

@@ -2,15 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{
-    action_plugins::{
-        check_kernel, check_stonith, firewall_cmd, high_availability, kernel_module, lamigo,
-        lpurge, ltuer, lustre,
-        ntp::action_configure,
-        ostpool, package, postoffice,
-        stratagem::{action_purge, action_warning, server},
-    },
-    systemd,
+use crate::action_plugins::{
+    check_kernel, check_stonith, firewall_cmd, high_availability, kernel_module, lamigo, lpurge,
+    ltuer, lustre,
+    ntp::{action_configure, is_ntp_configured},
+    ostpool, package, postoffice,
+    stratagem::{action_purge, action_warning, server},
 };
 use iml_util::action_plugins;
 use iml_wire_types::ActionName;
@@ -20,12 +17,12 @@ use tracing::info;
 /// Add new Actions to the fn body as they are created.
 pub fn create_registry() -> action_plugins::Actions {
     let map = action_plugins::Actions::default()
-        .add_plugin("start_unit", systemd::start_unit)
-        .add_plugin("stop_unit", systemd::stop_unit)
-        .add_plugin("enable_unit", systemd::enable_unit)
-        .add_plugin("disable_unit", systemd::disable_unit)
-        .add_plugin("restart_unit", systemd::restart_unit)
-        .add_plugin("get_unit_run_state", systemd::get_run_state)
+        .add_plugin("start_unit", iml_systemd::start_unit)
+        .add_plugin("stop_unit", iml_systemd::stop_unit)
+        .add_plugin("enable_unit", iml_systemd::enable_unit)
+        .add_plugin("disable_unit", iml_systemd::disable_unit)
+        .add_plugin("restart_unit", iml_systemd::restart_unit)
+        .add_plugin("get_unit_run_state", iml_systemd::get_run_state)
         .add_plugin("kernel_module_loaded", kernel_module::loaded)
         .add_plugin("kernel_module_version", kernel_module::version)
         .add_plugin("package_installed", package::installed)
@@ -64,6 +61,7 @@ pub fn create_registry() -> action_plugins::Actions {
             "configure_ntp",
             action_configure::update_and_write_new_config,
         )
+        .add_plugin("is_ntp_configured", is_ntp_configured::is_ntp_configured)
         .add_plugin("create_ltuer_conf", ltuer::create_ltuer_conf);
 
     info!("Loaded the following ActionPlugins:");

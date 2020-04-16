@@ -4,7 +4,7 @@
 
 pub(crate) mod corosync_conf;
 
-use crate::{agent_error::ImlAgentError, systemd};
+use crate::agent_error::ImlAgentError;
 use elementtree::Element;
 use futures::{future::try_join_all, try_join};
 use iml_cmd::{CheckedCommandExt, Command};
@@ -104,7 +104,7 @@ pub async fn get_ha_resource_list(_: ()) -> Result<Vec<ResourceAgentInfo>, ImlAg
 
 async fn systemd_unit_servicestate(name: &str) -> Result<ServiceState, ImlAgentError> {
     let n = format!("{}.service", name);
-    match systemd::get_run_state(n).await {
+    match iml_systemd::get_run_state(n).await {
         Ok(s) => Ok(ServiceState::Configured(s)),
         Err(err) => {
             tracing::debug!("Get Run State of {} failed: {:?}", name, err);

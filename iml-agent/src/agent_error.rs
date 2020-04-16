@@ -95,6 +95,7 @@ pub enum ImlAgentError {
     Reqwest(reqwest::Error),
     SendError,
     Serde(serde_json::Error),
+    SystemdError(iml_systemd::SystemdError),
     TokioJoinError(tokio::task::JoinError),
     TokioTimerError(tokio::time::Error),
     UnexpectedStatusError,
@@ -129,6 +130,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::Reqwest(ref err) => write!(f, "{}", err),
             ImlAgentError::SendError => write!(f, "Rx went away"),
             ImlAgentError::Serde(ref err) => write!(f, "{}", err),
+            ImlAgentError::SystemdError(ref err) => write!(f, "{}", err),
             ImlAgentError::TokioJoinError(ref err) => write!(f, "{}", err),
             ImlAgentError::TokioTimerError(ref err) => write!(f, "{}", err),
             ImlAgentError::UnexpectedStatusError => write!(f, "Unexpected status code"),
@@ -165,6 +167,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::Reqwest(ref err) => Some(err),
             ImlAgentError::SendError => None,
             ImlAgentError::Serde(ref err) => Some(err),
+            ImlAgentError::SystemdError(ref err) => Some(err),
             ImlAgentError::TokioJoinError(ref err) => Some(err),
             ImlAgentError::TokioTimerError(ref err) => Some(err),
             ImlAgentError::UnexpectedStatusError => None,
@@ -190,6 +193,12 @@ impl From<std::io::Error> for ImlAgentError {
 impl From<serde_json::Error> for ImlAgentError {
     fn from(err: serde_json::Error) -> Self {
         ImlAgentError::Serde(err)
+    }
+}
+
+impl From<iml_systemd::SystemdError> for ImlAgentError {
+    fn from(err: iml_systemd::SystemdError) -> Self {
+        ImlAgentError::SystemdError(err)
     }
 }
 

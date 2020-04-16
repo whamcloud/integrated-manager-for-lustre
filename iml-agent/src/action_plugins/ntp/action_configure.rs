@@ -2,19 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use crate::action_plugins::ntp::common::{
+    get_ntp_config_stream, MARKER, NTP_CONFIG_FILE, PREFIX, REMOVE_MARKER,
+};
 use crate::agent_error::ImlAgentError;
 use futures::{future, Future, Stream, TryFutureExt, TryStreamExt};
-use std::path::Path;
-
-static NTP_CONFIG_FILE: &str = "/etc/ntp.conf";
-static MARKER: &str = "# IML_EDIT";
-static REMOVE_MARKER: &str = "#REMOVE_MARKER#";
-static PREFIX: &str = "server";
-
-/// Gets a stream to the ntp config
-fn get_ntp_config_stream() -> impl Stream<Item = Result<String, ImlAgentError>> {
-    iml_fs::stream_file_lines(Path::new(NTP_CONFIG_FILE)).err_into()
-}
 
 /// Writes the new config data to the config file
 pub async fn update_and_write_new_config(server: Option<String>) -> Result<(), ImlAgentError> {

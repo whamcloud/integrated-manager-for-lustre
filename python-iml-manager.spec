@@ -42,8 +42,7 @@ Requires:       fence-agents
 Requires:       fence-agents-virsh
 Requires:       ntp
 Requires:       pygobject2
-Requires:       postgresql12
-Requires:       postgresql12-server
+Requires:       postgresql96-server >= 9.6.17
 Requires:       python-daemon
 Requires:       python-gunicorn
 Requires:       python-networkx
@@ -51,6 +50,7 @@ Requires:       python-ordereddict
 Requires:       python-paramiko
 Requires:       python-pip
 Requires:       python-prettytable
+Requires:       python-psycopg2 = 2.7.7
 Requires:       python-setuptools
 Requires:       python-requests >= 2.6.0
 Requires:       python-uuid
@@ -89,6 +89,7 @@ Requires:       rust-iml-postoffice >= 0.2.0
 Requires:       rust-iml-stats >= 0.2.0
 Requires:       rust-iml-warp-drive >= 0.2.0
 Requires:       rust-iml-device >= 0.2.0
+Requires:       rust-iml-ntp >= 0.2.0
 # Other Repos
 Requires:       influxdb
 Requires:       grafana
