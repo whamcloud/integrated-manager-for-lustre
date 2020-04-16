@@ -3,14 +3,12 @@
 // license that can be found in the LICENSE file.
 
 use iml_cmd::CmdError;
-use iml_system_test_utils::{docker, iml, ssh, vagrant, SetupConfigType};
+use iml_system_test_utils::*;
 use iml_systemd::SystemdError;
-use std::time::Duration;
-use tokio::time::delay_for;
 use tracing::Level;
 use tracing_subscriber::fmt::Subscriber;
 
-pub async fn setup(config: &vagrant::ClusterConfig) -> Result<(), SystemdError> {
+pub async fn setup(config: &Config) -> Result<(), SystemdError> {
     Subscriber::builder().with_max_level(Level::DEBUG).init();
 
     // remove the stack if it is running and clean up volumes and network
@@ -34,26 +32,24 @@ pub async fn setup(config: &vagrant::ClusterConfig) -> Result<(), SystemdError> 
     Ok(())
 }
 
-pub async fn run_fs_test(
-    config: &vagrant::ClusterConfig,
-    docker_setup: &SetupConfigType,
-    server_map: Vec<(String, &[&str])>,
-    fs_type: vagrant::FsType,
-) -> Result<(), SystemdError> {
-    setup(config).await?;
-    docker::configure_docker_setup(&docker_setup).await?;
+pub async fn run_fs_test(config: Config) -> Result<Config, SystemdError> {
+    setup(&config).await?;
+
+    let config = vagrant::setup_bare(config).await?;
+
+    let config = docker::configure_docker_setup(config).await?;
 
     docker::deploy_iml_stack().await?;
 
-    vagrant::setup_deploy_docker_servers(&config, server_map).await?;
+    let config = vagrant::deploy_docker_servers(config).await?;
 
-    vagrant::create_fs(fs_type, &config).await?;
+    let config = vagrant::install_fs(config).await?;
 
-    delay_for(Duration::from_secs(30)).await;
+    let config = vagrant::create_fs(config).await?;
 
     iml::detect_fs().await?;
 
-    Ok(())
+    Ok(config)
 }
 
 pub async fn wait_for_ntp(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {

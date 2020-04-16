@@ -1,5 +1,5 @@
 use crate::{
-    iml::IML_DOCKER_PATH, SetupConfig, SetupConfigType, STRATAGEM_CLIENT_PROFILE,
+    iml::IML_DOCKER_PATH, snapshots, vagrant, Config, STRATAGEM_CLIENT_PROFILE,
     STRATAGEM_SERVER_PROFILE,
 };
 use iml_cmd::{CheckedCommandExt, CmdError};
@@ -105,8 +105,8 @@ pub async fn remove_password() -> Result<(), CmdError> {
     Ok(())
 }
 
-pub async fn configure_docker_setup(setup: &SetupConfigType) -> Result<(), CmdError> {
-    let config: String = setup.into();
+pub async fn configure_docker_setup(config: Config) -> Result<Config, CmdError> {
+    let config_content: String = config.get_setup_config();
     let mut path = canonicalize(IML_DOCKER_PATH).await?;
     path.push("setup");
 
@@ -114,10 +114,9 @@ pub async fn configure_docker_setup(setup: &SetupConfigType) -> Result<(), CmdEr
     config_path.push("config");
 
     let mut file = File::create(config_path).await?;
-    file.write_all(config.as_bytes()).await?;
+    file.write_all(config_content.as_bytes()).await?;
 
-    let setup_config: &SetupConfig = setup.into();
-    if setup_config.use_stratagem {
+    if config.use_stratagem {
         let mut server_profile_path = path.clone();
         server_profile_path.push("stratagem-server.profile");
 
@@ -131,7 +130,23 @@ pub async fn configure_docker_setup(setup: &SetupConfigType) -> Result<(), CmdEr
         file.write_all(STRATAGEM_CLIENT_PROFILE.as_bytes()).await?;
     }
 
-    Ok(())
+    for host in config.all_hosts() {
+        vagrant::snapshot_save(
+            host,
+            snapshots::SnapshotName::ImlConfigured.to_string().as_str(),
+        )
+        .await?
+        .checked_status()
+        .await?;
+    }
+
+    vagrant::up()
+        .await?
+        .args(config.all_hosts())
+        .checked_status()
+        .await?;
+
+    Ok(config)
 }
 
 pub async fn configure_docker_overrides() -> Result<(), CmdError> {

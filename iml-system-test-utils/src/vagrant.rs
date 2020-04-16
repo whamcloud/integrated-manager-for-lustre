@@ -2,13 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{
-    iml, ssh, try_command_n_times, ServerList as _, SetupConfig, SetupConfigType,
-    STRATAGEM_CLIENT_PROFILE, STRATAGEM_SERVER_PROFILE,
-};
+use crate::*;
 use futures::future::try_join_all;
 use iml_cmd::{CheckedCommandExt, CmdError};
-use std::{collections::HashMap, env, str, time::Duration};
+use std::{env, str, time::Duration};
 use tokio::{
     fs::{canonicalize, create_dir, remove_dir_all, File},
     io::AsyncWriteExt,
@@ -16,17 +13,7 @@ use tokio::{
     time::delay_for,
 };
 
-pub enum NtpServer {
-    HostOnly,
-    Adm,
-}
-
-pub enum FsType {
-    LDISKFS,
-    ZFS,
-}
-
-async fn vagrant() -> Result<Command, CmdError> {
+pub async fn vagrant() -> Result<Command, CmdError> {
     let mut x = Command::new("vagrant");
 
     let path = canonicalize("../vagrant/").await?;
@@ -54,7 +41,7 @@ pub async fn up<'a>() -> Result<Command, CmdError> {
     Ok(x)
 }
 
-pub async fn destroy<'a>(config: &ClusterConfig) -> Result<(), CmdError> {
+pub async fn destroy<'a>(config: &Config) -> Result<(), CmdError> {
     let nodes = config.destroy_list();
 
     for node in &nodes {
@@ -160,7 +147,7 @@ pub async fn rsync(host: &str) -> Result<(), CmdError> {
     x.arg("rsync").arg(host).checked_status().await
 }
 
-pub async fn detect_fs(config: &ClusterConfig) -> Result<(), CmdError> {
+pub async fn detect_fs(config: &Config) -> Result<(), CmdError> {
     run_vm_command(config.manager, "iml filesystem detect")
         .await?
         .checked_status()
@@ -173,7 +160,7 @@ pub async fn global_prune() -> Result<(), CmdError> {
     x.arg("global-status").arg("--prune").checked_status().await
 }
 
-pub async fn wait_on_services_ready(config: &ClusterConfig) -> Result<(), CmdError> {
+pub async fn wait_on_services_ready(config: &Config) -> Result<(), CmdError> {
     let output =
         run_vm_command(config.manager, "systemctl list-dependencies iml-manager.target | tail -n +2 | awk '{print$2}' | awk '{print substr($1, 3)}' | grep -v iml-settings-populator.service | grep -v iml-sfa.service").await?.checked_output().await?;
 
@@ -284,66 +271,67 @@ pub async fn clear_vbox_machine_folder() -> Result<(), CmdError> {
     Ok(())
 }
 
-pub async fn setup_bare(
-    all_hosts: &[&str],
-    config: &ClusterConfig,
-    ntp_server: NtpServer,
-) -> Result<(), CmdError> {
-    up().await?.args(all_hosts).checked_status().await?;
+pub async fn setup_bare(config: Config) -> Result<Config, CmdError> {
+    if config.test_type == TestType::Rpm {
+        up().await?.arg(config.manager).checked_status().await?;
 
-    match ntp_server {
-        NtpServer::HostOnly => {
-            ssh::configure_ntp_for_host_only_if(&config.storage_server_ips()).await?
-        }
-        NtpServer::Adm => ssh::configure_ntp_for_adm(&config.storage_server_ips()).await?,
-    };
-
-    halt().await?.args(all_hosts).checked_status().await?;
-
-    for x in all_hosts {
-        snapshot_save(x, "bare").await?.checked_status().await?;
+        match env::var("REPO_URI") {
+            Ok(x) => {
+                provision_node(config.manager, "install-iml-repouri")
+                    .await?
+                    .env("REPO_URI", x)
+                    .checked_status()
+                    .await?;
+            }
+            _ => {
+                provision_node(config.manager, "install-iml-local")
+                    .await?
+                    .checked_status()
+                    .await?;
+            }
+        };
     }
 
-    Ok(())
-}
+    up().await?
+        .args(config.all_hosts())
+        .checked_status()
+        .await?;
 
-pub async fn setup_iml_install(
-    storage_and_client_servers: &[&str],
-    setup_config: &SetupConfigType,
-    config: &ClusterConfig,
-) -> Result<(), CmdError> {
-    let all_hosts = [
-        &vec![config.iscsi, config.manager][..],
-        storage_and_client_servers,
-    ]
-    .concat();
-
-    up().await?.arg(config.manager).checked_status().await?;
-
-    match env::var("REPO_URI") {
-        Ok(x) => {
-            provision_node(config.manager, "install-iml-repouri")
-                .await?
-                .env("REPO_URI", x)
-                .checked_status()
-                .await?;
+    match config.ntp_server {
+        NtpServer::HostOnly => {
+            ssh::configure_ntp_for_host_only_if(config.storage_server_ips()).await?
         }
-        _ => {
-            provision_node(config.manager, "install-iml-local")
-                .await?
-                .checked_status()
-                .await?;
-        }
+        NtpServer::Adm => ssh::configure_ntp_for_adm(config.storage_server_ips()).await?,
     };
 
-    setup_bare(&all_hosts, &config, NtpServer::Adm).await?;
+    halt()
+        .await?
+        .args(config.all_hosts())
+        .checked_status()
+        .await?;
 
+    for x in config.all_hosts() {
+        snapshot_save(
+            x,
+            snapshots::get_snapshot_name_for_state(&config, TestState::Bare)
+                .to_string()
+                .as_str(),
+        )
+        .await?
+        .checked_status()
+        .await?;
+    }
+
+    Ok(config)
+}
+
+pub async fn configure_iml(config: Config) -> Result<Config, CmdError> {
     up().await?
         .args(&vec![config.manager][..])
         .checked_status()
         .await?;
 
-    configure_rpm_setup(setup_config, &config).await?;
+    configure_rpm_setup(&config).await?;
 
     halt()
         .await?
@@ -351,28 +339,30 @@ pub async fn setup_iml_install(
         .checked_status()
         .await?;
 
-    for host in &all_hosts {
-        snapshot_save(host, "iml-installed")
-            .await?
-            .checked_status()
-            .await?;
+    for host in config.all_hosts() {
+        snapshot_save(
+            host,
+            snapshots::get_snapshot_name_for_state(&config, TestState::Configured)
+                .to_string()
+                .as_str(),
+        )
+        .await?
+        .checked_status()
+        .await?;
     }
 
-    up().await?.args(&all_hosts).checked_status().await?;
+    up().await?
+        .args(config.all_hosts())
+        .checked_status()
+        .await?;
 
-    wait_on_services_ready(config).await?;
+    wait_on_services_ready(&config).await?;
 
-    Ok(())
+    Ok(config)
 }
 
-pub async fn setup_deploy_servers(
-    config: &ClusterConfig,
-    setup_config: &SetupConfigType,
-    server_map: Vec<(String, &[&str])>,
-) -> Result<(), CmdError> {
-    setup_iml_install(&server_map.to_server_list(), &setup_config, &config).await?;
-
-    for (profile, hosts) in server_map {
+pub async fn deploy_servers(config: Config) -> Result<Config, CmdError> {
+    for (profile, hosts) in &config.profile_map {
         let host_ips = config.hosts_to_ips(&hosts);
         for host in host_ips {
             tracing::debug!("pinging host to make sure it is up.");
@@ -388,78 +378,82 @@ pub async fn setup_deploy_servers(
         .await?;
     }
 
-    halt().await?.args(config.all()).checked_status().await?;
-
-    for host in config.all() {
-        snapshot_save(host, "servers-deployed")
-            .await?
-            .checked_status()
-            .await?;
-    }
-
-    up().await?.args(config.all()).checked_status().await?;
-
-    wait_on_services_ready(config).await?;
-
-    Ok(())
-}
-
-pub async fn add_docker_servers(
-    config: &ClusterConfig,
-    server_map: &[(String, &[&str])],
-) -> Result<(), CmdError> {
-    iml::server_add(&server_map).await?;
-
     halt()
         .await?
-        .args(&config.all_but_adm())
+        .args(config.all_hosts())
         .checked_status()
         .await?;
 
-    for host in config.all_but_adm() {
-        snapshot_save(host, "servers-deployed")
-            .await?
-            .checked_status()
-            .await?;
+    for host in config.all_hosts() {
+        snapshot_save(
+            host,
+            snapshots::get_snapshot_name_for_state(&config, TestState::ServersDeployed)
+                .to_string()
+                .as_str(),
+        )
+        .await?
+        .checked_status()
+        .await?;
     }
 
     up().await?
-        .args(&config.all_but_adm())
+        .args(config.all_hosts())
         .checked_status()
-        .await
+        .await?;
+
+    wait_on_services_ready(&config).await?;
+
+    Ok(config)
 }
 
-pub async fn setup_deploy_docker_servers(
-    config: &ClusterConfig,
-    server_map: Vec<(String, &[&str])>,
-) -> Result<(), CmdError> {
-    let server_set: Vec<&str> = server_map.to_server_list();
-    let all_hosts = [&vec![config.iscsi][..], &server_set].concat();
+pub async fn add_docker_servers(config: &Config) -> Result<(), CmdError> {
+    iml::server_add(&config).await?;
 
-    setup_bare(&all_hosts, &config, NtpServer::HostOnly).await?;
+    halt()
+        .await?
+        .args(&config.all_hosts())
+        .checked_status()
+        .await?;
 
+    for host in config.all_hosts() {
+        snapshot_save(
+            host,
+            snapshots::get_snapshot_name_for_state(&config, TestState::ServersDeployed)
+                .to_string()
+                .as_str(),
+        )
+        .await?
+        .checked_status()
+        .await?;
+    }
+
+    up().await?.args(&config.all_hosts()).checked_status().await
+}
+
+pub async fn deploy_docker_servers(config: Config) -> Result<Config, CmdError> {
     up().await?
-        .args(&config.all_but_adm())
+        .args(&config.all_hosts())
         .checked_status()
         .await?;
 
     delay_for(Duration::from_secs(30)).await;
 
-    configure_docker_network(&server_set).await?;
+    configure_docker_network(&config).await?;
 
-    add_docker_servers(&config, &server_map).await?;
+    add_docker_servers(&config).await?;
 
-    Ok(())
+    Ok(config)
 }
 
-pub async fn configure_docker_network(hosts: &[&str]) -> Result<(), CmdError> {
+pub async fn configure_docker_network(config: &Config) -> Result<(), CmdError> {
+    let host_list = config.profile_map.to_server_list();
     // The configure-docker-network provisioner must be run individually on
     // each server node.
     tracing::debug!(
         "Configuring docker network for the following servers: {:?}",
-        hosts
+        host_list
     );
-    for host in hosts {
+    for host in host_list {
         provision_node(host, "configure-docker-network")
             .await?
             .checked_status()
@@ -469,15 +463,7 @@ pub async fn configure_docker_network(hosts: &[&str]) -> Result<(), CmdError> {
     Ok(())
 }
 
-async fn create_monitored_ldiskfs(config: &ClusterConfig) -> Result<(), CmdError> {
-    ssh::install_ldiskfs_no_iml(&config.storage_server_ips(), config.lustre_version()).await?;
-
-    reload()
-        .await?
-        .args(config.storage_servers())
-        .checked_status()
-        .await?;
-
+async fn create_monitored_ldiskfs(config: &Config) -> Result<(), CmdError> {
     let xs = config
         .storage_servers()
         .into_iter()
@@ -498,15 +484,7 @@ async fn create_monitored_ldiskfs(config: &ClusterConfig) -> Result<(), CmdError
     Ok(())
 }
 
-async fn create_monitored_zfs(config: &ClusterConfig) -> Result<(), CmdError> {
-    ssh::install_zfs_no_iml(&config.storage_server_ips(), config.lustre_version()).await?;
-
-    reload()
-        .await?
-        .args(config.storage_servers())
-        .checked_status()
-        .await?;
-
+async fn create_monitored_zfs(config: &Config) -> Result<(), CmdError> {
     let xs = config.storage_servers().into_iter().map(|x| {
         tracing::debug!("creating zfs fs for {}", x);
         async move {
@@ -527,31 +505,62 @@ async fn create_monitored_zfs(config: &ClusterConfig) -> Result<(), CmdError> {
     Ok(())
 }
 
-pub async fn create_fs(fs_type: FsType, config: &ClusterConfig) -> Result<(), CmdError> {
-    match fs_type {
+pub async fn install_fs(config: Config) -> Result<Config, CmdError> {
+    match config.fs_type {
+        FsType::LDISKFS => ssh::install_ldiskfs_no_iml(&config).await?,
+        FsType::ZFS => ssh::install_zfs_no_iml(&config).await?,
+    };
+
+    vagrant::halt()
+        .await?
+        .args(config.all_hosts())
+        .checked_status()
+        .await?;
+
+    for x in config.all_hosts() {
+        vagrant::snapshot_save(
+            x,
+            snapshots::get_snapshot_name_for_state(&config, TestState::FsInstalled)
+                .to_string()
+                .as_str(),
+        )
+        .await?
+        .checked_status()
+        .await?;
+    }
+
+    vagrant::up()
+        .await?
+        .args(config.all_hosts())
+        .checked_status()
+        .await?;
+
+    Ok(config)
+}
+
+pub async fn create_fs(config: Config) -> Result<Config, CmdError> {
+    match config.fs_type {
         FsType::LDISKFS => create_monitored_ldiskfs(&config).await?,
         FsType::ZFS => create_monitored_zfs(&config).await?,
     };
 
-    Ok(())
+    delay_for(Duration::from_secs(30)).await;
+
+    Ok(config)
 }
 
-pub async fn configure_rpm_setup(
-    setup: &SetupConfigType,
-    cluster_config: &ClusterConfig,
-) -> Result<(), CmdError> {
-    let config: String = setup.into();
+pub async fn configure_rpm_setup(config: &Config) -> Result<(), CmdError> {
+    let config_content: String = config.get_setup_config();
 
     let vagrant_path = canonicalize("../vagrant/").await?;
     let mut config_path = vagrant_path.clone();
     config_path.push("local_settings.py");
 
     let mut file = File::create(config_path).await?;
-    file.write_all(config.as_bytes()).await?;
+    file.write_all(config_content.as_bytes()).await?;
 
     let mut vm_cmd: String = "sudo cp /vagrant/local_settings.py /usr/share/chroma-manager/".into();
-    let setup_config: &SetupConfig = setup.into();
-    if setup_config.use_stratagem {
+    if config.use_stratagem {
         let mut server_profile_path = vagrant_path.clone();
         server_profile_path.push("stratagem-server.profile");
 
@@ -573,115 +582,12 @@ pub async fn configure_rpm_setup(
         );
     }
 
-    rsync(cluster_config.manager).await?;
+    rsync(config.manager).await?;
 
-    run_vm_command(cluster_config.manager, vm_cmd.as_str())
+    run_vm_command(config.manager, vm_cmd.as_str())
         .await?
         .checked_status()
         .await?;
 
     Ok(())
-}
-
-pub async fn remove_rpm_setup_files() {}
-
-pub struct ClusterConfig {
-    manager: &'static str,
-    manager_ip: &'static str,
-    mds: Vec<&'static str>,
-    mds_ips: Vec<&'static str>,
-    oss: Vec<&'static str>,
-    oss_ips: Vec<&'static str>,
-    client: Vec<&'static str>,
-    client_ips: Vec<&'static str>,
-    iscsi: &'static str,
-    lustre_version: &'static str,
-    server_map: HashMap<&'static str, &'static str>,
-}
-
-impl Default for ClusterConfig {
-    fn default() -> Self {
-        ClusterConfig {
-            manager: "adm",
-            manager_ip: "10.73.10.10",
-            mds: vec!["mds1", "mds2"],
-            mds_ips: vec!["10.73.10.11", "10.73.10.12"],
-            oss: vec!["oss1", "oss2"],
-            oss_ips: vec!["10.73.10.21", "10.73.10.22"],
-            client: vec!["c1"],
-            client_ips: vec!["10.73.10.31"],
-            iscsi: "iscsi",
-            lustre_version: "2.12.4",
-            server_map: vec![
-                ("adm", "10.73.10.10"),
-                ("mds1", "10.73.10.11"),
-                ("mds2", "10.73.10.12"),
-                ("oss1", "10.73.10.21"),
-                ("oss2", "10.73.10.22"),
-                ("c1", "10.73.10.31"),
-            ]
-            .into_iter()
-            .collect::<HashMap<&str, &str>>(),
-        }
-    }
-}
-
-impl ClusterConfig {
-    pub fn all(&self) -> Vec<&str> {
-        let mut xs = vec![self.iscsi, self.manager];
-
-        xs.extend(self.storage_servers());
-        xs.extend(&self.client);
-
-        xs
-    }
-    pub fn destroy_list(&self) -> Vec<&str> {
-        let mut to_destroy = self.all();
-        to_destroy.reverse();
-
-        to_destroy
-    }
-    pub fn all_but_adm(&self) -> Vec<&str> {
-        let mut xs = vec![self.iscsi];
-
-        xs.extend(self.storage_servers());
-        xs.extend(&self.client);
-
-        xs
-    }
-    pub fn manager_ip(&self) -> Vec<&str> {
-        vec![self.manager_ip]
-    }
-    pub fn storage_servers(&self) -> Vec<&str> {
-        [&self.mds[..], &self.oss[..]].concat()
-    }
-    pub fn storage_server_ips(&self) -> Vec<&str> {
-        [&self.mds_ips[..], &self.oss_ips[..]].concat()
-    }
-    pub fn mds_servers(&self) -> Vec<&str> {
-        [&self.mds[..]].concat()
-    }
-    pub fn oss_servers(&self) -> Vec<&str> {
-        [&self.oss[..]].concat()
-    }
-    pub fn client_servers(&self) -> Vec<&str> {
-        [&self.client[..]].concat()
-    }
-    pub fn client_server_ips(&self) -> Vec<&str> {
-        [&self.client_ips[..]].concat()
-    }
-    pub fn lustre_version(&self) -> &str {
-        self.lustre_version
-    }
-    pub fn hosts_to_ips(&self, hosts: &[&str]) -> Vec<&str> {
-        hosts
-            .iter()
-            .map(|host| {
-                self.server_map
-                    .get(host)
-                    .unwrap_or_else(|| panic!("Couldn't locate {} in server map.", host))
-            })
-            .copied()
-            .collect()
-    }
 }

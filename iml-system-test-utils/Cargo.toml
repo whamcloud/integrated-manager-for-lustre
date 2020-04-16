@@ -11,6 +11,10 @@ iml-cmd = { version = "0.3", path = "../iml-cmd" }
 iml-fs = { version = "0.3", path = "../iml-fs" }
 iml-systemd = { version = "0.3", path = "../iml-systemd" }
 iml-wire-types = { version = "0.3", path = "../iml-wire-types" }
+petgraph = "0.5"
 thiserror = "1.0"
 tokio = {version="0.2", features=["process", "macros", "fs"]}
 tracing = "0.1"
+
+[dev-dependencies]
+insta = "0.16.1"
