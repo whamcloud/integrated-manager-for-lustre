@@ -39,8 +39,5 @@ cp /integrated-manager-for-lustre/_topdir/RPMS/x86_64/rust-iml-agent-[0-9]*.rpm 
 cp /integrated-manager-for-lustre/chroma_support.repo /etc/yum.repos.d/
 
 yum install -y /tmp/manager-rpms/*.rpm
-echo 'pathmunge /usr/pgsql-12/bin' > /etc/profile.d/postgres.sh
-chmod +x /etc/profile.d/postgres.sh
-. /etc/profile
 
 chroma-config setup admin lustre localhost --no-dbspace-check

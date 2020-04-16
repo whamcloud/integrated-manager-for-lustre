@@ -11,8 +11,6 @@ use std::{collections::BTreeSet, fmt, ops::Deref, path::PathBuf};
 use bytes::BytesMut;
 #[cfg(feature = "postgres-interop")]
 use postgres_types::{to_sql_checked, FromSql, IsNull, ToSql, Type};
-
-use serde::Serialize;
 #[cfg(feature = "postgres-interop")]
 use std::io;
 #[cfg(feature = "postgres-interop")]
@@ -737,7 +735,7 @@ impl Deref for DeviceId {
     }
 }
 
-#[derive(Serialize, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, Debug, Default, PartialEq, Eq)]
 pub struct DeviceIds(pub BTreeSet<DeviceId>);
 
 impl Deref for DeviceIds {
@@ -780,7 +778,7 @@ impl<'a> FromSql<'a> for DeviceIds {
     }
 }
 
-#[derive(Serialize, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, Debug, PartialEq, Eq)]
 pub struct Size(pub u64);
 
 #[cfg(feature = "postgres-interop")]
@@ -896,7 +894,7 @@ impl<'a> FromSql<'a> for DeviceType {
 
 /// A device (Block or Virtual).
 /// These should be unique per cluster
-#[derive(Serialize, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, Debug, PartialEq, Eq)]
 pub struct Device {
     pub id: DeviceId,
     pub size: Size,

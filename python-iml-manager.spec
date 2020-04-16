@@ -48,7 +48,6 @@ Requires:       python-gunicorn
 Requires:       python-networkx
 Requires:       python-ordereddict
 Requires:       python-paramiko
-Requires:       python-pip
 Requires:       python-prettytable
 Requires:       python-psycopg2 = 2.7.7
 Requires:       python-setuptools

@@ -437,7 +437,7 @@ class ServiceConfig(CommandLine):
             # Allow our django user to connect with no password
             cfg.write("local\tall\t%s\t\ttrust\n" % database["USER"])
             # Allow the system superuser (postgres) to connect
-            cfg.write("local\tall\tall\t\tpeer\n")
+            cfg.write("local\tall\tall\t\tident\n")
             # Allow grafana to connect (as chroma) with no password
             cfg.write("host\tall\t%s\tlocalhost\ttrust\n" % database["USER"])
 
