@@ -24,7 +24,6 @@ pub(crate) mod chart;
 pub(crate) mod command_modal;
 pub(crate) mod dashboard;
 pub(crate) mod datepicker;
-pub(crate) mod dependency_tree;
 pub(crate) mod duration_picker;
 pub(crate) mod font_awesome;
 pub(crate) mod grafana_chart;
