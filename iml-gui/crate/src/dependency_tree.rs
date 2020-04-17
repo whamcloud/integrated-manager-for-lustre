@@ -45,19 +45,25 @@ where
 {
     let mut roots: Vec<u32> = Vec::new();
     let mut dag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(ts.len());
-    for t in ts {
-        let x = t.id();
-        let ys = t.deps();
-        if !ys.is_empty() {
-            // push the arcs `x -> y` for all `y \in xs` into the graph
-            dag.push((x, ys.to_vec()));
-            if !roots.contains(&x) {
-                roots.push(x);
-            }
-            // remove any of the destinations from the roots
-            for y in ys {
-                if let Some(i) = roots.iter().position(|r| *r == y) {
-                    roots.remove(i);
+    if ts.len() == 1 {
+        // special case, when there is no any arc `x -> y`,
+        // then the only vertex becomes the root
+        roots.push(ts[0].id());
+    } else {
+        for t in ts {
+            let x = t.id();
+            let ys = t.deps();
+            if !ys.is_empty() {
+                // push the arcs `x -> y` for all `y \in xs` into the graph
+                dag.push((x, ys.to_vec()));
+                if !roots.contains(&x) {
+                    roots.push(x);
+                }
+                // remove any of the destinations from the roots
+                for y in ys {
+                    if let Some(i) = roots.iter().position(|r| *r == y) {
+                        roots.remove(i);
+                    }
                 }
             }
         }
@@ -93,10 +99,10 @@ pub fn enrich_dag<T>(objs: &[Arc<T>], int_roots: &[u32], int_deps: &[(u32, Vec<u
 where
     T: Deps + Clone + Debug,
 {
-    let roots: Vec<Arc<T>> = convert_ids_to_arcs(&objs, &int_roots);
+    let roots: Vec<Arc<T>> = convert_ids_to_arcs(objs, int_roots);
     let deps: HashMap<u32, Vec<Arc<T>>> = int_deps
         .iter()
-        .map(|(id, ids)| (*id, convert_ids_to_arcs(&objs, ids)))
+        .map(|(id, ids)| (*id, convert_ids_to_arcs(objs, ids)))
         .collect();
     DependencyDAG { roots, deps }
 }
@@ -225,6 +231,18 @@ mod tests {
         let dag = build_inverse_dag(&x_arcs);
         let result = build_dag_str(&dag, &node_to_string).join("\n");
         assert_eq!(result, "");
+    }
+
+    #[test]
+    fn single_node() {
+        let x_list: Vec<X> = vec![X::new(1, &[], "One")];
+        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(|x| Arc::new(x)).collect();
+        let dag = build_direct_dag(&x_arcs);
+        let result = build_dag_str(&dag, &node_to_string).join("\n");
+        assert_eq!(result, "1: One");
+        let dag = build_inverse_dag(&x_arcs);
+        let result = build_dag_str(&dag, &node_to_string).join("\n");
+        assert_eq!(result, "1: One");
     }
 
     fn node_to_string(node: Arc<X>, ctx: &mut Context) -> String {
