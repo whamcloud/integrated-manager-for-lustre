@@ -31,7 +31,7 @@ impl Deps for Job0 {
         let mut deps: Vec<u32> = self
             .wait_for
             .iter()
-            .filter_map(|s| extract_uri_id::<Job0>(&s))
+            .filter_map(|s| extract_uri_id::<Self>(s))
             .collect();
         deps.sort();
         deps
@@ -69,9 +69,9 @@ pub enum CommandError {
 impl fmt::Display for CommandError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CommandError::UnknownCommand(cmd_id) => write!(f, "Invariant violation, command_id={} is unknown", cmd_id),
-            CommandError::UnknownJob(job_id) => write!(f, "Invariant violation, job_id={} is unknown", job_id),
-            CommandError::UnknownSteps(step_ids) => write!(
+            Self::UnknownCommand(cmd_id) => write!(f, "Invariant violation, command_id={} is unknown", cmd_id),
+            Self::UnknownJob(job_id) => write!(f, "Invariant violation, job_id={} is unknown", job_id),
+            Self::UnknownSteps(step_ids) => write!(
                 f,
                 "Invariant violation, some of some_step_ids={:?} is unknown",
                 step_ids
@@ -188,7 +188,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::FetchedJobs(jobs_data_result) => match *jobs_data_result {
             Ok(api_list) => {
-                if are_jobs_consistent(&model, &api_list.objects) {
+                if are_jobs_consistent(model, &api_list.objects) {
                     model.jobs_loading = false;
                     model.jobs = api_list.objects.into_iter().map(Arc::new).collect();
                     if model.is_dag_inverse {
@@ -206,7 +206,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         },
         Msg::FetchedSteps(steps_data_result) => match *steps_data_result {
             Ok(api_list) => {
-                if are_steps_consistent(&model, &api_list.objects) {
+                if are_steps_consistent(model, &api_list.objects) {
                     model.steps_loading = false;
                     model.steps = api_list.objects.into_iter().map(Arc::new).collect();
                 }
@@ -347,7 +347,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
                         modal::title_view(Msg::Modal, plain!["Commands"]),
                         div![
                             class![C.py_8],
-                            model.commands.iter().map(|x| { command_item_view(&model, x) })
+                            model.commands.iter().map(|x| { command_item_view(model, x) })
                         ],
                         modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
                     ]
