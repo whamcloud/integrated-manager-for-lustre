@@ -22,6 +22,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
 };
+use tokio_diesel::*;
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::Filter;
 
@@ -102,18 +103,18 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         cache.insert(f.clone(), d.clone());
 
-        let conn = pool.get().unwrap();
         let device_to_insert = NewChromaCoreDevice {
             fqdn: f.0.clone(),
             device: serde_json::to_value(d.clone()).unwrap(),
         };
 
         let new_device = diesel::insert_into(table)
-            .values(&device_to_insert)
+            .values(device_to_insert)
             .on_conflict(fqdn)
             .do_update()
             .set(device.eq(excluded(device)))
-            .get_result::<ChromaCoreDevice>(&conn)
+            .get_result_async::<ChromaCoreDevice>(&pool)
+            .await
             .expect("Error saving new device");
 
         tracing::info!("Inserted device from host {}", new_device.fqdn);

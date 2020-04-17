@@ -1296,6 +1296,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
+ "tokio-diesel",
  "tokio-util",
  "tracing",
  "tracing-subscriber",
