@@ -43,20 +43,25 @@ pub enum FilesystemCommand {
     },
 }
 
+fn option_sub(a: Option<u64>, b: Option<u64>) -> Option<u64> {
+    Some(a?.saturating_sub(b?))
+}
+
 fn usage(
-    free: Option<u64>,
+    used: Option<u64>,
     total: Option<u64>,
     formatter: fn(f64, Option<usize>) -> String,
 ) -> String {
-    match (free, total) {
-        (Some(free), Some(total)) => format!(
-            "{} / {}",
-            formatter(total as f64 - free as f64, Some(0)),
-            formatter(total as f64, Some(0))
-        ),
-        (None, Some(total)) => format!("Calculating ... / {}", formatter(total as f64, Some(0))),
-        _ => "Calculating ...".to_string(),
-    }
+    format!(
+        "{} / {}",
+        used.map(|u| formatter(u as f64, Some(0)))
+            .as_deref()
+            .unwrap_or("---"),
+        total
+            .map(|t| formatter(t as f64, Some(0)))
+            .as_deref()
+            .unwrap_or("---")
+    )
 }
 
 async fn detect_filesystem(hosts: Option<String>) -> Result<(), ImlManagerCliError> {
@@ -124,15 +129,29 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
 
             let table = generate_table(
                 &[
-                    "Name", "State", "Space", "Inodes", "Clients", "MDTs", "OSTs",
+                    "Name",
+                    "State",
+                    "Space Used/Avail",
+                    "Inodes Used/Avail",
+                    "Clients",
+                    "MDTs",
+                    "OSTs",
                 ],
                 filesystems.objects.into_iter().map(|f| {
                     let s = stats.get(&f.name).cloned().unwrap_or_default();
                     vec![
                         f.label,
                         f.state,
-                        usage(s.bytes_free, s.bytes_total, format_bytes),
-                        usage(s.files_free, s.files_total, format_number),
+                        usage(
+                            option_sub(s.bytes_total, s.bytes_free),
+                            s.bytes_avail,
+                            format_bytes,
+                        ),
+                        usage(
+                            option_sub(s.files_total, s.files_free),
+                            s.files_total,
+                            format_number,
+                        ),
                         format!("{}", s.clients.unwrap_or(0)),
                         f.mdts.len().to_string(),
                         f.osts.len().to_string(),
@@ -166,12 +185,20 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
             let mut table = Table::new();
             table.add_row(Row::from(&["Name".to_string(), fs.label]));
             table.add_row(Row::from(&[
-                "Space".to_string(),
-                usage(st.bytes_free, st.bytes_total, format_bytes),
+                "Space Used/Avail".to_string(),
+                usage(
+                    option_sub(st.bytes_total, st.bytes_free),
+                    st.bytes_avail,
+                    format_bytes,
+                ),
             ]));
             table.add_row(Row::from(&[
-                "Inodes".to_string(),
-                usage(st.files_free, st.files_total, format_number),
+                "Inodes Used/Avail".to_string(),
+                usage(
+                    option_sub(st.files_total, st.files_free),
+                    st.files_total,
+                    format_number,
+                ),
             ]));
             table.add_row(Row::from(&["State".to_string(), fs.state]));
             table.add_row(Row::from(&[
