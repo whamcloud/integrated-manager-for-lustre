@@ -94,6 +94,15 @@ Vagrant.configure('2') do |config|
       vbx.cpus = ISCSI_CPU
     end
 
+    iscsi.vm.provision "file",
+                       source: "./99-external-storage.rules",
+                       destination: "/tmp/99-external-storage.rules"
+
+    iscsi.vm.provision 'udev-trigger', type: 'shell', inline: <<-SHELL
+      mv /tmp/99-external-storage.rules /etc/udev/rules.d/ 
+      udevadm trigger --subsystem-match=block
+    SHELL
+
     provision_iscsi_net iscsi, '10'
 
     iscsi.vm.provider 'virtualbox' do |vbx|
@@ -960,13 +969,13 @@ def create_iscsi_disks(vbox, name)
   dir = "#{get_machine_folder()}/vdisks"
   FileUtils.mkdir_p dir unless File.directory?(dir)
 
-  osts = (1..20).map { |x| ["OST#{x}", '5120'] }
+  osts = (1..20).map { |x| ["OST#{x}_", '5120'] }
 
   [
-    %w[mgt 512],
-    %w[mdt1 5120],
-    %w[mdt2 5120],
-    %w[mdt3 5120],
+    %w[mgt_ 512],
+    %w[mdt1_ 5120],
+    %w[mdt2_ 5120],
+    %w[mdt3_ 5120],
   ].concat(osts).each_with_index do |(name, size), i|
     file_to_disk = "#{dir}/#{name}.vdi"
     port = (i + 1).to_s
