@@ -424,11 +424,11 @@ pub fn job_tree_view(jobs_dag: &DependencyDAG<Job0>) -> Node<Msg> {
     div![
         class![C.font_ordinary, C.text_gray_700],
         h4![class![C.text_lg, C.font_medium], "Jobs"],
-        input![
-            attrs![ At::Type => "checkbox" ],
+        div![
+            input![ attrs![ At::Type => "checkbox" ] ],
+            span![class![C.mx_1, C.border], "Switch job dependency view"],
             simple_ev(Ev::Click, Msg::InverseClick),
         ],
-        span![class![C.mx_1, C.border], "Switch job dependency view"],
         div![
             class![
                 C.p_1,
