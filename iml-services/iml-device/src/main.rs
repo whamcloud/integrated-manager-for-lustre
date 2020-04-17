@@ -111,6 +111,17 @@ async fn main() -> Result<(), ImlDeviceError> {
     while let Some((f, d)) = s.try_next().await? {
         let mut cache = cache2.lock().await;
 
+        assert!(
+            match d {
+                Device::Root(_) => true,
+                _ => false,
+            },
+            "The top device has to be Root"
+        );
+
+        println!("Host: {}", f);
+        walk(&d, 0);
+
         cache.insert(f.clone(), d.clone());
 
         let device_to_insert = NewChromaCoreDevice {
@@ -132,4 +143,63 @@ async fn main() -> Result<(), ImlDeviceError> {
     }
 
     Ok(())
+}
+
+fn walk(d: &Device, level: usize) {
+    let s = match d {
+        Device::Root(dd) => {
+            for c in dd.children.iter() {
+                walk(c, level + 1);
+            }
+            "root"
+        }
+        Device::ScsiDevice(dd) => {
+            for c in dd.children.iter() {
+                walk(c, level + 1);
+            }
+            "scsi"
+        }
+        Device::Partition(dd) => {
+            for c in dd.children.iter() {
+                walk(c, level + 1);
+            }
+            "partition"
+        }
+        Device::MdRaid(dd) => {
+            for c in dd.children.iter() {
+                walk(c, level + 1);
+            }
+            "mdraid"
+        }
+        Device::Mpath(dd) => {
+            for c in dd.children.iter() {
+                walk(c, level + 1);
+            }
+            "mpath"
+        }
+        Device::VolumeGroup(dd) => {
+            for c in dd.children.iter() {
+                walk(c, level + 1);
+            }
+            "vg"
+        }
+        Device::Zpool(dd) => {
+            for c in dd.children.iter() {
+                walk(c, level + 1);
+            }
+            "zpool"
+        }
+        Device::LogicalVolume(dd) => {
+            for c in dd.children.iter() {
+                walk(c, level + 1);
+            }
+            "logicalvolume"
+        }
+        Device::Dataset(_dd) => "dataset",
+    };
+
+    for _ in 0..=level {
+        print!("{}", "-");
+    }
+    println!("{}", s);
 }
