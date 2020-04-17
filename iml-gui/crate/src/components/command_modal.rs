@@ -28,11 +28,7 @@ impl Deps for Job0 {
         self.id
     }
     fn deps(&self) -> Vec<u32> {
-        let mut deps: Vec<u32> = self
-            .wait_for
-            .iter()
-            .filter_map(|s| extract_uri_id::<Self>(s))
-            .collect();
+        let mut deps: Vec<u32> = self.wait_for.iter().filter_map(|s| extract_uri_id::<Self>(s)).collect();
         deps.sort();
         deps
     }
@@ -424,14 +420,13 @@ pub fn job_tree_view(jobs_dag: &DependencyDAG<Job0>) -> Node<Msg> {
     div![
         class![C.font_ordinary, C.text_gray_700],
         h4![class![C.text_lg, C.font_medium], "Jobs"],
-
         label![
             class![C.cursor_pointer],
             input![
                 attrs![ At::Type => "checkbox", At::Name => "checkbox" ],
                 simple_ev(Ev::Click, Msg::InverseClick),
             ],
-            span![ class![C.mx_1, C.border, C.underline], "Switch job dependency view" ],
+            span![class![C.mx_1, C.border, C.underline], "Switch job dependency view"],
         ],
         div![
             class![
@@ -504,11 +499,11 @@ fn job_item_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
         };
 
         if job.steps.is_empty() {
-            span![span![class![C.mr_1], icon], span![job.description],]
+            span![span![class![C.mr_1], icon], span![job.description]]
         } else {
             a![
                 span![class![C.mr_1], icon],
-                span![class![C.cursor_pointer, C.underline], job.description,],
+                span![class![C.cursor_pointer, C.underline], job.description],
                 simple_ev(Ev::Click, Msg::Click(TypedId::Job(job.id))),
             ]
         }
