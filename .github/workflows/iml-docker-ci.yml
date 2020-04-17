@@ -16,6 +16,7 @@ jobs:
         run: |
           make save
           docker image ls
+          docker system prune -f --all --volumes
 
       - name: Build rpm
         uses: ./.github/actions/copr
