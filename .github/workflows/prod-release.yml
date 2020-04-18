@@ -54,6 +54,7 @@ jobs:
         run: |
           make save
           docker image ls
+          docker system prune -f --all --volumes
 
       - name: Push RPM
         uses: ./.github/actions/copr
