@@ -13,7 +13,7 @@ iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
 ipnetwork = "0.16"
 r2d2 = {version = "0.8", optional = true }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1.0.51"
+serde_json = "1.0"
 tokio-diesel = { git = "https://github.com/jgrund/tokio-diesel", optional = true }
 
 [features]

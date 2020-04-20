@@ -491,7 +491,7 @@ pub struct ChromaCoreDetecttargetsjob {
 pub struct ChromaCoreDevice {
     pub id: i32,
     pub fqdn: String,
-    pub device: serde_json::Value,
+    pub devices: serde_json::Value,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
