@@ -1,29 +1,77 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
+use std::hash::Hash;
+use std::iter::FromIterator;
 use std::iter::Iterator;
 use std::sync::Arc;
 
-pub trait Deps {
-    fn id(&self) -> u32;
-    fn deps(&self) -> Vec<u32>;
+pub trait Deps<K> {
+    fn id(&self) -> K;
+    fn deps(&self) -> Vec<K>;
 }
 
-impl<T: Deps> Deps for Arc<T> {
-    fn id(&self) -> u32 {
+impl<K, T: Deps<K>> Deps<K> for Arc<T> {
+    fn id(&self) -> K {
         (**self).id()
     }
-    fn deps(&self) -> Vec<u32> {
+    fn deps(&self) -> Vec<K> {
         (**self).deps()
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct DependencyDAG<T> {
-    pub roots: Vec<Arc<T>>,
-    pub deps: HashMap<u32, Vec<Arc<T>>>,
+#[derive(Clone, Debug)]
+pub struct RichDeps<K: Hash + Eq, T> {
+    pub id: K,
+    pub dset: HashSet<K>,
+    pub inner: T,
 }
 
-impl<T> Default for DependencyDAG<T> {
+impl<K, T> RichDeps<K, T>
+where
+    K: Hash + Eq + Copy,
+    T: Deps<K> + Clone,
+{
+    pub fn new(t: T) -> Self {
+        Self {
+            id: t.id(),
+            dset: t.deps().into_iter().collect(),
+            inner: t,
+        }
+    }
+    pub fn from_ref(t: &T) -> Self {
+        Self {
+            id: t.id(),
+            dset: t.deps().into_iter().collect(),
+            inner: t.clone(),
+        }
+    }
+    pub fn contains(&self, k: &K) -> bool {
+        self.dset.contains(k)
+    }
+}
+
+impl<K, T> Deps<K> for RichDeps<K, T>
+where
+    K: Hash + Eq + Ord + Copy,
+    T: Deps<K>,
+{
+    fn id(&self) -> K {
+        self.id
+    }
+    fn deps(&self) -> Vec<K> {
+        let mut v = Vec::from_iter(self.dset.iter().copied());
+        v.sort();
+        v
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct DependencyDAG<K: Hash + Eq + Debug, T> {
+    pub roots: Vec<Arc<T>>,
+    pub deps: HashMap<K, Vec<Arc<T>>>,
+}
+
+impl<K: Hash + Eq + Debug, T> Default for DependencyDAG<K, T> {
     fn default() -> Self {
         Self {
             roots: Vec::new(),
@@ -32,19 +80,20 @@ impl<T> Default for DependencyDAG<T> {
     }
 }
 
-impl<T> DependencyDAG<T> {
+impl<K: Hash + Eq + Debug, T> DependencyDAG<K, T> {
     pub fn clear(&mut self) {
         self.roots.clear();
         self.deps.clear();
     }
 }
 
-pub fn build_direct_dag<T>(ts: &[Arc<T>]) -> DependencyDAG<T>
+pub fn build_direct_dag<K, T>(ts: &[Arc<T>]) -> DependencyDAG<K, T>
 where
-    T: Deps + Clone + Debug,
+    K: Hash + Eq + Copy + Debug,
+    T: Deps<K> + Clone + Debug,
 {
-    let mut roots: Vec<u32> = Vec::new();
-    let mut dag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(ts.len());
+    let mut roots: Vec<K> = Vec::new();
+    let mut dag: Vec<(K, Vec<K>)> = Vec::with_capacity(ts.len());
     if ts.len() == 1 {
         // special case, when there is no any arc `x -> y`,
         // then the only vertex becomes the root
@@ -71,12 +120,13 @@ where
     enrich_dag(ts, &roots, &dag)
 }
 
-pub fn build_inverse_dag<T>(ts: &[Arc<T>]) -> DependencyDAG<T>
+pub fn build_inverse_dag<K, T>(ts: &[Arc<T>]) -> DependencyDAG<K, T>
 where
-    T: Deps + Clone + Debug,
+    K: Hash + Eq + Copy + Debug,
+    T: Deps<K> + Clone + Debug,
 {
-    let mut roots: HashSet<u32> = ts.iter().map(|t| t.id()).collect();
-    let mut dag: Vec<(u32, Vec<u32>)> = Vec::with_capacity(ts.len());
+    let mut roots: HashSet<K> = ts.iter().map(|t| t.id()).collect();
+    let mut dag: Vec<(K, Vec<K>)> = Vec::with_capacity(ts.len());
     for t in ts {
         let y = t.id();
         let xs = t.deps();
@@ -91,25 +141,27 @@ where
             roots.remove(&y);
         }
     }
-    let roots = roots.into_iter().collect::<Vec<u32>>();
+    let roots = roots.into_iter().collect::<Vec<K>>();
     enrich_dag(ts, &roots, &dag)
 }
 
-pub fn enrich_dag<T>(objs: &[Arc<T>], int_roots: &[u32], int_deps: &[(u32, Vec<u32>)]) -> DependencyDAG<T>
+pub fn enrich_dag<K, T>(objs: &[Arc<T>], int_roots: &[K], int_deps: &[(K, Vec<K>)]) -> DependencyDAG<K, T>
 where
-    T: Deps + Clone + Debug,
+    K: Hash + Eq + Copy + Debug,
+    T: Deps<K> + Clone + Debug,
 {
     let roots: Vec<Arc<T>> = convert_ids_to_arcs(objs, int_roots);
-    let deps: HashMap<u32, Vec<Arc<T>>> = int_deps
+    let deps: HashMap<K, Vec<Arc<T>>> = int_deps
         .iter()
         .map(|(id, ids)| (*id, convert_ids_to_arcs(objs, ids)))
         .collect();
     DependencyDAG { roots, deps }
 }
 
-pub fn convert_ids_to_arcs<T>(objs: &[Arc<T>], ids: &[u32]) -> Vec<Arc<T>>
+pub fn convert_ids_to_arcs<K, T>(objs: &[Arc<T>], ids: &[K]) -> Vec<Arc<T>>
 where
-    T: Deps + Clone + Debug,
+    K: Hash + Eq + Debug,
+    T: Deps<K> + Clone + Debug,
 {
     ids.iter()
         .filter_map(|id| objs.iter().find(|o| o.id() == *id))
@@ -120,6 +172,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::hash::Hash;
 
     #[derive(Debug, Clone)]
     struct X {
@@ -138,7 +191,7 @@ mod tests {
         }
     }
 
-    impl Deps for X {
+    impl Deps<u32> for X {
         fn id(&self) -> u32 {
             self.id
         }
@@ -148,26 +201,100 @@ mod tests {
     }
 
     #[derive(Debug, Clone)]
-    struct Context {
-        visited: HashSet<u32>,
+    struct Context<K: Hash + Eq + Debug> {
+        visited: HashSet<K>,
         indent: usize,
         is_new: bool,
     }
 
-    fn build_dag_str<T, U, F>(dag: &DependencyDAG<T>, node_to_str: &F) -> Vec<U>
+    #[test]
+    fn build_dependency_tree_test() {
+        let x_list: Vec<X> = vec![
+            X::new(39, &[], "Install packages on server oss2.local."),
+            X::new(40, &[39], "Configure NTP on oss2.local."),
+            X::new(41, &[39], "Enable LNet on oss2.local."),
+            X::new(42, &[39], "Configure Corosync on oss2.local."),
+            X::new(43, &[42], "Start Corosync on oss2.local"),
+            X::new(44, &[41], "Load the LNet kernel modules."),
+            X::new(45, &[44], "Start the LNet networking layer."),
+            X::new(46, &[39, 43], "Configure Pacemaker on oss2.local."),
+            X::new(47, &[43, 46], "Start Pacemaker on oss2.local."),
+            X::new(48, &[39, 40, 41, 42, 45, 46, 47], "Setup managed host oss2.local."),
+        ];
+        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(|x| Arc::new(x)).collect();
+
+        let dag = build_direct_dag(&x_arcs);
+        let result = build_dag_str(&dag, &x_to_string).join("\n");
+        assert_eq!(result, TREE_DIRECT);
+
+        let dag = build_inverse_dag(&x_arcs);
+        let result = build_dag_str(&dag, &x_to_string).join("\n");
+        assert_eq!(result, TREE_INVERSE);
+    }
+
+    #[test]
+    fn cyclic_dependency() {
+        // it shouldn't be stack overflow anyway even if there is an invariant violation
+        let x_list: Vec<X> = vec![X::new(1, &[2], "One"), X::new(2, &[3], "Two"), X::new(3, &[2], "Three")];
+        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(|x| Arc::new(x)).collect();
+
+        let dag = build_direct_dag(&x_arcs);
+        let result = build_dag_str(&dag, &x_to_string).join("\n");
+        assert_eq!(result, "1: One\n  2: Two\n    3: Three\n      2: Two...\n3: Three...");
+
+        let dag = build_inverse_dag(&x_arcs);
+        let result = build_dag_str(&dag, &x_to_string).join("\n");
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn single_node() {
+        let x_list: Vec<X> = vec![X::new(1, &[], "One")];
+        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(|x| Arc::new(x)).collect();
+        let dag = build_direct_dag(&x_arcs);
+        let result = build_dag_str(&dag, &x_to_string).join("\n");
+        assert_eq!(result, "1: One");
+        let dag = build_inverse_dag(&x_arcs);
+        let result = build_dag_str(&dag, &x_to_string).join("\n");
+        assert_eq!(result, "1: One");
+    }
+
+    #[test]
+    fn test_rich_wrapper() {
+        let x_list: Vec<X> = vec![
+            X::new(39, &[], "Install packages on server oss2.local"),
+            X::new(40, &[39], "Configure NTP on oss2.local"),
+            X::new(46, &[43, 45, 46], "Configure Pacemaker on oss2.local"),
+            X::new(48, &[39, 40, 41, 42, 45, 46, 47], "Setup managed host oss2.local"),
+        ];
+        // dependencies always come in the stable order
+        // `for<'r> fn(std::sync::Arc<dependency_tree::tests::X>, &'r mut dependency_tree::tests::Context<u32>) -> _`
+        // `for<'r> fn(std::sync::Arc<dependency_tree::RichDeps<u32, dependency_tree::tests::X>>, &'r mut dependency_tree::tests::Context<u32>) -> _`
+        for _ in 0..10 {
+            let x_arcs: Vec<Arc<RichDeps<u32, X>>> =
+                x_list.clone().into_iter().map(|x| Arc::new(RichDeps::new(x))).collect();
+            let dag = build_direct_dag(&x_arcs);
+            let result = build_dag_str(&dag, &richx_to_string).join("\n");
+            assert_eq!(result, SMALL_TREE);
+        }
+    }
+
+    fn build_dag_str<K, T, U, F>(dag: &DependencyDAG<K, T>, node_to_str: &F) -> Vec<U>
     where
-        T: Deps,
-        F: Fn(Arc<T>, &mut Context) -> U,
+        K: Hash + Eq + Debug,
+        T: Deps<K>,
+        F: Fn(Arc<T>, &mut Context<K>) -> U,
     {
-        fn build_dag_str_inner<T, U, F>(
-            dag: &DependencyDAG<T>,
+        fn build_dag_str_inner<K, T, U, F>(
+            dag: &DependencyDAG<K, T>,
             node_to_str: &F,
             n: Arc<T>,
-            ctx: &mut Context,
+            ctx: &mut Context<K>,
             acc: &mut Vec<U>,
         ) where
-            T: Deps,
-            F: Fn(Arc<T>, &mut Context) -> U,
+            K: Hash + Eq + Debug,
+            T: Deps<K>,
+            F: Fn(Arc<T>, &mut Context<K>) -> U,
         {
             ctx.is_new = ctx.visited.insert(n.id());
             acc.push(node_to_str(Arc::clone(&n), ctx));
@@ -193,63 +320,22 @@ mod tests {
         acc
     }
 
-    #[test]
-    fn build_dependency_tree_test() {
-        let x_list: Vec<X> = vec![
-            X::new(39, &[], "Install packages on server oss2.local."),
-            X::new(40, &[39], "Configure NTP on oss2.local."),
-            X::new(41, &[39], "Enable LNet on oss2.local."),
-            X::new(42, &[39], "Configure Corosync on oss2.local."),
-            X::new(43, &[42], "Start Corosync on oss2.local"),
-            X::new(44, &[41], "Load the LNet kernel modules."),
-            X::new(45, &[44], "Start the LNet networking layer."),
-            X::new(46, &[39, 43], "Configure Pacemaker on oss2.local."),
-            X::new(47, &[43, 46], "Start Pacemaker on oss2.local."),
-            X::new(48, &[39, 40, 41, 42, 45, 46, 47], "Setup managed host oss2.local."),
-        ];
-        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(|x| Arc::new(x)).collect();
-
-        let dag = build_direct_dag(&x_arcs);
-        let result = build_dag_str(&dag, &node_to_string).join("\n");
-        assert_eq!(result, TREE_DIRECT);
-
-        let dag = build_inverse_dag(&x_arcs);
-        let result = build_dag_str(&dag, &node_to_string).join("\n");
-        assert_eq!(result, TREE_INVERSE);
-    }
-
-    #[test]
-    fn cyclic_dependency() {
-        // it shouldn't be stack overflow anyway even if there is an invariant violation
-        let x_list: Vec<X> = vec![X::new(1, &[2], "One"), X::new(2, &[3], "Two"), X::new(3, &[2], "Three")];
-        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(|x| Arc::new(x)).collect();
-
-        let dag = build_direct_dag(&x_arcs);
-        let result = build_dag_str(&dag, &node_to_string).join("\n");
-        assert_eq!(result, "1: One\n  2: Two\n    3: Three\n      2: Two...\n3: Three...");
-
-        let dag = build_inverse_dag(&x_arcs);
-        let result = build_dag_str(&dag, &node_to_string).join("\n");
-        assert_eq!(result, "");
-    }
-
-    #[test]
-    fn single_node() {
-        let x_list: Vec<X> = vec![X::new(1, &[], "One")];
-        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(|x| Arc::new(x)).collect();
-        let dag = build_direct_dag(&x_arcs);
-        let result = build_dag_str(&dag, &node_to_string).join("\n");
-        assert_eq!(result, "1: One");
-        let dag = build_inverse_dag(&x_arcs);
-        let result = build_dag_str(&dag, &node_to_string).join("\n");
-        assert_eq!(result, "1: One");
-    }
-
-    fn node_to_string(node: Arc<X>, ctx: &mut Context) -> String {
+    fn x_to_string(node: Arc<X>, ctx: &mut Context<u32>) -> String {
         let ellipsis = if ctx.is_new { "" } else { "..." };
         let indent = "  ".repeat(ctx.indent);
         format!("{}{}: {}{}", indent, node.id, node.description, ellipsis,)
     }
+
+    fn richx_to_string(node: Arc<RichDeps<u32, X>>, ctx: &mut Context<u32>) -> String {
+        x_to_string(Arc::new(node.inner.clone()), ctx)
+    }
+
+    const SMALL_TREE: &'static str = r#"48: Setup managed host oss2.local
+  39: Install packages on server oss2.local
+  40: Configure NTP on oss2.local
+    39: Install packages on server oss2.local...
+  46: Configure Pacemaker on oss2.local
+    46: Configure Pacemaker on oss2.local..."#;
 
     const TREE_DIRECT: &'static str = r#"48: Setup managed host oss2.local.
   39: Install packages on server oss2.local.
