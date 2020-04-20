@@ -23,7 +23,9 @@ const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
 type Job0 = Job<Option<()>>;
 
-impl Deps for Job0 {
+type JobsDAG = DependencyDAG<u32, Job0>;
+
+impl Deps<u32> for Job0 {
     fn id(&self) -> u32 {
         self.id
     }
@@ -97,7 +99,7 @@ pub struct Model {
 
     pub jobs_loading: bool,
     pub jobs: Vec<Arc<Job0>>,
-    pub jobs_dag: DependencyDAG<Job0>,
+    pub jobs_dag: DependencyDAG<u32, Job0>,
     pub is_dag_inverse: bool,
 
     pub steps_loading: bool,
@@ -416,7 +418,7 @@ fn command_item_view(model: &Model, x: &Command) -> Node<Msg> {
     ]
 }
 
-pub fn job_tree_view(jobs_dag: &DependencyDAG<Job0>) -> Node<Msg> {
+pub fn job_tree_view(jobs_dag: &DependencyDAG<u32, Job0>) -> Node<Msg> {
     div![
         class![C.font_ordinary, C.text_gray_700],
         h4![class![C.text_lg, C.font_medium], "Jobs"],
@@ -445,15 +447,13 @@ pub fn job_tree_view(jobs_dag: &DependencyDAG<Job0>) -> Node<Msg> {
     ]
 }
 
-pub fn job_dag_view<T, F>(dag: &DependencyDAG<T>, node_view: &F) -> Node<Msg>
+pub fn job_dag_view<F>(dag: &JobsDAG, node_view: &F) -> Node<Msg>
 where
-    T: Deps,
-    F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
+    F: Fn(Arc<Job0>, &mut Context) -> Node<Msg>,
 {
-    fn build_node_view<T, F>(dag: &DependencyDAG<T>, node_view: &F, n: Arc<T>, ctx: &mut Context) -> Node<Msg>
+    fn build_node_view<F>(dag: &JobsDAG, node_view: &F, n: Arc<Job0>, ctx: &mut Context) -> Node<Msg>
     where
-        T: Deps,
-        F: Fn(Arc<T>, &mut Context) -> Node<Msg>,
+        F: Fn(Arc<Job0>, &mut Context) -> Node<Msg>,
     {
         ctx.is_new = ctx.visited.insert(n.id());
         let parent: Node<Msg> = node_view(Arc::clone(&n), ctx);
