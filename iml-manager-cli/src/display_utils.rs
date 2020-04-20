@@ -80,7 +80,7 @@ where
 {
     let mut table = Table::new();
 
-    table.add_row(Row::from(columns));
+    table.set_titles(Row::from(columns));
 
     for r in rows {
         table.add_row(Row::from(r));
