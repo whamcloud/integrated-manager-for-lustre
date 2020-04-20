@@ -7,6 +7,8 @@
 use crate::schema::*;
 use chrono::offset::Utc;
 use chrono::DateTime;
+#[cfg(feature = "postgres-interop")]
+use diesel::{prelude::*, Identifiable, Queryable, Insertable, table};
 use ipnetwork::IpNetwork;
 use serde_json;
 

@@ -1,3 +1,5 @@
+use diesel::{self, prelude::*, *};
+
 table! {
     auth_group (id) {
         id -> Int4,

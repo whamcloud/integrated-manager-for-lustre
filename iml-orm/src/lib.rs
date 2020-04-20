@@ -5,8 +5,7 @@
 #![recursion_limit = "256"]
 
 #[cfg(feature = "postgres-interop")]
-#[macro_use]
-extern crate diesel;
+pub use diesel::{self, prelude::*};
 
 pub mod models;
 #[cfg(feature = "postgres-interop")]
