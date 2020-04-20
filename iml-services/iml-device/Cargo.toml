@@ -22,7 +22,6 @@ tracing = "0.1"
 tracing-subscriber = "0.2"
 warp = "0.2"
 diesel = { version = "1.4", default_features = false, features = ["postgres", "r2d2", "chrono", "serde_json"] }
-tokio-diesel = { git = "https://github.com/jgrund/tokio-diesel" }
 
 [dev-dependencies]
 insta = "0.15"
