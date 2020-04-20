@@ -70,6 +70,10 @@ ON %(name)s;
 """
 )
 
+forward_lustre_fid = "CREATE TYPE lustre_fid AS (seq bigint, oid integer, ver integer);"
+
+backward_lustre_fid = "DROP TYPE IF EXISTS lustre_fid;"
+
 
 def compose(*args):
     def compose_inner(x):
