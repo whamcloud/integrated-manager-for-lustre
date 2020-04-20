@@ -46,7 +46,7 @@ fn nav_manage_dropdown(open: bool) -> Node<Msg> {
             C.rounded,
             C.bg_menu,
             C.p_4,
-            C.z_20
+            C.z_40
         ],
         style! { "top" => "110%" },
         ul![
