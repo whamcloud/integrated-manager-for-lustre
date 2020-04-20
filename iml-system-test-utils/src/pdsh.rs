@@ -3,8 +3,12 @@
 // license that can be found in the LICENSE file.
 
 use iml_cmd::{CheckedCommandExt, CmdError};
-use std::str;
-use tokio::{fs::canonicalize, process::Command};
+use std::{process::Stdio, str};
+use tokio::{
+    fs::canonicalize,
+    io::{AsyncReadExt, AsyncWriteExt},
+    process::Command,
+};
 
 // sed "s/\$1/2.12.4/" scripts/install_ldiskfs_no_iml.sh | pdsh -R ssh -u root -w 10.73.10.11,10.73.10.12
 
@@ -27,7 +31,8 @@ pub async fn pdsh(hosts: &[&str], cmd: &str) -> Result<Command, CmdError> {
         "PDSH_SSH_ARGS_APPEND",
         "-i id_rsa -o StrictHostKeyChecking=no",
     );
-    x.arg("-S")
+    let pdsh_child = x
+        .arg("-S")
         .arg("-d")
         .arg("-t")
         .arg("100")
@@ -37,9 +42,24 @@ pub async fn pdsh(hosts: &[&str], cmd: &str) -> Result<Command, CmdError> {
         .arg("root")
         .arg("-w")
         .arg(hosts.join(","))
-        .arg(cmd);
+        .arg(cmd)
+        .stdout(Stdio::piped())
+        .spawn()?;
 
-    Ok(x)
+    let mut dshbak = Command::new("dshbak");
+    let dshbak_child = dshbak
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()?;
+
+    let mut pdsh_out = pdsh_child.stdout.expect("Couldn't get stdout.");
+    let mut dshbak_in = dshbak_child.stdin.expect("Couldn't get stdin.");
+
+    let mut buf: Vec<u8> = Vec::new();
+    pdsh_out.read_to_end(&mut buf).await?;
+    dshbak_in.write_all(&buf).await?;
+
+    Ok(dshbak)
 }
 
 async fn run_script_on_remote_hosts(hosts: &[&str], output: &[u8]) -> Result<(), CmdError> {
