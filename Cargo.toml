@@ -24,6 +24,7 @@ members = [
     'iml-services/iml-stats',
     'iml-timer',
     'iml-services/iml-ntp',
+    'iml-systemd',
     'iml-util',
     'iml-warp-drive',
     'iml-wire-types',
