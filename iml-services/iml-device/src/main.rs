@@ -15,6 +15,7 @@ use iml_device::{
 use iml_orm::{
     models::{ChromaCoreDevice, NewChromaCoreDevice},
     schema::chroma_core_device::{device, fqdn, table},
+    tokio_diesel::*,
 };
 use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::Fqdn;
@@ -22,7 +23,6 @@ use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
 };
-use tokio_diesel::*;
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::Filter;
 
@@ -97,7 +97,6 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     while let Some((f, d)) = s.try_next().await? {
         let mut cache = cache2.lock().await;
-
 
         cache.insert(f.clone(), d.clone());
 
