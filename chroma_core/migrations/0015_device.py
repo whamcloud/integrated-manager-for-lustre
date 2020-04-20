@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             fields=[
                 ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("fqdn", models.CharField(max_length=255, unique=True)),
-                ("device", django.contrib.postgres.fields.jsonb.JSONField()),
+                ("devices", django.contrib.postgres.fields.jsonb.JSONField()),
             ],
         ),
     ]

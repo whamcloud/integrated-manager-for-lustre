@@ -91,21 +91,19 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     tokio::spawn(server);
 
-    let mut s = consume_data("rust_agent_device_rx");
+    let mut s = consume_data::<Device>("rust_agent_device_rx");
 
     let pool = iml_orm::pool().unwrap();
 
     while let Some((f, d)) = s.try_next().await? {
         let mut cache = cache2.lock().await;
 
-        // Specify the type, otherwise inference fails on `.clone()`
-        let d: Device = d;
 
         cache.insert(f.clone(), d.clone());
 
         let device_to_insert = NewChromaCoreDevice {
-            fqdn: f.0.clone(),
-            device: serde_json::to_value(d.clone()).unwrap(),
+            fqdn: f.to_string(),
+            device: serde_json::to_value(d).expect("Could not convert incoming Devices to JSON."),
         };
 
         let new_device = diesel::insert_into(table)
