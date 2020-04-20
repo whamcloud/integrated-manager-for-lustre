@@ -21,6 +21,8 @@ use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::Fqdn;
 use std::{
     collections::{BTreeMap, HashMap},
+    fs::File,
+    io::Write,
     sync::Arc,
 };
 use warp::Filter;
@@ -90,6 +92,7 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let pool = iml_orm::pool().unwrap();
 
+    let mut i = 0usize;
     while let Some((f, d)) = s.try_next().await? {
         let mut cache = cache2.lock().await;
 
@@ -102,7 +105,15 @@ async fn main() -> Result<(), ImlDeviceError> {
         );
 
         println!("Host: {}", f);
-        walk(&d, 0);
+
+        let mut ff = File::create(format!("/tmp/device{}", i)).unwrap();
+        ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
+            .unwrap();
+        let mut parents = vec![];
+        walk(&d, 0, None, &mut parents);
+        let mut ff = File::create(format!("/tmp/parents{}", i)).unwrap();
+        ff.write_all(serde_json::to_string_pretty(&parents).unwrap().as_bytes())
+            .unwrap();
 
         cache.insert(f.clone(), d.clone());
 
@@ -122,66 +133,57 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         tracing::info!("Inserted device from host {}", new_device.fqdn);
         tracing::trace!("Inserted device {:?}", new_device);
+
+        i += 1;
     }
 
     Ok(())
 }
 
-fn walk(d: &Device, level: usize) {
-    let s = match d {
-        Device::Root(dd) => {
-            for c in dd.children.iter() {
-                walk(c, level + 1);
-            }
-            "root"
-        }
-        Device::ScsiDevice(dd) => {
-            for c in dd.children.iter() {
-                walk(c, level + 1);
-            }
-            "scsi"
-        }
-        Device::Partition(dd) => {
-            for c in dd.children.iter() {
-                walk(c, level + 1);
-            }
-            "partition"
-        }
-        Device::MdRaid(dd) => {
-            for c in dd.children.iter() {
-                walk(c, level + 1);
-            }
-            "mdraid"
-        }
-        Device::Mpath(dd) => {
-            for c in dd.children.iter() {
-                walk(c, level + 1);
-            }
-            "mpath"
-        }
-        Device::VolumeGroup(dd) => {
-            for c in dd.children.iter() {
-                walk(c, level + 1);
-            }
-            "vg"
-        }
-        Device::Zpool(dd) => {
-            for c in dd.children.iter() {
-                walk(c, level + 1);
-            }
-            "zpool"
-        }
-        Device::LogicalVolume(dd) => {
-            for c in dd.children.iter() {
-                walk(c, level + 1);
-            }
-            "logicalvolume"
-        }
-        Device::Dataset(_dd) => "dataset",
-    };
-
-    for _ in 0..=level {
-        print!("{}", "-");
+fn is_virtual(d: &Device) -> bool {
+    match d {
+        Device::Dataset(_)
+        | Device::LogicalVolume(_)
+        | Device::MdRaid(_)
+        | Device::VolumeGroup(_)
+        | Device::Zpool(_) => true,
+        _ => false,
     }
-    println!("{}", s);
+}
+
+fn walk<'d>(
+    d: &'d Device,
+    level: usize,
+    parent: Option<&'d Device>,
+    mut parents: &mut Vec<&'d Device>,
+) {
+    if is_virtual(d) {
+        parents.push(
+            parent.expect("Tried to push to parents the parent of the Root, which doesn't exist"),
+        );
+    } else {
+        match d {
+            Device::Root(dd) => {
+                for c in dd.children.iter() {
+                    walk(c, level + 1, Some(d), &mut parents);
+                }
+            }
+            Device::ScsiDevice(dd) => {
+                for c in dd.children.iter() {
+                    walk(c, level + 1, Some(d), &mut parents);
+                }
+            }
+            Device::Partition(dd) => {
+                for c in dd.children.iter() {
+                    walk(c, level + 1, Some(d), &mut parents);
+                }
+            }
+            Device::Mpath(dd) => {
+                for c in dd.children.iter() {
+                    walk(c, level + 1, Some(d), &mut parents);
+                }
+            }
+            _ => unreachable!(),
+        };
+    }
 }
