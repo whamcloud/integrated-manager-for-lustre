@@ -19,7 +19,6 @@ async fn setup() -> Result<(), SystemdError> {
     docker::configure_docker_overrides().await?;
     docker::stop_swarm().await?;
     docker::remove_password().await?;
-    iml_systemd::restart_unit("docker.service".into()).await?;
 
     docker::start_swarm().await?;
     docker::set_password().await?;
