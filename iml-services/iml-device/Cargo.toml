@@ -8,6 +8,8 @@ edition = "2018"
 device-types = "0.1"
 diesel = { version = "1.4", default_features = false, features = ["postgres", "r2d2", "chrono", "serde_json"] }
 futures = "0.3"
+im = { version = "13.0", features = ["serde"] }
+iml-rabbit = { path = "../../iml-rabbit", version = "0.2.0" }
 iml-manager-env = { path = "../../iml-manager-env", version = "0.2.0" }
 iml-orm = { path = "../../iml-orm", version = "0.2.0", features = ["postgres-interop"] }
 iml-postgres = { path = "../../iml-postgres", version = "0.2.0" }

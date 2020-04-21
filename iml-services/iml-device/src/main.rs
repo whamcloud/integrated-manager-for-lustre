@@ -2,9 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use device_types::devices::Device;
+use device_types::devices::{
+    Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup, Zpool,
+};
 use diesel::{self, pg::upsert::excluded, prelude::*};
 use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
+use im::HashSet;
 use iml_device::{
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
@@ -128,10 +131,48 @@ async fn main() -> Result<(), ImlDeviceError> {
         ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
             .unwrap();
         let mut parents = vec![];
-        walk(&d, 0, None, &mut parents);
         let mut ff = File::create(format!("/tmp/parents{}", i)).unwrap();
         ff.write_all(serde_json::to_string_pretty(&parents).unwrap().as_bytes())
             .unwrap();
+
+        collect_virtual_device_parents(&d, 0, None, &mut parents);
+
+        let other_devices = table
+            .filter(fqdn.ne(f.to_string()))
+            .load_async::<ChromaCoreDevice>(&pool)
+            .await
+            .expect("Error getting devices from other hosts");
+
+        for (j, ccd) in other_devices.into_iter().enumerate() {
+            let f = ccd.fqdn;
+            let d = ccd.devices;
+
+            let mut d: Device =
+                serde_json::from_value(d).expect("Couldn't read Device from JSON from DB");
+
+            insert_virtual_devices(&mut d, &*parents);
+
+            let mut ff = File::create(format!("/tmp/otherdevice{}-{}", i, j)).unwrap();
+            ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
+                .unwrap();
+
+            let device_to_insert = NewChromaCoreDevice {
+                fqdn: f.to_string(),
+                device: serde_json::to_value(d).expect("Could not convert incoming Devices to JSON."),
+            };
+    
+            let new_device = diesel::insert_into(table)
+                .values(device_to_insert)
+                .on_conflict(fqdn)
+                .do_update()
+                .set(device.eq(excluded(device)))
+                .get_result_async::<ChromaCoreDevice>(&pool)
+                .await
+                .expect("Error saving new device");
+    
+            tracing::info!("Inserted other device from host {}", new_device.fqdn);
+            tracing::trace!("Inserted other device {:?}", new_device);
+        }
 
         cache.insert(f.clone(), d.clone());
 
@@ -169,7 +210,7 @@ fn is_virtual(d: &Device) -> bool {
     }
 }
 
-fn walk<'d>(
+fn collect_virtual_device_parents<'d>(
     d: &'d Device,
     level: usize,
     parent: Option<&'d Device>,
@@ -183,25 +224,169 @@ fn walk<'d>(
         match d {
             Device::Root(dd) => {
                 for c in dd.children.iter() {
-                    walk(c, level + 1, Some(d), &mut parents);
+                    collect_virtual_device_parents(c, level + 1, Some(d), &mut parents);
                 }
             }
             Device::ScsiDevice(dd) => {
                 for c in dd.children.iter() {
-                    walk(c, level + 1, Some(d), &mut parents);
+                    collect_virtual_device_parents(c, level + 1, Some(d), &mut parents);
                 }
             }
             Device::Partition(dd) => {
                 for c in dd.children.iter() {
-                    walk(c, level + 1, Some(d), &mut parents);
+                    collect_virtual_device_parents(c, level + 1, Some(d), &mut parents);
                 }
             }
             Device::Mpath(dd) => {
                 for c in dd.children.iter() {
-                    walk(c, level + 1, Some(d), &mut parents);
+                    collect_virtual_device_parents(c, level + 1, Some(d), &mut parents);
                 }
             }
             _ => unreachable!(),
         };
+    }
+}
+
+fn _walk(d: &Device) {
+    match d {
+        Device::Root(d) => {
+            for c in &d.children {
+                _walk(c);
+            }
+        }
+        Device::ScsiDevice(d) => {
+            for c in &d.children {
+                _walk(c);
+            }
+        }
+        Device::Partition(d) => {
+            for c in &d.children {
+                _walk(c);
+            }
+        }
+        Device::MdRaid(d) => {
+            for c in &d.children {
+                _walk(c);
+            }
+        }
+        Device::Mpath(d) => {
+            for c in &d.children {
+                _walk(c);
+            }
+        }
+        Device::VolumeGroup(d) => {
+            for c in &d.children {
+                _walk(c);
+            }
+        }
+        Device::LogicalVolume(d) => {
+            for c in &d.children {
+                _walk(c);
+            }
+        }
+        Device::Zpool(d) => {
+            for c in &d.children {
+                _walk(c);
+            }
+        }
+        Device::Dataset(_) => {}
+    }
+}
+
+fn insert<'a>(d: &'a mut Device, to_insert: &'a Device) {
+    if compare_without_children(d, to_insert) {
+        *d = to_insert.clone();
+    } else {
+        match d {
+            Device::Root(d) => {
+                for mut c in d.children.iter_mut() {
+                    insert(&mut c, to_insert);
+                }
+            }
+            Device::ScsiDevice(d) => {
+                for mut c in d.children.iter_mut() {
+                    insert(&mut c, to_insert);
+                }
+            }
+            Device::Partition(d) => {
+                for mut c in d.children.iter_mut() {
+                    insert(&mut c, to_insert);
+                }
+            }
+            Device::MdRaid(d) => {
+                for mut c in d.children.iter_mut() {
+                    insert(&mut c, to_insert);
+                }
+            }
+            Device::Mpath(d) => {
+                for mut c in d.children.iter_mut() {
+                    insert(&mut c, to_insert);
+                }
+            }
+            Device::VolumeGroup(d) => {
+                for mut c in d.children.iter_mut() {
+                    insert(&mut c, to_insert);
+                }
+            }
+            Device::LogicalVolume(d) => {
+                for mut c in d.children.iter_mut() {
+                    insert(&mut c, to_insert);
+                }
+            }
+            Device::Zpool(d) => {
+                for mut c in d.children.iter_mut() {
+                    insert(&mut c, to_insert);
+                }
+            }
+            Device::Dataset(_) => {}
+        }
+    }
+}
+
+fn without_children(d: &Device) -> Device {
+    match d {
+        Device::Root(d) => Device::Root(Root {
+            children: HashSet::new(),
+            ..d.clone()
+        }),
+        Device::ScsiDevice(d) => Device::ScsiDevice(ScsiDevice {
+            children: HashSet::new(),
+            ..d.clone()
+        }),
+        Device::Partition(d) => Device::Partition(Partition {
+            children: HashSet::new(),
+            ..d.clone()
+        }),
+        Device::MdRaid(d) => Device::MdRaid(MdRaid {
+            children: HashSet::new(),
+            ..d.clone()
+        }),
+        Device::Mpath(d) => Device::Mpath(Mpath {
+            children: HashSet::new(),
+            ..d.clone()
+        }),
+        Device::VolumeGroup(d) => Device::VolumeGroup(VolumeGroup {
+            children: HashSet::new(),
+            ..d.clone()
+        }),
+        Device::LogicalVolume(d) => Device::LogicalVolume(LogicalVolume {
+            children: HashSet::new(),
+            ..d.clone()
+        }),
+        Device::Zpool(d) => Device::Zpool(Zpool {
+            children: HashSet::new(),
+            ..d.clone()
+        }),
+        Device::Dataset(d) => Device::Dataset(d.clone()),
+    }
+}
+
+fn compare_without_children(a: &Device, b: &Device) -> bool {
+    without_children(a) == without_children(b)
+}
+
+fn insert_virtual_devices(d: &mut Device, parents: &[&Device]) {
+    for p in parents {
+        insert(d, &p);
     }
 }
