@@ -13,7 +13,7 @@ from chroma_core.migrations import forward_lustre_fid, backward_lustre_fid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("chroma_core", "0014_multipletimesyncalert_notimesyncalert_timeoutofsyncalert"),
+        ("chroma_core", "0015_device"),
     ]
 
     operations = [
