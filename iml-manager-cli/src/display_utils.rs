@@ -4,11 +4,12 @@
 
 use console::{style, Term};
 use futures::{Future, FutureExt};
-use iml_wire_types::Command;
+use iml_wire_types::{Command, Host};
 use indicatif::ProgressBar;
 use prettytable::{Row, Table};
 use spinners::{Spinner, Spinners};
 use std::fmt::Display;
+use structopt::StructOpt;
 
 pub fn wrap_fut<T>(msg: &str, fut: impl Future<Output = T>) -> impl Future<Output = T> {
     let pb = ProgressBar::new_spinner();
@@ -87,4 +88,55 @@ where
     }
 
     table
+}
+
+pub trait IntoTable {
+    fn into_table(self) -> Table;
+}
+
+impl IntoTable for Vec<Host> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &["Id", "FQDN", "State", "Nids"],
+            self.into_iter().map(|h| {
+                vec![
+                    h.id.to_string(),
+                    h.fqdn,
+                    h.state,
+                    h.nids.unwrap_or_default().join(" "),
+                ]
+            }),
+        )
+    }
+}
+
+pub trait IntoDisplayType {
+    fn into_display_type(self, display_type: DisplayType) -> String;
+}
+
+impl<T: IntoTable + serde::Serialize> IntoDisplayType for T {
+    fn into_display_type(self, display_type: DisplayType) -> String {
+        match display_type {
+            DisplayType::Json => {
+                serde_json::to_string_pretty(&self).expect("Cannot serialize item to JSON")
+            }
+            DisplayType::Yaml => {
+                serde_yaml::to_string(&self).expect("Cannot serialize item to YAML")
+            }
+            DisplayType::Tabular => self.into_table().to_string(),
+        }
+    }
+}
+
+#[derive(StructOpt, Debug)]
+pub enum DisplayType {
+    Json,
+    Yaml,
+    Tabular,
+}
+
+impl Default for DisplayType {
+    fn default() -> Self {
+        Self::Tabular
+    }
 }
