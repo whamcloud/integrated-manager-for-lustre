@@ -182,10 +182,10 @@ async fn main() -> Result<(), ImlDeviceError> {
         let end: DateTime<Local> = Local::now();
 
         tracing::info!(
-            "Iteration {}: end: {}, duration: {}",
+            "Iteration {}: end: {}, duration: {:3} ms",
             i,
             end,
-            end - begin
+            (end - begin).num_milliseconds()
         );
 
         i = i.wrapping_add(1);
