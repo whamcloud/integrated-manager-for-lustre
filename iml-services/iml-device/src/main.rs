@@ -129,9 +129,9 @@ async fn main() -> Result<(), ImlDeviceError> {
             "The top device has to be Root"
         );
 
-        // let mut ff = File::create(format!("/tmp/device{}", i)).unwrap();
-        // ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
-        //     .unwrap();
+        let mut ff = File::create(format!("/tmp/device-{}-{}", f.to_string(), i)).unwrap();
+        ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
+            .unwrap();
 
         let mut parents = vec![];
         collect_virtual_device_parents(&d, 0, None, &mut parents);
@@ -161,9 +161,9 @@ async fn main() -> Result<(), ImlDeviceError> {
 
             insert_virtual_devices(&mut d, &*parents);
 
-            // let mut ff = File::create(format!("/tmp/otherdevice{}-{}", i, j)).unwrap();
-            // ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
-            //     .unwrap();
+            let mut ff = File::create(format!("/tmp/otherdevice-{}-{}-{}", f.to_string(), i, j)).unwrap();
+            ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
+                .unwrap();
 
             let device_to_insert = NewChromaCoreDevice {
                 fqdn: f.to_string(),
