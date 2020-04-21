@@ -251,7 +251,11 @@ fn collect_virtual_device_parents<'d>(
     mut parents: &mut Vec<&'d Device>,
 ) {
     if is_virtual(d) {
-        tracing::info!("Collecting parent {}", to_display(d));
+        tracing::info!(
+            "Collecting parent {} of {}",
+            parent.map(|x| to_display(x)).unwrap_or("None".into()),
+            to_display(d)
+        );
         parents.push(
             parent.expect("Tried to push to parents the parent of the Root, which doesn't exist"),
         );
