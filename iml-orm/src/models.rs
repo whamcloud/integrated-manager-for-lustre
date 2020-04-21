@@ -8,6 +8,7 @@ use crate::schema::*;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use ipnetwork::IpNetwork;
+use serde_json;
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -481,6 +482,24 @@ pub struct ChromaCoreDestroyostpooljob {
 pub struct ChromaCoreDetecttargetsjob {
     pub job_ptr_id: i32,
     pub host_ids: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
+#[cfg_attr(feature = "postgres-interop", primary_key(id))]
+#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_device")]
+pub struct ChromaCoreDevice {
+    pub id: i32,
+    pub fqdn: String,
+    pub devices: serde_json::Value,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "postgres-interop", derive(Insertable))]
+#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_device")]
+pub struct NewChromaCoreDevice {
+    pub fqdn: String,
+    pub device: serde_json::Value,
 }
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]

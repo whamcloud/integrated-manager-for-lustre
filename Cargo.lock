@@ -577,6 +577,7 @@ dependencies = [
  "diesel_derives",
  "pq-sys",
  "r2d2",
+ "serde_json",
 ]
 
 [[package]]
@@ -1282,8 +1283,11 @@ name = "iml-device"
 version = "0.2.0"
 dependencies = [
  "device-types",
+ "diesel",
  "futures",
  "iml-manager-env",
+ "iml-orm",
+ "iml-postgres",
  "iml-rabbit",
  "iml-service-queue",
  "iml-wire-types",
@@ -1419,6 +1423,7 @@ dependencies = [
  "ipnetwork",
  "r2d2",
  "serde",
+ "serde_json",
  "tokio-diesel",
 ]
 

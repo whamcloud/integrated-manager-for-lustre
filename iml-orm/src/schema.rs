@@ -342,6 +342,14 @@ table! {
 }
 
 table! {
+    chroma_core_device (id) {
+        id -> Int4,
+        fqdn -> Varchar,
+        device -> Jsonb,
+    }
+}
+
+table! {
     chroma_core_enablelnetjob (job_ptr_id) {
         job_ptr_id -> Int4,
         old_state -> Varchar,
@@ -1792,6 +1800,7 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_deployhostjob,
     chroma_core_destroyostpooljob,
     chroma_core_detecttargetsjob,
+    chroma_core_device,
     chroma_core_enablelnetjob,
     chroma_core_failbacktargetjob,
     chroma_core_failovertargetjob,

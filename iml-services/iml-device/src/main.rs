@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use device_types::devices::Device;
+use diesel::{self, pg::upsert::excluded, prelude::*};
 use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
 use iml_device::{
     linux_plugin_transforms::{
@@ -10,6 +11,11 @@ use iml_device::{
         LinuxPluginData,
     },
     ImlDeviceError,
+};
+use iml_orm::{
+    models::{ChromaCoreDevice, NewChromaCoreDevice},
+    schema::chroma_core_device::{device, fqdn, table},
+    tokio_diesel::*,
 };
 use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::Fqdn;
@@ -85,12 +91,31 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     tokio::spawn(server);
 
-    let mut s = consume_data("rust_agent_device_rx");
+    let mut s = consume_data::<Device>("rust_agent_device_rx");
 
-    while let Some((fqdn, device)) = s.try_next().await? {
+    let pool = iml_orm::pool().unwrap();
+
+    while let Some((f, d)) = s.try_next().await? {
         let mut cache = cache2.lock().await;
 
-        cache.insert(fqdn, device);
+        cache.insert(f.clone(), d.clone());
+
+        let device_to_insert = NewChromaCoreDevice {
+            fqdn: f.to_string(),
+            device: serde_json::to_value(d).expect("Could not convert incoming Devices to JSON."),
+        };
+
+        let new_device = diesel::insert_into(table)
+            .values(device_to_insert)
+            .on_conflict(fqdn)
+            .do_update()
+            .set(device.eq(excluded(device)))
+            .get_result_async::<ChromaCoreDevice>(&pool)
+            .await
+            .expect("Error saving new device");
+
+        tracing::info!("Inserted device from host {}", new_device.fqdn);
+        tracing::trace!("Inserted device {:?}", new_device);
     }
 
     Ok(())
