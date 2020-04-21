@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use chrono::prelude::*;
 use device_types::devices::{
     Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup, Zpool,
 };
@@ -115,6 +116,8 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let mut i = 0usize;
     while let Some((f, d)) = s.try_next().await? {
+        let begin: DateTime<Local> = Local::now();
+
         let mut cache = cache2.lock().await;
 
         assert!(
@@ -193,7 +196,16 @@ async fn main() -> Result<(), ImlDeviceError> {
         tracing::info!("Inserted device from host {}", new_device.fqdn);
         tracing::trace!("Inserted device {:?}", new_device);
 
-        i += 1;
+        let end: DateTime<Local> = Local::now();
+
+        tracing::info!(
+            "Iteration {}: end: {}, duration: {}",
+            i,
+            end,
+            end - begin
+        );
+
+        i = i.wrapping_add(1);
     }
 
     Ok(())
