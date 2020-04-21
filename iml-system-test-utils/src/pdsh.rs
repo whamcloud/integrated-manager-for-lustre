@@ -49,7 +49,7 @@ pub async fn pdsh(hosts: &[&str], cmd: &str) -> Result<Command, CmdError> {
     let mut dshbak = Command::new("dshbak");
     let dshbak_child = dshbak
         .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
+        .stdout(Stdio::inherit())
         .spawn()?;
 
     let mut pdsh_out = pdsh_child.stdout.expect("Couldn't get stdout.");
