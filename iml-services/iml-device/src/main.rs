@@ -212,24 +212,35 @@ fn is_virtual(d: &Device) -> bool {
 
 fn to_display(d: &Device) -> String {
     match d {
-        Device::Root(d) => String::from("Root"),
+        Device::Root(d) => format!("Root: children: {}", d.children.len()),
         Device::ScsiDevice(ref d) => format!(
-            "ScsiDevice: serial: {}",
-            d.serial.as_ref().unwrap_or(&"None".into())
+            "ScsiDevice: serial: {}, children: {}",
+            d.serial.as_ref().unwrap_or(&"None".into()),
+            d.children.len()
         ),
         Device::Partition(d) => format!(
-            "Partition: serial: {}",
-            d.serial.as_ref().unwrap_or(&"None".into())
+            "Partition: serial: {}, children: {}",
+            d.serial.as_ref().unwrap_or(&"None".into()),
+            d.children.len()
         ),
-        Device::MdRaid(d) => format!("MdRaid: uuid: {}", d.uuid),
+        Device::MdRaid(d) => format!("MdRaid: uuid: {}, children: {}", d.uuid, d.children.len()),
         Device::Mpath(d) => format!(
-            "Mpath: serial: {}",
-            d.serial.as_ref().unwrap_or(&"None".into())
+            "Mpath: serial: {}, children: {}",
+            d.serial.as_ref().unwrap_or(&"None".into()),
+            d.children.len(),
         ),
-        Device::VolumeGroup(d) => format!("VolumeGroup: name: {}", d.name),
-        Device::LogicalVolume(d) => format!("LogicalVolume: uuid: {}", d.uuid),
-        Device::Zpool(d) => format!("Zpool: guid: {}", d.guid),
-        Device::Dataset(d) => format!("Dataset: guid: {}", d.guid),
+        Device::VolumeGroup(d) => format!(
+            "VolumeGroup: name: {}, children: {}",
+            d.name,
+            d.children.len()
+        ),
+        Device::LogicalVolume(d) => format!(
+            "LogicalVolume: uuid: {}, children: {}",
+            d.uuid,
+            d.children.len()
+        ),
+        Device::Zpool(d) => format!("Zpool: guid: {}, children: {}", d.guid, d.children.len()),
+        Device::Dataset(d) => format!("Dataset: guid: {}, children: 0", d.guid),
     }
 }
 
@@ -319,7 +330,7 @@ fn _walk(d: &Device) {
 
 fn insert<'a>(d: &'a mut Device, to_insert: &'a Device) {
     if compare_without_children(d, to_insert) {
-        tracing::info!("Inserting a device");
+        tracing::info!("Inserting a device {}", to_display(to_insert));
         *d = to_insert.clone();
     } else {
         match d {
