@@ -1,3 +1,7 @@
+#[derive(SqlType)]
+#[postgres(type_name = "lustre_fid")]
+pub struct LustreFid;
+
 table! {
     auth_group (id) {
         id -> Int4,
@@ -379,9 +383,12 @@ table! {
 }
 
 table! {
+    use diesel::sql_types::*;
+    use super::LustreFid;
+
     chroma_core_fidactionqueue (id) {
         id -> Int4,
-        fid -> Lustre_fid,
+        fid -> LustreFid,
         entries -> Jsonb,
         failed -> Int2,
         mailbox_id -> Int4,

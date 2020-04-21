@@ -14,7 +14,7 @@ use iml_device::{
 };
 use iml_orm::{
     models::{ChromaCoreDevice, NewChromaCoreDevice},
-    schema::chroma_core_device::{device, fqdn, table},
+    schema::chroma_core_device::{devices, fqdn, table},
     tokio_diesel::*,
 };
 use iml_service_queue::service_queue::consume_data;
@@ -102,14 +102,14 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         let device_to_insert = NewChromaCoreDevice {
             fqdn: f.to_string(),
-            device: serde_json::to_value(d).expect("Could not convert incoming Devices to JSON."),
+            devices: serde_json::to_value(d).expect("Could not convert incoming Devices to JSON."),
         };
 
         let new_device = diesel::insert_into(table)
             .values(device_to_insert)
             .on_conflict(fqdn)
             .do_update()
-            .set(device.eq(excluded(device)))
+            .set(devices.eq(excluded(devices)))
             .get_result_async::<ChromaCoreDevice>(&pool)
             .await
             .expect("Error saving new device");

@@ -10,6 +10,14 @@ use chrono::DateTime;
 use ipnetwork::IpNetwork;
 use serde_json;
 
+#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug))]
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct LustreFid {
+    pub seq: i64,
+    pub oid: i32,
+    pub ver: i32,
+}
+
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "postgres-interop", table_name = "auth_group")]
@@ -499,7 +507,7 @@ pub struct ChromaCoreDevice {
 #[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_device")]
 pub struct NewChromaCoreDevice {
     pub fqdn: String,
-    pub device: serde_json::Value,
+    pub devices: serde_json::Value,
 }
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
