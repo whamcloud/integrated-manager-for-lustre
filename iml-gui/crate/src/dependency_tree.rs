@@ -267,9 +267,7 @@ mod tests {
             X::new(46, &[43, 45, 46], "Configure Pacemaker on oss2.local"),
             X::new(48, &[39, 40, 41, 42, 45, 46, 47], "Setup managed host oss2.local"),
         ];
-        // dependencies always come in the stable order
-        // `for<'r> fn(std::sync::Arc<dependency_tree::tests::X>, &'r mut dependency_tree::tests::Context<u32>) -> _`
-        // `for<'r> fn(std::sync::Arc<dependency_tree::RichDeps<u32, dependency_tree::tests::X>>, &'r mut dependency_tree::tests::Context<u32>) -> _`
+        // dependencies should always come in the stable order
         for _ in 0..10 {
             let x_arcs: Vec<Arc<RichDeps<u32, X>>> =
                 x_list.clone().into_iter().map(|x| Arc::new(RichDeps::new(x))).collect();
@@ -328,6 +326,68 @@ mod tests {
 
     fn richx_to_string(node: Arc<RichDeps<u32, X>>, ctx: &mut Context<u32>) -> String {
         x_to_string(Arc::new(node.inner.clone()), ctx)
+    }
+
+    #[derive(Debug, Clone)]
+    struct A(X);
+
+    impl Deps<u32> for A {
+        fn id(&self) -> u32 {
+            self.0.id
+        }
+        fn deps(&self) -> Vec<u32> {
+            self.0.deps.clone()
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct B(X);
+
+    impl Deps<u32> for B {
+        fn id(&self) -> u32 {
+            self.0.id
+        }
+        fn deps(&self) -> Vec<u32> {
+            self.0.deps.clone()
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct C(X);
+
+    impl Deps<u32> for C {
+        fn id(&self) -> u32 {
+            self.0.id
+        }
+        fn deps(&self) -> Vec<u32> {
+            self.0.deps.clone()
+        }
+    }
+
+    #[test]
+    fn test_async_handlers() {
+        let packet_a = vec![
+            A(X::new(1, &[10, 11], "One")),
+            A(X::new(2, &[12, 13], "Two")),
+            A(X::new(3, &[10, 13], "Three")),
+            A(X::new(4, &[11, 12], "Four")),
+        ];
+        let packet_b = vec![
+            B(X::new(10, &[20, 21], "Ten")),
+            B(X::new(11, &[22, 23], "Eleven")),
+            B(X::new(12, &[20, 23], "Twelve")),
+            B(X::new(13, &[21, 22], "Thirteen")),
+        ];
+        let packet_c = vec![
+            C(X::new(20, &[], "Twenty and zero")),
+            C(X::new(21, &[], "Twenty and one")),
+            C(X::new(22, &[], "Twenty and two")),
+            C(X::new(23, &[], "Twenty and three")),
+        ];
+        // TBD all the packets come in random order, the model should be always consistent
+        println!("{:?}", packet_a[3].deps());
+        println!("{:?}", packet_b[3].deps());
+        println!("{:?}", packet_c[3].deps());
     }
 
     const SMALL_TREE: &'static str = r#"48: Setup managed host oss2.local
