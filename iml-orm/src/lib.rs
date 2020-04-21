@@ -13,6 +13,9 @@ pub mod models;
 pub mod schema;
 
 #[cfg(feature = "postgres-interop")]
+pub mod action_queue;
+
+#[cfg(feature = "postgres-interop")]
 pub mod alerts;
 
 #[cfg(feature = "postgres-interop")]
