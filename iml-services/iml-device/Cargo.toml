@@ -24,6 +24,8 @@ tokio = { version = "0.2", features = ["macros"] }
 tokio-util = { version = "0.3", features = ["codec"] }
 tracing = "0.1"
 warp = "0.2"
+diesel = { version = "1.4", default_features = false, features = ["postgres", "r2d2", "chrono", "serde_json"] }
+chrono = "0.4.11"
 
 [dev-dependencies]
 insta = "0.16"
