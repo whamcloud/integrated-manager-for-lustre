@@ -99,6 +99,7 @@ async fn main() -> Result<(), ImlDeviceError> {
     let mut i = 0usize;
     while let Some((f, d)) = s.try_next().await? {
         let begin: DateTime<Local> = Local::now();
+        tracing::info!("Iteration {}: begin: {}", i, begin);
 
         let mut cache = cache2.lock().await;
 
