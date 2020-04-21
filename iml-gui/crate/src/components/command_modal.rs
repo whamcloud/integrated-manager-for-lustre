@@ -385,7 +385,7 @@ fn command_item_view(model: &Model, x: &Command) -> Node<Msg> {
                     C.py_5
                 ],
                 simple_ev(Ev::Click, Msg::Click(TypedId::Command(x.id))),
-                span![class![C.font_thin, C.text_xl], status_icon(x), &x.message],
+                span![class![C.font_thin, C.text_xl], cmd_status_icon(x), &x.message],
                 font_awesome(
                     class![C.w_4, C.h_4, C.inline, C.text_gray_700, C.text_blue_500],
                     open_icon
@@ -463,17 +463,7 @@ where
 
 fn job_item_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
     if ctx.is_new {
-        let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
-        let icon = if job.cancelled {
-            font_awesome(awesome_style, "ban").merge_attrs(class![C.text_red_500])
-        } else if job.errored {
-            font_awesome(awesome_style, "exclamation").merge_attrs(class![C.text_red_500])
-        } else if job.state == "complete" {
-            font_awesome(awesome_style, "check").merge_attrs(class![C.text_green_500])
-        } else {
-            font_awesome(awesome_style, "spinner").merge_attrs(class![C.text_gray_500, C.pulse])
-        };
-
+        let icon = job_status_icon(job.as_ref());
         if job.steps.is_empty() {
             span![span![class![C.mr_1], icon], span![job.description]]
         } else {
@@ -492,31 +482,31 @@ fn step_list_view(opens: &Opens, steps: &[Arc<Step>]) -> Node<Msg> {
     if steps.is_empty() {
         empty!()
     } else {
-        fn get_icon(state: &str) -> Node<Msg> {
-            let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
-            match state {
-                "incomplete" => font_awesome(awesome_style, "spinner").merge_attrs(class![C.text_gray_500, C.pulse]),
-                "failed" => font_awesome(awesome_style, "exclamation").merge_attrs(class![C.text_red_500]),
-                "success" => font_awesome(awesome_style, "check").merge_attrs(class![C.text_green_500]),
-                _ => font_awesome(awesome_style, "question").merge_attrs(class![C.text_pink_500]),
-            }
-        }
+
         let steps_list: Vec<Node<Msg>> = steps
             .iter()
             .map(|step| {
+                let is_open = is_typed_id_in_opens(opens, TypedId::Step(step.id));
+                let icon = step_status_icon(step, is_open);
                 li![
-                    span![class![C.mr_1], get_icon(&step.state)],
-                    span![
-                        class![C.cursor_pointer, C.underline],
-                        step.class_name,
-                        simple_ev(Ev::Click, Msg::Click(TypedId::Step(step.id))),
+                    div![
+                        class![C.flex],
+                        div![
+                            attrs![At::Style => "flex: 0 0 1em"],
+                            class![C.mx_2],
+                            icon,
+                        ],
+                        div![
+                            class![C.flex_grow, C.cursor_pointer, C.underline],
+                            step.class_name,
+                            simple_ev(Ev::Click, Msg::Click(TypedId::Step(step.id))),
+                        ],
                     ],
-                    step_item_view(opens, step),
+                    step_item_view(step, is_open),
                 ]
             })
             .collect();
         div![
-            h4![class![C.text_lg, C.font_medium], "Steps"],
             ul![
                 class![
                     C.p_1,
@@ -534,8 +524,7 @@ fn step_list_view(opens: &Opens, steps: &[Arc<Step>]) -> Node<Msg> {
     }
 }
 
-fn step_item_view(opens: &Opens, step: &Step) -> Node<Msg> {
-    let is_open = is_typed_id_in_opens(opens, TypedId::Step(step.id));
+fn step_item_view(step: &Step, is_open: bool) -> Node<Msg> {
     if !is_open {
         empty!()
     } else {
@@ -552,7 +541,6 @@ fn step_item_view(opens: &Opens, step: &Step) -> Node<Msg> {
                 step.args.get(k).unwrap_or(&serde_json::value::Value::Null)
             ));
         }
-
         let pre_class = class![
             C.p_2, C.m_2
             C.leading_tight,
@@ -563,16 +551,28 @@ fn step_item_view(opens: &Opens, step: &Step) -> Node<Msg> {
             C.break_all,
         ];
         div![
-            h4![class![C.text_lg, C.font_medium], "Arguments"],
-            pre![&pre_class, arg_str],
-            if step.console.is_empty() {
-                vec![]
-            } else {
-                vec![
-                    h4![class![C.text_lg, C.font_medium], "Logs"],
-                    pre![&pre_class, step.console],
-                ]
-            }
+            class![C.flex],
+            div![
+                attrs![At::Style => "flex: 0 0 1em"],
+                class![C.border_r_2, C.border_gray_300, C.hover__border_gray_600],
+                simple_ev(Ev::Click, Msg::Click(TypedId::Step(step.id))),
+            ],
+            div![
+                attrs![At::Style => "flex: 0 0 1em"],
+            ],
+            div![
+                class![C.float_right, C.flex_grow],
+                h4![class![C.text_lg, C.font_medium], "Arguments"],
+                pre![&pre_class, arg_str],
+                if step.console.is_empty() {
+                    vec![]
+                } else {
+                    vec![
+                        h4![class![C.text_lg, C.font_medium], "Logs"],
+                        pre![&pre_class, step.console],
+                    ]
+                }
+            ]
         ]
     }
 }
@@ -589,17 +589,44 @@ fn status_text(cmd: &Command) -> &'static str {
     }
 }
 
-fn status_icon<T>(cmd: &Command) -> Node<T> {
-    let cls = class![C.w_4, C.h_4, C.inline, C.mr_4];
-
+fn cmd_status_icon<T>(cmd: &Command) -> Node<T> {
+    let awesome_class = class![C.w_4, C.h_4, C.inline, C.mr_4];
     if cmd.complete {
-        font_awesome(cls, "check").merge_attrs(class![C.text_green_500])
+        font_awesome(awesome_class, "check").merge_attrs(class![C.text_green_500])
     } else if cmd.cancelled {
-        font_awesome(cls, "ban").merge_attrs(class![C.text_gray_500])
+        font_awesome(awesome_class, "ban").merge_attrs(class![C.text_gray_500])
     } else if cmd.errored {
-        font_awesome(cls, "bell").merge_attrs(class![C.text_red_500])
+        font_awesome(awesome_class, "bell").merge_attrs(class![C.text_red_500])
     } else {
-        font_awesome(cls, "spinner").merge_attrs(class![C.text_gray_500, C.pulse])
+        font_awesome(awesome_class, "spinner").merge_attrs(class![C.text_gray_500, C.pulse])
+    }
+}
+
+fn job_status_icon<T>(job: &Job0) -> Node<T> {
+    let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
+    if job.cancelled {
+        font_awesome(awesome_style, "ban").merge_attrs(class![C.text_red_500])
+    } else if job.errored {
+        font_awesome(awesome_style, "exclamation").merge_attrs(class![C.text_red_500])
+    } else if job.state == "complete" {
+        font_awesome(awesome_style, "check").merge_attrs(class![C.text_green_500])
+    } else {
+        font_awesome(awesome_style, "spinner").merge_attrs(class![C.text_gray_500, C.pulse])
+    }
+}
+
+fn step_status_icon<T>(step: &Step, is_open: bool) -> Node<T> {
+    let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
+    let color = match step.state.as_ref() {
+        "incomplete" => class![C.text_gray_500],
+        "failed" => class![C.text_red_500],
+        "success" => class![C.text_green_500],
+        _ => class![C.text_gray_100],
+    };
+    if is_open {
+        font_awesome(awesome_style, "minus-circle").merge_attrs(color)
+    } else {
+        font_awesome(awesome_style, "plus-circle").merge_attrs(color)
     }
 }
 
