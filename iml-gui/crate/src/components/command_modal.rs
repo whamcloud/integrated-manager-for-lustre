@@ -482,50 +482,37 @@ fn step_list_view(opens: &Opens, steps: &[Arc<Step>]) -> Node<Msg> {
     if steps.is_empty() {
         empty!()
     } else {
-
-        let steps_list: Vec<Node<Msg>> = steps
-            .iter()
-            .map(|step| {
+        div![ul![
+            class![
+                C.p_1,
+                C.pb_2,
+                C.mb_1,
+                C.bg_gray_100,
+                C.border,
+                C.rounded,
+                C.shadow_sm,
+                C.overflow_auto
+            ],
+            steps.iter().map(|step| {
                 let is_open = is_typed_id_in_opens(opens, TypedId::Step(step.id));
-                let icon = step_status_icon(step, is_open);
-                li![
-                    div![
-                        class![C.flex],
-                        div![
-                            attrs![At::Style => "flex: 0 0 1em"],
-                            class![C.mx_2],
-                            icon,
-                        ],
-                        div![
-                            class![C.flex_grow, C.cursor_pointer, C.underline],
-                            step.class_name,
-                            simple_ev(Ev::Click, Msg::Click(TypedId::Step(step.id))),
-                        ],
-                    ],
-                    step_item_view(step, is_open),
-                ]
+                li![step_item_view(step, is_open)]
             })
-            .collect();
-        div![
-            ul![
-                class![
-                    C.p_1,
-                    C.pb_2,
-                    C.mb_1,
-                    C.bg_gray_100,
-                    C.border,
-                    C.rounded,
-                    C.shadow_sm,
-                    C.overflow_auto
-                ],
-                steps_list
-            ]
-        ]
+        ]]
     }
 }
 
-fn step_item_view(step: &Step, is_open: bool) -> Node<Msg> {
-    if !is_open {
+fn step_item_view(step: &Step, is_open: bool) -> Vec<Node<Msg>> {
+    let icon = step_status_icon(step, is_open);
+    let item_caption = div![
+        class![C.flex],
+        div![attrs![At::Style => "flex: 0 0 1em"], class![C.mx_2], icon],
+        div![
+            class![C.flex_grow, C.cursor_pointer, C.underline],
+            step.class_name,
+            simple_ev(Ev::Click, Msg::Click(TypedId::Step(step.id))),
+        ],
+    ];
+    let item_body = if !is_open {
         empty!()
     } else {
         // note, we cannot just use the Debug instance for step.args,
@@ -557,9 +544,7 @@ fn step_item_view(step: &Step, is_open: bool) -> Node<Msg> {
                 class![C.border_r_2, C.border_gray_300, C.hover__border_gray_600],
                 simple_ev(Ev::Click, Msg::Click(TypedId::Step(step.id))),
             ],
-            div![
-                attrs![At::Style => "flex: 0 0 1em"],
-            ],
+            div![attrs![At::Style => "flex: 0 0 1em"],],
             div![
                 class![C.float_right, C.flex_grow],
                 h4![class![C.text_lg, C.font_medium], "Arguments"],
@@ -574,7 +559,8 @@ fn step_item_view(step: &Step, is_open: bool) -> Node<Msg> {
                 }
             ]
         ]
-    }
+    };
+    vec![item_caption, item_body]
 }
 
 fn status_text(cmd: &Command) -> &'static str {
