@@ -4,7 +4,7 @@
 
 use crate::{
     components::{font_awesome, modal},
-    dependency_tree::{build_direct_dag, build_inverse_dag, DependencyDAG, Deps},
+    dependency_tree::{build_direct_dag, DependencyDAG, Deps},
     extensions::{MergeAttrs as _, NodeExt as _, RequestExt as _},
     generated::css_classes::C,
     key_codes, sleep_with_handle, GMsg,
@@ -100,7 +100,6 @@ pub struct Model {
     pub jobs_loading: bool,
     pub jobs: Vec<Arc<Job0>>,
     pub jobs_dag: DependencyDAG<u32, Job0>,
-    pub is_dag_inverse: bool,
 
     pub steps_loading: bool,
     pub steps: Vec<Arc<Step>>,
@@ -124,7 +123,6 @@ pub enum Msg {
     FetchedJobs(Box<fetch::ResponseDataResult<ApiList<Job0>>>),
     FetchedSteps(Box<fetch::ResponseDataResult<ApiList<Step>>>),
     Click(TypedId),
-    InverseClick,
     Noop,
 }
 
@@ -189,11 +187,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 if are_jobs_consistent(model, &api_list.objects) {
                     model.jobs_loading = false;
                     model.jobs = api_list.objects.into_iter().map(Arc::new).collect();
-                    if model.is_dag_inverse {
-                        model.jobs_dag = build_inverse_dag(&model.jobs);
-                    } else {
-                        model.jobs_dag = build_direct_dag(&model.jobs);
-                    }
+                    model.jobs_dag = build_direct_dag(&model.jobs);
                 }
             }
             Err(e) => {
@@ -231,16 +225,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             if do_fetch {
                 if let Err(e) = schedule_fetch_tree(model, orders) {
                     error!(e.to_string())
-                }
-            }
-        }
-        Msg::InverseClick => {
-            if !model.jobs_loading {
-                model.is_dag_inverse = !model.is_dag_inverse;
-                if model.is_dag_inverse {
-                    model.jobs_dag = build_inverse_dag(&model.jobs);
-                } else {
-                    model.jobs_dag = build_direct_dag(&model.jobs);
                 }
             }
         }
@@ -422,14 +406,6 @@ pub fn job_tree_view(jobs_dag: &DependencyDAG<u32, Job0>) -> Node<Msg> {
     div![
         class![C.font_ordinary, C.text_gray_700],
         h4![class![C.text_lg, C.font_medium], "Jobs"],
-        label![
-            class![C.cursor_pointer],
-            input![
-                attrs![ At::Type => "checkbox", At::Name => "checkbox" ],
-                simple_ev(Ev::Click, Msg::InverseClick),
-            ],
-            span![class![C.mx_1, C.border, C.underline], "Switch job dependency view"],
-        ],
         div![
             class![
                 C.p_1,
