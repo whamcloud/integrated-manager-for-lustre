@@ -129,8 +129,6 @@ async fn main() -> Result<(), ImlDeviceError> {
             "The top device has to be Root"
         );
 
-        println!("Host: {}", f);
-
         let mut ff = File::create(format!("/tmp/device{}", i)).unwrap();
         ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
             .unwrap();
