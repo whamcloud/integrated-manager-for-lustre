@@ -111,15 +111,22 @@ async fn main() -> Result<(), ImlDeviceError> {
             "The top device has to be Root"
         );
 
-        let mut ff = File::create(format!("/tmp/device{}", i)).unwrap();
-        ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
-            .unwrap();
-        let mut parents = vec![];
-        let mut ff = File::create(format!("/tmp/parents{}", i)).unwrap();
-        ff.write_all(serde_json::to_string_pretty(&parents).unwrap().as_bytes())
-            .unwrap();
+        // let mut ff = File::create(format!("/tmp/device{}", i)).unwrap();
+        // ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
+        //     .unwrap();
 
+        let mut parents = vec![];
         collect_virtual_device_parents(&d, 0, None, &mut parents);
+
+        tracing::info!(
+            "Collected {} parents at {} host",
+            parents.len(),
+            f.to_string()
+        );
+
+        // let mut ff = File::create(format!("/tmp/parents{}", i)).unwrap();
+        // ff.write_all(serde_json::to_string_pretty(&parents).unwrap().as_bytes())
+        //     .unwrap();
 
         let other_devices = table
             .filter(fqdn.ne(f.to_string()))
@@ -131,20 +138,20 @@ async fn main() -> Result<(), ImlDeviceError> {
             let f = ccd.fqdn;
             let d = ccd.devices;
 
-            let mut d: Device =
-                serde_json::from_value(d).expect("Couldn't read Device from JSON from DB");
+            let mut d: Device = serde_json::from_value(d)
+                .expect("Couldn't deserialize Device from JSON when reading from DB");
 
             insert_virtual_devices(&mut d, &*parents);
 
-            let mut ff = File::create(format!("/tmp/otherdevice{}-{}", i, j)).unwrap();
-            ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
-                .unwrap();
+            // let mut ff = File::create(format!("/tmp/otherdevice{}-{}", i, j)).unwrap();
+            // ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
+            //     .unwrap();
 
             let device_to_insert = NewChromaCoreDevice {
                 fqdn: f.to_string(),
-                device: serde_json::to_value(d).expect("Could not convert incoming Devices to JSON."),
+                device: serde_json::to_value(d).expect("Could not convert other Device to JSON."),
             };
-    
+
             let new_device = diesel::insert_into(table)
                 .values(device_to_insert)
                 .on_conflict(fqdn)
@@ -153,7 +160,7 @@ async fn main() -> Result<(), ImlDeviceError> {
                 .get_result_async::<ChromaCoreDevice>(&pool)
                 .await
                 .expect("Error saving new device");
-    
+
             tracing::info!("Inserted other device from host {}", new_device.fqdn);
             tracing::trace!("Inserted other device {:?}", new_device);
         }
@@ -203,6 +210,29 @@ fn is_virtual(d: &Device) -> bool {
     }
 }
 
+fn to_display(d: &Device) -> String {
+    match d {
+        Device::Root(d) => String::from("Root"),
+        Device::ScsiDevice(ref d) => format!(
+            "ScsiDevice: serial: {}",
+            d.serial.as_ref().unwrap_or(&"None".into())
+        ),
+        Device::Partition(d) => format!(
+            "Partition: serial: {}",
+            d.serial.as_ref().unwrap_or(&"None".into())
+        ),
+        Device::MdRaid(d) => format!("MdRaid: uuid: {}", d.uuid),
+        Device::Mpath(d) => format!(
+            "Mpath: serial: {}",
+            d.serial.as_ref().unwrap_or(&"None".into())
+        ),
+        Device::VolumeGroup(d) => format!("VolumeGroup: name: {}", d.name),
+        Device::LogicalVolume(d) => format!("LogicalVolume: uuid: {}", d.uuid),
+        Device::Zpool(d) => format!("Zpool: guid: {}", d.guid),
+        Device::Dataset(d) => format!("Dataset: guid: {}", d.guid),
+    }
+}
+
 fn collect_virtual_device_parents<'d>(
     d: &'d Device,
     level: usize,
@@ -210,6 +240,7 @@ fn collect_virtual_device_parents<'d>(
     mut parents: &mut Vec<&'d Device>,
 ) {
     if is_virtual(d) {
+        tracing::info!("Collecting parent {}", to_display(d));
         parents.push(
             parent.expect("Tried to push to parents the parent of the Root, which doesn't exist"),
         );
@@ -288,6 +319,7 @@ fn _walk(d: &Device) {
 
 fn insert<'a>(d: &'a mut Device, to_insert: &'a Device) {
     if compare_without_children(d, to_insert) {
+        tracing::info!("Inserting a device");
         *d = to_insert.clone();
     } else {
         match d {
