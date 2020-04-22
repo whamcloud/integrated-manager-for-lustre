@@ -4,8 +4,12 @@ set -ex
 
 yum copr enable -y managerforlustre/manager-for-lustre-devel
 # Get latest rpmdevtools
-yum install -y https://copr-be.cloud.fedoraproject.org/results/managerforlustre/buildtools/epel-8-x86_64/01152137-rpmdevtools/rpmdevtools-8.10-7.el8.noarch.rpm
-yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+if ! yum list installed rpmdevtools-8.10-7.el8.noarch; then
+    yum install -y https://copr-be.cloud.fedoraproject.org/results/managerforlustre/buildtools/epel-8-x86_64/01152137-rpmdevtools/rpmdevtools-8.10-7.el8.noarch.rpm
+fi
+if ! yum list installed pgdg-redhat-repo.noarch; then
+    yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+fi
 yum install -y rpmdevtools git ed epel-release python-setuptools gcc openssl-devel postgresql96-devel
 curl https://sh.rustup.rs -sSf | sh -s -- -y
 source $HOME/.cargo/env
