@@ -170,52 +170,6 @@ fn collect_virtual_device_parents<'d, 'p: 'd>(
     }
 }
 
-fn _walk(d: &Device) {
-    match d {
-        Device::Root(d) => {
-            for c in &d.children {
-                _walk(c);
-            }
-        }
-        Device::ScsiDevice(d) => {
-            for c in &d.children {
-                _walk(c);
-            }
-        }
-        Device::Partition(d) => {
-            for c in &d.children {
-                _walk(c);
-            }
-        }
-        Device::MdRaid(d) => {
-            for c in &d.children {
-                _walk(c);
-            }
-        }
-        Device::Mpath(d) => {
-            for c in &d.children {
-                _walk(c);
-            }
-        }
-        Device::VolumeGroup(d) => {
-            for c in &d.children {
-                _walk(c);
-            }
-        }
-        Device::LogicalVolume(d) => {
-            for c in &d.children {
-                _walk(c);
-            }
-        }
-        Device::Zpool(d) => {
-            for c in &d.children {
-                _walk(c);
-            }
-        }
-        Device::Dataset(_) => {}
-    }
-}
-
 fn insert<'a>(d: &'a mut Device, to_insert: &'a Device) {
     if compare_without_children(d, to_insert) {
         tracing::info!(
