@@ -6,12 +6,7 @@ use chrono::prelude::*;
 use device_types::devices::{
     Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup, Zpool,
 };
-use diesel::{
-    self,
-    pg::upsert::excluded,
-    prelude::*,
-    r2d2::{ConnectionManager, Pool},
-};
+use diesel::{self, pg::upsert::excluded, prelude::*};
 use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
 use im::HashSet;
 use iml_device::{
@@ -31,8 +26,6 @@ use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::Fqdn;
 use std::{
     collections::{BTreeMap, HashMap},
-    fs::File,
-    io::Write,
     sync::Arc,
 };
 use warp::Filter;
@@ -135,7 +128,9 @@ async fn main() -> Result<(), ImlDeviceError> {
             "The top device has to be Root"
         );
 
-        update_virtual_devices(f, d, &pool).await;
+        let other_devices = get_other_devices(&f, &pool).await;
+
+        update_virtual_devices(f, d, other_devices, &pool).await;
 
         let end: DateTime<Local> = Local::now();
 
@@ -152,7 +147,31 @@ async fn main() -> Result<(), ImlDeviceError> {
     Ok(())
 }
 
-async fn update_virtual_devices(f: Fqdn, d: Device, pool: &DbPool) {
+async fn get_other_devices(f: &Fqdn, pool: &DbPool) -> Vec<(Fqdn, Device)> {
+    let other_devices = table
+        .filter(fqdn.ne(f.to_string()))
+        .load_async::<ChromaCoreDevice>(&pool)
+        .await
+        .expect("Error getting devices from other hosts");
+
+    other_devices
+        .into_iter()
+        .map(|d| {
+            (
+                Fqdn(d.fqdn),
+                serde_json::from_value(d.devices)
+                    .expect("Couldn't deserialize Device from JSON when reading from DB"),
+            )
+        })
+        .collect()
+}
+
+async fn update_virtual_devices(
+    f: Fqdn,
+    d: Device,
+    other_devices: Vec<(Fqdn, Device)>,
+    pool: &DbPool,
+) {
     let mut parents = vec![];
     collect_virtual_device_parents(&d, 0, None, &mut parents);
 
@@ -162,31 +181,13 @@ async fn update_virtual_devices(f: Fqdn, d: Device, pool: &DbPool) {
         f.to_string()
     );
 
-    // let mut ff = File::create(format!("/tmp/parents{}", i)).unwrap();
-    // ff.write_all(serde_json::to_string_pretty(&parents).unwrap().as_bytes())
-    //     .unwrap();
-
-    let other_devices = table
-        .filter(fqdn.ne(f.to_string()))
-        .load_async::<ChromaCoreDevice>(pool)
-        .await
-        .expect("Error getting devices from other hosts");
-
     // TODO: We also have to collect_virtual_device_parents on each of other_devices and insert_virtual_devices to the incoming device
 
-    for (j, ccd) in other_devices.into_iter().enumerate() {
-        let f = ccd.fqdn;
-        let d = ccd.devices;
-
-        let mut d: Device = serde_json::from_value(d)
-            .expect("Couldn't deserialize Device from JSON when reading from DB");
+    for (ff, dd) in other_devices.into_iter() {
+        let f = ff;
+        let mut d = dd;
 
         insert_virtual_devices(&mut d, &*parents);
-
-        // let mut ff =
-        //     File::create(format!("/tmp/otherdevice-{}-{}-{}", f.to_string(), i, j)).unwrap();
-        // ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
-        //     .unwrap();
 
         let device_to_insert = NewChromaCoreDevice {
             fqdn: f.to_string(),
