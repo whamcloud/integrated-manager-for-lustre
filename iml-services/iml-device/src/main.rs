@@ -18,7 +18,7 @@ use iml_device::{
 };
 use iml_orm::{
     models::{ChromaCoreDevice, NewChromaCoreDevice},
-    schema::chroma_core_device::{devices, fqdn, table},
+    schema::chroma_core_device::{self, fqdn, table},
     tokio_diesel::*,
     DbPool,
 };
@@ -113,7 +113,9 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         let other_devices = get_other_devices(&f, &pool).await;
 
-        update_virtual_devices(f, d, other_devices, &pool).await;
+        let updated_devices = update_virtual_devices(f, d, other_devices).await;
+
+        save_devices(updated_devices, &pool).await;
 
         let end: DateTime<Local> = Local::now();
 
@@ -128,6 +130,27 @@ async fn main() -> Result<(), ImlDeviceError> {
     }
 
     Ok(())
+}
+
+async fn save_devices(devices: Vec<(Fqdn, Device)>, pool: &DbPool) {
+    for (f, d) in devices.into_iter() {
+        let device_to_insert = NewChromaCoreDevice {
+            fqdn: f.to_string(),
+            devices: serde_json::to_value(d).expect("Could not convert other Device to JSON."),
+        };
+
+        let new_device = diesel::insert_into(table)
+            .values(device_to_insert)
+            .on_conflict(fqdn)
+            .do_update()
+            .set(chroma_core_device::devices.eq(excluded(chroma_core_device::devices)))
+            .get_result_async::<ChromaCoreDevice>(pool)
+            .await
+            .expect("Error saving new device");
+
+        tracing::info!("Inserted other device from host {}", new_device.fqdn);
+        tracing::trace!("Inserted other device {:?}", new_device);
+    }
 }
 
 async fn get_other_devices(f: &Fqdn, pool: &DbPool) -> Vec<(Fqdn, Device)> {
@@ -153,8 +176,9 @@ async fn update_virtual_devices(
     f: Fqdn,
     d: Device,
     other_devices: Vec<(Fqdn, Device)>,
-    pool: &DbPool,
-) {
+) -> Vec<(Fqdn, Device)> {
+    let mut results = vec![];
+
     let mut parents = vec![];
     collect_virtual_device_parents(&d, 0, None, &mut parents);
 
@@ -172,40 +196,12 @@ async fn update_virtual_devices(
 
         insert_virtual_devices(&mut d, &*parents);
 
-        let device_to_insert = NewChromaCoreDevice {
-            fqdn: f.to_string(),
-            devices: serde_json::to_value(d).expect("Could not convert incoming Devices to JSON."),
-        };
-
-        let new_device = diesel::insert_into(table)
-            .values(device_to_insert)
-            .on_conflict(fqdn)
-            .do_update()
-            .set(devices.eq(excluded(devices)))
-            .get_result_async::<ChromaCoreDevice>(&pool)
-            .await
-            .expect("Error saving new device");
-
-        tracing::info!("Inserted other device from host {}", new_device.fqdn);
-        tracing::trace!("Inserted other device {:?}", new_device);
+        results.push((f, d));
     }
 
-    let device_to_insert = NewChromaCoreDevice {
-        fqdn: f.to_string(),
-        devices: serde_json::to_value(d).expect("Could not convert incoming Devices to JSON."),
-    };
+    results.push((f, d));
 
-    let new_device = diesel::insert_into(table)
-        .values(device_to_insert)
-        .on_conflict(fqdn)
-        .do_update()
-        .set(devices.eq(excluded(devices)))
-        .get_result_async::<ChromaCoreDevice>(&pool)
-        .await
-        .expect("Error saving new device");
-
-    tracing::info!("Inserted device from host {}", new_device.fqdn);
-    tracing::trace!("Inserted device {:?}", new_device);
+    results
 }
 
 fn is_virtual(d: &Device) -> bool {
