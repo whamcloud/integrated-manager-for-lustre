@@ -8,7 +8,7 @@ use iml_wire_types::{Command, Host};
 use indicatif::ProgressBar;
 use prettytable::{Row, Table};
 use spinners::{Spinner, Spinners};
-use std::fmt::Display;
+use std::{fmt::Display, io, str::FromStr};
 use structopt::StructOpt;
 
 pub fn wrap_fut<T>(msg: &str, fut: impl Future<Output = T>) -> impl Future<Output = T> {
@@ -138,5 +138,21 @@ pub enum DisplayType {
 impl Default for DisplayType {
     fn default() -> Self {
         Self::Tabular
+    }
+}
+
+impl FromStr for DisplayType {
+    type Err = io::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "json" => Ok(Self::Json),
+            "yaml" => Ok(Self::Yaml),
+            "tabular" => Ok(Self::Tabular),
+            _ => Err(Self::Err::new(
+                io::ErrorKind::InvalidInput,
+                "Couldn't parse display type.",
+            )),
+        }
     }
 }

@@ -62,11 +62,17 @@ pub struct AddHosts {
     password: Option<String>,
 }
 
+#[derive(StructOpt, Debug)]
+pub struct ListItems {
+    #[structopt(short = "d", long = "display", default_value = "tabular")]
+    display_type: DisplayType,
+}
+
 #[derive(Debug, StructOpt)]
 pub enum ServerCommand {
     /// List all configured storage servers
     #[structopt(name = "list")]
-    List(DisplayType),
+    List(ListItems),
     /// Add new servers to IML
     #[structopt(name = "add")]
     Add(AddHosts),
@@ -709,9 +715,9 @@ fn get_agent_profile<'a>(
 
 pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError> {
     match command {
-        ServerCommand::List(display_type) => {
+        ServerCommand::List(config) => {
             let hosts: ApiList<Host> = wrap_fut("Fetching hosts...", get_hosts()).await?;
-            list_server(hosts, display_type);
+            list_server(hosts, config.display_type);
         }
         ServerCommand::Add(config) => add_server(config).await?,
         ServerCommand::Remove(config) => {
