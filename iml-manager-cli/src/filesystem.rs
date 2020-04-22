@@ -7,10 +7,11 @@ use crate::{
         create_command, get, get_all, get_hosts, get_influx, get_one, wait_for_cmds_success,
         SendCmd, SendJob,
     },
-    display_utils::{generate_table, wrap_fut},
+    display_utils::{wrap_fut, DisplayType, IntoDisplayType as _},
     error::ImlManagerCliError,
     ostpool::{ostpool_cli, OstPoolCommand},
 };
+use console::Term;
 use futures::future::{try_join, try_join_all};
 use iml_wire_types::{Filesystem, FlatQuery, Mgt, Ost};
 use number_formatter::{format_bytes, format_number};
@@ -18,11 +19,35 @@ use prettytable::{Row, Table};
 use std::collections::{BTreeMap, HashMap};
 use structopt::StructOpt;
 
+#[derive(Debug, serde::Serialize)]
+pub struct FilesystemAndStatsList(pub Vec<String>);
+
+impl IntoIterator for FilesystemAndStatsList {
+    type Item = String;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+#[derive(StructOpt, Debug)]
+pub struct ListItems {
+    /// Set the display type
+    ///
+    /// The display type can be one of the following:
+    /// tabular: display content in a table format
+    /// json: return data in json format
+    /// yaml: return data in yaml format
+    #[structopt(short = "d", long = "display", default_value = "tabular")]
+    display_type: DisplayType,
+}
+
 #[derive(Debug, StructOpt)]
 pub enum FilesystemCommand {
     /// List all configured filesystems
     #[structopt(name = "list")]
-    List,
+    List(ListItems),
     /// Show filesystem
     #[structopt(name = "show")]
     Show {
@@ -107,9 +132,19 @@ async fn detect_filesystem(hosts: Option<String>) -> Result<(), ImlManagerCliErr
     Ok(())
 }
 
+fn list_filesystems(xs: Vec<FilesystemAndStatsList>, display_type: DisplayType) {
+    let term = Term::stdout();
+
+    tracing::debug!("Filesystems: {:?}", xs);
+
+    let x = xs.into_display_type(display_type);
+
+    term.write_line(&x).unwrap();
+}
+
 pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManagerCliError> {
     match command {
-        FilesystemCommand::List => {
+        FilesystemCommand::List(config) => {
             let fut_fs = get_all::<Filesystem>();
             let query = iml_influx::filesystems::query();
             let fut_st =
@@ -122,11 +157,10 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
             tracing::debug!("FSs: {:?}", filesystems);
             tracing::debug!("Stats: {:?}", stats);
 
-            let table = generate_table(
-                &[
-                    "Name", "State", "Space", "Inodes", "Clients", "MDTs", "OSTs",
-                ],
-                filesystems.objects.into_iter().map(|f| {
+            let xs: Vec<FilesystemAndStatsList> = filesystems
+                .objects
+                .into_iter()
+                .map(|f| {
                     let s = stats.get(&f.name).cloned().unwrap_or_default();
                     vec![
                         f.label,
@@ -137,10 +171,11 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
                         f.mdts.len().to_string(),
                         f.osts.len().to_string(),
                     ]
-                }),
-            );
+                })
+                .map(FilesystemAndStatsList)
+                .collect();
 
-            table.printstd();
+            list_filesystems(xs, config.display_type);
         }
         FilesystemCommand::Show { fsname } => {
             let fut_fs = get_one::<Filesystem>(vec![("name", &fsname)]);

@@ -63,6 +63,12 @@ pub struct AddHosts {
 
 #[derive(StructOpt, Debug)]
 pub struct ListItems {
+    /// Set the display type
+    ///
+    /// The display type can be one of the following:
+    /// tabular: display content in a table format
+    /// json: return data in json format
+    /// yaml: return data in yaml format
     #[structopt(short = "d", long = "display", default_value = "tabular")]
     display_type: DisplayType,
 }
@@ -285,12 +291,12 @@ async fn wait_till_agent_starts(
     Ok(())
 }
 
-fn list_server(hosts: ApiList<Host>, display_type: DisplayType) {
+fn list_server(hosts: Vec<Host>, display_type: DisplayType) {
     let term = Term::stdout();
 
     tracing::debug!("Hosts: {:?}", hosts);
 
-    let x = hosts.objects.into_display_type(display_type);
+    let x = hosts.into_display_type(display_type);
 
     term.write_line(&x).unwrap();
 }
@@ -702,7 +708,7 @@ fn get_agent_profile<'a>(
     };
 
     let x = xs
-        .into_iter()
+        .iter()
         .find(|x| x.name == name)
         .ok_or_else(|| Error::new(ErrorKind::NotFound, format!("{} profile not found.", name)))?;
 
@@ -713,7 +719,7 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
     match command {
         ServerCommand::List(config) => {
             let hosts: ApiList<Host> = wrap_fut("Fetching hosts...", get_hosts()).await?;
-            list_server(hosts, config.display_type);
+            list_server(hosts.objects, config.display_type);
         }
         ServerCommand::Add(config) => add_server(config).await?,
         ServerCommand::Remove(config) => {
