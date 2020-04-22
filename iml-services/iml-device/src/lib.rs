@@ -4,5 +4,6 @@
 
 pub mod error;
 pub mod linux_plugin_transforms;
+pub mod virtual_device;
 
 pub use error::ImlDeviceError;
