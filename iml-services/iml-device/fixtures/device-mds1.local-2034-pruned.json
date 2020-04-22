@@ -6,8 +6,8 @@
           "serial": "36001405c476be7a53a94ca9a1ecc4512",
           "scsi80": "SLIO-ORG mdt2            c476be7a-53a9-4ca9-a1ec-c45123444aaf",
           "major": "8",
-          "minor": "96",
-          "devpath": "/devices/platform/host2/session1/target2:0:0/2:0:0:2/block/sdg",
+          "minor": "80",
+          "devpath": "/devices/platform/host3/session2/target3:0:0/3:0:0:2/block/sdf",
           "size": 5368709120,
           "filesystem_type": "mpath_member",
           "fs_uuid": "2863087293198835809",
@@ -16,10 +16,10 @@
             "/dev/disk/by-id/scsi-36001405c476be7a53a94ca9a1ecc4512",
             "/dev/disk/by-id/wwn-0x6001405c476be7a53a94ca9a1ecc4512",
             "/dev/disk/by-path/fc---lun-2",
-            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:mds-lun-2",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:mds-lun-2",
             "/dev/disk/by-label/mdt1",
             "/dev/disk/by-uuid/2863087293198835809",
-            "/dev/sdg"
+            "/dev/sdf"
           ],
           "mount": null,
           "children": [
