@@ -123,10 +123,10 @@ fn to_display(d: &Device) -> String {
     }
 }
 
-fn collect_virtual_device_parents<'d, 'p: 'd>(
-    d: &'d Device,
+fn collect_virtual_device_parents(
+    d: &Device,
     level: usize,
-    parent: Option<&'p Device>,
+    parent: Option<&Device>,
 ) -> Vec<Device> {
     let mut results = vec![];
 
