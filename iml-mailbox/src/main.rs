@@ -13,16 +13,11 @@
 use futures::{lock::Mutex, Stream, TryFutureExt, TryStreamExt};
 use iml_mailbox::{Errors, Incoming, MailboxSenders};
 use std::{fs, path::PathBuf, pin::Pin, sync::Arc};
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::Filter as _;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let subscriber = Subscriber::builder()
-        .with_env_filter(EnvFilter::from_default_env())
-        .finish();
-
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    iml_tracing::init();
 
     let addr = iml_manager_env::get_mailbox_addr();
     let mailbox_path = iml_manager_env::get_mailbox_path();

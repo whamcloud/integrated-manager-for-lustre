@@ -11,7 +11,6 @@ use iml_manager_cli::{
 };
 use std::process::exit;
 use structopt::StructOpt;
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "iml", setting = structopt::clap::AppSettings::ColoredHelp)]
@@ -42,11 +41,7 @@ pub enum App {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let subscriber = Subscriber::builder()
-        .with_env_filter(EnvFilter::from_default_env())
-        .finish();
-
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    iml_tracing::init();
 
     let matches = App::from_args();
 

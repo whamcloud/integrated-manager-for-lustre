@@ -10,15 +10,10 @@ use iml_agent::{
     http_comms::{agent_client::AgentClient, crypto_client, session},
     poller, reader,
 };
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let subscriber = Subscriber::builder()
-        .with_env_filter(EnvFilter::from_default_env())
-        .finish();
-
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    iml_tracing::init();
 
     tracing::info!("Starting Rust agent_daemon");
 

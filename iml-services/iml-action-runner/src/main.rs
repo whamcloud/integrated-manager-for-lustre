@@ -13,18 +13,13 @@ use iml_rabbit::create_connection_filter;
 use iml_service_queue::service_queue::{consume_service_queue, ImlServiceQueueError};
 use iml_util::tokio_utils::get_tcp_or_unix_listener;
 use std::{collections::HashMap, sync::Arc};
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::{self, Filter as _};
 
 pub static AGENT_TX_RUST: &str = "agent_tx_rust";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let subscriber = Subscriber::builder()
-        .with_env_filter(EnvFilter::from_default_env())
-        .finish();
-
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    iml_tracing::init();
 
     let (exit, valve) = tokio_runtime_shutdown::shared_shutdown();
 

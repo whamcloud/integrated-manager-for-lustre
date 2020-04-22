@@ -15,7 +15,6 @@ use iml_wire_types::{
     Envelope, Fqdn, ManagerMessage, ManagerMessages, Message, PluginMessage, PluginName,
 };
 use std::{sync::Arc, time::Duration};
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::Filter;
 
 async fn data_handler(
@@ -120,11 +119,7 @@ struct MessageFqdn {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let subscriber = Subscriber::builder()
-        .with_env_filter(EnvFilter::from_default_env())
-        .finish();
-
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    iml_tracing::init();
 
     // Handle an error in locks by shutting down
     let (tx, rx) = oneshot::channel();

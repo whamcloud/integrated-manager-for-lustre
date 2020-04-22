@@ -13,19 +13,13 @@ use iml_warp_drive::{
 };
 use iml_wire_types::warp_drive::{Cache, Message};
 use std::sync::Arc;
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::Filter;
 
 type SharedLocks = Arc<Mutex<Locks>>;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let subscriber = Subscriber::builder()
-        .with_env_filter(EnvFilter::from_default_env())
-        .without_time()
-        .finish();
-
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    iml_tracing::init();
 
     // Keep track of all connected users, key is `usize`, value
     // is a event stream sender.

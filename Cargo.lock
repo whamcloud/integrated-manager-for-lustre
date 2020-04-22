@@ -86,9 +86,9 @@ dependencies = [
 
 [[package]]
 name = "arc-swap"
-version = "0.4.5"
+version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d663a8e9a99154b5fb793032533f6328da35e23aac63d5c152279aa8ba356825"
+checksum = "b585a98a234c46fc563103e9278c9391fde1f4e6850334da895d27edb9580f62"
 
 [[package]]
 name = "arrayref"
@@ -170,9 +170,9 @@ dependencies = [
 
 [[package]]
 name = "backtrace-sys"
-version = "0.1.35"
+version = "0.1.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7de8aba10a69c8e8d7622c5710229485ec32e9d55fdad160ea559c086fdcd118"
+checksum = "78848718ee1255a2485d1309ad9cdecfc2e7d0362dd11c6829364c6b35ae1bc7"
 dependencies = [
  "cc",
  "libc",
@@ -318,9 +318,9 @@ checksum = "130aac562c0dd69c56b3b1cc8ffd2e17be31d0b6c25b61c96b76231aa23e39e1"
 
 [[package]]
 name = "cc"
-version = "1.0.50"
+version = "1.0.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95e28fa049fda1c330bcf9d723be7663a899c4679724b34c81e9f5a326aab8cd"
+checksum = "9c9384ca4b90c0ea47e19a5c996d6643a3e73dedf9b89c65efb67587e34da1bb"
 
 [[package]]
 name = "cexpr"
@@ -530,16 +530,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b2466559f260f48ad25fe6317b3c8dac77b5bdb5763ac7d9d6103530663bc90"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "ctor"
-version = "0.1.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47c5e5ac752e18207b12e16b10631ae5f7f68f8805f335f9b817ead83d9ffce1"
-dependencies = [
- "quote 1.0.3",
- "syn 1.0.17",
 ]
 
 [[package]]
@@ -1163,6 +1153,7 @@ dependencies = [
  "iml-manager-env",
  "iml-rabbit",
  "iml-service-queue",
+ "iml-tracing",
  "iml-util",
  "iml-wire-types",
  "rand 0.7.3",
@@ -1172,7 +1163,6 @@ dependencies = [
  "tokio-runtime-shutdown",
  "tokio-test",
  "tracing",
- "tracing-subscriber",
  "warp",
 ]
 
@@ -1194,6 +1184,7 @@ dependencies = [
  "iml-cmd",
  "iml-fs",
  "iml-systemd",
+ "iml-tracing",
  "iml-util",
  "iml-wire-types",
  "inotify",
@@ -1205,7 +1196,6 @@ dependencies = [
  "mockito",
  "native-tls",
  "parking_lot 0.9.0",
- "pretty_assertions",
  "prettytable-rs",
  "regex",
  "reqwest",
@@ -1219,9 +1209,8 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
- "tracing-subscriber",
  "url",
- "uuid 0.7.4",
+ "uuid",
  "v_hist",
  "version-utils",
 ]
@@ -1233,13 +1222,13 @@ dependencies = [
  "futures",
  "iml-manager-env",
  "iml-rabbit",
+ "iml-tracing",
  "iml-wire-types",
  "serde",
  "serde_json",
  "tokio",
  "tracing",
- "tracing-subscriber",
- "uuid 0.7.4",
+ "uuid",
  "warp",
 ]
 
@@ -1251,12 +1240,12 @@ dependencies = [
  "iml-job-scheduler-rpc",
  "iml-manager-env",
  "iml-rabbit",
+ "iml-tracing",
  "iml-wire-types",
  "serde",
  "serde_json",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "warp",
 ]
 
@@ -1290,6 +1279,7 @@ dependencies = [
  "iml-postgres",
  "iml-rabbit",
  "iml-service-queue",
+ "iml-tracing",
  "iml-wire-types",
  "insta",
  "serde",
@@ -1298,7 +1288,6 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
- "tracing-subscriber",
  "warp",
 ]
 
@@ -1308,7 +1297,6 @@ version = "0.2.0"
 dependencies = [
  "bytes",
  "futures",
- "pretty_assertions",
  "tempdir",
  "tempfile",
  "tokio",
@@ -1334,7 +1322,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
- "uuid 0.8.1",
+ "uuid",
 ]
 
 [[package]]
@@ -1345,11 +1333,10 @@ dependencies = [
  "futures",
  "iml-fs",
  "iml-manager-env",
- "pretty_assertions",
+ "iml-tracing",
  "tempdir",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "warp",
 ]
 
@@ -1366,6 +1353,7 @@ dependencies = [
  "iml-api-utils",
  "iml-influx",
  "iml-manager-client",
+ "iml-tracing",
  "iml-wire-types",
  "indicatif",
  "number-formatter",
@@ -1377,7 +1365,6 @@ dependencies = [
  "structopt",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1405,10 +1392,10 @@ dependencies = [
  "iml-orm",
  "iml-rabbit",
  "iml-service-queue",
+ "iml-tracing",
  "iml-wire-types",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1435,10 +1422,10 @@ dependencies = [
  "futures-util",
  "iml-postgres",
  "iml-service-queue",
+ "iml-tracing",
  "iml-wire-types",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1458,10 +1445,10 @@ dependencies = [
  "futures",
  "iml-rabbit",
  "iml-service-queue",
+ "iml-tracing",
  "iml-wire-types",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1515,12 +1502,12 @@ dependencies = [
  "futures",
  "iml-manager-env",
  "iml-service-queue",
+ "iml-tracing",
  "iml-wire-types",
  "influx_db_client",
  "lustre_collector",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "url",
 ]
 
@@ -1545,13 +1532,22 @@ dependencies = [
  "iml-cmd",
  "iml-manager-client",
  "iml-manager-env",
+ "iml-tracing",
  "serde",
  "serde_json",
  "structopt",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "warp",
+]
+
+[[package]]
+name = "iml-tracing"
+version = "0.1.0"
+dependencies = [
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -1576,14 +1572,14 @@ dependencies = [
  "iml-manager-env",
  "iml-postgres",
  "iml-rabbit",
+ "iml-tracing",
  "iml-wire-types",
  "serde",
  "serde_json",
  "tokio",
  "tokio-runtime-shutdown",
  "tracing",
- "tracing-subscriber",
- "uuid 0.7.4",
+ "uuid",
  "warp",
 ]
 
@@ -2200,15 +2196,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "output_vt100"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53cdc5b785b7a58c5aad8216b3dfa114df64b0b06ae6e1501cef91df2fbdf8f9"
-dependencies = [
- "winapi 0.3.8",
-]
-
-[[package]]
 name = "parking_lot"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2226,7 +2213,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3a704eb390aafdc107b0e392f56a82b668e3a71366993b5340f5833fd62505e"
 dependencies = [
  "lock_api",
- "parking_lot_core 0.7.1",
+ "parking_lot_core 0.7.2",
 ]
 
 [[package]]
@@ -2246,9 +2233,9 @@ dependencies = [
 
 [[package]]
 name = "parking_lot_core"
-version = "0.7.1"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e136c1904604defe99ce5fd71a28d473fa60a12255d511aa78a9ddf11237aeb"
+checksum = "d58c7c768d4ba344e3e8d72518ac13e259d7c7ade24167003b8488e10b6740a3"
 dependencies = [
  "cfg-if",
  "cloudabi",
@@ -2398,9 +2385,9 @@ checksum = "237844750cfbb86f67afe27eee600dfbbcb6188d734139b534cbfbf4f96792ae"
 
 [[package]]
 name = "pin-utils"
-version = "0.1.0-alpha.4"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5894c618ce612a3fa23881b152b608bafb8c56cfc22f434a3ba3120b40f7b587"
+checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "pinky-swear"
@@ -2468,18 +2455,6 @@ name = "precomputed-hash"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
-
-[[package]]
-name = "pretty_assertions"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f81e1644e1b54f5a68959a29aa86cde704219254669da328ecfdf6a1f09d427"
-dependencies = [
- "ansi_term 0.11.0",
- "ctor",
- "difference",
- "output_vt100",
-]
 
 [[package]]
 name = "prettytable-rs"
@@ -3105,9 +3080,9 @@ dependencies = [
 
 [[package]]
 name = "sharded-slab"
-version = "0.0.8"
+version = "0.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae75d0445b5d3778c9da3d1f840faa16d0627c8607f78a74daf69e5b988c39a1"
+checksum = "06d5a3f5166fb5b42a5439f2eee8b9de149e235961e3eb21c5808fc3ea17ff3e"
 dependencies = [
  "lazy_static",
 ]
@@ -3269,9 +3244,9 @@ checksum = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
 
 [[package]]
 name = "structopt"
-version = "0.3.13"
+version = "0.3.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff6da2e8d107dfd7b74df5ef4d205c6aebee0706c647f6bc6a2d5789905c00fb"
+checksum = "863246aaf5ddd0d6928dfeb1a9ca65f505599e4e1b399935ef7e75107516b4ef"
 dependencies = [
  "clap",
  "lazy_static",
@@ -3280,9 +3255,9 @@ dependencies = [
 
 [[package]]
 name = "structopt-derive"
-version = "0.4.6"
+version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a489c87c08fbaf12e386665109dd13470dcc9c4583ea3e10dd2b4523e5ebd9ac"
+checksum = "d239ca4b13aee7a2142e6795cbd69e457665ff8037aed33b3effdc430d2f927a"
 dependencies = [
  "heck",
  "proc-macro-error 1.0.2",
@@ -3357,9 +3332,9 @@ dependencies = [
 
 [[package]]
 name = "tcp-stream"
-version = "0.10.3"
+version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b90b1c8f6ae2edd9fd48158cdf10eea2c57c71560bc36d020e8f053e1c98cd5a"
+checksum = "ae73d8436406c3db72ee8c71afb734b8e9b35deb58ccda9fb9c76fc9111d0b90"
 dependencies = [
  "cfg-if",
  "mio 0.7.0",
@@ -3469,12 +3444,11 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.1.42"
+version = "0.1.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db8dcfca086c1143c9270ac42a2bbd8a7ee477b78ac8e45b19abfb0cbede4b6f"
+checksum = "ca8a50ef2360fbd1eeb0ecd46795a87a19024eb4b53c5dc916ca1fd95fe62438"
 dependencies = [
  "libc",
- "redox_syscall",
  "winapi 0.3.8",
 ]
 
@@ -3664,9 +3638,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-subscriber"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfc50df245be6f0adf35c399cb16dea60e2c7d6cc83ff5dc22d727df06dd6f0c"
+checksum = "1d53c40489aa69c9aed21ff483f26886ca8403df33bdc2d2f87c60c1617826d2"
 dependencies = [
  "ansi_term 0.11.0",
  "chrono",
@@ -3816,15 +3790,6 @@ name = "utf-8"
 version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "05e42f7c18b8f902290b009cde6d651262f956c98bc51bca4cd1d511c9cd85c7"
-
-[[package]]
-name = "uuid"
-version = "0.7.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90dbc611eb48397705a6b0f6e917da23ae517e4d127123d2cf7674206627d32a"
-dependencies = [
- "rand 0.6.5",
-]
 
 [[package]]
 name = "uuid"
@@ -4048,9 +4013,9 @@ checksum = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
 
 [[package]]
 name = "winapi-util"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa515c5163a99cc82bab70fd3bfdd36d827be85de63737b40fcef2ce084a436e"
+checksum = "70ec6ce85bb158151cae5e5c87f95a8e97d2c0c4b001223f33a334e3ce5de178"
 dependencies = [
  "winapi 0.3.8",
 ]
