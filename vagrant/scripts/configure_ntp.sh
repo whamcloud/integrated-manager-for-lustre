@@ -10,5 +10,6 @@ sed -i -e "/^server /d" /etc/ntp.conf
 sed -i -e "$ a server $NTP_SERVER iburst" /etc/ntp.conf
 
 sntp "$NTP_SERVER"
+sntp "$NTP_SERVER"
 
 systemctl enable --now ntpd.service

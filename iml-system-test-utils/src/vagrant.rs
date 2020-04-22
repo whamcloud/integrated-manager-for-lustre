@@ -3,8 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    iml, pdsh, server_map_to_server_set, try_command_n_times, SetupConfig, SetupConfigType,
-    STRATAGEM_CLIENT_PROFILE, STRATAGEM_SERVER_PROFILE,
+    iml, pdsh, try_command_n_times, SetupConfig, SetupConfigType, STRATAGEM_CLIENT_PROFILE,
+    STRATAGEM_SERVER_PROFILE,
 };
 use futures::future::try_join_all;
 use iml_cmd::{CheckedCommandExt, CmdError};
@@ -380,8 +380,8 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     server_map: HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
-    let server_set = server_map.values().cloned().collect::<BTreeSet<&[&str]>>();
-    let server_list = server_map_to_server_set(&server_set);
+    let server_set: BTreeSet<_> = server_map.values().cloned().flatten().collect();
+
     setup_bare(&config.all_but_adm()[..], &config, NtpServer::HostOnly).await?;
 
     up().await?
@@ -391,14 +391,14 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
 
     delay_for(Duration::from_secs(30)).await;
 
-    configure_docker_network(&server_list[..]).await?;
+    configure_docker_network(server_set).await?;
 
     add_docker_servers(&config, &server_map).await?;
 
     Ok(())
 }
 
-pub async fn configure_docker_network(hosts: &[&str]) -> Result<(), CmdError> {
+pub async fn configure_docker_network(hosts: BTreeSet<&&str>) -> Result<(), CmdError> {
     // The configure-docker-network provisioner must be run individually on
     // each server node.
     println!(

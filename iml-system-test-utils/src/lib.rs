@@ -5,7 +5,7 @@ pub mod vagrant;
 
 use iml_cmd::CmdError;
 use iml_wire_types::Branding;
-use std::{collections::BTreeSet, io, time::Duration};
+use std::{io, time::Duration};
 use tokio::{process::Command, time::delay_for};
 
 pub struct SetupConfig {
@@ -125,17 +125,4 @@ pub fn get_local_server_names<'a>(servers: &'a [&'a str]) -> Vec<String> {
         .iter()
         .map(move |x| format!("{}.local", x))
         .collect()
-}
-
-pub fn server_map_to_server_set<'a>(server_map: &'a BTreeSet<&[&str]>) -> Vec<&'a str> {
-    let mut set = server_map
-        .iter()
-        .cloned()
-        .flatten()
-        .cloned()
-        .collect::<Vec<&str>>();
-
-    set.sort();
-
-    set
 }
