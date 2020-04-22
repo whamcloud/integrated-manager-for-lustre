@@ -1,0 +1,2016 @@
+{
+  "Root": {
+    "children": [
+      {
+        "ScsiDevice": {
+          "serial": "36001405da4f3e02fd614b0fac14c0e3d",
+          "scsi80": "SLIO-ORG ost3            da4f3e02-fd61-4b0f-ac14-c0e3da5164e3",
+          "major": "66",
+          "minor": "64",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:2/block/sdak",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "867076623782509874",
+          "fs_label": "ost12",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405da4f3e02fd614b0fac14c0e3d",
+            "/dev/disk/by-id/wwn-0x6001405da4f3e02fd614b0fac14c0e3d",
+            "/dev/disk/by-path/fc---lun-2",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-2",
+            "/dev/disk/by-label/ost12",
+            "/dev/disk/by-uuid/867076623782509874",
+            "/dev/sdak"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-18",
+                "serial": "36001405da4f3e02fd614b0fac14c0e3d",
+                "scsi80": "SLIO-ORG ost3            da4f3e02-fd61-4b0f-ac14-c0e3da5164e3",
+                "dm_name": "mpathm",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "18",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "867076623782509874",
+                "fs_label": "ost12",
+                "paths": [
+                  "/dev/mapper/mpathm",
+                  "/dev/disk/by-id/dm-name-mpathm",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405da4f3e02fd614b0fac14c0e3d",
+                  "/dev/disk/by-label/ost12",
+                  "/dev/disk/by-uuid/867076623782509874",
+                  "/dev/dm-18"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405d4c04ef7170f4c89b2e41460d",
+          "scsi80": "SLIO-ORG ost14           d4c04ef7-170f-4c89-b2e4-1460d19b6040",
+          "major": "65",
+          "minor": "0",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:13/block/sdq",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "16796817936759794391",
+          "fs_label": "ost5",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405d4c04ef7170f4c89b2e41460d",
+            "/dev/disk/by-id/wwn-0x6001405d4c04ef7170f4c89b2e41460d",
+            "/dev/disk/by-path/fc---lun-13",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-13",
+            "/dev/disk/by-label/ost5",
+            "/dev/disk/by-uuid/16796817936759794391",
+            "/dev/sdq"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-8",
+                "serial": "36001405d4c04ef7170f4c89b2e41460d",
+                "scsi80": "SLIO-ORG ost14           d4c04ef7-170f-4c89-b2e4-1460d19b6040",
+                "dm_name": "mpathf",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "8",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "16796817936759794391",
+                "fs_label": "ost5",
+                "paths": [
+                  "/dev/mapper/mpathf",
+                  "/dev/disk/by-id/dm-name-mpathf",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405d4c04ef7170f4c89b2e41460d",
+                  "/dev/disk/by-label/ost5",
+                  "/dev/disk/by-uuid/16796817936759794391",
+                  "/dev/dm-8"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "360014050d3ab40ec14447f1981b3166f",
+          "scsi80": "SLIO-ORG ost8            0d3ab40e-c144-47f1-981b-3166f3800a27",
+          "major": "65",
+          "minor": "176",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:7/block/sdab",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "5078902062310758123",
+          "fs_label": "ost17",
+          "paths": [
+            "/dev/disk/by-id/scsi-360014050d3ab40ec14447f1981b3166f",
+            "/dev/disk/by-id/wwn-0x60014050d3ab40ec14447f1981b3166f",
+            "/dev/disk/by-path/fc---lun-7",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-7",
+            "/dev/disk/by-label/ost17",
+            "/dev/disk/by-uuid/5078902062310758123",
+            "/dev/sdab"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-13",
+                "serial": "360014050d3ab40ec14447f1981b3166f",
+                "scsi80": "SLIO-ORG ost8            0d3ab40e-c144-47f1-981b-3166f3800a27",
+                "dm_name": "mpathr",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "13",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "5078902062310758123",
+                "fs_label": "ost17",
+                "paths": [
+                  "/dev/mapper/mpathr",
+                  "/dev/disk/by-id/dm-name-mpathr",
+                  "/dev/disk/by-id/dm-uuid-mpath-360014050d3ab40ec14447f1981b3166f",
+                  "/dev/disk/by-label/ost17",
+                  "/dev/disk/by-uuid/5078902062310758123",
+                  "/dev/dm-13"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "360014055e8ba9461ee047e0adf1f4dec",
+          "scsi80": "SLIO-ORG ost19           5e8ba946-1ee0-47e0-adf1-f4decdab5b47",
+          "major": "8",
+          "minor": "80",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:18/block/sdf",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "18234780767096660949",
+          "fs_label": "ost10",
+          "paths": [
+            "/dev/disk/by-id/scsi-360014055e8ba9461ee047e0adf1f4dec",
+            "/dev/disk/by-id/wwn-0x60014055e8ba9461ee047e0adf1f4dec",
+            "/dev/disk/by-path/fc---lun-18",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-18",
+            "/dev/disk/by-label/ost10",
+            "/dev/disk/by-uuid/18234780767096660949",
+            "/dev/sdf"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-2",
+                "serial": "360014055e8ba9461ee047e0adf1f4dec",
+                "scsi80": "SLIO-ORG ost19           5e8ba946-1ee0-47e0-adf1-f4decdab5b47",
+                "dm_name": "mpathk",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "2",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "18234780767096660949",
+                "fs_label": "ost10",
+                "paths": [
+                  "/dev/mapper/mpathk",
+                  "/dev/disk/by-id/dm-name-mpathk",
+                  "/dev/disk/by-id/dm-uuid-mpath-360014055e8ba9461ee047e0adf1f4dec",
+                  "/dev/disk/by-label/ost10",
+                  "/dev/disk/by-uuid/18234780767096660949",
+                  "/dev/dm-2"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405d97d820ec0334bcdbbcd29a10",
+          "scsi80": "SLIO-ORG ost9            d97d820e-c033-4bcd-bbcd-29a106cff7f9",
+          "major": "65",
+          "minor": "144",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:8/block/sdz",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "16554480825462483027",
+          "fs_label": "ost18",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405d97d820ec0334bcdbbcd29a10",
+            "/dev/disk/by-id/wwn-0x6001405d97d820ec0334bcdbbcd29a10",
+            "/dev/disk/by-path/fc---lun-8",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-8",
+            "/dev/disk/by-label/ost18",
+            "/dev/disk/by-uuid/16554480825462483027",
+            "/dev/sdz"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-12",
+                "serial": "36001405d97d820ec0334bcdbbcd29a10",
+                "scsi80": "SLIO-ORG ost9            d97d820e-c033-4bcd-bbcd-29a106cff7f9",
+                "dm_name": "mpaths",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "12",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "16554480825462483027",
+                "fs_label": "ost18",
+                "paths": [
+                  "/dev/mapper/mpaths",
+                  "/dev/disk/by-id/dm-name-mpaths",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405d97d820ec0334bcdbbcd29a10",
+                  "/dev/disk/by-label/ost18",
+                  "/dev/disk/by-uuid/16554480825462483027",
+                  "/dev/dm-12"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405b755dc6b9fec451697710f154",
+          "scsi80": "SLIO-ORG ost16           b755dc6b-9fec-4516-9771-0f154975c4cc",
+          "major": "8",
+          "minor": "192",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:15/block/sdm",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "1159561821729130748",
+          "fs_label": "ost7",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405b755dc6b9fec451697710f154",
+            "/dev/disk/by-id/wwn-0x6001405b755dc6b9fec451697710f154",
+            "/dev/disk/by-path/fc---lun-15",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-15",
+            "/dev/disk/by-label/ost7",
+            "/dev/disk/by-uuid/1159561821729130748",
+            "/dev/sdm"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-5",
+                "serial": "36001405b755dc6b9fec451697710f154",
+                "scsi80": "SLIO-ORG ost16           b755dc6b-9fec-4516-9771-0f154975c4cc",
+                "dm_name": "mpathh",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "5",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "1159561821729130748",
+                "fs_label": "ost7",
+                "paths": [
+                  "/dev/mapper/mpathh",
+                  "/dev/disk/by-id/dm-name-mpathh",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405b755dc6b9fec451697710f154",
+                  "/dev/disk/by-label/ost7",
+                  "/dev/disk/by-uuid/1159561821729130748",
+                  "/dev/dm-5"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405b755dc6b9fec451697710f154",
+          "scsi80": "SLIO-ORG ost16           b755dc6b-9fec-4516-9771-0f154975c4cc",
+          "major": "8",
+          "minor": "176",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:15/block/sdl",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "1159561821729130748",
+          "fs_label": "ost7",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405b755dc6b9fec451697710f154",
+            "/dev/disk/by-id/wwn-0x6001405b755dc6b9fec451697710f154",
+            "/dev/disk/by-path/fc---lun-15",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-15",
+            "/dev/disk/by-label/ost7",
+            "/dev/disk/by-uuid/1159561821729130748",
+            "/dev/sdl"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-5",
+                "serial": "36001405b755dc6b9fec451697710f154",
+                "scsi80": "SLIO-ORG ost16           b755dc6b-9fec-4516-9771-0f154975c4cc",
+                "dm_name": "mpathh",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "5",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "1159561821729130748",
+                "fs_label": "ost7",
+                "paths": [
+                  "/dev/mapper/mpathh",
+                  "/dev/disk/by-id/dm-name-mpathh",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405b755dc6b9fec451697710f154",
+                  "/dev/disk/by-label/ost7",
+                  "/dev/disk/by-uuid/1159561821729130748",
+                  "/dev/dm-5"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405be573fca80964b1c955fabaf5",
+          "scsi80": "SLIO-ORG ost5            be573fca-8096-4b1c-955f-abaf5b0d2912",
+          "major": "66",
+          "minor": "48",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:4/block/sdaj",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "7343300484951083089",
+          "fs_label": "ost14",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405be573fca80964b1c955fabaf5",
+            "/dev/disk/by-id/wwn-0x6001405be573fca80964b1c955fabaf5",
+            "/dev/disk/by-path/fc---lun-4",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-4",
+            "/dev/disk/by-label/ost14",
+            "/dev/disk/by-uuid/7343300484951083089",
+            "/dev/sdaj"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-16",
+                "serial": "36001405be573fca80964b1c955fabaf5",
+                "scsi80": "SLIO-ORG ost5            be573fca-8096-4b1c-955f-abaf5b0d2912",
+                "dm_name": "mpatho",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "16",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "7343300484951083089",
+                "fs_label": "ost14",
+                "paths": [
+                  "/dev/mapper/mpatho",
+                  "/dev/disk/by-id/dm-name-mpatho",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405be573fca80964b1c955fabaf5",
+                  "/dev/disk/by-label/ost14",
+                  "/dev/disk/by-uuid/7343300484951083089",
+                  "/dev/dm-16"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405d4291d03c272490f94413850d",
+          "scsi80": "SLIO-ORG ost4            d4291d03-c272-490f-9441-3850d7385f32",
+          "major": "66",
+          "minor": "80",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:3/block/sdal",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "2098662261227363666",
+          "fs_label": "ost13",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405d4291d03c272490f94413850d",
+            "/dev/disk/by-id/wwn-0x6001405d4291d03c272490f94413850d",
+            "/dev/disk/by-path/fc---lun-3",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-3",
+            "/dev/disk/by-label/ost13",
+            "/dev/disk/by-uuid/2098662261227363666",
+            "/dev/sdal"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-17",
+                "serial": "36001405d4291d03c272490f94413850d",
+                "scsi80": "SLIO-ORG ost4            d4291d03-c272-490f-9441-3850d7385f32",
+                "dm_name": "mpathn",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "17",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "2098662261227363666",
+                "fs_label": "ost13",
+                "paths": [
+                  "/dev/mapper/mpathn",
+                  "/dev/disk/by-id/dm-name-mpathn",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405d4291d03c272490f94413850d",
+                  "/dev/disk/by-label/ost13",
+                  "/dev/disk/by-uuid/2098662261227363666",
+                  "/dev/dm-17"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405d97d820ec0334bcdbbcd29a10",
+          "scsi80": "SLIO-ORG ost9            d97d820e-c033-4bcd-bbcd-29a106cff7f9",
+          "major": "65",
+          "minor": "160",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:8/block/sdaa",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "16554480825462483027",
+          "fs_label": "ost18",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405d97d820ec0334bcdbbcd29a10",
+            "/dev/disk/by-id/wwn-0x6001405d97d820ec0334bcdbbcd29a10",
+            "/dev/disk/by-path/fc---lun-8",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-8",
+            "/dev/disk/by-label/ost18",
+            "/dev/disk/by-uuid/16554480825462483027",
+            "/dev/sdaa"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-12",
+                "serial": "36001405d97d820ec0334bcdbbcd29a10",
+                "scsi80": "SLIO-ORG ost9            d97d820e-c033-4bcd-bbcd-29a106cff7f9",
+                "dm_name": "mpaths",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "12",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "16554480825462483027",
+                "fs_label": "ost18",
+                "paths": [
+                  "/dev/mapper/mpaths",
+                  "/dev/disk/by-id/dm-name-mpaths",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405d97d820ec0334bcdbbcd29a10",
+                  "/dev/disk/by-label/ost18",
+                  "/dev/disk/by-uuid/16554480825462483027",
+                  "/dev/dm-12"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "360014050618ee0f743645d99e0575522",
+          "scsi80": "SLIO-ORG ost2            0618ee0f-7436-45d9-9e05-755228f38025",
+          "major": "66",
+          "minor": "128",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:1/block/sdao",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "13883877537783670255",
+          "fs_label": "ost1",
+          "paths": [
+            "/dev/disk/by-id/scsi-360014050618ee0f743645d99e0575522",
+            "/dev/disk/by-id/wwn-0x60014050618ee0f743645d99e0575522",
+            "/dev/disk/by-path/fc---lun-1",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-1",
+            "/dev/disk/by-label/ost1",
+            "/dev/disk/by-uuid/13883877537783670255",
+            "/dev/sdao"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-19",
+                "serial": "360014050618ee0f743645d99e0575522",
+                "scsi80": "SLIO-ORG ost2            0618ee0f-7436-45d9-9e05-755228f38025",
+                "dm_name": "mpathb",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "19",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "13883877537783670255",
+                "fs_label": "ost1",
+                "paths": [
+                  "/dev/mapper/mpathb",
+                  "/dev/disk/by-id/dm-name-mpathb",
+                  "/dev/disk/by-id/dm-uuid-mpath-360014050618ee0f743645d99e0575522",
+                  "/dev/disk/by-label/ost1",
+                  "/dev/disk/by-uuid/13883877537783670255",
+                  "/dev/dm-19"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405344dffacf03b40beacc990f91",
+          "scsi80": "SLIO-ORG ost17           344dffac-f03b-40be-acc9-90f919eba26a",
+          "major": "8",
+          "minor": "144",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:16/block/sdj",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "11998847116891928408",
+          "fs_label": "ost8",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405344dffacf03b40beacc990f91",
+            "/dev/disk/by-id/wwn-0x6001405344dffacf03b40beacc990f91",
+            "/dev/disk/by-path/fc---lun-16",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-16",
+            "/dev/disk/by-label/ost8",
+            "/dev/disk/by-uuid/11998847116891928408",
+            "/dev/sdj"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-4",
+                "serial": "36001405344dffacf03b40beacc990f91",
+                "scsi80": "SLIO-ORG ost17           344dffac-f03b-40be-acc9-90f919eba26a",
+                "dm_name": "mpathi",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "4",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "11998847116891928408",
+                "fs_label": "ost8",
+                "paths": [
+                  "/dev/mapper/mpathi",
+                  "/dev/disk/by-id/dm-name-mpathi",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405344dffacf03b40beacc990f91",
+                  "/dev/disk/by-label/ost8",
+                  "/dev/disk/by-uuid/11998847116891928408",
+                  "/dev/dm-4"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405d6b15cf577c547088a875a7c9",
+          "scsi80": "SLIO-ORG ost7            d6b15cf5-77c5-4708-8a87-5a7c98731e9a",
+          "major": "65",
+          "minor": "208",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:6/block/sdad",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "10222295332636198756",
+          "fs_label": "ost16",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405d6b15cf577c547088a875a7c9",
+            "/dev/disk/by-id/wwn-0x6001405d6b15cf577c547088a875a7c9",
+            "/dev/disk/by-path/fc---lun-6",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-6",
+            "/dev/disk/by-label/ost16",
+            "/dev/disk/by-uuid/10222295332636198756",
+            "/dev/sdad"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-14",
+                "serial": "36001405d6b15cf577c547088a875a7c9",
+                "scsi80": "SLIO-ORG ost7            d6b15cf5-77c5-4708-8a87-5a7c98731e9a",
+                "dm_name": "mpathq",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "14",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "10222295332636198756",
+                "fs_label": "ost16",
+                "paths": [
+                  "/dev/mapper/mpathq",
+                  "/dev/disk/by-id/dm-name-mpathq",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405d6b15cf577c547088a875a7c9",
+                  "/dev/disk/by-label/ost16",
+                  "/dev/disk/by-uuid/10222295332636198756",
+                  "/dev/dm-14"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "3600140501ea0e9be348404db44d11f4b",
+          "scsi80": "SLIO-ORG ost18           01ea0e9b-e348-404d-b44d-11f4b119c511",
+          "major": "8",
+          "minor": "112",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:17/block/sdh",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "15404256632694394711",
+          "fs_label": "ost9",
+          "paths": [
+            "/dev/disk/by-id/scsi-3600140501ea0e9be348404db44d11f4b",
+            "/dev/disk/by-id/wwn-0x600140501ea0e9be348404db44d11f4b",
+            "/dev/disk/by-path/fc---lun-17",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-17",
+            "/dev/disk/by-label/ost9",
+            "/dev/disk/by-uuid/15404256632694394711",
+            "/dev/sdh"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-3",
+                "serial": "3600140501ea0e9be348404db44d11f4b",
+                "scsi80": "SLIO-ORG ost18           01ea0e9b-e348-404d-b44d-11f4b119c511",
+                "dm_name": "mpathj",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "3",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "15404256632694394711",
+                "fs_label": "ost9",
+                "paths": [
+                  "/dev/mapper/mpathj",
+                  "/dev/disk/by-id/dm-name-mpathj",
+                  "/dev/disk/by-id/dm-uuid-mpath-3600140501ea0e9be348404db44d11f4b",
+                  "/dev/disk/by-label/ost9",
+                  "/dev/disk/by-uuid/15404256632694394711",
+                  "/dev/dm-3"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405fc1006f74e3c402383edaa375",
+          "scsi80": "SLIO-ORG ost12           fc1006f7-4e3c-4023-83ed-aa37560b0d82",
+          "major": "65",
+          "minor": "48",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:11/block/sdt",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "9090725866463677654",
+          "fs_label": "ost3",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405fc1006f74e3c402383edaa375",
+            "/dev/disk/by-id/wwn-0x6001405fc1006f74e3c402383edaa375",
+            "/dev/disk/by-path/fc---lun-11",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-11",
+            "/dev/disk/by-label/ost3",
+            "/dev/disk/by-uuid/9090725866463677654",
+            "/dev/sdt"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-9",
+                "serial": "36001405fc1006f74e3c402383edaa375",
+                "scsi80": "SLIO-ORG ost12           fc1006f7-4e3c-4023-83ed-aa37560b0d82",
+                "dm_name": "mpathd",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "9",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "9090725866463677654",
+                "fs_label": "ost3",
+                "paths": [
+                  "/dev/mapper/mpathd",
+                  "/dev/disk/by-id/dm-name-mpathd",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405fc1006f74e3c402383edaa375",
+                  "/dev/disk/by-label/ost3",
+                  "/dev/disk/by-uuid/9090725866463677654",
+                  "/dev/dm-9"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405672b27cf380a49449d354890e",
+          "scsi80": "SLIO-ORG ost15           672b27cf-380a-4944-9d35-4890efbd2d51",
+          "major": "8",
+          "minor": "208",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:14/block/sdn",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "3648061680288144113",
+          "fs_label": "ost6",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405672b27cf380a49449d354890e",
+            "/dev/disk/by-id/wwn-0x6001405672b27cf380a49449d354890e",
+            "/dev/disk/by-path/fc---lun-14",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-14",
+            "/dev/disk/by-label/ost6",
+            "/dev/disk/by-uuid/3648061680288144113",
+            "/dev/sdn"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-6",
+                "serial": "36001405672b27cf380a49449d354890e",
+                "scsi80": "SLIO-ORG ost15           672b27cf-380a-4944-9d35-4890efbd2d51",
+                "dm_name": "mpathg",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "6",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "3648061680288144113",
+                "fs_label": "ost6",
+                "paths": [
+                  "/dev/mapper/mpathg",
+                  "/dev/disk/by-id/dm-name-mpathg",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405672b27cf380a49449d354890e",
+                  "/dev/disk/by-label/ost6",
+                  "/dev/disk/by-uuid/3648061680288144113",
+                  "/dev/dm-6"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "360014050d3ab40ec14447f1981b3166f",
+          "scsi80": "SLIO-ORG ost8            0d3ab40e-c144-47f1-981b-3166f3800a27",
+          "major": "65",
+          "minor": "192",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:7/block/sdac",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "5078902062310758123",
+          "fs_label": "ost17",
+          "paths": [
+            "/dev/disk/by-id/scsi-360014050d3ab40ec14447f1981b3166f",
+            "/dev/disk/by-id/wwn-0x60014050d3ab40ec14447f1981b3166f",
+            "/dev/disk/by-path/fc---lun-7",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-7",
+            "/dev/disk/by-label/ost17",
+            "/dev/disk/by-uuid/5078902062310758123",
+            "/dev/sdac"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-13",
+                "serial": "360014050d3ab40ec14447f1981b3166f",
+                "scsi80": "SLIO-ORG ost8            0d3ab40e-c144-47f1-981b-3166f3800a27",
+                "dm_name": "mpathr",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "13",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "5078902062310758123",
+                "fs_label": "ost17",
+                "paths": [
+                  "/dev/mapper/mpathr",
+                  "/dev/disk/by-id/dm-name-mpathr",
+                  "/dev/disk/by-id/dm-uuid-mpath-360014050d3ab40ec14447f1981b3166f",
+                  "/dev/disk/by-label/ost17",
+                  "/dev/disk/by-uuid/5078902062310758123",
+                  "/dev/dm-13"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "3600140559cee8670eff45108165135b9",
+          "scsi80": "SLIO-ORG ost10           59cee867-0eff-4510-8165-135b9e25a8f8",
+          "major": "65",
+          "minor": "128",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:9/block/sdy",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "15943961459041747174",
+          "fs_label": "ost19",
+          "paths": [
+            "/dev/disk/by-id/scsi-3600140559cee8670eff45108165135b9",
+            "/dev/disk/by-id/wwn-0x600140559cee8670eff45108165135b9",
+            "/dev/disk/by-path/fc---lun-9",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-9",
+            "/dev/disk/by-label/ost19",
+            "/dev/disk/by-uuid/15943961459041747174",
+            "/dev/sdy"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-11",
+                "serial": "3600140559cee8670eff45108165135b9",
+                "scsi80": "SLIO-ORG ost10           59cee867-0eff-4510-8165-135b9e25a8f8",
+                "dm_name": "mpatht",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "11",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "15943961459041747174",
+                "fs_label": "ost19",
+                "paths": [
+                  "/dev/mapper/mpatht",
+                  "/dev/disk/by-id/dm-name-mpatht",
+                  "/dev/disk/by-id/dm-uuid-mpath-3600140559cee8670eff45108165135b9",
+                  "/dev/disk/by-label/ost19",
+                  "/dev/disk/by-uuid/15943961459041747174",
+                  "/dev/dm-11"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405ac72ed42e9734b38a22fdedfa",
+          "scsi80": "SLIO-ORG ost20           ac72ed42-e973-4b38-a22f-dedfa23269af",
+          "major": "8",
+          "minor": "64",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:19/block/sde",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "6204919664329753855",
+          "fs_label": "ost11",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405ac72ed42e9734b38a22fdedfa",
+            "/dev/disk/by-id/wwn-0x6001405ac72ed42e9734b38a22fdedfa",
+            "/dev/disk/by-path/fc---lun-19",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-19",
+            "/dev/disk/by-label/ost11",
+            "/dev/disk/by-uuid/6204919664329753855",
+            "/dev/sde"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-1",
+                "serial": "36001405ac72ed42e9734b38a22fdedfa",
+                "scsi80": "SLIO-ORG ost20           ac72ed42-e973-4b38-a22f-dedfa23269af",
+                "dm_name": "mpathl",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "1",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "6204919664329753855",
+                "fs_label": "ost11",
+                "paths": [
+                  "/dev/mapper/mpathl",
+                  "/dev/disk/by-id/dm-name-mpathl",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405ac72ed42e9734b38a22fdedfa",
+                  "/dev/disk/by-label/ost11",
+                  "/dev/disk/by-uuid/6204919664329753855",
+                  "/dev/dm-1"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "1ATA     VBOX HARDDISK                           VB0f128f57-092491b7",
+          "scsi80": "SATA     VBOX HARDDISK   VB0f128f57-092491b7",
+          "major": "8",
+          "minor": "0",
+          "devpath": "/devices/pci0000:00/0000:00:01.1/ata1/host0/target0:0:0/0:0:0:0/block/sda",
+          "size": 42949672960,
+          "filesystem_type": null,
+          "fs_uuid": null,
+          "fs_label": null,
+          "paths": [
+            "/dev/disk/by-id/ata-VBOX_HARDDISK_VB0f128f57-092491b7",
+            "/dev/disk/by-path/fc---lun-0",
+            "/dev/disk/by-path/pci-0000:00:01.1-ata-1.0",
+            "/dev/sda"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Partition": {
+                "serial": "1ATA     VBOX HARDDISK                           VB0f128f57-092491b7",
+                "scsi80": "SATA     VBOX HARDDISK   VB0f128f57-092491b7",
+                "partition_number": 1,
+                "size": 42948624384,
+                "major": "8",
+                "minor": "1",
+                "devpath": "/devices/pci0000:00/0000:00:01.1/ata1/host0/target0:0:0/0:0:0:0/block/sda/sda1",
+                "filesystem_type": "xfs",
+                "fs_uuid": "38c59e02-29d1-45a0-bc15-28f771f62734",
+                "fs_label": null,
+                "paths": [
+                  "/dev/disk/by-id/ata-VBOX_HARDDISK_VB0f128f57-092491b7-part1",
+                  "/dev/disk/by-path/fc---lun-0-part1",
+                  "/dev/disk/by-path/pci-0000:00:01.1-ata-1.0-part1",
+                  "/dev/disk/by-uuid/38c59e02-29d1-45a0-bc15-28f771f62734",
+                  "/dev/sda1"
+                ],
+                "mount": {
+                  "source": "/dev/sda1",
+                  "target": "/",
+                  "fs_type": "xfs",
+                  "opts": "rw,relatime,attr2,inode64,noquota"
+                },
+                "children": []
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405672b27cf380a49449d354890e",
+          "scsi80": "SLIO-ORG ost15           672b27cf-380a-4944-9d35-4890efbd2d51",
+          "major": "8",
+          "minor": "224",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:14/block/sdo",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "3648061680288144113",
+          "fs_label": "ost6",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405672b27cf380a49449d354890e",
+            "/dev/disk/by-id/wwn-0x6001405672b27cf380a49449d354890e",
+            "/dev/disk/by-path/fc---lun-14",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-14",
+            "/dev/disk/by-label/ost6",
+            "/dev/disk/by-uuid/3648061680288144113",
+            "/dev/sdo"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-6",
+                "serial": "36001405672b27cf380a49449d354890e",
+                "scsi80": "SLIO-ORG ost15           672b27cf-380a-4944-9d35-4890efbd2d51",
+                "dm_name": "mpathg",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "6",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "3648061680288144113",
+                "fs_label": "ost6",
+                "paths": [
+                  "/dev/mapper/mpathg",
+                  "/dev/disk/by-id/dm-name-mpathg",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405672b27cf380a49449d354890e",
+                  "/dev/disk/by-label/ost6",
+                  "/dev/disk/by-uuid/3648061680288144113",
+                  "/dev/dm-6"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405fc1006f74e3c402383edaa375",
+          "scsi80": "SLIO-ORG ost12           fc1006f7-4e3c-4023-83ed-aa37560b0d82",
+          "major": "65",
+          "minor": "64",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:11/block/sdu",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "9090725866463677654",
+          "fs_label": "ost3",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405fc1006f74e3c402383edaa375",
+            "/dev/disk/by-id/wwn-0x6001405fc1006f74e3c402383edaa375",
+            "/dev/disk/by-path/fc---lun-11",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-11",
+            "/dev/disk/by-label/ost3",
+            "/dev/disk/by-uuid/9090725866463677654",
+            "/dev/sdu"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-9",
+                "serial": "36001405fc1006f74e3c402383edaa375",
+                "scsi80": "SLIO-ORG ost12           fc1006f7-4e3c-4023-83ed-aa37560b0d82",
+                "dm_name": "mpathd",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "9",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "9090725866463677654",
+                "fs_label": "ost3",
+                "paths": [
+                  "/dev/mapper/mpathd",
+                  "/dev/disk/by-id/dm-name-mpathd",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405fc1006f74e3c402383edaa375",
+                  "/dev/disk/by-label/ost3",
+                  "/dev/disk/by-uuid/9090725866463677654",
+                  "/dev/dm-9"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "360014055e8ba9461ee047e0adf1f4dec",
+          "scsi80": "SLIO-ORG ost19           5e8ba946-1ee0-47e0-adf1-f4decdab5b47",
+          "major": "8",
+          "minor": "96",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:18/block/sdg",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "18234780767096660949",
+          "fs_label": "ost10",
+          "paths": [
+            "/dev/disk/by-id/scsi-360014055e8ba9461ee047e0adf1f4dec",
+            "/dev/disk/by-id/wwn-0x60014055e8ba9461ee047e0adf1f4dec",
+            "/dev/disk/by-path/fc---lun-18",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-18",
+            "/dev/disk/by-label/ost10",
+            "/dev/disk/by-uuid/18234780767096660949",
+            "/dev/sdg"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-2",
+                "serial": "360014055e8ba9461ee047e0adf1f4dec",
+                "scsi80": "SLIO-ORG ost19           5e8ba946-1ee0-47e0-adf1-f4decdab5b47",
+                "dm_name": "mpathk",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "2",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "18234780767096660949",
+                "fs_label": "ost10",
+                "paths": [
+                  "/dev/mapper/mpathk",
+                  "/dev/disk/by-id/dm-name-mpathk",
+                  "/dev/disk/by-id/dm-uuid-mpath-360014055e8ba9461ee047e0adf1f4dec",
+                  "/dev/disk/by-label/ost10",
+                  "/dev/disk/by-uuid/18234780767096660949",
+                  "/dev/dm-2"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "360014051316414dcda24cdaa2771edc8",
+          "scsi80": "SLIO-ORG ost6            1316414d-cda2-4cda-a277-1edc8e602aca",
+          "major": "66",
+          "minor": "16",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:5/block/sdah",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "3953683701854591283",
+          "fs_label": "ost15",
+          "paths": [
+            "/dev/disk/by-id/scsi-360014051316414dcda24cdaa2771edc8",
+            "/dev/disk/by-id/wwn-0x60014051316414dcda24cdaa2771edc8",
+            "/dev/disk/by-path/fc---lun-5",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-5",
+            "/dev/disk/by-label/ost15",
+            "/dev/disk/by-uuid/3953683701854591283",
+            "/dev/sdah"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-15",
+                "serial": "360014051316414dcda24cdaa2771edc8",
+                "scsi80": "SLIO-ORG ost6            1316414d-cda2-4cda-a277-1edc8e602aca",
+                "dm_name": "mpathp",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "15",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "3953683701854591283",
+                "fs_label": "ost15",
+                "paths": [
+                  "/dev/mapper/mpathp",
+                  "/dev/disk/by-id/dm-name-mpathp",
+                  "/dev/disk/by-id/dm-uuid-mpath-360014051316414dcda24cdaa2771edc8",
+                  "/dev/disk/by-label/ost15",
+                  "/dev/disk/by-uuid/3953683701854591283",
+                  "/dev/dm-15"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405ac72ed42e9734b38a22fdedfa",
+          "scsi80": "SLIO-ORG ost20           ac72ed42-e973-4b38-a22f-dedfa23269af",
+          "major": "8",
+          "minor": "48",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:19/block/sdd",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "6204919664329753855",
+          "fs_label": "ost11",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405ac72ed42e9734b38a22fdedfa",
+            "/dev/disk/by-id/wwn-0x6001405ac72ed42e9734b38a22fdedfa",
+            "/dev/disk/by-path/fc---lun-19",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-19",
+            "/dev/disk/by-label/ost11",
+            "/dev/disk/by-uuid/6204919664329753855",
+            "/dev/sdd"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-1",
+                "serial": "36001405ac72ed42e9734b38a22fdedfa",
+                "scsi80": "SLIO-ORG ost20           ac72ed42-e973-4b38-a22f-dedfa23269af",
+                "dm_name": "mpathl",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "1",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "6204919664329753855",
+                "fs_label": "ost11",
+                "paths": [
+                  "/dev/mapper/mpathl",
+                  "/dev/disk/by-id/dm-name-mpathl",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405ac72ed42e9734b38a22fdedfa",
+                  "/dev/disk/by-label/ost11",
+                  "/dev/disk/by-uuid/6204919664329753855",
+                  "/dev/dm-1"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "360014051316414dcda24cdaa2771edc8",
+          "scsi80": "SLIO-ORG ost6            1316414d-cda2-4cda-a277-1edc8e602aca",
+          "major": "65",
+          "minor": "240",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:5/block/sdaf",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "3953683701854591283",
+          "fs_label": "ost15",
+          "paths": [
+            "/dev/disk/by-id/scsi-360014051316414dcda24cdaa2771edc8",
+            "/dev/disk/by-id/wwn-0x60014051316414dcda24cdaa2771edc8",
+            "/dev/disk/by-path/fc---lun-5",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-5",
+            "/dev/disk/by-label/ost15",
+            "/dev/disk/by-uuid/3953683701854591283",
+            "/dev/sdaf"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-15",
+                "serial": "360014051316414dcda24cdaa2771edc8",
+                "scsi80": "SLIO-ORG ost6            1316414d-cda2-4cda-a277-1edc8e602aca",
+                "dm_name": "mpathp",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "15",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "3953683701854591283",
+                "fs_label": "ost15",
+                "paths": [
+                  "/dev/mapper/mpathp",
+                  "/dev/disk/by-id/dm-name-mpathp",
+                  "/dev/disk/by-id/dm-uuid-mpath-360014051316414dcda24cdaa2771edc8",
+                  "/dev/disk/by-label/ost15",
+                  "/dev/disk/by-uuid/3953683701854591283",
+                  "/dev/dm-15"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405d6b15cf577c547088a875a7c9",
+          "scsi80": "SLIO-ORG ost7            d6b15cf5-77c5-4708-8a87-5a7c98731e9a",
+          "major": "65",
+          "minor": "224",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:6/block/sdae",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "10222295332636198756",
+          "fs_label": "ost16",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405d6b15cf577c547088a875a7c9",
+            "/dev/disk/by-id/wwn-0x6001405d6b15cf577c547088a875a7c9",
+            "/dev/disk/by-path/fc---lun-6",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-6",
+            "/dev/disk/by-label/ost16",
+            "/dev/disk/by-uuid/10222295332636198756",
+            "/dev/sdae"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-14",
+                "serial": "36001405d6b15cf577c547088a875a7c9",
+                "scsi80": "SLIO-ORG ost7            d6b15cf5-77c5-4708-8a87-5a7c98731e9a",
+                "dm_name": "mpathq",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "14",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "10222295332636198756",
+                "fs_label": "ost16",
+                "paths": [
+                  "/dev/mapper/mpathq",
+                  "/dev/disk/by-id/dm-name-mpathq",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405d6b15cf577c547088a875a7c9",
+                  "/dev/disk/by-label/ost16",
+                  "/dev/disk/by-uuid/10222295332636198756",
+                  "/dev/dm-14"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405d4291d03c272490f94413850d",
+          "scsi80": "SLIO-ORG ost4            d4291d03-c272-490f-9441-3850d7385f32",
+          "major": "66",
+          "minor": "32",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:3/block/sdai",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "2098662261227363666",
+          "fs_label": "ost13",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405d4291d03c272490f94413850d",
+            "/dev/disk/by-id/wwn-0x6001405d4291d03c272490f94413850d",
+            "/dev/disk/by-path/fc---lun-3",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-3",
+            "/dev/disk/by-label/ost13",
+            "/dev/disk/by-uuid/2098662261227363666",
+            "/dev/sdai"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-17",
+                "serial": "36001405d4291d03c272490f94413850d",
+                "scsi80": "SLIO-ORG ost4            d4291d03-c272-490f-9441-3850d7385f32",
+                "dm_name": "mpathn",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "17",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "2098662261227363666",
+                "fs_label": "ost13",
+                "paths": [
+                  "/dev/mapper/mpathn",
+                  "/dev/disk/by-id/dm-name-mpathn",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405d4291d03c272490f94413850d",
+                  "/dev/disk/by-label/ost13",
+                  "/dev/disk/by-uuid/2098662261227363666",
+                  "/dev/dm-17"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "360014056f60a7c7101c4db58fcb47d92",
+          "scsi80": "SLIO-ORG ost11           6f60a7c7-101c-4db5-8fcb-47d92902f8f1",
+          "major": "65",
+          "minor": "96",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:10/block/sdw",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "5626247548244847586",
+          "fs_label": "ost2",
+          "paths": [
+            "/dev/disk/by-id/scsi-360014056f60a7c7101c4db58fcb47d92",
+            "/dev/disk/by-id/wwn-0x60014056f60a7c7101c4db58fcb47d92",
+            "/dev/disk/by-path/fc---lun-10",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-10",
+            "/dev/disk/by-label/ost2",
+            "/dev/disk/by-uuid/5626247548244847586",
+            "/dev/sdw"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-10",
+                "serial": "360014056f60a7c7101c4db58fcb47d92",
+                "scsi80": "SLIO-ORG ost11           6f60a7c7-101c-4db5-8fcb-47d92902f8f1",
+                "dm_name": "mpathc",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "10",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "5626247548244847586",
+                "fs_label": "ost2",
+                "paths": [
+                  "/dev/mapper/mpathc",
+                  "/dev/disk/by-id/dm-name-mpathc",
+                  "/dev/disk/by-id/dm-uuid-mpath-360014056f60a7c7101c4db58fcb47d92",
+                  "/dev/disk/by-label/ost2",
+                  "/dev/disk/by-uuid/5626247548244847586",
+                  "/dev/dm-10"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "360014050618ee0f743645d99e0575522",
+          "scsi80": "SLIO-ORG ost2            0618ee0f-7436-45d9-9e05-755228f38025",
+          "major": "66",
+          "minor": "112",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:1/block/sdan",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "13883877537783670255",
+          "fs_label": "ost1",
+          "paths": [
+            "/dev/disk/by-id/scsi-360014050618ee0f743645d99e0575522",
+            "/dev/disk/by-id/wwn-0x60014050618ee0f743645d99e0575522",
+            "/dev/disk/by-path/fc---lun-1",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-1",
+            "/dev/disk/by-label/ost1",
+            "/dev/disk/by-uuid/13883877537783670255",
+            "/dev/sdan"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-19",
+                "serial": "360014050618ee0f743645d99e0575522",
+                "scsi80": "SLIO-ORG ost2            0618ee0f-7436-45d9-9e05-755228f38025",
+                "dm_name": "mpathb",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "19",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "13883877537783670255",
+                "fs_label": "ost1",
+                "paths": [
+                  "/dev/mapper/mpathb",
+                  "/dev/disk/by-id/dm-name-mpathb",
+                  "/dev/disk/by-id/dm-uuid-mpath-360014050618ee0f743645d99e0575522",
+                  "/dev/disk/by-label/ost1",
+                  "/dev/disk/by-uuid/13883877537783670255",
+                  "/dev/dm-19"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "3600140501ea0e9be348404db44d11f4b",
+          "scsi80": "SLIO-ORG ost18           01ea0e9b-e348-404d-b44d-11f4b119c511",
+          "major": "8",
+          "minor": "128",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:17/block/sdi",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "15404256632694394711",
+          "fs_label": "ost9",
+          "paths": [
+            "/dev/disk/by-id/scsi-3600140501ea0e9be348404db44d11f4b",
+            "/dev/disk/by-id/wwn-0x600140501ea0e9be348404db44d11f4b",
+            "/dev/disk/by-path/fc---lun-17",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-17",
+            "/dev/disk/by-label/ost9",
+            "/dev/disk/by-uuid/15404256632694394711",
+            "/dev/sdi"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-3",
+                "serial": "3600140501ea0e9be348404db44d11f4b",
+                "scsi80": "SLIO-ORG ost18           01ea0e9b-e348-404d-b44d-11f4b119c511",
+                "dm_name": "mpathj",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "3",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "15404256632694394711",
+                "fs_label": "ost9",
+                "paths": [
+                  "/dev/mapper/mpathj",
+                  "/dev/disk/by-id/dm-name-mpathj",
+                  "/dev/disk/by-id/dm-uuid-mpath-3600140501ea0e9be348404db44d11f4b",
+                  "/dev/disk/by-label/ost9",
+                  "/dev/disk/by-uuid/15404256632694394711",
+                  "/dev/dm-3"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405344dffacf03b40beacc990f91",
+          "scsi80": "SLIO-ORG ost17           344dffac-f03b-40be-acc9-90f919eba26a",
+          "major": "8",
+          "minor": "160",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:16/block/sdk",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "11998847116891928408",
+          "fs_label": "ost8",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405344dffacf03b40beacc990f91",
+            "/dev/disk/by-id/wwn-0x6001405344dffacf03b40beacc990f91",
+            "/dev/disk/by-path/fc---lun-16",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-16",
+            "/dev/disk/by-label/ost8",
+            "/dev/disk/by-uuid/11998847116891928408",
+            "/dev/sdk"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-4",
+                "serial": "36001405344dffacf03b40beacc990f91",
+                "scsi80": "SLIO-ORG ost17           344dffac-f03b-40be-acc9-90f919eba26a",
+                "dm_name": "mpathi",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "4",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "11998847116891928408",
+                "fs_label": "ost8",
+                "paths": [
+                  "/dev/mapper/mpathi",
+                  "/dev/disk/by-id/dm-name-mpathi",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405344dffacf03b40beacc990f91",
+                  "/dev/disk/by-label/ost8",
+                  "/dev/disk/by-uuid/11998847116891928408",
+                  "/dev/dm-4"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "360014059e9ea314ea2443ac99aefc898",
+          "scsi80": "SLIO-ORG ost1            9e9ea314-ea24-43ac-99ae-fc8986e1d1bb",
+          "major": "8",
+          "minor": "16",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:0/block/sdb",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "10939021379814255977",
+          "fs_label": "ost0",
+          "paths": [
+            "/dev/disk/by-id/scsi-360014059e9ea314ea2443ac99aefc898",
+            "/dev/disk/by-id/wwn-0x60014059e9ea314ea2443ac99aefc898",
+            "/dev/disk/by-path/fc---lun-0",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-0",
+            "/dev/disk/by-label/ost0",
+            "/dev/disk/by-uuid/10939021379814255977",
+            "/dev/sdb"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-0",
+                "serial": "360014059e9ea314ea2443ac99aefc898",
+                "scsi80": "SLIO-ORG ost1            9e9ea314-ea24-43ac-99ae-fc8986e1d1bb",
+                "dm_name": "mpatha",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "0",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "10939021379814255977",
+                "fs_label": "ost0",
+                "paths": [
+                  "/dev/mapper/mpatha",
+                  "/dev/disk/by-id/dm-name-mpatha",
+                  "/dev/disk/by-id/dm-uuid-mpath-360014059e9ea314ea2443ac99aefc898",
+                  "/dev/disk/by-label/ost0",
+                  "/dev/disk/by-uuid/10939021379814255977",
+                  "/dev/dm-0"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "360014059e9ea314ea2443ac99aefc898",
+          "scsi80": "SLIO-ORG ost1            9e9ea314-ea24-43ac-99ae-fc8986e1d1bb",
+          "major": "8",
+          "minor": "32",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:0/block/sdc",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "10939021379814255977",
+          "fs_label": "ost0",
+          "paths": [
+            "/dev/disk/by-id/scsi-360014059e9ea314ea2443ac99aefc898",
+            "/dev/disk/by-id/wwn-0x60014059e9ea314ea2443ac99aefc898",
+            "/dev/disk/by-path/fc---lun-0",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-0",
+            "/dev/disk/by-label/ost0",
+            "/dev/disk/by-uuid/10939021379814255977",
+            "/dev/sdc"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-0",
+                "serial": "360014059e9ea314ea2443ac99aefc898",
+                "scsi80": "SLIO-ORG ost1            9e9ea314-ea24-43ac-99ae-fc8986e1d1bb",
+                "dm_name": "mpatha",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "0",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "10939021379814255977",
+                "fs_label": "ost0",
+                "paths": [
+                  "/dev/mapper/mpatha",
+                  "/dev/disk/by-id/dm-name-mpatha",
+                  "/dev/disk/by-id/dm-uuid-mpath-360014059e9ea314ea2443ac99aefc898",
+                  "/dev/disk/by-label/ost0",
+                  "/dev/disk/by-uuid/10939021379814255977",
+                  "/dev/dm-0"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405da4f3e02fd614b0fac14c0e3d",
+          "scsi80": "SLIO-ORG ost3            da4f3e02-fd61-4b0f-ac14-c0e3da5164e3",
+          "major": "66",
+          "minor": "96",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:2/block/sdam",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "867076623782509874",
+          "fs_label": "ost12",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405da4f3e02fd614b0fac14c0e3d",
+            "/dev/disk/by-id/wwn-0x6001405da4f3e02fd614b0fac14c0e3d",
+            "/dev/disk/by-path/fc---lun-2",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-2",
+            "/dev/disk/by-label/ost12",
+            "/dev/disk/by-uuid/867076623782509874",
+            "/dev/sdam"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-18",
+                "serial": "36001405da4f3e02fd614b0fac14c0e3d",
+                "scsi80": "SLIO-ORG ost3            da4f3e02-fd61-4b0f-ac14-c0e3da5164e3",
+                "dm_name": "mpathm",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "18",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "867076623782509874",
+                "fs_label": "ost12",
+                "paths": [
+                  "/dev/mapper/mpathm",
+                  "/dev/disk/by-id/dm-name-mpathm",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405da4f3e02fd614b0fac14c0e3d",
+                  "/dev/disk/by-label/ost12",
+                  "/dev/disk/by-uuid/867076623782509874",
+                  "/dev/dm-18"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405d4c04ef7170f4c89b2e41460d",
+          "scsi80": "SLIO-ORG ost14           d4c04ef7-170f-4c89-b2e4-1460d19b6040",
+          "major": "8",
+          "minor": "240",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:13/block/sdp",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "16796817936759794391",
+          "fs_label": "ost5",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405d4c04ef7170f4c89b2e41460d",
+            "/dev/disk/by-id/wwn-0x6001405d4c04ef7170f4c89b2e41460d",
+            "/dev/disk/by-path/fc---lun-13",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-13",
+            "/dev/disk/by-label/ost5",
+            "/dev/disk/by-uuid/16796817936759794391",
+            "/dev/sdp"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-8",
+                "serial": "36001405d4c04ef7170f4c89b2e41460d",
+                "scsi80": "SLIO-ORG ost14           d4c04ef7-170f-4c89-b2e4-1460d19b6040",
+                "dm_name": "mpathf",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "8",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "16796817936759794391",
+                "fs_label": "ost5",
+                "paths": [
+                  "/dev/mapper/mpathf",
+                  "/dev/disk/by-id/dm-name-mpathf",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405d4c04ef7170f4c89b2e41460d",
+                  "/dev/disk/by-label/ost5",
+                  "/dev/disk/by-uuid/16796817936759794391",
+                  "/dev/dm-8"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "360014059098da0ec78d4b1281b4b0166",
+          "scsi80": "SLIO-ORG ost13           9098da0e-c78d-4b12-81b4-b0166f61aaa9",
+          "major": "65",
+          "minor": "32",
+          "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:12/block/sds",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "18203608052822263296",
+          "fs_label": "ost4",
+          "paths": [
+            "/dev/disk/by-id/scsi-360014059098da0ec78d4b1281b4b0166",
+            "/dev/disk/by-id/wwn-0x60014059098da0ec78d4b1281b4b0166",
+            "/dev/disk/by-path/fc---lun-12",
+            "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-12",
+            "/dev/disk/by-label/ost4",
+            "/dev/disk/by-uuid/18203608052822263296",
+            "/dev/sds"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-7",
+                "serial": "360014059098da0ec78d4b1281b4b0166",
+                "scsi80": "SLIO-ORG ost13           9098da0e-c78d-4b12-81b4-b0166f61aaa9",
+                "dm_name": "mpathe",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "7",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "18203608052822263296",
+                "fs_label": "ost4",
+                "paths": [
+                  "/dev/mapper/mpathe",
+                  "/dev/disk/by-id/dm-name-mpathe",
+                  "/dev/disk/by-id/dm-uuid-mpath-360014059098da0ec78d4b1281b4b0166",
+                  "/dev/disk/by-label/ost4",
+                  "/dev/disk/by-uuid/18203608052822263296",
+                  "/dev/dm-7"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "360014056f60a7c7101c4db58fcb47d92",
+          "scsi80": "SLIO-ORG ost11           6f60a7c7-101c-4db5-8fcb-47d92902f8f1",
+          "major": "65",
+          "minor": "80",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:10/block/sdv",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "5626247548244847586",
+          "fs_label": "ost2",
+          "paths": [
+            "/dev/disk/by-id/scsi-360014056f60a7c7101c4db58fcb47d92",
+            "/dev/disk/by-id/wwn-0x60014056f60a7c7101c4db58fcb47d92",
+            "/dev/disk/by-path/fc---lun-10",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-10",
+            "/dev/disk/by-label/ost2",
+            "/dev/disk/by-uuid/5626247548244847586",
+            "/dev/sdv"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-10",
+                "serial": "360014056f60a7c7101c4db58fcb47d92",
+                "scsi80": "SLIO-ORG ost11           6f60a7c7-101c-4db5-8fcb-47d92902f8f1",
+                "dm_name": "mpathc",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "10",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "5626247548244847586",
+                "fs_label": "ost2",
+                "paths": [
+                  "/dev/mapper/mpathc",
+                  "/dev/disk/by-id/dm-name-mpathc",
+                  "/dev/disk/by-id/dm-uuid-mpath-360014056f60a7c7101c4db58fcb47d92",
+                  "/dev/disk/by-label/ost2",
+                  "/dev/disk/by-uuid/5626247548244847586",
+                  "/dev/dm-10"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "36001405be573fca80964b1c955fabaf5",
+          "scsi80": "SLIO-ORG ost5            be573fca-8096-4b1c-955f-abaf5b0d2912",
+          "major": "66",
+          "minor": "0",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:4/block/sdag",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "7343300484951083089",
+          "fs_label": "ost14",
+          "paths": [
+            "/dev/disk/by-id/scsi-36001405be573fca80964b1c955fabaf5",
+            "/dev/disk/by-id/wwn-0x6001405be573fca80964b1c955fabaf5",
+            "/dev/disk/by-path/fc---lun-4",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-4",
+            "/dev/disk/by-label/ost14",
+            "/dev/disk/by-uuid/7343300484951083089",
+            "/dev/sdag"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-16",
+                "serial": "36001405be573fca80964b1c955fabaf5",
+                "scsi80": "SLIO-ORG ost5            be573fca-8096-4b1c-955f-abaf5b0d2912",
+                "dm_name": "mpatho",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "16",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "7343300484951083089",
+                "fs_label": "ost14",
+                "paths": [
+                  "/dev/mapper/mpatho",
+                  "/dev/disk/by-id/dm-name-mpatho",
+                  "/dev/disk/by-id/dm-uuid-mpath-36001405be573fca80964b1c955fabaf5",
+                  "/dev/disk/by-label/ost14",
+                  "/dev/disk/by-uuid/7343300484951083089",
+                  "/dev/dm-16"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "3600140559cee8670eff45108165135b9",
+          "scsi80": "SLIO-ORG ost10           59cee867-0eff-4510-8165-135b9e25a8f8",
+          "major": "65",
+          "minor": "112",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:9/block/sdx",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "15943961459041747174",
+          "fs_label": "ost19",
+          "paths": [
+            "/dev/disk/by-id/scsi-3600140559cee8670eff45108165135b9",
+            "/dev/disk/by-id/wwn-0x600140559cee8670eff45108165135b9",
+            "/dev/disk/by-path/fc---lun-9",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-9",
+            "/dev/disk/by-label/ost19",
+            "/dev/disk/by-uuid/15943961459041747174",
+            "/dev/sdx"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-11",
+                "serial": "3600140559cee8670eff45108165135b9",
+                "scsi80": "SLIO-ORG ost10           59cee867-0eff-4510-8165-135b9e25a8f8",
+                "dm_name": "mpatht",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "11",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "15943961459041747174",
+                "fs_label": "ost19",
+                "paths": [
+                  "/dev/mapper/mpatht",
+                  "/dev/disk/by-id/dm-name-mpatht",
+                  "/dev/disk/by-id/dm-uuid-mpath-3600140559cee8670eff45108165135b9",
+                  "/dev/disk/by-label/ost19",
+                  "/dev/disk/by-uuid/15943961459041747174",
+                  "/dev/dm-11"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "ScsiDevice": {
+          "serial": "360014059098da0ec78d4b1281b4b0166",
+          "scsi80": "SLIO-ORG ost13           9098da0e-c78d-4b12-81b4-b0166f61aaa9",
+          "major": "65",
+          "minor": "16",
+          "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:12/block/sdr",
+          "size": 5368709120,
+          "filesystem_type": "mpath_member",
+          "fs_uuid": "18203608052822263296",
+          "fs_label": "ost4",
+          "paths": [
+            "/dev/disk/by-id/scsi-360014059098da0ec78d4b1281b4b0166",
+            "/dev/disk/by-id/wwn-0x60014059098da0ec78d4b1281b4b0166",
+            "/dev/disk/by-path/fc---lun-12",
+            "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-12",
+            "/dev/disk/by-label/ost4",
+            "/dev/disk/by-uuid/18203608052822263296",
+            "/dev/sdr"
+          ],
+          "mount": null,
+          "children": [
+            {
+              "Mpath": {
+                "devpath": "/devices/virtual/block/dm-7",
+                "serial": "360014059098da0ec78d4b1281b4b0166",
+                "scsi80": "SLIO-ORG ost13           9098da0e-c78d-4b12-81b4-b0166f61aaa9",
+                "dm_name": "mpathe",
+                "size": 5368709120,
+                "major": "253",
+                "minor": "7",
+                "filesystem_type": "zfs_member",
+                "fs_uuid": "18203608052822263296",
+                "fs_label": "ost4",
+                "paths": [
+                  "/dev/mapper/mpathe",
+                  "/dev/disk/by-id/dm-name-mpathe",
+                  "/dev/disk/by-id/dm-uuid-mpath-360014059098da0ec78d4b1281b4b0166",
+                  "/dev/disk/by-label/ost4",
+                  "/dev/disk/by-uuid/18203608052822263296",
+                  "/dev/dm-7"
+                ],
+                "children": [],
+                "mount": null
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
