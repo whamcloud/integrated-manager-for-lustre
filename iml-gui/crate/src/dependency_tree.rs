@@ -172,9 +172,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::hash::Hash;
+    use rand_core::{RngCore, SeedableRng};
     use rand_xoshiro::Xoroshiro64Star;
-    use rand_core::{SeedableRng, RngCore};
+    use std::hash::Hash;
     use wasm_bindgen::__rt::core::cmp::Ordering;
 
     #[derive(Debug, Clone)]
@@ -280,6 +280,47 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_async_handlers_consistency() {
+        fn extract_ids<T: Deps<u32>>(ts: &[Arc<T>]) -> Vec<u32> {
+            ts.iter().map(|t| t.id()).collect()
+        }
+        // all the packets come in random order, the model should be always consistent
+        // 1 -> [10, 11] -> [20, 21, 22, 23]
+        let mut rng = Xoroshiro64Star::seed_from_u64(485369);
+        let db = build_db();
+        let mut model = Model::default();
+        let (a, b, c) = prepare_abc(&db, 1);
+        model.assign_a(&db.select_a(&vec![1, 2]));
+        model.assign_b(&db.select_b(&vec![10, 12, 13, 14]));
+        model.assign_c(&db.select_c(&vec![20, 23, 14]));
+        model.assign_a(&db.select_a(&vec![1, 2, 3, 4]));
+
+        model.select = Select::SelectA(1);
+        model.assign_c(&c);
+        model.assign_b(&b);
+        model.assign_a(&a);
+        assert_eq!(extract_ids(&model.aa_view), [1, 2, 3, 4] as [u32; 4]);
+        assert_eq!(extract_ids(&model.bb_view), [] as [u32; 0]);
+        assert_eq!(extract_ids(&model.cc_view), [] as [u32; 0]);
+
+        model.select = Select::SelectB(1, 11);
+        model.assign_c(&c);
+        model.assign_a(&a);
+        model.assign_b(&b);
+        assert_eq!(extract_ids(&model.aa_view), [1, 2, 3, 4] as [u32; 4]);
+        assert_eq!(extract_ids(&model.bb_view), [10, 11] as [u32; 2]);
+        assert_eq!(extract_ids(&model.cc_view), [] as [u32; 0]);
+
+        model.select = Select::SelectC(1, 11, 26);
+        model.assign_b(&b);
+        model.assign_c(&c);
+        model.assign_a(&a);
+        assert_eq!(extract_ids(&model.aa_view), [1, 2, 3, 4] as [u32; 4]);
+        assert_eq!(extract_ids(&model.bb_view), [10, 11] as [u32; 2]);
+        assert_eq!(extract_ids(&model.cc_view), [20, 21, 26] as [u32; 3]);
+    }
+
     fn build_dag_str<K, T, U, F>(dag: &DependencyDAG<K, T>, node_to_str: &F) -> Vec<U>
     where
         K: Hash + Eq + Debug,
@@ -376,13 +417,25 @@ mod tests {
 
     impl Db {
         fn select_a(&self, is: &[u32]) -> Vec<A> {
-            self.all_a.iter().filter(|a| is.contains(&a.id())).map(|a| a.clone()).collect::<Vec<A>>()
+            self.all_a
+                .iter()
+                .filter(|a| is.contains(&a.id()))
+                .map(|a| a.clone())
+                .collect::<Vec<A>>()
         }
         fn select_b(&self, is: &[u32]) -> Vec<B> {
-            self.all_b.iter().filter(|b| is.contains(&b.id())).map(|b| b.clone()).collect::<Vec<B>>()
+            self.all_b
+                .iter()
+                .filter(|b| is.contains(&b.id()))
+                .map(|b| b.clone())
+                .collect::<Vec<B>>()
         }
         fn select_c(&self, is: &[u32]) -> Vec<C> {
-            self.all_c.iter().filter(|c| is.contains(&c.id())).map(|c| c.clone()).collect::<Vec<C>>()
+            self.all_c
+                .iter()
+                .filter(|c| is.contains(&c.id()))
+                .map(|c| c.clone())
+                .collect::<Vec<C>>()
         }
     }
 
@@ -392,9 +445,9 @@ mod tests {
         bb: Vec<Arc<B>>,
         cc: Vec<Arc<C>>,
 
-        bb_view: Vec<Arc<A>>,
         aa_view: Vec<Arc<A>>,
-        cc_view: Vec<Arc<A>>,
+        bb_view: Vec<Arc<B>>,
+        cc_view: Vec<Arc<C>>,
 
         select: Select,
     }
@@ -417,35 +470,46 @@ mod tests {
             let mut aas = aa.to_vec();
             aas.sort_by_key(|a| a.id());
             self.aa = aas.into_iter().map(|a| Arc::new(a.clone())).collect();
-            self.aa_view = self.aa.clone();
+            let (consistent, _, _) = self.consistency_level(&self.select);
+            if consistent {
+                self.aa_view = self.aa.clone();
+            }
         }
         fn assign_b(&mut self, bb: &[B]) {
             let mut bbs = bb.to_vec();
             bbs.sort_by_key(|b| b.id());
             self.bb = bbs.into_iter().map(|b| Arc::new(b.clone())).collect();
+            let (_, consistent, _) = self.consistency_level(&self.select);
+            if consistent {
+                self.bb_view = self.bb.clone();
+            }
         }
 
         fn assign_c(&mut self, cc: &[C]) {
             let mut ccs = cc.to_vec();
             ccs.sort_by_key(|c| c.id());
             self.cc = ccs.into_iter().map(|c| Arc::new(c.clone())).collect();
+            let (_, _, consistent) = self.consistency_level(&self.select);
+            if consistent {
+                self.cc_view = self.cc.clone();
+            }
         }
 
         fn consistency_level(&self, select: &Select) -> (bool, bool, bool) {
             let mut ls = [false; 3];
             match *select {
-                Select::None => {},
+                Select::None => {}
                 Select::SelectA(i) => {
                     let ao = self.aa.iter().find(|a| a.id() == i);
                     match ao {
                         Some(_) => {
                             ls[0] = true;
-                        },
+                        }
                         _ => {
                             ls[0] = false;
-                        },
+                        }
                     }
-                },
+                }
                 Select::SelectB(i, j) => {
                     let ao = self.aa.iter().find(|a| a.id() == i);
                     let bo = self.bb.iter().find(|b| b.id() == j);
@@ -463,13 +527,11 @@ mod tests {
                             ls[0] = false;
                         }
                     }
-                },
+                }
                 Select::SelectC(i, j, k) => {
                     let ao = self.aa.iter().find(|a| a.id() == i);
                     let bo = self.bb.iter().find(|b| b.id() == j);
                     let co = self.cc.iter().find(|c| c.id() == k);
-                    println!("ijk = {:?} / {:?} / {:?}", i, j, k);
-                    println!("{:?} / {:?} / {:?}", ao, bo, co);
                     match (ao, bo, co) {
                         (Some(a), Some(b), Some(c)) => {
                             ls[0] = true;
@@ -492,40 +554,10 @@ mod tests {
                             ls[2] = false;
                         }
                     }
-                },
+                }
             }
             (ls[0], ls[1], ls[2])
         }
-    }
-
-    fn recalc_view(model: &mut Model) {
-        match &model.select {
-            Select::None => {},
-            Select::SelectA(_) => {},
-            Select::SelectB(_, _) => {},
-            Select::SelectC(_, _, _) => {},
-        }
-    }
-
-    #[test]
-    fn test_async_handlers() {
-        // TBD all the packets come in random order, the model should be always consistent
-        // 1 -> [10, 11] -> [20, 21, 22, 23]
-        let mut rng = Xoroshiro64Star::seed_from_u64(485369);
-        let db = build_db();
-        let mut model = Model::default();
-        let (a, b, c) = prepare_abc(&db, 1);
-        model.assign_a(&db.select_a(&vec![1, 2]));
-        model.assign_b(&db.select_b(&vec![10, 12, 13, 14]));
-        model.assign_c(&db.select_c(&vec![20, 23, 14]));
-        println!("a = {:?}", model.aa);
-        println!("b = {:?}", model.bb);
-        println!("c = {:?}", model.cc);
-        println!("{:?}", model.consistency_level(&Select::SelectC(2, 12, 23)));
-        println!("{:?}", model.consistency_level(&Select::SelectC(2, 13, 23)));
-        println!("{:?}", model.consistency_level(&Select::SelectC(2, 12, 22)));
-        println!("{:?}", model.consistency_level(&Select::SelectC(2, 14, 22)));
-
     }
 
     fn build_db() -> Db {
@@ -552,7 +584,7 @@ mod tests {
             C(X::new(23, &[], "Twenty and three")),
             C(X::new(24, &[], "Twenty and four")),
             C(X::new(25, &[], "Twenty and five")),
-            C(X::new(26, &[], "Twenty and siz")),
+            C(X::new(26, &[], "Twenty and six")),
             C(X::new(27, &[], "Twenty and seven")),
             C(X::new(28, &[], "Twenty and eight")),
             C(X::new(29, &[], "Twenty and nine")),
