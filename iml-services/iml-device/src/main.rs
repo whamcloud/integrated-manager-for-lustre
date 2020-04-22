@@ -6,7 +6,12 @@ use chrono::prelude::*;
 use device_types::devices::{
     Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup, Zpool,
 };
-use diesel::{self, pg::upsert::excluded, prelude::*};
+use diesel::{
+    self,
+    pg::upsert::excluded,
+    prelude::*,
+    r2d2::{ConnectionManager, Pool},
+};
 use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
 use im::HashSet;
 use iml_device::{
@@ -20,6 +25,7 @@ use iml_orm::{
     models::{ChromaCoreDevice, NewChromaCoreDevice},
     schema::chroma_core_device::{devices, fqdn, table},
     tokio_diesel::*,
+    DbPool,
 };
 use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::Fqdn;
@@ -102,6 +108,7 @@ async fn main() -> Result<(), ImlDeviceError> {
         tracing::info!("Iteration {}: begin: {}", i, begin);
 
         let mut cache = cache2.lock().await;
+        cache.insert(f.clone(), d.clone());
 
         assert!(
             match d {
@@ -111,64 +118,58 @@ async fn main() -> Result<(), ImlDeviceError> {
             "The top device has to be Root"
         );
 
-        let mut ff = File::create(format!("/tmp/device-{}-{}", f.to_string(), i)).unwrap();
-        ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
-            .unwrap();
+        update_virtual_devices(f, d, &pool).await;
 
-        let mut parents = vec![];
-        collect_virtual_device_parents(&d, 0, None, &mut parents);
+        let end: DateTime<Local> = Local::now();
 
         tracing::info!(
-            "Collected {} parents at {} host",
-            parents.len(),
-            f.to_string()
+            "Iteration {}: end: {}, duration: {:3} ms",
+            i,
+            end,
+            (end - begin).num_milliseconds()
         );
 
-        // let mut ff = File::create(format!("/tmp/parents{}", i)).unwrap();
-        // ff.write_all(serde_json::to_string_pretty(&parents).unwrap().as_bytes())
+        i = i.wrapping_add(1);
+    }
+
+    Ok(())
+}
+
+async fn update_virtual_devices(f: Fqdn, d: Device, pool: &DbPool) {
+    let mut parents = vec![];
+    collect_virtual_device_parents(&d, 0, None, &mut parents);
+
+    tracing::info!(
+        "Collected {} parents at {} host",
+        parents.len(),
+        f.to_string()
+    );
+
+    // let mut ff = File::create(format!("/tmp/parents{}", i)).unwrap();
+    // ff.write_all(serde_json::to_string_pretty(&parents).unwrap().as_bytes())
+    //     .unwrap();
+
+    let other_devices = table
+        .filter(fqdn.ne(f.to_string()))
+        .load_async::<ChromaCoreDevice>(pool)
+        .await
+        .expect("Error getting devices from other hosts");
+
+    // TODO: We also have to collect_virtual_device_parents on each of other_devices and insert_virtual_devices to the incoming device
+
+    for (j, ccd) in other_devices.into_iter().enumerate() {
+        let f = ccd.fqdn;
+        let d = ccd.devices;
+
+        let mut d: Device = serde_json::from_value(d)
+            .expect("Couldn't deserialize Device from JSON when reading from DB");
+
+        insert_virtual_devices(&mut d, &*parents);
+
+        // let mut ff =
+        //     File::create(format!("/tmp/otherdevice-{}-{}-{}", f.to_string(), i, j)).unwrap();
+        // ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
         //     .unwrap();
-
-        let other_devices = table
-            .filter(fqdn.ne(f.to_string()))
-            .load_async::<ChromaCoreDevice>(&pool)
-            .await
-            .expect("Error getting devices from other hosts");
-
-        // TODO: We also have to collect_virtual_device_parents on each of other_devices and insert_virtual_devices to the incoming device
-
-        for (j, ccd) in other_devices.into_iter().enumerate() {
-            let f = ccd.fqdn;
-            let d = ccd.devices;
-
-            let mut d: Device = serde_json::from_value(d)
-                .expect("Couldn't deserialize Device from JSON when reading from DB");
-
-            insert_virtual_devices(&mut d, &*parents);
-
-            let mut ff =
-                File::create(format!("/tmp/otherdevice-{}-{}-{}", f.to_string(), i, j)).unwrap();
-            ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
-                .unwrap();
-
-            let device_to_insert = NewChromaCoreDevice {
-                fqdn: f.to_string(),
-                device: serde_json::to_value(d).expect("Could not convert other Device to JSON."),
-            };
-
-            let new_device = diesel::insert_into(table)
-                .values(device_to_insert)
-                .on_conflict(fqdn)
-                .do_update()
-                .set(device.eq(excluded(device)))
-                .get_result_async::<ChromaCoreDevice>(&pool)
-                .await
-                .expect("Error saving new device");
-
-            tracing::info!("Inserted other device from host {}", new_device.fqdn);
-            tracing::trace!("Inserted other device {:?}", new_device);
-        }
-
-        cache.insert(f.clone(), d.clone());
 
         let device_to_insert = NewChromaCoreDevice {
             fqdn: f.to_string(),
@@ -184,22 +185,26 @@ async fn main() -> Result<(), ImlDeviceError> {
             .await
             .expect("Error saving new device");
 
-        tracing::info!("Inserted device from host {}", new_device.fqdn);
-        tracing::trace!("Inserted device {:?}", new_device);
-
-        let end: DateTime<Local> = Local::now();
-
-        tracing::info!(
-            "Iteration {}: end: {}, duration: {:3} ms",
-            i,
-            end,
-            (end - begin).num_milliseconds()
-        );
-
-        i = i.wrapping_add(1);
+        tracing::info!("Inserted other device from host {}", new_device.fqdn);
+        tracing::trace!("Inserted other device {:?}", new_device);
     }
 
-    Ok(())
+    let device_to_insert = NewChromaCoreDevice {
+        fqdn: f.to_string(),
+        devices: serde_json::to_value(d).expect("Could not convert incoming Devices to JSON."),
+    };
+
+    let new_device = diesel::insert_into(table)
+        .values(device_to_insert)
+        .on_conflict(fqdn)
+        .do_update()
+        .set(devices.eq(excluded(devices)))
+        .get_result_async::<ChromaCoreDevice>(&pool)
+        .await
+        .expect("Error saving new device");
+
+    tracing::info!("Inserted device from host {}", new_device.fqdn);
+    tracing::trace!("Inserted device {:?}", new_device);
 }
 
 fn is_virtual(d: &Device) -> bool {
