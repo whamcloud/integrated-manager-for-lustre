@@ -322,3 +322,30 @@ fn insert_virtual_devices(d: &mut Device, parents: &[Device]) {
         insert(d, &p);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use insta::assert_debug_snapshot;
+
+    #[tokio::test]
+    async fn simple_test() {
+        let path1 = "fixtures/device-mds1.local-2034-pruned.json";
+        let path2 = "fixtures/device-mds2.local-2033-pruned.json";
+
+        let device1 = fs::read_to_string(path1).unwrap();
+        let device1: Device = serde_json::from_str(&device1).unwrap();
+
+        let device2 = fs::read_to_string(path2).unwrap();
+        let device2: Device = serde_json::from_str(&device2).unwrap();
+
+        let devices = vec![
+            (Fqdn("mds1.local".into()), device1),
+            (Fqdn("mds2.local".into()), device2),
+        ];
+
+        let results = update_virtual_devices(devices).await;
+        assert_debug_snapshot!("simple_test", results);
+    }
+}
