@@ -23,6 +23,7 @@ members = [
     'iml-services/iml-service-queue',
     'iml-services/iml-stats',
     'iml-systemd',
+    'iml-system-test-utils',
     'iml-timer',
     'iml-services/iml-ntp',
     'iml-systemd',
@@ -40,7 +41,6 @@ members = [
 
 exclude = [
     'iml-gui/crate',
-    'iml-system-test-utils',
     'iml-system-rpm-tests',
     'iml-system-docker-tests',
 ]

@@ -5,7 +5,7 @@ pub mod vagrant;
 
 use iml_cmd::CmdError;
 use iml_wire_types::Branding;
-use std::{collections::HashMap, io, time::Duration};
+use std::{collections::BTreeSet, io, time::Duration};
 use tokio::{process::Command, time::delay_for};
 
 pub struct SetupConfig {
@@ -127,18 +127,15 @@ pub fn get_local_server_names<'a>(servers: &'a [&'a str]) -> Vec<String> {
         .collect()
 }
 
-pub fn server_map_to_server_set<'a, S: std::hash::BuildHasher>(
-    server_map: &'a HashMap<String, &[&str], S>,
-) -> Vec<&'a str> {
+pub fn server_map_to_server_set<'a>(server_map: &'a BTreeSet<&[&str]>) -> Vec<&'a str> {
     let mut set = server_map
-        .values()
+        .iter()
         .cloned()
         .flatten()
         .cloned()
         .collect::<Vec<&str>>();
 
     set.sort();
-    set.dedup();
 
     set
 }

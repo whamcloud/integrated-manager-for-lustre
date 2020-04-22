@@ -8,7 +8,11 @@ use crate::{
 };
 use futures::future::try_join_all;
 use iml_cmd::{CheckedCommandExt, CmdError};
-use std::{collections::HashMap, env, str, time::Duration};
+use std::{
+    collections::{BTreeSet, HashMap},
+    env, str,
+    time::Duration,
+};
 use tokio::{
     fs::{canonicalize, create_dir, remove_dir_all, File},
     io::AsyncWriteExt,
@@ -376,7 +380,8 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     server_map: HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
-    let server_list = server_map_to_server_set(&server_map);
+    let server_set = server_map.values().cloned().collect::<BTreeSet<&[&str]>>();
+    let server_list = server_map_to_server_set(&server_set);
     setup_bare(&config.all_but_adm()[..], &config, NtpServer::HostOnly).await?;
 
     up().await?
