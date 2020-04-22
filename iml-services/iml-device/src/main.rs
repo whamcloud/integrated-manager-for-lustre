@@ -3,9 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use chrono::prelude::*;
-use device_types::devices::{
-    Device,
-};
+use device_types::devices::Device;
 use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
 
 use iml_device::{
