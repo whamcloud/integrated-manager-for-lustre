@@ -152,6 +152,8 @@ async fn main() -> Result<(), ImlDeviceError> {
             .await
             .expect("Error getting devices from other hosts");
 
+        // TODO: We also have to collect_virtual_device_parents on each of other_devices and insert_virtual_devices to the incoming device
+
         for (j, ccd) in other_devices.into_iter().enumerate() {
             let f = ccd.fqdn;
             let d = ccd.devices;
@@ -161,7 +163,8 @@ async fn main() -> Result<(), ImlDeviceError> {
 
             insert_virtual_devices(&mut d, &*parents);
 
-            let mut ff = File::create(format!("/tmp/otherdevice-{}-{}-{}", f.to_string(), i, j)).unwrap();
+            let mut ff =
+                File::create(format!("/tmp/otherdevice-{}-{}-{}", f.to_string(), i, j)).unwrap();
             ff.write_all(serde_json::to_string_pretty(&d).unwrap().as_bytes())
                 .unwrap();
 
@@ -352,7 +355,11 @@ fn _walk(d: &Device) {
 
 fn insert<'a>(d: &'a mut Device, to_insert: &'a Device) {
     if compare_without_children(d, to_insert) {
-        tracing::info!("Inserting a device {} to {}", to_display(to_insert), to_display(d));
+        tracing::info!(
+            "Inserting a device {} to {}",
+            to_display(to_insert),
+            to_display(d)
+        );
         *d = to_insert.clone();
     } else {
         match d {
