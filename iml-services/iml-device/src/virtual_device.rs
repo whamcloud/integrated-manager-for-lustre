@@ -170,7 +170,7 @@ fn collect_virtual_device_parents(
     }
 }
 
-fn insert<'a>(d: &'a mut Device, to_insert: &'a Device) {
+fn insert(d: &mut Device, to_insert: &Device) {
     if compare_without_children(d, to_insert) {
         tracing::info!(
             "Inserting a device {} to {}",
