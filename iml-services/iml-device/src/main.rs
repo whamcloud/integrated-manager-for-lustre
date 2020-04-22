@@ -111,9 +111,11 @@ async fn main() -> Result<(), ImlDeviceError> {
             "The top device has to be Root"
         );
 
-        let other_devices = get_other_devices(&f, &pool).await;
+        let mut all_devices = get_other_devices(&f, &pool).await;
 
-        let updated_devices = update_virtual_devices(f, d, other_devices).await;
+        all_devices.push((f, d));
+
+        let updated_devices = update_virtual_devices(all_devices).await;
 
         save_devices(updated_devices, &pool).await;
 
@@ -172,31 +174,27 @@ async fn get_other_devices(f: &Fqdn, pool: &DbPool) -> Vec<(Fqdn, Device)> {
         .collect()
 }
 
-async fn update_virtual_devices(
-    f: Fqdn,
-    d: Device,
-    other_devices: Vec<(Fqdn, Device)>,
-) -> Vec<(Fqdn, Device)> {
+async fn update_virtual_devices(devices: Vec<(Fqdn, Device)>) -> Vec<(Fqdn, Device)> {
     let mut results = vec![];
-
     let mut parents = vec![];
-    collect_virtual_device_parents(&d, 0, None, &mut parents);
+    let devices2 = devices.clone();
 
-    tracing::info!(
-        "Collected {} parents at {} host",
-        parents.len(),
-        f.to_string()
-    );
+    for (f, d) in devices {
+        parents.extend(collect_virtual_device_parents(&d, 0, None));
 
-    // TODO: We also have to collect_virtual_device_parents on each of other_devices and insert_virtual_devices to the incoming device
+        tracing::info!(
+            "Collected {} parents at {} host",
+            parents.len(),
+            f.to_string()
+        );
+    }
 
-    for (ff, mut dd) in other_devices.into_iter() {
+    // TODO: Assert that all parents are distinct
+    for (ff, mut dd) in devices2 {
         insert_virtual_devices(&mut dd, &*parents);
 
         results.push((ff, dd));
     }
-
-    results.push((f, d));
 
     results
 }
@@ -246,45 +244,50 @@ fn to_display(d: &Device) -> String {
     }
 }
 
-fn collect_virtual_device_parents<'d>(
+fn collect_virtual_device_parents<'d, 'p: 'd>(
     d: &'d Device,
     level: usize,
-    parent: Option<&'d Device>,
-    mut parents: &mut Vec<&'d Device>,
-) {
+    parent: Option<&'p Device>,
+) -> Vec<Device> {
+    let mut results = vec![];
+
     if is_virtual(d) {
         tracing::info!(
             "Collecting parent {} of {}",
             parent.map(|x| to_display(x)).unwrap_or("None".into()),
             to_display(d)
         );
-        parents.push(
-            parent.expect("Tried to push to parents the parent of the Root, which doesn't exist"),
-        );
+        vec![parent
+            .expect("Tried to push to parents the parent of the Root, which doesn't exist")
+            .clone()]
     } else {
         match d {
             Device::Root(dd) => {
                 for c in dd.children.iter() {
-                    collect_virtual_device_parents(c, level + 1, Some(d), &mut parents);
+                    results.extend(collect_virtual_device_parents(c, level + 1, Some(d)));
                 }
+                results
             }
             Device::ScsiDevice(dd) => {
                 for c in dd.children.iter() {
-                    collect_virtual_device_parents(c, level + 1, Some(d), &mut parents);
+                    results.extend(collect_virtual_device_parents(c, level + 1, Some(d)));
                 }
+                results
             }
             Device::Partition(dd) => {
                 for c in dd.children.iter() {
-                    collect_virtual_device_parents(c, level + 1, Some(d), &mut parents);
+                    results.extend(collect_virtual_device_parents(c, level + 1, Some(d)));
                 }
+                results
             }
             Device::Mpath(dd) => {
                 for c in dd.children.iter() {
-                    collect_virtual_device_parents(c, level + 1, Some(d), &mut parents);
+                    results.extend(collect_virtual_device_parents(c, level + 1, Some(d)));
                 }
+                results
             }
-            _ => unreachable!(),
-        };
+            _ => vec![],
+        }
     }
 }
 
@@ -431,7 +434,7 @@ fn compare_without_children(a: &Device, b: &Device) -> bool {
     without_children(a) == without_children(b)
 }
 
-fn insert_virtual_devices(d: &mut Device, parents: &[&Device]) {
+fn insert_virtual_devices(d: &mut Device, parents: &[Device]) {
     for p in parents {
         insert(d, &p);
     }
