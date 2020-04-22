@@ -10,6 +10,14 @@ use chrono::DateTime;
 use ipnetwork::IpNetwork;
 use serde_json;
 
+#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug))]
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct LustreFid {
+    pub seq: u64,
+    pub oid: u32,
+    pub ver: u32,
+}
+
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "postgres-interop", table_name = "auth_group")]
@@ -73,6 +81,14 @@ pub struct AuthUserUserPermission {
     pub id: i32,
     pub user_id: i32,
     pub permission_id: i32,
+}
+
+#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_actiontype")]
+pub struct ChromaCoreActiontype {
+    pub id: i32,
+    pub action: String,
 }
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
@@ -499,7 +515,7 @@ pub struct ChromaCoreDevice {
 #[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_device")]
 pub struct NewChromaCoreDevice {
     pub fqdn: String,
-    pub device: serde_json::Value,
+    pub devices: serde_json::Value,
 }
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
@@ -522,6 +538,20 @@ pub struct ChromaCoreEnablelnetjob {
 pub struct ChromaCoreFailbacktargetjob {
     pub job_ptr_id: i32,
     pub target_id: i32,
+}
+
+#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[cfg_attr(
+    feature = "postgres-interop",
+    table_name = "chroma_core_fidactionqueue"
+)]
+pub struct ChromaCoreFidactionqueue {
+    pub id: i32,
+    pub fid: LustreFid,
+    pub entries: serde_json::Value,
+    pub failed: i16,
+    pub mailbox_id: i32,
 }
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
@@ -756,6 +786,25 @@ pub struct ChromaCoreLustreclientmount {
     pub content_type_id: Option<i32>,
     pub filesystem_id: i32,
     pub host_id: i32,
+}
+
+#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_mailboxes")]
+pub struct ChromaCoreMailboxes {
+    pub id: i32,
+    pub name: String,
+    pub start: Option<DateTime<Utc>>,
+    pub finish: Option<DateTime<Utc>>,
+    pub state: String,
+    pub fids_total: i64,
+    pub fids_completed: i64,
+    pub fids_failed: i64,
+    pub data_transfered: i64,
+    pub keep_failed: bool,
+    pub actions: Vec<i32>,
+    pub args: serde_json::Value,
+    pub filesystem_id: i32,
 }
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
