@@ -1525,6 +1525,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-system-test-utils"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "iml-cmd",
+ "iml-systemd",
+ "iml-wire-types",
+ "tokio",
+]
+
+[[package]]
 name = "iml-systemd"
 version = "0.2.0"
 dependencies = [
