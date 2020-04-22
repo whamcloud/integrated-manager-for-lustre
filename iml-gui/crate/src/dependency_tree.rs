@@ -173,6 +173,9 @@ where
 mod tests {
     use super::*;
     use std::hash::Hash;
+    use rand_xoshiro::Xoroshiro64Star;
+    use rand_core::{SeedableRng, RngCore};
+    use wasm_bindgen::__rt::core::cmp::Ordering;
 
     #[derive(Debug, Clone)]
     struct X {
@@ -364,30 +367,207 @@ mod tests {
         }
     }
 
+    #[derive(Debug, Default, Clone)]
+    struct Db {
+        all_a: Vec<A>,
+        all_b: Vec<B>,
+        all_c: Vec<C>,
+    }
+
+    impl Db {
+        fn select_a(&self, is: &[u32]) -> Vec<A> {
+            self.all_a.iter().filter(|a| is.contains(&a.id())).map(|a| a.clone()).collect::<Vec<A>>()
+        }
+        fn select_b(&self, is: &[u32]) -> Vec<B> {
+            self.all_b.iter().filter(|b| is.contains(&b.id())).map(|b| b.clone()).collect::<Vec<B>>()
+        }
+        fn select_c(&self, is: &[u32]) -> Vec<C> {
+            self.all_c.iter().filter(|c| is.contains(&c.id())).map(|c| c.clone()).collect::<Vec<C>>()
+        }
+    }
+
+    #[derive(Debug, Default, Clone)]
+    struct Model {
+        aa: Vec<Arc<A>>,
+        bb: Vec<Arc<B>>,
+        cc: Vec<Arc<C>>,
+
+        bb_view: Vec<Arc<A>>,
+        aa_view: Vec<Arc<A>>,
+        cc_view: Vec<Arc<A>>,
+
+        select: Select,
+    }
+
+    #[derive(Debug, Clone)]
+    enum Select {
+        None,
+        SelectA(u32),
+        SelectB(u32, u32),
+        SelectC(u32, u32, u32),
+    }
+    impl Default for Select {
+        fn default() -> Self {
+            Self::None
+        }
+    }
+
+    impl Model {
+        fn assign_a(&mut self, aa: &[A]) {
+            let mut aas = aa.to_vec();
+            aas.sort_by_key(|a| a.id());
+            self.aa = aas.into_iter().map(|a| Arc::new(a.clone())).collect();
+            self.aa_view = self.aa.clone();
+        }
+        fn assign_b(&mut self, bb: &[B]) {
+            let mut bbs = bb.to_vec();
+            bbs.sort_by_key(|b| b.id());
+            self.bb = bbs.into_iter().map(|b| Arc::new(b.clone())).collect();
+        }
+
+        fn assign_c(&mut self, cc: &[C]) {
+            let mut ccs = cc.to_vec();
+            ccs.sort_by_key(|c| c.id());
+            self.cc = ccs.into_iter().map(|c| Arc::new(c.clone())).collect();
+        }
+
+        fn consistency_level(&self, select: &Select) -> (bool, bool, bool) {
+            let mut ls = [false; 3];
+            match *select {
+                Select::None => {},
+                Select::SelectA(i) => {
+                    let ao = self.aa.iter().find(|a| a.id() == i);
+                    match ao {
+                        Some(_) => {
+                            ls[0] = true;
+                        },
+                        _ => {
+                            ls[0] = false;
+                        },
+                    }
+                },
+                Select::SelectB(i, j) => {
+                    let ao = self.aa.iter().find(|a| a.id() == i);
+                    let bo = self.bb.iter().find(|b| b.id() == j);
+                    match (ao, bo) {
+                        (Some(a), Some(b)) => {
+                            ls[0] = true;
+                            ls[1] = a.deps().contains(&j);
+                        }
+                        (Some(_), _) => {
+                            ls[0] = true;
+                            ls[1] = false;
+                        }
+                        (_, _) => {
+                            ls[0] = false;
+                            ls[0] = false;
+                        }
+                    }
+                },
+                Select::SelectC(i, j, k) => {
+                    let ao = self.aa.iter().find(|a| a.id() == i);
+                    let bo = self.bb.iter().find(|b| b.id() == j);
+                    let co = self.cc.iter().find(|c| c.id() == k);
+                    println!("ijk = {:?} / {:?} / {:?}", i, j, k);
+                    println!("{:?} / {:?} / {:?}", ao, bo, co);
+                    match (ao, bo, co) {
+                        (Some(a), Some(b), Some(c)) => {
+                            ls[0] = true;
+                            ls[1] = a.deps().contains(&j);
+                            ls[2] = b.deps().contains(&k);
+                        }
+                        (Some(a), Some(_), _) => {
+                            ls[0] = true;
+                            ls[1] = a.deps().contains(&j);
+                            ls[2] = false;
+                        }
+                        (Some(_), _, _) => {
+                            ls[0] = true;
+                            ls[1] = false;
+                            ls[2] = false;
+                        }
+                        (_, _, _) => {
+                            ls[0] = false;
+                            ls[1] = false;
+                            ls[2] = false;
+                        }
+                    }
+                },
+            }
+            (ls[0], ls[1], ls[2])
+        }
+    }
+
+    fn recalc_view(model: &mut Model) {
+        match &model.select {
+            Select::None => {},
+            Select::SelectA(_) => {},
+            Select::SelectB(_, _) => {},
+            Select::SelectC(_, _, _) => {},
+        }
+    }
+
     #[test]
     fn test_async_handlers() {
-        let packet_a = vec![
+        // TBD all the packets come in random order, the model should be always consistent
+        // 1 -> [10, 11] -> [20, 21, 22, 23]
+        let mut rng = Xoroshiro64Star::seed_from_u64(485369);
+        let db = build_db();
+        let mut model = Model::default();
+        let (a, b, c) = prepare_abc(&db, 1);
+        model.assign_a(&db.select_a(&vec![1, 2]));
+        model.assign_b(&db.select_b(&vec![10, 12, 13, 14]));
+        model.assign_c(&db.select_c(&vec![20, 23, 14]));
+        println!("a = {:?}", model.aa);
+        println!("b = {:?}", model.bb);
+        println!("c = {:?}", model.cc);
+        println!("{:?}", model.consistency_level(&Select::SelectC(2, 12, 23)));
+        println!("{:?}", model.consistency_level(&Select::SelectC(2, 13, 23)));
+        println!("{:?}", model.consistency_level(&Select::SelectC(2, 12, 22)));
+        println!("{:?}", model.consistency_level(&Select::SelectC(2, 14, 22)));
+
+    }
+
+    fn build_db() -> Db {
+        let all_a = vec![
             A(X::new(1, &[10, 11], "One")),
             A(X::new(2, &[12, 13], "Two")),
-            A(X::new(3, &[10, 13], "Three")),
-            A(X::new(4, &[11, 12], "Four")),
+            A(X::new(3, &[14, 15], "Three")),
+            A(X::new(4, &[16, 17], "Four")),
         ];
-        let packet_b = vec![
+        let all_b = vec![
             B(X::new(10, &[20, 21], "Ten")),
-            B(X::new(11, &[22, 23], "Eleven")),
-            B(X::new(12, &[20, 23], "Twelve")),
-            B(X::new(13, &[21, 22], "Thirteen")),
+            B(X::new(11, &[21, 26], "Eleven")),
+            B(X::new(12, &[22, 23], "Twelve")),
+            B(X::new(13, &[23, 28], "Thirteen")),
+            B(X::new(14, &[24, 15], "Ten")),
+            B(X::new(15, &[25, 20], "Eleven")),
+            B(X::new(16, &[26, 27], "Twelve")),
+            B(X::new(17, &[27, 22], "Thirteen")),
         ];
-        let packet_c = vec![
+        let all_c = vec![
             C(X::new(20, &[], "Twenty and zero")),
             C(X::new(21, &[], "Twenty and one")),
             C(X::new(22, &[], "Twenty and two")),
             C(X::new(23, &[], "Twenty and three")),
+            C(X::new(24, &[], "Twenty and four")),
+            C(X::new(25, &[], "Twenty and five")),
+            C(X::new(26, &[], "Twenty and siz")),
+            C(X::new(27, &[], "Twenty and seven")),
+            C(X::new(28, &[], "Twenty and eight")),
+            C(X::new(29, &[], "Twenty and nine")),
         ];
-        // TBD all the packets come in random order, the model should be always consistent
-        println!("{:?}", packet_a[3].deps());
-        println!("{:?}", packet_b[3].deps());
-        println!("{:?}", packet_c[3].deps());
+        Db { all_a, all_b, all_c }
+    }
+
+    fn prepare_abc(db: &Db, id: u32) -> (Vec<A>, Vec<B>, Vec<C>) {
+        let ai = db.select_a(&vec![id]);
+        let aix = ai.iter().map(|a| a.deps()).flatten().collect::<Vec<u32>>();
+        let bi = db.select_b(&aix);
+        let bix = bi.iter().map(|b| b.deps()).flatten().collect::<Vec<u32>>();
+        let ci = db.select_c(&bix);
+        let ai = db.all_a.clone(); // use all roots
+        (ai, bi, ci)
     }
 
     const SMALL_TREE: &'static str = r#"48: Setup managed host oss2.local
