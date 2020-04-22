@@ -63,13 +63,9 @@ pub async fn update_virtual_devices(devices: Vec<(Fqdn, Device)>) -> Vec<(Fqdn, 
     let devices2 = devices.clone();
 
     for (f, d) in devices {
-        parents.extend(collect_virtual_device_parents(&d, 0, None));
-
-        tracing::info!(
-            "Collected {} parents at {} host",
-            parents.len(),
-            f.to_string()
-        );
+        let ps = collect_virtual_device_parents(&d, 0, None);
+        tracing::info!("Collected {} parents at {} host", ps.len(), f.to_string());
+        parents.extend(ps);
     }
 
     // TODO: Assert that all parents are distinct
@@ -326,8 +322,8 @@ fn insert_virtual_devices(d: &mut Device, parents: &[Device]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
     use insta::assert_debug_snapshot;
+    use std::fs;
 
     #[tokio::test]
     async fn simple_test() {
