@@ -70,7 +70,7 @@ pub async fn update_virtual_devices(devices: Vec<(Fqdn, Device)>) -> Vec<(Fqdn, 
 
     // TODO: Assert that all parents are distinct
     for (ff, mut dd) in devices2 {
-        insert_virtual_devices(&mut dd, &*parents);
+        insert_virtual_devices(&mut dd, &parents);
 
         results.push((ff, dd));
     }
