@@ -352,7 +352,7 @@ fn _walk(d: &Device) {
 
 fn insert<'a>(d: &'a mut Device, to_insert: &'a Device) {
     if compare_without_children(d, to_insert) {
-        tracing::info!("Inserting a device {}", to_display(to_insert));
+        tracing::info!("Inserting a device {} to {}", to_display(to_insert), to_display(d));
         *d = to_insert.clone();
     } else {
         match d {
