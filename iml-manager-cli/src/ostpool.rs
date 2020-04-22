@@ -4,7 +4,7 @@
 
 use crate::{
     api_utils::{delete, get, get_all, get_one, post, put, wait_for_cmds_success},
-    display_utils::{generate_table, wrap_fut},
+    display_utils::{wrap_fut, DisplayType, IntoDisplayType as _},
     error::ImlManagerCliError,
 };
 use console::{style, Term};
@@ -15,6 +15,18 @@ use iml_wire_types::{
 use prettytable::{Row, Table};
 use std::iter::FromIterator;
 use structopt::StructOpt;
+
+#[derive(Debug, serde::Serialize)]
+pub struct OstPoolList(pub Vec<String>);
+
+impl IntoIterator for OstPoolList {
+    type Item = String;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct ObjCommand {
@@ -33,6 +45,14 @@ pub enum OstPoolCommand {
     List {
         #[structopt(name = "FSNAME")]
         fsname: Option<String>,
+        /// Set the display type
+        ///
+        /// The display type can be one of the following:
+        /// tabular: display content in a table format
+        /// json: return data in json format
+        /// yaml: return data in yaml format
+        #[structopt(short = "d", long = "display", default_value = "tabular")]
+        display_type: DisplayType,
     },
 
     /// Show Pool Details
@@ -94,8 +114,21 @@ async fn pool_lookup(fsname: &str, poolname: &str) -> Result<OstPoolApi, ImlMana
     Ok(pool)
 }
 
-async fn ostpool_list(fsname: Option<String>) -> Result<(), ImlManagerCliError> {
-    let xs: Vec<_> = match fsname {
+fn list_ost_pools(xs: Vec<OstPoolList>, display_type: DisplayType) {
+    let term = Term::stdout();
+
+    tracing::debug!("Ost Pools: {:?}", xs);
+
+    let x = xs.into_display_type(display_type);
+
+    term.write_line(&x).unwrap();
+}
+
+async fn ostpool_list(
+    fsname: Option<String>,
+    display_type: DisplayType,
+) -> Result<(), ImlManagerCliError> {
+    let xs: Vec<OstPoolList> = match fsname {
         Some(fsname) => {
             let fs: Filesystem =
                 wrap_fut("Fetching Filesystem ...", get_one(vec![("name", &fsname)])).await?;
@@ -111,6 +144,7 @@ async fn ostpool_list(fsname: Option<String>) -> Result<(), ImlManagerCliError> 
                 .objects
                 .into_iter()
                 .map(|p| vec![fsname.clone(), p.ost.name, p.ost.osts.len().to_string()])
+                .map(OstPoolList)
                 .collect()
         }
         None => {
@@ -145,12 +179,12 @@ async fn ostpool_list(fsname: Option<String>) -> Result<(), ImlManagerCliError> 
                             vec![fs.name.clone(), p.ost.name, p.ost.osts.len().to_string()]
                         })
                 })
+                .map(OstPoolList)
                 .collect()
         }
     };
 
-    let table = generate_table(&["Filesystem", "Pool Name", "OST Count"], xs);
-    table.printstd();
+    list_ost_pools(xs, display_type);
 
     Ok(())
 }
@@ -187,7 +221,10 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
     let term = Term::stdout();
 
     match command {
-        OstPoolCommand::List { fsname } => ostpool_list(fsname).await?,
+        OstPoolCommand::List {
+            fsname,
+            display_type,
+        } => ostpool_list(fsname, display_type).await?,
         OstPoolCommand::Show { fsname, poolname } => ostpool_show(fsname, poolname).await?,
         OstPoolCommand::Create {
             fsname,

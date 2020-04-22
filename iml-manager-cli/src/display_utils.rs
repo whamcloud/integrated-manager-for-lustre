@@ -2,9 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use crate::{filesystem::FilesystemAndStatsList, ostpool::OstPoolList};
 use console::{style, Term};
 use futures::{Future, FutureExt};
-use iml_wire_types::{Command, Host};
+use iml_wire_types::{Command, Host, StratagemConfiguration};
 use indicatif::ProgressBar;
 use prettytable::{Row, Table};
 use spinners::{Spinner, Spinners};
@@ -106,6 +107,41 @@ impl IntoTable for Vec<Host> {
                     h.nids.unwrap_or_default().join(" "),
                 ]
             }),
+        )
+    }
+}
+
+impl IntoTable for Vec<StratagemConfiguration> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &["Id", "Filesystem", "State", "Interval", "Purge", "Report"],
+            self.into_iter().map(|x| {
+                vec![
+                    x.id.to_string(),
+                    x.filesystem,
+                    x.state,
+                    x.interval.to_string(),
+                    x.purge_duration.map(|x| x.to_string()).unwrap_or_default(),
+                    x.report_duration.map(|x| x.to_string()).unwrap_or_default(),
+                ]
+            }),
+        )
+    }
+}
+
+impl IntoTable for Vec<OstPoolList> {
+    fn into_table(self) -> Table {
+        generate_table(&["Filesystem", "Pool Name", "OST Count"], self)
+    }
+}
+
+impl IntoTable for Vec<FilesystemAndStatsList> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &[
+                "Name", "State", "Space", "Inodes", "Clients", "MDTs", "OSTs",
+            ],
+            self,
         )
     }
 }
