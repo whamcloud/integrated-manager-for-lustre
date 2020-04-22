@@ -923,7 +923,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM\n(SELECT difference(\"samples\") FROM \"target\" WHERE \"units\"='reqs' AND \"kind\" = 'MDT' AND \"name\" =~ /close|getattr|getxattr|link|mkdir|mknod|open|rename|rmdir|setattr|statfs|unlink/ AND \"target\" = '$target_name' AND time > now() - 1d AND $timeFilter GROUP BY \"name\"),\n(SELECT \"mean_diff_samples\" FROM \"long_term\".\"target\" WHERE \"units\"='reqs' AND \"kind\" = 'MDT' AND \"name\" =~ /close|getattr|getxattr|link|mkdir|mknod|open|rename|rmdir|setattr|statfs|unlink/ AND \"target\" = '$target_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"name\")\nGROUP BY \"name\"",
+          "query": "SELECT * FROM\n(SELECT difference(\"samples\") AS \"iops\" FROM \"target\" WHERE \"units\"='reqs' AND \"kind\" = 'MDT' AND \"name\" =~ /close|getattr|getxattr|link|mkdir|mknod|open|rename|rmdir|setattr|statfs|unlink/ AND \"target\" = '$target_name' AND time > now() - 1d AND $timeFilter GROUP BY \"name\"),\n(SELECT \"mean_diff_samples\" AS \"iops\" FROM \"long_term\".\"target\" WHERE \"units\"='reqs' AND \"kind\" = 'MDT' AND \"name\" =~ /close|getattr|getxattr|link|mkdir|mknod|open|rename|rmdir|setattr|statfs|unlink/ AND \"target\" = '$target_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"name\")\nGROUP BY \"name\"",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
