@@ -190,13 +190,10 @@ async fn update_virtual_devices(
 
     // TODO: We also have to collect_virtual_device_parents on each of other_devices and insert_virtual_devices to the incoming device
 
-    for (ff, dd) in other_devices.into_iter() {
-        let f = ff;
-        let mut d = dd;
+    for (ff, mut dd) in other_devices.into_iter() {
+        insert_virtual_devices(&mut dd, &*parents);
 
-        insert_virtual_devices(&mut d, &*parents);
-
-        results.push((f, d));
+        results.push((ff, dd));
     }
 
     results.push((f, d));
