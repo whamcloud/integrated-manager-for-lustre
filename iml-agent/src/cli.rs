@@ -22,7 +22,6 @@ use std::{
     process::exit,
 };
 use structopt::StructOpt;
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 #[derive(Debug, StructOpt)]
 pub enum StratagemCommand {
@@ -425,11 +424,8 @@ fn add_counter_entry(x: impl Counter, t: &mut Table, h: &mut v_hist::Histogram) 
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let subscriber = Subscriber::builder()
-        .with_env_filter(EnvFilter::from_default_env())
-        .finish();
+    iml_tracing::init();
 
-    tracing::subscriber::set_global_default(subscriber).unwrap();
     dotenv::from_path("/etc/iml/iml-agent.conf").expect("Could not load cli env");
 
     let matches = App::from_args();

@@ -7,11 +7,12 @@ mod error;
 
 use iml_rabbit::{self, create_connection_filter};
 use iml_wire_types::Conf;
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::Filter;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    iml_tracing::init();
+
     let addr = iml_manager_env::get_iml_api_addr();
 
     let conf = Conf {
@@ -22,12 +23,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         branding: iml_manager_env::get_branding().into(),
         use_stratagem: iml_manager_env::get_use_stratagem(),
     };
-
-    let subscriber = Subscriber::builder()
-        .with_env_filter(EnvFilter::from_default_env())
-        .finish();
-
-    tracing::subscriber::set_global_default(subscriber).unwrap();
 
     let (fut, client_filter) = create_connection_filter().await?;
 

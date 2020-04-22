@@ -7,12 +7,12 @@ edition = "2018"
 [dependencies]
 futures = "0.3"
 iml-cmd = { path = "../iml-cmd", version = "0.2", features = ["warp-errs"] }
-iml-manager-env = { path = "../iml-manager-env", version = "0.2.0" }
 iml-manager-client = { path = "../iml-manager-client", version = "0.2" }
+iml-manager-env = { path = "../iml-manager-env", version = "0.2.0" }
+iml-tracing = { version = "0.1", path="../iml-tracing"}
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 structopt = "0.3"
 tokio = { version = "0.2", features = ["process", "macros"] }
 tracing = "0.1"
-tracing-subscriber = "0.2"
 warp = "0.2"

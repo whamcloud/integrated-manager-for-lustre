@@ -11,14 +11,10 @@ use iml_ostpool::{
 use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::FsPoolMap;
 use std::collections::BTreeSet;
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let subscriber = Subscriber::builder()
-        .with_env_filter(EnvFilter::from_default_env())
-        .finish();
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    iml_tracing::init();
 
     let mut s = consume_data::<FsPoolMap>("rust_agent_ostpool_rx");
 

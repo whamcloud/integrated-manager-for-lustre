@@ -136,7 +136,6 @@ mod tests {
     use futures::TryStreamExt;
     use iml_fs::read_lines;
     use mockito::mock;
-    use pretty_assertions::assert_eq;
     use reqwest::Client;
     use std::str;
     use url::Url;

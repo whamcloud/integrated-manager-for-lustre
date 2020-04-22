@@ -23,18 +23,13 @@ use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
 };
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::Filter;
 
 type Cache = Arc<Mutex<HashMap<Fqdn, Device>>>;
 
 #[tokio::main]
 async fn main() -> Result<(), ImlDeviceError> {
-    let subscriber = Subscriber::builder()
-        .with_env_filter(EnvFilter::from_default_env())
-        .finish();
-
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    iml_tracing::init();
 
     let addr = iml_manager_env::get_device_aggregator_addr();
 

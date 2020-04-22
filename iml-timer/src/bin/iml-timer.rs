@@ -7,16 +7,11 @@ use iml_cmd::{CheckedCommandExt, Command};
 use iml_timer::config::{
     delete_config, get_config, service_file, timer_file, unit_name, write_configs,
 };
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use warp::{self, http::StatusCode, Filter};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let subscriber = Subscriber::builder()
-        .with_env_filter(EnvFilter::from_default_env())
-        .finish();
-
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    iml_tracing::init();
 
     // Match a config route
     let config_route = warp::put()

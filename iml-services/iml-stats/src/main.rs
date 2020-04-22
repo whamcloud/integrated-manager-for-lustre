@@ -15,7 +15,6 @@ use lustre_collector::{
         Stat, TargetStat,
     },
 };
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use url::Url;
 
 fn build_stats_query(x: &TargetStat<Vec<Stat>>, stat: &Stat, query: Point) -> Point {
@@ -457,11 +456,7 @@ fn handle_node(node: NodeStats, host: &Fqdn) -> Option<Vec<Point>> {
 
 #[tokio::main]
 async fn main() -> Result<(), ImlStatsError> {
-    let subscriber = Subscriber::builder()
-        .with_env_filter(EnvFilter::from_default_env())
-        .finish();
-
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    iml_tracing::init();
 
     let mut s = consume_data::<Vec<Record>>("rust_agent_stats_rx");
     let influx_url: String = format!("http://{}", get_influxdb_addr());

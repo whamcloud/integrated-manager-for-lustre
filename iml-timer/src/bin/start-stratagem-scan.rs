@@ -4,7 +4,6 @@
 
 use iml_manager_client::{get_client, post};
 use structopt::StructOpt;
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "start-stratagem-scan")]
@@ -29,11 +28,7 @@ struct StratagemData {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let subscriber = Subscriber::builder()
-        .with_env_filter(EnvFilter::from_default_env())
-        .finish();
-
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    iml_tracing::init();
 
     let opts = App::from_args();
 
