@@ -4,64 +4,86 @@ use std::hash::Hash;
 use std::iter::FromIterator;
 use std::iter::Iterator;
 use std::sync::Arc;
+use std::ops::Deref;
 
+/// There are two hierarchies that this trait is used for:
+/// * commands -> jobs -> steps form the tree structure, using `Command::jobs` and `Job<_>::steps` fields
+/// * jobs interdependencies via `Job<_>::wait_for`
 pub trait Deps<K> {
     fn id(&self) -> K;
-    fn deps(&self) -> Vec<K>;
+    fn deps(&self) -> &[K];
+    fn has(&self, k: &K) -> bool;
 }
 
 impl<K, T: Deps<K>> Deps<K> for Arc<T> {
     fn id(&self) -> K {
         (**self).id()
     }
-    fn deps(&self) -> Vec<K> {
+    fn deps(&self) -> &[K] {
         (**self).deps()
+    }
+    fn has(&self, k: &K) -> bool {
+        (**self).has(k)
     }
 }
 
+/// `deps` is to iterate through in the fixed order
+/// `dset` is to check the membership
+///
+/// Please note that the contents of `deps` and `dset` should be always equal, i.e.
+/// ```norun
+/// let set1 = HashSet::from_iter(self.deps.iter().cloned();
+/// let set2 = self.deps;
+/// asssert_eq!()
+/// ```
 #[derive(Clone, Debug)]
 pub struct RichDeps<K: Hash + Eq, T> {
     pub id: K,
+    pub deps: Vec<K>,
     pub dset: HashSet<K>,
     pub inner: T,
 }
 
 impl<K, T> RichDeps<K, T>
 where
-    K: Hash + Eq + Copy,
-    T: Deps<K> + Clone,
+    K: Hash + Ord + Copy,
+    T: Clone,
 {
-    pub fn new(t: T) -> Self {
+    pub fn new(t: T, extract: impl FnOnce(&T) -> (K, Vec<K>)) -> Self {
+        let (id, mut deps) = extract(&t);
+        deps.sort();
         Self {
-            id: t.id(),
-            dset: t.deps().into_iter().collect(),
+            id,
+            dset: HashSet::from_iter(deps.iter().cloned()),
+            deps,
             inner: t,
         }
-    }
-    pub fn from_ref(t: &T) -> Self {
-        Self {
-            id: t.id(),
-            dset: t.deps().into_iter().collect(),
-            inner: t.clone(),
-        }
-    }
-    pub fn contains(&self, k: &K) -> bool {
-        self.dset.contains(k)
     }
 }
 
 impl<K, T> Deps<K> for RichDeps<K, T>
 where
-    K: Hash + Eq + Ord + Copy,
-    T: Deps<K>,
+    K: Hash + Ord + Copy
 {
     fn id(&self) -> K {
         self.id
     }
-    fn deps(&self) -> Vec<K> {
-        let mut v = Vec::from_iter(self.dset.iter().copied());
-        v.sort();
-        v
+    fn deps(&self) -> &[K] {
+        &self.deps
+    }
+    fn has(&self, k: &K) -> bool {
+        self.dset.contains(k)
+    }
+}
+
+impl<K, T> Deref for RichDeps<K, T>
+where
+    K: Hash + Ord + Copy
+{
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
     }
 }
 
@@ -110,7 +132,7 @@ where
                 }
                 // remove any of the destinations from the roots
                 for y in ys {
-                    if let Some(i) = roots.iter().position(|r| *r == y) {
+                    if let Some(i) = roots.iter().position(|r| *r == *y) {
                         roots.remove(i);
                     }
                 }
@@ -132,10 +154,10 @@ where
         let xs = t.deps();
         for x in xs {
             // push the arc `x -> y` into the graph
-            if let Some((_, ref mut ys)) = dag.iter_mut().find(|(y, _)| *y == x) {
+            if let Some((_, ref mut ys)) = dag.iter_mut().find(|(y, _)| *y == *x) {
                 ys.push(y);
             } else {
-                dag.push((x, vec![y]));
+                dag.push((*x, vec![y]));
             }
             // any destination cannot be a root, so we need to remove any of these roots
             roots.remove(&y);
@@ -165,7 +187,7 @@ where
 {
     ids.iter()
         .filter_map(|id| objs.iter().find(|o| o.id() == *id))
-        .map(|a| Arc::clone(a))
+        .map(Arc::clone)
         .collect()
 }
 
@@ -175,7 +197,6 @@ mod tests {
     use rand_core::{RngCore, SeedableRng};
     use rand_xoshiro::Xoroshiro64Star;
     use std::hash::Hash;
-    use wasm_bindgen::__rt::core::cmp::Ordering;
 
     #[derive(Debug, Clone)]
     struct X {
@@ -198,8 +219,74 @@ mod tests {
         fn id(&self) -> u32 {
             self.id
         }
-        fn deps(&self) -> Vec<u32> {
-            self.deps.clone()
+        fn deps(&self) -> &[u32] {
+            &self.deps
+        }
+        fn has(&self, k: &u32) -> bool {
+            self.deps.contains(k)
+        }
+    }
+
+    // Note: Y cannot be Deps by itself, because Deps::deps() returns slice
+    #[derive(Debug, Clone)]
+    struct Y {
+        id: u32,
+        deps: Vec<String>,
+        description: String,
+    }
+
+    impl Y {
+        fn new(id: u32, str_deps: &[&str], desc: &str) -> Self {
+            Self {
+                id,
+                deps: str_deps.iter().map(|s| s.to_string()).collect(),
+                description: desc.to_string(),
+            }
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct A(X);
+
+    impl Deps<u32> for A {
+        fn id(&self) -> u32 {
+            self.0.id
+        }
+        fn deps(&self) -> &[u32] {
+            &self.0.deps
+        }
+        fn has(&self, k: &u32) -> bool {
+            self.0.deps.contains(k)
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct B(X);
+
+    impl Deps<u32> for B {
+        fn id(&self) -> u32 {
+            self.0.id
+        }
+        fn deps(&self) -> &[u32] {
+            &self.0.deps
+        }
+        fn has(&self, k: &u32) -> bool {
+            self.0.deps.contains(k)
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct C(X);
+
+    impl Deps<u32> for C {
+        fn id(&self) -> u32 {
+            self.0.id
+        }
+        fn deps(&self) -> &[u32] {
+            &self.0.deps
+        }
+        fn has(&self, k: &u32) -> bool {
+            self.0.deps.contains(k)
         }
     }
 
@@ -208,6 +295,13 @@ mod tests {
         visited: HashSet<K>,
         indent: usize,
         is_new: bool,
+    }
+
+    fn shuffle<R: RngCore, T>(slice: &mut [T], rng: &mut R) {
+        for i in (1..slice.len()).rev() {
+            let j = (rng.next_u64() as usize) % (i + 1);
+            slice.swap(i, j);
+        }
     }
 
     #[test]
@@ -224,7 +318,7 @@ mod tests {
             X::new(47, &[43, 46], "Start Pacemaker on oss2.local."),
             X::new(48, &[39, 40, 41, 42, 45, 46, 47], "Setup managed host oss2.local."),
         ];
-        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(|x| Arc::new(x)).collect();
+        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(Arc::new).collect();
 
         let dag = build_direct_dag(&x_arcs);
         let result = build_dag_str(&dag, &x_to_string).join("\n");
@@ -239,7 +333,7 @@ mod tests {
     fn cyclic_dependency() {
         // it shouldn't be stack overflow anyway even if there is an invariant violation
         let x_list: Vec<X> = vec![X::new(1, &[2], "One"), X::new(2, &[3], "Two"), X::new(3, &[2], "Three")];
-        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(|x| Arc::new(x)).collect();
+        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(Arc::new).collect();
 
         let dag = build_direct_dag(&x_arcs);
         let result = build_dag_str(&dag, &x_to_string).join("\n");
@@ -253,7 +347,7 @@ mod tests {
     #[test]
     fn single_node() {
         let x_list: Vec<X> = vec![X::new(1, &[], "One")];
-        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(|x| Arc::new(x)).collect();
+        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(Arc::new).collect();
         let dag = build_direct_dag(&x_arcs);
         let result = build_dag_str(&dag, &x_to_string).join("\n");
         assert_eq!(result, "1: One");
@@ -264,18 +358,26 @@ mod tests {
 
     #[test]
     fn test_rich_wrapper() {
-        let x_list: Vec<X> = vec![
-            X::new(39, &[], "Install packages on server oss2.local"),
-            X::new(40, &[39], "Configure NTP on oss2.local"),
-            X::new(46, &[43, 45, 46], "Configure Pacemaker on oss2.local"),
-            X::new(48, &[39, 40, 41, 42, 45, 46, 47], "Setup managed host oss2.local"),
+        fn extract_from_y(y: &Y) -> (u32, Vec<u32>) {
+            let deps = y.deps.iter().map(|s| s.parse::<u32>().unwrap()).collect();
+            (y.id, deps)
+        }
+        // the DAG built over RichDeps<_, _> must be always the same, no matter how dependencies are sorted
+        let mut rng = Xoroshiro64Star::seed_from_u64(485369);
+        let mut y_list: Vec<Y> = vec![
+            Y::new(39, &[], "Install packages on server oss2.local"),
+            Y::new(40, &["39"], "Configure NTP on oss2.local"),
+            Y::new(46, &["43", "45", "46"], "Configure Pacemaker on oss2.local"),
+            Y::new(48, &["39", "40", "41", "42", "45", "46", "47"], "Setup managed host oss2.local"),
         ];
-        // dependencies should always come in the stable order
         for _ in 0..10 {
-            let x_arcs: Vec<Arc<RichDeps<u32, X>>> =
-                x_list.clone().into_iter().map(|x| Arc::new(RichDeps::new(x))).collect();
-            let dag = build_direct_dag(&x_arcs);
-            let result = build_dag_str(&dag, &richx_to_string).join("\n");
+            for y in y_list.iter_mut() {
+                shuffle(&mut y.deps, &mut rng);
+            }
+            let y_arcs: Vec<Arc<RichDeps<u32, Y>>> =
+                y_list.clone().into_iter().map(|t| Arc::new(RichDeps::new(t, extract_from_y))).collect();
+            let dag = build_direct_dag(&y_arcs);
+            let result = build_dag_str(&dag, &rich_y_to_string).join("\n");
             assert_eq!(result, SMALL_TREE);
         }
     }
@@ -287,7 +389,6 @@ mod tests {
         }
         // all the packets come in random order, the model should be always consistent
         // 1 -> [10, 11] -> [20, 21, 22, 23]
-        let mut rng = Xoroshiro64Star::seed_from_u64(485369);
         let db = build_db();
         let mut model = Model::default();
         let (a, b, c) = prepare_abc(&db, 1);
@@ -365,47 +466,13 @@ mod tests {
     fn x_to_string(node: Arc<X>, ctx: &mut Context<u32>) -> String {
         let ellipsis = if ctx.is_new { "" } else { "..." };
         let indent = "  ".repeat(ctx.indent);
-        format!("{}{}: {}{}", indent, node.id, node.description, ellipsis,)
+        format!("{}{}: {}{}", indent, node.id, node.description, ellipsis)
     }
 
-    fn richx_to_string(node: Arc<RichDeps<u32, X>>, ctx: &mut Context<u32>) -> String {
-        x_to_string(Arc::new(node.inner.clone()), ctx)
-    }
-
-    #[derive(Debug, Clone)]
-    struct A(X);
-
-    impl Deps<u32> for A {
-        fn id(&self) -> u32 {
-            self.0.id
-        }
-        fn deps(&self) -> Vec<u32> {
-            self.0.deps.clone()
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    struct B(X);
-
-    impl Deps<u32> for B {
-        fn id(&self) -> u32 {
-            self.0.id
-        }
-        fn deps(&self) -> Vec<u32> {
-            self.0.deps.clone()
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    struct C(X);
-
-    impl Deps<u32> for C {
-        fn id(&self) -> u32 {
-            self.0.id
-        }
-        fn deps(&self) -> Vec<u32> {
-            self.0.deps.clone()
-        }
+    fn rich_y_to_string(node: Arc<RichDeps<u32, Y>>, ctx: &mut Context<u32>) -> String {
+        let ellipsis = if ctx.is_new { "" } else { "..." };
+        let indent = "  ".repeat(ctx.indent);
+        format!("{}{}: {}{}", indent, node.id(), node.description, ellipsis)
     }
 
     #[derive(Debug, Default, Clone)]
@@ -594,9 +661,9 @@ mod tests {
 
     fn prepare_abc(db: &Db, id: u32) -> (Vec<A>, Vec<B>, Vec<C>) {
         let ai = db.select_a(&vec![id]);
-        let aix = ai.iter().map(|a| a.deps()).flatten().collect::<Vec<u32>>();
+        let aix = ai.iter().map(|a| a.deps()).flatten().map(|a| *a).collect::<Vec<u32>>();
         let bi = db.select_b(&aix);
-        let bix = bi.iter().map(|b| b.deps()).flatten().collect::<Vec<u32>>();
+        let bix = bi.iter().map(|b| b.deps()).flatten().map(|b| *b).collect::<Vec<u32>>();
         let ci = db.select_c(&bix);
         let ai = db.all_a.clone(); // use all roots
         (ai, bi, ci)
