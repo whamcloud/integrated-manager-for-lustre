@@ -348,13 +348,13 @@ expression: c_serde
               }
             }
           ],
-          "devpath": "/devices/virtual/block/dm-7",
+          "devpath": "/devices/virtual/block/dm-8",
           "dm_name": "mpathe",
           "filesystem_type": "zfs_member",
           "fs_label": "ost4",
           "fs_uuid": "18203608052822263296",
           "major": "253",
-          "minor": "7",
+          "minor": "8",
           "mount": null,
           "paths": [
             "/dev/mapper/mpathe",
@@ -362,7 +362,7 @@ expression: c_serde
             "/dev/disk/by-id/dm-uuid-mpath-360014059098da0ec78d4b1281b4b0166",
             "/dev/disk/by-label/ost4",
             "/dev/disk/by-uuid/18203608052822263296",
-            "/dev/dm-7"
+            "/dev/dm-8"
           ],
           "scsi80": "SLIO-ORG ost13           9098da0e-c78d-4b12-81b4-b0166f61aaa9",
           "serial": "360014059098da0ec78d4b1281b4b0166",

@@ -171,15 +171,48 @@ fn collect_virtual_device_parents(
     }
 }
 
-fn insert(d: &mut Device, to_insert: &Device) {
+fn children_mut(d: &mut Device) -> Option<&mut HashSet<Device>> {
+    match d {
+        Device::Root(dd) => Some(&mut dd.children),
+        Device::ScsiDevice(dd) => Some(&mut dd.children),
+        Device::Partition(dd) => Some(&mut dd.children),
+        Device::MdRaid(dd) => Some(&mut dd.children),
+        Device::Mpath(dd) => Some(&mut dd.children),
+        Device::VolumeGroup(dd) => Some(&mut dd.children),
+        Device::LogicalVolume(dd) => Some(&mut dd.children),
+        Device::Zpool(dd) => Some(&mut dd.children),
+        Device::Dataset(_) => None,
+    }
+}
+
+fn children(d: &Device) -> Option<&HashSet<Device>> {
+    match d {
+        Device::Root(dd) => Some(&dd.children),
+        Device::ScsiDevice(dd) => Some(&dd.children),
+        Device::Partition(dd) => Some(&dd.children),
+        Device::MdRaid(dd) => Some(&dd.children),
+        Device::Mpath(dd) => Some(&dd.children),
+        Device::VolumeGroup(dd) => Some(&dd.children),
+        Device::LogicalVolume(dd) => Some(&dd.children),
+        Device::Zpool(dd) => Some(&dd.children),
+        Device::Dataset(_) => None,
+    }
+}
+
+fn insert(mut d: &mut Device, to_insert: &Device) {
     if compare_selected_fields(d, to_insert) {
         tracing::info!(
-            "Inserting a device {} to {}",
+            "Inserting device {} children to {}",
             to_display(to_insert),
             to_display(d)
         );
-        // TODO: Don't insert entire device to avoid rewriting major, minor, devpath, paths fields
-        *d = to_insert.clone();
+
+        // TODO: Go over inserted children and correct their major, minot, devpath, paths fields?
+        children_mut(&mut d).map(|x| {
+            children(to_insert).map(|y| {
+                *x = y.clone();
+            })
+        });
     } else {
         match d {
             Device::Root(d) => {
