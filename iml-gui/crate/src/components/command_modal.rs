@@ -17,24 +17,18 @@ use serde::de::DeserializeOwned;
 use std::collections::HashSet;
 use std::fmt;
 use std::{sync::Arc, time::Duration};
+use crate::dependency_tree::RichDeps;
 
 /// The component polls `/api/command/` endpoint and this constant defines how often it does.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
 type Job0 = Job<Option<()>>;
 
-type JobsDAG = DependencyDAG<u32, Job0>;
+type RichCommand = RichDeps<u32, Command>;
+type RichJob = RichDeps<u32, Job0>;
+type RichStep = RichDeps<u32, Step>;
 
-impl Deps<u32> for Job0 {
-    fn id(&self) -> u32 {
-        self.id
-    }
-    fn deps(&self) -> Vec<u32> {
-        let mut deps: Vec<u32> = self.wait_for.iter().filter_map(|s| extract_uri_id::<Self>(s)).collect();
-        deps.sort();
-        deps
-    }
-}
+type JobsGraph = DependencyDAG<u32, RichJob>;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum TypedId {
@@ -94,15 +88,17 @@ pub enum Input {
 pub struct Model {
     pub tree_cancel: Option<oneshot::Sender<()>>,
 
-    pub commands_loading: bool,
-    pub commands: Vec<Arc<Command>>,
+    pub commands_loading: bool, // TODO use commands_view instead
 
-    pub jobs_loading: bool,
-    pub jobs: Vec<Arc<Job0>>,
-    pub jobs_dag: DependencyDAG<u32, Job0>,
+    pub commands: Vec<Arc<RichCommand>>,
+    pub commands_view: Vec<Arc<RichCommand>>,
 
-    pub steps_loading: bool,
-    pub steps: Vec<Arc<Step>>,
+    pub jobs: Vec<Arc<RichJob>>,
+    pub jobs_view: Vec<Arc<RichJob>>,
+    pub jobs_graph: JobsGraph,
+
+    pub steps: Vec<Arc<RichStep>>,
+    pub steps_view: Vec<Arc<RichStep>>,
 
     pub opens: Opens,
     pub modal: modal::Model,
@@ -138,14 +134,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             // clear model from the previous command modal work
             model.commands.clear();
             model.jobs.clear();
-            model.jobs_dag.clear();
+            model.jobs_graph.clear();
             model.steps.clear();
 
             match cmds {
-                Input::Commands(cmds) => {
+                Input::Commands(mut cmds) => {
                     // use the (little) optimization:
                     // if we already have the commands and they all finished, we don't need to poll them anymore
-                    model.commands = cmds;
+                    model.commands = cmds.iter_mut().map(|ac| Arc::new(RichCommand::new((**ac).clone(), extract_children_from_cmd))).collect();
                     if !is_all_finished(&model.commands) {
                         orders.send_msg(Msg::FetchTree);
                     }
@@ -169,7 +165,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             model.commands_loading = false;
             match *commands_data_result {
                 Ok(api_list) => {
-                    model.commands = api_list.objects.into_iter().map(Arc::new).collect();
+                    model.commands = api_list.objects.into_iter().map(|c| Arc::new(RichCommand::new(c, extract_children_from_cmd))).collect();
                 }
                 Err(e) => {
                     error!("Failed to perform fetch_command_status {:#?}", e);
@@ -185,13 +181,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::FetchedJobs(jobs_data_result) => match *jobs_data_result {
             Ok(api_list) => {
                 if are_jobs_consistent(model, &api_list.objects) {
-                    model.jobs_loading = false;
-                    model.jobs = api_list.objects.into_iter().map(Arc::new).collect();
-                    model.jobs_dag = build_direct_dag(&model.jobs);
+                    let jobs_graph_data = api_list.objects.iter().map(|j| Arc::new(RichJob::new(j.clone(), extract_wait_fors_from_job))).collect::<Vec<Arc<RichJob>>>();
+                    model.jobs = api_list.objects.into_iter().map(|j| Arc::new(RichJob::new(j, extract_children_from_job))).collect();
+                    model.jobs_graph = build_direct_dag(&jobs_graph_data);
                 }
             }
             Err(e) => {
-                model.jobs_loading = false;
+                // TODO model.jobs_loading = false;
                 error!("Failed to perform fetch_job_status {:#?}", e);
                 orders.skip();
             }
@@ -199,12 +195,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::FetchedSteps(steps_data_result) => match *steps_data_result {
             Ok(api_list) => {
                 if are_steps_consistent(model, &api_list.objects) {
-                    model.steps_loading = false;
-                    model.steps = api_list.objects.into_iter().map(Arc::new).collect();
+                    // TODO model.steps_loading = false;
+                    model.steps = api_list.objects.into_iter().map(|s| RichStep::new(s, extract_children_from_step)).map(Arc::new).collect();
                 }
             }
             Err(e) => {
-                model.steps_loading = false;
+                // TODO model.steps_loading = false;
                 error!("Failed to perform fetch_job_status {:#?}", e);
                 orders.skip();
             }
@@ -216,7 +212,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             if let Some(clear_level) = do_clear {
                 if clear_level == 2 {
                     model.jobs.clear();
-                    model.jobs_dag.clear();
+                    model.jobs_graph.clear();
                     model.steps.clear();
                 } else if clear_level == 1 {
                     model.steps.clear();
@@ -244,7 +240,7 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -
         }
         Opens::Command(cmd_id) => {
             // the user has opened the info on the command,
-            // we need the corresponding jobs to build the dependency DAG
+            // we need the corresponding jobs to build the dependency graph
             if let Some(i) = model.commands.iter().position(|c| c.id == *cmd_id) {
                 let cmd_ids = model.commands.iter().map(|c| c.id).collect::<Vec<u32>>();
                 let job_ids = extract_ids::<Job0>(&model.commands[i].jobs);
@@ -344,7 +340,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
     }
 }
 
-fn command_item_view(model: &Model, x: &Command) -> Node<Msg> {
+fn command_item_view(model: &Model, x: &RichCommand) -> Node<Msg> {
     let is_open = is_typed_id_in_opens(&model.opens, TypedId::Command(x.id));
     let border = if !is_open {
         C.border_transparent
@@ -363,7 +359,7 @@ fn command_item_view(model: &Model, x: &Command) -> Node<Msg> {
     } else {
         "chevron-circle-down"
     };
-    let job_tree = job_tree_view(&model.jobs_dag);
+    let job_tree = job_tree_view(&model.jobs_graph);
     let step_list = step_list_view(&model.opens, &model.steps);
     div![
         class![C.border_b, C.last__border_b_0],
@@ -402,7 +398,7 @@ fn command_item_view(model: &Model, x: &Command) -> Node<Msg> {
     ]
 }
 
-pub fn job_tree_view(jobs_dag: &DependencyDAG<u32, Job0>) -> Node<Msg> {
+pub fn job_tree_view(jobs_graph: &JobsGraph) -> Node<Msg> {
     div![
         class![C.font_ordinary, C.text_gray_700],
         h4![class![C.text_lg, C.font_medium], "Jobs"],
@@ -418,20 +414,20 @@ pub fn job_tree_view(jobs_dag: &DependencyDAG<u32, Job0>) -> Node<Msg> {
                 C.overflow_auto,
                 C.max_h_screen
             ],
-            job_dag_view(jobs_dag, &job_item_view),
+            job_dag_view(jobs_graph, &job_item_view),
         ]
     ]
 }
 
-pub fn job_dag_view<F>(dag: &JobsDAG, node_view: &F) -> Node<Msg>
+pub fn job_dag_view<F>(dag: &JobsGraph, node_view: &F) -> Node<Msg>
 where
-    F: Fn(Arc<Job0>, &mut Context) -> Node<Msg>,
+    F: Fn(Arc<RichJob>, &mut Context) -> Node<Msg>,
 {
-    fn build_node_view<F>(dag: &JobsDAG, node_view: &F, n: Arc<Job0>, ctx: &mut Context) -> Node<Msg>
+    fn build_node_view<F>(dag: &JobsGraph, node_view: &F, n: Arc<RichJob>, ctx: &mut Context) -> Node<Msg>
     where
-        F: Fn(Arc<Job0>, &mut Context) -> Node<Msg>,
+        F: Fn(Arc<RichJob>, &mut Context) -> Node<Msg>,
     {
-        ctx.is_new = ctx.visited.insert(n.id());
+        ctx.is_new = ctx.visited.insert(n.id);
         let parent: Node<Msg> = node_view(Arc::clone(&n), ctx);
         let mut acc: Vec<Node<Msg>> = Vec::new();
         if let Some(deps) = dag.deps.get(&n.id()) {
@@ -461,7 +457,7 @@ where
     div![acc]
 }
 
-fn job_item_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
+fn job_item_view(job: Arc<RichJob>, ctx: &mut Context) -> Node<Msg> {
     if ctx.is_new {
         let icon = job_status_icon(job.as_ref());
         if job.steps.is_empty() {
@@ -478,7 +474,7 @@ fn job_item_view(job: Arc<Job0>, ctx: &mut Context) -> Node<Msg> {
     }
 }
 
-fn step_list_view(opens: &Opens, steps: &[Arc<Step>]) -> Node<Msg> {
+fn step_list_view(opens: &Opens, steps: &[Arc<RichStep>]) -> Node<Msg> {
     if steps.is_empty() {
         empty!()
     } else {
@@ -501,7 +497,7 @@ fn step_list_view(opens: &Opens, steps: &[Arc<Step>]) -> Node<Msg> {
     }
 }
 
-fn step_item_view(step: &Step, is_open: bool) -> Vec<Node<Msg>> {
+fn step_item_view(step: &RichStep, is_open: bool) -> Vec<Node<Msg>> {
     let icon = step_status_icon(step, is_open);
     let item_caption = div![
         class![C.flex],
@@ -563,7 +559,7 @@ fn step_item_view(step: &Step, is_open: bool) -> Vec<Node<Msg>> {
     vec![item_caption, item_body]
 }
 
-fn status_text(cmd: &Command) -> &'static str {
+fn status_text(cmd: &RichCommand) -> &'static str {
     if cmd.complete {
         "Complete"
     } else if cmd.errored {
@@ -575,7 +571,7 @@ fn status_text(cmd: &Command) -> &'static str {
     }
 }
 
-fn cmd_status_icon<T>(cmd: &Command) -> Node<T> {
+fn cmd_status_icon<T>(cmd: &RichCommand) -> Node<T> {
     let awesome_class = class![C.w_4, C.h_4, C.inline, C.mr_4];
     if cmd.complete {
         font_awesome(awesome_class, "check").merge_attrs(class![C.text_green_500])
@@ -588,7 +584,7 @@ fn cmd_status_icon<T>(cmd: &Command) -> Node<T> {
     }
 }
 
-fn job_status_icon<T>(job: &Job0) -> Node<T> {
+fn job_status_icon<T>(job: &RichJob) -> Node<T> {
     let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
     if job.cancelled {
         font_awesome(awesome_style, "ban").merge_attrs(class![C.text_red_500])
@@ -601,7 +597,7 @@ fn job_status_icon<T>(job: &Job0) -> Node<T> {
     }
 }
 
-fn step_status_icon<T>(step: &Step, is_open: bool) -> Node<T> {
+fn step_status_icon<T>(step: &RichStep, is_open: bool) -> Node<T> {
     let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
     let color = match step.state.as_ref() {
         "incomplete" => class![C.text_gray_500],
@@ -669,11 +665,11 @@ fn extract_ids<T: EndpointName>(uris: &[String]) -> Vec<u32> {
     uris.iter().filter_map(|s| extract_uri_id::<T>(s)).collect()
 }
 
-const fn is_finished(cmd: &Command) -> bool {
+fn is_finished(cmd: &RichCommand) -> bool {
     cmd.complete
 }
 
-fn is_all_finished(cmds: &[Arc<Command>]) -> bool {
+fn is_all_finished(cmds: &[Arc<RichCommand>]) -> bool {
     cmds.iter().all(|cmd| is_finished(cmd))
 }
 
@@ -821,6 +817,23 @@ fn perform_close_click(cur_opens: &Opens, the_id: TypedId) -> Opens {
     }
 }
 
+fn extract_children_from_cmd(cmd: &Command) -> (u32, Vec<u32>) {
+    (cmd.id, cmd.jobs.iter().filter_map(|s| extract_uri_id::<Job0>(s)).collect())
+}
+
+fn extract_children_from_job(job: &Job0) -> (u32, Vec<u32>) {
+    (job.id, job.steps.iter().filter_map(|s| extract_uri_id::<Step>(s)).collect())
+}
+
+fn extract_children_from_step(step: &Step) -> (u32, Vec<u32>) {
+    (step.id, Vec::new()) // steps have no descendants
+}
+
+fn extract_wait_fors_from_job(job: &Job0) -> (u32, Vec<u32>) {
+    // interdependencies between jobs
+    (job.id, job.wait_for.iter().filter_map(|s| extract_uri_id::<Job0>(s)).collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -841,7 +854,9 @@ mod tests {
             make_job(2, &[], "Two"),
             make_job(3, &[], "Three"),
         ];
-        let arc_jobs: Vec<Arc<Job0>> = jobs.into_iter().map(|j| Arc::new(j)).collect();
+        let rich_jobs = jobs.into_iter().map(|j| RichJob::new(j, extract_wait_fors_from_job));
+        let arc_jobs: Vec<Arc<RichJob>> = rich_jobs.map(|j| Arc::new(j)).collect();
+
         let dag = build_direct_dag(&arc_jobs);
         let dom = job_dag_view(&dag, &job_item_view);
         let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline, C.text_green_500];
