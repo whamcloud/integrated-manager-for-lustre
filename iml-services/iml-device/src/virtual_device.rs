@@ -214,49 +214,11 @@ fn insert(mut d: &mut Device, to_insert: &Device) {
             })
         });
     } else {
-        match d {
-            Device::Root(d) => {
-                for mut c in d.children.iter_mut() {
-                    insert(&mut c, to_insert);
-                }
+        children_mut(d).map(|cc| {
+            for mut c in cc.iter_mut() {
+                insert(&mut c, to_insert);
             }
-            Device::ScsiDevice(d) => {
-                for mut c in d.children.iter_mut() {
-                    insert(&mut c, to_insert);
-                }
-            }
-            Device::Partition(d) => {
-                for mut c in d.children.iter_mut() {
-                    insert(&mut c, to_insert);
-                }
-            }
-            Device::MdRaid(d) => {
-                for mut c in d.children.iter_mut() {
-                    insert(&mut c, to_insert);
-                }
-            }
-            Device::Mpath(d) => {
-                for mut c in d.children.iter_mut() {
-                    insert(&mut c, to_insert);
-                }
-            }
-            Device::VolumeGroup(d) => {
-                for mut c in d.children.iter_mut() {
-                    insert(&mut c, to_insert);
-                }
-            }
-            Device::LogicalVolume(d) => {
-                for mut c in d.children.iter_mut() {
-                    insert(&mut c, to_insert);
-                }
-            }
-            Device::Zpool(d) => {
-                for mut c in d.children.iter_mut() {
-                    insert(&mut c, to_insert);
-                }
-            }
-            Device::Dataset(_) => {}
-        }
+        });
     }
 }
 
