@@ -44,7 +44,6 @@ class Mailbox(models.Model):
     data_transfered = models.BigIntegerField(default=0)
 
     keep_failed = models.BooleanField(default=True, null=False)
-    # Actually links to ActionType
     actions = ArrayField(models.CharField(max_length=16))
 
     args = JSONField(default={})
@@ -57,7 +56,7 @@ class FidActionQueue(models.Model):
 
     fid = LustreFidField()
 
-    mailbox = models.ForeignKey("Mailboxes", on_delete=CASCADE)
+    mailbox = models.ForeignKey("Mailbox", on_delete=CASCADE)
 
     data = JSONField(default={})
     failed = models.PositiveSmallIntegerField(default=0, null=False)

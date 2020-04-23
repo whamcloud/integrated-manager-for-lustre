@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-pub use crate::models::{ChromaCoreMailboxes, LustreFid};
+pub use crate::models::{ChromaCoreMailbox, LustreFid};
 use crate::schema::chroma_core_mailboxes as mb;
 use diesel::{dsl, prelude::*};
 use std::{convert::From, fmt, str::FromStr};
@@ -40,7 +40,7 @@ impl From<[u8; 40_usize]> for LustreFid {
 pub type WithName = dsl::Eq<mb::name, String>;
 pub type ByName = dsl::Filter<mb::table, WithName>;
 
-impl ChromaCoreMailboxes {
+impl ChromaCoreMailbox {
     pub fn with_name(name: impl ToString) -> WithName {
         mb::name.eq(name.to_string())
     }
