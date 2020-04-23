@@ -24,7 +24,7 @@ tokio-util = { version = "0.3", features = ["codec"] }
 tracing = "0.1"
 warp = "0.2"
 chrono = "0.4.11"
-jsondata = "0.6.2"
 
 [dev-dependencies]
 insta = "0.16"
+jsondata = "0.6.2"
