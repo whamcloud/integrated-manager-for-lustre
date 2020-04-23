@@ -7,7 +7,7 @@ use crate::{
         create_command, get, get_all, get_hosts, get_influx, get_one, wait_for_cmds_success,
         SendCmd, SendJob,
     },
-    display_utils::{wrap_fut, DisplayType, IntoDisplayType as _},
+    display_utils::{usage, wrap_fut, DisplayType, IntoDisplayType as _},
     error::ImlManagerCliError,
     ostpool::{ostpool_cli, OstPoolCommand},
 };
@@ -19,35 +19,20 @@ use prettytable::{Row, Table};
 use std::collections::{BTreeMap, HashMap};
 use structopt::StructOpt;
 
-#[derive(Debug, serde::Serialize)]
-pub struct FilesystemAndStatsList(pub Vec<String>);
-
-impl IntoIterator for FilesystemAndStatsList {
-    type Item = String;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
-#[derive(StructOpt, Debug)]
-pub struct ListItems {
-    /// Set the display type
-    ///
-    /// The display type can be one of the following:
-    /// tabular: display content in a table format
-    /// json: return data in json format
-    /// yaml: return data in yaml format
-    #[structopt(short = "d", long = "display", default_value = "tabular")]
-    display_type: DisplayType,
-}
-
 #[derive(Debug, StructOpt)]
 pub enum FilesystemCommand {
     /// List all configured filesystems
     #[structopt(name = "list")]
-    List(ListItems),
+    List {
+        /// Set the display type
+        ///
+        /// The display type can be one of the following:
+        /// tabular: display content in a table format
+        /// json: return data in json format
+        /// yaml: return data in yaml format
+        #[structopt(short = "d", long = "display", default_value = "tabular")]
+        display_type: DisplayType,
+    },
     /// Show filesystem
     #[structopt(name = "show")]
     Show {
@@ -66,22 +51,6 @@ pub enum FilesystemCommand {
         #[structopt(short, long)]
         hosts: Option<String>,
     },
-}
-
-fn usage(
-    free: Option<u64>,
-    total: Option<u64>,
-    formatter: fn(f64, Option<usize>) -> String,
-) -> String {
-    match (free, total) {
-        (Some(free), Some(total)) => format!(
-            "{} / {}",
-            formatter(total as f64 - free as f64, Some(0)),
-            formatter(total as f64, Some(0))
-        ),
-        (None, Some(total)) => format!("Calculating ... / {}", formatter(total as f64, Some(0))),
-        _ => "Calculating ...".to_string(),
-    }
 }
 
 async fn detect_filesystem(hosts: Option<String>) -> Result<(), ImlManagerCliError> {
@@ -132,50 +101,38 @@ async fn detect_filesystem(hosts: Option<String>) -> Result<(), ImlManagerCliErr
     Ok(())
 }
 
-fn list_filesystems(xs: Vec<FilesystemAndStatsList>, display_type: DisplayType) {
-    let term = Term::stdout();
-
-    tracing::debug!("Filesystems: {:?}", xs);
-
-    let x = xs.into_display_type(display_type);
-
-    term.write_line(&x).unwrap();
-}
-
 pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManagerCliError> {
     match command {
-        FilesystemCommand::List(config) => {
+        FilesystemCommand::List { display_type } => {
             let fut_fs = get_all::<Filesystem>();
             let query = iml_influx::filesystems::query();
             let fut_st =
                 get_influx::<iml_influx::filesystems::InfluxResponse>("iml_stats", query.as_str());
 
-            let (filesystems, influx_resp) =
+            let (mut filesystems, influx_resp) =
                 wrap_fut("Fetching filesystems...", try_join(fut_fs, fut_st)).await?;
             let stats = iml_influx::filesystems::Response::from(influx_resp);
 
             tracing::debug!("FSs: {:?}", filesystems);
             tracing::debug!("Stats: {:?}", stats);
 
-            let xs: Vec<FilesystemAndStatsList> = filesystems
-                .objects
-                .into_iter()
-                .map(|f| {
-                    let s = stats.get(&f.name).cloned().unwrap_or_default();
-                    vec![
-                        f.label,
-                        f.state,
-                        usage(s.bytes_free, s.bytes_total, format_bytes),
-                        usage(s.files_free, s.files_total, format_number),
-                        format!("{}", s.clients.unwrap_or(0)),
-                        f.mdts.len().to_string(),
-                        f.osts.len().to_string(),
-                    ]
-                })
-                .map(FilesystemAndStatsList)
-                .collect();
+            filesystems.objects.iter_mut().for_each(|x| {
+                let s = stats.get(&x.name).cloned().unwrap_or_default();
 
-            list_filesystems(xs, config.display_type);
+                x.bytes_free = s.bytes_free.map(|x| x as f64);
+                x.bytes_total = s.bytes_total.map(|x| x as f64);
+                x.files_free = s.files_free;
+                x.files_total = s.files_total;
+                x.client_count = s.clients;
+            });
+
+            let term = Term::stdout();
+
+            tracing::debug!("Filesystems: {:?}", filesystems);
+
+            let x = filesystems.objects.into_display_type(display_type);
+
+            term.write_line(&x).unwrap();
         }
         FilesystemCommand::Show { fsname } => {
             let fut_fs = get_one::<Filesystem>(vec![("name", &fsname)]);

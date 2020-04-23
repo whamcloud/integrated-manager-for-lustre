@@ -25,23 +25,20 @@ pub enum StratagemCommand {
     StratagemInterval(StratagemInterval),
 }
 
-#[derive(StructOpt, Debug)]
-pub struct ListItems {
-    /// Set the display type
-    ///
-    /// The display type can be one of the following:
-    /// tabular: display content in a table format
-    /// json: return data in json format
-    /// yaml: return data in yaml format
-    #[structopt(short = "d", long = "display", default_value = "tabular")]
-    display_type: DisplayType,
-}
-
 #[derive(Debug, StructOpt)]
 pub enum StratagemInterval {
     /// List all existing Stratagem intervals
     #[structopt(name = "list")]
-    List(ListItems),
+    List {
+        /// Set the display type
+        ///
+        /// The display type can be one of the following:
+        /// tabular: display content in a table format
+        /// json: return data in json format
+        /// yaml: return data in yaml format
+        #[structopt(short = "d", long = "display", default_value = "tabular")]
+        display_type: DisplayType,
+    },
     /// Add a new Stratagem interval
     #[structopt(name = "add")]
     Add(StratagemIntervalConfig),
@@ -191,7 +188,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
             display_cmd_state(&command);
         }
         StratagemCommand::StratagemInterval(x) => match x {
-            StratagemInterval::List(config) => {
+            StratagemInterval::List { display_type } => {
                 let stop_spinner = start_spinner("Finding existing intervals...");
 
                 let r: ApiList<StratagemConfiguration> = get(
@@ -207,7 +204,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
                     return Ok(());
                 }
 
-                list_stratagem_configurations(r.objects, config.display_type);
+                list_stratagem_configurations(r.objects, display_type);
             }
             StratagemInterval::Add(c) => {
                 let r = post(StratagemConfiguration::endpoint_name(), c).await?;

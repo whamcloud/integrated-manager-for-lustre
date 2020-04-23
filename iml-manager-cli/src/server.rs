@@ -62,23 +62,20 @@ pub struct AddHosts {
     password: Option<String>,
 }
 
-#[derive(StructOpt, Debug)]
-pub struct ListItems {
-    /// Set the display type
-    ///
-    /// The display type can be one of the following:
-    /// tabular: display content in a table format
-    /// json: return data in json format
-    /// yaml: return data in yaml format
-    #[structopt(short = "d", long = "display", default_value = "tabular")]
-    display_type: DisplayType,
-}
-
 #[derive(Debug, StructOpt)]
 pub enum ServerCommand {
     /// List all configured storage servers
     #[structopt(name = "list")]
-    List(ListItems),
+    List {
+        /// Set the display type
+        ///
+        /// The display type can be one of the following:
+        /// tabular: display content in a table format
+        /// json: return data in json format
+        /// yaml: return data in yaml format
+        #[structopt(short = "d", long = "display", default_value = "tabular")]
+        display_type: DisplayType,
+    },
     /// Add new servers to IML
     #[structopt(name = "add")]
     Add(AddHosts),
@@ -721,9 +718,9 @@ fn get_agent_profile<'a>(
 
 pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError> {
     match command {
-        ServerCommand::List(config) => {
+        ServerCommand::List { display_type } => {
             let hosts: ApiList<Host> = wrap_fut("Fetching hosts...", get_hosts()).await?;
-            list_server(hosts.objects, config.display_type);
+            list_server(hosts.objects, display_type);
         }
         ServerCommand::Add(config) => add_server(config).await?,
         ServerCommand::Remove(config) => {

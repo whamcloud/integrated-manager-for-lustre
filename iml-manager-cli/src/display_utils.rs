@@ -2,11 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{filesystem::FilesystemAndStatsList, ostpool::OstPoolList};
 use console::{style, Term};
 use futures::{Future, FutureExt};
-use iml_wire_types::{Command, Host, StratagemConfiguration};
+use iml_wire_types::{Command, Filesystem, Host, OstPool, StratagemConfiguration};
 use indicatif::ProgressBar;
+use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
 use spinners::{Spinner, Spinners};
 use std::{fmt::Display, io, str::FromStr};
@@ -91,6 +91,22 @@ where
     table
 }
 
+pub fn usage(
+    free: Option<u64>,
+    total: Option<u64>,
+    formatter: fn(f64, Option<usize>) -> String,
+) -> String {
+    match (free, total) {
+        (Some(free), Some(total)) => format!(
+            "{} / {}",
+            formatter(total as f64 - free as f64, Some(0)),
+            formatter(total as f64, Some(0))
+        ),
+        (None, Some(total)) => format!("Calculating ... / {}", formatter(total as f64, Some(0))),
+        _ => "Calculating ...".to_string(),
+    }
+}
+
 pub trait IntoTable {
     fn into_table(self) -> Table;
 }
@@ -129,19 +145,37 @@ impl IntoTable for Vec<StratagemConfiguration> {
     }
 }
 
-impl IntoTable for Vec<OstPoolList> {
+impl IntoTable for Vec<OstPool> {
     fn into_table(self) -> Table {
-        generate_table(&["Filesystem", "Pool Name", "OST Count"], self)
+        generate_table(
+            &["Filesystem", "Pool Name", "OST Count"],
+            self.into_iter()
+                .map(|x| vec![x.filesystem, x.name, x.osts.len().to_string()]),
+        )
     }
 }
 
-impl IntoTable for Vec<FilesystemAndStatsList> {
+impl IntoTable for Vec<Filesystem> {
     fn into_table(self) -> Table {
         generate_table(
             &[
                 "Name", "State", "Space", "Inodes", "Clients", "MDTs", "OSTs",
             ],
-            self,
+            self.into_iter().map(|x| {
+                vec![
+                    x.label,
+                    x.state,
+                    usage(
+                        x.bytes_free.map(|x| x as u64),
+                        x.bytes_total.map(|x| x as u64),
+                        format_bytes,
+                    ),
+                    usage(x.files_free, x.files_total, format_number),
+                    format!("{}", x.client_count.unwrap_or(0)),
+                    x.mdts.len().to_string(),
+                    x.osts.len().to_string(),
+                ]
+            }),
         )
     }
 }
