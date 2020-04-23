@@ -276,7 +276,7 @@ fn insert_virtual_devices(d: &mut Device, parents: &[Device]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use insta::assert_debug_snapshot;
+    use insta::assert_json_snapshot;
     use std::fs;
 
     #[tokio::test]
@@ -296,6 +296,6 @@ mod tests {
         ];
 
         let results = update_virtual_devices(devices).await;
-        assert_debug_snapshot!("simple_test", results);
+        assert_json_snapshot!("simple_test", results);
     }
 }
