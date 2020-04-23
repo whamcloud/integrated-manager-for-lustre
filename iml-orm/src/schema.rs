@@ -389,7 +389,7 @@ table! {
     chroma_core_fidactionqueue (id) {
         id -> Int4,
         fid -> LustreFid,
-        entries -> Jsonb,
+        data -> Jsonb,
         failed -> Int2,
         mailbox_id -> Int4,
     }

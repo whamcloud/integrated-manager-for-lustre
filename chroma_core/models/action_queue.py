@@ -59,8 +59,8 @@ class FidActionQueue(models.Model):
 
     mailbox = models.ForeignKey("Mailboxes", on_delete=CASCADE)
 
-    entries = JSONField(default={})
-    failed = models.PositiveSmallIntegerField()
+    data = JSONField(default={})
+    failed = models.PositiveSmallIntegerField(default=0, null=False)
 
 
 class ActionType(models.Model):

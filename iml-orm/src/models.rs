@@ -549,7 +549,7 @@ pub struct ChromaCoreFailbacktargetjob {
 pub struct ChromaCoreFidactionqueue {
     pub id: i32,
     pub fid: LustreFid,
-    pub entries: serde_json::Value,
+    pub data: serde_json::Value,
     pub failed: i16,
     pub mailbox_id: i32,
 }
