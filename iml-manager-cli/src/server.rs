@@ -8,6 +8,7 @@ use crate::{
         display_cancelled, display_error, format_error, format_success, generate_table, wrap_fut,
     },
     error::ImlManagerCliError,
+    profile,
 };
 use console::{style, Term};
 use dialoguer::Confirmation;
@@ -71,9 +72,12 @@ pub enum ServerCommand {
     /// Remove servers from IML
     #[structopt(name = "remove")]
     Remove(RemoveHosts),
-    /// List all profiles
+    /// Work with Server Profiles
     #[structopt(name = "profile")]
-    Profile,
+    Profile {
+        #[structopt(subcommand)]
+        cmd: Option<profile::Cmd>,
+    },
 }
 
 #[derive(Debug)]
@@ -789,23 +793,7 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
 
             wait_for_cmds_success(&commands).await?;
         }
-        ServerCommand::Profile => {
-            let profiles: ApiList<ServerProfile> =
-                wrap_fut("Fetching profiles...", get_all()).await?;
-
-            tracing::debug!("profiles: {:?}", profiles);
-
-            let table = generate_table(
-                &["Profile", "Name", "Description"],
-                profiles
-                    .objects
-                    .into_iter()
-                    .filter(|x| x.user_selectable)
-                    .map(|x| vec![x.name, x.ui_name, x.ui_description]),
-            );
-
-            table.printstd();
-        }
+        ServerCommand::Profile { cmd } => profile::cmd(cmd).await?,
     };
 
     Ok(())
