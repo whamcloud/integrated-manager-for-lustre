@@ -56,5 +56,4 @@ class Migration(migrations.Migration):
             name="mailbox",
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.Mailbox"),
         ),
-        migrations.AlterUniqueTogether(name="actiontype", unique_together=set([("name",)]),),
     ]
