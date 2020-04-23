@@ -2,8 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-pub use crate::models::{ChromaCoreMailboxes, LustreFid};
-use crate::schema::chroma_core_mailboxes as mb;
+pub use crate::models::{ChromaCoreTask, LustreFid};
+use crate::schema::chroma_core_task as task;
 use diesel::{dsl, prelude::*};
 use std::{convert::From, fmt, str::FromStr};
 
@@ -37,14 +37,14 @@ impl From<[u8; 40_usize]> for LustreFid {
     }
 }
 
-pub type WithName = dsl::Eq<mb::name, String>;
-pub type ByName = dsl::Filter<mb::table, WithName>;
+pub type WithName = dsl::Eq<task::name, String>;
+pub type ByName = dsl::Filter<task::table, WithName>;
 
-impl ChromaCoreMailboxes {
+impl ChromaCoreTask {
     pub fn with_name(name: impl ToString) -> WithName {
-        mb::name.eq(name.to_string())
+        task::name.eq(name.to_string())
     }
     pub fn by_name(name: impl ToString) -> ByName {
-        mb::table.filter(Self::with_name(name))
+        task::table.filter(Self::with_name(name))
     }
 }
