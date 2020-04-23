@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 pub use crate::models::{ChromaCoreMailbox, LustreFid};
-use crate::schema::chroma_core_mailboxes as mb;
+use crate::schema::chroma_core_mailbox as mb;
 use diesel::{dsl, prelude::*};
 use std::{convert::From, fmt, str::FromStr};
 
