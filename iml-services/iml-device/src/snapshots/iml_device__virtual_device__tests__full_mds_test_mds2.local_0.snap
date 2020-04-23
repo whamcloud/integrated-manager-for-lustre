@@ -1,0 +1,49 @@
+---
+source: iml-services/iml-device/src/virtual_device.rs
+expression: c_serde
+---
+{
+  "ScsiDevice": {
+    "children": [
+      {
+        "Mpath": {
+          "children": [],
+          "devpath": "/devices/virtual/block/dm-1",
+          "dm_name": "mpathd",
+          "filesystem_type": null,
+          "fs_label": null,
+          "fs_uuid": null,
+          "major": "253",
+          "minor": "1",
+          "mount": null,
+          "paths": [
+            "/dev/mapper/mpathd",
+            "/dev/disk/by-id/dm-name-mpathd",
+            "/dev/disk/by-id/dm-uuid-mpath-3600140509e95bcb86e24685b75b6ec26",
+            "/dev/dm-1"
+          ],
+          "scsi80": "SLIO-ORG mdt3            09e95bcb-86e2-4685-b75b-6ec2622b5343",
+          "serial": "3600140509e95bcb86e24685b75b6ec26",
+          "size": 5368709120
+        }
+      }
+    ],
+    "devpath": "/devices/platform/host2/session1/target2:0:0/2:0:0:3/block/sde",
+    "filesystem_type": "mpath_member",
+    "fs_label": null,
+    "fs_uuid": null,
+    "major": "8",
+    "minor": "64",
+    "mount": null,
+    "paths": [
+      "/dev/disk/by-id/scsi-3600140509e95bcb86e24685b75b6ec26",
+      "/dev/disk/by-id/wwn-0x600140509e95bcb86e24685b75b6ec26",
+      "/dev/disk/by-path/fc---lun-3",
+      "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:mds-lun-3",
+      "/dev/sde"
+    ],
+    "scsi80": "SLIO-ORG mdt3            09e95bcb-86e2-4685-b75b-6ec2622b5343",
+    "serial": "3600140509e95bcb86e24685b75b6ec26",
+    "size": 5368709120
+  }
+}
