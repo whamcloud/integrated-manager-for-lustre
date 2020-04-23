@@ -276,7 +276,8 @@ fn insert_virtual_devices(d: &mut Device, parents: &[Device]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use insta::assert_json_snapshot;
+    use insta::assert_debug_snapshot;
+    use jsondata;
     use std::fs;
 
     #[tokio::test]
@@ -296,6 +297,30 @@ mod tests {
         ];
 
         let results = update_virtual_devices(devices).await;
-        assert_json_snapshot!("simple_test", results);
+
+        for (f, d) in results {
+            let mut children = vec![];
+            match d {
+                Device::Root(dd) => {
+                    for c in dd.children {
+                        children.push(c.clone());
+                    }
+                }
+                _ => unreachable!(),
+            }
+
+            let mut children_ordered = vec![];
+            for c in children {
+                let c_string = serde_json::to_string(&c).unwrap();
+
+                let c_ordered = c_string.parse::<jsondata::Json>().unwrap();
+
+                children_ordered.push(c_ordered);
+            }
+
+            children_ordered.sort();
+
+            assert_debug_snapshot!(format!("simple_test_{}", f), children_ordered);
+        }
     }
 }
