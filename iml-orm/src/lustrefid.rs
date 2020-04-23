@@ -2,10 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-pub use crate::models::{ChromaCoreMailboxes, LustreFid};
-use crate::schema::chroma_core_mailboxes as mb;
-use diesel::{dsl, prelude::*};
-use std::{convert::From, fmt, str::FromStr};
+pub use crate::models::LustreFid;
+use crate::schema::SqlLustreFid;
+use diesel::{
+    pg::Pg,
+    serialize::{self, IsNull, Output, ToSql},
+};
+use std::{convert::From, fmt, io::Write, str::FromStr};
 
 impl fmt::Display for LustreFid {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -37,14 +40,9 @@ impl From<[u8; 40_usize]> for LustreFid {
     }
 }
 
-pub type WithName = dsl::Eq<mb::name, String>;
-pub type ByName = dsl::Filter<mb::table, WithName>;
-
-impl ChromaCoreMailboxes {
-    pub fn with_name(name: impl ToString) -> WithName {
-        mb::name.eq(name.to_string())
-    }
-    pub fn by_name(name: impl ToString) -> ByName {
-        mb::table.filter(Self::with_name(name))
+impl ToSql<SqlLustreFid, Pg> for LustreFid {
+    fn to_sql<W: Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
+        out.write_all(format!("ROW{{ {}, {}, {} }}", self.seq, self.oid, self.ver).as_bytes())?;
+        Ok(IsNull::No)
     }
 }
