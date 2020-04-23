@@ -348,13 +348,13 @@ expression: c_serde
               }
             }
           ],
-          "devpath": "/devices/virtual/block/dm-8",
+          "devpath": "/devices/virtual/block/dm-7",
           "dm_name": "mpathf",
           "filesystem_type": "zfs_member",
           "fs_label": "ost5",
           "fs_uuid": "16796817936759794391",
           "major": "253",
-          "minor": "8",
+          "minor": "7",
           "mount": null,
           "paths": [
             "/dev/mapper/mpathf",
@@ -362,7 +362,7 @@ expression: c_serde
             "/dev/disk/by-id/dm-uuid-mpath-36001405d4c04ef7170f4c89b2e41460d",
             "/dev/disk/by-label/ost5",
             "/dev/disk/by-uuid/16796817936759794391",
-            "/dev/dm-8"
+            "/dev/dm-7"
           ],
           "scsi80": "SLIO-ORG ost14           d4c04ef7-170f-4c89-b2e4-1460d19b6040",
           "serial": "36001405d4c04ef7170f4c89b2e41460d",
