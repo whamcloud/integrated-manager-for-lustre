@@ -6,7 +6,7 @@ use device_types::devices::{
     Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup, Zpool,
 };
 use diesel::{self, pg::upsert::excluded, prelude::*};
-use im::HashSet;
+use im::{HashSet, OrdSet};
 
 use iml_orm::{
     models::{ChromaCoreDevice, NewChromaCoreDevice},
@@ -16,6 +16,7 @@ use iml_orm::{
 };
 
 use iml_wire_types::Fqdn;
+use std::path::PathBuf;
 
 pub async fn save_devices(devices: Vec<(Fqdn, Device)>, pool: &DbPool) {
     for (f, d) in devices.into_iter() {
@@ -171,7 +172,7 @@ fn collect_virtual_device_parents(
 }
 
 fn insert(d: &mut Device, to_insert: &Device) {
-    if compare_without_children(d, to_insert) {
+    if compare_selected_fields(d, to_insert) {
         tracing::info!(
             "Inserting a device {} to {}",
             to_display(to_insert),
@@ -225,7 +226,7 @@ fn insert(d: &mut Device, to_insert: &Device) {
     }
 }
 
-fn without_children(d: &Device) -> Device {
+fn selected_fields(d: &Device) -> Device {
     match d {
         Device::Root(d) => Device::Root(Root {
             children: HashSet::new(),
@@ -233,18 +234,33 @@ fn without_children(d: &Device) -> Device {
         }),
         Device::ScsiDevice(d) => Device::ScsiDevice(ScsiDevice {
             children: HashSet::new(),
+            major: String::new(),
+            minor: String::new(),
+            devpath: PathBuf::new(),
+            paths: OrdSet::new(),
             ..d.clone()
         }),
         Device::Partition(d) => Device::Partition(Partition {
             children: HashSet::new(),
+            major: String::new(),
+            minor: String::new(),
+            devpath: PathBuf::new(),
+            paths: OrdSet::new(),
             ..d.clone()
         }),
         Device::MdRaid(d) => Device::MdRaid(MdRaid {
             children: HashSet::new(),
+            major: String::new(),
+            minor: String::new(),
+            paths: OrdSet::new(),
             ..d.clone()
         }),
         Device::Mpath(d) => Device::Mpath(Mpath {
             children: HashSet::new(),
+            major: String::new(),
+            minor: String::new(),
+            devpath: PathBuf::new(),
+            paths: OrdSet::new(),
             ..d.clone()
         }),
         Device::VolumeGroup(d) => Device::VolumeGroup(VolumeGroup {
@@ -253,6 +269,10 @@ fn without_children(d: &Device) -> Device {
         }),
         Device::LogicalVolume(d) => Device::LogicalVolume(LogicalVolume {
             children: HashSet::new(),
+            major: String::new(),
+            minor: String::new(),
+            devpath: PathBuf::new(),
+            paths: OrdSet::new(),
             ..d.clone()
         }),
         Device::Zpool(d) => Device::Zpool(Zpool {
@@ -263,8 +283,8 @@ fn without_children(d: &Device) -> Device {
     }
 }
 
-fn compare_without_children(a: &Device, b: &Device) -> bool {
-    without_children(a) == without_children(b)
+fn compare_selected_fields(a: &Device, b: &Device) -> bool {
+    selected_fields(a) == selected_fields(b)
 }
 
 fn insert_virtual_devices(d: &mut Device, parents: &[Device]) {
