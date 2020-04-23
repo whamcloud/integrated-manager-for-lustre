@@ -3,8 +3,8 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::iter::FromIterator;
 use std::iter::Iterator;
-use std::sync::Arc;
 use std::ops::Deref;
+use std::sync::Arc;
 
 /// There are two hierarchies that this trait is used for:
 /// * commands -> jobs -> steps form the tree structure, using `Command::jobs` and `Job<_>::steps` fields
@@ -63,7 +63,7 @@ where
 
 impl<K, T> Deps<K> for RichDeps<K, T>
 where
-    K: Hash + Ord + Copy
+    K: Hash + Ord + Copy,
 {
     fn id(&self) -> K {
         self.id
@@ -78,7 +78,7 @@ where
 
 impl<K, T> Deref for RichDeps<K, T>
 where
-    K: Hash + Ord + Copy
+    K: Hash + Ord + Copy,
 {
     type Target = T;
 
@@ -368,14 +368,21 @@ mod tests {
             Y::new(39, &[], "Install packages on server oss2.local"),
             Y::new(40, &["39"], "Configure NTP on oss2.local"),
             Y::new(46, &["43", "45", "46"], "Configure Pacemaker on oss2.local"),
-            Y::new(48, &["39", "40", "41", "42", "45", "46", "47"], "Setup managed host oss2.local"),
+            Y::new(
+                48,
+                &["39", "40", "41", "42", "45", "46", "47"],
+                "Setup managed host oss2.local",
+            ),
         ];
         for _ in 0..10 {
             for y in y_list.iter_mut() {
                 shuffle(&mut y.deps, &mut rng);
             }
-            let y_arcs: Vec<Arc<RichDeps<u32, Y>>> =
-                y_list.clone().into_iter().map(|t| Arc::new(RichDeps::new(t, extract_from_y))).collect();
+            let y_arcs: Vec<Arc<RichDeps<u32, Y>>> = y_list
+                .clone()
+                .into_iter()
+                .map(|t| Arc::new(RichDeps::new(t, extract_from_y)))
+                .collect();
             let dag = build_direct_dag(&y_arcs);
             let result = build_dag_str(&dag, &rich_y_to_string).join("\n");
             assert_eq!(result, SMALL_TREE);
