@@ -1,6 +1,6 @@
 pub mod docker;
 pub mod iml;
-pub mod pdsh;
+pub mod ssh;
 pub mod vagrant;
 
 use iml_cmd::CmdError;

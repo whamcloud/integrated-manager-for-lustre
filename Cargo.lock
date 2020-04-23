@@ -1513,10 +1513,11 @@ dependencies = [
 
 [[package]]
 name = "iml-system-test-utils"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "iml-cmd",
+ "iml-fs",
  "iml-systemd",
  "iml-wire-types",
  "tokio",

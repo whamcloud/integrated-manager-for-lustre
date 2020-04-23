@@ -73,7 +73,7 @@ pub fn read_lines<
 /// * `p` - The `Path` to a file.
 pub async fn read_file_to_end<P>(p: P) -> Result<Vec<u8>, io::Error>
 where
-    P: AsRef<Path> + Send + 'static,
+    P: AsRef<Path> + Send,
 {
     let mut file = File::open(p).await?;
 

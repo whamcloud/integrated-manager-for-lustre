@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    iml, pdsh, try_command_n_times, SetupConfig, SetupConfigType, STRATAGEM_CLIENT_PROFILE,
+    iml, ssh, try_command_n_times, SetupConfig, SetupConfigType, STRATAGEM_CLIENT_PROFILE,
     STRATAGEM_SERVER_PROFILE,
 };
 use futures::future::try_join_all;
@@ -252,13 +252,13 @@ pub async fn setup_bare(
 ) -> Result<(), CmdError> {
     up().await?.args(hosts).checked_status().await?;
 
-    pdsh::yum_update(&config.storage_server_ips()).await?;
+    ssh::yum_update(&config.storage_server_ips()).await?;
 
     match ntp_server {
         NtpServer::HostOnly => {
-            pdsh::configure_ntp_for_host_only_if(&config.storage_server_ips()).await?
+            ssh::configure_ntp_for_host_only_if(&config.storage_server_ips()).await?
         }
-        NtpServer::Adm => pdsh::configure_ntp_for_adm(&config.storage_server_ips()).await?,
+        NtpServer::Adm => ssh::configure_ntp_for_adm(&config.storage_server_ips()).await?,
     };
 
     halt().await?.args(hosts).checked_status().await?;
@@ -416,7 +416,7 @@ pub async fn configure_docker_network(hosts: BTreeSet<&&str>) -> Result<(), CmdE
 }
 
 async fn create_monitored_ldiskfs(config: &ClusterConfig) -> Result<(), CmdError> {
-    pdsh::install_ldiskfs_no_iml(&config.storage_server_ips(), config.lustre_version()).await?;
+    ssh::install_ldiskfs_no_iml(&config.storage_server_ips(), config.lustre_version()).await?;
 
     reload()
         .await?
@@ -445,7 +445,7 @@ async fn create_monitored_ldiskfs(config: &ClusterConfig) -> Result<(), CmdError
 }
 
 async fn create_monitored_zfs(config: &ClusterConfig) -> Result<(), CmdError> {
-    pdsh::install_zfs_no_iml(&config.storage_server_ips(), config.lustre_version()).await?;
+    ssh::install_zfs_no_iml(&config.storage_server_ips(), config.lustre_version()).await?;
 
     reload()
         .await?

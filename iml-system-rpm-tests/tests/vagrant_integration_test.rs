@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use iml_cmd::CmdError;
-use iml_system_test_utils::{pdsh, vagrant, SetupConfig, SetupConfigType};
+use iml_system_test_utils::{ssh, vagrant, SetupConfig, SetupConfigType};
 use std::{
     collections::{hash_map::RandomState, HashMap},
     time::Duration,
@@ -40,7 +40,7 @@ async fn run_fs_test<S: std::hash::BuildHasher>(
 }
 
 async fn wait_for_ntp(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {
-    pdsh::wait_for_ntp_for_adm(&config.storage_server_ips()).await?;
+    ssh::wait_for_ntp(&config.storage_server_ips()).await?;
 
     Ok(())
 }
