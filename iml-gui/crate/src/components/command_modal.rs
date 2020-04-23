@@ -862,6 +862,111 @@ fn extract_wait_fors_from_job(job: &Job0) -> (u32, Vec<u32>) {
     )
 }
 
+fn consistency_level(model: &Model, select: &Select) -> (bool, bool, bool) {
+    let mut ls = [false; 3];
+    match select {
+        Select::None => {}
+        Select::Command(i) => {
+            let a0 = model.commands.iter().find(|x| x.id() == *i);
+            match a0 {
+                Some(_) => {
+                    ls[0] = true;
+                }
+                _ => {
+                    ls[0] = false;
+                }
+            }
+        }
+        Select::CommandJob(i, j) => {
+            let a0 = model.commands.iter().find(|x| x.id() == *i);
+            let b0 = model.jobs.iter().find(|x| x.id() == *j);
+            match (a0, b0) {
+                (Some(a), Some(_)) => {
+                    ls[0] = true;
+                    ls[1] = a.deps().contains(&j);
+                }
+                (Some(_), _) => {
+                    ls[0] = true;
+                    ls[1] = false;
+                }
+                (_, _) => {
+                    ls[0] = false;
+                    ls[0] = false;
+                }
+            }
+        }
+        Select::CommandJobSteps(i, j, ks) => {
+            let a0 = model.commands.iter().find(|x| x.id() == *i);
+            let b0 = model.jobs.iter().find(|x| x.id() == *j);
+            let cs = model.steps.iter().filter(|x| ks.contains(&x.id())).collect::<Vec<_>>();
+            let c0 = if cs.is_empty() { None } else { Some(cs) };
+            match (a0, b0, &c0) {
+                (Some(a), Some(b), Some(_)) => {
+                    ls[0] = true;
+                    ls[1] = a.deps().contains(&j);
+                    ls[2] = ks.iter().all(|k| b.deps().contains(&k));
+                }
+                (Some(a), Some(_), _) => {
+                    ls[0] = true;
+                    ls[1] = a.deps().contains(&j);
+                    ls[2] = false;
+                }
+                (Some(_), _, _) => {
+                    ls[0] = true;
+                    ls[1] = false;
+                    ls[2] = false;
+                }
+                (_, _, _) => {
+                    ls[0] = false;
+                    ls[1] = false;
+                    ls[2] = false;
+                }
+            }
+        }
+    }
+    (ls[0], ls[1], ls[2])
+}
+
+impl Model {
+    fn assign_commands(&mut self, cmds: &[Command]) {
+        let mut cmds_sorted = cmds.to_vec();
+        cmds_sorted.sort_by_key(|x| x.id);
+        self.commands = cmds_sorted
+            .into_iter()
+            .map(|x| Arc::new(RichCommand::new(x, extract_children_from_cmd)))
+            .collect();
+        let (consistent, _, _) = consistency_level(&self, &self.select);
+        if consistent {
+            self.commands_view = self.commands.clone();
+        }
+    }
+    fn assign_jobs(&mut self, jobs: &[Job0]) {
+        let mut jobs_sorted = jobs.to_vec();
+        jobs_sorted.sort_by_key(|x| x.id);
+        self.jobs = jobs_sorted
+            .into_iter()
+            .map(|x| Arc::new(RichJob::new(x, extract_children_from_job)))
+            .collect();
+        let (_, consistent, _) = consistency_level(&self, &self.select);
+        if consistent {
+            self.jobs_view = self.jobs.clone();
+        }
+    }
+
+    fn assign_steps(&mut self, steps: &[Step]) {
+        let mut steps_sorted = steps.to_vec();
+        steps_sorted.sort_by_key(|x| x.id);
+        self.steps = steps_sorted
+            .into_iter()
+            .map(|x| Arc::new(RichStep::new(x, extract_children_from_step)))
+            .collect();
+        let (_, _, consistent) = consistency_level(&self, &self.select);
+        if consistent {
+            self.steps_view = self.steps.clone();
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -992,32 +1097,32 @@ mod tests {
         let db = build_db();
         let mut model = Model::default();
         let (a, b, c) = prepare_subset(&db, 1);
-        model.assign_a(&db.select_cmds(&vec![1, 2]));
-        model.assign_b(&db.select_jobs(&vec![10, 12, 13, 14]));
-        model.assign_c(&db.select_steps(&vec![20, 23, 14]));
-        model.assign_a(&db.select_cmds(&vec![1, 2, 3, 4]));
+        model.assign_commands(&db.select_cmds(&vec![1, 2]));
+        model.assign_jobs(&db.select_jobs(&vec![10, 12, 13, 14]));
+        model.assign_steps(&db.select_steps(&vec![20, 23, 14]));
+        model.assign_commands(&db.select_cmds(&vec![1, 2, 3, 4]));
 
         model.select = Select::Command(1);
-        model.assign_c(&c);
-        model.assign_b(&b);
-        model.assign_a(&a);
-        assert_eq!(extract_ids(&model.cmds_view), [1, 2, 3, 4] as [u32; 4]);
+        model.assign_steps(&c);
+        model.assign_jobs(&b);
+        model.assign_commands(&a);
+        assert_eq!(extract_ids(&model.commands_view), [1, 2, 3, 4] as [u32; 4]);
         assert_eq!(extract_ids(&model.jobs_view), [] as [u32; 0]);
         assert_eq!(extract_ids(&model.steps_view), [] as [u32; 0]);
 
         model.select = Select::CommandJob(1, 11);
-        model.assign_c(&c);
-        model.assign_a(&a);
-        model.assign_b(&b);
-        assert_eq!(extract_ids(&model.cmds_view), [1, 2, 3, 4] as [u32; 4]);
+        model.assign_steps(&c);
+        model.assign_commands(&a);
+        model.assign_jobs(&b);
+        assert_eq!(extract_ids(&model.commands_view), [1, 2, 3, 4] as [u32; 4]);
         assert_eq!(extract_ids(&model.jobs_view), [10, 11] as [u32; 2]);
         assert_eq!(extract_ids(&model.steps_view), [] as [u32; 0]);
 
         model.select = Select::CommandJobSteps(1, 11, vec![26]);
-        model.assign_b(&b);
-        model.assign_c(&c);
-        model.assign_a(&a);
-        assert_eq!(extract_ids(&model.cmds_view), [1, 2, 3, 4] as [u32; 4]);
+        model.assign_jobs(&b);
+        model.assign_steps(&c);
+        model.assign_commands(&a);
+        assert_eq!(extract_ids(&model.commands_view), [1, 2, 3, 4] as [u32; 4]);
         assert_eq!(extract_ids(&model.jobs_view), [10, 11] as [u32; 2]);
         assert_eq!(extract_ids(&model.steps_view), [20, 21, 26] as [u32; 3]);
     }
@@ -1130,122 +1235,17 @@ mod tests {
         (cmds, jobs, steps)
     }
 
-    #[derive(Debug, Default, Clone)]
-    struct Model {
-        cmds: Vec<Arc<RichCommand>>,
-        cmds_view: Vec<Arc<RichCommand>>,
-
-        jobs: Vec<Arc<RichJob>>,
-        jobs_view: Vec<Arc<RichJob>>,
-
-        steps: Vec<Arc<RichStep>>,
-        steps_view: Vec<Arc<RichStep>>,
-
-        select: Select,
-    }
-
-    impl Model {
-        fn assign_a(&mut self, cmds: &[Command]) {
-            let mut cmds_sorted = cmds.to_vec();
-            cmds_sorted.sort_by_key(|x| x.id);
-            self.cmds = cmds_sorted
-                .into_iter()
-                .map(|x| Arc::new(RichCommand::new(x, extract_children_from_cmd)))
-                .collect();
-            let (consistent, _, _) = self.consistency_level(&self.select);
-            if consistent {
-                self.cmds_view = self.cmds.clone();
-            }
-        }
-        fn assign_b(&mut self, jobs: &[Job0]) {
-            let mut jobs_sorted = jobs.to_vec();
-            jobs_sorted.sort_by_key(|x| x.id);
-            self.jobs = jobs_sorted
-                .into_iter()
-                .map(|x| Arc::new(RichJob::new(x, extract_children_from_job)))
-                .collect();
-            let (_, consistent, _) = self.consistency_level(&self.select);
-            if consistent {
-                self.jobs_view = self.jobs.clone();
-            }
-        }
-
-        fn assign_c(&mut self, steps: &[Step]) {
-            let mut steps_sorted = steps.to_vec();
-            steps_sorted.sort_by_key(|x| x.id);
-            self.steps = steps_sorted
-                .into_iter()
-                .map(|x| Arc::new(RichStep::new(x, extract_children_from_step)))
-                .collect();
-            let (_, _, consistent) = self.consistency_level(&self.select);
-            if consistent {
-                self.steps_view = self.steps.clone();
-            }
-        }
-
-        fn consistency_level(&self, select: &Select) -> (bool, bool, bool) {
-            let mut ls = [false; 3];
-            match select {
-                Select::None => {}
-                Select::Command(i) => {
-                    let ao = self.cmds.iter().find(|x| x.id() == *i);
-                    match ao {
-                        Some(_) => {
-                            ls[0] = true;
-                        }
-                        _ => {
-                            ls[0] = false;
-                        }
-                    }
-                }
-                Select::CommandJob(i, j) => {
-                    let ao = self.cmds.iter().find(|x| x.id() == *i);
-                    let bo = self.jobs.iter().find(|x| x.id() == *j);
-                    match (ao, bo) {
-                        (Some(a), Some(_)) => {
-                            ls[0] = true;
-                            ls[1] = a.deps().contains(&j);
-                        }
-                        (Some(_), _) => {
-                            ls[0] = true;
-                            ls[1] = false;
-                        }
-                        (_, _) => {
-                            ls[0] = false;
-                            ls[0] = false;
-                        }
-                    }
-                }
-                Select::CommandJobSteps(i, j, ks) => {
-                    let k = &ks[0];
-                    let ao = self.cmds.iter().find(|x| x.id() == *i);
-                    let bo = self.jobs.iter().find(|x| x.id() == *j);
-                    let co = self.steps.iter().find(|x| x.id() == *k);
-                    match (ao, bo, co) {
-                        (Some(a), Some(b), Some(_)) => {
-                            ls[0] = true;
-                            ls[1] = a.deps().contains(&j);
-                            ls[2] = b.deps().contains(&k);
-                        }
-                        (Some(a), Some(_), _) => {
-                            ls[0] = true;
-                            ls[1] = a.deps().contains(&j);
-                            ls[2] = false;
-                        }
-                        (Some(_), _, _) => {
-                            ls[0] = true;
-                            ls[1] = false;
-                            ls[2] = false;
-                        }
-                        (_, _, _) => {
-                            ls[0] = false;
-                            ls[1] = false;
-                            ls[2] = false;
-                        }
-                    }
-                }
-            }
-            (ls[0], ls[1], ls[2])
-        }
-    }
+    // #[derive(Debug, Default, Clone)]
+    // struct Model {
+    //     cmds: Vec<Arc<RichCommand>>,
+    //     cmds_view: Vec<Arc<RichCommand>>,
+    //
+    //     jobs: Vec<Arc<RichJob>>,
+    //     jobs_view: Vec<Arc<RichJob>>,
+    //
+    //     steps: Vec<Arc<RichStep>>,
+    //     steps_view: Vec<Arc<RichStep>>,
+    //
+    //     select: Select,
+    // }
 }
