@@ -3,11 +3,11 @@
 # license that can be found in the LICENSE file.
 
 from django.db import models
-from django.db.models import CASCADE
+from django.db.models import CASCADE, SET_NULL
 from django.contrib.postgres.fields import ArrayField, JSONField
 
 from chroma_core.lib.job import DependOn, DependAll, Step, job_log
-from chroma_core.models import ManagedFilesystem
+from chroma_core.models import ManagedFilesystem, LustreClientMount
 
 
 class LustreFidField(models.Field):
@@ -24,8 +24,8 @@ class LustreFidField(models.Field):
         app_label = "chroma_core"
 
 
-class Mailboxes(models.Model):
-    """ List of deliveries for action queues """
+class Task(models.Model):
+    """ List of task queues """
 
     class Meta:
         app_label = "chroma_core"
@@ -43,30 +43,24 @@ class Mailboxes(models.Model):
     fids_failed = models.BigIntegerField(default=0)
     data_transfered = models.BigIntegerField(default=0)
 
+    single_runner = models.BooleanField(default=False, null=False)
     keep_failed = models.BooleanField(default=True, null=False)
-    # Actually links to ActionType
-    actions = ArrayField(models.PositiveIntegerField())
+    # this is an array of text fields because an array of Char(16) causes problems for
+    # diesel on the rust side
+    actions = ArrayField(models.TextField())
+
+    running_on = models.ForeignKey("LustreClientMount", blank=True, null=True, on_delete=SET_NULL)
 
     args = JSONField(default={})
 
 
-class FidActionQueue(models.Model):
-    # Use of abstract base classes to avoid django bug #12002
+class FidTaskQueue(models.Model):
     class Meta:
         app_label = "chroma_core"
 
     fid = LustreFidField()
 
-    mailbox = models.ForeignKey("Mailboxes", on_delete=CASCADE)
+    task = models.ForeignKey("Task", on_delete=CASCADE)
 
-    entries = JSONField(default={})
-    failed = models.PositiveSmallIntegerField()
-
-
-class ActionType(models.Model):
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-        unique_together = ("name",)
-
-    name = models.CharField(max_length=64)
+    data = JSONField(default={})
+    errno = models.PositiveSmallIntegerField(default=0, null=False)
