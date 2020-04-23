@@ -44,8 +44,12 @@ async fn ssh_exec_parallel(servers: &[&str], cmd: &str) -> Result<Vec<Output>, C
 }
 
 pub async fn ssh_script(host: &str, script: &str, args: &[&str]) -> Result<Output, CmdError> {
-    let script_content = iml_fs::read_file_to_end(script).await?;
     let path = canonicalize("../vagrant/").await?;
+    let mut script_path = path.clone();
+
+    script_path.push(script);
+
+    let script_content = iml_fs::read_file_to_end(script_path).await?;
 
     let mut x = Command::new("ssh");
     x.current_dir(path);
