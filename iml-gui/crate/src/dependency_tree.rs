@@ -37,14 +37,14 @@ impl<K, T: Deps<K>> Deps<K> for Arc<T> {
 /// asssert_eq!()
 /// ```
 #[derive(Clone, Debug)]
-pub struct RichDeps<K: Hash + Eq, T> {
+pub struct Rich<K: Hash + Eq, T> {
     pub id: K,
     pub deps: Vec<K>,
     pub dset: HashSet<K>,
     pub inner: T,
 }
 
-impl<K, T> RichDeps<K, T>
+impl<K, T> Rich<K, T>
 where
     K: Hash + Ord + Copy,
     T: Clone,
@@ -61,7 +61,7 @@ where
     }
 }
 
-impl<K, T> Deps<K> for RichDeps<K, T>
+impl<K, T> Deps<K> for Rich<K, T>
 where
     K: Hash + Ord + Copy,
 {
@@ -76,7 +76,7 @@ where
     }
 }
 
-impl<K, T> Deref for RichDeps<K, T>
+impl<K, T> Deref for Rich<K, T>
 where
     K: Hash + Ord + Copy,
 {
@@ -246,51 +246,6 @@ mod tests {
     }
 
     #[derive(Debug, Clone)]
-    struct A(X);
-
-    impl Deps<u32> for A {
-        fn id(&self) -> u32 {
-            self.0.id
-        }
-        fn deps(&self) -> &[u32] {
-            &self.0.deps
-        }
-        fn has(&self, k: &u32) -> bool {
-            self.0.deps.contains(k)
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    struct B(X);
-
-    impl Deps<u32> for B {
-        fn id(&self) -> u32 {
-            self.0.id
-        }
-        fn deps(&self) -> &[u32] {
-            &self.0.deps
-        }
-        fn has(&self, k: &u32) -> bool {
-            self.0.deps.contains(k)
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    struct C(X);
-
-    impl Deps<u32> for C {
-        fn id(&self) -> u32 {
-            self.0.id
-        }
-        fn deps(&self) -> &[u32] {
-            &self.0.deps
-        }
-        fn has(&self, k: &u32) -> bool {
-            self.0.deps.contains(k)
-        }
-    }
-
-    #[derive(Debug, Clone)]
     struct Context<K: Hash + Eq + Debug> {
         visited: HashSet<K>,
         indent: usize,
@@ -378,55 +333,15 @@ mod tests {
             for y in y_list.iter_mut() {
                 shuffle(&mut y.deps, &mut rng);
             }
-            let y_arcs: Vec<Arc<RichDeps<u32, Y>>> = y_list
+            let y_arcs: Vec<Arc<Rich<u32, Y>>> = y_list
                 .clone()
                 .into_iter()
-                .map(|t| Arc::new(RichDeps::new(t, extract_from_y)))
+                .map(|t| Arc::new(Rich::new(t, extract_from_y)))
                 .collect();
             let dag = build_direct_dag(&y_arcs);
             let result = build_dag_str(&dag, &rich_y_to_string).join("\n");
             assert_eq!(result, SMALL_TREE);
         }
-    }
-
-    #[test]
-    fn test_async_handlers_consistency() {
-        fn extract_ids<T: Deps<u32>>(ts: &[Arc<T>]) -> Vec<u32> {
-            ts.iter().map(|t| t.id()).collect()
-        }
-        // all the packets come in random order, the model should be always consistent
-        // 1 -> [10, 11] -> [20, 21, 22, 23]
-        let db = build_db();
-        let mut model = Model::default();
-        let (a, b, c) = prepare_abc(&db, 1);
-        model.assign_a(&db.select_a(&vec![1, 2]));
-        model.assign_b(&db.select_b(&vec![10, 12, 13, 14]));
-        model.assign_c(&db.select_c(&vec![20, 23, 14]));
-        model.assign_a(&db.select_a(&vec![1, 2, 3, 4]));
-
-        model.select = Select::SelectA(1);
-        model.assign_c(&c);
-        model.assign_b(&b);
-        model.assign_a(&a);
-        assert_eq!(extract_ids(&model.aa_view), [1, 2, 3, 4] as [u32; 4]);
-        assert_eq!(extract_ids(&model.bb_view), [] as [u32; 0]);
-        assert_eq!(extract_ids(&model.cc_view), [] as [u32; 0]);
-
-        model.select = Select::SelectB(1, 11);
-        model.assign_c(&c);
-        model.assign_a(&a);
-        model.assign_b(&b);
-        assert_eq!(extract_ids(&model.aa_view), [1, 2, 3, 4] as [u32; 4]);
-        assert_eq!(extract_ids(&model.bb_view), [10, 11] as [u32; 2]);
-        assert_eq!(extract_ids(&model.cc_view), [] as [u32; 0]);
-
-        model.select = Select::SelectC(1, 11, 26);
-        model.assign_b(&b);
-        model.assign_c(&c);
-        model.assign_a(&a);
-        assert_eq!(extract_ids(&model.aa_view), [1, 2, 3, 4] as [u32; 4]);
-        assert_eq!(extract_ids(&model.bb_view), [10, 11] as [u32; 2]);
-        assert_eq!(extract_ids(&model.cc_view), [20, 21, 26] as [u32; 3]);
     }
 
     fn build_dag_str<K, T, U, F>(dag: &DependencyDAG<K, T>, node_to_str: &F) -> Vec<U>
@@ -476,204 +391,10 @@ mod tests {
         format!("{}{}: {}{}", indent, node.id, node.description, ellipsis)
     }
 
-    fn rich_y_to_string(node: Arc<RichDeps<u32, Y>>, ctx: &mut Context<u32>) -> String {
+    fn rich_y_to_string(node: Arc<Rich<u32, Y>>, ctx: &mut Context<u32>) -> String {
         let ellipsis = if ctx.is_new { "" } else { "..." };
         let indent = "  ".repeat(ctx.indent);
         format!("{}{}: {}{}", indent, node.id(), node.description, ellipsis)
-    }
-
-    #[derive(Debug, Default, Clone)]
-    struct Db {
-        all_a: Vec<A>,
-        all_b: Vec<B>,
-        all_c: Vec<C>,
-    }
-
-    impl Db {
-        fn select_a(&self, is: &[u32]) -> Vec<A> {
-            self.all_a
-                .iter()
-                .filter(|a| is.contains(&a.id()))
-                .map(|a| a.clone())
-                .collect::<Vec<A>>()
-        }
-        fn select_b(&self, is: &[u32]) -> Vec<B> {
-            self.all_b
-                .iter()
-                .filter(|b| is.contains(&b.id()))
-                .map(|b| b.clone())
-                .collect::<Vec<B>>()
-        }
-        fn select_c(&self, is: &[u32]) -> Vec<C> {
-            self.all_c
-                .iter()
-                .filter(|c| is.contains(&c.id()))
-                .map(|c| c.clone())
-                .collect::<Vec<C>>()
-        }
-    }
-
-    #[derive(Debug, Default, Clone)]
-    struct Model {
-        aa: Vec<Arc<A>>,
-        bb: Vec<Arc<B>>,
-        cc: Vec<Arc<C>>,
-
-        aa_view: Vec<Arc<A>>,
-        bb_view: Vec<Arc<B>>,
-        cc_view: Vec<Arc<C>>,
-
-        select: Select,
-    }
-
-    #[derive(Debug, Clone)]
-    enum Select {
-        None,
-        SelectA(u32),
-        SelectB(u32, u32),
-        SelectC(u32, u32, u32),
-    }
-    impl Default for Select {
-        fn default() -> Self {
-            Self::None
-        }
-    }
-
-    impl Model {
-        fn assign_a(&mut self, aa: &[A]) {
-            let mut aas = aa.to_vec();
-            aas.sort_by_key(|a| a.id());
-            self.aa = aas.into_iter().map(|a| Arc::new(a.clone())).collect();
-            let (consistent, _, _) = self.consistency_level(&self.select);
-            if consistent {
-                self.aa_view = self.aa.clone();
-            }
-        }
-        fn assign_b(&mut self, bb: &[B]) {
-            let mut bbs = bb.to_vec();
-            bbs.sort_by_key(|b| b.id());
-            self.bb = bbs.into_iter().map(|b| Arc::new(b.clone())).collect();
-            let (_, consistent, _) = self.consistency_level(&self.select);
-            if consistent {
-                self.bb_view = self.bb.clone();
-            }
-        }
-
-        fn assign_c(&mut self, cc: &[C]) {
-            let mut ccs = cc.to_vec();
-            ccs.sort_by_key(|c| c.id());
-            self.cc = ccs.into_iter().map(|c| Arc::new(c.clone())).collect();
-            let (_, _, consistent) = self.consistency_level(&self.select);
-            if consistent {
-                self.cc_view = self.cc.clone();
-            }
-        }
-
-        fn consistency_level(&self, select: &Select) -> (bool, bool, bool) {
-            let mut ls = [false; 3];
-            match *select {
-                Select::None => {}
-                Select::SelectA(i) => {
-                    let ao = self.aa.iter().find(|a| a.id() == i);
-                    match ao {
-                        Some(_) => {
-                            ls[0] = true;
-                        }
-                        _ => {
-                            ls[0] = false;
-                        }
-                    }
-                }
-                Select::SelectB(i, j) => {
-                    let ao = self.aa.iter().find(|a| a.id() == i);
-                    let bo = self.bb.iter().find(|b| b.id() == j);
-                    match (ao, bo) {
-                        (Some(a), Some(b)) => {
-                            ls[0] = true;
-                            ls[1] = a.deps().contains(&j);
-                        }
-                        (Some(_), _) => {
-                            ls[0] = true;
-                            ls[1] = false;
-                        }
-                        (_, _) => {
-                            ls[0] = false;
-                            ls[0] = false;
-                        }
-                    }
-                }
-                Select::SelectC(i, j, k) => {
-                    let ao = self.aa.iter().find(|a| a.id() == i);
-                    let bo = self.bb.iter().find(|b| b.id() == j);
-                    let co = self.cc.iter().find(|c| c.id() == k);
-                    match (ao, bo, co) {
-                        (Some(a), Some(b), Some(c)) => {
-                            ls[0] = true;
-                            ls[1] = a.deps().contains(&j);
-                            ls[2] = b.deps().contains(&k);
-                        }
-                        (Some(a), Some(_), _) => {
-                            ls[0] = true;
-                            ls[1] = a.deps().contains(&j);
-                            ls[2] = false;
-                        }
-                        (Some(_), _, _) => {
-                            ls[0] = true;
-                            ls[1] = false;
-                            ls[2] = false;
-                        }
-                        (_, _, _) => {
-                            ls[0] = false;
-                            ls[1] = false;
-                            ls[2] = false;
-                        }
-                    }
-                }
-            }
-            (ls[0], ls[1], ls[2])
-        }
-    }
-
-    fn build_db() -> Db {
-        let all_a = vec![
-            A(X::new(1, &[10, 11], "One")),
-            A(X::new(2, &[12, 13], "Two")),
-            A(X::new(3, &[14, 15], "Three")),
-            A(X::new(4, &[16, 17], "Four")),
-        ];
-        let all_b = vec![
-            B(X::new(10, &[20, 21], "Ten")),
-            B(X::new(11, &[21, 26], "Eleven")),
-            B(X::new(12, &[22, 23], "Twelve")),
-            B(X::new(13, &[23, 28], "Thirteen")),
-            B(X::new(14, &[24, 15], "Ten")),
-            B(X::new(15, &[25, 20], "Eleven")),
-            B(X::new(16, &[26, 27], "Twelve")),
-            B(X::new(17, &[27, 22], "Thirteen")),
-        ];
-        let all_c = vec![
-            C(X::new(20, &[], "Twenty and zero")),
-            C(X::new(21, &[], "Twenty and one")),
-            C(X::new(22, &[], "Twenty and two")),
-            C(X::new(23, &[], "Twenty and three")),
-            C(X::new(24, &[], "Twenty and four")),
-            C(X::new(25, &[], "Twenty and five")),
-            C(X::new(26, &[], "Twenty and six")),
-            C(X::new(27, &[], "Twenty and seven")),
-            C(X::new(28, &[], "Twenty and eight")),
-            C(X::new(29, &[], "Twenty and nine")),
-        ];
-        Db { all_a, all_b, all_c }
-    }
-
-    fn prepare_abc(db: &Db, id: u32) -> (Vec<A>, Vec<B>, Vec<C>) {
-        let ai = db.select_a(&vec![id]);
-        let aix = ai.iter().map(|a| a.deps()).flatten().map(|a| *a).collect::<Vec<u32>>();
-        let bi = db.select_b(&aix);
-        let bix = bi.iter().map(|b| b.deps()).flatten().map(|b| *b).collect::<Vec<u32>>();
-        let ci = db.select_c(&bix);
-        let ai = db.all_a.clone(); // use all roots
-        (ai, bi, ci)
     }
 
     const SMALL_TREE: &'static str = r#"48: Setup managed host oss2.local

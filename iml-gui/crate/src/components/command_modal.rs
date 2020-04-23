@@ -4,7 +4,7 @@
 
 use crate::{
     components::{font_awesome, modal},
-    dependency_tree::{build_direct_dag, DependencyDAG, Deps, RichDeps},
+    dependency_tree::{build_direct_dag, DependencyDAG, Deps, Rich},
     extensions::{MergeAttrs as _, NodeExt as _, RequestExt as _},
     generated::css_classes::C,
     key_codes, sleep_with_handle, GMsg,
@@ -23,9 +23,9 @@ const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
 type Job0 = Job<Option<()>>;
 
-type RichCommand = RichDeps<u32, Command>;
-type RichJob = RichDeps<u32, Job0>;
-type RichStep = RichDeps<u32, Step>;
+type RichCommand = Rich<u32, Command>;
+type RichJob = Rich<u32, Job0>;
+type RichStep = Rich<u32, Step>;
 
 type JobsGraph = DependencyDAG<u32, RichJob>;
 
@@ -867,6 +867,124 @@ mod tests {
     use super::*;
     use crate::dependency_tree::build_direct_dag;
 
+    #[derive(Debug, Clone)]
+    struct A {
+        id: u32,
+        deps: Vec<u32>,
+        description: String,
+    }
+
+    impl A {
+        fn new(id: u32, deps: &[u32], desc: &str) -> Self {
+            Self {
+                id,
+                deps: deps.to_vec(),
+                description: desc.to_string(),
+            }
+        }
+    }
+
+    impl Deps<u32> for A {
+        fn id(&self) -> u32 {
+            self.id
+        }
+        fn deps(&self) -> &[u32] {
+            &self.deps
+        }
+        fn has(&self, k: &u32) -> bool {
+            self.deps.contains(k)
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct B {
+        id: u32,
+        deps: Vec<u32>,
+        description: String,
+    }
+
+    impl B {
+        fn new(id: u32, deps: &[u32], desc: &str) -> Self {
+            Self {
+                id,
+                deps: deps.to_vec(),
+                description: desc.to_string(),
+            }
+        }
+    }
+
+    impl Deps<u32> for B {
+        fn id(&self) -> u32 {
+            self.id
+        }
+        fn deps(&self) -> &[u32] {
+            &self.deps
+        }
+        fn has(&self, k: &u32) -> bool {
+            self.deps.contains(k)
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct C {
+        id: u32,
+        deps: Vec<u32>,
+        description: String,
+    }
+
+    impl C {
+        fn new(id: u32, deps: &[u32], desc: &str) -> Self {
+            Self {
+                id,
+                deps: deps.to_vec(),
+                description: desc.to_string(),
+            }
+        }
+    }
+
+    impl Deps<u32> for C {
+        fn id(&self) -> u32 {
+            self.id
+        }
+        fn deps(&self) -> &[u32] {
+            &self.deps
+        }
+        fn has(&self, k: &u32) -> bool {
+            self.deps.contains(k)
+        }
+    }
+
+    #[derive(Debug, Default, Clone)]
+    struct Db {
+        all_a: Vec<A>,
+        all_b: Vec<B>,
+        all_c: Vec<C>,
+    }
+
+    impl Db {
+        fn select_a(&self, is: &[u32]) -> Vec<A> {
+            self.all_a
+                .iter()
+                .filter(|a| is.contains(&a.id()))
+                .map(|a| a.clone())
+                .collect::<Vec<A>>()
+        }
+        fn select_b(&self, is: &[u32]) -> Vec<B> {
+            self.all_b
+                .iter()
+                .filter(|b| is.contains(&b.id()))
+                .map(|b| b.clone())
+                .collect::<Vec<B>>()
+        }
+        fn select_c(&self, is: &[u32]) -> Vec<C> {
+            self.all_c
+                .iter()
+                .filter(|c| is.contains(&c.id()))
+                .map(|c| c.clone())
+                .collect::<Vec<C>>()
+        }
+    }
+
     #[test]
     fn parse_job() {
         assert_eq!(extract_uri_id::<Job0>("/api/job/39/"), Some(39));
@@ -878,9 +996,9 @@ mod tests {
     #[test]
     fn build_dependency_view() {
         let jobs = vec![
-            make_job(1, &[2, 3], "One"),
-            make_job(2, &[], "Two"),
-            make_job(3, &[], "Three"),
+            make_dependent_job(1, &[2, 3], "One"),
+            make_dependent_job(2, &[], "Two"),
+            make_dependent_job(3, &[], "Three"),
         ];
         let rich_jobs = jobs.into_iter().map(|j| RichJob::new(j, extract_wait_fors_from_job));
         let arc_jobs: Vec<Arc<RichJob>> = rich_jobs.map(|j| Arc::new(j)).collect();
@@ -950,7 +1068,47 @@ mod tests {
         assert_eq!(&triple, &(Opens::Command(12), true, Some(2)));
     }
 
-    fn make_job(id: u32, deps: &[u32], descr: &str) -> Job0 {
+    #[test]
+    fn test_async_handlers_consistency() {
+        fn extract_ids<T: Deps<u32>>(ts: &[Arc<T>]) -> Vec<u32> {
+            ts.iter().map(|t| t.id()).collect()
+        }
+        // all the packets come in random order, the model should be always consistent
+        // 1 -> [10, 11] -> [20, 21, 22, 23]
+        let db = build_db();
+        let mut model = Model::default();
+        let (a, b, c) = prepare_abc(&db, 1);
+        model.assign_a(&db.select_a(&vec![1, 2]));
+        model.assign_b(&db.select_b(&vec![10, 12, 13, 14]));
+        model.assign_c(&db.select_c(&vec![20, 23, 14]));
+        model.assign_a(&db.select_a(&vec![1, 2, 3, 4]));
+
+        model.select = Select::SelectA(1);
+        model.assign_c(&c);
+        model.assign_b(&b);
+        model.assign_a(&a);
+        assert_eq!(extract_ids(&model.aa_view), [1, 2, 3, 4] as [u32; 4]);
+        assert_eq!(extract_ids(&model.bb_view), [] as [u32; 0]);
+        assert_eq!(extract_ids(&model.cc_view), [] as [u32; 0]);
+
+        model.select = Select::SelectB(1, 11);
+        model.assign_c(&c);
+        model.assign_a(&a);
+        model.assign_b(&b);
+        assert_eq!(extract_ids(&model.aa_view), [1, 2, 3, 4] as [u32; 4]);
+        assert_eq!(extract_ids(&model.bb_view), [10, 11] as [u32; 2]);
+        assert_eq!(extract_ids(&model.cc_view), [] as [u32; 0]);
+
+        model.select = Select::SelectC(1, 11, 26);
+        model.assign_b(&b);
+        model.assign_c(&c);
+        model.assign_a(&a);
+        assert_eq!(extract_ids(&model.aa_view), [1, 2, 3, 4] as [u32; 4]);
+        assert_eq!(extract_ids(&model.bb_view), [10, 11] as [u32; 2]);
+        assert_eq!(extract_ids(&model.cc_view), [20, 21, 26] as [u32; 3]);
+    }
+
+    fn make_dependent_job(id: u32, deps: &[u32], descr: &str) -> Job0 {
         Job0 {
             available_transitions: vec![],
             cancelled: false,
@@ -972,6 +1130,169 @@ mod tests {
             ],
             wait_for: deps.iter().map(|x| format!("/api/job/{}/", x)).collect(),
             write_locks: vec![],
+        }
+    }
+
+    fn build_db() -> Db {
+        let all_a = vec![
+            A::new(1, &[10, 11], "One"),
+            A::new(2, &[12, 13], "Two"),
+            A::new(3, &[14, 15], "Three"),
+            A::new(4, &[16, 17], "Four"),
+        ];
+        let all_b = vec![
+            B::new(10, &[20, 21], "Ten"),
+            B::new(11, &[21, 26], "Eleven"),
+            B::new(12, &[22, 23], "Twelve"),
+            B::new(13, &[23, 28], "Thirteen"),
+            B::new(14, &[24, 15], "Ten"),
+            B::new(15, &[25, 20], "Eleven"),
+            B::new(16, &[26, 27], "Twelve"),
+            B::new(17, &[27, 22], "Thirteen"),
+        ];
+        let all_c = vec![
+            C::new(20, &[], "Twenty and zero"),
+            C::new(21, &[], "Twenty and one"),
+            C::new(22, &[], "Twenty and two"),
+            C::new(23, &[], "Twenty and three"),
+            C::new(24, &[], "Twenty and four"),
+            C::new(25, &[], "Twenty and five"),
+            C::new(26, &[], "Twenty and six"),
+            C::new(27, &[], "Twenty and seven"),
+            C::new(28, &[], "Twenty and eight"),
+            C::new(29, &[], "Twenty and nine"),
+        ];
+        Db { all_a, all_b, all_c }
+    }
+
+    fn prepare_abc(db: &Db, id: u32) -> (Vec<A>, Vec<B>, Vec<C>) {
+        let ai = db.select_a(&vec![id]);
+        let aix = ai.iter().map(|a| a.deps()).flatten().map(|a| *a).collect::<Vec<u32>>();
+        let bi = db.select_b(&aix);
+        let bix = bi.iter().map(|b| b.deps()).flatten().map(|b| *b).collect::<Vec<u32>>();
+        let ci = db.select_c(&bix);
+        let ai = db.all_a.clone(); // use all roots
+        (ai, bi, ci)
+    }
+
+    #[derive(Debug, Default, Clone)]
+    struct Model {
+        aa: Vec<Arc<A>>,
+        bb: Vec<Arc<B>>,
+        cc: Vec<Arc<C>>,
+
+        aa_view: Vec<Arc<A>>,
+        bb_view: Vec<Arc<B>>,
+        cc_view: Vec<Arc<C>>,
+
+        select: Select,
+    }
+
+    #[derive(Debug, Clone)]
+    enum Select {
+        None,
+        SelectA(u32),
+        SelectB(u32, u32),
+        SelectC(u32, u32, u32),
+    }
+    impl Default for Select {
+        fn default() -> Self {
+            Self::None
+        }
+    }
+
+    impl Model {
+        fn assign_a(&mut self, aa: &[A]) {
+            let mut aas = aa.to_vec();
+            aas.sort_by_key(|a| a.id());
+            self.aa = aas.into_iter().map(|a| Arc::new(a.clone())).collect();
+            let (consistent, _, _) = self.consistency_level(&self.select);
+            if consistent {
+                self.aa_view = self.aa.clone();
+            }
+        }
+        fn assign_b(&mut self, bb: &[B]) {
+            let mut bbs = bb.to_vec();
+            bbs.sort_by_key(|b| b.id());
+            self.bb = bbs.into_iter().map(|b| Arc::new(b.clone())).collect();
+            let (_, consistent, _) = self.consistency_level(&self.select);
+            if consistent {
+                self.bb_view = self.bb.clone();
+            }
+        }
+
+        fn assign_c(&mut self, cc: &[C]) {
+            let mut ccs = cc.to_vec();
+            ccs.sort_by_key(|c| c.id());
+            self.cc = ccs.into_iter().map(|c| Arc::new(c.clone())).collect();
+            let (_, _, consistent) = self.consistency_level(&self.select);
+            if consistent {
+                self.cc_view = self.cc.clone();
+            }
+        }
+
+        fn consistency_level(&self, select: &Select) -> (bool, bool, bool) {
+            let mut ls = [false; 3];
+            match *select {
+                Select::None => {}
+                Select::SelectA(i) => {
+                    let ao = self.aa.iter().find(|a| a.id() == i);
+                    match ao {
+                        Some(_) => {
+                            ls[0] = true;
+                        }
+                        _ => {
+                            ls[0] = false;
+                        }
+                    }
+                }
+                Select::SelectB(i, j) => {
+                    let ao = self.aa.iter().find(|a| a.id() == i);
+                    let bo = self.bb.iter().find(|b| b.id() == j);
+                    match (ao, bo) {
+                        (Some(a), Some(_)) => {
+                            ls[0] = true;
+                            ls[1] = a.deps().contains(&j);
+                        }
+                        (Some(_), _) => {
+                            ls[0] = true;
+                            ls[1] = false;
+                        }
+                        (_, _) => {
+                            ls[0] = false;
+                            ls[0] = false;
+                        }
+                    }
+                }
+                Select::SelectC(i, j, k) => {
+                    let ao = self.aa.iter().find(|a| a.id() == i);
+                    let bo = self.bb.iter().find(|b| b.id() == j);
+                    let co = self.cc.iter().find(|c| c.id() == k);
+                    match (ao, bo, co) {
+                        (Some(a), Some(b), Some(_)) => {
+                            ls[0] = true;
+                            ls[1] = a.deps().contains(&j);
+                            ls[2] = b.deps().contains(&k);
+                        }
+                        (Some(a), Some(_), _) => {
+                            ls[0] = true;
+                            ls[1] = a.deps().contains(&j);
+                            ls[2] = false;
+                        }
+                        (Some(_), _, _) => {
+                            ls[0] = true;
+                            ls[1] = false;
+                            ls[2] = false;
+                        }
+                        (_, _, _) => {
+                            ls[0] = false;
+                            ls[1] = false;
+                            ls[2] = false;
+                        }
+                    }
+                }
+            }
+            (ls[0], ls[1], ls[2])
         }
     }
 }
