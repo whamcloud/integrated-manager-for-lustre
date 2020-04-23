@@ -327,4 +327,52 @@ mod tests {
             }
         }
     }
+
+    #[tokio::test]
+    async fn full_mds_test() {
+        let path1 = "fixtures/device-mds1.local-2034.json";
+        let path2 = "fixtures/device-mds2.local-2033.json";
+
+        let device1 = fs::read_to_string(path1).unwrap();
+        let device1: Device = serde_json::from_str(&device1).unwrap();
+
+        let device2 = fs::read_to_string(path2).unwrap();
+        let device2: Device = serde_json::from_str(&device2).unwrap();
+
+        let devices = vec![
+            (Fqdn("mds1.local".into()), device1),
+            (Fqdn("mds2.local".into()), device2),
+        ];
+
+        let results = update_virtual_devices(devices).await;
+
+        for (f, d) in results {
+            let mut children = vec![];
+            match d {
+                Device::Root(dd) => {
+                    for c in dd.children {
+                        children.push(c.clone());
+                    }
+                }
+                _ => unreachable!(),
+            }
+
+            let mut children_ordered = vec![];
+            for c in children {
+                let c_string = serde_json::to_string(&c).unwrap();
+
+                let c_ordered = c_string.parse::<jsondata::Json>().unwrap();
+
+                children_ordered.push(c_ordered);
+            }
+
+            children_ordered.sort();
+
+            for (i, c) in children_ordered.iter().enumerate() {
+                let c_string = c.to_string();
+                let c_serde: serde_json::Value = serde_json::from_str(&c_string).unwrap();
+                assert_json_snapshot!(format!("full_mds_test_{}_{}", f, i), c_serde);
+            }
+        }
+    }
 }
