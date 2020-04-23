@@ -178,6 +178,7 @@ fn insert(d: &mut Device, to_insert: &Device) {
             to_display(to_insert),
             to_display(d)
         );
+        // TODO: Don't insert entire device to avoid rewriting major, minor, devpath, paths fields
         *d = to_insert.clone();
     } else {
         match d {
