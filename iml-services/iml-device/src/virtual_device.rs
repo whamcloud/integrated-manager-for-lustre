@@ -276,7 +276,7 @@ fn insert_virtual_devices(d: &mut Device, parents: &[Device]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use insta::assert_debug_snapshot;
+    use insta::assert_json_snapshot;
     use jsondata;
     use std::fs;
 
@@ -320,7 +320,11 @@ mod tests {
 
             children_ordered.sort();
 
-            assert_debug_snapshot!(format!("simple_test_{}", f), children_ordered);
+            for (i, c) in children_ordered.iter().enumerate() {
+                let c_string = c.to_string();
+                let c_serde: serde_json::Value = serde_json::from_str(&c_string).unwrap();
+                assert_json_snapshot!(format!("simple_test_{}_{}", f, i), c_serde);
+            }
         }
     }
 }
