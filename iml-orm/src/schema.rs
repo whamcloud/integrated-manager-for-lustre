@@ -59,13 +59,6 @@ table! {
 }
 
 table! {
-    chroma_core_actiontype (id) {
-        id -> Int4,
-        name -> Varchar,
-    }
-}
-
-table! {
     chroma_core_addostpooljob (job_ptr_id) {
         job_ptr_id -> Int4,
         ost_id -> Int4,
@@ -569,7 +562,7 @@ table! {
 }
 
 table! {
-    chroma_core_mailboxes (id) {
+    chroma_core_mailbox (id) {
         id -> Int4,
         name -> Varchar,
         start -> Timestamptz,
@@ -1600,7 +1593,7 @@ joinable!(chroma_core_failbacktargetjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_failbacktargetjob -> chroma_core_managedtarget (target_id));
 joinable!(chroma_core_failovertargetjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_failovertargetjob -> chroma_core_managedtarget (target_id));
-joinable!(chroma_core_fidactionqueue -> chroma_core_mailboxes (mailbox_id));
+joinable!(chroma_core_fidactionqueue -> chroma_core_mailbox (mailbox_id));
 joinable!(chroma_core_filesystemclientconfparam -> chroma_core_confparam (confparam_ptr_id));
 joinable!(chroma_core_filesystemclientconfparam -> chroma_core_managedfilesystem (filesystem_id));
 joinable!(chroma_core_filesystemglobalconfparam -> chroma_core_confparam (confparam_ptr_id));
@@ -1639,7 +1632,7 @@ joinable!(chroma_core_loadlnetjob -> chroma_core_lnetconfiguration (lnet_configu
 joinable!(chroma_core_lustreclientmount -> chroma_core_managedfilesystem (filesystem_id));
 joinable!(chroma_core_lustreclientmount -> chroma_core_managedhost (host_id));
 joinable!(chroma_core_lustreclientmount -> django_content_type (content_type_id));
-joinable!(chroma_core_mailboxes -> chroma_core_managedfilesystem (filesystem_id));
+joinable!(chroma_core_mailbox -> chroma_core_managedfilesystem (filesystem_id));
 joinable!(chroma_core_makeavailablefilesystemunavailable -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_makeavailablefilesystemunavailable -> chroma_core_managedfilesystem (filesystem_id));
 joinable!(chroma_core_managedfilesystem -> chroma_core_managedmgs (mgs_id));
@@ -1813,7 +1806,6 @@ allow_tables_to_appear_in_same_query!(
     auth_user,
     auth_user_groups,
     auth_user_user_permissions,
-    chroma_core_actiontype,
     chroma_core_addostpooljob,
     chroma_core_aggregatestratagemresultsjob,
     chroma_core_alertemail,
@@ -1870,7 +1862,7 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_loadlnetjob,
     chroma_core_logmessage,
     chroma_core_lustreclientmount,
-    chroma_core_mailboxes,
+    chroma_core_mailbox,
     chroma_core_makeavailablefilesystemunavailable,
     chroma_core_managedfilesystem,
     chroma_core_managedhost,

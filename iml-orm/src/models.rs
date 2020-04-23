@@ -85,14 +85,6 @@ pub struct AuthUserUserPermission {
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
 #[derive(serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_actiontype")]
-pub struct ChromaCoreActiontype {
-    pub id: i32,
-    pub action: String,
-}
-
-#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
-#[derive(serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "postgres-interop", primary_key(job_ptr_id))]
 #[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_addostpooljob")]
 pub struct ChromaCoreAddostpooljob {
@@ -790,8 +782,8 @@ pub struct ChromaCoreLustreclientmount {
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
 #[derive(serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_mailboxes")]
-pub struct ChromaCoreMailboxes {
+#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_mailbox")]
+pub struct ChromaCoreMailbox {
     pub id: i32,
     pub name: String,
     pub start: Option<DateTime<Utc>>,
@@ -802,7 +794,7 @@ pub struct ChromaCoreMailboxes {
     pub fids_failed: i64,
     pub data_transfered: i64,
     pub keep_failed: bool,
-    pub actions: Vec<i32>,
+    pub actions: Vec<String>,
     pub args: serde_json::Value,
     pub filesystem_id: i32,
 }

@@ -19,14 +19,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunSQL(sql=forward_lustre_fid, reverse_sql=backward_lustre_fid),
         migrations.CreateModel(
-            name="ActionType",
-            fields=[
-                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
-                ("name", models.CharField(max_length=64)),
-            ],
-            options={"ordering": ["id"],},
-        ),
-        migrations.CreateModel(
             name="FidActionQueue",
             fields=[
                 ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
@@ -36,7 +28,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="Mailboxes",
+            name="Mailbox",
             fields=[
                 ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("name", models.CharField(max_length=128)),
@@ -50,7 +42,7 @@ class Migration(migrations.Migration):
                 ("keep_failed", models.BooleanField(default=True)),
                 (
                     "actions",
-                    django.contrib.postgres.fields.ArrayField(base_field=models.PositiveIntegerField(), size=None),
+                    django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=16), size=None),
                 ),
                 ("args", django.contrib.postgres.fields.jsonb.JSONField(default={})),
                 (
@@ -62,7 +54,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="fidactionqueue",
             name="mailbox",
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.Mailboxes"),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.Mailbox"),
         ),
         migrations.AlterUniqueTogether(name="actiontype", unique_together=set([("name",)]),),
     ]

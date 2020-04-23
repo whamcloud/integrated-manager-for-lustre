@@ -24,7 +24,7 @@ class LustreFidField(models.Field):
         app_label = "chroma_core"
 
 
-class Mailboxes(models.Model):
+class Mailbox(models.Model):
     """ List of deliveries for action queues """
 
     class Meta:
@@ -45,7 +45,7 @@ class Mailboxes(models.Model):
 
     keep_failed = models.BooleanField(default=True, null=False)
     # Actually links to ActionType
-    actions = ArrayField(models.PositiveIntegerField())
+    actions = ArrayField(models.CharField(max_length=16))
 
     args = JSONField(default={})
 
@@ -61,12 +61,3 @@ class FidActionQueue(models.Model):
 
     data = JSONField(default={})
     failed = models.PositiveSmallIntegerField(default=0, null=False)
-
-
-class ActionType(models.Model):
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-        unique_together = ("name",)
-
-    name = models.CharField(max_length=64)
