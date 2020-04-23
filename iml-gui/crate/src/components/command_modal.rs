@@ -4,7 +4,7 @@
 
 use crate::{
     components::{font_awesome, modal},
-    dependency_tree::{build_direct_dag, DependencyDAG, Deps},
+    dependency_tree::{build_direct_dag, DependencyDAG, Deps, RichDeps},
     extensions::{MergeAttrs as _, NodeExt as _, RequestExt as _},
     generated::css_classes::C,
     key_codes, sleep_with_handle, GMsg,
@@ -17,7 +17,6 @@ use serde::de::DeserializeOwned;
 use std::collections::HashSet;
 use std::fmt;
 use std::{sync::Arc, time::Duration};
-use crate::dependency_tree::RichDeps;
 
 /// The component polls `/api/command/` endpoint and this constant defines how often it does.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
@@ -141,7 +140,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 Input::Commands(mut cmds) => {
                     // use the (little) optimization:
                     // if we already have the commands and they all finished, we don't need to poll them anymore
-                    model.commands = cmds.iter_mut().map(|ac| Arc::new(RichCommand::new((**ac).clone(), extract_children_from_cmd))).collect();
+                    model.commands = cmds
+                        .iter_mut()
+                        .map(|ac| Arc::new(RichCommand::new((**ac).clone(), extract_children_from_cmd)))
+                        .collect();
                     if !is_all_finished(&model.commands) {
                         orders.send_msg(Msg::FetchTree);
                     }
@@ -165,7 +167,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             model.commands_loading = false;
             match *commands_data_result {
                 Ok(api_list) => {
-                    model.commands = api_list.objects.into_iter().map(|c| Arc::new(RichCommand::new(c, extract_children_from_cmd))).collect();
+                    model.commands = api_list
+                        .objects
+                        .into_iter()
+                        .map(|c| Arc::new(RichCommand::new(c, extract_children_from_cmd)))
+                        .collect();
                 }
                 Err(e) => {
                     error!("Failed to perform fetch_command_status {:#?}", e);
@@ -181,8 +187,16 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::FetchedJobs(jobs_data_result) => match *jobs_data_result {
             Ok(api_list) => {
                 if are_jobs_consistent(model, &api_list.objects) {
-                    let jobs_graph_data = api_list.objects.iter().map(|j| Arc::new(RichJob::new(j.clone(), extract_wait_fors_from_job))).collect::<Vec<Arc<RichJob>>>();
-                    model.jobs = api_list.objects.into_iter().map(|j| Arc::new(RichJob::new(j, extract_children_from_job))).collect();
+                    let jobs_graph_data = api_list
+                        .objects
+                        .iter()
+                        .map(|j| Arc::new(RichJob::new(j.clone(), extract_wait_fors_from_job)))
+                        .collect::<Vec<Arc<RichJob>>>();
+                    model.jobs = api_list
+                        .objects
+                        .into_iter()
+                        .map(|j| Arc::new(RichJob::new(j, extract_children_from_job)))
+                        .collect();
                     model.jobs_graph = build_direct_dag(&jobs_graph_data);
                 }
             }
@@ -196,7 +210,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             Ok(api_list) => {
                 if are_steps_consistent(model, &api_list.objects) {
                     // TODO model.steps_loading = false;
-                    model.steps = api_list.objects.into_iter().map(|s| RichStep::new(s, extract_children_from_step)).map(Arc::new).collect();
+                    model.steps = api_list
+                        .objects
+                        .into_iter()
+                        .map(|s| RichStep::new(s, extract_children_from_step))
+                        .map(Arc::new)
+                        .collect();
                 }
             }
             Err(e) => {
@@ -818,11 +837,17 @@ fn perform_close_click(cur_opens: &Opens, the_id: TypedId) -> Opens {
 }
 
 fn extract_children_from_cmd(cmd: &Command) -> (u32, Vec<u32>) {
-    (cmd.id, cmd.jobs.iter().filter_map(|s| extract_uri_id::<Job0>(s)).collect())
+    (
+        cmd.id,
+        cmd.jobs.iter().filter_map(|s| extract_uri_id::<Job0>(s)).collect(),
+    )
 }
 
 fn extract_children_from_job(job: &Job0) -> (u32, Vec<u32>) {
-    (job.id, job.steps.iter().filter_map(|s| extract_uri_id::<Step>(s)).collect())
+    (
+        job.id,
+        job.steps.iter().filter_map(|s| extract_uri_id::<Step>(s)).collect(),
+    )
 }
 
 fn extract_children_from_step(step: &Step) -> (u32, Vec<u32>) {
@@ -831,7 +856,10 @@ fn extract_children_from_step(step: &Step) -> (u32, Vec<u32>) {
 
 fn extract_wait_fors_from_job(job: &Job0) -> (u32, Vec<u32>) {
     // interdependencies between jobs
-    (job.id, job.wait_for.iter().filter_map(|s| extract_uri_id::<Job0>(s)).collect())
+    (
+        job.id,
+        job.wait_for.iter().filter_map(|s| extract_uri_id::<Job0>(s)).collect(),
+    )
 }
 
 #[cfg(test)]
