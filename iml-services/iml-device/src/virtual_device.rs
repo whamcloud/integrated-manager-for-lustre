@@ -393,8 +393,8 @@ mod tests {
 
     #[tokio::test]
     async fn full_oss_test() {
-        let path1 = "fixtures/device-oss1.local-2036.json";
-        let path2 = "fixtures/device-oss2.local-2035.json";
+        let path1 = "fixtures/device-oss1.local-62.json";
+        let path2 = "fixtures/device-oss2.local-61.json";
 
         let device1 = fs::read_to_string(path1).unwrap();
         let device1: Device = serde_json::from_str(&device1).unwrap();
