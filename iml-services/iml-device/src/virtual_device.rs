@@ -58,7 +58,7 @@ pub async fn get_other_devices(f: &Fqdn, pool: &DbPool) -> Vec<(Fqdn, Device)> {
         .collect()
 }
 
-pub async fn update_virtual_devices(devices: Vec<(Fqdn, Device)>) -> Vec<(Fqdn, Device)> {
+pub fn update_virtual_devices(devices: Vec<(Fqdn, Device)>) -> Vec<(Fqdn, Device)> {
     let mut results = vec![];
 
     // As there are multipath devices and we don't compare major, minor, devpath, paths fields,
@@ -351,8 +351,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn simple_test() {
+    #[test]
+    fn simple_test() {
         let devices = deser_fixture(
             "fixtures/device-mds1.local-2034-pruned.json",
             "fixtures/device-mds2.local-2033-pruned.json",
@@ -360,13 +360,13 @@ mod tests {
             Fqdn("mds2.local".into()),
         );
 
-        let results = update_virtual_devices(devices).await;
+        let results = update_virtual_devices(devices);
 
         compare_results(results, "simple_test");
     }
 
-    #[tokio::test]
-    async fn full_mds_test() {
+    #[test]
+    fn full_mds_test() {
         let devices = deser_fixture(
             "fixtures/device-mds1.local-2034.json",
             "fixtures/device-mds2.local-2033.json",
@@ -374,13 +374,13 @@ mod tests {
             Fqdn("mds2.local".into()),
         );
 
-        let results = update_virtual_devices(devices).await;
+        let results = update_virtual_devices(devices);
 
         compare_results(results, "full_mds_test");
     }
 
-    #[tokio::test]
-    async fn full_oss_test() {
+    #[test]
+    fn full_oss_test() {
         let devices = deser_fixture(
             "fixtures/device-oss1.local-62.json",
             "fixtures/device-oss2.local-61.json",
@@ -388,7 +388,7 @@ mod tests {
             Fqdn("oss2.local".into()),
         );
 
-        let results = update_virtual_devices(devices).await;
+        let results = update_virtual_devices(devices);
 
         compare_results(results, "full_oss_test");
     }
