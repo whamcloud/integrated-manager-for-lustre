@@ -305,17 +305,7 @@ mod tests {
         vec![(fqdn1, device1), (fqdn2, device2)]
     }
 
-    #[tokio::test]
-    async fn simple_test() {
-        let devices = deser_fixture(
-            "fixtures/device-mds1.local-2034-pruned.json",
-            "fixtures/device-mds2.local-2033-pruned.json",
-            Fqdn("mds1.local".into()),
-            Fqdn("mds2.local".into()),
-        );
-
-        let results = update_virtual_devices(devices).await;
-
+    fn compare_results(results: Vec<(Fqdn, Device)>, test_name: &str) {
         for (f, d) in results {
             let mut children = vec![];
             match d {
@@ -341,9 +331,23 @@ mod tests {
             for (i, c) in children_ordered.iter().enumerate() {
                 let c_string = c.to_string();
                 let c_serde: serde_json::Value = serde_json::from_str(&c_string).unwrap();
-                assert_json_snapshot!(format!("simple_test_{}_{}", f, i), c_serde);
+                assert_json_snapshot!(format!("{}_{}_{}", test_name, f, i), c_serde);
             }
         }
+    }
+
+    #[tokio::test]
+    async fn simple_test() {
+        let devices = deser_fixture(
+            "fixtures/device-mds1.local-2034-pruned.json",
+            "fixtures/device-mds2.local-2033-pruned.json",
+            Fqdn("mds1.local".into()),
+            Fqdn("mds2.local".into()),
+        );
+
+        let results = update_virtual_devices(devices).await;
+
+        compare_results(results, "simple_test");
     }
 
     #[tokio::test]
@@ -357,34 +361,7 @@ mod tests {
 
         let results = update_virtual_devices(devices).await;
 
-        for (f, d) in results {
-            let mut children = vec![];
-            match d {
-                Device::Root(dd) => {
-                    for c in dd.children {
-                        children.push(c.clone());
-                    }
-                }
-                _ => unreachable!(),
-            }
-
-            let mut children_ordered = vec![];
-            for c in children {
-                let c_string = serde_json::to_string(&c).unwrap();
-
-                let c_ordered = c_string.parse::<jsondata::Json>().unwrap();
-
-                children_ordered.push(c_ordered);
-            }
-
-            children_ordered.sort();
-
-            for (i, c) in children_ordered.iter().enumerate() {
-                let c_string = c.to_string();
-                let c_serde: serde_json::Value = serde_json::from_str(&c_string).unwrap();
-                assert_json_snapshot!(format!("full_mds_test_{}_{}", f, i), c_serde);
-            }
-        }
+        compare_results(results, "full_mds_test");
     }
 
     #[tokio::test]
@@ -398,33 +375,6 @@ mod tests {
 
         let results = update_virtual_devices(devices).await;
 
-        for (f, d) in results {
-            let mut children = vec![];
-            match d {
-                Device::Root(dd) => {
-                    for c in dd.children {
-                        children.push(c.clone());
-                    }
-                }
-                _ => unreachable!(),
-            }
-
-            let mut children_ordered = vec![];
-            for c in children {
-                let c_string = serde_json::to_string(&c).unwrap();
-
-                let c_ordered = c_string.parse::<jsondata::Json>().unwrap();
-
-                children_ordered.push(c_ordered);
-            }
-
-            children_ordered.sort();
-
-            for (i, c) in children_ordered.iter().enumerate() {
-                let c_string = c.to_string();
-                let c_serde: serde_json::Value = serde_json::from_str(&c_string).unwrap();
-                assert_json_snapshot!(format!("full_oss_test_{}_{}", f, i), c_serde);
-            }
-        }
+        compare_results(results, "full_oss_test");
     }
 }
