@@ -34,8 +34,8 @@ pub async fn save_devices(devices: Vec<(Fqdn, Device)>, pool: &DbPool) {
             .await
             .expect("Error saving new device");
 
-        tracing::info!("Inserted other device from host {}", new_device.fqdn);
-        tracing::trace!("Inserted other device {:?}", new_device);
+        tracing::info!("Inserted devices from host {}", new_device.fqdn);
+        tracing::trace!("Inserted devices {:?}", new_device);
     }
 }
 
@@ -136,7 +136,7 @@ fn collect_virtual_device_parents(
     let mut results = vec![];
 
     if is_virtual(d) {
-        tracing::info!(
+        tracing::debug!(
             "Collecting parent {} of {}",
             parent.map(|x| to_display(x)).unwrap_or("None".into()),
             to_display(d)
@@ -205,7 +205,7 @@ fn children(d: &Device) -> Option<&HashSet<Device>> {
 
 fn insert(mut d: &mut Device, to_insert: &Device) {
     if compare_selected_fields(d, to_insert) {
-        tracing::info!(
+        tracing::debug!(
             "Inserting device {} children to {}",
             to_display(to_insert),
             to_display(d)
