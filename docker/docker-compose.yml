@@ -262,6 +262,8 @@ services:
     environment:
       - PROXY_HOST=iml-api
       - RUST_LOG=info
+      - BRANDING
+      - USE_STRATAGEM
   iml-manager-cli:
     image: "imlteam/iml-manager-cli:6.1.0-dev"
     stdin_open: true
@@ -344,6 +346,9 @@ services:
       - "/etc/iml-docker/setup:/var/lib/chroma-setup"
     secrets:
       - iml_pw
+    environment:
+      - BRANDING
+      - USE_STRATAGEM
     deploy:
       restart_policy:
         condition: on-failure
