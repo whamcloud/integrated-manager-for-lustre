@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::iter::FromIterator;
 use std::iter::Iterator;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -12,7 +11,6 @@ use std::sync::Arc;
 pub trait Deps<K> {
     fn id(&self) -> K;
     fn deps(&self) -> &[K];
-    fn has(&self, k: &K) -> bool;
 }
 
 impl<K, T: Deps<K>> Deps<K> for Arc<T> {
@@ -21,9 +19,6 @@ impl<K, T: Deps<K>> Deps<K> for Arc<T> {
     }
     fn deps(&self) -> &[K] {
         (**self).deps()
-    }
-    fn has(&self, k: &K) -> bool {
-        (**self).has(k)
     }
 }
 
@@ -40,7 +35,6 @@ impl<K, T: Deps<K>> Deps<K> for Arc<T> {
 pub struct Rich<K: Hash + Eq, T> {
     pub id: K,
     pub deps: Vec<K>,
-    pub dset: HashSet<K>,
     pub inner: T,
 }
 
@@ -49,15 +43,10 @@ where
     K: Hash + Ord + Copy,
     T: Clone,
 {
-    pub fn new(t: T, extract: impl FnOnce(&T) -> (K, Vec<K>)) -> Self {
+    pub fn new(t: T, extract: impl Fn(&T) -> (K, Vec<K>)) -> Self {
         let (id, mut deps) = extract(&t);
         deps.sort();
-        Self {
-            id,
-            dset: HashSet::from_iter(deps.iter().cloned()),
-            deps,
-            inner: t,
-        }
+        Self { id, deps, inner: t }
     }
 }
 
@@ -70,9 +59,6 @@ where
     }
     fn deps(&self) -> &[K] {
         &self.deps
-    }
-    fn has(&self, k: &K) -> bool {
-        self.dset.contains(k)
     }
 }
 
@@ -221,9 +207,6 @@ mod tests {
         }
         fn deps(&self) -> &[u32] {
             &self.deps
-        }
-        fn has(&self, k: &u32) -> bool {
-            self.deps.contains(k)
         }
     }
 
