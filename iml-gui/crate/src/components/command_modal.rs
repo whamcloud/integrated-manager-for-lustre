@@ -72,7 +72,6 @@ pub struct Model {
     pub commands_view: Vec<Arc<RichCommand>>,
 
     pub jobs: HashMap<u32, Arc<RichJob>>,
-    pub jobs_view: Vec<Arc<RichJob>>,
     pub jobs_graph: JobsGraph,
 
     pub steps: HashMap<u32, Arc<RichStep>>,
@@ -242,24 +241,22 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
                         modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
                     ]
                 } else {
-                    let mut ids = model.commands.keys().copied().collect::<Vec<_>>();
-                    ids.sort();
                     vec![
                         modal::title_view(Msg::Modal, plain!["Commands"]),
                         div![
                             class![C.py_8],
-                            ids.iter().map(|k| { command_item_view(model, &model.commands[k]) })
+                            model.commands_view.iter().map(|x| { command_item_view(model, x) })
                         ],
                         modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
                     ]
                 },
             ),
         )
-        .with_listener(keyboard_ev(Ev::KeyDown, move |ev| match ev.key_code() {
-            key_codes::ESC => Msg::Modal(modal::Msg::Close),
-            _ => Msg::Noop,
-        }))
-        .merge_attrs(class![C.text_black])
+            .with_listener(keyboard_ev(Ev::KeyDown, move |ev| match ev.key_code() {
+                key_codes::ESC => Msg::Modal(modal::Msg::Close),
+                _ => Msg::Noop,
+            }))
+            .merge_attrs(class![C.text_black])
     }
 }
 
@@ -283,7 +280,7 @@ fn command_item_view(model: &Model, x: &RichCommand) -> Node<Msg> {
         "chevron-circle-down"
     };
     let job_tree = job_tree_view(&model.jobs_graph);
-    let step_list = step_list_view(&model.select, &model.steps);
+    let step_list = step_list_view(&model.select, &model.steps_view);
     div![
         class![C.border_b, C.last__border_b_0],
         div![
@@ -343,17 +340,17 @@ pub fn job_tree_view(jobs_graph: &JobsGraph) -> Node<Msg> {
 }
 
 pub fn job_dag_view<F>(dag: &JobsGraph, node_view: &F) -> Node<Msg>
-where
-    F: Fn(Arc<RichJob>, &mut Context) -> Node<Msg>,
-{
-    fn build_node_view<F>(dag: &JobsGraph, node_view: &F, n: Arc<RichJob>, ctx: &mut Context) -> Node<Msg>
     where
         F: Fn(Arc<RichJob>, &mut Context) -> Node<Msg>,
+{
+    fn build_node_view<F>(dag: &JobsGraph, node_view: &F, n: Arc<RichJob>, ctx: &mut Context) -> Node<Msg>
+        where
+            F: Fn(Arc<RichJob>, &mut Context) -> Node<Msg>,
     {
         ctx.is_new = ctx.visited.insert(n.id);
         let parent: Node<Msg> = node_view(Arc::clone(&n), ctx);
         let mut acc: Vec<Node<Msg>> = Vec::new();
-        if let Some(deps) = dag.deps.get(&n.id()) {
+        if let Some(deps) = dag.links.get(&n.id()) {
             if ctx.is_new {
                 for d in deps {
                     let rec_node = build_node_view(dag, node_view, Arc::clone(d), ctx);
@@ -396,12 +393,10 @@ fn job_item_view(job: Arc<RichJob>, ctx: &mut Context) -> Node<Msg> {
     }
 }
 
-fn step_list_view(select: &Select, steps: &HashMap<u32, Arc<RichStep>>) -> Node<Msg> {
+fn step_list_view(select: &Select, steps: &[Arc<RichStep>]) -> Node<Msg> {
     if steps.is_empty() {
         empty!()
     } else {
-        let mut ids = steps.keys().copied().collect::<Vec<_>>();
-        ids.sort();
         div![ul![
             class![
                 C.p_1,
@@ -413,9 +408,9 @@ fn step_list_view(select: &Select, steps: &HashMap<u32, Arc<RichStep>>) -> Node<
                 C.shadow_sm,
                 C.overflow_auto
             ],
-            ids.iter().map(|k| {
-                let is_open = is_typed_id_selected(select, TypedId::Step(*k));
-                li![step_item_view(&steps[k], is_open)]
+            steps.iter().map(|x| {
+                let is_open = is_typed_id_selected(select, TypedId::Step(x.id));
+                li![step_item_view(x, is_open)]
             })
         ]]
     }
@@ -555,14 +550,14 @@ fn close_button() -> Node<Msg> {
         simple_ev(Ev::Click, modal::Msg::Close),
         "Close",
     ]
-    .map_msg(Msg::Modal)
+        .map_msg(Msg::Modal)
 }
 
 async fn fetch_the_batch<T, F, U>(ids: Vec<u32>, data_to_msg: F) -> Result<U, U>
-where
-    T: DeserializeOwned + EndpointName + 'static,
-    F: FnOnce(ResponseDataResult<ApiList<T>>) -> U,
-    U: 'static,
+    where
+        T: DeserializeOwned + EndpointName + 'static,
+        F: FnOnce(ResponseDataResult<ApiList<T>>) -> U,
+        U: 'static,
 {
     // e.g. GET /api/something/?id__in=1&id__in=2&id__in=11&limit=0
     let err_msg = format!("Bad query for {}: {:?}", T::endpoint_name(), ids);
@@ -739,12 +734,25 @@ fn convert_to_rich_hashmap<T: Clone>(
         .collect()
 }
 
+/// NOTE: the slices must be sorted
+pub fn is_subset<T: PartialEq>(part: &[T], all: &[T]) -> bool {
+    let mut idx = 0;
+    for it in part {
+        while (idx < all.len()) && (&all[idx] != it) {
+            idx += 1;
+        }
+        if idx == all.len() {
+            return false;
+        }
+    }
+    return true;
+}
+
 impl Model {
     fn clear(&mut self) {
         self.commands.clear();
         self.commands_view.clear();
         self.jobs.clear();
-        self.jobs_view.clear();
         self.jobs_graph.clear();
         self.steps.clear();
         self.steps_view.clear();
@@ -785,8 +793,8 @@ impl Model {
         let job_ids = extract_sorted_ids(&self.jobs);
         let step_ids = extract_sorted_ids(&self.steps);
         ls[0] = !self.commands.is_empty();
-        ls[1] = self.commands.values().any(|x| x.deps() == &job_ids[..]);
-        ls[2] = self.jobs.values().any(|x| x.deps() == &step_ids[..]);
+        ls[1] = self.commands.values().any(|x| is_subset(x.deps(), &job_ids));
+        ls[2] = self.jobs.values().any(|x| is_subset(x.deps(), &step_ids));
 
         // the additional constraints from the selection
         match select {
@@ -842,11 +850,10 @@ impl Model {
             self.commands_view = convert_to_sorted_vec(&self.commands);
         }
         if jobs_ok {
-            self.jobs_view = convert_to_sorted_vec(&self.jobs);
-            let jobs_graph_data = self
-                .jobs_view
+            let ids = extract_sorted_ids(&self.jobs);
+            let jobs_graph_data = ids
                 .iter()
-                .map(|x| RichJob::new(x.inner.clone(), extract_wait_fors_from_job))
+                .map(|k| RichJob::new(self.jobs[k].inner.clone(), extract_wait_fors_from_job))
                 .collect::<Vec<RichJob>>();
             self.jobs_graph = build_direct_dag(&jobs_graph_data);
         }
@@ -893,7 +900,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_job() {
+    fn test_parse_job() {
         assert_eq!(extract_uri_id::<Job0>("/api/job/39/"), Some(39));
         assert_eq!(extract_uri_id::<Step>("/api/step/123/"), Some(123));
         assert_eq!(extract_uri_id::<Command>("/api/command/12/"), Some(12));
@@ -901,7 +908,20 @@ mod tests {
     }
 
     #[test]
-    fn build_dependency_view() {
+    fn test_is_subset() {
+        let all = vec![1, 2, 3, 4, 5];
+        assert_eq!(is_subset(&vec![1, 2, 3], &all), true);
+        assert_eq!(is_subset(&vec![1, 3, 5], &all), true);
+        assert_eq!(is_subset(&vec![], &all), true);
+        assert_eq!(is_subset(&all, &all), true);
+
+        assert_eq!(is_subset(&vec![1, 6], &all), false);
+        // if not sorted, the correctness is not guaranteed
+        assert_eq!(is_subset(&vec![5, 1], &all), false);
+    }
+
+    #[test]
+    fn test_build_dependency_view() {
         // make jobs to have fake steps for the full jobs dom
         let jobs = vec![
             make_job(1, &[10], &[2, 3], "One"),
@@ -945,7 +965,7 @@ mod tests {
     }
 
     #[test]
-    fn interpret_click_test() {
+    fn test_interpret_click() {
         let start = Select::None;
 
         // click on Command(12)
@@ -995,30 +1015,30 @@ mod tests {
         model.assign_steps(&db.select_steps(&vec![20, 23, 14]));
         model.assign_commands(&db.select_cmds(&vec![1, 2, 3, 4]));
 
-        // [1]
+        // [1, 2, 3, 4] -> [10, 11] -> [20, 21, 26]
         model.select = Select::Command(1);
         model.assign_steps(&c);
         model.assign_jobs(&b);
         model.assign_commands(&a);
         assert_eq!(extract_ids(&model.commands_view), vec![1, 2, 3, 4]);
-        assert_eq!(extract_ids(&model.jobs_view), vec![10, 11]);
-        assert_eq!(extract_ids(&model.steps_view), Vec::<u32>::new());
+        assert_eq!(extract_ids(&model.jobs_graph.roots), vec![10]);
+        assert_eq!(extract_ids(&model.steps_view), vec![20, 21, 26]);
 
         model.select = Select::CommandJob(1, 11);
         model.assign_steps(&c);
         model.assign_commands(&a);
         model.assign_jobs(&b);
         assert_eq!(extract_ids(&model.commands_view), vec![1, 2, 3, 4]);
-        assert_eq!(extract_ids(&model.jobs_view), vec![10, 11]);
-        assert_eq!(extract_ids(&model.steps_view), Vec::<u32>::new());
+        assert_eq!(extract_ids(&model.jobs_graph.roots), vec![10]);
+        assert_eq!(extract_ids(&model.steps_view), vec![20, 21, 26]);
 
         model.select = Select::CommandJobSteps(1, 11, vec![26]);
         model.assign_jobs(&b);
         model.assign_steps(&c);
         model.assign_commands(&a);
         assert_eq!(extract_ids(&model.commands_view), vec![1, 2, 3, 4]);
-        assert_eq!(extract_ids(&model.jobs_view), vec![10, 11]);
-        assert_eq!(extract_ids(&model.steps_view), Vec::<u32>::new());
+        assert_eq!(extract_ids(&model.jobs_graph.roots), vec![10]);
+        assert_eq!(extract_ids(&model.steps_view), vec![20, 21, 26]);
     }
 
     fn make_command(id: u32, jobs: &[u32], msg: &str) -> Command {
@@ -1083,9 +1103,9 @@ mod tests {
             make_command(4, &[16, 17], "Four"),
         ];
         let all_jobs = vec![
-            make_job(10, &[20, 21], &[], "Ten"),
+            make_job(10, &[20, 21], &[11], "Ten"),
             make_job(11, &[21, 26], &[], "Eleven"),
-            make_job(12, &[22, 23], &[], "Twelve"),
+            make_job(12, &[22, 23], &[13], "Twelve"),
             make_job(13, &[23, 28], &[], "Thirteen"),
             make_job(14, &[24, 15], &[], "Ten"),
             make_job(15, &[25, 20], &[], "Eleven"),

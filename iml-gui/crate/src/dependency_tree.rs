@@ -76,14 +76,14 @@ where
 #[derive(Clone, Debug)]
 pub struct DependencyDAG<K: Hash + Eq + Debug, T> {
     pub roots: Vec<Arc<T>>,
-    pub deps: HashMap<K, Vec<Arc<T>>>,
+    pub links: HashMap<K, Vec<Arc<T>>>,
 }
 
 impl<K: Hash + Eq + Debug, T> Default for DependencyDAG<K, T> {
     fn default() -> Self {
         Self {
             roots: Vec::new(),
-            deps: HashMap::new(),
+            links: HashMap::new(),
         }
     }
 }
@@ -91,7 +91,7 @@ impl<K: Hash + Eq + Debug, T> Default for DependencyDAG<K, T> {
 impl<K: Hash + Eq + Debug, T> DependencyDAG<K, T> {
     pub fn clear(&mut self) {
         self.roots.clear();
-        self.deps.clear();
+        self.links.clear();
     }
 }
 
@@ -163,7 +163,7 @@ where
         .iter()
         .map(|(id, ids)| (*id, convert_ids_to_arcs(objs, ids)))
         .collect();
-    DependencyDAG { roots, deps }
+    DependencyDAG { roots, links: deps }
 }
 
 pub fn convert_ids_to_arcs<K, T>(objs: &[T], ids: &[K]) -> Vec<Arc<T>>
@@ -339,7 +339,7 @@ mod tests {
         {
             ctx.is_new = ctx.visited.insert(n.id());
             acc.push(node_to_str(Arc::clone(&n), ctx));
-            if let Some(deps) = dag.deps.get(&n.id()) {
+            if let Some(deps) = dag.links.get(&n.id()) {
                 ctx.indent += 1;
                 if ctx.is_new {
                     for d in deps {
