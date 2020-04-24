@@ -755,69 +755,60 @@ impl Model {
         let mut sorted_cmds = cmds.to_vec();
         sorted_cmds.sort_by_key(|x| x.id);
         self.commands = convert_to_rich_hashmap(sorted_cmds, extract_children_from_cmd);
-        let (consistent, _, _) = self.consistency_level(&self.select);
-        if consistent {
-            self.commands_view = convert_to_sorted_vec(&self.commands);
-        }
+        let tuple = self.check_consistency(&self.select);
+        self.refresh_view(tuple);
     }
 
     fn assign_jobs(&mut self, jobs: &[Job0]) {
         let mut sorted_jobs = jobs.to_vec();
         sorted_jobs.sort_by_key(|x| x.id);
-        self.jobs = convert_to_rich_hashmap(sorted_jobs.clone(), extract_children_from_job);
-        let (_, consistent, _) = self.consistency_level(&self.select);
-        if consistent {
-            self.jobs_view = convert_to_sorted_vec(&self.jobs);
-            let jobs_graph_data = sorted_jobs
-                .into_iter()
-                .map(|x| Arc::new(RichJob::new(x, extract_wait_fors_from_job)))
-                .collect::<Vec<Arc<RichJob>>>();
-            self.jobs_graph = build_direct_dag(&jobs_graph_data);
-        }
+        self.jobs = convert_to_rich_hashmap(sorted_jobs, extract_children_from_job);
+        let tuple = self.check_consistency(&self.select);
+        self.refresh_view(tuple);
     }
 
     fn assign_steps(&mut self, steps: &[Step]) {
         let mut sorted_steps = steps.to_vec();
         sorted_steps.sort_by_key(|x| x.id);
         self.steps = convert_to_rich_hashmap(sorted_steps, extract_children_from_step);
-        let (_, _, consistent) = self.consistency_level(&self.select);
-        if consistent {
-            self.steps_view = convert_to_sorted_vec(&self.steps);
-        }
+        let tuple = self.check_consistency(&self.select);
+        self.refresh_view(tuple);
     }
 
-    fn consistency_level(&self, select: &Select) -> (bool, bool, bool) {
+    /// We perform the consistency check of the current collections
+    /// `self.commands`, `self.jobs` and `self.steps`.
+    /// The selection, if it is non-empty, places additional constraints.
+    fn check_consistency(&self, select: &Select) -> (bool, bool, bool) {
         let mut ls = [false; 3];
+
+        // check between layers
+        let job_ids = extract_sorted_ids(&self.jobs);
+        let step_ids = extract_sorted_ids(&self.steps);
+        ls[0] = !self.commands.is_empty();
+        ls[1] = self.commands.values().any(|x| x.deps() == &job_ids[..]);
+        ls[2] = self.jobs.values().any(|x| x.deps() == &step_ids[..]);
+
+        // the additional constraints from the selection
         match select {
             Select::None => {}
             Select::Command(i) => {
                 let a0 = self.commands.get(i);
-                if let Some(a) = a0 {
+                if a0.is_some() {
                     ls[0] = true;
-                    let ids = extract_sorted_ids(&self.jobs);
-                    ls[1] = &ids[..] == a.deps();
                 }
             }
             Select::CommandJob(i, j) => {
                 let a0 = self.commands.get(i);
                 let b0 = self.jobs.get(j);
                 match (a0, b0) {
-                    (Some(a), Some(b)) => {
+                    (Some(a), Some(_)) => {
                         ls[0] = true;
                         ls[1] = a.deps().contains(j);
-                        let ids = extract_sorted_ids(&self.steps);
-                        ls[2] = &ids[..] == b.deps();
                     }
                     (Some(_), _) => {
                         ls[0] = true;
-                        ls[1] = false;
-                        ls[2] = false;
                     }
-                    (_, _) => {
-                        ls[0] = false;
-                        ls[1] = false;
-                        ls[2] = false;
-                    }
+                    (_, _) => {}
                 }
             }
             Select::CommandJobSteps(i, j, ks) => {
@@ -834,22 +825,34 @@ impl Model {
                     (Some(a), Some(_), _) => {
                         ls[0] = true;
                         ls[1] = a.deps().contains(j);
-                        ls[2] = false;
                     }
                     (Some(_), _, _) => {
                         ls[0] = true;
-                        ls[1] = false;
-                        ls[2] = false;
                     }
-                    (_, _, _) => {
-                        ls[0] = false;
-                        ls[1] = false;
-                        ls[2] = false;
-                    }
+                    (_, _, _) => {}
                 }
             }
         }
         (ls[0], ls[1], ls[2])
+    }
+
+    fn refresh_view(&mut self, level: (bool, bool, bool)) {
+        let (cmds_ok, jobs_ok, steps_ok) = level;
+        if cmds_ok {
+            self.commands_view = convert_to_sorted_vec(&self.commands);
+        }
+        if jobs_ok {
+            self.jobs_view = convert_to_sorted_vec(&self.jobs);
+            let jobs_graph_data = self
+                .jobs_view
+                .iter()
+                .map(|x| RichJob::new(x.inner.clone(), extract_wait_fors_from_job))
+                .collect::<Vec<RichJob>>();
+            self.jobs_graph = build_direct_dag(&jobs_graph_data);
+        }
+        if steps_ok {
+            self.steps_view = convert_to_sorted_vec(&self.steps);
+        }
     }
 }
 
@@ -905,9 +908,11 @@ mod tests {
             make_job(2, &[11], &[], "Two"),
             make_job(3, &[12], &[], "Three"),
         ];
-        let rich_jobs = jobs.into_iter().map(|j| RichJob::new(j, extract_wait_fors_from_job));
-        let arc_jobs: Vec<Arc<RichJob>> = rich_jobs.map(|j| Arc::new(j)).collect();
-        let dag = build_direct_dag(&arc_jobs);
+        let rich_jobs = jobs
+            .into_iter()
+            .map(|j| RichJob::new(j, extract_wait_fors_from_job))
+            .collect::<Vec<RichJob>>();
+        let dag = build_direct_dag(&rich_jobs);
         let dom = job_dag_view(&dag, &job_item_view);
         let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline, C.text_green_500];
         let icon = font_awesome(awesome_style, "check");
@@ -1122,5 +1127,10 @@ mod tests {
         let steps = db.select_steps(&j_ids);
         let cmds = db.all_cmds.clone(); // use all roots
         (cmds, jobs, steps)
+    }
+
+    fn extract_ids<T: EndpointName>(uris: &[String]) -> Vec<u32> {
+        // uris is the slice of strings like ["/api/step/123/", .. , "/api/step/234/"]
+        uris.iter().filter_map(|s| extract_uri_id::<T>(s)).collect()
     }
 }
