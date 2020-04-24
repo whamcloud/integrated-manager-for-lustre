@@ -4,7 +4,7 @@
 
 use console::{style, Term};
 use futures::{Future, FutureExt};
-use iml_wire_types::{Command, Filesystem, Host, OstPool, StratagemConfiguration};
+use iml_wire_types::{Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration};
 use indicatif::ProgressBar;
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
@@ -176,6 +176,17 @@ impl IntoTable for Vec<Filesystem> {
                     x.osts.len().to_string(),
                 ]
             }),
+        )
+    }
+}
+
+impl IntoTable for Vec<ServerProfile> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &["Profile", "Name", "Description"],
+            self.into_iter()
+                .filter(|x| x.user_selectable)
+                .map(|x| vec![x.name, x.ui_name, x.ui_description]),
         )
     }
 }
