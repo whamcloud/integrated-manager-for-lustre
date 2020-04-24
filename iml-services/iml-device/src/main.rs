@@ -124,7 +124,7 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         all_devices.push((f, d));
 
-        let updated_devices = update_virtual_devices(all_devices).await;
+        let updated_devices = update_virtual_devices(all_devices);
 
         save_devices(updated_devices, &pool).await;
 
