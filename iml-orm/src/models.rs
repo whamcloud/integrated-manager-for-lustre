@@ -1378,8 +1378,11 @@ pub struct ChromaCoreSendstratagemresultstoclientjob {
     pub filesystem_id: i32,
 }
 
-#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[cfg_attr(
+    feature = "postgres-interop",
+    derive(Queryable, Debug, Identifiable, Insertable, AsChangeset)
+)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 #[cfg_attr(feature = "postgres-interop", primary_key(name))]
 #[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_serverprofile")]
 pub struct ChromaCoreServerprofile {

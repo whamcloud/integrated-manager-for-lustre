@@ -7,6 +7,7 @@ pub mod display_utils;
 pub mod error;
 pub mod filesystem;
 pub mod ostpool;
+pub mod profile;
 pub mod server;
 pub mod stratagem;
 pub mod update_repo_file;

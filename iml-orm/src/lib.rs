@@ -22,6 +22,12 @@ pub mod alerts;
 pub mod hosts;
 
 #[cfg(feature = "postgres-interop")]
+pub mod profile;
+
+#[cfg(feature = "postgres-interop")]
+pub mod repo;
+
+#[cfg(feature = "postgres-interop")]
 use diesel::{
     r2d2::{ConnectionManager, Pool},
     PgConnection,
@@ -34,6 +40,9 @@ pub type DbPool = Pool<ConnectionManager<diesel::PgConnection>>;
 
 #[cfg(feature = "postgres-interop")]
 pub use tokio_diesel;
+
+#[cfg(feature = "postgres-interop")]
+pub use r2d2;
 
 #[cfg(feature = "postgres-interop")]
 /// Get a new connection pool based on the envs connection string.

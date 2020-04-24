@@ -14,6 +14,7 @@ hostlist-parser = "0.1.2"
 iml-api-utils = { path = "../iml-api-utils", version = "0.2" }
 iml-influx = { path = "../iml-influx", version = "0.1" }
 iml-manager-client = { path = "../iml-manager-client", version = "0.2.0" }
+iml-orm = { path = "../iml-orm", version = "0.2.0", features = ["postgres-interop"]}
 iml-tracing = { version = "0.1", path="../iml-tracing"}
 iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
 indicatif = "0.14"
@@ -24,6 +25,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 spinners = "1.2.0"
 structopt = "0.3"
+thiserror = "1.0"
 tokio = { version = "0.2", features = ["macros", "io-std", "io-util"] }
 tracing = "0.1"
 
