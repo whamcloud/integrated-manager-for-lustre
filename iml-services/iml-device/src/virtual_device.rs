@@ -16,7 +16,7 @@ use iml_orm::{
 };
 
 use iml_wire_types::Fqdn;
-use std::path::PathBuf;
+use std::{collections, path::PathBuf};
 
 pub async fn save_devices(devices: Vec<(Fqdn, Device)>, pool: &DbPool) {
     for (f, d) in devices.into_iter() {
@@ -60,7 +60,12 @@ pub async fn get_other_devices(f: &Fqdn, pool: &DbPool) -> Vec<(Fqdn, Device)> {
 
 pub async fn update_virtual_devices(devices: Vec<(Fqdn, Device)>) -> Vec<(Fqdn, Device)> {
     let mut results = vec![];
-    let mut parents = vec![];
+
+    // As there are multipath devices and we don't compare major, minor, devpath, paths fields,
+    // there will be duplicates, of which we'll end up using only one,
+    // since when inserting we again search using same fields.
+    // So keep parents in a set to avoid iterating the same devices in insert_virtual_devices twice.
+    let mut parents = collections::HashSet::new();
     let devices2 = devices.clone();
 
     for (f, d) in devices {
@@ -69,11 +74,10 @@ pub async fn update_virtual_devices(devices: Vec<(Fqdn, Device)>) -> Vec<(Fqdn, 
         parents.extend(ps);
     }
 
-    // TODO: Assert that all parents are distinct
-    for (ff, mut dd) in devices2 {
-        insert_virtual_devices(&mut dd, &parents);
+    for (f, mut d) in devices2 {
+        insert_virtual_devices(&mut d, &parents);
 
-        results.push((ff, dd));
+        results.push((f, d));
     }
 
     results
@@ -282,7 +286,7 @@ fn compare_selected_fields(a: &Device, b: &Device) -> bool {
     selected_fields(a) == selected_fields(b)
 }
 
-fn insert_virtual_devices(d: &mut Device, parents: &[Device]) {
+fn insert_virtual_devices(d: &mut Device, parents: &collections::HashSet<Device>) {
     for p in parents {
         insert(d, &p);
     }
@@ -308,11 +312,11 @@ mod tests {
     // This function achieves specified order of children so snapshots are always the same.
     // We do this because Device has HashSet of children so order of iteration isn't specified
     //  - this affects Debug output for _debug_ snapshots, as well as all other operations.
-    // 
+    //
     // We serialize top-level children to JSON one-by-one, then read that JSON back to jsondata::Json.
     // We do this because jsondata::Json implements Ord so we can sort these values.
     // Otherwise snapshots have unspecified order of the children and tests fail randomly.
-    // 
+    //
     // Then we serialize jsondata::Json to String, and read that String as serde_json::Value once again.
     // We do this to achieve snapshots that are readable by human.
     // Otherwise, _debug_ snapshots of jsondata::Json are like AST dumps and very verbose.
