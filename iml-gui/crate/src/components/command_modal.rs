@@ -10,12 +10,13 @@ use crate::{
     key_codes, sleep_with_handle, GMsg,
 };
 use futures::channel::oneshot;
+
 use iml_wire_types::{ApiList, Command, EndpointName, Job, Step};
 use regex::{Captures, Regex};
 use seed::{prelude::*, *};
 use serde::de::DeserializeOwned;
-use std::collections::HashSet;
-use std::fmt;
+use std::collections::{HashMap, HashSet};
+
 use std::{sync::Arc, time::Duration};
 
 /// The component polls `/api/command/` endpoint and this constant defines how often it does.
@@ -50,27 +51,6 @@ impl Default for Select {
     }
 }
 
-#[derive(Debug)]
-pub enum CommandError {
-    UnknownCommand(u32),
-    UnknownJob(u32),
-    UnknownSteps(Vec<u32>),
-}
-
-impl fmt::Display for CommandError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::UnknownCommand(cmd_id) => write!(f, "Invariant violation, command_id={} is unknown", cmd_id),
-            Self::UnknownJob(job_id) => write!(f, "Invariant violation, job_id={} is unknown", job_id),
-            Self::UnknownSteps(step_ids) => write!(
-                f,
-                "Invariant violation, some of some_step_ids={:?} is unknown",
-                step_ids
-            ),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Context {
     pub visited: HashSet<u32>,
@@ -86,16 +66,16 @@ pub enum Input {
 #[derive(Default, Debug)]
 pub struct Model {
     pub tree_cancel: Option<oneshot::Sender<()>>,
-
     pub commands_loading: bool,
-    pub commands: Vec<Arc<RichCommand>>,
+
+    pub commands: HashMap<u32, Arc<RichCommand>>,
     pub commands_view: Vec<Arc<RichCommand>>,
 
-    pub jobs: Vec<Arc<RichJob>>,
+    pub jobs: HashMap<u32, Arc<RichJob>>,
     pub jobs_view: Vec<Arc<RichJob>>,
     pub jobs_graph: JobsGraph,
 
-    pub steps: Vec<Arc<RichStep>>,
+    pub steps: HashMap<u32, Arc<RichStep>>,
     pub steps_view: Vec<Arc<RichStep>>,
 
     pub select: Select,
@@ -123,7 +103,7 @@ pub enum Msg {
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     let msg_str = match msg {
         Msg::Modal(_) => "Msg-Modal".to_string(),
-        Msg::FireCommands(ref cmds) => format!("Msg-FireCommands: {:?}", cmds),
+        Msg::FireCommands(_) => "Msg-FireCommands".to_string(),
         Msg::FetchTree => "Msg-FetchTree".to_string(),
         Msg::FetchedCommands(_) => "Msg-FetchedCommands".to_string(),
         Msg::FetchedJobs(_) => "Msg-FetchedJobs".to_string(),
@@ -131,8 +111,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::Click(_) => "Msg-Click".to_string(),
         Msg::Noop => "Msg-Noop".to_string(),
     };
-    log!("command_modal::update [[[ ", msg_str, model.select, model.consistency_level(&model.select));
-
+    log!(msg_str, model);
     match msg {
         Msg::Modal(msg) => {
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
@@ -162,9 +141,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::FetchTree => {
             model.tree_cancel = None;
             if !is_all_finished(&model.commands) {
-                if let Err(e) = schedule_fetch_tree(model, orders) {
-                    error!(e.to_string())
-                }
+                schedule_fetch_tree(model, orders);
             }
         }
         Msg::FetchedCommands(commands_data_result) => {
@@ -205,87 +182,43 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             let (select, do_fetch) = interpret_click(&model.select, the_id);
             model.select = select;
             if do_fetch {
-                if let Err(e) = schedule_fetch_tree(model, orders) {
-                    error!(e.to_string())
-                }
+                schedule_fetch_tree(model, orders);
             }
         }
         Msg::Noop => {}
     }
-
-    log!("command_modal::update ]]] ", msg_str, model.select, model.consistency_level(&model.select));
 }
 
-fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) -> Result<(), CommandError> {
+fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match &model.select {
         Select::None => {
             // the user has all the commands dropdowns closed
-            let ids = model.commands.iter().map(|c| c.id).collect::<Vec<u32>>();
+            let cmd_ids = extract_sorted_ids(&model.commands);
             orders
                 .skip()
-                .perform_cmd(fetch_the_batch(ids, |x| Msg::FetchedCommands(Box::new(x))));
-            Ok(())
+                .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))));
         }
         Select::Command(cmd_id) => {
             // the user has opened the info on the command,
             // we need the corresponding jobs to build the dependency graph
-            if let Some(i) = model.commands.iter().position(|c| c.id == *cmd_id) {
-                let cmd_ids = model.commands.iter().map(|c| c.id).collect::<Vec<u32>>();
-                let job_ids = model.commands[i].deps().to_vec();
-                orders
-                    .skip()
-                    .perform_cmd(fetch_the_batch(job_ids, |x| Msg::FetchedJobs(Box::new(x))))
-                    .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))));
-                Ok(())
-            } else {
-                Err(CommandError::UnknownCommand(*cmd_id))
-            }
+            let cmd_ids = extract_sorted_ids(&model.commands);
+            let job_ids = model.commands[cmd_id].deps().to_vec();
+            orders
+                .skip()
+                .perform_cmd(fetch_the_batch(job_ids, |x| Msg::FetchedJobs(Box::new(x))))
+                .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))));
         }
-        Select::CommandJob(cmd_id, job_id) => {
+        Select::CommandJob(cmd_id, job_id) | Select::CommandJobSteps(cmd_id, job_id, _) => {
             // the user has opened the info on the command and selected the corresponding job
-            if let Some(i1) = model.commands.iter().position(|c| c.id == *cmd_id) {
-                if let Some(i2) = model.jobs.iter().position(|j| j.id == *job_id) {
-                    let cmd_ids = model.commands.iter().map(|c| c.id).collect::<Vec<u32>>();
-                    let job_ids = model.commands[i1].deps().to_vec();
-                    let step_ids = model.jobs[i2].deps().to_vec();
-                    orders
-                        .skip()
-                        .perform_cmd(fetch_the_batch(step_ids, |x| Msg::FetchedSteps(Box::new(x))))
-                        .perform_cmd(fetch_the_batch(job_ids, |x| Msg::FetchedJobs(Box::new(x))))
-                        .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))));
-                    Ok(())
-                } else {
-                    Err(CommandError::UnknownJob(*job_id))
-                }
-            } else {
-                Err(CommandError::UnknownCommand(*cmd_id))
-            }
-        }
-        Select::CommandJobSteps(cmd_id, job_id, some_step_ids) => {
-            // the user has opened the info on the command, selected a job and expanded some of the steps
-            if let Some(i1) = model.commands.iter().position(|c| c.id == *cmd_id) {
-                if let Some(i2) = model.jobs.iter().position(|j| j.id == *job_id) {
-                    let step_ids = model.jobs[i2].deps();
-                    if some_step_ids.iter().all(|id| step_ids.contains(id)) {
-                        let cmd_ids = model.commands.iter().map(|c| c.id()).collect::<Vec<u32>>();
-                        let job_ids = model.commands[i1].deps().to_vec();
-                        orders
-                            .skip()
-                            .perform_cmd(fetch_the_batch(some_step_ids.clone(), |x| {
-                                Msg::FetchedSteps(Box::new(x))
-                            }))
-                            .perform_cmd(fetch_the_batch(job_ids, |x| Msg::FetchedJobs(Box::new(x))))
-                            .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))));
-                        Ok(())
-                    } else {
-                        Err(CommandError::UnknownSteps(some_step_ids.clone()))
-                    }
-                } else {
-                    Err(CommandError::UnknownJob(*job_id))
-                }
-            } else {
-                Err(CommandError::UnknownCommand(*cmd_id))
-            }
+            // or the user has opened the info on the command, selected a job and expanded some of the steps
+            let cmd_ids = extract_sorted_ids(&model.commands);
+            let job_ids = model.commands[cmd_id].deps().to_vec();
+            let step_ids = model.jobs[job_id].deps().to_vec();
+            orders
+                .skip()
+                .perform_cmd(fetch_the_batch(step_ids, |x| Msg::FetchedSteps(Box::new(x))))
+                .perform_cmd(fetch_the_batch(job_ids, |x| Msg::FetchedJobs(Box::new(x))))
+                .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))));
         }
     }
 }
@@ -309,11 +242,13 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
                         modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
                     ]
                 } else {
+                    let mut ids = model.commands.keys().copied().collect::<Vec<_>>();
+                    ids.sort();
                     vec![
                         modal::title_view(Msg::Modal, plain!["Commands"]),
                         div![
                             class![C.py_8],
-                            model.commands.iter().map(|x| { command_item_view(model, x) })
+                            ids.iter().map(|k| { command_item_view(model, &model.commands[k]) })
                         ],
                         modal::footer_view(vec![close_button()]).merge_attrs(class![C.pt_8]),
                     ]
@@ -430,7 +365,6 @@ where
         if !parent.is_empty() {
             div![parent, acc]
         } else {
-            // to remove redundant empty dom elements
             empty!()
         }
     }
@@ -462,10 +396,12 @@ fn job_item_view(job: Arc<RichJob>, ctx: &mut Context) -> Node<Msg> {
     }
 }
 
-fn step_list_view(select: &Select, steps: &[Arc<RichStep>]) -> Node<Msg> {
+fn step_list_view(select: &Select, steps: &HashMap<u32, Arc<RichStep>>) -> Node<Msg> {
     if steps.is_empty() {
         empty!()
     } else {
+        let mut ids = steps.keys().copied().collect::<Vec<_>>();
+        ids.sort();
         div![ul![
             class![
                 C.p_1,
@@ -477,9 +413,9 @@ fn step_list_view(select: &Select, steps: &[Arc<RichStep>]) -> Node<Msg> {
                 C.shadow_sm,
                 C.overflow_auto
             ],
-            steps.iter().map(|step| {
-                let is_open = is_typed_id_selected(select, TypedId::Step(step.id));
-                li![step_item_view(step, is_open)]
+            ids.iter().map(|k| {
+                let is_open = is_typed_id_selected(select, TypedId::Step(*k));
+                li![step_item_view(&steps[k], is_open)]
             })
         ]]
     }
@@ -489,7 +425,12 @@ fn step_item_view(step: &RichStep, is_open: bool) -> Vec<Node<Msg>> {
     let icon = step_status_icon(step, is_open);
     let item_caption = div![
         class![C.flex],
-        div![attrs![At::Style => "flex: 0 0 1em"], class![C.mx_2], icon],
+        div![
+            attrs![At::Style => "flex: 0 0 1em"],
+            class![C.mx_2, C.cursor_pointer],
+            icon,
+            simple_ev(Ev::Click, Msg::Click(TypedId::Step(step.id))),
+        ],
         div![
             class![C.flex_grow, C.cursor_pointer, C.underline],
             step.class_name,
@@ -648,17 +589,12 @@ fn extract_uri_id<T: EndpointName>(input: &str) -> Option<u32> {
     })
 }
 
-fn extract_ids<T: EndpointName>(uris: &[String]) -> Vec<u32> {
-    // uris is the slice of strings like ["/api/step/123/", .. , "/api/step/234/"]
-    uris.iter().filter_map(|s| extract_uri_id::<T>(s)).collect()
-}
-
 fn is_finished(cmd: &RichCommand) -> bool {
     cmd.complete
 }
 
-fn is_all_finished(cmds: &[Arc<RichCommand>]) -> bool {
-    cmds.iter().all(|cmd| is_finished(cmd))
+fn is_all_finished(cmds: &HashMap<u32, Arc<RichCommand>>) -> bool {
+    cmds.values().all(|c| is_finished(c))
 }
 
 fn is_typed_id_selected(select: &Select, typed_id: TypedId) -> bool {
@@ -769,7 +705,7 @@ fn extract_children_from_job(job: &Job0) -> (u32, Vec<u32>) {
     )
 }
 
-fn extract_children_from_step(step: &Step) -> (u32, Vec<u32>) {
+const fn extract_children_from_step(step: &Step) -> (u32, Vec<u32>) {
     (step.id, Vec::new()) // steps have no descendants
 }
 
@@ -779,6 +715,28 @@ fn extract_wait_fors_from_job(job: &Job0) -> (u32, Vec<u32>) {
         job.id,
         job.wait_for.iter().filter_map(|s| extract_uri_id::<Job0>(s)).collect(),
     )
+}
+
+fn extract_sorted_ids<T>(hm: &HashMap<u32, T>) -> Vec<u32> {
+    let mut ids = hm.keys().copied().collect::<Vec<_>>();
+    ids.sort();
+    ids
+}
+
+fn convert_to_sorted_vec<T: Clone>(hm: &HashMap<u32, T>) -> Vec<T> {
+    extract_sorted_ids(hm).into_iter().map(|k| hm[&k].clone()).collect()
+}
+
+fn convert_to_rich_hashmap<T: Clone>(
+    ts: Vec<T>,
+    extract: impl Fn(&T) -> (u32, Vec<u32>),
+) -> HashMap<u32, Arc<Rich<u32, T>>> {
+    ts.into_iter()
+        .map(|t| {
+            let (id, deps) = extract(&t);
+            (id, Arc::new(Rich { id, deps, inner: t }))
+        })
+        .collect()
 }
 
 impl Model {
@@ -794,51 +752,37 @@ impl Model {
     }
 
     fn assign_commands(&mut self, cmds: &[Command]) {
-        let mut cmds_sorted = cmds.to_vec();
-        cmds_sorted.sort_by_key(|x| x.id);
-        self.commands = cmds_sorted
-            .into_iter()
-            .map(|x| Arc::new(RichCommand::new(x, extract_children_from_cmd)))
-            .collect();
+        let mut sorted_cmds = cmds.to_vec();
+        sorted_cmds.sort_by_key(|x| x.id);
+        self.commands = convert_to_rich_hashmap(sorted_cmds, extract_children_from_cmd);
         let (consistent, _, _) = self.consistency_level(&self.select);
         if consistent {
-            self.commands_view = self.commands.clone();
-        } else {
-            self.commands_view.clear();
+            self.commands_view = convert_to_sorted_vec(&self.commands);
         }
     }
+
     fn assign_jobs(&mut self, jobs: &[Job0]) {
-        let mut jobs_sorted = jobs.to_vec();
-        jobs_sorted.sort_by_key(|x| x.id);
-        self.jobs = jobs_sorted
-            .clone()
-            .into_iter()
-            .map(|x| Arc::new(RichJob::new(x, extract_children_from_job)))
-            .collect();
+        let mut sorted_jobs = jobs.to_vec();
+        sorted_jobs.sort_by_key(|x| x.id);
+        self.jobs = convert_to_rich_hashmap(sorted_jobs.clone(), extract_children_from_job);
         let (_, consistent, _) = self.consistency_level(&self.select);
         if consistent {
-            self.jobs_view = self.jobs.clone();
-            let jobs_graph_data = jobs_sorted
+            self.jobs_view = convert_to_sorted_vec(&self.jobs);
+            let jobs_graph_data = sorted_jobs
                 .into_iter()
-                .map(|x| Arc::new(RichJob::new(x.clone(), extract_wait_fors_from_job)))
+                .map(|x| Arc::new(RichJob::new(x, extract_wait_fors_from_job)))
                 .collect::<Vec<Arc<RichJob>>>();
             self.jobs_graph = build_direct_dag(&jobs_graph_data);
-        } else {
-            self.jobs_view.clear();
-            self.jobs_graph.clear();
         }
     }
 
     fn assign_steps(&mut self, steps: &[Step]) {
-        let mut steps_sorted = steps.to_vec();
-        steps_sorted.sort_by_key(|x| x.id);
-        self.steps = steps_sorted
-            .into_iter()
-            .map(|x| Arc::new(RichStep::new(x, extract_children_from_step)))
-            .collect();
+        let mut sorted_steps = steps.to_vec();
+        sorted_steps.sort_by_key(|x| x.id);
+        self.steps = convert_to_rich_hashmap(sorted_steps, extract_children_from_step);
         let (_, _, consistent) = self.consistency_level(&self.select);
         if consistent {
-            self.steps_view = self.steps.clone();
+            self.steps_view = convert_to_sorted_vec(&self.steps);
         }
     }
 
@@ -847,24 +791,21 @@ impl Model {
         match select {
             Select::None => {}
             Select::Command(i) => {
-                let a0 = self.commands.iter().find(|x| x.id() == *i);
-                match a0 {
-                    Some(a) => {
-                        ls[0] = true;
-                        let ids = self.jobs.iter().map(|x| x.id()).collect::<Vec<_>>();
-                        ls[1] = &ids[..] == a.deps();
-                    }
-                    _ => { }
+                let a0 = self.commands.get(i);
+                if let Some(a) = a0 {
+                    ls[0] = true;
+                    let ids = extract_sorted_ids(&self.jobs);
+                    ls[1] = &ids[..] == a.deps();
                 }
             }
             Select::CommandJob(i, j) => {
-                let a0 = self.commands.iter().find(|x| x.id() == *i);
-                let b0 = self.jobs.iter().find(|x| x.id() == *j);
+                let a0 = self.commands.get(i);
+                let b0 = self.jobs.get(j);
                 match (a0, b0) {
                     (Some(a), Some(b)) => {
                         ls[0] = true;
-                        ls[1] = a.deps().contains(&j);
-                        let ids = self.steps.iter().map(|x| x.id()).collect::<Vec<_>>();
+                        ls[1] = a.deps().contains(j);
+                        let ids = extract_sorted_ids(&self.steps);
                         ls[2] = &ids[..] == b.deps();
                     }
                     (Some(_), _) => {
@@ -880,19 +821,19 @@ impl Model {
                 }
             }
             Select::CommandJobSteps(i, j, ks) => {
-                let a0 = self.commands.iter().find(|x| x.id() == *i);
-                let b0 = self.jobs.iter().find(|x| x.id() == *j);
-                let cs = self.steps.iter().filter(|x| ks.contains(&x.id())).collect::<Vec<_>>();
-                let c0 = if cs.is_empty() { None } else { Some(cs) };
-                match (a0, b0, &c0) {
+                let a0 = self.commands.get(i);
+                let b0 = self.jobs.get(j);
+                let cs = ks.iter().all(|k| self.steps.contains_key(k));
+                let c0 = if cs { None } else { Some(()) };
+                match (a0, b0, c0) {
                     (Some(a), Some(b), Some(_)) => {
                         ls[0] = true;
-                        ls[1] = a.deps().contains(&j);
-                        ls[2] = ks.iter().all(|k| b.deps().contains(&k));
+                        ls[1] = a.deps().contains(j);
+                        ls[2] = ks.iter().all(|k| b.deps().contains(k));
                     }
                     (Some(a), Some(_), _) => {
                         ls[0] = true;
-                        ls[1] = a.deps().contains(&j);
+                        ls[1] = a.deps().contains(j);
                         ls[2] = false;
                     }
                     (Some(_), _, _) => {
@@ -966,7 +907,6 @@ mod tests {
         ];
         let rich_jobs = jobs.into_iter().map(|j| RichJob::new(j, extract_wait_fors_from_job));
         let arc_jobs: Vec<Arc<RichJob>> = rich_jobs.map(|j| Arc::new(j)).collect();
-        dbg!(&arc_jobs);
         let dag = build_direct_dag(&arc_jobs);
         let dom = job_dag_view(&dag, &job_item_view);
         let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline, C.text_green_500];
@@ -1050,29 +990,30 @@ mod tests {
         model.assign_steps(&db.select_steps(&vec![20, 23, 14]));
         model.assign_commands(&db.select_cmds(&vec![1, 2, 3, 4]));
 
+        // [1]
         model.select = Select::Command(1);
         model.assign_steps(&c);
         model.assign_jobs(&b);
         model.assign_commands(&a);
-        assert_eq!(extract_ids(&model.commands_view), [1, 2, 3, 4] as [u32; 4]);
-        assert_eq!(extract_ids(&model.jobs_view), [] as [u32; 0]);
-        assert_eq!(extract_ids(&model.steps_view), [] as [u32; 0]);
+        assert_eq!(extract_ids(&model.commands_view), vec![1, 2, 3, 4]);
+        assert_eq!(extract_ids(&model.jobs_view), vec![10, 11]);
+        assert_eq!(extract_ids(&model.steps_view), Vec::<u32>::new());
 
         model.select = Select::CommandJob(1, 11);
         model.assign_steps(&c);
         model.assign_commands(&a);
         model.assign_jobs(&b);
-        assert_eq!(extract_ids(&model.commands_view), [1, 2, 3, 4] as [u32; 4]);
-        assert_eq!(extract_ids(&model.jobs_view), [10, 11] as [u32; 2]);
-        assert_eq!(extract_ids(&model.steps_view), [] as [u32; 0]);
+        assert_eq!(extract_ids(&model.commands_view), vec![1, 2, 3, 4]);
+        assert_eq!(extract_ids(&model.jobs_view), vec![10, 11]);
+        assert_eq!(extract_ids(&model.steps_view), Vec::<u32>::new());
 
         model.select = Select::CommandJobSteps(1, 11, vec![26]);
         model.assign_jobs(&b);
         model.assign_steps(&c);
         model.assign_commands(&a);
-        assert_eq!(extract_ids(&model.commands_view), [1, 2, 3, 4] as [u32; 4]);
-        assert_eq!(extract_ids(&model.jobs_view), [10, 11] as [u32; 2]);
-        assert_eq!(extract_ids(&model.steps_view), [20, 21, 26] as [u32; 3]);
+        assert_eq!(extract_ids(&model.commands_view), vec![1, 2, 3, 4]);
+        assert_eq!(extract_ids(&model.jobs_view), vec![10, 11]);
+        assert_eq!(extract_ids(&model.steps_view), Vec::<u32>::new());
     }
 
     fn make_command(id: u32, jobs: &[u32], msg: &str) -> Command {
@@ -1182,18 +1123,4 @@ mod tests {
         let cmds = db.all_cmds.clone(); // use all roots
         (cmds, jobs, steps)
     }
-
-    // #[derive(Debug, Default, Clone)]
-    // struct Model {
-    //     cmds: Vec<Arc<RichCommand>>,
-    //     cmds_view: Vec<Arc<RichCommand>>,
-    //
-    //     jobs: Vec<Arc<RichJob>>,
-    //     jobs_view: Vec<Arc<RichJob>>,
-    //
-    //     steps: Vec<Arc<RichStep>>,
-    //     steps_view: Vec<Arc<RichStep>>,
-    //
-    //     select: Select,
-    // }
 }
