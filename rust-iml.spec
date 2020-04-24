@@ -40,6 +40,7 @@ cp iml-warp-drive %{buildroot}%{_bindir}
 cp iml-mailbox %{buildroot}%{_bindir}
 cp iml-ntp %{buildroot}%{_bindir}
 cp iml-postoffice %{buildroot}%{_bindir}
+cp iml-sfa %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp iml-api.service %{buildroot}%{_unitdir}
 cp iml-device.service %{buildroot}%{_unitdir}
@@ -52,6 +53,7 @@ cp iml-warp-drive.service %{buildroot}%{_unitdir}
 cp iml-mailbox.service %{buildroot}%{_unitdir}
 cp iml-ntp.service %{buildroot}%{_unitdir}
 cp iml-postoffice.service %{buildroot}%{_unitdir}
+cp iml-sfa.service %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_tmpfilesdir}
 cp iml-mailbox.conf %{buildroot}%{_tmpfilesdir}
 cp tmpfiles.conf %{buildroot}%{_tmpfilesdir}/iml-agent.conf
@@ -298,6 +300,27 @@ systemctl preset iml-postoffice.service
 %files postoffice
 %{_bindir}/iml-postoffice
 %attr(0644,root,root)%{_unitdir}/iml-postoffice.service
+
+%package sfa
+Summary: Consumer of SFA API calls
+License: MIT
+Group: System Environment/Libraries
+
+%description sfa
+%{summary}
+
+%post sfa
+systemctl preset iml-sfa.service
+
+%preun sfa
+%systemd_preun iml-sfa.service
+
+%postun sfa
+%systemd_postun_with_restart iml-sfa.service
+
+%files sfa
+%{_bindir}/iml-sfa
+%attr(0644,root,root)%{_unitdir}/iml-sfa.service
 
 %package device
 Summary: Consumer of IML Agent device push queue

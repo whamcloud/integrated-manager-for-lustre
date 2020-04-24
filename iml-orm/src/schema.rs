@@ -1080,6 +1080,75 @@ table! {
 }
 
 table! {
+    chroma_core_sfadiskdrive (index) {
+        index -> Int4,
+        child_health_state -> Int2,
+        failed -> Bool,
+        slot_number -> Int4,
+        health_state -> Int2,
+        health_state_reason -> Text,
+        member_index -> Nullable<Int2>,
+        member_state -> Int2,
+        enclosure_index -> Int4,
+        storage_system -> Text,
+    }
+}
+
+table! {
+    chroma_core_sfadiskslot (index) {
+        index -> Int4,
+        disk_drive_index -> Int4,
+        enclosure_index -> Int4,
+        storage_system -> Text,
+    }
+}
+
+table! {
+    chroma_core_sfaenclosure (index) {
+        index -> Int4,
+        element_name -> Text,
+        health_state -> Int2,
+        health_state_reason -> Text,
+        position -> Int2,
+        enclosure_type -> Int2,
+        canister_location -> Text,
+        storage_system -> Text,
+    }
+}
+
+table! {
+    chroma_core_sfajob (index) {
+        index -> Int4,
+        sub_target_index -> Nullable<Int4>,
+        sub_target_type -> Nullable<Int2>,
+        job_type -> Int2,
+        state -> Int2,
+        storage_system -> Text,
+    }
+}
+
+table! {
+    chroma_core_sfapowersupply (index) {
+        index -> Int2,
+        health_state -> Int2,
+        health_state_reason -> Text,
+        position -> Int2,
+        enclosure_index -> Int4,
+        storage_system -> Text,
+    }
+}
+
+table! {
+    chroma_core_sfastoragesystem (id) {
+        id -> Int4,
+        uuid -> Text,
+        health_state_reason -> Text,
+        health_state -> Int2,
+        child_health_state -> Int2,
+    }
+}
+
+table! {
     chroma_core_shutdownhostjob (job_ptr_id) {
         job_ptr_id -> Int4,
         host_id -> Int4,
@@ -1745,6 +1814,10 @@ joinable!(chroma_core_setupmonitoredhostjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_setupmonitoredhostjob -> chroma_core_managedhost (target_object_id));
 joinable!(chroma_core_setupworkerjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_setupworkerjob -> chroma_core_managedhost (target_object_id));
+joinable!(chroma_core_sfadiskdrive -> chroma_core_sfaenclosure (enclosure_index));
+joinable!(chroma_core_sfadiskslot -> chroma_core_sfadiskdrive (disk_drive_index));
+joinable!(chroma_core_sfadiskslot -> chroma_core_sfaenclosure (enclosure_index));
+joinable!(chroma_core_sfapowersupply -> chroma_core_sfaenclosure (enclosure_index));
 joinable!(chroma_core_shutdownhostjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_shutdownhostjob -> chroma_core_managedhost (host_id));
 joinable!(chroma_core_startcopytooljob -> chroma_core_copytool (copytool_id));
@@ -1937,6 +2010,12 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_setuphostjob,
     chroma_core_setupmonitoredhostjob,
     chroma_core_setupworkerjob,
+    chroma_core_sfadiskdrive,
+    chroma_core_sfadiskslot,
+    chroma_core_sfaenclosure,
+    chroma_core_sfajob,
+    chroma_core_sfapowersupply,
+    chroma_core_sfastoragesystem,
     chroma_core_shutdownhostjob,
     chroma_core_startcopytooljob,
     chroma_core_startcorosync2job,

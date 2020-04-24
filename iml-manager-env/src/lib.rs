@@ -7,6 +7,7 @@ use std::{
     net::{SocketAddr, ToSocketAddrs},
     path::PathBuf,
 };
+use url::Url;
 
 /// Get the environment variable or panic
 fn get_var(name: &str) -> String {
@@ -216,6 +217,40 @@ pub fn get_branding() -> String {
 
 pub fn get_use_stratagem() -> bool {
     string_to_bool(get_var("USE_STRATAGEM"))
+}
+
+pub fn get_sfa_endpoints() -> Option<Vec<Vec<Url>>> {
+    let num = env::var("SFA_ENDPOINTS");
+
+    let num = match num {
+        Err(env::VarError::NotPresent) => None,
+        Err(e) => panic!("{}", e),
+        Ok(num) => Some(num),
+    }?;
+
+    let num = num
+        .parse::<u32>()
+        .unwrap_or_else(|_| panic!("Could not parse SFA_ENDPOINTS={} to a u32", num));
+
+    let xs = (1..=num).fold(vec![], |mut acc, x| {
+        let xs: Vec<_> = get_var(&format!("SFA_ENDPOINTS{}", x))
+            .split('|')
+            .filter(|x| !x.is_empty())
+            .map(|x| Url::parse(x).expect("Could not parse URL entry"))
+            .collect();
+
+        if !xs.is_empty() {
+            acc.push(xs);
+        }
+
+        acc
+    });
+
+    if xs.is_empty() {
+        None
+    } else {
+        Some(xs)
+    }
 }
 
 /// Gets a connection string from the IML env

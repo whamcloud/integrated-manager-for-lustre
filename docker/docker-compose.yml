@@ -127,6 +127,22 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - RUST_LOG=info
+  sfa:
+    image: "imlteam/sfa:6.1.0-dev"
+    hostname: "iml-sfa"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-sfa.dockerfile
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        window: 5s
+    volumes:
+      - "manager-config:/var/lib/chroma"
+    environment:
+      - RUST_LOG=info
+      - SFA_ENDPOINTS
   corosync:
     image: "imlteam/manager-corosync:6.1.0-dev"
     hostname: "corosync"
@@ -349,6 +365,7 @@ services:
     environment:
       - BRANDING
       - USE_STRATAGEM
+      - SFA_ENDPOINTS
     deploy:
       restart_policy:
         condition: on-failure

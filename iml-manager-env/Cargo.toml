@@ -5,3 +5,4 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
+url = "2.1"

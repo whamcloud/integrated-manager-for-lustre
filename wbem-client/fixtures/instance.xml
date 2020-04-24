@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CIM CIMVERSION="2.0" DTDVERSION="2.0">
+    <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+        <SIMPLERSP>
+            <IMETHODRESPONSE NAME="GetInstance">
+                <IRETURNVALUE>
+                    <INSTANCE CLASSNAME="DDN_SFAStorageSystem">
+                        <PROPERTY NAME="UUID" TYPE="string">
+                            <VALUE>60001ff0e067b0000000000030000000</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="TimeZonePOSIX" TYPE="boolean">
+                            <VALUE>FALSE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="TimeZone" TYPE="string">
+                        </PROPERTY>
+                        <PROPERTY NAME="State" TYPE="uint8">
+                            <VALUE>2</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="SlowDriveLatencyThresholdSSD" TYPE="uint16">
+                            <VALUE>5</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="SlowDriveLatencyThresholdRotating" TYPE="uint16">
+                            <VALUE>5</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="SlowDriveDetectionAction" TYPE="uint8">
+                            <VALUE>1</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="SingleControllerWBC" TYPE="boolean">
+                            <VALUE>FALSE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="SFXEnabledOnNextBoot" TYPE="boolean">
+                            <VALUE>FALSE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="SFXEnabled" TYPE="boolean">
+                            <VALUE>FALSE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="SFXCapable" TYPE="boolean">
+                            <VALUE>FALSE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="ReadRetryTimeout" TYPE="uint16">
+                            <VALUE>8000</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="PoolVerifyPolicy" TYPE="boolean">
+                            <VALUE>FALSE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="Platform" TYPE="string">
+                            <VALUE>SFA400NVXE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="PeriodicCacheFlushInterval" TYPE="uint32">
+                            <VALUE>1440</VALUE>
+                        </PROPERTY>
+                        <PROPERTY.ARRAY NAME="NTPServers" TYPE="string">
+                            <VALUE.ARRAY>
+                            </VALUE.ARRAY>
+                        </PROPERTY.ARRAY>
+                        <PROPERTY NAME="NTPStarting" TYPE="boolean">
+                            <VALUE>FALSE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="NTPMode" TYPE="boolean">
+                            <VALUE>FALSE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="Name" TYPE="string">
+                            <VALUE />
+                        </PROPERTY>
+                        <PROPERTY NAME="LocateDwellTime" TYPE="uint16">
+                            <VALUE>120</VALUE>
+                        </PROPERTY>
+                        <PROPERTY.ARRAY NAME="Licenses" TYPE="uint8">
+                            <VALUE.ARRAY>
+                            </VALUE.ARRAY>
+                        </PROPERTY.ARRAY>
+                        <PROPERTY NAME="LicenseNeeded" TYPE="boolean">
+                            <VALUE>TRUE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="HealthState" TYPE="uint16">
+                            <VALUE>2</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="HealthStateReason" TYPE="string">
+                            <VALUE>Subsystem verify is disabled</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="FastTimeout" TYPE="boolean">
+                            <VALUE>FALSE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="EncryptionModel" TYPE="uint8">
+                            <VALUE>0</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="EncryptionPolicy" TYPE="uint8">
+                            <VALUE>0</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="EncryptionEnabled" TYPE="boolean">
+                            <VALUE>FALSE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="E_Platform" TYPE="boolean">
+                            <VALUE>TRUE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="DriveFormatPolicy" TYPE="uint8">
+                            <VALUE>0</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="DriveErrorTolerance" TYPE="uint8">
+                            <VALUE>3</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="DiskFormatPolicy" TYPE="uint8">
+                            <VALUE>0</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="DiskErrorTolerance" TYPE="uint8">
+                            <VALUE>3</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="DiskEnclosureConfiguration" TYPE="string">
+                            <VALUE>1- SS200NV(head + 4 SS9012) with 0 missing enclosures (AUTOMATIC Selection).</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="DefaultPoolType" TYPE="uint8">
+                            <VALUE>2</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="DefaultEndToEndDataIntegrityEnabled" TYPE="boolean">
+                            <VALUE>FALSE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="DefaultBlockSize" TYPE="uint16">
+                            <VALUE>4096</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="DateAndTime" TYPE="datetime">
+                            <VALUE>20200427164952.272397+000</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="ConfigDate" TYPE="datetime">
+                            <VALUE>20200408023301.311725+000</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="ChildHealthState" TYPE="uint16">
+                            <VALUE>2</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="AutoVerifyEnabled" TYPE="boolean">
+                            <VALUE>FALSE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="ATSMonitorEnabled" TYPE="boolean">
+                        </PROPERTY>
+                        <PROPERTY NAME="ATSMonitorSupported" TYPE="boolean">
+                            <VALUE>FALSE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="Index" TYPE="uint16">
+                            <VALUE>0</VALUE>
+                        </PROPERTY>
+                    </INSTANCE>
+                </IRETURNVALUE>
+            </IMETHODRESPONSE>
+        </SIMPLERSP>
+    </MESSAGE>
+</CIM>

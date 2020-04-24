@@ -94,7 +94,10 @@ BRANDING = os.getenv("BRANDING", "Whamcloud")
 
 USE_STRATAGEM = os.getenv("USE_STRATAGEM", "false")
 
-SFA_ENDPOINTS = os.getenv("SFA_ENDPOINTS", "")
+# How many Exascaler appliances are being monitored.
+# This must coorespond to a list of environment variables in the form of
+# `SFA_ENDPOINTS1` ..`SFA_ENDPOINTSN` where `N` is the same as the number of distinct appliances
+SFA_ENDPOINTS = os.getenv("SFA_ENDPOINTS", "0")
 
 ALLOWED_HOSTS = ["*"]
 

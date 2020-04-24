@@ -3,14 +3,16 @@
 // license that can be found in the LICENSE file.
 
 mod cim_xml;
-pub mod sfa_classes;
-
-pub use cim_xml::{req, resp};
 
 use async_trait::async_trait;
 use bytes::buf::ext::BufExt;
+pub use cim_xml::{
+    CimXmlError, {req, resp},
+};
 use futures::{future, Future, FutureExt, TryFutureExt};
-use reqwest::{header, Client, IntoUrl, Response};
+pub use reqwest::Client;
+use reqwest::{header, IntoUrl, Response};
+use resp::{Cim, IReturnValueInstance, IReturnValueNamedInstance};
 use serde::de::DeserializeOwned;
 use std::{collections::BTreeMap, iter::FromIterator, pin::Pin, time::Duration};
 use thiserror::Error;
@@ -29,21 +31,11 @@ pub enum WbemClientError {
 
 /// Get a client that is able to make authenticated requests
 /// against the API
-pub fn get_client(
-    auth: impl Into<Option<(String, String)>>,
-    insecure: bool,
-) -> Result<Client, WbemClientError> {
-    let mut headers = header::HeaderMap::from_iter(vec![(
+pub fn get_client<'a>(insecure: bool) -> Result<Client, WbemClientError> {
+    let headers = header::HeaderMap::from_iter(vec![(
         header::CONTENT_TYPE,
         header::HeaderValue::from_static("application/xml; charset=\"utf-8\""),
     )]);
-
-    if let Some((k, v)) = auth.into() {
-        let x = base64::encode(format!("{}:{}", k, v));
-        let x = header::HeaderValue::from_str(&format!("Basic {}", x))?;
-
-        headers.insert(header::AUTHORIZATION, x);
-    }
 
     Client::builder()
         .timeout(Duration::from_secs(60))
@@ -54,24 +46,63 @@ pub fn get_client(
 }
 
 pub trait ClientExt {
+    fn enumerate_instances(
+        &self,
+        url: impl IntoUrl,
+        namespace: &str,
+        class_name: &str,
+    ) -> Pin<Box<dyn Future<Output = Result<Cim<IReturnValueNamedInstance>, WbemClientError>>>>;
+    fn get_instance(
+        &self,
+        url: impl IntoUrl,
+        namespace: &str,
+        instance_name: &str,
+    ) -> Pin<Box<dyn Future<Output = Result<Cim<IReturnValueInstance>, WbemClientError>>>>;
     /// Perform an intrinsic method call.
-    fn imethodcall(
+    fn imethodcall<T: serde::de::DeserializeOwned + 'static>(
         &self,
         url: impl IntoUrl,
         name: &str,
         namespace: &str,
         params: impl Into<Option<BTreeMap<String, req::ParamValue>>>,
-    ) -> Pin<Box<dyn Future<Output = Result<Response, WbemClientError>>>>;
+    ) -> Pin<Box<dyn Future<Output = Result<Cim<T>, WbemClientError>>>>;
 }
 
 impl ClientExt for Client {
-    fn imethodcall(
+    fn enumerate_instances(
+        &self,
+        url: impl IntoUrl,
+        namespace: &str,
+        class_name: &str,
+    ) -> Pin<Box<dyn Future<Output = Result<Cim<IReturnValueNamedInstance>, WbemClientError>>>>
+    {
+        let params: BTreeMap<String, _> = BTreeMap::from_iter(vec![(
+            "ClassName".into(),
+            req::ParamValue::ClassName(class_name.into()),
+        )]);
+
+        self.imethodcall(url, "EnumerateInstances", namespace, params)
+    }
+    fn get_instance(
+        &self,
+        url: impl IntoUrl,
+        namespace: &str,
+        instance_name: &str,
+    ) -> Pin<Box<dyn Future<Output = Result<Cim<IReturnValueInstance>, WbemClientError>>>> {
+        let params: BTreeMap<String, _> = BTreeMap::from_iter(vec![(
+            "InstanceName".into(),
+            req::ParamValue::InstanceName(instance_name.into()),
+        )]);
+
+        self.imethodcall(url, "GetInstance", namespace, params)
+    }
+    fn imethodcall<T: serde::de::DeserializeOwned + 'static>(
         &self,
         url: impl IntoUrl,
         name: &str,
         namespace: &str,
         params: impl Into<Option<BTreeMap<String, req::ParamValue>>>,
-    ) -> Pin<Box<dyn Future<Output = Result<Response, WbemClientError>>>> {
+    ) -> Pin<Box<dyn Future<Output = Result<Cim<T>, WbemClientError>>>> {
         let namespace_path = namespace
             .split('/')
             .filter(|x| !x.is_empty())
@@ -109,6 +140,7 @@ impl ClientExt for Client {
         future::ready(req::evs_to_bytes(xs))
             .err_into()
             .and_then(|body| req.body(body).send().err_into())
+            .and_then(|x| x.xml::<Cim<T>>().err_into())
             .boxed()
     }
 }

@@ -5,6 +5,7 @@
 use crate::CompositeId;
 use crate::ToCompositeId;
 use crate::{EndpointName, Fqdn, Label};
+pub use iml_orm::sfa::{HealthState, SfaDiskDrive, SfaEnclosure};
 use std::{collections::BTreeSet, fmt, ops::Deref, path::PathBuf};
 
 #[cfg(feature = "postgres-interop")]
@@ -1284,5 +1285,88 @@ impl From<Row> for CorosyncConfigurationRecord {
             content_type_id: row.get::<_, Option<i32>>("content_type_id"),
             host_id: row.get::<_, i32>("host_id"),
         }
+    }
+}
+
+/// Record from the `chroma_core_sfastoragesystem` table
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct SfaStorageSystem {
+    pub id: i32,
+    pub child_health_state: HealthState,
+    pub health_state_reason: String,
+    pub health_state: HealthState,
+    pub uuid: String,
+}
+
+pub const SFA_STORAGE_SYSTEM_TABLE_NAME: TableName = TableName("chroma_core_sfastoragesystem");
+
+impl Name for SfaStorageSystem {
+    fn table_name() -> TableName<'static> {
+        SFA_STORAGE_SYSTEM_TABLE_NAME
+    }
+}
+
+impl Id for SfaStorageSystem {
+    fn id(&self) -> i32 {
+        self.id
+    }
+}
+
+impl Label for SfaStorageSystem {
+    fn label(&self) -> &str {
+        "SFA Storage System"
+    }
+}
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for SfaStorageSystem {
+    fn from(row: Row) -> Self {
+        Self {
+            id: row.get::<_, i32>("id"),
+            child_health_state: row.get::<_, i16>("child_health_state").into(),
+            health_state_reason: row.get("health_state_reason"),
+            health_state: row.get::<_, i16>("health_state").into(),
+            uuid: row.get("uuid"),
+        }
+    }
+}
+
+pub const SFA_ENCLOSURE_TABLE_NAME: TableName = TableName("chroma_core_sfaenclosure");
+
+impl Name for SfaEnclosure {
+    fn table_name() -> TableName<'static> {
+        SFA_ENCLOSURE_TABLE_NAME
+    }
+}
+
+impl Id for SfaEnclosure {
+    fn id(&self) -> i32 {
+        self.index
+    }
+}
+
+impl Label for SfaEnclosure {
+    fn label(&self) -> &str {
+        "SFA enclosure"
+    }
+}
+
+pub const SFA_DISK_DRIVE_TABLE_NAME: TableName = TableName("chroma_core_sfadiskdrive");
+
+impl Name for SfaDiskDrive {
+    fn table_name() -> TableName<'static> {
+        SFA_DISK_DRIVE_TABLE_NAME
+    }
+}
+
+impl Id for SfaDiskDrive {
+    fn id(&self) -> i32 {
+        self.index
+    }
+}
+
+impl Label for SfaDiskDrive {
+    fn label(&self) -> &str {
+        "SFA Disk Drive"
     }
 }

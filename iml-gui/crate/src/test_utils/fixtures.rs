@@ -9,6 +9,9 @@ pub(crate) fn get_cache() -> Cache {
   "group": {},
   "user": {},
   "user_group": {},
+  "sfa_disk_drive": {},
+  "sfa_enclosure": {},
+  "sfa_storage_system": {},
   "active_alert": {
     "577": {
       "_message": "Updates are ready for server oss1.local",
