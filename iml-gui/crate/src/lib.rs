@@ -7,13 +7,13 @@
 #![allow(clippy::enum_glob_use)]
 
 pub mod components;
+pub mod dependency_tree;
 pub mod key_codes;
 pub mod page;
 
 mod auth;
 mod breakpoints;
 mod ctx_help;
-mod dependency_tree;
 mod environment;
 mod event_source;
 mod extensions;
