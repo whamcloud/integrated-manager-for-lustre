@@ -95,7 +95,7 @@ impl<K: Hash + Eq + Debug, T> DependencyDAG<K, T> {
     }
 }
 
-pub fn build_direct_dag<K, T>(ts: &[Arc<T>]) -> DependencyDAG<K, T>
+pub fn build_direct_dag<K, T>(ts: &[T]) -> DependencyDAG<K, T>
 where
     K: Hash + Eq + Copy + Debug,
     T: Deps<K> + Clone + Debug,
@@ -128,7 +128,7 @@ where
     enrich_dag(ts, &roots, &dag)
 }
 
-pub fn build_inverse_dag<K, T>(ts: &[Arc<T>]) -> DependencyDAG<K, T>
+pub fn build_inverse_dag<K, T>(ts: &[T]) -> DependencyDAG<K, T>
 where
     K: Hash + Eq + Copy + Debug,
     T: Deps<K> + Clone + Debug,
@@ -153,7 +153,7 @@ where
     enrich_dag(ts, &roots, &dag)
 }
 
-pub fn enrich_dag<K, T>(objs: &[Arc<T>], int_roots: &[K], int_deps: &[(K, Vec<K>)]) -> DependencyDAG<K, T>
+pub fn enrich_dag<K, T>(objs: &[T], int_roots: &[K], int_deps: &[(K, Vec<K>)]) -> DependencyDAG<K, T>
 where
     K: Hash + Eq + Copy + Debug,
     T: Deps<K> + Clone + Debug,
@@ -166,14 +166,14 @@ where
     DependencyDAG { roots, deps }
 }
 
-pub fn convert_ids_to_arcs<K, T>(objs: &[Arc<T>], ids: &[K]) -> Vec<Arc<T>>
+pub fn convert_ids_to_arcs<K, T>(objs: &[T], ids: &[K]) -> Vec<Arc<T>>
 where
     K: Hash + Eq + Debug,
     T: Deps<K> + Clone + Debug,
 {
     ids.iter()
         .filter_map(|id| objs.iter().find(|o| o.id() == *id))
-        .map(Arc::clone)
+        .map(|o| Arc::new(o.clone()))
         .collect()
 }
 
@@ -244,7 +244,7 @@ mod tests {
 
     #[test]
     fn build_dependency_tree_test() {
-        let x_list: Vec<X> = vec![
+        let xs: Vec<X> = vec![
             X::new(39, &[], "Install packages on server oss2.local."),
             X::new(40, &[39], "Configure NTP on oss2.local."),
             X::new(41, &[39], "Enable LNet on oss2.local."),
@@ -256,13 +256,11 @@ mod tests {
             X::new(47, &[43, 46], "Start Pacemaker on oss2.local."),
             X::new(48, &[39, 40, 41, 42, 45, 46, 47], "Setup managed host oss2.local."),
         ];
-        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(Arc::new).collect();
-
-        let dag = build_direct_dag(&x_arcs);
+        let dag = build_direct_dag(&xs);
         let result = build_dag_str(&dag, &x_to_string).join("\n");
         assert_eq!(result, TREE_DIRECT);
 
-        let dag = build_inverse_dag(&x_arcs);
+        let dag = build_inverse_dag(&xs);
         let result = build_dag_str(&dag, &x_to_string).join("\n");
         assert_eq!(result, TREE_INVERSE);
     }
@@ -270,26 +268,25 @@ mod tests {
     #[test]
     fn cyclic_dependency() {
         // it shouldn't be stack overflow anyway even if there is an invariant violation
-        let x_list: Vec<X> = vec![X::new(1, &[2], "One"), X::new(2, &[3], "Two"), X::new(3, &[2], "Three")];
-        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(Arc::new).collect();
+        let xs: Vec<X> = vec![X::new(1, &[2], "One"), X::new(2, &[3], "Two"), X::new(3, &[2], "Three")];
 
-        let dag = build_direct_dag(&x_arcs);
+        let dag = build_direct_dag(&xs);
         let result = build_dag_str(&dag, &x_to_string).join("\n");
         assert_eq!(result, "1: One\n  2: Two\n    3: Three\n      2: Two...\n3: Three...");
 
-        let dag = build_inverse_dag(&x_arcs);
+        let dag = build_inverse_dag(&xs);
         let result = build_dag_str(&dag, &x_to_string).join("\n");
         assert_eq!(result, "");
     }
 
     #[test]
     fn single_node() {
-        let x_list: Vec<X> = vec![X::new(1, &[], "One")];
-        let x_arcs: Vec<Arc<X>> = x_list.into_iter().map(Arc::new).collect();
-        let dag = build_direct_dag(&x_arcs);
+        let xs: Vec<X> = vec![X::new(1, &[], "One")];
+
+        let dag = build_direct_dag(&xs);
         let result = build_dag_str(&dag, &x_to_string).join("\n");
         assert_eq!(result, "1: One");
-        let dag = build_inverse_dag(&x_arcs);
+        let dag = build_inverse_dag(&xs);
         let result = build_dag_str(&dag, &x_to_string).join("\n");
         assert_eq!(result, "1: One");
     }
@@ -302,7 +299,7 @@ mod tests {
         }
         // the DAG built over RichDeps<_, _> must be always the same, no matter how dependencies are sorted
         let mut rng = Xoroshiro64Star::seed_from_u64(485369);
-        let mut y_list: Vec<Y> = vec![
+        let mut ys: Vec<Y> = vec![
             Y::new(39, &[], "Install packages on server oss2.local"),
             Y::new(40, &["39"], "Configure NTP on oss2.local"),
             Y::new(46, &["43", "45", "46"], "Configure Pacemaker on oss2.local"),
@@ -313,15 +310,11 @@ mod tests {
             ),
         ];
         for _ in 0..10 {
-            for y in y_list.iter_mut() {
+            for y in ys.iter_mut() {
                 shuffle(&mut y.deps, &mut rng);
             }
-            let y_arcs: Vec<Arc<Rich<u32, Y>>> = y_list
-                .clone()
-                .into_iter()
-                .map(|t| Arc::new(Rich::new(t, extract_from_y)))
-                .collect();
-            let dag = build_direct_dag(&y_arcs);
+            let rich_ys: Vec<Rich<u32, Y>> = ys.clone().into_iter().map(|t| Rich::new(t, extract_from_y)).collect();
+            let dag = build_direct_dag(&rich_ys);
             let result = build_dag_str(&dag, &rich_y_to_string).join("\n");
             assert_eq!(result, SMALL_TREE);
         }
