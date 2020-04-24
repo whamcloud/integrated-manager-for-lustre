@@ -90,9 +90,11 @@ TIMER_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, TIMER_PORT)
 
 INCLUDES = ""
 
-BRANDING = "Whamcloud"
+BRANDING = os.getenv("BRANDING", "Whamcloud")
 
-USE_STRATAGEM = False
+USE_STRATAGEM = os.getenv("USE_STRATAGEM", "false")
+
+SFA_ENDPOINTS = os.getenv("SFA_ENDPOINTS", "")
 
 ALLOWED_HOSTS = ["*"]
 
