@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    components::{font_awesome, modal},
+    components::{font_awesome::*, modal},
     dependency_tree::{build_direct_dag, DependencyDAG, Deps, Rich},
     extensions::{MergeAttrs as _, NodeExt as _, RequestExt as _},
     generated::css_classes::C,
@@ -53,8 +53,7 @@ impl Default for Select {
 
 #[derive(Debug, Clone)]
 pub struct Context<'a> {
-    pub select: &'a Select,
-    pub steps: &'a [Arc<RichStep>],
+    pub model: &'a Model,
     pub visited: HashSet<u32>,
     pub is_new: bool,
 }
@@ -102,17 +101,6 @@ pub enum Msg {
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
-    let msg_str = match msg {
-        Msg::Modal(_) => "Msg-Modal".to_string(),
-        Msg::FireCommands(_) => "Msg-FireCommands".to_string(),
-        Msg::FetchTree => "Msg-FetchTree".to_string(),
-        Msg::FetchedCommands(_) => "Msg-FetchedCommands".to_string(),
-        Msg::FetchedJobs(_) => "Msg-FetchedJobs".to_string(),
-        Msg::FetchedSteps(_) => "Msg-FetchedSteps".to_string(),
-        Msg::Click(_) => "Msg-Click".to_string(),
-        Msg::Noop => "Msg-Noop".to_string(),
-    };
-    // log!(format!("f({}).", msg_str), model);
     match msg {
         Msg::Modal(msg) => {
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
@@ -151,7 +139,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     model.assign_commands(&api_list.objects);
                 }
                 Err(e) => {
-                    error!("Failed to perform fetch_command_status {:#?}", e);
+                    error!("Failed to perform FetchedCommands {:#?}", e);
                     orders.skip();
                 }
             }
@@ -166,7 +154,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 model.assign_jobs(&api_list.objects);
             }
             Err(e) => {
-                error!("Failed to perform fetch_job_status {:#?}", e);
+                error!("Failed to perform FetchJobs {:#?}", e);
                 orders.skip();
             }
         },
@@ -175,7 +163,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 model.assign_steps(&api_list.objects);
             }
             Err(e) => {
-                error!("Failed to perform fetch_job_status {:#?}", e);
+                error!("Failed to perform FetchSteps {:#?}", e);
                 orders.skip();
             }
         },
@@ -194,7 +182,7 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match &model.select {
         Select::None => {
             // the user has all the commands dropdowns closed
-            let cmd_ids = extract_sorted_ids(&model.commands);
+            let cmd_ids = extract_sorted_keys(&model.commands);
             orders
                 .skip()
                 .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))));
@@ -202,22 +190,21 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
         Select::Command(cmd_id) => {
             // the user has opened the info on the command,
             // we need the corresponding jobs to build the dependency graph
-            let cmd_ids = extract_sorted_ids(&model.commands);
+            let cmd_ids = extract_sorted_keys(&model.commands);
             let job_ids = model.commands[cmd_id].deps().to_vec();
             orders
                 .skip()
                 .perform_cmd(fetch_the_batch(job_ids, |x| Msg::FetchedJobs(Box::new(x))))
                 .perform_cmd(fetch_the_batch(cmd_ids, |x| Msg::FetchedCommands(Box::new(x))));
         }
-        Select::CommandJob(cmd_id, job_ids) | Select::CommandJobSteps(cmd_id, job_ids, _) => {
+        Select::CommandJob(cmd_id, _) | Select::CommandJobSteps(cmd_id, _, _) => {
             // the user has opened the info on the command and selected the corresponding job
             // or the user has opened the info on the command, selected a job and expanded some of the steps
-            let cmd_ids = extract_sorted_ids(&model.commands);
+            let cmd_ids = extract_sorted_keys(&model.commands);
             let job_ids = model.commands[cmd_id].deps().to_vec();
             let step_ids = job_ids
                 .iter()
-                .map(|job_id| model.jobs[job_id].deps())
-                .flatten()
+                .flat_map(|job_id| model.jobs[job_id].deps())
                 .copied()
                 .collect::<Vec<u32>>();
             orders
@@ -286,7 +273,7 @@ fn command_item_view(model: &Model, x: &RichCommand) -> Node<Msg> {
     } else {
         "chevron-circle-down"
     };
-    let job_tree = job_tree_view(&model);
+    let job_tree = job_tree_view(model);
     div![
         class![C.border_b, C.last__border_b_0],
         div![
@@ -337,28 +324,21 @@ pub fn job_tree_view(model: &Model) -> Node<Msg> {
                 C.rounded,
                 C.shadow_sm,
                 C.overflow_auto,
-                C.max_h_screen
             ],
-            job_dag_view(model, &job_item_view),
+            job_dag_view(model),
         ]
     ]
 }
 
-pub fn job_dag_view<F>(model: &Model, node_view: &F) -> Node<Msg>
-where
-    F: Fn(Arc<RichJob>, &mut Context) -> Node<Msg>,
-{
-    fn build_node_view<F>(dag: &JobsGraph, node_view: &F, n: Arc<RichJob>, ctx: &mut Context) -> Node<Msg>
-    where
-        F: Fn(Arc<RichJob>, &mut Context) -> Node<Msg>,
-    {
+pub fn job_dag_view(model: &Model) -> Node<Msg> {
+    fn build_node_view(dag: &JobsGraph, n: Arc<RichJob>, ctx: &mut Context) -> Node<Msg> {
         ctx.is_new = ctx.visited.insert(n.id);
-        let parent: Node<Msg> = node_view(Arc::clone(&n), ctx);
+        let parent: Node<Msg> = job_item_view(Arc::clone(&n), ctx);
         let mut acc: Vec<Node<Msg>> = Vec::new();
-        if let Some(deps) = dag.links.get(&n.id()) {
+        if let Some(deps) = dag.links.get(&n.id) {
             if ctx.is_new {
                 for d in deps {
-                    let rec_node = build_node_view(dag, node_view, Arc::clone(d), ctx);
+                    let rec_node = build_node_view(dag, Arc::clone(d), ctx);
                     // all the dependencies are shifted with the indent
                     acc.push(rec_node.merge_attrs(class![C.ml_3, C.mt_1]));
                 }
@@ -371,14 +351,13 @@ where
         }
     }
     let mut ctx = Context {
-        select: &model.select,
-        steps: &model.steps_view,
+        model,
         visited: HashSet::new(),
         is_new: false,
     };
     let mut acc: Vec<Node<Msg>> = Vec::with_capacity(model.jobs_graph.roots.len());
     for r in &model.jobs_graph.roots {
-        acc.push(build_node_view(&model.jobs_graph, &node_view, Arc::clone(r), &mut ctx));
+        acc.push(build_node_view(&model.jobs_graph, Arc::clone(r), &mut ctx));
     }
     div![acc]
 }
@@ -389,11 +368,15 @@ fn job_item_view(job: Arc<RichJob>, ctx: &mut Context) -> Node<Msg> {
         if job.steps.is_empty() {
             span![span![class![C.mr_1], icon], span![job.description]]
         } else {
-            a![
-                span![class![C.mr_1], icon],
-                span![class![C.cursor_pointer, C.underline], job.description],
-                simple_ev(Ev::Click, Msg::Click(TypedId::Job(job.id))),
-                div![class![C.ml_3, C.mt_1], step_list_view(ctx.select, ctx.steps),]
+            let is_open = is_typed_id_selected(&ctx.model.select, TypedId::Job(job.id));
+            let steps = select_by_keys(&ctx.model.steps, ctx.model.jobs[&job.id].deps());
+            div![
+                a![
+                    span![class![C.mr_1], icon],
+                    span![class![C.cursor_pointer, C.underline], job.description],
+                    simple_ev(Ev::Click, Msg::Click(TypedId::Job(job.id))),
+                ],
+                step_list_view(&steps, &ctx.model.select, is_open),
             ]
         }
     } else {
@@ -401,8 +384,8 @@ fn job_item_view(job: Arc<RichJob>, ctx: &mut Context) -> Node<Msg> {
     }
 }
 
-fn step_list_view(select: &Select, steps: &[Arc<RichStep>]) -> Node<Msg> {
-    if steps.is_empty() {
+fn step_list_view(steps: &[Arc<RichStep>], select: &Select, is_open: bool) -> Node<Msg> {
+    if !is_open || steps.is_empty() {
         empty!()
     } else {
         div![ul![
@@ -539,32 +522,10 @@ fn step_status_icon<T>(step: &RichStep, is_open: bool) -> Node<T> {
     };
     awesome_style.merge(color);
     if is_open {
-        svg![
-            awesome_style,
-            attrs! { "focusable" => "false", "xmlns" => "http://www.w3.org/2000/svg", "viewBox" => "0 0 512 512"},
-            path![attrs! {
-                "fill" => "currentColor",
-                "d" => "M140 274c-6.6 0-12-5.4-12-12v-12c0-6.6 5.4-12 12-12h232c6.6 0 12 5.4 12 \
-                 12v12c0 6.6-5.4 12-12 12H140zm364-18c0 137-111 248-248 248S8 393 8 256 119 8 \
-                 256 8s248 111 248 248zm-32 0c0-119.9-97.3-216-216-216-119.9 0-216 97.3-216 \
-                 216 0 119.9 97.3 216 216 216 119.9 0 216-97.3 216-216z",
-            }]
-        ]
+        font_awesome_minus_circle(awesome_style)
     // font_awesome(awesome_style, "minus-circle")
     } else {
-        svg![
-            awesome_style,
-            attrs! { "focusable" => "false", "xmlns" => "http://www.w3.org/2000/svg", "viewBox" => "0 0 512 512"},
-            path![attrs! {
-                "fill" => "currentColor",
-                "d" => "M384 250v12c0 6.6-5.4 12-12 12h-98v98c0 6.6-5.4 12-12 12h-12c-6.6 \
-                0-12-5.4-12-12v-98h-98c-6.6 0-12-5.4-12-12v-12c0-6.6 5.4-12 12-12h98v-98c0-6.6 \
-                5.4-12 12-12h12c6.6 0 12 5.4 12 12v98h98c6.6 0 12 5.4 12 12zm120 6c0 137-111 \
-                248-248 248S8 393 8 256 119 8 256 8s248 111 248 248zm-32 \
-                0c0-119.9-97.3-216-216-216-119.9 0-216 97.3-216 216 0 119.9 97.3 216 216 216 \
-                119.9 0 216-97.3 216-216z",
-            }]
-        ]
+        font_awesome_plus_circle(awesome_style)
         // font_awesome(awesome_style, "plus-circle")
     }
 }
@@ -660,10 +621,10 @@ fn interpret_click(old_select: &Select, the_id: TypedId) -> (Select, bool) {
 }
 
 fn perform_open_click(cur_select: &Select, the_id: TypedId) -> Select {
-    fn insert_in_sorted(ids: &Vec<u32>, id: u32) -> Vec<u32> {
-        let mut ids = ids.clone();
+    fn insert_in_sorted(ids: &[u32], id: u32) -> Vec<u32> {
+        let mut ids = ids.to_vec();
         match ids.binary_search(&id) {
-            Ok(pos) => ids,
+            Ok(_) => ids,
             Err(pos) => {
                 ids.insert(pos, id);
                 ids
@@ -675,9 +636,9 @@ fn perform_open_click(cur_select: &Select, the_id: TypedId) -> Select {
         TypedId::Job(job_id) => match &cur_select {
             Select::None => cur_select.clone(),
             Select::Command(cmd_id) => Select::CommandJob(*cmd_id, vec![job_id]),
-            Select::CommandJob(cmd_id, job_ids) => Select::CommandJob(*cmd_id, insert_in_sorted(&job_ids, job_id)),
+            Select::CommandJob(cmd_id, job_ids) => Select::CommandJob(*cmd_id, insert_in_sorted(job_ids, job_id)),
             Select::CommandJobSteps(cmd_id, job_ids, step_ids) => {
-                Select::CommandJobSteps(*cmd_id, insert_in_sorted(&job_ids, job_id), step_ids.clone())
+                Select::CommandJobSteps(*cmd_id, insert_in_sorted(job_ids, job_id), step_ids.clone())
             }
         },
         TypedId::Step(step_id) => match &cur_select {
@@ -685,21 +646,21 @@ fn perform_open_click(cur_select: &Select, the_id: TypedId) -> Select {
             Select::Command(_) => cur_select.clone(),
             Select::CommandJob(cmd_id, job_ids) => Select::CommandJobSteps(*cmd_id, job_ids.clone(), vec![step_id]),
             Select::CommandJobSteps(cmd_id, job_ids, step_ids) => {
-                Select::CommandJobSteps(*cmd_id, job_ids.clone(), insert_in_sorted(&step_ids, step_id))
+                Select::CommandJobSteps(*cmd_id, job_ids.clone(), insert_in_sorted(step_ids, step_id))
             }
         },
     }
 }
 
 fn perform_close_click(cur_select: &Select, the_id: TypedId) -> Select {
-    fn remove_from_sorted(ids: &Vec<u32>, id: u32) -> Vec<u32> {
-        let mut ids = ids.clone();
+    fn remove_from_sorted(ids: &[u32], id: u32) -> Vec<u32> {
+        let mut ids = ids.to_vec();
         match ids.binary_search(&id) {
-            Ok(pos) => ids,
-            Err(pos) => {
+            Ok(pos) => {
                 ids.remove(pos);
                 ids
             }
+            Err(_) => ids,
         }
     }
     match the_id {
@@ -767,14 +728,21 @@ fn extract_wait_fors_from_job(job: &Job0) -> (u32, Vec<u32>) {
     )
 }
 
-fn extract_sorted_ids<T>(hm: &HashMap<u32, T>) -> Vec<u32> {
+fn extract_sorted_keys<T>(hm: &HashMap<u32, T>) -> Vec<u32> {
     let mut ids = hm.keys().copied().collect::<Vec<_>>();
     ids.sort();
     ids
 }
 
 fn convert_to_sorted_vec<T: Clone>(hm: &HashMap<u32, T>) -> Vec<T> {
-    extract_sorted_ids(hm).into_iter().map(|k| hm[&k].clone()).collect()
+    extract_sorted_keys(hm).into_iter().map(|k| hm[&k].clone()).collect()
+}
+
+fn select_by_keys<T: Clone>(hm: &HashMap<u32, T>, keys: &[u32]) -> Vec<T> {
+    keys.iter()
+        .filter(|k| hm.contains_key(k))
+        .map(|k| hm[k].clone())
+        .collect()
 }
 
 fn convert_to_rich_hashmap<T: Clone>(
@@ -800,7 +768,7 @@ pub fn is_subset<T: PartialEq>(part: &[T], all: &[T]) -> bool {
             return false;
         }
     }
-    return true;
+    true
 }
 
 impl Model {
@@ -845,8 +813,8 @@ impl Model {
         let mut ls = [false; 3];
 
         // check between layers
-        let job_ids = extract_sorted_ids(&self.jobs);
-        let step_ids = extract_sorted_ids(&self.steps);
+        let job_ids = extract_sorted_keys(&self.jobs);
+        let step_ids = extract_sorted_keys(&self.steps);
         ls[0] = !self.commands.is_empty();
         ls[1] = self.commands.values().any(|x| is_subset(x.deps(), &job_ids));
         ls[2] = self.jobs.values().any(|x| is_subset(x.deps(), &step_ids));
@@ -862,7 +830,7 @@ impl Model {
             }
             Select::CommandJob(i, js) => {
                 let cmd0 = self.commands.get(i);
-                let jobs0 = if is_subset(js, &extract_sorted_ids(&self.jobs)) {
+                let jobs0 = if is_subset(js, &extract_sorted_keys(&self.jobs)) {
                     Some(())
                 } else {
                     None
@@ -880,12 +848,12 @@ impl Model {
             }
             Select::CommandJobSteps(i, js, ks) => {
                 let cmd0 = self.commands.get(i);
-                let jobs0 = if is_subset(js, &extract_sorted_ids(&self.jobs)) {
+                let jobs0 = if is_subset(js, &extract_sorted_keys(&self.jobs)) {
                     Some(js.iter().map(|j| Arc::clone(&self.jobs[j])).collect::<Vec<_>>())
                 } else {
                     None
                 };
-                let steps0 = if is_subset(ks, &extract_sorted_ids(&self.steps)) {
+                let steps0 = if is_subset(ks, &extract_sorted_keys(&self.steps)) {
                     Some(())
                 } else {
                     None
@@ -911,13 +879,13 @@ impl Model {
         (ls[0], ls[1], ls[2])
     }
 
-    fn refresh_view(&mut self, level: (bool, bool, bool)) {
-        let (cmds_ok, jobs_ok, steps_ok) = level;
+    fn refresh_view(&mut self, layers: (bool, bool, bool)) {
+        let (cmds_ok, jobs_ok, steps_ok) = layers;
         if cmds_ok {
             self.commands_view = convert_to_sorted_vec(&self.commands);
         }
         if jobs_ok {
-            let ids = extract_sorted_ids(&self.jobs);
+            let ids = extract_sorted_keys(&self.jobs);
             let jobs_graph_data = ids
                 .iter()
                 .map(|k| RichJob::new(self.jobs[k].inner.clone(), extract_wait_fors_from_job))
@@ -988,35 +956,30 @@ mod tests {
 
     #[test]
     fn test_interpret_click() {
-        let start = Select::None;
+        // test transitions, we simulate the clicks on various elements
 
-        // click on Command(12)
-        let triple = interpret_click(&start, TypedId::Command(12));
-        assert_eq!(&triple, &(Select::Command(12), true));
+        let pair = (Select::Command(77), false);
 
-        // click on Job(40)
-        let triple = interpret_click(&triple.0, TypedId::Job(40));
-        assert_eq!(&triple, &(Select::CommandJob(12, vec![40]), true));
+        let pair = interpret_click(&pair.0, TypedId::Job(162));
+        assert_eq!(&pair, &(Select::CommandJob(77, vec![162]), true));
 
-        // click on Step(63)
-        let triple = interpret_click(&triple.0, TypedId::Step(63));
-        assert_eq!(&triple, &(Select::CommandJobSteps(12, vec![40], vec![63]), true));
+        let pair = interpret_click(&pair.0, TypedId::Job(163));
+        assert_eq!(&pair, &(Select::CommandJob(77, vec![162, 163]), true));
 
-        // click on Step(62)
-        let triple = interpret_click(&triple.0, TypedId::Step(62));
-        assert_eq!(&triple, &(Select::CommandJobSteps(12, vec![40], vec![62, 63]), true));
+        let pair = interpret_click(&pair.0, TypedId::Step(309));
+        assert_eq!(&pair, &(Select::CommandJobSteps(77, vec![162, 163], vec![309]), true));
 
-        // click on the different command, Command(54)
-        let triple = interpret_click(&triple.0, TypedId::Command(54));
-        assert_eq!(&triple, &(Select::Command(54), true));
+        let pair = interpret_click(&pair.0, TypedId::Step(308));
+        assert_eq!(
+            &pair,
+            &(Select::CommandJobSteps(77, vec![162, 163], vec![308, 309]), true)
+        );
 
-        // click on the Job(91)
-        let triple = interpret_click(&triple.0, TypedId::Job(91));
-        assert_eq!(&triple, &(Select::CommandJob(54, vec![91]), true));
+        let pair = interpret_click(&pair.0, TypedId::Job(163));
+        assert_eq!(&pair, &(Select::CommandJobSteps(77, vec![162], vec![308, 309]), false));
 
-        // click on the different command, Command(12)
-        let triple = interpret_click(&triple.0, TypedId::Command(12));
-        assert_eq!(&triple, &(Select::Command(12), true));
+        let pair = interpret_click(&pair.0, TypedId::Job(162));
+        assert_eq!(&pair, &(Select::Command(77), false));
     }
 
     /// There could the the problem, when `schedule_fetch_tree` made the api requests
