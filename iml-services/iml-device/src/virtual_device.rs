@@ -207,7 +207,6 @@ fn insert(mut d: &mut Device, to_insert: &Device) {
             to_display(d)
         );
 
-        // TODO: Go over inserted children and correct their major, minot, devpath, paths fields?
         children_mut(&mut d).map(|x| {
             children(to_insert).map(|y| {
                 *x = y.clone();
