@@ -65,7 +65,6 @@ class Command(BaseCommand):
             "AMQP_BROKER_URL": settings.BROKER_URL,
             "BRANDING": settings.BRANDING,
             "USE_STRATAGEM": settings.USE_STRATAGEM,
-            "SFA_ENDPOINTS": settings.SFA_ENDPOINTS,
         }
 
         xs = map(lambda x: "{0}={1}".format(x[0], x[1]), config.items())

@@ -12,8 +12,8 @@ use iml_wire_types::{
         AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
         CorosyncConfigurationRecord, FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord,
         ManagedTargetMountRecord, ManagedTargetRecord, Name, NotDeleted, OstPoolOstsRecord,
-        OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration, VolumeNodeRecord,
-        VolumeRecord,
+        OstPoolRecord, PacemakerConfigurationRecord, SfaDiskDrive, SfaEnclosure, SfaStorageSystem,
+        StratagemConfiguration, VolumeNodeRecord, VolumeRecord,
     },
     warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam,
@@ -136,6 +136,26 @@ pub async fn db_record_to_change_record(
             }
             (MessageType::Insert, x) | (MessageType::Update, x) => {
                 Ok(RecordChange::Update(Record::StratagemConfig(x)))
+            }
+        },
+        DbRecord::SfaDiskDrive(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::SfaDiskDrive(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::SfaDiskDrive(x)))
+            }
+        },
+        DbRecord::SfaEnclosure(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::SfaEnclosure(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::SfaEnclosure(x)))
+            }
+        },
+        DbRecord::SfaStorageSystem(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => {
+                Ok(RecordChange::Delete(RecordId::SfaStorageSystem(x.id())))
+            }
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::SfaStorageSystem(x)))
             }
         },
         DbRecord::LnetConfiguration(x) => match (msg_type, x) {
@@ -334,6 +354,9 @@ pub async fn populate_from_db(
             "select * from {} where not_deleted = 't'",
             PacemakerConfigurationRecord::table_name()
         )),
+        client.prepare(&format!("select * from {}", SfaStorageSystem::table_name())),
+        client.prepare(&format!("select * from {}", SfaEnclosure::table_name())),
+        client.prepare(&format!("select * from {}", SfaDiskDrive::table_name())),
     ])
     .await?;
 
@@ -358,6 +381,12 @@ pub async fn populate_from_db(
     let pacemaker_configuration =
         into_row(client.query_raw(&stmts[12], iter::empty()).await?).await?;
 
+    let sfa_storage_system = into_row(client.query_raw(&stmts[13], iter::empty()).await?).await?;
+
+    let sfa_enclosure = into_row(client.query_raw(&stmts[14], iter::empty()).await?).await?;
+
+    let sfa_disk_drive = into_row(client.query_raw(&stmts[15], iter::empty()).await?).await?;
+
     let mut cache = shared_api_cache.lock().await;
 
     cache.managed_target_mount = managed_target_mount;
@@ -373,6 +402,9 @@ pub async fn populate_from_db(
     cache.user_group = user_groups;
     cache.corosync_configuration = corosync_configuration;
     cache.pacemaker_configuration = pacemaker_configuration;
+    cache.sfa_storage_system = sfa_storage_system;
+    cache.sfa_enclosure = sfa_enclosure;
+    cache.sfa_disk_drive = sfa_disk_drive;
 
     tracing::debug!("Populated from db");
 

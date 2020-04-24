@@ -175,7 +175,7 @@ pub async fn global_prune() -> Result<(), CmdError> {
 
 pub async fn wait_on_services_ready(config: &ClusterConfig) -> Result<(), CmdError> {
     let output =
-        run_vm_command(config.manager, "systemctl list-dependencies iml-manager.target | tail -n +2 | awk '{print$2}' | awk '{print substr($1, 3)}' | grep -v iml-settings-populator.service").await?.checked_output().await?;
+        run_vm_command(config.manager, "systemctl list-dependencies iml-manager.target | tail -n +2 | awk '{print$2}' | awk '{print substr($1, 3)}' | grep -v iml-settings-populator.service | grep -v iml-sfa.service").await?.checked_output().await?;
 
     let status_commands = str::from_utf8(&output.stdout)
         .expect("Couldn't parse service list")

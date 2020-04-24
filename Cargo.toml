@@ -1,9 +1,9 @@
 [workspace]
 members = [
-    'iml-agent',
     'iml-agent-comms',
-    'iml-api',
+    'iml-agent',
     'iml-api-utils',
+    'iml-api',
     'iml-cmd',
     'iml-fs',
     'iml-influx',
@@ -18,15 +18,15 @@ members = [
     'iml-request-retry',
     'iml-services/iml-action-runner',
     'iml-services/iml-device',
+    'iml-services/iml-ntp',
     'iml-services/iml-ostpool',
     'iml-services/iml-postoffice',
     'iml-services/iml-service-queue',
     'iml-services/iml-stats',
-    'iml-systemd',
+    'iml-sfa',
     'iml-system-test-utils',
-    'iml-timer',
-    'iml-services/iml-ntp',
     'iml-systemd',
+    'iml-timer',
     'iml-tracing',
     'iml-util',
     'iml-warp-drive',
@@ -36,7 +36,7 @@ members = [
     'number-formatter',
     'tokio-runtime-shutdown',
     'version-utils',
-    'wbem-client',
+    'wbem-client'
 ]
 
 exclude = [

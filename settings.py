@@ -94,8 +94,6 @@ BRANDING = os.getenv("BRANDING", "Whamcloud")
 
 USE_STRATAGEM = os.getenv("USE_STRATAGEM", "false")
 
-SFA_ENDPOINTS = os.getenv("SFA_ENDPOINTS", "")
-
 ALLOWED_HOSTS = ["*"]
 
 ADMINS = (
