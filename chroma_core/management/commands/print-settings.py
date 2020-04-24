@@ -17,18 +17,6 @@ class Command(BaseCommand):
 
     help = """Prints out selected settings in env variable format"""
 
-    def _load_config(self, config_file):
-        config = {}
-        if os.path.exists(config_file):
-            with open(config_file) as file:
-                content = file.read()
-
-                for line in content.splitlines():
-                    key_val = line.split("=", 1)
-                    config[key_val[0]] = key_val[1]
-
-        return config
-
     def handle(self, *args, **kwargs):
         cursor = connection.cursor()
         cursor.execute("SELECT * from api_key()")
@@ -37,8 +25,6 @@ class Command(BaseCommand):
 
         source_map_paths = glob.glob("/usr/share/iml-manager/iml-gui/main*.map")
         SOURCE_MAP_PATH = next(iter(source_map_paths), None)
-
-        overrides = self._load_config(os.path.join("/var/lib/chroma-setup", "config"))
 
         DB = settings.DATABASES.get("default")
 
@@ -78,10 +64,10 @@ class Command(BaseCommand):
             "AMQP_BROKER_PORT": settings.AMQP_BROKER_PORT,
             "AMQP_BROKER_URL": settings.BROKER_URL,
             "BRANDING": settings.BRANDING,
-            "USE_STRATAGEM": json.dumps(settings.USE_STRATAGEM),
+            "USE_STRATAGEM": settings.USE_STRATAGEM,
+            "SFA_ENDPOINTS": settings.SFA_ENDPOINTS,
         }
 
-        config.update(overrides)
         xs = map(lambda x: "{0}={1}".format(x[0], x[1]), config.items())
 
         print("\n".join(xs))

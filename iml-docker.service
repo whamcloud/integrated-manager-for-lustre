@@ -8,6 +8,7 @@ Type=oneshot
 RemainAfterExit=yes
 StandardError=journal
 StandardOutput=journal
+EnvironmentFile=-/etc/iml-docker/setup/config
 WorkingDirectory=/etc/iml-docker
 ExecStartPre=-/usr/bin/docker load -i /var/tmp/iml-images.tgz
 ExecStart=/usr/bin/docker stack deploy -c docker-compose.yml -c docker-compose.overrides.yml iml --resolve-image=never
