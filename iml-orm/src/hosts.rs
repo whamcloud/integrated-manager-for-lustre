@@ -28,6 +28,6 @@ impl ChromaCoreManagedhost {
         ["monitored", "managed", "working"]
             .iter()
             .find(|&x| x == &self.state)
-            .any(|x| x == &self.state)
+            .is_some()
     }
 }
