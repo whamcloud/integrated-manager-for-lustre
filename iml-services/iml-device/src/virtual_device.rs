@@ -295,21 +295,24 @@ mod tests {
     use jsondata;
     use std::fs;
 
-    #[tokio::test]
-    async fn simple_test() {
-        let path1 = "fixtures/device-mds1.local-2034-pruned.json";
-        let path2 = "fixtures/device-mds2.local-2033-pruned.json";
-
+    fn deser_fixture(path1: &str, path2: &str, fqdn1: Fqdn, fqdn2: Fqdn) -> Vec<(Fqdn, Device)> {
         let device1 = fs::read_to_string(path1).unwrap();
         let device1: Device = serde_json::from_str(&device1).unwrap();
 
         let device2 = fs::read_to_string(path2).unwrap();
         let device2: Device = serde_json::from_str(&device2).unwrap();
 
-        let devices = vec![
-            (Fqdn("mds1.local".into()), device1),
-            (Fqdn("mds2.local".into()), device2),
-        ];
+        vec![(fqdn1, device1), (fqdn2, device2)]
+    }
+
+    #[tokio::test]
+    async fn simple_test() {
+        let devices = deser_fixture(
+            "fixtures/device-mds1.local-2034-pruned.json",
+            "fixtures/device-mds2.local-2033-pruned.json",
+            Fqdn("mds1.local".into()),
+            Fqdn("mds2.local".into()),
+        );
 
         let results = update_virtual_devices(devices).await;
 
@@ -345,19 +348,12 @@ mod tests {
 
     #[tokio::test]
     async fn full_mds_test() {
-        let path1 = "fixtures/device-mds1.local-2034.json";
-        let path2 = "fixtures/device-mds2.local-2033.json";
-
-        let device1 = fs::read_to_string(path1).unwrap();
-        let device1: Device = serde_json::from_str(&device1).unwrap();
-
-        let device2 = fs::read_to_string(path2).unwrap();
-        let device2: Device = serde_json::from_str(&device2).unwrap();
-
-        let devices = vec![
-            (Fqdn("mds1.local".into()), device1),
-            (Fqdn("mds2.local".into()), device2),
-        ];
+        let devices = deser_fixture(
+            "fixtures/device-mds1.local-2034.json",
+            "fixtures/device-mds2.local-2033.json",
+            Fqdn("mds1.local".into()),
+            Fqdn("mds2.local".into()),
+        );
 
         let results = update_virtual_devices(devices).await;
 
@@ -393,19 +389,12 @@ mod tests {
 
     #[tokio::test]
     async fn full_oss_test() {
-        let path1 = "fixtures/device-oss1.local-62.json";
-        let path2 = "fixtures/device-oss2.local-61.json";
-
-        let device1 = fs::read_to_string(path1).unwrap();
-        let device1: Device = serde_json::from_str(&device1).unwrap();
-
-        let device2 = fs::read_to_string(path2).unwrap();
-        let device2: Device = serde_json::from_str(&device2).unwrap();
-
-        let devices = vec![
-            (Fqdn("oss1.local".into()), device1),
-            (Fqdn("oss2.local".into()), device2),
-        ];
+        let devices = deser_fixture(
+            "fixtures/device-oss1.local-62.json",
+            "fixtures/device-oss2.local-61.json",
+            Fqdn("oss1.local".into()),
+            Fqdn("oss2.local".into()),
+        );
 
         let results = update_virtual_devices(devices).await;
 
