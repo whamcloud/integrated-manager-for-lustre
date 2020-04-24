@@ -305,6 +305,17 @@ mod tests {
         vec![(fqdn1, device1), (fqdn2, device2)]
     }
 
+    // This function achieves specified order of children so snapshots are always the same.
+    // We do this because Device has HashSet of children so order of iteration isn't specified
+    //  - this affects Debug output for _debug_ snapshots, as well as all other operations.
+    // 
+    // We serialize top-level children to JSON one-by-one, then read that JSON back to jsondata::Json.
+    // We do this because jsondata::Json implements Ord so we can sort these values.
+    // Otherwise snapshots have unspecified order of the children and tests fail randomly.
+    // 
+    // Then we serialize jsondata::Json to String, and read that String as serde_json::Value once again.
+    // We do this to achieve snapshots that are readable by human.
+    // Otherwise, _debug_ snapshots of jsondata::Json are like AST dumps and very verbose.
     fn compare_results(results: Vec<(Fqdn, Device)>, test_name: &str) {
         for (f, d) in results {
             let mut children = vec![];
