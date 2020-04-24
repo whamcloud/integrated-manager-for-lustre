@@ -11,6 +11,7 @@ use std::{
 use tokio::{fs::canonicalize, io::AsyncWriteExt, process::Command};
 
 pub async fn ssh_exec(host: &str, cmd: &str) -> Result<Output, CmdError> {
+    println!("Running command {} on {}", cmd, host);
     let path = canonicalize("../vagrant/").await?;
 
     let mut x = Command::new("ssh");
@@ -49,7 +50,21 @@ pub async fn ssh_script(host: &str, script: &str, args: &[&str]) -> Result<Outpu
 
     script_path.push(script);
 
+    println!(
+        "Executing script: {} on {}",
+        script_path
+            .clone()
+            .into_os_string()
+            .into_string()
+            .expect("Couldn't convert path to string."),
+        host
+    );
     let script_content = iml_fs::read_file_to_end(script_path).await?;
+
+    println!(
+        "script content: {}",
+        str::from_utf8(&script_content).expect("Couldn't get script content")
+    );
 
     let mut x = Command::new("ssh");
     x.current_dir(path);
