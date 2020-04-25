@@ -4,6 +4,7 @@ use std::hash::Hash;
 use std::iter::Iterator;
 use std::ops::Deref;
 use std::sync::Arc;
+use rand_core::RngCore;
 
 /// There are two hierarchies that this trait is used for:
 /// * commands -> jobs -> steps form the tree structure, using `Command::jobs` and `Job<_>::steps` fields
@@ -177,10 +178,17 @@ where
         .collect()
 }
 
+pub fn shuffle<R: RngCore, T>(slice: &mut [T], rng: &mut R) {
+    for i in (1..slice.len()).rev() {
+        let j = (rng.next_u64() as usize) % (i + 1);
+        slice.swap(i, j);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand_core::{RngCore, SeedableRng};
+    use rand_core::SeedableRng;
     use rand_xoshiro::Xoroshiro64Star;
     use std::hash::Hash;
 
@@ -233,13 +241,6 @@ mod tests {
         visited: HashSet<K>,
         indent: usize,
         is_new: bool,
-    }
-
-    fn shuffle<R: RngCore, T>(slice: &mut [T], rng: &mut R) {
-        for i in (1..slice.len()).rev() {
-            let j = (rng.next_u64() as usize) % (i + 1);
-            slice.swap(i, j);
-        }
     }
 
     #[test]
