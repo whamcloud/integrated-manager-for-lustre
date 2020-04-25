@@ -15,7 +15,12 @@ use iml_wire_types::{ApiList, Command, EndpointName, Job, Step};
 use regex::{Captures, Regex};
 use seed::{prelude::*, *};
 use serde::de::DeserializeOwned;
-use std::{collections::{HashMap, HashSet}, sync::Arc, time::Duration, fmt::{self, Display}};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::{self, Display},
+    sync::Arc,
+    time::Duration,
+};
 
 /// The component polls `/api/command/` endpoint and this constant defines how often it does.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
@@ -319,13 +324,7 @@ pub fn job_tree_view(model: &Model) -> Node<Msg> {
         class![C.font_ordinary, C.text_gray_700],
         h4![class![C.text_lg, C.font_medium], "Jobs"],
         div![
-            class![
-                C.p_1,
-                C.pb_2,
-                C.mb_1,
-                C.shadow_sm,
-                C.overflow_auto,
-            ],
+            class![C.p_1, C.pb_2, C.mb_1, C.shadow_sm, C.overflow_auto,],
             job_dag_view(model),
         ]
     ]
@@ -390,13 +389,7 @@ fn step_list_view(steps: &[Arc<RichStep>], select: &Select, is_open: bool) -> No
         empty!()
     } else {
         div![ul![
-            class![
-                C.p_1,
-                C.pb_2,
-                C.mb_1,
-                C.shadow_sm,
-                C.overflow_auto
-            ],
+            class![C.p_1, C.pb_2, C.mb_1, C.shadow_sm, C.overflow_auto],
             steps.iter().map(|x| {
                 let is_open = is_typed_id_selected(select, TypedId::Step(x.id));
                 li![step_item_view(x, is_open)]
@@ -890,9 +883,9 @@ impl Model {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand_xoshiro::Xoroshiro64Star;
-    use rand_core::{SeedableRng, RngCore};
     use crate::dependency_tree::shuffle;
+    use rand_core::{RngCore, SeedableRng};
+    use rand_xoshiro::Xoroshiro64Star;
 
     #[derive(Default, Clone, Debug)]
     struct Db {
