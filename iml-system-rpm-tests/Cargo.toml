@@ -1,0 +1,11 @@
+[package]
+name = "iml-system-rpm-tests"
+version = "0.2.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+iml-cmd = { version = "0.2.0", path = "../iml-cmd" }
+iml-system-test-utils = { version = "0.2.0", path = "../iml-system-test-utils" }
+iml-wire-types = { version = "0.2.0", path = "../iml-wire-types" }
+tokio = {version="0.2", features=["macros"]}

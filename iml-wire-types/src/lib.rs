@@ -1592,5 +1592,15 @@ impl From<String> for Branding {
     }
 }
 
+impl fmt::Display for Branding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Ddn => write!(f, "ddn"),
+            Self::Whamcloud => write!(f, "whamcloud"),
+            Self::DdnAi400 => write!(f, "ddnai400"),
+        }
+    }
+}
+
 pub mod db;
 pub mod warp_drive;

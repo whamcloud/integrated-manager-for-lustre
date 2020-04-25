@@ -2,12 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{future::BoxFuture, FutureExt, TryFutureExt};
+use futures::{future::BoxFuture, Future, FutureExt, TryFutureExt};
 use std::{
     error, fmt, io,
+    pin::Pin,
     process::{ExitStatus, Output},
 };
-pub use tokio::process::Command;
+pub use tokio::process::{Child, Command};
 
 #[cfg(feature = "warp-errs")]
 use warp::reject;
@@ -90,6 +91,27 @@ impl CheckedCommandExt for Command {
         tracing::debug!("Running cmd: {:?}", self);
 
         self.output()
+            .err_into()
+            .and_then(|x| async {
+                if x.status.success() {
+                    Ok(x)
+                } else {
+                    Err(x.into())
+                }
+            })
+            .boxed()
+    }
+}
+
+pub trait CheckedChildExt {
+    fn wait_with_checked_output(self) -> Pin<Box<dyn Future<Output = Result<Output, CmdError>>>>;
+}
+
+impl CheckedChildExt for Child {
+    fn wait_with_checked_output(self) -> Pin<Box<dyn Future<Output = Result<Output, CmdError>>>> {
+        tracing::debug!("Child waiting for output: {:?}", self);
+
+        self.wait_with_output()
             .err_into()
             .and_then(|x| async {
                 if x.status.success() {

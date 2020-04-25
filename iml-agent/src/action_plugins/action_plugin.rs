@@ -9,6 +9,7 @@ use crate::action_plugins::{
     ostpool, package, postoffice,
     stratagem::{action_purge, action_warning, server},
 };
+use iml_systemd;
 use iml_util::action_plugins;
 use iml_wire_types::ActionName;
 use tracing::info;
