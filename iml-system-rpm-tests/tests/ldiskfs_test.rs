@@ -2,12 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_cmd::CmdError;
 use iml_system_rpm_tests::{run_fs_test, wait_for_ntp};
-use iml_system_test_utils::{vagrant, WithSos as _, SystemTestError, SetupConfig, SetupConfigType};
+use iml_system_test_utils::{vagrant, SetupConfig, SetupConfigType, SystemTestError, WithSos as _};
 use std::collections::HashMap;
 
-async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {
+async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError> {
     run_fs_test(
         &config,
         &SetupConfigType::RpmSetup(SetupConfig {

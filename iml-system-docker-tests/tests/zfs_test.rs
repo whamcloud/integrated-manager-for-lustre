@@ -2,11 +2,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-mod utils;
-
+use iml_system_docker_tests::{run_fs_test, wait_for_ntp};
 use iml_system_test_utils::{vagrant, SetupConfig, SetupConfigType, SystemTestError, WithSos as _};
-use std::collections::{hash_map::RandomState, HashMap};
-use utils::{run_fs_test, wait_for_ntp};
+use std::collections::HashMap;
 
 async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError> {
     run_fs_test(
