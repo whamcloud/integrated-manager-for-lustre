@@ -180,7 +180,6 @@ mod lamigo_tests {
     #[tokio::test]
     async fn test_works() {
         // for postoffice::socket_name()
-        env::set_var("SOCK_DIR", "/run");
         env::set_var("LAMIGO_CONF_PATH", "/etc/lamigo/{fs}-{mdt}.conf");
         let config = Config {
             fs: "LU_TEST2".into(),

@@ -93,7 +93,6 @@ mod lpurge_conf_tests {
     #[tokio::test]
     async fn works() {
         // for postoffice::socket_name()
-        env::set_var("SOCK_DIR", "/run/iml");
         let cfg = Config {
             fs: "lima".to_string(),
             pool: "santiago".to_string(),
