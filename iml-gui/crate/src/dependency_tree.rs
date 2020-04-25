@@ -1,10 +1,10 @@
+use rand_core::RngCore;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::iter::Iterator;
 use std::ops::Deref;
 use std::sync::Arc;
-use rand_core::RngCore;
 
 /// There are two hierarchies that this trait is used for:
 /// * commands -> jobs -> steps form the tree structure, using `Command::jobs` and `Job<_>::steps` fields
@@ -103,25 +103,24 @@ where
 {
     let mut roots: Vec<K> = Vec::new();
     let mut dag: Vec<(K, Vec<K>)> = Vec::with_capacity(ts.len());
-    if ts.len() == 1 {
-        // special case, when there is no any arc `x -> y`,
-        // then the only vertex becomes the root
-        roots.push(ts[0].id());
-    } else {
-        for t in ts {
-            let x = t.id();
-            let ys = t.deps();
-            if !ys.is_empty() {
-                // push the arcs `x -> y` for all `y \in xs` into the graph
-                dag.push((x, ys.to_vec()));
-                if !roots.contains(&x) {
-                    roots.push(x);
-                }
-                // remove any of the destinations from the roots
-                for y in ys {
-                    if let Some(i) = roots.iter().position(|r| *r == *y) {
-                        roots.remove(i);
-                    }
+
+    for t in ts {
+        // isolated vertices will remain to be roots after we traverse all the arcs
+        roots.push(t.id());
+    }
+    for t in ts {
+        let x = t.id();
+        let ys = t.deps();
+        if !ys.is_empty() {
+            // push the arcs `x -> y` for all `y \in xs` into the graph
+            dag.push((x, ys.to_vec()));
+            if !roots.contains(&x) {
+                roots.push(x);
+            }
+            // remove any of the destinations from the roots
+            for y in ys {
+                if let Some(i) = roots.iter().position(|r| *r == *y) {
+                    roots.remove(i);
                 }
             }
         }
@@ -131,7 +130,7 @@ where
 
 pub fn build_inverse_dag<K, T>(ts: &[T]) -> DependencyDAG<K, T>
 where
-    K: Hash + Eq + Copy + Debug,
+    K: Hash + Ord + Copy + Debug,
     T: Deps<K> + Clone + Debug,
 {
     let mut roots: HashSet<K> = ts.iter().map(|t| t.id()).collect();
@@ -150,7 +149,8 @@ where
             roots.remove(&y);
         }
     }
-    let roots = roots.into_iter().collect::<Vec<K>>();
+    let mut roots = roots.into_iter().collect::<Vec<K>>();
+    roots.sort();
     enrich_dag(ts, &roots, &dag)
 }
 
@@ -281,15 +281,15 @@ mod tests {
     }
 
     #[test]
-    fn single_node() {
-        let xs: Vec<X> = vec![X::new(1, &[], "One")];
+    fn isolated_nodes() {
+        let xs: Vec<X> = vec![X::new(1, &[], "One"), X::new(2, &[], "Two"), X::new(3, &[], "Three")];
 
         let dag = build_direct_dag(&xs);
         let result = build_dag_str(&dag, &x_to_string).join("\n");
-        assert_eq!(result, "1: One");
+        assert_eq!(result, "1: One\n2: Two\n3: Three");
         let dag = build_inverse_dag(&xs);
         let result = build_dag_str(&dag, &x_to_string).join("\n");
-        assert_eq!(result, "1: One");
+        assert_eq!(result, "1: One\n2: Two\n3: Three");
     }
 
     #[test]
