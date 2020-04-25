@@ -2,13 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-mod utils;
-
 use iml_cmd::CmdError;
+use iml_system_rpm_tests::{run_fs_test, wait_for_ntp};
 use iml_system_test_utils::{vagrant, CmdErrSos as _, SetupConfig, SetupConfigType};
-use std::collections::{hash_map::RandomState, HashMap};
-
-use utils::{run_fs_test, wait_for_ntp};
+use std::collections::HashMap;
 
 async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {
     run_fs_test(
@@ -19,7 +16,7 @@ async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {
         }),
         vec![("base_monitored".into(), &config.storage_servers()[..])]
             .into_iter()
-            .collect::<HashMap<String, &[&str], RandomState>>(),
+            .collect::<HashMap<String, &[&str]>>(),
         vagrant::FsType::ZFS,
     )
     .await?;

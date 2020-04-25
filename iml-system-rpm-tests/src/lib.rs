@@ -4,10 +4,7 @@
 
 use iml_cmd::CmdError;
 use iml_system_test_utils::{ssh, vagrant, SetupConfigType};
-use std::{
-    collections::{HashMap},
-    time::Duration,
-};
+use std::{collections::HashMap, time::Duration};
 use tokio::time::delay_for;
 
 pub async fn setup() -> Result<(), CmdError> {
