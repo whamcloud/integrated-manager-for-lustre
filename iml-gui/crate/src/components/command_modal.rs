@@ -15,9 +15,7 @@ use iml_wire_types::{ApiList, Command, EndpointName, Job, Step};
 use regex::{Captures, Regex};
 use seed::{prelude::*, *};
 use serde::de::DeserializeOwned;
-use std::collections::{HashMap, HashSet};
-
-use std::{sync::Arc, time::Duration};
+use std::{collections::{HashMap, HashSet}, sync::Arc, time::Duration, fmt::{self, Display}};
 
 /// The component polls `/api/command/` endpoint and this constant defines how often it does.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
@@ -51,7 +49,13 @@ impl Default for Select {
     }
 }
 
-#[derive(Debug, Clone)]
+impl Display for Select {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct Context<'a> {
     pub model: &'a Model,
     pub visited: HashSet<u32>,
@@ -319,9 +323,6 @@ pub fn job_tree_view(model: &Model) -> Node<Msg> {
                 C.p_1,
                 C.pb_2,
                 C.mb_1,
-                C.bg_gray_100,
-                C.border,
-                C.rounded,
                 C.shadow_sm,
                 C.overflow_auto,
             ],
@@ -393,9 +394,6 @@ fn step_list_view(steps: &[Arc<RichStep>], select: &Select, is_open: bool) -> No
                 C.p_1,
                 C.pb_2,
                 C.mb_1,
-                C.bg_gray_100,
-                C.border,
-                C.rounded,
                 C.shadow_sm,
                 C.overflow_auto
             ],
@@ -610,9 +608,6 @@ fn is_typed_id_selected(select: &Select, typed_id: TypedId) -> bool {
 }
 
 fn interpret_click(old_select: &Select, the_id: TypedId) -> (Select, bool) {
-    // commands behave like radio-button with the
-    // jobs behave like radio button
-    // steps are set of independent checkboxes
     if is_typed_id_selected(old_select, the_id) {
         (perform_close_click(old_select, the_id), false)
     } else {
@@ -783,25 +778,19 @@ impl Model {
     }
 
     fn assign_commands(&mut self, cmds: &[Command]) {
-        let mut sorted_cmds = cmds.to_vec();
-        sorted_cmds.sort_by_key(|x| x.id);
-        self.commands = convert_to_rich_hashmap(sorted_cmds, extract_children_from_cmd);
+        self.commands = convert_to_rich_hashmap(cmds.to_vec(), extract_children_from_cmd);
         let tuple = self.check_consistency(&self.select);
         self.refresh_view(tuple);
     }
 
     fn assign_jobs(&mut self, jobs: &[Job0]) {
-        let mut sorted_jobs = jobs.to_vec();
-        sorted_jobs.sort_by_key(|x| x.id);
-        self.jobs = convert_to_rich_hashmap(sorted_jobs, extract_children_from_job);
+        self.jobs = convert_to_rich_hashmap(jobs.to_vec(), extract_children_from_job);
         let tuple = self.check_consistency(&self.select);
         self.refresh_view(tuple);
     }
 
     fn assign_steps(&mut self, steps: &[Step]) {
-        let mut sorted_steps = steps.to_vec();
-        sorted_steps.sort_by_key(|x| x.id);
-        self.steps = convert_to_rich_hashmap(sorted_steps, extract_children_from_step);
+        self.steps = convert_to_rich_hashmap(steps.to_vec(), extract_children_from_step);
         let tuple = self.check_consistency(&self.select);
         self.refresh_view(tuple);
     }
@@ -901,8 +890,11 @@ impl Model {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand_xoshiro::Xoroshiro64Star;
+    use rand_core::{SeedableRng, RngCore};
+    use crate::dependency_tree::shuffle;
 
-    #[derive(Debug, Default, Clone)]
+    #[derive(Default, Clone, Debug)]
     struct Db {
         all_cmds: Vec<Command>,
         all_jobs: Vec<Job0>,
@@ -988,42 +980,53 @@ mod tests {
     /// and the test checks this.
     #[test]
     fn test_async_handlers_consistency() {
-        fn extract_ids<T: Deps<u32>>(ts: &[Arc<T>]) -> Vec<u32> {
-            ts.iter().map(|t| t.id()).collect()
-        }
-
+        let mut rng = Xoroshiro64Star::seed_from_u64(485369);
         let db = build_db();
+
         let mut model = Model::default();
-        let (a, b, c) = prepare_subset(&db, 1);
-        model.assign_commands(&db.select_cmds(&vec![1, 2]));
-        model.assign_jobs(&db.select_jobs(&vec![10, 12, 13, 14]));
-        model.assign_steps(&db.select_steps(&vec![20, 23, 14]));
-        model.assign_commands(&db.select_cmds(&vec![1, 2, 3, 4]));
+        let cmd_ids = db.all_cmds.iter().map(|x| x.id).collect::<Vec<_>>();
+        let mut permutation = vec![1, 2, 3];
+        let selects = vec![
+            Select::None,
+            Select::Command(2),
+            Select::Command(1),
+            Select::Command(3),
+            Select::Command(4),
+            Select::CommandJob(1, vec![10]),
+            Select::CommandJob(1, vec![10, 11]),
+            Select::CommandJobSteps(1, vec![10, 11], vec![21]),
+            Select::CommandJobSteps(1, vec![10, 11], vec![20, 21]),
+        ];
+        for select in selects {
+            let cmd_id = cmd_ids[rng.next_u32() as usize % cmd_ids.len()];
+            let (c, j, s) = prepare_subset(&db, cmd_id);
+            model.clear();
+            model.select = select.clone();
+            model.assign_commands(&c);
+            model.assign_jobs(&j);
+            model.assign_steps(&s);
+            let expected_cmd = model.commands_view.clone();
+            let expected_jobs = model.jobs_graph.clone();
+            let expected_steps = model.steps_view.clone();
 
-        // [1, 2, 3, 4] -> [10, 11] -> [20, 21, 26]
-        model.select = Select::Command(1);
-        model.assign_steps(&c);
-        model.assign_jobs(&b);
-        model.assign_commands(&a);
-        assert_eq!(extract_ids(&model.commands_view), vec![1, 2, 3, 4]);
-        assert_eq!(extract_ids(&model.jobs_graph.roots), vec![10]);
-        assert_eq!(extract_ids(&model.steps_view), vec![20, 21, 26]);
+            model.clear();
+            model.select = select.clone();
+            shuffle(&mut permutation, &mut rng);
 
-        model.select = Select::CommandJob(1, vec![11]);
-        model.assign_steps(&c);
-        model.assign_commands(&a);
-        model.assign_jobs(&b);
-        assert_eq!(extract_ids(&model.commands_view), vec![1, 2, 3, 4]);
-        assert_eq!(extract_ids(&model.jobs_graph.roots), vec![10]);
-        assert_eq!(extract_ids(&model.steps_view), vec![20, 21, 26]);
-
-        model.select = Select::CommandJobSteps(1, vec![11], vec![26]);
-        model.assign_jobs(&b);
-        model.assign_steps(&c);
-        model.assign_commands(&a);
-        assert_eq!(extract_ids(&model.commands_view), vec![1, 2, 3, 4]);
-        assert_eq!(extract_ids(&model.jobs_graph.roots), vec![10]);
-        assert_eq!(extract_ids(&model.steps_view), vec![20, 21, 26]);
+            // we simulate, that FetchCommands, FetchJobs and FetchSteps come in arbitrary order
+            for p in &permutation {
+                match p {
+                    1 => model.assign_commands(&c),
+                    2 => model.assign_jobs(&j),
+                    3 => model.assign_steps(&s),
+                    _ => unreachable!(),
+                }
+            }
+            // compare debug strings since there is no Eq instance for iml_wire_types
+            assert_eq!(format!("{:?}", model.commands_view), format!("{:?}", expected_cmd));
+            assert_eq!(format!("{:?}", model.jobs_graph), format!("{:?}", expected_jobs));
+            assert_eq!(format!("{:?}", model.steps_view), format!("{:?}", expected_steps));
+        }
     }
 
     fn make_command(id: u32, jobs: &[u32], msg: &str) -> Command {
