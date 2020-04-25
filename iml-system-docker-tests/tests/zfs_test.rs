@@ -17,7 +17,7 @@ async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError
         }),
         vec![("base_monitored".into(), &config.storage_servers()[..])]
             .into_iter()
-            .collect::<HashMap<String, &[&str], RandomState>>(),
+            .collect::<HashMap<String, &[&str]>>(),
         vagrant::FsType::ZFS,
     )
     .await?;

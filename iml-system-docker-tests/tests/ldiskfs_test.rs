@@ -6,7 +6,7 @@ mod utils;
 
 use iml_system_test_utils::{vagrant, SetupConfig, SetupConfigType, SystemTestError, WithSos as _};
 use iml_systemd::SystemdError;
-use std::collections::{hash_map::RandomState, HashMap};
+use std::collections::{HashMap};
 use utils::{run_fs_test, wait_for_ntp};
 
 async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemdError> {
@@ -18,7 +18,7 @@ async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemdError> {
         }),
         vec![("base_monitored".into(), &config.storage_servers()[..])]
             .into_iter()
-            .collect::<HashMap<String, &[&str], RandomState>>(),
+            .collect::<HashMap<String, &[&str]>>(),
         vagrant::FsType::LDISKFS,
     )
     .await?;
