@@ -44,7 +44,7 @@ pub fn create() -> impl DaemonPlugin {
 
 /// Return socket address for a given mailbox
 pub fn socket_name(mailbox: &str) -> String {
-    let sock_dir = env::get_var("SOCK_DIR");
+    let sock_dir = env::get_var_else("SOCK_DIR", "/run/iml");
     format!("{}/postman-{}.sock", sock_dir, mailbox)
 }
 
