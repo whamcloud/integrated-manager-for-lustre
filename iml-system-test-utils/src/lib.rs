@@ -3,8 +3,11 @@ pub mod iml;
 pub mod ssh;
 pub mod vagrant;
 
+use async_trait::async_trait;
 use iml_cmd::CmdError;
+use iml_systemd::SystemdError;
 use iml_wire_types::Branding;
+use ssh::create_iml_diagnostics;
 use std::{io, time::Duration};
 use tokio::{process::Command, time::delay_for};
 
@@ -125,4 +128,36 @@ pub fn get_local_server_names<'a>(servers: &'a [&'a str]) -> Vec<String> {
         .iter()
         .map(move |x| format!("{}.local", x))
         .collect()
+}
+
+#[async_trait]
+pub trait CmdErrSos {
+    async fn handle_test_result(self, hosts: &[&str], prefix: &str) -> Result<(), CmdError>;
+}
+
+#[async_trait]
+impl CmdErrSos for Result<(), CmdError> {
+    async fn handle_test_result(self, hosts: &[&str], prefix: &str) -> Result<(), CmdError> {
+        if self.is_err() {
+            create_iml_diagnostics(hosts, prefix).await?;
+        }
+
+        self
+    }
+}
+
+#[async_trait]
+pub trait SystemdErrSos {
+    async fn handle_test_result(self, hosts: &[&str], prefix: &str) -> Result<(), SystemdError>;
+}
+
+#[async_trait]
+impl SystemdErrSos for Result<(), SystemdError> {
+    async fn handle_test_result(self, hosts: &[&str], prefix: &str) -> Result<(), SystemdError> {
+        if self.is_err() {
+            create_iml_diagnostics(hosts, prefix).await?;
+        }
+
+        self
+    }
 }

@@ -143,3 +143,15 @@ pub async fn wait_for_ntp<'a, 'b>(
 ) -> Result<Vec<(&'a str, Output)>, CmdError> {
     ssh_script_parallel(hosts, "scripts/wait_for_ntp.sh", &[]).await
 }
+
+pub async fn create_iml_diagnostics<'a, 'b>(
+    hosts: &'b [&'a str],
+    prefix: &'a str,
+) -> Result<Vec<(&'a str, Output)>, CmdError> {
+    ssh_script_parallel(
+        hosts,
+        "scripts/create_iml_diagnostics.sh",
+        &["10.73.10.1", prefix],
+    )
+    .await
+}
