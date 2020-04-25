@@ -130,34 +130,28 @@ pub fn get_local_server_names<'a>(servers: &'a [&'a str]) -> Vec<String> {
         .collect()
 }
 
-#[async_trait]
-pub trait CmdErrSos {
-    async fn handle_test_result(self, hosts: &[&str], prefix: &str) -> Result<(), CmdError>;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum SystemTestError {
+    #[error(transparent)]
+    CmdError(#[from] CmdError),
+    #[error(transparent)]
+    SystemdError(#[from] SystemdError),
 }
 
 #[async_trait]
-impl CmdErrSos for Result<(), CmdError> {
-    async fn handle_test_result(self, hosts: &[&str], prefix: &str) -> Result<(), CmdError> {
+pub trait WithSos {
+    async fn handle_test_result(self, hosts: &[&str], prefix: &str) -> Result<(), SystemTestError>;
+}
+
+#[async_trait]
+impl<T: Into<SystemTestError> + Send> WithSos for Result<(), T> {
+    async fn handle_test_result(self, hosts: &[&str], prefix: &str) -> Result<(), SystemTestError> {
         if self.is_err() {
             create_iml_diagnostics(hosts, prefix).await?;
         }
 
-        self
-    }
-}
-
-#[async_trait]
-pub trait SystemdErrSos {
-    async fn handle_test_result(self, hosts: &[&str], prefix: &str) -> Result<(), SystemdError>;
-}
-
-#[async_trait]
-impl SystemdErrSos for Result<(), SystemdError> {
-    async fn handle_test_result(self, hosts: &[&str], prefix: &str) -> Result<(), SystemdError> {
-        if self.is_err() {
-            create_iml_diagnostics(hosts, prefix).await?;
-        }
-
-        self
+        self.map_err(|e| e.into())
     }
 }

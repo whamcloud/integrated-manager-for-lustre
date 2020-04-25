@@ -4,7 +4,7 @@
 
 mod utils;
 
-use iml_system_test_utils::{vagrant, SetupConfig, SetupConfigType, SystemdErrSos as _};
+use iml_system_test_utils::{vagrant, SetupConfig, SetupConfigType, SystemTestError, WithSos as _};
 use iml_systemd::SystemdError;
 use std::collections::{hash_map::RandomState, HashMap};
 use utils::{run_fs_test, wait_for_ntp};
@@ -29,10 +29,11 @@ async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemdError> {
 }
 
 #[tokio::test]
-async fn test_docker_ldiskfs_setup() -> Result<(), SystemdError> {
+async fn test_docker_ldiskfs_setup() -> Result<(), SystemTestError> {
     let config = vagrant::ClusterConfig::default();
 
-    run_test(&config).await.handle_test_result(&config.storage_server_ips()[..],
-    "docker_ldiskfs_test")
-    .await
+    run_test(&config)
+        .await
+        .handle_test_result(&config.storage_server_ips()[..], "docker_ldiskfs_test")
+        .await
 }

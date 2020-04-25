@@ -4,7 +4,7 @@
 
 use iml_cmd::CmdError;
 use iml_system_rpm_tests::{run_fs_test, wait_for_ntp};
-use iml_system_test_utils::{vagrant, CmdErrSos as _, SetupConfig, SetupConfigType};
+use iml_system_test_utils::{vagrant, WithSos as _, SystemTestError, SetupConfig, SetupConfigType};
 use std::collections::HashMap;
 
 async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {
@@ -27,7 +27,7 @@ async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {
 }
 
 #[tokio::test]
-async fn test_ldiskfs_setup() -> Result<(), iml_cmd::CmdError> {
+async fn test_ldiskfs_setup() -> Result<(), SystemTestError> {
     let config = vagrant::ClusterConfig::default();
     run_test(&config)
         .await
