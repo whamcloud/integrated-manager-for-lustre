@@ -4,9 +4,10 @@
 
 use crate::{
     api_utils::get_all,
-    display_utils::{display_success, generate_table, wrap_fut},
+    display_utils::{display_success, wrap_fut, DisplayType, IntoDisplayType as _},
     error::ImlManagerCliError,
 };
+use console::Term;
 use iml_orm::{profile, repo, tokio_diesel::AsyncRunQueryDsl as _};
 use iml_wire_types::{ApiList, ServerProfile};
 use std::io::{Error, ErrorKind};
@@ -17,7 +18,16 @@ use tokio::io::{stdin, AsyncReadExt};
 pub enum Cmd {
     /// List all profiles
     #[structopt(name = "list")]
-    List,
+    List {
+        /// Set the display type
+        ///
+        /// The display type can be one of the following:
+        /// tabular: display content in a table format
+        /// json: return data in json format
+        /// yaml: return data in yaml format
+        #[structopt(short = "d", long = "display", default_value = "tabular")]
+        display_type: DisplayType,
+    },
     /// Load a new profile from stdin
     #[structopt(name = "load")]
     Load,
@@ -26,24 +36,29 @@ pub enum Cmd {
     Remove { name: String },
 }
 
+async fn list_profiles(display_type: DisplayType) -> Result<(), ImlManagerCliError> {
+    let profiles: ApiList<ServerProfile> = wrap_fut("Fetching profiles...", get_all()).await?;
+
+    tracing::debug!("profiles: {:?}", profiles);
+
+    let term = Term::stdout();
+
+    tracing::debug!("Profiles: {:?}", profiles);
+
+    let x = profiles.objects.into_display_type(display_type);
+
+    term.write_line(&x).unwrap();
+
+    Ok(())
+}
+
 pub async fn cmd(cmd: Option<Cmd>) -> Result<(), ImlManagerCliError> {
     match cmd {
-        None | Some(Cmd::List) => {
-            let profiles: ApiList<ServerProfile> =
-                wrap_fut("Fetching profiles...", get_all()).await?;
-
-            tracing::debug!("profiles: {:?}", profiles);
-
-            let table = generate_table(
-                &["Profile", "Name", "Description"],
-                profiles
-                    .objects
-                    .into_iter()
-                    .filter(|x| x.user_selectable)
-                    .map(|x| vec![x.name, x.ui_name, x.ui_description]),
-            );
-
-            table.printstd();
+        None => {
+            list_profiles(DisplayType::Tabular).await?;
+        }
+        Some(Cmd::List { display_type }) => {
+            list_profiles(display_type).await?;
         }
         Some(Cmd::Load) => {
             let pool = iml_orm::pool()?;
@@ -57,7 +72,7 @@ pub async fn cmd(cmd: Option<Cmd>) -> Result<(), ImlManagerCliError> {
                 .get_results_async(&pool)
                 .await?;
 
-            if &xs.len() != &profile.repolist.len() {
+            if xs.len() != profile.repolist.len() {
                 return Err(Error::new(
                     ErrorKind::NotFound,
                     format!("Repos not found for profile {}", profile.name),

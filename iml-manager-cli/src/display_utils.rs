@@ -4,11 +4,13 @@
 
 use console::{style, Term};
 use futures::{Future, FutureExt};
-use iml_wire_types::Command;
+use iml_wire_types::{Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration};
 use indicatif::ProgressBar;
+use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
 use spinners::{Spinner, Spinners};
-use std::fmt::Display;
+use std::{fmt::Display, io, str::FromStr};
+use structopt::StructOpt;
 
 pub fn wrap_fut<T>(msg: &str, fut: impl Future<Output = T>) -> impl Future<Output = T> {
     let pb = ProgressBar::new_spinner();
@@ -87,4 +89,151 @@ where
     }
 
     table
+}
+
+pub fn usage(
+    free: Option<u64>,
+    total: Option<u64>,
+    formatter: fn(f64, Option<usize>) -> String,
+) -> String {
+    match (free, total) {
+        (Some(free), Some(total)) => format!(
+            "{} / {}",
+            formatter(total as f64 - free as f64, Some(0)),
+            formatter(total as f64, Some(0))
+        ),
+        (None, Some(total)) => format!("Calculating ... / {}", formatter(total as f64, Some(0))),
+        _ => "Calculating ...".to_string(),
+    }
+}
+
+pub trait IntoTable {
+    fn into_table(self) -> Table;
+}
+
+impl IntoTable for Vec<Host> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &["Id", "FQDN", "State", "Nids"],
+            self.into_iter().map(|h| {
+                vec![
+                    h.id.to_string(),
+                    h.fqdn,
+                    h.state,
+                    h.nids.unwrap_or_default().join(" "),
+                ]
+            }),
+        )
+    }
+}
+
+impl IntoTable for Vec<StratagemConfiguration> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &["Id", "Filesystem", "State", "Interval", "Purge", "Report"],
+            self.into_iter().map(|x| {
+                vec![
+                    x.id.to_string(),
+                    x.filesystem,
+                    x.state,
+                    x.interval.to_string(),
+                    x.purge_duration.map(|x| x.to_string()).unwrap_or_default(),
+                    x.report_duration.map(|x| x.to_string()).unwrap_or_default(),
+                ]
+            }),
+        )
+    }
+}
+
+impl IntoTable for Vec<OstPool> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &["Filesystem", "Pool Name", "OST Count"],
+            self.into_iter()
+                .map(|x| vec![x.filesystem, x.name, x.osts.len().to_string()]),
+        )
+    }
+}
+
+impl IntoTable for Vec<Filesystem> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &[
+                "Name", "State", "Space", "Inodes", "Clients", "MDTs", "OSTs",
+            ],
+            self.into_iter().map(|x| {
+                vec![
+                    x.label,
+                    x.state,
+                    usage(
+                        x.bytes_free.map(|x| x as u64),
+                        x.bytes_total.map(|x| x as u64),
+                        format_bytes,
+                    ),
+                    usage(x.files_free, x.files_total, format_number),
+                    format!("{}", x.client_count.unwrap_or(0)),
+                    x.mdts.len().to_string(),
+                    x.osts.len().to_string(),
+                ]
+            }),
+        )
+    }
+}
+
+impl IntoTable for Vec<ServerProfile> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &["Profile", "Name", "Description"],
+            self.into_iter()
+                .filter(|x| x.user_selectable)
+                .map(|x| vec![x.name, x.ui_name, x.ui_description]),
+        )
+    }
+}
+
+pub trait IntoDisplayType {
+    fn into_display_type(self, display_type: DisplayType) -> String;
+}
+
+impl<T: IntoTable + serde::Serialize> IntoDisplayType for T {
+    fn into_display_type(self, display_type: DisplayType) -> String {
+        match display_type {
+            DisplayType::Json => {
+                serde_json::to_string_pretty(&self).expect("Cannot serialize item to JSON")
+            }
+            DisplayType::Yaml => {
+                serde_yaml::to_string(&self).expect("Cannot serialize item to YAML")
+            }
+            DisplayType::Tabular => self.into_table().to_string(),
+        }
+    }
+}
+
+#[derive(StructOpt, Debug)]
+pub enum DisplayType {
+    Json,
+    Yaml,
+    Tabular,
+}
+
+impl Default for DisplayType {
+    fn default() -> Self {
+        Self::Tabular
+    }
+}
+
+impl FromStr for DisplayType {
+    type Err = io::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "json" => Ok(Self::Json),
+            "yaml" => Ok(Self::Yaml),
+            "tabular" => Ok(Self::Tabular),
+            _ => Err(Self::Err::new(
+                io::ErrorKind::InvalidInput,
+                "Couldn't parse display type.",
+            )),
+        }
+    }
 }

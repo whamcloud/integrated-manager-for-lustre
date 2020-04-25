@@ -4,7 +4,7 @@
 
 use crate::{
     api_utils::{delete, get, get_all, get_one, post, put, wait_for_cmds_success},
-    display_utils::{generate_table, wrap_fut},
+    display_utils::{wrap_fut, DisplayType, IntoDisplayType as _},
     error::ImlManagerCliError,
 };
 use console::{style, Term};
@@ -33,6 +33,14 @@ pub enum OstPoolCommand {
     List {
         #[structopt(name = "FSNAME")]
         fsname: Option<String>,
+        /// Set the display type
+        ///
+        /// The display type can be one of the following:
+        /// tabular: display content in a table format
+        /// json: return data in json format
+        /// yaml: return data in yaml format
+        #[structopt(short = "d", long = "display", default_value = "tabular")]
+        display_type: DisplayType,
     },
 
     /// Show Pool Details
@@ -75,6 +83,7 @@ pub enum OstPoolCommand {
 async fn pool_lookup(fsname: &str, poolname: &str) -> Result<OstPoolApi, ImlManagerCliError> {
     let fs: Filesystem =
         wrap_fut("Fetching Filesystem ...", get_one(vec![("name", fsname)])).await?;
+
     let mut pool: OstPoolApi = wrap_fut(
         "Fetching OstPool...",
         get_one(vec![
@@ -83,6 +92,7 @@ async fn pool_lookup(fsname: &str, poolname: &str) -> Result<OstPoolApi, ImlMana
         ]),
     )
     .await?;
+
     let osts: Vec<Ost> = try_join_all(
         pool.ost
             .osts
@@ -94,11 +104,15 @@ async fn pool_lookup(fsname: &str, poolname: &str) -> Result<OstPoolApi, ImlMana
     Ok(pool)
 }
 
-async fn ostpool_list(fsname: Option<String>) -> Result<(), ImlManagerCliError> {
-    let xs: Vec<_> = match fsname {
+async fn ostpool_list(
+    fsname: Option<String>,
+    display_type: DisplayType,
+) -> Result<(), ImlManagerCliError> {
+    let xs: Vec<OstPool> = match fsname {
         Some(fsname) => {
             let fs: Filesystem =
                 wrap_fut("Fetching Filesystem ...", get_one(vec![("name", &fsname)])).await?;
+
             let pools: ApiList<OstPoolApi> = wrap_fut(
                 "Fetching OstPools...",
                 get(
@@ -107,10 +121,14 @@ async fn ostpool_list(fsname: Option<String>) -> Result<(), ImlManagerCliError> 
                 ),
             )
             .await?;
+
             pools
                 .objects
                 .into_iter()
-                .map(|p| vec![fsname.clone(), p.ost.name, p.ost.osts.len().to_string()])
+                .map(|mut x| {
+                    x.ost.name = fs.name.clone();
+                    x.ost
+                })
                 .collect()
         }
         None => {
@@ -137,20 +155,27 @@ async fn ostpool_list(fsname: Option<String>) -> Result<(), ImlManagerCliError> 
             pools
                 .objects
                 .into_iter()
-                .filter_map(move |p| {
+                .filter_map(move |mut p| {
                     fs.objects
                         .iter()
                         .find(|f| f.resource_uri == p.ost.filesystem)
                         .map(move |fs| {
-                            vec![fs.name.clone(), p.ost.name, p.ost.osts.len().to_string()]
+                            p.ost.name = fs.name.clone();
+
+                            p.ost
                         })
                 })
                 .collect()
         }
     };
 
-    let table = generate_table(&["Filesystem", "Pool Name", "OST Count"], xs);
-    table.printstd();
+    let term = Term::stdout();
+
+    tracing::debug!("Ost Pools: {:?}", xs);
+
+    let x = xs.into_display_type(display_type);
+
+    term.write_line(&x).unwrap();
 
     Ok(())
 }
@@ -187,7 +212,10 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), ImlManagerCliErr
     let term = Term::stdout();
 
     match command {
-        OstPoolCommand::List { fsname } => ostpool_list(fsname).await?,
+        OstPoolCommand::List {
+            fsname,
+            display_type,
+        } => ostpool_list(fsname, display_type).await?,
         OstPoolCommand::Show { fsname, poolname } => ostpool_show(fsname, poolname).await?,
         OstPoolCommand::Create {
             fsname,

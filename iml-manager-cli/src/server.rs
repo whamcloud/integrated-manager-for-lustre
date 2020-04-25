@@ -6,6 +6,7 @@ use crate::{
     api_utils::{get, get_all, get_hosts, post, put, wait_for_cmds, wait_for_cmds_success},
     display_utils::{
         display_cancelled, display_error, format_error, format_success, generate_table, wrap_fut,
+        DisplayType, IntoDisplayType as _,
     },
     error::ImlManagerCliError,
     profile,
@@ -65,7 +66,16 @@ pub struct AddHosts {
 pub enum ServerCommand {
     /// List all configured storage servers
     #[structopt(name = "list")]
-    List,
+    List {
+        /// Set the display type
+        ///
+        /// The display type can be one of the following:
+        /// tabular: display content in a table format
+        /// json: return data in json format
+        /// yaml: return data in yaml format
+        #[structopt(short = "d", long = "display", default_value = "tabular")]
+        display_type: DisplayType,
+    },
     /// Add new servers to IML
     #[structopt(name = "add")]
     Add(AddHosts),
@@ -282,22 +292,14 @@ async fn wait_till_agent_starts(
     Ok(())
 }
 
-fn list_server(hosts: ApiList<Host>) {
+fn list_server(hosts: Vec<Host>, display_type: DisplayType) {
+    let term = Term::stdout();
+
     tracing::debug!("Hosts: {:?}", hosts);
 
-    let table = generate_table(
-        &["Id", "FQDN", "State", "Nids"],
-        hosts.objects.into_iter().map(|h| {
-            vec![
-                h.id.to_string(),
-                h.fqdn,
-                h.state,
-                h.nids.unwrap_or_default().join(" "),
-            ]
-        }),
-    );
+    let x = hosts.into_display_type(display_type);
 
-    table.printstd();
+    term.write_line(&x).unwrap();
 }
 
 fn get_profile_by_name<'a>(xs: &'a [ServerProfile], name: &str) -> Option<&'a ServerProfile> {
@@ -707,7 +709,7 @@ fn get_agent_profile<'a>(
     };
 
     let x = xs
-        .into_iter()
+        .iter()
         .find(|x| x.name == name)
         .ok_or_else(|| Error::new(ErrorKind::NotFound, format!("{} profile not found.", name)))?;
 
@@ -716,9 +718,9 @@ fn get_agent_profile<'a>(
 
 pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError> {
     match command {
-        ServerCommand::List => {
+        ServerCommand::List { display_type } => {
             let hosts: ApiList<Host> = wrap_fut("Fetching hosts...", get_hosts()).await?;
-            list_server(hosts);
+            list_server(hosts.objects, display_type);
         }
         ServerCommand::Add(config) => add_server(config).await?,
         ServerCommand::Remove(config) => {

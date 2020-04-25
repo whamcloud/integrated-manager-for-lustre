@@ -4,12 +4,13 @@
 
 use crate::{
     api_utils::{delete, first, get, post, put, wait_for_cmd},
-    display_utils::{display_cmd_state, generate_table, start_spinner},
+    display_utils::{display_cmd_state, start_spinner, DisplayType, IntoDisplayType as _},
     error::{
         DurationParseError, ImlManagerCliError, RunStratagemCommandResult,
         RunStratagemValidationError,
     },
 };
+use console::Term;
 use iml_manager_client::ImlManagerClientError;
 use iml_wire_types::{ApiList, CmdWrapper, EndpointName, Filesystem, StratagemConfiguration};
 use structopt::StructOpt;
@@ -28,7 +29,16 @@ pub enum StratagemCommand {
 pub enum StratagemInterval {
     /// List all existing Stratagem intervals
     #[structopt(name = "list")]
-    List,
+    List {
+        /// Set the display type
+        ///
+        /// The display type can be one of the following:
+        /// tabular: display content in a table format
+        /// json: return data in json format
+        /// yaml: return data in yaml format
+        #[structopt(short = "d", long = "display", default_value = "tabular")]
+        display_type: DisplayType,
+    },
     /// Add a new Stratagem interval
     #[structopt(name = "add")]
     Add(StratagemIntervalConfig),
@@ -147,6 +157,19 @@ async fn handle_cmd_resp(
     }
 }
 
+fn list_stratagem_configurations(
+    stratagem_configs: Vec<StratagemConfiguration>,
+    display_type: DisplayType,
+) {
+    let term = Term::stdout();
+
+    tracing::debug!("Stratagem Configurations: {:?}", stratagem_configs);
+
+    let x = stratagem_configs.into_display_type(display_type);
+
+    term.write_line(&x).unwrap();
+}
+
 pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCliError> {
     match command {
         StratagemCommand::Scan(data) => {
@@ -165,7 +188,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
             display_cmd_state(&command);
         }
         StratagemCommand::StratagemInterval(x) => match x {
-            StratagemInterval::List => {
+            StratagemInterval::List { display_type } => {
                 let stop_spinner = start_spinner("Finding existing intervals...");
 
                 let r: ApiList<StratagemConfiguration> = get(
@@ -181,21 +204,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
                     return Ok(());
                 }
 
-                let table = generate_table(
-                    &["Id", "Filesystem", "State", "Interval", "Purge", "Report"],
-                    r.objects.into_iter().map(|x| {
-                        vec![
-                            x.id.to_string(),
-                            x.filesystem,
-                            x.state,
-                            x.interval.to_string(),
-                            x.purge_duration.map(|x| x.to_string()).unwrap_or_default(),
-                            x.report_duration.map(|x| x.to_string()).unwrap_or_default(),
-                        ]
-                    }),
-                );
-
-                table.printstd();
+                list_stratagem_configurations(r.objects, display_type);
             }
             StratagemInterval::Add(c) => {
                 let r = post(StratagemConfiguration::endpoint_name(), c).await?;
