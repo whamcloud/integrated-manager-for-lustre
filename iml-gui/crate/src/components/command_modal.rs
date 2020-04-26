@@ -883,7 +883,6 @@ impl Model {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dependency_tree::shuffle;
     use rand_core::{RngCore, SeedableRng};
     use rand_xoshiro::Xoroshiro64Star;
 
@@ -975,50 +974,39 @@ mod tests {
     fn test_async_handlers_consistency() {
         let mut rng = Xoroshiro64Star::seed_from_u64(485369);
         let db = build_db();
-
         let mut model = Model::default();
         let cmd_ids = db.all_cmds.iter().map(|x| x.id).collect::<Vec<_>>();
-        let mut permutation = vec![1, 2, 3];
-        let selects = vec![
-            Select::None,
-            Select::Command(2),
-            Select::Command(1),
-            Select::Command(3),
-            Select::Command(4),
-            Select::CommandJob(1, vec![10]),
-            Select::CommandJob(1, vec![10, 11]),
-            Select::CommandJobSteps(1, vec![10, 11], vec![21]),
-            Select::CommandJobSteps(1, vec![10, 11], vec![20, 21]),
-        ];
+        let selects = generate_random_selects(&db, &mut rng, 100);
         for select in selects {
-            let cmd_id = cmd_ids[rng.next_u32() as usize % cmd_ids.len()];
-            let (c, j, s) = prepare_subset(&db, cmd_id);
-            model.clear();
-            model.select = select.clone();
-            model.assign_commands(&c);
-            model.assign_jobs(&j);
-            model.assign_steps(&s);
-            let expected_cmd = model.commands_view.clone();
-            let expected_jobs = model.jobs_graph.clone();
-            let expected_steps = model.steps_view.clone();
+            let permutations = vec![[1, 2, 3], [1, 3, 2], [2, 1, 3], [2, 3, 1], [3, 1, 2], [3, 2, 1]];
+            for permutation in permutations {
+                let cmd_id = cmd_ids[rng.next_u32() as usize % cmd_ids.len()];
+                let (c, j, s) = prepare_subset(&db, cmd_id);
+                model.clear();
+                model.select = select.clone();
+                model.assign_commands(&c);
+                model.assign_jobs(&j);
+                model.assign_steps(&s);
+                let expected_cmd = model.commands_view.clone();
+                let expected_jobs = model.jobs_graph.clone();
+                let expected_steps = model.steps_view.clone();
 
-            model.clear();
-            model.select = select.clone();
-            shuffle(&mut permutation, &mut rng);
-
-            // we simulate, that FetchCommands, FetchJobs and FetchSteps come in arbitrary order
-            for p in &permutation {
-                match p {
-                    1 => model.assign_commands(&c),
-                    2 => model.assign_jobs(&j),
-                    3 => model.assign_steps(&s),
-                    _ => unreachable!(),
+                model.clear();
+                model.select = select.clone();
+                // we simulate, that FetchCommands, FetchJobs and FetchSteps come in arbitrary order
+                for p in &permutation {
+                    match p {
+                        1 => model.assign_commands(&c),
+                        2 => model.assign_jobs(&j),
+                        3 => model.assign_steps(&s),
+                        _ => unreachable!(),
+                    }
                 }
+                // compare debug strings since there is no Eq instance for iml_wire_types
+                assert_eq!(format!("{:?}", model.commands_view), format!("{:?}", expected_cmd));
+                assert_eq!(format!("{:?}", model.jobs_graph), format!("{:?}", expected_jobs));
+                assert_eq!(format!("{:?}", model.steps_view), format!("{:?}", expected_steps));
             }
-            // compare debug strings since there is no Eq instance for iml_wire_types
-            assert_eq!(format!("{:?}", model.commands_view), format!("{:?}", expected_cmd));
-            assert_eq!(format!("{:?}", model.jobs_graph), format!("{:?}", expected_jobs));
-            assert_eq!(format!("{:?}", model.steps_view), format!("{:?}", expected_steps));
         }
     }
 
@@ -1128,6 +1116,55 @@ mod tests {
         let steps = db.select_steps(&j_ids);
         let cmds = db.all_cmds.clone(); // use all roots
         (cmds, jobs, steps)
+    }
+
+    fn generate_random_selects<R: RngCore>(db: &Db, rng: &mut R, n: u32) -> Vec<Select> {
+        let cmd_ids = db.all_cmds.iter().map(|x| x.id).collect::<Vec<_>>();
+        let job_ids = db.all_jobs.iter().map(|x| x.id).collect::<Vec<_>>();
+        let step_ids = db.all_steps.iter().map(|x| x.id).collect::<Vec<_>>();
+        fn sample<R: RngCore>(rng: &mut R, ids: &[u32], m: usize) -> Vec<u32> {
+            let mut hs = HashSet::with_capacity(m);
+            let n = ids.len();
+            if n < m {
+                panic!("Must be m <= ids.len()")
+            }
+            for _ in 0..m {
+                loop {
+                    let id = ids[rng.next_u32() as usize % n];
+                    if hs.insert(id) {
+                        break;
+                    }
+                }
+            }
+            let mut sam = hs.into_iter().collect::<Vec<_>>();
+            sam.sort();
+            sam
+        }
+        (0..n)
+            .into_iter()
+            .map(|_| match rng.next_u32() % 4 {
+                0 => Select::None,
+                1 => {
+                    let sel_cmd_id = sample(rng, &cmd_ids, 1)[0];
+                    Select::Command(sel_cmd_id)
+                }
+                2 => {
+                    let nj = (rng.next_u32() % 4 + 1) as usize;
+                    let sel_cmd_id = sample(rng, &cmd_ids, 1)[0];
+                    let sel_job_ids = sample(rng, &job_ids, nj);
+                    Select::CommandJob(sel_cmd_id, sel_job_ids)
+                }
+                3 => {
+                    let nj = (rng.next_u32() % 4 + 1) as usize;
+                    let ns = (rng.next_u32() % 4 + 1) as usize;
+                    let sel_cmd_id = sample(rng, &cmd_ids, 1)[0];
+                    let sel_job_ids = sample(rng, &job_ids, nj);
+                    let sel_step_ids = sample(rng, &step_ids, ns);
+                    Select::CommandJobSteps(sel_cmd_id, sel_job_ids, sel_step_ids)
+                }
+                _ => Select::None,
+            })
+            .collect()
     }
 
     fn extract_ids<T: EndpointName>(uris: &[String]) -> Vec<u32> {
