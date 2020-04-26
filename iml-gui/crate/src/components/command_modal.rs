@@ -200,7 +200,12 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
             // the user has opened the info on the command,
             // we need the corresponding jobs to build the dependency graph
             let cmd_ids = extract_sorted_keys(&model.commands);
-            let job_ids = model.commands[cmd_id].deps().to_vec();
+            let job_ids = [cmd_id]
+                .iter()
+                .filter(|id| model.commands.contains_key(id))
+                .flat_map(|id| model.commands[id].deps())
+                .copied()
+                .collect::<Vec<u32>>();
             orders
                 .skip()
                 .perform_cmd(fetch_the_batch(job_ids, |x| Msg::FetchedJobs(Box::new(x))))
@@ -210,10 +215,16 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
             // the user has opened the info on the command and selected the corresponding job
             // or the user has opened the info on the command, selected a job and expanded some of the steps
             let cmd_ids = extract_sorted_keys(&model.commands);
-            let job_ids = model.commands[cmd_id].deps().to_vec();
+            let job_ids = [cmd_id]
+                .iter()
+                .filter(|id| model.commands.contains_key(id))
+                .flat_map(|id| model.commands[id].deps())
+                .copied()
+                .collect::<Vec<u32>>();
             let step_ids = job_ids
                 .iter()
-                .flat_map(|job_id| model.jobs[job_id].deps())
+                .filter(|id| model.commands.contains_key(id))
+                .flat_map(|id| model.jobs[id].deps())
                 .copied()
                 .collect::<Vec<u32>>();
             orders

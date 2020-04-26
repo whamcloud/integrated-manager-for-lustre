@@ -171,7 +171,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand_core::{SeedableRng, RngCore};
+    use rand_core::{RngCore, SeedableRng};
     use rand_xoshiro::Xoroshiro64Star;
     use std::hash::Hash;
 
