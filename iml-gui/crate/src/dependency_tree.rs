@@ -1,4 +1,3 @@
-use rand_core::RngCore;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -23,15 +22,6 @@ impl<K, T: Deps<K>> Deps<K> for Arc<T> {
     }
 }
 
-/// `deps` is to iterate through in the fixed order
-/// `dset` is to check the membership
-///
-/// Please note that the contents of `deps` and `dset` should be always equal, i.e.
-/// ```norun
-/// let set1 = HashSet::from_iter(self.deps.iter().cloned();
-/// let set2 = self.deps;
-/// asssert_eq!()
-/// ```
 #[derive(Clone, Debug)]
 pub struct Rich<K: Hash + Eq, T> {
     pub id: K,
@@ -178,17 +168,10 @@ where
         .collect()
 }
 
-pub fn shuffle<R: RngCore, T>(slice: &mut [T], rng: &mut R) {
-    for i in (1..slice.len()).rev() {
-        let j = (rng.next_u64() as usize) % (i + 1);
-        slice.swap(i, j);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand_core::SeedableRng;
+    use rand_core::{SeedableRng, RngCore};
     use rand_xoshiro::Xoroshiro64Star;
     use std::hash::Hash;
 
@@ -372,6 +355,13 @@ mod tests {
         let ellipsis = if ctx.is_new { "" } else { "..." };
         let indent = "  ".repeat(ctx.indent);
         format!("{}{}: {}{}", indent, node.id(), node.description, ellipsis)
+    }
+
+    pub fn shuffle<R: RngCore, T>(slice: &mut [T], rng: &mut R) {
+        for i in (1..slice.len()).rev() {
+            let j = (rng.next_u64() as usize) % (i + 1);
+            slice.swap(i, j);
+        }
     }
 
     const SMALL_TREE: &'static str = r#"48: Setup managed host oss2.local
