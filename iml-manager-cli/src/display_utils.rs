@@ -4,7 +4,9 @@
 
 use console::{style, Term};
 use futures::{Future, FutureExt};
-use iml_wire_types::{Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration};
+use iml_wire_types::{
+    Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration, Volume,
+};
 use indicatif::ProgressBar;
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
@@ -187,6 +189,42 @@ impl IntoTable for Vec<ServerProfile> {
             self.into_iter()
                 .filter(|x| x.user_selectable)
                 .map(|x| vec![x.name, x.ui_name, x.ui_description]),
+        )
+    }
+}
+
+impl IntoTable for Vec<Volume> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &[
+                "Label",
+                "Size",
+                "Primary Host",
+                "Primary Path",
+                "Failover Host",
+                "Failover Path",
+            ],
+            self.into_iter().map(|x| {
+                let primary = x
+                    .volume_nodes
+                    .iter()
+                    .find(|vn| vn.primary)
+                    .map_or_else(|| ("", ""), |v| (&v.host_label, &v.path));
+                let failover = x
+                    .volume_nodes
+                    .iter()
+                    .find(|vn| !vn.primary)
+                    .map_or_else(|| ("", ""), |v| (&v.host_label, &v.path));
+
+                vec![
+                    x.label,
+                    x.size.unwrap_or_default().to_string(),
+                    primary.0.to_string(),
+                    primary.1.to_string(),
+                    failover.0.to_string(),
+                    failover.1.to_string(),
+                ]
+            }),
         )
     }
 }

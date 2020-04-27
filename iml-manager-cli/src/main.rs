@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use iml_manager_cli::{
+    devices::{self, devices_cli},
     display_utils::display_error,
     filesystem::{self, filesystem_cli},
     server::{self, server_cli},
@@ -16,6 +17,12 @@ use structopt::StructOpt;
 #[structopt(name = "iml", setting = structopt::clap::AppSettings::ColoredHelp)]
 /// The Integrated Manager for Lustre CLI
 pub enum App {
+    #[structopt(name = "devices")]
+    /// Work with devices
+    Devices {
+        #[structopt(subcommand)]
+        command: devices::DevicesCommand,
+    },
     #[structopt(name = "stratagem")]
     /// Work with Stratagem server
     Stratagem {
@@ -50,6 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::from_path("/var/lib/chroma/iml-settings.conf").expect("Could not load cli env");
 
     let r = match matches {
+        App::Devices { command } => devices_cli(command).await,
         App::Stratagem { command } => stratagem_cli(command).await,
         App::Server { command } => server_cli(command).await,
         App::UpdateRepoFile(config) => update_repo_file_cli(config).await,
