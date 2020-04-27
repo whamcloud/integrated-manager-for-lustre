@@ -772,6 +772,8 @@ pub fn is_subset<T: PartialEq>(part: &[T], all: &[T]) -> bool {
 
 impl Model {
     fn clear(&mut self) {
+        self.tree_cancel = None;
+        self.commands_loading = false;
         self.commands.clear();
         self.commands_view.clear();
         self.jobs.clear();
@@ -823,11 +825,7 @@ impl Model {
             }
             Select::CommandJob(i, js) => {
                 let cmd0 = self.commands.get(i);
-                let jobs0 = if is_subset(js, &extract_sorted_keys(&self.jobs)) {
-                    Some(())
-                } else {
-                    None
-                };
+                let jobs0 = if is_subset(js, &job_ids) { Some(()) } else { None };
                 match (cmd0, jobs0) {
                     (Some(cmd), Some(_)) => {
                         ls[0] = true;
@@ -841,16 +839,12 @@ impl Model {
             }
             Select::CommandJobSteps(i, js, ks) => {
                 let cmd0 = self.commands.get(i);
-                let jobs0 = if is_subset(js, &extract_sorted_keys(&self.jobs)) {
+                let jobs0 = if is_subset(js, &job_ids) {
                     Some(js.iter().map(|j| Arc::clone(&self.jobs[j])).collect::<Vec<_>>())
                 } else {
                     None
                 };
-                let steps0 = if is_subset(ks, &extract_sorted_keys(&self.steps)) {
-                    Some(())
-                } else {
-                    None
-                };
+                let steps0 = if is_subset(ks, &step_ids) { Some(()) } else { None };
                 match (cmd0, jobs0, steps0) {
                     (Some(cmd), Some(jobs), Some(_)) => {
                         ls[0] = true;
@@ -869,7 +863,16 @@ impl Model {
                 }
             }
         }
-        (ls[0], ls[1], ls[2])
+        // make ensure the consistency levels are ordered
+        if ls[0] && ls[1] && ls[2] {
+            (true, true, true)
+        } else if ls[0] && ls[1] {
+            (true, true, false)
+        } else if ls[0] {
+            (true, false, false)
+        } else {
+            (false, false, false)
+        }
     }
 
     fn refresh_view(&mut self, layers: (bool, bool, bool)) {
@@ -983,13 +986,13 @@ mod tests {
     /// and the test checks this.
     #[test]
     fn test_async_handlers_consistency() {
-        let mut rng = Xoroshiro64Star::seed_from_u64(485369);
+        let mut rng = Xoroshiro64Star::seed_from_u64(555);
         let db = build_db();
         let mut model = Model::default();
         let cmd_ids = db.all_cmds.iter().map(|x| x.id).collect::<Vec<_>>();
-        let selects = generate_random_selects(&db, &mut rng, 100);
+        let selects = generate_random_selects(&db, &mut rng, 500);
         for select in selects {
-            let permutations = vec![[1, 2, 3], [1, 3, 2], [2, 1, 3], [2, 3, 1], [3, 1, 2], [3, 2, 1]];
+            let permutations = vec![[1, 3, 2], [2, 1, 3], [2, 3, 1], [3, 1, 2], [3, 2, 1]];
             for permutation in permutations {
                 let cmd_id = cmd_ids[rng.next_u32() as usize % cmd_ids.len()];
                 let (c, j, s) = prepare_subset(&db, cmd_id);
@@ -1153,19 +1156,19 @@ mod tests {
         }
         (0..n)
             .into_iter()
-            .map(|_| match rng.next_u32() % 4 {
+            .map(|_| match rng.next_u32() % 9 {
                 0 => Select::None,
-                1 => {
+                1 | 2 => {
                     let sel_cmd_id = sample(rng, &cmd_ids, 1)[0];
                     Select::Command(sel_cmd_id)
                 }
-                2 => {
+                3 | 4 | 5 => {
                     let nj = (rng.next_u32() % 4 + 1) as usize;
                     let sel_cmd_id = sample(rng, &cmd_ids, 1)[0];
                     let sel_job_ids = sample(rng, &job_ids, nj);
                     Select::CommandJob(sel_cmd_id, sel_job_ids)
                 }
-                3 => {
+                6 | 7 | 8 => {
                     let nj = (rng.next_u32() % 4 + 1) as usize;
                     let ns = (rng.next_u32() % 4 + 1) as usize;
                     let sel_cmd_id = sample(rng, &cmd_ids, 1)[0];
