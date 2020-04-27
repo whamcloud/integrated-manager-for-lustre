@@ -10,8 +10,12 @@ use chrono::DateTime;
 use ipnetwork::IpNetwork;
 use serde_json;
 
-#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug))]
+#[cfg_attr(
+    feature = "postgres-interop",
+    derive(Debug, PartialEq, FromSqlRow, AsExpression)
+)]
 #[derive(serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "postgres-interop", sql_type = "SqlLustreFid")]
 pub struct LustreFid {
     pub seq: u64,
     pub oid: u32,
@@ -532,7 +536,10 @@ pub struct ChromaCoreFailbacktargetjob {
     pub target_id: i32,
 }
 
-#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
+#[cfg_attr(
+    feature = "postgres-interop",
+    derive(Queryable, Debug, Insertable, Identifiable)
+)]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_fidtaskqueue")]
 pub struct ChromaCoreFidtaskqueue {

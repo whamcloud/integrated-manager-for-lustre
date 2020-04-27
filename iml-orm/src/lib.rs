@@ -16,7 +16,13 @@ pub mod schema;
 pub mod alerts;
 
 #[cfg(feature = "postgres-interop")]
+pub mod fidtaskqueue;
+
+#[cfg(feature = "postgres-interop")]
 pub mod hosts;
+
+#[cfg(feature = "postgres-interop")]
+pub mod lustrefid;
 
 #[cfg(feature = "postgres-interop")]
 pub mod profile;

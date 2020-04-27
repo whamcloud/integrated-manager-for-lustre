@@ -1,6 +1,6 @@
 #[derive(SqlType)]
 #[postgres(type_name = "lustre_fid")]
-pub struct LustreFid;
+pub struct SqlLustreFid;
 
 table! {
     auth_group (id) {
@@ -377,11 +377,11 @@ table! {
 
 table! {
     use diesel::sql_types::*;
-    use super::LustreFid;
+    use super::SqlLustreFid;
 
     chroma_core_fidtaskqueue (id) {
         id -> Int4,
-        fid -> LustreFid,
+        fid -> SqlLustreFid,
         data -> Jsonb,
         errno -> Int2,
         task_id -> Int4,
@@ -1305,8 +1305,8 @@ table! {
     chroma_core_task (id) {
         id -> Int4,
         name -> Varchar,
-        start -> Timestamptz,
-        finish -> Timestamptz,
+        start -> Nullable<Timestamptz>,
+        finish -> Nullable<Timestamptz>,
         state -> Varchar,
         fids_total -> Int8,
         fids_completed -> Int8,
