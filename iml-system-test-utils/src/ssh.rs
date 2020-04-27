@@ -7,6 +7,7 @@ use iml_cmd::{CheckedChildExt, CheckedCommandExt, CmdError};
 use std::{
     process::{Output, Stdio},
     str,
+    time::{SystemTime, UNIX_EPOCH},
 };
 use tokio::{fs::canonicalize, io::AsyncWriteExt, process::Command};
 
@@ -177,8 +178,24 @@ pub async fn create_iml_diagnostics<'a, 'b>(
     hosts: &'b [&'a str],
     prefix: &'a str,
 ) -> Result<(), CmdError> {
+    let path_buf = canonicalize("../vagrant/").await?;
+    let path = path_buf.as_path().to_str().expect("Couldn't get path.");
+
     println!("Creating diagnostics on: {:?}", hosts);
     ssh_script_parallel(hosts, "scripts/create_iml_diagnostics.sh", &[prefix]).await?;
 
-    scp_parallel(hosts, "/var/tmp/*sosreport*", "/tmp").await
+    let now = SystemTime::now();
+    let ts = now.duration_since(UNIX_EPOCH).unwrap().as_millis();
+
+    let report_dir = format!("sosreport_{}", ts);
+    let mut mkdir = Command::new("mkdir");
+    mkdir.current_dir(path);
+    mkdir.arg(&report_dir);
+
+    scp_parallel(
+        hosts,
+        "/var/tmp/*sosreport*",
+        format!("./{}/", &report_dir).as_str(),
+    )
+    .await
 }
