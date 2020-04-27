@@ -177,12 +177,8 @@ pub async fn create_iml_diagnostics<'a, 'b>(
     hosts: &'b [&'a str],
     prefix: &'a str,
 ) -> Result<(), CmdError> {
-    ssh_script_parallel(
-        hosts,
-        "scripts/create_iml_diagnostics.sh",
-        &["10.73.10.1", prefix],
-    )
-    .await?;
+    println!("Creating diagnostics on: {:?}", hosts);
+    ssh_script_parallel(hosts, "scripts/create_iml_diagnostics.sh", &[prefix]).await?;
 
-    scp_parallel(hosts, "/var/tmp/sosreport*", "/tmp").await
+    scp_parallel(hosts, "/var/tmp/*sosreport*", "/tmp").await
 }
