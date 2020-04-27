@@ -129,6 +129,8 @@ Vagrant.configure('2') do |config|
 
     provision_fence_agents adm
 
+    create_iml_diagnostics adm
+
       adm.vm.synced_folder '../',
                            '/integrated-manager-for-lustre/',
                            type: 'rsync',
@@ -222,6 +224,8 @@ Vagrant.configure('2') do |config|
       mds.vm.provider 'virtualbox' do |vbx|
         vbx.name = "mds#{i}"
       end
+
+      create_iml_diagnostics mds
 
       provision_lnet_net mds, "1#{i}"
 
@@ -449,6 +453,8 @@ Vagrant.configure('2') do |config|
       oss.vm.provider 'virtualbox' do |vbx|
         vbx.name = "oss#{i}"
       end
+
+      create_iml_diagnostics oss
 
       # Lustre / application network
       provision_lnet_net oss, "2#{i}"
@@ -1071,5 +1077,13 @@ def wait_for_ntp_docker(config)
                           type: 'shell',
                           run: 'never',
                           path: 'scripts/wait_for_ntp.sh',
+                          args: ["10.73.10.1"]
+end
+
+def create_iml_diagnostics(config)
+  config.vm.provision 'create-iml-diagnostics',
+                          type: 'shell',
+                          run: 'never',
+                          path: 'scripts/create_iml_diagnostics.sh',
                           args: ["10.73.10.1"]
 end

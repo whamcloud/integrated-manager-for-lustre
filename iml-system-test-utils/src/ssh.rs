@@ -10,6 +10,35 @@ use std::{
 };
 use tokio::{fs::canonicalize, io::AsyncWriteExt, process::Command};
 
+pub async fn scp(from: String, to: String) -> Result<(), CmdError> {
+    println!("transferring file from {} to {}", from, to);
+
+    let path = canonicalize("../vagrant/").await?;
+
+    let mut x = Command::new("scp");
+    x.current_dir(path);
+
+    x.arg("-i")
+        .arg("./id_rsa")
+        .arg(from)
+        .arg(to)
+        .checked_status()
+        .await?;
+
+    Ok(())
+}
+
+pub async fn scp_parallel(servers: &[&str], remote_path: &str, to: &str) -> Result<(), CmdError> {
+    let remote_calls = servers.iter().map(|host| {
+        let from = format!("{}:{}", host, remote_path);
+        scp(from, to.to_string())
+    });
+
+    try_join_all(remote_calls).await?;
+
+    Ok(())
+}
+
 pub async fn ssh_exec<'a, 'b>(host: &'a str, cmd: &'b str) -> Result<(&'a str, Output), CmdError> {
     println!("Running command {} on {}", cmd, host);
     let path = canonicalize("../vagrant/").await?;
@@ -142,4 +171,18 @@ pub async fn wait_for_ntp<'a, 'b>(
     hosts: &'b [&'a str],
 ) -> Result<Vec<(&'a str, Output)>, CmdError> {
     ssh_script_parallel(hosts, "scripts/wait_for_ntp.sh", &[]).await
+}
+
+pub async fn create_iml_diagnostics<'a, 'b>(
+    hosts: &'b [&'a str],
+    prefix: &'a str,
+) -> Result<(), CmdError> {
+    ssh_script_parallel(
+        hosts,
+        "scripts/create_iml_diagnostics.sh",
+        &["10.73.10.1", prefix],
+    )
+    .await?;
+
+    scp_parallel(hosts, "/var/tmp/sosreport*", "/tmp").await
 }

@@ -104,11 +104,15 @@ impl CheckedCommandExt for Command {
 }
 
 pub trait CheckedChildExt {
-    fn wait_with_checked_output(self) -> Pin<Box<dyn Future<Output = Result<Output, CmdError>>>>;
+    fn wait_with_checked_output(
+        self,
+    ) -> Pin<Box<dyn Future<Output = Result<Output, CmdError>> + Send>>;
 }
 
 impl CheckedChildExt for Child {
-    fn wait_with_checked_output(self) -> Pin<Box<dyn Future<Output = Result<Output, CmdError>>>> {
+    fn wait_with_checked_output(
+        self,
+    ) -> Pin<Box<dyn Future<Output = Result<Output, CmdError>> + Send>> {
         tracing::debug!("Child waiting for output: {:?}", self);
 
         self.wait_with_output()

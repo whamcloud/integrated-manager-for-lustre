@@ -5,9 +5,11 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
+async-trait = "0.1"
 futures = "0.3"
 iml-cmd = { version = "0.2.0", path = "../iml-cmd" }
 iml-fs = { version = "0.2", path = "../iml-fs" }
 iml-systemd = { version = "0.2.0", path = "../iml-systemd" }
 iml-wire-types = { version = "0.2.0", path = "../iml-wire-types" }
 tokio = {version="0.2", features=["process", "macros", "fs"]}
+thiserror = "1.0"
