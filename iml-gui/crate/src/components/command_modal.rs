@@ -276,14 +276,15 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
 
 fn command_item_view(model: &Model, x: &RichCommand) -> Node<Msg> {
     let is_open = is_typed_id_selected(&model.select, TypedId::Command(x.id));
+
     let border = if !is_open {
         C.border_transparent
-    } else if x.complete {
-        C.border_green_500
     } else if x.errored {
         C.border_red_500
     } else if x.cancelled {
         C.border_gray_500
+    } else if x.complete {
+        C.border_green_500
     } else {
         C.border_transparent
     };
@@ -487,12 +488,13 @@ fn status_text(cmd: &RichCommand) -> &'static str {
 
 fn cmd_status_icon<T>(cmd: &RichCommand) -> Node<T> {
     let awesome_class = class![C.w_4, C.h_4, C.inline, C.mr_4];
-    if cmd.complete {
-        font_awesome(awesome_class, "check").merge_attrs(class![C.text_green_500])
-    } else if cmd.cancelled {
+
+    if cmd.cancelled {
         font_awesome(awesome_class, "ban").merge_attrs(class![C.text_gray_500])
     } else if cmd.errored {
         font_awesome(awesome_class, "bell").merge_attrs(class![C.text_red_500])
+    } else if cmd.complete {
+        font_awesome(awesome_class, "check").merge_attrs(class![C.text_green_500])
     } else {
         font_awesome(awesome_class, "spinner").merge_attrs(class![C.text_gray_500, C.pulse])
     }
