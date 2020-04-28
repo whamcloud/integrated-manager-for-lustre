@@ -1,6 +1,6 @@
 #! /bin/bash
 
-PREFIX=$2
+PREFIX=$1
 
 # Clean out any existing sos reports on this node
 rm -f /var/tmp/*sosreport*

@@ -189,8 +189,12 @@ pub async fn create_iml_diagnostics<'a, 'b>(
 
     let report_dir = format!("sosreport_{}", ts);
     let mut mkdir = Command::new("mkdir");
-    mkdir.current_dir(path);
-    mkdir.arg(&report_dir);
+
+    mkdir
+        .current_dir(path)
+        .arg(&report_dir)
+        .checked_status()
+        .await?;
 
     scp_parallel(
         hosts,
