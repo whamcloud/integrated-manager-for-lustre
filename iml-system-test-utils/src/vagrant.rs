@@ -63,7 +63,7 @@ pub async fn destroy<'a>() -> Result<(), CmdError> {
 
     x.arg("destroy").arg("-f");
 
-    try_command_n_times(3, &mut x).await
+    try_command_n_times(3, 1, &mut x).await
 }
 
 pub async fn halt() -> Result<Command, CmdError> {
@@ -318,6 +318,21 @@ pub async fn setup_iml_install(
     Ok(())
 }
 
+pub async fn wait_on_server_list(
+    config: &ClusterConfig,
+    setup_config: &SetupConfigType,
+) -> Result<(), CmdError> {
+    let mut list_cmd = match setup_config {
+        SetupConfigType::RpmSetup(_) => run_vm_command(config.manager, "iml server list").await?,
+        SetupConfigType::DockerSetup(_) => iml::list_servers().await?,
+    };
+
+    try_command_n_times(50, 5, &mut list_cmd).await?;
+    println!("Servers list responded with successful status.");
+
+    Ok(())
+}
+
 pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     setup_config: &SetupConfigType,
@@ -325,6 +340,7 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
 ) -> Result<(), CmdError> {
     setup_iml_install(&config.all(), &setup_config, &config).await?;
 
+    wait_on_server_list(config, setup_config).await?;
     for (profile, hosts) in server_map {
         run_vm_command(
             config.manager,
@@ -351,8 +367,10 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
 
 pub async fn add_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
+    setup_config: &SetupConfigType,
     server_map: &HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
+    wait_on_server_list(config, setup_config).await?;
     iml::server_add(&server_map).await?;
 
     halt()
@@ -376,6 +394,7 @@ pub async fn add_docker_servers<S: std::hash::BuildHasher>(
 
 pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
+    setup_config: &SetupConfigType,
     server_map: HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
     let server_set: BTreeSet<_> = server_map.values().cloned().flatten().collect();
@@ -391,7 +410,7 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
 
     configure_docker_network(server_set).await?;
 
-    add_docker_servers(&config, &server_map).await?;
+    add_docker_servers(config, setup_config, &server_map).await?;
 
     Ok(())
 }
