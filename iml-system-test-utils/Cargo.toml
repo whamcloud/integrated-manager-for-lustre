@@ -11,5 +11,6 @@ iml-cmd = { version = "0.2.0", path = "../iml-cmd" }
 iml-fs = { version = "0.2", path = "../iml-fs" }
 iml-systemd = { version = "0.2.0", path = "../iml-systemd" }
 iml-wire-types = { version = "0.2.0", path = "../iml-wire-types" }
+serde_json = "1.0"
 tokio = {version="0.2", features=["process", "macros", "fs"]}
 thiserror = "1.0"

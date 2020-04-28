@@ -41,7 +41,7 @@ pub async fn run_fs_test<S: std::hash::BuildHasher>(
 
     docker::deploy_iml_stack().await?;
 
-    vagrant::setup_deploy_docker_servers(&config, server_map).await?;
+    vagrant::setup_deploy_docker_servers(&config, docker_setup, server_map).await?;
 
     vagrant::create_fs(fs_type, &config).await?;
 

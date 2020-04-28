@@ -5,6 +5,7 @@
 use futures::future::try_join_all;
 use iml_cmd::{CheckedChildExt, CheckedCommandExt, CmdError};
 use std::{
+    collections::BTreeSet,
     process::{Output, Stdio},
     str,
     time::{SystemTime, UNIX_EPOCH},
@@ -198,4 +199,28 @@ pub async fn create_iml_diagnostics<'a, 'b>(
         format!("./{}/", &report_dir).as_str(),
     )
     .await
+}
+
+pub async fn get_host_bindings<'a, 'b>(hosts: &'b [&'a str]) -> Result<BTreeSet<String>, CmdError> {
+    let bindings: Vec<(&str, Output)> =
+        ssh_exec_parallel(hosts, "cat /etc/multipath/bindings").await?;
+
+    let wwids = bindings
+        .into_iter()
+        .map(|(_, out)| {
+            str::from_utf8(&out.stdout)
+                .expect("Couldn't parse multipath bindings file.")
+                .to_string()
+        })
+        .filter(|x| !x.starts_with('#'))
+        .map(|out| {
+            out.lines()
+                .map(|line| line.split(' ').last().expect("Couldn't parse WWID").into())
+                .collect::<BTreeSet<String>>()
+        })
+        .fold(BTreeSet::<String>::new(), |acc, xs| {
+            acc.union(&xs).cloned().collect()
+        });
+
+    Ok(wwids)
 }
