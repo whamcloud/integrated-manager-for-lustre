@@ -1524,6 +1524,7 @@ dependencies = [
  "iml-fs",
  "iml-systemd",
  "iml-wire-types",
+ "serde_json",
  "thiserror",
  "tokio",
 ]

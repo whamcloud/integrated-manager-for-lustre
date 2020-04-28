@@ -8,6 +8,7 @@ use crate::{
 };
 use futures::future::try_join_all;
 use iml_cmd::{CheckedCommandExt, CmdError};
+use iml_wire_types::Volume;
 use std::{
     collections::{BTreeSet, HashMap},
     env, str,
@@ -320,12 +321,56 @@ pub async fn setup_iml_install(
     Ok(())
 }
 
+pub async fn get_iml_devices(config: &ClusterConfig) -> Result<BTreeSet<String>, CmdError> {
+    let output = run_vm_command(config.manager, "iml devices list -d json")
+        .await?
+        .checked_output()
+        .await?;
+
+    let data_str = str::from_utf8(&output.stdout).expect("Couldn't parse devices information.");
+    let volumes: Vec<Volume> =
+        serde_json::from_str(data_str).expect("Couldn't serialize devices information.");
+
+    let labels: BTreeSet<String> = volumes.into_iter().map(|v| v.label).collect();
+
+    Ok(labels)
+}
+
+pub async fn wait_for_all_devices(max_tries: i32, config: &ClusterConfig) -> Result<(), CmdError> {
+    let mut count = 1;
+    let wwids: BTreeSet<String> = ssh::get_host_bindings(&config.storage_servers()[..]).await?;
+    println!("Comparing wwids from api to bindings: {:?}", wwids);
+
+    let iml_devices: BTreeSet<String> = get_iml_devices(config).await?;
+    let mut all_volumes_accounted_for = wwids.is_subset(&iml_devices);
+
+    println!("Comparing iml devices to bindings files.");
+    println!("iml_devices: {:?}", iml_devices);
+    println!("binding wwids: {:?}", wwids);
+
+    while !all_volumes_accounted_for && count < max_tries {
+        delay_for(Duration::from_secs(5)).await;
+
+        let iml_devices: BTreeSet<String> = get_iml_devices(config).await?;
+        all_volumes_accounted_for = wwids.is_subset(&iml_devices);
+        count += 1;
+
+        println!("Comparing iml devices to bindings files.");
+        println!("iml_devices: {:?}", iml_devices);
+        println!("binding wwids: {:?}", wwids);
+    }
+
+    Ok(())
+}
+
 pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     setup_config: &SetupConfigType,
     server_map: HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
     setup_iml_install(&config.all(), &setup_config, &config).await?;
+
+    wait_for_all_devices(10, config).await?;
 
     for (profile, hosts) in server_map {
         run_vm_command(
@@ -355,6 +400,9 @@ pub async fn add_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     server_map: &HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
+    // Need to  wait for devices on docker as well.
+    //wait_for_all_devices(10, config).await?;
+
     iml::server_add(&server_map).await?;
 
     halt()
