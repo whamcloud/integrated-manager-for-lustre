@@ -202,17 +202,19 @@ pub async fn create_iml_diagnostics<'a, 'b>(
 }
 
 pub async fn get_host_bindings<'a, 'b>(hosts: &'b [&'a str]) -> Result<BTreeSet<String>, CmdError> {
-    let hosts_output: Vec<(&str, Output)> =
+    let bindings: Vec<(&str, Output)> =
         ssh_exec_parallel(hosts, "cat /etc/multipath/bindings").await?;
 
-    let wwids = hosts_output
+    let wwids = bindings
         .into_iter()
-        .map(|(_, output)| {
-            let stdout =
-                str::from_utf8(&output.stdout).expect("Couldn't parse multipath bindings file.");
-
-            stdout
-                .lines()
+        .map(|(_, out)| {
+            str::from_utf8(&out.stdout)
+                .expect("Couldn't parse multipath bindings file.")
+                .to_string()
+        })
+        .filter(|x| !x.starts_with('#'))
+        .map(|out| {
+            out.lines()
                 .map(|line| line.split(' ').last().expect("Couldn't parse WWID").into())
                 .collect::<BTreeSet<String>>()
         })

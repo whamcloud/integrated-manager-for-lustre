@@ -11,7 +11,9 @@ use iml_cmd::{CheckedCommandExt, CmdError};
 use iml_wire_types::Volume;
 use std::{
     collections::{BTreeSet, HashMap},
-    env, str,
+    env,
+    process::Output,
+    str,
     time::Duration,
 };
 use tokio::{
@@ -321,27 +323,51 @@ pub async fn setup_iml_install(
     Ok(())
 }
 
-pub async fn get_iml_devices(config: &ClusterConfig) -> Result<BTreeSet<String>, CmdError> {
-    let output = run_vm_command(config.manager, "iml devices list -d json")
-        .await?
-        .checked_output()
-        .await?;
-
+pub fn parse_devices(output: &Output) -> BTreeSet<String> {
     let data_str = str::from_utf8(&output.stdout).expect("Couldn't parse devices information.");
     let volumes: Vec<Volume> =
         serde_json::from_str(data_str).expect("Couldn't serialize devices information.");
 
     let labels: BTreeSet<String> = volumes.into_iter().map(|v| v.label).collect();
 
-    Ok(labels)
+    labels
 }
 
-pub async fn wait_for_all_devices(max_tries: i32, config: &ClusterConfig) -> Result<(), CmdError> {
+pub async fn get_iml_devices(config: &ClusterConfig) -> Result<BTreeSet<String>, CmdError> {
+    let output = run_vm_command(config.manager, "iml devices list -d json")
+        .await?
+        .checked_output()
+        .await?;
+
+    Ok(parse_devices(&output))
+}
+
+pub async fn get_iml_docker_devices() -> Result<BTreeSet<String>, CmdError> {
+    let output = iml::list_devices().await?;
+
+    Ok(parse_devices(&output))
+}
+
+pub async fn get_devices(
+    config: &ClusterConfig,
+    setup_config: &SetupConfigType,
+) -> Result<BTreeSet<String>, CmdError> {
+    match setup_config {
+        SetupConfigType::RpmSetup(_) => get_iml_devices(config).await,
+        SetupConfigType::DockerSetup(_) => get_iml_docker_devices().await,
+    }
+}
+
+pub async fn wait_for_all_devices(
+    max_tries: i32,
+    config: &ClusterConfig,
+    setup_config: &SetupConfigType,
+) -> Result<(), CmdError> {
     let mut count = 1;
     let wwids: BTreeSet<String> = ssh::get_host_bindings(&config.storage_servers()[..]).await?;
     println!("Comparing wwids from api to bindings: {:?}", wwids);
 
-    let iml_devices: BTreeSet<String> = get_iml_devices(config).await?;
+    let iml_devices: BTreeSet<String> = get_devices(config, setup_config).await?;
     let mut all_volumes_accounted_for = wwids.is_subset(&iml_devices);
 
     println!("Comparing iml devices to bindings files.");
@@ -351,7 +377,7 @@ pub async fn wait_for_all_devices(max_tries: i32, config: &ClusterConfig) -> Res
     while !all_volumes_accounted_for && count < max_tries {
         delay_for(Duration::from_secs(5)).await;
 
-        let iml_devices: BTreeSet<String> = get_iml_devices(config).await?;
+        let iml_devices: BTreeSet<String> = get_devices(config, setup_config).await?;
         all_volumes_accounted_for = wwids.is_subset(&iml_devices);
         count += 1;
 
@@ -370,7 +396,7 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
 ) -> Result<(), CmdError> {
     setup_iml_install(&config.all(), &setup_config, &config).await?;
 
-    wait_for_all_devices(10, config).await?;
+    wait_for_all_devices(10, config, setup_config).await?;
 
     for (profile, hosts) in server_map {
         run_vm_command(
@@ -398,10 +424,10 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
 
 pub async fn add_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
+    setup_config: &SetupConfigType,
     server_map: &HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
-    // Need to  wait for devices on docker as well.
-    //wait_for_all_devices(10, config).await?;
+    wait_for_all_devices(10, config, setup_config).await?;
 
     iml::server_add(&server_map).await?;
 
@@ -426,6 +452,7 @@ pub async fn add_docker_servers<S: std::hash::BuildHasher>(
 
 pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
+    setup_config: &SetupConfigType,
     server_map: HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
     let server_set: BTreeSet<_> = server_map.values().cloned().flatten().collect();
@@ -441,7 +468,7 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
 
     configure_docker_network(server_set).await?;
 
-    add_docker_servers(&config, &server_map).await?;
+    add_docker_servers(&config, setup_config, &server_map).await?;
 
     Ok(())
 }
