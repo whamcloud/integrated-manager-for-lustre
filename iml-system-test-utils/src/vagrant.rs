@@ -533,6 +533,7 @@ pub async fn remove_rpm_setup_files() {}
 
 pub struct ClusterConfig {
     manager: &'static str,
+    manager_ip: &'static str,
     mds: Vec<&'static str>,
     mds_ips: Vec<&'static str>,
     oss: Vec<&'static str>,
@@ -546,6 +547,7 @@ impl Default for ClusterConfig {
     fn default() -> Self {
         ClusterConfig {
             manager: "adm",
+            manager_ip: "10.73.10.10",
             mds: vec!["mds1", "mds2"],
             mds_ips: vec!["10.73.10.11", "10.73.10.12"],
             oss: vec!["oss1", "oss2"],
@@ -573,6 +575,9 @@ impl ClusterConfig {
         xs.extend(&self.clients);
 
         xs
+    }
+    pub fn manager_ip(&self) -> Vec<&str> {
+        vec![self.manager_ip]
     }
     pub fn storage_servers(&self) -> Vec<&str> {
         [&self.mds[..], &self.oss[..]].concat()

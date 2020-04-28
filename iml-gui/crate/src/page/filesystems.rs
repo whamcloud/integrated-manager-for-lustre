@@ -162,7 +162,7 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<
                     t::th_view(plain!["Primary MGS"]),
                     t::th_view(plain!["MDT Count"]),
                     t::th_view(plain!["Connected Clients"]),
-                    t::th_view(plain!["Space Used / Total"]),
+                    t::th_view(plain!["Space Used / Available"]),
                 ]),
                 tbody![model.filesystems[model.pager.range()]
                     .iter()

@@ -276,7 +276,7 @@ fn details_table(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg
         ],
         t::wrapper_view(vec![
             tr![
-                t::th_left(plain!("Space Used / Total")),
+                t::th_left(plain!("Space Used / Available")),
                 t::td_view(space_used_view(
                     model.stats.bytes_free,
                     model.stats.bytes_total,
@@ -284,7 +284,7 @@ fn details_table(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg
                 ))
             ],
             tr![
-                t::th_left(plain!("Files Created / Maximum")),
+                t::th_left(plain!("Files Created / Available")),
                 t::td_view(files_created_view(model.stats.files_free, model.stats.files_total))
             ],
             tr![
