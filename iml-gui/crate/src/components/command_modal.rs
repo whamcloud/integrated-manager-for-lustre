@@ -556,13 +556,15 @@ where
     U: 'static,
 {
     // e.g. GET /api/something/?id__in=1&id__in=2&id__in=11&limit=0
-    let err_msg = format!("Bad query for {}: {:?}", T::endpoint_name(), ids);
     let mut ids: Vec<_> = ids.into_iter().map(|x| ("id__in", x)).collect();
     ids.push(("limit", 0));
-    Request::api_query(T::endpoint_name(), &ids)
-        .expect(&err_msg)
-        .fetch_json_data(data_to_msg)
-        .await
+    match Request::api_query(T::endpoint_name(), &ids) {
+        Ok(req) => req.fetch_json_data(data_to_msg).await,
+        Err(_) => {
+            // we always can url encode a vector of u32-s
+            unreachable!("Cannot encode request for {} with params {:?}", T::endpoint_name(), ids)
+        },
+    }
 }
 
 fn extract_uri_id<T: EndpointName>(input: &str) -> Option<u32> {
@@ -785,26 +787,26 @@ impl Model {
 
     fn assign_commands(&mut self, cmds: &[Command]) {
         self.commands = convert_to_rich_hashmap(cmds.to_vec(), extract_children_from_cmd);
-        let tuple = self.check_consistency(&self.select);
+        let tuple = self.check_consistency();
         self.refresh_view(tuple);
     }
 
     fn assign_jobs(&mut self, jobs: &[Job0]) {
         self.jobs = convert_to_rich_hashmap(jobs.to_vec(), extract_children_from_job);
-        let tuple = self.check_consistency(&self.select);
+        let tuple = self.check_consistency();
         self.refresh_view(tuple);
     }
 
     fn assign_steps(&mut self, steps: &[Step]) {
         self.steps = convert_to_rich_hashmap(steps.to_vec(), extract_children_from_step);
-        let tuple = self.check_consistency(&self.select);
+        let tuple = self.check_consistency();
         self.refresh_view(tuple);
     }
 
     /// We perform the consistency check of the current collections
     /// `self.commands`, `self.jobs` and `self.steps`.
     /// The selection, if it is non-empty, places additional constraints.
-    fn check_consistency(&self, select: &Select) -> (bool, bool, bool) {
+    fn check_consistency(&self) -> (bool, bool, bool) {
         let mut ls = [false; 3];
 
         // check between layers
@@ -815,7 +817,7 @@ impl Model {
         ls[2] = self.jobs.values().any(|x| is_subset(x.deps(), &step_ids));
 
         // the additional constraints from the selection
-        match select {
+        match &self.select {
             Select::None => {}
             Select::Command(i) => {
                 let cmd0 = self.commands.get(i);
