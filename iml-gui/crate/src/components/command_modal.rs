@@ -25,7 +25,7 @@ use std::{
 /// The component polls `/api/command/` endpoint and this constant defines how often it does.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
-type Job0 = Job<Option<()>>;
+type Job0 = Job<Option<serde_json::Value>>;
 
 type RichCommand = Rich<u32, Command>;
 type RichJob = Rich<u32, Job0>;
@@ -334,10 +334,7 @@ pub fn job_tree_view(model: &Model) -> Node<Msg> {
     div![
         class![C.font_ordinary, C.text_gray_700],
         h4![class![C.text_lg, C.font_medium], "Jobs"],
-        div![
-            class![C.p_1, C.pb_2, C.mb_1, C.shadow_sm, C.overflow_auto,],
-            job_dag_view(model),
-        ]
+        div![class![C.p_1, C.pb_2, C.mb_1, C.overflow_auto,], job_dag_view(model),]
     ]
 }
 
@@ -400,7 +397,7 @@ fn step_list_view(steps: &[Arc<RichStep>], select: &Select, is_open: bool) -> No
         empty!()
     } else {
         div![ul![
-            class![C.p_1, C.pb_2, C.mb_1, C.shadow_sm, C.overflow_auto],
+            class![C.p_1, C.pb_2, C.mb_1, C.overflow_auto],
             steps.iter().map(|x| {
                 let is_open = is_typed_id_selected(select, TypedId::Step(x.id));
                 li![step_item_view(x, is_open)]
@@ -563,7 +560,7 @@ where
         Err(_) => {
             // we always can url encode a vector of u32-s
             unreachable!("Cannot encode request for {} with params {:?}", T::endpoint_name(), ids)
-        },
+        }
     }
 }
 
