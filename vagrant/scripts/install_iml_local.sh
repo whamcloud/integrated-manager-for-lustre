@@ -3,7 +3,7 @@
 set -ex
 
 yum copr enable -y managerforlustre/manager-for-lustre-devel
-# Install repository with latest rpmdevtools
+# Install latest rpmdevtools for rpmdev-bumpspec
 if ! rpm -q rpmdevtools-8.10-7.el8.noarch; then
     yum install -y https://copr-be.cloud.fedoraproject.org/results/managerforlustre/buildtools/epel-8-x86_64/01152137-rpmdevtools/rpmdevtools-8.10-7.el8.noarch.rpm
 fi
@@ -12,7 +12,7 @@ if ! rpm -q pgdg-redhat-repo.noarch; then
     yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
 fi
 # Install the packages themselves
-yum install -y rpmdevtools git ed epel-release python-setuptools gcc openssl-devel postgresql96-devel
+yum install -y git ed epel-release python-setuptools gcc openssl-devel postgresql96-devel
 curl https://sh.rustup.rs -sSf | sh -s -- -y
 source $HOME/.cargo/env
 rustup update
@@ -34,6 +34,7 @@ rpmdev-bumpspec -n $V.$TS rust-iml.spec
 
 make all
 
+# Uninstall rpmdevtools and dependencies because it pull in python 3 and lots of other stuff
 yum autoremove -y rpmdevtools
 
 rm -rf /tmp/{manager,agent}-rpms
