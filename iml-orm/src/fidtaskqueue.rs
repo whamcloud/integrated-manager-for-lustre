@@ -3,32 +3,34 @@
 // license that can be found in the LICENSE file.
 
 pub use crate::models::ChromaCoreFidtaskqueue;
-use crate::{lustrefid::LustreFid, schema::chroma_core_fidtaskqueue, task::ChromaCoreTask, DbPool};
-use tokio_diesel::AsyncRunQueryDsl as _;
+use crate::{
+    diesel::ExpressionMethods, lustrefid::LustreFid, schema::chroma_core_fidtaskqueue as fidq,
+    task::ChromaCoreTask, Executable,
+};
+use diesel::{dsl, prelude::*};
+use serde_json;
 
-pub type Table = chroma_core_fidtaskqueue::table;
+pub type Table = fidq::table;
+pub type WithFid = dsl::Eq<fidq::fid, LustreFid>;
+pub type ByFid = dsl::Filter<fidq::table, WithFid>;
 
-#[derive(Insertable)]
-#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_fidtaskqueue")]
-pub struct NewFidTask {
-    pub fid: LustreFid,
-    pub data: serde_json::Value,
-    pub task_id: i32,
+impl ChromaCoreFidtaskqueue {
+    pub fn with_fid(fid: LustreFid) -> WithFid {
+        fidq::fid.eq(fid)
+    }
+    pub fn by_fid(fid: LustreFid) -> ByFid {
+        fidq::table.filter(Self::with_fid(fid))
+    }
 }
 
-pub async fn insert(
+pub fn insert_fidtask(
     fid: LustreFid,
     data: serde_json::Value,
     task: &ChromaCoreTask,
-    pool: &DbPool,
-) -> Result<(), crate::ImlOrmError> {
-    diesel::insert_into(chroma_core_fidtaskqueue::table)
-        .values(NewFidTask {
-            fid,
-            data,
-            task_id: task.id,
-        })
-        .execute_async(pool)
-        .await?;
-    Ok(())
+) -> impl Executable {
+    diesel::insert_into(fidq::table).values((
+        fidq::fid.eq(fid),
+        fidq::data.eq(data),
+        fidq::task_id.eq(task.id),
+    ))
 }

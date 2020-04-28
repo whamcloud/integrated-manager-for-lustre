@@ -5,7 +5,7 @@
 use crate::error::ImlApiError;
 use iml_orm::{
     command::ChromaCoreCommand,
-    job::{get_jobs_by_cmd, ChromaCoreJob},
+    job::ChromaCoreJob,
     step::ChromaCoreStepresult,
     tokio_diesel::{AsyncRunQueryDsl as _, OptionalExtension as _},
     DbPool,
@@ -20,7 +20,9 @@ pub(crate) async fn get_command(pool: &DbPool, id: i32) -> Result<Command, ImlAp
         .optional()?
         .ok_or_else(|| ImlApiError::NoneError)?;
 
-    let jobs: Vec<ChromaCoreJob> = get_jobs_by_cmd(id, &pool).await?;
+    let jobs: Vec<ChromaCoreJob> = ChromaCoreJob::by_cmdjob(id)
+        .get_results_async(&pool)
+        .await?;
 
     let steps: Vec<ChromaCoreStepresult> = ChromaCoreStepresult::by_jobs(jobs.iter().map(|j| j.id))
         .get_results_async(&pool)

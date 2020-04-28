@@ -133,4 +133,15 @@ class FidTaskQueue(models.Model):
     task = models.ForeignKey("Task", on_delete=CASCADE)
 
     data = JSONField(default={})
+
+
+class FidTaskError(models.Model):
+    class Meta:
+        app_label = "chroma_core"
+
+    fid = LustreFidField()
+
+    task = models.ForeignKey("Task", on_delete=CASCADE)
+
+    data = JSONField(default={})
     errno = models.PositiveSmallIntegerField(default=0, null=False)

@@ -9,7 +9,10 @@ bytes = "0.5"
 futures = "0.3"
 iml-fs = { path = "../iml-fs", version = "0.3" }
 iml-manager-env = { path = "../iml-manager-env", version = "0.3" }
+iml-orm = { path = "../iml-orm", version = "0.3", features = ["postgres-interop"] }
 iml-tracing = { version = "0.2", path="../iml-tracing"}
+serde_json = "1.0"
+thiserror = "1.0"
 tokio = "0.2"
 tracing = "0.1"
 warp = "0.2"

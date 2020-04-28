@@ -11,8 +11,8 @@
 //! concurrently
 
 use futures::{lock::Mutex, Stream, TryFutureExt, TryStreamExt};
-use iml_mailbox::{Errors, Incoming, MailboxSenders};
-use std::{fs, path::PathBuf, pin::Pin, sync::Arc};
+use iml_mailbox::{Incoming, MailboxError, MailboxSenders};
+use std::{pin::Pin, sync::Arc};
 use warp::Filter as _;
 
 #[tokio::main]
@@ -20,34 +20,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
     let addr = iml_manager_env::get_mailbox_addr();
-    let mailbox_path = iml_manager_env::get_mailbox_path();
 
     type SharedMailboxSenders = Arc<Mutex<MailboxSenders>>;
 
     let shared_senders = Arc::new(Mutex::new(MailboxSenders::default()));
     let shared_senders_filter = warp::any().map(move || Arc::clone(&shared_senders));
 
-    fs::create_dir_all(&mailbox_path).expect("could not create mailbox path");
+    //let pool = iml_orm::pool()?;
 
     let mailbox = warp::path("mailbox");
 
     let post = warp::post()
         .and(mailbox)
         .and(shared_senders_filter)
-        .and(
-            warp::header::<PathBuf>("mailbox-message-name")
-                .map(move |x| [&mailbox_path.clone(), &x].iter().collect()),
-        )
+        .and(warp::header::<String>("mailbox-message-name"))
         .and(iml_mailbox::line_stream())
         .and_then(
             |mailbox_senders: SharedMailboxSenders,
-             address: PathBuf,
+             task_name: String,
              mut s: Pin<Box<dyn Stream<Item = Result<String, warp::Rejection>> + Send>>| {
                 async move {
                     let tx = {
                         let mut lock = mailbox_senders.lock().await;
 
-                        lock.get(&address)
+                        lock.get(&task_name)
                     };
 
                     let tx = match tx {
@@ -55,23 +51,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         None => {
                             let (tx, fut) = {
                                 let mut lock = mailbox_senders.lock().await;
-                                lock.create(address.clone())
+                                lock.create(task_name.clone())
                             };
 
-                            let address2 = address.clone();
+                            let task_name2 = task_name.clone();
 
                             tokio::spawn(
                                 async move {
                                     fut.await.unwrap_or_else(|e| {
                                         tracing::error!(
-                                            "Got an error writing to mailbox address {:?}: {:?}",
-                                            &address2,
+                                            "Got an error writing to mailbox {:?}: {:?}",
+                                            &task_name2,
                                             e
                                         )
                                     });
 
                                     let mut lock = mailbox_senders.lock().await;
-                                    lock.remove(&address);
+                                    lock.remove(&task_name);
                                 }
                             );
 
@@ -83,13 +79,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     while let Some(l) = s.try_next().await? {
                         tracing::debug!("Sending line {:?}", l);
 
-                        tx.unbounded_send(Incoming::Line(l)).map_err(Errors::TrySendError).map_err(warp::reject::custom)?
+                        tx.unbounded_send(Incoming::Line(l)).map_err(MailboxError::TrySendError).map_err(warp::reject::custom)?
                     }
 
 
                     let (eof, rx) = Incoming::create_eof();
 
-                    tx.unbounded_send(eof).map_err(Errors::TrySendError).map_err(warp::reject::custom)?;
+                    tx.unbounded_send(eof).map_err(MailboxError::TrySendError).map_err(warp::reject::custom)?;
 
                     let _ = rx.map_err(|e| tracing::warn!("Error waiting for flush {:?}", e)).await;
 

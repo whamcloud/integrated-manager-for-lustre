@@ -8,7 +8,6 @@ use std::{
     collections::BTreeMap,
     env,
     net::{SocketAddr, ToSocketAddrs},
-    path::PathBuf,
 };
 use url::Url;
 
@@ -192,11 +191,6 @@ pub fn get_influxdb_addr() -> SocketAddr {
 /// Get the metrics influxdb database name
 pub fn get_influxdb_metrics_db() -> String {
     get_var("INFLUXDB_IML_STATS_DB")
-}
-
-/// Get the path to the mailbox from the env or panic
-pub fn get_mailbox_path() -> PathBuf {
-    get_var("MAILBOX_PATH").into()
 }
 
 /// Get the devices port or panic

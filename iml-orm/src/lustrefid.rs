@@ -6,7 +6,8 @@ pub use crate::models::LustreFid;
 use crate::schema::SqlLustreFid;
 use diesel::{
     pg::Pg,
-    serialize::{self, IsNull, Output, ToSql},
+    serialize::{self, Output, ToSql, WriteTuple},
+    sql_types::{BigInt, Integer},
 };
 use std::{convert::From, fmt, io::Write, str::FromStr};
 
@@ -42,7 +43,9 @@ impl From<[u8; 40_usize]> for LustreFid {
 
 impl ToSql<SqlLustreFid, Pg> for LustreFid {
     fn to_sql<W: Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
-        out.write_all(format!("ROW{{ {}, {}, {} }}", self.seq, self.oid, self.ver).as_bytes())?;
-        Ok(IsNull::No)
+        WriteTuple::<(BigInt, Integer, Integer)>::write_tuple(
+            &(self.seq as i64, self.oid as i32, self.ver as i32),
+            out,
+        )
     }
 }

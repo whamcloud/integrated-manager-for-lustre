@@ -3,12 +3,8 @@
 // license that can be found in the LICENSE file.
 
 pub use crate::models::{ChromaCoreCommandJob, ChromaCoreJob};
-use crate::{
-    schema::{chroma_core_command_jobs as cmdjobs, chroma_core_job as job},
-    DbPool,
-};
+use crate::schema::{chroma_core_command_jobs as cmdjobs, chroma_core_job as job};
 use diesel::{dsl, prelude::*};
-use tokio_diesel::AsyncRunQueryDsl as _;
 
 pub type WithCmd = dsl::Eq<cmdjobs::command_id, i32>;
 pub type JobsByCmd = dsl::Select<dsl::Filter<cmdjobs::table, WithCmd>, cmdjobs::id>;
@@ -28,6 +24,7 @@ pub type WithId = dsl::Eq<job::id, i32>;
 pub type WithIds = dsl::EqAny<job::id, Vec<i32>>;
 pub type ById = dsl::Filter<job::table, WithId>;
 pub type ByIds = dsl::Filter<job::table, WithIds>;
+pub type ByCmdJob = dsl::Filter<job::table, dsl::EqAny<job::id, JobsByCmd>>;
 
 impl ChromaCoreJob {
     pub fn with_id(id: i32) -> WithId {
@@ -44,17 +41,7 @@ impl ChromaCoreJob {
     pub fn by_ids(id: impl IntoIterator<Item = i32>) -> ByIds {
         job::table.filter(Self::with_ids(id))
     }
-}
-
-pub async fn get_jobs_by_cmd(
-    id: i32,
-    pool: &DbPool,
-) -> Result<Vec<ChromaCoreJob>, crate::ImlOrmError> {
-    let jobs: Vec<i32> = ChromaCoreCommandJob::jobs_by_cmd(id)
-        .get_results_async(&pool)
-        .await?;
-
-    let x = ChromaCoreJob::by_ids(jobs).get_results_async(&pool).await?;
-
-    Ok(x)
+    pub fn by_cmdjob(id: i32) -> ByCmdJob {
+        job::table.filter(job::id.eq_any(ChromaCoreCommandJob::jobs_by_cmd(id)))
+    }
 }

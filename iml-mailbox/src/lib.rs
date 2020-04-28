@@ -8,17 +8,36 @@ use futures::{
     stream::BoxStream,
     Future, Stream, StreamExt, TryStreamExt,
 };
-use std::{collections::HashMap, path::PathBuf};
-use tokio::{fs::OpenOptions, io::AsyncWriteExt};
+use iml_orm::{
+    fidtaskqueue::insert_fidtask,
+    lustrefid::LustreFid,
+    task::ChromaCoreTask as Task,
+    tokio_diesel::{AsyncRunQueryDsl as _, OptionalExtension as _},
+};
+use serde_json::json;
+use std::{collections::HashMap, str::FromStr};
+use thiserror::Error;
 use warp::{filters::BoxedFilter, reject, Filter};
 
-#[derive(Debug)]
-pub enum Errors {
-    IoError(std::io::Error),
-    TrySendError(mpsc::TrySendError<Incoming>),
+#[derive(Error, Debug)]
+pub enum MailboxError {
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
+    #[error(transparent)]
+    JsonError(#[from] serde_json::error::Error),
+    #[error("Not found: {0}")]
+    NotFound(String),
+    #[error(transparent)]
+    ParseIntError(#[from] std::num::ParseIntError),
+    #[error(transparent)]
+    R2D2Error(#[from] iml_orm::r2d2::Error),
+    #[error(transparent)]
+    TokioAsyncError(#[from] iml_orm::tokio_diesel::AsyncError),
+    #[error(transparent)]
+    TrySendError(#[from] futures::channel::mpsc::TrySendError<Incoming>),
 }
 
-impl reject::Reject for Errors {}
+impl reject::Reject for MailboxError {}
 
 pub trait LineStream: Stream<Item = Result<String, warp::Rejection>> {}
 impl<T: Stream<Item = Result<String, warp::Rejection>>> LineStream for T {}
@@ -29,7 +48,7 @@ fn streamer<'a>(
     let s = s.map_ok(|mut x| x.to_bytes());
 
     iml_fs::read_lines(s)
-        .map_err(Errors::IoError)
+        .map_err(MailboxError::IoError)
         .map_err(reject::custom)
         .boxed()
 }
@@ -52,8 +71,8 @@ pub fn line_stream<'a>() -> BoxedFilter<(BoxStream<'a, Result<String, warp::Reje
     warp::body::stream().map(streamer).boxed()
 }
 
-/// Holds all active streams that are currently writing to an address.
-pub struct MailboxSenders(HashMap<PathBuf, mpsc::UnboundedSender<Incoming>>);
+/// Holds all active streams that are currently writing to a task.
+pub struct MailboxSenders(HashMap<String, mpsc::UnboundedSender<Incoming>>);
 
 impl Default for MailboxSenders {
     fn default() -> Self {
@@ -62,19 +81,19 @@ impl Default for MailboxSenders {
 }
 
 impl MailboxSenders {
-    /// Adds a new address and tx handle to write lines with
-    pub fn insert(&mut self, address: PathBuf, tx: mpsc::UnboundedSender<Incoming>) {
-        self.0.insert(address, tx);
+    /// Adds a new task and tx handle to write lines with
+    pub fn insert(&mut self, task: String, tx: mpsc::UnboundedSender<Incoming>) {
+        self.0.insert(task, tx);
     }
-    /// Removes an address.
+    /// Removes an task.
     ///
     /// Usually called when the associated rx stream has finished.
-    pub fn remove(&mut self, address: &PathBuf) {
-        self.0.remove(address);
+    pub fn remove(&mut self, task: &String) {
+        self.0.remove(task);
     }
-    /// Returns a cloned reference to a tx handle matching the provided address, if one exists.
-    pub fn get(&mut self, address: &PathBuf) -> Option<mpsc::UnboundedSender<Incoming>> {
-        self.0.get(address).cloned()
+    /// Returns a cloned reference to a tx handle matching the provided task, if one exists.
+    pub fn get(&mut self, task: &String) -> Option<mpsc::UnboundedSender<Incoming>> {
+        self.0.get(task).cloned()
     }
     /// Creates a new sender entry.
     ///
@@ -83,56 +102,79 @@ impl MailboxSenders {
     /// so it won't block the current task.
     pub fn create(
         &mut self,
-        address: PathBuf,
+        task: String,
     ) -> (
         mpsc::UnboundedSender<Incoming>,
-        impl Future<Output = Result<(), std::io::Error>>,
+        impl Future<Output = Result<(), MailboxError>>,
     ) {
         let (tx, rx) = mpsc::unbounded();
 
-        self.insert(address.clone(), tx.clone());
+        self.insert(task.clone(), tx.clone());
 
-        (tx, ingest_data(address, rx))
+        (tx, ingest_data(task, rx))
     }
 }
 
-/// Given an address and `mpsc::UnboundedReceiver` handle,
+async fn get_task_by_name(
+    x: impl ToString,
+    pool: &iml_orm::DbPool,
+) -> Result<Option<Task>, iml_orm::tokio_diesel::AsyncError> {
+    Task::by_name(x).first_async(pool).await.optional()
+}
+
+/// Given an task name and `mpsc::UnboundedReceiver` handle,
 /// this fn will create or open an existing file in append mode.
 ///
 /// It will then write any incoming lines from the passed `mpsc::UnboundedReceiver`
 /// to that file.
 pub async fn ingest_data(
-    address: PathBuf,
+    task: String,
     mut rx: mpsc::UnboundedReceiver<Incoming>,
-) -> Result<(), std::io::Error> {
-    tracing::info!("Starting ingest for {:?}", address);
+) -> Result<(), MailboxError> {
+    tracing::info!("Starting ingest for {:?}", task);
 
-    let mut file = OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(address)
-        .await?;
+    let pool = iml_orm::pool()?;
+
+    let task = match get_task_by_name(&task, &pool).await? {
+        Some(t) => t,
+        None => {
+            tracing::info!("Task {} not found.  Creating.", task);
+
+            return Err(MailboxError::NotFound(format!("Failed to find {}", task)));
+        }
+    };
 
     while let Some(incoming) = rx.next().await {
         match incoming {
-            Incoming::Line(mut line) => {
-                if !line.ends_with('\n') {
-                    line.extend(['\n'].iter());
+            Incoming::Line(line) => {
+                tracing::trace!("handling line {:?}", &line);
+
+                let mut map: HashMap<String, serde_json::Value> = serde_json::from_str(&line)?;
+
+                if let Some(fid) = map.remove("fid".into()) {
+                    let fid = LustreFid::from_str(fid.as_str().ok_or(MailboxError::NotFound(
+                        format!("Failed to find fid in {}", line),
+                    ))?)?;
+
+                    // Get "other" data if it exists
+                    let data = match map.iter().next() {
+                        Some((_, v)) => v.clone(),
+                        None => json!({}),
+                    };
+
+                    tracing::trace!("Inserting fid:{:?} data:{:?} task:{:?}", fid, data, task);
+                    insert_fidtask(fid, data, &task)
+                        .execute_async(&pool)
+                        .await?;
+                } else {
+                    tracing::error!("No FID for task {} in line {:?}", &task.name, &line);
                 }
-
-                tracing::trace!("handling line {:?}", line);
-
-                file.write_all(line.as_bytes()).await?;
             }
             Incoming::EOF(tx) => {
-                file.flush().await?;
-
                 let _ = tx.send(());
             }
         }
     }
-
-    file.flush().await?;
 
     Ok(())
 }

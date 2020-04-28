@@ -59,7 +59,7 @@ impl std::fmt::Debug for PostOffice {
     }
 }
 
-// Returned trigger should bed drop'd to cause route to stop
+// Returned trigger should be drop'd to cause route to stop
 fn start_route(mailbox: String) -> Trigger {
     let (trigger, tripwire) = Tripwire::new();
     let addr = socket_name(&mailbox);
