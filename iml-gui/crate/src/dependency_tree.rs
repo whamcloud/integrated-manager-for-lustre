@@ -84,6 +84,9 @@ impl<K: Hash + Eq + Debug, T> DependencyDAG<K, T> {
         self.roots.clear();
         self.links.clear();
     }
+    pub fn is_empty(&self) -> bool {
+        self.roots.is_empty()
+    }
 }
 
 pub fn build_direct_dag<K, T>(ts: &[T]) -> DependencyDAG<K, T>
