@@ -324,6 +324,13 @@ table! {
 }
 
 table! {
+    chroma_core_createtaskjob (job_ptr_id) {
+        job_ptr_id -> Int4,
+        task_id -> Int4,
+    }
+}
+
+table! {
     chroma_core_deployhostjob (job_ptr_id) {
         job_ptr_id -> Int4,
         old_state -> Varchar,
@@ -931,6 +938,13 @@ table! {
         job_ptr_id -> Int4,
         old_state -> Varchar,
         target_id -> Int4,
+    }
+}
+
+table! {
+    chroma_core_removetaskjob (job_ptr_id) {
+        job_ptr_id -> Int4,
+        task_id -> Int4,
     }
 }
 
@@ -1584,6 +1598,8 @@ joinable!(chroma_core_corosyncconfiguration -> chroma_core_managedhost (host_id)
 joinable!(chroma_core_corosyncconfiguration -> django_content_type (content_type_id));
 joinable!(chroma_core_createostpooljob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_createostpooljob -> chroma_core_ostpool (pool_id));
+joinable!(chroma_core_createtaskjob -> chroma_core_job (job_ptr_id));
+joinable!(chroma_core_createtaskjob -> chroma_core_task (task_id));
 joinable!(chroma_core_deployhostjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_deployhostjob -> chroma_core_managedhost (managed_host_id));
 joinable!(chroma_core_destroyostpooljob -> chroma_core_job (job_ptr_id));
@@ -1704,6 +1720,8 @@ joinable!(chroma_core_removestratagemjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_removestratagemjob -> chroma_core_stratagemconfiguration (stratagem_configuration_id));
 joinable!(chroma_core_removetargetjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_removetargetjob -> chroma_core_managedtarget (target_id));
+joinable!(chroma_core_removetaskjob -> chroma_core_job (job_ptr_id));
+joinable!(chroma_core_removetaskjob -> chroma_core_task (task_id));
 joinable!(chroma_core_removeunconfiguredcopytooljob -> chroma_core_copytool (copytool_id));
 joinable!(chroma_core_removeunconfiguredcopytooljob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_removeunconfiguredhostjob -> chroma_core_job (job_ptr_id));
@@ -1837,6 +1855,7 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_corosync2configuration,
     chroma_core_corosyncconfiguration,
     chroma_core_createostpooljob,
+    chroma_core_createtaskjob,
     chroma_core_deployhostjob,
     chroma_core_destroyostpooljob,
     chroma_core_detecttargetsjob,
@@ -1903,6 +1922,7 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_removeostpooljob,
     chroma_core_removestratagemjob,
     chroma_core_removetargetjob,
+    chroma_core_removetaskjob,
     chroma_core_removeunconfiguredcopytooljob,
     chroma_core_removeunconfiguredhostjob,
     chroma_core_repo,

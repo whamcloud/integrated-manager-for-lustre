@@ -63,4 +63,42 @@ class Migration(migrations.Migration):
             name="task",
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.Task"),
         ),
+        migrations.CreateModel(
+            name="CreateTaskJob",
+            fields=[
+                (
+                    "job_ptr",
+                    models.OneToOneField(
+                        auto_created=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        parent_link=True,
+                        primary_key=True,
+                        serialize=False,
+                        to="chroma_core.Job",
+                    ),
+                ),
+                ("task", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.Task")),
+            ],
+            options={"ordering": ["id"],},
+            bases=("chroma_core.job",),
+        ),
+        migrations.CreateModel(
+            name="RemoveTaskJob",
+            fields=[
+                (
+                    "job_ptr",
+                    models.OneToOneField(
+                        auto_created=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        parent_link=True,
+                        primary_key=True,
+                        serialize=False,
+                        to="chroma_core.Job",
+                    ),
+                ),
+                ("task", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.Task")),
+            ],
+            options={"ordering": ["id"],},
+            bases=("chroma_core.job",),
+        ),
     ]

@@ -1979,3 +1979,21 @@ class JobScheduler(object):
             "Updating Stratagem",
             True,
         )
+
+    def create_task(self, task_data):
+        log.debug("Creating task from: %s" % task_data)
+        with self._lock:
+            filesystem = ObjectCache.get_by_id(ManagedFilesystem, int(copytool_data["filesystem"]))
+            task_data["filesystem"] = filesystem
+            if not "start" in task_data:
+                task_data["start"] = django.utils.timezone.now()
+
+            with transaction.atomic():
+                task = Task.objects.create(**task_data)
+
+                cmds = [{"class_name": "CreateTaskJob", "args": {"task": task}}]
+
+                command_id = self.CommandPlan.command_run_jobs(cmds, help_text["create_task"],)
+
+        self.progress.advance()
+        return task.id, command_id
