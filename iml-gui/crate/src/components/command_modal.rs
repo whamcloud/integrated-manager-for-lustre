@@ -22,7 +22,7 @@ use std::{
     time::Duration,
 };
 
-/// The component polls `/api/command/` endpoint and this constant defines how often it does.
+/// The component polls `/api/(command|job|step)/` endpoint and this constant defines how often it does.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
 type Job0 = Job<Option<serde_json::Value>>;
@@ -91,12 +91,6 @@ pub struct Model {
     pub modal: modal::Model,
 }
 
-/// `Msg::FireCommands(..)` adds new commands to the polling list
-/// `Msg::Fetch` spawns a future to make the api call
-/// `Msg::Fetched(..)` wraps the result like
-/// ```norun
-/// { "meta": { .. }, "objects": [ cmd0, cmd1, ..., cmd9 ] }
-/// ```
 #[derive(Clone, Debug)]
 pub enum Msg {
     Modal(modal::Msg),
@@ -125,7 +119,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     // use the (little) optimization:
                     // if we already have the commands and they all finished, we don't need to poll them anymore
                     let temp_slice = cmds.iter().map(|x: &Arc<Command>| (**x).clone()).collect::<Vec<_>>();
-                    model.assign_commands(&temp_slice);
+                    model.assign_commands(temp_slice);
                     if !is_all_finished(&model.commands) {
                         orders.send_msg(Msg::FetchTree);
                     }
@@ -145,10 +139,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::FetchedCommands(commands_data_result) => {
             match *commands_data_result {
                 Ok(api_list) => {
-                    model.assign_commands(&api_list.objects);
+                    model.assign_commands(api_list.objects);
                 }
                 Err(e) => {
-                    error!("Failed to perform FetchedCommands {:#?}", e);
+                    error!(format!("Failed to fetch commands {:#?}", e));
                     orders.skip();
                 }
             }
@@ -160,19 +154,19 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::FetchedJobs(jobs_data_result) => match *jobs_data_result {
             Ok(api_list) => {
-                model.assign_jobs(&api_list.objects);
+                model.assign_jobs(api_list.objects);
             }
             Err(e) => {
-                error!("Failed to perform FetchJobs {:#?}", e);
+                error!(format!("Failed to fetch jobs {:#?}", e));
                 orders.skip();
             }
         },
         Msg::FetchedSteps(steps_data_result) => match *steps_data_result {
             Ok(api_list) => {
-                model.assign_steps(&api_list.objects);
+                model.assign_steps(api_list.objects);
             }
             Err(e) => {
-                error!("Failed to perform FetchSteps {:#?}", e);
+                error!(format!("Failed to fetch steps {:#?}", e));
                 orders.skip();
             }
         },
@@ -276,7 +270,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
 
 fn command_item_view(model: &Model, x: &RichCommand) -> Node<Msg> {
     let is_open = is_typed_id_selected(&model.select, TypedId::Command(x.id));
-
+    // all commands will be marked complete when they finished, it's the absence of other states that makes them successful
     let border = if !is_open {
         C.border_transparent
     } else if x.errored {
@@ -427,17 +421,16 @@ fn step_item_view(step: &RichStep, is_open: bool) -> Vec<Node<Msg>> {
         empty!()
     } else {
         // note, we cannot just use the Debug instance for step.args,
-        // because the keys order changes every time the HashMap is traversed
+        // because the keys traversal order changes every time the HashMap is created
         let mut arg_keys = step.args.keys().collect::<Vec<&String>>();
         arg_keys.sort();
-        let mut arg_str = String::with_capacity(step.args.len() * 10);
+        let mut args: Vec<Node<Msg>> = Vec::with_capacity(step.args.len());
         for k in arg_keys {
-            arg_str.push_str(k);
-            arg_str.push_str(": ");
-            arg_str.push_str(&format!(
+            args.push(span![class![C.text_blue_300], &format!("{}: ", k)]);
+            args.push(plain![format!(
                 "{}\n",
                 step.args.get(k).unwrap_or(&serde_json::value::Value::Null)
-            ));
+            )]);
         }
         let pre_class = class![
             C.p_2, C.m_2
@@ -459,7 +452,7 @@ fn step_item_view(step: &RichStep, is_open: bool) -> Vec<Node<Msg>> {
             div![
                 class![C.float_right, C.flex_grow],
                 h4![class![C.text_lg, C.font_medium], "Arguments"],
-                pre![&pre_class, arg_str],
+                pre![&pre_class, args],
                 if step.console.is_empty() {
                     vec![]
                 } else {
@@ -524,10 +517,8 @@ fn step_status_icon<T>(step: &RichStep, is_open: bool) -> Node<T> {
     awesome_style.merge(color);
     if is_open {
         font_awesome_minus_circle(awesome_style)
-    // font_awesome(awesome_style, "minus-circle")
     } else {
         font_awesome_plus_circle(awesome_style)
-        // font_awesome(awesome_style, "plus-circle")
     }
 }
 
@@ -745,10 +736,7 @@ fn select_by_keys<T: Clone>(hm: &HashMap<u32, T>, keys: &[u32]) -> Vec<T> {
         .collect()
 }
 
-fn convert_to_rich_hashmap<T: Clone>(
-    ts: Vec<T>,
-    extract: impl Fn(&T) -> (u32, Vec<u32>),
-) -> HashMap<u32, Arc<Rich<u32, T>>> {
+fn convert_to_rich_hashmap<T>(ts: Vec<T>, extract: impl Fn(&T) -> (u32, Vec<u32>)) -> HashMap<u32, Arc<Rich<u32, T>>> {
     ts.into_iter()
         .map(|t| {
             let (id, deps) = extract(&t);
@@ -784,20 +772,20 @@ impl Model {
         self.select = Default::default();
     }
 
-    fn assign_commands(&mut self, cmds: &[Command]) {
-        self.commands = convert_to_rich_hashmap(cmds.to_vec(), extract_children_from_cmd);
+    fn assign_commands(&mut self, cmds: Vec<Command>) {
+        self.commands = convert_to_rich_hashmap(cmds, extract_children_from_cmd);
         let tuple = self.check_consistency();
         self.refresh_view(tuple);
     }
 
-    fn assign_jobs(&mut self, jobs: &[Job0]) {
-        self.jobs = convert_to_rich_hashmap(jobs.to_vec(), extract_children_from_job);
+    fn assign_jobs(&mut self, jobs: Vec<Job0>) {
+        self.jobs = convert_to_rich_hashmap(jobs, extract_children_from_job);
         let tuple = self.check_consistency();
         self.refresh_view(tuple);
     }
 
-    fn assign_steps(&mut self, steps: &[Step]) {
-        self.steps = convert_to_rich_hashmap(steps.to_vec(), extract_children_from_step);
+    fn assign_steps(&mut self, steps: Vec<Step>) {
+        self.steps = convert_to_rich_hashmap(steps, extract_children_from_step);
         let tuple = self.check_consistency();
         self.refresh_view(tuple);
     }
@@ -991,7 +979,7 @@ mod tests {
         let db = build_db();
         let mut model = Model::default();
         let cmd_ids = db.all_cmds.iter().map(|x| x.id).collect::<Vec<_>>();
-        let selects = generate_random_selects(&db, &mut rng, 500);
+        let selects = generate_random_selects(&db, &mut rng, 1000);
         for select in selects {
             let permutations = vec![[1, 3, 2], [2, 1, 3], [2, 3, 1], [3, 1, 2], [3, 2, 1]];
             for permutation in permutations {
@@ -999,21 +987,21 @@ mod tests {
                 let (c, j, s) = prepare_subset(&db, cmd_id);
                 model.clear();
                 model.select = select.clone();
-                model.assign_commands(&c);
-                model.assign_jobs(&j);
-                model.assign_steps(&s);
-                let expected_cmd = model.commands_view.clone();
-                let expected_jobs = model.jobs_graph.clone();
-                let expected_steps = model.steps_view.clone();
+                model.assign_commands(c.clone());
+                model.assign_jobs(j.clone());
+                model.assign_steps(s.clone());
+                let expected_cmd = std::mem::replace(&mut model.commands_view, Vec::new());
+                let expected_jobs = std::mem::replace(&mut model.jobs_graph, JobsGraph::default());
+                let expected_steps = std::mem::replace(&mut model.steps_view, Vec::new());
 
                 model.clear();
                 model.select = select.clone();
                 // we simulate, that FetchCommands, FetchJobs and FetchSteps come in arbitrary order
                 for p in &permutation {
                     match p {
-                        1 => model.assign_commands(&c),
-                        2 => model.assign_jobs(&j),
-                        3 => model.assign_steps(&s),
+                        1 => model.assign_commands(c.clone()),
+                        2 => model.assign_jobs(j.clone()),
+                        3 => model.assign_steps(s.clone()),
                         _ => unreachable!(),
                     }
                 }
