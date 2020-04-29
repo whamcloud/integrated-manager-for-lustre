@@ -252,8 +252,6 @@ pub async fn setup_bare(
 ) -> Result<(), CmdError> {
     up().await?.args(hosts).checked_status().await?;
 
-    ssh::yum_update(&config.storage_server_ips()).await?;
-
     match ntp_server {
         NtpServer::HostOnly => {
             ssh::configure_ntp_for_host_only_if(&config.storage_server_ips()).await?
@@ -279,14 +277,14 @@ pub async fn setup_iml_install(
 
     match env::var("REPO_URI") {
         Ok(x) => {
-            provision_node(config.manager, "yum-update,install-iml-repouri")
+            provision_node(config.manager, "install-iml-repouri")
                 .await?
                 .env("REPO_URI", x)
                 .checked_status()
                 .await?;
         }
         _ => {
-            provision_node(config.manager, "yum-update,install-iml-local")
+            provision_node(config.manager, "install-iml-local")
                 .await?
                 .checked_status()
                 .await?;
