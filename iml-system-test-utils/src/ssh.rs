@@ -21,6 +21,8 @@ pub async fn scp(from: String, to: String) -> Result<(), CmdError> {
 
     x.arg("-o")
         .arg("StrictHostKeyChecking=no")
+        .arg("-o")
+        .arg("UserKnownHostsFile=/dev/null")
         .arg("-i")
         .arg("./id_rsa")
         .arg(from)
@@ -51,6 +53,8 @@ pub async fn ssh_exec<'a, 'b>(host: &'a str, cmd: &'b str) -> Result<(&'a str, O
 
     x.arg("-o")
         .arg("StrictHostKeyChecking=no")
+        .arg("-o")
+        .arg("UserKnownHostsFile=/dev/null")
         .arg("-i")
         .arg("id_rsa")
         .arg("-o")
@@ -102,6 +106,8 @@ pub async fn ssh_script<'a, 'b>(
         .arg("id_rsa")
         .arg("-o")
         .arg("StrictHostKeyChecking=no")
+        .arg("-o")
+        .arg("UserKnownHostsFile=/dev/null")
         .arg(host)
         .arg("bash -s")
         .args(args)
