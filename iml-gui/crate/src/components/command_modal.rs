@@ -137,6 +137,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
         }
         Msg::FetchedCommands(commands_data_result) => {
+            model.commands_loading = false;
             match *commands_data_result {
                 Ok(api_list) => {
                     model.assign_commands(api_list.objects);
@@ -176,6 +177,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             if do_fetch {
                 schedule_fetch_tree(model, orders);
             }
+            let tuple = model.check_view_consistency();
+            model.clear_inconsistent_views(tuple);
         }
         Msg::Noop => {}
     }
@@ -326,11 +329,18 @@ fn command_item_view(model: &Model, x: &RichCommand) -> Node<Msg> {
 }
 
 pub fn job_tree_view(model: &Model) -> Node<Msg> {
-    div![
-        class![C.font_ordinary, C.text_gray_700],
-        h4![class![C.text_lg, C.font_medium], "Jobs"],
-        div![class![C.p_1, C.pb_2, C.mb_1, C.overflow_auto,], job_dag_view(model),]
-    ]
+    if model.jobs_graph.is_empty() {
+        div![
+            class![C.my_8, C.text_center, C.text_gray_500],
+            font_awesome(class![C.w_8, C.h_8, C.inline, C.pulse], "spinner"),
+        ]
+    } else {
+        div![
+            class![C.font_ordinary, C.text_gray_700],
+            h4![class![C.text_lg, C.font_medium], "Jobs"],
+            div![class![C.p_1, C.pb_2, C.mb_1, C.overflow_auto], job_dag_view(model)],
+        ]
+    }
 }
 
 pub fn job_dag_view(model: &Model) -> Node<Msg> {
@@ -388,8 +398,13 @@ fn job_item_view(job: Arc<RichJob>, ctx: &mut Context) -> Node<Msg> {
 }
 
 fn step_list_view(steps: &[Arc<RichStep>], select: &Select, is_open: bool) -> Node<Msg> {
-    if !is_open || steps.is_empty() {
+    if !is_open {
         empty!()
+    } else if steps.is_empty() {
+        div![
+            class![C.my_8, C.text_center, C.text_gray_500],
+            font_awesome(class![C.w_8, C.h_8, C.inline, C.pulse], "spinner"),
+        ]
     } else {
         div![ul![
             class![C.p_1, C.pb_2, C.mb_1, C.overflow_auto],
@@ -762,7 +777,7 @@ pub fn is_subset<T: PartialEq>(part: &[T], all: &[T]) -> bool {
 impl Model {
     fn clear(&mut self) {
         self.tree_cancel = None;
-        self.commands_loading = false;
+        self.commands_loading = true;
         self.commands.clear();
         self.commands_view.clear();
         self.jobs.clear();
@@ -774,34 +789,34 @@ impl Model {
 
     fn assign_commands(&mut self, cmds: Vec<Command>) {
         self.commands = convert_to_rich_hashmap(cmds, extract_children_from_cmd);
-        let tuple = self.check_consistency();
+        let tuple = self.check_back_consistency();
         self.refresh_view(tuple);
     }
 
     fn assign_jobs(&mut self, jobs: Vec<Job0>) {
         self.jobs = convert_to_rich_hashmap(jobs, extract_children_from_job);
-        let tuple = self.check_consistency();
+        let tuple = self.check_back_consistency();
         self.refresh_view(tuple);
     }
 
     fn assign_steps(&mut self, steps: Vec<Step>) {
         self.steps = convert_to_rich_hashmap(steps, extract_children_from_step);
-        let tuple = self.check_consistency();
+        let tuple = self.check_back_consistency();
         self.refresh_view(tuple);
     }
 
     /// We perform the consistency check of the current collections
     /// `self.commands`, `self.jobs` and `self.steps`.
     /// The selection, if it is non-empty, places additional constraints.
-    fn check_consistency(&self) -> (bool, bool, bool) {
-        let mut ls = [false; 3];
+    fn check_back_consistency(&self) -> (bool, bool, bool) {
+        let mut ok = [false; 3];
 
         // check between layers
         let job_ids = extract_sorted_keys(&self.jobs);
         let step_ids = extract_sorted_keys(&self.steps);
-        ls[0] = !self.commands.is_empty();
-        ls[1] = self.commands.values().any(|x| is_subset(x.deps(), &job_ids));
-        ls[2] = self.jobs.values().any(|x| is_subset(x.deps(), &step_ids));
+        ok[0] = !self.commands.is_empty();
+        ok[1] = self.commands.values().any(|x| is_subset(x.deps(), &job_ids));
+        ok[2] = self.jobs.values().any(|x| is_subset(x.deps(), &step_ids));
 
         // the additional constraints from the selection
         match &self.select {
@@ -809,7 +824,7 @@ impl Model {
             Select::Command(i) => {
                 let cmd0 = self.commands.get(i);
                 if cmd0.is_some() {
-                    ls[0] = true;
+                    ok[0] = true;
                 }
             }
             Select::CommandJob(i, js) => {
@@ -817,11 +832,11 @@ impl Model {
                 let jobs0 = if is_subset(js, &job_ids) { Some(()) } else { None };
                 match (cmd0, jobs0) {
                     (Some(cmd), Some(_)) => {
-                        ls[0] = true;
-                        ls[1] = is_subset(js, cmd.deps());
+                        ok[0] = true;
+                        ok[1] = is_subset(js, cmd.deps());
                     }
                     (Some(_), _) => {
-                        ls[0] = true;
+                        ok[0] = true;
                     }
                     (_, _) => {}
                 }
@@ -836,28 +851,28 @@ impl Model {
                 let steps0 = if is_subset(ks, &step_ids) { Some(()) } else { None };
                 match (cmd0, jobs0, steps0) {
                     (Some(cmd), Some(jobs), Some(_)) => {
-                        ls[0] = true;
-                        ls[1] = is_subset(js, cmd.deps());
+                        ok[0] = true;
+                        ok[1] = is_subset(js, cmd.deps());
                         let ids = jobs.iter().flat_map(|x| x.deps()).copied().collect::<Vec<u32>>();
-                        ls[2] = is_subset(ks, &ids);
+                        ok[2] = is_subset(ks, &ids);
                     }
                     (Some(cmd), Some(_), _) => {
-                        ls[0] = true;
-                        ls[1] = is_subset(js, cmd.deps());
+                        ok[0] = true;
+                        ok[1] = is_subset(js, cmd.deps());
                     }
                     (Some(_), _, _) => {
-                        ls[0] = true;
+                        ok[0] = true;
                     }
                     (_, _, _) => {}
                 }
             }
         }
         // make ensure the consistency levels are ordered
-        if ls[0] && ls[1] && ls[2] {
+        if ok[0] && ok[1] && ok[2] {
             (true, true, true)
-        } else if ls[0] && ls[1] {
+        } else if ok[0] && ok[1] {
             (true, true, false)
-        } else if ls[0] {
+        } else if ok[0] {
             (true, false, false)
         } else {
             (false, false, false)
@@ -879,6 +894,64 @@ impl Model {
         }
         if steps_ok {
             self.steps_view = convert_to_sorted_vec(&self.steps);
+        }
+    }
+
+    /// We check that the selection is compliant with the views,
+    /// if we don't do this, then the old views may appear, when the fetch returns.
+    fn check_view_consistency(&self) -> (bool, bool, bool) {
+        fn jobs_graph_all_ids(jobs_graph: &JobsGraph) -> HashSet<u32> {
+            let mut job_ids = jobs_graph.roots.iter().map(|x| x.id).collect::<HashSet<u32>>();
+            for (k, vs) in &jobs_graph.links {
+                job_ids.insert(*k);
+                for v in vs {
+                    job_ids.insert(v.id);
+                }
+            }
+            job_ids
+        }
+        let mut ok = [false; 3];
+        match &self.select {
+            Select::None => {
+                ok[0] = true;
+            }
+            Select::Command(i) => {
+                ok[0] = self.commands_view.iter().any(|x| x.id == *i);
+            }
+            Select::CommandJob(i, js) => {
+                ok[0] = self.commands_view.iter().any(|x| x.id == *i);
+                let job_ids = jobs_graph_all_ids(&self.jobs_graph);
+                ok[1] = js.iter().all(|k| job_ids.contains(k));
+            }
+            Select::CommandJobSteps(i, js, ks) => {
+                ok[0] = self.commands_view.iter().any(|x| x.id == *i);
+                let job_ids = jobs_graph_all_ids(&self.jobs_graph);
+                ok[1] = js.iter().all(|k| job_ids.contains(k));
+                let step_ids = self.steps_view.iter().map(|x| x.id).collect::<HashSet<_>>();
+                ok[2] = ks.iter().all(|k| step_ids.contains(k));
+            }
+        }
+        if ok[0] && ok[1] && ok[2] {
+            (true, true, true)
+        } else if ok[0] && ok[1] {
+            (true, true, false)
+        } else if ok[0] {
+            (true, false, false)
+        } else {
+            (false, false, false)
+        }
+    }
+
+    fn clear_inconsistent_views(&mut self, layers: (bool, bool, bool)) {
+        let (cmds_ok, jobs_ok, steps_ok) = layers;
+        if !cmds_ok {
+            self.commands_view.clear();
+        }
+        if !jobs_ok {
+            self.jobs_graph.clear();
+        }
+        if !steps_ok {
+            self.steps_view.clear();
         }
     }
 }
