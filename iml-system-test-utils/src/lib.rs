@@ -148,9 +148,7 @@ pub trait WithSos {
 #[async_trait]
 impl<T: Into<SystemTestError> + Send> WithSos for Result<(), T> {
     async fn handle_test_result(self, hosts: &[&str], prefix: &str) -> Result<(), SystemTestError> {
-        if self.is_err() {
-            create_iml_diagnostics(hosts, prefix).await?;
-        }
+        create_iml_diagnostics(hosts, prefix).await?;
 
         self.map_err(|e| e.into())
     }
