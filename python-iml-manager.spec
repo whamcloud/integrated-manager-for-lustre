@@ -58,7 +58,7 @@ Requires:       python2-jsonschema >= 2.5.1
 Requires:       python2-kombu >= 4.2.2
 Requires:       python2-mimeparse
 Requires:       python2-toolz
-Requires:       rabbitmq-server >= 3.3.5-34
+Requires:       rabbitmq-server >= 3.7.25-1
 Requires:       Django >= 1.11, Django < 1.12
 Requires:       policycoreutils-python
 Requires:       system-config-firewall-base
