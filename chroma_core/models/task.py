@@ -54,6 +54,74 @@ class Task(models.Model):
     args = JSONField(default={})
 
 
+class CreateTaskJob(AdvertisedJob):
+    task = models.ForeignKey("Task", on_delete=CASCADE)
+    requires_confirmation = False
+    classes = ["Task"]
+    verbe = "Create"
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return "Create Task"
+
+    @classmethod
+    def get_args(cls, task):
+        return {"task_id": task.id}
+
+    def description(self):
+        return "Create Task"
+
+    def get_steps(self):
+        steps = []
+        for host in instance.filesystem.get_servers():
+            steps.append((CreateTaskStep, {"task": self.task.name, "host": host.fqdn}))
+
+        return steps
+
+
+class CreateTaskStep(Step):
+    def run(self, args):
+        self.invoke_rust_local_action_expect_result(args["host"], "postoffice_add", args["task"])
+
+
+class RemoveTaskJob(AdvertisedJob):
+    task = models.ForeignKey("Task", on_delete=CASCADE)
+    requires_confirmation = False
+    classes = ["Task"]
+    verbe = "Remove"
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return "Remove Task"
+
+    @classmethod
+    def get_args(cls, task):
+        return {"task_id": task.id}
+
+    def description(self):
+        return "Remove Task"
+
+    def get_steps(self):
+        steps = []
+        for host in instance.filesystem.get_servers():
+            steps.append((RemoveTaskStep, {"task": self.task.name, "host": host.fqdn}))
+
+        return steps
+
+
+class RemoveTaskStep(Step):
+    def run(self, args):
+        self.invoke_rust_local_action_expect_result(args["host"], "postoffice_remove", args["task"])
+
+
 class FidTaskQueue(models.Model):
     class Meta:
         app_label = "chroma_core"
