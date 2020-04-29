@@ -19,7 +19,11 @@ pub async fn scp(from: String, to: String) -> Result<(), CmdError> {
     let mut x = Command::new("scp");
     x.current_dir(path);
 
-    x.arg("-i")
+    x.arg("-o")
+        .arg("StrictHostKeyChecking=no")
+        .arg("-o")
+        .arg("UserKnownHostsFile=/dev/null")
+        .arg("-i")
         .arg("./id_rsa")
         .arg(from)
         .arg(to)
@@ -47,7 +51,11 @@ pub async fn ssh_exec<'a, 'b>(host: &'a str, cmd: &'b str) -> Result<(&'a str, O
     let mut x = Command::new("ssh");
     x.current_dir(path);
 
-    x.arg("-i")
+    x.arg("-o")
+        .arg("StrictHostKeyChecking=no")
+        .arg("-o")
+        .arg("UserKnownHostsFile=/dev/null")
+        .arg("-i")
         .arg("id_rsa")
         .arg("-o")
         .arg("StrictHostKeyChecking=no")
@@ -98,6 +106,8 @@ pub async fn ssh_script<'a, 'b>(
         .arg("id_rsa")
         .arg("-o")
         .arg("StrictHostKeyChecking=no")
+        .arg("-o")
+        .arg("UserKnownHostsFile=/dev/null")
         .arg(host)
         .arg("bash -s")
         .args(args)
