@@ -134,6 +134,7 @@ pub async fn provision_node(node: &str, name: &str) -> Result<Command, CmdError>
 pub async fn run_vm_command(node: &str, cmd: &str) -> Result<Command, CmdError> {
     let mut x = vagrant().await?;
 
+    println!("Running command: {}", cmd);
     x.arg("ssh").arg("-c").arg(&cmd).arg(node);
 
     Ok(x)
@@ -146,10 +147,13 @@ pub async fn rsync(host: &str) -> Result<(), CmdError> {
 }
 
 pub async fn detect_fs(config: &ClusterConfig) -> Result<(), CmdError> {
-    run_vm_command(config.manager, "iml filesystem detect")
-        .await?
-        .checked_status()
-        .await
+    run_vm_command(
+        config.manager,
+        "RUST_BACKTRACE=1 RUST_LOG=debug iml filesystem detect",
+    )
+    .await?
+    .checked_status()
+    .await
 }
 
 pub async fn global_prune() -> Result<(), CmdError> {
@@ -328,7 +332,11 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
     for (profile, hosts) in server_map {
         run_vm_command(
             config.manager,
-            &format!("iml server add -h {} -p {}", hosts.join(","), profile),
+            &format!(
+                "RUST_BACKTRACE=1 RUST_LOG=debug iml server add -h {} -p {}",
+                hosts.join(","),
+                profile
+            ),
         )
         .await?
         .checked_status()
