@@ -211,5 +211,14 @@ pub async fn create_iml_diagnostics<'a, 'b>(
         "/var/tmp/*sosreport*",
         format!("./{}/", &report_dir).as_str(),
     )
-    .await
+    .await?;
+
+    let mut chmod = Command::new("chmod");
+    chmod
+        .current_dir(path)
+        .arg("777")
+        .arg("-R")
+        .arg(report_dir)
+        .checked_status()
+        .await
 }

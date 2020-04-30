@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    components::activity_indicator,
+    components::{activity_indicator, date},
     ctx_help::CtxHelp,
     extensions::MergeAttrs as _,
     font_awesome, font_awesome_outline,
@@ -11,7 +11,7 @@ use crate::{
     page::{activity, logs},
     restrict,
     route::Route,
-    GMsg, ServerDate, HELP_PATH,
+    GMsg, HELP_PATH,
 };
 use iml_wire_types::{
     warp_drive::{ArcCache, Locks},
@@ -117,7 +117,7 @@ pub fn view(
     activity_health: &activity_indicator::ActivityHealth,
     session: Option<&Session>,
     all_locks: &Locks,
-    sd: &ServerDate,
+    sd: &date::Model,
 ) -> Node<Msg> {
     div![
         class![
