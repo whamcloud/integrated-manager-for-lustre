@@ -50,7 +50,7 @@ enabled=1
 #bintraybintray-rabbitmq-erlang-rpm - packages by rabbitmq-erlang from Bintray
 [bintraybintray-rabbitmq-erlang-rpm]
 name=bintray-rabbitmq-erlang-rpm
-baseurl=https://dl.bintray.com/rabbitmq-erlang/rpm
+baseurl=https://dl.bintray.com/rabbitmq-erlang/rpm/erlang/21/el/7/
 gpgcheck=0
 repo_gpgcheck=0
 enabled=1
