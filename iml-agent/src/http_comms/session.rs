@@ -8,14 +8,13 @@ use crate::{
 };
 use futures::{future, Future, TryFutureExt};
 use iml_wire_types::{AgentResult, Id, PluginName, Seq};
-use parking_lot::Mutex;
 use std::{
     collections::HashMap,
     ops::Deref,
     sync::Arc,
     time::{Duration, Instant},
 };
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 use tracing::{info, warn};
 
 /// Takes a `Duration` and figures out the next duration
@@ -45,9 +44,9 @@ pub enum State {
 }
 
 impl State {
-    pub fn teardown(&mut self) -> Result<()> {
+    pub async fn teardown(&mut self) -> Result<()> {
         if let State::Active(a) = self {
-            a.session.teardown()?;
+            a.session.teardown().await?;
         }
 
         std::mem::replace(self, State::Empty(Instant::now()));
@@ -133,7 +132,7 @@ impl Sessions {
     pub async fn terminate_session(&self, name: &PluginName) -> Result<()> {
         match self.0.get(name) {
             Some(s) => {
-                s.write().await.teardown()?;
+                s.write().await.teardown().await?;
             }
             None => {
                 warn!("Plugin {:?} not found in sessions", name);
@@ -149,7 +148,7 @@ impl Sessions {
         let xs = self
             .0
             .values()
-            .map(|x| async move { x.write().await.teardown() })
+            .map(|x| async move { x.write().await.teardown().await })
             .collect::<Vec<_>>();
 
         future::try_join_all(xs).await.map(drop)
@@ -191,16 +190,30 @@ impl Session {
     pub fn start(&mut self) -> impl Future<Output = Result<Option<(SessionInfo, OutputValue)>>> {
         let info = Arc::clone(&self.info);
 
-        self.plugin
-            .start_session()
-            .map_ok(move |x| x.map(|y| addon_info(&mut info.lock(), y)))
+        self.plugin.start_session().and_then(|x| async move {
+            match x {
+                Some(x) => {
+                    let mut info = info.lock().await;
+
+                    Ok(Some(addon_info(&mut info, x)))
+                }
+                None => Ok(None),
+            }
+        })
     }
     pub fn poll(&self) -> impl Future<Output = Result<Option<(SessionInfo, OutputValue)>>> {
         let info = Arc::clone(&self.info);
 
-        self.plugin
-            .update_session()
-            .map_ok(move |x| x.map(|y| addon_info(&mut info.lock(), y)))
+        self.plugin.update_session().and_then(|x| async move {
+            match x {
+                Some(x) => {
+                    let mut info = info.lock().await;
+
+                    Ok(Some(addon_info(&mut info, x)))
+                }
+                None => Ok(None),
+            }
+        })
     }
     pub fn message(
         &self,
@@ -208,12 +221,14 @@ impl Session {
     ) -> impl Future<Output = Result<(SessionInfo, AgentResult)>> {
         let info = Arc::clone(&self.info);
 
-        self.plugin
-            .on_message(body)
-            .map_ok(move |x| addon_info(&mut info.lock(), x))
+        self.plugin.on_message(body).and_then(|x| async move {
+            let mut info = info.lock().await;
+
+            Ok(addon_info(&mut info, x))
+        })
     }
-    pub fn teardown(&mut self) -> Result<()> {
-        let info = self.info.lock();
+    pub async fn teardown(&mut self) -> Result<()> {
+        let info = self.info.lock().await;
 
         info!("Terminating session {:?}/{:?}", info.name, info.id);
 
