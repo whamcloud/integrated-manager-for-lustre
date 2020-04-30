@@ -8,6 +8,7 @@ After=postgresql-9.6.service
 Type=simple
 ExecStart=/bin/python /usr/share/chroma-manager/manage.py chroma_service --name=job_scheduler job_scheduler
 Restart=on-failure
+RestartSec=5
 StandardOutput=journal
 StandardError=journal
 

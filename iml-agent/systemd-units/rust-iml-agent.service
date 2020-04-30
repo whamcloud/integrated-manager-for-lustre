@@ -6,6 +6,7 @@ After=rust-iml-agent.path
 
 [Service]
 Restart=always
+RestartSec=5
 EnvironmentFile=/etc/iml/manager-url.conf
 EnvironmentFile=/etc/iml/iml-agent.conf
 ExecStart=/usr/bin/iml-agent-daemon

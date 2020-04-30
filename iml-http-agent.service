@@ -7,6 +7,7 @@ After=rabbitmq-server.service
 Type=simple
 ExecStart=/bin/python /usr/share/chroma-manager/manage.py chroma_service --name=http_agent http_agent --gevent
 Restart=on-failure
+RestartSec=5
 StandardOutput=journal
 StandardError=journal
 

@@ -7,6 +7,7 @@ After=rabbitmq-server.service
 Type=simple
 ExecStart=/bin/python /usr/share/chroma-manager/manage.py chroma_service --name=plugin_runner plugin_runner
 Restart=on-failure
+RestartSec=5
 StandardOutput=journal
 StandardError=journal
 
