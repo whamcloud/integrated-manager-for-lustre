@@ -1985,6 +1985,8 @@ class JobScheduler(object):
         with self._lock:
             filesystem = ObjectCache.get_by_id(ManagedFilesystem, int(copytool_data["filesystem"]))
             task_data["filesystem"] = filesystem
+            if not "start" in task_data:
+                task_data["start"] = django.utils.timezone.now()
 
             with transaction.atomic():
                 task = Task.objects.create(**task_data)

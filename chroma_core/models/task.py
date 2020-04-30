@@ -6,8 +6,9 @@ from django.db import models
 from django.db.models import CASCADE, SET_NULL
 from django.contrib.postgres.fields import ArrayField, JSONField
 
-from chroma_core.lib.job import DependOn, DependAll, Step, job_log
+from chroma_core.lib.job import DependOn, DependAll, Step
 from chroma_core.models import ManagedFilesystem, ManagedHost
+from chroma_core.models import AdvertisedJob
 
 
 class LustreFidField(models.Field):
