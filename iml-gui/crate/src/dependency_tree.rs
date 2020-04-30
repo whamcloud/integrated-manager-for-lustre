@@ -22,7 +22,7 @@ impl<K, T: Deps<K>> Deps<K> for Arc<T> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Rich<K: Hash + Eq, T> {
     pub id: K,
     pub deps: Vec<K>,
@@ -64,7 +64,7 @@ where
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct DependencyDAG<K: Hash + Eq + Debug, T> {
     pub roots: Vec<Arc<T>>,
     pub links: HashMap<K, Vec<Arc<T>>>,
