@@ -14,6 +14,7 @@ Environment=RUST_LOG=info
 EnvironmentFile=/var/lib/chroma/iml-settings.conf
 ExecStart=/bin/iml-device
 Restart=always
+RestartSec=5
 StandardOutput=journal
 StandardError=journal
 

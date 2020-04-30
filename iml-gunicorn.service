@@ -9,6 +9,7 @@ Type=notify
 WorkingDirectory=/usr/share/chroma-manager
 ExecStart=/bin/gunicorn wsgi:application -c ./wsgi.py
 Restart=on-failure
+RestartSec=5
 StandardOutput=journal
 StandardError=journal
 

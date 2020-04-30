@@ -9,6 +9,7 @@ Environment=TIMER_PORT=8892
 Environment=PROXY_HOST=iml-timer
 ExecStart=/bin/iml-timer
 Restart=always
+RestartSec=5
 StandardOutput=journal
 StandardError=journal
 
