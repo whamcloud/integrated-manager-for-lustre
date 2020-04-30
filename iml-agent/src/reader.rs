@@ -24,8 +24,7 @@ async fn get_delivery(
     let msgs = agent_client.clone().get().map_ok(|x| x.messages).await?;
 
     for x in msgs {
-        let mut sessions2 = sessions.clone();
-        let sessions3 = sessions.clone();
+        let sessions2 = sessions.clone();
         let agent_client2 = agent_client.clone();
 
         tracing::debug!("--> Delivery from manager {:?}", x);
@@ -38,7 +37,7 @@ async fn get_delivery(
                 let mut s = Session::new(plugin.clone(), session_id, plugin_instance);
                 let fut = s.start();
 
-                sessions2.insert_session(plugin.clone(), s);
+                sessions2.insert_session(plugin.clone(), s).await?;
 
                 let agent_client3 = agent_client2.clone();
 
@@ -56,7 +55,7 @@ async fn get_delivery(
                             Err(e) => {
                                 tracing::warn!("Error during session start {:?}", e);
 
-                                sessions3
+                                sessions2
                                     .terminate_session(&plugin)
                                     .await
                                     .unwrap_or_else(|e| {

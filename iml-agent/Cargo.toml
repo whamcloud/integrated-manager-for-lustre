@@ -8,6 +8,7 @@ license = "MIT"
 repository = "https://github.com/whamcloud/integrated-manager-for-lustre/tree/master/iml-agent"
 
 [dependencies]
+async-trait = "0.1"
 byte-unit = "=2.1"
 bytes = "0.5"
 chrono = "0.4"
@@ -31,7 +32,6 @@ libc = "0.2"
 liblustreapi = { path = "../liblustreapi", version = "0.2" }
 lustre_collector = "0.2.12"
 native-tls = "0.2"
-parking_lot = "0.9"
 prettytable-rs = "0.8"
 reqwest = { version = "0.10", features = ["default-tls", "native-tls", "json", "stream"] }
 serde = { version = "1", features = ["derive"] }

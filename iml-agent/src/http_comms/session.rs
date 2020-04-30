@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    agent_error::Result,
+    agent_error::{NoSessionError, Result},
     daemon_plugins::{DaemonBox, OutputValue},
 };
 use futures::{future, Future, TryFutureExt};
@@ -58,6 +58,15 @@ impl State {
             a.instant = Instant::now() + Duration::from_secs(10);
         }
     }
+    pub fn create_active(&mut self, session: Session) {
+        std::mem::replace(
+            self,
+            State::Active(Active {
+                session,
+                instant: Instant::now() + Duration::from_secs(10),
+            }),
+        );
+    }
     pub fn reset_empty(&mut self) {
         std::mem::replace(self, State::Empty(Instant::now() + Duration::from_secs(10)));
     }
@@ -70,8 +79,12 @@ impl State {
     }
 }
 
+/// Holds all information about active sessions.
+/// There is one important invariant: The inner `HashMap`
+/// should never be mutated directly.
+/// State changes are done via interior mutability.
 #[derive(Clone)]
-pub struct Sessions(pub HashMap<PluginName, Arc<RwLock<State>>>);
+pub struct Sessions(pub Arc<HashMap<PluginName, Arc<RwLock<State>>>>);
 
 impl Sessions {
     pub fn new(plugins: &[PluginName]) -> Self {
@@ -81,7 +94,7 @@ impl Sessions {
             .map(|x| (x, Arc::new(RwLock::new(State::Empty(Instant::now())))))
             .collect();
 
-        Self(hm)
+        Self(Arc::new(hm))
     }
     pub async fn reset_active(&self, name: &PluginName) {
         if let Some(x) = self.0.get(name) {
@@ -98,14 +111,16 @@ impl Sessions {
             x.write().await.convert_to_pending()
         }
     }
-    pub fn insert_session(&mut self, name: PluginName, s: Session) {
-        self.0.insert(
-            name,
-            Arc::new(RwLock::new(State::Active(Active {
-                session: s,
-                instant: Instant::now() + Duration::from_secs(10),
-            }))),
-        );
+    pub async fn insert_session(&self, name: PluginName, s: Session) -> Result<()> {
+        let state = self
+            .0
+            .get(&name)
+            .ok_or_else(|| NoSessionError(name))?
+            .clone();
+
+        state.write().await.create_active(s);
+
+        Ok(())
     }
     pub async fn message(
         &self,
@@ -215,24 +230,21 @@ impl Session {
             }
         })
     }
-    pub fn message(
-        &self,
-        body: serde_json::Value,
-    ) -> impl Future<Output = Result<(SessionInfo, AgentResult)>> {
+    pub async fn message(&self, body: serde_json::Value) -> Result<(SessionInfo, AgentResult)> {
         let info = Arc::clone(&self.info);
 
-        self.plugin.on_message(body).and_then(|x| async move {
-            let mut info = info.lock().await;
+        let x = self.plugin.on_message(body).await?;
 
-            Ok(addon_info(&mut info, x))
-        })
+        let mut info = info.lock().await;
+
+        Ok(addon_info(&mut info, x))
     }
     pub async fn teardown(&mut self) -> Result<()> {
         let info = self.info.lock().await;
 
         info!("Terminating session {:?}/{:?}", info.name, info.id);
 
-        self.plugin.teardown()
+        self.plugin.teardown().await
     }
 }
 
@@ -337,11 +349,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_sessions_insert_session() -> Result<()> {
-        let mut sessions = Sessions::new(&["test_plugin".into()]);
+        let sessions = Sessions::new(&["test_plugin".into()]);
 
         let session = create_session();
 
-        sessions.insert_session("test_plugin".into(), session);
+        sessions
+            .insert_session("test_plugin".into(), session)
+            .await?;
 
         let state = sessions.0.get(&"test_plugin".into()).cloned().unwrap();
         let state = state.read().await;
@@ -354,11 +368,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_sessions_session_message() -> Result<()> {
-        let mut sessions = Sessions::new(&["test_plugin".into()]);
+        let sessions = Sessions::new(&["test_plugin".into()]);
 
         let session = create_session();
 
-        sessions.insert_session("test_plugin".into(), session);
+        sessions
+            .insert_session("test_plugin".into(), session)
+            .await?;
 
         let plugin_name = "test_plugin".into();
 
