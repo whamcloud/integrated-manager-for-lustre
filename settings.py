@@ -371,9 +371,6 @@ SILENCED_SYSTEM_CHECKS = ["contenttypes.E001", "contenttypes.E002"]
 LOCAL_SETTINGS_FILE = "local_settings.py"
 
 try:
-    LOCAL_SETTINGS
-except NameError:
-    try:
-        from local_settings import *
-    except ImportError:
-        pass
+    from local_settings import *
+except ImportError:
+    pass
