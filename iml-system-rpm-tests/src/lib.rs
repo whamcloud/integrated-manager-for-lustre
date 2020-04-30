@@ -6,8 +6,14 @@ use iml_cmd::CmdError;
 use iml_system_test_utils::{ssh, vagrant, SetupConfigType};
 use std::{collections::HashMap, time::Duration};
 use tokio::time::delay_for;
+use tracing_subscriber::{fmt::Subscriber};
+use tracing::Level;
 
 pub async fn setup() -> Result<(), CmdError> {
+    Subscriber::builder()
+        .with_max_level(Level::DEBUG)
+        .init();
+
     vagrant::destroy().await?;
     vagrant::global_prune().await?;
     vagrant::poweroff_running_vms().await?;
