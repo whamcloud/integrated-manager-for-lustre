@@ -17,7 +17,7 @@ use tokio::time::delay_for;
 use tracing::{error, warn};
 
 async fn get_delivery(
-    mut sessions: Sessions,
+    sessions: Sessions,
     agent_client: AgentClient,
     registry: &DaemonPlugins,
 ) -> Result<(), ImlAgentError> {
@@ -25,6 +25,7 @@ async fn get_delivery(
 
     for x in msgs {
         let mut sessions2 = sessions.clone();
+        let sessions3 = sessions.clone();
         let agent_client2 = agent_client.clone();
 
         tracing::debug!("--> Delivery from manager {:?}", x);
@@ -49,40 +50,45 @@ async fn get_delivery(
 
                         Ok(())
                     }
-                    .map(move |r: Result<(), ImlAgentError>| match r {
-                        Ok(_) => (),
-                        Err(e) => {
-                            tracing::warn!("Error during session start {:?}", e);
-                            sessions2.terminate_session(&plugin).unwrap_or_else(|e| {
-                                tracing::warn!("Error terminating session, {}", e)
-                            });
+                    .then(move |r: Result<(), ImlAgentError>| async move {
+                        match r {
+                            Ok(_) => (),
+                            Err(e) => {
+                                tracing::warn!("Error during session start {:?}", e);
+
+                                sessions3
+                                    .terminate_session(&plugin)
+                                    .await
+                                    .unwrap_or_else(|e| {
+                                        tracing::warn!("Error terminating session, {}", e)
+                                    });
+                            }
                         }
                     }),
                 );
             }
             ManagerMessage::Data { plugin, body, .. } => {
-                let r = { sessions2.message(&plugin, body) };
+                tokio::spawn(
+                    async move {
+                        let r = { sessions2.message(&plugin, body) };
 
-                if let Some(fut) = r {
-                    let agent_client3 = agent_client2.clone();
+                        if let Some(x) = r.await {
+                            let agent_client3 = agent_client2.clone();
 
-                    tokio::spawn(
-                        async move {
-                            let (info, x) = fut.await?;
+                            let (info, x) = x?;
 
                             agent_client3.send_data(info, x).await?;
-
-                            Ok(())
                         }
-                        .map_err(|e: ImlAgentError| error!("{}", e))
-                        .map(drop),
-                    );
-                };
+
+                        Ok(())
+                    }
+                    .map_err(|e: ImlAgentError| error!("{}", e)),
+                );
             }
             ManagerMessage::SessionTerminate { plugin, .. } => {
-                sessions.terminate_session(&plugin)?
+                sessions.terminate_session(&plugin).await?
             }
-            ManagerMessage::SessionTerminateAll { .. } => sessions.terminate_all_sessions()?,
+            ManagerMessage::SessionTerminateAll { .. } => sessions.terminate_all_sessions().await?,
         }
     }
 
@@ -91,7 +97,7 @@ async fn get_delivery(
 
 /// Continually polls the manager for any incoming commands using a loop.
 pub async fn create_reader(
-    mut sessions: Sessions,
+    sessions: Sessions,
     agent_client: AgentClient,
     registry: DaemonPlugins,
 ) -> Result<(), ImlAgentError> {
@@ -101,9 +107,7 @@ pub async fn create_reader(
             Err(ImlAgentError::Reqwest(e)) => {
                 warn!("Got a manager read Error {:?}. Will retry in 5 seconds.", e);
 
-                if let Err(e) = sessions.terminate_all_sessions() {
-                    return Err(e);
-                };
+                sessions.terminate_all_sessions().await?;
 
                 delay_for(Duration::from_secs(5)).await;
             }
