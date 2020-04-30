@@ -47,11 +47,12 @@ gpgcheck=0
 repo_gpgcheck=0
 enabled=1
 
-[rabbitmq_erlang]
-name=rabbitmq_erlang
-baseurl=https://packagecloud.io/rabbitmq/erlang/el/7/\$basearch
-repo_gpgcheck=0
+#bintraybintray-rabbitmq-erlang-rpm - packages by rabbitmq-erlang from Bintray
+[bintraybintray-rabbitmq-erlang-rpm]
+name=bintray-rabbitmq-erlang-rpm
+baseurl=https://dl.bintray.com/rabbitmq-erlang/rpm
 gpgcheck=0
+repo_gpgcheck=0
 enabled=1
 
 [pgdg96]
