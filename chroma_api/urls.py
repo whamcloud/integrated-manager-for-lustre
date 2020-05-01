@@ -64,6 +64,7 @@ import chroma_api.pacemaker
 import chroma_api.stratagem
 import chroma_api.ntp
 import chroma_api.ticket
+import chroma_api.task
 
 api.register(chroma_api.host.HostResource())
 api.register(chroma_api.host.ServerProfileResource())
@@ -108,5 +109,6 @@ api.register(chroma_api.stratagem.StratagemConfigurationResource())
 api.register(chroma_api.stratagem.RunStratagemResource())
 api.register(chroma_api.ntp.NtpConfigurationResource())
 api.register(chroma_api.ticket.TicketResource())
+api.register(chroma_api.task.TaskResource())
 
 urlpatterns = [url(r"^", include(api.urls))]
