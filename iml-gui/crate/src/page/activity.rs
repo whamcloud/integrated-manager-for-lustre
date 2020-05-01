@@ -318,19 +318,15 @@ fn alert_item_view(
                 empty![]
             }
         ],
-        if let Some(end) = alert.end.as_ref() {
-            vec![
-                div![
-                    class![C.row_span_1, C.col_span_2, C.whitespace_no_wrap],
-                    "Ended",
-                    " ",
-                    date_view(sd, end)
-                ],
-                command_details_button(alert),
-            ]
-        } else {
-            vec![]
-        }
+        div![
+            class![C.row_span_1, C.col_span_2, C.whitespace_no_wrap],
+            if let Some(end) = alert.end.as_ref() {
+                span!["Ended ", date_view(sd, end)]
+            } else {
+                empty![]
+            }
+        ],
+        command_details_button(alert),
     ]
 }
 
