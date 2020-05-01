@@ -3,7 +3,9 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{get, get_all, get_hosts, post, put, wait_for_cmds, wait_for_cmds_success},
+    api_utils::{
+        get, get_all, get_hosts, post, put, wait_for_cmds, wait_for_cmds_success, SendCmd, SendJob,
+    },
     display_utils::{
         display_cancelled, display_error, format_error, format_success, generate_table, wrap_fut,
         DisplayType, IntoDisplayType as _,
@@ -82,6 +84,10 @@ pub enum ServerCommand {
     /// Remove servers from IML
     #[structopt(name = "remove")]
     Remove(RemoveHosts),
+    /// Remove servers from IML DB, but leave agents in place.
+    /// Takes a hostlist expression of servers to remove.
+    #[structopt(name = "force-remove")]
+    ForceRemove { hosts: String },
     /// Work with Server Profiles
     #[structopt(name = "profile")]
     Profile {
@@ -723,6 +729,76 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
             list_server(hosts.objects, display_type);
         }
         ServerCommand::Add(config) => add_server(config).await?,
+        ServerCommand::ForceRemove { hosts } => {
+            let remove_hosts = hostlist_parser::parse(&hosts)?;
+
+            tracing::debug!("Parsed hosts {:?}", remove_hosts);
+
+            let api_hosts = wrap_fut("Fetching hosts...", get_hosts()).await?;
+
+            let (hosts, unknown_names) = filter_known_hosts(remove_hosts, &api_hosts.objects);
+
+            for unknown_name in unknown_names {
+                display_cancelled(format!(
+                    "Host {} unknown; it will not be force removed.",
+                    unknown_name
+                ));
+            }
+
+            let xs: Vec<_> = hosts
+                .iter()
+                .map(|x| x.composite_id())
+                .map(|x| ("composite_ids", x.to_string()))
+                .chain(std::iter::once(("limit", "0".into())))
+                .collect();
+
+            let actions: ApiList<AvailableAction> =
+                get(AvailableAction::endpoint_name(), &xs).await?;
+
+            let removable: Vec<_> = actions
+                .objects
+                .into_iter()
+                .filter(|x| x.verb == "Force Remove")
+                .collect();
+
+            if removable.is_empty() {
+                return Ok(());
+            }
+
+            hosts
+                .into_iter()
+                .filter(|x| {
+                    removable
+                        .iter()
+                        .find(|y| y.composite_id == x.composite_id())
+                        .is_none()
+                })
+                .for_each(|x| {
+                    display_cancelled(format!("Host {} is unable to be force removed.", x.fqdn));
+                });
+
+            let jobs: Vec<_> = removable
+                .iter()
+                .map(|x| SendJob {
+                    class_name: x.class_name.clone().unwrap(),
+                    args: &x.args,
+                })
+                .collect();
+
+            let cmd = post(
+                Command::endpoint_name(),
+                SendCmd {
+                    jobs,
+                    message: "Force Remove hosts".to_string(),
+                },
+            )
+            .await?
+            .error_for_status()?;
+
+            let command: Command = wrap_fut("Removing Hosts...", cmd.json()).await?;
+
+            wait_for_cmds_success(&[command]).await?;
+        }
         ServerCommand::Remove(config) => {
             let remove_hosts = hostlist_parser::parse(&config.hosts)?;
 
