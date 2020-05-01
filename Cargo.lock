@@ -535,8 +535,7 @@ dependencies = [
 [[package]]
 name = "device-types"
 version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f46ab2f1807f25fc47fc0eb206b6baec061503cc1aa891db168d14e81525a44"
+source = "git+https://github.com/whamcloud/device-scanner.git#fb92f654d4c8f6c949ea30269cb682e4cd6de05e"
 dependencies = [
  "im 13.0.0",
  "libzfs-types",
@@ -1832,9 +1831,8 @@ dependencies = [
 
 [[package]]
 name = "libzfs-types"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "781e3a0e71718873e3fb34ba980a2ff855079c2685d36c78c3df5586a9379bca"
+version = "0.1.2"
+source = "git+https://github.com/whamcloud/rust-libzfs.git#6041b5e746cdaff54552b9c53163686378f74bdf"
 dependencies = [
  "serde",
  "serde_derive",
