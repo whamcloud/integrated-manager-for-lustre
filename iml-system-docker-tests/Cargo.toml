@@ -10,3 +10,5 @@ iml-system-test-utils = { version = "0.2.0", path = "../iml-system-test-utils" }
 iml-systemd = { version = "0.2.0", path = "../iml-systemd" }
 iml-wire-types = { version = "0.2.0", path = "../iml-wire-types" }
 tokio = {version="0.2", features=["macros"]}
+tracing = "0.1"
+tracing-subscriber = "0.2"
