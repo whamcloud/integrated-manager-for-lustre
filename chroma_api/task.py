@@ -4,11 +4,13 @@
 
 import tastypie.http as http
 from tastypie import fields
-
+from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.chroma_model_resource import ChromaModelResource
 from chroma_api.utils import custom_response, dehydrate_command
+from chroma_api.validation_utils import validate
 
 from chroma_core.models import Task
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
 
 class TaskResource(ChromaModelResource):

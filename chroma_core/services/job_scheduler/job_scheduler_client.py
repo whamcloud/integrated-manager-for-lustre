@@ -30,6 +30,7 @@ class JobSchedulerRpc(ServiceRpcInterface):
         "test_host_contact",
         "create_filesystem",
         "create_ostpool",
+        "create_task",
         "update_ostpool",
         "delete_ostpool",
         "create_client_mount",
@@ -186,6 +187,10 @@ class JobSchedulerClient(object):
     @classmethod
     def delete_ostpool(cls, pool):
         return JobSchedulerRpc().delete_ostpool(pool)
+
+    @classmethod
+    def create_task(cls, task_data):
+        return JobSchedulerRpc().create_task(task_data)
 
     @classmethod
     def update_nids(cls, nid_data):
