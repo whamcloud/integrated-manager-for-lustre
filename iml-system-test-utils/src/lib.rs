@@ -95,7 +95,11 @@ pub const STRATAGEM_CLIENT_PROFILE: &str = r#"{
   }
   "#;
 
-pub async fn try_command_n_times(max_tries: u32, cmd: &mut Command) -> Result<(), CmdError> {
+pub async fn try_command_n_times(
+    max_tries: u32,
+    delay: u64,
+    cmd: &mut Command,
+) -> Result<(), CmdError> {
     let mut count = 1;
     let mut r = cmd.status().await?;
 
@@ -104,7 +108,7 @@ pub async fn try_command_n_times(max_tries: u32, cmd: &mut Command) -> Result<()
         println!("Trying command: {:?} - Attempt #{}", cmd, count + 1);
         count += 1;
 
-        delay_for(Duration::from_secs(1)).await;
+        delay_for(Duration::from_secs(delay)).await;
 
         r = cmd.status().await?;
     }

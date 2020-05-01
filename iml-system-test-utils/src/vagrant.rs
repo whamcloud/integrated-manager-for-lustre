@@ -63,7 +63,7 @@ pub async fn destroy<'a>() -> Result<(), CmdError> {
 
     x.arg("destroy").arg("-f");
 
-    try_command_n_times(3, &mut x).await
+    try_command_n_times(3, 1, &mut x).await
 }
 
 pub async fn halt() -> Result<Command, CmdError> {
@@ -319,6 +319,18 @@ pub async fn setup_iml_install(
 
     up().await?.args(hosts).checked_status().await?;
 
+    wait_on_services_ready(config).await?;
+
+    Ok(())
+}
+
+pub async fn wait_on_services_ready(config: &ClusterConfig) -> Result<(), CmdError> {
+    let mut status_cmd =
+        run_vm_command(config.manager, "systemctl status iml-manager.target").await?;
+
+    try_command_n_times(50, 3, &mut status_cmd).await?;
+    println!("Services are ready.");
+
     Ok(())
 }
 
@@ -353,6 +365,8 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
     }
 
     up().await?.args(config.all()).checked_status().await?;
+
+    wait_on_services_ready(config).await?;
 
     Ok(())
 }
