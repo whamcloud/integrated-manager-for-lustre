@@ -442,7 +442,7 @@ fn step_list_view(steps: &[Arc<RichStep>], select: &Select, is_open: bool) -> No
 }
 
 fn step_item_view(step: &RichStep, is_open: bool) -> Vec<Node<Msg>> {
-    let icon = step_status_icon(step, is_open);
+    let icon = step_status_icon(is_open);
     let item_caption = div![
         class![C.flex],
         div![
@@ -546,19 +546,12 @@ fn job_status_icon<T>(job: &RichJob) -> Node<T> {
     }
 }
 
-fn step_status_icon<T>(step: &RichStep, is_open: bool) -> Node<T> {
-    let mut awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
-    let color = match step.state.as_ref() {
-        "incomplete" => class![C.text_gray_500],
-        "failed" => class![C.text_red_500],
-        "success" => class![C.text_green_500],
-        _ => class![C.text_gray_100],
-    };
-    awesome_style.merge(color);
+fn step_status_icon<T>(is_open: bool) -> Node<T> {
+    let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline, C.text_gray_500];
     if is_open {
-        font_awesome_minus_circle(awesome_style)
+        font_awesome_outline(awesome_style, "minus-square")
     } else {
-        font_awesome_plus_circle(awesome_style)
+        font_awesome_outline(awesome_style, "plus-square")
     }
 }
 
@@ -939,8 +932,8 @@ mod tests {
     use super::*;
     use rand_core::{RngCore, SeedableRng};
     use rand_xoshiro::Xoroshiro64Star;
-    use wasm_bindgen::__rt::core::fmt::Debug;
     use std::hash::Hash;
+    use wasm_bindgen::__rt::core::fmt::Debug;
 
     #[derive(Default, Clone, Debug)]
     struct Db {
