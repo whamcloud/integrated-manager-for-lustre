@@ -6,7 +6,7 @@ use device_types::devices::{
     Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup, Zpool,
 };
 use diesel::{self, pg::upsert::excluded, prelude::*};
-use im::{HashSet, OrdSet};
+use im::{HashSet, OrdSet, Vector};
 
 use iml_orm::{
     models::{ChromaCoreDevice, NewChromaCoreDevice},
@@ -175,7 +175,7 @@ fn collect_virtual_device_parents(
     }
 }
 
-fn children_mut(d: &mut Device) -> Option<&mut OrdSet<Device>> {
+fn children_mut(d: &mut Device) -> Option<&mut Vector<Device>> {
     match d {
         Device::Root(dd) => Some(&mut dd.children),
         Device::ScsiDevice(dd) => Some(&mut dd.children),
@@ -189,7 +189,7 @@ fn children_mut(d: &mut Device) -> Option<&mut OrdSet<Device>> {
     }
 }
 
-fn children(d: &Device) -> Option<&OrdSet<Device>> {
+fn children(d: &Device) -> Option<&Vector<Device>> {
     match d {
         Device::Root(dd) => Some(&dd.children),
         Device::ScsiDevice(dd) => Some(&dd.children),
@@ -218,14 +218,9 @@ fn insert(mut d: &mut Device, to_insert: &Device) {
         });
     } else {
         children_mut(d).map(|cc| {
-            // FIXME: This code is really slow
-            // The issue is that OrdSet doesn't have iter_mut()
-            let mut hashset: HashSet<_> = cc.iter().map(|x| x.clone()).collect();
-            for mut c in hashset.iter_mut() {
+            for mut c in cc.iter_mut() {
                 insert(&mut c, to_insert);
             }
-            let new_ordset: OrdSet<Device> = hashset.into_iter().collect();
-            mem::replace(cc, new_ordset);
         });
     }
 }
@@ -233,11 +228,11 @@ fn insert(mut d: &mut Device, to_insert: &Device) {
 fn selected_fields(d: &Device) -> Device {
     match d {
         Device::Root(d) => Device::Root(Root {
-            children: OrdSet::new(),
+            children: Vector::new(),
             ..d.clone()
         }),
         Device::ScsiDevice(d) => Device::ScsiDevice(ScsiDevice {
-            children: OrdSet::new(),
+            children: Vector::new(),
             major: String::new(),
             minor: String::new(),
             devpath: PathBuf::new(),
@@ -245,7 +240,7 @@ fn selected_fields(d: &Device) -> Device {
             ..d.clone()
         }),
         Device::Partition(d) => Device::Partition(Partition {
-            children: OrdSet::new(),
+            children: Vector::new(),
             major: String::new(),
             minor: String::new(),
             devpath: PathBuf::new(),
@@ -253,14 +248,14 @@ fn selected_fields(d: &Device) -> Device {
             ..d.clone()
         }),
         Device::MdRaid(d) => Device::MdRaid(MdRaid {
-            children: OrdSet::new(),
+            children: Vector::new(),
             major: String::new(),
             minor: String::new(),
             paths: OrdSet::new(),
             ..d.clone()
         }),
         Device::Mpath(d) => Device::Mpath(Mpath {
-            children: OrdSet::new(),
+            children: Vector::new(),
             major: String::new(),
             minor: String::new(),
             devpath: PathBuf::new(),
@@ -268,11 +263,11 @@ fn selected_fields(d: &Device) -> Device {
             ..d.clone()
         }),
         Device::VolumeGroup(d) => Device::VolumeGroup(VolumeGroup {
-            children: OrdSet::new(),
+            children: Vector::new(),
             ..d.clone()
         }),
         Device::LogicalVolume(d) => Device::LogicalVolume(LogicalVolume {
-            children: OrdSet::new(),
+            children: Vector::new(),
             major: String::new(),
             minor: String::new(),
             devpath: PathBuf::new(),
@@ -280,7 +275,7 @@ fn selected_fields(d: &Device) -> Device {
             ..d.clone()
         }),
         Device::Zpool(d) => Device::Zpool(Zpool {
-            children: OrdSet::new(),
+            children: Vector::new(),
             ..d.clone()
         }),
         Device::Dataset(d) => Device::Dataset(d.clone()),

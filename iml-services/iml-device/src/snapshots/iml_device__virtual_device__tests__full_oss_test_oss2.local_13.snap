@@ -7,8 +7,8 @@ expression: c
     "serial": "360014055e8ba9461ee047e0adf1f4dec",
     "scsi80": "SLIO-ORG ost19           5e8ba946-1ee0-47e0-adf1-f4decdab5b47",
     "major": "8",
-    "minor": "80",
-    "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:18/block/sdf",
+    "minor": "96",
+    "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:18/block/sdg",
     "size": 5368709120,
     "filesystem_type": "mpath_member",
     "fs_uuid": "11096843282724822125",
@@ -17,10 +17,10 @@ expression: c
       "/dev/disk/by-id/scsi-360014055e8ba9461ee047e0adf1f4dec",
       "/dev/disk/by-id/wwn-0x60014055e8ba9461ee047e0adf1f4dec",
       "/dev/disk/by-path/fc---lun-18",
-      "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-18",
+      "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-18",
       "/dev/disk/by-label/ost10",
       "/dev/disk/by-uuid/11096843282724822125",
-      "/dev/sdf"
+      "/dev/sdg"
     ],
     "mount": null,
     "children": [

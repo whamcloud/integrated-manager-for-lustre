@@ -4,44 +4,49 @@ expression: c
 ---
 {
   "ScsiDevice": {
-    "serial": "3600140509e95bcb86e24685b75b6ec26",
-    "scsi80": "SLIO-ORG mdt3            09e95bcb-86e2-4685-b75b-6ec2622b5343",
+    "serial": "1ATA     VBOX HARDDISK                           VB0f128f57-092491b7",
+    "scsi80": "SATA     VBOX HARDDISK   VB0f128f57-092491b7",
     "major": "8",
-    "minor": "48",
-    "devpath": "/devices/platform/host3/session2/target3:0:0/3:0:0:3/block/sdd",
-    "size": 5368709120,
-    "filesystem_type": "mpath_member",
+    "minor": "0",
+    "devpath": "/devices/pci0000:00/0000:00:01.1/ata1/host0/target0:0:0/0:0:0:0/block/sda",
+    "size": 42949672960,
+    "filesystem_type": null,
     "fs_uuid": null,
     "fs_label": null,
     "paths": [
-      "/dev/disk/by-id/scsi-3600140509e95bcb86e24685b75b6ec26",
-      "/dev/disk/by-id/wwn-0x600140509e95bcb86e24685b75b6ec26",
-      "/dev/disk/by-path/fc---lun-3",
-      "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:mds-lun-3",
-      "/dev/sdd"
+      "/dev/disk/by-id/ata-VBOX_HARDDISK_VB0f128f57-092491b7",
+      "/dev/disk/by-path/fc---lun-0",
+      "/dev/disk/by-path/pci-0000:00:01.1-ata-1.0",
+      "/dev/sda"
     ],
     "mount": null,
     "children": [
       {
-        "Mpath": {
-          "devpath": "/devices/virtual/block/dm-1",
-          "serial": "3600140509e95bcb86e24685b75b6ec26",
-          "scsi80": "SLIO-ORG mdt3            09e95bcb-86e2-4685-b75b-6ec2622b5343",
-          "dm_name": "mpathd",
-          "size": 5368709120,
-          "major": "253",
+        "Partition": {
+          "serial": "1ATA     VBOX HARDDISK                           VB0f128f57-092491b7",
+          "scsi80": "SATA     VBOX HARDDISK   VB0f128f57-092491b7",
+          "partition_number": 1,
+          "size": 42948624384,
+          "major": "8",
           "minor": "1",
-          "filesystem_type": null,
-          "fs_uuid": null,
+          "devpath": "/devices/pci0000:00/0000:00:01.1/ata1/host0/target0:0:0/0:0:0:0/block/sda/sda1",
+          "filesystem_type": "xfs",
+          "fs_uuid": "38c59e02-29d1-45a0-bc15-28f771f62734",
           "fs_label": null,
           "paths": [
-            "/dev/mapper/mpathd",
-            "/dev/disk/by-id/dm-name-mpathd",
-            "/dev/disk/by-id/dm-uuid-mpath-3600140509e95bcb86e24685b75b6ec26",
-            "/dev/dm-1"
+            "/dev/disk/by-id/ata-VBOX_HARDDISK_VB0f128f57-092491b7-part1",
+            "/dev/disk/by-path/fc---lun-0-part1",
+            "/dev/disk/by-path/pci-0000:00:01.1-ata-1.0-part1",
+            "/dev/disk/by-uuid/38c59e02-29d1-45a0-bc15-28f771f62734",
+            "/dev/sda1"
           ],
-          "children": [],
-          "mount": null
+          "mount": {
+            "source": "/dev/sda1",
+            "target": "/",
+            "fs_type": "xfs",
+            "opts": "rw,relatime,attr2,inode64,noquota"
+          },
+          "children": []
         }
       }
     ]

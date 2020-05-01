@@ -7,8 +7,8 @@ expression: c
     "serial": "36001405e7ca5156565041c1a626ac2f6",
     "scsi80": "SLIO-ORG mgt1            e7ca5156-5650-41c1-a626-ac2f688929f5",
     "major": "8",
-    "minor": "32",
-    "devpath": "/devices/platform/host2/session1/target2:0:0/2:0:0:0/block/sdc",
+    "minor": "16",
+    "devpath": "/devices/platform/host3/session2/target3:0:0/3:0:0:0/block/sdb",
     "size": 536870912,
     "filesystem_type": "mpath_member",
     "fs_uuid": "15884990715732293275",
@@ -17,10 +17,10 @@ expression: c
       "/dev/disk/by-id/scsi-36001405e7ca5156565041c1a626ac2f6",
       "/dev/disk/by-id/wwn-0x6001405e7ca5156565041c1a626ac2f6",
       "/dev/disk/by-path/fc---lun-0",
-      "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:mds-lun-0",
+      "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:mds-lun-0",
       "/dev/disk/by-label/mgt",
       "/dev/disk/by-uuid/15884990715732293275",
-      "/dev/sdc"
+      "/dev/sdb"
     ],
     "mount": null,
     "children": [

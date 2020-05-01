@@ -44,3 +44,6 @@ exclude = [
     'iml-system-rpm-tests',
     'iml-system-docker-tests',
 ]
+
+[patch.'https://github.com/whamcloud/device-scanner.git']
+device-types = { path = "/home/mkpankov/work/device-scanner/device-types" }

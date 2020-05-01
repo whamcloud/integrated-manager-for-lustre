@@ -4,51 +4,51 @@ expression: c
 ---
 {
   "ScsiDevice": {
-    "serial": "36001405c476be7a53a94ca9a1ecc4512",
-    "scsi80": "SLIO-ORG mdt2            c476be7a-53a9-4ca9-a1ec-c45123444aaf",
+    "serial": "36001405f701ec9f7a4d44a2876e6d084",
+    "scsi80": "SLIO-ORG mdt1            f701ec9f-7a4d-44a2-876e-6d084638901b",
     "major": "8",
-    "minor": "96",
-    "devpath": "/devices/platform/host2/session1/target2:0:0/2:0:0:2/block/sdg",
+    "minor": "128",
+    "devpath": "/devices/platform/host2/session1/target2:0:0/2:0:0:1/block/sdi",
     "size": 5368709120,
     "filesystem_type": "mpath_member",
-    "fs_uuid": "2863087293198835809",
-    "fs_label": "mdt1",
+    "fs_uuid": "14193942828102514402",
+    "fs_label": "mdt0",
     "paths": [
-      "/dev/disk/by-id/scsi-36001405c476be7a53a94ca9a1ecc4512",
-      "/dev/disk/by-id/wwn-0x6001405c476be7a53a94ca9a1ecc4512",
-      "/dev/disk/by-path/fc---lun-2",
-      "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:mds-lun-2",
-      "/dev/disk/by-label/mdt1",
-      "/dev/disk/by-uuid/2863087293198835809",
-      "/dev/sdg"
+      "/dev/disk/by-id/scsi-36001405f701ec9f7a4d44a2876e6d084",
+      "/dev/disk/by-id/wwn-0x6001405f701ec9f7a4d44a2876e6d084",
+      "/dev/disk/by-path/fc---lun-1",
+      "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:mds-lun-1",
+      "/dev/disk/by-label/mdt0",
+      "/dev/disk/by-uuid/14193942828102514402",
+      "/dev/sdi"
     ],
     "mount": null,
     "children": [
       {
         "Mpath": {
-          "devpath": "/devices/virtual/block/dm-2",
-          "serial": "36001405c476be7a53a94ca9a1ecc4512",
-          "scsi80": "SLIO-ORG mdt2            c476be7a-53a9-4ca9-a1ec-c45123444aaf",
-          "dm_name": "mpathc",
+          "devpath": "/devices/virtual/block/dm-3",
+          "serial": "36001405f701ec9f7a4d44a2876e6d084",
+          "scsi80": "SLIO-ORG mdt1            f701ec9f-7a4d-44a2-876e-6d084638901b",
+          "dm_name": "mpathb",
           "size": 5368709120,
           "major": "253",
-          "minor": "2",
+          "minor": "3",
           "filesystem_type": "zfs_member",
-          "fs_uuid": "2863087293198835809",
-          "fs_label": "mdt1",
+          "fs_uuid": "14193942828102514402",
+          "fs_label": "mdt0",
           "paths": [
-            "/dev/mapper/mpathc",
-            "/dev/disk/by-id/dm-name-mpathc",
-            "/dev/disk/by-id/dm-uuid-mpath-36001405c476be7a53a94ca9a1ecc4512",
-            "/dev/disk/by-label/mdt1",
-            "/dev/disk/by-uuid/2863087293198835809",
-            "/dev/dm-2"
+            "/dev/mapper/mpathb",
+            "/dev/disk/by-id/dm-name-mpathb",
+            "/dev/disk/by-id/dm-uuid-mpath-36001405f701ec9f7a4d44a2876e6d084",
+            "/dev/disk/by-label/mdt0",
+            "/dev/disk/by-uuid/14193942828102514402",
+            "/dev/dm-3"
           ],
           "children": [
             {
               "Zpool": {
-                "guid": 2863087293198835809,
-                "name": "mdt1",
+                "guid": 14193942828102514402,
+                "name": "mdt0",
                 "health": "ONLINE",
                 "state": "ACTIVE",
                 "size": 5335154688,
@@ -57,10 +57,10 @@ expression: c
                     "children": [
                       {
                         "Disk": {
-                          "guid": 2581067637632890532,
+                          "guid": 18243268064316204489,
                           "state": "ONLINE",
-                          "path": "/dev/mapper/mpathc",
-                          "dev_id": "dm-uuid-mpath-36001405c476be7a53a94ca9a1ecc4512",
+                          "path": "/dev/mapper/mpathb",
+                          "dev_id": "dm-uuid-mpath-36001405f701ec9f7a4d44a2876e6d084",
                           "phys_path": null,
                           "whole_disk": false,
                           "is_log": false
@@ -75,13 +75,13 @@ expression: c
                 "children": [
                   {
                     "Dataset": {
-                      "guid": 16954366997832554325,
-                      "name": "mdt1/mdt1",
+                      "guid": 17930952625555981391,
+                      "name": "mdt0/mdt0",
                       "kind": "filesystem",
                       "props": [
                         {
                           "name": "name",
-                          "value": "mdt1/mdt1"
+                          "value": "mdt0/mdt0"
                         },
                         {
                           "name": "type",
@@ -89,19 +89,19 @@ expression: c
                         },
                         {
                           "name": "creation",
-                          "value": "1587120304"
+                          "value": "1587120088"
                         },
                         {
                           "name": "used",
-                          "value": "3244544"
+                          "value": "3375104"
                         },
                         {
                           "name": "available",
-                          "value": "5165020672"
+                          "value": "5164890112"
                         },
                         {
                           "name": "referenced",
-                          "value": "3244544"
+                          "value": "3375104"
                         },
                         {
                           "name": "compressratio",
@@ -125,7 +125,7 @@ expression: c
                         },
                         {
                           "name": "mountpoint",
-                          "value": "/mdt1/mdt1"
+                          "value": "/mdt0/mdt0"
                         },
                         {
                           "name": "sharenfs",
@@ -225,7 +225,7 @@ expression: c
                         },
                         {
                           "name": "guid",
-                          "value": "16954366997832554325"
+                          "value": "17930952625555981391"
                         },
                         {
                           "name": "primarycache",
@@ -241,7 +241,7 @@ expression: c
                         },
                         {
                           "name": "usedbydataset",
-                          "value": "3244544"
+                          "value": "3375104"
                         },
                         {
                           "name": "usedbychildren",
@@ -277,15 +277,15 @@ expression: c
                         },
                         {
                           "name": "written",
-                          "value": "3244544"
+                          "value": "3375104"
                         },
                         {
                           "name": "logicalused",
-                          "value": "1722368"
+                          "value": "1786368"
                         },
                         {
                           "name": "logicalreferenced",
-                          "value": "1722368"
+                          "value": "1786368"
                         },
                         {
                           "name": "volmode",
@@ -344,16 +344,16 @@ expression: c
                           "value": "off"
                         },
                         {
-                          "name": "lustre:version",
-                          "value": "1"
-                        },
-                        {
                           "name": "lustre:fsname",
                           "value": "zfsmo"
                         },
                         {
+                          "name": "lustre:mgsnode",
+                          "value": "10.73.20.11@tcp:10.73.20.12@tcp"
+                        },
+                        {
                           "name": "lustre:failover.node",
-                          "value": "10.73.20.11@tcp"
+                          "value": "10.73.20.12@tcp"
                         },
                         {
                           "name": "lustre:flags",
@@ -361,15 +361,15 @@ expression: c
                         },
                         {
                           "name": "lustre:svname",
-                          "value": "zfsmo-MDT0001"
+                          "value": "zfsmo-MDT0000"
                         },
                         {
-                          "name": "lustre:index",
+                          "name": "lustre:version",
                           "value": "1"
                         },
                         {
-                          "name": "lustre:mgsnode",
-                          "value": "10.73.20.11@tcp:10.73.20.12@tcp"
+                          "name": "lustre:index",
+                          "value": "0"
                         }
                       ],
                       "mount": null
@@ -377,8 +377,8 @@ expression: c
                   }
                 ],
                 "mount": {
-                  "source": "mdt1",
-                  "target": "/mdt1",
+                  "source": "mdt0",
+                  "target": "/mdt0",
                   "fs_type": "zfs",
                   "opts": "rw,xattr,noacl"
                 }

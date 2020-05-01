@@ -535,7 +535,6 @@ dependencies = [
 [[package]]
 name = "device-types"
 version = "0.1.4"
-source = "git+https://github.com/whamcloud/device-scanner.git#fb92f654d4c8f6c949ea30269cb682e4cd6de05e"
 dependencies = [
  "im 13.0.0",
  "libzfs-types",
