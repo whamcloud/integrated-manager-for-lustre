@@ -68,18 +68,18 @@ class CreateTaskJob(AdvertisedJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return "Create Task"
+        return "Create Task on servers"
 
     @classmethod
     def get_args(cls, task):
         return {"task_id": task.id}
 
     def description(self):
-        return "Create Task"
+        return "Create Task on servers"
 
     def get_steps(self):
         steps = []
-        for host in instance.filesystem.get_servers():
+        for host in self.task.filesystem.get_servers():
             steps.append((CreateTaskStep, {"task": self.task.name, "host": host.fqdn}))
 
         return steps
@@ -87,7 +87,7 @@ class CreateTaskJob(AdvertisedJob):
 
 class CreateTaskStep(Step):
     def run(self, args):
-        self.invoke_rust_local_action_expect_result(args["host"], "postoffice_add", args["task"])
+        self.invoke_rust_agent_expect_result(args["host"], "postoffice_add", args["task"])
 
 
 class RemoveTaskJob(AdvertisedJob):
@@ -102,18 +102,18 @@ class RemoveTaskJob(AdvertisedJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return "Remove Task"
+        return "Remove Task from servers"
 
     @classmethod
     def get_args(cls, task):
         return {"task_id": task.id}
 
     def description(self):
-        return "Remove Task"
+        return "Remove Task from servers"
 
     def get_steps(self):
         steps = []
-        for host in instance.filesystem.get_servers():
+        for host in self.task.filesystem.get_servers():
             steps.append((RemoveTaskStep, {"task": self.task.name, "host": host.fqdn}))
 
         return steps
@@ -121,7 +121,7 @@ class RemoveTaskJob(AdvertisedJob):
 
 class RemoveTaskStep(Step):
     def run(self, args):
-        self.invoke_rust_local_action_expect_result(args["host"], "postoffice_remove", args["task"])
+        self.invoke_rust_agent_expect_result(args["host"], "postoffice_remove", args["task"])
 
 
 class FidTaskQueue(models.Model):
