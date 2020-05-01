@@ -301,7 +301,6 @@ fn insert_virtual_devices(d: &mut Device, parents: &collections::HashSet<Device>
 mod tests {
     use super::*;
     use insta::assert_json_snapshot;
-    use jsondata;
     use std::fs;
 
     fn deser_fixture(path1: &str, path2: &str, fqdn1: Fqdn, fqdn2: Fqdn) -> Vec<(Fqdn, Device)> {

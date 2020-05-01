@@ -1283,7 +1283,6 @@ dependencies = [
  "iml-tracing",
  "iml-wire-types",
  "insta",
- "jsondata",
  "serde",
  "serde_json",
  "thiserror",
@@ -1736,16 +1735,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a27d435371a2fa5b6d2b028a74bbdb1234f308da363226a2854ca3ff8ba7055"
 dependencies = [
  "wasm-bindgen",
-]
-
-[[package]]
-name = "jsondata"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc45ac7f05750742c127ea674aaa5e0b6821c96bb12ddb848309865ca52a487e"
-dependencies = [
- "lazy_static",
- "unicode_reader",
 ]
 
 [[package]]
@@ -3795,15 +3784,6 @@ name = "unicode-xid"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "826e7639553986605ec5979c7dd957c7895e93eabed50ab2ffa7f6128a75097c"
-
-[[package]]
-name = "unicode_reader"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "001b27e8f5e9da465b3584051a3a3d2ebefee4f8595c49e96cc1deec9667e4cc"
-dependencies = [
- "unicode-segmentation",
-]
 
 [[package]]
 name = "url"
