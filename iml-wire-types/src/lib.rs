@@ -647,7 +647,7 @@ pub struct CmdWrapper {
     pub command: Command,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Eq, PartialEq, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Command {
     pub cancelled: bool,
     pub complete: bool,
@@ -666,7 +666,7 @@ impl EndpointName for Command {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct JobLock {
     pub locked_item_content_type_id: u32,
     pub locked_item_id: u32,
@@ -674,13 +674,13 @@ pub struct JobLock {
     pub resource_uri: String,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AvailableTransition {
     pub label: String,
     pub state: String,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Job<T> {
     pub available_transitions: Vec<AvailableTransition>,
     pub cancelled: bool,
@@ -721,7 +721,7 @@ impl<T> EndpointName for Job<T> {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Step {
     pub args: HashMap<String, serde_json::value::Value>,
     pub backtrace: String,

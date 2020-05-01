@@ -939,6 +939,8 @@ mod tests {
     use super::*;
     use rand_core::{RngCore, SeedableRng};
     use rand_xoshiro::Xoroshiro64Star;
+    use wasm_bindgen::__rt::core::fmt::Debug;
+    use std::hash::Hash;
 
     #[derive(Default, Clone, Debug)]
     struct Db {
@@ -1038,22 +1040,22 @@ mod tests {
         let cmd_ids = db.all_cmds.iter().map(|x| x.id).collect::<Vec<_>>();
         let selects = generate_random_selects(&db, &mut rng, 1000);
         for select in selects {
+            let sel_cmd_ids = match &select {
+                Select::None => &cmd_ids,
+                Select::Command(cs) | Select::CommandJob(cs, _) | Select::CommandJobSteps(cs, _, _) => &cs,
+            };
+            let (c, j, s) = prepare_subset(&db, sel_cmd_ids);
+            model.clear();
+            model.select = select.clone();
+            model.assign_commands(c.clone());
+            model.assign_jobs(j.clone());
+            model.assign_steps(s.clone());
+            let expected_cmd = to_str_vec(std::mem::replace(&mut model.commands_view, Vec::new()));
+            let expected_jobs = to_str_hm(std::mem::replace(&mut model.jobs_graphs, HashMap::new()));
+            let expected_steps = to_str_hm(std::mem::replace(&mut model.steps_view, HashMap::new()));
+
             let permutations = vec![[1, 3, 2], [2, 1, 3], [2, 3, 1], [3, 1, 2], [3, 2, 1]];
             for permutation in permutations {
-                let sel_cmd_ids = match &select {
-                    Select::None => &cmd_ids,
-                    Select::Command(cs) | Select::CommandJob(cs, _) | Select::CommandJobSteps(cs, _, _) => &cs,
-                };
-                let (c, j, s) = prepare_subset(&db, sel_cmd_ids);
-                model.clear();
-                model.select = select.clone();
-                model.assign_commands(c.clone());
-                model.assign_jobs(j.clone());
-                model.assign_steps(s.clone());
-                let expected_cmd = std::mem::replace(&mut model.commands_view, Vec::new());
-                let expected_jobs = std::mem::replace(&mut model.jobs_graphs, HashMap::new());
-                let expected_steps = std::mem::replace(&mut model.steps_view, HashMap::new());
-
                 model.clear();
                 model.select = select.clone();
                 // we simulate, that FetchCommands, FetchJobs and FetchSteps come in arbitrary order
@@ -1065,11 +1067,23 @@ mod tests {
                         _ => unreachable!(),
                     }
                 }
-                assert_eq!(model.commands_view, expected_cmd);
-                assert_eq!(model.jobs_graphs, expected_jobs);
-                assert_eq!(model.steps_view, expected_steps);
+
+                let actual_cmd = to_str_vec(std::mem::replace(&mut model.commands_view, Vec::new()));
+                let actual_jobs = to_str_hm(std::mem::replace(&mut model.jobs_graphs, HashMap::new()));
+                let actual_steps = to_str_hm(std::mem::replace(&mut model.steps_view, HashMap::new()));
+                assert_eq!(actual_cmd, expected_cmd);
+                assert_eq!(actual_jobs, expected_jobs);
+                assert_eq!(actual_steps, expected_steps);
             }
         }
+    }
+
+    fn to_str_vec<V: Debug>(vec: Vec<V>) -> Vec<String> {
+        vec.into_iter().map(|x| format!("{:?}", x)).collect()
+    }
+
+    fn to_str_hm<K: Hash + Eq, V: Debug>(hm: HashMap<K, V>) -> HashMap<K, String> {
+        hm.into_iter().map(|(k, v)| (k, format!("{:?}", v))).collect()
     }
 
     fn make_command(id: u32, jobs: &[u32], msg: &str) -> Command {
