@@ -16,7 +16,7 @@ use iml_orm::{
 };
 
 use iml_wire_types::Fqdn;
-use std::{collections, path::PathBuf};
+use std::{collections, mem, path::PathBuf};
 
 pub async fn save_devices(devices: Vec<(Fqdn, Device)>, pool: &DbPool) {
     for (f, d) in devices.into_iter() {
@@ -175,7 +175,7 @@ fn collect_virtual_device_parents(
     }
 }
 
-fn children_mut(d: &mut Device) -> Option<&mut HashSet<Device>> {
+fn children_mut(d: &mut Device) -> Option<&mut OrdSet<Device>> {
     match d {
         Device::Root(dd) => Some(&mut dd.children),
         Device::ScsiDevice(dd) => Some(&mut dd.children),
@@ -189,7 +189,7 @@ fn children_mut(d: &mut Device) -> Option<&mut HashSet<Device>> {
     }
 }
 
-fn children(d: &Device) -> Option<&HashSet<Device>> {
+fn children(d: &Device) -> Option<&OrdSet<Device>> {
     match d {
         Device::Root(dd) => Some(&dd.children),
         Device::ScsiDevice(dd) => Some(&dd.children),
@@ -218,9 +218,14 @@ fn insert(mut d: &mut Device, to_insert: &Device) {
         });
     } else {
         children_mut(d).map(|cc| {
-            for mut c in cc.iter_mut() {
+            // FIXME: This code is really slow
+            // The issue is that OrdSet doesn't have iter_mut()
+            let mut hashset: HashSet<_> = cc.iter().map(|x| x.clone()).collect();
+            for mut c in hashset.iter_mut() {
                 insert(&mut c, to_insert);
             }
+            let new_ordset: OrdSet<Device> = hashset.into_iter().collect();
+            mem::replace(cc, new_ordset);
         });
     }
 }
@@ -228,11 +233,11 @@ fn insert(mut d: &mut Device, to_insert: &Device) {
 fn selected_fields(d: &Device) -> Device {
     match d {
         Device::Root(d) => Device::Root(Root {
-            children: HashSet::new(),
+            children: OrdSet::new(),
             ..d.clone()
         }),
         Device::ScsiDevice(d) => Device::ScsiDevice(ScsiDevice {
-            children: HashSet::new(),
+            children: OrdSet::new(),
             major: String::new(),
             minor: String::new(),
             devpath: PathBuf::new(),
@@ -240,7 +245,7 @@ fn selected_fields(d: &Device) -> Device {
             ..d.clone()
         }),
         Device::Partition(d) => Device::Partition(Partition {
-            children: HashSet::new(),
+            children: OrdSet::new(),
             major: String::new(),
             minor: String::new(),
             devpath: PathBuf::new(),
@@ -248,14 +253,14 @@ fn selected_fields(d: &Device) -> Device {
             ..d.clone()
         }),
         Device::MdRaid(d) => Device::MdRaid(MdRaid {
-            children: HashSet::new(),
+            children: OrdSet::new(),
             major: String::new(),
             minor: String::new(),
             paths: OrdSet::new(),
             ..d.clone()
         }),
         Device::Mpath(d) => Device::Mpath(Mpath {
-            children: HashSet::new(),
+            children: OrdSet::new(),
             major: String::new(),
             minor: String::new(),
             devpath: PathBuf::new(),
@@ -263,11 +268,11 @@ fn selected_fields(d: &Device) -> Device {
             ..d.clone()
         }),
         Device::VolumeGroup(d) => Device::VolumeGroup(VolumeGroup {
-            children: HashSet::new(),
+            children: OrdSet::new(),
             ..d.clone()
         }),
         Device::LogicalVolume(d) => Device::LogicalVolume(LogicalVolume {
-            children: HashSet::new(),
+            children: OrdSet::new(),
             major: String::new(),
             minor: String::new(),
             devpath: PathBuf::new(),
@@ -275,7 +280,7 @@ fn selected_fields(d: &Device) -> Device {
             ..d.clone()
         }),
         Device::Zpool(d) => Device::Zpool(Zpool {
-            children: HashSet::new(),
+            children: OrdSet::new(),
             ..d.clone()
         }),
         Device::Dataset(d) => Device::Dataset(d.clone()),
@@ -309,44 +314,26 @@ mod tests {
         vec![(fqdn1, device1), (fqdn2, device2)]
     }
 
-    // This function achieves specified order of children so snapshots are always the same.
-    // We do this because Device has HashSet of children so order of iteration isn't specified
-    //  - this affects Debug output for _debug_ snapshots, as well as all other operations.
-    //
-    // We serialize top-level children to JSON one-by-one, then read that JSON back to jsondata::Json.
-    // We do this because jsondata::Json implements Ord so we can sort these values.
-    // Otherwise snapshots have unspecified order of the children and tests fail randomly.
-    //
-    // Then we serialize jsondata::Json to String, and read that String as serde_json::Value once again.
-    // We do this to achieve snapshots that are readable by human.
-    // Otherwise, _debug_ snapshots of jsondata::Json are like AST dumps and very verbose.
+    // This function gets top-level children and snapshots them one-by-one.
+    // This way you can compare i.e.
+    // snapshots/iml_device__virtual_device__tests__full_mds_test_mds1.local_0.snap
+    // and
+    // snapshots/iml_device__virtual_device__tests__full_mds_test_mds2.local_0.snap
+    // and find those are the same modulo devpath, paths, major, minor fields.
     fn compare_results(results: Vec<(Fqdn, Device)>, test_name: &str) {
         for (f, d) in results {
             let mut children = vec![];
             match d {
                 Device::Root(dd) => {
                     for c in dd.children {
-                        children.push(c.clone());
+                        children.push(c);
                     }
                 }
                 _ => unreachable!(),
             }
 
-            let mut children_ordered = vec![];
-            for c in children {
-                let c_string = serde_json::to_string(&c).unwrap();
-
-                let c_ordered = c_string.parse::<jsondata::Json>().unwrap();
-
-                children_ordered.push(c_ordered);
-            }
-
-            children_ordered.sort();
-
-            for (i, c) in children_ordered.iter().enumerate() {
-                let c_string = c.to_string();
-                let c_serde: serde_json::Value = serde_json::from_str(&c_string).unwrap();
-                assert_json_snapshot!(format!("{}_{}_{}", test_name, f, i), c_serde);
+            for (i, c) in children.iter().enumerate() {
+                assert_json_snapshot!(format!("{}_{}_{}", test_name, f, i), c);
             }
         }
     }

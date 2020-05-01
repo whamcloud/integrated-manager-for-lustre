@@ -1,22 +1,83 @@
 ---
 source: iml-services/iml-device/src/virtual_device.rs
-expression: c_serde
+expression: c
 ---
 {
   "ScsiDevice": {
+    "serial": "36001405344dffacf03b40beacc990f91",
+    "scsi80": "SLIO-ORG ost17           344dffac-f03b-40be-acc9-90f919eba26a",
+    "major": "8",
+    "minor": "160",
+    "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:16/block/sdk",
+    "size": 5368709120,
+    "filesystem_type": "mpath_member",
+    "fs_uuid": "2259451214255839809",
+    "fs_label": "ost8",
+    "paths": [
+      "/dev/disk/by-id/scsi-36001405344dffacf03b40beacc990f91",
+      "/dev/disk/by-id/wwn-0x6001405344dffacf03b40beacc990f91",
+      "/dev/disk/by-path/fc---lun-16",
+      "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-16",
+      "/dev/disk/by-label/ost8",
+      "/dev/disk/by-uuid/2259451214255839809",
+      "/dev/sdk"
+    ],
+    "mount": null,
     "children": [
       {
         "Mpath": {
+          "devpath": "/devices/virtual/block/dm-4",
+          "serial": "36001405344dffacf03b40beacc990f91",
+          "scsi80": "SLIO-ORG ost17           344dffac-f03b-40be-acc9-90f919eba26a",
+          "dm_name": "mpathi",
+          "size": 5368709120,
+          "major": "253",
+          "minor": "4",
+          "filesystem_type": "zfs_member",
+          "fs_uuid": "2259451214255839809",
+          "fs_label": "ost8",
+          "paths": [
+            "/dev/mapper/mpathi",
+            "/dev/disk/by-id/dm-name-mpathi",
+            "/dev/disk/by-id/dm-uuid-mpath-36001405344dffacf03b40beacc990f91",
+            "/dev/disk/by-label/ost8",
+            "/dev/disk/by-uuid/2259451214255839809",
+            "/dev/dm-4"
+          ],
           "children": [
             {
               "Zpool": {
+                "guid": 2259451214255839809,
+                "name": "ost8",
+                "health": "ONLINE",
+                "state": "ACTIVE",
+                "size": 5335154688,
+                "vdev": {
+                  "Root": {
+                    "children": [
+                      {
+                        "Disk": {
+                          "guid": 7027415539543258860,
+                          "state": "ONLINE",
+                          "path": "/dev/mapper/mpathi",
+                          "dev_id": "dm-uuid-mpath-36001405344dffacf03b40beacc990f91",
+                          "phys_path": null,
+                          "whole_disk": false,
+                          "is_log": false
+                        }
+                      }
+                    ],
+                    "spares": [],
+                    "cache": []
+                  }
+                },
+                "props": [],
                 "children": [
                   {
                     "Dataset": {
                       "guid": 3323208509702482379,
-                      "kind": "filesystem",
-                      "mount": null,
                       "name": "ost8/ost8",
+                      "kind": "filesystem",
                       "props": [
                         {
                           "name": "name",
@@ -310,84 +371,23 @@ expression: c_serde
                           "name": "lustre:mgsnode",
                           "value": "10.73.20.11@tcp:10.73.20.12@tcp"
                         }
-                      ]
+                      ],
+                      "mount": null
                     }
                   }
                 ],
-                "guid": 2259451214255839809,
-                "health": "ONLINE",
                 "mount": {
-                  "fs_type": "zfs",
-                  "opts": "rw,xattr,noacl",
                   "source": "ost8",
-                  "target": "/ost8"
-                },
-                "name": "ost8",
-                "props": [],
-                "size": 5335154688,
-                "state": "ACTIVE",
-                "vdev": {
-                  "Root": {
-                    "cache": [],
-                    "children": [
-                      {
-                        "Disk": {
-                          "dev_id": "dm-uuid-mpath-36001405344dffacf03b40beacc990f91",
-                          "guid": 7027415539543258860,
-                          "is_log": false,
-                          "path": "/dev/mapper/mpathi",
-                          "phys_path": null,
-                          "state": "ONLINE",
-                          "whole_disk": false
-                        }
-                      }
-                    ],
-                    "spares": []
-                  }
+                  "target": "/ost8",
+                  "fs_type": "zfs",
+                  "opts": "rw,xattr,noacl"
                 }
               }
             }
           ],
-          "devpath": "/devices/virtual/block/dm-4",
-          "dm_name": "mpathi",
-          "filesystem_type": "zfs_member",
-          "fs_label": "ost8",
-          "fs_uuid": "2259451214255839809",
-          "major": "253",
-          "minor": "4",
-          "mount": null,
-          "paths": [
-            "/dev/mapper/mpathi",
-            "/dev/disk/by-id/dm-name-mpathi",
-            "/dev/disk/by-id/dm-uuid-mpath-36001405344dffacf03b40beacc990f91",
-            "/dev/disk/by-label/ost8",
-            "/dev/disk/by-uuid/2259451214255839809",
-            "/dev/dm-4"
-          ],
-          "scsi80": "SLIO-ORG ost17           344dffac-f03b-40be-acc9-90f919eba26a",
-          "serial": "36001405344dffacf03b40beacc990f91",
-          "size": 5368709120
+          "mount": null
         }
       }
-    ],
-    "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:16/block/sdj",
-    "filesystem_type": "mpath_member",
-    "fs_label": "ost8",
-    "fs_uuid": "2259451214255839809",
-    "major": "8",
-    "minor": "144",
-    "mount": null,
-    "paths": [
-      "/dev/disk/by-id/scsi-36001405344dffacf03b40beacc990f91",
-      "/dev/disk/by-id/wwn-0x6001405344dffacf03b40beacc990f91",
-      "/dev/disk/by-path/fc---lun-16",
-      "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-16",
-      "/dev/disk/by-label/ost8",
-      "/dev/disk/by-uuid/2259451214255839809",
-      "/dev/sdj"
-    ],
-    "scsi80": "SLIO-ORG ost17           344dffac-f03b-40be-acc9-90f919eba26a",
-    "serial": "36001405344dffacf03b40beacc990f91",
-    "size": 5368709120
+    ]
   }
 }

@@ -1,22 +1,83 @@
 ---
 source: iml-services/iml-device/src/virtual_device.rs
-expression: c_serde
+expression: c
 ---
 {
   "ScsiDevice": {
+    "serial": "36001405f701ec9f7a4d44a2876e6d084",
+    "scsi80": "SLIO-ORG mdt1            f701ec9f-7a4d-44a2-876e-6d084638901b",
+    "major": "8",
+    "minor": "112",
+    "devpath": "/devices/platform/host3/session2/target3:0:0/3:0:0:1/block/sdh",
+    "size": 5368709120,
+    "filesystem_type": "mpath_member",
+    "fs_uuid": "14193942828102514402",
+    "fs_label": "mdt0",
+    "paths": [
+      "/dev/disk/by-id/scsi-36001405f701ec9f7a4d44a2876e6d084",
+      "/dev/disk/by-id/wwn-0x6001405f701ec9f7a4d44a2876e6d084",
+      "/dev/disk/by-path/fc---lun-1",
+      "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:mds-lun-1",
+      "/dev/disk/by-label/mdt0",
+      "/dev/disk/by-uuid/14193942828102514402",
+      "/dev/sdh"
+    ],
+    "mount": null,
     "children": [
       {
         "Mpath": {
+          "devpath": "/devices/virtual/block/dm-3",
+          "serial": "36001405f701ec9f7a4d44a2876e6d084",
+          "scsi80": "SLIO-ORG mdt1            f701ec9f-7a4d-44a2-876e-6d084638901b",
+          "dm_name": "mpathb",
+          "size": 5368709120,
+          "major": "253",
+          "minor": "3",
+          "filesystem_type": "zfs_member",
+          "fs_uuid": "14193942828102514402",
+          "fs_label": "mdt0",
+          "paths": [
+            "/dev/mapper/mpathb",
+            "/dev/disk/by-id/dm-name-mpathb",
+            "/dev/disk/by-id/dm-uuid-mpath-36001405f701ec9f7a4d44a2876e6d084",
+            "/dev/disk/by-label/mdt0",
+            "/dev/disk/by-uuid/14193942828102514402",
+            "/dev/dm-3"
+          ],
           "children": [
             {
               "Zpool": {
+                "guid": 14193942828102514402,
+                "name": "mdt0",
+                "health": "ONLINE",
+                "state": "ACTIVE",
+                "size": 5335154688,
+                "vdev": {
+                  "Root": {
+                    "children": [
+                      {
+                        "Disk": {
+                          "guid": 18243268064316204489,
+                          "state": "ONLINE",
+                          "path": "/dev/mapper/mpathb",
+                          "dev_id": "dm-uuid-mpath-36001405f701ec9f7a4d44a2876e6d084",
+                          "phys_path": null,
+                          "whole_disk": false,
+                          "is_log": false
+                        }
+                      }
+                    ],
+                    "spares": [],
+                    "cache": []
+                  }
+                },
+                "props": [],
                 "children": [
                   {
                     "Dataset": {
                       "guid": 17930952625555981391,
-                      "kind": "filesystem",
-                      "mount": null,
                       "name": "mdt0/mdt0",
+                      "kind": "filesystem",
                       "props": [
                         {
                           "name": "name",
@@ -310,84 +371,23 @@ expression: c_serde
                           "name": "lustre:index",
                           "value": "0"
                         }
-                      ]
+                      ],
+                      "mount": null
                     }
                   }
                 ],
-                "guid": 14193942828102514402,
-                "health": "ONLINE",
                 "mount": {
-                  "fs_type": "zfs",
-                  "opts": "rw,xattr,noacl",
                   "source": "mdt0",
-                  "target": "/mdt0"
-                },
-                "name": "mdt0",
-                "props": [],
-                "size": 5335154688,
-                "state": "ACTIVE",
-                "vdev": {
-                  "Root": {
-                    "cache": [],
-                    "children": [
-                      {
-                        "Disk": {
-                          "dev_id": "dm-uuid-mpath-36001405f701ec9f7a4d44a2876e6d084",
-                          "guid": 18243268064316204489,
-                          "is_log": false,
-                          "path": "/dev/mapper/mpathb",
-                          "phys_path": null,
-                          "state": "ONLINE",
-                          "whole_disk": false
-                        }
-                      }
-                    ],
-                    "spares": []
-                  }
+                  "target": "/mdt0",
+                  "fs_type": "zfs",
+                  "opts": "rw,xattr,noacl"
                 }
               }
             }
           ],
-          "devpath": "/devices/virtual/block/dm-3",
-          "dm_name": "mpathb",
-          "filesystem_type": "zfs_member",
-          "fs_label": "mdt0",
-          "fs_uuid": "14193942828102514402",
-          "major": "253",
-          "minor": "3",
-          "mount": null,
-          "paths": [
-            "/dev/mapper/mpathb",
-            "/dev/disk/by-id/dm-name-mpathb",
-            "/dev/disk/by-id/dm-uuid-mpath-36001405f701ec9f7a4d44a2876e6d084",
-            "/dev/disk/by-label/mdt0",
-            "/dev/disk/by-uuid/14193942828102514402",
-            "/dev/dm-3"
-          ],
-          "scsi80": "SLIO-ORG mdt1            f701ec9f-7a4d-44a2-876e-6d084638901b",
-          "serial": "36001405f701ec9f7a4d44a2876e6d084",
-          "size": 5368709120
+          "mount": null
         }
       }
-    ],
-    "devpath": "/devices/platform/host3/session2/target3:0:0/3:0:0:1/block/sdh",
-    "filesystem_type": "mpath_member",
-    "fs_label": "mdt0",
-    "fs_uuid": "14193942828102514402",
-    "major": "8",
-    "minor": "112",
-    "mount": null,
-    "paths": [
-      "/dev/disk/by-id/scsi-36001405f701ec9f7a4d44a2876e6d084",
-      "/dev/disk/by-id/wwn-0x6001405f701ec9f7a4d44a2876e6d084",
-      "/dev/disk/by-path/fc---lun-1",
-      "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:mds-lun-1",
-      "/dev/disk/by-label/mdt0",
-      "/dev/disk/by-uuid/14193942828102514402",
-      "/dev/sdh"
-    ],
-    "scsi80": "SLIO-ORG mdt1            f701ec9f-7a4d-44a2-876e-6d084638901b",
-    "serial": "36001405f701ec9f7a4d44a2876e6d084",
-    "size": 5368709120
+    ]
   }
 }
