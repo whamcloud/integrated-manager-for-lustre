@@ -112,7 +112,7 @@ pub enum Msg {
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
-    match msg.clone() {
+    match msg {
         Msg::Modal(msg) => {
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
         }
@@ -188,20 +188,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::Noop => {}
     }
-    match msg {
-        Msg::Modal(_) => "Msg-Modal".to_string(),
-        Msg::FireCommands(_) => "Msg-FireCommands".to_string(),
-        Msg::FetchTree => "Msg-FetchTree".to_string(),
-        Msg::FetchedCommands(_) => "Msg-FetchedCommands".to_string(),
-        Msg::FetchedJobs(_) => "Msg-FetchedJobs".to_string(),
-        Msg::FetchedSteps(_) => "Msg-FetchedSteps".to_string(),
-        Msg::Click(x) => {
-            // let msg_str = "Msg-Click".to_string();
-            log!(format!("         typed_id: {:?}, select: {:?} ", x, model.select));
-            "".to_string()
-        }
-        Msg::Noop => "Msg-Noop".to_string(),
-    };
 }
 
 fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -244,7 +230,6 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
                 .flat_map(|id| model.jobs[id].deps())
                 .copied()
                 .collect::<Vec<u32>>();
-            log!("schedule ", all_cmd_ids, cmd_ids, job_ids, step_ids);
             orders
                 .skip()
                 .perform_cmd(fetch_the_batch(step_ids, |x| Msg::FetchedSteps(Box::new(x))))
