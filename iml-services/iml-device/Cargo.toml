@@ -27,4 +27,3 @@ chrono = "0.4.11"
 
 [dev-dependencies]
 insta = "0.16"
-jsondata = "0.6.2"
