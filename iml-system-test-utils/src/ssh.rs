@@ -12,7 +12,7 @@ use std::{
 use tokio::{fs::canonicalize, io::AsyncWriteExt, process::Command};
 
 pub async fn scp(from: String, to: String) -> Result<(), CmdError> {
-    println!("transferring file from {} to {}", from, to);
+    tracing::debug!("transferring file from {} to {}", from, to);
 
     let path = canonicalize("../vagrant/").await?;
 
@@ -45,7 +45,7 @@ pub async fn scp_parallel(servers: &[&str], remote_path: &str, to: &str) -> Resu
 }
 
 pub async fn ssh_exec<'a, 'b>(host: &'a str, cmd: &'b str) -> Result<(&'a str, Output), CmdError> {
-    println!("Running command {} on {}", cmd, host);
+    tracing::debug!("Running command {} on {}", cmd, host);
     let path = canonicalize("../vagrant/").await?;
 
     let mut x = Command::new("ssh");
@@ -76,7 +76,7 @@ async fn ssh_exec_parallel<'a, 'b>(
     let output = try_join_all(remote_calls).await?;
 
     for (host, out) in &output {
-        println!(
+        tracing::debug!(
             "ssh output {}: {}",
             host,
             str::from_utf8(&out.stdout).expect("Couldn't read output.")
@@ -133,7 +133,7 @@ async fn ssh_script_parallel<'a, 'b>(
     let output = try_join_all(remote_calls).await?;
 
     for (host, out) in &output {
-        println!(
+        tracing::debug!(
             "ssh output {}: {}",
             host,
             str::from_utf8(&out.stdout).expect("Couldn't read output.")
@@ -191,7 +191,7 @@ pub async fn create_iml_diagnostics<'a, 'b>(
     let path_buf = canonicalize("../vagrant/").await?;
     let path = path_buf.as_path().to_str().expect("Couldn't get path.");
 
-    println!("Creating diagnostics on: {:?}", hosts);
+    tracing::debug!("Creating diagnostics on: {:?}", hosts);
     ssh_script_parallel(hosts, "scripts/create_iml_diagnostics.sh", &[prefix]).await?;
 
     let now = SystemTime::now();

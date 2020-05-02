@@ -182,7 +182,7 @@ pub async fn poweroff_running_vms() -> Result<(), CmdError> {
 
     let vm_list = vm_list_from_output(running_vms);
 
-    println!("Powering off the following vm's: {:?}", vm_list);
+    tracing::debug!("Powering off the following vm's: {:?}", vm_list);
 
     for vm in vm_list {
         let mut y = vbox_manage().await?;
@@ -206,7 +206,7 @@ pub async fn unregister_vms() -> Result<(), CmdError> {
 
     let vm_list: Vec<String> = vm_list_from_output(vms);
 
-    println!("Unregistering the following vm's: {:?}", vm_list);
+    tracing::debug!("Unregistering the following vm's: {:?}", vm_list);
 
     for vm in vm_list {
         let mut y = vbox_manage().await?;
@@ -239,11 +239,11 @@ pub async fn clear_vbox_machine_folder() -> Result<(), CmdError> {
         });
 
     if let Some(path) = machine_folder {
-        println!("removing contents from machine folder: {}", path);
+        tracing::debug!("removing contents from machine folder: {}", path);
         remove_dir_all(path).await?;
         create_dir(path).await?;
     } else {
-        println!("Couldn't determine vbox machine folder. Contents of vms directory will not be cleaned.");
+        tracing::debug!("Couldn't determine vbox machine folder. Contents of vms directory will not be cleaned.");
     }
 
     Ok(())
@@ -421,7 +421,7 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
 pub async fn configure_docker_network(hosts: BTreeSet<&&str>) -> Result<(), CmdError> {
     // The configure-docker-network provisioner must be run individually on
     // each server node.
-    println!(
+    tracing::debug!(
         "Configuring docker network for the following servers: {:?}",
         hosts
     );
@@ -448,7 +448,7 @@ async fn create_monitored_ldiskfs(config: &ClusterConfig) -> Result<(), CmdError
         .storage_servers()
         .into_iter()
         .map(|x| {
-            println!("creating ldiskfs fs for {}", x);
+            tracing::debug!("creating ldiskfs fs for {}", x);
             async move {
                 provision_node(x, "configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2")
                     .await?
@@ -474,7 +474,7 @@ async fn create_monitored_zfs(config: &ClusterConfig) -> Result<(), CmdError> {
         .await?;
 
     let xs = config.storage_servers().into_iter().map(|x| {
-        println!("creating zfs fs for {}", x);
+        tracing::debug!("creating zfs fs for {}", x);
         async move {
             provision_node(
                 x,

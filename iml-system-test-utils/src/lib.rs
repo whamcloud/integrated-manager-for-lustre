@@ -105,7 +105,7 @@ pub async fn try_command_n_times(
 
     // try to run the command max_tries times until it succeeds. There is a delay of 1 second.
     while !r.success() && count < max_tries {
-        println!("Trying command: {:?} - Attempt #{}", cmd, count + 1);
+        tracing::debug!("Trying command: {:?} - Attempt #{}", cmd, count + 1);
         count += 1;
 
         delay_for(Duration::from_secs(delay)).await;
