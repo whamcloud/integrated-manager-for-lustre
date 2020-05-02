@@ -77,7 +77,6 @@ impl Select {
                 TypedId::Step(s) => insert_in_sorted(&mut step_ids, *s),
             }
         }
-        cmd_ids.sort();
         (cmd_ids, job_ids, step_ids)
     }
 }
@@ -828,9 +827,7 @@ mod tests {
     }
 
     #[test]
-    fn test_interpret_click() {
-        // test transitions, we simulate the clicks on various elements
-
+    fn test_selection_split() {
         let select = Select(
             vec![
                 TypedId::Command(1),
