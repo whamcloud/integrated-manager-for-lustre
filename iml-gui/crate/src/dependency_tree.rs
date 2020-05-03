@@ -171,12 +171,70 @@ where
         .collect()
 }
 
+/// The function to traverse the graph and build the result after the full traversal.
+/// - `apply_node` is called each time a node is visited;
+/// - `combine_nodes` is called each time when the current node and all nodes, reachable from the current;
+/// - `context` is a custom context, no restrictions placed on its type.
+pub fn traverse_graph<K, T, U, C, F1, F2>(
+    graph: &DependencyDAG<K, T>,
+    apply_node: &F1,
+    combine_nodes: &F2,
+    context: &mut C,
+) -> Vec<U>
+where
+    K: Hash + Eq + Debug,
+    T: Deps<K>,
+    F1: Fn(Arc<T>, bool, &mut C) -> U,
+    F2: Fn(U, Vec<U>, &mut C) -> U,
+{
+    struct Env<'a, K: Hash + Eq + Debug, T: Deps<K>, F1, F2, C> {
+        graph: &'a DependencyDAG<K, T>,
+        apply_node: &'a F1,
+        combine_nodes: &'a F2,
+        context: &'a mut C,
+        visited: &'a mut HashSet<K>,
+    }
+
+    fn traverse_node<K, T, U, F1, F2, C>(env: &mut Env<K, T, F1, F2, C>, n: Arc<T>) -> U
+    where
+        K: Hash + Eq + Debug,
+        T: Deps<K>,
+        F1: Fn(Arc<T>, bool, &mut C) -> U,
+        F2: Fn(U, Vec<U>, &mut C) -> U,
+    {
+        let is_new = env.visited.insert(n.id());
+        let parent: U = (env.apply_node)(Arc::clone(&n), is_new, env.context);
+        let mut acc: Vec<U> = Vec::new();
+        if let Some(deps) = env.graph.links.get(&n.id()) {
+            if is_new {
+                for d in deps {
+                    let rec_node = traverse_node(env, Arc::clone(d));
+                    acc.push(rec_node);
+                }
+            }
+        }
+        (env.combine_nodes)(parent, acc, env.context)
+    }
+    let mut visited = HashSet::<K>::new();
+    let mut env = Env {
+        graph,
+        apply_node,
+        combine_nodes,
+        context,
+        visited: &mut visited,
+    };
+    let mut acc: Vec<U> = Vec::with_capacity(graph.roots.len());
+    for r in &graph.roots {
+        acc.push(traverse_node(&mut env, Arc::clone(r)));
+    }
+    acc
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use rand_core::{RngCore, SeedableRng};
     use rand_xoshiro::Xoroshiro64Star;
-    use std::hash::Hash;
 
     #[derive(Debug, Clone)]
     struct X {
@@ -223,10 +281,8 @@ mod tests {
     }
 
     #[derive(Debug, Clone)]
-    struct Context<K: Hash + Eq + Debug> {
-        visited: HashSet<K>,
+    struct Context {
         indent: usize,
-        is_new: bool,
     }
 
     #[test]
@@ -244,11 +300,13 @@ mod tests {
             X::new(48, &[39, 40, 41, 42, 45, 46, 47], "Setup managed host oss2.local."),
         ];
         let dag = build_direct_dag(&xs);
-        let result = build_dag_str(&dag, &x_to_string).join("\n");
+        let mut ctx = Context { indent: 0 };
+        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("\n");
         assert_eq!(result, TREE_DIRECT);
 
         let dag = build_inverse_dag(&xs);
-        let result = build_dag_str(&dag, &x_to_string).join("\n");
+        let mut ctx = Context { indent: 0 };
+        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("\n");
         assert_eq!(result, TREE_INVERSE);
     }
 
@@ -258,11 +316,13 @@ mod tests {
         let xs: Vec<X> = vec![X::new(1, &[2], "One"), X::new(2, &[3], "Two"), X::new(3, &[2], "Three")];
 
         let dag = build_direct_dag(&xs);
-        let result = build_dag_str(&dag, &x_to_string).join("\n");
+        let mut ctx = Context { indent: 0 };
+        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("\n");
         assert_eq!(result, "1: One\n  2: Two\n    3: Three\n      2: Two...\n3: Three...");
 
         let dag = build_inverse_dag(&xs);
-        let result = build_dag_str(&dag, &x_to_string).join("\n");
+        let mut ctx = Context { indent: 0 };
+        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("\n");
         assert_eq!(result, "");
     }
 
@@ -271,10 +331,13 @@ mod tests {
         let xs: Vec<X> = vec![X::new(1, &[], "One"), X::new(2, &[], "Two"), X::new(3, &[], "Three")];
 
         let dag = build_direct_dag(&xs);
-        let result = build_dag_str(&dag, &x_to_string).join("\n");
+        let mut ctx = Context { indent: 0 };
+        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("\n");
         assert_eq!(result, "1: One\n2: Two\n3: Three");
+
         let dag = build_inverse_dag(&xs);
-        let result = build_dag_str(&dag, &x_to_string).join("\n");
+        let mut ctx = Context { indent: 0 };
+        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("\n");
         assert_eq!(result, "1: One\n2: Two\n3: Three");
     }
 
@@ -302,62 +365,36 @@ mod tests {
             }
             let rich_ys: Vec<Rich<u32, Y>> = ys.clone().into_iter().map(|t| Rich::new(t, extract_from_y)).collect();
             let dag = build_direct_dag(&rich_ys);
-            let result = build_dag_str(&dag, &rich_y_to_string).join("\n");
+            let mut ctx = Context { indent: 0 };
+            let result = traverse_graph(&dag, &rich_y_to_string, &combine_strings, &mut ctx).join("\n");
             assert_eq!(result, SMALL_TREE);
         }
     }
 
-    fn build_dag_str<K, T, U, F>(dag: &DependencyDAG<K, T>, node_to_str: &F) -> Vec<U>
-    where
-        K: Hash + Eq + Debug,
-        T: Deps<K>,
-        F: Fn(Arc<T>, &mut Context<K>) -> U,
-    {
-        fn build_dag_str_inner<K, T, U, F>(
-            dag: &DependencyDAG<K, T>,
-            node_to_str: &F,
-            n: Arc<T>,
-            ctx: &mut Context<K>,
-            acc: &mut Vec<U>,
-        ) where
-            K: Hash + Eq + Debug,
-            T: Deps<K>,
-            F: Fn(Arc<T>, &mut Context<K>) -> U,
-        {
-            ctx.is_new = ctx.visited.insert(n.id());
-            acc.push(node_to_str(Arc::clone(&n), ctx));
-            if let Some(deps) = dag.links.get(&n.id()) {
-                ctx.indent += 1;
-                if ctx.is_new {
-                    for d in deps {
-                        build_dag_str_inner(dag, node_to_str, Arc::clone(d), ctx, acc);
-                    }
-                }
-                ctx.indent -= 1;
-            }
-        }
-        let mut ctx = Context {
-            visited: HashSet::new(),
-            indent: 0,
-            is_new: false,
-        };
-        let mut acc: Vec<U> = Vec::new();
-        for r in &dag.roots {
-            build_dag_str_inner(dag, node_to_str, Arc::clone(r), &mut ctx, &mut acc);
-        }
-        acc
+    fn rich_y_to_string(node: Arc<Rich<u32, Y>>, is_new: bool, ctx: &mut Context) -> String {
+        ctx.indent += 1;
+        let ellipsis = if is_new { "" } else { "..." };
+        format!("{}: {}{}", node.id(), node.description, ellipsis)
     }
 
-    fn x_to_string(node: Arc<X>, ctx: &mut Context<u32>) -> String {
-        let ellipsis = if ctx.is_new { "" } else { "..." };
-        let indent = "  ".repeat(ctx.indent);
-        format!("{}{}: {}{}", indent, node.id, node.description, ellipsis)
+    fn x_to_string(node: Arc<X>, is_new: bool, ctx: &mut Context) -> String {
+        ctx.indent += 1;
+        let ellipsis = if is_new { "" } else { "..." };
+        format!("{}: {}{}", node.id, node.description, ellipsis)
     }
 
-    fn rich_y_to_string(node: Arc<Rich<u32, Y>>, ctx: &mut Context<u32>) -> String {
-        let ellipsis = if ctx.is_new { "" } else { "..." };
-        let indent = "  ".repeat(ctx.indent);
-        format!("{}{}: {}{}", indent, node.id(), node.description, ellipsis)
+    fn combine_strings(node: String, nodes: Vec<String>, ctx: &mut Context) -> String {
+        let mut result: String = node;
+        for n in nodes.into_iter() {
+            result.push('\n');
+            let indent = "  ".repeat(ctx.indent);
+            result.push_str(&indent);
+            result.push_str(&n);
+        }
+        if ctx.indent > 0 {
+            ctx.indent -= 1;
+        }
+        result
     }
 
     pub fn shuffle<R: RngCore, T>(slice: &mut [T], rng: &mut R) {
