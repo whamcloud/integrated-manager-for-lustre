@@ -11,6 +11,7 @@ use crate::{
 };
 use futures::channel::oneshot;
 
+use crate::dependency_tree::traverse_graph;
 use iml_wire_types::{ApiList, Command, EndpointName, Job, Step};
 use regex::{Captures, Regex};
 use seed::{prelude::*, *};
@@ -46,7 +47,6 @@ pub enum TypedId {
     Step(u32),
 }
 
-/// Note: all vectors must be sorted
 #[derive(Clone, Eq, PartialEq, Debug, Default)]
 pub struct Select(HashSet<TypedId>);
 
@@ -85,8 +85,6 @@ impl Select {
 pub struct Context<'a> {
     pub steps_view: &'a HashMap<JobId, Vec<Arc<RichStep>>>,
     pub select: &'a Select,
-    pub visited: HashSet<u32>,
-    pub is_new: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -194,8 +192,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
         },
         Msg::Click(the_id) => {
-            let (select, do_fetch) = perform_click(&model.select, the_id);
-            model.select = select;
+            let do_fetch = perform_click(&mut model.select, the_id);
             if do_fetch {
                 schedule_fetch_tree(model, orders);
             }
@@ -334,50 +331,26 @@ pub fn job_tree_view(model: &Model, parent_cid: CmdId) -> Node<Msg> {
             font_awesome(class![C.w_8, C.h_8, C.inline, C.pulse], "spinner"),
         ]
     } else {
-        let dag_view = job_dag_view(model, &model.jobs_graphs[&parent_cid]);
+        let mut ctx = Context {
+            steps_view: &model.steps_view,
+            select: &model.select,
+        };
+        let dag_nodes = traverse_graph(
+            &model.jobs_graphs[&parent_cid],
+            &job_item_view,
+            &job_item_combine,
+            &mut ctx,
+        );
         div![
             class![C.font_ordinary, C.text_gray_700],
             h4![class![C.text_lg, C.font_medium], "Jobs"],
-            div![class![C.p_1, C.pb_2, C.mb_1, C.overflow_auto], dag_view],
+            div![class![C.p_1, C.pb_2, C.mb_1, C.overflow_auto], div![dag_nodes]],
         ]
     }
 }
 
-pub fn job_dag_view(model: &Model, graph: &JobsGraph) -> Node<Msg> {
-    fn build_node_view(graph: &JobsGraph, n: Arc<RichJob>, ctx: &mut Context) -> Node<Msg> {
-        ctx.is_new = ctx.visited.insert(n.id);
-        let parent: Node<Msg> = job_item_view(Arc::clone(&n), ctx);
-        let mut acc: Vec<Node<Msg>> = Vec::new();
-        if let Some(deps) = graph.links.get(&n.id) {
-            if ctx.is_new {
-                for d in deps {
-                    let rec_node = build_node_view(graph, Arc::clone(d), ctx);
-                    // all the dependencies are shifted with the indent
-                    acc.push(rec_node.merge_attrs(class![C.ml_3, C.mt_1]));
-                }
-            }
-        }
-        if !parent.is_empty() {
-            div![parent, acc]
-        } else {
-            empty!()
-        }
-    }
-    let mut ctx = Context {
-        steps_view: &model.steps_view,
-        select: &model.select,
-        visited: HashSet::new(),
-        is_new: false,
-    };
-    let mut acc: Vec<Node<Msg>> = Vec::with_capacity(graph.roots.len());
-    for r in &graph.roots {
-        acc.push(build_node_view(graph, Arc::clone(r), &mut ctx));
-    }
-    div![acc]
-}
-
-fn job_item_view(job: Arc<RichJob>, ctx: &mut Context) -> Node<Msg> {
-    if ctx.is_new {
+fn job_item_view(job: Arc<RichJob>, is_new: bool, ctx: &mut Context) -> Node<Msg> {
+    if is_new {
         let icon = job_status_icon(job.as_ref());
         // we don't use job.deps() since deps() now show interdependencies between jobs
         if job.steps.is_empty() {
@@ -395,6 +368,16 @@ fn job_item_view(job: Arc<RichJob>, ctx: &mut Context) -> Node<Msg> {
                 step_list_view(steps, ctx.select, is_open),
             ]
         }
+    } else {
+        empty!()
+    }
+}
+
+fn job_item_combine(parent: Node<Msg>, acc: Vec<Node<Msg>>, _ctx: &mut Context) -> Node<Msg> {
+    if !parent.is_empty() {
+        // all the dependencies are shifted with the indent
+        let acc_plus = acc.into_iter().map(|a| a.merge_attrs(class![C.ml_3, C.mt_1]));
+        div![parent, acc_plus]
     } else {
         empty!()
     }
@@ -591,14 +574,11 @@ fn is_all_finished(cmds: &HashMap<u32, Arc<RichCommand>>) -> bool {
     cmds.values().all(|c| is_finished(c))
 }
 
-fn perform_click(old_select: &Select, id: TypedId) -> (Select, bool) {
-    let mut select = old_select.clone();
+fn perform_click(select: &mut Select, id: TypedId) -> bool {
     if select.contains(id) {
-        select.0.remove(&id);
-        (select, false)
+        !select.0.remove(&id)
     } else {
-        select.0.insert(id);
-        (select, true)
+        select.0.insert(id)
     }
 }
 
