@@ -589,12 +589,14 @@ pub struct ChromaCoreFilesystemglobalconfparam {
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "postgres-interop", primary_key(ticket_ptr_id))]
-#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_filesystemticket")]
+#[cfg_attr(
+    feature = "postgres-interop",
+    table_name = "chroma_core_filesystemticket"
+)]
 pub struct ChromaCoreFilesystemticket {
     pub ticket_ptr_id: i32,
     pub filesystem_id: i32,
 }
-
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
 #[derive(serde::Serialize, serde::Deserialize)]

@@ -4,6 +4,7 @@
 
 mod action;
 mod error;
+mod task;
 
 use iml_rabbit::{self, create_connection_filter};
 use iml_wire_types::Conf;
@@ -30,7 +31,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let routes = warp::path("conf")
         .map(move || warp::reply::json(&conf))
-        .or(action::endpoint(client_filter));
+        .or(action::endpoint(client_filter.clone()))
+        .or(task::endpoint(client_filter));
 
     tracing::info!("Starting on {:?}", addr);
 
