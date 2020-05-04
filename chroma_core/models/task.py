@@ -60,7 +60,7 @@ class CreateTaskJob(AdvertisedJob):
     task = models.ForeignKey("Task", on_delete=CASCADE)
     requires_confirmation = False
     classes = ["Task"]
-    verbe = "Create"
+    verb = "Create"
 
     class Meta:
         app_label = "chroma_core"
@@ -94,7 +94,7 @@ class RemoveTaskJob(AdvertisedJob):
     task = models.ForeignKey("Task", on_delete=CASCADE)
     requires_confirmation = False
     classes = ["Task"]
-    verbe = "Remove"
+    verb = "Remove"
 
     class Meta:
         app_label = "chroma_core"

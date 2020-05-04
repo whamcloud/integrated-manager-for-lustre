@@ -1257,6 +1257,7 @@ dependencies = [
  "futures",
  "iml-job-scheduler-rpc",
  "iml-manager-env",
+ "iml-orm",
  "iml-rabbit",
  "iml-tracing",
  "iml-wire-types",
