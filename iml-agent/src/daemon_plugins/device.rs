@@ -6,6 +6,7 @@ use crate::{
     agent_error::ImlAgentError,
     daemon_plugins::{DaemonPlugin, Output},
 };
+use async_trait::async_trait;
 use futures::{
     channel::oneshot, future, lock::Mutex, Future, FutureExt, Stream, StreamExt, TryFutureExt,
     TryStreamExt,
@@ -43,6 +44,7 @@ pub struct Devices {
     state: Arc<Mutex<(Output, Output)>>,
 }
 
+#[async_trait]
 impl DaemonPlugin for Devices {
     fn start_session(
         &mut self,
@@ -110,7 +112,7 @@ impl DaemonPlugin for Devices {
         }
         .boxed()
     }
-    fn teardown(&mut self) -> Result<(), ImlAgentError> {
+    async fn teardown(&mut self) -> Result<(), ImlAgentError> {
         self.trigger.take();
 
         Ok(())

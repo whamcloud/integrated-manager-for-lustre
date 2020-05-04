@@ -3,17 +3,18 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    agent_error::Result,
+    agent_error::{NoSessionError, Result},
     daemon_plugins::{DaemonBox, OutputValue},
 };
-use futures::{Future, TryFutureExt};
+use futures::{future, Future, TryFutureExt};
 use iml_wire_types::{AgentResult, Id, PluginName, Seq};
-use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::{
     collections::HashMap,
+    ops::Deref,
     sync::Arc,
     time::{Duration, Instant},
 };
+use tokio::sync::{Mutex, RwLock};
 use tracing::{info, warn};
 
 /// Takes a `Duration` and figures out the next duration
@@ -43,9 +44,9 @@ pub enum State {
 }
 
 impl State {
-    pub fn teardown(&mut self) -> Result<()> {
+    pub async fn teardown(&mut self) -> Result<()> {
         if let State::Active(a) = self {
-            a.session.teardown()?;
+            a.session.teardown().await?;
         }
 
         std::mem::replace(self, State::Empty(Instant::now()));
@@ -56,6 +57,15 @@ impl State {
         if let State::Active(a) = self {
             a.instant = Instant::now() + Duration::from_secs(10);
         }
+    }
+    pub fn create_active(&mut self, session: Session) {
+        std::mem::replace(
+            self,
+            State::Active(Active {
+                session,
+                instant: Instant::now() + Duration::from_secs(10),
+            }),
+        );
     }
     pub fn reset_empty(&mut self) {
         std::mem::replace(self, State::Empty(Instant::now() + Duration::from_secs(10)));
@@ -69,60 +79,75 @@ impl State {
     }
 }
 
+/// Holds all information about active sessions.
+/// There is one important invariant: The inner `HashMap`
+/// should never be mutated directly.
+/// State changes are done via interior mutability.
 #[derive(Clone)]
-pub struct Sessions(Arc<RwLock<HashMap<PluginName, State>>>);
+pub struct Sessions(pub Arc<HashMap<PluginName, Arc<RwLock<State>>>>);
 
 impl Sessions {
     pub fn new(plugins: &[PluginName]) -> Self {
         let hm = plugins
             .iter()
             .cloned()
-            .map(|x| (x, State::Empty(Instant::now())))
+            .map(|x| (x, Arc::new(RwLock::new(State::Empty(Instant::now())))))
             .collect();
 
-        Self(Arc::new(RwLock::new(hm)))
+        Self(Arc::new(hm))
     }
-    pub fn reset_active(&mut self, name: &PluginName) {
-        if let Some(x) = self.0.write().get_mut(name) {
-            x.reset_active()
+    pub async fn reset_active(&self, name: &PluginName) {
+        if let Some(x) = self.0.get(name) {
+            x.write().await.reset_active()
         }
     }
-    pub fn reset_empty(&mut self, name: &PluginName) {
-        if let Some(x) = self.0.write().get_mut(name) {
-            x.reset_empty()
+    pub async fn reset_empty(&self, name: &PluginName) {
+        if let Some(x) = self.0.get(name) {
+            x.write().await.reset_empty()
         }
     }
-    pub fn convert_to_pending(&mut self, name: &PluginName) {
-        if let Some(x) = self.0.write().get_mut(name) {
-            x.convert_to_pending()
+    pub async fn convert_to_pending(&self, name: &PluginName) {
+        if let Some(x) = self.0.get(name) {
+            x.write().await.convert_to_pending()
         }
     }
-    pub fn insert_session(&mut self, name: PluginName, s: Session) {
-        self.0.write().insert(
-            name,
-            State::Active(Active {
-                session: s,
-                instant: Instant::now() + Duration::from_secs(10),
-            }),
-        );
+    pub async fn insert_session(&self, name: PluginName, s: Session) -> Result<()> {
+        let state = self
+            .0
+            .get(&name)
+            .ok_or_else(|| NoSessionError(name))?
+            .clone();
+
+        state.write().await.create_active(s);
+
+        Ok(())
     }
-    pub fn message(
+    pub async fn message(
         &self,
         name: &PluginName,
         body: serde_json::Value,
-    ) -> Option<impl Future<Output = Result<(SessionInfo, AgentResult)>>> {
-        if let Some(State::Active(active)) = self.0.read().get(name) {
-            Some(active.session.message(body))
-        } else {
+    ) -> Option<Result<(SessionInfo, AgentResult)>> {
+        let state = self.0.get(name).or_else(|| {
             warn!("Received a message for unknown session {}", name);
+            None
+        })?;
+
+        if let State::Active(active) = state.read().await.deref() {
+            Some(active.session.message(body).await)
+        } else {
+            warn!(
+                "Received a message for session in non-active state {}",
+                name
+            );
 
             None
         }
     }
-    pub fn terminate_session(&mut self, name: &PluginName) -> Result<()> {
-        match self.0.write().get_mut(name) {
+
+    pub async fn terminate_session(&self, name: &PluginName) -> Result<()> {
+        match self.0.get(name) {
             Some(s) => {
-                s.teardown()?;
+                s.write().await.teardown().await?;
             }
             None => {
                 warn!("Plugin {:?} not found in sessions", name);
@@ -132,21 +157,16 @@ impl Sessions {
         Ok(())
     }
     /// Terminates all held sessions.
-    pub fn terminate_all_sessions(&mut self) -> Result<()> {
+    pub async fn terminate_all_sessions(&self) -> Result<()> {
         info!("Terminating all sessions");
 
-        self.0
-            .write()
-            .iter_mut()
-            .map(|(_, v)| v.teardown())
-            .collect::<Result<Vec<()>>>()
-            .map(|_| ())
-    }
-    pub fn write(&mut self) -> RwLockWriteGuard<'_, HashMap<PluginName, State>> {
-        self.0.write()
-    }
-    pub fn read(&mut self) -> RwLockReadGuard<'_, HashMap<PluginName, State>> {
-        self.0.read()
+        let xs = self
+            .0
+            .values()
+            .map(|x| async move { x.write().await.teardown().await })
+            .collect::<Vec<_>>();
+
+        future::try_join_all(xs).await.map(drop)
     }
 }
 
@@ -185,33 +205,46 @@ impl Session {
     pub fn start(&mut self) -> impl Future<Output = Result<Option<(SessionInfo, OutputValue)>>> {
         let info = Arc::clone(&self.info);
 
-        self.plugin
-            .start_session()
-            .map_ok(move |x| x.map(|y| addon_info(&mut info.lock(), y)))
+        self.plugin.start_session().and_then(|x| async move {
+            match x {
+                Some(x) => {
+                    let mut info = info.lock().await;
+
+                    Ok(Some(addon_info(&mut info, x)))
+                }
+                None => Ok(None),
+            }
+        })
     }
     pub fn poll(&self) -> impl Future<Output = Result<Option<(SessionInfo, OutputValue)>>> {
         let info = Arc::clone(&self.info);
 
-        self.plugin
-            .update_session()
-            .map_ok(move |x| x.map(|y| addon_info(&mut info.lock(), y)))
+        self.plugin.update_session().and_then(|x| async move {
+            match x {
+                Some(x) => {
+                    let mut info = info.lock().await;
+
+                    Ok(Some(addon_info(&mut info, x)))
+                }
+                None => Ok(None),
+            }
+        })
     }
-    pub fn message(
-        &self,
-        body: serde_json::Value,
-    ) -> impl Future<Output = Result<(SessionInfo, AgentResult)>> {
+    pub async fn message(&self, body: serde_json::Value) -> Result<(SessionInfo, AgentResult)> {
         let info = Arc::clone(&self.info);
 
-        self.plugin
-            .on_message(body)
-            .map_ok(move |x| addon_info(&mut info.lock(), x))
+        let x = self.plugin.on_message(body).await?;
+
+        let mut info = info.lock().await;
+
+        Ok(addon_info(&mut info, x))
     }
-    pub fn teardown(&mut self) -> Result<()> {
-        let info = self.info.lock();
+    pub async fn teardown(&mut self) -> Result<()> {
+        let info = self.info.lock().await;
 
         info!("Terminating session {:?}/{:?}", info.name, info.id);
 
-        self.plugin.teardown()
+        self.plugin.teardown().await
     }
 }
 
@@ -222,7 +255,7 @@ mod tests {
         agent_error::Result, daemon_plugins::daemon_plugin::test_plugin::TestDaemonPlugin,
     };
     use serde_json::json;
-    use std::time::Instant;
+    use std::{ops::Deref, time::Instant};
 
     fn create_session() -> Session {
         Session::new(
@@ -299,34 +332,35 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_sessions_convert_to_pending() -> Result<()> {
-        let mut sessions = Sessions::new(&["test_plugin".into()]);
+    #[tokio::test]
+    async fn test_sessions_convert_to_pending() -> Result<()> {
+        let sessions = Sessions::new(&["test_plugin".into()]);
 
-        sessions.convert_to_pending(&"test_plugin".into());
+        sessions.convert_to_pending(&"test_plugin".into()).await;
 
-        let sessions = sessions.read();
+        let state = sessions.0.get(&"test_plugin".into()).cloned().unwrap();
+        let state = state.read().await;
 
-        let state = sessions.get(&"test_plugin".into()).unwrap();
-
-        match state {
+        match state.deref() {
             State::Pending => Ok(()),
             _ => panic!("State was not Pending"),
         }
     }
 
-    #[test]
-    fn test_sessions_insert_session() -> Result<()> {
-        let mut sessions = Sessions::new(&["test_plugin".into()]);
+    #[tokio::test]
+    async fn test_sessions_insert_session() -> Result<()> {
+        let sessions = Sessions::new(&["test_plugin".into()]);
 
         let session = create_session();
 
-        sessions.insert_session("test_plugin".into(), session);
+        sessions
+            .insert_session("test_plugin".into(), session)
+            .await?;
 
-        let sessions = sessions.read();
-        let state = sessions.get(&"test_plugin".into()).unwrap();
+        let state = sessions.0.get(&"test_plugin".into()).cloned().unwrap();
+        let state = state.read().await;
 
-        match state {
+        match state.deref() {
             State::Active(_) => Ok(()),
             _ => panic!("State was not Pending"),
         }
@@ -334,20 +368,22 @@ mod tests {
 
     #[tokio::test]
     async fn test_sessions_session_message() -> Result<()> {
-        let mut sessions = Sessions::new(&["test_plugin".into()]);
+        let sessions = Sessions::new(&["test_plugin".into()]);
 
         let session = create_session();
 
-        sessions.insert_session("test_plugin".into(), session);
+        sessions
+            .insert_session("test_plugin".into(), session)
+            .await?;
 
-        let fut = sessions
-            .message(&"test_plugin".into(), json!("hi!"))
-            .unwrap();
+        let plugin_name = "test_plugin".into();
 
-        let sessions = sessions.read();
-        let state = sessions.get(&"test_plugin".into()).unwrap();
+        let fut = sessions.message(&plugin_name, json!("hi!"));
 
-        let actual = fut.await?;
+        let state = sessions.0.get(&"test_plugin".into()).cloned().unwrap();
+        let state = state.read().await;
+
+        let actual = fut.await.unwrap()?;
 
         let session_info = SessionInfo {
             name: "test_plugin".into(),
@@ -357,7 +393,7 @@ mod tests {
 
         assert_eq!(actual, (session_info, Ok(json!("hi!"))));
 
-        match state {
+        match state.deref() {
             State::Active(_) => Ok(()),
             _ => panic!("State was not Pending"),
         }

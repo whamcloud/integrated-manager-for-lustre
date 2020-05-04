@@ -8,6 +8,7 @@ use crate::{
     env,
     http_comms::mailbox_client::send,
 };
+use async_trait::async_trait;
 use futures::{
     executor::block_on,
     stream::{StreamExt as _, TryStreamExt},
@@ -101,6 +102,7 @@ fn start_route(mailbox: String) -> Trigger {
     trigger
 }
 
+#[async_trait]
 impl DaemonPlugin for PostOffice {
     fn start_session(
         &mut self,
@@ -170,15 +172,13 @@ impl DaemonPlugin for PostOffice {
         .boxed()
     }
 
-    fn teardown(&mut self) -> Result<(), ImlAgentError> {
-        block_on(async move {
-            if let Some(wd) = self.wd.lock().await.0.clone() {
-                let _ = self.inotify.lock().await.rm_watch(wd);
-            }
-            // drop all triggers
-            self.routes.lock().await.clear();
+    async fn teardown(&mut self) -> Result<(), ImlAgentError> {
+        if let Some(wd) = self.wd.lock().await.0.clone() {
+            let _ = self.inotify.lock().await.rm_watch(wd);
+        }
+        // drop all triggers
+        self.routes.lock().await.clear();
 
-            Ok(())
-        })
+        Ok(())
     }
 }
