@@ -8,18 +8,15 @@ use iml_orm::{task::ChromaCoreTask, tokio_diesel::AsyncRunQueryDsl as _};
 use iml_rabbit::Connection;
 use iml_wire_types::{ApiList, CompositeId};
 //use std::convert::TryFrom;
-use std::collections::HashMap;
 use warp::Filter;
 
 async fn create_task(
     client: Connection,
-    args: HashMap<String, String>,
+    task: serde_json::Value,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    // -> Result<CompositeId, ImlApiError> {
-    let xs: CompositeId =
-        iml_job_scheduler_rpc::call(&client, "create_task", None as Option<Vec<i32>>, args)
-            .map_err(ImlApiError::ImlJobSchedulerRpcError)
-            .await?;
+    let xs: CompositeId = iml_job_scheduler_rpc::call(&client, "create_task", vec![task], None)
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
 
     Ok(warp::reply::json(&xs))
 }
@@ -28,8 +25,6 @@ async fn remove_task(
     client: Connection,
     ids: Vec<i32>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    // -> Result<CompositeId, ImlApiError> {
-
     let xs: CompositeId = iml_job_scheduler_rpc::call(&client, "remove_task", ids, None)
         .map_err(ImlApiError::ImlJobSchedulerRpcError)
         .await?;
