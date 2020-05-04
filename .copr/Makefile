@@ -93,6 +93,7 @@ iml-srpm: iml-deps substs
 	cp -r ${BUILDROOT}/grafana ${TMPDIR}/configuration
 	cp ${BUILDROOT}/iml-*.service \
 		${BUILDROOT}/rabbitmq-env.conf \
+		${BUILDROOT}/rabbitmq-server-dropin.conf \
 		${BUILDROOT}/iml-manager-redirect.conf \
 		${BUILDROOT}/iml-manager.target \
 		${BUILDROOT}/chroma-config.1 \

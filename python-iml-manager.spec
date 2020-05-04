@@ -184,6 +184,8 @@ mv $RPM_BUILD_ROOT%{manager_root}/grafana/dashboards/iml-dashboards.yaml $RPM_BU
 mv $RPM_BUILD_ROOT%{manager_root}/grafana/datasources/influxdb-iml-datasource.yml $RPM_BUILD_ROOT%{_sysconfdir}/grafana/provisioning/datasources
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}/grafana-server.service.d/
 mv $RPM_BUILD_ROOT%{manager_root}/grafana/dropin-iml.conf $RPM_BUILD_ROOT%{_unitdir}/grafana-server.service.d/90-iml.conf
+mkdir -p $RPM_BUILD_ROOT%{_unitdir}/rabbitmq-server.service.d
+mv rabbitmq-server-dropin.conf $RPM_BUILD_ROOT%{_unitdir}/rabbitmq-server.service.d/90-rabbitmq-server-dropin.conf
 cp iml-manager-redirect.conf $RPM_BUILD_ROOT%{_sysconfdir}/nginx/default.d/iml-manager-redirect.conf
 cp rabbitmq-env.conf $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq/rabbitmq-env.conf
 mkdir -p $RPM_BUILD_ROOT%{_mandir}/man1
@@ -293,6 +295,7 @@ fi
 %{_sysconfdir}/rabbitmq/rabbitmq-env.conf
 %{_sysconfdir}/grafana/grafana-iml.ini
 %{_unitdir}/grafana-server.service.d/90-iml.conf
+%{_unitdir}/rabbitmq-server.service.d/90-rabbitmq-server-dropin.conf
 %attr(0755,root,root)%{_mandir}/man1/chroma-config.1.gz
 %attr(0644,root,root)%{_sysconfdir}/logrotate.d/chroma-manager
 %attr(0644,root,grafana)%{_sysconfdir}/grafana/provisioning/dashboards/iml-dashboards.yaml

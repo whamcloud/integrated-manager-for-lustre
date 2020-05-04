@@ -11,6 +11,3 @@ ExecStart=/bin/gunicorn wsgi:application -c ./wsgi.py
 Restart=on-failure
 StandardOutput=journal
 StandardError=journal
-
-[Install]
-WantedBy=iml-manager.target
