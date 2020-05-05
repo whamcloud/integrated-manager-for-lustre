@@ -225,7 +225,7 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
         orders.perform_cmd(fetch_the_batch(load_job_ids, |x| Msg::FetchedJobs(Box::new(x))));
     }
     if !load_step_ids.is_empty() {
-        orders.perform_cmd(fetch_the_batch(load_step_ids, |x| Msg::FetchedJobs(Box::new(x))));
+        orders.perform_cmd(fetch_the_batch(load_step_ids, |x| Msg::FetchedSteps(Box::new(x))));
     }
 }
 
@@ -350,26 +350,22 @@ pub fn job_tree_view(model: &Model, parent_cid: CmdId) -> Node<Msg> {
 }
 
 fn job_item_view(job: Arc<RichJob>, is_new: bool, ctx: &mut Context) -> Node<Msg> {
-    if is_new {
-        let icon = job_status_icon(job.as_ref());
-        // we don't use job.deps() since deps() now show interdependencies between jobs
-        if job.steps.is_empty() {
-            span![span![class![C.mr_1], icon], span![job.description]]
-        } else {
-            let is_open = ctx.select.contains(TypedId::Job(job.id));
-            let def_vec = Vec::new();
-            let steps = ctx.steps_view.get(&JobId(job.id)).unwrap_or(&def_vec);
-            div![
-                a![
-                    span![class![C.mr_1], icon],
-                    span![class![C.cursor_pointer, C.underline], job.description],
-                    simple_ev(Ev::Click, Msg::Click(TypedId::Job(job.id))),
-                ],
-                step_list_view(steps, ctx.select, is_open),
-            ]
-        }
+    let icon = job_status_icon(job.as_ref());
+    // we don't use job.deps() since deps() now show interdependencies between jobs
+    if !is_new || job.steps.is_empty() {
+        span![span![class![C.mr_1], icon], span![job.description]]
     } else {
-        empty!()
+        let is_open = ctx.select.contains(TypedId::Job(job.id));
+        let def_vec = Vec::new();
+        let steps = ctx.steps_view.get(&JobId(job.id)).unwrap_or(&def_vec);
+        div![
+            a![
+                span![class![C.mr_1], icon],
+                span![class![C.cursor_pointer, C.underline], job.description],
+                simple_ev(Ev::Click, Msg::Click(TypedId::Job(job.id))),
+            ],
+            step_list_view(steps, ctx.select, is_open),
+        ]
     }
 }
 
@@ -403,7 +399,7 @@ fn step_list_view(steps: &[Arc<RichStep>], select: &Select, is_open: bool) -> No
 }
 
 fn step_item_view(step: &RichStep, is_open: bool) -> Vec<Node<Msg>> {
-    let icon = step_status_icon(is_open);
+    let icon = step_status_icon(step);
     let item_caption = div![
         class![C.flex],
         div![
@@ -442,6 +438,23 @@ fn step_item_view(step: &RichStep, is_open: bool) -> Vec<Node<Msg>> {
             C.whitespace_pre_line,
             C.break_all,
         ];
+        let caption_class = class![C.text_lg, C.font_medium];
+        // show logs and backtrace if the step has failed
+        let backtrace_view = if step.state == "failed" && !step.backtrace.is_empty() {
+            vec![h4![&caption_class, "Backtrace"], pre![&pre_class, step.backtrace]]
+        } else {
+            vec![]
+        };
+        let log_view = if step.state == "failed" && !step.log.is_empty() {
+            vec![h4![&caption_class, "Logs"], pre![&pre_class, step.log]]
+        } else {
+            vec![]
+        };
+        let console_view = if !step.console.is_empty() {
+            vec![h4![&caption_class, "Console output"], pre![&pre_class, step.console]]
+        } else {
+            vec![]
+        };
         div![
             class![C.flex],
             div![
@@ -449,19 +462,14 @@ fn step_item_view(step: &RichStep, is_open: bool) -> Vec<Node<Msg>> {
                 class![C.border_r_2, C.border_gray_300, C.hover__border_gray_600],
                 simple_ev(Ev::Click, Msg::Click(TypedId::Step(step.id))),
             ],
-            div![attrs![At::Style => "flex: 0 0 1em"],],
+            div![attrs![At::Style => "flex: 0 0 1em"]],
             div![
                 class![C.float_right, C.flex_grow],
-                h4![class![C.text_lg, C.font_medium], "Arguments"],
+                h4![&caption_class, "Arguments"],
                 pre![&pre_class, args],
-                if step.console.is_empty() {
-                    vec![]
-                } else {
-                    vec![
-                        h4![class![C.text_lg, C.font_medium], "Logs"],
-                        pre![&pre_class, step.console],
-                    ]
-                }
+                backtrace_view,
+                log_view,
+                console_view,
             ]
         ]
     };
@@ -482,7 +490,6 @@ fn status_text(cmd: &RichCommand) -> &'static str {
 
 fn cmd_status_icon<T>(cmd: &RichCommand) -> Node<T> {
     let awesome_class = class![C.w_4, C.h_4, C.inline, C.mr_4];
-
     if cmd.cancelled {
         font_awesome(awesome_class, "ban").merge_attrs(class![C.text_gray_500])
     } else if cmd.errored {
@@ -507,12 +514,13 @@ fn job_status_icon<T>(job: &RichJob) -> Node<T> {
     }
 }
 
-fn step_status_icon<T>(is_open: bool) -> Node<T> {
-    let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline, C.text_gray_500];
-    if is_open {
-        font_awesome_outline(awesome_style, "minus-square")
-    } else {
-        font_awesome_outline(awesome_style, "plus-square")
+fn step_status_icon<T>(step: &RichStep) -> Node<T> {
+    let awesome_style = class![C.fill_current, C.w_4, C.h_4, C.inline];
+    match &step.state[..] {
+        "cancelled" => font_awesome(awesome_style, "ban").merge_attrs(class![C.text_red_500]),
+        "failed" => font_awesome(awesome_style, "exclamation").merge_attrs(class![C.text_red_500]),
+        "success" => font_awesome(awesome_style, "check").merge_attrs(class![C.text_green_500]),
+        _ /* "incomplete" */ => font_awesome(awesome_style, "spinner").merge_attrs(class![C.text_gray_500, C.pulse]),
     }
 }
 
@@ -752,6 +760,7 @@ mod tests {
     use rand_core::{RngCore, SeedableRng};
     use rand_xoshiro::Xoroshiro64Star;
     use std::hash::Hash;
+    use std::iter;
     use wasm_bindgen::__rt::core::fmt::Debug;
 
     #[derive(Default, Clone, Debug)]
@@ -903,12 +912,14 @@ mod tests {
         }
     }
 
-    fn make_job(id: u32, steps: &[u32], wait_for: &[u32], descr: &str) -> Job0 {
+    fn make_job(id: u32, cmd_id: CmdId, steps: &[u32], wait_for: &[u32], descr: &str) -> Job0 {
         Job0 {
             available_transitions: vec![],
             cancelled: false,
             class_name: "".to_string(),
-            commands: vec!["/api/command/111/".to_string()],
+            commands: iter::once(cmd_id)
+                .map(|CmdId(id)| format!("/api/command/{}/", id))
+                .collect(),
             created_at: "2020-03-16T07:22:34.491600".to_string(),
             description: descr.to_string(),
             errored: false,
@@ -951,14 +962,14 @@ mod tests {
             make_command(4, &[16, 17], "Four"),
         ];
         let all_jobs = vec![
-            make_job(10, &[20, 21], &[11], "Ten"),
-            make_job(11, &[21, 26], &[], "Eleven"),
-            make_job(12, &[22, 23], &[13], "Twelve"),
-            make_job(13, &[23, 28], &[], "Thirteen"),
-            make_job(14, &[24, 15], &[], "Ten"),
-            make_job(15, &[25, 20], &[], "Eleven"),
-            make_job(16, &[26, 27], &[], "Twelve"),
-            make_job(17, &[27, 22], &[], "Thirteen"),
+            make_job(10, CmdId(1), &[20, 21], &[11], "Ten"),
+            make_job(11, CmdId(1), &[21, 26], &[], "Eleven"),
+            make_job(12, CmdId(2), &[22, 23], &[13], "Twelve"),
+            make_job(13, CmdId(2), &[23, 28], &[], "Thirteen"),
+            make_job(14, CmdId(3), &[24, 15], &[], "Ten"),
+            make_job(15, CmdId(3), &[25, 20], &[], "Eleven"),
+            make_job(16, CmdId(4), &[26, 27], &[], "Twelve"),
+            make_job(17, CmdId(4), &[27, 22], &[], "Thirteen"),
         ];
         let all_steps = vec![
             make_step(20, "Twenty and zero"),
@@ -1043,4 +1054,6 @@ mod tests {
         // uris is the slice of strings like ["/api/step/123/", .. , "/api/step/234/"]
         uris.iter().filter_map(|s| extract_uri_id::<T>(s)).collect()
     }
+
+    // test_view is here https://gist.github.com/nlinker/9cbd9092986180531a841f9e610ef53a
 }
