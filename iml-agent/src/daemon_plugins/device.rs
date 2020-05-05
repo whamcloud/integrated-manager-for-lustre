@@ -8,10 +8,9 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::{
-    channel::oneshot, future, lock::Mutex, Future, FutureExt, Stream, StreamExt, TryFutureExt,
-    TryStreamExt,
+    future, lock::Mutex, Future, FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
-use std::{pin::Pin, sync::Arc};
+use std::{io, pin::Pin, sync::Arc};
 use stream_cancel::{StreamExt as _, Trigger, Tripwire};
 use tokio::{io::AsyncWriteExt, net::UnixStream};
 use tokio_util::codec::{FramedRead, LinesCodec};
@@ -31,17 +30,23 @@ fn device_stream() -> impl Stream<Item = Result<String, ImlAgentError>> {
         .try_flatten_stream()
 }
 
+#[derive(Eq, PartialEq)]
+enum State {
+    Pending,
+    Sent,
+}
+
 pub fn create() -> impl DaemonPlugin {
     Devices {
         trigger: None,
-        state: Arc::new(Mutex::new((None, None))),
+        state: Arc::new(Mutex::new((None, State::Pending))),
     }
 }
 
 #[derive(Debug)]
 pub struct Devices {
     trigger: Option<Trigger>,
-    state: Arc<Mutex<(Output, Output)>>,
+    state: Arc<Mutex<(Output, State)>>,
 }
 
 #[async_trait]
@@ -50,51 +55,62 @@ impl DaemonPlugin for Devices {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<Output, ImlAgentError>> + Send>> {
         let (trigger, tripwire) = Tripwire::new();
-        let (tx, rx) = oneshot::channel();
 
         self.trigger = Some(trigger);
 
+        let fut = device_stream()
+            .boxed()
+            .and_then(|x| future::ready(serde_json::from_str(&x)).err_into())
+            .into_future();
+
         let state = Arc::clone(&self.state);
 
-        tokio::spawn(
-            device_stream()
-                .boxed()
-                .and_then(|x| future::ready(serde_json::from_str(&x).map_err(|e| e.into())))
-                .into_future()
-                .then(|(x, s)| {
-                    let x = if let Some(x) = x {
-                        x.map(move |y| {
-                            let _ = tx.send(y);
-                            s
-                        })
-                    } else {
-                        Ok(s)
-                    };
+        Box::pin(async move {
+            let (x, s) = fut.await;
 
-                    future::ready(x)
-                })
-                .try_flatten_stream()
-                .take_until(tripwire)
-                .try_for_each(move |x| {
-                    let state = Arc::clone(&state);
+            let x: Output = match x {
+                Some(x) => x,
+                None => {
+                    return Err(ImlAgentError::Io(io::Error::new(
+                        io::ErrorKind::ConnectionAborted,
+                        "Device scanner connection aborted before any data was sent",
+                    )))
+                }
+            }?;
 
-                    async move {
-                        let mut s = state.lock().await;
+            {
+                let mut lock = state.lock().await;
 
-                        s.0 = s.1.take();
-                        s.1 = x;
+                lock.0 = x.clone();
+            }
 
-                        Ok(())
-                    }
-                })
-                .map(|x| {
-                    if let Err(e) = x {
-                        tracing::error!("Error processing device output: {}", e);
-                    }
-                }),
-        );
+            tokio::spawn(
+                s.take_until(tripwire)
+                    .try_for_each(move |x| {
+                        let state = Arc::clone(&state);
 
-        Box::pin(rx.err_into())
+                        async move {
+                            let mut lock = state.lock().await;
+
+                            if lock.0 != x {
+                                tracing::debug!("marking pending (is none: {}) ", x.is_none());
+
+                                lock.0 = x;
+                                lock.1 = State::Pending;
+                            }
+
+                            Ok(())
+                        }
+                    })
+                    .map(|x| {
+                        if let Err(e) = x {
+                            tracing::error!("Error processing device output: {}", e);
+                        }
+                    }),
+            );
+
+            Ok(x)
+        })
     }
     fn update_session(
         &self,
@@ -102,10 +118,13 @@ impl DaemonPlugin for Devices {
         let state = Arc::clone(&self.state);
 
         async move {
-            let s = state.lock().await.clone();
+            let mut lock = state.lock().await;
 
-            if s.0 != s.1 {
-                Ok(s.1)
+            if lock.1 == State::Pending {
+                tracing::debug!("Sending new value");
+                lock.1 = State::Sent;
+
+                Ok(lock.0.clone())
             } else {
                 Ok(None)
             }
