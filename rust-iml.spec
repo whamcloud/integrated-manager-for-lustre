@@ -93,6 +93,7 @@ Obsoletes: iml-device-scanner-proxy
 
 %post agent
 systemctl preset rust-iml-agent.path
+%tmpfiles_create %{_tmpfilesdir}/iml-agent.conf
 
 %preun agent
 %systemd_preun rust-iml-agent.path
