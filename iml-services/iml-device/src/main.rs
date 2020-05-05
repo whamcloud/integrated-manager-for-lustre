@@ -4,6 +4,7 @@
 
 use chrono::prelude::*;
 use device_types::devices::Device;
+use diesel::{self, pg::upsert::excluded, prelude::*};
 use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
 
 use iml_device::{
@@ -13,6 +14,12 @@ use iml_device::{
     },
     virtual_device::{get_other_devices, save_devices, update_virtual_devices},
     ImlDeviceError,
+};
+use iml_orm::{
+    models::{ChromaCoreDevice, NewChromaCoreDevice},
+    schema::chroma_core_device::{devices, fqdn, table},
+    tokio_diesel::*,
+    DbPool,
 };
 use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::Fqdn;
