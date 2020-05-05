@@ -168,8 +168,9 @@ pub async fn wait_on_services_ready(config: &ClusterConfig) -> Result<(), CmdErr
         .map(|s| {
             tracing::debug!("checking status of service {}", s);
             let cmd = format!("systemctl status {}", s);
+
             async move {
-                let mut cmd = run_vm_command(config.manager, cmd.as_str()).await?;
+                let mut cmd = ssh::ssh_exec_cmd(config.manager_ip, cmd.as_str()).await?;
                 try_command_n_times(50, 3, &mut cmd).await?;
 
                 Ok::<(), CmdError>(())
