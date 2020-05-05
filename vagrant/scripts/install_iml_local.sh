@@ -4,7 +4,7 @@ set -ex
 
 yum copr enable -y managerforlustre/manager-for-lustre-devel
 yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
-yum install -y git ed epel-release python-setuptools gcc openssl-devel postgresql96-devel
+yum install -y rpm-build git ed epel-release python-setuptools gcc openssl-devel postgresql96-devel
 curl https://sh.rustup.rs -sSf | sh -s -- -y
 source $HOME/.cargo/env
 rustup update
