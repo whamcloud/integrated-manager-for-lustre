@@ -3,6 +3,10 @@ MODULE_SUBDIR  = chroma_manager
 DEVELOP_DEPS  := version
 DEVELOP_POST  := ./manage.py dev_setup
 DIST_DEPS     := version $(COPR_REPO_TARGETS)
+RPM_OPTS = -D "_topdir $(CURDIR)/_topdir"
+ifdef RPM_DIST
+	RPM_OPTS += -D "dist ${RPM_DIST}"
+endif
 
 # SET MFL_COPR_REPO in .copr/Makefile
 TAGS_ARGS      := --exclude=chroma-manager/_topdir     \
@@ -36,22 +40,25 @@ ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo '
 
 all: copr-rpms rpms
 
+local:
+	$(MAKE) RPM_DIST="0.$(shell date '+%s')" all
+
 iml-gui-rpm:
 	$(MAKE) -f .copr/Makefile iml-gui-srpm outdir=.
-	rpmbuild --rebuild -D "_topdir $(CURDIR)/_topdir" _topdir/SRPMS/rust-iml-gui-*.src.rpm
+	rpmbuild --rebuild ${RPM_OPTS} _topdir/SRPMS/rust-iml-gui-*.src.rpm
 
 rpms:
 	$(MAKE) -f .copr/Makefile iml-srpm outdir=.
-	rpmbuild --rebuild -D "_topdir $(CURDIR)/_topdir" _topdir/SRPMS/python-iml-manager-*.src.rpm
+	rpmbuild --rebuild ${RPM_OPTS} _topdir/SRPMS/python-iml-manager-*.src.rpm
 
 copr-rpms:
 	$(MAKE) -f .copr/Makefile srpm outdir=.
-	rpmbuild --rebuild -D "_topdir $(CURDIR)/_topdir" _topdir/SRPMS/rust-iml-*.src.rpm
+	rpmbuild --rebuild ${RPM_OPTS} _topdir/SRPMS/rust-iml-*.src.rpm
 
 docker-rpms:
 	$(MAKE) -C docker save
 	$(MAKE) -f .copr/Makefile iml-docker-srpm outdir=.
-	rpmbuild --rebuild -D "_topdir $(CURDIR)/_topdir" _topdir/SRPMS/iml-docker-*.src.rpm
+	rpmbuild --rebuild ${RPM_OPTS} _topdir/SRPMS/iml-docker-*.src.rpm
 
 cleandist:
 	rm -rf dist
