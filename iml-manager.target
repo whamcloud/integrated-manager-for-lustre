@@ -78,6 +78,8 @@ After=iml-device.service
 
 After=network.target
 
+PartOf=rabbitmq-server.service
+
 [Install]
 WantedBy=multi-user.target
 Also=grafana-server.service
