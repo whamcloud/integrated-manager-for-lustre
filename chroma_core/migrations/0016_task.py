@@ -101,4 +101,5 @@ class Migration(migrations.Migration):
             options={"ordering": ["id"],},
             bases=("chroma_core.job",),
         ),
+        migrations.AlterUniqueTogether(name="task", unique_together=set([("name",)]),),
     ]
