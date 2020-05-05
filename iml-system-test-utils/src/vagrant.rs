@@ -63,7 +63,7 @@ pub async fn destroy<'a>() -> Result<(), CmdError> {
 
     x.arg("destroy").arg("-f");
 
-    try_command_n_times(3, &mut x).await
+    try_command_n_times(3, 1, &mut x).await
 }
 
 pub async fn halt() -> Result<Command, CmdError> {
@@ -159,11 +159,24 @@ pub async fn global_prune() -> Result<(), CmdError> {
 }
 
 pub async fn wait_on_services_ready(config: &ClusterConfig) -> Result<(), CmdError> {
-    let mut status_cmd =
-        run_vm_command(config.manager, "systemctl status iml-manager.target").await?;
+    let output =
+        run_vm_command(config.manager, "systemctl list-dependencies iml-manager.target | tail -n +2 | awk '{print$2}' | awk '{print substr($1, 3)}' | grep -v iml-settings-populator.service").await?.checked_output().await?;
 
-    try_command_n_times(50, &mut status_cmd).await?;
-    println!("Services are ready.");
+    let status_commands = str::from_utf8(&output.stdout)
+        .expect("Couldn't parse service list")
+        .lines()
+        .map(|s| {
+            tracing::debug!("checking status of service {}", s);
+            let cmd = format!("systemctl status {}", s);
+            async move {
+                let mut cmd = run_vm_command(config.manager, cmd.as_str()).await?;
+                try_command_n_times(50, 3, &mut cmd).await?;
+
+                Ok::<(), CmdError>(())
+            }
+        });
+
+    try_join_all(status_commands).await?;
 
     Ok(())
 }
