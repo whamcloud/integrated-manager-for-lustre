@@ -1,6 +1,6 @@
 [lustre]
 name=Lustre Server
-baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.12.3/el7/patchless-ldiskfs-server/
+baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.12.4/el7/patchless-ldiskfs-server/
 enabled=1
 gpgcheck=0
 repo_gpgcheck=0
@@ -13,7 +13,7 @@ gpgcheck=0
 repo_gpgcheck=0
 
 [zfs-kmod]
-name=ZFS on Linux for EL7 - kmod
+name=ZFS 0.7.x on Linux for EL7 - kmod
 baseurl=http://download.zfsonlinux.org/epel/7.6/kmod/$basearch/
 enabled=1
 metadata_expire=7d
