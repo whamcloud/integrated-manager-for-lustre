@@ -303,37 +303,37 @@ fn insert_owned(mut d: Device, to_insert: &Device) -> Device {
     } else {
         let d_2 = d.clone();
 
-        match d_2 {
+        match d {
             Device::Root(dd) => Device::Root(Root {
-                children: new_children(d, to_insert),
+                children: new_children(d_2, to_insert),
                 ..dd
             }),
             Device::ScsiDevice(dd) => Device::ScsiDevice(ScsiDevice {
-                children: new_children(d, to_insert),
+                children: new_children(d_2, to_insert),
                 ..dd
             }),
             Device::Partition(dd) => Device::Partition(Partition {
-                children: new_children(d, to_insert),
+                children: new_children(d_2, to_insert),
                 ..dd
             }),
             Device::MdRaid(dd) => Device::MdRaid(MdRaid {
-                children: new_children(d, to_insert),
+                children: new_children(d_2, to_insert),
                 ..dd
             }),
             Device::Mpath(dd) => Device::Mpath(Mpath {
-                children: new_children(d, to_insert),
+                children: new_children(d_2, to_insert),
                 ..dd
             }),
             Device::VolumeGroup(dd) => Device::VolumeGroup(VolumeGroup {
-                children: new_children(d, to_insert),
+                children: new_children(d_2, to_insert),
                 ..dd
             }),
             Device::LogicalVolume(dd) => Device::LogicalVolume(LogicalVolume {
-                children: new_children(d, to_insert),
+                children: new_children(d_2, to_insert),
                 ..dd
             }),
             Device::Zpool(dd) => Device::Zpool(Zpool {
-                children: new_children(d, to_insert),
+                children: new_children(d_2, to_insert),
                 ..dd
             }),
             Device::Dataset(dd) => Device::Dataset(Dataset { ..dd }),
