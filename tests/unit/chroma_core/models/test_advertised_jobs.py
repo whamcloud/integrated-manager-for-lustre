@@ -47,6 +47,8 @@ class TestAdvertisedJobCoverage(TestAdvertisedCase):
             "MigrateTargetJob",
             "CreateOstPoolJob",
             "DestroyOstPoolJob",
+            "CreateTaskJob",
+            "RemoveTaskJob",
         ]
         IMPORTED_JOBS = [x for x in globals().values() if (inspect.isclass(x) and issubclass(x, AdvertisedJob))]
 
