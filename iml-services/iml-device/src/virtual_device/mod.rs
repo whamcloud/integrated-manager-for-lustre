@@ -2,21 +2,25 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+mod util;
+
+use util::{
+    children, children_mut, children_owned, compare_selected_fields, is_virtual, to_display,
+};
+
 use device_types::devices::{
     Dataset, Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup, Zpool,
 };
 use diesel::{self, pg::upsert::excluded, prelude::*};
 use im::OrdSet;
-
 use iml_orm::{
     models::{ChromaCoreDevice, NewChromaCoreDevice},
     schema::chroma_core_device::{self, fqdn, table},
     tokio_diesel::*,
     DbPool,
 };
-
 use iml_wire_types::Fqdn;
-use std::{collections, path::PathBuf};
+use std::collections;
 
 pub async fn save_devices(devices: Vec<(Fqdn, Device)>, pool: &DbPool) {
     for (f, d) in devices.into_iter() {
@@ -75,57 +79,12 @@ pub fn update_virtual_devices(devices: Vec<(Fqdn, Device)>) -> Vec<(Fqdn, Device
     }
 
     for (f, d) in devices2 {
-        let dd = insert_virtual_devices_owned(d, &parents);
+        let dd = insert_virtual_devices(d, &parents);
 
         results.push((f, dd));
     }
 
     results
-}
-
-fn is_virtual(d: &Device) -> bool {
-    match d {
-        Device::Dataset(_)
-        | Device::LogicalVolume(_)
-        | Device::MdRaid(_)
-        | Device::VolumeGroup(_)
-        | Device::Zpool(_) => true,
-        _ => false,
-    }
-}
-
-fn to_display(d: &Device) -> String {
-    match d {
-        Device::Root(d) => format!("Root: children: {}", d.children.len()),
-        Device::ScsiDevice(ref d) => format!(
-            "ScsiDevice: serial: {}, children: {}",
-            d.serial.as_ref().unwrap_or(&"None".into()),
-            d.children.len()
-        ),
-        Device::Partition(d) => format!(
-            "Partition: serial: {}, children: {}",
-            d.serial.as_ref().unwrap_or(&"None".into()),
-            d.children.len()
-        ),
-        Device::MdRaid(d) => format!("MdRaid: uuid: {}, children: {}", d.uuid, d.children.len()),
-        Device::Mpath(d) => format!(
-            "Mpath: serial: {}, children: {}",
-            d.serial.as_ref().unwrap_or(&"None".into()),
-            d.children.len(),
-        ),
-        Device::VolumeGroup(d) => format!(
-            "VolumeGroup: name: {}, children: {}",
-            d.name,
-            d.children.len()
-        ),
-        Device::LogicalVolume(d) => format!(
-            "LogicalVolume: uuid: {}, children: {}",
-            d.uuid,
-            d.children.len()
-        ),
-        Device::Zpool(d) => format!("Zpool: guid: {}, children: {}", d.guid, d.children.len()),
-        Device::Dataset(d) => format!("Dataset: guid: {}, children: 0", d.guid),
-    }
 }
 
 fn collect_virtual_device_parents(
@@ -175,107 +134,14 @@ fn collect_virtual_device_parents(
     }
 }
 
-fn children_owned(d: Device) -> OrdSet<Device> {
-    match d {
-        Device::Root(dd) => dd.children,
-        Device::ScsiDevice(dd) => dd.children,
-        Device::Partition(dd) => dd.children,
-        Device::MdRaid(dd) => dd.children,
-        Device::Mpath(dd) => dd.children,
-        Device::VolumeGroup(dd) => dd.children,
-        Device::LogicalVolume(dd) => dd.children,
-        Device::Zpool(dd) => dd.children,
-        Device::Dataset(_) => OrdSet::new(),
+// This function accepts ownership of `Device` to be able to reconstruct
+// its `children`, which is an `OrdSet`.
+// `OrdSet` doesn't have `iter_mut` so iterating `children` and mutating them in-place isn't possible.
+fn insert_virtual_devices(mut d: Device, parents: &collections::HashSet<Device>) -> Device {
+    for p in parents {
+        d = insert(d, &p);
     }
-}
-
-fn children_mut(d: &mut Device) -> Option<&mut OrdSet<Device>> {
-    match d {
-        Device::Root(dd) => Some(&mut dd.children),
-        Device::ScsiDevice(dd) => Some(&mut dd.children),
-        Device::Partition(dd) => Some(&mut dd.children),
-        Device::MdRaid(dd) => Some(&mut dd.children),
-        Device::Mpath(dd) => Some(&mut dd.children),
-        Device::VolumeGroup(dd) => Some(&mut dd.children),
-        Device::LogicalVolume(dd) => Some(&mut dd.children),
-        Device::Zpool(dd) => Some(&mut dd.children),
-        Device::Dataset(_) => None,
-    }
-}
-
-fn children(d: &Device) -> Option<&OrdSet<Device>> {
-    match d {
-        Device::Root(dd) => Some(&dd.children),
-        Device::ScsiDevice(dd) => Some(&dd.children),
-        Device::Partition(dd) => Some(&dd.children),
-        Device::MdRaid(dd) => Some(&dd.children),
-        Device::Mpath(dd) => Some(&dd.children),
-        Device::VolumeGroup(dd) => Some(&dd.children),
-        Device::LogicalVolume(dd) => Some(&dd.children),
-        Device::Zpool(dd) => Some(&dd.children),
-        Device::Dataset(_) => None,
-    }
-}
-
-fn selected_fields(d: &Device) -> Device {
-    match d {
-        Device::Root(d) => Device::Root(Root {
-            children: OrdSet::new(),
-            ..d.clone()
-        }),
-        Device::ScsiDevice(d) => Device::ScsiDevice(ScsiDevice {
-            children: OrdSet::new(),
-            major: String::new(),
-            minor: String::new(),
-            devpath: PathBuf::new(),
-            paths: OrdSet::new(),
-            ..d.clone()
-        }),
-        Device::Partition(d) => Device::Partition(Partition {
-            children: OrdSet::new(),
-            major: String::new(),
-            minor: String::new(),
-            devpath: PathBuf::new(),
-            paths: OrdSet::new(),
-            ..d.clone()
-        }),
-        Device::MdRaid(d) => Device::MdRaid(MdRaid {
-            children: OrdSet::new(),
-            major: String::new(),
-            minor: String::new(),
-            paths: OrdSet::new(),
-            ..d.clone()
-        }),
-        Device::Mpath(d) => Device::Mpath(Mpath {
-            children: OrdSet::new(),
-            major: String::new(),
-            minor: String::new(),
-            devpath: PathBuf::new(),
-            paths: OrdSet::new(),
-            ..d.clone()
-        }),
-        Device::VolumeGroup(d) => Device::VolumeGroup(VolumeGroup {
-            children: OrdSet::new(),
-            ..d.clone()
-        }),
-        Device::LogicalVolume(d) => Device::LogicalVolume(LogicalVolume {
-            children: OrdSet::new(),
-            major: String::new(),
-            minor: String::new(),
-            devpath: PathBuf::new(),
-            paths: OrdSet::new(),
-            ..d.clone()
-        }),
-        Device::Zpool(d) => Device::Zpool(Zpool {
-            children: OrdSet::new(),
-            ..d.clone()
-        }),
-        Device::Dataset(d) => Device::Dataset(d.clone()),
-    }
-}
-
-fn compare_selected_fields(a: &Device, b: &Device) -> bool {
-    selected_fields(a) == selected_fields(b)
+    d
 }
 
 // This function in only for deduplication of `else` branch in `insert`
@@ -340,13 +206,6 @@ fn insert(mut d: Device, to_insert: &Device) -> Device {
             Device::Dataset(dd) => Device::Dataset(Dataset { ..dd }),
         }
     }
-}
-
-fn insert_virtual_devices_owned(mut d: Device, parents: &collections::HashSet<Device>) -> Device {
-    for p in parents {
-        d = insert(d, &p);
-    }
-    d
 }
 
 #[cfg(test)]
