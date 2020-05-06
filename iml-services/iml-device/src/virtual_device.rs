@@ -278,14 +278,15 @@ fn compare_selected_fields(a: &Device, b: &Device) -> bool {
     selected_fields(a) == selected_fields(b)
 }
 
+// This function in only for deduplication of `else` branch in `insert`
 fn new_children(d: Device, to_insert: &Device) -> OrdSet<Device> {
     children_owned(d)
         .into_iter()
-        .map(|c| insert_owned(c, to_insert))
+        .map(|c| insert(c, to_insert))
         .collect()
 }
 
-fn insert_owned(mut d: Device, to_insert: &Device) -> Device {
+fn insert(mut d: Device, to_insert: &Device) -> Device {
     if compare_selected_fields(&d, to_insert) {
         tracing::debug!(
             "Inserting device {} children to {}",
@@ -343,7 +344,7 @@ fn insert_owned(mut d: Device, to_insert: &Device) -> Device {
 
 fn insert_virtual_devices_owned(mut d: Device, parents: &collections::HashSet<Device>) -> Device {
     for p in parents {
-        d = insert_owned(d, &p);
+        d = insert(d, &p);
     }
     d
 }
