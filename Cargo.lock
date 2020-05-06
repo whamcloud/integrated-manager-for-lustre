@@ -1313,6 +1313,7 @@ dependencies = [
  "insta",
  "serde",
  "serde_json",
+ "test-case",
  "thiserror",
  "tokio",
  "tokio-util",
@@ -3442,6 +3443,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f0fcee7b24a25675de40d5bb4de6e41b0df07bc9856295e7e2b3a3600c400c2"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "test-case"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "199464148b42bcf3da8b2a56f6ee87ca68f47402496d1268849291ec9fb463c8"
+dependencies = [
+ "proc-macro2 1.0.12",
+ "quote 1.0.4",
+ "syn 1.0.18",
+ "version_check 0.9.1",
 ]
 
 [[package]]

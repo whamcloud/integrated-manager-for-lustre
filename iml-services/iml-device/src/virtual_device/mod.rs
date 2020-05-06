@@ -213,6 +213,7 @@ mod tests {
     use super::*;
     use insta::assert_json_snapshot;
     use std::fs;
+    use test_case::test_case;
 
     fn deser_fixture(path1: &str, path2: &str, fqdn1: Fqdn, fqdn2: Fqdn) -> Vec<(Fqdn, Device)> {
         let device1 = fs::read_to_string(path1).unwrap();
@@ -248,45 +249,32 @@ mod tests {
         }
     }
 
-    #[test]
-    fn simple_test() {
-        let devices = deser_fixture(
-            "fixtures/device-mds1.local-2034-pruned.json",
-            "fixtures/device-mds2.local-2033-pruned.json",
-            Fqdn("mds1.local".into()),
-            Fqdn("mds2.local".into()),
-        );
+    #[test_case(
+        "simple_test",
+        "fixtures/device-mds1.local-2034-pruned.json",
+        "fixtures/device-mds2.local-2033-pruned.json",
+        "mds1.local",
+        "mds2.local"
+    )]
+    #[test_case(
+        "full_mds_test",
+        "fixtures/device-mds1.local-2034.json",
+        "fixtures/device-mds2.local-2033.json",
+        "mds1.local",
+        "mds2.local"
+    )]
+    #[test_case(
+        "full_oss_test",
+        "fixtures/device-oss1.local-62.json",
+        "fixtures/device-oss2.local-61.json",
+        "oss1.local",
+        "oss2.local"
+    )]
+    fn test(test_name: &str, path1: &str, path2: &str, fqdn1: &str, fqdn2: &str) {
+        let devices = deser_fixture(path1, path2, Fqdn(fqdn1.into()), Fqdn(fqdn2.into()));
 
         let results = update_virtual_devices(devices);
 
-        compare_results(results, "simple_test");
-    }
-
-    #[test]
-    fn full_mds_test() {
-        let devices = deser_fixture(
-            "fixtures/device-mds1.local-2034.json",
-            "fixtures/device-mds2.local-2033.json",
-            Fqdn("mds1.local".into()),
-            Fqdn("mds2.local".into()),
-        );
-
-        let results = update_virtual_devices(devices);
-
-        compare_results(results, "full_mds_test");
-    }
-
-    #[test]
-    fn full_oss_test() {
-        let devices = deser_fixture(
-            "fixtures/device-oss1.local-62.json",
-            "fixtures/device-oss2.local-61.json",
-            Fqdn("oss1.local".into()),
-            Fqdn("oss2.local".into()),
-        );
-
-        let results = update_virtual_devices(devices);
-
-        compare_results(results, "full_oss_test");
+        compare_results(results, test_name);
     }
 }

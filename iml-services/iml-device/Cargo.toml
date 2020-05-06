@@ -27,3 +27,4 @@ chrono = "0.4.11"
 
 [dev-dependencies]
 insta = "0.16"
+test-case = "1.0.0"
