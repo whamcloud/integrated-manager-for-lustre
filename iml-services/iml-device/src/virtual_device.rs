@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use device_types::devices::{
-    Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup, Zpool, Dataset,
+    Dataset, Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup, Zpool,
 };
 use diesel::{self, pg::upsert::excluded, prelude::*};
 use im::OrdSet;
