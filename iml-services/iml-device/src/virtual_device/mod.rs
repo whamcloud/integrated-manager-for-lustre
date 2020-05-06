@@ -81,7 +81,7 @@ pub fn update_virtual_devices(devices: Vec<(Fqdn, Device)>) -> Vec<(Fqdn, Device
         // So the note is to reflect that. We push the incoming data to the end of the `Vec` so it's last.
         let note = if i == len - 1 { " (incoming)" } else { "" };
         tracing::info!(
-            "Collected {} parents at {} host{}",
+            "Collected {:3} parents at {:25} host{}",
             ps.len(),
             f.to_string(),
             note
