@@ -2,7 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use chrono::prelude::*;
 use device_types::devices::Device;
 use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
 
@@ -87,7 +86,6 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let pool = iml_orm::pool().unwrap();
 
-    let mut i = 0usize;
     // You may observe spurious updates.
     // This means that, when a single device is mounted, updated device tree may come in here several times from a single host.
     // This is due to two reasons:
@@ -103,19 +101,8 @@ async fn main() -> Result<(), ImlDeviceError> {
     // The period is usually a bit longer due to overhead. So a max of 5 updates has been observed in practice.
     //
     while let Some((f, d)) = s.try_next().await? {
-        let begin: DateTime<Local> = Local::now();
-        tracing::info!("Iteration {}: begin: {}", i, begin);
-
         let mut cache = cache2.lock().await;
         cache.insert(f.clone(), d.clone());
-
-        assert!(
-            match d {
-                Device::Root(_) => true,
-                _ => false,
-            },
-            "The top device has to be Root"
-        );
 
         let mut all_devices = get_other_devices(&f, &pool).await;
 
@@ -124,17 +111,6 @@ async fn main() -> Result<(), ImlDeviceError> {
         let updated_devices = update_virtual_devices(all_devices);
 
         save_devices(updated_devices, &pool).await;
-
-        let end: DateTime<Local> = Local::now();
-
-        tracing::info!(
-            "Iteration {}: end: {}, duration: {:3} ms",
-            i,
-            end,
-            (end - begin).num_milliseconds()
-        );
-
-        i = i.wrapping_add(1);
     }
 
     Ok(())
