@@ -527,16 +527,13 @@ class RunStratagemJob(Job):
             super(RunStratagemJob, self).__init__(*args, **kwargs)
         else:
             mdt = ManagedMdt.objects.get(id=kwargs["mdt_id"])
-            target_mount = ManagedTargetMount.objects.get(id=mdt.active_mount_id)
-            volume_node = VolumeNode.objects.get(id=target_mount.volume_node_id)
-            volume = Volume.objects.get(id=mdt.volume_id)
-            host = ManagedHost.objects.get(id=target_mount.host_id)
+            active_mount = mdt.active_mount
 
-            kwargs["fqdn"] = host.fqdn
+            kwargs["fqdn"] = active_mount.host.fqdn
             kwargs["target_name"] = mdt.name
-            kwargs["filesystem_type"] = volume.filesystem_type
-            kwargs["target_mount_point"] = target_mount.mount_point
-            kwargs["device_path"] = volume_node.path
+            kwargs["filesystem_type"] = mdt.volume.filesystem_type
+            kwargs["target_mount_point"] = active_mount.mount_point
+            kwargs["device_path"] = active_mount.volume_node.path
 
             super(RunStratagemJob, self).__init__(*args, **kwargs)
 

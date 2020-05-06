@@ -101,7 +101,7 @@ pub async fn try_command_n_times(max_tries: u32, cmd: &mut Command) -> Result<()
 
     // try to run the command max_tries times until it succeeds. There is a delay of 1 second.
     while !r.success() && count < max_tries {
-        println!("Trying command: {:?} - Attempt #{}", cmd, count + 1);
+        tracing::debug!("Trying command: {:?} - Attempt #{}", cmd, count + 1);
         count += 1;
 
         delay_for(Duration::from_secs(1)).await;
@@ -148,9 +148,7 @@ pub trait WithSos {
 #[async_trait]
 impl<T: Into<SystemTestError> + Send> WithSos for Result<(), T> {
     async fn handle_test_result(self, hosts: &[&str], prefix: &str) -> Result<(), SystemTestError> {
-        if self.is_err() {
-            create_iml_diagnostics(hosts, prefix).await?;
-        }
+        create_iml_diagnostics(hosts, prefix).await?;
 
         self.map_err(|e| e.into())
     }

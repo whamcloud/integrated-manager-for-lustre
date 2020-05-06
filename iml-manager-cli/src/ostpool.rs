@@ -126,7 +126,7 @@ async fn ostpool_list(
                 .objects
                 .into_iter()
                 .map(|mut x| {
-                    x.ost.name = fs.name.clone();
+                    x.ost.filesystem = fs.name.clone();
                     x.ost
                 })
                 .collect()
@@ -160,7 +160,7 @@ async fn ostpool_list(
                         .iter()
                         .find(|f| f.resource_uri == p.ost.filesystem)
                         .map(move |fs| {
-                            p.ost.name = fs.name.clone();
+                            p.ost.filesystem = fs.name.clone();
 
                             p.ost
                         })
