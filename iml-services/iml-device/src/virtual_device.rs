@@ -306,37 +306,37 @@ fn insert_owned(mut d: Device, to_insert: &Device) -> Device {
         match d_2 {
             Device::Root(dd) => Device::Root(Root {
                 children: new_children(d, to_insert),
-                ..dd.clone()
+                ..dd
             }),
             Device::ScsiDevice(dd) => Device::ScsiDevice(ScsiDevice {
                 children: new_children(d, to_insert),
-                ..dd.clone()
+                ..dd
             }),
             Device::Partition(dd) => Device::Partition(Partition {
                 children: new_children(d, to_insert),
-                ..dd.clone()
+                ..dd
             }),
             Device::MdRaid(dd) => Device::MdRaid(MdRaid {
                 children: new_children(d, to_insert),
-                ..dd.clone()
+                ..dd
             }),
             Device::Mpath(dd) => Device::Mpath(Mpath {
                 children: new_children(d, to_insert),
-                ..dd.clone()
+                ..dd
             }),
             Device::VolumeGroup(dd) => Device::VolumeGroup(VolumeGroup {
                 children: new_children(d, to_insert),
-                ..dd.clone()
+                ..dd
             }),
             Device::LogicalVolume(dd) => Device::LogicalVolume(LogicalVolume {
                 children: new_children(d, to_insert),
-                ..dd.clone()
+                ..dd
             }),
             Device::Zpool(dd) => Device::Zpool(Zpool {
                 children: new_children(d, to_insert),
-                ..dd.clone()
+                ..dd
             }),
-            Device::Dataset(dd) => Device::Dataset(Dataset { ..dd.clone() }),
+            Device::Dataset(dd) => Device::Dataset(Dataset { ..dd }),
         }
     }
 }
