@@ -168,6 +168,31 @@ services:
   device:
     environment:
       - RUST_LOG=debug
+  corosync:
+    environment:
+      - LOG_LEVEL=10
+  gunicorn:
+    environment:
+      - LOG_LEVEL=10
+  http-agent:
+    environment:
+      - LOG_LEVEL=10
+  job-scheduler:
+    environment:
+      - LOG_LEVEL=10
+  lustre-audit:
+    environment:
+      - LOG_LEVEL=10
+  plugin-runner:
+    environment:
+      - LOG_LEVEL=10
+  power-control:
+    environment:
+      - LOG_LEVEL=10
+  syslog:
+    environment:
+      - LOG_LEVEL=10
+
 "#;
 
     let mut path = canonicalize(IML_DOCKER_PATH).await?;

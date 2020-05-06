@@ -145,6 +145,63 @@ pub async fn rsync(host: &str) -> Result<(), CmdError> {
     x.arg("rsync").arg(host).checked_status().await
 }
 
+pub async fn configure_dropins(path: &str, hosts: &[&str]) -> Result<(), CmdError> {
+    let path_dir = canonicalize(format!("./{}", path)).await?;
+
+    // Create service override directory
+    let mut ls = Command::new("ls");
+    ls.current_dir(path_dir);
+
+    let output = ls.checked_output().await?;
+    let dropin_names = str::from_utf8(&output.stdout).expect("Couldn't get dropin list.");
+
+    let dropin_futures = dropin_names
+        .lines()
+        .map(|l| format!("{}.service.d", l.replace("-dropin.conf", "")))
+        .map(|l| async move {
+            ssh::create_unit_override_dir(hosts, l.as_str()).await?;
+            Ok::<_, CmdError>(())
+        });
+
+    try_join_all(dropin_futures).await?;
+
+    let scp_futures = dropin_names
+        .lines()
+        .map(|l| (format!("{}.service.d", l.replace("-dropin.conf", "")), l))
+        .map(|(dir, dropin)| async move {
+            ssh::scp(
+                format!("../iml-system-test-utils/{}/{}", path.to_string(), dropin),
+                format!("/etc/systemd/system/{}/{}", dir, dropin),
+            )
+            .await?;
+
+            Ok::<_, CmdError>(())
+        });
+
+    try_join_all(scp_futures).await?;
+
+    Ok(())
+}
+
+pub async fn configure_manager_dropins(config: &ClusterConfig) -> Result<(), CmdError> {
+    configure_dropins("manager-dropins", &config.manager_ip()[..]).await?;
+
+    ssh::restart_manager(config.manager_ip).await?;
+
+    Ok(())
+}
+
+pub async fn configure_agent_dropins(config: &ClusterConfig) -> Result<(), CmdError> {
+    let hosts = &config.storage_server_ips()[..];
+    ssh::setup_agent_debug(hosts).await?;
+
+    configure_dropins("agent-dropins", hosts).await?;
+
+    ssh::restart_storage_server_target(hosts).await?;
+
+    Ok(())
+}
+
 pub async fn detect_fs(config: &ClusterConfig) -> Result<(), CmdError> {
     run_vm_command(config.manager, "iml filesystem detect")
         .await?
@@ -283,6 +340,8 @@ pub async fn setup_bare(
         NtpServer::Adm => ssh::configure_ntp_for_adm(&config.storage_server_ips()).await?,
     };
 
+    ssh::setup_agent_debug(&config.storage_server_ips()[..]).await?;
+
     halt().await?.args(hosts).checked_status().await?;
 
     for x in hosts {
@@ -314,6 +373,8 @@ pub async fn setup_iml_install(
                 .await?;
         }
     };
+
+    configure_manager_dropins(config).await?;
 
     setup_bare(hosts, &config, NtpServer::Adm).await?;
 
@@ -361,6 +422,8 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
         .await?;
     }
 
+    configure_agent_dropins(config).await?;
+
     halt().await?.args(config.all()).checked_status().await?;
 
     for host in config.all() {
@@ -382,6 +445,8 @@ pub async fn add_docker_servers<S: std::hash::BuildHasher>(
     server_map: &HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
     iml::server_add(&server_map).await?;
+
+    configure_agent_dropins(config).await?;
 
     halt()
         .await?

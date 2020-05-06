@@ -228,3 +228,31 @@ pub async fn create_iml_diagnostics<'a, 'b>(
         .checked_status()
         .await
 }
+
+pub async fn create_unit_override_dir(hosts: &[&str], unit_name: &str) -> Result<(), CmdError> {
+    ssh_exec_parallel(
+        hosts,
+        format!("mkdir etc/systemd/system/{}.d", unit_name).as_str(),
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn restart_manager(adm_host: &str) -> Result<(), CmdError> {
+    ssh_exec(adm_host, "systemctl restart iml-manager.target").await?;
+
+    Ok(())
+}
+
+pub async fn restart_storage_server_target(hosts: &[&str]) -> Result<(), CmdError> {
+    ssh_exec_parallel(hosts, "systemctl restart iml-storage-server.target").await?;
+
+    Ok(())
+}
+
+pub async fn setup_agent_debug(hosts: &[&str]) -> Result<(), CmdError> {
+    ssh_exec_parallel(hosts, r#"touch /tmp/chroma-agent-debug && echo "RUST_LOG=debug" > /etc/iml/integration-test-overrides.conf"#).await?;
+
+    Ok(())
+}
