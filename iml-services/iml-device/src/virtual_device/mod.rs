@@ -72,9 +72,20 @@ pub fn update_virtual_devices(devices: Vec<(Fqdn, Device)>) -> Vec<(Fqdn, Device
     let mut parents = collections::HashSet::new();
     let devices2 = devices.clone();
 
-    for (f, d) in devices {
+    let len = devices.len();
+    for (i, (f, d)) in devices.into_iter().enumerate() {
         let ps = collect_virtual_device_parents(&d, 0, None);
-        tracing::info!("Collected {} parents at {} host", ps.len(), f.to_string());
+        // The incoming tree will always have less virtual device parents.
+        // In the incoming data there are only virtual devices that are local to that host (i.e. are mounted there).
+        // In the database, there are virtual devices that are collected from all of hosts.
+        // So the note is to reflect that. We push the incoming data to the end of the `Vec` so it's last.
+        let note = if i == len - 1 { " (incoming)" } else { "" };
+        tracing::info!(
+            "Collected {} parents at {} host{}",
+            ps.len(),
+            f.to_string(),
+            note
+        );
         parents.extend(ps);
     }
 
