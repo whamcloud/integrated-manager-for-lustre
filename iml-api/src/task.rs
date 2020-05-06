@@ -2,30 +2,37 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::error::ImlApiError;
+use crate::{command::get_command, error::ImlApiError};
 use futures::TryFutureExt;
 use iml_orm::{task::ChromaCoreTask, tokio_diesel::AsyncRunQueryDsl as _};
 use iml_rabbit::Connection;
-use iml_wire_types::{ApiList, CompositeId};
-//use std::convert::TryFrom;
+use iml_wire_types::{ApiList, CmdWrapper};
 use warp::Filter;
 
 async fn create_task(
     client: Connection,
     task: serde_json::Value,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let xs: CompositeId = iml_job_scheduler_rpc::call(&client, "create_task", vec![task], None)
+    let pool = iml_orm::pool().map_err(ImlApiError::ImlR2D2Error)?;
+
+    // Return value: [ task_id, command_id ]
+    let xs: Vec<i32> = iml_job_scheduler_rpc::call(&client, "create_task", vec![task], None)
         .map_err(ImlApiError::ImlJobSchedulerRpcError)
         .await?;
 
-    Ok(warp::reply::json(&xs))
+    let command = get_command(&pool, xs[1]).await?;
+
+    Ok(warp::reply::json(&CmdWrapper { command }))
 }
 
 async fn remove_task(
     client: Connection,
     ids: Vec<i32>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let xs: CompositeId = iml_job_scheduler_rpc::call(&client, "remove_task", ids, None)
+    //let pool = iml_orm::pool().map_err(ImlApiError::ImlR2D2Error)?;
+
+    // Return value: [ task_id, command_id ]
+    let xs: Vec<u32> = iml_job_scheduler_rpc::call(&client, "remove_task", ids, None)
         .map_err(ImlApiError::ImlJobSchedulerRpcError)
         .await?;
     Ok(warp::reply::json(&xs))
