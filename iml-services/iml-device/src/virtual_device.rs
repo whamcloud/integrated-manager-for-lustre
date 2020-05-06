@@ -3,10 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use device_types::devices::{
-    Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup, Zpool,
+    Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup, Zpool, Dataset,
 };
 use diesel::{self, pg::upsert::excluded, prelude::*};
-use im::{HashSet, OrdSet};
+use im::OrdSet;
 
 use iml_orm::{
     models::{ChromaCoreDevice, NewChromaCoreDevice},
@@ -16,7 +16,7 @@ use iml_orm::{
 };
 
 use iml_wire_types::Fqdn;
-use std::{collections, mem, path::PathBuf};
+use std::{collections, path::PathBuf};
 
 pub async fn save_devices(devices: Vec<(Fqdn, Device)>, pool: &DbPool) {
     for (f, d) in devices.into_iter() {
@@ -74,10 +74,10 @@ pub fn update_virtual_devices(devices: Vec<(Fqdn, Device)>) -> Vec<(Fqdn, Device
         parents.extend(ps);
     }
 
-    for (f, mut d) in devices2 {
-        insert_virtual_devices(&mut d, &parents);
+    for (f, d) in devices2 {
+        let dd = insert_virtual_devices_owned(d, &parents);
 
-        results.push((f, d));
+        results.push((f, dd));
     }
 
     results
@@ -175,6 +175,20 @@ fn collect_virtual_device_parents(
     }
 }
 
+fn children_owned(d: Device) -> OrdSet<Device> {
+    match d {
+        Device::Root(dd) => dd.children,
+        Device::ScsiDevice(dd) => dd.children,
+        Device::Partition(dd) => dd.children,
+        Device::MdRaid(dd) => dd.children,
+        Device::Mpath(dd) => dd.children,
+        Device::VolumeGroup(dd) => dd.children,
+        Device::LogicalVolume(dd) => dd.children,
+        Device::Zpool(dd) => dd.children,
+        Device::Dataset(_) => OrdSet::new(),
+    }
+}
+
 fn children_mut(d: &mut Device) -> Option<&mut OrdSet<Device>> {
     match d {
         Device::Root(dd) => Some(&mut dd.children),
@@ -200,33 +214,6 @@ fn children(d: &Device) -> Option<&OrdSet<Device>> {
         Device::LogicalVolume(dd) => Some(&dd.children),
         Device::Zpool(dd) => Some(&dd.children),
         Device::Dataset(_) => None,
-    }
-}
-
-fn insert(mut d: &mut Device, to_insert: &Device) {
-    if compare_selected_fields(d, to_insert) {
-        tracing::debug!(
-            "Inserting device {} children to {}",
-            to_display(to_insert),
-            to_display(d)
-        );
-
-        children_mut(&mut d).map(|x| {
-            children(to_insert).map(|y| {
-                *x = y.clone();
-            })
-        });
-    } else {
-        children_mut(d).map(|cc| {
-            // FIXME: This code is really slow
-            // The issue is that OrdSet doesn't have iter_mut()
-            let mut hashset: HashSet<_> = cc.iter().map(|x| x.clone()).collect();
-            for mut c in hashset.iter_mut() {
-                insert(&mut c, to_insert);
-            }
-            let new_ordset: OrdSet<Device> = hashset.into_iter().collect();
-            mem::replace(cc, new_ordset);
-        });
     }
 }
 
@@ -291,10 +278,74 @@ fn compare_selected_fields(a: &Device, b: &Device) -> bool {
     selected_fields(a) == selected_fields(b)
 }
 
-fn insert_virtual_devices(d: &mut Device, parents: &collections::HashSet<Device>) {
-    for p in parents {
-        insert(d, &p);
+fn new_children(d: Device, to_insert: &Device) -> OrdSet<Device> {
+    children_owned(d)
+        .into_iter()
+        .map(|c| insert_owned(c, to_insert))
+        .collect()
+}
+
+fn insert_owned(mut d: Device, to_insert: &Device) -> Device {
+    if compare_selected_fields(&d, to_insert) {
+        tracing::debug!(
+            "Inserting device {} children to {}",
+            to_display(to_insert),
+            to_display(&d)
+        );
+
+        children_mut(&mut d).map(|x| {
+            children(to_insert).map(|y| {
+                *x = y.clone();
+            })
+        });
+
+        d
+    } else {
+        let d_2 = d.clone();
+
+        match d_2 {
+            Device::Root(dd) => Device::Root(Root {
+                children: new_children(d, to_insert),
+                ..dd.clone()
+            }),
+            Device::ScsiDevice(dd) => Device::ScsiDevice(ScsiDevice {
+                children: new_children(d, to_insert),
+                ..dd.clone()
+            }),
+            Device::Partition(dd) => Device::Partition(Partition {
+                children: new_children(d, to_insert),
+                ..dd.clone()
+            }),
+            Device::MdRaid(dd) => Device::MdRaid(MdRaid {
+                children: new_children(d, to_insert),
+                ..dd.clone()
+            }),
+            Device::Mpath(dd) => Device::Mpath(Mpath {
+                children: new_children(d, to_insert),
+                ..dd.clone()
+            }),
+            Device::VolumeGroup(dd) => Device::VolumeGroup(VolumeGroup {
+                children: new_children(d, to_insert),
+                ..dd.clone()
+            }),
+            Device::LogicalVolume(dd) => Device::LogicalVolume(LogicalVolume {
+                children: new_children(d, to_insert),
+                ..dd.clone()
+            }),
+            Device::Zpool(dd) => Device::Zpool(Zpool {
+                children: new_children(d, to_insert),
+                ..dd.clone()
+            }),
+            Device::Dataset(dd) => Device::Dataset(Dataset { ..dd.clone() }),
+        }
     }
+}
+
+fn insert_virtual_devices_owned(mut d: Device, parents: &collections::HashSet<Device>) -> Device {
+    for p in parents {
+        d = insert_owned(d, &p);
+    }
+    d
 }
 
 #[cfg(test)]
