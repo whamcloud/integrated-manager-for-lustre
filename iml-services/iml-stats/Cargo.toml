@@ -11,7 +11,7 @@ iml-service-queue = { path = "../iml-service-queue", version = "0.2.0" }
 iml-tracing = { version = "0.1", path="../../iml-tracing"}
 iml-wire-types = { path = "../../iml-wire-types", version = "0.2" }
 influx_db_client = "0.4"
-lustre_collector = "0.2.12"
+lustre_collector = "0.2.13"
 tokio = { version = "0.2", features = [ "macros" ] }
 tracing = "0.1"
 url = "2.1.1"

@@ -14,7 +14,7 @@ use crate::{
     profile,
 };
 use console::{style, Term};
-use dialoguer::Confirmation;
+use dialoguer::Confirm;
 use futures::future;
 use iml_wire_types::{
     ApiList, AvailableAction, CmdWrapper, Command, EndpointName, Host, HostProfile,
@@ -222,8 +222,8 @@ fn can_continue(config: &AddHosts) -> bool {
 }
 
 fn get_confirm() -> bool {
-    Confirmation::new()
-        .with_text("Continue deployment?")
+    Confirm::new()
+        .with_prompt("Continue deployment?")
         .default(true)
         .show_default(true)
         .interact()
