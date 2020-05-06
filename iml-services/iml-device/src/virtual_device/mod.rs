@@ -135,7 +135,7 @@ fn collect_virtual_device_parents(
 }
 
 // This function accepts ownership of `Device` to be able to reconstruct
-// its `children`, which is an `OrdSet`.
+// its `children`, which is an `OrdSet`, inside of `insert`.
 // `OrdSet` doesn't have `iter_mut` so iterating `children` and mutating them in-place isn't possible.
 fn insert_virtual_devices(mut d: Device, parents: &collections::HashSet<Device>) -> Device {
     for p in parents {
@@ -168,6 +168,7 @@ fn insert(mut d: Device, to_insert: &Device) -> Device {
 
         d
     } else {
+        // This is a shallow copy due to `children` being `im::OrdSet`, which is copy-on-write.
         let d_2 = d.clone();
 
         match d {
