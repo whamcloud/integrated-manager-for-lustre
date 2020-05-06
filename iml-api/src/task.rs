@@ -29,13 +29,16 @@ async fn remove_task(
     client: Connection,
     ids: Vec<i32>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    //let pool = iml_orm::pool().map_err(ImlApiError::ImlR2D2Error)?;
+    let pool = iml_orm::pool().map_err(ImlApiError::ImlR2D2Error)?;
 
     // Return value: [ task_id, command_id ]
-    let xs: Vec<u32> = iml_job_scheduler_rpc::call(&client, "remove_task", ids, None)
+    let xs: Vec<i32> = iml_job_scheduler_rpc::call(&client, "remove_task", ids, None)
         .map_err(ImlApiError::ImlJobSchedulerRpcError)
         .await?;
-    Ok(warp::reply::json(&xs))
+
+    let command = get_command(&pool, xs[1]).await?;
+
+    Ok(warp::reply::json(&CmdWrapper { command }))
 }
 
 async fn get_tasks() -> Result<impl warp::Reply, warp::Rejection> {
