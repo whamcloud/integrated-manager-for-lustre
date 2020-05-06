@@ -34,10 +34,12 @@ where
     K: Hash + Ord + Copy,
     T: Clone,
 {
-    pub fn new(t: T, extract: impl Fn(&T) -> (K, Vec<K>)) -> Self {
-        let (id, mut deps) = extract(&t);
-        deps.sort();
-        Self { id, deps, inner: t }
+    pub fn new<F>(inner: T, extract: F) -> Self
+    where
+        F: Fn(&T) -> (K, Vec<K>),
+    {
+        let (id, deps) = extract(&inner);
+        Self { id, deps, inner }
     }
 }
 
@@ -153,11 +155,11 @@ where
     T: Deps<K> + Clone + Debug,
 {
     let roots: Vec<Arc<T>> = convert_ids_to_arcs(objs, int_roots);
-    let deps: HashMap<K, Vec<Arc<T>>> = int_deps
+    let links: HashMap<K, Vec<Arc<T>>> = int_deps
         .iter()
         .map(|(id, ids)| (*id, convert_ids_to_arcs(objs, ids)))
         .collect();
-    DependencyDAG { roots, links: deps }
+    DependencyDAG { roots, links }
 }
 
 pub fn convert_ids_to_arcs<K, T>(objs: &[T], ids: &[K]) -> Vec<Arc<T>>
@@ -282,7 +284,7 @@ mod tests {
 
     #[derive(Debug, Clone)]
     struct Context {
-        indent: usize,
+        level: usize,
     }
 
     #[test]
@@ -300,13 +302,13 @@ mod tests {
             X::new(48, &[39, 40, 41, 42, 45, 46, 47], "Setup managed host oss2.local."),
         ];
         let dag = build_direct_dag(&xs);
-        let mut ctx = Context { indent: 0 };
-        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("\n");
+        let mut ctx = Context { level: 0 };
+        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("");
         assert_eq!(result, TREE_DIRECT);
 
         let dag = build_inverse_dag(&xs);
-        let mut ctx = Context { indent: 0 };
-        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("\n");
+        let mut ctx = Context { level: 0 };
+        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("");
         assert_eq!(result, TREE_INVERSE);
     }
 
@@ -316,13 +318,13 @@ mod tests {
         let xs: Vec<X> = vec![X::new(1, &[2], "One"), X::new(2, &[3], "Two"), X::new(3, &[2], "Three")];
 
         let dag = build_direct_dag(&xs);
-        let mut ctx = Context { indent: 0 };
-        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("\n");
-        assert_eq!(result, "1: One\n  2: Two\n    3: Three\n      2: Two...\n3: Three...");
+        let mut ctx = Context { level: 0 };
+        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("");
+        assert_eq!(result, "1: One\n  2: Two\n    3: Three\n");
 
         let dag = build_inverse_dag(&xs);
-        let mut ctx = Context { indent: 0 };
-        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("\n");
+        let mut ctx = Context { level: 0 };
+        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("");
         assert_eq!(result, "");
     }
 
@@ -331,20 +333,21 @@ mod tests {
         let xs: Vec<X> = vec![X::new(1, &[], "One"), X::new(2, &[], "Two"), X::new(3, &[], "Three")];
 
         let dag = build_direct_dag(&xs);
-        let mut ctx = Context { indent: 0 };
-        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("\n");
-        assert_eq!(result, "1: One\n2: Two\n3: Three");
+        let mut ctx = Context { level: 0 };
+        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("");
+        assert_eq!(result, "1: One\n2: Two\n3: Three\n");
 
         let dag = build_inverse_dag(&xs);
-        let mut ctx = Context { indent: 0 };
-        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("\n");
-        assert_eq!(result, "1: One\n2: Two\n3: Three");
+        let mut ctx = Context { level: 0 };
+        let result = traverse_graph(&dag, &x_to_string, &combine_strings, &mut ctx).join("");
+        assert_eq!(result, "1: One\n2: Two\n3: Three\n");
     }
 
     #[test]
     fn test_rich_wrapper() {
         fn extract_from_y(y: &Y) -> (u32, Vec<u32>) {
-            let deps = y.deps.iter().map(|s| s.parse::<u32>().unwrap()).collect();
+            let mut deps = y.deps.iter().map(|s| s.parse::<u32>().unwrap()).collect::<Vec<u32>>();
+            deps.sort();
             (y.id, deps)
         }
         // the DAG built over RichDeps<_, _> must be always the same, no matter how dependencies are sorted
@@ -365,34 +368,44 @@ mod tests {
             }
             let rich_ys: Vec<Rich<u32, Y>> = ys.clone().into_iter().map(|t| Rich::new(t, extract_from_y)).collect();
             let dag = build_direct_dag(&rich_ys);
-            let mut ctx = Context { indent: 0 };
-            let result = traverse_graph(&dag, &rich_y_to_string, &combine_strings, &mut ctx).join("\n");
+            let mut ctx = Context { level: 0 };
+            let result = traverse_graph(&dag, &rich_y_to_string, &combine_strings, &mut ctx).join("");
             assert_eq!(result, SMALL_TREE);
         }
     }
 
     fn rich_y_to_string(node: Arc<Rich<u32, Y>>, is_new: bool, ctx: &mut Context) -> String {
-        ctx.indent += 1;
+        ctx.level += 1;
         let ellipsis = if is_new { "" } else { "..." };
         format!("{}: {}{}", node.id(), node.description, ellipsis)
     }
 
     fn x_to_string(node: Arc<X>, is_new: bool, ctx: &mut Context) -> String {
-        ctx.indent += 1;
-        let ellipsis = if is_new { "" } else { "..." };
-        format!("{}: {}{}", node.id, node.description, ellipsis)
+        ctx.level += 1;
+        if is_new {
+            format!("{}: {}\n", node.id, node.description)
+        } else {
+            String::new()
+        }
     }
 
     fn combine_strings(node: String, nodes: Vec<String>, ctx: &mut Context) -> String {
-        let mut result: String = node;
-        for n in nodes.into_iter() {
-            result.push('\n');
-            let indent = "  ".repeat(ctx.indent);
-            result.push_str(&indent);
-            result.push_str(&n);
+        if ctx.level > 0 {
+            ctx.level -= 1;
         }
-        if ctx.indent > 0 {
-            ctx.indent -= 1;
+        let space = if ctx.level > 0 { "  " } else { "" };
+        let mut result = String::with_capacity(100);
+        for line in node.lines() {
+            result.push_str(space);
+            result.push_str(line);
+            result.push('\n');
+        }
+        for n in nodes.iter() {
+            for line in n.lines() {
+                result.push_str(space);
+                result.push_str(line);
+                result.push('\n');
+            }
         }
         result
     }
@@ -409,26 +422,20 @@ mod tests {
   40: Configure NTP on oss2.local
     39: Install packages on server oss2.local...
   46: Configure Pacemaker on oss2.local
-    46: Configure Pacemaker on oss2.local..."#;
+    46: Configure Pacemaker on oss2.local...
+"#;
 
     const TREE_DIRECT: &'static str = r#"48: Setup managed host oss2.local.
   39: Install packages on server oss2.local.
   40: Configure NTP on oss2.local.
-    39: Install packages on server oss2.local....
   41: Enable LNet on oss2.local.
-    39: Install packages on server oss2.local....
   42: Configure Corosync on oss2.local.
-    39: Install packages on server oss2.local....
   45: Start the LNet networking layer.
     44: Load the LNet kernel modules.
-      41: Enable LNet on oss2.local....
   46: Configure Pacemaker on oss2.local.
-    39: Install packages on server oss2.local....
     43: Start Corosync on oss2.local
-      42: Configure Corosync on oss2.local....
   47: Start Pacemaker on oss2.local.
-    43: Start Corosync on oss2.local...
-    46: Configure Pacemaker on oss2.local...."#;
+"#;
 
     const TREE_INVERSE: &'static str = r#"39: Install packages on server oss2.local.
   40: Configure NTP on oss2.local.
@@ -436,16 +443,9 @@ mod tests {
   41: Enable LNet on oss2.local.
     44: Load the LNet kernel modules.
       45: Start the LNet networking layer.
-        48: Setup managed host oss2.local....
-    48: Setup managed host oss2.local....
   42: Configure Corosync on oss2.local.
     43: Start Corosync on oss2.local
       46: Configure Pacemaker on oss2.local.
         47: Start Pacemaker on oss2.local.
-          48: Setup managed host oss2.local....
-        48: Setup managed host oss2.local....
-      47: Start Pacemaker on oss2.local....
-    48: Setup managed host oss2.local....
-  46: Configure Pacemaker on oss2.local....
-  48: Setup managed host oss2.local...."#;
+"#;
 }

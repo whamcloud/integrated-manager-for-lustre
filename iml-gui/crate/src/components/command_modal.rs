@@ -349,8 +349,9 @@ pub fn job_tree_view(model: &Model, parent_cid: CmdId) -> Node<Msg> {
 
 fn job_item_view(job: Arc<RichJob>, is_new: bool, ctx: &mut Context) -> Node<Msg> {
     let icon = job_status_icon(job.as_ref());
-    // we don't use job.deps() since deps() now show interdependencies between jobs
-    if !is_new || job.steps.is_empty() {
+    if !is_new {
+        empty!()
+    } else if job.steps.is_empty() {
         span![span![class![C.mr_1], icon], span![job.description]]
     } else {
         let is_open = ctx.select.contains(TypedId::Job(job.id));
@@ -589,29 +590,49 @@ fn perform_click(select: &mut Select, id: TypedId) -> bool {
 }
 
 fn extract_children_from_cmd(cmd: &Command) -> (u32, Vec<u32>) {
-    (
-        cmd.id,
-        cmd.jobs.iter().filter_map(|s| extract_uri_id::<Job0>(s)).collect(),
-    )
+    let mut deps = cmd
+        .jobs
+        .iter()
+        .filter_map(|s| extract_uri_id::<Job0>(s))
+        .collect::<Vec<u32>>();
+    deps.sort();
+    (cmd.id, deps)
 }
 
 fn extract_children_from_job(job: &Job0) -> (u32, Vec<u32>) {
-    (
-        job.id,
-        job.steps.iter().filter_map(|s| extract_uri_id::<Step>(s)).collect(),
-    )
+    let mut deps = job
+        .steps
+        .iter()
+        .filter_map(|s| extract_uri_id::<Step>(s))
+        .collect::<Vec<u32>>();
+    deps.sort();
+    (job.id, deps)
 }
 
 const fn extract_children_from_step(step: &Step) -> (u32, Vec<u32>) {
     (step.id, Vec::new()) // steps have no descendants
 }
 
-fn extract_wait_fors_from_job(job: &Job0) -> (u32, Vec<u32>) {
-    // interdependencies between jobs
-    (
-        job.id,
-        job.wait_for.iter().filter_map(|s| extract_uri_id::<Job0>(s)).collect(),
-    )
+fn extract_wait_fors_from_job(job: &Job0, jobs: &HashMap<u32, Arc<RichJob>>) -> (u32, Vec<u32>) {
+    // Extract the interdependencies between jobs.
+    // See [command_modal::tests::test_jobs_ordering]
+    let mut deps = job
+        .wait_for
+        .iter()
+        .filter_map(|s| extract_uri_id::<Job0>(s))
+        .collect::<Vec<u32>>();
+    deps.sort_by(|i1, i2| {
+        let t1 = jobs
+            .get(i1)
+            .map(|arj| (-(arj.deps.len() as i32), &arj.description[..], arj.id))
+            .unwrap_or((0, "", *i1));
+        let t2 = jobs
+            .get(i2)
+            .map(|arj| (-(arj.deps.len() as i32), &arj.description[..], arj.id))
+            .unwrap_or((0, "", *i2));
+        t1.cmp(&t2)
+    });
+    (job.id, deps)
 }
 
 fn extract_sorted_keys<T>(hm: &HashMap<u32, T>) -> Vec<u32> {
@@ -723,10 +744,11 @@ impl Model {
             let mut jobs_graphs = HashMap::new();
             for (c, cmd) in &self.commands {
                 if cmd.deps().iter().all(|j| self.jobs.contains_key(j)) {
+                    let extract_fun = |job: &Job0| extract_wait_fors_from_job(job, &self.jobs);
                     let jobs_graph_data = cmd
                         .deps()
                         .iter()
-                        .map(|k| RichJob::new(self.jobs[k].inner.clone(), extract_wait_fors_from_job))
+                        .map(|k| RichJob::new(self.jobs[k].inner.clone(), extract_fun))
                         .collect::<Vec<RichJob>>();
                     let graph = build_direct_dag(&jobs_graph_data);
                     jobs_graphs.insert(CmdId(*c), graph);
@@ -757,9 +779,9 @@ mod tests {
     use super::*;
     use rand_core::{RngCore, SeedableRng};
     use rand_xoshiro::Xoroshiro64Star;
+    use std::fmt::Debug;
     use std::hash::Hash;
     use std::iter;
-    use wasm_bindgen::__rt::core::fmt::Debug;
 
     #[derive(Default, Clone, Debug)]
     struct Db {
@@ -790,6 +812,11 @@ mod tests {
                 .map(|x| x.clone())
                 .collect()
         }
+    }
+
+    #[derive(Debug, Clone)]
+    struct Context0 {
+        level: usize,
     }
 
     #[test]
@@ -836,6 +863,34 @@ mod tests {
         assert_eq!(ss, vec![21, 22, 23]);
     }
 
+    #[test]
+    fn test_jobs_ordering() {
+        // The jobs' dependencies (vector of u32) are sorted in special order so that the
+        // jobs with more dependencies come first. If the number of dependencies are equal,
+        // they are sorted by alphabetical order by the description.
+        // If the description is the same, then the jobs are ordered by id.
+        // The sort order of the jobs themself does NOT matter.
+        let mut rng = Xoroshiro64Star::seed_from_u64(555);
+        let db = build_db_2();
+        let commands = db.select_cmds(&[109]);
+        let mut jobs = db.select_jobs(&extract_ids::<Job0>(&commands[0].jobs));
+        for i in (1..jobs.len()).rev() {
+            let j = (rng.next_u64() as usize) % (i + 1);
+            jobs.swap(i, j);
+        }
+        let mut model = Model::default();
+        model.jobs = convert_to_rich_hashmap(jobs, extract_children_from_job);
+        model.commands = convert_to_rich_hashmap(commands, extract_children_from_cmd);
+
+        // here the [command_modal::extract_wait_fors_from_job] function plays
+        model.refresh_view((false, true, false));
+
+        let dag = &model.jobs_graphs[&CmdId(109)];
+        let mut ctx = Context0 { level: 0 };
+        let result = traverse_graph(dag, &rich_job_to_string, &rich_job_combine_strings, &mut ctx).join("");
+        assert_eq!(result, WELL_ORDERED_TREE);
+    }
+
     /// There could the the problem, when `schedule_fetch_tree` made the api requests
     /// in one order, but during delays or something the responses may come in different
     /// order. In all such cases, however, model should remain consistent,
@@ -843,10 +898,10 @@ mod tests {
     #[test]
     fn test_async_handlers_consistency() {
         let mut rng = Xoroshiro64Star::seed_from_u64(555);
-        let db = build_db();
+        let db = build_db_1();
         let mut model = Model::default();
         let cmd_ids = db.all_cmds.iter().map(|x| x.id).collect::<Vec<_>>();
-        let selects = generate_random_selects(&db, &mut rng, 1000);
+        let selects = generate_random_selects(&db, &mut rng, 200);
         for select in selects {
             let sel_cmd_ids = if select.0.is_empty() {
                 cmd_ids.clone()
@@ -952,7 +1007,7 @@ mod tests {
         }
     }
 
-    fn build_db() -> Db {
+    fn build_db_1() -> Db {
         let all_cmds = vec![
             make_command(1, &[10, 11], "One"),
             make_command(2, &[12, 13], "Two"),
@@ -981,6 +1036,48 @@ mod tests {
             make_step(28, "Twenty and eight"),
             make_step(29, "Twenty and nine"),
         ];
+        Db {
+            all_cmds,
+            all_jobs,
+            all_steps,
+        }
+    }
+
+    fn build_db_2() -> Db {
+        let all_cmds = vec![make_command(
+            109,
+            &[240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253],
+            "Stop file system fs",
+        )];
+        let all_jobs = vec![
+            make_job(240, CmdId(109), &[], &[], "Stop target fs-OST0008"),
+            make_job(241, CmdId(109), &[], &[], "Stop target fs-OST0007"),
+            make_job(242, CmdId(109), &[], &[], "Stop target fs-OST0003"),
+            make_job(243, CmdId(109), &[], &[], "Stop target fs-OST0000"),
+            make_job(
+                244,
+                CmdId(109),
+                &[],
+                &[240, 241, 242, 243],
+                "Make file system fs unavailable",
+            ),
+            make_job(245, CmdId(109), &[], &[244], "Stop target fs-OST0005"),
+            make_job(246, CmdId(109), &[], &[244], "Stop target fs-MDT0000"),
+            make_job(247, CmdId(109), &[], &[244], "Stop target fs-OST0004"),
+            make_job(248, CmdId(109), &[], &[244], "Stop target fs-OST0002"),
+            make_job(249, CmdId(109), &[], &[244], "Stop target fs-OST0001"),
+            make_job(250, CmdId(109), &[], &[244], "Stop target fs-OST0006"),
+            make_job(251, CmdId(109), &[], &[244], "Stop target fs-MDT0001"),
+            make_job(252, CmdId(109), &[], &[244], "Stop target fs-OST0009"),
+            make_job(
+                253,
+                CmdId(109),
+                &[],
+                &[240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252],
+                "Stop file system fs",
+            ),
+        ];
+        let all_steps = vec![];
         Db {
             all_cmds,
             all_jobs,
@@ -1052,6 +1149,52 @@ mod tests {
         // uris is the slice of strings like ["/api/step/123/", .. , "/api/step/234/"]
         uris.iter().filter_map(|s| extract_uri_id::<T>(s)).collect()
     }
+
+    fn rich_job_to_string(node: Arc<RichJob>, is_new: bool, ctx: &mut Context0) -> String {
+        ctx.level += 1;
+        if is_new {
+            format!("{}: {}\n", node.id, node.description)
+        } else {
+            String::new()
+        }
+    }
+
+    fn rich_job_combine_strings(node: String, nodes: Vec<String>, ctx: &mut Context0) -> String {
+        if ctx.level > 0 {
+            ctx.level -= 1;
+        }
+        let space = if ctx.level > 0 { "  " } else { "" };
+        let mut result = String::with_capacity(100);
+        for line in node.lines() {
+            result.push_str(space);
+            result.push_str(line);
+            result.push('\n');
+        }
+        for n in nodes.iter() {
+            for line in n.lines() {
+                result.push_str(space);
+                result.push_str(line);
+                result.push('\n');
+            }
+        }
+        result
+    }
+
+    const WELL_ORDERED_TREE: &'static str = r#"253: Stop file system fs
+  244: Make file system fs unavailable
+    243: Stop target fs-OST0000
+    242: Stop target fs-OST0003
+    241: Stop target fs-OST0007
+    240: Stop target fs-OST0008
+  246: Stop target fs-MDT0000
+  251: Stop target fs-MDT0001
+  249: Stop target fs-OST0001
+  248: Stop target fs-OST0002
+  247: Stop target fs-OST0004
+  245: Stop target fs-OST0005
+  250: Stop target fs-OST0006
+  252: Stop target fs-OST0009
+"#;
 
     // test_view is here https://gist.github.com/nlinker/9cbd9092986180531a841f9e610ef53a
 }
