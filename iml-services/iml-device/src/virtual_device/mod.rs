@@ -75,7 +75,7 @@ pub fn update_virtual_devices(devices: Vec<(Fqdn, Device)>) -> Vec<(Fqdn, Device
     let len = devices.len();
     for (i, (f, d)) in devices.into_iter().enumerate() {
         let ps = collect_virtual_device_parents(&d, 0, None);
-        // The incoming tree will always have less virtual device parents.
+        // The incoming tree (from current host) can have less virtual device parents, then trees from the DB (from other hosts).
         // In the incoming data there are only virtual devices that are local to that host (i.e. are mounted there).
         // In the database, there are virtual devices that are collected from all of hosts.
         // So the note is to reflect that. We push the incoming data to the end of the `Vec` so it's last.
