@@ -44,7 +44,7 @@ pub async fn scp_parallel(servers: &[&str], remote_path: &str, to: &str) -> Resu
     Ok(())
 }
 
-pub async fn ssh_exec<'a, 'b>(host: &'a str, cmd: &'b str) -> Result<(&'a str, Output), CmdError> {
+pub async fn ssh_exec_cmd<'a, 'b>(host: &'a str, cmd: &'b str) -> Result<Command, CmdError> {
     tracing::debug!("Running command {} on {}", cmd, host);
     let path = canonicalize("../vagrant/").await?;
 
@@ -62,7 +62,13 @@ pub async fn ssh_exec<'a, 'b>(host: &'a str, cmd: &'b str) -> Result<(&'a str, O
         .arg(host)
         .arg(cmd);
 
-    let out = x.checked_output().await?;
+    Ok(x)
+}
+
+pub async fn ssh_exec<'a, 'b>(host: &'a str, cmd: &'b str) -> Result<(&'a str, Output), CmdError> {
+    let mut cmd = ssh_exec_cmd(host, cmd).await?;
+
+    let out = cmd.checked_output().await?;
 
     Ok((host, out))
 }

@@ -4,6 +4,7 @@ PartOf=iml-manager.target
 Before=iml-plugin-runner.service
 Before=nginx.service
 After=rabbitmq-server.service
+After=postgresql-9.6.service
 After=iml-settings-populator.service
 Requires=iml-settings-populator.service
 
@@ -14,8 +15,6 @@ Environment=RUST_LOG=info
 EnvironmentFile=/var/lib/chroma/iml-settings.conf
 ExecStart=/bin/iml-device
 Restart=always
+RestartSec=2
 StandardOutput=journal
 StandardError=journal
-
-[Install]
-WantedBy=iml-manager.target
