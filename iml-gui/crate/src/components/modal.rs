@@ -81,7 +81,10 @@ pub fn content_view<T>(p_msg: ParentMsg<T>, children: impl View<T>) -> Node<T> {
             font_awesome(class![C.w_4, C.h_4, C.inline], "times"),
             span![class![C.text_sm,], "(Esc)",],
         ],
-        div![class![C.py_4, C.text_left, C.px_6,], children.els()]
+        div![
+            class![C.py_4, C.text_left, C.px_6, C.max_h_screen, C.overflow_auto],
+            children.els()
+        ]
     ]
 }
 

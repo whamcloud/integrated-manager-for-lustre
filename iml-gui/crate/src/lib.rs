@@ -7,6 +7,7 @@
 #![allow(clippy::enum_glob_use)]
 
 pub mod components;
+pub mod dependency_tree;
 pub mod key_codes;
 pub mod page;
 
