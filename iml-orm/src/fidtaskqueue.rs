@@ -6,11 +6,8 @@
 
 pub use crate::models::ChromaCoreFidtaskqueue;
 use crate::{lustrefid::LustreFid, schema::chroma_core_fidtaskqueue, task::ChromaCoreTask, DbPool};
-//use diesel::{dsl, prelude::*};
 use serde_json;
 use tokio_diesel::AsyncRunQueryDsl as _;
-
-impl ChromaCoreFidtaskqueue {}
 
 pub type Table = chroma_core_fidtaskqueue::table;
 
