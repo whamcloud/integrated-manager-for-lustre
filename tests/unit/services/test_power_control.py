@@ -6,7 +6,6 @@ from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.models.power_control import PowerControlType, PowerControlDevice, PowerControlDeviceOutlet
 from chroma_core.services.power_control.manager import PowerControlManager
 from chroma_core.services.power_control.monitor_daemon import PowerMonitorDaemon, PowerDeviceMonitor
-from tests.integration.core.constants import TEST_TIMEOUT
 
 
 class PowerControlTestCase(IMLUnitTestCase):
@@ -49,7 +48,7 @@ class PowerControlTestCase(IMLUnitTestCase):
         return [t.__class__.__name__ for t in threading.enumerate()]
 
     # TODO: Figure out how to share these things.
-    def wait_for_assert(self, lambda_expression, timeout=TEST_TIMEOUT):
+    def wait_for_assert(self, lambda_expression, timeout=10 * 60):
         """
         Evaluates lambda_expression once/1s until no AssertionError or hits
         timeout.
