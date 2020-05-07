@@ -146,7 +146,7 @@ pub async fn rsync(host: &str) -> Result<(), CmdError> {
 }
 
 pub async fn configure_dropins(path: &str, hosts: &[&str]) -> Result<(), CmdError> {
-    let path_dir = canonicalize(format!("./{}", path)).await?;
+    let path_dir = canonicalize(format!("../iml-system-test-utils/{}", path)).await?;
 
     // Create service override directory
     let mut ls = Command::new("ls");
@@ -172,7 +172,7 @@ pub async fn configure_dropins(path: &str, hosts: &[&str]) -> Result<(), CmdErro
         .lines()
         .map(|l| (format!("{}.service.d", l.replace("-dropin.conf", "")), l))
         .map(|(dir, dropin)| async move {
-            ssh::scp_parallel(
+            ssh::scp_up_parallel(
                 hosts,
                 format!("../iml-system-test-utils/{}/{}", path.to_string(), dropin).as_str(),
                 format!("/etc/systemd/system/{}/{}", dir, dropin).as_str(),

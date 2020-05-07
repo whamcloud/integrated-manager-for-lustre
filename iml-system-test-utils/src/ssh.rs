@@ -34,10 +34,29 @@ pub async fn scp(from: String, to: String) -> Result<(), CmdError> {
     Ok(())
 }
 
-pub async fn scp_parallel(servers: &[&str], remote_path: &str, to: &str) -> Result<(), CmdError> {
+pub async fn scp_down_parallel(
+    servers: &[&str],
+    remote_path: &str,
+    to: &str,
+) -> Result<(), CmdError> {
     let remote_calls = servers.iter().map(|host| {
         let from = format!("{}:{}", host, remote_path);
         scp(from, to.to_string())
+    });
+
+    try_join_all(remote_calls).await?;
+
+    Ok(())
+}
+
+pub async fn scp_up_parallel(
+    servers: &[&str],
+    from: &str,
+    to_remote: &str,
+) -> Result<(), CmdError> {
+    let remote_calls = servers.iter().map(|host| {
+        let to = format!("{}:{}", host, to_remote);
+        scp(from.into(), to)
     });
 
     try_join_all(remote_calls).await?;
@@ -212,7 +231,7 @@ pub async fn create_iml_diagnostics<'a, 'b>(
         .checked_status()
         .await?;
 
-    scp_parallel(
+    scp_down_parallel(
         hosts,
         "/var/tmp/*sosreport*",
         format!("./{}/", &report_dir).as_str(),
@@ -232,7 +251,7 @@ pub async fn create_iml_diagnostics<'a, 'b>(
 pub async fn create_unit_override_dir(hosts: &[&str], unit_name: &str) -> Result<(), CmdError> {
     ssh_exec_parallel(
         hosts,
-        format!("mkdir etc/systemd/system/{}.d", unit_name).as_str(),
+        format!("mkdir -p /etc/systemd/system/{}", unit_name).as_str(),
     )
     .await?;
 
