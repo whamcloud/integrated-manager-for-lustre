@@ -152,13 +152,16 @@ pub async fn configure_dropins(path: &str, hosts: &[&str]) -> Result<(), CmdErro
     let mut ls = Command::new("ls");
     ls.current_dir(path_dir);
 
+    tracing::debug!("getting ls output for {}", path);
     let output = ls.checked_output().await?;
     let dropin_names = str::from_utf8(&output.stdout).expect("Couldn't get dropin list.");
+    tracing::debug!("dropin names: {}", dropin_names);
 
     let dropin_futures = dropin_names
         .lines()
         .map(|l| format!("{}.service.d", l.replace("-dropin.conf", "")))
         .map(|l| async move {
+            tracing::debug!("creating directory {} on {:?}", l, hosts);
             ssh::create_unit_override_dir(hosts, l.as_str()).await?;
             Ok::<_, CmdError>(())
         });
@@ -169,15 +172,17 @@ pub async fn configure_dropins(path: &str, hosts: &[&str]) -> Result<(), CmdErro
         .lines()
         .map(|l| (format!("{}.service.d", l.replace("-dropin.conf", "")), l))
         .map(|(dir, dropin)| async move {
-            ssh::scp(
-                format!("../iml-system-test-utils/{}/{}", path.to_string(), dropin),
-                format!("/etc/systemd/system/{}/{}", dir, dropin),
+            ssh::scp_parallel(
+                hosts,
+                format!("../iml-system-test-utils/{}/{}", path.to_string(), dropin).as_str(),
+                format!("/etc/systemd/system/{}/{}", dir, dropin).as_str(),
             )
             .await?;
 
             Ok::<_, CmdError>(())
         });
 
+    tracing::debug!("scping dropin files to {:?}", hosts);
     try_join_all(scp_futures).await?;
 
     Ok(())
