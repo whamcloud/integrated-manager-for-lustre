@@ -349,8 +349,10 @@ pub async fn setup_bare(
         NtpServer::Adm => ssh::configure_ntp_for_adm(&config.storage_server_ips()).await?,
     };
 
+    tracing::debug!("About to setup agent debug");
     ssh::setup_agent_debug(&config.storage_server_ips()[..]).await?;
 
+    tracing::debug!("Setting up agent debug completed! Halting hosts.");
     halt().await?.args(hosts).checked_status().await?;
 
     for x in hosts {
