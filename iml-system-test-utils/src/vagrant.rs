@@ -188,10 +188,14 @@ pub async fn configure_dropins(path: &str, hosts: &[&str]) -> Result<(), CmdErro
     Ok(())
 }
 
-pub async fn configure_manager_dropins(config: &ClusterConfig) -> Result<(), CmdError> {
-    configure_dropins("manager-dropins", &config.manager_ip()[..]).await?;
+pub async fn configure_manager_setup(config: &ClusterConfig) -> Result<(), CmdError> {
+    ssh::create_iml_setup_dir(config.manager_ip).await?;
 
-    ssh::restart_manager(config.manager_ip).await?;
+    ssh::scp(
+        "../iml-system-test-utils/data/config".into(),
+        format!("{}:{}", config.manager_ip, iml::IML_SETUP_PATH),
+    )
+    .await?;
 
     Ok(())
 }
@@ -363,6 +367,8 @@ pub async fn setup_iml_install(
 ) -> Result<(), CmdError> {
     up().await?.arg(config.manager).checked_status().await?;
 
+    configure_manager_setup(config).await?;
+
     match env::var("REPO_URI") {
         Ok(x) => {
             provision_node(config.manager, "install-iml-repouri")
@@ -378,8 +384,6 @@ pub async fn setup_iml_install(
                 .await?;
         }
     };
-
-    configure_manager_dropins(config).await?;
 
     setup_bare(hosts, &config, NtpServer::Adm).await?;
 

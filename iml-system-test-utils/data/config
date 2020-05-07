@@ -1,0 +1,2 @@
+RUST_LOG=debug
+LOG_LEVEL=10

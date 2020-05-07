@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use crate::iml;
 use futures::future::try_join_all;
 use iml_cmd::{CheckedChildExt, CheckedCommandExt, CmdError};
 use std::{
@@ -253,6 +254,12 @@ pub async fn restart_storage_server_target(hosts: &[&str]) -> Result<(), CmdErro
 
 pub async fn setup_agent_debug(hosts: &[&str]) -> Result<(), CmdError> {
     ssh_exec_parallel(hosts, r#"touch /tmp/chroma-agent-debug && echo "RUST_LOG=debug" > /etc/iml/integration-test-overrides.conf"#).await?;
+
+    Ok(())
+}
+
+pub async fn create_iml_setup_dir(host: &str) -> Result<(), CmdError> {
+    ssh_exec(host, format!("mkdir -p {}", iml::IML_SETUP_PATH).as_str()).await?;
 
     Ok(())
 }

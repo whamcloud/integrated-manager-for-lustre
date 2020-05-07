@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use tokio::{fs, process::Command};
 
 pub const IML_DOCKER_PATH: &str = "/etc/iml-docker";
+pub const IML_SETUP_PATH: &str = "/var/lib/chroma-setup";
 
 async fn iml() -> Result<Command, CmdError> {
     let mut x = Command::new("/usr/bin/iml");

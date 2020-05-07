@@ -271,6 +271,7 @@ dependencies = [
  "iml-wire-types",
  "thiserror",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
