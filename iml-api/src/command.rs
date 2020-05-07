@@ -3,32 +3,27 @@
 // license that can be found in the LICENSE file.
 
 use crate::error::ImlApiError;
-use futures::TryFutureExt;
 use iml_orm::{
     command::ChromaCoreCommand,
     job::{get_jobs_by_cmd, ChromaCoreJob},
     step::ChromaCoreStepresult,
-    tokio_diesel::AsyncRunQueryDsl as _,
+    tokio_diesel::{AsyncRunQueryDsl as _, OptionalExtension as _},
     DbPool,
 };
 use iml_wire_types::{Command, EndpointName as _, TestHostJob};
 use itertools::Itertools;
 
 pub(crate) async fn get_command(pool: &DbPool, id: i32) -> Result<Command, ImlApiError> {
-    let mut cmd: Vec<ChromaCoreCommand> = ChromaCoreCommand::by_id(id)
-        .get_results_async(&pool)
-        .map_err(ImlApiError::ImlDieselAsyncError)
-        .await?;
+    let cmd: ChromaCoreCommand = ChromaCoreCommand::by_id(id)
+        .first_async(&pool)
+        .await
+        .optional()?
+        .ok_or_else(|| ImlApiError::NoneError)?;
 
-    let cmd = cmd.pop().unwrap();
-
-    let jobs: Vec<ChromaCoreJob> = get_jobs_by_cmd(id, &pool)
-        .map_err(ImlApiError::ImlDieselAsyncError)
-        .await?;
+    let jobs: Vec<ChromaCoreJob> = get_jobs_by_cmd(id, &pool).await?;
 
     let steps: Vec<ChromaCoreStepresult> = ChromaCoreStepresult::by_jobs(jobs.iter().map(|j| j.id))
         .get_results_async(&pool)
-        .map_err(ImlApiError::ImlDieselAsyncError)
         .await?;
 
     Ok(Command {

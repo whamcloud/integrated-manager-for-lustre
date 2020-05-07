@@ -13,6 +13,7 @@ pub enum ImlApiError {
     ImlJobSchedulerRpcError(ImlJobSchedulerRpcError),
     ImlR2D2Error(iml_orm::r2d2::Error),
     ImlRabbitError(ImlRabbitError),
+    NoneError,
     OneshotCanceled(oneshot::Canceled),
     SerdeJsonError(serde_json::error::Error),
 }
@@ -26,6 +27,7 @@ impl std::fmt::Display for ImlApiError {
             ImlApiError::ImlJobSchedulerRpcError(ref err) => write!(f, "{}", err),
             ImlApiError::ImlR2D2Error(ref err) => write!(f, "{}", err),
             ImlApiError::ImlRabbitError(ref err) => write!(f, "{}", err),
+            ImlApiError::NoneError => write!(f, "Not Found"),
             ImlApiError::OneshotCanceled(ref err) => write!(f, "{}", err),
             ImlApiError::SerdeJsonError(ref err) => write!(f, "{}", err),
         }
@@ -39,6 +41,7 @@ impl std::error::Error for ImlApiError {
             ImlApiError::ImlJobSchedulerRpcError(ref err) => Some(err),
             ImlApiError::ImlR2D2Error(ref err) => Some(err),
             ImlApiError::ImlRabbitError(ref err) => Some(err),
+            ImlApiError::NoneError => None,
             ImlApiError::OneshotCanceled(ref err) => Some(err),
             ImlApiError::SerdeJsonError(ref err) => Some(err),
         }
