@@ -13,9 +13,9 @@ from testconfig import config
 from iml_common.lib.util import ExceptionThrowingThread
 from iml_common.lib.shell import Shell
 from tests.utils.remote_firewall_control import RemoteFirewallControl
-from tests.integration.core.constants import TEST_TIMEOUT
-from tests.integration.core.constants import LONG_TEST_TIMEOUT
-from tests.integration.core.constants import UNATTENDED_BOOT_TIMEOUT
+from tests.unit.constants import TEST_TIMEOUT
+from tests.unit.constants import LONG_TEST_TIMEOUT
+from tests.unit.constants import UNATTENDED_BOOT_TIMEOUT
 
 logger = logging.getLogger("test")
 logger.setLevel(logging.DEBUG)
@@ -43,13 +43,6 @@ class RemoteOperations(object):
     things which talk directly to a storage server or a lustre client rather
     than going via the manager API.
     """
-
-    def _address2server(self, address):
-        for server in config["lustre_servers"]:
-            if server["address"] == address:
-                return server
-
-        raise RuntimeError("Unable to resolve %s as a server fqdn" % address)
 
     def distro_version(self, host):
         """
