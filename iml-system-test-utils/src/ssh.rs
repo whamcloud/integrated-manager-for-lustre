@@ -58,8 +58,6 @@ pub async fn ssh_exec_cmd<'a, 'b>(host: &'a str, cmd: &'b str) -> Result<Command
         .arg("UserKnownHostsFile=/dev/null")
         .arg("-i")
         .arg("id_rsa")
-        .arg("-o")
-        .arg("StrictHostKeyChecking=no")
         .arg(host)
         .arg(cmd);
 
@@ -84,8 +82,9 @@ async fn ssh_exec_parallel<'a, 'b>(
 
     for (host, out) in &output {
         tracing::debug!(
-            "ssh output {}: {}",
+            "ssh result on {}: {} - {}",
             host,
+            out.status.code().expect("Couldn't get exit code."),
             str::from_utf8(&out.stdout).expect("Couldn't read output.")
         );
     }
