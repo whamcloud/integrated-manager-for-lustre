@@ -78,7 +78,7 @@ pub fn consume_service_queue(
         .map_ok(|s| s.map_err(ImlServiceQueueError::from))
         .try_flatten_stream()
         .and_then(|m| {
-            tracing::debug!("Incoming message: {:?}", m.data);
+            tracing::debug!("Incoming message: {}", String::from_utf8_lossy(&m.data));
 
             future::ready(serde_json::from_slice(&m.data).map_err(ImlServiceQueueError::from))
         })
