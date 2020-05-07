@@ -44,3 +44,6 @@ exclude = [
     'iml-system-rpm-tests',
     'iml-system-docker-tests',
 ]
+
+[profile.release]
+debug = true
