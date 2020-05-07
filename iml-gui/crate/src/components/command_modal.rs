@@ -789,7 +789,7 @@ mod tests {
     #[derive(Default, Clone, Debug)]
     struct Db {
         all_cmds: Vec<Command>,
-        all_jobs: Vec<Job0>,
+        all_jobs: Vec<Arc<Job0>>,
         all_steps: Vec<Step>,
     }
 
@@ -801,11 +801,11 @@ mod tests {
                 .map(|x| x.clone())
                 .collect()
         }
-        fn select_jobs(&self, is: &[u32]) -> Vec<Job0> {
+        fn select_jobs(&self, is: &[u32]) -> Vec<Arc<Job0>> {
             self.all_jobs
                 .iter()
                 .filter(|x| is.contains(&x.id))
-                .map(|x| x.clone())
+                .map(|x| Arc::clone(&x))
                 .collect()
         }
         fn select_steps(&self, is: &[u32]) -> Vec<Step> {
@@ -968,8 +968,8 @@ mod tests {
         }
     }
 
-    fn make_job(id: u32, cmd_id: CmdId, steps: &[u32], wait_for: &[u32], descr: &str) -> Job0 {
-        Job0 {
+    fn make_job(id: u32, cmd_id: CmdId, steps: &[u32], wait_for: &[u32], descr: &str) -> Arc<Job0> {
+        Arc::new(Job0 {
             available_transitions: vec![],
             cancelled: false,
             class_name: "".to_string(),
@@ -988,7 +988,7 @@ mod tests {
             steps: steps.iter().map(|x| format!("/api/step/{}/", x)).collect(),
             wait_for: wait_for.iter().map(|x| format!("/api/job/{}/", x)).collect(),
             write_locks: vec![],
-        }
+        })
     }
 
     fn make_step(id: u32, class_name: &str) -> Step {
@@ -1088,7 +1088,7 @@ mod tests {
         }
     }
 
-    fn prepare_subset(db: &Db, cmd_ids: &[u32]) -> (Vec<Command>, Vec<Job0>, Vec<Step>) {
+    fn prepare_subset(db: &Db, cmd_ids: &[u32]) -> (Vec<Command>, Vec<Arc<Job0>>, Vec<Step>) {
         let cmds = db.select_cmds(&cmd_ids);
         let c_ids = cmds
             .iter()
