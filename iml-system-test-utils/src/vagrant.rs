@@ -202,8 +202,8 @@ pub async fn configure_manager_setup(config: &ClusterConfig) -> Result<(), CmdEr
 
 pub async fn configure_agent_dropins(config: &ClusterConfig) -> Result<(), CmdError> {
     let hosts = &config.storage_server_ips()[..];
-    ssh::setup_agent_debug(hosts).await?;
 
+    tracing::debug!("Configuring agent dropins");
     configure_dropins("agent-dropins", hosts).await?;
 
     ssh::restart_storage_server_target(hosts).await?;
@@ -349,10 +349,8 @@ pub async fn setup_bare(
         NtpServer::Adm => ssh::configure_ntp_for_adm(&config.storage_server_ips()).await?,
     };
 
-    tracing::debug!("About to setup agent debug");
     ssh::setup_agent_debug(&config.storage_server_ips()[..]).await?;
 
-    tracing::debug!("Setting up agent debug completed! Halting hosts.");
     halt().await?.args(hosts).checked_status().await?;
 
     for x in hosts {
