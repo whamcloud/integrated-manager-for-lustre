@@ -27,7 +27,7 @@ const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 type Job0 = Job<Option<serde_json::Value>>;
 
 type RichCommand = Rich<u32, Command>;
-type RichJob = Rich<u32, Job0>;
+type RichJob = Rich<u32, Arc<Job0>>;
 type RichStep = Rich<u32, Step>;
 
 type JobsGraph = DependencyDAG<u32, RichJob>;
@@ -173,7 +173,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::FetchedJobs(jobs_data_result) => match *jobs_data_result {
             Ok(api_list) => {
-                model.assign_jobs(api_list.objects);
+                model.assign_jobs(api_list.objects.into_iter().map(Arc::new).collect());
             }
             Err(e) => {
                 error!(format!("Failed to fetch jobs {:#?}", e));
@@ -599,7 +599,7 @@ fn extract_children_from_cmd(cmd: &Command) -> (u32, Vec<u32>) {
     (cmd.id, deps)
 }
 
-fn extract_children_from_job(job: &Job0) -> (u32, Vec<u32>) {
+fn extract_children_from_job(job: &Arc<Job0>) -> (u32, Vec<u32>) {
     let mut deps = job
         .steps
         .iter()
@@ -641,8 +641,11 @@ fn extract_sorted_keys<T>(hm: &HashMap<u32, T>) -> Vec<u32> {
     ids
 }
 
-fn convert_to_sorted_vec<T: Clone>(hm: &HashMap<u32, T>) -> Vec<T> {
-    extract_sorted_keys(hm).into_iter().map(|k| hm[&k].clone()).collect()
+fn convert_to_sorted_vec<T>(hm: &HashMap<u32, Arc<T>>) -> Vec<Arc<T>> {
+    extract_sorted_keys(hm)
+        .into_iter()
+        .map(|k| Arc::clone(&hm[&k]))
+        .collect()
 }
 
 fn convert_to_rich_hashmap<T>(ts: Vec<T>, extract: impl Fn(&T) -> (u32, Vec<u32>)) -> HashMap<u32, Arc<Rich<u32, T>>> {
@@ -687,7 +690,7 @@ impl Model {
         self.refresh_view(tuple);
     }
 
-    fn assign_jobs(&mut self, jobs: Vec<Job0>) {
+    fn assign_jobs(&mut self, jobs: Vec<Arc<Job0>>) {
         self.jobs = convert_to_rich_hashmap(jobs, extract_children_from_job);
         let tuple = self.check_back_consistency();
         self.refresh_view(tuple);
@@ -744,11 +747,11 @@ impl Model {
             let mut jobs_graphs = HashMap::new();
             for (c, cmd) in &self.commands {
                 if cmd.deps().iter().all(|j| self.jobs.contains_key(j)) {
-                    let extract_fun = |job: &Job0| extract_wait_fors_from_job(job, &self.jobs);
+                    let extract_fun = |job: &Arc<Job0>| extract_wait_fors_from_job(job, &self.jobs);
                     let jobs_graph_data = cmd
                         .deps()
                         .iter()
-                        .map(|k| RichJob::new(self.jobs[k].inner.clone(), extract_fun))
+                        .map(|k| RichJob::new(Arc::clone(&self.jobs[k].inner), extract_fun))
                         .collect::<Vec<RichJob>>();
                     let graph = build_direct_dag(&jobs_graph_data);
                     jobs_graphs.insert(CmdId(*c), graph);
