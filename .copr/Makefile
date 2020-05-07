@@ -7,7 +7,7 @@ MFL_REPO_NAME  := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
 MFL_COPR_NAME  := $(MFL_REPO_OWNER)-$(MFL_REPO_NAME)
 
 # Files needing substitutions for MFL_COPR/REPO_*
-SUBSTS_SHELL := tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup tests/framework/utils/defaults.sh tests/framework/services/runner.sh
+SUBSTS_SHELL := tests/framework/services/runner.sh
 SUBSTS_REPOS := base.repo chroma_support.repo tests/framework/chroma_support.repo
 
 SUBSTS := $(SUBSTS_SHELL) $(SUBSTS_REPOS)

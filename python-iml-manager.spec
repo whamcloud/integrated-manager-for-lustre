@@ -325,11 +325,3 @@ fi
 %files -f cli.files -n python2-%{pypi_name}-cli
 %defattr(-,root,root)
 %{_bindir}/chroma
-
-%files -n python2-%{pypi_name}-integration-tests
-%defattr(-,root,root)
-%{manager_root}/tests/__init__.py
-%{manager_root}/tests/utils/*
-%{manager_root}/tests/sample_data/*
-%{manager_root}/tests/plugins/*
-%{manager_root}/tests/integration/*

@@ -1,6 +1,6 @@
 import logging
 
-from tests.integration.core.remote_operations import RealRemoteOperations
+from tests.unit.remote_operations import RealRemoteOperations
 
 logger = logging.getLogger("test")
 
