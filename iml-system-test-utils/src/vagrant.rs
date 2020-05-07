@@ -197,7 +197,7 @@ pub async fn configure_manager_setup(
 
     ssh::ssh_exec(
         cluster_config.manager_ip,
-        format!("echo {} > {}/config", config, iml::IML_SETUP_PATH).as_str(),
+        format!(r#"echo "{}" > {}/config"#, config, iml::IML_SETUP_PATH).as_str(),
     )
     .await?;
 
@@ -207,9 +207,12 @@ pub async fn configure_manager_setup(
         ssh::ssh_exec(
             cluster_config.manager_ip,
             format!(
-                "echo {} > {}",
+                r#"cat <<EOF > {}
+{}
+EOF
+"#,
+                format!("{}/stratagem-server.profile", iml::IML_SETUP_PATH),
                 STRATAGEM_SERVER_PROFILE,
-                format!("{}/stratagem-server.profile", iml::IML_SETUP_PATH)
             )
             .as_str(),
         )
@@ -218,9 +221,12 @@ pub async fn configure_manager_setup(
         ssh::ssh_exec(
             cluster_config.manager_ip,
             format!(
-                "echo {} > {}",
+                r#"cat <<EOF > {}
+{}
+EOF
+"#,
+                format!("{}/stratagem-client.profile", iml::IML_SETUP_PATH),
                 STRATAGEM_CLIENT_PROFILE,
-                format!("{}/stratagem-client.profile", iml::IML_SETUP_PATH)
             )
             .as_str(),
         )
