@@ -26,9 +26,9 @@ const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
 type Job0 = Job<Option<serde_json::Value>>;
 
-type RichCommand = Rich<u32, Command>;
+type RichCommand = Rich<u32, Arc<Command>>;
 type RichJob = Rich<u32, Arc<Job0>>;
-type RichStep = Rich<u32, Step>;
+type RichStep = Rich<u32, Arc<Step>>;
 
 type JobsGraph = DependencyDAG<u32, RichJob>;
 
@@ -136,8 +136,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 Input::Commands(cmds) => {
                     // use the (little) optimization:
                     // if we already have the commands and they all finished, we don't need to poll them anymore
-                    let temp_slice = cmds.iter().map(|x: &Arc<Command>| (**x).clone()).collect::<Vec<_>>();
-                    model.assign_commands(temp_slice);
+                    model.assign_commands(cmds);
                     if !is_all_finished(&model.commands) {
                         orders.send_msg(Msg::FetchTree);
                     }
@@ -158,7 +157,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             model.commands_loading = false;
             match *commands_data_result {
                 Ok(api_list) => {
-                    model.assign_commands(api_list.objects);
+                    model.assign_commands(api_list.objects.into_iter().map(Arc::new).collect());
                 }
                 Err(e) => {
                     error!(format!("Failed to fetch commands {:#?}", e));
@@ -182,7 +181,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         },
         Msg::FetchedSteps(steps_data_result) => match *steps_data_result {
             Ok(api_list) => {
-                model.assign_steps(api_list.objects);
+                model.assign_steps(api_list.objects.into_iter().map(Arc::new).collect());
             }
             Err(e) => {
                 error!(format!("Failed to fetch steps {:#?}", e));
@@ -589,7 +588,7 @@ fn perform_click(select: &mut Select, id: TypedId) -> bool {
     }
 }
 
-fn extract_children_from_cmd(cmd: &Command) -> (u32, Vec<u32>) {
+fn extract_children_from_cmd(cmd: &Arc<Command>) -> (u32, Vec<u32>) {
     let mut deps = cmd
         .jobs
         .iter()
@@ -609,7 +608,7 @@ fn extract_children_from_job(job: &Arc<Job0>) -> (u32, Vec<u32>) {
     (job.id, deps)
 }
 
-const fn extract_children_from_step(step: &Step) -> (u32, Vec<u32>) {
+fn extract_children_from_step(step: &Arc<Step>) -> (u32, Vec<u32>) {
     (step.id, Vec::new()) // steps have no descendants
 }
 
@@ -684,7 +683,7 @@ impl Model {
         self.select = Default::default();
     }
 
-    fn assign_commands(&mut self, cmds: Vec<Command>) {
+    fn assign_commands(&mut self, cmds: Vec<Arc<Command>>) {
         self.commands = convert_to_rich_hashmap(cmds, extract_children_from_cmd);
         let tuple = self.check_back_consistency();
         self.refresh_view(tuple);
@@ -696,7 +695,7 @@ impl Model {
         self.refresh_view(tuple);
     }
 
-    fn assign_steps(&mut self, steps: Vec<Step>) {
+    fn assign_steps(&mut self, steps: Vec<Arc<Step>>) {
         self.steps = convert_to_rich_hashmap(steps, extract_children_from_step);
         let tuple = self.check_back_consistency();
         self.refresh_view(tuple);
@@ -788,31 +787,31 @@ mod tests {
 
     #[derive(Default, Clone, Debug)]
     struct Db {
-        all_cmds: Vec<Command>,
+        all_cmds: Vec<Arc<Command>>,
         all_jobs: Vec<Arc<Job0>>,
-        all_steps: Vec<Step>,
+        all_steps: Vec<Arc<Step>>,
     }
 
     impl Db {
-        fn select_cmds(&self, is: &[u32]) -> Vec<Command> {
+        fn select_cmds(&self, is: &[u32]) -> Vec<Arc<Command>> {
             self.all_cmds
                 .iter()
                 .filter(|x| is.contains(&x.id))
-                .map(|x| x.clone())
+                .map(|x| Arc::clone(x))
                 .collect()
         }
         fn select_jobs(&self, is: &[u32]) -> Vec<Arc<Job0>> {
             self.all_jobs
                 .iter()
                 .filter(|x| is.contains(&x.id))
-                .map(|x| Arc::clone(&x))
+                .map(|x| Arc::clone(x))
                 .collect()
         }
-        fn select_steps(&self, is: &[u32]) -> Vec<Step> {
+        fn select_steps(&self, is: &[u32]) -> Vec<Arc<Step>> {
             self.all_steps
                 .iter()
                 .filter(|x| is.contains(&x.id))
-                .map(|x| x.clone())
+                .map(|x| Arc::clone(x))
                 .collect()
         }
     }
@@ -954,8 +953,8 @@ mod tests {
         hm.into_iter().map(|(k, v)| (k, format!("{:?}", v))).collect()
     }
 
-    fn make_command(id: u32, jobs: &[u32], msg: &str) -> Command {
-        Command {
+    fn make_command(id: u32, jobs: &[u32], msg: &str) -> Arc<Command> {
+        Arc::new(Command {
             cancelled: false,
             complete: false,
             created_at: "2020-03-16T07:22:34.491600".to_string(),
@@ -965,7 +964,7 @@ mod tests {
             logs: "".to_string(),
             message: msg.to_string(),
             resource_uri: format!("/api/command/{}/", id),
-        }
+        })
     }
 
     fn make_job(id: u32, cmd_id: CmdId, steps: &[u32], wait_for: &[u32], descr: &str) -> Arc<Job0> {
@@ -991,8 +990,8 @@ mod tests {
         })
     }
 
-    fn make_step(id: u32, class_name: &str) -> Step {
-        Step {
+    fn make_step(id: u32, class_name: &str) -> Arc<Step> {
+        Arc::new(Step {
             args: Default::default(),
             backtrace: "".to_string(),
             class_name: class_name.to_string(),
@@ -1007,7 +1006,7 @@ mod tests {
             state: "incomplete".to_string(),
             step_count: 0,
             step_index: 0,
-        }
+        })
     }
 
     fn build_db_1() -> Db {
@@ -1088,7 +1087,7 @@ mod tests {
         }
     }
 
-    fn prepare_subset(db: &Db, cmd_ids: &[u32]) -> (Vec<Command>, Vec<Arc<Job0>>, Vec<Step>) {
+    fn prepare_subset(db: &Db, cmd_ids: &[u32]) -> (Vec<Arc<Command>>, Vec<Arc<Job0>>, Vec<Arc<Step>>) {
         let cmds = db.select_cmds(&cmd_ids);
         let c_ids = cmds
             .iter()
