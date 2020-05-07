@@ -39,7 +39,7 @@ enum State {
 pub fn create() -> impl DaemonPlugin {
     Devices {
         trigger: None,
-        state: Arc::new(Mutex::new((None, State::Pending))),
+        state: Arc::new(Mutex::new((None, State::Sent))),
     }
 }
 
