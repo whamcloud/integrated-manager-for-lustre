@@ -63,7 +63,7 @@ pub async fn destroy<'a>() -> Result<(), CmdError> {
 
     x.arg("destroy").arg("-f");
 
-    try_command_n_times(3, &mut x).await
+    try_command_n_times(3, 1, &mut x).await
 }
 
 pub async fn halt() -> Result<Command, CmdError> {
@@ -156,6 +156,30 @@ pub async fn global_prune() -> Result<(), CmdError> {
     let mut x = vagrant().await?;
 
     x.arg("global-status").arg("--prune").checked_status().await
+}
+
+pub async fn wait_on_services_ready(config: &ClusterConfig) -> Result<(), CmdError> {
+    let output =
+        run_vm_command(config.manager, "systemctl list-dependencies iml-manager.target | tail -n +2 | awk '{print$2}' | awk '{print substr($1, 3)}' | grep -v iml-settings-populator.service").await?.checked_output().await?;
+
+    let status_commands = str::from_utf8(&output.stdout)
+        .expect("Couldn't parse service list")
+        .lines()
+        .map(|s| {
+            tracing::debug!("checking status of service {}", s);
+            let cmd = format!("systemctl status {}", s);
+
+            async move {
+                let mut cmd = ssh::ssh_exec_cmd(config.manager_ip, cmd.as_str()).await?;
+                try_command_n_times(50, 3, &mut cmd).await?;
+
+                Ok::<(), CmdError>(())
+            }
+        });
+
+    try_join_all(status_commands).await?;
+
+    Ok(())
 }
 
 fn vm_list_from_output(output: &str) -> Vec<String> {
@@ -315,6 +339,8 @@ pub async fn setup_iml_install(
 
     up().await?.args(hosts).checked_status().await?;
 
+    wait_on_services_ready(config).await?;
+
     Ok(())
 }
 
@@ -345,6 +371,8 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
     }
 
     up().await?.args(config.all()).checked_status().await?;
+
+    wait_on_services_ready(config).await?;
 
     Ok(())
 }

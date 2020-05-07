@@ -23,6 +23,4 @@ logrotate.cfg
 media
 requirements.dev
 tests
-vagrant-virsh
 vagrant/
-Vagrantfile

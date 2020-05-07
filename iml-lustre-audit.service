@@ -7,8 +7,6 @@ After=rabbitmq-server.service
 Type=simple
 ExecStart=/bin/python /usr/share/chroma-manager/manage.py chroma_service --name=lustre_audit lustre_audit
 Restart=on-failure
+RestartSec=2
 StandardOutput=journal
 StandardError=journal
-
-[Install]
-WantedBy=iml-manager.target

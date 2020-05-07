@@ -7,7 +7,7 @@ MFL_REPO_NAME  := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
 MFL_COPR_NAME  := $(MFL_REPO_OWNER)-$(MFL_REPO_NAME)
 
 # Files needing substitutions for MFL_COPR/REPO_*
-SUBSTS_SHELL := tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup tests/framework/utils/defaults.sh tests/framework/services/runner.sh
+SUBSTS_SHELL := tests/framework/services/runner.sh
 SUBSTS_REPOS := base.repo chroma_support.repo tests/framework/chroma_support.repo
 
 SUBSTS := $(SUBSTS_SHELL) $(SUBSTS_REPOS)
@@ -34,7 +34,10 @@ substs: $(SUBSTS)
 	chmod +x $(SUBSTS_SHELL)
 
 srpm:
-	yum install -y postgresql96-devel
+	if ! rpm -q postgresql96-devel 2> /dev/null; then \
+		yum install -y postgresql96-devel; \
+	fi
+
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/release/rust-iml
 	PQ_LIB_DIR=/usr/pgsql-9.6/lib cargo build --release
@@ -93,6 +96,7 @@ iml-srpm: iml-deps substs
 	cp -r ${BUILDROOT}/grafana ${TMPDIR}/configuration
 	cp ${BUILDROOT}/iml-*.service \
 		${BUILDROOT}/rabbitmq-env.conf \
+		${BUILDROOT}/rabbitmq-server-dropin.conf \
 		${BUILDROOT}/iml-manager-redirect.conf \
 		${BUILDROOT}/iml-manager.target \
 		${BUILDROOT}/chroma-config.1 \
