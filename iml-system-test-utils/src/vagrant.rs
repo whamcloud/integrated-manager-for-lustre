@@ -14,8 +14,7 @@ use std::{
     time::Duration,
 };
 use tokio::{
-    fs::{canonicalize, create_dir, remove_dir_all, File},
-    io::AsyncWriteExt,
+    fs::{canonicalize, create_dir, remove_dir_all},
     process::Command,
     time::delay_for,
 };
@@ -188,14 +187,45 @@ pub async fn configure_dropins(path: &str, hosts: &[&str]) -> Result<(), CmdErro
     Ok(())
 }
 
-pub async fn configure_manager_setup(config: &ClusterConfig) -> Result<(), CmdError> {
-    ssh::create_iml_setup_dir(config.manager_ip).await?;
+pub async fn configure_manager_setup(
+    setup: &SetupConfigType,
+    cluster_config: &ClusterConfig,
+) -> Result<(), CmdError> {
+    ssh::create_iml_setup_dir(cluster_config.manager_ip).await?;
 
-    ssh::scp(
-        "../iml-system-test-utils/data/config".into(),
-        format!("{}:{}", config.manager_ip, iml::IML_SETUP_PATH),
+    let config: String = setup.into();
+
+    ssh::ssh_exec(
+        cluster_config.manager_ip,
+        format!("echo {} > {}/config", config, iml::IML_SETUP_PATH).as_str(),
     )
     .await?;
+
+    let setup_config: &SetupConfig = setup.into();
+
+    if setup_config.use_stratagem {
+        ssh::ssh_exec(
+            cluster_config.manager_ip,
+            format!(
+                "echo {} > {}",
+                STRATAGEM_SERVER_PROFILE,
+                format!("{}/stratagem-server.profile", iml::IML_SETUP_PATH)
+            )
+            .as_str(),
+        )
+        .await?;
+
+        ssh::ssh_exec(
+            cluster_config.manager_ip,
+            format!(
+                "echo {} > {}",
+                STRATAGEM_CLIENT_PROFILE,
+                format!("{}/stratagem-client.profile", iml::IML_SETUP_PATH)
+            )
+            .as_str(),
+        )
+        .await?;
+    }
 
     Ok(())
 }
@@ -367,7 +397,7 @@ pub async fn setup_iml_install(
 ) -> Result<(), CmdError> {
     up().await?.arg(config.manager).checked_status().await?;
 
-    configure_manager_setup(config).await?;
+    configure_manager_setup(setup_config, config).await?;
 
     match env::var("REPO_URI") {
         Ok(x) => {
@@ -391,8 +421,6 @@ pub async fn setup_iml_install(
         .args(&vec![config.manager][..])
         .checked_status()
         .await?;
-
-    configure_rpm_setup(setup_config, &config).await?;
 
     halt()
         .await?
@@ -581,55 +609,6 @@ pub async fn create_fs(fs_type: FsType, config: &ClusterConfig) -> Result<(), Cm
 
     Ok(())
 }
-
-pub async fn configure_rpm_setup(
-    setup: &SetupConfigType,
-    cluster_config: &ClusterConfig,
-) -> Result<(), CmdError> {
-    let config: String = setup.into();
-
-    let vagrant_path = canonicalize("../vagrant/").await?;
-    let mut config_path = vagrant_path.clone();
-    config_path.push("local_settings.py");
-
-    let mut file = File::create(config_path).await?;
-    file.write_all(config.as_bytes()).await?;
-
-    let mut vm_cmd: String = "sudo cp /vagrant/local_settings.py /usr/share/chroma-manager/".into();
-    let setup_config: &SetupConfig = setup.into();
-    if setup_config.use_stratagem {
-        let mut server_profile_path = vagrant_path.clone();
-        server_profile_path.push("stratagem-server.profile");
-
-        let mut file = File::create(server_profile_path).await?;
-        file.write_all(STRATAGEM_SERVER_PROFILE.as_bytes()).await?;
-
-        let mut client_profile_path = vagrant_path.clone();
-        client_profile_path.push("stratagem-client.profile");
-
-        let mut file = File::create(client_profile_path).await?;
-        file.write_all(STRATAGEM_CLIENT_PROFILE.as_bytes()).await?;
-
-        vm_cmd = format!(
-            "{}{}",
-            vm_cmd,
-            "&& sudo chroma-config profile register /vagrant/stratagem-server.profile \
-        && sudo chroma-config profile register /vagrant/stratagem-client.profile \
-        && sudo systemctl restart iml-manager.target"
-        );
-    }
-
-    rsync(cluster_config.manager).await?;
-
-    run_vm_command(cluster_config.manager, vm_cmd.as_str())
-        .await?
-        .checked_status()
-        .await?;
-
-    Ok(())
-}
-
-pub async fn remove_rpm_setup_files() {}
 
 pub struct ClusterConfig {
     manager: &'static str,

@@ -26,13 +26,17 @@ impl From<&SetupConfigType> for String {
         match config {
             SetupConfigType::RpmSetup(c) => format!(
                 r#"USE_STRATAGEM = {}
-BRANDING = "{}""#,
+BRANDING = "{}"
+RUST_LOG = debug
+LOG_LEVEL = 10"#,
                 if c.use_stratagem { "True" } else { "False" },
                 c.branding.to_string()
             ),
             SetupConfigType::DockerSetup(c) => format!(
                 r#"USE_STRATAGEM={}
-            BRANDING={}"#,
+BRANDING={}
+RUST_LOG = debug
+LOG_LEVEL = 10"#,
                 c.use_stratagem,
                 c.branding.to_string()
             ),
