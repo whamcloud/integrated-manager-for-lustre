@@ -136,7 +136,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 Input::Commands(cmds) => {
                     // use the (little) optimization:
                     // if we already have the commands and they all finished, we don't need to poll them anymore
-                    model.assign_commands(cmds);
+                    model.update_commands(cmds);
                     if !is_all_finished(&model.commands) {
                         orders.send_msg(Msg::FetchTree);
                     }
@@ -157,7 +157,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             model.commands_loading = false;
             match *commands_data_result {
                 Ok(api_list) => {
-                    model.assign_commands(api_list.objects.into_iter().map(Arc::new).collect());
+                    model.update_commands(api_list.objects.into_iter().map(Arc::new).collect());
                 }
                 Err(e) => {
                     error!(format!("Failed to fetch commands {:#?}", e));
@@ -172,7 +172,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::FetchedJobs(jobs_data_result) => match *jobs_data_result {
             Ok(api_list) => {
-                model.assign_jobs(api_list.objects.into_iter().map(Arc::new).collect());
+                model.update_jobs(api_list.objects.into_iter().map(Arc::new).collect());
             }
             Err(e) => {
                 error!(format!("Failed to fetch jobs {:#?}", e));
@@ -181,7 +181,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         },
         Msg::FetchedSteps(steps_data_result) => match *steps_data_result {
             Ok(api_list) => {
-                model.assign_steps(api_list.objects.into_iter().map(Arc::new).collect());
+                model.update_steps(api_list.objects.into_iter().map(Arc::new).collect());
             }
             Err(e) => {
                 error!(format!("Failed to fetch steps {:#?}", e));
@@ -683,20 +683,23 @@ impl Model {
         self.select = Default::default();
     }
 
-    fn assign_commands(&mut self, cmds: Vec<Arc<Command>>) {
-        self.commands = convert_to_rich_hashmap(cmds, extract_children_from_cmd);
+    fn update_commands(&mut self, cmds: Vec<Arc<Command>>) {
+        let commands = convert_to_rich_hashmap(cmds, extract_children_from_cmd);
+        self.commands.extend(commands);
         let tuple = self.check_back_consistency();
         self.refresh_view(tuple);
     }
 
-    fn assign_jobs(&mut self, jobs: Vec<Arc<Job0>>) {
-        self.jobs = convert_to_rich_hashmap(jobs, extract_children_from_job);
+    fn update_jobs(&mut self, jobs: Vec<Arc<Job0>>) {
+        let jobs = convert_to_rich_hashmap(jobs, extract_children_from_job);
+        self.jobs.extend(jobs);
         let tuple = self.check_back_consistency();
         self.refresh_view(tuple);
     }
 
-    fn assign_steps(&mut self, steps: Vec<Arc<Step>>) {
-        self.steps = convert_to_rich_hashmap(steps, extract_children_from_step);
+    fn update_steps(&mut self, steps: Vec<Arc<Step>>) {
+        let steps = convert_to_rich_hashmap(steps, extract_children_from_step);
+        self.steps.extend(steps);
         let tuple = self.check_back_consistency();
         self.refresh_view(tuple);
     }
@@ -914,9 +917,9 @@ mod tests {
             let (c, j, s) = prepare_subset(&db, &sel_cmd_ids);
             model.clear();
             model.select = select.clone();
-            model.assign_commands(c.clone());
-            model.assign_jobs(j.clone());
-            model.assign_steps(s.clone());
+            model.update_commands(c.clone());
+            model.update_jobs(j.clone());
+            model.update_steps(s.clone());
             let expected_cmd = to_str_vec(std::mem::replace(&mut model.commands_view, Vec::new()));
             let expected_jobs = to_str_hm(std::mem::replace(&mut model.jobs_graphs, HashMap::new()));
             let expected_steps = to_str_hm(std::mem::replace(&mut model.steps_view, HashMap::new()));
@@ -928,9 +931,9 @@ mod tests {
                 // we simulate, that FetchCommands, FetchJobs and FetchSteps come in arbitrary order
                 for p in &permutation {
                     match p {
-                        1 => model.assign_commands(c.clone()),
-                        2 => model.assign_jobs(j.clone()),
-                        3 => model.assign_steps(s.clone()),
+                        1 => model.update_commands(c.clone()),
+                        2 => model.update_jobs(j.clone()),
+                        3 => model.update_steps(s.clone()),
                         _ => unreachable!(),
                     }
                 }
