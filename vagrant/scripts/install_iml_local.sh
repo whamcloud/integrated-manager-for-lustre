@@ -81,11 +81,10 @@ failovermethod=priority
 enabled=0
 
 [pgdg96]
-name=PostgreSQL 9.6 for RHEL/CentOS $releasever - $basearch
+name=PostgreSQL 9.6 for RHEL/CentOS 7 - x86_64
 baseurl=https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64
 enabled=1
-gpgcheck=1
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-PGDG
+gpgcheck=0
 
 [copr:copr.fedorainfracloud.org:managerforlustre:buildtools]
 name=Copr repo for buildtools owned by managerforlustre
