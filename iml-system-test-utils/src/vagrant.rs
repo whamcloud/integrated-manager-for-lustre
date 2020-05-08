@@ -144,107 +144,24 @@ pub async fn rsync(host: &str) -> Result<(), CmdError> {
     x.arg("rsync").arg(host).checked_status().await
 }
 
-pub async fn configure_dropins(path: &str, hosts: &[&str]) -> Result<(), CmdError> {
-    let path_dir = canonicalize(format!("../iml-system-test-utils/{}", path)).await?;
-
-    // Create service override directory
-    let mut ls = Command::new("ls");
-    ls.current_dir(path_dir);
-
-    tracing::debug!("getting ls output for {}", path);
-    let output = ls.checked_output().await?;
-    let dropin_names = str::from_utf8(&output.stdout).expect("Couldn't get dropin list.");
-    tracing::debug!("dropin names: {}", dropin_names);
-
-    let dropin_futures = dropin_names
-        .lines()
-        .map(|l| format!("{}.service.d", l.replace("-dropin.conf", "")))
-        .map(|l| async move {
-            tracing::debug!("creating directory {} on {:?}", l, hosts);
-            ssh::create_unit_override_dir(hosts, l.as_str()).await?;
-            Ok::<_, CmdError>(())
-        });
-
-    try_join_all(dropin_futures).await?;
-
-    let scp_futures = dropin_names
-        .lines()
-        .map(|l| (format!("{}.service.d", l.replace("-dropin.conf", "")), l))
-        .map(|(dir, dropin)| async move {
-            ssh::scp_up_parallel(
-                hosts,
-                format!("../iml-system-test-utils/{}/{}", path.to_string(), dropin).as_str(),
-                format!("/etc/systemd/system/{}/{}", dir, dropin).as_str(),
-            )
-            .await?;
-
-            Ok::<_, CmdError>(())
-        });
-
-    tracing::debug!("scping dropin files to {:?}", hosts);
-    try_join_all(scp_futures).await?;
-
-    Ok(())
-}
-
-pub async fn configure_manager_setup(
+pub async fn configure_manager_overrides(
     setup: &SetupConfigType,
     cluster_config: &ClusterConfig,
 ) -> Result<(), CmdError> {
-    ssh::create_iml_setup_dir(cluster_config.manager_ip).await?;
-
     let config: String = setup.into();
 
-    ssh::ssh_exec(
-        cluster_config.manager_ip,
-        format!(r#"echo "{}" > {}/config"#, config, iml::IML_SETUP_PATH).as_str(),
-    )
-    .await?;
+    ssh::create_iml_config_dir(cluster_config.manager_ip).await?;
 
-    let setup_config: &SetupConfig = setup.into();
-
-    if setup_config.use_stratagem {
-        ssh::ssh_exec(
-            cluster_config.manager_ip,
-            format!(
-                r#"cat <<EOF > {}
-{}
-EOF
-"#,
-                format!("{}/stratagem-server.profile", iml::IML_SETUP_PATH),
-                STRATAGEM_SERVER_PROFILE,
-            )
-            .as_str(),
-        )
-        .await?;
-
-        ssh::ssh_exec(
-            cluster_config.manager_ip,
-            format!(
-                r#"cat <<EOF > {}
-{}
-EOF
-"#,
-                format!("{}/stratagem-client.profile", iml::IML_SETUP_PATH),
-                STRATAGEM_CLIENT_PROFILE,
-            )
-            .as_str(),
-        )
-        .await?;
-    }
-
-    Ok(())
+    ssh::set_manager_overrides(cluster_config.manager_ip, config.as_str()).await
 }
 
-pub async fn configure_agent_dropins(config: &ClusterConfig) -> Result<(), CmdError> {
+pub async fn configure_agent_overrides(config: &ClusterConfig) -> Result<(), CmdError> {
     let hosts = &config.storage_server_ips()[..];
+    let config = r#"RUST_LOG=debug
+LOG_LEVEL=10"#;
+    ssh::create_agent_config_dir(hosts).await?;
 
-    tracing::debug!("Configuring agent dropins");
-    configure_dropins("agent-dropins", hosts).await?;
-
-    ssh::restart_storage_server_target(hosts).await?;
-
-    Ok(())
+    ssh::set_agent_overrides(hosts, config).await
 }
 
 pub async fn detect_fs(config: &ClusterConfig) -> Result<(), CmdError> {
@@ -403,7 +320,7 @@ pub async fn setup_iml_install(
 ) -> Result<(), CmdError> {
     up().await?.arg(config.manager).checked_status().await?;
 
-    configure_manager_setup(setup_config, config).await?;
+    configure_manager_overrides(setup_config, config).await?;
 
     match env::var("REPO_URI") {
         Ok(x) => {
@@ -427,6 +344,8 @@ pub async fn setup_iml_install(
         .args(&vec![config.manager][..])
         .checked_status()
         .await?;
+
+    configure_rpm_setup(setup_config, &config).await?;
 
     halt()
         .await?
@@ -455,6 +374,8 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
 ) -> Result<(), CmdError> {
     setup_iml_install(&config.all(), &setup_config, &config).await?;
 
+    configure_agent_overrides(config).await?;
+
     for (profile, hosts) in server_map {
         run_vm_command(
             config.manager,
@@ -464,8 +385,6 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
         .checked_status()
         .await?;
     }
-
-    configure_agent_dropins(config).await?;
 
     halt().await?.args(config.all()).checked_status().await?;
 
@@ -487,9 +406,9 @@ pub async fn add_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     server_map: &HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
-    iml::server_add(&server_map).await?;
+    configure_agent_overrides(config).await?;
 
-    configure_agent_dropins(config).await?;
+    iml::server_add(&server_map).await?;
 
     halt()
         .await?
@@ -508,6 +427,62 @@ pub async fn add_docker_servers<S: std::hash::BuildHasher>(
         .args(&config.all_but_adm())
         .checked_status()
         .await
+}
+
+pub async fn configure_rpm_setup(
+    setup: &SetupConfigType,
+    cluster_config: &ClusterConfig,
+) -> Result<(), CmdError> {
+    let setup_config: &SetupConfig = setup.into();
+
+    if setup_config.use_stratagem {
+        ssh::create_iml_config_dir(cluster_config.manager_ip).await?;
+
+        ssh::ssh_exec(
+            cluster_config.manager_ip,
+            format!(
+                r#"cat <<EOF > {}
+{}
+EOF
+"#,
+                format!("{}/stratagem-server.profile", iml::IML_RPM_CONFIG_PATH),
+                STRATAGEM_SERVER_PROFILE,
+            )
+            .as_str(),
+        )
+        .await?;
+
+        ssh::ssh_exec(
+            cluster_config.manager_ip,
+            format!(
+                r#"cat <<EOF > {}
+{}
+EOF
+"#,
+                format!("{}/stratagem-client.profile", iml::IML_RPM_CONFIG_PATH),
+                STRATAGEM_CLIENT_PROFILE,
+            )
+            .as_str(),
+        )
+        .await?;
+
+        run_vm_command(
+            cluster_config.manager,
+            format!(
+                "sudo chroma-config profile register {}/stratagem-server.profile \
+        && sudo chroma-config profile register {}/stratagem-client.profile \
+        && sudo systemctl restart iml-manager.target",
+                iml::IML_RPM_CONFIG_PATH,
+                iml::IML_RPM_CONFIG_PATH
+            )
+            .as_str(),
+        )
+        .await?
+        .checked_status()
+        .await?;
+    }
+
+    Ok(())
 }
 
 pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(

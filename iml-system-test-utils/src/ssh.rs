@@ -248,16 +248,6 @@ pub async fn create_iml_diagnostics<'a, 'b>(
         .await
 }
 
-pub async fn create_unit_override_dir(hosts: &[&str], unit_name: &str) -> Result<(), CmdError> {
-    ssh_exec_parallel(
-        hosts,
-        format!("mkdir -p /etc/systemd/system/{}", unit_name).as_str(),
-    )
-    .await?;
-
-    Ok(())
-}
-
 pub async fn restart_manager(adm_host: &str) -> Result<(), CmdError> {
     ssh_exec(adm_host, "systemctl restart iml-manager.target").await?;
 
@@ -271,13 +261,63 @@ pub async fn restart_storage_server_target(hosts: &[&str]) -> Result<(), CmdErro
 }
 
 pub async fn setup_agent_debug(hosts: &[&str]) -> Result<(), CmdError> {
-    ssh_exec_parallel(hosts, r#"touch /tmp/chroma-agent-debug && mkdir -p /etc/iml && echo "RUST_LOG=debug" > /etc/iml/integration-test-overrides.conf"#).await?;
+    ssh_exec_parallel(hosts, "touch /tmp/chroma-agent-debug").await?;
 
     Ok(())
 }
 
-pub async fn create_iml_setup_dir(host: &str) -> Result<(), CmdError> {
-    ssh_exec(host, format!("mkdir -p {}", iml::IML_SETUP_PATH).as_str()).await?;
+pub async fn create_iml_config_dir(host: &str) -> Result<(), CmdError> {
+    ssh_exec(
+        host,
+        format!("mkdir -p {}", iml::IML_RPM_CONFIG_PATH).as_str(),
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn set_manager_overrides(host: &str, config: &str) -> Result<(), CmdError> {
+    ssh_exec(
+        host,
+        format!(
+            r#"CAT <<EOF > {}/overrides.conf
+{}
+EOF
+"#,
+            iml::IML_RPM_CONFIG_PATH,
+            config
+        )
+        .as_str(),
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn create_agent_config_dir(hosts: &[&str]) -> Result<(), CmdError> {
+    ssh_exec_parallel(
+        hosts,
+        format!("mkdir -p {}", iml::IML_AGENT_CONFIG_PATH).as_str(),
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn set_agent_overrides(hosts: &[&str], config: &str) -> Result<(), CmdError> {
+    ssh_exec_parallel(
+        hosts,
+        format!(
+            r#"CAT <<EOF > {}/overrides.conf
+{}
+EOF
+"#,
+            iml::IML_AGENT_CONFIG_PATH,
+            config
+        )
+        .as_str(),
+    )
+    .await?;
 
     Ok(())
 }
