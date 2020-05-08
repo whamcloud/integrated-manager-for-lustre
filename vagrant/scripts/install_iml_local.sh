@@ -1,7 +1,6 @@
 set -x
 
-# Install both architectures of nosync per docs
-yum install -y mock-1.2.17 nosync.x86_64 nosync.i686
+yum install -y mock-1.2.17 nosync.x86_64
 
 set +e
 
