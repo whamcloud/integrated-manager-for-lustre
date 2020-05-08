@@ -73,7 +73,7 @@ pub fn update_virtual_devices(devices: Vec<(Fqdn, Device)>) -> Vec<(Fqdn, Device
     let devices2 = devices.clone();
 
     let len = devices.len();
-    for (i, (f, d)) in devices.into_iter().enumerate() {
+    for (i, (f, d)) in devices.iter().enumerate() {
         let ps = collect_virtual_device_parents(&d, 0, None);
         // The incoming tree (from current host) can have less virtual device parents, than trees from the DB (from other hosts).
         // In the incoming data there are only virtual devices that are local to that host (i.e. are mounted there).
@@ -98,11 +98,11 @@ pub fn update_virtual_devices(devices: Vec<(Fqdn, Device)>) -> Vec<(Fqdn, Device
     results
 }
 
-fn collect_virtual_device_parents(
-    d: &Device,
+fn collect_virtual_device_parents<'d>(
+    d: &'d Device,
     level: usize,
-    parent: Option<&Device>,
-) -> Vec<Device> {
+    parent: Option<&'d Device>,
+) -> Vec<&'d Device> {
     let mut results = vec![];
 
     if is_virtual(d) {
@@ -111,9 +111,7 @@ fn collect_virtual_device_parents(
             parent.map(|x| to_display(x)).unwrap_or("None".into()),
             to_display(d)
         );
-        vec![parent
-            .expect("Tried to push to parents the parent of the Root, which doesn't exist")
-            .clone()]
+        vec![parent.expect("Tried to push to parents the parent of the Root, which doesn't exist")]
     } else {
         match d {
             Device::Root(dd) => {
@@ -148,7 +146,7 @@ fn collect_virtual_device_parents(
 // This function accepts ownership of `Device` to be able to reconstruct
 // its `children`, which is an `OrdSet`, inside of `insert`.
 // `OrdSet` doesn't have `iter_mut` so iterating `children` and mutating them in-place isn't possible.
-fn insert_virtual_devices(mut d: Device, parents: &collections::HashSet<Device>) -> Device {
+fn insert_virtual_devices(mut d: Device, parents: &collections::HashSet<&Device>) -> Device {
     for p in parents {
         d = insert(d, &p);
     }
