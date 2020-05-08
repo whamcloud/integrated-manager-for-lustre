@@ -145,17 +145,22 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         all_devices.push((f, d));
 
+        let middle1: DateTime<Local> = Local::now();
+
         let updated_devices = update_virtual_devices(all_devices);
+
+        let middle2: DateTime<Local> = Local::now();
 
         save_devices(updated_devices, &pool).await;
 
         let end: DateTime<Local> = Local::now();
 
         tracing::info!(
-            "Iteration {}: end: {}, duration: {:3} ms",
+            "Iteration {}: end: {}, duration: {:3} ms, resolution durarion: {:3} ms",
             i,
             end,
-            (end - begin).num_milliseconds()
+            (end - begin).num_milliseconds(),
+            (middle2 - middle1).num_milliseconds(),
         );
 
         i = i.wrapping_add(1);
