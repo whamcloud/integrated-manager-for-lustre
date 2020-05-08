@@ -1,6 +1,7 @@
 set -x
 
-yum install -y mock-1.2.17
+# Install both architectures of nosync per docs
+yum install -y mock-1.2.17 nosync.x86_64 nosync.i686
 
 set +e
 
@@ -26,6 +27,7 @@ config_opts['releasever'] = '7'
 config_opts['plugin_conf']['bind_mount_enable'] = True
 config_opts['plugin_conf']['bind_mount_opts']['dirs'].append(('/home/mocker/.cargo', '/tmp/.cargo' ))
 config_opts['plugin_conf']['bind_mount_opts']['dirs'].append(('/home/mocker/target', '/tmp/target' ))
+config_opts['nosync'] = True
 
 config_opts['yum.conf'] = """
 [main]
