@@ -12,7 +12,10 @@ mkdir -p /home/mocker/target
 
 set -e
 
-cat << EOF > /etc/mock/iml.cfg
+new=/etc/mock/iml.cfg.new
+old=/etc/mock/iml.cfg
+
+cat << EOF > $new
 config_opts['root'] = 'epel-7-x86_64'
 config_opts['target_arch'] = 'x86_64'
 config_opts['legal_host_arches'] = ('x86_64',)
@@ -106,6 +109,10 @@ enabled=1
 enabled_metadata=1
 """
 EOF
+
+if (! [ -f $old ]) || (! cmp --silent $old $new); then
+    mv $new $old;
+fi
 
 rm -rf /tmp/iml/_topdir/
 
