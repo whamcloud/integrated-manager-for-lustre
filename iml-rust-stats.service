@@ -10,6 +10,7 @@ After=rabbitmq-server.service
 Type=simple
 Environment=RUST_LOG=info
 EnvironmentFile=/var/lib/chroma/iml-settings.conf
+EnvironmentFile=-/var/lib/chroma/overrides.conf
 ExecStart=/bin/iml-stats
 Restart=always
 RestartSec=2
