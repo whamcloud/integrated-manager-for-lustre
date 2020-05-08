@@ -280,7 +280,7 @@ pub async fn set_manager_overrides(host: &str, config: &str) -> Result<(), CmdEr
     ssh_exec(
         host,
         format!(
-            r#"CAT <<EOF > {}/overrides.conf
+            r#"cat <<EOF > {}/overrides.conf
 {}
 EOF
 "#,
@@ -308,7 +308,7 @@ pub async fn set_agent_overrides(hosts: &[&str], config: &str) -> Result<(), Cmd
     ssh_exec_parallel(
         hosts,
         format!(
-            r#"CAT <<EOF > {}/overrides.conf
+            r#"cat <<EOF > {}/overrides.conf
 {}
 EOF
 "#,
