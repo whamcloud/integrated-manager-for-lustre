@@ -162,6 +162,7 @@ fn new_children(d: Device, to_insert: &Device) -> OrdSet<Device> {
 }
 
 fn insert(mut d: Device, to_insert: &Device) -> Device {
+    tracing::trace!("Trying to insert to {}", to_display(&d));
     if compare_selected_fields(&d, to_insert) {
         tracing::debug!(
             "Inserting device {} children to {}",
@@ -225,6 +226,14 @@ mod tests {
     use std::fs;
     use test_case::test_case;
 
+    fn init_subscriber() {
+        if let Ok(o) = std::env::var("ENABLE_LOG") {
+            if o == "1" {
+                tracing_subscriber::fmt::init();
+            }
+        }
+    }
+
     fn deser_fixture(path1: &str, path2: &str, fqdn1: Fqdn, fqdn2: Fqdn) -> Vec<(Fqdn, Device)> {
         let device1 = fs::read_to_string(path1).unwrap();
         let device1: Device = serde_json::from_str(&device1).unwrap();
@@ -281,6 +290,8 @@ mod tests {
         "oss2.local"
     )]
     fn test(test_name: &str, path1: &str, path2: &str, fqdn1: &str, fqdn2: &str) {
+        init_subscriber();
+
         let devices = deser_fixture(path1, path2, Fqdn(fqdn1.into()), Fqdn(fqdn2.into()));
 
         let results = update_virtual_devices(devices);
