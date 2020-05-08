@@ -1,5 +1,6 @@
 BUILDROOT:=$(shell [ -d "/build" ] && echo "/build" || echo ".")
 TMPDIR:=$(shell mktemp -d)
+TARGET:=target
 
 MFL_COPR_REPO=managerforlustre/manager-for-lustre-devel
 MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
@@ -41,7 +42,7 @@ srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/release/rust-iml
 	PQ_LIB_DIR=/usr/pgsql-9.6/lib cargo build --release
-	cp target/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,mailbox,ntp,ostpool,postoffice,stats,device,warp-drive} \
+	cp ${TARGET}/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,mailbox,ntp,ostpool,postoffice,stats,device,warp-drive} \
 		iml-agent-comms.service \
 		iml-mailbox.service \
 		iml-postoffice.service \
@@ -56,7 +57,7 @@ srpm:
 		iml-mailbox.conf \
 		iml-ntp.service \
 		${TMPDIR}/release/rust-iml
-	cp target/release/iml ${TMPDIR}/release/rust-iml
+	cp ${TARGET}/release/iml ${TMPDIR}/release/rust-iml
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/rust-iml.tar.gz -C ${TMPDIR}/release/rust-iml .
 	cp rust-iml.spec ${TMPDIR}/_topdir/SPECS/
 	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-iml.spec
