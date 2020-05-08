@@ -1772,13 +1772,15 @@ class FailoverTargetJob(MigrateTargetJob):
         self.target.save()
 
     def get_steps(self):
+        host = self.target.failover_hosts[0]
+
         return [
             (
                 FailoverTargetStep,
                 {
                     "target": self.target,
-                    "host": self.target.failover_hosts[0],
-                    "secondary_mount": self.target.managedtargetmount_set.get(primary=False),
+                    "host": host,
+                    "secondary_mount": self.target.managedtargetmount_set.get(primary=False, host=host),
                 },
             )
         ]
