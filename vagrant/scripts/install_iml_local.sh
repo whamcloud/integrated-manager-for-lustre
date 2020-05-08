@@ -112,7 +112,7 @@ enabled_metadata=1
 """
 EOF
 
-if (! [ -f $old ]) || (! cmp --silent $old $new); then
+if { ! [ -f $old ]; } || { ! cmp --silent $old $new; } ; then
     mv $new $old;
 fi
 
