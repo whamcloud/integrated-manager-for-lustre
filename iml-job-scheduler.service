@@ -6,6 +6,7 @@ After=postgresql-9.6.service
 
 [Service]
 Type=simple
+EnvironmentFile=-/var/lib/chroma/overrides.conf
 ExecStart=/bin/python /usr/share/chroma-manager/manage.py chroma_service --name=job_scheduler job_scheduler
 Restart=on-failure
 RestartSec=2
