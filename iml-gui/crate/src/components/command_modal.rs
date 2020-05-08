@@ -124,20 +124,21 @@ pub enum Msg {
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::Modal(msg) => {
+            if msg == modal::Msg::Close {
+                model.clear();
+            }
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
         }
         Msg::FireCommands(cmds) => {
             model.select = Select(HashSet::new());
             model.modal.open = true;
 
-            // clear model from the previous command modal work
-            model.clear();
             match cmds {
                 Input::Commands(cmds) => {
                     // use the (little) optimization:
                     // if we already have the commands and they all finished, we don't need to poll them anymore
                     model.update_commands(cmds);
-                    if !is_all_finished(&model.commands) {
+                    if !is_all_commands_finished(&model.commands) {
                         orders.send_msg(Msg::FetchTree);
                     }
                 }
@@ -149,7 +150,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::FetchTree => {
             model.tree_cancel = None;
-            if !is_all_finished(&model.commands) {
+            if !is_all_commands_finished(&model.commands) {
                 schedule_fetch_tree(model, orders);
             }
         }
@@ -164,7 +165,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     orders.skip();
                 }
             }
-            if !is_all_finished(&model.commands) {
+            if !is_all_commands_finished(&model.commands) {
                 let (cancel, fut) = sleep_with_handle(POLL_INTERVAL, Msg::FetchTree, Msg::Noop);
                 model.tree_cancel = Some(cancel);
                 orders.perform_cmd(fut);
@@ -200,17 +201,23 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
 fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     let (cmd_ids, job_ids, _) = &model.select.split();
-    let load_cmd_ids = extract_sorted_keys(&model.commands);
+    // grab all the dependencies for the chosen items, except those that already loaded and completed
+    let load_cmd_ids = extract_sorted_keys(&model.commands)
+        .into_iter()
+        .filter(|c| !model.commands.get(c).map(|cmd| is_finished_cmd(cmd)).unwrap_or(false))
+        .collect::<Vec<u32>>();
     let load_job_ids = cmd_ids
         .iter()
-        .filter(|id| model.commands.contains_key(id))
-        .flat_map(|id| model.commands[id].deps())
+        .filter(|c| model.commands.contains_key(c))
+        .flat_map(|c| model.commands[c].deps())
+        .filter(|j| !model.jobs.get(j).map(|job| is_finished_job(job)).unwrap_or(false))
         .copied()
         .collect::<Vec<u32>>();
     let load_step_ids = job_ids
         .iter()
-        .filter(|id| model.jobs.contains_key(id))
-        .flat_map(|id| model.jobs[id].deps())
+        .filter(|j| model.jobs.contains_key(j))
+        .flat_map(|j| model.jobs[j].deps())
+        .filter(|s| !model.steps.get(s).map(|step| is_finished_step(step)).unwrap_or(false))
         .copied()
         .collect::<Vec<u32>>();
 
@@ -475,12 +482,12 @@ fn step_item_view(step: &RichStep, is_open: bool) -> Vec<Node<Msg>> {
 }
 
 fn status_text(cmd: &RichCommand) -> &'static str {
-    if cmd.complete {
-        "Complete"
+    if cmd.cancelled {
+        "Cancelled"
     } else if cmd.errored {
         "Errored"
-    } else if cmd.cancelled {
-        "Cancelled"
+    } else if cmd.complete {
+        "Complete"
     } else {
         "Running"
     }
@@ -572,12 +579,20 @@ fn extract_uri_id<T: EndpointName>(input: &str) -> Option<u32> {
     })
 }
 
-fn is_finished(cmd: &RichCommand) -> bool {
+fn is_finished_cmd(cmd: &RichCommand) -> bool {
     cmd.complete
 }
 
-fn is_all_finished(cmds: &HashMap<u32, Arc<RichCommand>>) -> bool {
-    cmds.values().all(|c| is_finished(c))
+fn is_finished_job(job: &RichJob) -> bool {
+    job.state == "complete"
+}
+
+fn is_finished_step(step: &RichStep) -> bool {
+    step.state == "success"
+}
+
+fn is_all_commands_finished(cmds: &HashMap<u32, Arc<RichCommand>>) -> bool {
+    cmds.values().all(|c| is_finished_cmd(c))
 }
 
 fn perform_click(select: &mut Select, id: TypedId) -> bool {
