@@ -95,7 +95,6 @@ pub enum Input {
 pub struct Model {
     pub tree_cancel: Option<oneshot::Sender<()>>,
 
-    pub commands_loading: bool,
     pub commands: HashMap<u32, Arc<RichCommand>>,
     pub commands_view: Vec<Arc<RichCommand>>,
 
@@ -155,7 +154,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
         }
         Msg::FetchedCommands(commands_data_result) => {
-            model.commands_loading = false;
             match *commands_data_result {
                 Ok(api_list) => {
                     model.update_commands(api_list.objects.into_iter().map(Arc::new).collect());
@@ -242,7 +240,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
             Msg::Modal,
             modal::content_view(
                 Msg::Modal,
-                if model.commands_loading {
+                if model.commands_view.is_empty() {
                     vec![
                         modal::title_view(Msg::Modal, span!["Loading Command"]),
                         div![
@@ -688,7 +686,6 @@ pub fn is_subset<T: PartialEq>(part: &[T], all: &[T]) -> bool {
 impl Model {
     fn clear(&mut self) {
         self.tree_cancel = None;
-        self.commands_loading = true;
         self.commands.clear();
         self.commands_view.clear();
         self.jobs.clear();
