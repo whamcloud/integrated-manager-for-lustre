@@ -1,8 +1,5 @@
-use device_types::devices::{
-    Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup, Zpool,
-};
+use device_types::devices::Device;
 use im::OrdSet;
-use std::path::PathBuf;
 
 pub fn children_owned(d: Device) -> OrdSet<Device> {
     match d {
@@ -47,63 +44,91 @@ pub fn children(d: &Device) -> Option<&OrdSet<Device>> {
 }
 
 pub fn compare_selected_fields(a: &Device, b: &Device) -> bool {
-    selected_fields(a) == selected_fields(b)
-}
-
-fn selected_fields(d: &Device) -> Device {
-    match d {
-        Device::Root(d) => Device::Root(Root {
-            children: OrdSet::new(),
-            ..d.clone()
-        }),
-        Device::ScsiDevice(d) => Device::ScsiDevice(ScsiDevice {
-            children: OrdSet::new(),
-            major: String::new(),
-            minor: String::new(),
-            devpath: PathBuf::new(),
-            paths: OrdSet::new(),
-            ..d.clone()
-        }),
-        Device::Partition(d) => Device::Partition(Partition {
-            children: OrdSet::new(),
-            major: String::new(),
-            minor: String::new(),
-            devpath: PathBuf::new(),
-            paths: OrdSet::new(),
-            ..d.clone()
-        }),
-        Device::MdRaid(d) => Device::MdRaid(MdRaid {
-            children: OrdSet::new(),
-            major: String::new(),
-            minor: String::new(),
-            paths: OrdSet::new(),
-            ..d.clone()
-        }),
-        Device::Mpath(d) => Device::Mpath(Mpath {
-            children: OrdSet::new(),
-            major: String::new(),
-            minor: String::new(),
-            devpath: PathBuf::new(),
-            paths: OrdSet::new(),
-            ..d.clone()
-        }),
-        Device::VolumeGroup(d) => Device::VolumeGroup(VolumeGroup {
-            children: OrdSet::new(),
-            ..d.clone()
-        }),
-        Device::LogicalVolume(d) => Device::LogicalVolume(LogicalVolume {
-            children: OrdSet::new(),
-            major: String::new(),
-            minor: String::new(),
-            devpath: PathBuf::new(),
-            paths: OrdSet::new(),
-            ..d.clone()
-        }),
-        Device::Zpool(d) => Device::Zpool(Zpool {
-            children: OrdSet::new(),
-            ..d.clone()
-        }),
-        Device::Dataset(d) => Device::Dataset(d.clone()),
+    match a {
+        Device::Root(_) => match b {
+            Device::Root(_) => true,
+            _ => false,
+        },
+        Device::ScsiDevice(da) => match b {
+            Device::ScsiDevice(db) => {
+                if da.serial == db.serial {
+                    true
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        },
+        Device::Partition(da) => match b {
+            Device::Partition(db) => {
+                if da.serial == db.serial {
+                    true
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        },
+        Device::MdRaid(da) => match b {
+            Device::MdRaid(db) => {
+                if da.uuid == db.uuid {
+                    true
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        },
+        Device::Mpath(da) => match b {
+            Device::Mpath(db) => {
+                if da.serial == db.serial {
+                    true
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        },
+        Device::VolumeGroup(da) => match b {
+            Device::VolumeGroup(db) => {
+                if da.uuid == db.uuid {
+                    true
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        },
+        Device::LogicalVolume(da) => match b {
+            Device::LogicalVolume(db) => {
+                if da.uuid == db.uuid {
+                    true
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        },
+        Device::Zpool(da) => match b {
+            Device::Zpool(db) => {
+                if da.guid == db.guid {
+                    true
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        },
+        Device::Dataset(da) => match b {
+            Device::Dataset(db) => {
+                if da.guid == db.guid {
+                    true
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        },
     }
 }
 
