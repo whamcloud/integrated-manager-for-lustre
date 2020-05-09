@@ -147,6 +147,7 @@ services:
       - "c1.local:10.73.10.31"
     environment:
       - "NTP_SERVER_HOSTNAME=10.73.10.1"
+      - "LOG_LEVEL=10"
   iml-warp-drive:
     environment:
       - RUST_LOG=debug
@@ -175,9 +176,6 @@ services:
     environment:
       - LOG_LEVEL=10
   http-agent:
-    environment:
-      - LOG_LEVEL=10
-  job-scheduler:
     environment:
       - LOG_LEVEL=10
   lustre-audit:
