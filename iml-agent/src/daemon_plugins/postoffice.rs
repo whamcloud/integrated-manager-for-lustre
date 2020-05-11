@@ -20,7 +20,7 @@ use std::{
     pin::Pin,
     sync::Arc,
 };
-use stream_cancel::{StreamExt, Trigger, Tripwire};
+use stream_cancel::{Trigger, Tripwire};
 use tokio::{fs, net::UnixListener, sync::Mutex};
 use tokio_util::codec::{BytesCodec, FramedRead};
 

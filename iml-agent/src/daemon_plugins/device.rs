@@ -11,7 +11,7 @@ use futures::{
     future, lock::Mutex, Future, FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
 use std::{io, pin::Pin, sync::Arc};
-use stream_cancel::{StreamExt as _, Trigger, Tripwire};
+use stream_cancel::{Trigger, Tripwire};
 use tokio::{io::AsyncWriteExt, net::UnixStream};
 use tokio_util::codec::{FramedRead, LinesCodec};
 
