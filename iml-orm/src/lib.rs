@@ -29,11 +29,27 @@ pub mod repo;
 
 #[cfg(feature = "postgres-interop")]
 use diesel::{
+    prelude::RunQueryDsl,
+    query_builder::{QueryFragment, QueryId},
     r2d2::{ConnectionManager, Pool},
     PgConnection,
 };
 #[cfg(feature = "postgres-interop")]
 use iml_manager_env::get_db_conn_string;
+
+#[cfg(feature = "postgres-interop")]
+/// Allows for a generic return type for Insert statements, that can be used in either a sync or async
+/// context.
+pub trait Executable:
+    RunQueryDsl<diesel::PgConnection> + QueryFragment<diesel::pg::Pg> + QueryId
+{
+}
+
+#[cfg(feature = "postgres-interop")]
+impl<T> Executable for T where
+    T: RunQueryDsl<diesel::PgConnection> + QueryFragment<diesel::pg::Pg> + QueryId
+{
+}
 
 #[cfg(feature = "postgres-interop")]
 pub type DbPool = Pool<ConnectionManager<diesel::PgConnection>>;

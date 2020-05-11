@@ -80,14 +80,24 @@ pub async fn cmd(cmd: Option<Cmd>) -> Result<(), ImlManagerCliError> {
                 .into());
             }
 
-            profile::upsert_user_profile(profile, &pool).await?;
+            let (e1, e2, e3) = profile::upsert_user_profile(profile);
+
+            e1.execute_async(&pool).await?;
+
+            futures::future::try_join(e2.execute_async(&pool), e3.execute_async(&pool)).await?;
 
             display_success("Profile loaded");
         }
         Some(Cmd::Remove { name }) => {
             let pool = iml_orm::pool()?;
 
-            profile::remove_profile_by_name(name, &pool).await?;
+            let (e1, e2, e3) = profile::remove_profile_by_name(name);
+
+            e1.execute_async(&pool).await?;
+
+            e2.execute_async(&pool).await?;
+
+            e3.execute_async(&pool).await?;
 
             display_success("Profile removed");
         }

@@ -3,11 +3,9 @@
 // license that can be found in the LICENSE file.
 
 pub use crate::models::ChromaCoreAlertstate;
-use crate::{schema::chroma_core_alertstate as a, DbPool};
+use crate::{schema::chroma_core_alertstate as a, Executable};
 use diesel::{dsl, pg::expression::array_comparison::Any, prelude::*};
-use futures::Future;
 pub use iml_wire_types::AlertRecordType;
-use tokio_diesel::AsyncRunQueryDsl;
 
 pub type AnyRecord = Any<diesel::pg::types::sql_types::Array<dsl::AsExpr<String, a::record_type>>>;
 pub type Table = a::table;
@@ -45,21 +43,14 @@ impl ChromaCoreAlertstate {
     }
 }
 
-pub async fn lower(
-    xs: Vec<AlertRecordType>,
-    host_id: i32,
-    pool: &DbPool,
-) -> Result<usize, tokio_diesel::AsyncError> {
+pub fn lower(xs: Vec<AlertRecordType>, host_id: i32) -> impl Executable {
     let q = ChromaCoreAlertstate::by_active_records(xs)
         .filter(ChromaCoreAlertstate::with_alert_item_id(host_id));
 
-    diesel::update(q)
-        .set((
-            a::active.eq(Option::<bool>::None),
-            a::end.eq(diesel::dsl::now),
-        ))
-        .execute_async(&pool)
-        .await
+    diesel::update(q).set((
+        a::active.eq(Option::<bool>::None),
+        a::end.eq(diesel::dsl::now),
+    ))
 }
 
 pub fn raise(
@@ -67,8 +58,7 @@ pub fn raise(
     msg: impl ToString,
     item_content_type_id: i32,
     item_id: i32,
-    pool: &DbPool,
-) -> impl Future<Output = Result<usize, tokio_diesel::AsyncError>> + '_ {
+) -> impl Executable {
     diesel::insert_into(a::table)
         .values((
             a::record_type.eq(record_type.to_string()),
@@ -83,5 +73,4 @@ pub fn raise(
             a::alert_item_type_id.eq(item_content_type_id),
         ))
         .on_conflict_do_nothing()
-        .execute_async(pool)
 }

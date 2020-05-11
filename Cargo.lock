@@ -1429,7 +1429,6 @@ version = "0.2.0"
 dependencies = [
  "chrono",
  "diesel",
- "futures",
  "iml-manager-env",
  "iml-wire-types",
  "ipnetwork",
