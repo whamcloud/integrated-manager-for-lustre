@@ -49,8 +49,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         AlertRecordType::UnknownTimeSyncAlert,
                     ],
                     host.id,
-                    &pool,
                 )
+                .execute_async(&pool)
                 .await?;
             }
             State::None => {
@@ -61,18 +61,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         AlertRecordType::UnknownTimeSyncAlert,
                     ],
                     host.id,
-                    &pool,
                 )
+                .execute_async(&pool)
                 .await?;
 
                 if host.is_setup() {
                     alerts::raise(
                         AlertRecordType::NoTimeSyncAlert,
-                        &format!("No running time sync clients found on {}", fqdn),
+                        format!("No running time sync clients found on {}", fqdn),
                         host.content_type_id.expect("Host has no content_type_id"),
                         host.id,
-                        &pool,
                     )
+                    .execute_async(&pool)
                     .await?;
                 }
             }
@@ -84,18 +84,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         AlertRecordType::UnknownTimeSyncAlert,
                     ],
                     host.id,
-                    &pool,
                 )
+                .execute_async(&pool)
                 .await?;
 
                 if host.is_setup() {
                     alerts::raise(
                         AlertRecordType::MultipleTimeSyncAlert,
-                        &format!("Multiple running time sync clients found on {}", fqdn),
+                        format!("Multiple running time sync clients found on {}", fqdn),
                         host.content_type_id.expect("Host has no content_type_id"),
                         host.id,
-                        &pool,
                     )
+                    .execute_async(&pool)
                     .await?;
                 }
             }
@@ -107,18 +107,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         AlertRecordType::UnknownTimeSyncAlert,
                     ],
                     host.id,
-                    &pool,
                 )
+                .execute_async(&pool)
                 .await?;
 
                 if host.is_setup() {
                     alerts::raise(
                         AlertRecordType::TimeOutOfSyncAlert,
-                        &format!("Time is out of sync on server {}", fqdn),
+                        format!("Time is out of sync on server {}", fqdn),
                         host.content_type_id.expect("Host has no content_type_id"),
                         host.id,
-                        &pool,
                     )
+                    .execute_async(&pool)
                     .await?;
                 }
             }
@@ -130,18 +130,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         AlertRecordType::TimeOutOfSyncAlert,
                     ],
                     host.id,
-                    &pool,
                 )
+                .execute_async(&pool)
                 .await?;
 
                 if host.is_setup() {
                     alerts::raise(
                         AlertRecordType::UnknownTimeSyncAlert,
-                        &format!("Unable to determine time sync status on {}", fqdn),
+                        format!("Unable to determine time sync status on {}", fqdn),
                         host.content_type_id.expect("Host has no content_type_id"),
                         host.id,
-                        &pool,
                     )
+                    .execute_async(&pool)
                     .await?;
                 }
             }

@@ -8,11 +8,10 @@ use crate::{
         chroma_core_serverprofile as sp, chroma_core_serverprofile_repolist as rl,
         chroma_core_serverprofilepackage as pl,
     },
-    DbPool,
+    Executable,
 };
 use diesel::{dsl, prelude::*};
 use std::collections::HashSet;
-use tokio_diesel::AsyncRunQueryDsl as _;
 
 pub type Table = sp::table;
 pub type Name = dsl::Eq<sp::name, String>;
@@ -61,32 +60,19 @@ impl From<UserProfile> for ChromaCoreServerprofile {
     }
 }
 
-pub async fn remove_profile_by_name(
+pub fn remove_profile_by_name(
     name: impl ToString,
-    pool: &DbPool,
-) -> Result<(), tokio_diesel::AsyncError> {
-    diesel::delete(rl::table)
-        .filter(rl::serverprofile_id.eq(name.to_string()))
-        .execute_async(&pool)
-        .await?;
+) -> (impl Executable, impl Executable, impl Executable) {
+    let e1 = diesel::delete(rl::table).filter(rl::serverprofile_id.eq(name.to_string()));
 
-    diesel::delete(pl::table)
-        .filter(pl::server_profile_id.eq(name.to_string()))
-        .execute_async(&pool)
-        .await?;
+    let e2 = diesel::delete(pl::table).filter(pl::server_profile_id.eq(name.to_string()));
 
-    diesel::delete(sp::table)
-        .filter(ChromaCoreServerprofile::with_name(name.to_string()))
-        .execute_async(&pool)
-        .await?;
+    let e3 = diesel::delete(sp::table).filter(ChromaCoreServerprofile::with_name(name.to_string()));
 
-    Ok(())
+    (e1, e2, e3)
 }
 
-pub async fn upsert_user_profile(
-    u: UserProfile,
-    pool: &DbPool,
-) -> Result<(), tokio_diesel::AsyncError> {
+pub fn upsert_user_profile(u: UserProfile) -> (impl Executable, impl Executable, impl Executable) {
     let name = u.name.clone();
 
     let repos: Vec<_> = u
@@ -110,25 +96,19 @@ pub async fn upsert_user_profile(
 
     let x = ChromaCoreServerprofile::from(u);
 
-    diesel::insert_into(sp::table)
+    let e1 = diesel::insert_into(sp::table)
         .values(x.clone())
         .on_conflict(sp::name)
         .do_update()
-        .set(x)
-        .execute_async(pool)
-        .await?;
+        .set(x);
 
-    let repo_insert = diesel::insert_into(rl::table)
+    let e2 = diesel::insert_into(rl::table)
         .values(repos)
-        .on_conflict_do_nothing()
-        .execute_async(pool);
+        .on_conflict_do_nothing();
 
-    let package_insert = diesel::insert_into(pl::table)
+    let e3 = diesel::insert_into(pl::table)
         .values(packages)
-        .on_conflict_do_nothing()
-        .execute_async(pool);
+        .on_conflict_do_nothing();
 
-    futures::future::try_join(repo_insert, package_insert).await?;
-
-    Ok(())
+    (e1, e2, e3)
 }

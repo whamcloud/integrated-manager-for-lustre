@@ -7,7 +7,6 @@ edition = "2018"
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 diesel = { version = "1.4", default_features = false, features = ["postgres", "r2d2", "chrono", "serde_json"], optional = true }
-futures = { version = "0.3", optional = true }
 iml-manager-env = { path = "../iml-manager-env", version = "0.2.0", optional = true }
 iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
 ipnetwork = "0.16"
@@ -17,5 +16,5 @@ serde_json = "1.0"
 tokio-diesel = { git = "https://github.com/jgrund/tokio-diesel", optional = true }
 
 [features]
-postgres-interop = ["diesel", "iml-manager-env", "r2d2", "tokio-diesel", "futures"]
+postgres-interop = ["diesel", "iml-manager-env", "r2d2", "tokio-diesel"]
 wasm = ["chrono/wasmbind"]
