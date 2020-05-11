@@ -31,6 +31,7 @@ pub enum FsType {
 
 async fn vagrant() -> Result<Command, CmdError> {
     let mut x = Command::new("vagrant");
+    x.env("VAGRANT_LOG", "debug");
 
     let path = canonicalize("../vagrant/").await?;
 
