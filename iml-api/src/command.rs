@@ -38,6 +38,6 @@ pub(crate) async fn get_command(pool: &DbPool, id: i32) -> Result<Command, ImlAp
             .iter()
             .map(|j| format!("/api/{}/{}/", TestHostJob::endpoint_name(), j.id))
             .collect(),
-        logs: steps.iter().map(|s| s.log.clone()).join("\n"),
+        logs: steps.into_iter().map(|s| s.log).join("\n"),
     })
 }
