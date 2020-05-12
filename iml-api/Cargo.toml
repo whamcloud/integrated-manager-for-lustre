@@ -8,9 +8,11 @@ edition = "2018"
 futures = "0.3"
 iml-job-scheduler-rpc = { path = "../iml-job-scheduler-rpc", version = "0.2" }
 iml-manager-env = { path = "../iml-manager-env", version = "0.2" }
+iml-orm = { path = "../iml-orm", version = "0.2" }
 iml-rabbit = { path = "../iml-rabbit", version = "0.2.0", features = ["warp-filters"] }
 iml-tracing = { version = "0.1", path="../iml-tracing"}
 iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
+itertools = { version = "0.8" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "0.2", features = ["macros"] }

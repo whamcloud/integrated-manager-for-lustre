@@ -59,6 +59,7 @@ from chroma_core.models import (
     RemoveStratagemJob,
     StratagemConfiguration,
 )
+from chroma_core.models import Task, CreateTaskJob
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache, lock_change_receiver, to_lock_json
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -1979,3 +1980,38 @@ class JobScheduler(object):
             "Updating Stratagem",
             True,
         )
+
+    def create_task(self, task_data):
+        log.debug("Creating task from: %s" % task_data)
+        with self._lock:
+            filesystem = ObjectCache.get_by_id(ManagedFilesystem, int(task_data["filesystem"]))
+            task_data["filesystem"] = filesystem
+            if not "start" in task_data:
+                task_data["start"] = django.utils.timezone.now()
+
+            with transaction.atomic():
+                task = Task.objects.create(**task_data)
+
+                cmds = [{"class_name": "CreateTaskJob", "args": {"task": task}}]
+
+                command_id = self.CommandPlan.command_run_jobs(cmds, help_text["create_task"],)
+
+        self.progress.advance()
+        return task.id, command_id
+
+    def remove_task(self, task_id):
+        log.debug("Removing task %d" % task_id)
+        with self._lock:
+            task = Task.objects.get(pk=task_id)
+
+            with transaction.atomic():
+                task.finish = django.utils.timezone.now()
+                task.state = "removed"
+                task.save()
+
+                cmds = [{"class_name": "RemoveTaskJob", "args": {"task": task}}]
+
+                command_id = self.CommandPlan.command_run_jobs(cmds, help_text["create_task"],)
+
+        self.progress.advance()
+        return task.id, command_id
