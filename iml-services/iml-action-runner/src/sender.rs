@@ -115,15 +115,32 @@ pub fn sender(
                             action => {
                                 let (tx, rx) = oneshot::channel();
 
-                                send_message(client.clone(), "", queue_name, msg).await?;
-
                                 let action_id: ActionId = action.get_id().clone();
                                 let af = ActionInFlight::new(action, tx);
 
                                 {
                                     let mut lock = shared_session_to_rpcs.lock().await;
 
-                                    insert_action_in_flight(session_id, action_id, af, &mut lock);
+                                    insert_action_in_flight(
+                                        session_id.clone(),
+                                        action_id.clone(),
+                                        af,
+                                        &mut lock,
+                                    );
+                                }
+
+                                let x = send_message(client.clone(), "", queue_name, msg)
+                                    .err_into()
+                                    .await;
+
+                                if let Err(e) = x {
+                                    tracing::error!("Message send failed {}", e);
+
+                                    let mut lock = shared_session_to_rpcs.lock().await;
+
+                                    remove_action_in_flight(&session_id, &action_id, &mut lock);
+
+                                    return Err(e);
                                 }
 
                                 rx.await.map_err(|e| e.into())

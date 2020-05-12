@@ -104,6 +104,12 @@ pub fn insert_action_in_flight(
     action: ActionInFlight,
     session_to_rpcs: &mut SessionToRpcs,
 ) {
+    tracing::debug!(
+        "Inserting new ActionInFlight with id {:?} and action_id {:?}",
+        id,
+        action_id
+    );
+
     let rpcs = session_to_rpcs.entry(id).or_insert_with(HashMap::new);
 
     rpcs.insert(action_id, action);
@@ -133,6 +139,12 @@ pub fn remove_action_in_flight<'a>(
     action_id: &ActionId,
     session_to_rpcs: &'a mut SessionToRpcs,
 ) -> Option<ActionInFlight> {
+    tracing::debug!(
+        "Removing ActionInFlight with id {:?} and action_id {:?}",
+        id,
+        action_id
+    );
+
     session_to_rpcs
         .get_mut(id)
         .and_then(|rpcs| rpcs.remove(action_id))
