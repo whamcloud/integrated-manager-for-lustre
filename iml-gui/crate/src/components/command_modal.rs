@@ -10,7 +10,7 @@ use crate::{
     key_codes, sleep_with_handle, GMsg,
 };
 use futures::channel::oneshot;
-use iml_wire_types::{ApiList, Command, EndpointName, Job, Step};
+use iml_wire_types::{ApiList, AvailableTransition, Command, EndpointName, Job, Step};
 use regex::{Captures, Regex};
 use seed::{prelude::*, *};
 use serde::de::DeserializeOwned;
@@ -117,6 +117,8 @@ pub enum Msg {
     FetchedJobs(Box<fetch::ResponseDataResult<ApiList<Job0>>>),
     FetchedSteps(Box<fetch::ResponseDataResult<ApiList<Step>>>),
     Click(TypedId),
+    JobCancel(u32),
+    JobCancelled(Box<fetch::ResponseDataResult<Job0>>),
     Noop,
 }
 
@@ -193,6 +195,15 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 schedule_fetch_tree(model, orders);
             }
         }
+        Msg::JobCancel(job_id) => {
+            if let Some(job) = model.jobs.get(&job_id) {
+                if job.available_transitions.len() > 0 {
+                    let fut = cancel_job(job_id, job.available_transitions[0].clone());
+                    orders.skip().perform_cmd(fut);
+                }
+            }
+        }
+        Msg::JobCancelled(job_result) => log!("Job cancelled", job_result),
         Msg::Noop => {}
     }
 }
@@ -358,6 +369,7 @@ fn job_item_view(job: Arc<RichJob>, is_new: bool, ctx: &mut Context) -> Node<Msg
     } else if job.steps.is_empty() {
         span![span![class![C.mr_1], icon], span![job.description]]
     } else {
+        let job_transitions = job_item_transitions(job.id, &job.available_transitions);
         let is_open = ctx.select.contains(TypedId::Job(job.id));
         let def_vec = Vec::new();
         let steps = ctx.steps_view.get(&JobId(job.id)).unwrap_or(&def_vec);
@@ -367,6 +379,7 @@ fn job_item_view(job: Arc<RichJob>, is_new: bool, ctx: &mut Context) -> Node<Msg
                 span![class![C.cursor_pointer, C.underline], job.description],
                 simple_ev(Ev::Click, Msg::Click(TypedId::Job(job.id))),
             ],
+            job_transitions,
             step_list_view(steps, ctx.select, is_open),
         ]
     }
@@ -379,6 +392,29 @@ fn job_item_combine(parent: Node<Msg>, acc: Vec<Node<Msg>>, _ctx: &mut Context) 
         div![parent, acc_plus]
     } else {
         empty!()
+    }
+}
+
+fn job_item_transitions(job_id: u32, transitions: &[AvailableTransition]) -> Node<Msg> {
+    if transitions.is_empty() {
+        empty!()
+    } else {
+        let trans = &transitions[0];
+        div![
+            class![
+                C.inline,
+                C.bg_blue_500,
+                C.mx_2,
+                C.px_1,
+                C.rounded_lg,
+                C.text_white,
+                C.hover__bg_blue_400
+            ],
+            trans.label,
+            simple_ev(Ev::Click, Msg::JobCancel(job_id)),
+        ]
+        // let awesome_class = class![C.mx_1, C.w_4, C.h_4, C.inline, C.mr_4];
+        // font_awesome(awesome_class, "ban").merge_attrs(class![C.text_red_500])
     }
 }
 
@@ -560,6 +596,19 @@ where
             unreachable!("Cannot encode request for {} with params {:?}", T::endpoint_name(), ids)
         }
     }
+}
+
+async fn cancel_job(job_id: u32, transition: AvailableTransition) -> Result<Msg, Msg> {
+    let json = serde_json::json!({
+        "id": (job_id),
+        "state": (transition.state),
+    });
+    let req = Request::api_item(Job0::endpoint_name(), job_id)
+        // .with_auth()
+        .method(fetch::Method::Put)
+        .send_json(&json);
+    log!("req = ", req);
+    req.fetch_json_data(|x| Msg::JobCancelled(Box::new(x))).await
 }
 
 fn extract_uri_id<T: EndpointName>(input: &str) -> Option<u32> {
