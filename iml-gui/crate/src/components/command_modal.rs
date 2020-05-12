@@ -408,7 +408,8 @@ fn job_item_transitions(job_id: u32, transitions: &[AvailableTransition]) -> Nod
                 C.px_1,
                 C.rounded_lg,
                 C.text_white,
-                C.hover__bg_blue_400
+                C.hover__bg_blue_400,
+                C.cursor_pointer
             ],
             trans.label,
             simple_ev(Ev::Click, Msg::JobCancel(job_id)),
