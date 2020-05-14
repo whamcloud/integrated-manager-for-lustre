@@ -239,7 +239,7 @@ dependencies = [
  "im 14.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "iml-api-utils 0.2.0",
  "iml-influx 0.1.0",
- "iml-wire-types 0.2.0",
+ "iml-wire-types 0.2.1",
  "js-sys 0.3.37 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "natord 1.0.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -261,13 +261,13 @@ dependencies = [
 name = "iml-influx"
 version = "0.1.0"
 dependencies = [
- "iml-wire-types 0.2.0",
+ "iml-wire-types 0.2.1",
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "iml-wire-types"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "im 14.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "iml-api-utils 0.2.0",
