@@ -159,8 +159,9 @@ async fn ssh_script_parallel<'a, 'b>(
 
     for (host, out) in &output {
         tracing::debug!(
-            "ssh output {}: {}",
+            "ssh result on {}: {} - {}",
             host,
+            out.status.code().expect("Couldn't get exit code."),
             str::from_utf8(&out.stdout).expect("Couldn't read output.")
         );
     }
