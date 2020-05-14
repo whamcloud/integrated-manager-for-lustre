@@ -202,20 +202,20 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     // grab all the dependencies for the chosen items, except those that already loaded and completed
     let load_cmd_ids = extract_sorted_keys(&model.commands)
         .into_iter()
-        .filter(|c| !model.commands.get(c).map(|cmd| is_finished_cmd(cmd)).unwrap_or(false))
+        .filter(|c| to_load_cmd(model, *c))
         .collect::<Vec<u32>>();
     let load_job_ids = cmd_ids
         .iter()
         .filter(|c| model.commands.contains_key(c))
         .flat_map(|c| model.commands[c].deps())
-        .filter(|j| !model.jobs.get(j).map(|job| is_finished_job(job)).unwrap_or(false))
+        .filter(|j| to_load_job(model, **j))
         .copied()
         .collect::<Vec<u32>>();
     let load_step_ids = job_ids
         .iter()
         .filter(|j| model.jobs.contains_key(j))
         .flat_map(|j| model.jobs[j].deps())
-        .filter(|s| !model.steps.get(s).map(|step| is_finished_step(step)).unwrap_or(false))
+        .filter(|s| to_load_step(model, **s))
         .copied()
         .collect::<Vec<u32>>();
 
@@ -577,20 +577,36 @@ fn extract_uri_id<T: EndpointName>(input: &str) -> Option<u32> {
     })
 }
 
-fn is_finished_cmd(cmd: &RichCommand) -> bool {
-    cmd.complete
+fn to_load_cmd(model: &Model, cmd_id: u32) -> bool {
+    // load it if the command is not found or is not complete
+    if let Some(cmd) = model.commands.get(&cmd_id) {
+        !cmd.complete
+    } else {
+        true
+    }
 }
 
-fn is_finished_job(job: &RichJob) -> bool {
-    job.state == "complete"
+fn to_load_job(model: &Model, job_id: u32) -> bool {
+    if let Some(job) = model.jobs.get(&job_id) {
+        // job.state can be "tasked", "pending" or "complete"
+        // if a job is errored or cancelled, it is also complete
+        job.state != "complete"
+    } else {
+        true
+    }
 }
 
-fn is_finished_step(step: &RichStep) -> bool {
-    step.state == "success"
+fn to_load_step(model: &Model, step_id: u32) -> bool {
+    if let Some(step) = model.steps.get(&step_id) {
+        // step.state can be "success", "failed" or "incomplete"
+        step.state != "success" && step.state != "failed"
+    } else {
+        true
+    }
 }
 
 fn is_all_commands_finished(cmds: &HashMap<u32, Arc<RichCommand>>) -> bool {
-    cmds.values().all(|c| is_finished_cmd(c))
+    cmds.values().all(|c| c.complete)
 }
 
 fn perform_click(select: &mut Select, id: TypedId) -> bool {
