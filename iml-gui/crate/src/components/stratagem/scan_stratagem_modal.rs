@@ -76,7 +76,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     orders.send_g_msg(GMsg::OpenCommandModal(x));
                 }
                 Err(err) => {
-                    error!("An error has occurred during Stratagem scan: {:?}", err);
+                    error!("An error has occurred during Stratagem scan: ", err);
                     orders.skip();
                 }
             }
