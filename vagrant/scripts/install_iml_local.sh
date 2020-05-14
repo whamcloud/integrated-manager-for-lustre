@@ -1,6 +1,6 @@
 set -x
 
-yum install -y mock-1.2.17 nosync.x86_64
+yum install -y mock-1.2.17 nosync
 
 set +e
 
@@ -111,7 +111,7 @@ enabled_metadata=1
 """
 EOF
 
-if { ! [ -f $old ]; } || { ! cmp --silent $old $new; } ; then
+if ! cmp --silent $old $new; then
     mv $new $old;
 fi
 
