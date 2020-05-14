@@ -9,7 +9,9 @@ use crate::{
     GMsg,
 };
 use futures::TryFutureExt;
-use iml_wire_types::{db::StratagemConfiguration, warp_drive::ArcCache, warp_drive::Locks, Filesystem, ToCompositeId};
+use iml_wire_types::{
+    db::StratagemConfiguration, warp_drive::ArcCache, warp_drive::Locks, CmdWrapper, Filesystem, ToCompositeId,
+};
 use seed::{prelude::*, *};
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -20,11 +22,6 @@ pub(crate) mod scan_stratagem_button;
 pub(crate) mod scan_stratagem_modal;
 pub(crate) mod update_stratagem_button;
 pub(crate) mod validation;
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct ActionResponse {
-    command: iml_wire_types::Command,
-}
 
 #[derive(Default)]
 pub struct TargetConfig {
@@ -141,7 +138,7 @@ pub enum Msg {
     CheckStratagem,
     EnableStratagem,
     DisableStratagem,
-    CmdSent(Box<fetch::FetchObject<ActionResponse>>),
+    CmdSent(Box<fetch::FetchObject<CmdWrapper>>),
     ScanStratagemButton(scan_stratagem_button::Msg),
     Noop,
 }
