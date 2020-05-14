@@ -4,14 +4,16 @@
 
 use crate::{
     components::{
-        font_awesome, modal,
-        stratagem::{duration_picker, validation, ActionResponse, StratagemScan},
+        command_modal, font_awesome, modal,
+        stratagem::{duration_picker, validation, StratagemScan},
     },
     extensions::{MergeAttrs as _, NodeExt as _},
     generated::css_classes::C,
     key_codes, GMsg, RequestExt,
 };
+use iml_wire_types::CmdWrapper;
 use seed::{prelude::*, *};
+use std::sync::Arc;
 
 #[derive(Default)]
 pub struct Model {
@@ -36,7 +38,7 @@ pub enum Msg {
     ReportDurationPicker(duration_picker::Msg),
     PurgeDurationPicker(duration_picker::Msg),
     SubmitScan,
-    Scanned(Box<fetch::ResponseDataResult<ActionResponse>>),
+    Scanned(Box<fetch::ResponseDataResult<CmdWrapper>>),
     Modal(modal::Msg),
     Noop,
 }
@@ -66,8 +68,18 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
             orders.perform_cmd(req.fetch_json_data(|x| Msg::Scanned(Box::new(x))));
         }
-        Msg::Scanned(_msg) => {
-            //@TODO: Launch command modal here
+        Msg::Scanned(x) => {
+            match *x {
+                Ok(x) => {
+                    let x = command_modal::Input::Commands(vec![Arc::new(x.command)]);
+
+                    orders.send_g_msg(GMsg::OpenCommandModal(x));
+                }
+                Err(err) => {
+                    error!("An error has occurred during Stratagem scan: {:?}", err);
+                    orders.skip();
+                }
+            }
 
             model.scanning = false;
             model.report_duration.reset();
