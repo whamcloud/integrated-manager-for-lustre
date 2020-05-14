@@ -121,7 +121,7 @@ su -l mocker << EOF
 mock -r /etc/mock/iml.cfg --init
 mock -r /etc/mock/iml.cfg --copyin /integrated-manager-for-lustre /iml
 mock -r /etc/mock/iml.cfg -i cargo git ed epel-release python-setuptools gcc openssl-devel postgresql96-devel python2-devel python2-setuptools ed
-mock -r /etc/mock/iml.cfg --shell 'export CARGO_HOME=/tmp/.cargo CARGO_TARGET_DIR=/tmp/target && cd /iml && make local TARGET=/tmp/target'
+mock -r /etc/mock/iml.cfg --shell 'export CARGO_HOME=/tmp/.cargo CARGO_TARGET_DIR=/tmp/target && cd /iml && make local'
 mock -r /etc/mock/iml.cfg --copyout /iml/_topdir /tmp/iml/_topdir
 mock -r /etc/mock/iml.cfg --copyout /iml/chroma_support.repo /tmp/iml/
 EOF
