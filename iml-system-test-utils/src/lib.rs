@@ -8,7 +8,11 @@ use iml_cmd::CmdError;
 use iml_systemd::SystemdError;
 use iml_wire_types::Branding;
 use ssh::create_iml_diagnostics;
-use std::{collections::{HashMap, BTreeSet}, io, time::Duration};
+use std::{
+    collections::{BTreeSet, HashMap},
+    io,
+    time::Duration,
+};
 use tokio::{process::Command, time::delay_for};
 
 pub struct SetupConfig {
@@ -149,13 +153,13 @@ pub enum SystemTestError {
 }
 
 pub trait ServerList {
-    fn to_server_list(&self) -> Vec<String>;
+    fn to_server_list(&self) -> Vec<&str>;
 }
 
 impl<S: std::hash::BuildHasher> ServerList for HashMap<String, &[&str], S> {
-    fn to_server_list(&self) -> Vec<String> {
+    fn to_server_list(&self) -> Vec<&str> {
         let server_set: BTreeSet<_> = self.values().cloned().flatten().collect();
-        server_set.into_iter().map(|x| (*x).into()).collect()
+        server_set.into_iter().map(|x| *x).collect()
     }
 }
 

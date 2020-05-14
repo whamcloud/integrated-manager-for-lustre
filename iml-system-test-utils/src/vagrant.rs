@@ -8,11 +8,7 @@ use crate::{
 };
 use futures::future::try_join_all;
 use iml_cmd::{CheckedCommandExt, CmdError};
-use std::{
-    collections::{HashMap},
-    env, str,
-    time::Duration,
-};
+use std::{collections::HashMap, env, str, time::Duration};
 use tokio::{
     fs::{canonicalize, create_dir, remove_dir_all},
     process::Command,
@@ -290,11 +286,12 @@ pub async fn clear_vbox_machine_folder() -> Result<(), CmdError> {
 }
 
 pub async fn setup_bare(
-    hosts: &[String],
+    storage_and_client_hosts: &[&str],
+    all_hosts: &[&str],
     config: &ClusterConfig,
     ntp_server: NtpServer,
 ) -> Result<(), CmdError> {
-    up().await?.args(hosts.iter()).checked_status().await?;
+    up().await?.args(all_hosts).checked_status().await?;
 
     match ntp_server {
         NtpServer::HostOnly => {
@@ -303,22 +300,28 @@ pub async fn setup_bare(
         NtpServer::Adm => ssh::configure_ntp_for_adm(&config.storage_server_ips()).await?,
     };
 
-    ssh::setup_agent_debug(&config.storage_server_ips()[..]).await?;
+    ssh::setup_agent_debug(&storage_and_client_hosts[..]).await?;
 
-    halt().await?.args(hosts.iter()).checked_status().await?;
+    halt().await?.args(all_hosts).checked_status().await?;
 
-    for x in hosts {
-        snapshot_save(x.as_str(), "bare").await?.checked_status().await?;
+    for x in all_hosts {
+        snapshot_save(x, "bare").await?.checked_status().await?;
     }
 
     Ok(())
 }
 
 pub async fn setup_iml_install(
-    hosts: &[String],
+    storage_and_client_servers: &[&str],
     setup_config: &SetupConfigType,
     config: &ClusterConfig,
 ) -> Result<(), CmdError> {
+    let all_hosts = [
+        &vec![config.iscsi, config.manager][..],
+        storage_and_client_servers,
+    ]
+    .concat();
+
     up().await?.arg(config.manager).checked_status().await?;
 
     configure_manager_overrides(setup_config, config).await?;
@@ -339,12 +342,15 @@ pub async fn setup_iml_install(
         }
     };
 
-    setup_bare(&hosts, &config, NtpServer::Adm).await?;
+    setup_bare(
+        storage_and_client_servers,
+        &all_hosts,
+        config,
+        NtpServer::Adm,
+    )
+    .await?;
 
-    up().await?
-        .args(&vec![config.manager][..])
-        .checked_status()
-        .await?;
+    up().await?.arg(config.manager).checked_status().await?;
 
     configure_rpm_setup(setup_config, &config).await?;
 
@@ -354,15 +360,15 @@ pub async fn setup_iml_install(
         .checked_status()
         .await?;
 
-    for host in hosts {
-        snapshot_save(host.as_str(), "iml-installed")
+    for host in &all_hosts {
+        snapshot_save(host, "iml-installed")
             .await?
             .checked_status()
             .await?;
     }
 
-    tracing::debug!("Bringing up servers: {:?}", hosts);
-    up().await?.args(hosts).checked_status().await?;
+    tracing::debug!("Bringing up servers: {:?}", all_hosts);
+    up().await?.args(&all_hosts).checked_status().await?;
 
     wait_on_services_ready(config).await?;
 
@@ -500,25 +506,23 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     server_map: HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
-    let server_set = server_map.to_server_list();
+    let server_set: Vec<&str> = server_map.to_server_list();
+    let all_hosts = [&vec![config.iscsi][..], &server_set].concat();
 
-    setup_bare(&server_set, &config, NtpServer::HostOnly).await?;
+    setup_bare(&server_set, &all_hosts, &config, NtpServer::HostOnly).await?;
 
-    up().await?
-        .args(&config.all_but_adm())
-        .checked_status()
-        .await?;
+    up().await?.args(&all_hosts).checked_status().await?;
 
-    delay_for(Duration::from_secs(30)).await;
+    delay_for(Duration::from_secs(60)).await;
 
-    configure_docker_network(server_set).await?;
+    configure_docker_network(&server_set).await?;
 
     add_docker_servers(&config, &server_map).await?;
 
     Ok(())
 }
 
-pub async fn configure_docker_network(hosts: Vec<String>) -> Result<(), CmdError> {
+pub async fn configure_docker_network(hosts: &[&str]) -> Result<(), CmdError> {
     // The configure-docker-network provisioner must be run individually on
     // each server node.
     tracing::debug!(
@@ -526,7 +530,7 @@ pub async fn configure_docker_network(hosts: Vec<String>) -> Result<(), CmdError
         hosts
     );
     for host in hosts {
-        provision_node(host.as_str(), "configure-docker-network")
+        provision_node(host, "configure-docker-network")
             .await?
             .checked_status()
             .await?;
