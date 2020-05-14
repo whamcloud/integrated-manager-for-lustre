@@ -200,9 +200,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::CancelJob(job_id) => {
             if let Some(job) = model.jobs.get(&job_id) {
                 if let Some(ct) = find_cancel_transition(job) {
-                    model.cancelling_jobs.insert(job_id);
-                    let fut = apply_job_transition(job_id, ct.clone());
-                    orders.skip().perform_cmd(fut);
+                    if model.cancelling_jobs.insert(job_id) {
+                        let fut = apply_job_transition(job_id, ct.clone());
+                        orders.skip().perform_cmd(fut);
+                    }
                 }
             }
         }
@@ -409,7 +410,7 @@ fn job_item_combine(parent: Node<Msg>, acc: Vec<Node<Msg>>, _ctx: &mut Context) 
 }
 
 fn job_item_cancel_button(job: &Arc<RichJob>, cancelling: bool) -> Node<Msg> {
-    if let Some(trans) = find_cancel_transition(&job) {
+    if let Some(trans) = find_cancel_transition(job) {
         if !cancelling {
             div![
                 class![
