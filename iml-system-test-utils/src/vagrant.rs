@@ -3,16 +3,12 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    iml, ssh, try_command_n_times, SetupConfig, SetupConfigType, STRATAGEM_CLIENT_PROFILE,
-    STRATAGEM_SERVER_PROFILE,
+    iml, ssh, try_command_n_times, ServerList as _, SetupConfig, SetupConfigType,
+    STRATAGEM_CLIENT_PROFILE, STRATAGEM_SERVER_PROFILE,
 };
 use futures::future::try_join_all;
 use iml_cmd::{CheckedCommandExt, CmdError};
-use std::{
-    collections::{BTreeSet, HashMap},
-    env, str,
-    time::Duration,
-};
+use std::{collections::HashMap, env, str, time::Duration};
 use tokio::{
     fs::{canonicalize, create_dir, remove_dir_all, File},
     io::AsyncWriteExt,
@@ -270,11 +266,11 @@ pub async fn clear_vbox_machine_folder() -> Result<(), CmdError> {
 }
 
 pub async fn setup_bare(
-    hosts: &[&str],
+    all_hosts: &[&str],
     config: &ClusterConfig,
     ntp_server: NtpServer,
 ) -> Result<(), CmdError> {
-    up().await?.args(hosts).checked_status().await?;
+    up().await?.args(all_hosts).checked_status().await?;
 
     match ntp_server {
         NtpServer::HostOnly => {
@@ -283,9 +279,9 @@ pub async fn setup_bare(
         NtpServer::Adm => ssh::configure_ntp_for_adm(&config.storage_server_ips()).await?,
     };
 
-    halt().await?.args(hosts).checked_status().await?;
+    halt().await?.args(all_hosts).checked_status().await?;
 
-    for x in hosts {
+    for x in all_hosts {
         snapshot_save(x, "bare").await?.checked_status().await?;
     }
 
@@ -293,10 +289,16 @@ pub async fn setup_bare(
 }
 
 pub async fn setup_iml_install(
-    hosts: &[&str],
+    storage_and_client_servers: &[&str],
     setup_config: &SetupConfigType,
     config: &ClusterConfig,
 ) -> Result<(), CmdError> {
+    let all_hosts = [
+        &vec![config.iscsi, config.manager][..],
+        storage_and_client_servers,
+    ]
+    .concat();
+
     up().await?.arg(config.manager).checked_status().await?;
 
     match env::var("REPO_URI") {
@@ -315,7 +317,7 @@ pub async fn setup_iml_install(
         }
     };
 
-    setup_bare(hosts, &config, NtpServer::Adm).await?;
+    setup_bare(&all_hosts, &config, NtpServer::Adm).await?;
 
     up().await?
         .args(&vec![config.manager][..])
@@ -330,14 +332,14 @@ pub async fn setup_iml_install(
         .checked_status()
         .await?;
 
-    for host in hosts {
+    for host in &all_hosts {
         snapshot_save(host, "iml-installed")
             .await?
             .checked_status()
             .await?;
     }
 
-    up().await?.args(hosts).checked_status().await?;
+    up().await?.args(&all_hosts).checked_status().await?;
 
     wait_on_services_ready(config).await?;
 
@@ -349,9 +351,15 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
     setup_config: &SetupConfigType,
     server_map: HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
-    setup_iml_install(&config.all(), &setup_config, &config).await?;
+    setup_iml_install(&server_map.to_server_list(), &setup_config, &config).await?;
 
     for (profile, hosts) in server_map {
+        let host_ips = config.hosts_to_ips(&hosts);
+        for host in host_ips {
+            tracing::debug!("pinging host to make sure it is up.");
+            ssh::ssh_exec(host, "uname -r").await?;
+        }
+
         run_vm_command(
             config.manager,
             &format!("iml server add -h {} -p {}", hosts.join(","), profile),
@@ -406,9 +414,10 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     server_map: HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
-    let server_set: BTreeSet<_> = server_map.values().cloned().flatten().collect();
+    let server_set: Vec<&str> = server_map.to_server_list();
+    let all_hosts = [&vec![config.iscsi][..], &server_set].concat();
 
-    setup_bare(&config.all_but_adm()[..], &config, NtpServer::HostOnly).await?;
+    setup_bare(&all_hosts, &config, NtpServer::HostOnly).await?;
 
     up().await?
         .args(&config.all_but_adm())
@@ -417,14 +426,14 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
 
     delay_for(Duration::from_secs(30)).await;
 
-    configure_docker_network(server_set).await?;
+    configure_docker_network(&server_set).await?;
 
     add_docker_servers(&config, &server_map).await?;
 
     Ok(())
 }
 
-pub async fn configure_docker_network(hosts: BTreeSet<&&str>) -> Result<(), CmdError> {
+pub async fn configure_docker_network(hosts: &[&str]) -> Result<(), CmdError> {
     // The configure-docker-network provisioner must be run individually on
     // each server node.
     tracing::debug!(
@@ -564,9 +573,11 @@ pub struct ClusterConfig {
     mds_ips: Vec<&'static str>,
     oss: Vec<&'static str>,
     oss_ips: Vec<&'static str>,
-    clients: Vec<&'static str>,
+    client: Vec<&'static str>,
+    client_ips: Vec<&'static str>,
     iscsi: &'static str,
     lustre_version: &'static str,
+    server_map: HashMap<&'static str, &'static str>,
 }
 
 impl Default for ClusterConfig {
@@ -578,9 +589,20 @@ impl Default for ClusterConfig {
             mds_ips: vec!["10.73.10.11", "10.73.10.12"],
             oss: vec!["oss1", "oss2"],
             oss_ips: vec!["10.73.10.21", "10.73.10.22"],
-            clients: vec!["c1"],
+            client: vec!["c1"],
+            client_ips: vec!["10.73.10.31"],
             iscsi: "iscsi",
             lustre_version: "2.12.4",
+            server_map: vec![
+                ("adm", "10.73.10.10"),
+                ("mds1", "10.73.10.11"),
+                ("mds2", "10.73.10.12"),
+                ("oss1", "10.73.10.21"),
+                ("oss2", "10.73.10.22"),
+                ("c1", "10.73.10.31"),
+            ]
+            .into_iter()
+            .collect::<HashMap<&str, &str>>(),
         }
     }
 }
@@ -590,7 +612,7 @@ impl ClusterConfig {
         let mut xs = vec![self.iscsi, self.manager];
 
         xs.extend(self.storage_servers());
-        xs.extend(&self.clients);
+        xs.extend(&self.client);
 
         xs
     }
@@ -598,7 +620,7 @@ impl ClusterConfig {
         let mut xs = vec![self.iscsi];
 
         xs.extend(self.storage_servers());
-        xs.extend(&self.clients);
+        xs.extend(&self.client);
 
         xs
     }
@@ -618,9 +640,23 @@ impl ClusterConfig {
         [&self.oss[..]].concat()
     }
     pub fn client_servers(&self) -> Vec<&str> {
-        [&self.clients[..]].concat()
+        [&self.client[..]].concat()
+    }
+    pub fn client_server_ips(&self) -> Vec<&str> {
+        [&self.client_ips[..]].concat()
     }
     pub fn lustre_version(&self) -> &str {
         self.lustre_version
+    }
+    pub fn hosts_to_ips(&self, hosts: &[&str]) -> Vec<&str> {
+        hosts
+            .into_iter()
+            .map(|host| {
+                self.server_map
+                    .get(host)
+                    .expect(format!("Couldn't locate {} in server map.", host).as_str())
+            })
+            .map(|x| *x)
+            .collect()
     }
 }
