@@ -49,10 +49,12 @@ impl ChromaCoreJob {
 pub async fn get_jobs_by_cmd(
     id: i32,
     pool: &DbPool,
-) -> Result<Vec<ChromaCoreJob>, tokio_diesel::AsyncError> {
+) -> Result<Vec<ChromaCoreJob>, crate::ImlOrmError> {
     let jobs: Vec<i32> = ChromaCoreCommandJob::jobs_by_cmd(id)
         .get_results_async(&pool)
         .await?;
 
-    ChromaCoreJob::by_ids(jobs).get_results_async(&pool).await
+    let x = ChromaCoreJob::by_ids(jobs).get_results_async(&pool).await?;
+
+    Ok(x)
 }
