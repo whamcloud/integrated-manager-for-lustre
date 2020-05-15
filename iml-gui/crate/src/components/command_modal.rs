@@ -120,7 +120,7 @@ pub enum Msg {
     FetchedSteps(Box<fetch::ResponseDataResult<ApiList<Step>>>),
     Click(TypedId),
     CancelJob(u32),
-    CancelledJob(Box<fetch::ResponseDataResult<Job0>>),
+    CancelledJob(u32, Box<fetch::ResponseDataResult<Job0>>),
     Noop,
 }
 
@@ -207,12 +207,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 }
             }
         }
-        Msg::CancelledJob(job_result) => match *job_result {
-            Ok(job) => {
-                model.cancelling_jobs.remove(&job.id);
+        Msg::CancelledJob(job_id, job_result) => match *job_result {
+            Ok(_) => {
+                model.cancelling_jobs.remove(&job_id);
             }
             Err(e) => {
-                error!(format!("Failed to cancel job {:#?}", e));
+                model.cancelling_jobs.remove(&job_id);
+                error!(format!("Failed to cancel job {}: {:#?}", job_id, e));
                 orders.skip();
             }
         },
@@ -633,7 +634,7 @@ async fn apply_job_transition(job_id: u32, transition: AvailableTransition) -> R
         // .with_auth()
         .method(fetch::Method::Put)
         .send_json(&json);
-    req.fetch_json_data(|x| Msg::CancelledJob(Box::new(x))).await
+    req.fetch_json_data(|x| Msg::CancelledJob(job_id, Box::new(x))).await
 }
 
 fn extract_uri_id<T: EndpointName>(input: &str) -> Option<u32> {
