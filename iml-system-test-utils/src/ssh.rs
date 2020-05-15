@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use crate::iml;
 use futures::future::try_join_all;
 use iml_cmd::{CheckedChildExt, CheckedCommandExt, CmdError};
 use std::{
@@ -100,8 +101,9 @@ async fn ssh_exec_parallel<'a, 'b>(
 
     for (host, out) in &output {
         tracing::debug!(
-            "ssh output {}: {}",
+            "ssh result on {}: {} - {}",
             host,
+            out.status.code().expect("Couldn't get exit code."),
             str::from_utf8(&out.stdout).expect("Couldn't read output.")
         );
     }
@@ -157,8 +159,9 @@ async fn ssh_script_parallel<'a, 'b>(
 
     for (host, out) in &output {
         tracing::debug!(
-            "ssh output {}: {}",
+            "ssh result on {}: {} - {}",
             host,
+            out.status.code().expect("Couldn't get exit code."),
             str::from_utf8(&out.stdout).expect("Couldn't read output.")
         );
     }
@@ -244,4 +247,78 @@ pub async fn create_iml_diagnostics<'a, 'b>(
         .arg(report_dir)
         .checked_status()
         .await
+}
+
+pub async fn restart_manager(adm_host: &str) -> Result<(), CmdError> {
+    ssh_exec(adm_host, "systemctl restart iml-manager.target").await?;
+
+    Ok(())
+}
+
+pub async fn restart_storage_server_target(hosts: &[&str]) -> Result<(), CmdError> {
+    ssh_exec_parallel(hosts, "systemctl restart iml-storage-server.target").await?;
+
+    Ok(())
+}
+
+pub async fn setup_agent_debug(hosts: &[&str]) -> Result<(), CmdError> {
+    ssh_exec_parallel(hosts, "touch /tmp/chroma-agent-debug").await?;
+
+    Ok(())
+}
+
+pub async fn create_iml_config_dir(host: &str) -> Result<(), CmdError> {
+    ssh_exec(
+        host,
+        format!("mkdir -p {}", iml::IML_RPM_CONFIG_PATH).as_str(),
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn set_manager_overrides(host: &str, config: &str) -> Result<(), CmdError> {
+    ssh_exec(
+        host,
+        format!(
+            r#"cat <<EOF > {}/overrides.conf
+{}
+EOF
+"#,
+            iml::IML_RPM_CONFIG_PATH,
+            config
+        )
+        .as_str(),
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn create_agent_config_dir(hosts: &[&str]) -> Result<(), CmdError> {
+    ssh_exec_parallel(
+        hosts,
+        format!("mkdir -p {}", iml::IML_AGENT_CONFIG_PATH).as_str(),
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn set_agent_overrides(hosts: &[&str], config: &str) -> Result<(), CmdError> {
+    ssh_exec_parallel(
+        hosts,
+        format!(
+            r#"cat <<EOF > {}/overrides.conf
+{}
+EOF
+"#,
+            iml::IML_AGENT_CONFIG_PATH,
+            config
+        )
+        .as_str(),
+    )
+    .await?;
+
+    Ok(())
 }

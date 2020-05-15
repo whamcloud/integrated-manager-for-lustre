@@ -3,15 +3,14 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    iml, ssh, try_command_n_times, ServerList as _, SetupConfig, SetupConfigType,
+    iml, ssh, get_local_server_names, try_command_n_times, ServerList as _, SetupConfig, SetupConfigType,
     STRATAGEM_CLIENT_PROFILE, STRATAGEM_SERVER_PROFILE,
 };
 use futures::future::try_join_all;
 use iml_cmd::{CheckedCommandExt, CmdError};
 use std::{collections::HashMap, env, str, time::Duration};
 use tokio::{
-    fs::{canonicalize, create_dir, remove_dir_all, File},
-    io::AsyncWriteExt,
+    fs::{canonicalize, create_dir, remove_dir_all},
     process::Command,
     time::delay_for,
 };
@@ -141,6 +140,26 @@ pub async fn rsync(host: &str) -> Result<(), CmdError> {
     x.arg("rsync").arg(host).checked_status().await
 }
 
+pub async fn configure_manager_overrides(
+    setup: &SetupConfigType,
+    cluster_config: &ClusterConfig,
+) -> Result<(), CmdError> {
+    let config: String = setup.into();
+
+    ssh::create_iml_config_dir(cluster_config.manager_ip).await?;
+
+    ssh::set_manager_overrides(cluster_config.manager_ip, config.as_str()).await
+}
+
+pub async fn configure_agent_overrides(config: &ClusterConfig) -> Result<(), CmdError> {
+    let hosts = &config.storage_server_ips()[..];
+    let config = r#"RUST_LOG=debug
+LOG_LEVEL=10"#;
+    ssh::create_agent_config_dir(hosts).await?;
+
+    ssh::set_agent_overrides(hosts, config).await
+}
+
 pub async fn detect_fs(config: &ClusterConfig) -> Result<(), CmdError> {
     run_vm_command(config.manager, "iml filesystem detect")
         .await?
@@ -266,6 +285,7 @@ pub async fn clear_vbox_machine_folder() -> Result<(), CmdError> {
 }
 
 pub async fn setup_bare(
+    storage_and_client_hosts: &[&str],
     all_hosts: &[&str],
     config: &ClusterConfig,
     ntp_server: NtpServer,
@@ -278,6 +298,8 @@ pub async fn setup_bare(
         }
         NtpServer::Adm => ssh::configure_ntp_for_adm(&config.storage_server_ips()).await?,
     };
+
+    ssh::setup_agent_debug(&config.hosts_to_ips(&storage_and_client_hosts[..])[..]).await?;
 
     halt().await?.args(all_hosts).checked_status().await?;
 
@@ -301,6 +323,8 @@ pub async fn setup_iml_install(
 
     up().await?.arg(config.manager).checked_status().await?;
 
+    configure_manager_overrides(setup_config, config).await?;
+
     match env::var("REPO_URI") {
         Ok(x) => {
             provision_node(config.manager, "install-iml-repouri")
@@ -317,10 +341,10 @@ pub async fn setup_iml_install(
         }
     };
 
-    setup_bare(&all_hosts, &config, NtpServer::Adm).await?;
+    setup_bare(storage_and_client_servers, &all_hosts, &config, NtpServer::Adm).await?;
 
     up().await?
-        .args(&vec![config.manager][..])
+        .arg(config.manager)
         .checked_status()
         .await?;
 
@@ -328,7 +352,7 @@ pub async fn setup_iml_install(
 
     halt()
         .await?
-        .args(&vec![config.manager][..])
+        .arg(config.manager)
         .checked_status()
         .await?;
 
@@ -339,6 +363,7 @@ pub async fn setup_iml_install(
             .await?;
     }
 
+    tracing::debug!("Bringing up servers: {:?}", all_hosts);
     up().await?.args(&all_hosts).checked_status().await?;
 
     wait_on_services_ready(config).await?;
@@ -353,6 +378,8 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
 ) -> Result<(), CmdError> {
     setup_iml_install(&server_map.to_server_list(), &setup_config, &config).await?;
 
+    configure_agent_overrides(config).await?;
+
     for (profile, hosts) in server_map {
         let host_ips = config.hosts_to_ips(&hosts);
         for host in host_ips {
@@ -362,7 +389,7 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
 
         run_vm_command(
             config.manager,
-            &format!("iml server add -h {} -p {}", hosts.join(","), profile),
+            &format!("iml server add -h {} -p {}", get_local_server_names(hosts).join(","), profile),
         )
         .await?
         .checked_status()
@@ -389,6 +416,8 @@ pub async fn add_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     server_map: &HashMap<String, &[&str], S>,
 ) -> Result<(), CmdError> {
+    configure_agent_overrides(config).await?;
+
     iml::server_add(&server_map).await?;
 
     halt()
@@ -410,6 +439,62 @@ pub async fn add_docker_servers<S: std::hash::BuildHasher>(
         .await
 }
 
+pub async fn configure_rpm_setup(
+    setup: &SetupConfigType,
+    cluster_config: &ClusterConfig,
+) -> Result<(), CmdError> {
+    let setup_config: &SetupConfig = setup.into();
+
+    if setup_config.use_stratagem {
+        ssh::create_iml_config_dir(cluster_config.manager_ip).await?;
+
+        ssh::ssh_exec(
+            cluster_config.manager_ip,
+            format!(
+                r#"cat <<EOF > {}
+{}
+EOF
+"#,
+                format!("{}/stratagem-server.profile", iml::IML_RPM_CONFIG_PATH),
+                STRATAGEM_SERVER_PROFILE,
+            )
+            .as_str(),
+        )
+        .await?;
+
+        ssh::ssh_exec(
+            cluster_config.manager_ip,
+            format!(
+                r#"cat <<EOF > {}
+{}
+EOF
+"#,
+                format!("{}/stratagem-client.profile", iml::IML_RPM_CONFIG_PATH),
+                STRATAGEM_CLIENT_PROFILE,
+            )
+            .as_str(),
+        )
+        .await?;
+
+        run_vm_command(
+            cluster_config.manager,
+            format!(
+                "sudo chroma-config profile register {}/stratagem-server.profile \
+        && sudo chroma-config profile register {}/stratagem-client.profile \
+        && sudo systemctl restart iml-manager.target",
+                iml::IML_RPM_CONFIG_PATH,
+                iml::IML_RPM_CONFIG_PATH
+            )
+            .as_str(),
+        )
+        .await?
+        .checked_status()
+        .await?;
+    }
+
+    Ok(())
+}
+
 pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     config: &ClusterConfig,
     server_map: HashMap<String, &[&str], S>,
@@ -417,14 +502,11 @@ pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
     let server_set: Vec<&str> = server_map.to_server_list();
     let all_hosts = [&vec![config.iscsi][..], &server_set].concat();
 
-    setup_bare(&all_hosts, &config, NtpServer::HostOnly).await?;
+    setup_bare(&server_set, &all_hosts, &config, NtpServer::HostOnly).await?;
 
-    up().await?
-        .args(&config.all_but_adm())
-        .checked_status()
-        .await?;
+    up().await?.args(&all_hosts).checked_status().await?;
 
-    delay_for(Duration::from_secs(30)).await;
+    delay_for(Duration::from_secs(60)).await;
 
     configure_docker_network(&server_set).await?;
 
@@ -513,53 +595,6 @@ pub async fn create_fs(fs_type: FsType, config: &ClusterConfig) -> Result<(), Cm
         FsType::LDISKFS => create_monitored_ldiskfs(&config).await?,
         FsType::ZFS => create_monitored_zfs(&config).await?,
     };
-
-    Ok(())
-}
-
-pub async fn configure_rpm_setup(
-    setup: &SetupConfigType,
-    cluster_config: &ClusterConfig,
-) -> Result<(), CmdError> {
-    let config: String = setup.into();
-
-    let vagrant_path = canonicalize("../vagrant/").await?;
-    let mut config_path = vagrant_path.clone();
-    config_path.push("local_settings.py");
-
-    let mut file = File::create(config_path).await?;
-    file.write_all(config.as_bytes()).await?;
-
-    let mut vm_cmd: String = "sudo cp /vagrant/local_settings.py /usr/share/chroma-manager/".into();
-    let setup_config: &SetupConfig = setup.into();
-    if setup_config.use_stratagem {
-        let mut server_profile_path = vagrant_path.clone();
-        server_profile_path.push("stratagem-server.profile");
-
-        let mut file = File::create(server_profile_path).await?;
-        file.write_all(STRATAGEM_SERVER_PROFILE.as_bytes()).await?;
-
-        let mut client_profile_path = vagrant_path.clone();
-        client_profile_path.push("stratagem-client.profile");
-
-        let mut file = File::create(client_profile_path).await?;
-        file.write_all(STRATAGEM_CLIENT_PROFILE.as_bytes()).await?;
-
-        vm_cmd = format!(
-            "{}{}",
-            vm_cmd,
-            "&& sudo chroma-config profile register /vagrant/stratagem-server.profile \
-        && sudo chroma-config profile register /vagrant/stratagem-client.profile \
-        && sudo systemctl restart iml-manager.target"
-        );
-    }
-
-    rsync(cluster_config.manager).await?;
-
-    run_vm_command(cluster_config.manager, vm_cmd.as_str())
-        .await?
-        .checked_status()
-        .await?;
 
     Ok(())
 }
