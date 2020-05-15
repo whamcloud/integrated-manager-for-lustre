@@ -7,6 +7,8 @@ use iml_cmd::{CheckedCommandExt, CmdError};
 use tokio::{fs, process::Command};
 
 pub const IML_DOCKER_PATH: &str = "/etc/iml-docker";
+pub const IML_RPM_CONFIG_PATH: &str = "/var/lib/chroma";
+pub const IML_AGENT_CONFIG_PATH: &str = "/etc/iml";
 
 async fn iml() -> Result<Command, CmdError> {
     let mut x = Command::new("/usr/bin/iml");
