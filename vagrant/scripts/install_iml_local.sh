@@ -1,21 +1,32 @@
 set -x
 
-yum install -y mock-1.2.17
+yum install -y mock-1.2.17 nosync
 
 set +e
 
 useradd mocker
 usermod -a -G mock mocker
 
+mkdir -p /home/mocker/.cargo
+mkdir -p /home/mocker/target
+
 set -e
 
-cat << EOF > /etc/mock/iml.cfg
+new=/etc/mock/iml.cfg.new
+old=/etc/mock/iml.cfg
+
+cat << EOF > $new
 config_opts['root'] = 'epel-7-x86_64'
 config_opts['target_arch'] = 'x86_64'
 config_opts['legal_host_arches'] = ('x86_64',)
 config_opts['chroot_setup_cmd'] = 'install @buildsys-build'
 config_opts['dist'] = 'el7'  # only useful for --resultdir variable subst
 config_opts['releasever'] = '7'
+
+config_opts['plugin_conf']['bind_mount_enable'] = True
+config_opts['plugin_conf']['bind_mount_opts']['dirs'].append(('/home/mocker/.cargo', '/tmp/.cargo' ))
+config_opts['plugin_conf']['bind_mount_opts']['dirs'].append(('/home/mocker/target', '/tmp/target' ))
+config_opts['nosync'] = True
 
 config_opts['yum.conf'] = """
 [main]
@@ -99,13 +110,17 @@ enabled_metadata=1
 """
 EOF
 
+if ! cmp --silent $old $new; then
+    mv $new $old;
+fi
+
 rm -rf /tmp/iml/_topdir/
 
 su -l mocker << EOF
 mock -r /etc/mock/iml.cfg --init
 mock -r /etc/mock/iml.cfg --copyin /integrated-manager-for-lustre /iml
 mock -r /etc/mock/iml.cfg -i cargo git ed epel-release python-setuptools gcc openssl-devel postgresql96-devel python2-devel python2-setuptools ed
-mock -r /etc/mock/iml.cfg --shell 'cd /iml && make local'
+mock -r /etc/mock/iml.cfg --shell 'export CARGO_HOME=/tmp/.cargo CARGO_TARGET_DIR=/tmp/target && cd /iml && make local'
 mock -r /etc/mock/iml.cfg --copyout /iml/_topdir /tmp/iml/_topdir
 mock -r /etc/mock/iml.cfg --copyout /iml/chroma_support.repo /tmp/iml/
 EOF
