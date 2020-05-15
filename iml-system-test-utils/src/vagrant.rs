@@ -300,7 +300,7 @@ pub async fn setup_bare(
         NtpServer::Adm => ssh::configure_ntp_for_adm(&config.storage_server_ips()).await?,
     };
 
-    ssh::setup_agent_debug(&storage_and_client_hosts[..]).await?;
+    ssh::setup_agent_debug(&config.hosts_to_ips(&storage_and_client_hosts[..])[..]).await?;
 
     halt().await?.args(all_hosts).checked_status().await?;
 
@@ -617,6 +617,7 @@ pub struct ClusterConfig {
     client_ips: Vec<&'static str>,
     iscsi: &'static str,
     lustre_version: &'static str,
+    server_map: HashMap<&'static str, &'static str>,
 }
 
 impl Default for ClusterConfig {
@@ -632,6 +633,16 @@ impl Default for ClusterConfig {
             client_ips: vec!["10.73.10.31"],
             iscsi: "iscsi",
             lustre_version: "2.12.4",
+            server_map: vec![
+                ("adm", "10.73.10.10"),
+                ("mds1", "10.73.10.11"),
+                ("mds2", "10.73.10.12"),
+                ("oss1", "10.73.10.21"),
+                ("oss2", "10.73.10.22"),
+                ("c1", "10.73.10.31"),
+            ]
+            .into_iter()
+            .collect::<HashMap<&str, &str>>(),
         }
     }
 }
@@ -676,5 +687,16 @@ impl ClusterConfig {
     }
     pub fn lustre_version(&self) -> &str {
         self.lustre_version
+    }
+    pub fn hosts_to_ips(&self, hosts: &[&str]) -> Vec<&str> {
+        hosts
+            .into_iter()
+            .map(|host| {
+                self.server_map
+                    .get(host)
+                    .expect(format!("Couldn't locate {} in server map.", host).as_str())
+            })
+            .map(|x| *x)
+            .collect()
     }
 }
