@@ -207,16 +207,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 }
             }
         }
-        Msg::CancelledJob(job_id, job_result) => match *job_result {
-            Ok(_) => {
-                model.cancelling_jobs.remove(&job_id);
-            }
-            Err(e) => {
-                model.cancelling_jobs.remove(&job_id);
+        Msg::CancelledJob(job_id, job_result) => {
+            model.cancelling_jobs.remove(&job_id);
+            if let Err(e) = *job_result {
                 error!(format!("Failed to cancel job {}: {:#?}", job_id, e));
                 orders.skip();
             }
-        },
+        }
         Msg::Noop => {}
     }
 }
@@ -631,7 +628,7 @@ async fn apply_job_transition(job_id: u32, transition: AvailableTransition) -> R
         "state": (transition.state),
     });
     let req = Request::api_item(Job0::endpoint_name(), job_id)
-        // .with_auth()
+        .with_auth()
         .method(fetch::Method::Put)
         .send_json(&json);
     req.fetch_json_data(|x| Msg::CancelledJob(job_id, Box::new(x))).await
@@ -662,30 +659,22 @@ fn perform_click(select: &mut Select, id: TypedId) -> bool {
 
 fn to_load_cmd(model: &Model, cmd_id: u32) -> bool {
     // load it if the command is not found or is not complete
-    if let Some(cmd) = model.commands.get(&cmd_id) {
-        !cmd.complete
-    } else {
-        true
-    }
+    model.commands.get(&cmd_id).map(|c| !c.complete).unwrap_or(true)
 }
 
 fn to_load_job(model: &Model, job_id: u32) -> bool {
-    if let Some(job) = model.jobs.get(&job_id) {
-        // job.state can be "tasked", "pending" or "complete"
-        // if a job is errored or cancelled, it is also complete
-        job.state != "complete"
-    } else {
-        true
-    }
+    // job.state can be "tasked", "pending" or "complete"
+    // if a job is errored or cancelled, it is also complete
+    model.jobs.get(&job_id).map(|j| j.state != "complete").unwrap_or(true)
 }
 
 fn to_load_step(model: &Model, step_id: u32) -> bool {
-    if let Some(step) = model.steps.get(&step_id) {
-        // step.state can be "success", "failed" or "incomplete"
-        step.state != "success" && step.state != "failed"
-    } else {
-        true
-    }
+    // step.state can be "success", "failed" or "incomplete"
+    model
+        .steps
+        .get(&step_id)
+        .map(|s| s.state != "success" && s.state != "failed")
+        .unwrap_or(true)
 }
 
 fn is_all_commands_finished(cmds: &HashMap<u32, Arc<RichCommand>>) -> bool {
