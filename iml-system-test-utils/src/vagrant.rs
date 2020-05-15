@@ -385,7 +385,8 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
     configure_agent_overrides(config).await?;
 
     for (profile, hosts) in server_map {
-        for host in hosts {
+        let host_ips = config.hosts_to_ips(&hosts);
+        for host in host_ips {
             tracing::debug!("pinging host to make sure it is up.");
             ssh::ssh_exec(host, "uname -r").await?;
         }
