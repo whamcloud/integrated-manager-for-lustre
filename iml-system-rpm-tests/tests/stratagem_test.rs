@@ -35,7 +35,12 @@ async fn test_stratagem_setup() -> Result<(), SystemTestError> {
     run_test(&config)
         .await
         .handle_test_result(
-            &vec![&config.manager_ip()[..], &config.storage_server_ips()[..]].concat()[..],
+            &vec![
+                &config.manager_ip()[..],
+                &config.storage_server_ips()[..],
+                &config.client_server_ips(),
+            ]
+            .concat()[..],
             "rpm_stratagem_test",
         )
         .await
