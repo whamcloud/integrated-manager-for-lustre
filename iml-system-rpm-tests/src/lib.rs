@@ -9,10 +9,10 @@ use tokio::time::delay_for;
 use tracing::Level;
 use tracing_subscriber::fmt::Subscriber;
 
-pub async fn setup() -> Result<(), CmdError> {
+pub async fn setup(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {
     Subscriber::builder().with_max_level(Level::DEBUG).init();
 
-    vagrant::destroy().await?;
+    vagrant::destroy(config).await?;
     vagrant::global_prune().await?;
     vagrant::poweroff_running_vms().await?;
     vagrant::unregister_vms().await?;
@@ -27,7 +27,7 @@ pub async fn run_fs_test<S: std::hash::BuildHasher>(
     server_map: HashMap<String, &[&str], S>,
     fs_type: vagrant::FsType,
 ) -> Result<(), CmdError> {
-    setup().await?;
+    setup(config).await?;
 
     vagrant::setup_deploy_servers(&config, &setup_config, server_map).await?;
 
