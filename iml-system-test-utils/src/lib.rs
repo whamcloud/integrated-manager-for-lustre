@@ -154,8 +154,8 @@ pub trait ServerList {
 
 impl<S: std::hash::BuildHasher> ServerList for HashMap<String, &[&str], S> {
     fn to_server_list(&self) -> Vec<&str> {
-        let server_set: BTreeSet<_> = self.values().cloned().flatten().collect();
-        server_set.into_iter().map(|x| *x).collect()
+        let server_set: BTreeSet<_> = self.into_iter().flat_map(|(_, x)| *x).map(|x| *x).collect();
+        server_set.into_iter().collect()
     }
 }
 
