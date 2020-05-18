@@ -2,9 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use device_types::devices::Device;
-use diesel::{self, pg::upsert::excluded, prelude::*};
+use device_types::{devices::Device, mount::Mount};
+use diesel::{self, dsl, pg::upsert::excluded, prelude::*, sql_types};
 use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
+use im::HashSet;
 use iml_device::{
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
@@ -13,8 +14,12 @@ use iml_device::{
     ImlDeviceError,
 };
 use iml_orm::{
-    models::{ChromaCoreDevice, NewChromaCoreDevice},
-    schema::chroma_core_device::{devices, fqdn, table},
+    models::{ChromaCoreDevice, ChromaCoreLustreclientmount, NewChromaCoreDevice},
+    schema::{
+        chroma_core_device as dvc, chroma_core_lustreclientmount as clmnt,
+        chroma_core_managedfilesystem as mgtfs, chroma_core_managedhost as mgthost,
+        django_content_type as djct,
+    },
     tokio_diesel::*,
 };
 use iml_service_queue::service_queue::consume_data;
@@ -86,31 +91,131 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     tokio::spawn(server);
 
-    let mut s = consume_data::<Device>("rust_agent_device_rx");
+    let mut s = consume_data::<(Device, HashSet<Mount>)>("rust_agent_device_rx");
 
     let pool = iml_orm::pool().unwrap();
 
-    while let Some((f, d)) = s.try_next().await? {
+    while let Some((host, (devices, mounts))) = s.try_next().await? {
         let mut cache = cache2.lock().await;
 
-        cache.insert(f.clone(), d.clone());
+        cache.insert(host.clone(), devices.clone());
 
         let device_to_insert = NewChromaCoreDevice {
-            fqdn: f.to_string(),
-            devices: serde_json::to_value(d).expect("Could not convert incoming Devices to JSON."),
+            fqdn: host.to_string(),
+            devices: serde_json::to_value(devices)
+                .expect("Could not convert incoming Devices to JSON."),
         };
 
-        let new_device = diesel::insert_into(table)
+        let new_device = diesel::insert_into(dvc::table)
             .values(device_to_insert)
-            .on_conflict(fqdn)
+            .on_conflict(dvc::fqdn)
             .do_update()
-            .set(devices.eq(excluded(devices)))
+            .set(dvc::devices.eq(excluded(dvc::devices)))
             .get_result_async::<ChromaCoreDevice>(&pool)
             .await
             .expect("Error saving new device");
 
-        tracing::info!("Inserted device from host {}", new_device.fqdn);
-        tracing::trace!("Inserted device {:?}", new_device);
+        tracing::info!("Inserted device from host {}", host);
+        tracing::debug!("Inserted {:?}", new_device);
+
+        let lustre_mounts = mounts
+            .into_iter()
+            .filter(|m| m.fs_type.0.as_str() == "lustre")
+            .filter_map(|m| {
+                m.source
+                    .0
+                    .to_str()
+                    .and_then(|p| p.splitn(2, ":/").nth(1))
+                    .map(|fs| (fs.to_string(), m.target.0.to_str().map(String::from)))
+            })
+            .collect::<Vec<_>>();
+
+        tracing::debug!("Client mounts at {}: {:?}", host, &lustre_mounts);
+
+        let state_modified_at = chrono::offset::Utc::now().into_sql::<sql_types::Timestamptz>();
+        let not_deleted = Some(true).into_sql::<sql_types::Nullable<sql_types::Bool>>();
+        let cross = true.into_sql::<sql_types::Bool>();
+        let immutable_state = false.into_sql::<sql_types::Bool>();
+
+        let insert_mounts = lustre_mounts
+            .iter()
+            .map(|(fs, tg)| {
+                let mp = tg
+                    .clone()
+                    .into_sql::<sql_types::Nullable<sql_types::Text>>();
+                mgtfs::table
+                    .inner_join(mgthost::table.on(cross))
+                    .inner_join(djct::table.on(cross))
+                    .select((
+                        mgthost::id,
+                        mgtfs::id,
+                        mp,
+                        "mounted".as_sql::<sql_types::Text>(),
+                        state_modified_at,
+                        immutable_state,
+                        not_deleted,
+                        djct::id.nullable(),
+                    ))
+                    .filter(mgtfs::name.eq(fs.clone()))
+                    .filter(mgthost::fqdn.eq(host.to_string()))
+                    .filter(djct::model.eq("lustreclientmount"))
+                    .insert_into(clmnt::table)
+                    .into_columns((
+                        clmnt::host_id,
+                        clmnt::filesystem_id,
+                        clmnt::mountpoint,
+                        clmnt::state,
+                        clmnt::state_modified_at,
+                        clmnt::immutable_state,
+                        clmnt::not_deleted,
+                        clmnt::content_type_id,
+                    ))
+                    .on_conflict((clmnt::host_id, clmnt::filesystem_id, clmnt::not_deleted))
+                    .do_update()
+                    .set((
+                        clmnt::mountpoint.eq(excluded(clmnt::mountpoint)),
+                        clmnt::state.eq(excluded(clmnt::state)),
+                        clmnt::state_modified_at.eq(state_modified_at),
+                    ))
+                    .get_result_async::<ChromaCoreLustreclientmount>(&pool)
+            })
+            .collect::<Vec<_>>();
+
+        let mounts = futures::future::join_all(insert_mounts).await;
+
+        for m in &mounts {
+            match m {
+                Ok(x) => tracing::debug!("Inserted {:?}", x),
+                Err(e) => tracing::error!("Failed to insert client mount {:?}", e),
+            }
+        }
+
+        let fs_ids: Vec<i32> = mounts
+            .into_iter()
+            .filter_map(Result::ok)
+            .map(|c| c.filesystem_id)
+            .collect();
+        let updated = diesel::update(clmnt::table)
+            .filter(clmnt::filesystem_id.ne(dsl::all(fs_ids)))
+            .filter(
+                clmnt::host_id.eq(dsl::any(
+                    mgthost::table
+                        .filter(mgthost::fqdn.eq(host.to_string()))
+                        .select(mgthost::id),
+                )),
+            )
+            .set((
+                clmnt::mountpoint.eq(Option::<String>::None),
+                clmnt::state.eq("unmounted".as_sql::<sql_types::Text>()),
+                clmnt::state_modified_at.eq(state_modified_at),
+            ))
+            .get_results_async::<ChromaCoreLustreclientmount>(&pool)
+            .await;
+
+        match updated {
+            Ok(u) => tracing::debug!("Updated {:?}", u),
+            Err(e) => tracing::error!("Failed to update client mounts: {:?}", e),
+        }
     }
 
     Ok(())
