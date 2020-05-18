@@ -7,54 +7,10 @@ mod command;
 mod error;
 mod task;
 
-use futures::{
-    channel::{mpsc, oneshot},
-    future, Future, StreamExt as _, TryFutureExt,
-};
-use iml_orm::DbPool;
+use iml_orm::create_pool_filter;
 use iml_rabbit::{self, create_connection_filter};
 use iml_wire_types::Conf;
 use warp::Filter;
-
-type PoolSender = oneshot::Sender<DbPool>;
-pub fn get_cloned_pool(
-    pool: DbPool,
-) -> (mpsc::UnboundedSender<PoolSender>, impl Future<Output = ()>) {
-    let (tx, rx) = mpsc::unbounded();
-
-    let fut = rx.for_each(move |sender: PoolSender| {
-        let _ = sender
-            .send(pool.clone())
-            .map_err(|_| tracing::info!("channel recv dropped before we could hand out a pool"));
-
-        future::ready(())
-    });
-
-    (tx, fut)
-}
-
-pub async fn create_pool_filter() -> Result<
-    (
-        impl Future<Output = ()>,
-        impl Filter<Extract = (DbPool,), Error = warp::Rejection> + Clone,
-    ),
-    error::ImlApiError,
-> {
-    let conn = iml_orm::pool()?;
-
-    let (tx, fut) = get_cloned_pool(conn);
-
-    let filter = warp::any().and_then(move || {
-        let (tx2, rx2) = oneshot::channel();
-
-        tx.unbounded_send(tx2).unwrap();
-
-        rx2.map_err(error::ImlApiError::OneshotCanceled)
-            .map_err(warp::reject::custom)
-    });
-
-    Ok((fut, filter))
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

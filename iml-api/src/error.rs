@@ -4,6 +4,7 @@
 
 use futures::channel::oneshot;
 use iml_job_scheduler_rpc::ImlJobSchedulerRpcError;
+use iml_orm::ImlOrmError;
 use iml_rabbit::{self, ImlRabbitError};
 use warp::reject;
 
@@ -11,7 +12,7 @@ use warp::reject;
 pub enum ImlApiError {
     ImlDieselAsyncError(iml_orm::tokio_diesel::AsyncError),
     ImlJobSchedulerRpcError(ImlJobSchedulerRpcError),
-    ImlR2D2Error(iml_orm::r2d2::Error),
+    ImlOrmError(ImlOrmError),
     ImlRabbitError(ImlRabbitError),
     NoneError,
     OneshotCanceled(oneshot::Canceled),
@@ -25,7 +26,7 @@ impl std::fmt::Display for ImlApiError {
         match *self {
             ImlApiError::ImlDieselAsyncError(ref err) => write!(f, "{}", err),
             ImlApiError::ImlJobSchedulerRpcError(ref err) => write!(f, "{}", err),
-            ImlApiError::ImlR2D2Error(ref err) => write!(f, "{}", err),
+            ImlApiError::ImlOrmError(ref err) => write!(f, "{}", err),
             ImlApiError::ImlRabbitError(ref err) => write!(f, "{}", err),
             ImlApiError::NoneError => write!(f, "Not Found"),
             ImlApiError::OneshotCanceled(ref err) => write!(f, "{}", err),
@@ -39,7 +40,7 @@ impl std::error::Error for ImlApiError {
         match *self {
             ImlApiError::ImlDieselAsyncError(ref err) => Some(err),
             ImlApiError::ImlJobSchedulerRpcError(ref err) => Some(err),
-            ImlApiError::ImlR2D2Error(ref err) => Some(err),
+            ImlApiError::ImlOrmError(ref err) => Some(err),
             ImlApiError::ImlRabbitError(ref err) => Some(err),
             ImlApiError::NoneError => None,
             ImlApiError::OneshotCanceled(ref err) => Some(err),
@@ -51,12 +52,6 @@ impl std::error::Error for ImlApiError {
 impl From<iml_orm::tokio_diesel::AsyncError> for ImlApiError {
     fn from(err: iml_orm::tokio_diesel::AsyncError) -> Self {
         ImlApiError::ImlDieselAsyncError(err)
-    }
-}
-
-impl From<iml_orm::r2d2::Error> for ImlApiError {
-    fn from(err: iml_orm::r2d2::Error) -> Self {
-        ImlApiError::ImlR2D2Error(err)
     }
 }
 
@@ -75,6 +70,12 @@ impl From<serde_json::error::Error> for ImlApiError {
 impl From<oneshot::Canceled> for ImlApiError {
     fn from(err: oneshot::Canceled) -> Self {
         ImlApiError::OneshotCanceled(err)
+    }
+}
+
+impl From<ImlOrmError> for ImlApiError {
+    fn from(err: ImlOrmError) -> Self {
+        ImlApiError::ImlOrmError(err)
     }
 }
 

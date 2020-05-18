@@ -22,7 +22,7 @@ pub async fn insert(
     data: serde_json::Value,
     task: &ChromaCoreTask,
     pool: &DbPool,
-) -> Result<(), tokio_diesel::AsyncError> {
+) -> Result<(), crate::ImlOrmError> {
     diesel::insert_into(chroma_core_fidtaskqueue::table)
         .values(NewFidTask {
             fid,
