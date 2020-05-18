@@ -4,12 +4,12 @@
 
 use crate::{
     components::{font_awesome::*, modal},
-    dependency_tree::{build_direct_dag, traverse_graph, DependencyDAG, Deps, Rich},
     extensions::{MergeAttrs as _, NodeExt as _, RequestExt as _},
     generated::css_classes::C,
     key_codes, sleep_with_handle, GMsg,
 };
 use futures::channel::oneshot;
+use iml_api_utils::dependency_tree::{build_direct_dag, traverse_graph, DependencyDAG, Deps, Rich};
 use iml_wire_types::{ApiList, AvailableTransition, Command, EndpointName, Job, Step};
 use regex::{Captures, Regex};
 use seed::{prelude::*, *};
