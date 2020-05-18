@@ -1654,13 +1654,6 @@ impl fmt::Display for Branding {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct FidError {
-    pub fid: String,
-    pub data: serde_json::Value,
-    pub errno: i16,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct FidItem {
     pub fid: String,
     pub data: serde_json::Value,
