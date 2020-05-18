@@ -1875,7 +1875,6 @@ class JobScheduler(object):
                 "actions": ["stratagem.warning"],
             }
             task = Task.objects.create(**task_data)
-            task_list.append(task)
 
             run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
 
@@ -1889,7 +1888,6 @@ class JobScheduler(object):
                 "actions": ["stratagem.purge"],
             }
             task = Task.objects.create(**task_data)
-            task_list.append(task)
 
             run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
 
@@ -1911,46 +1909,12 @@ class JobScheduler(object):
         run_stratagem_list.append(
             {
                 "class_name": "AggregateStratagemResultsJob",
-                "args": {"depends_on_job_range": range(1, len(run_stratagem_list)), "fs_name": filesystem.name},
-            }
-        )
-
-        client_host = ManagedHost.objects.get(
-            Q(server_profile_id="stratagem_client") | Q(server_profile_id="stratagem_existing_client")
-        )
-        client_mount_exists = LustreClientMount.objects.filter(
-            host_id=client_host.id, filesystem=filesystem.name
-        ).exists()
-
-        mountpoint = "/mnt/{}".format(filesystem.name)
-        if not client_mount_exists:
-            self._create_client_mount(client_host, filesystem.name, mountpoint)
-
-        client_mount = ObjectCache.get_one(
-            LustreClientMount, lambda mnt: mnt.host_id == client_host.id and mnt.filesystem == filesystem.name
-        )
-        client_mount.state = "unmounted"
-        client_mount.mountpoint = mountpoint
-        client_mount.filesystem = filesystem.name
-        client_mount.save()
-        ObjectCache.update(client_mount)
-
-        run_stratagem_list.append(
-            {
-                "class_name": "MountLustreClientJob",
                 "args": {
                     "depends_on_job_range": range(len(run_stratagem_list) - len(mdts), len(run_stratagem_list)),
                     "fs_name": filesystem.name,
                 },
             }
         )
-
-        # Remove tasks after they are done
-        list_len = len(run_stratagem_list)
-        for task in task_list:
-            run_stratagem_list.append(
-                {"class_name": "RemoveTaskJob", "args": {"task": task, "depends_on_job_range": range(0, list_len)}}
-            )
 
         command = self.run_jobs(run_stratagem_list, help_text["run_stratagem_for_all"])
 
