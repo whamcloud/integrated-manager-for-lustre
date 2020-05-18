@@ -7,6 +7,7 @@ use futures::{
     future::{self, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
+use iml_wire_types::{FidError, FidItem};
 use iml_wire_types::FidItem;
 use liblustreapi::LlapiFid;
 use std::{collections::HashMap, convert::Into};
