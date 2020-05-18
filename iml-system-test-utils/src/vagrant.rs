@@ -58,12 +58,25 @@ pub async fn up<'a>() -> Result<Command, CmdError> {
     Ok(x)
 }
 
-pub async fn destroy<'a>() -> Result<(), CmdError> {
-    let mut x = vagrant().await?;
+pub async fn destroy<'a>(config: &ClusterConfig) -> Result<(), CmdError> {
+    let mut nodes = config.all();
+    nodes.reverse();
 
-    x.arg("destroy").arg("-f");
+    for node in &nodes {
+        let mut halt_cmd = halt().await?;
+        halt_cmd.arg(node);
 
-    try_command_n_times(3, 1, &mut x).await
+        try_command_n_times(3, 1, &mut halt_cmd).await?;
+    }
+
+    for node in &nodes {
+        let mut destroy_cmd = vagrant().await?;
+        destroy_cmd.arg("destroy").arg("-f").arg(node);
+
+        try_command_n_times(3, 1, &mut destroy_cmd).await?;
+    }
+
+    Ok(())
 }
 
 pub async fn halt() -> Result<Command, CmdError> {
