@@ -5,10 +5,11 @@
 use crate::{agent_error::ImlAgentError, http_comms::mailbox_client};
 use futures::{
     future::{self, TryFutureExt},
-    stream::{StreamExt, TryStreamExt},
+    stream::{self, StreamExt, TryStreamExt},
 };
+use iml_wire_types::FidItem;
 use liblustreapi::LlapiFid;
-use std::convert::Into;
+use std::{collections::HashMap, convert::Into};
 use tokio::task::spawn_blocking;
 use tracing::{debug, error, warn};
 
@@ -53,6 +54,28 @@ pub async fn read_mailbox(
         .try_filter_map(future::ok)
         .chunks(rmfids_size)
         .map(|xs| xs.into_iter().collect())
+        .try_for_each_concurrent(10, |fids| {
+            rm_fids(llapi.clone(), fids)
+                .or_else(|e| {
+                    warn!("Error removing fid {}", e);
+                    future::ok(())
+                })
+                .map_ok(|_| debug!("removed {} fids", rmfids_size))
+        })
+        .await
+}
+
+pub async fn process_fids(
+    (fsname_or_mntpath, _task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
+) -> Result<(), ImlAgentError> {
+    let llapi = search_rootpath(fsname_or_mntpath).await?;
+
+    let rmfids_size = llapi.rmfids_size();
+
+    let fids = fid_list.into_iter().map(|fi| fi.fid.clone());
+    stream::iter(fids)
+        .chunks(rmfids_size)
+        .map(|xs| Ok(xs.into_iter().collect()))
         .try_for_each_concurrent(10, |fids| {
             rm_fids(llapi.clone(), fids)
                 .or_else(|e| {

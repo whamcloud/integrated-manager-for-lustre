@@ -1625,5 +1625,11 @@ impl fmt::Display for Branding {
     }
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FidItem {
+    pub fid: String,
+    pub data: serde_json::Value,
+}
+
 pub mod db;
 pub mod warp_drive;

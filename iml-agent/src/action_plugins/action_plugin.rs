@@ -62,7 +62,10 @@ pub fn create_registry() -> action_plugins::Actions {
             action_configure::update_and_write_new_config,
         )
         .add_plugin("is_ntp_configured", is_ntp_configured::is_ntp_configured)
-        .add_plugin("create_ltuer_conf", ltuer::create_ltuer_conf);
+        .add_plugin("create_ltuer_conf", ltuer::create_ltuer_conf)
+        // Task Actions
+        .add_plugin("action.stratagem.warning", action_warning::process_fids)
+        .add_plugin("action.stratagem.purge", action_purge::process_fids);
 
     info!("Loaded the following ActionPlugins:");
 

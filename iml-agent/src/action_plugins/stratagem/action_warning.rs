@@ -2,14 +2,19 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, env, fidlist, http_comms::mailbox_client};
+use crate::{
+    agent_error::{ImlAgentError, RequiredError},
+    env, fidlist,
+    http_comms::mailbox_client,
+};
 use futures::{
     future::{self, join_all},
     sink::SinkExt,
-    StreamExt, TryFutureExt, TryStreamExt,
+    stream, StreamExt, TryFutureExt, TryStreamExt,
 };
+use iml_wire_types::FidItem;
 use liblustreapi::LlapiFid;
-use std::{io, path::PathBuf};
+use std::{collections::HashMap, io, path::PathBuf};
 use tokio::task::spawn_blocking;
 use tracing::{debug, error};
 
@@ -111,4 +116,68 @@ pub async fn read_mailbox(
         .await?;
 
     Ok(txt_path)
+}
+
+async fn fi2path(llapi: LlapiFid, fi: FidItem) -> Option<String> {
+    let pfids: Vec<fidlist::LinkEA> = serde_json::from_value(fi.data).unwrap_or(vec![]);
+
+    let path = if let Some(pfid) = pfids.get(0) {
+        format!(
+            "{}/{}",
+            fid2path(llapi, pfid.pfid.clone())
+                .await?,
+            pfid.name
+        )
+    } else {
+        fid2path(llapi.clone(), fi.fid).await?
+    };
+    Some(path)
+}
+
+/// Process FIDs
+pub async fn process_fids(
+    (fsname_or_mntpath, task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
+) -> Result<(), ImlAgentError> {
+    let txt_path = task_args.get("report_file".into()).ok_or(RequiredError(
+        "Task missing 'report_file' argument".to_string(),
+    ))?;
+
+    let f = iml_fs::file_write_bytes(txt_path.into()).await?;
+
+    let llapi = search_rootpath(fsname_or_mntpath).await?;
+
+    let mntpt = llapi.mntpt();
+
+    stream::iter(fid_list)
+        .chunks(1000)
+        .map(|xs| Ok::<_, ImlAgentError>(xs.into_iter().collect()) )
+        .and_then(|xs: Vec<_>| {
+            let llapi = llapi.clone();
+
+            async move {
+                let xs = join_all(
+                    xs.into_iter()
+                        .map(move |x| fi2path(llapi.clone(), x)),
+                )
+                .await;
+
+                Ok(xs)
+            }
+        })
+        .inspect(|_| debug!("Resolved 1000 Fids"))
+        .map_ok(move |xs|
+                xs.into_iter()
+                .filter_map(std::convert::identity)
+                .map(|x| format!("{}/{}", mntpt, x))
+                .collect())
+        .map_ok(|xs: Vec<String>| bytes::BytesMut::from(xs.join("\n").as_str()))
+        .map_ok(|mut x: bytes::BytesMut| {
+            if !x.is_empty() {
+                x.extend_from_slice(b"\n");
+            }
+            x.freeze()
+        })
+        .forward(f.sink_err_into())
+        .await?;
+    Ok(())
 }

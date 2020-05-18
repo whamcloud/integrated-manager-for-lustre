@@ -1857,6 +1857,33 @@ class JobScheduler(object):
         filesystem = ManagedFilesystem.objects.get(id=fs_id)
 
         run_stratagem_list = [{"class_name": "ClearOldStratagemDataJob", "args": {}}]
+        if stratagem_data.get("report_duration"):
+            task_data = {
+                "filesystem": filesystem,
+                "name": "{}-warn_fids-fids_expiring_soon".format(unique_id),
+                "start": django.utils.timezone.now(),
+                "state": "created",
+                "single_runner": True,
+                "keep_failed": False,
+                "args": {"report_file": "/tmp/expiring_fids-{}-{}.txt".format(filesystem.name, unique_id)},
+                "actions": ["stratagem.warning"],
+            }
+            task = Task.objects.create(**task_data)
+
+            run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
+
+        if stratagem_data.get("purge_duration"):
+            task_data = {
+                "filesystem": filesystem,
+                "name": "{}-purge_fids-fids_expired".format(unique_id),
+                "start": django.utils.timezone.now(),
+                "state": "created",
+                "keep_failed": False,
+                "actions": ["stratagem.purge"],
+            }
+            task = Task.objects.create(**task_data)
+
+            run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
 
         run_stratagem_list += map(
             lambda mdt_id: {
@@ -1867,7 +1894,7 @@ class JobScheduler(object):
                     "report_duration": stratagem_data.get("report_duration"),
                     "purge_duration": stratagem_data.get("purge_duration"),
                     "filesystem": filesystem,
-                    "depends_on_job_range": [0],
+                    "depends_on_job_range": range(0, len(run_stratagem_list)),
                 },
             },
             mdts,
@@ -1876,50 +1903,9 @@ class JobScheduler(object):
         run_stratagem_list.append(
             {
                 "class_name": "AggregateStratagemResultsJob",
-                "args": {"depends_on_job_range": range(1, len(run_stratagem_list)), "fs_name": filesystem.name},
-            }
-        )
-
-        client_host = ManagedHost.objects.get(
-            Q(server_profile_id="stratagem_client") | Q(server_profile_id="stratagem_existing_client")
-        )
-        client_mount_exists = LustreClientMount.objects.filter(
-            host_id=client_host.id, filesystem=filesystem.name
-        ).exists()
-
-        mountpoint = "/mnt/{}".format(filesystem.name)
-        if not client_mount_exists:
-            self._create_client_mount(client_host, filesystem, mountpoint)
-
-        client_mount = ObjectCache.get_one(
-            LustreClientMount, lambda mnt: mnt.host_id == client_host.id and mnt.filesystem == filesystem.name
-        )
-        client_mount.state = "unmounted"
-        client_mount.mountpoint = mountpoint
-        client_mount.filesystem = filesystem.name
-        client_mount.save()
-        ObjectCache.update(client_mount)
-
-        run_stratagem_list.append(
-            {
-                "class_name": "MountLustreClientJob",
                 "args": {
-                    "depends_on_job_range": [len(run_stratagem_list) - 1],
-                    "lustre_client_mount": client_mount,
-                    "old_state": "unmounted",
-                },
-            }
-        )
-
-        run_stratagem_list.append(
-            {
-                "class_name": "SendStratagemResultsToClientJob",
-                "args": {
-                    "depends_on_job_range": [len(run_stratagem_list) - 1],
-                    "uuid": unique_id,
-                    "report_duration": stratagem_data.get("report_duration"),
-                    "purge_duration": stratagem_data.get("purge_duration"),
-                    "filesystem": filesystem,
+                    "depends_on_job_range": range(len(run_stratagem_list) - len(mdts), len(run_stratagem_list)),
+                    "fs_name": filesystem.name,
                 },
             }
         )
