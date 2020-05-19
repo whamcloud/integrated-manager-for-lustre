@@ -3,8 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    iml, ssh, get_local_server_names, try_command_n_times, ServerList as _, SetupConfig, SetupConfigType,
-    STRATAGEM_CLIENT_PROFILE, STRATAGEM_SERVER_PROFILE,
+    get_local_server_names, iml, ssh, try_command_n_times, ServerList as _, SetupConfig,
+    SetupConfigType, STRATAGEM_CLIENT_PROFILE, STRATAGEM_SERVER_PROFILE,
 };
 use futures::future::try_join_all;
 use iml_cmd::{CheckedCommandExt, CmdError};
@@ -341,20 +341,19 @@ pub async fn setup_iml_install(
         }
     };
 
-    setup_bare(storage_and_client_servers, &all_hosts, &config, NtpServer::Adm).await?;
+    setup_bare(
+        storage_and_client_servers,
+        &all_hosts,
+        &config,
+        NtpServer::Adm,
+    )
+    .await?;
 
-    up().await?
-        .arg(config.manager)
-        .checked_status()
-        .await?;
+    up().await?.arg(config.manager).checked_status().await?;
 
     configure_rpm_setup(setup_config, &config).await?;
 
-    halt()
-        .await?
-        .arg(config.manager)
-        .checked_status()
-        .await?;
+    halt().await?.arg(config.manager).checked_status().await?;
 
     for host in &all_hosts {
         snapshot_save(host, "iml-installed")
@@ -389,7 +388,11 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
 
         run_vm_command(
             config.manager,
-            &format!("iml server add -h {} -p {}", get_local_server_names(hosts).join(","), profile),
+            &format!(
+                "iml server add -h {} -p {}",
+                get_local_server_names(hosts).join(","),
+                profile
+            ),
         )
         .await?
         .checked_status()
@@ -451,11 +454,10 @@ pub async fn configure_rpm_setup(
         ssh::ssh_exec(
             cluster_config.manager_ip,
             format!(
-                r#"cat <<EOF > {}
+                r#"cat <<EOF | iml server profile load
 {}
 EOF
 "#,
-                format!("{}/stratagem-server.profile", iml::IML_RPM_CONFIG_PATH),
                 STRATAGEM_SERVER_PROFILE,
             )
             .as_str(),
@@ -465,11 +467,10 @@ EOF
         ssh::ssh_exec(
             cluster_config.manager_ip,
             format!(
-                r#"cat <<EOF > {}
+                r#"cat <<EOF | iml server profile load
 {}
 EOF
 "#,
-                format!("{}/stratagem-client.profile", iml::IML_RPM_CONFIG_PATH),
                 STRATAGEM_CLIENT_PROFILE,
             )
             .as_str(),
@@ -478,14 +479,7 @@ EOF
 
         run_vm_command(
             cluster_config.manager,
-            format!(
-                "sudo chroma-config profile register {}/stratagem-server.profile \
-        && sudo chroma-config profile register {}/stratagem-client.profile \
-        && sudo systemctl restart iml-manager.target",
-                iml::IML_RPM_CONFIG_PATH,
-                iml::IML_RPM_CONFIG_PATH
-            )
-            .as_str(),
+            format!("sudo systemctl restart iml-manager.target").as_str(),
         )
         .await?
         .checked_status()
