@@ -63,10 +63,10 @@ pub async fn destroy<'a>(config: &ClusterConfig) -> Result<(), CmdError> {
     nodes.reverse();
 
     for node in &nodes {
-        let mut halt_cmd = halt().await?;
-        halt_cmd.arg(node);
+        let mut suspend_cmd = suspend().await?;
+        suspend_cmd.arg(node);
 
-        try_command_n_times(3, 1, &mut halt_cmd).await?;
+        try_command_n_times(3, 1, &mut suspend_cmd).await?;
     }
 
     for node in &nodes {
@@ -82,6 +82,13 @@ pub async fn destroy<'a>(config: &ClusterConfig) -> Result<(), CmdError> {
 pub async fn halt() -> Result<Command, CmdError> {
     let mut x = vagrant().await?;
     x.arg("halt");
+
+    Ok(x)
+}
+
+pub async fn suspend() -> Result<Command, CmdError> {
+    let mut x = vagrant().await?;
+    x.arg("suspend");
 
     Ok(x)
 }
