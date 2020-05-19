@@ -299,13 +299,13 @@ async fn wait_till_agent_starts(
 }
 
 fn list_server(hosts: Vec<Host>, display_type: DisplayType) {
-    let term = Term::stdout();
-
     tracing::debug!("Hosts: {:?}", hosts);
 
-    let x = hosts.into_display_type(display_type);
-
-    term.write_line(&x).unwrap();
+    if !hosts.is_empty() || (display_type != DisplayType::Tabular) {
+        let term = Term::stdout();
+        let x = hosts.into_display_type(display_type);
+        term.write_line(&x).unwrap();
+    }
 }
 
 fn get_profile_by_name<'a>(xs: &'a [ServerProfile], name: &str) -> Option<&'a ServerProfile> {

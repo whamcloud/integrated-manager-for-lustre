@@ -209,7 +209,7 @@ impl<T: IntoTable + serde::Serialize> IntoDisplayType for T {
     }
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(StructOpt, Debug, PartialEq)]
 pub enum DisplayType {
     Json,
     Yaml,
