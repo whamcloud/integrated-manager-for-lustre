@@ -376,7 +376,7 @@ pub fn job_tree_view(model: &Model, parent_cid: CmdId) -> Node<Msg> {
 fn job_item_view(job: Arc<RichJob>, is_new: bool, ctx: &mut Context) -> Node<Msg> {
     let icon = job_status_icon(job.as_ref());
     if !is_new {
-        empty!()
+        empty![]
     } else if job.steps.is_empty() {
         span![span![class![C.mr_1], icon], span![job.description]]
     } else {
@@ -403,48 +403,32 @@ fn job_item_combine(parent: Node<Msg>, acc: Vec<Node<Msg>>, _ctx: &mut Context) 
         let acc_plus = acc.into_iter().map(|a| a.merge_attrs(class![C.ml_3, C.mt_1]));
         div![parent, acc_plus]
     } else {
-        empty!()
+        empty![]
     }
 }
 
 fn job_item_cancel_button(job: &Arc<RichJob>, cancelling: bool) -> Node<Msg> {
     if let Some(trans) = find_cancel_transition(job) {
+        let cancel_btn: Node<Msg> = div![
+            class![C.inline, C.px_1, C.rounded_lg, C.text_white, C.cursor_pointer],
+            trans.label,
+        ];
         if !cancelling {
-            div![
-                class![
-                    C.inline,
-                    C.px_1,
-                    C.rounded_lg,
-                    C.text_white,
-                    C.cursor_pointer,
-                    C.bg_blue_500,
-                    C.hover__bg_blue_400,
-                ],
-                simple_ev(Ev::Click, Msg::CancelJob(job.id)),
-                trans.label,
-            ]
+            cancel_btn
+                .merge_attrs(class![C.bg_blue_500, C.hover__bg_blue_400])
+                .with_listener(simple_ev(Ev::Click, Msg::CancelJob(job.id)))
         } else {
             // ongoing action will render gray button without the handler
-            div![
-                class![
-                    C.inline,
-                    C.px_1,
-                    C.rounded_lg,
-                    C.text_white,
-                    C.bg_gray_500,
-                    C.hover__bg_gray_400,
-                ],
-                trans.label,
-            ]
+            cancel_btn.merge_attrs(class![C.bg_gray_500, C.hover__bg_gray_400])
         }
     } else {
-        empty!()
+        empty![]
     }
 }
 
 fn step_list_view(steps: &[Arc<RichStep>], select: &Select, is_open: bool) -> Node<Msg> {
     if !is_open {
-        empty!()
+        empty![]
     } else if steps.is_empty() {
         div![
             class![C.my_8, C.text_center, C.text_gray_500],
@@ -478,7 +462,7 @@ fn step_item_view(step: &RichStep, is_open: bool) -> Vec<Node<Msg>> {
         ],
     ];
     let item_body = if !is_open {
-        empty!()
+        empty![]
     } else {
         // note, we cannot just use the Debug instance for step.args,
         // because the keys traversal order changes every time the HashMap is created
@@ -624,8 +608,8 @@ where
 
 async fn apply_job_transition(job_id: u32, transition: AvailableTransition) -> Result<Msg, Msg> {
     let json = serde_json::json!({
-        "id": (job_id),
-        "state": (transition.state),
+        "id": job_id,
+        "state": transition.state,
     });
     let req = Request::api_item(Job0::endpoint_name(), job_id)
         .with_auth()
@@ -663,7 +647,7 @@ fn to_load_cmd(model: &Model, cmd_id: u32) -> bool {
 }
 
 fn to_load_job(model: &Model, job_id: u32) -> bool {
-    // job.state can be "tasked", "pending" or "complete"
+    // job.state can be "pending", "tasked" or "complete"
     // if a job is errored or cancelled, it is also complete
     model.jobs.get(&job_id).map(|j| j.state != "complete").unwrap_or(true)
 }
@@ -673,7 +657,7 @@ fn to_load_step(model: &Model, step_id: u32) -> bool {
     model
         .steps
         .get(&step_id)
-        .map(|s| s.state != "success" && s.state != "failed")
+        .map(|s| s.state == "incomplete")
         .unwrap_or(true)
 }
 
