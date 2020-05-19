@@ -31,7 +31,7 @@ pub fn server_link<T>(uri: Option<&String>, txt: &str) -> Node<T> {
 
 pub fn volume_link<T>(t: &Target<TargetConfParam>) -> Node<T> {
     // let vol_id = match &t.volume {
-    //     VolumeOrResourceUri::ResourceUri(url) => extract_id(url).unwrap().parse::<u32>().unwrap(),
+    //     VolumeOrResourceUri::ResourceUri(url) => extract_id(url).unwrap().parse::<i32>().unwrap(),
     //     VolumeOrResourceUri::Volume(v) => v.id,
     // };
 

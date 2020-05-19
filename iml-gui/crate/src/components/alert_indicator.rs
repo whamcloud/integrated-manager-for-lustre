@@ -12,7 +12,7 @@ use seed::{prelude::*, *};
 use std::{cmp::max, collections::BTreeSet, iter::FromIterator, sync::Arc};
 
 pub(crate) fn alert_indicator<T>(
-    alerts: &HashMap<u32, Arc<Alert>>,
+    alerts: &HashMap<i32, Arc<Alert>>,
     x: &dyn ToCompositeId,
     compact: bool,
     tt_placement: Placement,

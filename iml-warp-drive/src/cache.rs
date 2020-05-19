@@ -46,7 +46,7 @@ async fn converter<T>(
     msg_type: MessageType,
     x: impl ToApiRecord + NotDeleted,
     record_fn: fn(T) -> Record,
-    record_id_fn: fn(u32) -> RecordId,
+    record_id_fn: fn(i32) -> RecordId,
 ) -> Result<RecordChange, ImlManagerClientError>
 where
     T: std::fmt::Debug
@@ -269,13 +269,13 @@ pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlM
 
 async fn into_row<T>(
     s: impl Stream<Item = Result<iml_postgres::Row, iml_postgres::Error>>,
-) -> Result<HashMap<u32, T>, iml_postgres::Error>
+) -> Result<HashMap<i32, T>, iml_postgres::Error>
 where
     T: From<iml_postgres::Row> + Name + Id + Clone,
 {
     s.map_ok(T::from)
         .map_ok(|record| (record.id(), record))
-        .try_collect::<HashMap<u32, T>>()
+        .try_collect::<HashMap<i32, T>>()
         .await
 }
 

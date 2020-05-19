@@ -17,8 +17,8 @@ use std::io;
 use tokio_postgres::Row;
 
 pub trait Id {
-    /// Returns the `Id` (`u32`).
-    fn id(&self) -> u32;
+    /// Returns the `Id` (`i32`).
+    fn id(&self) -> i32;
 }
 
 pub trait NotDeleted {
@@ -53,13 +53,13 @@ pub trait Name {
 /// Record from the `django_content_type` table
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct ContentTypeRecord {
-    pub id: u32,
+    pub id: i32,
     pub app_label: String,
     pub model: String,
 }
 
 impl Id for ContentTypeRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -76,7 +76,7 @@ impl Name for ContentTypeRecord {
 impl From<Row> for ContentTypeRecord {
     fn from(row: Row) -> Self {
         ContentTypeRecord {
-            id: row.get::<_, i32>("id") as u32,
+            id: row.get::<_, i32>("id"),
             app_label: row.get("app_label"),
             model: row.get("model"),
         }
@@ -86,20 +86,20 @@ impl From<Row> for ContentTypeRecord {
 /// Record from the `chroma_core_managedfilesystem` table
 #[derive(serde::Deserialize, Debug)]
 pub struct FsRecord {
-    id: u32,
+    id: i32,
     state_modified_at: String,
     state: String,
     immutable_state: bool,
     name: String,
-    mgs_id: u32,
-    mdt_next_index: u32,
-    ost_next_index: u32,
+    mgs_id: i32,
+    mdt_next_index: i32,
+    ost_next_index: i32,
     not_deleted: Option<bool>,
-    content_type_id: Option<u32>,
+    content_type_id: Option<i32>,
 }
 
 impl Id for FsRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -121,8 +121,8 @@ impl Name for FsRecord {
 /// Record from the `chroma_core_volume` table
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct VolumeRecord {
-    pub id: u32,
-    pub storage_resource_id: Option<u32>,
+    pub id: i32,
+    pub storage_resource_id: Option<i32>,
     pub size: Option<u64>,
     pub label: String,
     pub filesystem_type: Option<String>,
@@ -131,7 +131,7 @@ pub struct VolumeRecord {
 }
 
 impl Id for VolumeRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -154,15 +154,13 @@ impl Name for VolumeRecord {
 impl From<Row> for VolumeRecord {
     fn from(row: Row) -> Self {
         VolumeRecord {
-            id: row.get::<_, i32>("id") as u32,
+            id: row.get::<_, i32>("id"),
             size: row.get::<_, Option<i64>>("size").map(|x| x as u64),
             label: row.get("label"),
             filesystem_type: row.get("filesystem_type"),
             usable_for_lustre: row.get("usable_for_lustre"),
             not_deleted: row.get("not_deleted"),
-            storage_resource_id: row
-                .get::<_, Option<i32>>("storage_resource_id")
-                .map(|x| x as u32),
+            storage_resource_id: row.get::<_, Option<i32>>("storage_resource_id"),
         }
     }
 }
@@ -170,11 +168,11 @@ impl From<Row> for VolumeRecord {
 /// Record from the `chroma_core_volumenode` table
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct VolumeNodeRecord {
-    pub id: u32,
-    pub volume_id: u32,
-    pub host_id: u32,
+    pub id: i32,
+    pub volume_id: i32,
+    pub host_id: i32,
     pub path: String,
-    pub storage_resource_id: Option<u32>,
+    pub storage_resource_id: Option<i32>,
     pub primary: bool,
     #[serde(rename = "use")]
     pub _use: bool,
@@ -182,13 +180,13 @@ pub struct VolumeNodeRecord {
 }
 
 impl Id for VolumeNodeRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
 
 impl Id for &VolumeNodeRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -223,13 +221,11 @@ impl Name for VolumeNodeRecord {
 impl From<Row> for VolumeNodeRecord {
     fn from(row: Row) -> Self {
         VolumeNodeRecord {
-            id: row.get::<_, i32>("id") as u32,
-            volume_id: row.get::<_, i32>("volume_id") as u32,
-            host_id: row.get::<_, i32>("host_id") as u32,
+            id: row.get::<_, i32>("id"),
+            volume_id: row.get::<_, i32>("volume_id"),
+            host_id: row.get::<_, i32>("host_id"),
             path: row.get("path"),
-            storage_resource_id: row
-                .get::<_, Option<i32>>("storage_resource_id")
-                .map(|x| x as u32),
+            storage_resource_id: row.get::<_, Option<i32>>("storage_resource_id"),
             primary: row.get("primary"),
             _use: row.get("use"),
             not_deleted: row.get("not_deleted"),
@@ -240,17 +236,17 @@ impl From<Row> for VolumeNodeRecord {
 /// Record from the `chroma_core_managedtargetmount` table
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct ManagedTargetMountRecord {
-    pub id: u32,
-    pub host_id: u32,
+    pub id: i32,
+    pub host_id: i32,
     pub mount_point: Option<String>,
-    pub volume_node_id: u32,
+    pub volume_node_id: i32,
     pub primary: bool,
-    pub target_id: u32,
+    pub target_id: i32,
     pub not_deleted: Option<bool>,
 }
 
 impl Id for ManagedTargetMountRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -265,12 +261,12 @@ impl NotDeleted for ManagedTargetMountRecord {
 impl From<Row> for ManagedTargetMountRecord {
     fn from(row: Row) -> Self {
         ManagedTargetMountRecord {
-            id: row.get::<_, i32>("id") as u32,
-            host_id: row.get::<_, i32>("host_id") as u32,
+            id: row.get::<_, i32>("id"),
+            host_id: row.get::<_, i32>("host_id"),
             mount_point: row.get("mount_point"),
-            volume_node_id: row.get::<_, i32>("volume_node_id") as u32,
+            volume_node_id: row.get::<_, i32>("volume_node_id"),
             primary: row.get("primary"),
-            target_id: row.get::<_, i32>("target_id") as u32,
+            target_id: row.get::<_, i32>("target_id"),
             not_deleted: row.get("not_deleted"),
         }
     }
@@ -287,25 +283,25 @@ impl Name for ManagedTargetMountRecord {
 /// Record from the `chroma_core_managedtarget` table
 #[derive(serde::Deserialize, Debug)]
 pub struct ManagedTargetRecord {
-    id: u32,
+    id: i32,
     state_modified_at: String,
     state: String,
     immutable_state: bool,
     name: Option<String>,
     uuid: Option<String>,
     ha_label: Option<String>,
-    volume_id: u32,
-    inode_size: Option<u32>,
-    bytes_per_inode: Option<u32>,
+    volume_id: i32,
+    inode_size: Option<i32>,
+    bytes_per_inode: Option<i32>,
     inode_count: Option<u64>,
     reformat: bool,
-    active_mount_id: Option<u32>,
+    active_mount_id: Option<i32>,
     not_deleted: Option<bool>,
-    content_type_id: Option<u32>,
+    content_type_id: Option<i32>,
 }
 
 impl Id for ManagedTargetRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -327,21 +323,21 @@ impl Name for ManagedTargetRecord {
 /// Record from the `chroma_core_ostpool` table
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct OstPoolRecord {
-    pub id: u32,
+    pub id: i32,
     pub name: String,
-    pub filesystem_id: u32,
+    pub filesystem_id: i32,
     pub not_deleted: Option<bool>,
-    pub content_type_id: Option<u32>,
+    pub content_type_id: Option<i32>,
 }
 
 impl Id for OstPoolRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
 
 impl Id for &OstPoolRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -356,13 +352,11 @@ impl NotDeleted for OstPoolRecord {
 impl From<Row> for OstPoolRecord {
     fn from(row: Row) -> Self {
         OstPoolRecord {
-            id: row.get::<_, i32>("id") as u32,
+            id: row.get::<_, i32>("id"),
             name: row.get("name"),
-            filesystem_id: row.get::<_, i32>("filesystem_id") as u32,
+            filesystem_id: row.get::<_, i32>("filesystem_id"),
             not_deleted: row.get("not_deleted"),
-            content_type_id: row
-                .get::<_, Option<i32>>("content_type_id")
-                .map(|x| x as u32),
+            content_type_id: row.get::<_, Option<i32>>("content_type_id"),
         }
     }
 }
@@ -390,13 +384,13 @@ impl Label for &OstPoolRecord {
 /// Record from the `chroma_core_ostpool_osts` table
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct OstPoolOstsRecord {
-    pub id: u32,
-    pub ostpool_id: u32,
-    pub managedost_id: u32,
+    pub id: i32,
+    pub ostpool_id: i32,
+    pub managedost_id: i32,
 }
 
 impl Id for OstPoolOstsRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -405,9 +399,9 @@ impl Id for OstPoolOstsRecord {
 impl From<Row> for OstPoolOstsRecord {
     fn from(row: Row) -> Self {
         OstPoolOstsRecord {
-            id: row.get::<_, i32>("id") as u32,
-            ostpool_id: row.get::<_, i32>("ostpool_id") as u32,
-            managedost_id: row.get::<_, i32>("managedost_id") as u32,
+            id: row.get::<_, i32>("id"),
+            ostpool_id: row.get::<_, i32>("ostpool_id"),
+            managedost_id: row.get::<_, i32>("managedost_id"),
         }
     }
 }
@@ -423,13 +417,13 @@ impl Name for OstPoolOstsRecord {
 /// Record from the `chroma_core_managedost` table
 #[derive(serde::Deserialize, Debug)]
 pub struct ManagedOstRecord {
-    managedtarget_ptr_id: u32,
-    index: u32,
-    filesystem_id: u32,
+    managedtarget_ptr_id: i32,
+    index: i32,
+    filesystem_id: i32,
 }
 
 impl Id for ManagedOstRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.managedtarget_ptr_id
     }
 }
@@ -451,13 +445,13 @@ impl Name for ManagedOstRecord {
 /// Record from the `chroma_core_managedmdt` table
 #[derive(serde::Deserialize, Debug)]
 pub struct ManagedMdtRecord {
-    managedtarget_ptr_id: u32,
-    index: u32,
-    filesystem_id: u32,
+    managedtarget_ptr_id: i32,
+    index: i32,
+    filesystem_id: i32,
 }
 
 impl Id for ManagedMdtRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.managedtarget_ptr_id
     }
 }
@@ -479,12 +473,12 @@ impl Name for ManagedMdtRecord {
 /// Record from the `chroma_core_managedhost` table
 #[derive(serde::Deserialize, Debug)]
 pub struct ManagedHostRecord {
-    id: u32,
+    id: i32,
     state_modified_at: String,
     state: String,
     immutable_state: bool,
     not_deleted: Option<bool>,
-    content_type_id: Option<u32>,
+    content_type_id: Option<i32>,
     address: String,
     fqdn: String,
     nodename: String,
@@ -497,7 +491,7 @@ pub struct ManagedHostRecord {
 }
 
 impl Id for ManagedHostRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -519,18 +513,18 @@ impl Name for ManagedHostRecord {
 /// Record from the `chroma_core_alertstate` table
 #[derive(serde::Deserialize, Debug)]
 pub struct AlertStateRecord {
-    id: u32,
-    alert_item_type_id: Option<u32>,
-    alert_item_id: Option<u32>,
+    id: i32,
+    alert_item_type_id: Option<i32>,
+    alert_item_id: Option<i32>,
     alert_type: String,
     begin: String,
     end: Option<String>,
     active: Option<bool>,
     dismissed: bool,
-    severity: u32,
+    severity: i32,
     record_type: String,
     variant: Option<String>,
-    lustre_pid: Option<u32>,
+    lustre_pid: Option<i32>,
     message: Option<String>,
 }
 
@@ -541,7 +535,7 @@ impl AlertStateRecord {
 }
 
 impl Id for AlertStateRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -557,8 +551,8 @@ impl Name for AlertStateRecord {
 /// Record from the `chroma_core_stratagemconfiguration` table
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct StratagemConfiguration {
-    pub id: u32,
-    pub filesystem_id: u32,
+    pub id: i32,
+    pub filesystem_id: i32,
     pub interval: u64,
     pub report_duration: Option<u64>,
     pub purge_duration: Option<u64>,
@@ -571,8 +565,8 @@ pub struct StratagemConfiguration {
 impl From<Row> for StratagemConfiguration {
     fn from(row: Row) -> Self {
         StratagemConfiguration {
-            id: row.get::<_, i32>("id") as u32,
-            filesystem_id: row.get::<_, i32>("filesystem_id") as u32,
+            id: row.get::<_, i32>("id"),
+            filesystem_id: row.get::<_, i32>("filesystem_id"),
             interval: row.get::<_, i64>("interval") as u64,
             report_duration: row
                 .get::<_, Option<i64>>("report_duration")
@@ -588,7 +582,7 @@ impl From<Row> for StratagemConfiguration {
 }
 
 impl Id for StratagemConfiguration {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -623,32 +617,30 @@ impl EndpointName for StratagemConfiguration {
 /// Record from the `chroma_core_lnetconfiguration` table
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct LnetConfigurationRecord {
-    pub id: u32,
+    pub id: i32,
     pub state: String,
-    pub host_id: u32,
+    pub host_id: i32,
     pub immutable_state: bool,
     pub not_deleted: Option<bool>,
-    pub content_type_id: Option<u32>,
+    pub content_type_id: Option<i32>,
 }
 
 #[cfg(feature = "postgres-interop")]
 impl From<Row> for LnetConfigurationRecord {
     fn from(row: Row) -> Self {
         LnetConfigurationRecord {
-            id: row.get::<_, i32>("id") as u32,
+            id: row.get::<_, i32>("id"),
             state: row.get("state"),
-            host_id: row.get::<_, i32>("host_id") as u32,
+            host_id: row.get::<_, i32>("host_id"),
             immutable_state: row.get("immutable_state"),
             not_deleted: row.get("not_deleted"),
-            content_type_id: row
-                .get::<_, Option<i32>>("content_type_id")
-                .map(|x| x as u32),
+            content_type_id: row.get::<_, Option<i32>>("content_type_id"),
         }
     }
 }
 
 impl Id for LnetConfigurationRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -1047,7 +1039,7 @@ impl From<Row> for DeviceHost {
 /// Record from the `auth_user` table
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct AuthUserRecord {
-    pub id: u32,
+    pub id: i32,
     pub is_superuser: bool,
     pub username: String,
     pub first_name: String,
@@ -1066,7 +1058,7 @@ impl Name for AuthUserRecord {
 }
 
 impl Id for AuthUserRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -1075,7 +1067,7 @@ impl Id for AuthUserRecord {
 impl From<Row> for AuthUserRecord {
     fn from(row: Row) -> Self {
         Self {
-            id: row.get::<_, i32>("id") as u32,
+            id: row.get::<_, i32>("id"),
             is_superuser: row.get("is_superuser"),
             username: row.get("username"),
             first_name: row.get("first_name"),
@@ -1090,9 +1082,9 @@ impl From<Row> for AuthUserRecord {
 /// Record from the `auth_user_groups` table
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct AuthUserGroupRecord {
-    pub id: u32,
-    pub user_id: u32,
-    pub group_id: u32,
+    pub id: i32,
+    pub user_id: i32,
+    pub group_id: i32,
 }
 
 pub const AUTH_USER_GROUP_TABLE_NAME: TableName = TableName("auth_user_groups");
@@ -1104,7 +1096,7 @@ impl Name for AuthUserGroupRecord {
 }
 
 impl Id for AuthUserGroupRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -1113,9 +1105,9 @@ impl Id for AuthUserGroupRecord {
 impl From<Row> for AuthUserGroupRecord {
     fn from(row: Row) -> Self {
         Self {
-            id: row.get::<_, i32>("id") as u32,
-            user_id: row.get::<_, i32>("user_id") as u32,
-            group_id: row.get::<_, i32>("group_id") as u32,
+            id: row.get::<_, i32>("id"),
+            user_id: row.get::<_, i32>("user_id"),
+            group_id: row.get::<_, i32>("group_id"),
         }
     }
 }
@@ -1123,7 +1115,7 @@ impl From<Row> for AuthUserGroupRecord {
 /// Record from the `auth_group` table
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct AuthGroupRecord {
-    pub id: u32,
+    pub id: i32,
     pub name: String,
 }
 
@@ -1136,7 +1128,7 @@ impl Name for AuthGroupRecord {
 }
 
 impl Id for AuthGroupRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -1145,7 +1137,7 @@ impl Id for AuthGroupRecord {
 impl From<Row> for AuthGroupRecord {
     fn from(row: Row) -> Self {
         Self {
-            id: row.get::<_, i32>("id") as u32,
+            id: row.get::<_, i32>("id"),
             name: row.get("name"),
         }
     }
@@ -1154,12 +1146,12 @@ impl From<Row> for AuthGroupRecord {
 /// Record from the `chroma_core_pacemakerconfiguration` table
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct PacemakerConfigurationRecord {
-    pub id: u32,
+    pub id: i32,
     pub state: String,
     pub immutable_state: bool,
     pub not_deleted: Option<bool>,
-    pub content_type_id: Option<u32>,
-    pub host_id: u32,
+    pub content_type_id: Option<i32>,
+    pub host_id: i32,
 }
 
 pub const PACEMAKER_CONFIGURATION_TABLE_NAME: TableName =
@@ -1172,7 +1164,7 @@ impl Name for PacemakerConfigurationRecord {
 }
 
 impl Id for PacemakerConfigurationRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -1211,14 +1203,12 @@ impl ToCompositeId for &PacemakerConfigurationRecord {
 impl From<Row> for PacemakerConfigurationRecord {
     fn from(row: Row) -> Self {
         Self {
-            id: row.get::<_, i32>("id") as u32,
+            id: row.get::<_, i32>("id"),
             state: row.get("state"),
             immutable_state: row.get("immutable_state"),
             not_deleted: row.get("not_deleted"),
-            content_type_id: row
-                .get::<_, Option<i32>>("content_type_id")
-                .map(|x| x as u32),
-            host_id: row.get::<_, i32>("host_id") as u32,
+            content_type_id: row.get::<_, Option<i32>>("content_type_id"),
+            host_id: row.get::<_, i32>("host_id"),
         }
     }
 }
@@ -1226,14 +1216,14 @@ impl From<Row> for PacemakerConfigurationRecord {
 /// Record from the `chroma_core_corosyncconfiguration` table
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct CorosyncConfigurationRecord {
-    pub id: u32,
+    pub id: i32,
     pub state: String,
     pub immutable_state: bool,
     pub not_deleted: Option<bool>,
-    pub mcast_port: Option<u32>,
+    pub mcast_port: Option<i32>,
     pub corosync_reported_up: bool,
-    pub content_type_id: Option<u32>,
-    pub host_id: u32,
+    pub content_type_id: Option<i32>,
+    pub host_id: i32,
 }
 
 pub const COROSYNC_CONFIGURATION_TABLE_NAME: TableName =
@@ -1246,7 +1236,7 @@ impl Name for CorosyncConfigurationRecord {
 }
 
 impl Id for CorosyncConfigurationRecord {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -1285,16 +1275,14 @@ impl ToCompositeId for &CorosyncConfigurationRecord {
 impl From<Row> for CorosyncConfigurationRecord {
     fn from(row: Row) -> Self {
         Self {
-            id: row.get::<_, i32>("id") as u32,
+            id: row.get::<_, i32>("id"),
             state: row.get("state"),
             immutable_state: row.get("immutable_state"),
             not_deleted: row.get("not_deleted"),
-            mcast_port: row.get::<_, Option<i32>>("mcast_port").map(|x| x as u32),
+            mcast_port: row.get::<_, Option<i32>>("mcast_port"),
             corosync_reported_up: row.get("corosync_reported_up"),
-            content_type_id: row
-                .get::<_, Option<i32>>("content_type_id")
-                .map(|x| x as u32),
-            host_id: row.get::<_, i32>("host_id") as u32,
+            content_type_id: row.get::<_, Option<i32>>("content_type_id"),
+            host_id: row.get::<_, i32>("host_id"),
         }
     }
 }

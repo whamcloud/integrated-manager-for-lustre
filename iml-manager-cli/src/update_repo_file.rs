@@ -36,7 +36,7 @@ fn has_host(api_hosts: &[&Host], host: &str) -> bool {
 
 #[derive(serde::Serialize)]
 pub struct HostId {
-    host_id: u32,
+    host_id: i32,
 }
 
 pub async fn update_repo_file_cli(config: UpdateRepoFileHosts) -> Result<(), ImlManagerCliError> {

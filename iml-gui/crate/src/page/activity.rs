@@ -20,7 +20,7 @@ use std::{collections::HashMap, mem, time::Duration};
 enum State {
     Loading,
     Fetching,
-    Loaded(ApiList<Alert>, HashMap<u32, Row>),
+    Loaded(ApiList<Alert>, HashMap<i32, Row>),
 }
 
 struct Row {
@@ -47,7 +47,7 @@ impl Default for Model {
 pub enum Msg {
     ActionDropdown(Box<action_dropdown::IdMsg>),
     ActionsFetched(Box<fetch::ResponseDataResult<ApiList<Alert>>>),
-    OpenCommandModal(u32),
+    OpenCommandModal(i32),
     FetchOffset,
     Loop,
     Page(paging::Msg),
@@ -162,7 +162,7 @@ pub(crate) fn init(orders: &mut impl Orders<Msg, GMsg>) {
     orders.send_msg(Msg::FetchOffset);
 }
 
-fn update_rows(alerts: &mut ApiList<Alert>, rows: &mut HashMap<u32, Row>) {
+fn update_rows(alerts: &mut ApiList<Alert>, rows: &mut HashMap<i32, Row>) {
     let (add, remove): (Vec<_>, Vec<_>) = alerts
         .objects
         .iter_mut()

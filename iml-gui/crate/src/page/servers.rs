@@ -36,7 +36,7 @@ struct Row {
 #[derive(Default)]
 pub struct Model {
     hosts: Vec<Arc<Host>>,
-    rows: HashMap<u32, Row>,
+    rows: HashMap<i32, Row>,
     pager: paging::Model,
     sort: (SortField, paging::Dir),
 }
@@ -45,9 +45,9 @@ pub struct Model {
 pub enum Msg {
     SetHosts(
         Vec<Arc<Host>>,
-        im::HashMap<u32, Arc<LnetConfigurationRecord>>,
-        im::HashMap<u32, Arc<PacemakerConfigurationRecord>>,
-        im::HashMap<u32, Arc<CorosyncConfigurationRecord>>,
+        im::HashMap<i32, Arc<LnetConfigurationRecord>>,
+        im::HashMap<i32, Arc<PacemakerConfigurationRecord>>,
+        im::HashMap<i32, Arc<CorosyncConfigurationRecord>>,
     ), // @FIXME: This should be more granular so row state isn't lost.
     Page(paging::Msg),
     Sort,

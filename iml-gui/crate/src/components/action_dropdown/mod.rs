@@ -119,7 +119,7 @@ impl Drop for Model {
 }
 
 #[derive(Clone, Debug)]
-pub struct IdMsg(pub u32, pub Msg);
+pub struct IdMsg(pub i32, pub Msg);
 
 #[derive(Clone, Debug)]
 pub enum Msg {
@@ -268,7 +268,7 @@ fn sort_actions<T>(actions: &mut Vec<(Arc<AvailableAction>, T)>) {
     actions.sort_by(|a, b| a.0.display_order.cmp(&b.0.display_order));
 }
 
-pub fn view<'a>(id: u32, model: &Model, all_locks: &Locks, session: impl Into<Option<&'a Session>>) -> Node<IdMsg> {
+pub fn view<'a>(id: i32, model: &Model, all_locks: &Locks, session: impl Into<Option<&'a Session>>) -> Node<IdMsg> {
     unstyled_view(
         id,
         model,
@@ -279,7 +279,7 @@ pub fn view<'a>(id: u32, model: &Model, all_locks: &Locks, session: impl Into<Op
 }
 
 pub fn unstyled_view<'a>(
-    id: u32,
+    id: i32,
     model: &Model,
     all_locks: &Locks,
     session: impl Into<Option<&'a Session>>,
@@ -363,7 +363,7 @@ pub fn unstyled_view<'a>(
     }
 }
 
-fn items_view(id: u32, x: &ActionMap) -> impl View<IdMsg> {
+fn items_view(id: i32, x: &ActionMap) -> impl View<IdMsg> {
     let xs = x
         .iter()
         .flat_map(|(label, actions)| {

@@ -8,7 +8,7 @@ use iml_wire_types::{warp_drive::ArcValuesExt, Alert, AlertSeverity};
 use seed::{prelude::*, *};
 use std::{cmp::max, sync::Arc};
 
-pub fn update_activity_health(active_alert: &HashMap<u32, Arc<Alert>>) -> ActivityHealth {
+pub fn update_activity_health(active_alert: &HashMap<i32, Arc<Alert>>) -> ActivityHealth {
     active_alert
         .arc_values()
         .filter(|x: &&Alert| x.severity > AlertSeverity::INFO)

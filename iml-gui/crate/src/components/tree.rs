@@ -25,11 +25,11 @@ fn sort_by_label(xs: &mut Vec<impl Label>) {
     xs.sort_by(|a, b| natord::compare(a.label(), b.label()));
 }
 
-pub fn slice_page<'a>(paging: &paging::Model, xs: &'a BTreeSet<u32>) -> impl Iterator<Item = &'a u32> {
+pub fn slice_page<'a>(paging: &paging::Model, xs: &'a BTreeSet<i32>) -> impl Iterator<Item = &'a i32> {
     xs.iter().skip(paging.offset()).take(paging.end())
 }
 
-fn sorted_cache<'a>(x: &'a im::HashMap<u32, Arc<impl Label + Id>>) -> impl Iterator<Item = u32> + 'a {
+fn sorted_cache<'a>(x: &'a im::HashMap<i32, Arc<impl Label + Id>>) -> impl Iterator<Item = i32> + 'a {
     let mut xs: Vec<_> = x.values().collect();
 
     xs.sort_by(|a, b| natord::compare(a.label(), b.label()));
@@ -37,11 +37,11 @@ fn sorted_cache<'a>(x: &'a im::HashMap<u32, Arc<impl Label + Id>>) -> impl Itera
     xs.into_iter().map(|x| x.id())
 }
 
-fn get_volume_nodes_by_host_id(xs: &im::HashMap<u32, Arc<VolumeNodeRecord>>, host_id: u32) -> Vec<&VolumeNodeRecord> {
+fn get_volume_nodes_by_host_id(xs: &im::HashMap<i32, Arc<VolumeNodeRecord>>, host_id: i32) -> Vec<&VolumeNodeRecord> {
     xs.arc_values().filter(|v| v.host_id == host_id).collect()
 }
 
-fn get_ost_pools_by_fs_id(xs: &im::HashMap<u32, Arc<OstPoolRecord>>, fs_id: u32) -> Vec<&OstPoolRecord> {
+fn get_ost_pools_by_fs_id(xs: &im::HashMap<i32, Arc<OstPoolRecord>>, fs_id: i32) -> Vec<&OstPoolRecord> {
     xs.arc_values().filter(|v| v.filesystem_id == fs_id).collect()
 }
 
@@ -57,7 +57,7 @@ fn get_targets_by_parent_resource(
     }
 }
 
-fn get_targets_by_pool_id(cache: &ArcCache, ostpool_id: u32) -> Vec<&Target<TargetConfParam>> {
+fn get_targets_by_pool_id(cache: &ArcCache, ostpool_id: i32) -> Vec<&Target<TargetConfParam>> {
     let target_ids: Vec<_> = cache
         .ost_pool_osts
         .arc_values()
@@ -73,8 +73,8 @@ fn get_targets_by_pool_id(cache: &ArcCache, ostpool_id: u32) -> Vec<&Target<Targ
 }
 
 fn get_targets_by_fs_id(
-    xs: &im::HashMap<u32, Arc<Target<TargetConfParam>>>,
-    fs_id: u32,
+    xs: &im::HashMap<i32, Arc<Target<TargetConfParam>>>,
+    fs_id: i32,
     kind: TargetKind,
 ) -> Vec<&Target<TargetConfParam>> {
     let it = xs.arc_values().filter(|t| t.kind == kind);
@@ -92,7 +92,7 @@ fn get_targets_by_fs_id(
     }
 }
 
-fn get_target_fs_ids(x: &Target<TargetConfParam>) -> Vec<u32> {
+fn get_target_fs_ids(x: &Target<TargetConfParam>) -> Vec<i32> {
     match x.kind {
         TargetKind::Mgt => x.filesystems.iter().flatten().map(|x| x.id).collect(),
         TargetKind::Mdt | TargetKind::Ost => x.filesystem_id.map(|x| vec![x]).unwrap_or_default(),
@@ -104,14 +104,14 @@ fn get_target_fs_ids(x: &Target<TargetConfParam>) -> Vec<u32> {
 #[derive(Debug, Eq, PartialEq, Hash, PartialOrd, Ord, Clone, Copy)]
 pub enum Step {
     HostCollection,
-    Host(u32),
+    Host(i32),
     VolumeCollection,
     FsCollection,
-    Fs(u32),
+    Fs(i32),
     MgtCollection,
     MdtCollection,
     OstPoolCollection,
-    OstPool(u32),
+    OstPool(i32),
     OstCollection,
 }
 
@@ -157,12 +157,12 @@ impl From<Vec<Step>> for Address {
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct TreeNode {
     open: bool,
-    items: BTreeSet<u32>,
+    items: BTreeSet<i32>,
     paging: paging::Model,
 }
 
 impl TreeNode {
-    fn from_items(xs: impl IntoIterator<Item = u32>) -> Self {
+    fn from_items(xs: impl IntoIterator<Item = i32>) -> Self {
         let items = BTreeSet::from_iter(xs);
 
         Self {
@@ -194,7 +194,7 @@ impl Model {
     fn reset(&mut self) {
         self.0 = HashMap::new();
     }
-    fn remove_item(&mut self, addr: &Address, id: u32) {
+    fn remove_item(&mut self, addr: &Address, id: i32) {
         if let Some(tree_node) = self.get_mut(addr) {
             tree_node.items.remove(&id);
             tree_node.paging.total -= 1;
