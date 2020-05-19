@@ -14,7 +14,9 @@ forward_function_template = fill_template(
     """
 CREATE OR REPLACE FUNCTION table_%(function_name)s_update_notify() RETURNS trigger AS $$
 BEGIN
-    IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+    IF TG_OP = 'INSERT' THEN
+        PERFORM pg_notify('table_update', '[ "' || TG_OP || '", "' || TG_TABLE_NAME || '", ' || row_to_json(NEW) || ']');
+    ELSEIF TG_OP = 'UPDATE' AND OLD IS DISTINCT FROM NEW THEN
         PERFORM pg_notify('table_update', '[ "' || TG_OP || '", "' || TG_TABLE_NAME || '", ' || row_to_json(NEW) || ']');
     ELSE
         PERFORM pg_notify('table_update', '[ "' || TG_OP || '", "' || TG_TABLE_NAME || '", ' || row_to_json(OLD) || ']');
