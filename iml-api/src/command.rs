@@ -31,7 +31,7 @@ pub(crate) async fn get_command(pool: &DbPool, id: i32) -> Result<Command, ImlAp
         complete: cmd.complete,
         created_at: format!("{}", cmd.created_at),
         errored: cmd.errored,
-        id: cmd.id as u32,
+        id: cmd.id,
         message: cmd.message,
         resource_uri: format!("/api/{}/{}/", Command::endpoint_name(), cmd.id),
         jobs: jobs

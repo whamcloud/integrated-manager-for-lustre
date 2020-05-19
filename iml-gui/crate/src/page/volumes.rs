@@ -84,7 +84,7 @@ impl From<&Arc<Host>> for Model {
 }
 
 fn build_rows(cache: &ArcCache, host: &Option<Arc<Host>>) -> Vec<Row> {
-    let x: im::HashMap<u32, Vec<_>> = cache.volume_node.values().fold(im::hashmap! {}, |mut acc, x| {
+    let x: im::HashMap<i32, Vec<_>> = cache.volume_node.values().fold(im::hashmap! {}, |mut acc, x| {
         acc.entry(x.volume_id)
             .and_modify(|xs| {
                 xs.push(Arc::clone(x));

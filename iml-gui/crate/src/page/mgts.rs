@@ -23,7 +23,7 @@ pub struct Row {
 
 #[derive(Default)]
 pub struct Model {
-    pub rows: HashMap<u32, Row>,
+    pub rows: HashMap<i32, Row>,
     pub mgts: Vec<Arc<Target<TargetConfParam>>>,
 }
 
@@ -31,7 +31,7 @@ pub struct Model {
 pub enum Msg {
     ActionDropdown(Box<action_dropdown::IdMsg>),
     SetTargets(Vec<Arc<Target<TargetConfParam>>>),
-    RemoveTarget(u32),
+    RemoveTarget(i32),
     AddTarget(Arc<Target<TargetConfParam>>),
 }
 
@@ -121,7 +121,7 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<
                     Some(row) => {
                         let fs = cache.filesystem.arc_values().filter(|y| {
                             extract_id(&y.mgt)
-                                .and_then(|y| y.parse::<u32>().ok())
+                                .and_then(|y| y.parse::<i32>().ok())
                                 .filter(|y| y == &x.id)
                                 .is_some()
                         });

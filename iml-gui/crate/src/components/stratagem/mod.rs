@@ -32,8 +32,8 @@ pub struct TargetConfig {
 
 #[derive(Debug, Default, Clone, serde::Serialize)]
 pub struct StratagemUpdate {
-    pub id: u32,
-    pub filesystem: u32,
+    pub id: i32,
+    pub filesystem: i32,
     pub interval: u64,
     pub report_duration: Option<u64>,
     pub purge_duration: Option<u64>,
@@ -41,7 +41,7 @@ pub struct StratagemUpdate {
 
 #[derive(Debug, Default, Clone, serde::Serialize)]
 pub struct StratagemEnable {
-    pub filesystem: u32,
+    pub filesystem: i32,
     pub interval: u64,
     pub report_duration: Option<u64>,
     pub purge_duration: Option<u64>,
@@ -49,7 +49,7 @@ pub struct StratagemEnable {
 
 #[derive(Debug, serde::Serialize)]
 pub struct StratagemScan {
-    pub filesystem: u32,
+    pub filesystem: i32,
     pub report_duration: Option<u64>,
     pub purge_duration: Option<u64>,
 }
@@ -92,7 +92,7 @@ pub struct Config {
     pub scan_duration_picker: duration_picker::Model,
     pub report_duration_picker: duration_picker::Model,
     pub purge_duration_picker: duration_picker::Model,
-    pub id: Option<u32>,
+    pub id: Option<i32>,
     pub destroyed: bool,
     pub disabled: bool,
     pub target_config: TargetConfig,
@@ -105,7 +105,7 @@ impl Config {
             && self.report_duration_picker.validation_message.is_none()
             && self.purge_duration_picker.validation_message.is_none()
     }
-    fn get_stratagem_update_config(&self, fs_id: u32) -> Option<StratagemUpdate> {
+    fn get_stratagem_update_config(&self, fs_id: i32) -> Option<StratagemUpdate> {
         Some(StratagemUpdate {
             id: self.id?,
             filesystem: fs_id,
@@ -115,7 +115,7 @@ impl Config {
         })
     }
 
-    fn create_enable_stratagem_model(&self, fs_id: u32) -> Option<StratagemEnable> {
+    fn create_enable_stratagem_model(&self, fs_id: i32) -> Option<StratagemEnable> {
         Some(StratagemEnable {
             filesystem: fs_id,
             interval: self.scan_duration_picker.value_as_ms()?,

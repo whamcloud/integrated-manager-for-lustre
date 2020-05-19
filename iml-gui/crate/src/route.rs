@@ -9,14 +9,14 @@ use std::{borrow::Cow, ops::Deref};
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct RouteId<'a>(Cow<'a, str>);
 
-impl<'a> From<u32> for RouteId<'a> {
-    fn from(n: u32) -> Self {
+impl<'a> From<i32> for RouteId<'a> {
+    fn from(n: i32) -> Self {
         RouteId(Cow::from(n.to_string()))
     }
 }
 
-impl<'a> From<&u32> for RouteId<'a> {
-    fn from(n: &u32) -> Self {
+impl<'a> From<&i32> for RouteId<'a> {
+    fn from(n: &i32) -> Self {
         RouteId(Cow::from(n.to_string()))
     }
 }

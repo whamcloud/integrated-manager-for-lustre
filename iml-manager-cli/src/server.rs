@@ -160,7 +160,7 @@ struct StateChange {
 
 #[derive(serde::Serialize)]
 struct HostProfileConfig<'a> {
-    host: u32,
+    host: i32,
     profile: &'a str,
 }
 
@@ -252,7 +252,7 @@ async fn wait_till_agent_starts(
             return Err(ImlManagerCliError::ApiError(x.error.take().unwrap()));
         };
 
-        let profile_checks: HashMap<u32, Vec<ProfileTest>> = objects
+        let profile_checks: HashMap<i32, Vec<ProfileTest>> = objects
             .iter_mut()
             .filter_map(|x| x.host_profiles.take())
             .map(|mut x| {
@@ -266,7 +266,7 @@ async fn wait_till_agent_starts(
                         ))
                     })
             })
-            .collect::<Result<HashMap<u32, Vec<ProfileTest>>, ImlManagerCliError>>()?;
+            .collect::<Result<HashMap<i32, Vec<ProfileTest>>, ImlManagerCliError>>()?;
 
         let waiting_for_agent: Vec<_> = profile_checks
             .iter()
@@ -467,7 +467,7 @@ fn get_host_ids(hosts: &[Host]) -> Vec<[String; 2]> {
         .collect()
 }
 
-fn filter_host_profiles<I>(profile: &ServerProfile, objects: I) -> Vec<(u32, Vec<ProfileTest>)>
+fn filter_host_profiles<I>(profile: &ServerProfile, objects: I) -> Vec<(i32, Vec<ProfileTest>)>
 where
     I: IntoIterator<Item = HostProfileWrapper>,
 {
@@ -478,7 +478,7 @@ where
         .collect()
 }
 
-fn filter_profile_tests(objects: &[(u32, Vec<ProfileTest>)]) -> Vec<(&u32, Vec<&ProfileTest>)> {
+fn filter_profile_tests(objects: &[(i32, Vec<ProfileTest>)]) -> Vec<(&i32, Vec<&ProfileTest>)> {
     objects
         .iter()
         .map(|(k, tests)| (k, tests.iter().filter(|y| !y.pass).collect::<Vec<_>>()))
@@ -491,7 +491,7 @@ fn handle_invalid_profile_tests(
     config: &AddHosts,
     profile: &ServerProfile,
     hosts: &[Host],
-    invalid: Vec<(&u32, Vec<&ProfileTest>)>,
+    invalid: Vec<(&i32, Vec<&ProfileTest>)>,
 ) -> Result<(), ImlManagerCliError> {
     if !invalid.is_empty() {
         display_error(format!("Profile {} is invalid:\n\n", profile.name));
@@ -525,7 +525,7 @@ fn handle_invalid_profile_tests(
 
 fn get_host_profile_configs<'a>(
     profile: &'a ServerProfile,
-    objects: &[(u32, Vec<ProfileTest>)],
+    objects: &[(i32, Vec<ProfileTest>)],
 ) -> Vec<HostProfileConfig<'a>> {
     objects
         .iter()

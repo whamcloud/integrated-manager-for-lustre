@@ -33,7 +33,7 @@ pub struct Model {
     mgt: Vec<Arc<Target<TargetConfParam>>>,
     osts: Vec<Arc<Target<TargetConfParam>>>,
     ost_paging: paging::Model,
-    rows: HashMap<u32, Row>,
+    rows: HashMap<i32, Row>,
     stratagem: stratagem::Model,
     stats: iml_influx::filesystem::Response,
     stats_cancel: Option<oneshot::Sender<()>>,
@@ -64,7 +64,7 @@ pub enum Msg {
     StatsFetched(Box<fetch::ResponseDataResult<iml_influx::filesystem::InfluxResponse>>),
     ActionDropdown(Box<action_dropdown::IdMsg>),
     AddTarget(Arc<Target<TargetConfParam>>),
-    RemoveTarget(u32),
+    RemoveTarget(i32),
     SetTargets(Vec<Arc<Target<TargetConfParam>>>),
     OstPaging(paging::Msg),
     MdtPaging(paging::Msg),
@@ -321,7 +321,7 @@ fn targets(
     cache: &ArcCache,
     all_locks: &Locks,
     session: Option<&Session>,
-    rows: &HashMap<u32, Row>,
+    rows: &HashMap<i32, Row>,
     tgts: &[Arc<Target<TargetConfParam>>],
     pager: impl Into<Option<Node<Msg>>>,
 ) -> Node<Msg> {
@@ -416,7 +416,7 @@ pub(crate) fn clients_view<T>(cc: impl Into<Option<u64>>) -> Node<T> {
     plain![cc.into().map(|c| c.to_string()).unwrap_or_else(|| "---".to_string())]
 }
 
-fn is_fs_target(fs_id: u32, t: &Target<TargetConfParam>) -> bool {
+fn is_fs_target(fs_id: i32, t: &Target<TargetConfParam>) -> bool {
     t.filesystem_id == Some(fs_id)
         || t.filesystems
             .as_ref()

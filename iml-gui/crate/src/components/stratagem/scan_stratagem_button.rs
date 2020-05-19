@@ -14,12 +14,12 @@ use seed::{prelude::*, *};
 pub struct Model {
     pub disabled: bool,
     pub locked: bool,
-    pub fs_id: u32,
+    pub fs_id: i32,
     pub scan_stratagem_modal: scan_stratagem_modal::Model,
 }
 
 impl Model {
-    pub fn new(fs_id: u32) -> Self {
+    pub fn new(fs_id: i32) -> Self {
         Self {
             fs_id,
             scan_stratagem_modal: scan_stratagem_modal::Model::new(fs_id),

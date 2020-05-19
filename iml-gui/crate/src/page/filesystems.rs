@@ -28,7 +28,7 @@ pub struct Model {
     filesystems: Vec<Arc<Filesystem>>,
     stats: iml_influx::filesystems::Response,
     pager: paging::Model,
-    rows: HashMap<u32, Row>,
+    rows: HashMap<i32, Row>,
     stats_cancel: Option<oneshot::Sender<()>>,
 }
 
@@ -39,7 +39,7 @@ pub enum Msg {
     ActionDropdown(Box<action_dropdown::IdMsg>),
     AddFilesystem(Arc<Filesystem>),
     Page(paging::Msg),
-    RemoveFilesystem(u32),
+    RemoveFilesystem(i32),
     SetFilesystems(Vec<Arc<Filesystem>>),
     Noop,
 }

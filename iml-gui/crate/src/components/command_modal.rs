@@ -26,23 +26,23 @@ const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
 type Job0 = Job<Option<serde_json::Value>>;
 
-type RichCommand = Rich<u32, Arc<Command>>;
-type RichJob = Rich<u32, Arc<Job0>>;
-type RichStep = Rich<u32, Arc<Step>>;
+type RichCommand = Rich<i32, Arc<Command>>;
+type RichJob = Rich<i32, Arc<Job0>>;
+type RichStep = Rich<i32, Arc<Step>>;
 
-type JobsGraph = DependencyDAG<u32, RichJob>;
-
-#[derive(Copy, Clone, Hash, PartialEq, Eq, Ord, PartialOrd, Debug)]
-pub struct CmdId(u32);
+type JobsGraph = DependencyDAG<i32, RichJob>;
 
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Ord, PartialOrd, Debug)]
-pub struct JobId(u32);
+pub struct CmdId(i32);
+
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Ord, PartialOrd, Debug)]
+pub struct JobId(i32);
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
 pub enum TypedId {
-    Command(u32),
-    Job(u32),
-    Step(u32),
+    Command(i32),
+    Job(i32),
+    Step(i32),
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Default)]
@@ -58,8 +58,8 @@ impl Select {
     fn contains(&self, id: TypedId) -> bool {
         self.0.contains(&id)
     }
-    fn split(&self) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-        fn insert_in_sorted(ids: &mut Vec<u32>, id: u32) {
+    fn split(&self) -> (Vec<i32>, Vec<i32>, Vec<i32>) {
+        fn insert_in_sorted(ids: &mut Vec<i32>, id: i32) {
             match ids.binary_search(&id) {
                 Ok(_) => {}
                 Err(pos) => ids.insert(pos, id),
@@ -88,7 +88,7 @@ pub struct Context<'a> {
 #[derive(Clone, Debug)]
 pub enum Input {
     Commands(Vec<Arc<Command>>),
-    Ids(Vec<u32>),
+    Ids(Vec<i32>),
 }
 
 #[derive(Default, Debug)]
@@ -96,13 +96,13 @@ pub struct Model {
     pub tree_cancel: Option<oneshot::Sender<()>>,
 
     pub commands_loading: bool,
-    pub commands: HashMap<u32, Arc<RichCommand>>,
+    pub commands: HashMap<i32, Arc<RichCommand>>,
     pub commands_view: Vec<Arc<RichCommand>>,
 
-    pub jobs: HashMap<u32, Arc<RichJob>>,
+    pub jobs: HashMap<i32, Arc<RichJob>>,
     pub jobs_graphs: HashMap<CmdId, JobsGraph>, // cmd_id -> JobsGraph
 
-    pub steps: HashMap<u32, Arc<RichStep>>,
+    pub steps: HashMap<i32, Arc<RichStep>>,
     pub steps_view: HashMap<JobId, Vec<Arc<RichStep>>>, // job_id -> [Step]
 
     pub select: Select,
@@ -206,13 +206,13 @@ fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
         .filter(|id| model.commands.contains_key(id))
         .flat_map(|id| model.commands[id].deps())
         .copied()
-        .collect::<Vec<u32>>();
+        .collect::<Vec<i32>>();
     let load_step_ids = job_ids
         .iter()
         .filter(|id| model.jobs.contains_key(id))
         .flat_map(|id| model.jobs[id].deps())
         .copied()
-        .collect::<Vec<u32>>();
+        .collect::<Vec<i32>>();
 
     orders.skip();
     if !load_cmd_ids.is_empty() {
@@ -539,7 +539,7 @@ fn close_button() -> Node<Msg> {
     .map_msg(Msg::Modal)
 }
 
-async fn fetch_the_batch<T, F, U>(ids: Vec<u32>, data_to_msg: F) -> Result<U, U>
+async fn fetch_the_batch<T, F, U>(ids: Vec<i32>, data_to_msg: F) -> Result<U, U>
 where
     T: DeserializeOwned + EndpointName + 'static,
     F: FnOnce(ResponseDataResult<ApiList<T>>) -> U,
@@ -551,13 +551,13 @@ where
     match Request::api_query(T::endpoint_name(), &ids) {
         Ok(req) => req.fetch_json_data(data_to_msg).await,
         Err(_) => {
-            // we always can url encode a vector of u32-s
+            // we always can url encode a vector of i32-s
             unreachable!("Cannot encode request for {} with params {:?}", T::endpoint_name(), ids)
         }
     }
 }
 
-fn extract_uri_id<T: EndpointName>(input: &str) -> Option<u32> {
+fn extract_uri_id<T: EndpointName>(input: &str) -> Option<i32> {
     lazy_static::lazy_static! {
         static ref RE: Regex = Regex::new(r"/api/(\w+)/(\d+)/").unwrap();
     }
@@ -565,7 +565,7 @@ fn extract_uri_id<T: EndpointName>(input: &str) -> Option<u32> {
         let s = cap.get(1).unwrap().as_str();
         let t = cap.get(2).unwrap().as_str();
         if s == T::endpoint_name() {
-            t.parse::<u32>().ok()
+            t.parse::<i32>().ok()
         } else {
             None
         }
@@ -576,7 +576,7 @@ fn is_finished(cmd: &RichCommand) -> bool {
     cmd.complete
 }
 
-fn is_all_finished(cmds: &HashMap<u32, Arc<RichCommand>>) -> bool {
+fn is_all_finished(cmds: &HashMap<i32, Arc<RichCommand>>) -> bool {
     cmds.values().all(|c| is_finished(c))
 }
 
@@ -588,38 +588,38 @@ fn perform_click(select: &mut Select, id: TypedId) -> bool {
     }
 }
 
-fn extract_children_from_cmd(cmd: &Arc<Command>) -> (u32, Vec<u32>) {
+fn extract_children_from_cmd(cmd: &Arc<Command>) -> (i32, Vec<i32>) {
     let mut deps = cmd
         .jobs
         .iter()
         .filter_map(|s| extract_uri_id::<Job0>(s))
-        .collect::<Vec<u32>>();
+        .collect::<Vec<i32>>();
     deps.sort();
     (cmd.id, deps)
 }
 
-fn extract_children_from_job(job: &Arc<Job0>) -> (u32, Vec<u32>) {
+fn extract_children_from_job(job: &Arc<Job0>) -> (i32, Vec<i32>) {
     let mut deps = job
         .steps
         .iter()
         .filter_map(|s| extract_uri_id::<Step>(s))
-        .collect::<Vec<u32>>();
+        .collect::<Vec<i32>>();
     deps.sort();
     (job.id, deps)
 }
 
-fn extract_children_from_step(step: &Arc<Step>) -> (u32, Vec<u32>) {
+fn extract_children_from_step(step: &Arc<Step>) -> (i32, Vec<i32>) {
     (step.id, Vec::new()) // steps have no descendants
 }
 
-fn extract_wait_fors_from_job(job: &Job0, jobs: &HashMap<u32, Arc<RichJob>>) -> (u32, Vec<u32>) {
+fn extract_wait_fors_from_job(job: &Job0, jobs: &HashMap<i32, Arc<RichJob>>) -> (i32, Vec<i32>) {
     // Extract the interdependencies between jobs.
     // See [command_modal::tests::test_jobs_ordering]
     let mut deps = job
         .wait_for
         .iter()
         .filter_map(|s| extract_uri_id::<Job0>(s))
-        .collect::<Vec<u32>>();
+        .collect::<Vec<i32>>();
     deps.sort_by(|i1, i2| {
         let t1 = jobs
             .get(i1)
@@ -634,20 +634,20 @@ fn extract_wait_fors_from_job(job: &Job0, jobs: &HashMap<u32, Arc<RichJob>>) -> 
     (job.id, deps)
 }
 
-fn extract_sorted_keys<T>(hm: &HashMap<u32, T>) -> Vec<u32> {
+fn extract_sorted_keys<T>(hm: &HashMap<i32, T>) -> Vec<i32> {
     let mut ids = hm.keys().copied().collect::<Vec<_>>();
     ids.sort();
     ids
 }
 
-fn convert_to_sorted_vec<T>(hm: &HashMap<u32, Arc<T>>) -> Vec<Arc<T>> {
+fn convert_to_sorted_vec<T>(hm: &HashMap<i32, Arc<T>>) -> Vec<Arc<T>> {
     extract_sorted_keys(hm)
         .into_iter()
         .map(|k| Arc::clone(&hm[&k]))
         .collect()
 }
 
-fn convert_to_rich_hashmap<T>(ts: Vec<T>, extract: impl Fn(&T) -> (u32, Vec<u32>)) -> HashMap<u32, Arc<Rich<u32, T>>> {
+fn convert_to_rich_hashmap<T>(ts: Vec<T>, extract: impl Fn(&T) -> (i32, Vec<i32>)) -> HashMap<i32, Arc<Rich<i32, T>>> {
     ts.into_iter()
         .map(|t| {
             let (id, deps) = extract(&t);
@@ -793,21 +793,21 @@ mod tests {
     }
 
     impl Db {
-        fn select_cmds(&self, is: &[u32]) -> Vec<Arc<Command>> {
+        fn select_cmds(&self, is: &[i32]) -> Vec<Arc<Command>> {
             self.all_cmds
                 .iter()
                 .filter(|x| is.contains(&x.id))
                 .map(|x| Arc::clone(x))
                 .collect()
         }
-        fn select_jobs(&self, is: &[u32]) -> Vec<Arc<Job0>> {
+        fn select_jobs(&self, is: &[i32]) -> Vec<Arc<Job0>> {
             self.all_jobs
                 .iter()
                 .filter(|x| is.contains(&x.id))
                 .map(|x| Arc::clone(x))
                 .collect()
         }
-        fn select_steps(&self, is: &[u32]) -> Vec<Arc<Step>> {
+        fn select_steps(&self, is: &[i32]) -> Vec<Arc<Step>> {
             self.all_steps
                 .iter()
                 .filter(|x| is.contains(&x.id))
@@ -867,7 +867,7 @@ mod tests {
 
     #[test]
     fn test_jobs_ordering() {
-        // The jobs' dependencies (vector of u32) are sorted in special order so that the
+        // The jobs' dependencies (vector of i32) are sorted in special order so that the
         // jobs with more dependencies come first. If the number of dependencies are equal,
         // they are sorted by alphabetical order by the description.
         // If the description is the same, then the jobs are ordered by id.
@@ -953,7 +953,7 @@ mod tests {
         hm.into_iter().map(|(k, v)| (k, format!("{:?}", v))).collect()
     }
 
-    fn make_command(id: u32, jobs: &[u32], msg: &str) -> Arc<Command> {
+    fn make_command(id: i32, jobs: &[i32], msg: &str) -> Arc<Command> {
         Arc::new(Command {
             cancelled: false,
             complete: false,
@@ -967,7 +967,7 @@ mod tests {
         })
     }
 
-    fn make_job(id: u32, cmd_id: CmdId, steps: &[u32], wait_for: &[u32], descr: &str) -> Arc<Job0> {
+    fn make_job(id: i32, cmd_id: CmdId, steps: &[i32], wait_for: &[i32], descr: &str) -> Arc<Job0> {
         Arc::new(Job0 {
             available_transitions: vec![],
             cancelled: false,
@@ -990,7 +990,7 @@ mod tests {
         })
     }
 
-    fn make_step(id: u32, class_name: &str) -> Arc<Step> {
+    fn make_step(id: i32, class_name: &str) -> Arc<Step> {
         Arc::new(Step {
             args: Default::default(),
             backtrace: "".to_string(),
@@ -1087,29 +1087,29 @@ mod tests {
         }
     }
 
-    fn prepare_subset(db: &Db, cmd_ids: &[u32]) -> (Vec<Arc<Command>>, Vec<Arc<Job0>>, Vec<Arc<Step>>) {
+    fn prepare_subset(db: &Db, cmd_ids: &[i32]) -> (Vec<Arc<Command>>, Vec<Arc<Job0>>, Vec<Arc<Step>>) {
         let cmds = db.select_cmds(&cmd_ids);
         let c_ids = cmds
             .iter()
             .map(|x| extract_ids::<Job0>(&x.jobs))
             .flatten()
-            .collect::<Vec<u32>>();
+            .collect::<Vec<i32>>();
         let jobs = db.select_jobs(&c_ids);
         let j_ids = jobs
             .iter()
             .map(|x| extract_ids::<Step>(&x.steps))
             .flatten()
-            .collect::<Vec<u32>>();
+            .collect::<Vec<i32>>();
         let steps = db.select_steps(&j_ids);
         let cmds = db.all_cmds.clone(); // use all roots
         (cmds, jobs, steps)
     }
 
-    fn generate_random_selects<R: RngCore>(db: &Db, rng: &mut R, n: u32) -> Vec<Select> {
+    fn generate_random_selects<R: RngCore>(db: &Db, rng: &mut R, n: i32) -> Vec<Select> {
         let cmd_ids = db.all_cmds.iter().map(|x| x.id).collect::<Vec<_>>();
         let job_ids = db.all_jobs.iter().map(|x| x.id).collect::<Vec<_>>();
         let step_ids = db.all_steps.iter().map(|x| x.id).collect::<Vec<_>>();
-        fn sample<R: RngCore>(rng: &mut R, ids: &[u32], m: usize) -> Vec<u32> {
+        fn sample<R: RngCore>(rng: &mut R, ids: &[i32], m: usize) -> Vec<i32> {
             let mut hs = HashSet::with_capacity(m);
             let n = ids.len();
             if n < m {
@@ -1147,7 +1147,7 @@ mod tests {
             .collect()
     }
 
-    fn extract_ids<T: EndpointName>(uris: &[String]) -> Vec<u32> {
+    fn extract_ids<T: EndpointName>(uris: &[String]) -> Vec<i32> {
         // uris is the slice of strings like ["/api/step/123/", .. , "/api/step/234/"]
         uris.iter().filter_map(|s| extract_uri_id::<T>(s)).collect()
     }

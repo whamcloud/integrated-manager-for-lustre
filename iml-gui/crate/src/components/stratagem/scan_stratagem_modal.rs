@@ -20,12 +20,12 @@ pub struct Model {
     pub modal: modal::Model,
     pub report_duration: duration_picker::Model,
     pub purge_duration: duration_picker::Model,
-    pub fs_id: u32,
+    pub fs_id: i32,
     pub scanning: bool,
 }
 
 impl Model {
-    pub fn new(fs_id: u32) -> Self {
+    pub fn new(fs_id: i32) -> Self {
         Self {
             fs_id,
             ..Default::default()
