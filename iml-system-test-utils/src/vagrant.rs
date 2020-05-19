@@ -55,8 +55,7 @@ pub async fn up<'a>() -> Result<Command, CmdError> {
 }
 
 pub async fn destroy<'a>(config: &ClusterConfig) -> Result<(), CmdError> {
-    let mut nodes = config.all();
-    nodes.reverse();
+    let nodes = config.destroy_list();
 
     for node in &nodes {
         let mut suspend_cmd = suspend().await?;
@@ -635,6 +634,12 @@ impl ClusterConfig {
         xs.extend(&self.client);
 
         xs
+    }
+    pub fn destroy_list(&self) -> Vec<&str> {
+        let mut to_destroy = self.all();
+        to_destroy.reverse();
+
+        to_destroy
     }
     pub fn all_but_adm(&self) -> Vec<&str> {
         let mut xs = vec![self.iscsi];
