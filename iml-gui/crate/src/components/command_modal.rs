@@ -10,7 +10,7 @@ use crate::{
     key_codes, sleep_with_handle, GMsg,
 };
 use futures::channel::oneshot;
-use iml_wire_types::{ApiList, Command, EndpointName, Job, Step};
+use iml_wire_types::{ApiList, AvailableTransition, Command, EndpointName, Job, Step};
 use regex::{Captures, Regex};
 use seed::{prelude::*, *};
 use serde::de::DeserializeOwned;
@@ -38,12 +38,15 @@ pub struct CmdId(u32);
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Ord, PartialOrd, Debug)]
 pub struct JobId(u32);
 
-#[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub enum TypedId {
     Command(u32),
     Job(u32),
     Step(u32),
 }
+
+#[derive(Clone, Debug)]
+struct TransitionState(String);
 
 #[derive(Clone, Eq, PartialEq, Debug, Default)]
 pub struct Select(HashSet<TypedId>);
@@ -55,9 +58,6 @@ impl Display for Select {
 }
 
 impl Select {
-    fn contains(&self, id: TypedId) -> bool {
-        self.0.contains(&id)
-    }
     fn split(&self) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
         fn insert_in_sorted(ids: &mut Vec<u32>, id: u32) {
             match ids.binary_search(&id) {
@@ -77,12 +77,25 @@ impl Select {
         }
         (cmd_ids, job_ids, step_ids)
     }
+
+    fn contains(&self, id: TypedId) -> bool {
+        self.0.contains(&id)
+    }
+
+    fn perform_click(&mut self, id: TypedId) -> bool {
+        if self.0.contains(&id) {
+            !self.0.remove(&id)
+        } else {
+            self.0.insert(id)
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
 pub struct Context<'a> {
     pub steps_view: &'a HashMap<JobId, Vec<Arc<RichStep>>>,
     pub select: &'a Select,
+    pub cancelling_jobs: &'a HashSet<u32>,
 }
 
 #[derive(Clone, Debug)]
@@ -99,12 +112,13 @@ pub struct Model {
     pub commands_view: Vec<Arc<RichCommand>>,
 
     pub jobs: HashMap<u32, Arc<RichJob>>,
-    pub jobs_graphs: HashMap<CmdId, JobsGraph>, // cmd_id -> JobsGraph
+    pub jobs_graphs: HashMap<CmdId, JobsGraph>,
 
     pub steps: HashMap<u32, Arc<RichStep>>,
-    pub steps_view: HashMap<JobId, Vec<Arc<RichStep>>>, // job_id -> [Step]
+    pub steps_view: HashMap<JobId, Vec<Arc<RichStep>>>,
 
     pub select: Select,
+    pub cancelling_jobs: HashSet<u32>,
     pub modal: modal::Model,
 }
 
@@ -117,6 +131,8 @@ pub enum Msg {
     FetchedJobs(Box<fetch::ResponseDataResult<ApiList<Job0>>>),
     FetchedSteps(Box<fetch::ResponseDataResult<ApiList<Step>>>),
     Click(TypedId),
+    CancelJob(u32),
+    CancelledJob(u32, Box<fetch::ResponseDataResult<Job0>>),
     Noop,
 }
 
@@ -188,9 +204,26 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
         },
         Msg::Click(the_id) => {
-            let do_fetch = perform_click(&mut model.select, the_id);
+            let do_fetch = model.select.perform_click(the_id);
             if do_fetch {
                 schedule_fetch_tree(model, orders);
+            }
+        }
+        Msg::CancelJob(job_id) => {
+            if let Some(job) = model.jobs.get(&job_id) {
+                if let Some(ct) = find_cancel_transition(job) {
+                    if model.cancelling_jobs.insert(job_id) {
+                        let fut = apply_job_transition(job_id, TransitionState(ct.state.clone()));
+                        orders.skip().perform_cmd(fut);
+                    }
+                }
+            }
+        }
+        Msg::CancelledJob(job_id, job_result) => {
+            model.cancelling_jobs.remove(&job_id);
+            if let Err(e) = *job_result {
+                error!(format!("Failed to cancel job {}: {:#?}", job_id, e));
+                orders.skip();
             }
         }
         Msg::Noop => {}
@@ -336,6 +369,7 @@ pub fn job_tree_view(model: &Model, parent_cid: CmdId) -> Node<Msg> {
         let mut ctx = Context {
             steps_view: &model.steps_view,
             select: &model.select,
+            cancelling_jobs: &model.cancelling_jobs,
         };
         let dag_nodes = traverse_graph(
             &model.jobs_graphs[&parent_cid],
@@ -354,10 +388,12 @@ pub fn job_tree_view(model: &Model, parent_cid: CmdId) -> Node<Msg> {
 fn job_item_view(job: Arc<RichJob>, is_new: bool, ctx: &mut Context) -> Node<Msg> {
     let icon = job_status_icon(job.as_ref());
     if !is_new {
-        empty!()
+        empty![]
     } else if job.steps.is_empty() {
         span![span![class![C.mr_1], icon], span![job.description]]
     } else {
+        let cancelling = ctx.cancelling_jobs.contains(&job.id);
+        let cancel_btn = job_item_cancel_button(&job, cancelling);
         let is_open = ctx.select.contains(TypedId::Job(job.id));
         let def_vec = Vec::new();
         let steps = ctx.steps_view.get(&JobId(job.id)).unwrap_or(&def_vec);
@@ -367,6 +403,7 @@ fn job_item_view(job: Arc<RichJob>, is_new: bool, ctx: &mut Context) -> Node<Msg
                 span![class![C.cursor_pointer, C.underline], job.description],
                 simple_ev(Ev::Click, Msg::Click(TypedId::Job(job.id))),
             ],
+            cancel_btn,
             step_list_view(steps, ctx.select, is_open),
         ]
     }
@@ -378,13 +415,32 @@ fn job_item_combine(parent: Node<Msg>, acc: Vec<Node<Msg>>, _ctx: &mut Context) 
         let acc_plus = acc.into_iter().map(|a| a.merge_attrs(class![C.ml_3, C.mt_1]));
         div![parent, acc_plus]
     } else {
-        empty!()
+        empty![]
+    }
+}
+
+fn job_item_cancel_button(job: &Arc<RichJob>, cancelling: bool) -> Node<Msg> {
+    if let Some(trans) = find_cancel_transition(job) {
+        let cancel_btn: Node<Msg> = div![
+            class![C.inline, C.px_1, C.rounded_lg, C.text_white, C.cursor_pointer],
+            trans.label,
+        ];
+        if !cancelling {
+            cancel_btn
+                .merge_attrs(class![C.bg_blue_500, C.hover__bg_blue_400])
+                .with_listener(simple_ev(Ev::Click, Msg::CancelJob(job.id)))
+        } else {
+            // ongoing action will render gray button without the handler
+            cancel_btn.merge_attrs(class![C.bg_gray_500, C.hover__bg_gray_400])
+        }
+    } else {
+        empty![]
     }
 }
 
 fn step_list_view(steps: &[Arc<RichStep>], select: &Select, is_open: bool) -> Node<Msg> {
     if !is_open {
-        empty!()
+        empty![]
     } else if steps.is_empty() {
         div![
             class![C.my_8, C.text_center, C.text_gray_500],
@@ -418,7 +474,7 @@ fn step_item_view(step: &RichStep, is_open: bool) -> Vec<Node<Msg>> {
         ],
     ];
     let item_body = if !is_open {
-        empty!()
+        empty![]
     } else {
         // note, we cannot just use the Debug instance for step.args,
         // because the keys traversal order changes every time the HashMap is created
@@ -562,6 +618,18 @@ where
     }
 }
 
+async fn apply_job_transition(job_id: u32, transition_state: TransitionState) -> Result<Msg, Msg> {
+    let json = serde_json::json!({
+        "id": job_id,
+        "state": transition_state.0,
+    });
+    let req = Request::api_item(Job0::endpoint_name(), job_id)
+        .with_auth()
+        .method(fetch::Method::Put)
+        .send_json(&json);
+    req.fetch_json_data(|x| Msg::CancelledJob(job_id, Box::new(x))).await
+}
+
 fn extract_uri_id<T: EndpointName>(input: &str) -> Option<u32> {
     lazy_static::lazy_static! {
         static ref RE: Regex = Regex::new(r"/api/(\w+)/(\d+)/").unwrap();
@@ -578,43 +646,31 @@ fn extract_uri_id<T: EndpointName>(input: &str) -> Option<u32> {
 }
 
 fn to_load_cmd(model: &Model, cmd_id: u32) -> bool {
-    // load it if the command is not found or is not complete
-    if let Some(cmd) = model.commands.get(&cmd_id) {
-        !cmd.complete
-    } else {
-        true
-    }
+    // load the command if it is not found or is not complete
+    model.commands.get(&cmd_id).map(|c| !c.complete).unwrap_or(true)
 }
 
 fn to_load_job(model: &Model, job_id: u32) -> bool {
-    if let Some(job) = model.jobs.get(&job_id) {
-        // job.state can be "tasked", "pending" or "complete"
-        // if a job is errored or cancelled, it is also complete
-        job.state != "complete"
-    } else {
-        true
-    }
+    // job.state can be "pending", "tasked" or "complete"
+    // if a job is errored or cancelled, it is also complete
+    model.jobs.get(&job_id).map(|j| j.state != "complete").unwrap_or(true)
 }
 
 fn to_load_step(model: &Model, step_id: u32) -> bool {
-    if let Some(step) = model.steps.get(&step_id) {
-        // step.state can be "success", "failed" or "incomplete"
-        step.state != "success" && step.state != "failed"
-    } else {
-        true
-    }
+    // step.state can be "success", "failed" or "incomplete"
+    model
+        .steps
+        .get(&step_id)
+        .map(|s| s.state == "incomplete")
+        .unwrap_or(true)
 }
 
 fn is_all_commands_finished(cmds: &HashMap<u32, Arc<RichCommand>>) -> bool {
     cmds.values().all(|c| c.complete)
 }
 
-fn perform_click(select: &mut Select, id: TypedId) -> bool {
-    if select.contains(id) {
-        !select.0.remove(&id)
-    } else {
-        select.0.insert(id)
-    }
+fn find_cancel_transition(job: &Arc<RichJob>) -> Option<&AvailableTransition> {
+    job.available_transitions.iter().find(|at| at.state == "cancelled")
 }
 
 fn extract_children_from_cmd(cmd: &Arc<Command>) -> (u32, Vec<u32>) {
@@ -709,6 +765,7 @@ impl Model {
         self.steps.clear();
         self.steps_view.clear();
         self.select = Default::default();
+        self.cancelling_jobs.clear();
     }
 
     fn update_commands(&mut self, cmds: Vec<Arc<Command>>) {
