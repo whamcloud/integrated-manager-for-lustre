@@ -58,9 +58,6 @@ impl Display for Select {
 }
 
 impl Select {
-    fn contains(&self, id: TypedId) -> bool {
-        self.0.contains(&id)
-    }
     fn split(&self) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
         fn insert_in_sorted(ids: &mut Vec<u32>, id: u32) {
             match ids.binary_search(&id) {
@@ -79,6 +76,18 @@ impl Select {
             }
         }
         (cmd_ids, job_ids, step_ids)
+    }
+
+    fn contains(&self, id: TypedId) -> bool {
+        self.0.contains(&id)
+    }
+
+    fn perform_click(&mut self, id: TypedId) -> bool {
+        if self.0.contains(&id) {
+            !self.0.remove(&id)
+        } else {
+            self.0.insert(id)
+        }
     }
 }
 
@@ -195,7 +204,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             }
         },
         Msg::Click(the_id) => {
-            let do_fetch = perform_click(&mut model.select, the_id);
+            let do_fetch = model.select.perform_click(the_id);
             if do_fetch {
                 schedule_fetch_tree(model, orders);
             }
@@ -634,14 +643,6 @@ fn extract_uri_id<T: EndpointName>(input: &str) -> Option<u32> {
             None
         }
     })
-}
-
-fn perform_click(select: &mut Select, id: TypedId) -> bool {
-    if select.contains(id) {
-        !select.0.remove(&id)
-    } else {
-        select.0.insert(id)
-    }
 }
 
 fn to_load_cmd(model: &Model, cmd_id: u32) -> bool {
