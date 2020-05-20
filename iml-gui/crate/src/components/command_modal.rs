@@ -645,7 +645,7 @@ fn perform_click(select: &mut Select, id: TypedId) -> bool {
 }
 
 fn to_load_cmd(model: &Model, cmd_id: u32) -> bool {
-    // load it if the command is not found or is not complete
+    // load the command if it is not found or is not complete
     model.commands.get(&cmd_id).map(|c| !c.complete).unwrap_or(true)
 }
 
