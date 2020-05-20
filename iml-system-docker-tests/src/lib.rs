@@ -7,13 +7,11 @@ use iml_system_test_utils::{docker, iml, ssh, vagrant, SetupConfigType};
 use iml_systemd::SystemdError;
 use std::{collections::HashMap, time::Duration};
 use tokio::time::delay_for;
-use tracing_subscriber::{fmt::Subscriber};
 use tracing::Level;
+use tracing_subscriber::fmt::Subscriber;
 
 pub async fn setup() -> Result<(), SystemdError> {
-    Subscriber::builder()
-        .with_max_level(Level::DEBUG)
-        .init();
+    Subscriber::builder().with_max_level(Level::DEBUG).init();
 
     // remove the stack if it is running and clean up volumes and network
     docker::remove_iml_stack().await?;

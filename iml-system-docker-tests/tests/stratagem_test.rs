@@ -35,6 +35,13 @@ async fn test_docker_stratagem_setup() -> Result<(), SystemTestError> {
 
     run_test(&config)
         .await
-        .handle_test_result(&config.storage_server_ips()[..], "docker_stratagem_test")
+        .handle_test_result(
+            &[
+                &config.storage_server_ips()[..],
+                &config.client_server_ips()[..],
+            ]
+            .concat(),
+            "docker_stratagem_test",
+        )
         .await
 }
