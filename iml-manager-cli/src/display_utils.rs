@@ -107,6 +107,16 @@ pub fn usage(
     }
 }
 
+pub trait IsEmpty {
+    fn is_empty(&self) -> bool;
+}
+
+impl<T> IsEmpty for Vec<T> {
+    fn is_empty(&self) -> bool {
+        self.is_empty()
+    }
+}
+
 pub trait IntoTable {
     fn into_table(self) -> Table;
 }
@@ -195,7 +205,10 @@ pub trait IntoDisplayType {
     fn into_display_type(self, display_type: DisplayType) -> String;
 }
 
-impl<T: IntoTable + serde::Serialize> IntoDisplayType for T {
+impl<T> IntoDisplayType for T
+where
+    T: IsEmpty + IntoTable + serde::Serialize,
+{
     fn into_display_type(self, display_type: DisplayType) -> String {
         match display_type {
             DisplayType::Json => {
@@ -204,7 +217,13 @@ impl<T: IntoTable + serde::Serialize> IntoDisplayType for T {
             DisplayType::Yaml => {
                 serde_yaml::to_string(&self).expect("Cannot serialize item to YAML")
             }
-            DisplayType::Tabular => self.into_table().to_string(),
+            DisplayType::Tabular => {
+                if self.is_empty() {
+                    "".to_string()
+                } else {
+                    self.into_table().to_string()
+                }
+            }
         }
     }
 }
