@@ -103,10 +103,10 @@ pub struct Model {
     pub commands_view: Vec<Arc<RichCommand>>,
 
     pub jobs: HashMap<u32, Arc<RichJob>>,
-    pub jobs_graphs: HashMap<CmdId, JobsGraph>, // cmd_id -> JobsGraph
+    pub jobs_graphs: HashMap<CmdId, JobsGraph>,
 
     pub steps: HashMap<u32, Arc<RichStep>>,
-    pub steps_view: HashMap<JobId, Vec<Arc<RichStep>>>, // job_id -> [Step]
+    pub steps_view: HashMap<JobId, Vec<Arc<RichStep>>>,
 
     pub select: Select,
     pub cancelling_jobs: HashSet<u32>,
