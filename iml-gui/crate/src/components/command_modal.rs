@@ -38,12 +38,15 @@ pub struct CmdId(u32);
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Ord, PartialOrd, Debug)]
 pub struct JobId(u32);
 
-#[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub enum TypedId {
     Command(u32),
     Job(u32),
     Step(u32),
 }
+
+#[derive(Clone, Debug)]
+struct TransitionState(String);
 
 #[derive(Clone, Eq, PartialEq, Debug, Default)]
 pub struct Select(HashSet<TypedId>);
@@ -201,7 +204,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             if let Some(job) = model.jobs.get(&job_id) {
                 if let Some(ct) = find_cancel_transition(job) {
                     if model.cancelling_jobs.insert(job_id) {
-                        let fut = apply_job_transition(job_id, ct.clone());
+                        let fut = apply_job_transition(job_id, TransitionState(ct.state.clone()));
                         orders.skip().perform_cmd(fut);
                     }
                 }
@@ -606,10 +609,10 @@ where
     }
 }
 
-async fn apply_job_transition(job_id: u32, transition: AvailableTransition) -> Result<Msg, Msg> {
+async fn apply_job_transition(job_id: u32, transition_state: TransitionState) -> Result<Msg, Msg> {
     let json = serde_json::json!({
         "id": job_id,
-        "state": transition.state,
+        "state": transition_state.0,
     });
     let req = Request::api_item(Job0::endpoint_name(), job_id)
         .with_auth()
