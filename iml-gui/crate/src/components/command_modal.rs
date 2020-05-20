@@ -95,7 +95,6 @@ pub enum Input {
 pub struct Model {
     pub tree_cancel: Option<oneshot::Sender<()>>,
 
-    pub commands_loading: bool,
     pub commands: HashMap<u32, Arc<RichCommand>>,
     pub commands_view: Vec<Arc<RichCommand>>,
 
@@ -124,20 +123,21 @@ pub enum Msg {
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::Modal(msg) => {
+            if msg == modal::Msg::Close {
+                model.clear();
+            }
             modal::update(msg, &mut model.modal, &mut orders.proxy(Msg::Modal));
         }
         Msg::FireCommands(cmds) => {
             model.select = Select(HashSet::new());
             model.modal.open = true;
 
-            // clear model from the previous command modal work
-            model.clear();
             match cmds {
                 Input::Commands(cmds) => {
                     // use the (little) optimization:
                     // if we already have the commands and they all finished, we don't need to poll them anymore
-                    model.assign_commands(cmds);
-                    if !is_all_finished(&model.commands) {
+                    model.update_commands(cmds);
+                    if !is_all_commands_finished(&model.commands) {
                         orders.send_msg(Msg::FetchTree);
                     }
                 }
@@ -149,22 +149,21 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::FetchTree => {
             model.tree_cancel = None;
-            if !is_all_finished(&model.commands) {
+            if !is_all_commands_finished(&model.commands) {
                 schedule_fetch_tree(model, orders);
             }
         }
         Msg::FetchedCommands(commands_data_result) => {
-            model.commands_loading = false;
             match *commands_data_result {
                 Ok(api_list) => {
-                    model.assign_commands(api_list.objects.into_iter().map(Arc::new).collect());
+                    model.update_commands(api_list.objects.into_iter().map(Arc::new).collect());
                 }
                 Err(e) => {
                     error!(format!("Failed to fetch commands {:#?}", e));
                     orders.skip();
                 }
             }
-            if !is_all_finished(&model.commands) {
+            if !is_all_commands_finished(&model.commands) {
                 let (cancel, fut) = sleep_with_handle(POLL_INTERVAL, Msg::FetchTree, Msg::Noop);
                 model.tree_cancel = Some(cancel);
                 orders.perform_cmd(fut);
@@ -172,7 +171,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::FetchedJobs(jobs_data_result) => match *jobs_data_result {
             Ok(api_list) => {
-                model.assign_jobs(api_list.objects.into_iter().map(Arc::new).collect());
+                model.update_jobs(api_list.objects.into_iter().map(Arc::new).collect());
             }
             Err(e) => {
                 error!(format!("Failed to fetch jobs {:#?}", e));
@@ -181,7 +180,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         },
         Msg::FetchedSteps(steps_data_result) => match *steps_data_result {
             Ok(api_list) => {
-                model.assign_steps(api_list.objects.into_iter().map(Arc::new).collect());
+                model.update_steps(api_list.objects.into_iter().map(Arc::new).collect());
             }
             Err(e) => {
                 error!(format!("Failed to fetch steps {:#?}", e));
@@ -200,17 +199,23 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
 fn schedule_fetch_tree(model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     let (cmd_ids, job_ids, _) = &model.select.split();
-    let load_cmd_ids = extract_sorted_keys(&model.commands);
+    // grab all the dependencies for the chosen items, except those that already loaded and completed
+    let load_cmd_ids = extract_sorted_keys(&model.commands)
+        .into_iter()
+        .filter(|c| to_load_cmd(model, *c))
+        .collect::<Vec<u32>>();
     let load_job_ids = cmd_ids
         .iter()
-        .filter(|id| model.commands.contains_key(id))
-        .flat_map(|id| model.commands[id].deps())
+        .filter(|c| model.commands.contains_key(c))
+        .flat_map(|c| model.commands[c].deps())
+        .filter(|j| to_load_job(model, **j))
         .copied()
         .collect::<Vec<u32>>();
     let load_step_ids = job_ids
         .iter()
-        .filter(|id| model.jobs.contains_key(id))
-        .flat_map(|id| model.jobs[id].deps())
+        .filter(|j| model.jobs.contains_key(j))
+        .flat_map(|j| model.jobs[j].deps())
+        .filter(|s| to_load_step(model, **s))
         .copied()
         .collect::<Vec<u32>>();
 
@@ -235,7 +240,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
             Msg::Modal,
             modal::content_view(
                 Msg::Modal,
-                if model.commands_loading {
+                if model.commands_view.is_empty() {
                     vec![
                         modal::title_view(Msg::Modal, span!["Loading Command"]),
                         div![
@@ -475,12 +480,12 @@ fn step_item_view(step: &RichStep, is_open: bool) -> Vec<Node<Msg>> {
 }
 
 fn status_text(cmd: &RichCommand) -> &'static str {
-    if cmd.complete {
-        "Complete"
+    if cmd.cancelled {
+        "Cancelled"
     } else if cmd.errored {
         "Errored"
-    } else if cmd.cancelled {
-        "Cancelled"
+    } else if cmd.complete {
+        "Complete"
     } else {
         "Running"
     }
@@ -572,12 +577,36 @@ fn extract_uri_id<T: EndpointName>(input: &str) -> Option<u32> {
     })
 }
 
-fn is_finished(cmd: &RichCommand) -> bool {
-    cmd.complete
+fn to_load_cmd(model: &Model, cmd_id: u32) -> bool {
+    // load it if the command is not found or is not complete
+    if let Some(cmd) = model.commands.get(&cmd_id) {
+        !cmd.complete
+    } else {
+        true
+    }
 }
 
-fn is_all_finished(cmds: &HashMap<u32, Arc<RichCommand>>) -> bool {
-    cmds.values().all(|c| is_finished(c))
+fn to_load_job(model: &Model, job_id: u32) -> bool {
+    if let Some(job) = model.jobs.get(&job_id) {
+        // job.state can be "tasked", "pending" or "complete"
+        // if a job is errored or cancelled, it is also complete
+        job.state != "complete"
+    } else {
+        true
+    }
+}
+
+fn to_load_step(model: &Model, step_id: u32) -> bool {
+    if let Some(step) = model.steps.get(&step_id) {
+        // step.state can be "success", "failed" or "incomplete"
+        step.state != "success" && step.state != "failed"
+    } else {
+        true
+    }
+}
+
+fn is_all_commands_finished(cmds: &HashMap<u32, Arc<RichCommand>>) -> bool {
+    cmds.values().all(|c| c.complete)
 }
 
 fn perform_click(select: &mut Select, id: TypedId) -> bool {
@@ -673,7 +702,6 @@ pub fn is_subset<T: PartialEq>(part: &[T], all: &[T]) -> bool {
 impl Model {
     fn clear(&mut self) {
         self.tree_cancel = None;
-        self.commands_loading = true;
         self.commands.clear();
         self.commands_view.clear();
         self.jobs.clear();
@@ -683,20 +711,23 @@ impl Model {
         self.select = Default::default();
     }
 
-    fn assign_commands(&mut self, cmds: Vec<Arc<Command>>) {
-        self.commands = convert_to_rich_hashmap(cmds, extract_children_from_cmd);
+    fn update_commands(&mut self, cmds: Vec<Arc<Command>>) {
+        let commands = convert_to_rich_hashmap(cmds, extract_children_from_cmd);
+        self.commands.extend(commands);
         let tuple = self.check_back_consistency();
         self.refresh_view(tuple);
     }
 
-    fn assign_jobs(&mut self, jobs: Vec<Arc<Job0>>) {
-        self.jobs = convert_to_rich_hashmap(jobs, extract_children_from_job);
+    fn update_jobs(&mut self, jobs: Vec<Arc<Job0>>) {
+        let jobs = convert_to_rich_hashmap(jobs, extract_children_from_job);
+        self.jobs.extend(jobs);
         let tuple = self.check_back_consistency();
         self.refresh_view(tuple);
     }
 
-    fn assign_steps(&mut self, steps: Vec<Arc<Step>>) {
-        self.steps = convert_to_rich_hashmap(steps, extract_children_from_step);
+    fn update_steps(&mut self, steps: Vec<Arc<Step>>) {
+        let steps = convert_to_rich_hashmap(steps, extract_children_from_step);
+        self.steps.extend(steps);
         let tuple = self.check_back_consistency();
         self.refresh_view(tuple);
     }
@@ -914,9 +945,9 @@ mod tests {
             let (c, j, s) = prepare_subset(&db, &sel_cmd_ids);
             model.clear();
             model.select = select.clone();
-            model.assign_commands(c.clone());
-            model.assign_jobs(j.clone());
-            model.assign_steps(s.clone());
+            model.update_commands(c.clone());
+            model.update_jobs(j.clone());
+            model.update_steps(s.clone());
             let expected_cmd = to_str_vec(std::mem::replace(&mut model.commands_view, Vec::new()));
             let expected_jobs = to_str_hm(std::mem::replace(&mut model.jobs_graphs, HashMap::new()));
             let expected_steps = to_str_hm(std::mem::replace(&mut model.steps_view, HashMap::new()));
@@ -928,9 +959,9 @@ mod tests {
                 // we simulate, that FetchCommands, FetchJobs and FetchSteps come in arbitrary order
                 for p in &permutation {
                     match p {
-                        1 => model.assign_commands(c.clone()),
-                        2 => model.assign_jobs(j.clone()),
-                        3 => model.assign_steps(s.clone()),
+                        1 => model.update_commands(c.clone()),
+                        2 => model.update_jobs(j.clone()),
+                        3 => model.update_steps(s.clone()),
                         _ => unreachable!(),
                     }
                 }
