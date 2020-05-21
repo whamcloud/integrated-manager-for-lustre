@@ -54,17 +54,36 @@ pub async fn up<'a>() -> Result<Command, CmdError> {
     Ok(x)
 }
 
-pub async fn destroy<'a>() -> Result<(), CmdError> {
-    let mut x = vagrant().await?;
+pub async fn destroy<'a>(config: &ClusterConfig) -> Result<(), CmdError> {
+    let nodes = config.destroy_list();
 
-    x.arg("destroy").arg("-f");
+    for node in &nodes {
+        let mut suspend_cmd = suspend().await?;
+        suspend_cmd.arg(node);
 
-    try_command_n_times(3, 1, &mut x).await
+        try_command_n_times(3, 1, &mut suspend_cmd).await?;
+    }
+
+    for node in &nodes {
+        let mut destroy_cmd = vagrant().await?;
+        destroy_cmd.arg("destroy").arg("-f").arg(node);
+
+        try_command_n_times(3, 1, &mut destroy_cmd).await?;
+    }
+
+    Ok(())
 }
 
 pub async fn halt() -> Result<Command, CmdError> {
     let mut x = vagrant().await?;
     x.arg("halt");
+
+    Ok(x)
+}
+
+pub async fn suspend() -> Result<Command, CmdError> {
+    let mut x = vagrant().await?;
+    x.arg("suspend");
 
     Ok(x)
 }
@@ -615,6 +634,12 @@ impl ClusterConfig {
         xs.extend(&self.client);
 
         xs
+    }
+    pub fn destroy_list(&self) -> Vec<&str> {
+        let mut to_destroy = self.all();
+        to_destroy.reverse();
+
+        to_destroy
     }
     pub fn all_but_adm(&self) -> Vec<&str> {
         let mut xs = vec![self.iscsi];
