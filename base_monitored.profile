@@ -1,5 +1,5 @@
 {
-  "ui_name": "Monitored Storage Server",
+  "ui_name": "Storage Server",
   "managed": false,
   "worker": false,
   "name": "base_monitored",
@@ -8,7 +8,9 @@
   "corosync": false,
   "corosync2": false,
   "pacemaker": false,
-  "ui_description": "A storage server suitable for monitoring only",
-  "packages": [],
+  "ui_description": "A storage server for monitoring and management of pre-existing resources",
+  "packages": [
+    "python2-iml-agent-management",
+  ],
   "repolist": [ "base" ]
 }
