@@ -42,6 +42,10 @@ class LustreClientMount(DeletableStatefulObject):
             state = self.state
 
         deps = []
+
+        if self.host.immutable_state:
+            return DependAll(deps)
+            
         if state == "mounted":
             # Depend on this mount's host having LNet up. If LNet is stopped
             # on the host, this filesystem will be unmounted first.

@@ -1106,14 +1106,17 @@ class JobScheduler(object):
         # if we have an entry with 'root'=true then move it to the front of the list before returning the result
         return sorted(sorted_list, key=lambda entry: entry.get("root", False), reverse=True)
 
-    def create_client_mount(self, host_id, filesystem_name, mountpoint):
+    def create_client_mount(self, host_id, filesystem_id, mountpoint, existing):
         # RPC-callable
         host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == host_id)
-        mount = self._create_client_mount(host, filesystem_name, mountpoint)
+        filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.id == filesystem_id)
+
+        mount = self._create_client_mount(host, filesystem, mountpoint, existing)
+
         self.progress.advance()
         return mount.id
 
-    def _create_client_mount(self, host, filesystem_name, mountpoint):
+    def _create_client_mount(self, host, filesystem, mountpoint, existing = False):
         # Used for intra-JobScheduler calls
         log.debug("Creating client mount for %s as %s:%s" % (filesystem_name, host, mountpoint))
 
@@ -1121,7 +1124,10 @@ class JobScheduler(object):
             from django.db import transaction
 
             with transaction.atomic():
-                mount, created = LustreClientMount.objects.get_or_create(host=host, filesystem=filesystem_name)
+                mount, created = LustreClientMount.objects.get_or_create(host=host, filesystem=filesystem)
+                if existing:
+                    mount.state = "mounted"
+                
                 mount.mountpoint = mountpoint
                 mount.save()
 

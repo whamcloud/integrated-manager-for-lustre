@@ -428,7 +428,6 @@ class Job(models.Model):
                 DependAll(dependent_deps),
                 dep_cache.get(self),
                 dep_cache.get(stateful_object, new_state),
-                DependOn(stateful_object, self.old_state),
             )
         else:
             return dep_cache.get(self)
