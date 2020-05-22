@@ -42,6 +42,9 @@ class StatefulObject(models.Model):
     route_map = None
     transition_map = None
     job_class_map = None
+    skip_if_satisfied = False
+    _begin_state = None
+    _end_state = None
 
     reverse_deps = {}
 
@@ -60,6 +63,12 @@ class StatefulObject(models.Model):
         )
         self.state = state
         self.state_modified_at = now()
+
+    def set_begin_state(self, begin_state):
+        self._begin_state = begin_state
+
+    def set_end_state(self, end_state):
+        self._end_state = end_state
 
     def not_state(self, state):
         return list(set(self.states) - set([state]))
@@ -189,6 +198,12 @@ class StatefulObject(models.Model):
             return cls.route_map[(begin_state, end_state)]
         except KeyError:
             raise SchedulingError("%s->%s not legal state transition for %s" % (begin_state, end_state, cls))
+
+    def get_current_route(self):
+        if self._begin_state and self._end_state:
+            return self.get_route(self._begin_state, self._end_state)
+
+        return []
 
     def get_available_states(self, begin_state):
         """States which should be advertised externally (i.e. exclude states which
@@ -385,6 +400,8 @@ class Job(models.Model):
     #: Whether the job can be safely cancelled
     cancellable = True
 
+    skip_if_satisfied = False
+
     class Meta:
         app_label = "chroma_core"
         ordering = ["id"]
@@ -422,13 +439,21 @@ class Job(models.Model):
                         dependent_dependency.stateful_object == stateful_object
                         and not new_state in dependent_dependency.acceptable_states
                     ):
-                        dependent_deps.append(DependOn(dependent, dependent_dependency.fix_state))
+                        if dependent.state != dependent_dependency.fix_state:
+                            dependent.set_begin_state(dependent.state)
+                            dependent.set_end_state(dependent_dependency.fix_state)
+
+                        dependent_deps.append(
+                            DependOn(
+                                dependent, dependent_dependency.fix_state, skip_if_satisfied=dependent.skip_if_satisfied
+                            )
+                        )
 
             return DependAll(
                 DependAll(dependent_deps),
                 dep_cache.get(self),
                 dep_cache.get(stateful_object, new_state),
-                DependOn(stateful_object, self.old_state),
+                DependOn(stateful_object, self.old_state, skip_if_satisfied=self.skip_if_satisfied),
             )
         else:
             return dep_cache.get(self)

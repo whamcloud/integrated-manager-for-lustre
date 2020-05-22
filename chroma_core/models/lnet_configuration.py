@@ -279,6 +279,7 @@ class UnconfigureLNetJob(NullStateChangeJob):
 class EnableLNetJob(NullStateChangeJob):
     target_object = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, "unconfigured", "lnet_unloaded")
+    skip_if_satisfied = True
 
     class Meta:
         app_label = "chroma_core"
@@ -320,6 +321,7 @@ class LoadLNetJob(LNetStateChangeJob):
     stateful_object = "lnet_configuration"
     lnet_configuration = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     state_verb = "Load LNet"
+    skip_if_satisfied = True
 
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 30
@@ -359,6 +361,7 @@ class StartLNetJob(LNetStateChangeJob):
     stateful_object = "lnet_configuration"
     lnet_configuration = models.ForeignKey(LNetConfiguration, on_delete=CASCADE)
     state_verb = "Start LNet"
+    skip_if_satisfied = True
 
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 40
