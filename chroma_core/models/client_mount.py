@@ -26,6 +26,7 @@ class LustreClientMount(DeletableStatefulObject):
 
     states = ["unmounted", "mounted", "removed"]
     initial_state = "unmounted"
+    skip_if_satisfied = True
 
     def __str__(self):
         return self.get_label()
@@ -42,6 +43,10 @@ class LustreClientMount(DeletableStatefulObject):
             state = self.state
 
         deps = []
+
+        if self.host.immutable_state:
+            return DependAll(deps)
+
         if state == "mounted":
             # Depend on this mount's host having LNet up. If LNet is stopped
             # on the host, this filesystem will be unmounted first.
@@ -140,6 +145,7 @@ class MountLustreClientJob(StateChangeJob):
     stateful_object = "lustre_client_mount"
     lustre_client_mount = models.ForeignKey(LustreClientMount, on_delete=CASCADE)
     state_verb = None
+    skip_if_satisfied = True
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -184,6 +190,7 @@ class UnmountLustreClientMountJob(StateChangeJob):
     stateful_object = "lustre_client_mount"
     lustre_client_mount = models.ForeignKey(LustreClientMount, on_delete=CASCADE)
     state_verb = None
+    skip_if_satisfied = True
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -220,6 +227,7 @@ class RemoveLustreClientJob(StateChangeJob):
     stateful_object = "lustre_client_mount"
     lustre_client_mount = models.ForeignKey(LustreClientMount, on_delete=CASCADE)
     state_verb = None
+    skip_if_satisfied = True
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -368,15 +376,11 @@ class UnmountLustreFilesystemsJob(AdvertisedJob):
     def get_steps(self):
         search = lambda cm: (cm.host == self.host and cm.state == "mounted")
         mounted = ObjectCache.get(LustreClientMount, search)
-        args = {
-            "host": self.host,
-            "filesystems": [
-                (
-                    ObjectCache.get_one(ManagedFilesystem, lambda mf, mtd=m: mf.name == mtd.filesystem).mount_path(),
-                    m.mountpoint,
-                )
+        args = dict(
+            host=self.host,
+            filesystems=[
+                (ObjectCache.get_one(ManagedFilesystem, lambda mf, mtd=m: mf.name == mtd.filesystem).mount_path(), m.mountpoint)
                 for m in mounted
             ],
-        }
-
+        )
         return [(UnmountLustreFilesystemsStep, args)]

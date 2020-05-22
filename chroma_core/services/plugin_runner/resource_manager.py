@@ -901,23 +901,19 @@ class ResourceManager(object):
         for lnet_state_resource in node_resources[LNETModules]:
             lnet_state = lnet_state_resource.to_resource()
 
-            # Really this code should be more tightly tied to the lnet_configuration classes, but in a one step
-            # at a time approach. Until lnet is !unconfigured we should not be updating it's state.
-            # Double if because the first if should be removed really, in some more perfect future.
-            if host.lnet_configuration.state != "unconfigured":
-                if lnet_state.host_id == host.id:
-                    lnet_configuration = LNetConfiguration.objects.get(host=lnet_state.host_id)
+            if lnet_state.host_id == host.id:
+                lnet_configuration = LNetConfiguration.objects.get(host=lnet_state.host_id)
 
-                    # Truthfully this should use the notify which I've added as a comment to show the correct way. The problem is that
-                    # during the ConfigureLNetJob the state is changed to unloaded and this masks the notify in some way the is probably
-                    # as planned but prevents it being set back. What we really need is to somehow get a single command that goes
-                    # to a state and then to another state. post_dependencies almost. At present I can't see how to do this so I am leaving
-                    # this code as is.
-                    lnet_configuration.set_state(lnet_state.state)
-                    lnet_configuration.save()
-                    # JobSchedulerClient.notify(lnet_configuration, now(), {'state': lnet_state.state})
+                # Truthfully this should use the notify which I've added as a comment to show the correct way. The problem is that
+                # during the ConfigureLNetJob the state is changed to unloaded and this masks the notify in some way the is probably
+                # as planned but prevents it being set back. What we really need is to somehow get a single command that goes
+                # to a state and then to another state. post_dependencies almost. At present I can't see how to do this so I am leaving
+                # this code as is.
+                lnet_configuration.set_state(lnet_state.state)
+                lnet_configuration.save()
+                # JobSchedulerClient.notify(lnet_configuration, now(), {'state': lnet_state.state})
 
-                    log.debug("_persist_nid_updates lnet_configuration %s" % lnet_configuration)
+                log.debug("_persist_nid_updates lnet_configuration %s" % lnet_configuration)
 
         # Only get the lnet_configuration if we actually have a LNetInterface (nid) to add.
         if len(node_resources[LNETInterface]) > 0:

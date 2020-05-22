@@ -242,10 +242,10 @@ class JobSchedulerClient(object):
         return (list(ManagedTarget.objects.filter(id__in=target_ids)), Command.objects.get(pk=command_id))
 
     @classmethod
-    def create_client_mount(cls, host, filesystem_name, mountpoint):
+    def create_client_mount(cls, host, filesystem_name, mountpoint, existing):
         from chroma_core.models import LustreClientMount
 
-        client_mount_id = JobSchedulerRpc().create_client_mount(host.id, filesystem_name, mountpoint)
+        client_mount_id = JobSchedulerRpc().create_client_mount(host.id, filesystem_name, mountpoint, existing)
         return LustreClientMount.objects.get(id=client_mount_id)
 
     @classmethod
