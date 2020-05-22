@@ -618,6 +618,7 @@ class AggregateStratagemResultsJob(Job):
         ]
 
 
+# @@ To Be Deleted
 class SendResultsToClientStep(Step):
     def run(self, args):
         host, mount_point, uuid, report_duration, purge_duration = args["client_args"]
@@ -658,6 +659,7 @@ class SendResultsToClientStep(Step):
         return file_location
 
 
+# @@ To Be Deleted
 class SendStratagemResultsToClientJob(Job):
     filesystem = models.ForeignKey("ManagedFilesystem", null=False, on_delete=CASCADE)
     uuid = models.CharField(max_length=64, null=False, default="")

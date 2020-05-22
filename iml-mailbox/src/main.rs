@@ -26,8 +26,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let shared_senders = Arc::new(Mutex::new(MailboxSenders::default()));
     let shared_senders_filter = warp::any().map(move || Arc::clone(&shared_senders));
 
-    //let pool = iml_orm::pool()?;
-
     let mailbox = warp::path("mailbox");
 
     let post = warp::post()

@@ -1612,6 +1612,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-task-runner"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "iml-action-client",
+ "iml-orm",
+ "iml-postgres",
+ "iml-tracing",
+ "iml-wire-types",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "iml-timer"
 version = "0.3.0"
 dependencies = [

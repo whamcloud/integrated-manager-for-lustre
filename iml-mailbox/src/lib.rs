@@ -30,7 +30,7 @@ pub enum MailboxError {
     #[error(transparent)]
     ParseIntError(#[from] std::num::ParseIntError),
     #[error(transparent)]
-    R2D2Error(#[from] iml_orm::r2d2::Error),
+    ImlOrmError(#[from] iml_orm::ImlOrmError),
     #[error(transparent)]
     TokioAsyncError(#[from] iml_orm::tokio_diesel::AsyncError),
     #[error(transparent)]

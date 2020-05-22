@@ -124,8 +124,7 @@ async fn fi2path(llapi: LlapiFid, fi: FidItem) -> Option<String> {
     let path = if let Some(pfid) = pfids.get(0) {
         format!(
             "{}/{}",
-            fid2path(llapi, pfid.pfid.clone())
-                .await?,
+            fid2path(llapi, pfid.pfid.clone()).await?,
             pfid.name
         )
     } else {
@@ -150,26 +149,23 @@ pub async fn process_fids(
 
     stream::iter(fid_list)
         .chunks(1000)
-        .map(|xs| Ok::<_, ImlAgentError>(xs.into_iter().collect()) )
+        .map(|xs| Ok::<_, ImlAgentError>(xs.into_iter().collect()))
         .and_then(|xs: Vec<_>| {
             let llapi = llapi.clone();
 
             async move {
-                let xs = join_all(
-                    xs.into_iter()
-                        .map(move |x| fi2path(llapi.clone(), x)),
-                )
-                .await;
+                let xs = join_all(xs.into_iter().map(move |x| fi2path(llapi.clone(), x))).await;
 
                 Ok(xs)
             }
         })
         .inspect(|_| debug!("Resolved 1000 Fids"))
-        .map_ok(move |xs|
-                xs.into_iter()
+        .map_ok(move |xs| {
+            xs.into_iter()
                 .filter_map(std::convert::identity)
                 .map(|x| format!("{}/{}", mntpt, x))
-                .collect())
+                .collect()
+        })
         .map_ok(|xs: Vec<String>| bytes::BytesMut::from(xs.join("\n").as_str()))
         .map_ok(|mut x: bytes::BytesMut| {
             if !x.is_empty() {

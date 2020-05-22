@@ -1,0 +1,17 @@
+[package]
+name = "iml-task-runner"
+version = "0.1.0"
+authors = ["Nathaniel Clark <nclark@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+futures = "0.3"
+iml-action-client =  { path = "../iml-action-client", version = "0.1" }
+iml-orm = { path = "../iml-orm", version = "0.3", features = ["postgres-interop"] }
+iml-tracing = { path = "../iml-tracing", version = "0.2" }
+iml-postgres = { path = "../iml-postgres", version = "0.3" }
+iml-wire-types = { path = "../iml-wire-types", version = "0.3" }
+serde_json = "1.0"
+thiserror = "1.0"
+tokio = { version = "0.2", features = ["macros"] }
+tracing = "0.1"

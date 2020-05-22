@@ -34,6 +34,14 @@ class Task(models.Model):
     start = models.DateTimeField(null=False)
     finish = models.DateTimeField(null=True, blank=True)
 
+    # states = [ "started", "finished", "closed" ]
+    # Started - Task is started and mailbox is created on servers
+    #   - main ingest phase
+    #   - outgest can run
+    # Finished - Mailbox is removed from servers
+    #   - ingest is complete
+    #   - outgest is running
+    # Closed - outgest is completed
     state = models.CharField(max_length=16)
 
     fids_total = models.BigIntegerField(default=0)
