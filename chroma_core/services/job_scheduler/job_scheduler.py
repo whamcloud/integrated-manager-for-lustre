@@ -36,7 +36,7 @@ from chroma_core.models import ManagedHost
 from chroma_core.models import ManagedMdt
 from chroma_core.models import FilesystemMember
 from chroma_core.models import ConfigureLNetJob
-from chroma_core.models import ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject
+from chroma_core.models import ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject, StatefulObject
 from chroma_core.models import StepResult
 from chroma_core.models import (
     ManagedMgs,
@@ -60,6 +60,7 @@ from chroma_core.models import (
     StratagemConfiguration,
 )
 from chroma_core.models import Task, CreateTaskJob
+from chroma_core.models.jobs import StateChangeJob
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache, lock_change_receiver, to_lock_json
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -402,6 +403,14 @@ class JobCollection(object):
         """
         for job in jobs:
             self.add(job)
+
+        stateful_objects = list(
+            set([x.get_stateful_object() for x in self._jobs.values() if isinstance(x, StateChangeJob)])
+        )
+        for so in stateful_objects:
+            so.set_begin_state(self.get_stateful_object_begin_state(so))
+            so.set_end_state(self.get_stateful_object_end_state(so))
+
         self._commands[command.id] = command
         self._command_to_jobs[command.id] |= set([j.id for j in jobs])
         for job in jobs:
@@ -453,6 +462,23 @@ class JobCollection(object):
             self._state_jobs[job.state][job.id] = job
 
         Job.objects.filter(id__in=[j.id for j in jobs]).update(state=new_state)
+
+    def get_jobs_by_stateful_object(self, so):
+        return [
+            x
+            for x in self._jobs.values()
+            if isinstance(x, StateChangeJob) and type(x.get_stateful_object()) is type(so)
+        ]
+
+    def get_stateful_object_begin_state(self, so):
+        first_job = self.get_jobs_by_stateful_object(so)[:+1]
+        if first_job:
+            return first_job[0].state_transition.old_state
+
+    def get_stateful_object_end_state(self, so):
+        last_job = self.get_jobs_by_stateful_object(so)[-1:]
+        if last_job:
+            return last_job[0].state_transition.new_state
 
     @property
     def ready_jobs(self):
@@ -567,7 +593,20 @@ class JobScheduler(object):
                         log.error("Job %d: exception in get_steps: %s" % (job.id, traceback.format_exc()))
                         cancel_jobs.append(job)
                     else:
-                        ok_jobs.append(job)
+                        if isinstance(job, StateChangeJob):
+                            so = job.get_stateful_object()
+                            stateful_object = so.__class__._base_manager.get(pk=so.pk)
+                            state = stateful_object.state
+
+                            if state != job.old_state and job.skip_if_satisfied:
+                                if state in so.get_current_route():
+                                    self._complete_job(job, False, False)
+                                else:
+                                    cancel_jobs.append(job)
+                            else:
+                                ok_jobs.append(job)
+                        else:
+                            ok_jobs.append(job)
 
         return ok_jobs, cancel_jobs
 
@@ -1106,14 +1145,16 @@ class JobScheduler(object):
         # if we have an entry with 'root'=true then move it to the front of the list before returning the result
         return sorted(sorted_list, key=lambda entry: entry.get("root", False), reverse=True)
 
-    def create_client_mount(self, host_id, filesystem_name, mountpoint):
+    def create_client_mount(self, host_id, filesystem_name, mountpoint, existing):
         # RPC-callable
         host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == host_id)
-        mount = self._create_client_mount(host, filesystem_name, mountpoint)
+
+        mount = self._create_client_mount(host, filesystem_name, mountpoint, existing)
+
         self.progress.advance()
         return mount.id
 
-    def _create_client_mount(self, host, filesystem_name, mountpoint):
+    def _create_client_mount(self, host, filesystem_name, mountpoint, existing=False):
         # Used for intra-JobScheduler calls
         log.debug("Creating client mount for %s as %s:%s" % (filesystem_name, host, mountpoint))
 
@@ -1122,6 +1163,9 @@ class JobScheduler(object):
 
             with transaction.atomic():
                 mount, created = LustreClientMount.objects.get_or_create(host=host, filesystem=filesystem_name)
+                if existing:
+                    mount.state = "mounted"
+
                 mount.mountpoint = mountpoint
                 mount.save()
 
@@ -1889,7 +1933,7 @@ class JobScheduler(object):
 
         mountpoint = "/mnt/{}".format(filesystem.name)
         if not client_mount_exists:
-            self._create_client_mount(client_host, filesystem, mountpoint)
+            self._create_client_mount(client_host, filesystem.name, mountpoint)
 
         client_mount = ObjectCache.get_one(
             LustreClientMount, lambda mnt: mnt.host_id == client_host.id and mnt.filesystem == filesystem.name
