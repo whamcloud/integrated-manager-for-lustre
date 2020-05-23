@@ -25,6 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         is_release: iml_manager_env::get_is_release(),
         branding: iml_manager_env::get_branding().into(),
         use_stratagem: iml_manager_env::get_use_stratagem(),
+        monitor_sfa: iml_manager_env::get_sfa_endpoints().is_some(),
     };
 
     let (cli_fut, client_filter) = create_connection_filter().await?;

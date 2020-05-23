@@ -6,7 +6,7 @@ Cim {
     message: Message {
         simplersp: SimpleRsp {
             imethodresponse: IMethodResponse {
-                i_return_value: IReturnValue {
+                i_return_value: IReturnValueNamedInstance {
                     named_instance: [
                         NamedInstance {
                             instance: Instance {

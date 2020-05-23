@@ -5,6 +5,7 @@ expression: xs
 [
     Ok(
         SfaEnclosure {
+            oid: 1342177280,
             element_name: "Enclosure_00",
             health_state: Ok,
             position: 0,
@@ -13,6 +14,7 @@ expression: xs
     ),
     Ok(
         SfaEnclosure {
+            oid: 1342177281,
             element_name: "Enclosure_01",
             health_state: Ok,
             position: 1,
@@ -21,6 +23,7 @@ expression: xs
     ),
     Ok(
         SfaEnclosure {
+            oid: 1342177282,
             element_name: "Enclosure_02",
             health_state: Ok,
             position: 2,
@@ -29,6 +32,7 @@ expression: xs
     ),
     Ok(
         SfaEnclosure {
+            oid: 1342177283,
             element_name: "Enclosure_03",
             health_state: Ok,
             position: 0,

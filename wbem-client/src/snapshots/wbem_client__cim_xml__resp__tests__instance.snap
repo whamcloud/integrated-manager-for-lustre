@@ -1,0 +1,411 @@
+---
+source: wbem-client/src/cim_xml.rs
+expression: r
+---
+Cim {
+    message: Message {
+        simplersp: SimpleRsp {
+            imethodresponse: IMethodResponse {
+                i_return_value: IReturnValueInstance {
+                    instance: Instance {
+                        class_name: "DDN_SFAStorageSystem",
+                        properties: [
+                            Single {
+                                name: Some(
+                                    "UUID",
+                                ),
+                                prop_type: "string",
+                                value: Some(
+                                    "60001ff0e067b0000000000030000000",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "TimeZonePOSIX",
+                                ),
+                                prop_type: "boolean",
+                                value: Some(
+                                    "FALSE",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "TimeZone",
+                                ),
+                                prop_type: "string",
+                                value: None,
+                            },
+                            Single {
+                                name: Some(
+                                    "State",
+                                ),
+                                prop_type: "uint8",
+                                value: Some(
+                                    "2",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "SlowDriveLatencyThresholdSSD",
+                                ),
+                                prop_type: "uint16",
+                                value: Some(
+                                    "5",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "SlowDriveLatencyThresholdRotating",
+                                ),
+                                prop_type: "uint16",
+                                value: Some(
+                                    "5",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "SlowDriveDetectionAction",
+                                ),
+                                prop_type: "uint8",
+                                value: Some(
+                                    "1",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "SingleControllerWBC",
+                                ),
+                                prop_type: "boolean",
+                                value: Some(
+                                    "FALSE",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "SFXEnabledOnNextBoot",
+                                ),
+                                prop_type: "boolean",
+                                value: Some(
+                                    "FALSE",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "SFXEnabled",
+                                ),
+                                prop_type: "boolean",
+                                value: Some(
+                                    "FALSE",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "SFXCapable",
+                                ),
+                                prop_type: "boolean",
+                                value: Some(
+                                    "FALSE",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "ReadRetryTimeout",
+                                ),
+                                prop_type: "uint16",
+                                value: Some(
+                                    "8000",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "PoolVerifyPolicy",
+                                ),
+                                prop_type: "boolean",
+                                value: Some(
+                                    "FALSE",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "Platform",
+                                ),
+                                prop_type: "string",
+                                value: Some(
+                                    "SFA400NVXE",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "PeriodicCacheFlushInterval",
+                                ),
+                                prop_type: "uint32",
+                                value: Some(
+                                    "1440",
+                                ),
+                            },
+                            Multiple {
+                                name: Some(
+                                    "NTPServers",
+                                ),
+                                prop_type: "string",
+                                values: ValueArray {
+                                    inner: [],
+                                },
+                            },
+                            Single {
+                                name: Some(
+                                    "NTPStarting",
+                                ),
+                                prop_type: "boolean",
+                                value: Some(
+                                    "FALSE",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "NTPMode",
+                                ),
+                                prop_type: "boolean",
+                                value: Some(
+                                    "FALSE",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "Name",
+                                ),
+                                prop_type: "string",
+                                value: Some(
+                                    "",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "LocateDwellTime",
+                                ),
+                                prop_type: "uint16",
+                                value: Some(
+                                    "120",
+                                ),
+                            },
+                            Multiple {
+                                name: Some(
+                                    "Licenses",
+                                ),
+                                prop_type: "uint8",
+                                values: ValueArray {
+                                    inner: [],
+                                },
+                            },
+                            Single {
+                                name: Some(
+                                    "LicenseNeeded",
+                                ),
+                                prop_type: "boolean",
+                                value: Some(
+                                    "TRUE",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "HealthState",
+                                ),
+                                prop_type: "uint16",
+                                value: Some(
+                                    "2",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "HealthStateReason",
+                                ),
+                                prop_type: "string",
+                                value: Some(
+                                    "Subsystem verify is disabled",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "FastTimeout",
+                                ),
+                                prop_type: "boolean",
+                                value: Some(
+                                    "FALSE",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "EncryptionModel",
+                                ),
+                                prop_type: "uint8",
+                                value: Some(
+                                    "0",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "EncryptionPolicy",
+                                ),
+                                prop_type: "uint8",
+                                value: Some(
+                                    "0",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "EncryptionEnabled",
+                                ),
+                                prop_type: "boolean",
+                                value: Some(
+                                    "FALSE",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "E_Platform",
+                                ),
+                                prop_type: "boolean",
+                                value: Some(
+                                    "TRUE",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "DriveFormatPolicy",
+                                ),
+                                prop_type: "uint8",
+                                value: Some(
+                                    "0",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "DriveErrorTolerance",
+                                ),
+                                prop_type: "uint8",
+                                value: Some(
+                                    "3",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "DiskFormatPolicy",
+                                ),
+                                prop_type: "uint8",
+                                value: Some(
+                                    "0",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "DiskErrorTolerance",
+                                ),
+                                prop_type: "uint8",
+                                value: Some(
+                                    "3",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "DiskEnclosureConfiguration",
+                                ),
+                                prop_type: "string",
+                                value: Some(
+                                    "1- SS200NV(head + 4 SS9012) with 0 missing enclosures (AUTOMATIC Selection).",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "DefaultPoolType",
+                                ),
+                                prop_type: "uint8",
+                                value: Some(
+                                    "2",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "DefaultEndToEndDataIntegrityEnabled",
+                                ),
+                                prop_type: "boolean",
+                                value: Some(
+                                    "FALSE",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "DefaultBlockSize",
+                                ),
+                                prop_type: "uint16",
+                                value: Some(
+                                    "4096",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "DateAndTime",
+                                ),
+                                prop_type: "datetime",
+                                value: Some(
+                                    "20200427164952.272397+000",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "ConfigDate",
+                                ),
+                                prop_type: "datetime",
+                                value: Some(
+                                    "20200408023301.311725+000",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "ChildHealthState",
+                                ),
+                                prop_type: "uint16",
+                                value: Some(
+                                    "2",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "AutoVerifyEnabled",
+                                ),
+                                prop_type: "boolean",
+                                value: Some(
+                                    "FALSE",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "ATSMonitorEnabled",
+                                ),
+                                prop_type: "boolean",
+                                value: None,
+                            },
+                            Single {
+                                name: Some(
+                                    "ATSMonitorSupported",
+                                ),
+                                prop_type: "boolean",
+                                value: Some(
+                                    "FALSE",
+                                ),
+                            },
+                            Single {
+                                name: Some(
+                                    "Index",
+                                ),
+                                prop_type: "uint16",
+                                value: Some(
+                                    "0",
+                                ),
+                            },
+                        ],
+                    },
+                },
+            },
+        },
+    },
+}

@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 futures = "0.3"
-im = { version = "14.1", features = ["serde"] }
+im = { version = "14.3", features = ["serde"] }
 iml-manager-client = { path = "../iml-manager-client", version = "0.2" }
 iml-manager-env = { path = "../iml-manager-env", version = "0.2.0" }
 iml-postgres = { path = "../iml-postgres", version = "0.2.0" }

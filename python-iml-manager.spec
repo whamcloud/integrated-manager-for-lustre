@@ -89,6 +89,7 @@ Requires:       rust-iml-stats >= 0.2.0
 Requires:       rust-iml-warp-drive >= 0.2.0
 Requires:       rust-iml-device >= 0.2.0
 Requires:       rust-iml-ntp >= 0.2.0
+Requires:       rust-iml-sfa >= 0.2.0
 # Other Repos
 Requires:       influxdb
 Requires:       grafana
