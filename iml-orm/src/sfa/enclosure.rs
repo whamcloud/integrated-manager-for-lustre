@@ -93,6 +93,7 @@ impl SfaEnclosure {
                 se::child_health_state.eq(excluded(se::child_health_state)),
                 se::element_name.eq(excluded(se::element_name)),
                 se::health_state.eq(excluded(se::health_state)),
+                se::health_state_reason.eq(excluded(se::health_state_reason)),
                 se::position.eq(excluded(se::position)),
                 se::enclosure_type.eq(excluded(se::enclosure_type)),
             ))
