@@ -82,6 +82,7 @@ checksum = "80094f509cf8b5ae86a4966a39b3ff66cd7e2a3e594accec3743ff3fabeab5b2"
 dependencies = [
  "num-integer",
  "num-traits",
+ "serde",
  "time",
 ]
 
@@ -247,6 +248,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-orm"
+version = "0.2.0"
+dependencies = [
+ "chrono",
+ "ipnetwork",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "iml-system-rpm-tests"
 version = "0.2.0"
 dependencies = [
@@ -292,6 +303,7 @@ version = "0.2.1"
 dependencies = [
  "im",
  "iml-api-utils",
+ "iml-orm",
  "serde",
  "serde_json",
  "serde_repr",
@@ -304,6 +316,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b2b3ea6ff95e175473f8ffe6a7eb7c00d054240321b84c57051175fe3c1e075e"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "ipnetwork"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8eca9f51da27bc908ef3dd85c21e1bbba794edaf94d7841e37356275b82d31e"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

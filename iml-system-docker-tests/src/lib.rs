@@ -5,7 +5,7 @@
 use iml_cmd::CmdError;
 use iml_system_test_utils::{docker, iml, ssh, vagrant, SetupConfigType};
 use iml_systemd::SystemdError;
-use std::{collections::HashMap, time::Duration};
+use std::time::Duration;
 use tokio::time::delay_for;
 use tracing::Level;
 use tracing_subscriber::fmt::Subscriber;
@@ -34,10 +34,10 @@ pub async fn setup(config: &vagrant::ClusterConfig) -> Result<(), SystemdError> 
     Ok(())
 }
 
-pub async fn run_fs_test<S: std::hash::BuildHasher>(
+pub async fn run_fs_test(
     config: &vagrant::ClusterConfig,
     docker_setup: &SetupConfigType,
-    server_map: HashMap<String, &[&str], S>,
+    server_map: Vec<(String, &[&str])>,
     fs_type: vagrant::FsType,
 ) -> Result<(), SystemdError> {
     setup(config).await?;
