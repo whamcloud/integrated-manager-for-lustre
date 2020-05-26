@@ -10,10 +10,11 @@ use crate::{schema::chroma_core_sfastoragesystem as ss, Executable};
 #[cfg_attr(feature = "postgres-interop", derive(Insertable, AsChangeset))]
 #[cfg_attr(feature = "postgres-interop", table_name = "ss")]
 pub struct SfaStorageSystem {
-    pub child_health_state: HealthState,
+    pub uuid: String,
+    pub platform: String,
     pub health_state_reason: String,
     pub health_state: HealthState,
-    pub uuid: String,
+    pub child_health_state: HealthState,
 }
 
 #[cfg(feature = "postgres-interop")]

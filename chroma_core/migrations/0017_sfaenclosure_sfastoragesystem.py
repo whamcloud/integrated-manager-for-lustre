@@ -21,6 +21,7 @@ class Migration(migrations.Migration):
                 ("enclosure_index", models.PositiveIntegerField()),
                 ("health_state", models.PositiveSmallIntegerField()),
                 ("health_state_reason", models.TextField()),
+                ("child_health_state", models.PositiveSmallIntegerField()),
             ],
         ),
         migrations.CreateModel(
@@ -88,6 +89,7 @@ class Migration(migrations.Migration):
             fields=[
                 ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("uuid", models.TextField(unique=True)),
+                ("platform", models.TextField()),
                 ("health_state_reason", models.TextField()),
                 ("health_state", models.PositiveSmallIntegerField()),
                 ("child_health_state", models.PositiveSmallIntegerField()),

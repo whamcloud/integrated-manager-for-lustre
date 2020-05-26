@@ -374,7 +374,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::LoadPage => {
             if model.loading.loaded() && !model.page.is_active(&model.route) {
-                model.page = (&model.records, &model.route).into();
+                model.page = (&model.records, &model.conf, &model.route).into();
                 orders.send_msg(Msg::UpdatePageTitle);
                 model.page.init(&model.records, &mut orders.proxy(Msg::Page));
             } else {
@@ -404,7 +404,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 warp_drive::Message::RecordChange(record_change) => Msg::RecordChange(Box::new(record_change)),
             };
 
-            orders.send_msg(msg);
+            orders.skip().send_msg(msg);
         }
         Msg::EventSourceError(_) => {
             log("EventSource error.");
@@ -1059,6 +1059,13 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::Volumes(x) => main_panels(model, page::volumes::view(x).els().map_msg(page::Msg::Volumes)).els(),
         Page::ServerVolumes(x) => main_panels(model, page::volumes::view(x).els().map_msg(page::Msg::Volumes)).els(),
         Page::Volume(x) => main_panels(model, page::volume::view(x).els().map_msg(page::Msg::Volume)).els(),
+        Page::SfaEnclosure(x) => main_panels(
+            model,
+            page::sfa_enclosure::view(&model.records, x)
+                .els()
+                .map_msg(page::Msg::SfaEnclosure),
+        )
+        .els(),
     };
 
     // command modal is the global singleton, therefore is being showed here

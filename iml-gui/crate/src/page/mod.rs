@@ -20,6 +20,7 @@ pub mod power_control;
 pub mod server;
 pub mod server_dashboard;
 pub mod servers;
+pub mod sfa_enclosure;
 pub mod target;
 pub mod target_dashboard;
 pub mod targets;
@@ -29,10 +30,14 @@ pub mod volume;
 pub mod volumes;
 
 use crate::{
+    components::sfa_overview,
     route::{Route, RouteId},
     GMsg,
 };
-use iml_wire_types::warp_drive::{ArcCache, ArcRecord, RecordId};
+use iml_wire_types::{
+    warp_drive::{ArcCache, ArcRecord, RecordId},
+    Conf,
+};
 use seed::prelude::Orders;
 use std::sync::Arc;
 
@@ -71,6 +76,7 @@ pub(crate) enum Page {
     Volumes(volumes::Model),
     ServerVolumes(volumes::Model),
     Volume(volume::Model),
+    SfaEnclosure(sfa_enclosure::Model),
 }
 
 impl Page {
@@ -100,6 +106,7 @@ impl Page {
             Self::Volumes(_) => "Volumes".into(),
             Self::ServerVolumes(m) => format!("Volumes on {}", &m.host.as_ref().unwrap().fqdn),
             Self::Volume(m) => format!("Volume: {}", &m.id),
+            Self::SfaEnclosure(m) => format!("Sfa Enclosure: {}", &m.id),
         }
     }
 }
@@ -110,18 +117,21 @@ impl RecordChange<Msg> for Page {
             Self::Volumes(m) | Self::ServerVolumes(m) => {
                 m.update_record(record, cache, &mut orders.proxy(Msg::Volumes))
             }
+            Self::Dashboard(m) => m.update_record(record, cache, &mut orders.proxy(Msg::Dashboard)),
             _ => {}
         }
     }
     fn remove_record(&mut self, id: RecordId, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
         match self {
             Self::Volumes(m) | Self::ServerVolumes(m) => m.remove_record(id, cache, &mut orders.proxy(Msg::Volumes)),
+            Self::Dashboard(m) => m.remove_record(id, cache, &mut orders.proxy(Msg::Dashboard)),
             _ => {}
         }
     }
     fn set_records(&mut self, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
         match self {
             Self::Volumes(m) | Self::ServerVolumes(m) => m.set_records(cache, &mut orders.proxy(Msg::Volumes)),
+            Self::Dashboard(m) => m.set_records(cache, &mut orders.proxy(Msg::Dashboard)),
             _ => {}
         }
     }
@@ -133,8 +143,8 @@ impl Default for Page {
     }
 }
 
-impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
-    fn from((cache, route): (&ArcCache, &Route<'a>)) -> Self {
+impl<'a> From<(&ArcCache, &Conf, &Route<'a>)> for Page {
+    fn from((cache, conf, route): (&ArcCache, &Conf, &Route<'a>)) -> Self {
         match route {
             Route::About => Self::About,
             Route::Filesystems => Self::Filesystems(filesystems::Model::default()),
@@ -145,6 +155,11 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
                 .map(|x| Self::Filesystem(Box::new(filesystem::Model::new(x))))
                 .unwrap_or_default(),
             Route::Dashboard => Self::Dashboard(dashboard::Model {
+                sfa_overview: if conf.monitor_sfa {
+                    Some(sfa_overview::Model::default())
+                } else {
+                    None
+                },
                 ..dashboard::Model::default()
             }),
             Route::FsDashboard(id) => Self::FsDashboard(Box::new(fs_dashboard::Model::new(id.to_string()))),
@@ -206,6 +221,10 @@ impl<'a> From<(&ArcCache, &Route<'a>)> for Page {
                 .parse()
                 .map(|id| Self::Volume(volume::Model { id }))
                 .unwrap_or_default(),
+            Route::SfaEnclosure(id) => id
+                .parse()
+                .map(|id| Self::SfaEnclosure(sfa_enclosure::Model { id }))
+                .unwrap_or_default(),
         }
     }
 }
@@ -264,8 +283,8 @@ impl Page {
             Self::FsDashboard(_) => {
                 fs_dashboard::init(&mut orders.proxy(Msg::FsDashboard));
             }
-            Self::Dashboard(_) => {
-                dashboard::init(&mut orders.proxy(Msg::Dashboard));
+            Self::Dashboard(m) => {
+                dashboard::init(cache, m, &mut orders.proxy(Msg::Dashboard));
             }
             Self::Volumes(m) | Self::ServerVolumes(m) => {
                 volumes::init(cache, m, &mut orders.proxy(Msg::Volumes));
@@ -298,6 +317,7 @@ pub enum Msg {
     Users(users::Msg),
     Volume(volume::Msg),
     Volumes(volumes::Msg),
+    SfaEnclosure(sfa_enclosure::Msg),
 }
 
 pub(crate) fn update(msg: Msg, page: &mut Page, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
@@ -369,6 +389,7 @@ pub(crate) fn update(msg: Msg, page: &mut Page, cache: &ArcCache, orders: &mut i
         | Msg::ServerDashboard(_)
         | Msg::Targets(_)
         | Msg::Users(_)
-        | Msg::Volume(_) => {}
+        | Msg::Volume(_)
+        | Msg::SfaEnclosure(_) => {}
     }
 }

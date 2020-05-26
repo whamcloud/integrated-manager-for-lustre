@@ -157,6 +157,9 @@ module.exports = {
         "8xl": "88rem",
         "400": "100rem",
       },
+      minWidth: {
+        "6": "1.5rem",
+      },
       height: {
         "main-content": "calc(100vh - 6.6rem)",
         "18": "4.5rem",
@@ -202,6 +205,9 @@ module.exports = {
         "140px": "140px",
         "260px": "260px",
         "330px": "330px",
+      },
+      borderWidth: {
+        "3": "3px",
       },
       textColor: {
         active: "#3793FF",
