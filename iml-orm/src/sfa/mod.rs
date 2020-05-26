@@ -15,7 +15,7 @@ use crate::{
         chroma_core_sfapowersupply, chroma_core_sfastoragesystem as ss,
         chroma_core_sfastoragesystem,
     },
-    Additions, Executable, Updates,
+    Executable, Upserts,
 };
 #[cfg(feature = "postgres-interop")]
 use diesel::{
@@ -27,6 +27,7 @@ use diesel::{
 };
 #[cfg(feature = "postgres-interop")]
 use diesel::{pg::upsert::excluded, prelude::*};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{convert::TryFrom, io};
 #[cfg(feature = "postgres-interop")]
 use std::{convert::TryInto, io::Write};
@@ -35,12 +36,11 @@ pub use tokio_postgres_interop::*;
 #[cfg(feature = "wbem-interop")]
 pub use wbem_interop::*;
 
-#[derive(
-    serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd,
-)]
+#[derive(Serialize_repr, Deserialize_repr, Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
 #[cfg_attr(feature = "postgres-interop", derive(AsExpression, SqlType))]
 #[cfg_attr(feature = "postgres-interop", sql_type = "SmallInt")]
 #[cfg_attr(feature = "postgres-interop", postgres(type_name = "SmallInt"))]
+#[repr(i16)]
 pub enum EnclosureType {
     None = 0,
     Disk = 1,
@@ -97,11 +97,10 @@ where
     }
 }
 
-#[derive(
-    serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd,
-)]
+#[derive(Serialize_repr, Deserialize_repr, Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
 #[cfg_attr(feature = "postgres-interop", derive(AsExpression))]
 #[cfg_attr(feature = "postgres-interop", sql_type = "SmallInt")]
+#[repr(i16)]
 pub enum HealthState {
     None = 0,
     Ok = 1,
@@ -158,11 +157,10 @@ where
     }
 }
 
-#[derive(
-    serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd,
-)]
+#[derive(Serialize_repr, Deserialize_repr, Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
 #[cfg_attr(feature = "postgres-interop", derive(AsExpression))]
 #[cfg_attr(feature = "postgres-interop", sql_type = "SmallInt")]
+#[repr(i16)]
 pub enum JobType {
     Initialize = 0,
     Rebuild = 1,
@@ -246,11 +244,10 @@ where
         i16::build(row).try_into().unwrap_or_default()
     }
 }
-#[derive(
-    serde::Serialize, serde::Deserialize, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd,
-)]
+#[derive(Serialize_repr, Deserialize_repr, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 #[cfg_attr(feature = "postgres-interop", derive(AsExpression))]
 #[cfg_attr(feature = "postgres-interop", sql_type = "SmallInt")]
+#[repr(i16)]
 pub enum JobState {
     Queued = 0,
     Running = 1,
@@ -311,11 +308,10 @@ where
     }
 }
 
-#[derive(
-    serde::Serialize, serde::Deserialize, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd,
-)]
+#[derive(Serialize_repr, Deserialize_repr, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 #[cfg_attr(feature = "postgres-interop", derive(AsExpression))]
 #[cfg_attr(feature = "postgres-interop", sql_type = "SmallInt")]
+#[repr(i16)]
 pub enum SubTargetType {
     Pool = 0,
     Vd = 1,
@@ -359,11 +355,10 @@ where
     }
 }
 
-#[derive(
-    serde::Serialize, serde::Deserialize, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd,
-)]
+#[derive(Serialize_repr, Deserialize_repr, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 #[cfg_attr(feature = "postgres-interop", derive(AsExpression))]
 #[cfg_attr(feature = "postgres-interop", sql_type = "SmallInt")]
+#[repr(i16)]
 pub enum MemberState {
     Normal = 0,
     Missing = 1,
@@ -472,10 +467,7 @@ impl SfaEnclosure {
     pub fn all() -> Table {
         se::table
     }
-    pub fn batch_insert(x: Additions<&Self>) -> impl Executable + '_ {
-        diesel::insert_into(Self::all()).values(x.0)
-    }
-    pub fn batch_upsert(x: Updates<&Self>) -> impl Executable + '_ {
+    pub fn batch_upsert(x: Upserts<&Self>) -> impl Executable + '_ {
         diesel::insert_into(Self::all())
             .values(x.0)
             .on_conflict(se::index)
@@ -548,10 +540,7 @@ impl SfaDiskDrive {
     pub fn all() -> sd::table {
         sd::table
     }
-    pub fn batch_insert(x: Additions<&Self>) -> impl Executable + '_ {
-        diesel::insert_into(Self::all()).values(x.0)
-    }
-    pub fn batch_upsert(x: Updates<&Self>) -> impl Executable + '_ {
+    pub fn batch_upsert(x: Upserts<&Self>) -> impl Executable + '_ {
         diesel::insert_into(Self::all())
             .values(x.0)
             .on_conflict(sd::index)

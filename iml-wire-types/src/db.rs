@@ -5,7 +5,7 @@
 use crate::CompositeId;
 use crate::ToCompositeId;
 use crate::{EndpointName, Fqdn, Label};
-pub use iml_orm::sfa::{HealthState, SfaDiskDrive, SfaEnclosure};
+pub use iml_orm::sfa::{EnclosureType, HealthState, SfaDiskDrive, SfaEnclosure};
 use std::{collections::BTreeSet, fmt, ops::Deref, path::PathBuf};
 
 #[cfg(feature = "postgres-interop")]
