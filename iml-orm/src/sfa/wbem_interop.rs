@@ -48,6 +48,7 @@ impl TryFrom<(String, Instance)> for SfaEnclosure {
                 .parse::<i16>()?
                 .try_into()?,
             health_state_reason: x.try_get_property("HealthStateReason")?.into(),
+            model: x.try_get_property("Model")?.into(),
             position: x.try_get_property("Position")?.parse::<i16>()?,
             enclosure_type: x.try_get_property("Type")?.parse::<i16>()?.try_into()?,
             canister_location: x.try_get_property("CanisterLocation")?.into(),

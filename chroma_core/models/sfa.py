@@ -24,6 +24,7 @@ class SfaEnclosure(models.Model):
     element_name = models.TextField()
     health_state = models.PositiveSmallIntegerField()
     health_state_reason = models.TextField()
+    model = models.TextField()
     position = models.PositiveSmallIntegerField()
     enclosure_type = models.PositiveSmallIntegerField()
     storage_system = models.ForeignKey(
