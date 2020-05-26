@@ -58,7 +58,7 @@ pub fn view(_: &ArcCache, model: &Model) -> Node<Msg> {
                 dashboard_container::view(
                     "Metadata Operations",
                     div![
-                        class![C.h_80, C.p_2],
+                        class![C.h_full, C.min_h_80, C.p_2],
                         grafana_chart::view(
                             IML_METRICS_DASHBOARD_ID,
                             IML_METRICS_DASHBOARD_NAME,
@@ -70,7 +70,7 @@ pub fn view(_: &ArcCache, model: &Model) -> Node<Msg> {
                 dashboard_container::view(
                     "Space Usage",
                     div![
-                        class![C.h_80, C.p_2],
+                        class![C.h_full, C.min_h_80, C.p_2],
                         grafana_chart::view(
                             IML_METRICS_DASHBOARD_ID,
                             IML_METRICS_DASHBOARD_NAME,
@@ -82,7 +82,7 @@ pub fn view(_: &ArcCache, model: &Model) -> Node<Msg> {
                 dashboard_container::view(
                     "File Usage",
                     div![
-                        class![C.h_80, C.p_2],
+                        class![C.h_full, C.min_h_80, C.p_2],
                         grafana_chart::view(
                             IML_METRICS_DASHBOARD_ID,
                             IML_METRICS_DASHBOARD_NAME,
@@ -110,7 +110,7 @@ pub fn view(_: &ArcCache, model: &Model) -> Node<Msg> {
                 dashboard_container::view(
                     "Space Usage",
                     div![
-                        class![C.h_80, C.p_2],
+                        class![C.h_full, C.min_h_80, C.p_2],
                         grafana_chart::view(
                             IML_METRICS_DASHBOARD_ID,
                             IML_METRICS_DASHBOARD_NAME,
@@ -122,7 +122,7 @@ pub fn view(_: &ArcCache, model: &Model) -> Node<Msg> {
                 dashboard_container::view(
                     "Object Usage",
                     div![
-                        class![C.h_80, C.p_2],
+                        class![C.h_full, C.min_h_80, C.p_2],
                         grafana_chart::view(
                             IML_METRICS_DASHBOARD_ID,
                             IML_METRICS_DASHBOARD_NAME,

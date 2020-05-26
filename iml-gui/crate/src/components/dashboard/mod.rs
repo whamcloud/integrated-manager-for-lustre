@@ -21,7 +21,7 @@ pub(crate) fn performance_container(
     vars: impl IntoIterator<Item = (impl ToString, impl ToString)> + Clone,
 ) -> Node<datepicker::Msg> {
     div![
-        class![C.h_80, C.px_2],
+        class![C.h_full, C.min_h_80, C.px_2],
         div![
             class![C.text_center],
             p![
