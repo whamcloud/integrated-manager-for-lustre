@@ -1109,6 +1109,7 @@ table! {
         element_name -> Text,
         health_state -> Int2,
         health_state_reason -> Text,
+        model -> Text,
         position -> Int2,
         enclosure_type -> Int2,
         canister_location -> Text,
