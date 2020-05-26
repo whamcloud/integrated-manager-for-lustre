@@ -16,6 +16,7 @@ impl From<Row> for SfaEnclosure {
                 .try_into()
                 .unwrap_or_default(),
             health_state_reason: row.get("health_state_reason"),
+            model: row.get("model"),
             position: row.get::<_, i16>("position"),
             enclosure_type: row
                 .get::<_, i16>("enclosure_type")

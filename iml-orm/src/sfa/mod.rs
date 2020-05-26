@@ -457,6 +457,7 @@ pub struct SfaEnclosure {
     pub element_name: String,
     pub health_state: HealthState,
     pub health_state_reason: String,
+    pub model: String,
     pub position: i16,
     pub enclosure_type: EnclosureType,
     pub canister_location: String,
