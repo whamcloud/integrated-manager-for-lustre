@@ -68,19 +68,19 @@ async fn main() -> Result<(), ImlSfaError> {
 
         let (new_enclosures, x, new_drives) = future::try_join3(fut1, fut2, fut3).await?;
 
-        tracing::debug!("SfaStorageSystem {:?}", x);
-        tracing::debug!("SfaEnclosures {:?}", new_enclosures);
-        tracing::debug!("SfaDiskDrives {:?}", new_drives);
+        tracing::trace!("SfaStorageSystem {:?}", x);
+        tracing::trace!("SfaEnclosures {:?}", new_enclosures);
+        tracing::trace!("SfaDiskDrives {:?}", new_drives);
 
         SfaStorageSystem::upsert(x).execute_async(&pool).await?;
-
-        update_drives(&new_drives, &old_drives, &pool).await?;
-
-        old_drives = new_drives;
 
         update_enclosures(&new_enclosures, &old_enclosures, &pool).await?;
 
         old_enclosures = new_enclosures;
+
+        update_drives(&new_drives, &old_drives, &pool).await?;
+
+        old_drives = new_drives;
     }
 }
 
@@ -89,19 +89,17 @@ async fn update_enclosures(
     old_enclosures: &Vec<SfaEnclosure>,
     pool: &DbPool,
 ) -> Result<(), ImlSfaError> {
-    let (add, update, remove) = new_enclosures.get_changes(&old_enclosures);
+    let (upsert, remove) = new_enclosures.get_changes(&old_enclosures);
 
-    if let Some(add) = add {
-        SfaEnclosure::batch_insert(add).execute_async(pool).await?;
-    }
-
-    if let Some(update) = update {
-        SfaEnclosure::batch_upsert(update)
+    if let Some(upsert) = upsert {
+        tracing::debug!("{} changed Enclosures, performing Upsert", upsert.0.len());
+        SfaEnclosure::batch_upsert(upsert)
             .execute_async(pool)
             .await?;
     }
 
     if let Some(remove) = remove {
+        tracing::debug!("{} removed Enclosures, performing Deletion", remove.0.len());
         let indexes = remove.0.into_iter().map(|x| &x.index).copied().collect();
 
         SfaEnclosure::batch_remove(indexes)
@@ -117,19 +115,19 @@ async fn update_drives(
     old_drives: &Vec<SfaDiskDrive>,
     pool: &DbPool,
 ) -> Result<(), ImlSfaError> {
-    let (add, update, remove) = new_drives.get_changes(&old_drives);
+    let (upsert, remove) = new_drives.get_changes(&old_drives);
 
-    if let Some(add) = add {
-        SfaDiskDrive::batch_insert(add).execute_async(pool).await?;
-    }
+    if let Some(upsert) = upsert {
+        tracing::debug!("{} changed Drives, performing Upsert", upsert.0.len());
 
-    if let Some(update) = update {
-        SfaDiskDrive::batch_upsert(update)
+        SfaDiskDrive::batch_upsert(upsert)
             .execute_async(pool)
             .await?;
     }
 
     if let Some(remove) = remove {
+        tracing::debug!("{} removed Drives, performing Deletion", remove.0.len());
+
         let indexes = remove.0.into_iter().map(|x| &x.index).copied().collect();
 
         SfaDiskDrive::batch_remove(indexes)

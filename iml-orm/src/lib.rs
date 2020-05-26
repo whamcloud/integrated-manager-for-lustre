@@ -172,23 +172,16 @@ mod change {
     impl<T> Changeable for T where T: Eq + Ord + Debug {}
 
     #[derive(Debug)]
-    pub struct Additions<T: Changeable>(pub Vec<T>);
-
-    #[derive(Debug)]
-    pub struct Updates<T: Changeable>(pub Vec<T>);
+    pub struct Upserts<T: Changeable>(pub Vec<T>);
 
     #[derive(Debug)]
     pub struct Deletions<T: Changeable>(pub Vec<T>);
 
-    type Changes<'a, T> = (
-        Option<Additions<&'a T>>,
-        Option<Updates<&'a T>>,
-        Option<Deletions<&'a T>>,
-    );
+    type Changes<'a, T> = (Option<Upserts<&'a T>>, Option<Deletions<&'a T>>);
 
     pub trait GetChanges<T: Changeable> {
         /// Given new and old items, this method compares them and
-        /// returns a tuple of `Additions`, `Updates`, and `Deletions`.
+        /// returns a tuple of `Upserts` and `Deletions`.
         fn get_changes<'a>(&'a self, old: &'a Self) -> Changes<'a, T>;
     }
 
@@ -197,20 +190,12 @@ mod change {
             let new = BTreeSet::from_iter(self);
             let old = BTreeSet::from_iter(old);
 
-            let to_add: Vec<&T> = new.difference(&old).copied().collect();
+            let to_upsert: Vec<&T> = new.difference(&old).copied().collect();
 
-            let to_add = if to_add.is_empty() {
+            let to_upsert = if to_upsert.is_empty() {
                 None
             } else {
-                Some(Additions(to_add))
-            };
-
-            let to_change: Vec<&T> = new.intersection(&old).copied().collect();
-
-            let to_change = if to_change.is_empty() {
-                None
-            } else {
-                Some(Updates(to_change))
+                Some(Upserts(to_upsert))
             };
 
             let to_remove: Vec<&T> = old.difference(&new).copied().collect();
@@ -221,7 +206,7 @@ mod change {
                 Some(Deletions(to_remove))
             };
 
-            (to_add, to_change, to_remove)
+            (to_upsert, to_remove)
         }
     }
 }
