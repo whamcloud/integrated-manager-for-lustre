@@ -72,7 +72,13 @@ ON %(name)s;
 """
 )
 
-forward_lustre_fid = "CREATE TYPE lustre_fid AS (seq bigint, oid integer, ver integer);"
+forward_lustre_fid = """
+DO $$ BEGIN
+    CREATE TYPE lustre_fid AS (seq bigint, oid integer, ver integer);
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+"""
 
 backward_lustre_fid = "DROP TYPE IF EXISTS lustre_fid;"
 
