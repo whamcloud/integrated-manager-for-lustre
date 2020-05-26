@@ -38,7 +38,7 @@ tablib = "==0.9.11"
 toolz = "*"
 tzlocal = "*"
 urllib3 = "*"
-Django = "==1.11.23"
+Django = "==1.11.28"
 PrettyTable = "==0.6"
 
 [requires]
