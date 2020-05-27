@@ -44,7 +44,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
 pub fn view(model: &Model) -> Node<Msg> {
     div![
-        class![C.grid, C.lg__grid_cols_2, C.gap_6],
+        class![C.grid, C.lg__grid_cols_2, C.gap_6, C.h_full],
         vec![
             dashboard_fs_usage::view(&model.fs_usage),
             dashboard_container::view(
@@ -72,7 +72,7 @@ pub fn view(model: &Model) -> Node<Msg> {
             dashboard_container::view(
                 "LNET Performance",
                 div![
-                    class![C.h_80, C.p_2],
+                    class![C.h_full, C.min_h_80, C.p_2],
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
