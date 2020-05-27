@@ -16,9 +16,7 @@ async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError
             ("stratagem_server".into(), &config.mds_servers()[..]),
             ("base_monitored".into(), &config.oss_servers()[..]),
             ("stratagem_client".into(), &config.client_servers()[..]),
-        ]
-        .into_iter()
-        .collect(),
+        ],
         vagrant::FsType::LDISKFS,
     )
     .await?;

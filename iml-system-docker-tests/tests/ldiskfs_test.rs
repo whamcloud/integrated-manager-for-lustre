@@ -12,9 +12,7 @@ async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError
             use_stratagem: false,
             branding: iml_wire_types::Branding::Whamcloud,
         }),
-        vec![("base_monitored".into(), &config.storage_servers()[..])]
-            .into_iter()
-            .collect(),
+        vec![("base_monitored".into(), &config.storage_servers()[..])],
         vagrant::FsType::LDISKFS,
     )
     .await?;
