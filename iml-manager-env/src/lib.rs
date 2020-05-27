@@ -220,6 +220,18 @@ pub fn get_use_stratagem() -> bool {
     string_to_bool(get_var("USE_STRATAGEM"))
 }
 
+pub fn get_action_runner_connect() -> String {
+    format!(
+        "http://{}:{}",
+        get_server_host(),
+        get_var("ACTION_RUNNER_PORT")
+    )
+}
+
+pub fn get_action_runner_socket() -> String {
+    "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/".to_string()
+}
+
 pub fn get_sfa_endpoints() -> Option<Vec<Vec<Url>>> {
     let xs: BTreeMap<_, _> = env::vars()
         .filter(|(k, _)| k.starts_with("SFA_ENDPOINTS_"))
