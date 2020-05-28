@@ -1176,13 +1176,13 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "iml-action-runner",
- "iml-fs",
  "iml-manager-env",
  "iml-wire-types",
+ "lazy_static",
  "reqwest",
  "serde",
  "serde_json",
- "tracing",
+ "thiserror",
  "uuid",
 ]
 
