@@ -792,7 +792,7 @@ pub struct ChromaCoreLustreclientmount {
     pub not_deleted: Option<bool>,
     pub mountpoint: Option<String>,
     pub content_type_id: Option<i32>,
-    pub filesystem_id: i32,
+    pub filesystem: String,
     pub host_id: i32,
 }
 

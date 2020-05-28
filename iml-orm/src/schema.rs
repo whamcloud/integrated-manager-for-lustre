@@ -563,7 +563,7 @@ table! {
         not_deleted -> Nullable<Bool>,
         mountpoint -> Nullable<Varchar>,
         content_type_id -> Nullable<Int4>,
-        filesystem_id -> Int4,
+        filesystem -> Varchar,
         host_id -> Int4,
     }
 }
@@ -1713,7 +1713,6 @@ joinable!(chroma_core_lnetconfiguration -> chroma_core_managedhost (host_id));
 joinable!(chroma_core_lnetconfiguration -> django_content_type (content_type_id));
 joinable!(chroma_core_loadlnetjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_loadlnetjob -> chroma_core_lnetconfiguration (lnet_configuration_id));
-joinable!(chroma_core_lustreclientmount -> chroma_core_managedfilesystem (filesystem_id));
 joinable!(chroma_core_lustreclientmount -> chroma_core_managedhost (host_id));
 joinable!(chroma_core_lustreclientmount -> django_content_type (content_type_id));
 joinable!(chroma_core_makeavailablefilesystemunavailable -> chroma_core_job (job_ptr_id));

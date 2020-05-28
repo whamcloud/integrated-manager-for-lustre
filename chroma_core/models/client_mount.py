@@ -8,6 +8,7 @@ from django.db.models import CASCADE
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.utils import CHARFIELD_MAX_LENGTH
 from chroma_core.models.host import ManagedHost, HostOfflineAlert, HostContactAlert
+from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.jobs import DeletableStatefulObject
 from chroma_core.models.jobs import StateChangeJob
 from chroma_core.models.alert import AlertState
@@ -18,7 +19,12 @@ from chroma_help.help import help_text
 
 class LustreClientMount(DeletableStatefulObject):
     host = models.ForeignKey("ManagedHost", help_text="Mount host", related_name="client_mounts", on_delete=CASCADE)
-    filesystem = models.ForeignKey("ManagedFilesystem", help_text="Mounted filesystem", on_delete=CASCADE)
+    filesystem = models.CharField(
+        max_length=ManagedFilesystem._meta.get_field("name").max_length,
+        help_text="Mounted filesystem",
+        null=False,
+        blank=False,
+    )
     mountpoint = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, help_text="Filesystem mountpoint on host", null=True, blank=True
     )
@@ -47,8 +53,10 @@ class LustreClientMount(DeletableStatefulObject):
             deps.append(DependOn(self.host.lnet_configuration, "lnet_up", fix_state="unmounted"))
 
         if state != "removed":
+            fs = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.name == self.filesystem)
+
             # Depend on the fs being available.
-            deps.append(DependOn(self.filesystem, "available", fix_state="unmounted"))
+            deps.append(DependOn(fs, "available", fix_state="unmounted"))
 
             # But if either the host or the filesystem are removed, the
             # mount should follow.
@@ -62,9 +70,9 @@ class LustreClientMount(DeletableStatefulObject):
             )
             deps.append(
                 DependOn(
-                    self.filesystem,
+                    fs,
                     "available",
-                    acceptable_states=list(set(self.filesystem.states) - set(["removed", "forgotten"])),
+                    acceptable_states=list(set(fs.states) - set(["removed", "forgotten"])),
                     fix_state="removed",
                 )
             )
@@ -74,7 +82,7 @@ class LustreClientMount(DeletableStatefulObject):
     reverse_deps = {
         "ManagedHost": lambda mh: ObjectCache.host_client_mounts(mh.id),
         "LNetConfiguration": lambda lc: ObjectCache.host_client_mounts(lc.host.id),
-        "ManagedFilesystem": lambda mf: ObjectCache.filesystem_client_mounts(mf.id),
+        "ManagedFilesystem": lambda mf: ObjectCache.filesystem_client_mounts(mf.name),
     }
 
     class Meta:
@@ -150,9 +158,8 @@ class MountLustreClientJob(StateChangeJob):
 
     def get_steps(self):
         host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == self.lustre_client_mount.host_id)
-        from chroma_core.models.filesystem import ManagedFilesystem
 
-        filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.id == self.lustre_client_mount.filesystem_id)
+        filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.name == self.lustre_client_mount.filesystem)
         args = dict(host=host, filesystems=[(filesystem.mount_path(), self.lustre_client_mount.mountpoint)])
         return [(MountLustreFilesystemsStep, args)]
 
@@ -193,9 +200,8 @@ class UnmountLustreClientMountJob(StateChangeJob):
 
     def get_steps(self):
         host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == self.lustre_client_mount.host_id)
-        from chroma_core.models.filesystem import ManagedFilesystem
 
-        filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.id == self.lustre_client_mount.filesystem_id)
+        filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.name == self.lustre_client_mount.filesystem)
         args = dict(host=host, filesystems=[(filesystem.mount_path(), self.lustre_client_mount.mountpoint)])
         return [(UnmountLustreFilesystemsStep, args)]
 
