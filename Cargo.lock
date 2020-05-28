@@ -1447,7 +1447,6 @@ dependencies = [
  "serde_repr",
  "thiserror",
  "tokio-diesel",
- "tokio-postgres",
  "tracing",
  "warp",
  "wbem-client",
