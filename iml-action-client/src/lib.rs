@@ -39,16 +39,8 @@ lazy_static! {
 pub enum ImlActionClientError {
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
+    #[error("Request Cancelled")]
     CancelledRequest,
-}
-
-impl std::fmt::Display for ImlActionClientError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match *self {
-            ImlActionClientError::ReqwestError(ref err) => write!(f, "{}", err),
-            ImlActionClientError::CancelledRequest => write!(f, "Request Cancelled"),
-        }
-    }
 }
 
 pub fn invoke_rust_agent(
