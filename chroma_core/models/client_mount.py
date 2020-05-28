@@ -18,7 +18,9 @@ from chroma_help.help import help_text
 
 class LustreClientMount(DeletableStatefulObject):
     host = models.ForeignKey("ManagedHost", help_text="Mount host", related_name="client_mounts", on_delete=CASCADE)
-    filesystem = models.ForeignKey("ManagedFilesystem", help_text="Mounted filesystem", on_delete=CASCADE)
+    filesystem = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, help_text="Mounted filesystem", null=False, blank=False
+    )
     mountpoint = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, help_text="Filesystem mountpoint on host", null=True, blank=True
     )
@@ -74,7 +76,7 @@ class LustreClientMount(DeletableStatefulObject):
     reverse_deps = {
         "ManagedHost": lambda mh: ObjectCache.host_client_mounts(mh.id),
         "LNetConfiguration": lambda lc: ObjectCache.host_client_mounts(lc.host.id),
-        "ManagedFilesystem": lambda mf: ObjectCache.filesystem_client_mounts(mf.id),
+        "ManagedFilesystem": lambda mf: ObjectCache.filesystem_client_mounts(mf.name),
     }
 
     class Meta:
@@ -152,7 +154,7 @@ class MountLustreClientJob(StateChangeJob):
         host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == self.lustre_client_mount.host_id)
         from chroma_core.models.filesystem import ManagedFilesystem
 
-        filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.id == self.lustre_client_mount.filesystem_id)
+        filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.name == self.lustre_client_mount.filesystem)
         args = dict(host=host, filesystems=[(filesystem.mount_path(), self.lustre_client_mount.mountpoint)])
         return [(MountLustreFilesystemsStep, args)]
 
@@ -195,7 +197,7 @@ class UnmountLustreClientMountJob(StateChangeJob):
         host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == self.lustre_client_mount.host_id)
         from chroma_core.models.filesystem import ManagedFilesystem
 
-        filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.id == self.lustre_client_mount.filesystem_id)
+        filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.name == self.lustre_client_mount.filesystem)
         args = dict(host=host, filesystems=[(filesystem.mount_path(), self.lustre_client_mount.mountpoint)])
         return [(UnmountLustreFilesystemsStep, args)]
 

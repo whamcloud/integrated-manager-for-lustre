@@ -111,13 +111,6 @@ class ManagedHost(DeletableStatefulObject):
         default=False, help_text="True if there are package updates available for this server"
     )
 
-    client_filesystems = models.ManyToManyField(
-        "ManagedFilesystem",
-        related_name="workers",
-        through="LustreClientMount",
-        help_text="Filesystems for which this node is a non-server worker",
-    )
-
     corosync_ring0 = models.CharField(
         max_length=255, help_text="Unicode string, hostname used to configure corosync ring0"
     )
