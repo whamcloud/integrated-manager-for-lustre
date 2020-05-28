@@ -4,10 +4,17 @@
 
 use crate::{display_utils, error::ImlManagerCliError};
 use futures::{future, FutureExt, TryFutureExt};
-use iml_wire_types::{ApiList, AvailableAction, Command, EndpointName, FlatQuery, Host};
+use iml_api_utils::dependency_tree::{Rich, Deps};
+use iml_wire_types::{ApiList, AvailableAction, Command, EndpointName, FlatQuery, Host, Job};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use std::sync::Arc;
 use std::{collections::HashMap, fmt::Debug, iter, time::Duration};
 use tokio::{task::spawn_blocking, time::delay_for};
+use regex::{Captures, Regex};
+
+type Job0 = Job<Option<serde_json::Value>>;
+type RichCommand = Rich<i32, Arc<Command>>;
+type RichJob = Rich<i32, Arc<Job0>>;
 
 #[derive(serde::Serialize)]
 pub struct SendJob<T> {
@@ -37,6 +44,12 @@ pub async fn create_command<T: serde::Serialize>(
 
 fn cmd_finished(cmd: &Command) -> bool {
     cmd.complete
+}
+
+fn job_finished(job: &Job<Option<serde_json::Value>>) -> bool {
+    // job.state can be "pending", "tasked" or "complete"
+    // if a job is errored or cancelled, it is also complete
+    job.state == "complete"
 }
 
 pub async fn wait_for_cmd(cmd: Command) -> Result<Command, ImlManagerCliError> {
@@ -89,6 +102,9 @@ pub async fn wait_for_cmds(cmds: &[Command]) -> Result<Vec<Command>, ImlManagerC
     let fut = spawn_blocking(move || m.join())
         .map(|x| x.map_err(|e| e.into()).and_then(std::convert::identity));
 
+    let mut commands: HashMap<i32, Rich<i32, Command>> = HashMap::new();
+    let mut jobs: HashMap<i32, Rich<i32, Job0>> = HashMap::new();
+
     let fut2 = async {
         loop {
             if cmd_spinners.is_empty() {
@@ -106,22 +122,41 @@ pub async fn wait_for_cmds(cmds: &[Command]) -> Result<Vec<Command>, ImlManagerC
 
             let cmds: ApiList<Command> = get(Command::endpoint_name(), query).await?;
 
-            for cmd in cmds.objects {
+            let new_cmds: HashMap<i32, Rich<i32, Command>> = cmds
+                .objects
+                .into_iter()
+                .map(|t| {
+                    let (id, deps) = extract_children_from_cmd(&t);
+                    (id, Rich { id, deps, inner: t })
+                })
+                .collect();
+            commands.extend(new_cmds);
+
+            for cmd in commands.values() {
                 if cmd_finished(&cmd) {
                     let pb = cmd_spinners.remove(&cmd.id).unwrap();
                     pb.finish_with_message(&display_utils::format_cmd_state(&cmd));
-                    settled_commands.push(cmd);
+                    settled_commands.push(cmd.clone());
                 } else {
                     let pb = cmd_spinners.get(&cmd.id).unwrap();
                     pb.inc(1);
                 }
             }
+
+            let load_job_ids = cmd_spinners
+                .keys()
+                .filter(|c| commands.contains_key(c))
+                .flat_map(|c| commands[c].deps())
+                .filter(|j| jobs.contains_key(j))
+                .filter(|j| !job_finished(&jobs[*j]))
+                .copied()
+                .collect::<Vec<i32>>();
         }
     };
 
     future::try_join(fut.err_into(), fut2).await?;
 
-    Ok(settled_commands)
+    Ok(settled_commands.into_iter().map(|rc| rc.inner).collect())
 }
 
 /// Waits for command completion and prints progress messages.
@@ -236,4 +271,39 @@ pub async fn get_influx<T: serde::de::DeserializeOwned + std::fmt::Debug>(
     iml_manager_client::get_influx(client, db, influxql)
         .await
         .map_err(|e| e.into())
+}
+
+fn extract_children_from_cmd(cmd: &Command) -> (i32, Vec<i32>) {
+    let mut deps = cmd
+        .jobs
+        .iter()
+        .filter_map(|s| extract_uri_id::<Job0>(s))
+        .collect::<Vec<i32>>();
+    deps.sort();
+    (cmd.id, deps)
+}
+
+fn extract_uri_id<T: EndpointName>(input: &str) -> Option<i32> {
+    lazy_static::lazy_static! {
+        static ref RE: Regex = Regex::new(r"/api/(\w+)/(\d+)/").unwrap();
+    }
+    RE.captures(input).and_then(|cap: Captures| {
+        let s = cap.get(1).unwrap().as_str();
+        let t = cap.get(2).unwrap().as_str();
+        if s == T::endpoint_name() {
+            t.parse::<i32>().ok()
+        } else {
+            None
+        }
+    })
+}
+
+mod tests {
+    use super::*;
+    use iml_wire_types::Command;
+
+    #[test]
+    fn test_simple() {
+        assert_eq!(extract_uri_id::<Command>("/api/command/123/"), Some(123));
+    }
 }
