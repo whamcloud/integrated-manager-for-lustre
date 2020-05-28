@@ -4,7 +4,6 @@
 
 use iml_system_rpm_tests::{run_fs_test, wait_for_ntp};
 use iml_system_test_utils::{vagrant, SetupConfig, SetupConfigType, SystemTestError, WithSos as _};
-use std::collections::HashMap;
 
 async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError> {
     run_fs_test(
@@ -17,9 +16,7 @@ async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError
             ("stratagem_server".into(), &config.mds_servers()[..]),
             ("base_monitored".into(), &config.oss_servers()[..]),
             ("stratagem_client".into(), &config.client_servers()[..]),
-        ]
-        .into_iter()
-        .collect::<HashMap<String, &[&str]>>(),
+        ],
         vagrant::FsType::LDISKFS,
     )
     .await?;

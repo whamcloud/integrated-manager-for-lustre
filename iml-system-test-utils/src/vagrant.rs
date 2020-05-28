@@ -365,10 +365,10 @@ pub async fn setup_iml_install(
     Ok(())
 }
 
-pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
+pub async fn setup_deploy_servers(
     config: &ClusterConfig,
     setup_config: &SetupConfigType,
-    server_map: HashMap<String, &[&str], S>,
+    server_map: Vec<(String, &[&str])>,
 ) -> Result<(), CmdError> {
     setup_iml_install(&server_map.to_server_list(), &setup_config, &config).await?;
 
@@ -404,9 +404,9 @@ pub async fn setup_deploy_servers<S: std::hash::BuildHasher>(
     Ok(())
 }
 
-pub async fn add_docker_servers<S: std::hash::BuildHasher>(
+pub async fn add_docker_servers(
     config: &ClusterConfig,
-    server_map: &HashMap<String, &[&str], S>,
+    server_map: &Vec<(String, &[&str])>,
 ) -> Result<(), CmdError> {
     iml::server_add(&server_map).await?;
 
@@ -429,9 +429,9 @@ pub async fn add_docker_servers<S: std::hash::BuildHasher>(
         .await
 }
 
-pub async fn setup_deploy_docker_servers<S: std::hash::BuildHasher>(
+pub async fn setup_deploy_docker_servers(
     config: &ClusterConfig,
-    server_map: HashMap<String, &[&str], S>,
+    server_map: Vec<(String, &[&str])>,
 ) -> Result<(), CmdError> {
     let server_set: Vec<&str> = server_map.to_server_list();
     let all_hosts = [&vec![config.iscsi][..], &server_set].concat();

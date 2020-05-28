@@ -4,7 +4,6 @@
 
 use crate::get_local_server_names;
 use iml_cmd::{CheckedCommandExt, CmdError};
-use std::collections::HashMap;
 use tokio::{fs, process::Command};
 
 pub const IML_DOCKER_PATH: &str = "/etc/iml-docker";
@@ -27,9 +26,7 @@ pub async fn list_servers() -> Result<Command, CmdError> {
     Ok(x)
 }
 
-pub async fn server_add<S: std::hash::BuildHasher>(
-    host_map: &HashMap<String, &[&str], S>,
-) -> Result<(), CmdError> {
+pub async fn server_add(host_map: &Vec<(String, &[&str])>) -> Result<(), CmdError> {
     for (profile, hosts) in host_map {
         let mut x = iml().await?;
         x.arg("server")
