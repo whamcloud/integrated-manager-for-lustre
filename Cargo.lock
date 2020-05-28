@@ -1178,7 +1178,6 @@ dependencies = [
  "iml-action-runner",
  "iml-manager-env",
  "iml-wire-types",
- "lazy_static",
  "reqwest",
  "serde",
  "serde_json",
@@ -1431,6 +1430,7 @@ dependencies = [
 name = "iml-manager-env"
 version = "0.2.0"
 dependencies = [
+ "lazy_static",
  "url",
 ]
 

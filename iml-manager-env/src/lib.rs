@@ -8,7 +8,27 @@ use std::{
     net::{SocketAddr, ToSocketAddrs},
     path::PathBuf,
 };
+use std::io::BufRead;
+use lazy_static::lazy_static;
 use url::Url;
+
+lazy_static! {
+    static ref RUNNING_IN_DOCKER: bool = {
+        match std::fs::File::open("/proc/self/cgroup") {
+            Err(_) => false,
+            Ok(file) => {
+                let reader = std::io::BufReader::new(file);
+                reader
+                    .lines()
+                    .filter(|l| {
+                        l.as_ref().unwrap_or(&"".to_string()).split(':').nth(1) == Some("docker")
+                    })
+                    .next()
+                    .is_some()
+            }
+        }
+    };
+}
 
 /// Get the environment variable or panic
 fn get_var(name: &str) -> String {
@@ -43,6 +63,11 @@ fn string_to_bool(x: String) -> bool {
         "true" => true,
         _ => false,
     }
+}
+
+/// Determine if local node is a docker volume
+pub fn running_in_docker() -> bool {
+    *RUNNING_IN_DOCKER
 }
 
 /// Get anonymous read permission from the env or panic
@@ -221,15 +246,15 @@ pub fn get_use_stratagem() -> bool {
 }
 
 pub fn get_action_runner_connect() -> String {
-    format!(
-        "http://{}:{}",
-        get_server_host(),
-        get_var("ACTION_RUNNER_PORT")
-    )
-}
-
-pub fn get_action_runner_socket() -> String {
-    "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/".to_string()
+    if running_in_docker() {
+        format!(
+            "http://{}:{}",
+            get_server_host(),
+            get_var("ACTION_RUNNER_PORT")
+        )
+    } else {
+        "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/".to_string()    
+    }
 }
 
 pub fn get_sfa_endpoints() -> Option<Vec<Vec<Url>>> {
