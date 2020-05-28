@@ -167,6 +167,12 @@ mod change {
         iter::FromIterator,
     };
 
+    pub trait Identifiable {
+        type Id: Eq + Ord;
+
+        fn id(&self) -> Self::Id;
+    }
+
     pub trait Changeable: Eq + Ord + Debug {}
 
     impl<T> Changeable for T where T: Eq + Ord + Debug {}
@@ -179,13 +185,13 @@ mod change {
 
     type Changes<'a, T> = (Option<Upserts<&'a T>>, Option<Deletions<&'a T>>);
 
-    pub trait GetChanges<T: Changeable> {
+    pub trait GetChanges<T: Changeable + Identifiable> {
         /// Given new and old items, this method compares them and
         /// returns a tuple of `Upserts` and `Deletions`.
         fn get_changes<'a>(&'a self, old: &'a Self) -> Changes<'a, T>;
     }
 
-    impl<T: Changeable> GetChanges<T> for Vec<T> {
+    impl<T: Changeable + Identifiable> GetChanges<T> for Vec<T> {
         fn get_changes<'a>(&'a self, old: &'a Self) -> Changes<'a, T> {
             let new = BTreeSet::from_iter(self);
             let old = BTreeSet::from_iter(old);
@@ -198,7 +204,20 @@ mod change {
                 Some(Upserts(to_upsert))
             };
 
-            let to_remove: Vec<&T> = old.difference(&new).copied().collect();
+            let new_ids: BTreeSet<<T as Identifiable>::Id> = new.iter().map(|x| x.id()).collect();
+            let old_ids: BTreeSet<<T as Identifiable>::Id> = old.iter().map(|x| x.id()).collect();
+
+            let changed: BTreeSet<_> = new_ids.intersection(&old_ids).collect();
+
+            let to_remove: Vec<&T> = old
+                .difference(&new)
+                .filter(|x| {
+                    let id = x.id();
+
+                    changed.get(&id).is_none()
+                })
+                .copied()
+                .collect();
 
             let to_remove = if to_remove.is_empty() {
                 None
