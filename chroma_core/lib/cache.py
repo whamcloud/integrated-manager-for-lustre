@@ -145,10 +145,10 @@ class ObjectCache(object):
         return cls.get(LustreClientMount, lambda hcm: hcm.host_id == host_id)
 
     @classmethod
-    def filesystem_client_mounts(cls, fs_id):
+    def filesystem_client_mounts(cls, fs_name):
         from chroma_core.models.client_mount import LustreClientMount
 
-        return cls.get(LustreClientMount, lambda fcm: fcm.filesystem_id == fs_id)
+        return cls.get(LustreClientMount, lambda lcm: lcm.filesystem == fs_name)
 
     @classmethod
     def client_mount_copytools(cls, cm_id):

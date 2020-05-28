@@ -300,7 +300,7 @@ class TestClientManagementJobs(TestAdvertisedCase):
         ManagedMdt.create_for_volume(synthetic_volume_full(self.server).id, filesystem=fs)
         ManagedOst.create_for_volume(synthetic_volume_full(self.server).id, filesystem=fs)
         state = "mounted" if active else "unmounted"
-        self.mount = LustreClientMount.objects.create(host=self.worker, filesystem=fs, state=state)
+        self.mount = LustreClientMount.objects.create(host=self.worker, filesystem=fs.name, state=state)
 
         ObjectCache.add(LustreClientMount, self.mount)
 
