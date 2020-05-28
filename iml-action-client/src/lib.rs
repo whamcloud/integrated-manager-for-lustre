@@ -5,9 +5,7 @@
 use futures::{
     channel::oneshot,
     future::{self, Either},
-    Future,
-    FutureExt,
-    TryFutureExt,
+    Future, FutureExt, TryFutureExt,
 };
 use iml_action_runner::ActionType;
 use iml_manager_env::get_action_runner_connect;
@@ -27,7 +25,10 @@ pub fn invoke_rust_agent(
     host: impl Into<Fqdn> + Clone,
     command: impl Into<ActionName>,
     args: impl serde::Serialize,
-) -> (oneshot::Sender<()>, impl Future<Output = Result<serde_json::Value, ImlActionClientError>>) {
+) -> (
+    oneshot::Sender<()>,
+    impl Future<Output = Result<serde_json::Value, ImlActionClientError>>,
+) {
     let request_id = Uuid::new_v4().to_hyphenated().to_string();
     let conn = get_action_runner_connect();
 

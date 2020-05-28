@@ -2,14 +2,14 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use lazy_static::lazy_static;
+use std::io::BufRead;
 use std::{
     collections::BTreeMap,
     env,
     net::{SocketAddr, ToSocketAddrs},
     path::PathBuf,
 };
-use std::io::BufRead;
-use lazy_static::lazy_static;
 use url::Url;
 
 lazy_static! {
@@ -253,7 +253,7 @@ pub fn get_action_runner_connect() -> String {
             get_var("ACTION_RUNNER_PORT")
         )
     } else {
-        "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/".to_string()    
+        "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/".to_string()
     }
 }
 
