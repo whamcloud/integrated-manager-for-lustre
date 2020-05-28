@@ -563,7 +563,7 @@ table! {
         not_deleted -> Nullable<Bool>,
         mountpoint -> Nullable<Varchar>,
         content_type_id -> Nullable<Int4>,
-        filesystem_id -> Int4,
+        filesystem -> Varchar,
         host_id -> Int4,
     }
 }
