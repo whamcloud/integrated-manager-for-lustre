@@ -49,3 +49,4 @@ tests/framework/integration/shared_storage_configuration/full_cluster/cluster_se
 tests/framework/services/runner.sh
 tests/framework/utils/defaults.sh
 vagrant/sosreport*
+docker/*.tar

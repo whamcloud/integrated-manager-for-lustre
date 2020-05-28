@@ -142,6 +142,7 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - RUST_LOG=info
+      - SFA_ENDPOINTS_1
   corosync:
     image: "imlteam/manager-corosync:6.1.0-dev"
     hostname: "corosync"
@@ -279,6 +280,7 @@ services:
       - RUST_LOG=info
       - BRANDING
       - USE_STRATAGEM
+      - SFA_ENDPOINTS_1
   iml-manager-cli:
     image: "imlteam/iml-manager-cli:6.1.0-dev"
     stdin_open: true
