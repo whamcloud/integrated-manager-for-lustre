@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    'iml-action-client',
     'iml-agent-comms',
     'iml-agent',
     'iml-api-utils',

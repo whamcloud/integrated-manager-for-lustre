@@ -1171,6 +1171,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-action-client"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "iml-action-runner",
+ "iml-manager-env",
+ "iml-wire-types",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "uuid",
+]
+
+[[package]]
 name = "iml-action-runner"
 version = "0.2.0"
 dependencies = [
@@ -1415,6 +1430,7 @@ dependencies = [
 name = "iml-manager-env"
 version = "0.2.0"
 dependencies = [
+ "lazy_static",
  "url",
 ]
 
