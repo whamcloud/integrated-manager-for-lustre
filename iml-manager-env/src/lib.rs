@@ -20,10 +20,9 @@ lazy_static! {
                 let reader = std::io::BufReader::new(file);
                 reader
                     .lines()
-                    .filter(|l| {
+                    .find(|l| {
                         l.as_ref().unwrap_or(&"".to_string()).split(':').nth(1) == Some("docker")
                     })
-                    .next()
                     .is_some()
             }
         }
