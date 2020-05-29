@@ -337,7 +337,7 @@ fn all_jobs_passed(jobs: ApiList<TestHostJob>, profile: &ServerProfile, term: &T
 
                 handle_invalid_profile_tests(term, &profile, &failed_tests);
 
-                !failed_tests.is_empty()
+                state && failed_tests.is_empty()
             } else {
                 state
             }
