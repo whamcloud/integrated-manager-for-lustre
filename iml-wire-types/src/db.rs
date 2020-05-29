@@ -487,7 +487,6 @@ pub struct ManagedHostRecord {
     server_profile_id: Option<String>,
     needs_update: bool,
     install_method: String,
-    properties: String,
     corosync_ring0: String,
 }
 

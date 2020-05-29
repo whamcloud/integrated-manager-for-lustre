@@ -605,7 +605,6 @@ table! {
         needs_update -> Bool,
         corosync_ring0 -> Varchar,
         install_method -> Varchar,
-        properties -> Text,
         content_type_id -> Nullable<Int4>,
         server_profile_id -> Nullable<Varchar>,
     }
@@ -1043,14 +1042,6 @@ table! {
         id -> Int4,
         test -> Varchar,
         description -> Varchar,
-        server_profile_id -> Varchar,
-    }
-}
-
-table! {
-    chroma_core_sethostprofilejob (job_ptr_id) {
-        job_ptr_id -> Int4,
-        host_id -> Int4,
         server_profile_id -> Varchar,
     }
 }
@@ -1806,9 +1797,6 @@ joinable!(chroma_core_serverprofile_repolist -> chroma_core_repo (repo_id));
 joinable!(chroma_core_serverprofile_repolist -> chroma_core_serverprofile (serverprofile_id));
 joinable!(chroma_core_serverprofilepackage -> chroma_core_serverprofile (server_profile_id));
 joinable!(chroma_core_serverprofilevalidation -> chroma_core_serverprofile (server_profile_id));
-joinable!(chroma_core_sethostprofilejob -> chroma_core_job (job_ptr_id));
-joinable!(chroma_core_sethostprofilejob -> chroma_core_managedhost (host_id));
-joinable!(chroma_core_sethostprofilejob -> chroma_core_serverprofile (server_profile_id));
 joinable!(chroma_core_setuphostjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_setuphostjob -> chroma_core_managedhost (target_object_id));
 joinable!(chroma_core_setupmonitoredhostjob -> chroma_core_job (job_ptr_id));
@@ -2007,7 +1995,6 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_serverprofile_repolist,
     chroma_core_serverprofilepackage,
     chroma_core_serverprofilevalidation,
-    chroma_core_sethostprofilejob,
     chroma_core_setuphostjob,
     chroma_core_setupmonitoredhostjob,
     chroma_core_setupworkerjob,

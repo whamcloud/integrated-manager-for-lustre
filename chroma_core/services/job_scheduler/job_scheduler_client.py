@@ -42,7 +42,6 @@ class JobSchedulerRpc(ServiceRpcInterface):
         "trigger_plugin_update",
         "update_lnet_configuration",
         "create_host",
-        "set_host_profile",
         "create_targets",
         "available_transitions",
         "available_jobs",
@@ -234,19 +233,6 @@ class JobSchedulerClient(object):
         host_id, command_id = JobSchedulerRpc().create_host(fqdn, nodename, address, server_profile_id)
 
         return (ManagedHost.objects.get(pk=host_id), Command.objects.get(pk=command_id))
-
-    @classmethod
-    def set_host_profile(cls, host_id, server_profile_id):
-        """
-        Set the profile for the given host to the given profile, this includes updating the manager view
-        and making the appropriate changes to the host.
-        :param host_id:
-        :param server_profile_id:
-        :return: Command for the host job.
-        """
-        command_id = JobSchedulerRpc().set_host_profile(host_id, server_profile_id)
-
-        return Command.objects.filter(pk=command_id) if command_id else None
 
     @classmethod
     def create_targets(cls, targets_data):

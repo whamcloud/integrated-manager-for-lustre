@@ -20,7 +20,7 @@ import logging
 # Set the time, so certs work below ALWAYS.
 # Future NTP job will set it again,
 # so preserving host's date is unecessary
-ret = subprocess.call("date -s @{server_epoch_seconds} > /dev/null 2>&1", shell=True)
+subprocess.call("date -s @{server_epoch_seconds} > /dev/null 2>&1", shell=True)
 
 # create Logger with a single file handler
 bootstrap_log = logging.getLogger("bootstrap")
@@ -49,7 +49,7 @@ reg_url = "{reg_url}"
 cert_str = """{cert_str}"""
 repo_url = "{repo_url}"
 repo_packages = "{repo_packages}"
-profile_json = '{profile_json}'
+profile_json = "{profile_json}"
 
 REPO_CONTENT = """{repos}"""
 
@@ -104,14 +104,18 @@ def reg_manager():
     nodename = os.uname()[1]
     csr = launch_command("openssl req -new -subj /C=/ST=/L=/O=/CN=%s -key %s" % (fqdn, PRIVATE_KEY))
 
-    data = json.dumps({{
-        "address": socket.gethostbyname(socket.gethostname()),
-        "fqdn": fqdn,
-        "nodename": nodename,
-        "version": 0,
-        "csr": csr,
-        "capabilities": [],
-    }})
+    data = json.dumps(
+        {
+            {
+                "address": socket.gethostbyname(socket.gethostname()),
+                "fqdn": fqdn,
+                "nodename": nodename,
+                "version": 0,
+                "csr": csr,
+                "capabilities": [],
+            }
+        }
+    )
 
     try:
         https_handler = VerifiedHTTPSHandler()
