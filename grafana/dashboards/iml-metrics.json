@@ -2,6 +2,7 @@
   "annotations": {
     "list": [
       {
+        "$$hashKey": "object:19",
         "builtIn": 1,
         "datasource": "-- Grafana --",
         "enable": true,
@@ -15,7 +16,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1584541734725,
+  "iteration": 1591012021759,
   "links": [],
   "panels": [
     {
@@ -75,7 +76,7 @@
           "measurement": "lnet",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT SUM(*) FROM\n(SELECT difference(\"samples\") AS \"diff\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"host\"),\n(SELECT \"mean_diff_samples\" AS \"diff\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"host\")\nWHERE diff > 0\nGROUP BY \"host\", time($interval)",
+          "query": "SELECT SUM(*) FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT derivative(\"samples\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"host\", \"target\") GROUP BY time($interval)),\n(SELECT sum(\"diff1\") AS \"diff\" FROM (SELECT derivative(\"mean_samples\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"host\", \"target\") GROUP BY time($interval))\nGROUP BY \"host\", time($interval)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -107,7 +108,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT SUM(*) FROM\n(SELECT difference(\"samples\") AS \"diff\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"host\"),\n(SELECT \"mean_diff_samples\" AS \"diff\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"host\")\nWHERE diff > 0\nGROUP BY \"host\", time($interval)",
+          "query": "SELECT SUM(*) FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT derivative(\"samples\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"host\", \"target\") GROUP BY time($interval)),\n(SELECT sum(\"diff1\") AS \"diff\" FROM (SELECT derivative(\"mean_samples\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"host\", \"target\") GROUP BY time($interval))\nGROUP BY \"host\", time($interval)",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
@@ -146,6 +147,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:532",
           "format": "Bps",
           "label": null,
           "logBase": 1,
@@ -154,6 +156,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:533",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -521,7 +524,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM\n(SELECT SUM(\"diff\") FROM ( SELECT difference(\"samples\") AS \"diff\" FROM \"target\" WHERE \"units\"='reqs' AND \"kind\" = 'MDT' AND \"name\" =~ /close|getattr|getxattr|link|mkdir|mknod|open|rename|rmdir|setattr|statfs|unlink/ AND \"fs\" = '$fs_name' AND time > now() - 1d AND $timeFilter GROUP BY \"target\", \"name\" ) GROUP BY time($interval), \"name\"),\n(SELECT SUM(\"diff\") FROM ( SELECT \"mean_diff_samples\" AS \"diff\" FROM \"long_term\".\"target\" WHERE \"units\"='reqs' AND \"kind\" = 'MDT' AND \"name\" =~ /close|getattr|getxattr|link|mkdir|mknod|open|rename|rmdir|setattr|statfs|unlink/ AND \"fs\" = '$fs_name' AND time < now() - 1d AND $timeFilter GROUP BY \"target\", \"name\" ) GROUP BY time($interval), \"name\")\n GROUP BY \"name\"",
+          "query": "SELECT * FROM\n(SELECT SUM(\"diff\") FROM ( SELECT  non_negative_difference(\"samples\") AS \"diff\" FROM \"target\" WHERE \"units\"='reqs' AND \"kind\" = 'MDT' AND \"fs\" = '$fs_name' AND time > now() - 1d AND $timeFilter GROUP BY \"target\", \"name\" ) GROUP BY time($interval), \"name\"),\n(SELECT SUM(\"diff\") FROM ( SELECT non_negative_difference(\"mean_samples\") AS \"diff\" FROM \"long_term\".\"target\" WHERE \"units\"='reqs' AND \"kind\" = 'MDT' AND \"fs\" = '$fs_name' AND time < now() - 1d AND $timeFilter GROUP BY \"target\", \"name\" ) GROUP BY time($interval), \"name\")\n GROUP BY \"name\"",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -560,6 +563,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:1390",
           "format": "ops",
           "label": null,
           "logBase": 1,
@@ -568,6 +572,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:1391",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -626,7 +631,7 @@
         "orientation": "vertical",
         "showUnfilled": true
       },
-      "pluginVersion": "6.6.2",
+      "pluginVersion": "6.7.3",
       "targets": [
         {
           "alias": "$tag_target",
@@ -711,7 +716,7 @@
         "orientation": "vertical",
         "showUnfilled": true
       },
-      "pluginVersion": "6.6.2",
+      "pluginVersion": "6.7.3",
       "targets": [
         {
           "alias": "$tag_target",
@@ -770,10 +775,12 @@
       "id": 24,
       "interval": "",
       "legend": {
+        "alignAsTable": false,
         "avg": false,
         "current": false,
         "max": false,
         "min": false,
+        "rightSide": false,
         "show": false,
         "total": false,
         "values": false
@@ -807,7 +814,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM\n(SELECT difference(\"sum\") FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time > now() - 1d AND $timeFilter GROUP BY target),\n(SELECT \"mean_diff_sum\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY target)\nGROUP BY target",
+          "query": "SELECT * FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT derivative(\"sum\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval)),\n(SELECT SUM(\"diff1\") AS \"diff\" FROM (SELECT derivative(\"mean_sum\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval))\nGROUP BY \"target\"",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -834,7 +841,7 @@
       "tooltip": {
         "shared": true,
         "sort": 0,
-        "value_type": "cumulative"
+        "value_type": "individual"
       },
       "type": "graph",
       "xaxis": {
@@ -846,6 +853,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:244",
           "format": "Bps",
           "label": null,
           "logBase": 1,
@@ -854,6 +862,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:245",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -923,7 +932,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM\n(SELECT difference(\"samples\") FROM \"target\" WHERE \"units\"='reqs' AND \"kind\" = 'MDT' AND \"name\" =~ /close|getattr|getxattr|link|mkdir|mknod|open|rename|rmdir|setattr|statfs|unlink/ AND \"target\" = '$target_name' AND time > now() - 1d AND $timeFilter GROUP BY \"name\"),\n(SELECT \"mean_diff_samples\" FROM \"long_term\".\"target\" WHERE \"units\"='reqs' AND \"kind\" = 'MDT' AND \"name\" =~ /close|getattr|getxattr|link|mkdir|mknod|open|rename|rmdir|setattr|statfs|unlink/ AND \"target\" = '$target_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"name\")\nGROUP BY \"name\"",
+          "query": "SELECT * FROM\n(SELECT MEAN(\"diff\") FROM ( SELECT non_negative_derivative(\"samples\", 1s) AS \"diff\" FROM \"target\" WHERE \"units\"='reqs' AND \"kind\" = 'MDT' AND \"name\" =~ /close|getattr|getxattr|link|mkdir|mknod|open|rename|rmdir|setattr|statfs|unlink/ AND \"target\" = '$target_name' AND time > now() - 1d AND $timeFilter GROUP BY \"target\", \"name\") GROUP BY time($__interval), \"name\"),\n(SELECT SUM(\"diff\") FROM ( SELECT non_negative_derivative(\"mean_samples\", 1s) AS \"diff\" FROM \"long_term\".\"target\" WHERE \"units\"='reqs' AND \"kind\" = 'MDT' AND \"name\" =~ /close|getattr|getxattr|link|mkdir|mknod|open|rename|rmdir|setattr|statfs|unlink/ AND \"target\" = '$target_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\", \"name\") GROUP BY time($__interval), \"name\")\nGROUP BY \"name\"",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -1039,7 +1048,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM\n(SELECT difference(\"sum\") FROM target where \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time > now() - 1d AND $timeFilter GROUP BY target),\n(SELECT \"mean_diff_sum\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY target)\nGROUP BY target",
+          "query": "SELECT * FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT derivative(\"sum\", 1s) AS \"diff1\" FROM target where \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($interval)),\n(SELECT SUM(\"diff1\") AS \"diff\" FROM (SELECT derivative(\"mean_sum\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY target) GROUP BY time($interval))\nGROUP BY target",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -1155,7 +1164,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM \n(SELECT 100*(mean(\"total\") - mean(\"free\"))/mean(\"total\") FROM ( SELECT \"files_free\" AS \"free\", \"files_total\" AS \"total\" FROM \"target\" WHERE  \"target\"='$target_name'  AND \"name\" = '' AND $timeFilter AND time > now() - 1d GROUP BY target) GROUP BY time($interval)),\n(SELECT 100*(mean(\"total\") - mean(\"free\"))/mean(\"total\") FROM ( SELECT \"mean_files_free\" AS \"free\", \"mean_files_total\" AS \"total\" FROM \"long_term\".\"target\" WHERE \"target\"='$target_name' AND \"name\" = '' AND $timeFilter AND time < now() - 1d GROUP BY target) GROUP BY time($interval))",
+          "query": "SELECT * FROM \n(SELECT 100*(mean(\"total\") - mean(\"free\"))/mean(\"total\") FROM ( SELECT \"files_free\" AS \"free\", \"files_total\" AS \"total\" FROM \"target\" WHERE  \"target\"='$target_name'  AND \"name\" = '' AND $timeFilter AND time > now() - 1d GROUP BY \"target\") GROUP BY time($interval)),\n(SELECT 100*(mean(\"total\") - mean(\"free\"))/mean(\"total\") FROM ( SELECT \"mean_files_free\" AS \"free\", \"mean_files_total\" AS \"total\" FROM \"long_term\".\"target\" WHERE \"target\"='$target_name' AND \"name\" = '' AND $timeFilter AND time < now() - 1d GROUP BY \"target\") GROUP BY time($interval))",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -1272,7 +1281,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM\n(SELECT difference(\"samples\") FROM target where \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time > now() - 1d AND $timeFilter GROUP BY target),\n(SELECT \"mean_diff_samples\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY target)\nGROUP BY target",
+          "query": "SELECT * FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT derivative(\"samples\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval)),\n(SELECT SUM(\"diff1\") AS \"diff\" FROM (SELECT derivative(\"mean_samples\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval))\nGROUP BY \"target\"",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -1299,7 +1308,7 @@
       "tooltip": {
         "shared": true,
         "sort": 0,
-        "value_type": "cumulative"
+        "value_type": "individual"
       },
       "type": "graph",
       "xaxis": {
@@ -1311,6 +1320,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:728",
           "format": "iops",
           "label": null,
           "logBase": 1,
@@ -1319,6 +1329,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:729",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1504,7 +1515,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM\n(SELECT difference(\"samples\") FROM target where \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time > now() - 1d AND $timeFilter GROUP BY target),\n(SELECT \"mean_diff_samples\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY target)\nGROUP BY target",
+          "query": "SELECT * FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT derivative(\"samples\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval)),\n(SELECT SUM(\"diff1\") AS \"diff\" FROM (SELECT derivative(\"mean_samples\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval))\nGROUP BY \"target\"",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -1543,6 +1554,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:650",
           "format": "iops",
           "label": null,
           "logBase": 1,
@@ -1551,6 +1563,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:651",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1789,7 +1802,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "Read IOPS",
+          "alias": "Read IOPS $tag_target",
           "groupBy": [
             {
               "params": ["$__interval"],
@@ -1802,7 +1815,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT SUM(*) FROM\n(SELECT difference(\"samples\") AS \"diff\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"target\"),\n(SELECT \"mean_diff_samples\" AS \"diff\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\")\nWHERE \"diff\" > 0\nGROUP BY time($interval)",
+          "query": "SELECT * FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT NON_NEGATIVE_derivative(\"samples\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval)),\n(SELECT SUM(\"diff1\") AS \"diff\" FROM (SELECT NON_NEGATIVE_derivative(\"mean_samples\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval))\nGROUP BY \"target\"\n",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
@@ -1821,7 +1834,7 @@
           "tags": []
         },
         {
-          "alias": "Write IOPS",
+          "alias": "Write IOPS $tag_target",
           "groupBy": [
             {
               "params": ["$__interval"],
@@ -1834,7 +1847,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT SUM(*) FROM\n(SELECT difference(\"samples\") AS \"diff\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"target\"),\n(SELECT \"mean_diff_samples\" AS \"diff\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\")\nWHERE \"diff\" > 0\nGROUP BY time($interval)",
+          "query": "SELECT * FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT NON_NEGATIVE_derivative(\"samples\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval)),\n(SELECT SUM(\"diff1\") AS \"diff\" FROM (SELECT NON_NEGATIVE_derivative(\"mean_samples\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval))\nGROUP BY \"target\"",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -1952,7 +1965,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM \n(SELECT difference(\"samples\") FROM \"target\" WHERE  \"name\" = 'read_bytes' AND \"target\" = '$target_name' AND $timeFilter AND time > now() - 1d),\n(SELECT \"mean_diff_samples\" FROM \"long_term\".\"target\" WHERE  \"name\" = 'read_bytes' AND \"target\" = '$target_name' AND $timeFilter AND time < now() - 1d)",
+          "query": "SELECT * FROM \n(SELECT MEAN(\"diff\") FROM ( SELECT non_negative_derivative(\"samples\", 1s) AS \"diff\" FROM \"target\" WHERE  \"name\" = 'read_bytes' AND \"target\" = '$target_name' AND $timeFilter AND time > now() - 1d) GROUP BY time($__interval)),\n(SELECT SUM(\"diff1\") AS \"diff\" FROM (SELECT NON_NEGATIVE_derivative(\"mean_samples\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" WHERE  \"name\" = 'read_bytes' AND \"target\" = '$target_name' AND $timeFilter AND time < now() - 1d) GROUP BY time($__interval))",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
@@ -1984,7 +1997,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM \n(SELECT -difference(\"samples\") FROM \"target\" WHERE  \"name\" = 'write_bytes' AND \"target\" = '$target_name' AND $timeFilter AND time > now() - 1d),\n(SELECT -\"mean_diff_samples\" FROM \"long_term\".\"target\" WHERE  \"name\" = 'write_bytes' AND \"target\" = '$target_name' AND $timeFilter AND time < now() - 1d)",
+          "query": "SELECT * FROM \n(SELECT -MEAN(\"diff\") FROM ( SELECT non_negative_derivative(\"samples\", 1s) AS \"diff\" FROM \"target\" WHERE  \"name\" = 'write_bytes' AND \"target\" = '$target_name' AND $timeFilter AND time > now() - 1d) GROUP BY time($__interval)),\n(SELECT -SUM(\"diff1\") AS \"diff\" FROM (SELECT NON_NEGATIVE_derivative(\"mean_samples\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" WHERE  \"name\" = 'write_bytes' AND \"target\" = '$target_name' AND $timeFilter AND time < now() - 1d) GROUP BY time($__interval))",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -2090,7 +2103,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "Read Bytes",
+          "alias": "Read Bytes $tag_target",
           "groupBy": [
             {
               "params": ["$__interval"],
@@ -2103,7 +2116,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT SUM(*) FROM\n(SELECT difference(\"sum\") AS \"diff\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time > now() - 1d AND $timeFilter GROUP BY target),\n(SELECT \"mean_diff_sum\" AS \"diff\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY target)\nWHERE \"diff\" > 0\nGROUP BY time($interval)",
+          "query": "SELECT * FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT NON_NEGATIVE_derivative(\"sum\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval)),\n(SELECT SUM(\"diff1\") AS \"diff\" FROM (SELECT NON_NEGATIVE_derivative(\"mean_sum\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval))\nGROUP BY \"target\"",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -2122,7 +2135,7 @@
           "tags": []
         },
         {
-          "alias": "Write Bytes",
+          "alias": "Write Bytes $tag_target",
           "groupBy": [
             {
               "params": ["$__interval"],
@@ -2135,7 +2148,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT SUM(*) FROM\n(SELECT difference(\"sum\") AS \"diff\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time > now() - 1d AND $timeFilter GROUP BY target),\n(SELECT \"mean_diff_sum\" AS \"diff\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY target)\nWHERE \"diff\" > 0\nGROUP BY time($interval)",
+          "query": "SELECT * FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT NON_NEGATIVE_derivative(\"sum\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval)),\n(SELECT SUM(\"diff1\") AS \"diff\" FROM (SELECT NON_NEGATIVE_derivative(\"mean_sum\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval))\nGROUP BY \"target\"",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
@@ -2402,7 +2415,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT SUM(*) FROM\n  (SELECT SUM(\"diff\") FROM \n    (SELECT difference(\"samples\") AS \"diff\" FROM \"target\" WHERE \"units\"='reqs' AND \"kind\" = 'MDT' AND \"name\" =~ /close|getattr|getxattr|link|mkdir|mknod|open|rename|rmdir|setattr|statfs|unlink/ AND time > now() - 1d AND $timeFilter GROUP BY \"target\",\"name\")\n  GROUP BY time($interval),\"name\"),\n  (SELECT SUM(\"diff\") FROM\n    (SELECT \"mean_diff_samples\" AS \"diff\" FROM \"long_term\".\"target\" WHERE \"units\"='reqs' AND \"kind\" = 'MDT' AND \"name\" =~ /close|getattr|getxattr|link|mkdir|mknod|open|rename|rmdir|setattr|statfs|unlink/ AND time < now() - 1d AND $timeFilter GROUP BY \"target\",\"name\")\n  GROUP BY time($interval),\"name\")\nGROUP BY time($interval),\"name\"",
+          "query": "SELECT * FROM\n(SELECT MEAN(\"diff\") AS \"value\" FROM ( SELECT non_negative_derivative(\"samples\", 1s) AS \"diff1\" FROM \"target\" WHERE \"units\"='reqs' AND \"kind\" = 'MDT' AND \"fs\" = '$fs_name' AND time > now() - 1d AND $timeFilter GROUP BY \"target\", \"name\" ) GROUP BY time($interval), \"name\"),\n(SELECT SUM(\"diff\") AS \"value\" FROM ( SELECT non_negative_derivative(\"mean_samples\", 1s) AS \"diff\" FROM \"long_term\".\"target\" WHERE \"units\"='reqs' AND \"kind\" = 'MDT' AND \"fs\" = '$fs_name' AND time < now() - 1d AND $timeFilter GROUP BY \"target\", \"name\" ) GROUP BY time($interval), \"name\")\nGROUP BY \"name\"",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -2441,6 +2454,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:966",
           "format": "ops",
           "label": null,
           "logBase": 1,
@@ -2449,6 +2463,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:967",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -3110,7 +3125,7 @@
           "measurement": "lnet",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM\n(SELECT difference(\"recv_count\") AS \"diff\" FROM \"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY \"nid\"),\n(SELECT \"mean_diff_recv\" AS \"diff\" FROM \"long_term\".\"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"nid\")\nGROUP BY \"nid\"",
+          "query": "SELECT * FROM\n(SELECT mean(\"diff\") AS \"value\" FROM (SELECT DIFFERENCE(\"recv_count\") AS \"diff\" FROM \"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY \"nid\") GROUP BY time($interval)),\n(SELECT SUM(\"diff\") AS \"value\" FROM ( SELECT \"mean_diff_recv\" AS \"diff\" FROM \"long_term\".\"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"nid\") GROUP BY time($interval))\nGROUP BY \"nid\"",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -3142,7 +3157,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM\n(SELECT -difference(\"send_count\") AS \"diff\" FROM \"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY \"nid\"),\n(SELECT -\"mean_diff_send\" AS \"diff\" FROM \"long_term\".\"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"nid\")\nGROUP BY \"nid\"",
+          "query": "SELECT * FROM\n(SELECT -mean(\"diff\") AS \"value\" FROM (SELECT DIFFERENCE(\"send_count\") AS \"diff\" FROM \"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY \"nid\") GROUP BY time($interval)),\n(SELECT -SUM(\"diff\") AS \"value\" FROM ( SELECT \"mean_diff_send\" AS \"diff\" FROM \"long_term\".\"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"nid\") GROUP BY time($interval))\nGROUP BY \"nid\"",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
@@ -3181,6 +3196,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:1155",
           "format": "pps",
           "label": null,
           "logBase": 1,
@@ -3189,6 +3205,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:1156",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -3312,5 +3329,5 @@
   "timezone": "",
   "title": "IML Metrics",
   "uid": "8Klek6wZz",
-  "version": 4
+  "version": 5
 }
