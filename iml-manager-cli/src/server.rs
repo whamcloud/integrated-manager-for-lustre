@@ -17,20 +17,16 @@ use console::{style, Term};
 use dialoguer::Confirm;
 use futures::future;
 use iml_wire_types::{
-    ApiList, AvailableAction, CmdWrapper, Command, EndpointName, Host, HostProfile,
-    HostProfileWrapper, ProfileTest, ServerProfile, TestHostJob, ToCompositeId,
+    ApiList, AvailableAction, CmdWrapper, Command, EndpointName, Host, ProfileTest, ServerProfile,
+    TestHostJob, ToCompositeId,
 };
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::BTreeSet,
     io::{Error, ErrorKind},
     iter,
-    time::Duration,
 };
 use structopt::StructOpt;
-use tokio::{
-    io::{stdin, AsyncReadExt},
-    time::delay_for,
-};
+use tokio::io::{stdin, AsyncReadExt};
 
 #[derive(StructOpt, Debug)]
 pub struct RemoveHosts {
@@ -230,74 +226,6 @@ fn get_confirm() -> bool {
         .unwrap_or(false)
 }
 
-async fn wait_till_agent_starts(
-    hosts: &[Host],
-    profile_name: &str,
-) -> Result<(), ImlManagerCliError> {
-    let host_ids: Vec<_> = hosts
-        .iter()
-        .map(|x| ["id__in".into(), x.id.to_string()])
-        .chain(iter::once(["limit".into(), "0".into()]))
-        .collect();
-
-    let upper: u32 = 120;
-
-    for cnt in 1..=upper {
-        let ApiList { mut objects, .. }: ApiList<HostProfileWrapper> =
-            get(HostProfile::endpoint_name(), &host_ids).await?;
-
-        tracing::debug!("Host Profiles {:?}", objects);
-
-        if let Some(x) = objects.iter_mut().find(|x| x.error.is_some()) {
-            return Err(ImlManagerCliError::ApiError(x.error.take().unwrap()));
-        };
-
-        let profile_checks: HashMap<i32, Vec<ProfileTest>> = objects
-            .iter_mut()
-            .filter_map(|x| x.host_profiles.take())
-            .map(|mut x| {
-                x.profiles
-                    .remove(profile_name)
-                    .map(|y| (x.host, y))
-                    .ok_or_else(|| {
-                        ImlManagerCliError::ApiError(format!(
-                            "Profile {} not found for host {} while booting",
-                            profile_name, x.host
-                        ))
-                    })
-            })
-            .collect::<Result<HashMap<i32, Vec<ProfileTest>>, ImlManagerCliError>>()?;
-
-        let waiting_for_agent: Vec<_> = profile_checks
-            .iter()
-            .filter(|(_, checks)| {
-                checks
-                    .iter()
-                    .any(|y| y.error == "Result unavailable while host agent starts")
-            })
-            .map(|(k, _)| hosts.iter().find(|x| &x.id == k).unwrap())
-            .map(|x| {
-                format!(
-                    "No contact with IML agent on {} for 60s (after restart)",
-                    x.address
-                )
-            })
-            .collect();
-
-        if waiting_for_agent.is_empty() {
-            return Ok(());
-        }
-
-        if cnt == upper {
-            return Err(ImlManagerCliError::ApiError(waiting_for_agent.join("\n")));
-        }
-
-        delay_for(Duration::from_millis(500)).await;
-    }
-
-    Ok(())
-}
-
 fn list_server(hosts: Vec<Host>, display_type: DisplayType) {
     let term = Term::stdout();
 
@@ -373,7 +301,7 @@ where
         .collect()
 }
 
-fn all_jobs_passed(jobs: ApiList<TestHostJob>, term: &Term) -> bool {
+fn all_jobs_passed(jobs: ApiList<TestHostJob>, profile: &ServerProfile, term: &Term) -> bool {
     jobs.objects
         .into_iter()
         .flat_map(|x| x.step_results.into_iter().map(|(_, b)| b))
@@ -404,6 +332,12 @@ fn all_jobs_passed(jobs: ApiList<TestHostJob>, term: &Term) -> bool {
                 term.write_line("\n").unwrap();
 
                 false
+            } else if let Some(xs) = check.profiles.get(&profile.name) {
+                let failed_tests: Vec<_> = xs.iter().filter(|y| !y.pass).collect();
+
+                handle_invalid_profile_tests(term, &profile, &failed_tests);
+
+                state && failed_tests.is_empty()
             } else {
                 state
             }
@@ -426,14 +360,14 @@ fn handle_test_host_failure(all_passed: bool, config: &AddHosts) -> Result<(), I
 
 fn get_agent_config_objects<'a>(
     new_hosts: &'a BTreeSet<String>,
-    agent_profile: &'a ServerProfile,
+    server_profile: &'a ServerProfile,
     auth: &AuthType,
 ) -> Vec<AgentConfig<'a>> {
     new_hosts
         .iter()
         .map(|address| AgentConfig {
             info: TestHostConfig::new(&address, &auth),
-            server_profile: &agent_profile.resource_uri,
+            server_profile: &server_profile.resource_uri,
         })
         .collect()
 }
@@ -459,98 +393,25 @@ where
         .unzip()
 }
 
-fn get_host_ids(hosts: &[Host]) -> Vec<[String; 2]> {
-    hosts
-        .iter()
-        .map(|x| ["id__in".into(), x.id.to_string()])
-        .chain(iter::once(["limit".into(), "0".into()]))
-        .collect()
-}
-
-fn filter_host_profiles<I>(profile: &ServerProfile, objects: I) -> Vec<(i32, Vec<ProfileTest>)>
-where
-    I: IntoIterator<Item = HostProfileWrapper>,
-{
-    objects
-        .into_iter()
-        .filter_map(|x| x.host_profiles)
-        .filter_map(|mut x| x.profiles.remove(&profile.name).map(|p| (x.host, p)))
-        .collect()
-}
-
-fn filter_profile_tests(objects: &[(i32, Vec<ProfileTest>)]) -> Vec<(&i32, Vec<&ProfileTest>)> {
-    objects
-        .iter()
-        .map(|(k, tests)| (k, tests.iter().filter(|y| !y.pass).collect::<Vec<_>>()))
-        .filter(|(_, tests)| !tests.is_empty())
-        .collect()
-}
-
 fn handle_invalid_profile_tests(
     term: &Term,
-    config: &AddHosts,
     profile: &ServerProfile,
-    hosts: &[Host],
-    invalid: Vec<(&i32, Vec<&ProfileTest>)>,
-) -> Result<(), ImlManagerCliError> {
-    if !invalid.is_empty() {
+    failed_tests: &Vec<&ProfileTest>,
+) {
+    if !failed_tests.is_empty() {
         display_error(format!("Profile {} is invalid:\n\n", profile.name));
 
-        for (host_id, failed_tests) in invalid {
-            let host = hosts.iter().find(|x| &x.id == host_id).unwrap();
+        let table = generate_table(
+            &["Description", "Test", "Error"],
+            failed_tests
+                .into_iter()
+                .map(|x| vec![&x.description, &x.test, &x.error]),
+        );
 
-            display_error(format!("Host {}\n", host.address));
+        table.printstd();
 
-            let table = generate_table(
-                &["Description", "Test", "Error"],
-                failed_tests
-                    .into_iter()
-                    .map(|x| vec![&x.description, &x.test, &x.error]),
-            );
-
-            table.printstd();
-
-            term.write_line("\n\n")?;
-        }
-
-        if !can_continue(&config) {
-            return Err(ImlManagerCliError::ApiError(
-                "Did not deploy profile.".into(),
-            ));
-        }
+        term.write_line("\n\n").unwrap();
     }
-
-    Ok(())
-}
-
-fn get_host_profile_configs<'a>(
-    profile: &'a ServerProfile,
-    objects: &[(i32, Vec<ProfileTest>)],
-) -> Vec<HostProfileConfig<'a>> {
-    objects
-        .iter()
-        .map(|(host, _)| HostProfileConfig {
-            host: *host,
-            profile: &profile.name,
-        })
-        .collect()
-}
-
-async fn post_profile<'a>(
-    objects: Vec<HostProfileConfig<'a>>,
-) -> Result<Objects<HostProfileCmdWrapper>, ImlManagerCliError> {
-    Ok(post(HostProfile::endpoint_name(), Objects { objects })
-        .await?
-        .json()
-        .await
-        .map_err(iml_manager_client::ImlManagerClientError::Reqwest)?)
-}
-
-fn get_commands_from_wrapper(objects: Vec<HostProfileCmdWrapper>) -> Vec<Command> {
-    objects
-        .into_iter()
-        .flat_map(|HostProfileCmdWrapper { commands }| commands)
-        .collect()
 }
 
 async fn process_addhosts(
@@ -582,6 +443,7 @@ async fn get_test_host_commands_and_jobs(
     term: &Term,
     new_hosts: &BTreeSet<String>,
     auth: &AuthType,
+    profile: &ServerProfile,
 ) -> Result<bool, ImlManagerCliError> {
     let objects = get_test_host_configs(&new_hosts, auth);
 
@@ -601,7 +463,7 @@ async fn get_test_host_commands_and_jobs(
 
     tracing::debug!("jobs {:?}", jobs);
 
-    let all_passed = all_jobs_passed(jobs, term);
+    let all_passed = all_jobs_passed(jobs, profile, term);
 
     Ok(all_passed)
 }
@@ -609,61 +471,22 @@ async fn get_test_host_commands_and_jobs(
 async fn deploy_agents(
     term: &Term,
     new_hosts: &BTreeSet<String>,
-    agent_profile: &ServerProfile,
     server_profile: &ServerProfile,
     auth: &AuthType,
-) -> Result<Vec<Host>, ImlManagerCliError> {
-    let objects = get_agent_config_objects(new_hosts, agent_profile, auth);
+) -> Result<(), ImlManagerCliError> {
+    let objects = get_agent_config_objects(new_hosts, server_profile, auth);
 
     let Objects { objects }: Objects<CommandAndHostWrapper> = post_command_to_host(objects).await?;
 
     tracing::debug!("command and hosts {:?}", objects);
 
-    let (commands, hosts): (Vec<_>, Vec<_>) = get_commands_and_hosts_from_objects(objects);
+    let (commands, _): (Vec<_>, Vec<_>) = get_commands_and_hosts_from_objects(objects);
 
     term.write_line(&format!("{} agents...", style("Deploying").green()))?;
 
     wait_for_cmds_success(&commands).await?;
 
-    wrap_fut(
-        "Waiting for agents to restart...",
-        wait_till_agent_starts(&hosts, &server_profile.name),
-    )
-    .await?;
-
-    Ok(hosts)
-}
-
-async fn handle_profiles(
-    term: &Term,
-    config: &AddHosts,
-    hosts: &[Host],
-    profile: &ServerProfile,
-) -> Result<Vec<Command>, ImlManagerCliError> {
-    let host_ids = get_host_ids(hosts);
-
-    let ApiList { objects, .. }: ApiList<HostProfileWrapper> =
-        get(HostProfile::endpoint_name(), host_ids).await?;
-
-    tracing::debug!("Host Profiles {:?}", objects);
-
-    let objects = filter_host_profiles(profile, objects);
-
-    let invalid = filter_profile_tests(&objects);
-
-    handle_invalid_profile_tests(term, config, profile, hosts, invalid)?;
-
-    let objects = get_host_profile_configs(&profile, &objects);
-
-    let Objects { objects } = post_profile(objects).await?;
-
-    tracing::debug!("Host Profile resp {:?}", objects);
-
-    let cmds: Vec<Command> = get_commands_from_wrapper(objects);
-
-    term.write_line(&format!("{} host profiles...", style("Setting").green()))?;
-
-    Ok(cmds)
+    Ok(())
 }
 
 async fn add_server(config: AddHosts) -> Result<(), ImlManagerCliError> {
@@ -679,8 +502,6 @@ async fn add_server(config: AddHosts) -> Result<(), ImlManagerCliError> {
     let server_profile = get_profile_by_name(&profiles.objects, &config.profile)
         .ok_or_else(|| not_found_err(format!("{} profile not found.", &config.profile)))?;
 
-    let agent_profile = get_agent_profile(server_profile, &profiles.objects)?;
-
     let (new_hosts, auth) = process_addhosts(&config, &api_hosts.objects, new_hosts).await?;
 
     if new_hosts.is_empty() {
@@ -689,37 +510,14 @@ async fn add_server(config: AddHosts) -> Result<(), ImlManagerCliError> {
 
     tracing::debug!("AUTH: {:?}", auth);
 
-    let all_passed = get_test_host_commands_and_jobs(&term, &new_hosts, &auth).await?;
+    let all_passed =
+        get_test_host_commands_and_jobs(&term, &new_hosts, &auth, &server_profile).await?;
 
     handle_test_host_failure(all_passed, &config)?;
 
-    let hosts = deploy_agents(&term, &new_hosts, &agent_profile, &server_profile, &auth).await?;
-
-    let cmds = handle_profiles(&term, &config, &hosts, &server_profile).await?;
-
-    wait_for_cmds_success(&cmds).await?;
+    deploy_agents(&term, &new_hosts, &server_profile, &auth).await?;
 
     Ok(())
-}
-
-/// Given a server_profile to deploy,
-/// figures out the profile that should be used to deploy the agents
-fn get_agent_profile<'a>(
-    profile: &ServerProfile,
-    xs: &'a [ServerProfile],
-) -> Result<&'a ServerProfile, Error> {
-    let name = if profile.repolist.is_empty() {
-        "default_baseless"
-    } else {
-        "default"
-    };
-
-    let x = xs
-        .iter()
-        .find(|x| x.name == name)
-        .ok_or_else(|| Error::new(ErrorKind::NotFound, format!("{} profile not found.", name)))?;
-
-    Ok(x)
 }
 
 pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError> {

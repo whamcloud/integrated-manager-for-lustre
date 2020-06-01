@@ -1481,34 +1481,6 @@ class JobScheduler(object):
 
         return host.id, command.id
 
-    def set_host_profile(self, host_id, server_profile_id):
-        """
-        Set the profile for the given host to the given profile.
-
-        :param host_id:
-        :param server_profile_id:
-        :return: Command for the host job or None if no commands were created.
-        """
-
-        with self._lock:
-            with transaction.atomic():
-                server_profile = ServerProfile.objects.get(pk=server_profile_id)
-                host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == host_id)
-
-                commands_required = host.set_profile(server_profile_id)
-
-                if commands_required:
-                    command = self.CommandPlan.command_run_jobs(
-                        commands_required, help_text["change_host_profile"] % (host.fqdn, server_profile.ui_name)
-                    )
-                else:
-                    command = None
-
-        if command:
-            self.progress.advance()
-
-        return command
-
     def create_host(self, fqdn, nodename, address, server_profile_id):
         """
         Create a new host, or update a host in the process of being deployed.

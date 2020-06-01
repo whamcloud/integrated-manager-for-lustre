@@ -43,7 +43,6 @@ class UpdateScan(object):
             return False
 
     def audit_host(self):
-        self.update_properties(self.host_data.get("properties"))
         self.update_packages(self.host_data.get("packages"))
         self.update_resource_locations()
 
@@ -58,13 +57,6 @@ class UpdateScan(object):
         log.debug("UpdateScan.run: %s" % self.host)
 
         self.audit_host()
-
-    def update_properties(self, properties):
-        if properties is not None:
-            properties = json.dumps(properties)
-            # use the job scheduler to update, but only as necessary
-            if self.host.properties != properties:
-                job_scheduler_notify.notify(self.host, self.started_at, {"properties": properties})
 
     # Compatibility with pre-4.1 IML upgrades
     def update_packages(self, package_report):
