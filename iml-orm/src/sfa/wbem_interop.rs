@@ -48,6 +48,10 @@ impl TryFrom<(String, Instance)> for SfaEnclosure {
                 .parse::<i16>()?
                 .try_into()?,
             health_state_reason: x.try_get_property("HealthStateReason")?.into(),
+            child_health_state: x
+                .try_get_property("ChildHealthState")?
+                .parse::<i16>()?
+                .try_into()?,
             model: x.try_get_property("Model")?.into(),
             position: x.try_get_property("Position")?.parse::<i16>()?,
             enclosure_type: x.try_get_property("Type")?.parse::<i16>()?.try_into()?,
@@ -106,10 +110,6 @@ impl TryFrom<(String, Instance)> for SfaDiskDrive {
 
         Ok(SfaDiskDrive {
             index: x.try_get_property("Index")?.parse::<i32>()?,
-            child_health_state: x
-                .try_get_property("ChildHealthState")?
-                .parse::<i16>()?
-                .try_into()?,
             enclosure_index: x.try_get_property("EnclosureIndex")?.parse::<i32>()?,
             failed: x
                 .try_get_property("Failed")?
@@ -157,8 +157,8 @@ impl TryFrom<(String, Instance)> for SfaJob {
                 .transpose()?
                 .map(|x| x.try_into())
                 .transpose()?,
-            job_type: x.try_get_property("JobType")?.parse::<i16>()?.try_into()?,
-            state: x.try_get_property("JobState")?.parse::<i16>()?.try_into()?,
+            job_type: x.try_get_property("Type")?.parse::<i16>()?.try_into()?,
+            state: x.try_get_property("State")?.parse::<i16>()?.try_into()?,
             storage_system,
         })
     }
