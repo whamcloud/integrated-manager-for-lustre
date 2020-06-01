@@ -106,29 +106,38 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     tokio::spawn(server);
 
-    let mut s = consume_data::<Device>("rust_agent_device_rx");
+    use device_types::MyOutput;
+    let mut s = consume_data::<MyOutput>("rust_agent_device_rx");
 
-    while let Some((f, d)) = s.try_next().await? {
-        let mut cache = cache2.lock().await;
+    while let Some((f, output)) = s.try_next().await? {
+        match output {
+            MyOutput::Device(d) => {
+                let mut cache = cache2.lock().await;
 
-        cache.insert(f.clone(), d.clone());
+                cache.insert(f.clone(), d.clone());
 
-        let device_to_insert = NewChromaCoreDevice {
-            fqdn: f.to_string(),
-            devices: serde_json::to_value(d).expect("Could not convert incoming Devices to JSON."),
-        };
+                let device_to_insert = NewChromaCoreDevice {
+                    fqdn: f.to_string(),
+                    devices: serde_json::to_value(d)
+                        .expect("Could not convert incoming Devices to JSON."),
+                };
 
-        let new_device = diesel::insert_into(table)
-            .values(device_to_insert)
-            .on_conflict(fqdn)
-            .do_update()
-            .set(devices.eq(excluded(devices)))
-            .get_result_async::<ChromaCoreDevice>(&pool)
-            .await
-            .expect("Error saving new device");
+                let new_device = diesel::insert_into(table)
+                    .values(device_to_insert)
+                    .on_conflict(fqdn)
+                    .do_update()
+                    .set(devices.eq(excluded(devices)))
+                    .get_result_async::<ChromaCoreDevice>(&pool)
+                    .await
+                    .expect("Error saving new device");
 
-        tracing::info!("Inserted device from host {}", new_device.fqdn);
-        tracing::trace!("Inserted device {:?}", new_device);
+                tracing::info!("Inserted device from host {}", new_device.fqdn);
+                tracing::trace!("Inserted device {:?}", new_device);
+            }
+            MyOutput::Command(c) => {
+                tracing::info!("Got command {:?}", c);
+            }
+        }
     }
 
     Ok(())
