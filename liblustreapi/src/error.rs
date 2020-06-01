@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use crate::LIBLUSTRE;
-use libc;
 use std::{error, ffi::IntoStringError, io, io::Error};
 
 /// Error if liblustreapi.so calls fail to load

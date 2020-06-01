@@ -4,7 +4,7 @@ BuildRequires: systemd
 %global crate iml
 
 Name: rust-%{crate}
-Version: 0.2.0
+Version: 0.3.0
 # Release Start
 Release: 1%{?dist}
 # Release End

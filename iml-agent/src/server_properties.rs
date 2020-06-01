@@ -2,7 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use dns_lookup;
 use lazy_static::lazy_static;
 use std::{
     fs::File,
@@ -48,7 +47,7 @@ lazy_static! {
                 ["btime", v] => Some(v),
                 _ => None,
             })
-            .nth(0)
+            .next()
             .expect("Could not find boot time")
             .parse()
             .expect("Could not parse boot secs into int");

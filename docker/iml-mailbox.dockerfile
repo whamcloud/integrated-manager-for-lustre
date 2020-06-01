@@ -1,6 +1,6 @@
 FROM rust-iml-base as builder
 
-FROM imlteam/systemd-base:6.1.0-dev
+FROM imlteam/systemd-base:6.2.0-dev
 COPY --from=builder /build/target/release/iml-mailbox /bin/
 COPY docker/iml-mailbox/iml-mailbox.service /etc/systemd/system/
 COPY docker/iml-mailbox/iml-mailbox.conf /etc/systemd/system/
