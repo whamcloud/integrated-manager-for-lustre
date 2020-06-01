@@ -5,7 +5,7 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-device-types = "0.1"
+device-types = { git = "https://github.com/whamcloud/device-scanner.git", branch = "tree", version = "0.1" }
 diesel = { version = "1.4", default_features = false, features = ["postgres", "r2d2", "chrono", "serde_json"] }
 futures = "0.3"
 iml-manager-env = { path = "../../iml-manager-env", version = "0.3" }
