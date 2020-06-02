@@ -1215,6 +1215,7 @@ dependencies = [
  "bytes",
  "chrono",
  "console 0.11.3",
+ "device-types",
  "dns-lookup",
  "dotenv",
  "elementtree",
