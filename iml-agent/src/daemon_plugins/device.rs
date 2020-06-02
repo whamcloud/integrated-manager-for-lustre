@@ -7,6 +7,7 @@ use crate::{
     daemon_plugins::{DaemonPlugin, Output},
 };
 use async_trait::async_trait;
+use device_types::MyOutput;
 use futures::{
     future, lock::Mutex, Future, FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
@@ -84,30 +85,59 @@ impl DaemonPlugin for Devices {
                 lock.0.push(x.clone());
             }
 
-            tokio::spawn(
-                s.take_until(tripwire)
-                    .try_for_each(move |x| {
-                        let state = Arc::clone(&state);
+            {
+                let state = state.clone();
+                tokio::spawn(
+                    s.take_until(tripwire)
+                        .try_for_each(move |x| {
+                            let state = Arc::clone(&state);
 
-                        async move {
-                            let mut lock = state.lock().await;
+                            async move {
+                                let mut lock = state.lock().await;
 
-                            tracing::debug!("marking pending (is none: {}) ", x.is_none());
+                                tracing::debug!("marking pending (is none: {}) ", x.is_none());
 
-                            lock.1 = State::Pending;
-                            lock.0.push(x);
+                                lock.1 = State::Pending;
+                                lock.0.push(x);
 
-                            Ok(())
-                        }
-                    })
-                    .map(|x| {
-                        if let Err(e) = x {
-                            tracing::error!("Error processing device output: {}", e);
-                        }
-                    }),
-            );
+                                tracing::debug!("{} items buffered after push", lock.0.len());
 
-            Ok(x)
+                                Ok(())
+                            }
+                        })
+                        .map(|x| {
+                            if let Err(e) = x {
+                                tracing::error!("Error processing device output: {}", e);
+                            }
+                        }),
+                );
+            }
+
+            {
+                let mut lock = state.lock().await;
+
+                tracing::debug!(
+                    "{} items buffered before pop (in create_session)",
+                    lock.0.len()
+                );
+                let buffer = std::mem::replace(&mut lock.0, Vec::new());
+                let deserialized: Vec<MyOutput> = buffer
+                    .into_iter()
+                    .filter_map(|x| x.map(|s| serde_json::from_value(s).unwrap()))
+                    .collect();
+
+                tracing::debug!(
+                    "{} items after deserializing (in create_session)",
+                    deserialized.len()
+                );
+
+                if deserialized.is_empty() {
+                    Ok(None)
+                } else {
+                    let serialized = serde_json::to_value(&deserialized).unwrap();
+                    Ok(Some(serialized))
+                }
+            }
         })
     }
     fn update_session(
@@ -118,11 +148,25 @@ impl DaemonPlugin for Devices {
         async move {
             let mut lock = state.lock().await;
 
-            if lock.1 == State::Pending && !lock.0.is_empty() {
+            if lock.1 == State::Pending {
                 tracing::debug!("Sending new value");
                 lock.1 = State::Sent;
 
-                Ok(lock.0.pop().unwrap())
+                tracing::debug!("{} items buffered before pop", lock.0.len());
+                let buffer = std::mem::replace(&mut lock.0, Vec::new());
+                let deserialized: Vec<MyOutput> = buffer
+                    .into_iter()
+                    .filter_map(|x| x.map(|s| serde_json::from_value(s).unwrap()))
+                    .collect();
+
+                tracing::debug!("{} items after deserializing", deserialized.len());
+
+                if deserialized.is_empty() {
+                    Ok(None)
+                } else {
+                    let serialized = serde_json::to_value(&deserialized).unwrap();
+                    Ok(Some(serialized))
+                }
             } else {
                 Ok(None)
             }
