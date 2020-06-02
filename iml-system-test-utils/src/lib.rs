@@ -150,7 +150,7 @@ pub trait ServerList {
 
 impl ServerList for Vec<(String, &[&str])> {
     fn to_server_list(&self) -> Vec<&str> {
-        let server_set: Vec<_> = self.into_iter().flat_map(|(_, x)| *x).map(|x| *x).collect();
+        let server_set: Vec<_> = self.iter().flat_map(|(_, x)| *x).copied().collect();
         let mut xs: Vec<&str> = server_set.into_iter().collect();
         xs.dedup();
 

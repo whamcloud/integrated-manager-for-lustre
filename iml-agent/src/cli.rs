@@ -555,7 +555,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             NtpClientCommand::IsConfigured => {
                 match is_ntp_configured::is_ntp_configured(()).await {
                     Ok(configured) => {
-                        if configured == true {
+                        if configured {
                             println!("Ntp is configured for IML on this server.");
                         } else {
                             println!("Ntp is not configured for IML on this server.");
