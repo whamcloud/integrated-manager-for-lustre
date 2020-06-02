@@ -44,16 +44,6 @@ class RemoteOperations(object):
     than going via the manager API.
     """
 
-    def distro_version(self, host):
-        """
-        :return: floating point x.y version of distro running. Works for hosts from the api and for the
-                 'lustre_servers' type entries in config
-        """
-        if "distro" in host:
-            return float(re.match(".*([0-9].[0-9])", host["distro"]).group(1))
-        else:
-            return float(json.loads(host["properties"])["distro_version"])
-
     def get_fence_nodes_list(self, address, ignore_failure=False):
         return ["fake", "fake"]
 
@@ -412,28 +402,6 @@ class RealRemoteOperations(RemoteOperations):
         """
         self._unmount_filesystem(client_address, filesystem["name"])
 
-    def get_resource_running(self, host, ha_label):
-        result = self._ssh_address(
-            host["address"],
-            "crm_resource -r %s -W" % ha_label,
-            timeout=30,  # shorter timeout since shouldn't take long and increases turnaround when there is a problem
-        )
-        resource_status = result.stdout
-
-        # Sometimes crm_resource -W gives a false positive when it is repetitively
-        # trying to restart a resource over and over. Lets also check the failcount
-        # to check that it didn't have problems starting.
-        hostname = host["fqdn"] if self.distro_version(host) >= 7 else host["nodename"]
-        result = self._ssh_address(
-            host["address"], "crm_attribute -t status -n fail-count-%s -N %s -G -d 0" % (ha_label, hostname)
-        )
-        self._test_case.assertRegexpMatches(result.stdout, "value=0")
-
-        # Check pacemaker thinks it's running on the right host.
-        expected_resource_status = "%s is running on: %s" % (ha_label, host["nodename"])
-
-        return bool(re.search(expected_resource_status, resource_status))
-
     def check_ha_config(self, hosts, filesystem_name):
         import xml.etree.ElementTree as xml
 
@@ -659,86 +627,6 @@ class RealRemoteOperations(RemoteOperations):
         node_status = result.stdout
         if re.search("started", node_status):
             logger.info("%s started successfully" % fqdn)
-
-    def await_server_boot(self, boot_fqdn, monitor_fqdn=None, restart=False):
-        """
-        Wait for the stonithed server to come back online
-        """
-        import xml.etree.ElementTree as xml
-
-        boot_server = self._fqdn_to_server_config(boot_fqdn)
-        monitor_server = None if monitor_fqdn is None else self._fqdn_to_server_config(monitor_fqdn)
-        restart_attempted = False
-
-        hostname = boot_server["fqdn"] if self.distro_version(boot_server) >= 7 else boot_server["nodename"]
-
-        running_time = 0
-        while running_time < TEST_TIMEOUT:
-            if self.host_contactable(boot_server["address"]):
-                # If we have a peer to check then fall through to that, else
-                # drop out here
-                if not monitor_server:
-                    break
-
-                # Verify other host knows it is no longer offline
-                result = self._ssh_address(monitor_server["address"], "crm_mon -X")
-
-                logger.info("Response running crm_mon -1 on %s:\n%s", hostname, result.stdout)
-                err = result.stderr
-                if err:
-                    logger.error("    result.stderr:  " + err)
-
-                tree = xml.fromstring(result.stdout)
-                node = tree.find('.//node[@name="{}"]'.format(hostname))
-
-                self._test_case.assertIsNotNone(node, "Host %s not defined in crm_mon" % hostname)
-
-                # Wait for host to be online
-                if node.get("online") == "true" and node.get("pending") == "false":
-                    resources = tree.findall(".//resource[@status]")
-                    # Done if all resources are started or no resources
-                    if not resources or not next(
-                        (
-                            res
-                            for res in resources
-                            if res.get("status") != "Started"
-                            and res.get("active") == "true"
-                            and res.get("failed") == "false"
-                        ),
-                        False,
-                    ):
-                        break
-
-            else:
-                if restart and running_time > UNATTENDED_BOOT_TIMEOUT and not restart_attempted:
-                    logger.info("attempting to restart %s", boot_fqdn)
-                    result = self._ssh_address(
-                        boot_server["host"],
-                        boot_server["status_command"],
-                        as_root=self._host_of_server(boot_server).get("virsh_as_root", True),
-                    )
-                    node_status = result.stdout
-                    if re.search("running", node_status):
-                        logger.info("%s seems to be running, but unresponsive", boot_fqdn)
-                        self.kill_server(boot_fqdn)
-                    self.start_server(boot_fqdn)
-                    restart_attempted = True
-
-            time.sleep(3)
-            running_time += 3
-
-        if running_time >= TEST_TIMEOUT:
-            host_alive = self._ssh_address(boot_server["address"], "hostname", expected_return_code=None).rc == 0
-
-            self._test_case.assertTrue(
-                False,
-                "Timed out waiting for host %s to come back online.\n"
-                "Host is actually alive %s" % (hostname, host_alive),
-            )
-
-        if monitor_server:
-            result = self._ssh_address(monitor_server["address"], "crm_mon -1")
-            self._test_case.assertRegexpMatches(result.stdout, "Online: \[.* %s .*\]" % hostname)
 
     def unmount_clients(self):
         """

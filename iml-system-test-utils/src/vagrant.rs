@@ -675,13 +675,13 @@ impl ClusterConfig {
     }
     pub fn hosts_to_ips(&self, hosts: &[&str]) -> Vec<&str> {
         hosts
-            .into_iter()
+            .iter()
             .map(|host| {
                 self.server_map
                     .get(host)
                     .expect(format!("Couldn't locate {} in server map.", host).as_str())
             })
-            .map(|x| *x)
+            .copied()
             .collect()
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "iml-device"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
@@ -8,13 +8,13 @@ edition = "2018"
 device-types = "0.1"
 diesel = { version = "1.4", default_features = false, features = ["postgres", "r2d2", "chrono", "serde_json"] }
 futures = "0.3"
-iml-manager-env = { path = "../../iml-manager-env", version = "0.2.0" }
-iml-orm = { path = "../../iml-orm", version = "0.2.0", features = ["postgres-interop"] }
-iml-postgres = { path = "../../iml-postgres", version = "0.2.0" }
-iml-rabbit = { path = "../../iml-rabbit", version = "0.2.0" }
-iml-service-queue = { path = "../iml-service-queue", version = "0.2.0" }
-iml-tracing = { version = "0.1", path="../../iml-tracing"}
-iml-wire-types = { path = "../../iml-wire-types", version = "0.2", features = ["postgres-interop"] }
+iml-manager-env = { path = "../../iml-manager-env", version = "0.3" }
+iml-orm = { path = "../../iml-orm", version = "0.3", features = ["postgres-interop"] }
+iml-postgres = { path = "../../iml-postgres", version = "0.3" }
+iml-rabbit = { path = "../../iml-rabbit", version = "0.3" }
+iml-service-queue = { path = "../iml-service-queue", version = "0.3" }
+iml-tracing = { version = "0.2", path="../../iml-tracing"}
+iml-wire-types = { path = "../../iml-wire-types", version = "0.3", features = ["postgres-interop"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "1.0"

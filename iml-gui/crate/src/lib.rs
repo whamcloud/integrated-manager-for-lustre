@@ -717,13 +717,19 @@ fn handle_record_change(
                     };
                 }
                 ArcRecord::SfaDiskDrive(x) => {
-                    model.records.sfa_disk_drive.insert(x.index, Arc::clone(&x));
+                    model.records.sfa_disk_drive.insert(x.id, Arc::clone(&x));
                 }
                 ArcRecord::SfaEnclosure(x) => {
-                    model.records.sfa_enclosure.insert(x.index, Arc::clone(&x));
+                    model.records.sfa_enclosure.insert(x.id, Arc::clone(&x));
                 }
                 ArcRecord::SfaStorageSystem(x) => {
                     model.records.sfa_storage_system.insert(x.id, Arc::clone(&x));
+                }
+                ArcRecord::SfaJob(x) => {
+                    model.records.sfa_job.insert(x.id, Arc::clone(&x));
+                }
+                ArcRecord::SfaPowerSupply(x) => {
+                    model.records.sfa_power_supply.insert(x.id, Arc::clone(&x));
                 }
                 ArcRecord::StratagemConfig(x) => {
                     model.records.stratagem_config.insert(x.id, Arc::clone(&x));

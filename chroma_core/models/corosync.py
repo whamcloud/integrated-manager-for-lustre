@@ -225,7 +225,7 @@ class StartCorosyncJob(corosync_common.StartCorosyncJob):
         ordering = ["id"]
 
     def get_steps(self):
-        return [(StartCorosyncStep, {"host": self.corosync_configuration.host})]
+        return [(StartCorosyncStep, {"host": self.corosync_configuration.host.fqdn})]
 
 
 class StopCorosyncStep(Step):

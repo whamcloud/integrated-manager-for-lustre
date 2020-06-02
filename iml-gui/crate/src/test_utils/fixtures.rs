@@ -12,6 +12,8 @@ pub(crate) fn get_cache() -> Cache {
   "sfa_disk_drive": {},
   "sfa_enclosure": {},
   "sfa_storage_system": {},
+  "sfa_job": {},
+  "sfa_power_supply": {},
   "active_alert": {
     "577": {
       "_message": "Updates are ready for server oss1.local",
@@ -330,7 +332,6 @@ pub(crate) fn get_cache() -> Cache {
       "pacemaker_configuration": "/api/pacemaker_configuration/1/",
       "private_key": null,
       "private_key_passphrase": null,
-      "properties": "{\"python_patchlevel\": 5, \"kernel_version\": \"3.10.0-1062.1.2.el7.x86_64\", \"zfs_installed\": true, \"distro_version\": 7.7, \"python_version_major_minor\": 2.7, \"distro\": \"CentOS Linux\"}",
       "resource_uri": "/api/host/1/",
       "root_pw": null,
       "server_profile": {
@@ -377,7 +378,6 @@ pub(crate) fn get_cache() -> Cache {
       "pacemaker_configuration": "/api/pacemaker_configuration/2/",
       "private_key": null,
       "private_key_passphrase": null,
-      "properties": "{\"python_patchlevel\": 5, \"kernel_version\": \"3.10.0-1062.1.2.el7.x86_64\", \"zfs_installed\": true, \"distro_version\": 7.7, \"python_version_major_minor\": 2.7, \"distro\": \"CentOS Linux\"}",
       "resource_uri": "/api/host/2/",
       "root_pw": null,
       "server_profile": {
@@ -424,7 +424,6 @@ pub(crate) fn get_cache() -> Cache {
       "pacemaker_configuration": "/api/pacemaker_configuration/3/",
       "private_key": null,
       "private_key_passphrase": null,
-      "properties": "{\"python_patchlevel\": 5, \"kernel_version\": \"3.10.0-1062.1.2.el7.x86_64\", \"zfs_installed\": true, \"distro_version\": 7.7, \"python_version_major_minor\": 2.7, \"distro\": \"CentOS Linux\"}",
       "resource_uri": "/api/host/3/",
       "root_pw": null,
       "server_profile": {
@@ -471,7 +470,6 @@ pub(crate) fn get_cache() -> Cache {
       "pacemaker_configuration": "/api/pacemaker_configuration/4/",
       "private_key": null,
       "private_key_passphrase": null,
-      "properties": "{\"python_patchlevel\": 5, \"kernel_version\": \"3.10.0-1062.1.2.el7.x86_64\", \"zfs_installed\": true, \"distro_version\": 7.7, \"python_version_major_minor\": 2.7, \"distro\": \"CentOS Linux\"}",
       "resource_uri": "/api/host/4/",
       "root_pw": null,
       "server_profile": {
@@ -516,7 +514,6 @@ pub(crate) fn get_cache() -> Cache {
       "pacemaker_configuration": null,
       "private_key": null,
       "private_key_passphrase": null,
-      "properties": "{\"python_patchlevel\": 5, \"kernel_version\": \"3.10.0-957.12.2.el7.x86_64\", \"zfs_installed\": false, \"distro_version\": 7.6, \"python_version_major_minor\": 2.7, \"distro\": \"CentOS Linux\"}",
       "resource_uri": "/api/host/11/",
       "root_pw": null,
       "server_profile": {
