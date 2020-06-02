@@ -39,14 +39,14 @@ enum State {
 pub fn create() -> impl DaemonPlugin {
     Devices {
         trigger: None,
-        state: Arc::new(Mutex::new((None, State::Sent))),
+        state: Arc::new(Mutex::new((Vec::new(), State::Sent))),
     }
 }
 
 #[derive(Debug)]
 pub struct Devices {
     trigger: Option<Trigger>,
-    state: Arc<Mutex<(Output, State)>>,
+    state: Arc<Mutex<(Vec<Output>, State)>>,
 }
 
 #[async_trait]
@@ -81,7 +81,7 @@ impl DaemonPlugin for Devices {
             {
                 let mut lock = state.lock().await;
 
-                lock.0 = x.clone();
+                lock.0.push(x.clone());
             }
 
             tokio::spawn(
@@ -92,12 +92,10 @@ impl DaemonPlugin for Devices {
                         async move {
                             let mut lock = state.lock().await;
 
-                            if lock.0 != x {
-                                tracing::debug!("marking pending (is none: {}) ", x.is_none());
+                            tracing::debug!("marking pending (is none: {}) ", x.is_none());
 
-                                lock.0 = x;
-                                lock.1 = State::Pending;
-                            }
+                            lock.1 = State::Pending;
+                            lock.0.push(x);
 
                             Ok(())
                         }
@@ -120,11 +118,11 @@ impl DaemonPlugin for Devices {
         async move {
             let mut lock = state.lock().await;
 
-            if lock.1 == State::Pending {
+            if lock.1 == State::Pending && !lock.0.is_empty() {
                 tracing::debug!("Sending new value");
                 lock.1 = State::Sent;
 
-                Ok(lock.0.clone())
+                Ok(lock.0.pop().unwrap())
             } else {
                 Ok(None)
             }
