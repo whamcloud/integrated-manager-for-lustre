@@ -404,7 +404,7 @@ fn handle_invalid_profile_tests(
         let table = generate_table(
             &["Description", "Test", "Error"],
             failed_tests
-                .into_iter()
+                .iter()
                 .map(|x| vec![&x.description, &x.test, &x.error]),
         );
 

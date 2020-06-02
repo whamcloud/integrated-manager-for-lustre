@@ -4,7 +4,6 @@
 
 use futures::{lock::Mutex, FutureExt, TryFutureExt, TryStreamExt};
 use iml_manager_client::get_client;
-use iml_manager_env;
 use iml_warp_drive::{
     cache::{populate_from_api, populate_from_db, SharedCache},
     error, listen,

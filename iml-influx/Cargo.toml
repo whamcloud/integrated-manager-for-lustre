@@ -6,5 +6,5 @@ description = "Shared functions and data types related to influx"
 edition = "2018"
 
 [dependencies]
-iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
+iml-wire-types = { path = "../iml-wire-types", version = "0.3" }
 serde = { version = "1", features = ['derive'] }
