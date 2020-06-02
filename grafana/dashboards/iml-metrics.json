@@ -2150,7 +2150,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT NON_NEGATIVE_derivative(\"sum\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval)),\n(SELECT SUM(\"diff1\") AS \"diff\" FROM (SELECT NON_NEGATIVE_derivative(\"mean_sum\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval))\nGROUP BY \"target\"",
+          "query": "SELECT * FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT NON_NEGATIVE_derivative(\"sum\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval)),\n(SELECT SUM(\"diff1\") AS \"diff\" FROM (SELECT NON_NEGATIVE_derivative(\"mean_sum\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($__interval))\nGROUP BY \"target\"",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
