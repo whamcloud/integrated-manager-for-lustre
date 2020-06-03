@@ -29,15 +29,16 @@ from chroma_core.models import Job
 from chroma_core.models import StateChangeJob, StateLock, StepResult, LustreClientMount
 from chroma_help.help import help_text
 from chroma_core.models import (
-    AlertStateBase,
     AlertEvent,
+    AlertStateBase,
+    ManagedFilesystem,
     ManagedHost,
     ManagedMdt,
     ManagedTarget,
     ManagedTargetMount,
+    StorageResourceRecord,
     Volume,
     VolumeNode,
-    StorageResourceRecord,
 )
 
 
@@ -678,7 +679,7 @@ class SendStratagemResultsToClientJob(Job):
         client_host = ManagedHost.objects.get(
             Q(server_profile_id="stratagem_client") | Q(server_profile_id="stratagem_existing_client")
         )
-        client_mount = LustreClientMount.objects.get(host_id=client_host.id, filesystem_id=self.filesystem.id)
+        client_mount = LustreClientMount.objects.get(host_id=client_host.id, filesystem=filesystem.name)
 
         return [
             (

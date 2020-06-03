@@ -96,7 +96,7 @@ class HostTestValidation(HostValidation):
                     if not len(private_key.strip()):
                         errors["private_key"].append(self.mandatory_message)
         except KeyError:
-            #  What?  Now auth_type? assume existing key default case.
+            #  What?  Now auth_type? Assume existing key default case.
             pass
 
         return errors
@@ -135,10 +135,8 @@ class ServerProfileResource(ChromaModelResource):
 
 
 class ClientMountResource(ChromaModelResource):
-    # This resource is only used for integration testing.
-
     host = fields.ToOneField("chroma_api.host.HostResource", "host")
-    filesystem = fields.ToOneField("chroma_api.filesystem.FilesystemResource", "filesystem")
+    filesystem = fields.CharField()
     mountpoint = fields.CharField()
 
     class Meta:
@@ -157,7 +155,7 @@ class ClientMountResource(ChromaModelResource):
     def obj_create(self, bundle, **kwargs):
         request = bundle.request
         host = self.fields["host"].hydrate(bundle).obj
-        filesystem = self.fields["filesystem"].hydrate(bundle).obj
+        filesystem = ManagedFilesystem.objects.get(name=bundle.data["filesystem"])
         mountpoint = bundle.data["mountpoint"]
 
         client_mount = JobSchedulerClient.create_client_mount(host, filesystem, mountpoint)
@@ -209,7 +207,7 @@ class HostResource(StatefulModelResource, BulkResourceOperation):
         search = lambda cm: cm.host == bundle.obj
         mounts = ObjectCache.get(LustreClientMount, search)
         return [
-            {"filesystem_name": mount.filesystem.name, "mountpoint": mount.mountpoint, "state": mount.state}
+            {"filesystem_name": mount.filesystem, "mountpoint": mount.mountpoint, "state": mount.state}
             for mount in mounts
         ]
 
