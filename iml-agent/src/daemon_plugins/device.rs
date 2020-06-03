@@ -121,20 +121,28 @@ impl DaemonPlugin for Devices {
                     lock.0.len()
                 );
                 let buffer = std::mem::replace(&mut lock.0, Vec::new());
-                let deserialized: Vec<MyOutput> = buffer
+                let deserialized: Vec<Vec<MyOutput>> = buffer
                     .into_iter()
                     .filter_map(|x| x.map(|s| serde_json::from_value(s).unwrap()))
                     .collect();
 
-                tracing::debug!(
-                    "{} items after deserializing (in create_session)",
-                    deserialized.len()
-                );
+                let mut flattened = Vec::new();
+                for i in deserialized {
+                    flattened.extend(i);
+                }
 
-                if deserialized.is_empty() {
+                tracing::debug!("{} items after deserializing", flattened.len());
+                for i in flattened.iter() {
+                    match i {
+                        MyOutput::Device(_) => tracing::debug!("Device"),
+                        MyOutput::Command(_) => tracing::debug!("Command"),
+                    }
+                }
+
+                if flattened.is_empty() {
                     Ok(None)
                 } else {
-                    let serialized = serde_json::to_value(&deserialized).unwrap();
+                    let serialized = serde_json::to_value(&flattened).unwrap();
                     Ok(Some(serialized))
                 }
             }
@@ -154,17 +162,27 @@ impl DaemonPlugin for Devices {
 
                 tracing::debug!("{} items buffered before pop", lock.0.len());
                 let buffer = std::mem::replace(&mut lock.0, Vec::new());
-                let deserialized: Vec<MyOutput> = buffer
+                let deserialized: Vec<Vec<MyOutput>> = buffer
                     .into_iter()
                     .filter_map(|x| x.map(|s| serde_json::from_value(s).unwrap()))
                     .collect();
+                let mut flattened = Vec::new();
+                for i in deserialized {
+                    flattened.extend(i);
+                }
 
-                tracing::debug!("{} items after deserializing", deserialized.len());
+                tracing::debug!("{} items after deserializing", flattened.len());
+                for i in flattened.iter() {
+                    match i {
+                        MyOutput::Device(_) => tracing::debug!("Device"),
+                        MyOutput::Command(_) => tracing::debug!("Command"),
+                    }
+                }
 
-                if deserialized.is_empty() {
+                if flattened.is_empty() {
                     Ok(None)
                 } else {
-                    let serialized = serde_json::to_value(&deserialized).unwrap();
+                    let serialized = serde_json::to_value(&flattened).unwrap();
                     Ok(Some(serialized))
                 }
             } else {
