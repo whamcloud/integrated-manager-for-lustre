@@ -321,6 +321,7 @@ class ServiceConfig(CommandLine):
             expected_exception_classes=[CommandError],
         )
 
+        # When changing any of the following also change: docker/influxdb/setup-influxdb.sh
         log.info("Creating InfluxDB database...")
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_IML_DB)])
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_STRATAGEM_SCAN_DB)])
@@ -354,7 +355,8 @@ class ServiceConfig(CommandLine):
                 settings.INFLUXDB_IML_STATS_DB,
                 "-execute",
                 "{}; {}; {}; {}".format(
-                    'CREATE CONTINUOUS QUERY "downsample_means" ON "{}" BEGIN SELECT mean(*) INTO "{}"."long_term".:MEASUREMENT FROM "{}"."autogen"."target","{}"."autogen"."host" GROUP BY time(30m),* END'.format(
+                    'CREATE CONTINUOUS QUERY "downsample_means" ON "{}" BEGIN SELECT mean(*) INTO "{}"."long_term".:MEASUREMENT FROM "{}"."autogen"."target","{}"."autogen"."host","{}"."autogen"."node" GROUP BY time(30m),* END'.format(
+                        settings.INFLUXDB_IML_STATS_DB,
                         settings.INFLUXDB_IML_STATS_DB,
                         settings.INFLUXDB_IML_STATS_DB,
                         settings.INFLUXDB_IML_STATS_DB,
