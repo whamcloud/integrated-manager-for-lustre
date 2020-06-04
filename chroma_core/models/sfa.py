@@ -94,3 +94,17 @@ class SfaPowerSupply(models.Model):
     storage_system = models.ForeignKey(
         "SfaStorageSystem", to_field="uuid", db_column="storage_system", on_delete=CASCADE
     )
+
+
+class SfaController(models.Model):
+    class Meta:
+        app_label = "chroma_core"
+        unique_together = (("index", "storage_system"),)
+
+    index = models.PositiveIntegerField()
+    enclosure_index = models.PositiveIntegerField()
+    health_state = models.PositiveSmallIntegerField()
+    health_state_reason = models.TextField()
+    storage_system = models.ForeignKey(
+        "SfaStorageSystem", to_field="uuid", db_column="storage_system", on_delete=CASCADE
+    )

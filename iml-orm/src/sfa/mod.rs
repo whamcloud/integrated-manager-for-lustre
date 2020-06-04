@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+mod controller;
 mod disk_drive;
 mod enclosure;
 mod job;
@@ -13,7 +14,9 @@ mod wbem_interop;
 
 #[cfg(feature = "postgres-interop")]
 use crate::schema::chroma_core_sfadiskslot;
-pub use crate::sfa::{disk_drive::*, enclosure::*, job::*, power_supply::*, storage_system::*};
+pub use crate::sfa::{
+    controller::*, disk_drive::*, enclosure::*, job::*, power_supply::*, storage_system::*,
+};
 #[cfg(feature = "postgres-interop")]
 use diesel::{
     backend::Backend,

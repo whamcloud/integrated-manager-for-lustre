@@ -1556,3 +1556,50 @@ impl From<Row> for SfaPowerSupply {
         }
     }
 }
+
+pub const SFA_CONTROLLER_TABLE_NAME: TableName = TableName("chroma_core_sfacontroller");
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct SfaController {
+    pub id: i32,
+    pub index: i32,
+    pub enclosure_index: i32,
+    pub health_state: HealthState,
+    pub health_state_reason: String,
+    pub storage_system: String,
+}
+
+impl Name for SfaController {
+    fn table_name() -> TableName<'static> {
+        SFA_CONTROLLER_TABLE_NAME
+    }
+}
+
+impl Id for SfaController {
+    fn id(&self) -> i32 {
+        self.id
+    }
+}
+
+impl Label for SfaController {
+    fn label(&self) -> &str {
+        "SFA Controller"
+    }
+}
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for SfaController {
+    fn from(row: Row) -> Self {
+        Self {
+            id: row.get::<_, i32>("id"),
+            index: row.get::<_, i32>("index"),
+            enclosure_index: row.get::<_, i32>("enclosure_index"),
+            health_state: row
+                .get::<_, i16>("health_state")
+                .try_into()
+                .unwrap_or_default(),
+            health_state_reason: row.get("health_state_reason"),
+            storage_system: row.get("storage_system"),
+        }
+    }
+}

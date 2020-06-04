@@ -13,7 +13,6 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RemoveField(model_name="sethostprofilejob", name="host",),
-        migrations.RemoveField(model_name="sethostprofilejob", name="job_ptr",),
         migrations.RemoveField(model_name="sethostprofilejob", name="server_profile",),
         migrations.RemoveField(model_name="managedhost", name="properties",),
         migrations.DeleteModel(name="SetHostProfileJob",),
