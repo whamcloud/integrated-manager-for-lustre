@@ -95,7 +95,11 @@ pub struct LustreFid {
 }
 impl fmt::Display for LustreFid {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[0x{:x}:0x{:x}:0x{:x}]", self.seq as u64, self.oid as u32, self.ver as u32)
+        write!(
+            f,
+            "[0x{:x}:0x{:x}:0x{:x}]",
+            self.seq as u64, self.oid as u32, self.ver as u32
+        )
     }
 }
 
@@ -114,12 +118,11 @@ impl From<Row> for FidTaskQueue {
         FidTaskQueue {
             id: row.get::<_, i32>("id"),
             fid: row.get("fid"),
-            data: serde_json::from_str(row.get::<_, &str>("data")).unwrap(),
+            data: row.get("data"),
             task_id: row.get::<_, i32>("task_id"),
         }
     }
 }
-
 
 /// Record from the `chroma_core_managedfilesystem` table
 #[derive(serde::Deserialize, Debug)]

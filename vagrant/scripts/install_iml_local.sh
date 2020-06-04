@@ -128,7 +128,7 @@ EOF
 rm -rf /tmp/{manager,agent}-rpms
 mkdir -p /tmp/{manager,agent}-rpms
 
-cp /tmp/iml/_topdir/RPMS/rust-iml-{action-runner,agent-comms,api,cli,mailbox,ntp,ostpool,postoffice,sfa,stats,device,warp-drive}-*.rpm /tmp/manager-rpms/
+cp /tmp/iml/_topdir/RPMS/rust-iml-{action-runner,agent-comms,api,cli,mailbox,ntp,ostpool,postoffice,sfa,stats,task-runner,device,warp-drive}-*.rpm /tmp/manager-rpms/
 cp /tmp/iml/_topdir/RPMS/python2-iml-manager-*.rpm /tmp/manager-rpms/
 cp /tmp/iml/_topdir/RPMS/rust-iml-agent-[0-9]*.rpm /tmp/agent-rpms
 cp /tmp/iml/chroma_support.repo /etc/yum.repos.d/

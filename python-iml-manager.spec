@@ -85,6 +85,7 @@ Requires:       rust-iml-gui >= 0.2.0
 Requires:       rust-iml-mailbox >= 0.3.0
 Requires:       rust-iml-ostpool >= 0.3.0
 Requires:       rust-iml-postoffice >= 0.3.0
+Requires:       rust-iml-task-runner >= 0.3.0
 Requires:       rust-iml-stats >= 0.3.0
 Requires:       rust-iml-warp-drive >= 0.3.0
 Requires:       rust-iml-device >= 0.3.0
