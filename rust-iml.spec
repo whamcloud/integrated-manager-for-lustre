@@ -193,6 +193,27 @@ systemctl preset iml-ostpool.service
 %{_bindir}/iml-ostpool
 %attr(0644,root,root)%{_unitdir}/iml-ostpool.service
 
+%package task-runner
+Summary: Dispatches and tracks Tasks to Client Workers
+License: MIT
+Group: System Environment/Libraries
+
+%description task-runner
+%{summary}
+
+%post task-runner
+systemctl preset iml-task-runner.service
+
+%preun task-runner
+%systemd_preun iml-task-runner.service
+
+%postun task-runner
+%systemd_postun_with_restart iml-task-runner.service
+
+%files task-runner
+%{_bindir}/iml-task-runner
+%attr(0644,root,root)%{_unitdir}/iml-task-runner.service
+
 %package stats
 Summary: Consumer of IML stats
 License: MIT

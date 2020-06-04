@@ -13,7 +13,7 @@ use iml_orm::{
     DbPool,
 };
 use iml_postgres::SharedClient;
-use iml_wire_types::TaskAction;
+use iml_wire_types::{db::FidTaskQueue, FidItem, TaskAction};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -75,15 +75,23 @@ async fn send_work(
 ) -> Result<(), error::ImlTaskRunnerError> {
     let taskargs: HashMap<String, String> = serde_json::from_value(task.args.clone())?;
 
+    tracing::debug!("send_work({}, {}, {})", &fqdn, &fsname, task.name);
+
     let mut c = shared_client.lock().await;
     let trans = c.transaction().await?;
     let sql = "DELETE FROM chroma_core_fidtaskqueue WHERE id in ( SELECT id FROM chroma_core_fidtaskqueue WHERE task_id = $1 LIMIT $2 SKIP LOCKED ) RETURNING *";
     let s = trans.prepare(sql).await?;
-    let _fidlist = trans.query(&s, &[&task.id, &FID_LIMIT]).await?;
+    let rowlist = trans.query(&s, &[&task.id, &FID_LIMIT]).await?;
 
-    // @@ convert fidlist (tokio_postgres::row::Row) to Vec<FidItem>
+    let fidlist = rowlist.into_iter().map(|row| {
+        let ft: FidTaskQueue = row.into();
+        FidItem {
+            fid: ft.fid.to_string(),
+            data: ft.data
+        }
+    }).collect();
 
-    let args = TaskAction(fsname, taskargs, vec![] /*@@*/);
+    let args = TaskAction(fsname, taskargs, fidlist);
 
     // send fids to actions runner
     for action in task.actions.iter() {

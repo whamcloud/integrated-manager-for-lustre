@@ -84,6 +84,43 @@ impl From<Row> for ContentTypeRecord {
     }
 }
 
+/// Record from the `lustre_fid` type
+#[cfg(feature = "postgres-interop")]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug, ToSql, FromSql)]
+#[postgres(name = "lustre_fid")]
+pub struct LustreFid {
+    pub seq: i64,
+    pub oid: i32,
+    pub ver: i32,
+}
+impl fmt::Display for LustreFid {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[0x{:x}:0x{:x}:0x{:x}]", self.seq as u64, self.oid as u32, self.ver as u32)
+    }
+}
+
+/// Record from the `chroma_core_fidtaskqueue` table
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
+pub struct FidTaskQueue {
+    pub id: i32,
+    pub fid: LustreFid,
+    pub data: serde_json::Value,
+    pub task_id: i32,
+}
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for FidTaskQueue {
+    fn from(row: Row) -> Self {
+        FidTaskQueue {
+            id: row.get::<_, i32>("id"),
+            fid: row.get("fid"),
+            data: serde_json::from_str(row.get::<_, &str>("data")).unwrap(),
+            task_id: row.get::<_, i32>("task_id"),
+        }
+    }
+}
+
+
 /// Record from the `chroma_core_managedfilesystem` table
 #[derive(serde::Deserialize, Debug)]
 pub struct FsRecord {
