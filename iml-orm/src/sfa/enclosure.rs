@@ -7,9 +7,10 @@ use crate::sfa::{EnclosureType, HealthState};
 use crate::{schema::chroma_core_sfaenclosure as se, Executable, Upserts};
 #[cfg(feature = "postgres-interop")]
 use diesel::{
-    self,
+    self, dsl,
     pg::{upsert::excluded, Pg},
-    ExpressionMethods as _, Queryable,
+    prelude::*,
+    Queryable,
 };
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
@@ -71,6 +72,12 @@ impl Queryable<se::SqlType, Pg> for SfaEnclosure {
 
 #[cfg(feature = "postgres-interop")]
 pub type Table = se::table;
+#[cfg(feature = "postgres-interop")]
+pub type WithIndexes = dsl::EqAny<se::index, Vec<i32>>;
+#[cfg(feature = "postgres-interop")]
+pub type WithStorageSystem<'a> = dsl::EqAny<se::storage_system, Vec<&'a str>>;
+#[cfg(feature = "postgres-interop")]
+pub type ByRecords<'a> = dsl::Filter<Table, dsl::And<WithIndexes, WithStorageSystem<'a>>>;
 
 #[cfg(feature = "postgres-interop")]
 impl SfaEnclosure {
@@ -90,7 +97,19 @@ impl SfaEnclosure {
                 se::enclosure_type.eq(excluded(se::enclosure_type)),
             ))
     }
-    pub fn batch_remove(xs: Vec<i32>) -> impl Executable {
-        diesel::delete(Self::all()).filter(se::index.eq_any(xs))
+    fn batch_delete_filter<'a>(xs: Vec<&'a Self>) -> ByRecords<'a> {
+        let (indexes, storage_systems): (Vec<_>, Vec<_>) = xs
+            .into_iter()
+            .map(|x| (x.index, x.storage_system.as_str()))
+            .unzip();
+
+        Self::all().filter(
+            se::index
+                .eq_any(indexes)
+                .and(se::storage_system.eq_any(storage_systems)),
+        )
+    }
+    pub fn batch_delete<'a>(xs: Vec<&'a Self>) -> impl Executable + 'a {
+        diesel::delete(Self::batch_delete_filter(xs))
     }
 }

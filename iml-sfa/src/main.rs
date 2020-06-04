@@ -8,7 +8,8 @@ use futures::{future, Future, TryFutureExt};
 use iml_orm::{
     sfa::{SfaClassError, SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem},
     tokio_diesel::{AsyncError, AsyncRunQueryDsl as _},
-    DbPool, GetChanges as _,
+    AsyncRunQueryDslPostgres, Changeable, DbPool, Executable, GetChanges as _, Identifiable,
+    Upserts,
 };
 use iml_tracing::tracing;
 use std::{convert::TryInto as _, time::Duration};
@@ -86,15 +87,37 @@ async fn main() -> Result<(), ImlSfaError> {
         tracing::trace!("SfaJobs {:?}", new_jobs);
         tracing::trace!("SfaPowerSupply {:?}", new_power_supplies);
 
-        let (enclosure_upsert, enclosure_remove) =
-            diff_enclosures(&new_enclosures, &old_enclosures, &pool);
+        let (enclosure_upsert, enclosure_remove) = diff_items(
+            &new_enclosures,
+            &old_enclosures,
+            &pool,
+            SfaEnclosure::batch_upsert,
+            SfaEnclosure::batch_delete,
+        );
 
-        let (drive_upsert, drive_remove) = diff_drives(&new_drives, &old_drives, &pool);
+        let (drive_upsert, drive_remove) = diff_items(
+            &new_drives,
+            &old_drives,
+            &pool,
+            SfaDiskDrive::batch_upsert,
+            SfaDiskDrive::batch_delete,
+        );
 
-        let (job_upsert, job_remove) = diff_jobs(&new_jobs, &old_jobs, &pool);
+        let (job_upsert, job_remove) = diff_items(
+            &new_jobs,
+            &old_jobs,
+            &pool,
+            SfaJob::batch_upsert,
+            SfaJob::batch_delete,
+        );
 
-        let (power_supply_upsert, power_supply_remove) =
-            diff_power_supplies(&new_power_supplies, &old_power_supplies, &pool);
+        let (power_supply_upsert, power_supply_remove) = diff_items(
+            &new_power_supplies,
+            &old_power_supplies,
+            &pool,
+            SfaPowerSupply::batch_upsert,
+            SfaPowerSupply::batch_delete,
+        );
 
         SfaStorageSystem::upsert(x).execute_async(&pool).await?;
 
@@ -124,20 +147,30 @@ async fn main() -> Result<(), ImlSfaError> {
     }
 }
 
-fn diff_enclosures<'a>(
-    new_enclosures: &'a Vec<SfaEnclosure>,
-    old_enclosures: &'a Vec<SfaEnclosure>,
+type UpsertFn<'a, T, R> = fn(Upserts<&'a T>) -> R;
+type DeleteFn<'a, T, R> = fn(Vec<&'a T>) -> R;
+
+fn diff_items<
+    'a,
+    T: Identifiable + Changeable,
+    R1: AsyncRunQueryDslPostgres + Executable + 'a,
+    R2: AsyncRunQueryDslPostgres + Executable + 'a,
+>(
+    new: &'a Vec<T>,
+    old: &'a Vec<T>,
     pool: &'a DbPool,
+    upsert_fn: UpsertFn<'a, T, R1>,
+    delete_fn: DeleteFn<'a, T, R2>,
 ) -> (
     impl Future<Output = Result<(), ImlSfaError>> + 'a,
     impl Future<Output = Result<(), ImlSfaError>> + 'a,
 ) {
-    let (upsert, remove) = new_enclosures.get_changes(&old_enclosures);
+    let (upsert, remove) = new.get_changes(&old);
 
     let upserts = if let Some(upsert) = upsert {
         tracing::debug!("{} changed Enclosures, performing Upsert", upsert.0.len());
         Either::Left(
-            SfaEnclosure::batch_upsert(upsert)
+            upsert_fn(upsert)
                 .execute_async(pool)
                 .map_ok(drop)
                 .err_into(),
@@ -147,136 +180,10 @@ fn diff_enclosures<'a>(
     };
 
     let removals = if let Some(remove) = remove {
-        tracing::debug!("{} removed Enclosures, performing Deletion", remove.0.len());
-        let indexes = remove.0.into_iter().map(|x| &x.index).copied().collect();
+        tracing::debug!("{} removed Items, performing Deletion", remove.0.len());
 
         Either::Left(
-            SfaEnclosure::batch_remove(indexes)
-                .execute_async(pool)
-                .map_ok(drop)
-                .err_into(),
-        )
-    } else {
-        Either::Right(future::ok(()))
-    };
-
-    (upserts, removals)
-}
-
-fn diff_drives<'a>(
-    new_drives: &'a Vec<SfaDiskDrive>,
-    old_drives: &'a Vec<SfaDiskDrive>,
-    pool: &'a DbPool,
-) -> (
-    impl Future<Output = Result<(), ImlSfaError>> + 'a,
-    impl Future<Output = Result<(), ImlSfaError>> + 'a,
-) {
-    let (upsert, remove) = new_drives.get_changes(&old_drives);
-
-    let upserts = if let Some(upsert) = upsert {
-        tracing::debug!("{} changed Drives, performing Upsert", upsert.0.len());
-
-        Either::Left(
-            SfaDiskDrive::batch_upsert(upsert)
-                .execute_async(pool)
-                .map_ok(drop)
-                .err_into(),
-        )
-    } else {
-        Either::Right(future::ok(()))
-    };
-
-    let removals = if let Some(remove) = remove {
-        tracing::debug!("{} removed Drives, performing Deletion", remove.0.len());
-
-        let indexes = remove.0.into_iter().map(|x| &x.index).copied().collect();
-
-        Either::Left(
-            SfaDiskDrive::batch_remove(indexes)
-                .execute_async(pool)
-                .map_ok(drop)
-                .err_into(),
-        )
-    } else {
-        Either::Right(future::ok(()))
-    };
-
-    (upserts, removals)
-}
-
-fn diff_jobs<'a>(
-    new_jobs: &'a Vec<SfaJob>,
-    old_jobs: &'a Vec<SfaJob>,
-    pool: &'a DbPool,
-) -> (
-    impl Future<Output = Result<(), ImlSfaError>> + 'a,
-    impl Future<Output = Result<(), ImlSfaError>> + 'a,
-) {
-    let (upsert, remove) = new_jobs.get_changes(&old_jobs);
-
-    let upserts = if let Some(upsert) = upsert {
-        tracing::debug!("{} changed Jobs, performing Upsert", upsert.0.len());
-        Either::Left(
-            SfaJob::batch_upsert(upsert)
-                .execute_async(pool)
-                .map_ok(drop)
-                .err_into(),
-        )
-    } else {
-        Either::Right(future::ok(()))
-    };
-
-    let removals = if let Some(remove) = remove {
-        tracing::debug!("{} removed Jobs, performing Deletion", remove.0.len());
-        let indexes = remove.0.into_iter().map(|x| &x.index).copied().collect();
-
-        Either::Left(
-            SfaJob::batch_remove(indexes)
-                .execute_async(pool)
-                .map_ok(drop)
-                .err_into(),
-        )
-    } else {
-        Either::Right(future::ok(()))
-    };
-
-    (upserts, removals)
-}
-
-fn diff_power_supplies<'a>(
-    new_power_supplies: &'a Vec<SfaPowerSupply>,
-    old_power_supplies: &'a Vec<SfaPowerSupply>,
-    pool: &'a DbPool,
-) -> (
-    impl Future<Output = Result<(), ImlSfaError>> + 'a,
-    impl Future<Output = Result<(), ImlSfaError>> + 'a,
-) {
-    let (upsert, remove) = new_power_supplies.get_changes(&old_power_supplies);
-
-    let upserts = if let Some(upsert) = upsert {
-        tracing::debug!(
-            "{} changed Power Supplies, performing Upsert",
-            upsert.0.len()
-        );
-        Either::Left(
-            SfaPowerSupply::batch_upsert(upsert)
-                .execute_async(pool)
-                .map_ok(drop)
-                .err_into(),
-        )
-    } else {
-        Either::Right(future::ok(()))
-    };
-
-    let removals = if let Some(remove) = remove {
-        tracing::debug!(
-            "{} removed Power Supplies, performing Deletion",
-            remove.0.len()
-        );
-        let indexes = remove.0.into_iter().map(|x| &x.index).copied().collect();
-
-        Either::Left(
-            SfaPowerSupply::batch_remove(indexes)
+            delete_fn(remove.0)
                 .execute_async(pool)
                 .map_ok(drop)
                 .err_into(),

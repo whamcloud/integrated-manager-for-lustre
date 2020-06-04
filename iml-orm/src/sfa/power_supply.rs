@@ -7,10 +7,23 @@ use crate::sfa::HealthState;
 use crate::{schema::chroma_core_sfapowersupply as sp, Executable, Upserts};
 #[cfg(feature = "postgres-interop")]
 use diesel::{
-    self,
+    self, dsl,
     pg::{upsert::excluded, Pg},
-    ExpressionMethods as _, Queryable,
+    prelude::*,
+    Queryable,
 };
+
+#[cfg(feature = "postgres-interop")]
+pub type Table = sp::table;
+#[cfg(feature = "postgres-interop")]
+pub type WithIndexes = dsl::EqAny<sp::index, Vec<i32>>;
+#[cfg(feature = "postgres-interop")]
+pub type WithStorageSystem<'a> = dsl::EqAny<sp::storage_system, Vec<&'a str>>;
+#[cfg(feature = "postgres-interop")]
+pub type WithEnclosureIndex = dsl::EqAny<sp::enclosure_index, Vec<i32>>;
+#[cfg(feature = "postgres-interop")]
+pub type ByRecords<'a> =
+    dsl::Filter<Table, dsl::And<WithEnclosureIndex, dsl::And<WithIndexes, WithStorageSystem<'a>>>>;
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
 #[cfg_attr(feature = "postgres-interop", derive(Insertable, AsChangeset))]
@@ -53,7 +66,7 @@ impl Queryable<sp::SqlType, Pg> for SfaPowerSupply {
 
 #[cfg(feature = "postgres-interop")]
 impl SfaPowerSupply {
-    pub fn all() -> sp::table {
+    pub fn all() -> Table {
         sp::table
     }
     pub fn batch_upsert(x: Upserts<&Self>) -> impl Executable + '_ {
@@ -67,7 +80,23 @@ impl SfaPowerSupply {
                 sp::position.eq(excluded(sp::position)),
             ))
     }
-    pub fn batch_remove(xs: Vec<i32>) -> impl Executable {
-        diesel::delete(Self::all()).filter(sp::index.eq_any(xs))
+    fn batch_delete_filter<'a>(xs: Vec<&'a Self>) -> ByRecords<'a> {
+        let (enclosure_indexes, b): (Vec<_>, Vec<_>) = xs
+            .into_iter()
+            .map(|x| (x.enclosure_index, (x.index, x.storage_system.as_str())))
+            .unzip();
+
+        let (indexes, storage_systems): (Vec<_>, Vec<_>) = b.into_iter().unzip();
+
+        Self::all().filter(
+            sp::enclosure_index.eq_any(enclosure_indexes).and(
+                sp::index
+                    .eq_any(indexes)
+                    .and(sp::storage_system.eq_any(storage_systems)),
+            ),
+        )
+    }
+    pub fn batch_delete<'a>(xs: Vec<&'a Self>) -> impl Executable + 'a {
+        diesel::delete(Self::batch_delete_filter(xs))
     }
 }
