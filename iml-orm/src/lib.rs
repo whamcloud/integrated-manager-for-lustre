@@ -6,7 +6,7 @@
 
 #[cfg(feature = "postgres-interop")]
 #[macro_use]
-extern crate diesel;
+pub extern crate diesel;
 
 #[cfg(feature = "postgres-interop")]
 pub mod models;
@@ -56,24 +56,39 @@ use warp::Filter;
 
 #[cfg(feature = "postgres-interop")]
 use diesel::{
-    query_builder::{QueryFragment, QueryId},
+    query_builder::QueryFragment,
+    query_dsl::load_dsl::ExecuteDsl,
     r2d2::{ConnectionManager, Pool},
     PgConnection,
 };
 #[cfg(feature = "postgres-interop")]
 use iml_manager_env::get_db_conn_string;
+#[cfg(feature = "postgres-interop")]
+use tokio_diesel::AsyncRunQueryDsl;
+
+#[cfg(feature = "postgres-interop")]
+pub trait PgQueryFragment: QueryFragment<diesel::pg::Pg> {}
+
+#[cfg(feature = "postgres-interop")]
+impl<T> PgQueryFragment for T where T: QueryFragment<diesel::pg::Pg> {}
+
+#[cfg(feature = "postgres-interop")]
+pub trait AsyncRunQueryDslPostgres: AsyncRunQueryDsl<diesel::PgConnection, DbPool> {}
+
+#[cfg(feature = "postgres-interop")]
+impl<T> AsyncRunQueryDslPostgres for T where T: AsyncRunQueryDsl<diesel::PgConnection, DbPool> {}
 
 #[cfg(feature = "postgres-interop")]
 /// Allows for a generic return type for Insert statements, that can be used in either a sync or async
 /// context.
 pub trait Executable:
-    RunQueryDsl<diesel::PgConnection> + QueryFragment<diesel::pg::Pg> + QueryId
+    RunQueryDsl<diesel::PgConnection> + ExecuteDsl<diesel::PgConnection, diesel::pg::Pg>
 {
 }
 
 #[cfg(feature = "postgres-interop")]
 impl<T> Executable for T where
-    T: RunQueryDsl<diesel::PgConnection> + QueryFragment<diesel::pg::Pg> + QueryId
+    T: RunQueryDsl<diesel::PgConnection> + ExecuteDsl<diesel::PgConnection, diesel::pg::Pg>
 {
 }
 

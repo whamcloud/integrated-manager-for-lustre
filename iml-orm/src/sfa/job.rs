@@ -7,10 +7,20 @@ use crate::sfa::{JobState, JobType, SubTargetType};
 use crate::{schema::chroma_core_sfajob as sj, Executable, Upserts};
 #[cfg(feature = "postgres-interop")]
 use diesel::{
-    self,
+    self, dsl,
     pg::{upsert::excluded, Pg},
-    ExpressionMethods as _, Queryable,
+    prelude::*,
+    Queryable,
 };
+
+#[cfg(feature = "postgres-interop")]
+pub type Table = sj::table;
+#[cfg(feature = "postgres-interop")]
+pub type WithIndexes = dsl::EqAny<sj::index, Vec<i32>>;
+#[cfg(feature = "postgres-interop")]
+pub type WithStorageSystem<'a> = dsl::EqAny<sj::storage_system, Vec<&'a str>>;
+#[cfg(feature = "postgres-interop")]
+pub type ByRecords<'a> = dsl::Filter<Table, dsl::And<WithIndexes, WithStorageSystem<'a>>>;
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
 #[cfg_attr(feature = "postgres-interop", derive(Insertable, AsChangeset))]
@@ -49,8 +59,20 @@ impl SfaJob {
                 sj::state.eq(excluded(sj::state)),
             ))
     }
-    pub fn batch_remove(xs: Vec<i32>) -> impl Executable {
-        diesel::delete(Self::all()).filter(sj::index.eq_any(xs))
+    fn batch_delete_filter<'a>(xs: Vec<&'a Self>) -> ByRecords<'a> {
+        let (indexes, storage_systems): (Vec<_>, Vec<_>) = xs
+            .into_iter()
+            .map(|x| (x.index, x.storage_system.as_str()))
+            .unzip();
+
+        Self::all().filter(
+            sj::index
+                .eq_any(indexes)
+                .and(sj::storage_system.eq_any(storage_systems)),
+        )
+    }
+    pub fn batch_delete<'a>(xs: Vec<&'a Self>) -> impl Executable + 'a {
+        diesel::delete(Self::batch_delete_filter(xs))
     }
 }
 
