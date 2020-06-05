@@ -173,51 +173,73 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pg_pool = pool::pool().await?;
     let activeclients = Arc::new(Mutex::new(HashSet::new()));
 
-    // Task Runner Loop
-    let mut interval = time::interval(Duration::from_secs(DELAY));
-    loop {
-        interval.tick().await;
+    // Single runner
+    let fut = async move  {
+        let workers = available_workers(&pool, activeclients.clone()).await?;
+        let worker = workers.first().unwrap();
+        let fqdn = worker_fqdn(&pool, &worker).await?;
+        let tasks = tasks_per_worker(&pool, &worker).await?;
+        let task = tasks.first().unwrap();
 
-        let workers = available_workers(&pool, activeclients.clone())
+        send_work(shared_client.clone(), fqdn, worker.filesystem.clone(), &task)
             .await
-            .unwrap_or(vec![]);
+            .map_err(|e| {
+                tracing::warn!(
+                    "send_work({}) failed {:?}",
+                    task.name,
+                    e
+                );
+                e
+            })
+    };
+            
+    tokio::spawn(fut);
 
-        tokio::spawn({
-            let shared_client = shared_client.clone();
-            try_join_all(workers.into_iter().map(|worker| {
-                let shared_client = shared_client.clone();
-                let fsname = worker.filesystem.clone();
-                let orm_pool = orm_pool.clone();
-                let activeclients = activeclients.clone();
+    Ok(())
+    // // Task Runner Loop
+    // let mut interval = time::interval(Duration::from_secs(DELAY));
+    // loop {
+    //     interval.tick().await;
 
-                async move {
-                    activeclients.lock().await.insert(worker.id);
-                    let tasks = tasks_per_worker(&pool, &worker).await?;
-                    let fqdn = worker_fqdn(&pool, &worker).await?;
+    //     let workers = available_workers(&pool, activeclients.clone())
+    //         .await
+    //         .unwrap_or(vec![]);
 
-                    let rc = try_join_all(tasks.into_iter().map(|task| {
-                        let pg_pool = pg_pool.clone();
-                        let orm_pool = orm_pool.clone();
-                        let fsname = fsname.clone();
-                        let fqdn = fqdn.clone();
-                        async move {
-                            send_work(shared_client.clone(), fqdn, fsname, &task)
-                                .await
-                                .map_err(|e| {
-                                    tracing::warn!(
-                                        "send_work({}) failed {:?}",
-                                        task.name,
-                                        e
-                                    );
-                                    e
-                                })
-                        }
-                    }))
-                    .await;
-                    activeclients.lock().await.remove(&worker.id);
-                    rc
-                }
-            }))
-        });
-    }
+    //     tokio::spawn({
+    //         let shared_client = shared_client.clone();
+    //         try_join_all(workers.into_iter().map(|worker| {
+    //             let shared_client = shared_client.clone();
+    //             let fsname = worker.filesystem.clone();
+    //             let pool = pool.clone();
+    //             let activeclients = activeclients.clone();
+
+    //             async move {
+    //                 activeclients.lock().await.insert(worker.id);
+    //                 let tasks = tasks_per_worker(&pool, &worker).await?;
+    //                 let fqdn = worker_fqdn(&pool, &worker).await?;
+
+    //                 let rc = try_join_all(tasks.into_iter().map(|task| {
+    //                     let shared_client = shared_client.clone();
+    //                     let fsname = fsname.clone();
+    //                     let fqdn = fqdn.clone();
+    //                     async move {
+    //                         send_work(shared_client.clone(), fqdn, fsname, &task)
+    //                             .await
+    //                             .map_err(|e| {
+    //                                 tracing::warn!(
+    //                                     "send_work({}) failed {:?}",
+    //                                     task.name,
+    //                                     e
+    //                                 );
+    //                                 e
+    //                             })
+    //                     }
+    //                 }))
+    //                 .await;
+    //                 activeclients.lock().await.remove(&worker.id);
+    //                 rc
+    //             }
+    //         }))
+    //     });
+    // }
 }
