@@ -611,7 +611,7 @@ impl Default for ClusterConfig {
             client: vec!["c1"],
             client_ips: vec!["10.73.10.31"],
             iscsi: "iscsi",
-            lustre_version: "2.12.4",
+            lustre_version: "2.12.5",
             server_map: vec![
                 ("adm", "10.73.10.10"),
                 ("mds1", "10.73.10.11"),
