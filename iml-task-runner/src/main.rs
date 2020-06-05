@@ -93,11 +93,7 @@ async fn send_work(
         rowlist.len()
     );
 
-    if rowlist.is_empty() {
-        return trans.commit().err_into().await;
-    }
-
-    let fidlist: Vec<FidItem> = rowlist
+    let fidlist = rowlist
         .into_iter()
         .map(|row| {
             let ft: FidTaskQueue = row.into();
@@ -107,19 +103,6 @@ async fn send_work(
             }
         })
         .collect();
-
-    if task.single_runner && task.running_on_id.is_none() {
-        tracing::debug!(
-            "Setting Task {} ({}) Running to host {} ({})",
-            task.name,
-            task.id,
-            fqdn,
-            host_id
-        );
-        let sql = "UPDATE chroma_core_task SET running_on_id = $1 WHERE id = $2";
-        let s = trans.prepare(sql).await?;
-        trans.execute(&s, &[&host_id, &task.id]).await?;
-    }
 
     let mut completed = fidlist.len();
     let mut failed = 0;
@@ -195,26 +178,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         interval.tick().await;
 
-        let workers = available_workers(&orm_pool, activeclients.clone())
+        let workers = available_workers(&pool, activeclients.clone())
             .await
             .unwrap_or(vec![]);
-        activeclients
-            .lock()
-            .await
-            .extend(workers.iter().map(|w| w.id));
 
         tokio::spawn({
-            let pg_pool = pg_pool.clone();
+            let shared_client = shared_client.clone();
             try_join_all(workers.into_iter().map(|worker| {
-                let pg_pool = pg_pool.clone();
+                let shared_client = shared_client.clone();
                 let fsname = worker.filesystem.clone();
                 let orm_pool = orm_pool.clone();
                 let activeclients = activeclients.clone();
 
                 async move {
-                    let tasks = tasks_per_worker(&orm_pool, &worker).await?;
-                    let fqdn = worker_fqdn(&orm_pool, &worker).await?;
-                    let host_id = worker.host_id;
+                    activeclients.lock().await.insert(worker.id);
+                    let tasks = tasks_per_worker(&pool, &worker).await?;
+                    let fqdn = worker_fqdn(&pool, &worker).await?;
 
                     let rc = try_join_all(tasks.into_iter().map(|task| {
                         let pg_pool = pg_pool.clone();
@@ -222,10 +201,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let fsname = fsname.clone();
                         let fqdn = fqdn.clone();
                         async move {
-                            send_work(orm_pool, pg_pool.get().await?, fqdn, fsname, &task, host_id)
+                            send_work(shared_client.clone(), fqdn, fsname, &task)
                                 .await
                                 .map_err(|e| {
-                                    tracing::warn!("send_work({}) failed {:?}", task.name, e);
+                                    tracing::warn!(
+                                        "send_work({}) failed {:?}",
+                                        task.name,
+                                        e
+                                    );
                                     e
                                 })
                         }
