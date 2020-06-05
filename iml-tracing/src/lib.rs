@@ -24,7 +24,7 @@ pub fn init() {
     tokio::spawn(async move {
         let mut stream = signal(SignalKind::user_defined1()).expect("Could not listen to SIGUSR1");
 
-        while let Some(_) = stream.recv().await {
+        while stream.recv().await.is_some() {
             handle2.reload("info").unwrap();
         }
     });
@@ -32,7 +32,7 @@ pub fn init() {
     tokio::spawn(async move {
         let mut stream = signal(SignalKind::user_defined2()).expect("Could not listen to SIGUSR2");
 
-        while let Some(_) = stream.recv().await {
+        while stream.recv().await.is_some() {
             handle.reload("debug").unwrap();
         }
     });

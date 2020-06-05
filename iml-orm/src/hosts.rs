@@ -27,6 +27,6 @@ impl ChromaCoreManagedhost {
     pub fn is_setup(&self) -> bool {
         ["monitored", "managed", "working"]
             .iter()
-            .any(|&x| x == &self.state)
+            .any(|&x| x == self.state)
     }
 }

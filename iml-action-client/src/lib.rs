@@ -58,7 +58,7 @@ pub fn invoke_rust_agent(
 
         match either {
             Either::Left((x, f)) => {
-                if let Err(_) = x {
+                if x.is_err() {
                     return f.await;
                 }
                 let cancel = ActionType::Remote((
