@@ -93,9 +93,14 @@ impl DaemonPlugin for Devices {
             {
                 let mut state = state.lock().await;
 
-                x.map(|x| match serde_json::from_value(x).unwrap() {
-                    MyOutput::Device(d) => state.device = Some(d),
-                    MyOutput::Command(c) => state.command_buffer.push(c),
+                x.map(|x| {
+                    let values: Vec<_> = serde_json::from_value(x).unwrap();
+                    for v in values {
+                        match v {
+                            MyOutput::Device(d) => state.device = Some(d),
+                            MyOutput::Command(c) => state.command_buffer.push(c),
+                        }
+                    }
                 });
             }
 
@@ -112,9 +117,14 @@ impl DaemonPlugin for Devices {
                                 tracing::debug!("marking pending (is none: {}) ", x.is_none());
 
                                 state.status = Status::Pending;
-                                x.map(|x| match serde_json::from_value(x).unwrap() {
-                                    MyOutput::Device(d) => state.device = Some(d),
-                                    MyOutput::Command(c) => state.command_buffer.push(c),
+                                x.map(|x| {
+                                    let values: Vec<_> = serde_json::from_value(x).unwrap();
+                                    for v in values {
+                                        match v {
+                                            MyOutput::Device(d) => state.device = Some(d),
+                                            MyOutput::Command(c) => state.command_buffer.push(c),
+                                        }
+                                    }
                                 });
 
                                 tracing::debug!(
