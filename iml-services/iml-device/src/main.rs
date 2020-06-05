@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use device_types::devices::Device;
+use device_types::{devices::Device, Command};
 use diesel::{self, pg::upsert::excluded, prelude::*};
 use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
 use iml_device::{
@@ -106,39 +106,34 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     tokio::spawn(server);
 
-    use device_types::MyOutput;
-    let mut s = consume_data::<Vec<MyOutput>>("rust_agent_device_rx");
+    let mut s = consume_data::<(Device, Vec<Command>)>("rust_agent_device_rx");
 
     while let Some((f, output)) = s.try_next().await? {
-        for i in output {
-            match i {
-                MyOutput::Device(d) => {
-                    let mut cache = cache2.lock().await;
+        let (d, cs) = output;
 
-                    cache.insert(f.clone(), d.clone());
+        let mut cache = cache2.lock().await;
 
-                    let device_to_insert = NewChromaCoreDevice {
-                        fqdn: f.to_string(),
-                        devices: serde_json::to_value(d)
-                            .expect("Could not convert incoming Devices to JSON."),
-                    };
+        cache.insert(f.clone(), d.clone());
 
-                    let new_device = diesel::insert_into(table)
-                        .values(device_to_insert)
-                        .on_conflict(fqdn)
-                        .do_update()
-                        .set(devices.eq(excluded(devices)))
-                        .get_result_async::<ChromaCoreDevice>(&pool)
-                        .await
-                        .expect("Error saving new device");
+        let device_to_insert = NewChromaCoreDevice {
+            fqdn: f.to_string(),
+            devices: serde_json::to_value(d).expect("Could not convert incoming Devices to JSON."),
+        };
 
-                    tracing::info!("Inserted device from host {}", new_device.fqdn);
-                    tracing::trace!("Inserted device {:?}", new_device);
-                }
-                MyOutput::Command(c) => {
-                    tracing::info!("Got command {:?}", c);
-                }
-            }
+        let new_device = diesel::insert_into(table)
+            .values(device_to_insert)
+            .on_conflict(fqdn)
+            .do_update()
+            .set(devices.eq(excluded(devices)))
+            .get_result_async::<ChromaCoreDevice>(&pool)
+            .await
+            .expect("Error saving new device");
+
+        tracing::info!("Inserted device from host {}", new_device.fqdn);
+        tracing::trace!("Inserted device {:?}", new_device);
+
+        for c in cs {
+            tracing::info!("Got command {:?}", c);
         }
     }
 

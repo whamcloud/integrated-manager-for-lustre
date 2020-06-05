@@ -7,7 +7,7 @@ use crate::{
     daemon_plugins::{DaemonPlugin, Output},
 };
 use async_trait::async_trait;
-use device_types::MyOutput;
+use device_types::{devices::Device, Command, MyOutput};
 use futures::{
     future, lock::Mutex, Future, FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
@@ -31,23 +31,34 @@ fn device_stream() -> impl Stream<Item = Result<String, ImlAgentError>> {
         .try_flatten_stream()
 }
 
-#[derive(Eq, PartialEq)]
-enum State {
+#[derive(Debug, Eq, PartialEq)]
+enum Status {
     Pending,
     Sent,
+}
+
+#[derive(Debug)]
+struct State {
+    device: Option<Device>,
+    command_buffer: Vec<Command>,
+    status: Status,
 }
 
 pub fn create() -> impl DaemonPlugin {
     Devices {
         trigger: None,
-        state: Arc::new(Mutex::new((Vec::new(), State::Sent))),
+        state: Arc::new(Mutex::new(State {
+            device: None,
+            command_buffer: Vec::new(),
+            status: Status::Sent,
+        })),
     }
 }
 
 #[derive(Debug)]
 pub struct Devices {
     trigger: Option<Trigger>,
-    state: Arc<Mutex<(Vec<Output>, State)>>,
+    state: Arc<Mutex<State>>,
 }
 
 #[async_trait]
@@ -80,9 +91,12 @@ impl DaemonPlugin for Devices {
             }?;
 
             {
-                let mut lock = state.lock().await;
+                let mut state = state.lock().await;
 
-                lock.0.push(x.clone());
+                x.map(|x| match serde_json::from_value(x).unwrap() {
+                    MyOutput::Device(d) => state.device = Some(d),
+                    MyOutput::Command(c) => state.command_buffer.push(c),
+                });
             }
 
             {
@@ -93,14 +107,20 @@ impl DaemonPlugin for Devices {
                             let state = Arc::clone(&state);
 
                             async move {
-                                let mut lock = state.lock().await;
+                                let mut state = state.lock().await;
 
                                 tracing::debug!("marking pending (is none: {}) ", x.is_none());
 
-                                lock.1 = State::Pending;
-                                lock.0.push(x);
+                                state.status = Status::Pending;
+                                x.map(|x| match serde_json::from_value(x).unwrap() {
+                                    MyOutput::Device(d) => state.device = Some(d),
+                                    MyOutput::Command(c) => state.command_buffer.push(c),
+                                });
 
-                                tracing::debug!("{} items buffered after push", lock.0.len());
+                                tracing::debug!(
+                                    "{} items buffered after push",
+                                    state.command_buffer.len()
+                                );
 
                                 Ok(())
                             }
@@ -114,37 +134,18 @@ impl DaemonPlugin for Devices {
             }
 
             {
-                let mut lock = state.lock().await;
+                let mut state = state.lock().await;
 
                 tracing::debug!(
-                    "{} items buffered before pop (in create_session)",
-                    lock.0.len()
+                    "Device is some: {}, {} items buffered before pop (in create_session)",
+                    state.device.is_some(),
+                    state.command_buffer.len()
                 );
-                let buffer = std::mem::replace(&mut lock.0, Vec::new());
-                let deserialized: Vec<Vec<MyOutput>> = buffer
-                    .into_iter()
-                    .filter_map(|x| x.map(|s| serde_json::from_value(s).unwrap()))
-                    .collect();
+                let buffer = std::mem::replace(&mut state.command_buffer, Vec::new());
+                let to_be_sent = (state.device.take().unwrap(), buffer);
 
-                let mut flattened = Vec::new();
-                for i in deserialized {
-                    flattened.extend(i);
-                }
-
-                tracing::debug!("{} items after deserializing", flattened.len());
-                for i in flattened.iter() {
-                    match i {
-                        MyOutput::Device(_) => tracing::debug!("Device"),
-                        MyOutput::Command(_) => tracing::debug!("Command"),
-                    }
-                }
-
-                if flattened.is_empty() {
-                    Ok(None)
-                } else {
-                    let serialized = serde_json::to_value(&flattened).unwrap();
-                    Ok(Some(serialized))
-                }
+                let serialized = serde_json::to_value(&to_be_sent).unwrap();
+                Ok(Some(serialized))
             }
         })
     }
@@ -154,37 +155,22 @@ impl DaemonPlugin for Devices {
         let state = Arc::clone(&self.state);
 
         async move {
-            let mut lock = state.lock().await;
+            let mut state = state.lock().await;
 
-            if lock.1 == State::Pending {
+            if state.status == Status::Pending {
                 tracing::debug!("Sending new value");
-                lock.1 = State::Sent;
+                state.status = Status::Sent;
 
-                tracing::debug!("{} items buffered before pop", lock.0.len());
-                let buffer = std::mem::replace(&mut lock.0, Vec::new());
-                let deserialized: Vec<Vec<MyOutput>> = buffer
-                    .into_iter()
-                    .filter_map(|x| x.map(|s| serde_json::from_value(s).unwrap()))
-                    .collect();
-                let mut flattened = Vec::new();
-                for i in deserialized {
-                    flattened.extend(i);
-                }
+                tracing::debug!(
+                    "Device is some: {}, {} items buffered before pop (in create_session)",
+                    state.device.is_some(),
+                    state.command_buffer.len()
+                );
+                let buffer = std::mem::replace(&mut state.command_buffer, Vec::new());
+                let to_be_sent = (state.device.take().unwrap(), buffer);
 
-                tracing::debug!("{} items after deserializing", flattened.len());
-                for i in flattened.iter() {
-                    match i {
-                        MyOutput::Device(_) => tracing::debug!("Device"),
-                        MyOutput::Command(_) => tracing::debug!("Command"),
-                    }
-                }
-
-                if flattened.is_empty() {
-                    Ok(None)
-                } else {
-                    let serialized = serde_json::to_value(&flattened).unwrap();
-                    Ok(Some(serialized))
-                }
+                let serialized = serde_json::to_value(&to_be_sent).unwrap();
+                Ok(Some(serialized))
             } else {
                 Ok(None)
             }
