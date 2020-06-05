@@ -12,8 +12,9 @@ use iml_wire_types::{
         AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
         CorosyncConfigurationRecord, FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord,
         ManagedTargetMountRecord, ManagedTargetRecord, Name, NotDeleted, OstPoolOstsRecord,
-        OstPoolRecord, PacemakerConfigurationRecord, SfaDiskDrive, SfaEnclosure, SfaJob,
-        SfaPowerSupply, SfaStorageSystem, StratagemConfiguration, VolumeNodeRecord, VolumeRecord,
+        OstPoolRecord, PacemakerConfigurationRecord, SfaController, SfaDiskDrive, SfaEnclosure,
+        SfaJob, SfaPowerSupply, SfaStorageSystem, StratagemConfiguration, VolumeNodeRecord,
+        VolumeRecord,
     },
     warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam,
@@ -168,6 +169,12 @@ pub async fn db_record_to_change_record(
             (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::SfaPowerSupply(x.id()))),
             (MessageType::Insert, x) | (MessageType::Update, x) => {
                 Ok(RecordChange::Update(Record::SfaPowerSupply(x)))
+            }
+        },
+        DbRecord::SfaController(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::SfaController(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::SfaController(x)))
             }
         },
         DbRecord::LnetConfiguration(x) => match (msg_type, x) {
@@ -371,6 +378,7 @@ pub async fn populate_from_db(
         client.prepare(&format!("select * from {}", SfaDiskDrive::table_name())),
         client.prepare(&format!("select * from {}", SfaJob::table_name())),
         client.prepare(&format!("select * from {}", SfaPowerSupply::table_name())),
+        client.prepare(&format!("select * from {}", SfaController::table_name())),
     ])
     .await?;
 
@@ -405,6 +413,8 @@ pub async fn populate_from_db(
 
     let sfa_power_supply = into_row(client.query_raw(&stmts[17], iter::empty()).await?).await?;
 
+    let sfa_controller = into_row(client.query_raw(&stmts[18], iter::empty()).await?).await?;
+
     let mut cache = shared_api_cache.lock().await;
 
     cache.managed_target_mount = managed_target_mount;
@@ -425,6 +435,7 @@ pub async fn populate_from_db(
     cache.sfa_disk_drive = sfa_disk_drive;
     cache.sfa_job = sfa_job;
     cache.sfa_power_supply = sfa_power_supply;
+    cache.sfa_controller = sfa_controller;
 
     tracing::debug!("Populated from db");
 

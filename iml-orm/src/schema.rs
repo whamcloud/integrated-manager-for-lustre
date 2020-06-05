@@ -1071,6 +1071,17 @@ table! {
 }
 
 table! {
+    chroma_core_sfacontroller (id) {
+        id -> Int4,
+        index -> Int4,
+        enclosure_index -> Int4,
+        health_state -> Int2,
+        health_state_reason -> Text,
+        storage_system -> Text,
+    }
+}
+
+table! {
     chroma_core_sfadiskdrive (id) {
         id -> Int4,
         index -> Int4,
@@ -1998,6 +2009,7 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_setuphostjob,
     chroma_core_setupmonitoredhostjob,
     chroma_core_setupworkerjob,
+    chroma_core_sfacontroller,
     chroma_core_sfadiskdrive,
     chroma_core_sfadiskslot,
     chroma_core_sfaenclosure,
