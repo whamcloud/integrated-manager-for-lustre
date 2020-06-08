@@ -77,8 +77,8 @@ async fn send_work(
 
     tracing::debug!("send_work({}, {}, {})", &fqdn, &fsname, task.name);
 
-    let trans = client.transaction().await?;
-
+    let mut c = shared_client.lock().await;
+    let trans = c.transaction().await?;
     let sql = "DELETE FROM chroma_core_fidtaskqueue WHERE id in ( SELECT id FROM chroma_core_fidtaskqueue WHERE task_id = $1 LIMIT $2 FOR UPDATE SKIP LOCKED ) RETURNING *";
     let s = trans.prepare(sql).await?;
 
