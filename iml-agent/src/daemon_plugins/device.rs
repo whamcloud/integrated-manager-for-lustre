@@ -7,7 +7,7 @@ use crate::{
     daemon_plugins::{DaemonPlugin, Output},
 };
 use async_trait::async_trait;
-use device_types::{devices::Device, Command, MyOutput};
+use device_types::{devices::Device, Command, Output as DeviceOutput};
 use futures::{
     future, lock::Mutex, Future, FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
@@ -97,8 +97,8 @@ impl DaemonPlugin for Devices {
                     let values: Vec<_> = serde_json::from_value(x).unwrap();
                     for v in values {
                         match v {
-                            MyOutput::Device(d) => state.device = Some(d),
-                            MyOutput::Command(c) => state.command_buffer.push(c),
+                            DeviceOutput::Device(d) => state.device = Some(d),
+                            DeviceOutput::Command(c) => state.command_buffer.push(c),
                         }
                     }
                 });
@@ -121,8 +121,10 @@ impl DaemonPlugin for Devices {
                                     let values: Vec<_> = serde_json::from_value(x).unwrap();
                                     for v in values {
                                         match v {
-                                            MyOutput::Device(d) => state.device = Some(d),
-                                            MyOutput::Command(c) => state.command_buffer.push(c),
+                                            DeviceOutput::Device(d) => state.device = Some(d),
+                                            DeviceOutput::Command(c) => {
+                                                state.command_buffer.push(c)
+                                            }
                                         }
                                     }
                                 });
