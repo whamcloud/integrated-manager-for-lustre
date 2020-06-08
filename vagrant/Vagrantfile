@@ -790,13 +790,6 @@ Vagrant.configure('2') do |config|
 
       configure_docker_network c
 
-      configure_lustre_network c
-
-      c.vm.provision 'install-iml-local',
-            type: 'shell',
-            run: 'never',
-            path: './scripts/install_iml_local_agent.sh'
-
       c.vm.provision 'install-lustre-client',
                      type: 'shell',
                      run: 'never',
@@ -804,6 +797,14 @@ Vagrant.configure('2') do |config|
                             yum-config-manager --add-repo https://downloads.whamcloud.com/public/lustre/lustre-#{LUSTRE}/el7/client/
                             yum install -y --nogpgcheck lustre-client
                      SHELL
+
+      configure_lustre_network c
+
+      c.vm.provision 'install-iml-local',
+            type: 'shell',
+            run: 'never',
+            path: './scripts/install_iml_local_agent.sh'
+
     end
   end
 end
