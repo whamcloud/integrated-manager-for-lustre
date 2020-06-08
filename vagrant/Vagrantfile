@@ -99,7 +99,7 @@ Vagrant.configure('2') do |config|
                        destination: "/tmp/99-external-storage.rules"
 
     iscsi.vm.provision 'udev-trigger', type: 'shell', inline: <<-SHELL
-      mv /tmp/99-external-storage.rules /etc/udev/rules.d/ 
+      mv /tmp/99-external-storage.rules /etc/udev/rules.d/
       udevadm trigger --subsystem-match=block
     SHELL
 
@@ -638,7 +638,7 @@ Vagrant.configure('2') do |config|
                          run: 'never',
                          path: 'scripts/create_ldiskfs_lvm_oss_ha_setup.sh',
                          args: [ "{a..e} {k..o}", 0, VBOX_USER, VBOX_PASSWD, VBOX_SSHKEY ]
-                         
+
       else
         oss.vm.provision 'create-pools',
                          type: 'shell',
@@ -799,7 +799,7 @@ Vagrant.configure('2') do |config|
 
       c.vm.provision 'install-lustre-client',
                      type: 'shell',
-                     run: 'never',
+                     run: 'once',
                      inline: <<-SHELL
                             yum-config-manager --add-repo https://downloads.whamcloud.com/public/lustre/lustre-#{LUSTRE}/el7/client/
                             yum install -y --nogpgcheck lustre-client
@@ -847,7 +847,7 @@ end
 
 def provision_mgmt_net(config, num)
   interface_name = if OS.windows? then 'VirtualBox Host-Only Ethernet Adapter' else 'vboxnet0' end
-  
+
   config.vm.network 'private_network',
                     ip: "#{MGMT_NET_PFX}.#{num}",
                     netmask: '255.255.255.0',
