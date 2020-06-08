@@ -4,4 +4,5 @@
 
 pub mod action_purge;
 pub mod action_warning;
+pub mod action_filesync;
 pub mod server;

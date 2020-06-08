@@ -212,6 +212,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         interval.tick().await;
 
+	tracing::info!("tick");
+		
         let workers = available_workers(&orm_pool, activeclients.clone())
             .await
             .unwrap_or_default();
@@ -221,19 +223,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await
             .extend(workers.iter().map(|w| w.id));
 
+	tracing::info!("workers: {:?}", workers);
+	
         tokio::spawn({
             let pg_pool = pg_pool.clone();
+	    tracing::info!("spawn");
             try_join_all(workers.into_iter().map(|worker| {
                 let pg_pool = pg_pool.clone();
                 let fsname = worker.filesystem.clone();
                 let orm_pool = orm_pool.clone();
                 let activeclients = activeclients.clone();
 
+		tracing::info!("try_join_all");
+		
                 async move {
                     let tasks = tasks_per_worker(&orm_pool, &worker).await?;
                     let fqdn = worker_fqdn(&orm_pool, &worker).await?;
                     let host_id = worker.host_id;
-
+		    tracing::info!("fqdn {} id {} tasks {:?}", fqdn, host_id, tasks);
+		    
                     let rc = try_join_all(tasks.into_iter().map(|task| {
                         let pg_pool = pg_pool.clone();
                         let orm_pool = orm_pool.clone();

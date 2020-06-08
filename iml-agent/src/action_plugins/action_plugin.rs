@@ -7,7 +7,7 @@ use crate::action_plugins::{
     ltuer, lustre,
     ntp::{action_configure, is_ntp_configured},
     ostpool, package, postoffice,
-    stratagem::{action_purge, action_warning, server},
+    stratagem::{action_purge, action_warning, action_filesync, server},
 };
 use iml_util::action_plugins;
 use iml_wire_types::ActionName;
@@ -28,7 +28,11 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("package_installed", package::installed)
         .add_plugin("package_version", package::version)
         .add_plugin("start_scan_stratagem", server::trigger_scan)
+        .add_plugin("start_scan_stratagem_single", server::trigger_scan_single)
         .add_plugin("stream_fidlists_stratagem", server::stream_fidlists)
+        .add_plugin("action_warning_stratagem", action_warning::read_mailbox)
+        .add_plugin("action_purge_stratagem", action_purge::read_mailbox)
+	.add_plugin("action_filesync_stratagem", action_filesync::read_mailbox)
         .add_plugin("action_check_ha", high_availability::check_ha)
         .add_plugin("action_check_stonith", check_stonith::check_stonith)
         .add_plugin("get_kernel", check_kernel::get_kernel)
@@ -63,7 +67,8 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("create_ltuer_conf", ltuer::create_ltuer_conf)
         // Task Actions
         .add_plugin("action.stratagem.warning", action_warning::process_fids)
-        .add_plugin("action.stratagem.purge", action_purge::process_fids);
+        .add_plugin("action.stratagem.purge", action_purge::process_fids)
+        .add_plugin("action.stratagem.filesync", action_filesync::process_fids);
 
     info!("Loaded the following ActionPlugins:");
 
