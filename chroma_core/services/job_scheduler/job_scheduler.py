@@ -1898,7 +1898,6 @@ class JobScheduler(object):
                 "state": "created",
                 "keep_failed": False,
                 "actions": ["stratagem.filesync"],
-                "args": {"remote": stratagem_data.get("remote"), "expression": stratagem_data.get("expression"), "policy": stratagem_data.get("policy")},
             }
             task = Task.objects.create(**task_data)
 
