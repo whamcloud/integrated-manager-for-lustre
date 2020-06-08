@@ -133,7 +133,7 @@ async fn main() -> Result<(), ImlDeviceError> {
         tracing::trace!("Inserted device {:?}", new_device);
 
         for c in cs {
-            tracing::info!("Got command {:?}", c);
+            tracing::trace!("Got command {:?}", c);
         }
     }
 

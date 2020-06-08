@@ -149,7 +149,7 @@ impl DaemonPlugin for Devices {
                 let mut state = state.lock().await;
 
                 tracing::debug!(
-                    "Device is some: {}, {} items buffered before pop (in create_session)",
+                    "Device is some: {}, {} items buffered before send (in create_session)",
                     state.device.is_some(),
                     state.command_buffer.len()
                 );
@@ -174,7 +174,7 @@ impl DaemonPlugin for Devices {
                 state.status = Status::Sent;
 
                 tracing::debug!(
-                    "Device is some: {}, {} items buffered before pop (in create_session)",
+                    "Device is some: {}, {} items buffered before send (in create_session)",
                     state.device.is_some(),
                     state.command_buffer.len()
                 );
