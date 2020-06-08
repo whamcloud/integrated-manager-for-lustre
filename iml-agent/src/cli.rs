@@ -8,9 +8,9 @@ use iml_agent::action_plugins::{
     ntp::{action_configure, is_ntp_configured},
     ostpool, package, postoffice,
     stratagem::{
-        action_purge, action_warning,
+        action_purge, action_warning, action_filesync,
         server::{
-            generate_cooked_config, stream_fidlists, trigger_scan, Counter, StratagemCounters,
+            generate_cooked_config, stream_fidlists, trigger_scan, trigger_scan_single, Counter, StratagemCounters,
         },
     },
 };
@@ -232,6 +232,17 @@ pub enum StratagemClientCommand {
     Purge {
         #[structopt(flatten)]
         fidopts: FidInput,
+    },
+
+    #[structopt(name = "filesync")]
+    /// Run FileSync action
+    FileSync {
+	#[structopt(short = "d")]
+	/// destination path
+	target_fs: String,
+
+	#[structopt(flatten)]
+	fidopts: FidInput,
     },
 }
 
@@ -509,6 +520,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     exit(exitcode::IOERR);
                 }
             }
+	    StratagemClientCommand::FileSync {
+		target_fs,
+		fidopts,
+	    } => {
+		let device = fidopts.fsname;
+		let dest_str = target_fs;
+
+		if action_filesync::filesync_files(&device, fidopts.fidlist, dest_str).is_err() {
+		    exit(exitcode::IOERR);
+		}
+	    }
         },
         App::StratagemServer { command } => match command {
             StratagemCommand::Scan {

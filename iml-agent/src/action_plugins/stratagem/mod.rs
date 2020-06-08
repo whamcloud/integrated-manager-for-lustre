@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+pub mod action_filesync;
 pub mod action_mirror;
 pub mod action_purge;
 pub mod action_warning;
