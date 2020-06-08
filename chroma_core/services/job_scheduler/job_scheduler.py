@@ -1890,6 +1890,19 @@ class JobScheduler(object):
 
             run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
 
+        if stratagem_data.get("filesync"):
+            task_data = {
+                "filesystem": filesystem,
+                "name": "{}-filesync-filesync".format(unique_id),
+                "start": django.utils.timezone.now(),
+                "state": "created",
+                "keep_failed": False,
+                "actions": ["stratagem.filesync"],
+            }
+            task = Task.objects.create(**task_data)
+
+            run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
+
         run_stratagem_list += map(
             lambda mdt_id: {
                 "class_name": "RunStratagemJob",

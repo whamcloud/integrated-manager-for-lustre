@@ -381,6 +381,7 @@ class RunStratagemStep(Step):
             rule_map = {
                 "fids_expiring_soon": report_duration is not None and "warn_fids",
                 "fids_expired": purge_duration is not None and "purge_fids",
+                "filesync": mount_point is not None and "filesync",
             }
 
             groups = ["size_distribution", "user_distribution"] + filter(bool, rule_map.values())
@@ -407,6 +408,17 @@ class RunStratagemStep(Step):
                                 "expression": "&& != type S_IFDIR < atime - sys_time {}".format(purge_duration),
                                 "argument": "fids_expired",
                                 "counter_name": "fids_expired",
+                            }
+                        ],
+                    },
+                    {
+                        "name": "filesync",
+                        "rules": [
+                            {
+                                "action": "LAT_SHELL_CMD_FID",
+                                "expression": "&& <= size 1048576 != type S_IFDIR",
+                                "argument": "filesync",
+                                "counter_name": "filesync",
                             }
                         ],
                     },
