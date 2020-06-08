@@ -12,6 +12,7 @@ use iml_orm::{
     tokio_diesel::{AsyncRunQueryDsl as _, OptionalExtension as _},
     DbPool,
 };
+use iml_postgres::pool;
 use iml_postgres::SharedClient;
 use iml_wire_types::{db::FidTaskQueue, AgentResult, FidError, FidItem, TaskAction};
 use std::{
@@ -77,8 +78,7 @@ async fn send_work(
 
     tracing::debug!("send_work({}, {}, {})", &fqdn, &fsname, task.name);
 
-    let mut c = shared_client.lock().await;
-    let trans = c.transaction().await?;
+    let trans = client.transaction().await?;
 
     let sql = "DELETE FROM chroma_core_fidtaskqueue WHERE id in ( SELECT id FROM chroma_core_fidtaskqueue WHERE task_id = $1 LIMIT $2 FOR UPDATE SKIP LOCKED ) RETURNING *";
     let s = trans.prepare(sql).await?;
@@ -188,22 +188,16 @@ async fn send_work(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    let (db_client, conn) = iml_postgres::connect().await?;
-    let shared_client = iml_postgres::shared_client(db_client);
-    let pool = iml_orm::pool()?;
+    let orm_pool = iml_orm::pool()?;
+    let pg_pool = pool::pool().await?;
     let activeclients = Arc::new(Mutex::new(HashSet::new()));
-
-    tokio::spawn(async move {
-        conn.await
-            .unwrap_or_else(|e| tracing::error!("DB connection error {}", e));
-    });
-
+    
     // Task Runner Loop
     let mut interval = time::interval(Duration::from_secs(DELAY));
     loop {
         interval.tick().await;
 
-        let workers = available_workers(&pool, activeclients.clone())
+        let workers = available_workers(&orm_pool, activeclients.clone())
             .await
             .unwrap_or(vec![]);
         activeclients
@@ -211,18 +205,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await
             .extend(workers.iter().map(|w| w.id));
 
-        tokio::spawn({
-            let shared_client = shared_client.clone();
+	tokio::spawn({
+            let pg_pool = pg_pool.clone();
             try_join_all(workers.into_iter().map(|worker| {
-                let shared_client = shared_client.clone();
+                let pg_pool = pg_pool.clone();
                 let fsname = worker.filesystem.clone();
-                let pool = pool.clone();
+                let orm_pool = orm_pool.clone();
                 let activeclients = activeclients.clone();
 
                 async move {
-                    activeclients.lock().await.insert(worker.id);
-                    let tasks = tasks_per_worker(&pool, &worker).await?;
-                    let fqdn = worker_fqdn(&pool, &worker).await?;
+                    let tasks = tasks_per_worker(&orm_pool, &worker).await?;
+                    let fqdn = worker_fqdn(&orm_pool, &worker).await?;
                     let host_id = worker.host_id;
 
                     let rc = try_join_all(tasks.into_iter().map(|task| {
