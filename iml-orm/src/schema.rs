@@ -563,7 +563,7 @@ table! {
         not_deleted -> Nullable<Bool>,
         mountpoint -> Nullable<Varchar>,
         content_type_id -> Nullable<Int4>,
-        filesystem_id -> Int4,
+        filesystem -> Varchar,
         host_id -> Int4,
     }
 }
@@ -605,7 +605,6 @@ table! {
         needs_update -> Bool,
         corosync_ring0 -> Varchar,
         install_method -> Varchar,
-        properties -> Text,
         content_type_id -> Nullable<Int4>,
         server_profile_id -> Nullable<Varchar>,
     }
@@ -1048,14 +1047,6 @@ table! {
 }
 
 table! {
-    chroma_core_sethostprofilejob (job_ptr_id) {
-        job_ptr_id -> Int4,
-        host_id -> Int4,
-        server_profile_id -> Varchar,
-    }
-}
-
-table! {
     chroma_core_setuphostjob (job_ptr_id) {
         job_ptr_id -> Int4,
         old_state -> Varchar,
@@ -1080,35 +1071,49 @@ table! {
 }
 
 table! {
-    chroma_core_sfadiskdrive (index) {
+    chroma_core_sfacontroller (id) {
+        id -> Int4,
         index -> Int4,
-        child_health_state -> Int2,
+        enclosure_index -> Int4,
+        health_state -> Int2,
+        health_state_reason -> Text,
+        storage_system -> Text,
+    }
+}
+
+table! {
+    chroma_core_sfadiskdrive (id) {
+        id -> Int4,
+        index -> Int4,
+        enclosure_index -> Int4,
         failed -> Bool,
         slot_number -> Int4,
         health_state -> Int2,
         health_state_reason -> Text,
         member_index -> Nullable<Int2>,
         member_state -> Int2,
-        enclosure_index -> Int4,
         storage_system -> Text,
     }
 }
 
 table! {
-    chroma_core_sfadiskslot (index) {
+    chroma_core_sfadiskslot (id) {
+        id -> Int4,
         index -> Int4,
-        disk_drive_index -> Int4,
         enclosure_index -> Int4,
+        disk_drive_index -> Int4,
         storage_system -> Text,
     }
 }
 
 table! {
-    chroma_core_sfaenclosure (index) {
+    chroma_core_sfaenclosure (id) {
+        id -> Int4,
         index -> Int4,
         element_name -> Text,
         health_state -> Int2,
         health_state_reason -> Text,
+        child_health_state -> Int2,
         model -> Text,
         position -> Int2,
         enclosure_type -> Int2,
@@ -1118,7 +1123,8 @@ table! {
 }
 
 table! {
-    chroma_core_sfajob (index) {
+    chroma_core_sfajob (id) {
+        id -> Int4,
         index -> Int4,
         sub_target_index -> Nullable<Int4>,
         sub_target_type -> Nullable<Int2>,
@@ -1129,12 +1135,13 @@ table! {
 }
 
 table! {
-    chroma_core_sfapowersupply (index) {
+    chroma_core_sfapowersupply (id) {
+        id -> Int4,
         index -> Int4,
+        enclosure_index -> Int4,
         health_state -> Int2,
         health_state_reason -> Text,
         position -> Int2,
-        enclosure_index -> Int4,
         storage_system -> Text,
     }
 }
@@ -1717,7 +1724,6 @@ joinable!(chroma_core_lnetconfiguration -> chroma_core_managedhost (host_id));
 joinable!(chroma_core_lnetconfiguration -> django_content_type (content_type_id));
 joinable!(chroma_core_loadlnetjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_loadlnetjob -> chroma_core_lnetconfiguration (lnet_configuration_id));
-joinable!(chroma_core_lustreclientmount -> chroma_core_managedfilesystem (filesystem_id));
 joinable!(chroma_core_lustreclientmount -> chroma_core_managedhost (host_id));
 joinable!(chroma_core_lustreclientmount -> django_content_type (content_type_id));
 joinable!(chroma_core_makeavailablefilesystemunavailable -> chroma_core_job (job_ptr_id));
@@ -1806,19 +1812,12 @@ joinable!(chroma_core_serverprofile_repolist -> chroma_core_repo (repo_id));
 joinable!(chroma_core_serverprofile_repolist -> chroma_core_serverprofile (serverprofile_id));
 joinable!(chroma_core_serverprofilepackage -> chroma_core_serverprofile (server_profile_id));
 joinable!(chroma_core_serverprofilevalidation -> chroma_core_serverprofile (server_profile_id));
-joinable!(chroma_core_sethostprofilejob -> chroma_core_job (job_ptr_id));
-joinable!(chroma_core_sethostprofilejob -> chroma_core_managedhost (host_id));
-joinable!(chroma_core_sethostprofilejob -> chroma_core_serverprofile (server_profile_id));
 joinable!(chroma_core_setuphostjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_setuphostjob -> chroma_core_managedhost (target_object_id));
 joinable!(chroma_core_setupmonitoredhostjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_setupmonitoredhostjob -> chroma_core_managedhost (target_object_id));
 joinable!(chroma_core_setupworkerjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_setupworkerjob -> chroma_core_managedhost (target_object_id));
-joinable!(chroma_core_sfadiskdrive -> chroma_core_sfaenclosure (enclosure_index));
-joinable!(chroma_core_sfadiskslot -> chroma_core_sfadiskdrive (disk_drive_index));
-joinable!(chroma_core_sfadiskslot -> chroma_core_sfaenclosure (enclosure_index));
-joinable!(chroma_core_sfapowersupply -> chroma_core_sfaenclosure (enclosure_index));
 joinable!(chroma_core_shutdownhostjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_shutdownhostjob -> chroma_core_managedhost (host_id));
 joinable!(chroma_core_startcopytooljob -> chroma_core_copytool (copytool_id));
@@ -2007,10 +2006,10 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_serverprofile_repolist,
     chroma_core_serverprofilepackage,
     chroma_core_serverprofilevalidation,
-    chroma_core_sethostprofilejob,
     chroma_core_setuphostjob,
     chroma_core_setupmonitoredhostjob,
     chroma_core_setupworkerjob,
+    chroma_core_sfacontroller,
     chroma_core_sfadiskdrive,
     chroma_core_sfadiskslot,
     chroma_core_sfaenclosure,

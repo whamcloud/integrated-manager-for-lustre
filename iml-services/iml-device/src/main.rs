@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use chrono::prelude::*;
-use device_types::devices::Device;
+use device_types::{devices::Device, Command};
 use diesel::{self, pg::upsert::excluded, prelude::*};
 use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
 
@@ -109,26 +109,14 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     tokio::spawn(server);
 
-    let mut s = consume_data::<Device>("rust_agent_device_rx");
-
+    let mut s = consume_data::<(Device, Vec<Command>)>("rust_agent_device_rx");
     let mut i = 0usize;
-    // You may observe spurious updates.
-    // This means that, when a single device is mounted, updated device tree may come in here several times from a single host.
-    // This is due to two reasons:
-    // 1. The swap-emitter service on the storage node fires once per minute, so there will be an update of the tree at agent side at that interval no matter what.
-    // 2. When device-scanner starts it does not fill any of the state, so there will always be data sent for the first update (state #2 below).
-    //
-    // Device scanner switches its (previous, current) states like this:
-    // #       1               2                  3
-    // state   (None, None) -> (None, initial) -> (initial, initial)
-    // A change is observed when agent is polled while it's in the middle state, and it will be in that state for a minute until swap-emitter fires.
-    //
-    // In summary, you can observe up to a minute of incoming updates, with a period of roughly 10 seconds.
-    // The period is usually a bit longer due to overhead. So a max of 5 updates has been observed in practice.
-    //
-    while let Some((f, d)) = s.try_next().await? {
+
+    while let Some((f, output)) = s.try_next().await? {
         let begin: DateTime<Local> = Local::now();
         tracing::info!("Iteration {}: begin: {}", i, begin);
+
+        let (d, cs) = output;
 
         let mut cache = cache2.lock().await;
         cache.insert(f.clone(), d.clone());
@@ -162,6 +150,10 @@ async fn main() -> Result<(), ImlDeviceError> {
             (end - begin).num_milliseconds(),
             (middle2 - middle1).num_milliseconds(),
         );
+
+        for c in cs {
+            tracing::trace!("Got command {:?}", c);
+        }
 
         i = i.wrapping_add(1);
     }

@@ -6,7 +6,7 @@
 
 #[cfg(feature = "postgres-interop")]
 #[macro_use]
-extern crate diesel;
+pub extern crate diesel;
 
 #[cfg(feature = "postgres-interop")]
 pub mod models;
@@ -56,24 +56,39 @@ use warp::Filter;
 
 #[cfg(feature = "postgres-interop")]
 use diesel::{
-    query_builder::{QueryFragment, QueryId},
+    query_builder::QueryFragment,
+    query_dsl::load_dsl::ExecuteDsl,
     r2d2::{ConnectionManager, Pool},
     PgConnection,
 };
 #[cfg(feature = "postgres-interop")]
 use iml_manager_env::get_db_conn_string;
+#[cfg(feature = "postgres-interop")]
+use tokio_diesel::AsyncRunQueryDsl;
+
+#[cfg(feature = "postgres-interop")]
+pub trait PgQueryFragment: QueryFragment<diesel::pg::Pg> {}
+
+#[cfg(feature = "postgres-interop")]
+impl<T> PgQueryFragment for T where T: QueryFragment<diesel::pg::Pg> {}
+
+#[cfg(feature = "postgres-interop")]
+pub trait AsyncRunQueryDslPostgres: AsyncRunQueryDsl<diesel::PgConnection, DbPool> {}
+
+#[cfg(feature = "postgres-interop")]
+impl<T> AsyncRunQueryDslPostgres for T where T: AsyncRunQueryDsl<diesel::PgConnection, DbPool> {}
 
 #[cfg(feature = "postgres-interop")]
 /// Allows for a generic return type for Insert statements, that can be used in either a sync or async
 /// context.
 pub trait Executable:
-    RunQueryDsl<diesel::PgConnection> + QueryFragment<diesel::pg::Pg> + QueryId
+    RunQueryDsl<diesel::PgConnection> + ExecuteDsl<diesel::PgConnection, diesel::pg::Pg>
 {
 }
 
 #[cfg(feature = "postgres-interop")]
 impl<T> Executable for T where
-    T: RunQueryDsl<diesel::PgConnection> + QueryFragment<diesel::pg::Pg> + QueryId
+    T: RunQueryDsl<diesel::PgConnection> + ExecuteDsl<diesel::PgConnection, diesel::pg::Pg>
 {
 }
 
@@ -167,6 +182,12 @@ mod change {
         iter::FromIterator,
     };
 
+    pub trait Identifiable {
+        type Id: Eq + Ord;
+
+        fn id(&self) -> Self::Id;
+    }
+
     pub trait Changeable: Eq + Ord + Debug {}
 
     impl<T> Changeable for T where T: Eq + Ord + Debug {}
@@ -179,13 +200,13 @@ mod change {
 
     type Changes<'a, T> = (Option<Upserts<&'a T>>, Option<Deletions<&'a T>>);
 
-    pub trait GetChanges<T: Changeable> {
+    pub trait GetChanges<T: Changeable + Identifiable> {
         /// Given new and old items, this method compares them and
         /// returns a tuple of `Upserts` and `Deletions`.
         fn get_changes<'a>(&'a self, old: &'a Self) -> Changes<'a, T>;
     }
 
-    impl<T: Changeable> GetChanges<T> for Vec<T> {
+    impl<T: Changeable + Identifiable> GetChanges<T> for Vec<T> {
         fn get_changes<'a>(&'a self, old: &'a Self) -> Changes<'a, T> {
             let new = BTreeSet::from_iter(self);
             let old = BTreeSet::from_iter(old);
@@ -198,7 +219,20 @@ mod change {
                 Some(Upserts(to_upsert))
             };
 
-            let to_remove: Vec<&T> = old.difference(&new).copied().collect();
+            let new_ids: BTreeSet<<T as Identifiable>::Id> = new.iter().map(|x| x.id()).collect();
+            let old_ids: BTreeSet<<T as Identifiable>::Id> = old.iter().map(|x| x.id()).collect();
+
+            let changed: BTreeSet<_> = new_ids.intersection(&old_ids).collect();
+
+            let to_remove: Vec<&T> = old
+                .difference(&new)
+                .filter(|x| {
+                    let id = x.id();
+
+                    changed.get(&id).is_none()
+                })
+                .copied()
+                .collect();
 
             let to_remove = if to_remove.is_empty() {
                 None

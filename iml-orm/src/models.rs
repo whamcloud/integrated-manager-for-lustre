@@ -792,7 +792,7 @@ pub struct ChromaCoreLustreclientmount {
     pub not_deleted: Option<bool>,
     pub mountpoint: Option<String>,
     pub content_type_id: Option<i32>,
-    pub filesystem_id: i32,
+    pub filesystem: String,
     pub host_id: i32,
 }
 
@@ -844,7 +844,6 @@ pub struct ChromaCoreManagedhost {
     pub needs_update: bool,
     pub corosync_ring0: String,
     pub install_method: String,
-    pub properties: String,
     pub content_type_id: Option<i32>,
     pub server_profile_id: Option<String>,
 }
@@ -1432,19 +1431,6 @@ pub struct ChromaCoreServerprofilevalidation {
     pub id: i32,
     pub test: String,
     pub description: String,
-    pub server_profile_id: String,
-}
-
-#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
-#[derive(serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "postgres-interop", primary_key(job_ptr_id))]
-#[cfg_attr(
-    feature = "postgres-interop",
-    table_name = "chroma_core_sethostprofilejob"
-)]
-pub struct ChromaCoreSethostprofilejob {
-    pub job_ptr_id: i32,
-    pub host_id: i32,
     pub server_profile_id: String,
 }
 

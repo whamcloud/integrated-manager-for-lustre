@@ -6,7 +6,6 @@ use futures::{
     channel::{mpsc, oneshot},
     future, Future, Stream, StreamExt, TryFutureExt,
 };
-use iml_manager_env;
 use iml_wire_types::ToBytes;
 pub use lapin::{
     message,

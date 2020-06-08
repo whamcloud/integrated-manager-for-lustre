@@ -8,11 +8,7 @@ use iml_cmd::CmdError;
 use iml_systemd::SystemdError;
 use iml_wire_types::Branding;
 use ssh::create_iml_diagnostics;
-use std::{
-    collections::{BTreeSet, HashMap},
-    io,
-    time::Duration,
-};
+use std::{io, time::Duration};
 use tokio::{process::Command, time::delay_for};
 
 pub struct SetupConfig {
@@ -152,10 +148,13 @@ pub trait ServerList {
     fn to_server_list(&self) -> Vec<&str>;
 }
 
-impl<S: std::hash::BuildHasher> ServerList for HashMap<String, &[&str], S> {
+impl ServerList for Vec<(String, &[&str])> {
     fn to_server_list(&self) -> Vec<&str> {
-        let server_set: BTreeSet<_> = self.into_iter().flat_map(|(_, x)| *x).map(|x| *x).collect();
-        server_set.into_iter().collect()
+        let server_set: Vec<_> = self.iter().flat_map(|(_, x)| *x).copied().collect();
+        let mut xs: Vec<&str> = server_set.into_iter().collect();
+        xs.dedup();
+
+        xs
     }
 }
 
@@ -170,5 +169,28 @@ impl<T: Into<SystemTestError> + Send> WithSos for Result<(), T> {
         create_iml_diagnostics(hosts, prefix).await?;
 
         self.map_err(|e| e.into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_to_server_list() {
+        let config = vagrant::ClusterConfig::default();
+        let mds_servers = &config.mds_servers()[..];
+        let oss_servers = &config.oss_servers()[..];
+        let client_servers = &config.client_servers()[..];
+
+        let xs: Vec<(String, &[&str])> = vec![
+            ("stratagem_server".into(), mds_servers),
+            ("base_monitored".into(), oss_servers),
+            ("stratagem_client".into(), client_servers),
+        ];
+
+        let servers = xs.to_server_list();
+
+        assert_eq!(servers, vec!["mds1", "mds2", "oss1", "oss2", "c1"]);
     }
 }

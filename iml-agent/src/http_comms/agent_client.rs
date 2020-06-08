@@ -8,7 +8,6 @@ use crate::{
     server_properties,
 };
 use futures::{Future, TryFutureExt};
-use iml_wire_types;
 use reqwest::Client;
 use std::convert::Into;
 use tracing::{debug, info};

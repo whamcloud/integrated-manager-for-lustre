@@ -4,7 +4,6 @@
 
 use iml_system_docker_tests::{run_fs_test, wait_for_ntp};
 use iml_system_test_utils::{vagrant, SetupConfig, SetupConfigType, SystemTestError, WithSos as _};
-use std::collections::HashMap;
 
 async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError> {
     run_fs_test(
@@ -13,9 +12,7 @@ async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError
             use_stratagem: false,
             branding: iml_wire_types::Branding::Whamcloud,
         }),
-        vec![("base_monitored".into(), &config.storage_servers()[..])]
-            .into_iter()
-            .collect::<HashMap<String, &[&str]>>(),
+        vec![("base_monitored".into(), &config.storage_servers()[..])],
         vagrant::FsType::LDISKFS,
     )
     .await?;

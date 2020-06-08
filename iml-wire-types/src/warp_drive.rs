@@ -6,8 +6,9 @@ use crate::{
     db::{
         AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
         CorosyncConfigurationRecord, Id, LnetConfigurationRecord, ManagedTargetMountRecord,
-        OstPoolOstsRecord, OstPoolRecord, PacemakerConfigurationRecord, SfaDiskDrive, SfaEnclosure,
-        SfaStorageSystem, StratagemConfiguration, VolumeNodeRecord, VolumeRecord,
+        OstPoolOstsRecord, OstPoolRecord, PacemakerConfigurationRecord, SfaController,
+        SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem,
+        StratagemConfiguration, VolumeNodeRecord, VolumeRecord,
     },
     Alert, CompositeId, EndpointNameSelf, Filesystem, Host, Label, LockChange, Target,
     TargetConfParam, ToCompositeId,
@@ -102,7 +103,10 @@ pub struct Cache {
     pub ost_pool_osts: HashMap<i32, OstPoolOstsRecord>,
     pub sfa_disk_drive: HashMap<i32, SfaDiskDrive>,
     pub sfa_enclosure: HashMap<i32, SfaEnclosure>,
+    pub sfa_job: HashMap<i32, SfaJob>,
+    pub sfa_power_supply: HashMap<i32, SfaPowerSupply>,
     pub sfa_storage_system: HashMap<i32, SfaStorageSystem>,
+    pub sfa_controller: HashMap<i32, SfaController>,
     pub stratagem_config: HashMap<i32, StratagemConfiguration>,
     pub target: HashMap<i32, Target<TargetConfParam>>,
     pub user: HashMap<i32, AuthUserRecord>,
@@ -128,6 +132,9 @@ pub struct ArcCache {
     pub sfa_disk_drive: HashMap<i32, Arc<SfaDiskDrive>>,
     pub sfa_enclosure: HashMap<i32, Arc<SfaEnclosure>>,
     pub sfa_storage_system: HashMap<i32, Arc<SfaStorageSystem>>,
+    pub sfa_job: HashMap<i32, Arc<SfaJob>>,
+    pub sfa_power_supply: HashMap<i32, Arc<SfaPowerSupply>>,
+    pub sfa_controller: HashMap<i32, Arc<SfaController>>,
     pub stratagem_config: HashMap<i32, Arc<StratagemConfiguration>>,
     pub target: HashMap<i32, Arc<Target<TargetConfParam>>>,
     pub user: HashMap<i32, Arc<AuthUserRecord>>,
@@ -158,6 +165,9 @@ impl Cache {
             RecordId::SfaDiskDrive(id) => self.sfa_disk_drive.remove(&id).is_some(),
             RecordId::SfaEnclosure(id) => self.sfa_enclosure.remove(&id).is_some(),
             RecordId::SfaStorageSystem(id) => self.sfa_storage_system.remove(&id).is_some(),
+            RecordId::SfaJob(id) => self.sfa_job.remove(&id).is_some(),
+            RecordId::SfaPowerSupply(id) => self.sfa_power_supply.remove(&id).is_some(),
+            RecordId::SfaController(id) => self.sfa_controller.remove(&id).is_some(),
             RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
             RecordId::Target(id) => self.target.remove(&id).is_some(),
             RecordId::User(id) => self.user.remove(&id).is_some(),
@@ -210,6 +220,15 @@ impl Cache {
             }
             Record::SfaStorageSystem(x) => {
                 self.sfa_storage_system.insert(x.id(), x);
+            }
+            Record::SfaJob(x) => {
+                self.sfa_job.insert(x.id(), x);
+            }
+            Record::SfaPowerSupply(x) => {
+                self.sfa_power_supply.insert(x.id, x);
+            }
+            Record::SfaController(x) => {
+                self.sfa_controller.insert(x.id, x);
             }
             Record::StratagemConfig(x) => {
                 self.stratagem_config.insert(x.id(), x);
@@ -265,6 +284,9 @@ impl ArcCache {
             RecordId::SfaDiskDrive(id) => self.sfa_disk_drive.remove(&id).is_some(),
             RecordId::SfaEnclosure(id) => self.sfa_enclosure.remove(&id).is_some(),
             RecordId::SfaStorageSystem(id) => self.sfa_storage_system.remove(&id).is_some(),
+            RecordId::SfaJob(id) => self.sfa_job.remove(&id).is_some(),
+            RecordId::SfaPowerSupply(id) => self.sfa_power_supply.remove(&id).is_some(),
+            RecordId::SfaController(id) => self.sfa_controller.remove(&id).is_some(),
             RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
             RecordId::Target(id) => self.target.remove(&id).is_some(),
             RecordId::User(id) => self.user.remove(&id).is_some(),
@@ -317,6 +339,15 @@ impl ArcCache {
             }
             Record::SfaStorageSystem(x) => {
                 self.sfa_storage_system.insert(x.id(), Arc::new(x));
+            }
+            Record::SfaJob(x) => {
+                self.sfa_job.insert(x.id(), Arc::new(x));
+            }
+            Record::SfaPowerSupply(x) => {
+                self.sfa_power_supply.insert(x.id(), Arc::new(x));
+            }
+            Record::SfaController(x) => {
+                self.sfa_controller.insert(x.id(), Arc::new(x));
             }
             Record::StratagemConfig(x) => {
                 self.stratagem_config.insert(x.id(), Arc::new(x));
@@ -386,6 +417,9 @@ impl From<&Cache> for ArcCache {
             sfa_disk_drive: hashmap_to_arc_hashmap(&cache.sfa_disk_drive),
             sfa_enclosure: hashmap_to_arc_hashmap(&cache.sfa_enclosure),
             sfa_storage_system: hashmap_to_arc_hashmap(&cache.sfa_storage_system),
+            sfa_job: hashmap_to_arc_hashmap(&cache.sfa_job),
+            sfa_power_supply: hashmap_to_arc_hashmap(&cache.sfa_power_supply),
+            sfa_controller: hashmap_to_arc_hashmap(&cache.sfa_controller),
             stratagem_config: hashmap_to_arc_hashmap(&cache.stratagem_config),
             target: hashmap_to_arc_hashmap(&cache.target),
             user: hashmap_to_arc_hashmap(&cache.user),
@@ -413,6 +447,9 @@ impl From<&ArcCache> for Cache {
             sfa_disk_drive: arc_hashmap_to_hashmap(&cache.sfa_disk_drive),
             sfa_enclosure: arc_hashmap_to_hashmap(&cache.sfa_enclosure),
             sfa_storage_system: arc_hashmap_to_hashmap(&cache.sfa_storage_system),
+            sfa_job: arc_hashmap_to_hashmap(&cache.sfa_job),
+            sfa_power_supply: arc_hashmap_to_hashmap(&cache.sfa_power_supply),
+            sfa_controller: arc_hashmap_to_hashmap(&cache.sfa_controller),
             stratagem_config: arc_hashmap_to_hashmap(&cache.stratagem_config),
             target: arc_hashmap_to_hashmap(&cache.target),
             user: arc_hashmap_to_hashmap(&cache.user),
@@ -441,6 +478,9 @@ pub enum Record {
     SfaDiskDrive(SfaDiskDrive),
     SfaEnclosure(SfaEnclosure),
     SfaStorageSystem(SfaStorageSystem),
+    SfaJob(SfaJob),
+    SfaPowerSupply(SfaPowerSupply),
+    SfaController(SfaController),
     StratagemConfig(StratagemConfiguration),
     Target(Target<TargetConfParam>),
     User(AuthUserRecord),
@@ -465,6 +505,9 @@ pub enum ArcRecord {
     SfaDiskDrive(Arc<SfaDiskDrive>),
     SfaEnclosure(Arc<SfaEnclosure>),
     SfaStorageSystem(Arc<SfaStorageSystem>),
+    SfaJob(Arc<SfaJob>),
+    SfaPowerSupply(Arc<SfaPowerSupply>),
+    SfaController(Arc<SfaController>),
     StratagemConfig(Arc<StratagemConfiguration>),
     Target(Arc<Target<TargetConfParam>>),
     User(Arc<AuthUserRecord>),
@@ -490,6 +533,9 @@ impl From<Record> for ArcRecord {
             Record::SfaDiskDrive(x) => Self::SfaDiskDrive(Arc::new(x)),
             Record::SfaEnclosure(x) => Self::SfaEnclosure(Arc::new(x)),
             Record::SfaStorageSystem(x) => Self::SfaStorageSystem(Arc::new(x)),
+            Record::SfaJob(x) => Self::SfaJob(Arc::new(x)),
+            Record::SfaPowerSupply(x) => Self::SfaPowerSupply(Arc::new(x)),
+            Record::SfaController(x) => Self::SfaController(Arc::new(x)),
             Record::StratagemConfig(x) => Self::StratagemConfig(Arc::new(x)),
             Record::Target(x) => Self::Target(Arc::new(x)),
             Record::User(x) => Self::User(Arc::new(x)),
@@ -517,6 +563,9 @@ pub enum RecordId {
     SfaDiskDrive(i32),
     SfaEnclosure(i32),
     SfaStorageSystem(i32),
+    SfaJob(i32),
+    SfaPowerSupply(i32),
+    SfaController(i32),
     StratagemConfig(i32),
     Target(i32),
     User(i32),
@@ -543,6 +592,9 @@ impl Deref for RecordId {
             | Self::SfaDiskDrive(x)
             | Self::SfaEnclosure(x)
             | Self::SfaStorageSystem(x)
+            | Self::SfaJob(x)
+            | Self::SfaPowerSupply(x)
+            | Self::SfaController(x)
             | Self::StratagemConfig(x)
             | Self::Target(x)
             | Self::User(x)

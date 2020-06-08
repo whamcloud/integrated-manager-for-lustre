@@ -43,7 +43,6 @@ class UpdateScan(object):
             return False
 
     def audit_host(self):
-        self.update_properties(self.host_data.get("properties"))
         self.update_packages(self.host_data.get("packages"))
         self.update_resource_locations()
 
@@ -58,13 +57,6 @@ class UpdateScan(object):
         log.debug("UpdateScan.run: %s" % self.host)
 
         self.audit_host()
-
-    def update_properties(self, properties):
-        if properties is not None:
-            properties = json.dumps(properties)
-            # use the job scheduler to update, but only as necessary
-            if self.host.properties != properties:
-                job_scheduler_notify.notify(self.host, self.started_at, {"properties": properties})
 
     # Compatibility with pre-4.1 IML upgrades
     def update_packages(self, package_report):
@@ -146,7 +138,7 @@ class UpdateScan(object):
         if client_mounts is None:
             return
 
-        expected_fs_mounts = LustreClientMount.objects.select_related("filesystem").filter(host=self.host)
+        expected_fs_mounts = LustreClientMount.objects.filter(host=self.host)
         actual_fs_mounts = [m["mountspec"].split(":/")[1] for m in client_mounts]
 
         # Don't bother with the rest if there's nothing to do.
@@ -154,7 +146,7 @@ class UpdateScan(object):
             return
 
         for expected_mount in expected_fs_mounts:
-            if expected_mount.active and expected_mount.filesystem.name not in actual_fs_mounts:
+            if expected_mount.active and expected_mount.filesystem not in actual_fs_mounts:
                 update = dict(state="unmounted", mountpoint=None)
                 job_scheduler_notify.notify(expected_mount, self.started_at, update)
                 log.info("updated mount %s on %s -> inactive" % (expected_mount.mountpoint, self.host))
@@ -162,7 +154,7 @@ class UpdateScan(object):
         for actual_mount in client_mounts:
             fsname = actual_mount["mountspec"].split(":/")[1]
             try:
-                mount = [m for m in expected_fs_mounts if m.filesystem.name == fsname][0]
+                mount = [m for m in expected_fs_mounts if m.filesystem == fsname][0]
                 log.debug("mount: %s" % mount)
                 if not mount.active:
                     update = dict(state="mounted", mountpoint=actual_mount["mountpoint"])
@@ -170,8 +162,7 @@ class UpdateScan(object):
                     log.info("updated mount %s on %s -> active" % (actual_mount["mountpoint"], self.host))
             except IndexError:
                 log.info("creating new mount %s on %s" % (actual_mount["mountpoint"], self.host))
-                filesystem = ManagedFilesystem.objects.get(name=fsname)
-                JobSchedulerClient.create_client_mount(self.host, filesystem, actual_mount["mountpoint"])
+                JobSchedulerClient.create_client_mount(self.host, fsname, actual_mount["mountpoint"])
 
     def update_target_mounts(self):
         # If mounts is None then nothing changed since the last update and so we can just return.

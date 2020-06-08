@@ -4,9 +4,7 @@
 
 pub mod error;
 
-use errno;
 use error::{LiblustreError, LoadError};
-use libc;
 use libloading as lib;
 use liblustreapi_types as types;
 use std::{

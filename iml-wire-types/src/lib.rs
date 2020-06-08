@@ -200,6 +200,12 @@ impl From<&str> for ActionName {
     }
 }
 
+impl From<String> for ActionName {
+    fn from(name: String) -> Self {
+        Self(name)
+    }
+}
+
 impl fmt::Display for ActionName {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
@@ -515,7 +521,6 @@ pub struct Host {
     pub pacemaker_configuration: Option<String>,
     pub private_key: Option<String>,
     pub private_key_passphrase: Option<String>,
-    pub properties: String,
     pub resource_uri: String,
     pub root_pw: Option<String>,
     pub server_profile: ServerProfile,
@@ -615,28 +620,6 @@ impl EndpointName for ServerProfile {
     }
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct HostProfileWrapper {
-    pub host_profiles: Option<HostProfile>,
-    pub error: Option<String>,
-    pub traceback: Option<String>,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct HostProfile {
-    pub address: String,
-    pub host: i32,
-    pub profiles: HashMap<String, Vec<ProfileTest>>,
-    pub profiles_valid: bool,
-    pub resource_uri: String,
-}
-
-impl EndpointName for HostProfile {
-    fn endpoint_name() -> &'static str {
-        "host_profile"
-    }
-}
-
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ProfileTest {
     pub description: String,
@@ -714,6 +697,7 @@ pub struct HostValididity {
     pub address: String,
     pub status: Vec<Check>,
     pub valid: bool,
+    pub profiles: HashMap<String, Vec<ProfileTest>>,
 }
 
 pub type TestHostJob = Job<HostValididity>;

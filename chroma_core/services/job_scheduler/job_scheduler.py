@@ -1106,25 +1106,22 @@ class JobScheduler(object):
         # if we have an entry with 'root'=true then move it to the front of the list before returning the result
         return sorted(sorted_list, key=lambda entry: entry.get("root", False), reverse=True)
 
-    def create_client_mount(self, host_id, filesystem_id, mountpoint):
+    def create_client_mount(self, host_id, filesystem_name, mountpoint):
         # RPC-callable
         host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == host_id)
-        filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.id == filesystem_id)
-
-        mount = self._create_client_mount(host, filesystem, mountpoint)
-
+        mount = self._create_client_mount(host, filesystem_name, mountpoint)
         self.progress.advance()
         return mount.id
 
-    def _create_client_mount(self, host, filesystem, mountpoint):
+    def _create_client_mount(self, host, filesystem_name, mountpoint):
         # Used for intra-JobScheduler calls
-        log.debug("Creating client mount for %s as %s:%s" % (filesystem, host, mountpoint))
+        log.debug("Creating client mount for %s as %s:%s" % (filesystem_name, host, mountpoint))
 
         with self._lock:
             from django.db import transaction
 
             with transaction.atomic():
-                mount, created = LustreClientMount.objects.get_or_create(host=host, filesystem=filesystem)
+                mount, created = LustreClientMount.objects.get_or_create(host=host, filesystem=filesystem_name)
                 mount.mountpoint = mountpoint
                 mount.save()
 
@@ -1480,34 +1477,6 @@ class JobScheduler(object):
         self.progress.advance()
 
         return host.id, command.id
-
-    def set_host_profile(self, host_id, server_profile_id):
-        """
-        Set the profile for the given host to the given profile.
-
-        :param host_id:
-        :param server_profile_id:
-        :return: Command for the host job or None if no commands were created.
-        """
-
-        with self._lock:
-            with transaction.atomic():
-                server_profile = ServerProfile.objects.get(pk=server_profile_id)
-                host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == host_id)
-
-                commands_required = host.set_profile(server_profile_id)
-
-                if commands_required:
-                    command = self.CommandPlan.command_run_jobs(
-                        commands_required, help_text["change_host_profile"] % (host.fqdn, server_profile.ui_name)
-                    )
-                else:
-                    command = None
-
-        if command:
-            self.progress.advance()
-
-        return command
 
     def create_host(self, fqdn, nodename, address, server_profile_id):
         """
@@ -1914,18 +1883,20 @@ class JobScheduler(object):
         client_host = ManagedHost.objects.get(
             Q(server_profile_id="stratagem_client") | Q(server_profile_id="stratagem_existing_client")
         )
-        client_mount_exists = LustreClientMount.objects.filter(host_id=client_host.id, filesystem_id=fs_id).exists()
+        client_mount_exists = LustreClientMount.objects.filter(
+            host_id=client_host.id, filesystem=filesystem.name
+        ).exists()
 
         mountpoint = "/mnt/{}".format(filesystem.name)
         if not client_mount_exists:
             self._create_client_mount(client_host, filesystem, mountpoint)
 
         client_mount = ObjectCache.get_one(
-            LustreClientMount, lambda mnt: mnt.host_id == client_host.id and mnt.filesystem_id == fs_id
+            LustreClientMount, lambda mnt: mnt.host_id == client_host.id and mnt.filesystem == filesystem.name
         )
         client_mount.state = "unmounted"
         client_mount.mountpoint = mountpoint
-        client_mount.filesystem_id = filesystem.id
+        client_mount.filesystem = filesystem.name
         client_mount.save()
         ObjectCache.update(client_mount)
 

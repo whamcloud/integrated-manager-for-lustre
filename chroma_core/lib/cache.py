@@ -16,6 +16,7 @@ class ObjectCache(object):
     def __init__(self):
         from chroma_core.models import ManagedFilesystem, ManagedHost, LNetConfiguration, LustreClientMount
         from chroma_core.models import PacemakerConfiguration, CorosyncConfiguration, Corosync2Configuration
+        from chroma_core.models import ServerProfile
         from chroma_core.models import NTPConfiguration, StratagemConfiguration, Ticket
         from chroma_core.models.target import ManagedTarget, ManagedTargetMount
         from chroma_core.models.copytool import Copytool
@@ -40,6 +41,7 @@ class ObjectCache(object):
             NTPConfiguration,
             StratagemConfiguration,
             Ticket,
+            ServerProfile,
         ]
 
         for klass in self._cached_models:
@@ -143,10 +145,10 @@ class ObjectCache(object):
         return cls.get(LustreClientMount, lambda hcm: hcm.host_id == host_id)
 
     @classmethod
-    def filesystem_client_mounts(cls, fs_id):
+    def filesystem_client_mounts(cls, fs_name):
         from chroma_core.models.client_mount import LustreClientMount
 
-        return cls.get(LustreClientMount, lambda fcm: fcm.filesystem_id == fs_id)
+        return cls.get(LustreClientMount, lambda lcm: lcm.filesystem == fs_name)
 
     @classmethod
     def client_mount_copytools(cls, cm_id):
