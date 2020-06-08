@@ -203,10 +203,8 @@ pub fn view(
                                 .merge_attrs(class![C.text_center]),
                                 table::td_view(date_view(sd, &x.boot_time)).merge_attrs(class![C.text_center]),
                                 table::td_view(span![x.server_profile.ui_name]).merge_attrs(class![C.text_center]),
-                                table::td_view(
-                                    div![lnet_by_server_view(x, cache, all_locks).unwrap_or_else(|| vec![])]
-                                )
-                                .merge_attrs(class![C.text_center]),
+                                table::td_view(div![lnet_by_server_view(x, cache, all_locks).unwrap_or_else(Vec::new)])
+                                    .merge_attrs(class![C.text_center]),
                                 td![
                                     class![C.p_3, C.text_center],
                                     action_dropdown::view(x.id, &row.dropdown, all_locks, session)
