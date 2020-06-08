@@ -253,6 +253,22 @@ pub fn generate_cooked_config(path: String, rd: Option<u64>, pd: Option<u64>) ->
         });
     }
 
+    if true {
+        let name = "filesync";
+
+        conf.device.groups.push(name.into());
+
+        conf.groups.push(StratagemGroup {
+            name: name.into(),
+            rules: vec![StratagemRule {
+                action: "LAT_SHELL_CMD_FID".into(),
+                expression: format!("&& != type S_IFDIR >= size 1048576"),
+                argument: "filesync".into(),
+                counter_name: Some("filesync".into()),
+            }],
+        });
+    }
+    
     if let Some(rd) = rd {
         let name = "warn_fids";
 
@@ -353,6 +369,61 @@ pub async fn trigger_scan(
     let x = serde_json::from_slice(&xs)?;
 
     let mailbox_files = get_mailbox_files(&tmp_dir, &data, &x);
+
+    Ok((tmp_dir, x, mailbox_files))
+}
+
+/// Triggers a scan with Stratagem.
+/// This will only trigger a scan and return a triple of `(String, StratagemResult, MailboxFiles)`
+///
+/// It will *not* stream data for processing
+pub async fn trigger_scan_single(
+    data: StratagemConfig,
+) -> Result<(String, StratagemResult, MailboxFiles), ImlAgentError> {
+    let id = Uuid::new_v4().to_hyphenated().to_string();
+
+    let tmp_dir = format!("/tmp/{}/", id);
+
+    let result_file = format!("{}result.json", tmp_dir);
+
+    let result_sock = format!("{}result-sock.json", tmp_dir);
+
+    let device = format!("/dev/mapper/mds1_flakey");
+
+    let rule_name = format!("scan_{}", id);
+
+    let rule = format!(">= size 1048576");
+
+    println!("tmpfile {}", result_sock);
+
+    let output = Command::new("/usr/bin/lipe_scan")
+        .args(&[
+            "-W",
+            &tmp_dir,
+            "-d",
+            &device,
+            "-n",
+            &rule_name,
+            "-r",
+            &rule,
+            "-s",
+            &result_sock,
+        ])
+        .checked_output()
+        .await?;
+
+    tracing::debug!(
+        "Scan result: {}",
+        String::from_utf8_lossy(&output.stdout).into_owned()
+    );
+
+    let xs = read_file_to_end(result_file).await?;
+
+    let x = serde_json::from_slice(&xs)?;
+
+    let mut mailbox_files = Vec::new();
+
+    mailbox_files.push((PathBuf::from(result_sock), rule));
 
     Ok((tmp_dir, x, mailbox_files))
 }
