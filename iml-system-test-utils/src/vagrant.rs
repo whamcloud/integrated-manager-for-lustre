@@ -406,7 +406,7 @@ pub async fn setup_deploy_servers(
 
 pub async fn add_docker_servers(
     config: &ClusterConfig,
-    server_map: &Vec<(String, &[&str])>,
+    server_map: &[(String, &[&str])],
 ) -> Result<(), CmdError> {
     iml::server_add(&server_map).await?;
 
@@ -679,7 +679,7 @@ impl ClusterConfig {
             .map(|host| {
                 self.server_map
                     .get(host)
-                    .expect(format!("Couldn't locate {} in server map.", host).as_str())
+                    .unwrap_or_else(|| panic!("Couldn't locate {} in server map.", host))
             })
             .copied()
             .collect()

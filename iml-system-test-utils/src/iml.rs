@@ -26,7 +26,7 @@ pub async fn list_servers() -> Result<Command, CmdError> {
     Ok(x)
 }
 
-pub async fn server_add(host_map: &Vec<(String, &[&str])>) -> Result<(), CmdError> {
+pub async fn server_add(host_map: &[(String, &[&str])]) -> Result<(), CmdError> {
     for (profile, hosts) in host_map {
         let mut x = iml().await?;
         x.arg("server")
