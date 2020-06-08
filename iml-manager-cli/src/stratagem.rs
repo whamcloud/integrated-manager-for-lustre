@@ -84,6 +84,9 @@ pub struct StratagemScanData {
     /// The purge duration
     #[structopt(short = "p", long = "purge", parse(try_from_str = parse_duration))]
     purge_duration: Option<u64>,
+    /// filesync
+    #[structopt(name = "filesync")]
+    filesync: Option<bool>,
 }
 
 fn parse_duration(src: &str) -> Result<u64, ImlManagerCliError> {
