@@ -83,7 +83,9 @@ pub fn invoke_rust_agent(
     let (p, c) = oneshot::channel::<()>();
 
     let req = Request::builder()
-        .method("POST")
+        .method(hyper::Method::POST)
+        .header(hyper::header::ACCEPT, "application/json")
+        .header(hyper::header::CONTENT_TYPE, "application/json")
         .uri(&uri)
         .body(Body::from(serde_json::to_string(&action).unwrap()))
         .unwrap();
