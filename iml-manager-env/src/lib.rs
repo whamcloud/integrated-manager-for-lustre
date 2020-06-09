@@ -248,7 +248,7 @@ pub fn get_action_runner_connect() -> String {
             get_var("ACTION_RUNNER_PORT")
         )
     } else {
-        "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/".to_string()
+        "unix:/var/run/iml-action-runner.sock".to_string()
     }
 }
 
