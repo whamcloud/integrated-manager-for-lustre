@@ -8,8 +8,13 @@ use util::{
     children, children_mut, children_owned, compare_selected_fields, is_virtual, to_display,
 };
 
-use device_types::devices::{
-    Dataset, Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup, Zpool,
+use device_types::{
+    devices::{
+        Dataset, Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup,
+        Zpool,
+    },
+    zed::PoolCommand,
+    Command,
 };
 use diesel::{self, pg::upsert::excluded, prelude::*};
 use im::OrdSet;
@@ -62,7 +67,10 @@ pub async fn get_other_devices(f: &Fqdn, pool: &DbPool) -> Vec<(Fqdn, Device)> {
         .collect()
 }
 
-pub fn update_virtual_devices(devices: Vec<(Fqdn, Device)>) -> Vec<(Fqdn, Device)> {
+pub fn update_virtual_devices(
+    devices: Vec<(Fqdn, Device)>,
+    commands: &[Command],
+) -> Vec<(Fqdn, Device)> {
     let mut results = vec![];
 
     // As there are multipath devices and we don't compare major, minor, devpath, paths fields,
@@ -74,7 +82,7 @@ pub fn update_virtual_devices(devices: Vec<(Fqdn, Device)>) -> Vec<(Fqdn, Device
 
     let len = devices.len();
     for (i, (f, d)) in devices.iter().enumerate() {
-        let ps = collect_virtual_device_parents(&d, 0, None);
+        let ps = collect_virtual_device_parents(&d, 0, None, commands);
         // The incoming tree (from current host) can have less virtual device parents, than trees from the DB (from other hosts).
         // In the incoming data there are only virtual devices that are local to that host (i.e. are mounted there).
         // In the database, there are virtual devices that are collected from all of hosts.
@@ -102,39 +110,89 @@ fn collect_virtual_device_parents<'d>(
     d: &'d Device,
     level: usize,
     parent: Option<&'d Device>,
+    commands: &[Command],
 ) -> Vec<&'d Device> {
     let mut results = vec![];
 
     if is_virtual(d) {
-        tracing::debug!(
-            "Collecting parent {} of {}",
-            parent.map(|x| to_display(x)).unwrap_or("None".into()),
-            to_display(d)
-        );
-        vec![parent.expect("Tried to push to parents the parent of the Root, which doesn't exist")]
+        if !commands.is_empty() {
+            tracing::info!("Looking through commands");
+            for c in commands {
+                match c {
+                    Command::PoolCommand(pc) => {
+                        tracing::info!("Got PoolCommand");
+                        match pc {
+                            PoolCommand::UpdatePool(p) => {
+                                tracing::info!("Got UpdatePool");
+
+                                let guid1 = p.guid;
+                                let guid2 = match d {
+                                    Device::Zpool(dd) => Some(dd.guid),
+                                    _ => None,
+                                };
+                                guid2.map(|g| if g == guid1 { 
+                                results.push(parent.expect("Tried to push to parents the parent of the Root, which doesn't exist"))
+                            });
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            results
+        } else {
+            tracing::debug!(
+                "Collecting parent {} of {}",
+                parent.map(|x| to_display(x)).unwrap_or("None".into()),
+                to_display(d)
+            );
+            vec![parent
+                .expect("Tried to push to parents the parent of the Root, which doesn't exist")]
+        }
     } else {
         match d {
             Device::Root(dd) => {
                 for c in dd.children.iter() {
-                    results.extend(collect_virtual_device_parents(c, level + 1, Some(d)));
+                    results.extend(collect_virtual_device_parents(
+                        c,
+                        level + 1,
+                        Some(d),
+                        commands,
+                    ));
                 }
                 results
             }
             Device::ScsiDevice(dd) => {
                 for c in dd.children.iter() {
-                    results.extend(collect_virtual_device_parents(c, level + 1, Some(d)));
+                    results.extend(collect_virtual_device_parents(
+                        c,
+                        level + 1,
+                        Some(d),
+                        commands,
+                    ));
                 }
                 results
             }
             Device::Partition(dd) => {
                 for c in dd.children.iter() {
-                    results.extend(collect_virtual_device_parents(c, level + 1, Some(d)));
+                    results.extend(collect_virtual_device_parents(
+                        c,
+                        level + 1,
+                        Some(d),
+                        commands,
+                    ));
                 }
                 results
             }
             Device::Mpath(dd) => {
                 for c in dd.children.iter() {
-                    results.extend(collect_virtual_device_parents(c, level + 1, Some(d)));
+                    results.extend(collect_virtual_device_parents(
+                        c,
+                        level + 1,
+                        Some(d),
+                        commands,
+                    ));
                 }
                 results
             }
@@ -294,7 +352,7 @@ mod tests {
 
         let devices = deser_fixture(path1, path2, Fqdn(fqdn1.into()), Fqdn(fqdn2.into()));
 
-        let results = update_virtual_devices(devices);
+        let results = update_virtual_devices(devices, &Vec::new());
 
         compare_results(results, test_name);
     }

@@ -135,7 +135,7 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         let middle1: DateTime<Local> = Local::now();
 
-        let updated_devices = update_virtual_devices(all_devices);
+        let updated_devices = update_virtual_devices(all_devices, &cs);
 
         let middle2: DateTime<Local> = Local::now();
 
@@ -152,7 +152,7 @@ async fn main() -> Result<(), ImlDeviceError> {
         );
 
         for c in cs {
-            tracing::trace!("Got command {:?}", c);
+            tracing::info!("Got command {:?}", c);
         }
 
         i = i.wrapping_add(1);
