@@ -240,16 +240,16 @@ pub fn get_use_stratagem() -> bool {
     string_to_bool(get_var("USE_STRATAGEM"))
 }
 
-pub fn get_action_runner_connect() -> String {
-    if running_in_docker() {
-        format!(
-            "http://{}:{}",
-            get_server_host(),
-            get_var("ACTION_RUNNER_PORT")
-        )
-    } else {
-        "unix:/var/run/iml-action-runner.sock".to_string()
-    }
+pub fn get_action_runner_http() -> String {
+    format!(
+        "http://{}:{}",
+        get_server_host(),
+        get_var("ACTION_RUNNER_PORT")
+    )
+}
+
+pub fn get_action_runner_uds() -> String {
+    "/var/run/iml-action-runner.sock".to_string()
 }
 
 pub fn get_sfa_endpoints() -> Option<Vec<Vec<Url>>> {

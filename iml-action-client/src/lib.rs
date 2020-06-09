@@ -11,7 +11,7 @@ use futures::{
 use hyper::{client::HttpConnector, Body, Client, Request};
 use hyperlocal::{UnixClientExt as _, UnixConnector};
 use iml_action_runner::ActionType;
-use iml_manager_env::{get_action_runner_connect, running_in_docker};
+use iml_manager_env::{get_action_runner_http, get_action_runner_uds, running_in_docker};
 use iml_wire_types::{Action, ActionId, ActionName, Fqdn};
 use thiserror::Error;
 use uuid::Uuid;
@@ -44,9 +44,17 @@ impl ClientWrapper {
 
 fn client() -> ClientWrapper {
     if running_in_docker() {
-        ClientWrapper::Unix(Client::unix())
-    } else {
         ClientWrapper::Http(Client::new())
+    } else {
+        ClientWrapper::Unix(Client::unix())
+    }
+}
+
+fn connect_uri() -> hyper::Uri {
+    if running_in_docker() {
+        get_action_runner_http().parse::<hyper::Uri>().unwrap()
+    } else {
+        hyperlocal::Uri::new(get_action_runner_uds(), "/").into()
     }
 }
 
@@ -59,7 +67,7 @@ pub fn invoke_rust_agent(
     impl Future<Output = Result<serde_json::Value, ImlActionClientError>>,
 ) {
     let request_id = Uuid::new_v4().to_hyphenated().to_string();
-    let uri = get_action_runner_connect();
+    let uri = connect_uri();
 
     let action = ActionType::Remote((
         host.clone().into(),
