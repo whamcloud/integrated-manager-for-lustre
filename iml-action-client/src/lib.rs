@@ -58,6 +58,14 @@ fn connect_uri() -> hyper::Uri {
     }
 }
 
+fn connect_uri() -> hyper::Uri {
+    if running_in_docker() {
+        get_action_runner_http().parse::<hyper::Uri>().unwrap()
+    } else {
+        hyperlocal::Uri::new(get_action_runner_uds(), "/").into()
+    }
+}
+
 pub fn invoke_rust_agent(
     host: impl Into<Fqdn> + Clone,
     command: impl Into<ActionName>,
