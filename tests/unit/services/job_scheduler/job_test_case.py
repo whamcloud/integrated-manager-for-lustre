@@ -8,6 +8,7 @@ from chroma_core.models import Command
 from chroma_core.models import ManagedTarget
 from chroma_core.models import ManagedTargetMount
 from chroma_core.models import Nid
+from chroma_core.models import StateChangeJob
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
 from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import ServiceRpcInterface
@@ -190,6 +191,9 @@ class JobTestCase(IMLUnitTestCase):
         def run_next():
             while True:
                 runnable_jobs = self.job_scheduler._job_collection.ready_jobs
+                for job in runnable_jobs:
+                    if isinstance(job, StateChangeJob):
+                        job.skip_if_satisfied = False
 
                 log.info(
                     "run_next: %d runnable jobs of (%d pending, %d tasked)"
