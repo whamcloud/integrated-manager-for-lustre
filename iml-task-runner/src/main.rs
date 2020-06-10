@@ -12,8 +12,13 @@ use iml_orm::{
     tokio_diesel::{AsyncRunQueryDsl as _, OptionalExtension as _},
     DbPool,
 };
+<<<<<<< HEAD
 use iml_postgres::pool;
 use iml_wire_types::{db::FidTaskQueue, AgentResult, FidError, FidItem, TaskAction};
+=======
+use iml_postgres::SharedClient;
+use iml_wire_types::{db::FidTaskQueue, AgentResult, FidItem, TaskAction};
+>>>>>>> Add running_on host
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -93,6 +98,10 @@ async fn send_work(
         rowlist.len()
     );
 
+    if rowlist.is_empty() {
+        return trans.commit().err_into().await;
+    }
+
     let fidlist = rowlist
         .into_iter()
         .map(|row| {
@@ -104,8 +113,19 @@ async fn send_work(
         })
         .collect();
 
-    let mut completed = fidlist.len();
-    let mut failed = 0;
+    if task.single_runner && task.running_on_id.is_none() {
+        tracing::debug!(
+            "Setting Task {} ({}) Running to host {} ({})",
+            task.name,
+            task.id,
+            fqdn,
+            host_id
+        );
+        let sql = "UPDATE chroma_core_task SET running_on_id = $1 WHERE id = $2";
+        let s = trans.prepare(sql).await?;
+        trans.execute(&s, &[&host_id, &task.id]).await?;
+    }
+
     let args = TaskAction(fsname, taskargs, fidlist);
 
     // send fids to actions runner
@@ -200,13 +220,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     activeclients.lock().await.insert(worker.id);
                     let tasks = tasks_per_worker(&pool, &worker).await?;
                     let fqdn = worker_fqdn(&pool, &worker).await?;
+                    let host_id = worker.host_id;
 
                     let rc = try_join_all(tasks.into_iter().map(|task| {
                         let shared_client = shared_client.clone();
                         let fsname = fsname.clone();
                         let fqdn = fqdn.clone();
                         async move {
-                            send_work(shared_client.clone(), fqdn, fsname, &task)
+                            send_work(shared_client.clone(), fqdn, fsname, &task, host_id)
                                 .await
                                 .map_err(|e| {
                                     tracing::warn!("send_work({}) failed {:?}", task.name, e);
