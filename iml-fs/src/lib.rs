@@ -190,6 +190,18 @@ pub async fn file_exists(path: &str) -> bool {
     }
 }
 
+/// Given a `PathBuf`, Open for append or creates a new file that can have
+/// arbitrary `Bytes` written to it.
+pub async fn file_append_bytes(path: PathBuf) -> Result<FramedWrite<File, BytesCodec>, io::Error> {
+    let file = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .await?;
+
+    Ok(FramedWrite::new(file, BytesCodec::new()))
+}
+
 /// Given a `PathBuf`, creates a new file that can have
 /// arbitrary `Bytes` written to it.
 pub async fn file_write_bytes(path: PathBuf) -> Result<FramedWrite<File, BytesCodec>, io::Error> {

@@ -7,7 +7,7 @@ use futures::{
     future::{self, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
-use iml_wire_types::FidItem;
+use iml_wire_types::{FidError, FidItem};
 use liblustreapi::LlapiFid;
 use std::{collections::HashMap, convert::Into};
 use tokio::task::spawn_blocking;
@@ -67,7 +67,7 @@ pub async fn read_mailbox(
 
 pub async fn process_fids(
     (fsname_or_mntpath, _task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
-) -> Result<(), ImlAgentError> {
+) -> Result<Vec<FidError>, ImlAgentError> {
     let llapi = search_rootpath(fsname_or_mntpath).await?;
 
     let rmfids_size = llapi.rmfids_size();
@@ -75,7 +75,7 @@ pub async fn process_fids(
     let fids = fid_list.into_iter().map(|fi| fi.fid.clone());
     stream::iter(fids)
         .chunks(rmfids_size)
-        .map(|xs| Ok(xs.into_iter().collect()))
+        .map(|xs| Ok::<_, ImlAgentError>(xs.into_iter().collect()))
         .try_for_each_concurrent(10, |fids| {
             rm_fids(llapi.clone(), fids)
                 .or_else(|e| {
@@ -84,5 +84,6 @@ pub async fn process_fids(
                 })
                 .map_ok(|_| debug!("removed {} fids", rmfids_size))
         })
-        .await
+        .await?;
+    Ok(vec![])
 }

@@ -12,7 +12,7 @@ use futures::{
     sink::SinkExt,
     stream, StreamExt, TryFutureExt, TryStreamExt,
 };
-use iml_wire_types::FidItem;
+use iml_wire_types::{FidError, FidItem};
 use liblustreapi::LlapiFid;
 use std::{collections::HashMap, io, path::PathBuf};
 use tokio::task::spawn_blocking;
@@ -136,12 +136,12 @@ async fn fi2path(llapi: LlapiFid, fi: FidItem) -> Option<String> {
 /// Process FIDs
 pub async fn process_fids(
     (fsname_or_mntpath, task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
-) -> Result<(), ImlAgentError> {
+) -> Result<Vec<FidError>, ImlAgentError> {
     let txt_path = task_args.get("report_file".into()).ok_or(RequiredError(
         "Task missing 'report_file' argument".to_string(),
     ))?;
 
-    let f = iml_fs::file_write_bytes(txt_path.into()).await?;
+    let f = iml_fs::file_append_bytes(txt_path.into()).await?;
 
     let llapi = search_rootpath(fsname_or_mntpath).await?;
 
@@ -175,5 +175,5 @@ pub async fn process_fids(
         })
         .forward(f.sink_err_into())
         .await?;
-    Ok(())
+    Ok(vec![])
 }

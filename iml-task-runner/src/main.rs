@@ -13,7 +13,7 @@ use iml_orm::{
     DbPool,
 };
 use iml_postgres::SharedClient;
-use iml_wire_types::{AgentResult, db::FidTaskQueue, FidItem, TaskAction};
+use iml_wire_types::{db::FidTaskQueue, AgentResult, FidError, FidItem, TaskAction};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -70,6 +70,7 @@ async fn send_work(
     fqdn: String,
     fsname: String,
     task: &Task,
+    host_id: i32,
 ) -> Result<(), error::ImlTaskRunnerError> {
     let taskargs: HashMap<String, String> = serde_json::from_value(task.args.clone())?;
 
@@ -77,6 +78,7 @@ async fn send_work(
 
     let mut c = shared_client.lock().await;
     let trans = c.transaction().await?;
+
     let sql = "DELETE FROM chroma_core_fidtaskqueue WHERE id in ( SELECT id FROM chroma_core_fidtaskqueue WHERE task_id = $1 LIMIT $2 FOR UPDATE SKIP LOCKED ) RETURNING *";
     let s = trans.prepare(sql).await?;
 
@@ -91,6 +93,10 @@ async fn send_work(
         rowlist.len()
     );
 
+    if rowlist.is_empty() {
+        return trans.commit().err_into().await;
+    }
+
     let fidlist = rowlist
         .into_iter()
         .map(|row| {
@@ -102,6 +108,19 @@ async fn send_work(
         })
         .collect();
 
+    if task.single_runner && task.running_on_id.is_none() {
+        tracing::debug!(
+            "Setting Task {} ({}) Running to host {} ({})",
+            task.name,
+            task.id,
+            fqdn,
+            host_id
+        );
+        let sql = "UPDATE chroma_core_task SET running_on_id = $1 WHERE id = $2";
+        let s = trans.prepare(sql).await?;
+        trans.execute(&s, &[&host_id, &task.id]).await?;
+    }
+
     let args = TaskAction(fsname, taskargs, fidlist);
 
     // send fids to actions runner
@@ -110,17 +129,36 @@ async fn send_work(
         match fut.await {
             Err(e) => {
                 tracing::info!("Failed to send {} to {}: {}", &action, &fqdn, e);
-                trans.rollback().await?;
-                return Ok(());
+                return trans.rollback().err_into().await;
             }
             Ok(res) => {
                 let agent_result: AgentResult = serde_json::from_value(res)?;
                 match agent_result {
-                    Ok(data) => tracing::debug!("Success {} on {}: {:?}", &action, &fqdn, data),
+                    Ok(data) => {
+                        tracing::debug!("Success {} on {}: {:?}", &action, &fqdn, data);
+                        if task.keep_failed {
+                            let errors: Vec<FidError> = serde_json::from_value(data)?;
+                            let sql = "INSERT INTO chroma_core_fidtaskerror (fid, task, data, errno) VALUES ($1, $2, $3, $4)";
+                            let s = trans.prepare(sql).await?;
+                            let task_id = task.id;
+                            for err in errors.iter() {
+                                if let Err(e) = trans
+                                    .execute(&s, &[&err.fid, &task_id, &err.data, &err.errno])
+                                    .await
+                                {
+                                    tracing::info!(
+                                        "Failed to insert fid error ({} : {}): {}",
+                                        err.fid,
+                                        err.errno,
+                                        e
+                                    );
+                                }
+                            }
+                        }
+                    }
                     Err(err) => {
                         tracing::info!("Failed {} on {}: {}", &action, &fqdn, err);
-                        trans.rollback().await?;
-                        return Ok(());
+                        return trans.rollback().err_into().await;
                     }
                 }
             }
@@ -165,13 +203,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     activeclients.lock().await.insert(worker.id);
                     let tasks = tasks_per_worker(&pool, &worker).await?;
                     let fqdn = worker_fqdn(&pool, &worker).await?;
+                    let host_id = worker.host_id;
 
                     let rc = try_join_all(tasks.into_iter().map(|task| {
                         let shared_client = shared_client.clone();
                         let fsname = fsname.clone();
                         let fqdn = fqdn.clone();
                         async move {
-                            send_work(shared_client.clone(), fqdn, fsname, &task)
+                            // @@ send_work() locks shared_client -
+                            // need a way to run multiple transactions
+                            // simultaneously
+                            send_work(shared_client.clone(), fqdn, fsname, &task, host_id)
                                 .await
                                 .map_err(|e| {
                                     tracing::warn!("send_work({}) failed {:?}", task.name, e);
