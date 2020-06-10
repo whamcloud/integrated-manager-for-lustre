@@ -12,7 +12,7 @@ use iml_device::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
     },
-    virtual_device::{get_other_devices, save_devices, update_virtual_devices},
+    virtual_device::{get_all_devices, get_other_devices, save_devices, update_virtual_devices},
     ImlDeviceError,
 };
 use iml_orm::{
@@ -129,9 +129,7 @@ async fn main() -> Result<(), ImlDeviceError> {
             "The top device has to be Root"
         );
 
-        let mut all_devices = get_other_devices(&f, &pool).await;
-
-        all_devices.push((f, d));
+        let all_devices = get_all_devices(&pool).await;
 
         let middle1: DateTime<Local> = Local::now();
 

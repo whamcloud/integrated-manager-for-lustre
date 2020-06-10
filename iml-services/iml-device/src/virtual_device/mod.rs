@@ -8,6 +8,7 @@ use util::{
     children, children_mut, children_owned, compare_selected_fields, is_virtual, to_display,
 };
 
+use collections::HashMap;
 use device_types::{
     devices::{
         Dataset, Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup,
@@ -67,6 +68,24 @@ pub async fn get_other_devices(f: &Fqdn, pool: &DbPool) -> Vec<(Fqdn, Device)> {
         .collect()
 }
 
+pub async fn get_all_devices(pool: &DbPool) -> Vec<(Fqdn, Device)> {
+    let all_devices = table
+        .load_async::<ChromaCoreDevice>(&pool)
+        .await
+        .expect("Error getting devices from other hosts");
+
+    all_devices
+        .into_iter()
+        .map(|d| {
+            (
+                Fqdn(d.fqdn),
+                serde_json::from_value(d.devices)
+                    .expect("Couldn't deserialize Device from JSON when reading from DB"),
+            )
+        })
+        .collect()
+}
+
 pub fn update_virtual_devices(
     devices: Vec<(Fqdn, Device)>,
     commands: &[Command],
@@ -77,12 +96,13 @@ pub fn update_virtual_devices(
     // there will be duplicates, of which we'll end up using only one,
     // since when inserting we again search using same fields.
     // So keep parents in a set to avoid iterating the same devices in insert_virtual_devices twice.
-    let mut parents = collections::HashSet::new();
+    let mut actions = collections::HashSet::new();
     let devices2 = devices.clone();
+    let changes = transform_commands_to_changes(commands);
 
     let len = devices.len();
     for (i, (f, d)) in devices.iter().enumerate() {
-        let ps = collect_virtual_device_parents(&d, 0, None, commands);
+        let aa = collect_actions(&d, 0, None, &changes);
         // The incoming tree (from current host) can have less virtual device parents, than trees from the DB (from other hosts).
         // In the incoming data there are only virtual devices that are local to that host (i.e. are mounted there).
         // In the database, there are virtual devices that are collected from all of hosts.
@@ -90,15 +110,15 @@ pub fn update_virtual_devices(
         let note = if i == len - 1 { " (incoming)" } else { "" };
         tracing::info!(
             "Collected {:3} parents at {:25} host{}",
-            ps.len(),
+            aa.len(),
             f.to_string(),
             note
         );
-        parents.extend(ps);
+        actions.extend(aa);
     }
 
     for (f, d) in devices2 {
-        let dd = insert_virtual_devices(d, &parents);
+        let dd = process_actions(d, &mut actions);
 
         results.push((f, dd));
     }
@@ -106,40 +126,77 @@ pub fn update_virtual_devices(
     results
 }
 
-fn collect_virtual_device_parents<'d>(
-    d: &'d Device,
-    level: usize,
-    parent: Option<&'d Device>,
-    commands: &[Command],
-) -> Vec<&'d Device> {
-    let mut results = vec![];
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum Id {
+    Guid(u64),
+}
 
-    if is_virtual(d) {
-        if !commands.is_empty() {
-            tracing::info!("Looking through commands");
-            for c in commands {
-                match c {
-                    Command::PoolCommand(pc) => {
-                        tracing::info!("Got PoolCommand");
-                        match pc {
-                            PoolCommand::UpdatePool(p) => {
-                                tracing::info!("Got UpdatePool");
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum Change {
+    Upsert(Id),
+    Remove(Id),
+}
 
-                                let guid1 = p.guid;
-                                let guid2 = match d {
-                                    Device::Zpool(dd) => Some(dd.guid),
-                                    _ => None,
-                                };
-                                guid2.map(|g| if g == guid1 { 
-                                results.push(parent.expect("Tried to push to parents the parent of the Root, which doesn't exist"))
-                            });
-                            }
-                            _ => {}
-                        }
+type ChangesMap = HashMap<Id, Change>;
+
+fn transform_commands_to_changes(commands: &[Command]) -> ChangesMap {
+    let mut results = HashMap::new();
+
+    for c in commands {
+        match c {
+            Command::PoolCommand(pc) => {
+                tracing::info!("Got PoolCommand");
+                match pc {
+                    PoolCommand::UpdatePool(p) => {
+                        tracing::info!("Got UpdatePool");
+
+                        let guid = p.guid;
+                        results.insert(Id::Guid(guid), Change::Upsert(Id::Guid(guid)));
                     }
                     _ => {}
                 }
             }
+            _ => {}
+        }
+    }
+
+    results
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum IdentifiedDevice<'d> {
+    Parent(&'d Device),
+    Itself(&'d Device),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum Action<'d> {
+    Upsert(IdentifiedDevice<'d>),
+    Remove(IdentifiedDevice<'d>),
+}
+
+fn collect_actions<'d>(
+    d: &'d Device,
+    level: usize,
+    parent: Option<&'d Device>,
+    changes: &ChangesMap,
+) -> Vec<Action<'d>> {
+    let mut results = vec![];
+
+    if is_virtual(d) {
+        if !changes.is_empty() {
+            let guid = match d {
+                Device::Zpool(dd) => Some(dd.guid),
+                _ => None,
+            };
+            guid.map(|g| match changes.get(&Id::Guid(g)) {
+                Some(Change::Upsert(id)) => {
+                    results.push(Action::Upsert(IdentifiedDevice::Parent(parent.expect(
+                        "Tried to push to parents the parent of the Root, which doesn't exist",
+                    ))));
+                }
+                _ => {}
+            });
             results
         } else {
             tracing::debug!(
@@ -147,52 +204,33 @@ fn collect_virtual_device_parents<'d>(
                 parent.map(|x| to_display(x)).unwrap_or("None".into()),
                 to_display(d)
             );
-            vec![parent
-                .expect("Tried to push to parents the parent of the Root, which doesn't exist")]
+            vec![Action::Upsert(IdentifiedDevice::Parent(parent.expect(
+                "Tried to push to parents the parent of the Root, which doesn't exist",
+            )))]
         }
     } else {
         match d {
             Device::Root(dd) => {
                 for c in dd.children.iter() {
-                    results.extend(collect_virtual_device_parents(
-                        c,
-                        level + 1,
-                        Some(d),
-                        commands,
-                    ));
+                    results.extend(collect_actions(c, level + 1, Some(d), changes));
                 }
                 results
             }
             Device::ScsiDevice(dd) => {
                 for c in dd.children.iter() {
-                    results.extend(collect_virtual_device_parents(
-                        c,
-                        level + 1,
-                        Some(d),
-                        commands,
-                    ));
+                    results.extend(collect_actions(c, level + 1, Some(d), changes));
                 }
                 results
             }
             Device::Partition(dd) => {
                 for c in dd.children.iter() {
-                    results.extend(collect_virtual_device_parents(
-                        c,
-                        level + 1,
-                        Some(d),
-                        commands,
-                    ));
+                    results.extend(collect_actions(c, level + 1, Some(d), changes));
                 }
                 results
             }
             Device::Mpath(dd) => {
                 for c in dd.children.iter() {
-                    results.extend(collect_virtual_device_parents(
-                        c,
-                        level + 1,
-                        Some(d),
-                        commands,
-                    ));
+                    results.extend(collect_actions(c, level + 1, Some(d), changes));
                 }
                 results
             }
@@ -201,80 +239,104 @@ fn collect_virtual_device_parents<'d>(
     }
 }
 
+// Returns `true` if action was applied
+fn maybe_apply_action(mut d: Device, action: &Action) -> (Device, bool) {
+    match action {
+        Action::Upsert(device) => match device {
+            IdentifiedDevice::Parent(new_d) => {
+                if compare_selected_fields(&d, new_d) {
+                    tracing::debug!(
+                        "Inserting device {} children to {}",
+                        to_display(new_d),
+                        to_display(&d)
+                    );
+
+                    children_mut(&mut d).map(|x| {
+                        children(new_d).map(|y| {
+                            *x = y.clone();
+                        })
+                    });
+
+                    (d, true)
+                } else {
+                    (d, false)
+                }
+            }
+            _ => (d, false),
+        },
+        Action::Remove(device) => match device {
+            IdentifiedDevice::Itself(new_d) => (d, false),
+            _ => (d, false),
+        },
+    }
+}
+
 // This function accepts ownership of `Device` to be able to reconstruct
 // its `children`, which is an `OrdSet`, inside of `insert`.
 // `OrdSet` doesn't have `iter_mut` so iterating `children` and mutating them in-place isn't possible.
-fn insert_virtual_devices(mut d: Device, parents: &collections::HashSet<&Device>) -> Device {
-    for p in parents {
-        d = insert(d, &p);
+fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) -> Device {
+    tracing::trace!("Processing device {}", to_display(&d));
+    let mut actions_to_remove = collections::HashSet::new();
+    for a in actions.iter() {
+        let (new_d, did_apply) = maybe_apply_action(d, a);
+        d = new_d;
+        if did_apply {
+            actions_to_remove.insert(a.clone());
+        }
     }
-    d
-}
-
-// This function in only for deduplication of `else` branch in `insert`
-fn new_children(d: Device, to_insert: &Device) -> OrdSet<Device> {
-    children_owned(d)
-        .into_iter()
-        .map(|c| insert(c, to_insert))
-        .collect()
-}
-
-fn insert(mut d: Device, to_insert: &Device) -> Device {
-    tracing::trace!("Trying to insert to {}", to_display(&d));
-    if compare_selected_fields(&d, to_insert) {
-        tracing::debug!(
-            "Inserting device {} children to {}",
-            to_display(to_insert),
-            to_display(&d)
-        );
-
-        children_mut(&mut d).map(|x| {
-            children(to_insert).map(|y| {
-                *x = y.clone();
-            })
-        });
-
-        d
+    for a in actions_to_remove {
+        assert!(actions.remove(&a));
+    }
+    if actions.is_empty() {
+        return d;
     } else {
         // This is a shallow copy due to `children` being `im::OrdSet`, which is copy-on-write.
         let d_2 = d.clone();
 
         match d {
             Device::Root(dd) => Device::Root(Root {
-                children: new_children(d_2, to_insert),
+                children: new_children(d_2, actions),
                 ..dd
             }),
             Device::ScsiDevice(dd) => Device::ScsiDevice(ScsiDevice {
-                children: new_children(d_2, to_insert),
+                children: new_children(d_2, actions),
                 ..dd
             }),
             Device::Partition(dd) => Device::Partition(Partition {
-                children: new_children(d_2, to_insert),
+                children: new_children(d_2, actions),
                 ..dd
             }),
             Device::MdRaid(dd) => Device::MdRaid(MdRaid {
-                children: new_children(d_2, to_insert),
+                children: new_children(d_2, actions),
                 ..dd
             }),
             Device::Mpath(dd) => Device::Mpath(Mpath {
-                children: new_children(d_2, to_insert),
+                children: new_children(d_2, actions),
                 ..dd
             }),
             Device::VolumeGroup(dd) => Device::VolumeGroup(VolumeGroup {
-                children: new_children(d_2, to_insert),
+                children: new_children(d_2, actions),
                 ..dd
             }),
             Device::LogicalVolume(dd) => Device::LogicalVolume(LogicalVolume {
-                children: new_children(d_2, to_insert),
+                children: new_children(d_2, actions),
                 ..dd
             }),
             Device::Zpool(dd) => Device::Zpool(Zpool {
-                children: new_children(d_2, to_insert),
+                children: new_children(d_2, actions),
                 ..dd
             }),
             Device::Dataset(dd) => Device::Dataset(Dataset { ..dd }),
         }
     }
+}
+
+// This function in only for deduplication of `else` branch in `insert`
+fn new_children(d: Device, actions: &mut collections::HashSet<Action>) -> OrdSet<Device> {
+    children_owned(d)
+        .into_iter()
+        .map(|c| process_actions(c, actions))
+        .collect()
 }
 
 #[cfg(test)]
