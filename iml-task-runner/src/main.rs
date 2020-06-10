@@ -13,7 +13,7 @@ use iml_orm::{
     DbPool,
 };
 use iml_postgres::SharedClient;
-use iml_wire_types::{ActionResult, db::FidTaskQueue, FidItem, TaskAction};
+use iml_wire_types::{AgentResult, db::FidTaskQueue, FidItem, TaskAction};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -114,8 +114,8 @@ async fn send_work(
                 return Ok(());
             }
             Ok(res) => {
-                let action_result: ActionResult = serde_json::from_value(res)?;
-                match action_result.result {
+                let agent_result: AgentResult = serde_json::from_value(res)?;
+                match agent_result {
                     Ok(data) => tracing::debug!("Success {} on {}: {:?}", &action, &fqdn, data),
                     Err(err) => {
                         tracing::info!("Failed {} on {}: {}", &action, &fqdn, err);
