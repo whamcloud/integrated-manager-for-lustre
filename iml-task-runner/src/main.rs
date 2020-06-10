@@ -13,7 +13,7 @@ use iml_orm::{
     DbPool,
 };
 use iml_postgres::SharedClient;
-use iml_wire_types::{db::FidTaskQueue, FidItem, TaskAction};
+use iml_wire_types::{ActionResult, db::FidTaskQueue, FidItem, TaskAction};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -113,9 +113,16 @@ async fn send_work(
                 trans.rollback().await?;
                 return Ok(());
             }
-            Ok(_res) => {
-                tracing::debug!("Success {} on {}", &action, &fqdn);
-                // @@ check for failed fids and move them to fidtaskerror
+            Ok(res) => {
+                let action_result: ActionResult = serde_json::from_value(res)?;
+                match action_result.result {
+                    Ok(data) => tracing::debug!("Success {} on {}: {:?}", &action, &fqdn, data),
+                    Err(err) => {
+                        tracing::info!("Failed {} on {}: {}", &action, &fqdn, err);
+                        trans.rollback().await?;
+                        return Ok(());
+                    }
+                }
             }
         }
     }
