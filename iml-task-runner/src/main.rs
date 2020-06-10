@@ -12,13 +12,8 @@ use iml_orm::{
     tokio_diesel::{AsyncRunQueryDsl as _, OptionalExtension as _},
     DbPool,
 };
-<<<<<<< HEAD
-use iml_postgres::pool;
-use iml_wire_types::{db::FidTaskQueue, AgentResult, FidError, FidItem, TaskAction};
-=======
 use iml_postgres::SharedClient;
-use iml_wire_types::{db::FidTaskQueue, AgentResult, FidItem, TaskAction};
->>>>>>> Add running_on host
+use iml_wire_types::{db::FidTaskQueue, AgentResult, FidError, FidItem, TaskAction};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -84,6 +79,7 @@ async fn send_work(
 
     let mut c = shared_client.lock().await;
     let trans = c.transaction().await?;
+
     let sql = "DELETE FROM chroma_core_fidtaskqueue WHERE id in ( SELECT id FROM chroma_core_fidtaskqueue WHERE task_id = $1 LIMIT $2 FOR UPDATE SKIP LOCKED ) RETURNING *";
     let s = trans.prepare(sql).await?;
 
@@ -142,11 +138,8 @@ async fn send_work(
                 match agent_result {
                     Ok(data) => {
                         tracing::debug!("Success {} on {}: {:?}", &action, &fqdn, data);
-                        let errors: Vec<FidError> = serde_json::from_value(data)?;
-                        failed += errors.len();
-                        completed -= errors.len();
-
                         if task.keep_failed {
+                            let errors: Vec<FidError> = serde_json::from_value(data)?;
                             let sql = "INSERT INTO chroma_core_fidtaskerror (fid, task, data, errno) VALUES ($1, $2, $3, $4)";
                             let s = trans.prepare(sql).await?;
                             let task_id = task.id;
@@ -227,6 +220,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let fsname = fsname.clone();
                         let fqdn = fqdn.clone();
                         async move {
+                            // @@ send_work() locks shared_client -
+                            // need a way to run multiple transactions
+                            // simultaneously
                             send_work(shared_client.clone(), fqdn, fsname, &task, host_id)
                                 .await
                                 .map_err(|e| {
