@@ -162,7 +162,6 @@ class UpdateScan(object):
                     log.info("updated mount %s on %s -> active" % (actual_mount["mountpoint"], self.host))
             except IndexError:
                 log.info("creating new mount %s on %s" % (actual_mount["mountpoint"], self.host))
-                filesystem = ManagedFilesystem.objects.get(name=fsname)
                 JobSchedulerClient.create_client_mount(self.host, fsname, actual_mount["mountpoint"], True)
 
     def update_target_mounts(self):
