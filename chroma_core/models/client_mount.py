@@ -26,7 +26,6 @@ class LustreClientMount(DeletableStatefulObject):
 
     states = ["unmounted", "mounted", "removed"]
     initial_state = "unmounted"
-    skip_if_satisfied = True
 
     def __str__(self):
         return self.get_label()
