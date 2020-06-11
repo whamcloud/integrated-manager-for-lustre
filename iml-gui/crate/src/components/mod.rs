@@ -32,6 +32,7 @@ pub(crate) mod loading;
 pub(crate) mod lock_indicator;
 pub(crate) mod logo;
 pub(crate) mod restrict;
+pub(crate) mod sfa_overview;
 pub(crate) mod stratagem;
 pub(crate) mod tree;
 

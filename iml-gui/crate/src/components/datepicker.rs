@@ -34,7 +34,7 @@ impl<'a> Default for Model {
 }
 
 pub fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg, GMsg>) {
-    log!("update");
+
     match msg {
         Msg::SelectDuration(duration) => {
             match duration {

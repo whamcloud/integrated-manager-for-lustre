@@ -1295,6 +1295,7 @@ pub struct SfaStorageSystem {
     pub health_state_reason: String,
     pub health_state: HealthState,
     pub uuid: String,
+    pub platform: String,
 }
 
 pub const SFA_STORAGE_SYSTEM_TABLE_NAME: TableName = TableName("chroma_core_sfastoragesystem");
@@ -1332,6 +1333,7 @@ impl From<Row> for SfaStorageSystem {
                 .try_into()
                 .unwrap_or_default(),
             uuid: row.get("uuid"),
+            platform: row.get("platform"),
         }
     }
 }
@@ -1566,6 +1568,7 @@ pub struct SfaController {
     pub enclosure_index: i32,
     pub health_state: HealthState,
     pub health_state_reason: String,
+    pub child_health_state: HealthState,
     pub storage_system: String,
 }
 
@@ -1599,6 +1602,10 @@ impl From<Row> for SfaController {
                 .try_into()
                 .unwrap_or_default(),
             health_state_reason: row.get("health_state_reason"),
+            child_health_state: row
+                .get::<_, i16>("child_health_state")
+                .try_into()
+                .unwrap_or_default(),
             storage_system: row.get("storage_system"),
         }
     }

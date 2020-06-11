@@ -84,6 +84,7 @@ impl TryFrom<Instance> for SfaStorageSystem {
                 .parse::<i16>()?
                 .try_into()?,
             uuid: x.try_get_property("UUID")?.into(),
+            platform: x.try_get_property("Platform")?.into(),
         })
     }
 }
@@ -227,6 +228,10 @@ impl TryFrom<(String, Instance)> for SfaController {
             health_state_reason: x.try_get_property("HealthStateReason")?.into(),
             health_state: x
                 .try_get_property("HealthState")?
+                .parse::<i16>()?
+                .try_into()?,
+            child_health_state: x
+                .try_get_property("ChildHealthState")?
                 .parse::<i16>()?
                 .try_into()?,
             storage_system,
