@@ -16,7 +16,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1591903353508,
+  "iteration": 1591906343784,
   "links": [],
   "panels": [
     {
@@ -25,7 +25,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "iml_stats",
-      "description": "LNet Send/Receive Counts",
+      "description": "LNet Operations",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -68,7 +68,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "$tag_host read",
+          "alias": "$tag_host",
           "groupBy": [
             {
               "params": ["$__interval"],
@@ -82,41 +82,9 @@
           "measurement": "lnet",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT SUM(*) FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT non_negative_derivative(\"samples\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"host\", \"target\") GROUP BY time($interval)),\n(SELECT sum(\"diff1\") AS \"diff\" FROM (SELECT non_negative_derivative(\"mean_samples\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"host\", \"target\") GROUP BY time($interval))\nGROUP BY \"host\", time($interval)",
+          "query": "SELECT SUM(*) FROM\n(SELECT mean(\"diff\") AS \"value\" FROM (SELECT non_negative_derivative(\"recv_count\", 1s) AS \"diff\" FROM \"lnet\" WHERE \"nid\" != '0@lo' AND  time > now() - 1d AND $timeFilter GROUP BY \"nid\", \"host\") GROUP BY time($interval), \"nid\", \"host\"),\n(SELECT SUM(\"diff\") AS \"value\" FROM ( SELECT non_negative_derivative(\"mean_recv\", 1s) AS \"diff\" FROM \"long_term\".\"lnet\" WHERE \"nid\" != '0@lo' AND time <= now() - 1d AND $timeFilter GROUP BY \"nid\", \"host\") GROUP BY time($interval), \"nid\", \"host\")\nGROUP BY time($interval), \"host\"",
           "rawQuery": true,
           "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": ["value"],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              }
-            ]
-          ],
-          "tags": []
-        },
-        {
-          "alias": "$tag_host write",
-          "groupBy": [
-            {
-              "params": ["$__interval"],
-              "type": "time"
-            },
-            {
-              "params": ["null"],
-              "type": "fill"
-            }
-          ],
-          "orderByTime": "ASC",
-          "policy": "default",
-          "query": "SELECT SUM(*) FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT non_negative_derivative(\"samples\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"host\", \"target\") GROUP BY time($interval)),\n(SELECT sum(\"diff1\") AS \"diff\" FROM (SELECT non_negative_derivative(\"mean_samples\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"host\", \"target\") GROUP BY time($interval))\nGROUP BY \"host\", time($interval)",
-          "rawQuery": true,
-          "refId": "B",
           "resultFormat": "time_series",
           "select": [
             [
@@ -3226,7 +3194,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "iml_stats",
-      "description": "LNet Send/Receive Counts",
+      "description": "LNet Operations by Server",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -3286,38 +3254,6 @@
           "query": "SELECT * FROM\n(SELECT mean(\"diff\") AS \"value\" FROM (SELECT non_negative_derivative(\"recv_count\", 1s) AS \"diff\" FROM \"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY \"nid\") GROUP BY time($interval), \"nid\"),\n(SELECT SUM(\"diff\") AS \"value\" FROM ( SELECT non_negative_derivative(\"mean_recv\", 1s) AS \"diff\" FROM \"long_term\".\"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"nid\") GROUP BY time($interval), \"nid\")\nGROUP BY \"nid\"",
           "rawQuery": true,
           "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": ["value"],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              }
-            ]
-          ],
-          "tags": []
-        },
-        {
-          "alias": "$tag_nid send",
-          "groupBy": [
-            {
-              "params": ["$__interval"],
-              "type": "time"
-            },
-            {
-              "params": ["null"],
-              "type": "fill"
-            }
-          ],
-          "orderByTime": "ASC",
-          "policy": "default",
-          "query": "SELECT * FROM\n(SELECT mean(\"diff\") AS \"value\" FROM (SELECT non_negative_derivative(\"send_count\", 1s) AS \"diff\" FROM \"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY \"nid\") GROUP BY time($interval), \"nid\"),\n(SELECT SUM(\"diff\") AS \"value\" FROM ( SELECT non_negative_derivative(\"mean_send\", 1s) AS \"diff\" FROM \"long_term\".\"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"nid\") GROUP BY time($interval), \"nid\")\nGROUP BY \"nid\"",
-          "rawQuery": true,
-          "refId": "B",
           "resultFormat": "time_series",
           "select": [
             [
@@ -3472,7 +3408,6 @@
   },
   "timepicker": {
     "refresh_intervals": [
-      "5s",
       "10s",
       "30s",
       "1m",
@@ -3487,5 +3422,5 @@
   "timezone": "",
   "title": "IML Metrics",
   "uid": "8Klek6wZz",
-  "version": 1
+  "version": 3
 }
