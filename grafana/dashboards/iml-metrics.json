@@ -16,7 +16,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1591128408528,
+  "iteration": 1591894865833,
   "links": [],
   "panels": [
     {
@@ -26,6 +26,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "LNet Send/Receive Counts",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -48,7 +54,7 @@
       },
       "lines": true,
       "linewidth": 2,
-      "nullPointMode": "null as zero",
+      "nullPointMode": "connected",
       "options": {
         "dataLinks": []
       },
@@ -76,7 +82,7 @@
           "measurement": "lnet",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT SUM(*) FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT derivative(\"samples\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"host\", \"target\") GROUP BY time($interval)),\n(SELECT sum(\"diff1\") AS \"diff\" FROM (SELECT derivative(\"mean_samples\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"host\", \"target\") GROUP BY time($interval))\nGROUP BY \"host\", time($interval)",
+          "query": "SELECT SUM(*) FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT non_negative_derivative(\"samples\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"host\", \"target\") GROUP BY time($interval)),\n(SELECT sum(\"diff1\") AS \"diff\" FROM (SELECT non_negative_derivative(\"mean_samples\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'read_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"host\", \"target\") GROUP BY time($interval))\nGROUP BY \"host\", time($interval)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -108,7 +114,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT SUM(*) FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT derivative(\"samples\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"host\", \"target\") GROUP BY time($interval)),\n(SELECT sum(\"diff1\") AS \"diff\" FROM (SELECT derivative(\"mean_samples\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"host\", \"target\") GROUP BY time($interval))\nGROUP BY \"host\", time($interval)",
+          "query": "SELECT SUM(*) FROM\n(SELECT mean(\"diff1\") AS \"diff\" FROM (SELECT non_negative_derivative(\"samples\", 1s) AS \"diff1\" FROM \"target\" WHERE \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time > now() - 1d AND $timeFilter GROUP BY \"host\", \"target\") GROUP BY time($interval)),\n(SELECT sum(\"diff1\") AS \"diff\" FROM (SELECT non_negative_derivative(\"mean_samples\", 1s) AS \"diff1\" FROM \"long_term\".\"target\" where \"kind\"='OST'  AND \"name\" = 'write_bytes' AND time <= now() - 1d AND $timeFilter GROUP BY \"host\", \"target\") GROUP BY time($interval))\nGROUP BY \"host\", time($interval)",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
@@ -148,7 +154,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:532",
-          "format": "Bps",
+          "format": "ops",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -177,6 +183,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Usages for a particular filesystem",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 2,
       "fillGradient": 0,
       "gridPos": {
@@ -358,6 +370,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Space usage",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 2,
       "fillGradient": 0,
       "gridPos": {
@@ -475,6 +493,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Metadata Operations for a particular filesystem",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 2,
       "fillGradient": 0,
       "gridPos": {
@@ -589,6 +613,34 @@
     {
       "datasource": "iml_stats",
       "description": "OST Usage",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "displayName": "",
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 75
+              }
+            ]
+          },
+          "unit": "%"
+        },
+        "overrides": []
+      },
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -599,39 +651,15 @@
       "interval": "",
       "options": {
         "displayMode": "gradient",
-        "fieldOptions": {
+        "orientation": "vertical",
+        "reduceOptions": {
           "calcs": ["mean"],
-          "defaults": {
-            "mappings": [],
-            "max": 100,
-            "min": 0,
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "yellow",
-                  "value": 50
-                },
-                {
-                  "color": "red",
-                  "value": 75
-                }
-              ]
-            },
-            "title": "",
-            "unit": "%"
-          },
-          "overrides": [],
+          "fields": "",
           "values": true
         },
-        "orientation": "vertical",
         "showUnfilled": true
       },
-      "pluginVersion": "6.7.3",
+      "pluginVersion": "7.0.3",
       "targets": [
         {
           "alias": "$tag_target",
@@ -674,6 +702,34 @@
     {
       "datasource": "iml_stats",
       "description": "OST Balance for a particular filesystem",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "displayName": "",
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 75
+              }
+            ]
+          },
+          "unit": "%"
+        },
+        "overrides": []
+      },
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -684,39 +740,15 @@
       "interval": "",
       "options": {
         "displayMode": "gradient",
-        "fieldOptions": {
+        "orientation": "vertical",
+        "reduceOptions": {
           "calcs": ["mean"],
-          "defaults": {
-            "mappings": [],
-            "max": 100,
-            "min": 0,
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "yellow",
-                  "value": 50
-                },
-                {
-                  "color": "red",
-                  "value": 75
-                }
-              ]
-            },
-            "title": "",
-            "unit": "%"
-          },
-          "overrides": [],
+          "fields": "",
           "values": true
         },
-        "orientation": "vertical",
         "showUnfilled": true
       },
-      "pluginVersion": "6.7.3",
+      "pluginVersion": "7.0.3",
       "targets": [
         {
           "alias": "$tag_target",
@@ -763,6 +795,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Read Bytes shown by filesystem",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 2,
       "fillGradient": 0,
       "gridPos": {
@@ -868,7 +906,7 @@
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
+          "show": false
         }
       ],
       "yaxis": {
@@ -883,6 +921,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Metadata Operations for a particular target",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 2,
       "fillGradient": 0,
       "gridPos": {
@@ -971,6 +1015,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:797",
           "format": "ops",
           "label": null,
           "logBase": 1,
@@ -979,6 +1024,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:798",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -999,6 +1045,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Write Bytes shown by target",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 2,
       "fillGradient": 0,
       "gridPos": {
@@ -1087,6 +1139,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:347",
           "format": "Bps",
           "label": null,
           "logBase": 1,
@@ -1095,6 +1148,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:348",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1115,6 +1169,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "File Inode Usage for a particular target",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1232,6 +1292,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Read IOPS shown by target",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 2,
       "fillGradient": 0,
       "gridPos": {
@@ -1254,7 +1320,7 @@
       },
       "lines": true,
       "linewidth": 2,
-      "nullPointMode": "null as zero",
+      "nullPointMode": "connected",
       "options": {
         "dataLinks": []
       },
@@ -1350,6 +1416,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Space Usage for a particular target",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 2,
       "fillGradient": 0,
       "gridPos": {
@@ -1466,6 +1538,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Write IOPS shown by target",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 2,
       "fillGradient": 0,
       "gridPos": {
@@ -1584,6 +1662,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "CPU Usage for a particular server",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 2,
       "fillGradient": 0,
       "gridPos": {
@@ -1766,6 +1850,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Read/Write IOPS",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 2,
       "fillGradient": 0,
       "gridPos": {
@@ -1891,7 +1981,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -1918,6 +2008,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Read/Write IOPS for a specific target",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 2,
       "fillGradient": 0,
       "gridPos": {
@@ -2043,7 +2139,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -2071,6 +2167,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Read/Write Bytes",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 2,
       "fillGradient": 0,
       "gridPos": {
@@ -2196,7 +2298,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -2224,6 +2326,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Read/Write Bandwidth for a specific target",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 2,
       "fillGradient": 0,
       "gridPos": {
@@ -2349,7 +2457,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -2374,6 +2482,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Metadata Operations",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 2,
       "fillGradient": 0,
       "gridPos": {
@@ -2396,7 +2510,7 @@
       },
       "lines": true,
       "linewidth": 2,
-      "nullPointMode": "null as zero",
+      "nullPointMode": "connected",
       "options": {
         "dataLinks": []
       },
@@ -2492,6 +2606,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Memory and Swap Usage for a particular server",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -2706,6 +2826,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Files Used",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -2793,6 +2919,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:687",
           "format": "percent",
           "label": null,
           "logBase": 1,
@@ -2801,6 +2928,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:688",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -2821,6 +2949,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Read/Write Bandwidth for a particular server",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 2,
       "fillGradient": 0,
       "gridPos": {
@@ -2852,10 +2986,11 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
+          "alias": "Read $tag_host_name",
           "groupBy": [
             {
               "params": ["$__interval"],
@@ -2868,7 +3003,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM\n(SELECT SUM(\"diff\") FROM (SELECT difference(\"samples\") AS \"diff\" FROM \"target\" WHERE \"name\" = 'read_bytes' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($interval)),\n(SELECT SUM(\"diff\") FROM (SELECT \"mean_diff_samples\" AS \"diff\" FROM \"long_term\".\"target\" WHERE \"name\" = 'read_bytes' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\")\nGROUP BY time($interval))",
+          "query": "SELECT SUM(*) FROM\n(SELECT SUM(\"diff\") FROM (SELECT non_negative_derivative(\"sum\", 1s) AS \"diff\" FROM \"target\" WHERE \"name\" = 'read_bytes' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($interval), \"target\"),\n(SELECT SUM(\"diff\") FROM (SELECT non_negative_derivative(\"mean_sum\", 1s) AS \"diff\" FROM \"long_term\".\"target\" WHERE \"name\" = 'read_bytes' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\")\nGROUP BY time($interval), \"target\")",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -2899,7 +3034,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM\n(SELECT -SUM(\"diff\") FROM (SELECT difference(\"samples\") AS \"diff\" FROM \"target\" WHERE \"name\" = 'write_bytes' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY target) GROUP BY time($interval)),\n(SELECT -SUM(\"diff\") FROM (SELECT \"mean_diff_samples\" AS \"diff\" FROM \"long_term\".\"target\" WHERE \"name\" = 'write_bytes' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY target)\nGROUP BY time($interval))",
+          "query": "SELECT SUM(*) FROM\n(SELECT -SUM(\"diff\") FROM (SELECT non_negative_derivative(\"sum\", 1s) AS \"diff\" FROM \"target\" WHERE \"name\" = 'write_bytes' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY target) GROUP BY time($interval), \"target\"),\n(SELECT -SUM(\"diff\") FROM (SELECT non_negative_derivative(\"mean_sum\", 1s) AS \"diff\" FROM \"long_term\".\"target\" WHERE \"name\" = 'write_bytes' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\")\nGROUP BY time($interval), \"target\")",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
@@ -2938,14 +3073,16 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:982",
           "format": "Bps",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
+          "$$hashKey": "object:983",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -2968,6 +3105,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "Objects Used",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -3083,6 +3226,12 @@
       "dashes": false,
       "datasource": "iml_stats",
       "description": "LNet Send/Receive Counts",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -3105,7 +3254,7 @@
       },
       "lines": true,
       "linewidth": 2,
-      "nullPointMode": "null",
+      "nullPointMode": "connected",
       "options": {
         "dataLinks": []
       },
@@ -3115,7 +3264,7 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
@@ -3133,7 +3282,7 @@
           "measurement": "lnet",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM\n(SELECT mean(\"diff\") AS \"value\" FROM (SELECT DIFFERENCE(\"recv_count\") AS \"diff\" FROM \"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY \"nid\") GROUP BY time($interval)),\n(SELECT SUM(\"diff\") AS \"value\" FROM ( SELECT \"mean_diff_recv\" AS \"diff\" FROM \"long_term\".\"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"nid\") GROUP BY time($interval))\nGROUP BY \"nid\"",
+          "query": "SELECT * FROM\n(SELECT mean(\"diff\") AS \"value\" FROM (SELECT non_negative_derivative(\"recv_count\", 1s) AS \"diff\" FROM \"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY \"nid\") GROUP BY time($interval), \"nid\"),\n(SELECT SUM(\"diff\") AS \"value\" FROM ( SELECT non_negative_derivative(\"mean_recv\", 1s) AS \"diff\" FROM \"long_term\".\"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"nid\") GROUP BY time($interval), \"nid\")\nGROUP BY \"nid\"",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -3165,7 +3314,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT * FROM\n(SELECT -mean(\"diff\") AS \"value\" FROM (SELECT DIFFERENCE(\"send_count\") AS \"diff\" FROM \"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY \"nid\") GROUP BY time($interval)),\n(SELECT -SUM(\"diff\") AS \"value\" FROM ( SELECT \"mean_diff_send\" AS \"diff\" FROM \"long_term\".\"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"nid\") GROUP BY time($interval))\nGROUP BY \"nid\"",
+          "query": "SELECT * FROM\n(SELECT mean(\"diff\") AS \"value\" FROM (SELECT non_negative_derivative(\"send_count\", 1s) AS \"diff\" FROM \"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY \"nid\") GROUP BY time($interval), \"nid\"),\n(SELECT SUM(\"diff\") AS \"value\" FROM ( SELECT non_negative_derivative(\"mean_send\", 1s) AS \"diff\" FROM \"long_term\".\"lnet\" WHERE \"nid\" != '0@lo' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"nid\") GROUP BY time($interval), \"nid\")\nGROUP BY \"nid\"",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
@@ -3209,7 +3358,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -3229,7 +3378,7 @@
     }
   ],
   "refresh": false,
-  "schemaVersion": 22,
+  "schemaVersion": 25,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -3337,5 +3486,5 @@
   "timezone": "",
   "title": "IML Metrics",
   "uid": "8Klek6wZz",
-  "version": 5
+  "version": 1
 }
