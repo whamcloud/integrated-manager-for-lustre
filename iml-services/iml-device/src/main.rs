@@ -133,6 +133,8 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         let middle1: DateTime<Local> = Local::now();
 
+        // TODO: Store incoming and resolved device trees separately
+
         let updated_devices = update_virtual_devices(all_devices, &cs);
 
         let middle2: DateTime<Local> = Local::now();
