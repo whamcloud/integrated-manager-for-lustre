@@ -311,6 +311,13 @@ pub fn get_db_conn_hash() -> HashMap<String, String> {
     if let Some(x) = std::env::current_exe().unwrap_or("".into()).file_name() {
         xs.push(format!("application_name={}", x.to_string_lossy()));
     }
+}
 
-    xs.join(" ")
+/// Gets a connection string from the IML env
+pub fn get_db_conn_string() -> String {
+    let xs = get_db_conn_hash();
+    xs.iter()
+        .map(|(k, v)| format!("{}={}", k, v))
+        .collect::<Vec<String>>()
+        .join(" ")
 }
