@@ -252,7 +252,7 @@ fn context_sensitive_help_link<T: 'static>(route: &Route) -> impl View<T> {
         a![
             &at,
             class![C.text_sm, C.group_hover__text_active, C.text_gray_500, C.pt_2],
-            "Support"
+            "Help"
         ]
     ]
 }

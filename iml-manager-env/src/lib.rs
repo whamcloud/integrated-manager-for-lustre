@@ -86,6 +86,11 @@ pub fn get_version() -> String {
     get_var("VERSION")
 }
 
+/// Get exascaler version
+pub fn get_exascaler_version() -> String {
+    get_var("EXASCALER_VERSION")
+}
+
 /// Get the broker URL from the env or panic
 pub fn get_amqp_broker_url() -> String {
     get_var("AMQP_BROKER_URL")
