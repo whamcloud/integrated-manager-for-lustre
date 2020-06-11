@@ -92,6 +92,8 @@ INCLUDES = ""
 
 BRANDING = os.getenv("BRANDING", "Whamcloud")
 
+EXASCALER_VERSION = os.getenv("EXASCALER_VERSION", "0")
+
 USE_STRATAGEM = os.getenv("USE_STRATAGEM", "false")
 
 ALLOWED_HOSTS = ["*"]

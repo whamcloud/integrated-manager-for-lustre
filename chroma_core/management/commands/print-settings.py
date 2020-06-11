@@ -43,6 +43,7 @@ class Command(BaseCommand):
             "SERVER_HTTP_URL": settings.SERVER_HTTP_URL,
             "SITE_ROOT": settings.SITE_ROOT,
             "VERSION": settings.VERSION,
+            "EXASCALER_VERSION": settings.EXASCALER_VERSION,
             "API_USER": API_USER,
             "API_KEY": API_KEY,
             "SOURCE_MAP_PATH": SOURCE_MAP_PATH,

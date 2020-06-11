@@ -4,11 +4,16 @@
 
 use crate::{generated::css_classes::C, Msg};
 use chrono::{offset::Local, Datelike};
+use iml_wire_types::Conf;
 use seed::{prelude::*, *};
 
-pub fn view() -> impl View<Msg> {
+pub fn view(conf: Conf) -> impl View<Msg> {
     let year = Local::now().year();
-
+    let mut footer_string =  format!("Integrated Manager for Lustre software {} is Copyright © ", conf.version);
+    
+    if conf.branding != Branding::Whamcloud {
+        footer_string = format!("EXAScaler software {} is Copyright © ", conf.exascaler_version);
+    }
     footer![
         class![C.h_5, C.flex, C.justify_center],
         div![
