@@ -42,7 +42,6 @@ class StatefulObject(models.Model):
     route_map = None
     transition_map = None
     job_class_map = None
-    skip_if_satisfied = False
     _begin_state = None
     _end_state = None
 
@@ -445,7 +444,7 @@ class Job(models.Model):
 
                         dependent_deps.append(
                             DependOn(
-                                dependent, dependent_dependency.fix_state, skip_if_satisfied=dependent.skip_if_satisfied
+                                dependent, dependent_dependency.fix_state, skip_if_satisfied=self.skip_if_satisfied
                             )
                         )
 
