@@ -99,17 +99,22 @@ pub fn update_virtual_devices(
     let mut actions = collections::HashSet::new();
     let devices2 = devices.clone();
     let changes = transform_commands_to_changes(commands);
+    tracing::debug!("Changes: {:?}", changes);
 
+    // FIXME: There are 0 devices because we fetch them all from DB, and there are none initially
     let len = devices.len();
+    tracing::debug!("{} devices", len);
+
     for (i, (f, d)) in devices.iter().enumerate() {
         let aa = collect_actions(&d, 0, None, &changes);
+        tracing::debug!("Host: {}, actions: {:?}", f, actions);
         // The incoming tree (from current host) can have less virtual device parents, than trees from the DB (from other hosts).
         // In the incoming data there are only virtual devices that are local to that host (i.e. are mounted there).
         // In the database, there are virtual devices that are collected from all of hosts.
         // So the note is to reflect that. We push the incoming data to the end of the `Vec` so it's last.
         let note = if i == len - 1 { " (incoming)" } else { "" };
         tracing::info!(
-            "Collected {:3} parents at {:25} host{}",
+            "Collected {:3} actions at {:25} host{}",
             aa.len(),
             f.to_string(),
             note
@@ -191,6 +196,7 @@ fn collect_actions<'d>(
             };
             guid.map(|g| match changes.get(&Id::Guid(g)) {
                 Some(Change::Upsert(id)) => {
+                    tracing::info!("Saving Upsert");
                     results.push(Action::Upsert(IdentifiedDevice::Parent(parent.expect(
                         "Tried to push to parents the parent of the Root, which doesn't exist",
                     ))));
@@ -284,6 +290,7 @@ fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) ->
             actions_to_remove.insert(a.clone());
         }
     }
+    tracing::info!("Took {} actions", actions_to_remove.len());
     for a in actions_to_remove {
         assert!(actions.remove(&a));
     }
