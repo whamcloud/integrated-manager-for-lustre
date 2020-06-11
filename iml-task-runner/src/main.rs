@@ -98,7 +98,7 @@ async fn send_work(
         return trans.commit().err_into().await;
     }
 
-    let fidlist = rowlist
+    let fidlist: Vec<FidItem> = rowlist
         .into_iter()
         .map(|row| {
             let ft: FidTaskQueue = row.into();
@@ -122,6 +122,8 @@ async fn send_work(
         trans.execute(&s, &[&host_id, &task.id]).await?;
     }
 
+    let mut completed = fidlist.len();
+    let mut failed = 0;
     let args = TaskAction(fsname, taskargs, fidlist);
 
     // send fids to actions runner
@@ -138,8 +140,12 @@ async fn send_work(
                 match agent_result {
                     Ok(data) => {
                         tracing::debug!("Success {} on {}: {:?}", &action, &fqdn, data);
+                        // @@ update task.{fids_completed | fids_failed | data_transfered }?
+                        let errors: Vec<FidError> = serde_json::from_value(data)?;
+                        failed += errors.len();
+                        completed -= errors.len();
+
                         if task.keep_failed {
-                            let errors: Vec<FidError> = serde_json::from_value(data)?;
                             let sql = "INSERT INTO chroma_core_fidtaskerror (fid, task, data, errno) VALUES ($1, $2, $3, $4)";
                             let s = trans.prepare(sql).await?;
                             let task_id = task.id;
@@ -200,6 +206,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let workers = available_workers(&pool, activeclients.clone())
             .await
             .unwrap_or(vec![]);
+        activeclients
+            .lock()
+            .await
+            .extend(workers.iter().map(|w| w.id));
 
         tokio::spawn({
             let shared_client = shared_client.clone();
@@ -216,14 +226,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let host_id = worker.host_id;
 
                     let rc = try_join_all(tasks.into_iter().map(|task| {
-                        let shared_client = shared_client.clone();
+                        let pg_pool = pg_pool.clone();
+                        let orm_pool = orm_pool.clone();
                         let fsname = fsname.clone();
                         let fqdn = fqdn.clone();
                         async move {
-                            // @@ send_work() locks shared_client -
-                            // need a way to run multiple transactions
-                            // simultaneously
-                            send_work(shared_client.clone(), fqdn, fsname, &task, host_id)
+                            send_work(orm_pool, pg_pool.get().await?, fqdn, fsname, &task, host_id)
                                 .await
                                 .map_err(|e| {
                                     tracing::warn!("send_work({}) failed {:?}", task.name, e);
