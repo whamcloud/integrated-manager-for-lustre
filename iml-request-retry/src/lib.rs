@@ -186,13 +186,16 @@ mod tests {
 
     #[test]
     fn dynamic_future_generation() {
-        let mut policy = |_, _|  RetryAction::RetryNow;
+        let mut policy = |_, _| RetryAction::RetryNow;
 
-        let fut = retry_future(|c| match c {
-            0 => futures::future::err(100),
-            1 => futures::future::ok(c),
-            _ => futures::future::err(200),
-        }, &mut policy);
+        let fut = retry_future(
+            |c| match c {
+                0 => futures::future::err(100),
+                1 => futures::future::ok(c),
+                _ => futures::future::err(200),
+            },
+            &mut policy,
+        );
 
         assert_eq!(Ok(1), block_on(fut));
     }
