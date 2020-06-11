@@ -16,7 +16,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1591894865833,
+  "iteration": 1591903353508,
   "links": [],
   "panels": [
     {
@@ -2990,7 +2990,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "Read $tag_host_name",
+          "alias": "Read Bytes",
           "groupBy": [
             {
               "params": ["$__interval"],
@@ -3022,6 +3022,7 @@
           "tags": []
         },
         {
+          "alias": "Write Bytes",
           "groupBy": [
             {
               "params": ["$__interval"],
@@ -3034,7 +3035,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT SUM(*) FROM\n(SELECT -SUM(\"diff\") FROM (SELECT non_negative_derivative(\"sum\", 1s) AS \"diff\" FROM \"target\" WHERE \"name\" = 'write_bytes' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY target) GROUP BY time($interval), \"target\"),\n(SELECT -SUM(\"diff\") FROM (SELECT non_negative_derivative(\"mean_sum\", 1s) AS \"diff\" FROM \"long_term\".\"target\" WHERE \"name\" = 'write_bytes' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\")\nGROUP BY time($interval), \"target\")",
+          "query": "SELECT SUM(*) FROM\n(SELECT SUM(\"diff\") FROM (SELECT non_negative_derivative(\"sum\", 1s) AS \"diff\" FROM \"target\" WHERE \"name\" = 'write_bytes' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY target) GROUP BY time($interval), \"target\"),\n(SELECT SUM(\"diff\") FROM (SELECT non_negative_derivative(\"mean_sum\", 1s) AS \"diff\" FROM \"long_term\".\"target\" WHERE \"name\" = 'write_bytes' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\")\nGROUP BY time($interval), \"target\")",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
