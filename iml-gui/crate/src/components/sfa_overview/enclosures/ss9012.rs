@@ -57,43 +57,38 @@ pub(crate) fn view<T>(x: &Model) -> Node<T> {
                 sfa_item(x.psu4.as_deref(), span!["PSU4"]).merge_attrs(class![C.w_20]),
             ],
             div![
-                class![
-                    C.bg_gray_300,
-                    C.col_span_6,
-                    C.grid_flow_col,
-                    C.grid,
-                    C.h_12,
-                    C.p_1
-                ],
+                class![C.bg_gray_300, C.col_span_6, C.grid_flow_col, C.grid, C.h_12, C.p_1],
                 div![
                     class![C.border_2, C.border_gray_200],
-                    div![class![
-                        C.bg_gray_300,
-                        C.border_4,
-                        C.border_gray_400,
-                        C.flex_col,
-                        C.flex,
-                        C.h_full,
-                        C.items_center,
-                        C.justify_center,
-                        C.rounded_md,
-                    ],
+                    div![
+                        class![
+                            C.bg_gray_300,
+                            C.border_4,
+                            C.border_gray_400,
+                            C.flex_col,
+                            C.flex,
+                            C.h_full,
+                            C.items_center,
+                            C.justify_center,
+                            C.rounded_md,
+                        ],
                         "ESM A"
                     ]
                 ],
                 div![
                     class![C.border_2, C.border_gray_200],
-                    div![class![
-                        C.bg_gray_300,
-                        C.border_4,
-                        C.border_gray_400,
-                        C.flex_col,
-                        C.flex,
-                        C.h_full,
-                        C.items_center,
-                        C.justify_center,
-                        C.rounded_md,
-                    ],
+                    div![
+                        class![
+                            C.bg_gray_300,
+                            C.border_4,
+                            C.border_gray_400,
+                            C.flex_col,
+                            C.flex,
+                            C.h_full,
+                            C.items_center,
+                            C.justify_center,
+                            C.rounded_md,
+                        ],
                         "ESM B"
                     ]
                 ],

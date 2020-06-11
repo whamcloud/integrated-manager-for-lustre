@@ -32,7 +32,7 @@ impl ToHealthState for Option<&SfaPowerSupply> {
     fn to_health_state_reason(&self) -> Cow<'_, str> {
         self.as_ref()
             .map(|x| Cow::Borrowed(x.health_state_reason.as_str()))
-            .map(|x| if x.is_empty() { Cow::Borrowed("No Issues") } else { x })
+            .map(|x| if x.is_empty() { Cow::Borrowed("Healthy") } else { x })
             .unwrap_or_else(|| Cow::Borrowed("Status Unknown"))
     }
 }
@@ -57,7 +57,7 @@ impl ToHealthState for Option<&SfaController> {
                 sfa_status_text(&x.child_health_state)
             ))
         } else if x.health_state_reason.is_empty() {
-            Cow::Borrowed("No Issues")
+            Cow::Borrowed("Healthy")
         } else {
             Cow::Borrowed(&x.health_state_reason)
         }
@@ -77,7 +77,7 @@ impl ToHealthState for &SfaEnclosure {
                 sfa_status_text(&self.child_health_state)
             ))
         } else if self.health_state_reason.is_empty() {
-            Cow::Borrowed("No Issues")
+            Cow::Borrowed("Healthy")
         } else {
             Cow::Borrowed(&self.health_state_reason)
         }
@@ -96,8 +96,10 @@ impl ToHealthState for &SfaStorageSystem {
                 "A {} issue has been detected with at least one element within the subsystem.",
                 sfa_status_text(&self.child_health_state)
             ))
+        } else if self.health_state_reason.is_empty() {
+            Cow::Borrowed("Healthy")
         } else {
-            Cow::Borrowed(self.health_state_reason.as_str())
+            Cow::Borrowed(&self.health_state_reason)
         }
     }
 }
