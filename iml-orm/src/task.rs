@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 pub use crate::models::ChromaCoreTask;
-use crate::schema::chroma_core_task as task;
+use crate::{schema::chroma_core_task as task, Executable};
 use diesel::{
     backend::Backend,
     dsl,
@@ -14,9 +14,11 @@ use diesel::{
 use std::{fmt, io::Write};
 
 pub type Table = task::table;
+pub type WithId = dsl::Eq<task::id, i32>;
 pub type WithName = dsl::Eq<task::name, String>;
 pub type WithFs = dsl::Eq<task::filesystem_id, i32>;
 pub type WithOutState = dsl::NotEq<task::state, String>;
+pub type ById = dsl::Filter<task::table, WithId>;
 pub type ByName = dsl::Filter<task::table, WithName>;
 pub type OutgestHost = dsl::Filter<
     task::table,
@@ -28,6 +30,7 @@ pub type OutgestHost = dsl::Filter<
         >,
     >,
 >;
+pub type IncreaseTotal = dsl::Update<task::table, task::fids_total>;
 
 #[derive(Debug, Clone, Copy)]
 pub enum TaskState {
@@ -63,11 +66,17 @@ impl ChromaCoreTask {
     pub fn with_name(name: impl ToString) -> WithName {
         task::name.eq(name.to_string())
     }
+    pub fn with_id(id: i32) -> WithId {
+        task::id.eq(id)
+    }
     pub fn with_fs(fs_id: i32) -> WithFs {
         task::filesystem_id.eq(fs_id)
     }
     pub fn without_state(state: TaskState) -> WithOutState {
         task::state.ne(state.to_string())
+    }
+    pub fn by_id(id: i32) -> ById {
+        task::table.filter(Self::with_id(id))
     }
     pub fn by_name(name: impl ToString) -> ByName {
         task::table.filter(Self::with_name(name))
@@ -83,4 +92,16 @@ impl ChromaCoreTask {
             ),
         )
     }
+}
+
+pub fn increase_total(task_id: i32, amount: i64) -> impl Executable {
+    diesel::update(ChromaCoreTask::by_id(task_id))
+        .set(task::fids_total.eq(task::fids_total + amount))
+}
+
+pub fn increase_finished(task_id: i32, completed: i64, failed: i64) -> impl Executable {
+    diesel::update(ChromaCoreTask::by_id(task_id)).set((
+        task::fids_completed.eq(task::fids_completed + completed),
+        task::fids_failed.eq(task::fids_failed + failed),
+    ))
 }

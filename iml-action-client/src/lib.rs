@@ -94,7 +94,9 @@ pub fn invoke_rust_agent(
         .request(req)
         .err_into()
         .and_then(|resp| hyper::body::aggregate(resp).err_into())
-        .map_ok(|body| serde_json::from_reader(body.reader()).unwrap())
+        .map_ok(|body| serde_json::from_reader(body.reader()).unwrap_or(
+            serde_json::from_str("[]").unwrap()
+        ))
         .boxed();
 
     let fut = async move {

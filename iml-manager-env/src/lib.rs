@@ -301,7 +301,10 @@ pub fn get_db_conn_hash() -> HashMap<String, String> {
 
     // Convert executable name to application_name for Postgres
     if let Some(x) = std::env::current_exe().unwrap_or("".into()).file_name() {
-        xs.insert("application_name".to_string(), x.to_string_lossy().to_string());
+        xs.insert(
+            "application_name".to_string(),
+            x.to_string_lossy().to_string(),
+        );
     }
 
     xs
@@ -310,5 +313,8 @@ pub fn get_db_conn_hash() -> HashMap<String, String> {
 /// Gets a connection string from the IML env
 pub fn get_db_conn_string() -> String {
     let xs = get_db_conn_hash();
-    xs.iter().map(|(k, v)| format!("{}={}", k, v)).collect::<Vec<String>>().join(" ")
+    xs.iter()
+        .map(|(k, v)| format!("{}={}", k, v))
+        .collect::<Vec<String>>()
+        .join(" ")
 }

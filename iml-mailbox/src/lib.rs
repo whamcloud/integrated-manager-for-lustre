@@ -11,7 +11,7 @@ use futures::{
 use iml_orm::{
     fidtaskqueue::insert_fidtask,
     lustrefid::LustreFid,
-    task::ChromaCoreTask as Task,
+    task::{self, ChromaCoreTask as Task},
     tokio_diesel::{AsyncRunQueryDsl as _, OptionalExtension as _},
 };
 use serde_json::json;
@@ -144,6 +144,8 @@ pub async fn ingest_data(
         }
     };
 
+    let mut count: i64 = 0;
+
     while let Some(incoming) = rx.next().await {
         match incoming {
             Incoming::Line(line) => {
@@ -166,6 +168,8 @@ pub async fn ingest_data(
                     insert_fidtask(fid, data, &task)
                         .execute_async(&pool)
                         .await?;
+
+                    count += 1;
                 } else {
                     tracing::error!("No FID for task {} in line {:?}", &task.name, &line);
                 }
@@ -175,6 +179,10 @@ pub async fn ingest_data(
             }
         }
     }
+
+    task::increase_total(task.id, count)
+        .execute_async(&pool)
+        .await?;
 
     Ok(())
 }
