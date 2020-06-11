@@ -5,7 +5,7 @@
 use lazy_static::lazy_static;
 use std::io::BufRead;
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     env,
     net::{SocketAddr, ToSocketAddrs},
 };
@@ -278,29 +278,37 @@ pub fn get_sfa_endpoints() -> Option<Vec<Vec<Url>>> {
     }
 }
 
-/// Gets a connection string from the IML env
-pub fn get_db_conn_string() -> String {
-    let mut xs = vec![format!("user={}", get_db_user())];
+/// Gets a hash of db connection values
+pub fn get_db_conn_hash() -> HashMap<String, String> {
+    let mut xs = HashMap::new();
+
+    xs.insert("user".to_string(), get_db_user());
 
     let host = match get_db_host() {
         Some(x) => x,
         None => "/var/run/postgresql".into(),
     };
 
-    xs.push(format!("host={}", host));
+    xs.insert("host".to_string(), host);
 
     if let Some(x) = get_db_name() {
-        xs.push(format!("dbname={}", x));
+        xs.insert("dbname".to_string(), x);
     }
 
     if let Some(x) = get_db_password() {
-        xs.push(format!("password={}", x));
+        xs.insert("password".to_string(), x);
     }
 
     // Convert executable name to application_name for Postgres
     if let Some(x) = std::env::current_exe().unwrap_or("".into()).file_name() {
-        xs.push(format!("application_name={}", x.to_string_lossy()));
+        xs.insert("application_name".to_string(), x.to_string_lossy().to_string());
     }
 
-    xs.join(" ")
+    xs
+}
+
+/// Gets a connection string from the IML env
+pub fn get_db_conn_string() -> String {
+    let xs = get_db_conn_hash();
+    xs.iter().map(|(k, v)| format!("{}={}", k, v)).collect::<Vec<String>>().join(" ")
 }

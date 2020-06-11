@@ -17,6 +17,9 @@ pub use tokio_postgres::{
 };
 use tokio_postgres::{tls::NoTlsStream, Connection, NoTls, Socket};
 
+#[cfg(feature = "pool")]
+pub mod pool;
+
 /// Connect to the postgres instance running on the IML manager
 ///
 /// This fn is useful for production code as it reads in env vars
