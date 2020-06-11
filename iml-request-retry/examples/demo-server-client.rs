@@ -55,8 +55,8 @@ async fn server(addr: &SocketAddr) {
 
 async fn retry_client_obj(addr: &SocketAddr, client_id: u32) -> Result<String, reqwest::Error> {
     let mut policy_1 = |k: u32, e| match k {
-        0 => RetryAction::RetryNow,
-        k if k < 3 => RetryAction::WaitFor(Duration::from_secs((2 * k) as u64)),
+        1 => RetryAction::RetryNow,
+        k if k < 4 => RetryAction::WaitFor(Duration::from_secs((2 * (k - 1)) as u64)),
         _ => RetryAction::ReturnError(e),
     };
 
@@ -65,7 +65,7 @@ async fn retry_client_obj(addr: &SocketAddr, client_id: u32) -> Result<String, r
 
 async fn retry_client_fun(addr: &SocketAddr, client_id: u32) -> Result<String, reqwest::Error> {
     fn policy_2<E: Debug>(k: u32, _e: E) -> RetryAction<E> {
-        if k == 0 {
+        if k == 1 {
             RetryAction::RetryNow
         } else {
             RetryAction::WaitFor(Duration::from_secs(5))

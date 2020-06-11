@@ -75,7 +75,7 @@ where
     F: Future<Output = Result<T, E>>,
     FF: FutureFactory<T, E, F>,
 {
-    let mut request_no = 0u32;
+    let mut request_no = 1u32;
     loop {
         let future = factory.build_future(request_no);
         tracing::debug!("about to call the future built");
@@ -105,7 +105,7 @@ where
     P: Fn(u32, E) -> RetryAction<E>,
     FF: FutureFactory<T, E, F>,
 {
-    let mut request_no = 0u32;
+    let mut request_no = 1u32;
     loop {
         let future = factory.build_future(request_no);
         tracing::debug!("about to call the future built");
@@ -189,14 +189,16 @@ mod tests {
         let mut policy = |_, _| RetryAction::RetryNow;
 
         let fut = retry_future(
-            |c| match c {
-                0 => futures::future::err(100),
-                1 => futures::future::ok(c),
-                _ => futures::future::err(200),
+            |c| {
+                if c != 2 {
+                    futures::future::err(1)
+                } else {
+                    futures::future::ok(c)
+                }
             },
             &mut policy,
         );
 
-        assert_eq!(Ok(1), block_on(fut));
+        assert_eq!(Ok(2), block_on(fut));
     }
 }

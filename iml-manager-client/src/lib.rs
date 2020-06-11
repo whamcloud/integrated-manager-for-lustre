@@ -152,8 +152,8 @@ pub async fn get_influx<T: DeserializeOwned + Debug>(
 
 fn create_policy<E: Debug>() -> impl RetryPolicy<E> + Send {
     |k: u32, e| match k {
-        0 => RetryAction::RetryNow,
-        k if k < 3 => RetryAction::WaitFor(Duration::from_secs((2 * k) as u64)),
+        1 => RetryAction::RetryNow,
+        k if k < 4 => RetryAction::WaitFor(Duration::from_secs((2 * (k - 1)) as u64)),
         _ => RetryAction::ReturnError(e),
     }
 }
