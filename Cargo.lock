@@ -1556,6 +1556,7 @@ dependencies = [
  "futures",
  "iml-manager-env",
  "iml-orm",
+ "iml-request-retry",
  "iml-tracing",
  "thiserror",
  "tokio",
