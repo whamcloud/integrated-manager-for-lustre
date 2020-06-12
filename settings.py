@@ -92,7 +92,7 @@ INCLUDES = ""
 
 BRANDING = os.getenv("BRANDING", "Whamcloud")
 
-EXASCALER_VERSION = os.getenv("EXASCALER_VERSION", "0")
+EXA_VERSION = os.getenv("EXA_VERSION")
 
 USE_STRATAGEM = os.getenv("USE_STRATAGEM", "false")
 

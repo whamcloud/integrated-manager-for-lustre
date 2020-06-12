@@ -12,7 +12,13 @@ pub fn view(conf: &Conf) -> impl View<Msg> {
 
     let footer_string = match conf.branding {
         Branding::Whamcloud => format!("Integrated Manager for Lustre software {} is Copyright © ", conf.version),
-        _ => format!("EXAScaler software {} is Copyright © ", conf.exascaler_version),
+        _ => {
+            if let Some(version) = &conf.exa_version {
+                format!("Exascaler software {} is Copyright © ", version)
+            } else {
+                format!("Exascaler software is Copyright © ")
+            }
+        }
     };
 
     footer![

@@ -43,7 +43,6 @@ class Command(BaseCommand):
             "SERVER_HTTP_URL": settings.SERVER_HTTP_URL,
             "SITE_ROOT": settings.SITE_ROOT,
             "VERSION": settings.VERSION,
-            "EXASCALER_VERSION": settings.EXASCALER_VERSION,
             "API_USER": API_USER,
             "API_KEY": API_KEY,
             "SOURCE_MAP_PATH": SOURCE_MAP_PATH,
@@ -67,6 +66,9 @@ class Command(BaseCommand):
             "BRANDING": settings.BRANDING,
             "USE_STRATAGEM": settings.USE_STRATAGEM,
         }
+
+        if settings.EXA_VERSION:
+            config["EXA_VERSION"] = settings.EXA_VERSION
 
         xs = map(lambda x: "{0}={1}".format(x[0], x[1]), config.items())
 
