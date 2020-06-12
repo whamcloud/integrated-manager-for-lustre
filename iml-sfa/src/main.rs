@@ -34,10 +34,13 @@ enum ImlSfaError {
     ImlOrm(#[from] iml_orm::ImlOrmError),
 }
 
-fn create_retry_endpoint_policy<E: Debug>() -> impl RetryPolicy<E> + Send {
-    |k: u32, e| match k {
-        0 | 1 => RetryAction::RetryNow,
-        _ => RetryAction::ReturnError(e),
+fn create_retry_endpoint_policy<E: Debug>(len: u32) -> impl RetryPolicy<E> + Send {
+    move |k: u32, e| {
+        if k < len {
+            RetryAction::RetryNow
+        } else {
+            RetryAction::ReturnError(e)
+        }
     }
 }
 
@@ -83,31 +86,31 @@ async fn main() -> Result<(), ImlSfaError> {
     loop {
         interval.tick().await;
 
-        let mut fut1_policy = create_retry_endpoint_policy();
+        let mut fut1_policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
         let fut1 = retry_future(
             |c| client.fetch_sfa_enclosures(endpoints[0][c as usize].clone()),
             &mut fut1_policy,
         );
 
-        let mut fut2_policy = create_retry_endpoint_policy();
+        let mut fut2_policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
         let fut2 = retry_future(
             |c| client.fetch_sfa_storage_system(endpoints[0][c as usize].clone()),
             &mut fut2_policy,
         );
 
-        let mut fut3_policy = create_retry_endpoint_policy();
+        let mut fut3_policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
         let fut3 = retry_future(
             |c| client.fetch_sfa_disk_drives(endpoints[0][c as usize].clone()),
             &mut fut3_policy,
         );
 
-        let mut fut4_policy = create_retry_endpoint_policy();
+        let mut fut4_policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
         let fut4 = retry_future(
             |c| client.fetch_sfa_jobs(endpoints[0][c as usize].clone()),
             &mut fut4_policy,
         );
 
-        let mut fut5_policy = create_retry_endpoint_policy();
+        let mut fut5_policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
         let fut5 = retry_future(
             |c| client.fetch_sfa_power_supply(endpoints[0][c as usize].clone()),
             &mut fut5_policy,
