@@ -141,7 +141,7 @@ pub fn view(model: &Model, branding: Branding) -> impl View<Msg> {
             C.text_teal_500,
             whamcloud_logo().merge_attrs(class![C.h_16, C.w_16]),
         ),
-        Branding::Ddn | Branding::DdnAi400 => (
+        Branding::DDN(_) => (
             C.border_red_700,
             C.text_black,
             div![

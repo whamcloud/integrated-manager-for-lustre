@@ -189,10 +189,12 @@ fn ddn_logo_full<T>() -> Node<T> {
 fn logo_nav_view<T>(branding: Branding) -> Node<T> {
     let (logo, txt) = match branding {
         Branding::Whamcloud => (whamcloud_logo().merge_attrs(class![C.h_12, C.w_24, C.mr_3]), empty![]),
-        Branding::Ddn => (ddn_logo_full(), empty![]),
-        Branding::DdnAi400 => (
-            ddn_logo_full().merge_attrs(class![C.mr_2]),
-            span![class![C.font_semibold, C.text_2xl, C.tracking_tight], "AI400"],
+        Branding::DDN(ddn_brand) => (
+            ddn_logo_full(),
+            span![
+                class![C.font_semibold, C.text_2xl, C.tracking_tight],
+                ddn_brand.to_string()
+            ],
         ),
     };
 
