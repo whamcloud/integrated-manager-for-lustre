@@ -204,14 +204,8 @@ fn collect_actions<'d>(
             });
             results
         } else {
-            tracing::debug!(
-                "Collecting parent {} of {}",
-                parent.map(|x| to_display(x)).unwrap_or("None".into()),
-                to_display(d)
-            );
-            vec![Action::Upsert(IdentifiedDevice::Parent(parent.expect(
-                "Tried to push to parents the parent of the Root, which doesn't exist",
-            )))]
+            // Nothing changed, don't collect anything
+            results
         }
     } else {
         match d {
@@ -289,7 +283,7 @@ fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) ->
             actions_to_remove.insert(a.clone());
         }
     }
-    tracing::info!("Took {} actions", actions_to_remove.len());
+    tracing::trace!("Took {} actions", actions_to_remove.len());
     for a in actions_to_remove {
         assert!(actions.remove(&a));
     }
