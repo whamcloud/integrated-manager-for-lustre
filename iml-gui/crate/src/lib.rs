@@ -1001,7 +1001,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
             main_panels(model, page::fs_dashboard::view(page).map_msg(page::Msg::FsDashboard)).els()
         }
         Page::Jobstats => main_panels(model, page::jobstats::view(model).els().map_msg(page::Msg::Jobstats)).els(),
-        Page::Login(x) => page::login::view(x, model.conf.branding)
+        Page::Login(x) => page::login::view(x, model.conf.branding, &model.conf.exa_version)
             .els()
             .map_msg(|x| page::Msg::Login(Box::new(x)))
             .map_msg(Msg::Page),

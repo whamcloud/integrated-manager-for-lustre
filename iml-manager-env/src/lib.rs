@@ -88,7 +88,7 @@ pub fn get_version() -> String {
 
 /// Get exascaler version
 pub fn get_exa_version() -> Option<String> {
-    empty_str_to_none(get_var("EXA_VERSION"))
+    env::var("EXA_VERSION").ok()
 }
 
 /// Get the broker URL from the env or panic
