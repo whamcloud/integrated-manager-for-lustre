@@ -4,7 +4,7 @@
 
 use crate::{
     auth,
-    components::{ddn_logo, whamcloud_logo},
+    components::{ddn_logo, ddn_logo_lettering, whamcloud_logo},
     generated::css_classes::C,
     FailReasonExt, GMsg, MergeAttrs, Route,
 };
@@ -143,8 +143,12 @@ pub fn view(model: &Model, branding: Branding) -> impl View<Msg> {
         ),
         Branding::Ddn | Branding::DdnAi400 => (
             C.border_red_700,
-            C.text_red_700,
-            ddn_logo().merge_attrs(class![C.h_16, C.w_32]),
+            C.text_black,
+            div![
+                class![C.w_32, C.flex, C.flex_col, C.items_center],
+                ddn_logo().merge_attrs(class![C.w_24, C.mb_4]),
+                ddn_logo_lettering().merge_attrs(class![C.w_24]),
+            ],
         ),
     };
 

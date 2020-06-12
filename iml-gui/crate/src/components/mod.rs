@@ -40,7 +40,7 @@ pub(crate) use activity_indicator::{update_activity_health, ActivityHealth};
 pub(crate) use alert_indicator::alert_indicator;
 pub(crate) use arrow::arrow;
 pub(crate) use font_awesome::{font_awesome, font_awesome_outline};
-pub use logo::{ddn_logo, whamcloud_logo};
+pub use logo::{ddn_logo, ddn_logo_lettering, whamcloud_logo};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Placement {
