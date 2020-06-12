@@ -16,7 +16,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1591906343784,
+  "iteration": 1591989954458,
   "links": [],
   "panels": [
     {
@@ -2971,7 +2971,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT SUM(*) FROM\n(SELECT SUM(\"diff\") FROM (SELECT non_negative_derivative(\"sum\", 1s) AS \"diff\" FROM \"target\" WHERE \"name\" = 'read_bytes' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($interval), \"target\"),\n(SELECT SUM(\"diff\") FROM (SELECT non_negative_derivative(\"mean_sum\", 1s) AS \"diff\" FROM \"long_term\".\"target\" WHERE \"name\" = 'read_bytes' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\")\nGROUP BY time($interval), \"target\")",
+          "query": "SELECT SUM(*) FROM\n(SELECT SUM(\"diff\") FROM (SELECT non_negative_derivative(\"sum\", 1s) AS \"diff\" FROM \"target\" WHERE \"name\" = 'read_bytes' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY \"target\") GROUP BY time($interval), \"target\"),\n(SELECT SUM(\"diff\") FROM (SELECT non_negative_derivative(\"mean_sum\", 1s) AS \"diff\" FROM \"long_term\".\"target\" WHERE \"name\" = 'read_bytes' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\")\nGROUP BY time($interval), \"target\") GROUP BY time($interval)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -3003,7 +3003,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT SUM(*) FROM\n(SELECT SUM(\"diff\") FROM (SELECT non_negative_derivative(\"sum\", 1s) AS \"diff\" FROM \"target\" WHERE \"name\" = 'write_bytes' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY target) GROUP BY time($interval), \"target\"),\n(SELECT SUM(\"diff\") FROM (SELECT non_negative_derivative(\"mean_sum\", 1s) AS \"diff\" FROM \"long_term\".\"target\" WHERE \"name\" = 'write_bytes' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\")\nGROUP BY time($interval), \"target\")",
+          "query": "SELECT SUM(*) FROM\n(SELECT SUM(\"diff\") FROM (SELECT non_negative_derivative(\"sum\", 1s) AS \"diff\" FROM \"target\" WHERE \"name\" = 'write_bytes' AND \"host\"='$host_name' AND time > now() - 1d AND $timeFilter GROUP BY target) GROUP BY time($interval), \"target\"),\n(SELECT SUM(\"diff\") FROM (SELECT non_negative_derivative(\"mean_sum\", 1s) AS \"diff\" FROM \"long_term\".\"target\" WHERE \"name\" = 'write_bytes' AND \"host\"='$host_name' AND time <= now() - 1d AND $timeFilter GROUP BY \"target\")\nGROUP BY time($interval), \"target\") GROUP BY time($interval)",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
@@ -3422,5 +3422,5 @@
   "timezone": "",
   "title": "IML Metrics",
   "uid": "8Klek6wZz",
-  "version": 3
+  "version": 6
 }
