@@ -192,7 +192,7 @@ fn logo_nav_view<T>(branding: Branding) -> Node<T> {
         Branding::DDN(ddn_brand) => (
             ddn_logo_full(),
             span![
-                class![C.font_semibold, C.text_2xl, C.tracking_tight],
+                class![C.font_semibold, C.text_2xl, C.tracking_tight, C.ml_2],
                 ddn_brand.to_string()
             ],
         ),

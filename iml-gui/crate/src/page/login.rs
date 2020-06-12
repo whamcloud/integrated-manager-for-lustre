@@ -152,7 +152,7 @@ pub fn view(model: &Model, branding: Branding, exa_version: &Option<String>) -> 
         ),
     };
     let exa_version = if let Some(version) = exa_version {
-        p![format!("Exascaler software {} ©", version)]
+        p![class![C.mt_3], "Version ", version]
     } else {
         empty![]
     };
@@ -172,8 +172,18 @@ pub fn view(model: &Model, branding: Branding, exa_version: &Option<String>) -> 
                 event.prevent_default();
                 Msg::Submit
             }),
-            div![class![text_color, C.flex, C.justify_center, C.mb_6], logo],
-            exa_version,
+            div![
+                class![
+                    C.flex_col,
+                    C.flex,
+                    C.items_center,
+                    C.justify_center,
+                    C.mb_6
+                    text_color,
+                ],
+                logo,
+                exa_version
+            ],
             match errs.__all__.as_ref() {
                 Some(x) => err_item(x),
                 None => empty![],
