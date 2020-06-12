@@ -56,11 +56,13 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let pool = iml_orm::pool()?;
 
-    let cache = create_cache(&pool).await?;
-    let cache2 = Arc::clone(&cache);
-    let cache = warp::any().map(move || Arc::clone(&cache));
+    let incoming_devices = Arc::new(Mutex::new(HashMap::new()));
+    let incoming_devices_2 = Arc::clone(&incoming_devices);
+    let resolved_devices = create_cache(&pool).await?;
+    let resolved_devices_2 = Arc::clone(&resolved_devices);
+    let resolved_devices = warp::any().map(move || Arc::clone(&resolved_devices));
 
-    let get = warp::get().and(cache).and_then(|cache: Cache| {
+    let get = warp::get().and(resolved_devices).and_then(|cache: Cache| {
         async move {
             let cache = cache.lock().await;
 
@@ -118,8 +120,8 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         let (d, cs) = output;
 
-        let mut cache = cache2.lock().await;
-        cache.insert(f.clone(), d.clone());
+        let mut incoming_devices = incoming_devices_2.lock().await;
+        incoming_devices.insert(f.clone(), d.clone());
 
         assert!(
             match d {
@@ -129,17 +131,24 @@ async fn main() -> Result<(), ImlDeviceError> {
             "The top device has to be Root"
         );
 
-        let all_devices = get_all_devices(&pool).await;
+        let all_devices = incoming_devices
+            .iter()
+            .map(|(x, y)| (x.clone(), y.clone()))
+            .collect();
 
         let middle1: DateTime<Local> = Local::now();
-
-        // TODO: Store incoming and resolved device trees separately
 
         let updated_devices = update_virtual_devices(all_devices, &cs);
 
         let middle2: DateTime<Local> = Local::now();
 
-        save_devices(updated_devices, &pool).await;
+        let updated_devices_2 = updated_devices.clone();
+
+        let updated_devices: HashMap<Fqdn, Device> = updated_devices.clone().into_iter().collect();
+        let mut resolved_devices = resolved_devices_2.lock().await;
+        std::mem::replace(&mut *resolved_devices, updated_devices);
+
+        save_devices(updated_devices_2, &pool).await;
 
         let end: DateTime<Local> = Local::now();
 
