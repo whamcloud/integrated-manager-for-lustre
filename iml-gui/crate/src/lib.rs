@@ -940,7 +940,7 @@ pub fn main_panels(model: &Model, children: impl View<page::Msg>) -> impl View<M
                     class![C.flex_grow, C.overflow_x_auto, C.overflow_y_auto, C.p_6],
                     children.els().map_msg(Msg::Page)
                 ],
-                page::partial::footer::view(model.conf).els(),
+                page::partial::footer::view(&model.conf).els(),
             ],
             // Side buttons panel
             status_section::view(
