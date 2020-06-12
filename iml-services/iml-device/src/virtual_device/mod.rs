@@ -101,7 +101,6 @@ pub fn update_virtual_devices(
     let changes = transform_commands_to_changes(commands);
     tracing::debug!("Changes: {:?}", changes);
 
-    // FIXME: There are 0 devices because we fetch them all from DB, and there are none initially
     let len = devices.len();
     tracing::debug!("{} devices", len);
 
