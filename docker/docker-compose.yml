@@ -280,6 +280,7 @@ services:
       - RUST_LOG=info
       - BRANDING
       - USE_STRATAGEM
+      - EXA_VERSION
       - SFA_ENDPOINTS_1
   iml-manager-cli:
     image: "imlteam/iml-manager-cli:6.2.0-dev"
@@ -366,6 +367,7 @@ services:
     environment:
       - BRANDING
       - USE_STRATAGEM
+      - EXA_VERSION
     deploy:
       restart_policy:
         condition: on-failure
