@@ -4,19 +4,22 @@
 
 use crate::{generated::css_classes::C, Msg};
 use chrono::{offset::Local, Datelike};
-use iml_wire_types::{Conf, Branding};
+use iml_wire_types::{Branding, Conf};
 use seed::{prelude::*, *};
 
 pub fn view(conf: &Conf) -> impl View<Msg> {
     let year = Local::now().year();
 
     let footer_string = match conf.branding {
-        Branding::Whamcloud => format!("Integrated Manager for Lustre software {} is Copyright © ", conf.version),
+        Branding::Whamcloud => format!(
+            "Integrated Manager for Lustre software {} is Copyright © ",
+            conf.version
+        ),
         _ => {
             if let Some(version) = &conf.exa_version {
                 format!("Exascaler software {} is Copyright © ", version)
             } else {
-                format!("Exascaler software is Copyright © ")
+                "Exascaler software is Copyright © ".to_string()
             }
         }
     };
