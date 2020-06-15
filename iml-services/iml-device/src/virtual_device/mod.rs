@@ -162,6 +162,14 @@ fn transform_commands_to_changes(commands: &[Command]) -> ChangesMap {
                         let guid = p.guid;
                         results.insert(Id::ZpoolGuid(guid), Change::Upsert(Id::ZpoolGuid(guid)));
                     }
+                    PoolCommand::RemovePool(guid) => {
+                        tracing::info!("Got RemovePool");
+
+                        tracing::info!("Trying to parse guid {}", guid.0);
+                        // FIXME: Remove [2..]
+                        let guid = u64::from_str_radix(&guid.0[2..], 16).unwrap();
+                        results.insert(Id::ZpoolGuid(guid), Change::Remove(Id::ZpoolGuid(guid)));
+                    }
                     _ => {}
                 }
             }
@@ -193,6 +201,7 @@ fn collect_actions<'d>(
     let mut results = vec![];
 
     if is_virtual(d) {
+        // FIXME: Since we want to remove child of virtual device, we need to go deeper
         if !changes.is_empty() {
             let guid = match d {
                 Device::Zpool(dd) => Some(dd.guid),
@@ -242,7 +251,7 @@ fn collect_actions<'d>(
                 }
                 results
             }
-            _ => vec![],
+            _ => results,
         }
     }
 }
