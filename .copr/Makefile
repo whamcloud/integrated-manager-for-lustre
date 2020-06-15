@@ -2,7 +2,7 @@ BUILDROOT:=$(shell [ -d "/build" ] && echo "/build" || echo ".")
 TMPDIR:=$(shell mktemp -d)
 TARGET:=$(or $(CARGO_TARGET_DIR),target)
 
-MFL_COPR_REPO=managerforlustre/manager-for-lustre-devel
+MFL_COPR_REPO=managerforlustre/manager-for-lustre-6.1
 MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
 MFL_REPO_NAME  := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
 MFL_COPR_NAME  := $(MFL_REPO_OWNER)-$(MFL_REPO_NAME)
