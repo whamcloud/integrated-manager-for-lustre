@@ -363,7 +363,10 @@ class UnmountLustreFilesystemsJob(AdvertisedJob):
         args = dict(
             host=self.host,
             filesystems=[
-                (ObjectCache.get_one(ManagedFilesystem, lambda mf, mtd=m: mf.name == mtd.filesystem).mount_path(), m.mountpoint)
+                (
+                    ObjectCache.get_one(ManagedFilesystem, lambda mf, mtd=m: mf.name == mtd.filesystem).mount_path(),
+                    m.mountpoint,
+                )
                 for m in mounted
             ],
         )
