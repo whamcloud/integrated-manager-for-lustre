@@ -44,14 +44,13 @@ pub fn children(d: &Device) -> Option<&OrdSet<Device>> {
     }
 }
 
-// TODO: This won't tell apart devices of different types with same ids
 pub(crate) fn check_id(device: &Device, id: &Id) -> bool {
     match device {
         Device::Root(_) => match id {
             _ => false,
         },
         Device::ScsiDevice(da) => match id {
-            Id::Serial(serial) => da
+            Id::ScsiDeviceSerial(serial) => da
                 .serial
                 .as_ref()
                 .map(|s| if s == serial { true } else { false })
@@ -59,7 +58,7 @@ pub(crate) fn check_id(device: &Device, id: &Id) -> bool {
             _ => false,
         },
         Device::Partition(da) => match id {
-            Id::Serial(serial) => da
+            Id::PartitionSerial(serial) => da
                 .serial
                 .as_ref()
                 .map(|s| if s == serial { true } else { false })
@@ -67,7 +66,7 @@ pub(crate) fn check_id(device: &Device, id: &Id) -> bool {
             _ => false,
         },
         Device::MdRaid(da) => match id {
-            Id::Uuid(uuid) => {
+            Id::MdRaidUuid(uuid) => {
                 if &da.uuid == uuid {
                     true
                 } else {
@@ -77,7 +76,7 @@ pub(crate) fn check_id(device: &Device, id: &Id) -> bool {
             _ => false,
         },
         Device::Mpath(da) => match id {
-            Id::Serial(serial) => da
+            Id::MpathSerial(serial) => da
                 .serial
                 .as_ref()
                 .map(|s| if s == serial { true } else { false })
@@ -85,7 +84,7 @@ pub(crate) fn check_id(device: &Device, id: &Id) -> bool {
             _ => false,
         },
         Device::VolumeGroup(da) => match id {
-            Id::Uuid(uuid) => {
+            Id::VolumeGroupUuid(uuid) => {
                 if &da.uuid == uuid {
                     true
                 } else {
@@ -95,7 +94,7 @@ pub(crate) fn check_id(device: &Device, id: &Id) -> bool {
             _ => false,
         },
         Device::LogicalVolume(da) => match id {
-            Id::Uuid(uuid) => {
+            Id::LogicalVolumeUuid(uuid) => {
                 if &da.uuid == uuid {
                     true
                 } else {
@@ -105,7 +104,7 @@ pub(crate) fn check_id(device: &Device, id: &Id) -> bool {
             _ => false,
         },
         Device::Zpool(da) => match id {
-            Id::Guid(guid) => {
+            Id::ZpoolGuid(guid) => {
                 if &da.guid == guid {
                     true
                 } else {
@@ -115,7 +114,7 @@ pub(crate) fn check_id(device: &Device, id: &Id) -> bool {
             _ => false,
         },
         Device::Dataset(da) => match id {
-            Id::Guid(guid) => {
+            Id::DatasetGuid(guid) => {
                 if &da.guid == guid {
                     true
                 } else {

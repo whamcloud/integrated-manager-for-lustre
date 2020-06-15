@@ -130,9 +130,14 @@ pub fn update_virtual_devices(
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(crate) enum Id {
-    Guid(u64),
-    Serial(String),
-    Uuid(String),
+    ScsiDeviceSerial(String),
+    PartitionSerial(String),
+    MdRaidUuid(String),
+    MpathSerial(String),
+    VolumeGroupUuid(String),
+    LogicalVolumeUuid(String),
+    ZpoolGuid(u64),
+    DatasetGuid(u64),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -155,7 +160,7 @@ fn transform_commands_to_changes(commands: &[Command]) -> ChangesMap {
                         tracing::info!("Got UpdatePool");
 
                         let guid = p.guid;
-                        results.insert(Id::Guid(guid), Change::Upsert(Id::Guid(guid)));
+                        results.insert(Id::ZpoolGuid(guid), Change::Upsert(Id::ZpoolGuid(guid)));
                     }
                     _ => {}
                 }
@@ -193,7 +198,7 @@ fn collect_actions<'d>(
                 Device::Zpool(dd) => Some(dd.guid),
                 _ => None,
             };
-            guid.map(|g| match changes.get(&Id::Guid(g)) {
+            guid.map(|g| match changes.get(&Id::ZpoolGuid(g)) {
                 Some(Change::Upsert(id)) => {
                     tracing::info!("Saving Upsert");
                     results.push(Action::Upsert(IdentifiedDevice::Parent(parent.expect(
@@ -268,7 +273,7 @@ fn maybe_apply_action(mut d: Device, action: &Action) -> (Device, bool) {
             _ => (d, false),
         },
         Action::Remove(device) => match device {
-            Id::Guid(guid) => (d, false),
+            Id::ZpoolGuid(guid) => (d, false),
             _ => (d, false),
         },
     }
