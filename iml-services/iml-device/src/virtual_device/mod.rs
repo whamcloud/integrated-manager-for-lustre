@@ -4,9 +4,7 @@
 
 mod util;
 
-use util::{
-    children, children_mut, children_owned, compare_selected_fields, is_virtual, to_display,
-};
+use util::{children, children_mut, children_owned, compare_by_id, is_virtual, to_display};
 
 use collections::HashMap;
 use device_types::{
@@ -131,8 +129,10 @@ pub fn update_virtual_devices(
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-enum Id {
+pub(crate) enum Id {
     Guid(u64),
+    Serial(String),
+    Uuid(String),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -176,7 +176,7 @@ enum IdentifiedDevice<'d> {
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Action<'d> {
     Upsert(IdentifiedDevice<'d>),
-    Remove(IdentifiedDevice<'d>),
+    Remove(Id),
 }
 
 fn collect_actions<'d>(
@@ -199,6 +199,10 @@ fn collect_actions<'d>(
                     results.push(Action::Upsert(IdentifiedDevice::Parent(parent.expect(
                         "Tried to push to parents the parent of the Root, which doesn't exist",
                     ))));
+                }
+                Some(Change::Remove(id)) => {
+                    tracing::info!("Saving Remove");
+                    results.push(Action::Remove(id.clone()));
                 }
                 _ => {}
             });
@@ -243,7 +247,7 @@ fn maybe_apply_action(mut d: Device, action: &Action) -> (Device, bool) {
     match action {
         Action::Upsert(device) => match device {
             IdentifiedDevice::Parent(new_d) => {
-                if compare_selected_fields(&d, new_d) {
+                if compare_by_id(&d, new_d) {
                     tracing::debug!(
                         "Inserting device {} children to {}",
                         to_display(new_d),
@@ -264,7 +268,7 @@ fn maybe_apply_action(mut d: Device, action: &Action) -> (Device, bool) {
             _ => (d, false),
         },
         Action::Remove(device) => match device {
-            IdentifiedDevice::Itself(new_d) => (d, false),
+            Id::Guid(guid) => (d, false),
             _ => (d, false),
         },
     }
