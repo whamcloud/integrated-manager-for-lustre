@@ -4,7 +4,7 @@
 
 mod util;
 
-use util::{children, children_mut, children_owned, compare_by_id, is_virtual, to_display};
+use util::{children, children_mut, children_owned, compare_by_id, get_id, is_virtual, to_display};
 
 use collections::HashMap;
 use device_types::{
@@ -200,14 +200,35 @@ fn collect_actions<'d>(
 ) -> Vec<Action<'d>> {
     let mut results = vec![];
 
-    if is_virtual(d) {
-        // FIXME: Since we want to remove child of virtual device, we need to go deeper
-        if !changes.is_empty() {
-            let guid = match d {
-                Device::Zpool(dd) => Some(dd.guid),
-                _ => None,
-            };
-            guid.map(|g| match changes.get(&Id::ZpoolGuid(g)) {
+    match d {
+        Device::Root(dd) => {
+            for c in dd.children.iter() {
+                results.extend(collect_actions(c, level + 1, Some(d), changes));
+            }
+            results
+        }
+        Device::ScsiDevice(dd) => {
+            for c in dd.children.iter() {
+                results.extend(collect_actions(c, level + 1, Some(d), changes));
+            }
+            results
+        }
+        Device::Partition(dd) => {
+            for c in dd.children.iter() {
+                results.extend(collect_actions(c, level + 1, Some(d), changes));
+            }
+            results
+        }
+        Device::Mpath(dd) => {
+            for c in dd.children.iter() {
+                results.extend(collect_actions(c, level + 1, Some(d), changes));
+            }
+            results
+        }
+        Device::MdRaid(dd) => {
+            let maybe_id = get_id(d);
+            let maybe_change = maybe_id.map(|id| changes.get(&id)).flatten();
+            match maybe_change {
                 Some(Change::Upsert(id)) => {
                     tracing::info!("Saving Upsert");
                     results.push(Action::Upsert(IdentifiedDevice::Parent(parent.expect(
@@ -218,42 +239,131 @@ fn collect_actions<'d>(
                     tracing::info!("Saving Remove");
                     results.push(Action::Remove(id.clone()));
                 }
-                _ => {}
-            });
-            results
-        } else {
-            // Nothing changed, don't collect anything
+                None => {
+                    for c in dd.children.iter() {
+                        results.extend(collect_actions(c, level + 1, Some(d), changes));
+                    }
+                }
+            }
             results
         }
-    } else {
-        match d {
-            Device::Root(dd) => {
-                for c in dd.children.iter() {
-                    results.extend(collect_actions(c, level + 1, Some(d), changes));
+        Device::LogicalVolume(dd) => {
+            let maybe_id = get_id(d);
+            let maybe_change = maybe_id.map(|id| changes.get(&id)).flatten();
+            match maybe_change {
+                Some(Change::Upsert(id)) => {
+                    tracing::info!("Saving Upsert");
+                    results.push(Action::Upsert(IdentifiedDevice::Parent(parent.expect(
+                        "Tried to push to parents the parent of the Root, which doesn't exist",
+                    ))));
                 }
-                results
-            }
-            Device::ScsiDevice(dd) => {
-                for c in dd.children.iter() {
-                    results.extend(collect_actions(c, level + 1, Some(d), changes));
+                Some(Change::Remove(id)) => {
+                    tracing::info!("Saving Remove");
+                    results.push(Action::Remove(id.clone()));
                 }
-                results
-            }
-            Device::Partition(dd) => {
-                for c in dd.children.iter() {
-                    results.extend(collect_actions(c, level + 1, Some(d), changes));
+                None => {
+                    for c in dd.children.iter() {
+                        results.extend(collect_actions(c, level + 1, Some(d), changes));
+                    }
                 }
-                results
             }
-            Device::Mpath(dd) => {
-                for c in dd.children.iter() {
-                    results.extend(collect_actions(c, level + 1, Some(d), changes));
-                }
-                results
-            }
-            _ => results,
+            results
         }
+        Device::VolumeGroup(dd) => {
+            let maybe_id = get_id(d);
+            let maybe_change = maybe_id.map(|id| changes.get(&id)).flatten();
+            match maybe_change {
+                Some(Change::Upsert(id)) => {
+                    tracing::info!("Saving Upsert");
+                    results.push(Action::Upsert(IdentifiedDevice::Parent(parent.expect(
+                        "Tried to push to parents the parent of the Root, which doesn't exist",
+                    ))));
+                }
+                Some(Change::Remove(id)) => {
+                    tracing::info!("Saving Remove");
+                    results.push(Action::Remove(id.clone()));
+                }
+                None => {
+                    for c in dd.children.iter() {
+                        results.extend(collect_actions(c, level + 1, Some(d), changes));
+                    }
+                }
+            }
+            results
+        }
+        Device::Zpool(dd) => {
+            let maybe_id = get_id(d);
+            let maybe_change = maybe_id.map(|id| changes.get(&id)).flatten();
+            match maybe_change {
+                Some(Change::Upsert(id)) => {
+                    tracing::info!("Saving Upsert");
+                    results.push(Action::Upsert(IdentifiedDevice::Parent(parent.expect(
+                        "Tried to push to parents the parent of the Root, which doesn't exist",
+                    ))));
+                }
+                Some(Change::Remove(id)) => {
+                    tracing::info!("Saving Remove");
+                    results.push(Action::Remove(id.clone()));
+                }
+                None => {
+                    for c in dd.children.iter() {
+                        results.extend(collect_actions(c, level + 1, Some(d), changes));
+                    }
+                }
+            }
+            results
+        }
+        Device::Dataset(dd) => {
+            let maybe_id = get_id(d);
+            let maybe_change = maybe_id.map(|id| changes.get(&id)).flatten();
+            match maybe_change {
+                Some(Change::Upsert(id)) => {
+                    tracing::info!("Saving Upsert");
+                    results.push(Action::Upsert(IdentifiedDevice::Parent(parent.expect(
+                        "Tried to push to parents the parent of the Root, which doesn't exist",
+                    ))));
+                }
+                Some(Change::Remove(id)) => {
+                    tracing::info!("Saving Remove");
+                    results.push(Action::Remove(id.clone()));
+                }
+                None => {
+                    // No children possible
+                }
+            }
+            results
+        }
+        _ => results,
     }
+
+    // if is_virtual(d) {
+    //     // FIXME: Since we want to remove child of virtual device, we need to go deeper
+    //     if !changes.is_empty() {
+    //         let guid = match d {
+    //             Device::Zpool(dd) => Some(dd.guid),
+    //             _ => None,
+    //         };
+    //         guid.map(|g| match changes.get(&Id::ZpoolGuid(g)) {
+    //             Some(Change::Upsert(id)) => {
+    //                 tracing::info!("Saving Upsert");
+    //                 results.push(Action::Upsert(IdentifiedDevice::Parent(parent.expect(
+    //                     "Tried to push to parents the parent of the Root, which doesn't exist",
+    //                 ))));
+    //             }
+    //             Some(Change::Remove(id)) => {
+    //                 tracing::info!("Saving Remove");
+    //                 results.push(Action::Remove(id.clone()));
+    //             }
+    //             _ => {}
+    //         });
+    //         results
+    //     } else {
+    //         // Nothing changed, don't collect anything
+    //         results
+    //     }
+    // } else {
+
+    // }
 }
 
 // Returns `true` if action was applied

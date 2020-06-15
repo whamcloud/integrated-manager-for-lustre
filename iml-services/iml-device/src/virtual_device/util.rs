@@ -126,6 +126,20 @@ pub(crate) fn check_id(device: &Device, id: &Id) -> bool {
     }
 }
 
+pub(crate) fn get_id(device: &Device) -> Option<Id> {
+    match device {
+        Device::Root(_) => None,
+        Device::ScsiDevice(da) => da.serial.as_ref().map(|s| Id::ScsiDeviceSerial(s.clone())),
+        Device::Partition(da) => da.serial.as_ref().map(|s| Id::PartitionSerial(s.clone())),
+        Device::MdRaid(da) => Some(Id::MdRaidUuid(da.uuid.clone())),
+        Device::Mpath(da) => da.serial.as_ref().map(|s| Id::MpathSerial(s.clone())),
+        Device::VolumeGroup(da) => Some(Id::VolumeGroupUuid(da.uuid.clone())),
+        Device::LogicalVolume(da) => Some(Id::LogicalVolumeUuid(da.uuid.clone())),
+        Device::Zpool(da) => Some(Id::ZpoolGuid(da.guid)),
+        Device::Dataset(da) => Some(Id::DatasetGuid(da.guid)),
+    }
+}
+
 pub(crate) fn compare_by_id(a: &Device, b: &Device) -> bool {
     match a {
         Device::Root(_) => match b {
