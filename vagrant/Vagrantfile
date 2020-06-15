@@ -83,6 +83,7 @@ Vagrant.configure('2') do |config|
 
   config.vm.provision 'deps', type: 'shell', inline: <<-SHELL
     yum install -y epel-release
+    yum clean all
     yum install -y jq htop vim
   SHELL
 
@@ -866,6 +867,7 @@ end
 def provision_fence_agents(config)
   config.vm.provision 'fence-agents', type: 'shell', inline: <<-SHELL
     yum install -y epel-release
+    yum clean all
     yum install -y yum-plugin-copr
     yum -y copr enable managerforlustre/manager-for-lustre-devel
     yum install -y fence-agents-vbox
