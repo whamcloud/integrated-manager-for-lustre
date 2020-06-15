@@ -199,6 +199,7 @@ fn collect_actions<'d>(
     changes: &ChangesMap,
 ) -> Vec<Action<'d>> {
     let mut results = vec![];
+    tracing::debug!("Inspecting {}", to_display(&d));
 
     match d {
         Device::Root(dd) => {
@@ -335,35 +336,6 @@ fn collect_actions<'d>(
         }
         _ => results,
     }
-
-    // if is_virtual(d) {
-    //     // FIXME: Since we want to remove child of virtual device, we need to go deeper
-    //     if !changes.is_empty() {
-    //         let guid = match d {
-    //             Device::Zpool(dd) => Some(dd.guid),
-    //             _ => None,
-    //         };
-    //         guid.map(|g| match changes.get(&Id::ZpoolGuid(g)) {
-    //             Some(Change::Upsert(id)) => {
-    //                 tracing::info!("Saving Upsert");
-    //                 results.push(Action::Upsert(IdentifiedDevice::Parent(parent.expect(
-    //                     "Tried to push to parents the parent of the Root, which doesn't exist",
-    //                 ))));
-    //             }
-    //             Some(Change::Remove(id)) => {
-    //                 tracing::info!("Saving Remove");
-    //                 results.push(Action::Remove(id.clone()));
-    //             }
-    //             _ => {}
-    //         });
-    //         results
-    //     } else {
-    //         // Nothing changed, don't collect anything
-    //         results
-    //     }
-    // } else {
-
-    // }
 }
 
 // Returns `true` if action was applied
@@ -402,7 +374,7 @@ fn maybe_apply_action(mut d: Device, action: &Action) -> (Device, bool) {
 // its `children`, which is an `OrdSet`, inside of `insert`.
 // `OrdSet` doesn't have `iter_mut` so iterating `children` and mutating them in-place isn't possible.
 fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) -> Device {
-    tracing::trace!("Processing device {}", to_display(&d));
+    tracing::debug!("Processing device {}", to_display(&d));
     let mut actions_to_remove = collections::HashSet::new();
     for a in actions.iter() {
         let (new_d, did_apply) = maybe_apply_action(d, a);
@@ -411,7 +383,7 @@ fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) ->
             actions_to_remove.insert(a.clone());
         }
     }
-    tracing::trace!("Took {} actions", actions_to_remove.len());
+    tracing::debug!("Took {} actions", actions_to_remove.len());
     for a in actions_to_remove {
         assert!(actions.remove(&a));
     }
