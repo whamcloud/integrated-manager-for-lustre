@@ -2,8 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{Future, FutureExt};
 use console::{style, Term};
+use futures::{Future, FutureExt};
 use iml_wire_types::{
     snapshot::Snapshot, Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration,
 };
