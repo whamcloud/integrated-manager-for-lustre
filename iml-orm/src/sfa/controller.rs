@@ -73,6 +73,7 @@ impl SfaController {
                 sc::enclosure_index.eq(excluded(sc::enclosure_index)),
                 sc::health_state.eq(excluded(sc::health_state)),
                 sc::health_state_reason.eq(excluded(sc::health_state_reason)),
+                sc::child_health_state.eq(excluded(sc::child_health_state)),
             ))
     }
     fn batch_delete_filter<'a>(xs: Vec<&'a Self>) -> ByRecords<'a> {
