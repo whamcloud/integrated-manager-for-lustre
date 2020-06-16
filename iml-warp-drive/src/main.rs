@@ -84,9 +84,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         populate_from_db(Arc::clone(&api_cache_state3), &mut c).await?;
     }
 
-    let rabbit_client = iml_rabbit::connect_to_rabbit().await?;
+    let pool = iml_rabbit::connect_to_rabbit(1);
 
-    let locks_consumer_stream = create_locks_consumer(rabbit_client).await?;
+    let conn = iml_rabbit::get_conn(pool).await?;
+
+    let ch = iml_rabbit::create_channel(&conn).await?;
+
+    let locks_consumer_stream = create_locks_consumer(&ch).await?;
 
     let mut s = valve.wrap(locks_consumer_stream);
 

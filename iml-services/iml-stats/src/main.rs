@@ -458,7 +458,13 @@ fn handle_node(node: NodeStats, host: &Fqdn) -> Option<Vec<Point>> {
 async fn main() -> Result<(), ImlStatsError> {
     iml_tracing::init();
 
-    let mut s = consume_data::<Vec<Record>>("rust_agent_stats_rx");
+    let pool = iml_rabbit::connect_to_rabbit(1);
+
+    let conn = iml_rabbit::get_conn(pool).await?;
+
+    let ch = iml_rabbit::create_channel(&conn).await?;
+
+    let mut s = consume_data::<Vec<Record>>(&ch, "rust_agent_stats_rx");
     let influx_url: String = format!("http://{}", get_influxdb_addr());
     tracing::debug!("influx_url: {}", &influx_url);
 
