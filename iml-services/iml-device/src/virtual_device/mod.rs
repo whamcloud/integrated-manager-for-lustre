@@ -4,7 +4,9 @@
 
 mod util;
 
-use util::{children, children_mut, children_owned, compare_by_id, get_id, is_virtual, to_display};
+use util::{
+    check_id, children, children_mut, children_owned, compare_by_id, get_id, is_virtual, to_display,
+};
 
 use collections::HashMap;
 use device_types::{
@@ -85,7 +87,8 @@ pub async fn get_all_devices(pool: &DbPool) -> Vec<(Fqdn, Device)> {
 }
 
 pub fn update_virtual_devices(
-    devices: Vec<(Fqdn, Device)>,
+    incoming_devices: Vec<(Fqdn, Device)>,
+    resolved_devices: Vec<(Fqdn, Device)>,
     commands: &[Command],
 ) -> Vec<(Fqdn, Device)> {
     let mut results = vec![];
@@ -95,15 +98,21 @@ pub fn update_virtual_devices(
     // since when inserting we again search using same fields.
     // So keep parents in a set to avoid iterating the same devices in insert_virtual_devices twice.
     let mut actions = collections::HashSet::new();
-    let devices2 = devices.clone();
     let changes = transform_commands_to_changes(commands);
     tracing::debug!("Changes: {:?}", changes);
 
-    let len = devices.len();
+    let len = incoming_devices.len();
     tracing::debug!("{} devices", len);
 
-    for (i, (f, d)) in devices.iter().enumerate() {
-        let aa = collect_actions(&d, 0, None, &changes);
+    for (i, (f, d)) in incoming_devices.iter().enumerate() {
+        let mut aa = collect_actions(&d, 0, None, &changes);
+        for (_, c) in changes.iter() {
+            match c {
+                Change::Remove(id) => aa.push(Action::Remove(id.clone())),
+                _ => {}
+            }
+        }
+
         tracing::debug!("Host: {}, actions: {:?}", f, actions);
         // The incoming tree (from current host) can have less virtual device parents, than trees from the DB (from other hosts).
         // In the incoming data there are only virtual devices that are local to that host (i.e. are mounted there).
@@ -119,7 +128,8 @@ pub fn update_virtual_devices(
         actions.extend(aa);
     }
 
-    for (f, d) in devices2 {
+    for (f, d) in resolved_devices {
+        tracing::debug!("Host: {}, actions: {:?}", f, actions);
         let dd = process_actions(d, &mut actions);
 
         results.push((f, dd));
@@ -200,6 +210,12 @@ fn collect_actions<'d>(
 ) -> Vec<Action<'d>> {
     let mut results = vec![];
     tracing::debug!("Inspecting {}", to_display(&d));
+
+    if changes.is_empty() {
+        return results;
+    }
+
+    // FIXME: Remove Change::Remove handling on encountering a device
 
     match d {
         Device::Root(dd) => {
@@ -363,8 +379,15 @@ fn maybe_apply_action(mut d: Device, action: &Action) -> (Device, bool) {
             }
             _ => (d, false),
         },
-        Action::Remove(device) => match device {
-            Id::ZpoolGuid(guid) => (d, false),
+        Action::Remove(id) => match id {
+            Id::ZpoolGuid(guid) => {
+                if check_id(&d, id) {
+                    // FIXME: This is incorrect
+                    (d, true)
+                } else {
+                    (d, false)
+                }
+            }
             _ => (d, false),
         },
     }
@@ -374,7 +397,7 @@ fn maybe_apply_action(mut d: Device, action: &Action) -> (Device, bool) {
 // its `children`, which is an `OrdSet`, inside of `insert`.
 // `OrdSet` doesn't have `iter_mut` so iterating `children` and mutating them in-place isn't possible.
 fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) -> Device {
-    tracing::debug!("Processing device {}", to_display(&d));
+    tracing::debug!("Processing {}, actions: {:?}", to_display(&d), actions);
     let mut actions_to_remove = collections::HashSet::new();
     for a in actions.iter() {
         let (new_d, did_apply) = maybe_apply_action(d, a);
@@ -383,7 +406,9 @@ fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) ->
             actions_to_remove.insert(a.clone());
         }
     }
-    tracing::debug!("Took {} actions", actions_to_remove.len());
+    if !actions_to_remove.is_empty() {
+        tracing::debug!("Took {} actions", actions_to_remove.len());
+    }
     for a in actions_to_remove {
         assert!(actions.remove(&a));
     }
@@ -514,7 +539,7 @@ mod tests {
 
         let devices = deser_fixture(path1, path2, Fqdn(fqdn1.into()), Fqdn(fqdn2.into()));
 
-        let results = update_virtual_devices(devices, &Vec::new());
+        let results = update_virtual_devices(Vec::new(), devices, &Vec::new());
 
         compare_results(results, test_name);
     }

@@ -120,9 +120,6 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         let (d, cs) = output;
 
-        let mut incoming_devices = incoming_devices_2.lock().await;
-        incoming_devices.insert(f.clone(), d.clone());
-
         assert!(
             match d {
                 Device::Root(_) => true,
@@ -131,23 +128,37 @@ async fn main() -> Result<(), ImlDeviceError> {
             "The top device has to be Root"
         );
 
-        let all_devices = incoming_devices
-            .iter()
-            .map(|(x, y)| (x.clone(), y.clone()))
-            .collect();
+        let incoming_devices = {
+            let mut incoming_devices = incoming_devices_2.lock().await;
+            incoming_devices.insert(f.clone(), d.clone());
+
+            incoming_devices
+                .iter()
+                .map(|(x, y)| (x.clone(), y.clone()))
+                .collect()
+        };
+
+        let resolved_devices = {
+            let resolved_devices = resolved_devices_2.lock().await;
+            resolved_devices
+                .iter()
+                .map(|(x, y)| (x.clone(), y.clone()))
+                .collect()
+        };
 
         let middle1: DateTime<Local> = Local::now();
 
-        let updated_devices = update_virtual_devices(all_devices, &cs);
+        let updated_devices = update_virtual_devices(incoming_devices, resolved_devices, &cs);
 
         let middle2: DateTime<Local> = Local::now();
 
         let updated_devices_2 = updated_devices.clone();
 
         let updated_devices: HashMap<Fqdn, Device> = updated_devices.clone().into_iter().collect();
-        let mut resolved_devices = resolved_devices_2.lock().await;
-        std::mem::replace(&mut *resolved_devices, updated_devices);
-
+        {
+            let mut resolved_devices = resolved_devices_2.lock().await;
+            std::mem::replace(&mut *resolved_devices, updated_devices);
+        }
         save_devices(updated_devices_2, &pool).await;
 
         let end: DateTime<Local> = Local::now();
