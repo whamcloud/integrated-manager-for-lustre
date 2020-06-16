@@ -11,7 +11,8 @@ from chroma_core.migrations import (
 
 
 tables = map(
-    build_tables, ["sfadiskdrive", "sfadiskslot", "sfaenclosure", "sfajob", "sfapowersupply", "sfastoragesystem"]
+    build_tables,
+    ["sfadiskdrive", "sfadiskslot", "sfaenclosure", "sfajob", "sfapowersupply", "sfastoragesystem", "sfacontroller"],
 )
 
 forward_trigger_list = map(forward_trigger_template, tables)
