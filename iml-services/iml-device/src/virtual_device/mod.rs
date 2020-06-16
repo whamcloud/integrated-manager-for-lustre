@@ -130,7 +130,7 @@ pub fn update_virtual_devices(
 
     for (f, d) in resolved_devices {
         tracing::debug!("Host: {}, actions: {:?}", f, actions);
-        let dd = process_actions(d, &mut actions);
+        let dd = process_actions(d, &mut actions).unwrap();
 
         results.push((f, dd));
     }
@@ -355,7 +355,7 @@ fn collect_actions<'d>(
 }
 
 // Returns `true` if action was applied
-fn maybe_apply_action(mut d: Device, action: &Action) -> (Device, bool) {
+fn maybe_apply_action(mut d: Device, action: &Action) -> (Option<Device>, bool) {
     match action {
         Action::Upsert(device) => match device {
             IdentifiedDevice::Parent(new_d) => {
@@ -372,23 +372,22 @@ fn maybe_apply_action(mut d: Device, action: &Action) -> (Device, bool) {
                         })
                     });
 
-                    (d, true)
+                    (Some(d), true)
                 } else {
-                    (d, false)
+                    (Some(d), false)
                 }
             }
-            _ => (d, false),
+            _ => (Some(d), false),
         },
         Action::Remove(id) => match id {
             Id::ZpoolGuid(guid) => {
                 if check_id(&d, id) {
-                    // FIXME: This is incorrect
-                    (d, true)
+                    (None, true)
                 } else {
-                    (d, false)
+                    (Some(d), false)
                 }
             }
-            _ => (d, false),
+            _ => (Some(d), false),
         },
     }
 }
@@ -396,12 +395,16 @@ fn maybe_apply_action(mut d: Device, action: &Action) -> (Device, bool) {
 // This function accepts ownership of `Device` to be able to reconstruct
 // its `children`, which is an `OrdSet`, inside of `insert`.
 // `OrdSet` doesn't have `iter_mut` so iterating `children` and mutating them in-place isn't possible.
-fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) -> Device {
+fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) -> Option<Device> {
     tracing::debug!("Processing {}, actions: {:?}", to_display(&d), actions);
     let mut actions_to_remove = collections::HashSet::new();
     for a in actions.iter() {
-        let (new_d, did_apply) = maybe_apply_action(d, a);
-        d = new_d;
+        let (new_d, did_apply) = maybe_apply_action(d.clone(), a);
+        if let Some(new_d) = new_d {
+            d = new_d;
+        } else {
+            return None;
+        }
         if did_apply {
             actions_to_remove.insert(a.clone());
         }
@@ -413,12 +416,11 @@ fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) ->
         assert!(actions.remove(&a));
     }
     if actions.is_empty() {
-        return d;
+        return Some(d);
     } else {
-        // This is a shallow copy due to `children` being `im::OrdSet`, which is copy-on-write.
         let d_2 = d.clone();
 
-        match d {
+        Some(match d {
             Device::Root(dd) => Device::Root(Root {
                 children: new_children(d_2, actions),
                 ..dd
@@ -452,7 +454,7 @@ fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) ->
                 ..dd
             }),
             Device::Dataset(dd) => Device::Dataset(Dataset { ..dd }),
-        }
+        })
     }
 }
 
@@ -460,7 +462,7 @@ fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) ->
 fn new_children(d: Device, actions: &mut collections::HashSet<Action>) -> OrdSet<Device> {
     children_owned(d)
         .into_iter()
-        .map(|c| process_actions(c, actions))
+        .filter_map(|c| process_actions(c, actions))
         .collect()
 }
 
