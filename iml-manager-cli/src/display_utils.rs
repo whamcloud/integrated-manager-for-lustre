@@ -2,15 +2,17 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use console::{style, Term};
 use futures::{Future, FutureExt};
-use iml_wire_types::{Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration};
-use indicatif::ProgressBar;
+use console::{style, Term};
+use iml_wire_types::{
+    Command, Filesystem, Host, Job, OstPool, ServerProfile, Step, StratagemConfiguration,
+};
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
-use spinners::{Spinner, Spinners};
 use std::{fmt::Display, io, str::FromStr};
 use structopt::StructOpt;
+use indicatif::ProgressBar;
+use spinners::{Spinner, Spinners};
 
 pub fn wrap_fut<T>(msg: &str, fut: impl Future<Output = T>) -> impl Future<Output = T> {
     let pb = ProgressBar::new_spinner();
@@ -36,18 +38,51 @@ pub fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) {
     }
 }
 
-pub fn format_cmd_state(cmd: &Command) -> String {
-    if cmd.errored {
-        format_error(format!("{} errored", cmd.message))
-    } else if cmd.cancelled {
-        format_cancelled(&format!("{} cancelled", cmd.message))
-    } else {
-        format_success(format!("{} successful", cmd.message))
+pub fn format_cmd_state(indent: usize, cmd: &Command) -> String {
+    let indent = "  ".repeat(indent);
+    indent
+        + &if cmd.cancelled {
+            format_cancelled(&format!("{} cancelled", cmd.message))
+        } else if cmd.errored {
+            format_error(format!("{} errored", cmd.message))
+        } else if cmd.complete {
+            format_success(format!("{} successful", cmd.message))
+        } else {
+            format_in_progress(&cmd.message)
+        }
+}
+
+pub fn format_job_state<T>(indent: usize, job: &Job<T>) -> String {
+    let indent = "  ".repeat(indent);
+    indent
+        + &if job.cancelled {
+            format_cancelled(&format!("{} cancelled", job.description))
+        } else if job.errored {
+            format_error(format!("{} errored", job.description))
+        } else if job.state == "complete" {
+            format_success(format!("{} successful", job.description))
+        } else {
+            format_in_progress(&job.description)
+        }
+}
+
+pub fn format_step_state(indent: usize, step: &Step) -> String {
+    let indent = "  ".repeat(indent);
+    indent
+        + &match &step.state[..] {
+        "cancelled" => format_cancelled(&format!("{} cancelled", step.class_name)),
+        "failed" => format_error(format!("{} errored", step.class_name)),
+        "success" => format_success(format!("{} successful", step.class_name)),
+        _ /* "incomplete" */ => format_in_progress(&step.class_name),
     }
 }
 
+pub fn format_in_progress(message: impl Display) -> String {
+    format!("  {}", message)
+}
+
 pub fn display_cmd_state(cmd: &Command) {
-    println!("{}", format_cmd_state(&cmd));
+    println!("{}", format_cmd_state(0, &cmd));
 }
 
 pub fn format_cancelled(message: impl Display) -> String {

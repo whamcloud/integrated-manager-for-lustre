@@ -4,7 +4,7 @@
 
 use crate::{
     api_utils::{
-        get, get_all, get_hosts, post, put, wait_for_cmds, wait_for_cmds_success, SendCmd, SendJob,
+        get, get_all, get_hosts, post, put, wait_for_commands, wait_for_cmds_success, SendCmd, SendJob,
     },
     display_utils::{
         display_cancelled, display_error, format_error, format_success, generate_table, wrap_fut,
@@ -455,7 +455,7 @@ async fn get_test_host_commands_and_jobs(
 
     term.write_line(&format!("{} preflight checks...", style("Running").green()))?;
 
-    let cmds = wait_for_cmds(&cmds).await?;
+    let cmds = wait_for_commands(&cmds).await?;
 
     let jobs = get_jobs_from_commands(cmds);
 
