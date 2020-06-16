@@ -354,7 +354,11 @@ class ServiceConfig(CommandLine):
                 "-database",
                 settings.INFLUXDB_IML_STATS_DB,
                 "-execute",
-                "{}; {}; {}; {}".format(
+                "{}; {}; {}; {}; {}; {}; {}; {}".format(
+                    'DROP CONTINUOUS QUERY "downsample_means" ON "{}"'.format(settings.INFLUXDB_IML_STATS_DB),
+                    'DROP CONTINUOUS QUERY "downsample_lnet" ON "{}"'.format(settings.INFLUXDB_IML_STATS_DB),
+                    'DROP CONTINUOUS QUERY "downsample_samples" ON "{}"'.format(settings.INFLUXDB_IML_STATS_DB),
+                    'DROP CONTINUOUS QUERY "downsample_sums" ON "{}"'.format(settings.INFLUXDB_IML_STATS_DB),
                     'CREATE CONTINUOUS QUERY "downsample_means" ON "{}" BEGIN SELECT mean(*) INTO "{}"."long_term".:MEASUREMENT FROM "{}"."autogen"."target","{}"."autogen"."host","{}"."autogen"."node" GROUP BY time(30m),* END'.format(
                         settings.INFLUXDB_IML_STATS_DB,
                         settings.INFLUXDB_IML_STATS_DB,
