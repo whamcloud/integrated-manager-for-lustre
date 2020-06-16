@@ -2,17 +2,17 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{Future, FutureExt};
 use console::{style, Term};
+use futures::{Future, FutureExt};
 use iml_wire_types::{
     Command, Filesystem, Host, Job, OstPool, ServerProfile, Step, StratagemConfiguration,
 };
+use indicatif::ProgressBar;
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
+use spinners::{Spinner, Spinners};
 use std::{fmt::Display, io, str::FromStr};
 use structopt::StructOpt;
-use indicatif::ProgressBar;
-use spinners::{Spinner, Spinners};
 
 pub fn wrap_fut<T>(msg: &str, fut: impl Future<Output = T>) -> impl Future<Output = T> {
     let pb = ProgressBar::new_spinner();
