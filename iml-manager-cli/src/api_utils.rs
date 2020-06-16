@@ -6,7 +6,6 @@ use crate::diff::{calculate_diff, AlignmentOp, Keyed, Side};
 use crate::{display_utils, error::ImlManagerCliError};
 use futures::{future, FutureExt, TryFutureExt};
 use iml_api_utils::dependency_tree::{build_direct_dag, traverse_graph, Deps, Rich};
-use iml_manager_client;
 use iml_wire_types::{ApiList, AvailableAction, Command, EndpointName, FlatQuery, Host, Job, Step};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use regex::{Captures, Regex};
@@ -156,7 +155,7 @@ pub async fn wait_for_commands(cmds: &[Command]) -> Result<Vec<Command>, ImlMana
 
     let mut cmd_ids = vec![];
 
-    for cmd in cmds.into_iter() {
+    for cmd in cmds.iter() {
         let (id, deps) = extract_children_from_cmd(cmd);
         let inner = cmd.clone();
         commands.insert(id, Rich { id, deps, inner });
@@ -212,8 +211,8 @@ pub async fn wait_for_commands(cmds: &[Command]) -> Result<Vec<Command>, ImlMana
                                     cmd_no += 1usize;
                                     pb.set_prefix(&format!("[{}/{}]", cmd_no, commands.len()));
                                 }
-                                TypedId::Job(_) => pb.set_prefix(&format!("     ")),
-                                TypedId::Step(_) => pb.set_prefix(&format!("     ")),
+                                TypedId::Job(_) => pb.set_prefix("     "),
+                                TypedId::Step(_) => pb.set_prefix("     "),
                             };
                             pb.set_message(&format!("{}  {}", "  ".repeat(x.indent), x.msg));
                             pb.tick();
@@ -325,7 +324,7 @@ fn build_fresh_lines(
             };
             let xs = traverse_graph(&dag, &rich_job_to_line, &rich_job_combine_lines, &mut ctx)
                 .into_iter()
-                .flat_map(|v| v)
+                .flatten()
                 .collect::<Vec<_>>();
             for x in xs.into_iter() {
                 rows.push(x);

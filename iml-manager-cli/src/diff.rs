@@ -19,22 +19,22 @@ pub enum AlignmentOp {
 pub fn calculate_diff<T: Keyed + Eq>(left_xs: &[T], right_xs: &[T]) -> Vec<AlignmentOp> {
     // Ad-hoc version of sequence alignment, left biased.
     // More solid approach is the https://en.wikipedia.org/wiki/Hirschberg%27s_algorithm
-    let m = left_xs.len();
-    let n = right_xs.len();
+    let nl = left_xs.len();
+    let nr = right_xs.len();
     let mut i = 0; // i ∈ (0..m)
     let mut j = 0; // j ∈ (0..n)
-    let mut result = Vec::with_capacity(m + n);
+    let mut result = Vec::with_capacity(nl + nr);
     loop {
-        if i >= m && j >= n {
+        if i >= nl && j >= nr {
             // both arrays exhausted
             return result;
-        } else if j >= n {
+        } else if j >= nr {
             // right array exhausted
-            (i..m).for_each(|i| result.push(AlignmentOp::Insert(Side::Right, i, j)));
+            (i..nl).for_each(|i| result.push(AlignmentOp::Insert(Side::Right, i, j)));
             return result;
-        } else if i >= m {
+        } else if i >= nl {
             // left array exhausted
-            (j..n).for_each(|j| result.push(AlignmentOp::Insert(Side::Left, i, j)));
+            (j..nr).for_each(|j| result.push(AlignmentOp::Insert(Side::Left, i, j)));
             return result;
         } else if left_xs[i] == right_xs[j] {
             // both elements are the same, skip
