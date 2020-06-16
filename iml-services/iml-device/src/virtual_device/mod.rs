@@ -398,24 +398,28 @@ fn maybe_apply_action(mut d: Device, action: &Action) -> (Option<Device>, bool) 
 fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) -> Option<Device> {
     tracing::debug!("Processing {}, actions: {:?}", to_display(&d), actions);
     let mut actions_to_remove = collections::HashSet::new();
+    let mut is_removed = false;
     for a in actions.iter() {
         let (new_d, did_apply) = maybe_apply_action(d.clone(), a);
-        if let Some(new_d) = new_d {
-            d = new_d;
-        } else {
-            return None;
-        }
         if did_apply {
             actions_to_remove.insert(a.clone());
         }
+        if let Some(new_d) = new_d {
+            d = new_d;
+        } else {
+            is_removed = true;
+        }
     }
     if !actions_to_remove.is_empty() {
-        tracing::debug!("Took {} actions", actions_to_remove.len());
+        tracing::info!("Took {} actions", actions_to_remove.len());
     }
     for a in actions_to_remove {
         assert!(actions.remove(&a));
     }
-    if actions.is_empty() {
+    if is_removed {
+        tracing::debug!("Removing {}", to_display(&d));
+        return None;
+    } else if actions.is_empty() {
         return Some(d);
     } else {
         let d_2 = d.clone();
