@@ -3,22 +3,22 @@
 // license that can be found in the LICENSE file.
 
 use crate::request::Request;
-use futures::Stream;
+use futures::{Stream, TryStreamExt};
 use im::{HashMap, HashSet};
 use iml_rabbit::{
-    basic_consume, basic_publish, bind_queue, create_channel, declare_transient_exchange,
-    declare_transient_queue, message::Delivery, purge_queue, BasicConsumeOptions, Channel,
-    Connection, ExchangeKind, ImlRabbitError, Queue,
+    basic_consume, basic_publish, bind_queue, declare_transient_exchange, declare_transient_queue,
+    message::Delivery, purge_queue, BasicConsumeOptions, Channel, ExchangeKind, ImlRabbitError,
+    Queue,
 };
 use iml_wire_types::{LockAction, LockChange, ToCompositeId};
 
 /// Declares the exchange for rpc comms
-async fn declare_rpc_exchange(c: Channel) -> Result<Channel, ImlRabbitError> {
-    declare_transient_exchange(c, "rpc", ExchangeKind::Topic).await
+async fn declare_rpc_exchange(c: &Channel) -> Result<(), ImlRabbitError> {
+    declare_transient_exchange(&c, "rpc", ExchangeKind::Topic).await
 }
 
 /// Declares the queue used for locks
-async fn declare_locks_queue(c: Channel) -> Result<(Channel, Queue), ImlRabbitError> {
+async fn declare_locks_queue(c: &Channel) -> Result<Queue, ImlRabbitError> {
     declare_transient_queue(c, "locks").await
 }
 
@@ -29,17 +29,17 @@ async fn declare_locks_queue(c: Channel) -> Result<(Channel, Queue), ImlRabbitEr
 ///
 /// This is expected to be called once during startup.
 pub async fn create_locks_consumer(
-    conn: Connection,
+    channel: &Channel,
 ) -> Result<impl Stream<Item = Result<Delivery, ImlRabbitError>>, ImlRabbitError> {
-    let channel = create_channel(&conn).await?;
-    let channel = declare_rpc_exchange(channel).await?;
-    let (channel, queue) = declare_locks_queue(channel).await?;
+    declare_rpc_exchange(channel).await?;
 
-    let channel = bind_queue(channel, "rpc", "locks", "locks").await?;
+    let queue = declare_locks_queue(&channel).await?;
 
-    let channel = purge_queue(channel, "locks").await?;
+    bind_queue(channel, "rpc", "locks", "locks").await?;
 
-    let channel = basic_publish(
+    purge_queue(channel, "locks").await?;
+
+    basic_publish(
         channel,
         "rpc",
         "JobSchedulerRpc.requests",
@@ -58,7 +58,7 @@ pub async fn create_locks_consumer(
     )
     .await?;
 
-    Ok(consumer)
+    Ok(consumer.map_ok(|(_, x)| x))
 }
 
 /// Need to wrap `LockChange` with this, because it's how
