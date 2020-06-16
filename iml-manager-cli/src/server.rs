@@ -4,7 +4,8 @@
 
 use crate::{
     api_utils::{
-        get, get_all, get_hosts, post, put, wait_for_commands, wait_for_cmds_success, SendCmd, SendJob,
+        get, get_all, get_hosts, post, put, wait_for_cmds_success, wait_for_commands, SendCmd,
+        SendJob,
     },
     display_utils::{
         display_cancelled, display_error, format_error, format_success, generate_table, wrap_fut,
