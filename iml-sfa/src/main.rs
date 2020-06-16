@@ -119,9 +119,12 @@ async fn main() -> Result<(), ImlSfaError> {
         let (new_enclosures, x, new_drives, new_jobs, new_power_supplies) =
             future::try_join5(fut1, fut2, fut3, fut4, fut5).await?;
 
-        let new_controllers = client
-            .fetch_sfa_controllers(endpoints[0][0].clone())
-            .await?;
+        let mut policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
+        let new_controllers = retry_future(
+            |c| client.fetch_sfa_controllers(endpoints[0][c as usize].clone()),
+            &mut policy,
+        )
+        .await?;
 
         tracing::trace!("SfaStorageSystem {:?}", x);
         tracing::trace!("SfaEnclosures {:?}", new_enclosures);
