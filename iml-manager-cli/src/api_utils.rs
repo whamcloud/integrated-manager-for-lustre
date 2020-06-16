@@ -7,7 +7,7 @@ use crate::{display_utils, error::ImlManagerCliError};
 use futures::{future, FutureExt, TryFutureExt};
 use iml_api_utils::dependency_tree::{build_direct_dag, traverse_graph, Deps, Rich};
 use iml_manager_client;
-use iml_wire_types::{ApiList, Command, EndpointName, Job, Step, AvailableAction, Host, FlatQuery};
+use iml_wire_types::{ApiList, AvailableAction, Command, EndpointName, FlatQuery, Host, Job, Step};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use regex::{Captures, Regex};
 use std::sync::Arc;
@@ -127,8 +127,8 @@ pub async fn wait_for_cmd(cmd: Command) -> Result<Command, ImlManagerCliError> {
 }
 
 pub async fn fetch_api_list<T>(ids: Vec<i32>) -> Result<ApiList<T>, ImlManagerCliError>
-    where
-        T: EndpointName + serde::de::DeserializeOwned + std::fmt::Debug,
+where
+    T: EndpointName + serde::de::DeserializeOwned + std::fmt::Debug,
 {
     let query: Vec<_> = ids
         .into_iter()
@@ -259,21 +259,18 @@ pub async fn wait_for_commands(cmds: &[Command]) -> Result<Vec<Command>, ImlMana
             for x in current_lines.iter_mut() {
                 if let Some(pb) = &x.progress_bar {
                     let msg_opt = match x.the_id {
-                        TypedId::Command(id) => {
-                            commands.get(&id)
-                                .filter(|c| cmd_finished(c))
-                                .map(|c| display_utils::format_cmd_state(x.indent, c))
-                        }
-                        TypedId::Job(id) => {
-                            jobs.get(&id)
-                                .filter(|j| job_finished(j))
-                                .map(|j| display_utils::format_job_state(x.indent, j))
-                        }
-                        TypedId::Step(id) => {
-                            steps.get(&id)
-                                .filter(|s| step_finished(s))
-                                .map(|s| display_utils::format_step_state(x.indent, s))
-                        }
+                        TypedId::Command(id) => commands
+                            .get(&id)
+                            .filter(|c| cmd_finished(c))
+                            .map(|c| display_utils::format_cmd_state(x.indent, c)),
+                        TypedId::Job(id) => jobs
+                            .get(&id)
+                            .filter(|j| job_finished(j))
+                            .map(|j| display_utils::format_job_state(x.indent, j)),
+                        TypedId::Step(id) => steps
+                            .get(&id)
+                            .filter(|s| step_finished(s))
+                            .map(|s| display_utils::format_step_state(x.indent, s)),
                     };
                     if let Some(msg) = msg_opt {
                         pb.finish_with_message(&msg);
