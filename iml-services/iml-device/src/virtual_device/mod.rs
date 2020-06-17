@@ -397,8 +397,10 @@ fn maybe_apply_action(mut d: Device, action: &Action) -> (Option<Device>, bool) 
 // `OrdSet` doesn't have `iter_mut` so iterating `children` and mutating them in-place isn't possible.
 fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) -> Option<Device> {
     tracing::debug!("Processing {}, actions: {:?}", to_display(&d), actions);
+    // FIXME: We can't remove action right after taking it once, since we have multipath devices which 
+    // resolve to devices with same ids. That means we'll encounter a matching device more than once
     let mut actions_to_remove = collections::HashSet::new();
-    let mut is_removed = false;
+    let mut this_device_is_removed = false;
     for a in actions.iter() {
         let (new_d, did_apply) = maybe_apply_action(d.clone(), a);
         if did_apply {
@@ -407,7 +409,7 @@ fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) ->
         if let Some(new_d) = new_d {
             d = new_d;
         } else {
-            is_removed = true;
+            this_device_is_removed = true;
         }
     }
     if !actions_to_remove.is_empty() {
@@ -416,7 +418,7 @@ fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) ->
     for a in actions_to_remove {
         assert!(actions.remove(&a));
     }
-    if is_removed {
+    if this_device_is_removed {
         tracing::debug!("Removing {}", to_display(&d));
         return None;
     } else if actions.is_empty() {
