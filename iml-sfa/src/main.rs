@@ -36,7 +36,7 @@ enum ImlSfaError {
 
 fn create_retry_endpoint_policy<E: Debug>(len: u32) -> impl RetryPolicy<E> + Send {
     move |k: u32, e| {
-        if k < len {
+        if k < len - 1 {
             RetryAction::RetryNow
         } else {
             RetryAction::ReturnError(e)
@@ -355,5 +355,56 @@ impl SfaClassExt for Client {
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(ys)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use futures::executor::block_on;
+
+    #[test]
+    fn policy_fails_after_first_two_failures() {
+        let mut policy = create_retry_endpoint_policy(2);
+        let fut = retry_future(
+            |c| match c {
+                0 => futures::future::err(0),
+                1 => futures::future::err(1),
+                _ => futures::future::ok(1),
+            },
+            &mut policy,
+        );
+
+        assert_eq!(Err(1), block_on(fut));
+    }
+
+    #[test]
+    fn policy_passes_on_second_attempt() {
+        let mut policy = create_retry_endpoint_policy(2);
+        let fut = retry_future(
+            |c| match c {
+                0 => futures::future::err(0),
+                1 => futures::future::ok(1),
+                _ => futures::future::err(2),
+            },
+            &mut policy,
+        );
+
+        assert_eq!(Ok(1), block_on(fut));    
+    }
+
+    #[test]
+    fn policy_passes_on_first_attempt() {
+        let mut policy = create_retry_endpoint_policy(2);
+        let fut = retry_future(
+            |c| match c {
+                0 => futures::future::ok(0),
+                1 => futures::future::err(1),
+                _ => futures::future::err(2),
+            },
+            &mut policy,
+        );
+
+        assert_eq!(Ok(0), block_on(fut));    
     }
 }
