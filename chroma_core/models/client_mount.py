@@ -293,7 +293,17 @@ class MountLustreFilesystemsJob(AdvertisedJob):
     def get_steps(self):
         search = lambda cm: (cm.host == self.host and cm.state == "unmounted")
         unmounted = ObjectCache.get(LustreClientMount, search)
-        args = dict(host=self.host, filesystems=[(m.filesystem.mount_path(), m.mountpoint) for m in unmounted])
+        args = {
+            "host": self.host,
+            "filesystems": [
+                (
+                    ObjectCache.get_one(ManagedFilesystem, lambda mf, mtd=m: mf.name == mtd.filesystem).mount_path(),
+                    m.mountpoint,
+                )
+                for m in unmounted
+            ],
+        }
+
         return [(MountLustreFilesystemsStep, args)]
 
 
@@ -353,5 +363,15 @@ class UnmountLustreFilesystemsJob(AdvertisedJob):
     def get_steps(self):
         search = lambda cm: (cm.host == self.host and cm.state == "mounted")
         mounted = ObjectCache.get(LustreClientMount, search)
-        args = dict(host=self.host, filesystems=[(m.filesystem.mount_path(), m.mountpoint) for m in mounted])
+        args = {
+            "host": self.host,
+            "filesystems": [
+                (
+                    ObjectCache.get_one(ManagedFilesystem, lambda mf, mtd=m: mf.name == mtd.filesystem).mount_path(),
+                    m.mountpoint,
+                )
+                for m in mounted
+            ],
+        }
+
         return [(UnmountLustreFilesystemsStep, args)]
