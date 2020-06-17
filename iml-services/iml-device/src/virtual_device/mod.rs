@@ -113,23 +113,24 @@ pub fn update_virtual_devices(
             }
         }
 
-        tracing::debug!("Host: {}, actions: {:?}", f, actions);
-        // The incoming tree (from current host) can have less virtual device parents, than trees from the DB (from other hosts).
-        // In the incoming data there are only virtual devices that are local to that host (i.e. are mounted there).
-        // In the database, there are virtual devices that are collected from all of hosts.
-        // So the note is to reflect that. We push the incoming data to the end of the `Vec` so it's last.
-        let note = if i == len - 1 { " (incoming)" } else { "" };
+        tracing::debug!("Collect: host: {}, actions: {:?}", f, actions);
+
         tracing::info!(
-            "Collected {:3} actions at {:25} host{}",
+            "Collected {:3} actions at {:25} host",
             aa.len(),
             f.to_string(),
-            note
         );
         actions.extend(aa);
     }
 
     for (f, d) in resolved_devices {
-        tracing::debug!("Host: {}, actions: {:?}", f, actions);
+        tracing::debug!("Apply: host: {}, actions: {:?}", f, actions);
+
+        tracing::info!(
+            "Taking {:3} actions at {:25} host",
+            actions.len(),
+            f.to_string(),
+        );
         let dd = process_actions(d, &mut actions).unwrap();
 
         results.push((f, dd));
@@ -396,9 +397,7 @@ fn maybe_apply_action(mut d: Device, action: &Action) -> (Option<Device>, bool) 
 // its `children`, which is an `OrdSet`, inside of `insert`.
 // `OrdSet` doesn't have `iter_mut` so iterating `children` and mutating them in-place isn't possible.
 fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) -> Option<Device> {
-    tracing::debug!("Processing {}, actions: {:?}", to_display(&d), actions);
-    // FIXME: We can't remove action right after taking it once, since we have multipath devices which 
-    // resolve to devices with same ids. That means we'll encounter a matching device more than once
+    tracing::debug!("Processing {}", to_display(&d));
     let mut actions_to_remove = collections::HashSet::new();
     let mut this_device_is_removed = false;
     for a in actions.iter() {
@@ -415,9 +414,11 @@ fn process_actions(mut d: Device, actions: &mut collections::HashSet<Action>) ->
     if !actions_to_remove.is_empty() {
         tracing::info!("Took {} actions", actions_to_remove.len());
     }
-    for a in actions_to_remove {
-        assert!(actions.remove(&a));
-    }
+    // FIXME: We can't remove action right after taking it once, since we have multipath devices which
+    // resolve to devices with same ids. That means we'll encounter a matching device more than once
+    // for a in actions_to_remove {
+    //     assert!(actions.remove(&a));
+    // }
     if this_device_is_removed {
         tracing::debug!("Removing {}", to_display(&d));
         return None;

@@ -128,7 +128,7 @@ async fn main() -> Result<(), ImlDeviceError> {
             "The top device has to be Root"
         );
 
-        let incoming_devices = {
+        let incoming_devices: Vec<_> = {
             let mut incoming_devices = incoming_devices_2.lock().await;
             incoming_devices.insert(f.clone(), d.clone());
 
@@ -139,7 +139,10 @@ async fn main() -> Result<(), ImlDeviceError> {
         };
 
         let resolved_devices = {
-            let resolved_devices = resolved_devices_2.lock().await;
+            let mut resolved_devices = resolved_devices_2.lock().await;
+            for (f, d) in incoming_devices.iter() {
+                resolved_devices.entry(f.clone()).or_insert(d.clone());
+            }
             resolved_devices
                 .iter()
                 .map(|(x, y)| (x.clone(), y.clone()))
@@ -154,7 +157,7 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         let updated_devices_2 = updated_devices.clone();
 
-        let updated_devices: HashMap<Fqdn, Device> = updated_devices.clone().into_iter().collect();
+        let updated_devices: HashMap<Fqdn, Device> = updated_devices.into_iter().collect();
         {
             let mut resolved_devices = resolved_devices_2.lock().await;
             std::mem::replace(&mut *resolved_devices, updated_devices);
