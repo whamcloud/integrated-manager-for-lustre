@@ -15,9 +15,9 @@ use tokio::task::JoinError;
 use tokio::{task::spawn_blocking, time::delay_for};
 
 type Job0 = Job<Option<serde_json::Value>>;
-type RichCommand = Rich<i32, Command>;
-type RichJob = Rich<i32, Job0>;
-type RichStep = Rich<i32, Step>;
+type RichCommand = Rich<i32, Arc<Command>>;
+type RichJob = Rich<i32, Arc<Job0>>;
+type RichStep = Rich<i32, Arc<Step>>;
 
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Ord, PartialOrd, Debug)]
 pub struct CmdId(i32);
@@ -157,22 +157,22 @@ pub async fn wait_for_commands(cmds: &[Command]) -> Result<Vec<Command>, ImlMana
 
     for cmd in cmds.iter() {
         let (id, deps) = extract_children_from_cmd(cmd);
-        let inner = cmd.clone();
+        let inner = Arc::new(cmd.clone());
         commands.insert(id, Rich { id, deps, inner });
         cmd_ids.push(id);
     }
 
     for (cmd_no, c) in cmd_ids.iter().enumerate() {
-        let pb = multi_progress_0.add(ProgressBar::new(100_000));
-        pb.set_style(spinner_style.clone());
-        pb.set_prefix(&format!("[{}/{}]", cmd_no + 1, commands.len()));
-        pb.set_message(&display_utils::format_cmd_state(0, &commands[&c]));
-        current_lines.push(ProgressLine {
+        let x = ProgressLine {
             the_id: TypedId::Command(*c),
             indent: 0,
-            msg: "".to_string(),
-            progress_bar: Some(pb),
+            msg: commands[c].message.clone(),
+            progress_bar: None,
+        };
+        let y = build_progress_line(x, spinner_style.clone(), cmd_no + 1, commands.len(), |pb| {
+            multi_progress_0.add(pb)
         });
+        current_lines.push(y);
     }
 
     let multi_progress_1 = Arc::clone(&multi_progress_0);
@@ -190,34 +190,28 @@ pub async fn wait_for_commands(cmds: &[Command]) -> Result<Vec<Command>, ImlMana
                 tracing::debug!("All commands complete. Returning");
                 return Ok::<_, ImlManagerCliError>(());
             }
-
             fetch_and_update(&mut commands, &mut jobs, &mut steps).await?;
-
             let mut fresh_lines = build_fresh_lines(&cmd_ids, &commands, &jobs, &steps);
             let diff = calculate_diff(&current_lines, &fresh_lines);
-
             let mut cmd_no = 0;
             let mut di = 0;
             let mut dj = 0;
             for op in diff {
                 match op {
                     AlignmentOp::Insert(Side::Left, i, j) => {
-                        let mut x = fresh_lines[j + dj].clone();
+                        let x = fresh_lines[j + dj].clone();
                         if !current_lines.contains(&x) {
-                            let pb = multi_progress_0.insert(i + di, ProgressBar::new(100_000));
-                            pb.set_style(spinner_style.clone());
-                            match x.the_id {
-                                TypedId::Command(_) => {
-                                    cmd_no += 1usize;
-                                    pb.set_prefix(&format!("[{}/{}]", cmd_no, commands.len()));
-                                }
-                                TypedId::Job(_) => pb.set_prefix("     "),
-                                TypedId::Step(_) => pb.set_prefix("     "),
-                            };
-                            pb.set_message(&format!("{}  {}", "  ".repeat(x.indent), x.msg));
-                            pb.tick();
-                            x.progress_bar = Some(pb);
-                            current_lines.insert(i + di, x);
+                            if let TypedId::Command(_) = x.the_id {
+                                cmd_no += 1;
+                            }
+                            let y = build_progress_line(
+                                x,
+                                spinner_style.clone(),
+                                cmd_no,
+                                commands.len(),
+                                |pb| multi_progress_0.insert(i + di, pb),
+                            );
+                            current_lines.insert(i + di, y);
                             di += 1;
                         }
                     }
@@ -251,7 +245,8 @@ pub async fn wait_for_commands(cmds: &[Command]) -> Result<Vec<Command>, ImlMana
                         }
                     }
                     AlignmentOp::Replace(Side::Right, _, _) => {
-                        // loaded_xs[j + dj] = current_xs[i + di].clone();
+                        // Formally we need to do fresh_lines[j + dj] = current_lines[i + di].clone();
+                        // But the changes will disappear after the next fetch anyway
                     }
                 }
             }
@@ -288,11 +283,37 @@ pub async fn wait_for_commands(cmds: &[Command]) -> Result<Vec<Command>, ImlMana
     // return the commands, that
     let mut result: Vec<Command> = Vec::with_capacity(commands.len());
     for id in cmd_ids {
-        if let Some(cmd) = commands.remove(&id) {
-            result.push(cmd.inner)
+        if let Some(rich_cmd) = commands.remove(&id) {
+            if let Ok(cmd) = Arc::try_unwrap(rich_cmd.inner) {
+                result.push(cmd)
+            }
         }
     }
     Ok(result)
+}
+
+fn build_progress_line(
+    line: ProgressLine,
+    spinner_style: ProgressStyle,
+    cmd_no: usize,
+    cmd_count: usize,
+    register: impl Fn(ProgressBar) -> ProgressBar,
+) -> ProgressLine {
+    let pb = register(ProgressBar::new(100_000));
+    pb.set_style(spinner_style);
+    match line.the_id {
+        TypedId::Command(_) => {
+            pb.set_prefix(&format!("[{}/{}]", cmd_no, cmd_count));
+        }
+        TypedId::Job(_) => pb.set_prefix("     "),
+        TypedId::Step(_) => pb.set_prefix("     "),
+    };
+    pb.set_message(&format!("{}  {}", "  ".repeat(line.indent), line.msg));
+    pb.tick();
+    ProgressLine {
+        progress_bar: Some(pb),
+        ..line
+    }
 }
 
 fn build_fresh_lines(
@@ -311,11 +332,11 @@ fn build_fresh_lines(
             progress_bar: None,
         });
         if cmd.deps().iter().all(|j| jobs.contains_key(j)) {
-            let extract_fun = |job: &Job0| extract_wait_fors_from_job(job, &jobs);
+            let extract_fun = |job: &Arc<Job0>| extract_wait_fors_from_job(job, &jobs);
             let jobs_graph_data = cmd
                 .deps()
                 .iter()
-                .map(|k| RichJob::new(jobs[k].inner.clone(), extract_fun))
+                .map(|k| RichJob::new(Arc::clone(&jobs[k].inner), extract_fun))
                 .collect::<Vec<RichJob>>();
             let dag = build_direct_dag(&jobs_graph_data);
             let mut ctx = Context {
@@ -354,7 +375,14 @@ fn update_commands(commands: &mut HashMap<i32, RichCommand>, loaded_cmds: Vec<Co
         .into_iter()
         .map(|t| {
             let (id, deps) = extract_children_from_cmd(&t);
-            (id, Rich { id, deps, inner: t })
+            (
+                id,
+                Rich {
+                    id,
+                    deps,
+                    inner: Arc::new(t),
+                },
+            )
         })
         .collect::<HashMap<i32, RichCommand>>();
     commands.extend(new_commands);
@@ -365,7 +393,14 @@ fn update_jobs(jobs: &mut HashMap<i32, RichJob>, loaded_jobs: Vec<Job0>) {
         .into_iter()
         .map(|t| {
             let (id, deps) = extract_children_from_job(&t);
-            (id, Rich { id, deps, inner: t })
+            (
+                id,
+                Rich {
+                    id,
+                    deps,
+                    inner: Arc::new(t),
+                },
+            )
         })
         .collect::<HashMap<i32, RichJob>>();
     jobs.extend(new_jobs);
@@ -376,7 +411,14 @@ fn update_steps(steps: &mut HashMap<i32, RichStep>, loaded_steps: Vec<Step>) {
         .into_iter()
         .map(|t| {
             let (id, deps) = extract_children_from_step(&t);
-            (id, Rich { id, deps, inner: t })
+            (
+                id,
+                Rich {
+                    id,
+                    deps,
+                    inner: Arc::new(t),
+                },
+            )
         })
         .collect::<HashMap<i32, RichStep>>();
     steps.extend(new_steps);
