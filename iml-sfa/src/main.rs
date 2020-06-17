@@ -36,7 +36,7 @@ enum ImlSfaError {
 
 fn create_retry_endpoint_policy<E: Debug>(len: u32) -> impl RetryPolicy<E> + Send {
     move |k: u32, e| {
-        if k < len - 1 {
+        if k < len {
             RetryAction::RetryNow
         } else {
             RetryAction::ReturnError(e)
@@ -86,31 +86,31 @@ async fn main() -> Result<(), ImlSfaError> {
     loop {
         interval.tick().await;
 
-        let mut fut1_policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
+        let mut fut1_policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
         let fut1 = retry_future(
             |c| client.fetch_sfa_enclosures(endpoints[0][c as usize].clone()),
             &mut fut1_policy,
         );
 
-        let mut fut2_policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
+        let mut fut2_policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
         let fut2 = retry_future(
             |c| client.fetch_sfa_storage_system(endpoints[0][c as usize].clone()),
             &mut fut2_policy,
         );
 
-        let mut fut3_policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
+        let mut fut3_policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
         let fut3 = retry_future(
             |c| client.fetch_sfa_disk_drives(endpoints[0][c as usize].clone()),
             &mut fut3_policy,
         );
 
-        let mut fut4_policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
+        let mut fut4_policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
         let fut4 = retry_future(
             |c| client.fetch_sfa_jobs(endpoints[0][c as usize].clone()),
             &mut fut4_policy,
         );
 
-        let mut fut5_policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
+        let mut fut5_policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
         let fut5 = retry_future(
             |c| client.fetch_sfa_power_supply(endpoints[0][c as usize].clone()),
             &mut fut5_policy,
@@ -119,7 +119,7 @@ async fn main() -> Result<(), ImlSfaError> {
         let (new_enclosures, x, new_drives, new_jobs, new_power_supplies) =
             future::try_join5(fut1, fut2, fut3, fut4, fut5).await?;
 
-        let mut policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
+        let mut policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
         let new_controllers = retry_future(
             |c| client.fetch_sfa_controllers(endpoints[0][c as usize].clone()),
             &mut policy,
@@ -364,13 +364,29 @@ mod tests {
     use futures::executor::block_on;
 
     #[test]
-    fn policy_fails_after_first_two_failures() {
+    fn policy_with_2_retries() {
         let mut policy = create_retry_endpoint_policy(2);
         let fut = retry_future(
             |c| match c {
                 0 => futures::future::err(0),
                 1 => futures::future::err(1),
-                _ => futures::future::ok(1),
+                2 => futures::future::err(2),
+                _ => futures::future::ok(3),
+            },
+            &mut policy,
+        );
+
+        assert_eq!(Err(2), block_on(fut));
+    }
+
+    #[test]
+    fn policy_with_1_retry() {
+        let mut policy = create_retry_endpoint_policy(1);
+        let fut = retry_future(
+            |c| match c {
+                0 => futures::future::err(0),
+                1 => futures::future::err(1),
+                _ => futures::future::ok(2),
             },
             &mut policy,
         );
@@ -379,32 +395,17 @@ mod tests {
     }
 
     #[test]
-    fn policy_passes_on_second_attempt() {
-        let mut policy = create_retry_endpoint_policy(2);
+    fn policy_with_no_retries() {
+        let mut policy = create_retry_endpoint_policy(0);
         let fut = retry_future(
             |c| match c {
                 0 => futures::future::err(0),
                 1 => futures::future::ok(1),
-                _ => futures::future::err(2),
+                _ => futures::future::ok(2),
             },
             &mut policy,
         );
 
-        assert_eq!(Ok(1), block_on(fut));
-    }
-
-    #[test]
-    fn policy_passes_on_first_attempt() {
-        let mut policy = create_retry_endpoint_policy(2);
-        let fut = retry_future(
-            |c| match c {
-                0 => futures::future::ok(0),
-                1 => futures::future::err(1),
-                _ => futures::future::err(2),
-            },
-            &mut policy,
-        );
-
-        assert_eq!(Ok(0), block_on(fut));
+        assert_eq!(Err(0), block_on(fut));
     }
 }
