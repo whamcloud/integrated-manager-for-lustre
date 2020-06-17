@@ -679,7 +679,7 @@ class SendStratagemResultsToClientJob(Job):
         client_host = ManagedHost.objects.get(
             Q(server_profile_id="stratagem_client") | Q(server_profile_id="stratagem_existing_client")
         )
-        client_mount = LustreClientMount.objects.get(host_id=client_host.id, filesystem=self.filesystem.name)
+        client_mount = LustreClientMount.objects.get(host_id=client_host.id, filesystem=filesystem.name)
 
         return [
             (

@@ -75,22 +75,20 @@ pub const STRATAGEM_SERVER_PROFILE: &str = r#"{
 
 pub const STRATAGEM_CLIENT_PROFILE: &str = r#"{
     "ui_name": "Stratagem Client Node",
-    "managed": true,
+    "managed": false,
     "worker": true,
     "name": "stratagem_client",
-    "initial_state": "managed",
-    "ntp": true,
+    "initial_state": "monitored",
+    "ntp": false,
     "corosync": false,
     "corosync2": false,
     "pacemaker": false,
     "ui_description": "A client that can receive stratagem data",
     "packages": [
-      "python2-iml-agent-management",
-      "lustre-client"
+      "python2-iml-agent-management"
     ],
     "repolist": [
-      "base",
-      "lustre-client"
+      "base"
     ]
   }
   "#;

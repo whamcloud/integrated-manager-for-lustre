@@ -1106,14 +1106,16 @@ class JobScheduler(object):
         # if we have an entry with 'root'=true then move it to the front of the list before returning the result
         return sorted(sorted_list, key=lambda entry: entry.get("root", False), reverse=True)
 
-    def create_client_mount(self, host_id, filesystem_name, mountpoint):
+    def create_client_mount(self, host_id, filesystem_name, mountpoint, existing):
         # RPC-callable
         host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == host_id)
-        mount = self._create_client_mount(host, filesystem_name, mountpoint)
+
+        mount = self._create_client_mount(host, filesystem_name, mountpoint, existing)
+
         self.progress.advance()
         return mount.id
 
-    def _create_client_mount(self, host, filesystem_name, mountpoint):
+    def _create_client_mount(self, host, filesystem_name, mountpoint, existing=False):
         # Used for intra-JobScheduler calls
         log.debug("Creating client mount for %s as %s:%s" % (filesystem_name, host, mountpoint))
 
@@ -1122,6 +1124,9 @@ class JobScheduler(object):
 
             with transaction.atomic():
                 mount, created = LustreClientMount.objects.get_or_create(host=host, filesystem=filesystem_name)
+                if existing:
+                    mount.state = "mounted"
+
                 mount.mountpoint = mountpoint
                 mount.save()
 
@@ -1889,7 +1894,7 @@ class JobScheduler(object):
 
         mountpoint = "/mnt/{}".format(filesystem.name)
         if not client_mount_exists:
-            self._create_client_mount(client_host, filesystem, mountpoint)
+            self._create_client_mount(client_host, filesystem.name, mountpoint)
 
         client_mount = ObjectCache.get_one(
             LustreClientMount, lambda mnt: mnt.host_id == client_host.id and mnt.filesystem == filesystem.name
