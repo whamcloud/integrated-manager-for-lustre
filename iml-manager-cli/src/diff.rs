@@ -71,10 +71,6 @@ pub fn calculate_diff<T: Keyed + Eq>(left_xs: &[T], right_xs: &[T]) -> Vec<Align
 #[cfg(test)]
 mod tests {
     use super::*;
-    use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-    use std::collections::HashMap;
-    use std::sync::Arc;
-    use std::thread;
 
     #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
     struct Id(i32);

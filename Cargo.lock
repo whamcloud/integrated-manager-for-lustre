@@ -1477,6 +1477,8 @@ name = "iml-api-utils"
 version = "0.3.0"
 dependencies = [
  "lazy_static",
+ "rand_core 0.5.1",
+ "rand_xoshiro",
  "regex",
 ]
 
