@@ -46,13 +46,7 @@ class Dependable(object):
 
 class DependOn(Dependable):
     def __init__(
-        self,
-        stateful_object,
-        preferred_state,
-        acceptable_states=None,
-        unacceptable_states=None,
-        fix_state=None,
-        skip_if_satisfied=False,
+        self, stateful_object, preferred_state, acceptable_states=None, unacceptable_states=None, fix_state=None
     ):
         """preferred_state: what we will try to put the dependency into if
            it is not already in one of acceptable_states.
@@ -86,8 +80,6 @@ class DependOn(Dependable):
         self.fix_state = fix_state
         self.stateful_object = stateful_object
 
-        self.skip_if_satisfied = skip_if_satisfied
-
     def __str__(self):
         return "%s %s %s %s" % (self.stateful_object, self.preferred_state, self.acceptable_states, self.fix_state)
 
@@ -100,11 +92,7 @@ class DependOn(Dependable):
         except:
             self.stateful_object.__class__._base_manager.get(pk=self.stateful_object.pk)
 
-        if self.skip_if_satisfied:
-            satisfied = depended_object.state in self.stateful_object.get_current_route()
-        else:
-            satisfied = depended_object.state in self.acceptable_states
-
+        satisfied = depended_object.state in self.acceptable_states
         if not satisfied:
             job_log.warning(
                 "DependOn not satisfied: %s in state %s, not one of %s (preferred %s)"
