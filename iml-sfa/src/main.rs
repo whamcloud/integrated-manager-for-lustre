@@ -86,31 +86,31 @@ async fn main() -> Result<(), ImlSfaError> {
     loop {
         interval.tick().await;
 
-        let mut fut1_policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
+        let mut fut1_policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
         let fut1 = retry_future(
             |c| client.fetch_sfa_enclosures(endpoints[0][c as usize].clone()),
             &mut fut1_policy,
         );
 
-        let mut fut2_policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
+        let mut fut2_policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
         let fut2 = retry_future(
             |c| client.fetch_sfa_storage_system(endpoints[0][c as usize].clone()),
             &mut fut2_policy,
         );
 
-        let mut fut3_policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
+        let mut fut3_policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
         let fut3 = retry_future(
             |c| client.fetch_sfa_disk_drives(endpoints[0][c as usize].clone()),
             &mut fut3_policy,
         );
 
-        let mut fut4_policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
+        let mut fut4_policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
         let fut4 = retry_future(
             |c| client.fetch_sfa_jobs(endpoints[0][c as usize].clone()),
             &mut fut4_policy,
         );
 
-        let mut fut5_policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
+        let mut fut5_policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
         let fut5 = retry_future(
             |c| client.fetch_sfa_power_supply(endpoints[0][c as usize].clone()),
             &mut fut5_policy,
@@ -119,7 +119,7 @@ async fn main() -> Result<(), ImlSfaError> {
         let (new_enclosures, x, new_drives, new_jobs, new_power_supplies) =
             future::try_join5(fut1, fut2, fut3, fut4, fut5).await?;
 
-        let mut policy = create_retry_endpoint_policy(endpoints[0].len() as u32);
+        let mut policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
         let new_controllers = retry_future(
             |c| client.fetch_sfa_controllers(endpoints[0][c as usize].clone()),
             &mut policy,
