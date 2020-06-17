@@ -357,11 +357,6 @@ pub async fn trigger_scan(
     Ok((tmp_dir, x, mailbox_files))
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-struct SendFid {
-    fid: String,
-}
-
 /// Streams output for all given mailbox files
 ///
 /// This fn will stream all files in parallel and return once they have all finished.
@@ -373,11 +368,9 @@ pub async fn stream_fidlists(mailbox_files: MailboxFiles) -> Result<(), ImlAgent
             .map(Ok)
             .try_for_each(move |xs| {
                 let xs = xs.into_iter().map(|x| {
-                    let fid = SendFid {
-                        fid: x?
-                    };
+                    let x = x?;
 
-                    serde_json::to_string(&fid).map(|x| x.into()).map_err(ImlAgentError::Serde)
+                    Ok(format!("\{ \"fid\": \"{}\" \}\n", x).into())
                 });
 
                 mailbox_client::send(address.clone(), stream::iter(xs))
