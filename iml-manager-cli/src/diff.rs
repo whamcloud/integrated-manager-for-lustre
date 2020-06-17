@@ -70,6 +70,8 @@ pub fn calculate_diff<T: Keyed + Eq>(left_xs: &[T], right_xs: &[T]) -> Vec<Align
 
 #[cfg(test)]
 mod tests {
+    use super::AlignmentOp::*;
+    use super::Side::*;
     use super::*;
 
     #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -96,6 +98,14 @@ mod tests {
         let diff = calculate_diff(&xs, &ys);
         apply_diff(&mut xs, &mut ys, &diff);
         assert_eq!(xs, ys);
+        let exp_diff = vec![
+            Insert(Left, 1, 1),
+            Delete(Left, 2),
+            Insert(Left, 5, 5),
+            Insert(Left, 5, 6),
+            Insert(Left, 5, 7),
+        ];
+        assert_eq!(diff, exp_diff);
     }
 
     #[test]
@@ -105,6 +115,8 @@ mod tests {
         let diff = calculate_diff(&xs, &ys);
         apply_diff(&mut xs, &mut ys, &diff);
         assert_eq!(xs, ys);
+        let exp_diff: Vec<AlignmentOp> = vec![];
+        assert_eq!(diff, exp_diff);
     }
 
     #[test]
@@ -114,6 +126,14 @@ mod tests {
         let diff = calculate_diff(&xs, &ys);
         apply_diff(&mut xs, &mut ys, &diff);
         assert_eq!(xs, ys);
+        let exp_diff = vec![
+            Insert(Left, 0, 0),
+            Insert(Left, 0, 1),
+            Insert(Left, 0, 2),
+            Insert(Left, 0, 3),
+            Insert(Left, 0, 4),
+        ];
+        assert_eq!(diff, exp_diff);
     }
 
     #[test]
@@ -123,6 +143,14 @@ mod tests {
         let diff = calculate_diff(&xs, &ys);
         apply_diff(&mut xs, &mut ys, &diff);
         assert_eq!(xs, ys);
+        let exp_diff = vec![
+            Insert(Right, 0, 0),
+            Insert(Right, 1, 0),
+            Insert(Right, 2, 0),
+            Insert(Right, 3, 0),
+            Insert(Right, 4, 0),
+        ];
+        assert_eq!(diff, exp_diff);
     }
 
     #[test]
@@ -134,6 +162,15 @@ mod tests {
         apply_diff(&mut xs, &mut ys, &diff);
         assert_eq!(xs, ys);
         assert_eq!(xs, exp);
+        let exp_diff = vec![
+            Insert(Left, 0, 0),
+            Insert(Left, 1, 2),
+            Insert(Left, 1, 3),
+            Insert(Left, 2, 5),
+            Insert(Left, 2, 6),
+            Insert(Left, 3, 8),
+        ];
+        assert_eq!(diff, exp_diff);
     }
 
     #[test]
@@ -145,6 +182,15 @@ mod tests {
         apply_diff(&mut xs, &mut ys, &diff);
         assert_eq!(xs, ys);
         assert_eq!(xs, exp);
+        let exp_diff = vec![
+            Insert(Right, 0, 0),
+            Insert(Right, 2, 1),
+            Insert(Right, 3, 1),
+            Insert(Right, 5, 2),
+            Insert(Right, 6, 2),
+            Insert(Right, 8, 3),
+        ];
+        assert_eq!(diff, exp_diff);
     }
 
     #[test]
@@ -156,6 +202,8 @@ mod tests {
         apply_diff(&mut xs, &mut ys, &diff);
         assert_eq!(xs, ys);
         assert_eq!(xs, exp);
+        let exp_diff = vec![Insert(Left, 2, 2), Insert(Left, 4, 5)];
+        assert_eq!(diff, exp_diff);
     }
 
     #[test]
@@ -169,6 +217,15 @@ mod tests {
         apply_diff(&mut xs, &mut ys, &diff);
         assert_eq!(xs, ys);
         assert_eq!(xs, exp);
+        let exp_diff = vec![
+            Insert(Right, 0, 0),
+            Insert(Left, 1, 0),
+            Replace(Left, 1, 1),
+            Replace(Left, 2, 2),
+            Insert(Right, 3, 3),
+            Insert(Left, 4, 3),
+        ];
+        assert_eq!(diff, exp_diff);
     }
 
     fn t(id: i32) -> T {
