@@ -487,6 +487,8 @@ class StreamFidlistStep(Step):
         mailbox_files = map(lambda xs: (xs[0], "{}-{}".format(unique_id, xs[1])), mailbox_files)
         result = self.invoke_rust_agent_expect_result(host, "stream_fidlists_stratagem", mailbox_files)
 
+        self.log(u"\u2713 Scan results sent to client under:\n{}".format("\n".join(xs[1] for xs in mailbox_files)))
+
         return result
 
 

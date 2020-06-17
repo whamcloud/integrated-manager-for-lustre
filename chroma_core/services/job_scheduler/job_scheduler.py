@@ -1855,6 +1855,7 @@ class JobScheduler(object):
     def run_stratagem(self, mdts, fs_id, stratagem_data):
         unique_id = uuid.uuid4()
         filesystem = ManagedFilesystem.objects.get(id=fs_id)
+        task_list = []
 
         run_stratagem_list = [{"class_name": "ClearOldStratagemDataJob", "args": {}}]
         if stratagem_data.get("report_duration"):
@@ -1869,6 +1870,7 @@ class JobScheduler(object):
                 "actions": ["stratagem.warning"],
             }
             task = Task.objects.create(**task_data)
+            task_list.append(task)
 
             run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
 
@@ -1882,6 +1884,7 @@ class JobScheduler(object):
                 "actions": ["stratagem.purge"],
             }
             task = Task.objects.create(**task_data)
+            task_list.append(task)
 
             run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
 
@@ -1909,6 +1912,13 @@ class JobScheduler(object):
                 },
             }
         )
+
+        # Remove tasks after they are done
+        list_len = len(run_stratagem_list)
+        for task in task_list:
+            run_stratagem_list.append(
+                {"class_name": "RemoveTaskJob", "args": {"task": task, "depends_on_job_range": range(0, list_len)}}
+            )
 
         command = self.run_jobs(run_stratagem_list, help_text["run_stratagem_for_all"])
 

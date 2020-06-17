@@ -9,7 +9,9 @@ use iml_agent::action_plugins::{
     ostpool, package, postoffice,
     stratagem::{
         action_purge, action_warning,
-        server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
+        server::{
+            generate_cooked_config, stream_fidlists, trigger_scan, Counter, StratagemCounters,
+        },
     },
 };
 use liblustreapi as llapi;
@@ -19,6 +21,7 @@ use std::{
     convert::TryInto,
     fs::File,
     io::{self, BufRead, BufReader},
+    path::PathBuf,
     process::exit,
 };
 use structopt::StructOpt;
@@ -37,6 +40,16 @@ pub enum StratagemCommand {
         /// The purge duration
         #[structopt(short = "p", long = "purge", parse(try_from_str = parse_duration))]
         pd: Option<u64>,
+    },
+    /// Stream a fidlist
+    #[structopt(name = "streamfidlist")]
+    StreamFidList {
+        /// Directory to stream up
+        #[structopt(short = "d", long = "dir")]
+        dir: PathBuf,
+        /// Mailbox to stream fids to
+        #[structopt(short = "m", long = "mailbox")]
+        mailbox: String,
     },
 }
 
@@ -503,6 +516,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         exit(exitcode::SOFTWARE);
                     }
                 };
+            }
+            StratagemCommand::StreamFidList { dir, mailbox } => {
+                let arg = vec![(dir, mailbox)];
+
+                if let Err(e) = stream_fidlists(arg).await {
+                    tracing::error!("Failed to stream fids: {:?}", e);
+                }
             }
         },
         App::CheckHA => match high_availability::check_ha(()).await {

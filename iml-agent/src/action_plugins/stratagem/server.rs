@@ -362,6 +362,7 @@ pub async fn trigger_scan(
 /// This fn will stream all files in parallel and return once they have all finished.
 pub async fn stream_fidlists(mailbox_files: MailboxFiles) -> Result<(), ImlAgentError> {
     let mailbox_files = mailbox_files.into_iter().map(|(file, address)| {
+        tracing::debug!("streaming from dir:{:?} to mailbox:{}", &file, &address);
         stream_dir_lines(file)
             .err_into::<ImlAgentError>()
             .chunks(5000)
@@ -370,7 +371,7 @@ pub async fn stream_fidlists(mailbox_files: MailboxFiles) -> Result<(), ImlAgent
                 let xs = xs.into_iter().map(|x| {
                     let x = x?;
 
-                    Ok(format!("\{ \"fid\": \"{}\" \}\n", x).into())
+                    Ok(format!("{{ \"fid\": \"{}\" }}\n", x).into())
                 });
 
                 mailbox_client::send(address.clone(), stream::iter(xs))
