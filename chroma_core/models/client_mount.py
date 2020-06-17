@@ -144,7 +144,6 @@ class MountLustreClientJob(StateChangeJob):
     stateful_object = "lustre_client_mount"
     lustre_client_mount = models.ForeignKey(LustreClientMount, on_delete=CASCADE)
     state_verb = None
-    skip_if_satisfied = True
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -184,7 +183,6 @@ class UnmountLustreClientMountJob(StateChangeJob):
     stateful_object = "lustre_client_mount"
     lustre_client_mount = models.ForeignKey(LustreClientMount, on_delete=CASCADE)
     state_verb = None
-    skip_if_satisfied = True
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -221,7 +219,6 @@ class RemoveLustreClientJob(StateChangeJob):
     stateful_object = "lustre_client_mount"
     lustre_client_mount = models.ForeignKey(LustreClientMount, on_delete=CASCADE)
     state_verb = None
-    skip_if_satisfied = True
 
     @classmethod
     def long_description(cls, stateful_object):
