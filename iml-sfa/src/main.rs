@@ -390,7 +390,7 @@ mod tests {
             &mut policy,
         );
 
-        assert_eq!(Ok(1), block_on(fut));    
+        assert_eq!(Ok(1), block_on(fut));
     }
 
     #[test]
@@ -405,6 +405,6 @@ mod tests {
             &mut policy,
         );
 
-        assert_eq!(Ok(0), block_on(fut));    
+        assert_eq!(Ok(0), block_on(fut));
     }
 }
