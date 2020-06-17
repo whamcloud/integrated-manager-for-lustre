@@ -17,20 +17,27 @@ pub fn view(conf: &Conf) -> impl View<Msg> {
         ),
         _ => {
             if let Some(version) = &conf.exa_version {
-                format!("Exascaler software {} is Copyright © ", version)
+                format!("DDN EXAScaler {} ", version)
             } else {
-                "Exascaler software is Copyright © ".to_string()
+                "DDN EXAScaler ".to_string()
             }
         }
+    };
+
+    let footer_text =  match conf.branding {
+        Branding::Whamcloud => div![
+            footer_string,
+            year.to_string(),
+            " DDN. All rights reserved.".to_string(),
+        ],
+        _ => div![footer_string]
     };
 
     footer![
         class![C.h_5, C.flex, C.justify_center],
         div![
             class![C.px_5, C.text_sm, C.items_center,],
-            footer_string,
-            &year.to_string(),
-            " DDN. All rights reserved.",
+            footer_text
         ]
     ]
 }
