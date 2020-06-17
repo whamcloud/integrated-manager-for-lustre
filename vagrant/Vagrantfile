@@ -793,6 +793,10 @@ Vagrant.configure('2') do |config|
 
       configure_lustre_network c
 
+      configure_ntp c
+
+      configure_ntp_docker c
+
       c.vm.provision 'install-iml-local',
             type: 'shell',
             run: 'never',
