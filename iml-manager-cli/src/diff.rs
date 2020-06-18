@@ -53,10 +53,11 @@ pub fn calculate_diff<T: Keyed + Eq>(left_xs: &[T], right_xs: &[T]) -> Vec<Align
             {
                 (0..j1).for_each(|ix| result.push(AlignmentOp::Insert(Side::Left, i, j + ix)));
                 j += j1;
-            } else if let Some((_, _)) = right_xs[0..j]
+            } else if right_xs[0..j]
                 .iter()
                 .enumerate()
                 .rfind(|(_, r)| r.key() == l.key())
+                .is_some()
             {
                 result.push(AlignmentOp::Delete(Side::Left, i));
                 i += 1;
