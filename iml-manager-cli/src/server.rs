@@ -202,10 +202,10 @@ fn parse_hosts(hosts: &[String]) -> Result<BTreeSet<String>, ImlManagerCliError>
 /// Given an expanded hostlist and a list of API host objects
 /// returns a tuple of hosts that match a hostlist item, and the remaining hostlist items
 /// that did not match anything.
-fn filter_known_hosts<'a>(
+fn filter_known_hosts(
     hostlist: BTreeSet<String>,
-    api_hosts: &'a [Host],
-) -> (Vec<&'a Host>, BTreeSet<String>) {
+    api_hosts: &[Host],
+) -> (Vec<&Host>, BTreeSet<String>) {
     hostlist
         .into_iter()
         .map(
