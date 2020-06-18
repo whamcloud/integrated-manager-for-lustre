@@ -34,7 +34,7 @@ services:
       - "manager-config:/var/lib/chroma"
     healthcheck:
       test: ["CMD-SHELL", "curl --fail influxdb:8086/ping?wait_for_leader=10s"]
-      interval: 5s
+      interval: 30s
       timeout: 15s
       retries: 5
       start_period: 60s
