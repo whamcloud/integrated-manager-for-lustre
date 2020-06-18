@@ -4,7 +4,7 @@
 
 use crate::{
     auth, breakpoints,
-    components::{breadcrumbs, ddn_logo, font_awesome, restrict, whamcloud_logo},
+    components::{breadcrumbs, ddn_logo, ddn_logo_lettering, font_awesome, restrict, whamcloud_logo},
     generated::css_classes::C,
     MergeAttrs, Model, Msg, Route, SessionExt,
     Visibility::*,
@@ -177,15 +177,24 @@ fn toggle_nav_view() -> Node<Msg> {
     ]
 }
 
+fn ddn_logo_full<T>() -> Node<T> {
+    div![
+        class![C.inline_flex],
+        ddn_logo().merge_attrs(class![C.h_8, C.mr_1]),
+        ddn_logo_lettering().merge_attrs(class![C.h_6, C.m_px])
+    ]
+}
+
 /// The navbar logo
 fn logo_nav_view<T>(branding: Branding) -> Node<T> {
-    let (logo, txt, color) = match branding {
-        Branding::Whamcloud => (whamcloud_logo(), empty![], C.text_white),
-        Branding::Ddn => (ddn_logo(), empty![], C.text_red_600),
-        Branding::DdnAi400 => (
-            ddn_logo(),
-            span![class![C.font_semibold, C.text_3xl, C.tracking_tight], "AI400"],
-            C.text_red_600,
+    let (logo, txt) = match branding {
+        Branding::Whamcloud => (whamcloud_logo().merge_attrs(class![C.h_12, C.w_24, C.mr_3]), empty![]),
+        Branding::DDN(ddn_brand) => (
+            ddn_logo_full(),
+            span![
+                class![C.font_semibold, C.text_2xl, C.tracking_tight, C.ml_2],
+                ddn_brand.to_string()
+            ],
         ),
     };
 
@@ -199,10 +208,10 @@ fn logo_nav_view<T>(branding: Branding) -> Node<T> {
             C.lg__my_0,
             C.ml_6,
             C.my_2,
-            color,
+            C.text_white,
             C.xl__mr_12
         ],
-        logo.merge_attrs(class![C.h_12, C.w_24, C.mr_3]),
+        logo,
         txt,
     ]
 }

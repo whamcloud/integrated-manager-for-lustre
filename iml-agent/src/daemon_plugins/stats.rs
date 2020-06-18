@@ -45,23 +45,23 @@ impl DaemonPlugin for Stats {
             let mut cmd4 = iml_fs::stream_file_lines("/proc/stat").boxed();
             let cmd4 = cmd4.try_next().err_into();
 
-            let r = future::try_join4(cmd1, cmd2, cmd3, cmd4).await;
+            let result = future::try_join4(cmd1, cmd2, cmd3, cmd4).await;
 
-            match r {
-                Ok((w, x, y, z)) => {
-                    let mut lctl_output = parse_lctl_output(&w.stdout)?;
+            match result {
+                Ok((lctl, lnetctl, meminfo, maybe_cpustats)) => {
+                    let mut lctl_output = parse_lctl_output(&lctl.stdout)?;
 
-                    let lnetctl_stats = str::from_utf8(&x.stdout)?;
+                    let lnetctl_stats = str::from_utf8(&lnetctl.stdout)?;
 
                     let mut lnetctl_output = parse_lnetctl_output(lnetctl_stats)?;
 
                     lctl_output.append(&mut lnetctl_output);
 
-                    let mut mem_output = parse_meminfo_output(&y)?;
+                    let mut mem_output = parse_meminfo_output(&meminfo)?;
 
                     lctl_output.append(&mut mem_output);
 
-                    if let Some(z) = z {
+                    if let Some(z) = maybe_cpustats {
                         let mut cpu_output = parse_cpustats_output(&z.trim().as_bytes())?;
 
                         lctl_output.append(&mut cpu_output);

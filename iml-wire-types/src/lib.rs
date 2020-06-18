@@ -427,6 +427,7 @@ pub struct Conf {
     pub allow_anonymous_read: bool,
     pub build: String,
     pub version: String,
+    pub exa_version: Option<String>,
     pub is_release: bool,
     pub branding: Branding,
     pub use_stratagem: bool,
@@ -439,6 +440,7 @@ impl Default for Conf {
             allow_anonymous_read: true,
             build: "Not Loaded".into(),
             version: "0".into(),
+            exa_version: None,
             is_release: false,
             branding: Branding::default(),
             use_stratagem: false,
@@ -1537,9 +1539,51 @@ impl PartialEq for OstPool {
 
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub enum Branding {
+    DDN(DdnBranding),
     Whamcloud,
-    Ddn,
-    DdnAi400,
+}
+
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+pub enum DdnBranding {
+    AI200,
+    AI200X,
+    AI400,
+    AI400X,
+    AI7990X,
+    ES14K,
+    ES14KX,
+    ES18K,
+    ES18KX,
+    ES200NV,
+    ES200NVX,
+    ES400NV,
+    ES400NVX,
+    ES7990,
+    ES7990X,
+    Exascaler,
+}
+
+impl fmt::Display for DdnBranding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::AI200 => write!(f, "AI200"),
+            Self::AI200X => write!(f, "AI200X"),
+            Self::AI400 => write!(f, "AI400"),
+            Self::AI400X => write!(f, "AI400X"),
+            Self::AI7990X => write!(f, "AI7990X"),
+            Self::ES14K => write!(f, "ES14K"),
+            Self::ES14KX => write!(f, "ES14KX"),
+            Self::ES18K => write!(f, "ES18K"),
+            Self::ES18KX => write!(f, "ES18KX"),
+            Self::ES200NV => write!(f, "ES200NV"),
+            Self::ES200NVX => write!(f, "ES200NVX"),
+            Self::ES400NV => write!(f, "ES400NV"),
+            Self::ES400NVX => write!(f, "ES400NVX"),
+            Self::ES7990 => write!(f, "ES7990"),
+            Self::ES7990X => write!(f, "ES7990X"),
+            Self::Exascaler => write!(f, "EXA5"),
+        }
+    }
 }
 
 impl Default for Branding {
@@ -1551,9 +1595,22 @@ impl Default for Branding {
 impl From<String> for Branding {
     fn from(x: String) -> Self {
         match x.to_lowercase().as_str() {
-            "whamcloud" => Self::Whamcloud,
-            "ddn" => Self::Ddn,
-            "ddnai400" => Self::DdnAi400,
+            "ai200" => Self::DDN(DdnBranding::AI200),
+            "ai200x" => Self::DDN(DdnBranding::AI200X),
+            "ai400" => Self::DDN(DdnBranding::AI400),
+            "ai400x" => Self::DDN(DdnBranding::AI400X),
+            "ai7990x" => Self::DDN(DdnBranding::AI7990X),
+            "es14k" => Self::DDN(DdnBranding::ES14K),
+            "es14kx" => Self::DDN(DdnBranding::ES14KX),
+            "es18k" => Self::DDN(DdnBranding::ES18K),
+            "es18kx" => Self::DDN(DdnBranding::ES18KX),
+            "es200nv" => Self::DDN(DdnBranding::ES200NV),
+            "es200nvx" => Self::DDN(DdnBranding::ES200NVX),
+            "es400nv" => Self::DDN(DdnBranding::ES400NV),
+            "es400nvx" => Self::DDN(DdnBranding::ES400NVX),
+            "es7990" => Self::DDN(DdnBranding::ES7990),
+            "es7990x" => Self::DDN(DdnBranding::ES7990X),
+            "exascaler" => Self::DDN(DdnBranding::Exascaler),
             _ => Self::Whamcloud,
         }
     }
@@ -1562,9 +1619,8 @@ impl From<String> for Branding {
 impl fmt::Display for Branding {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Ddn => write!(f, "ddn"),
+            Self::DDN(x) => write!(f, "{}", x),
             Self::Whamcloud => write!(f, "whamcloud"),
-            Self::DdnAi400 => write!(f, "ddnai400"),
         }
     }
 }

@@ -1,6 +1,7 @@
 FROM imlteam/python-service-base:6.2.0-dev
 
 RUN yum install -y epel-release \
+  && yum clean all \
   && yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre-devel/repo/epel-7/managerforlustre-manager-for-lustre-devel-epel-7.repo \
   && yum clean metadata \
   && yum install -y python-pip \

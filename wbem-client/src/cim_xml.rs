@@ -284,7 +284,7 @@ pub mod resp {
     pub struct Instance {
         #[serde(rename = "CLASSNAME")]
         pub class_name: String,
-        #[serde(rename = "$value")]
+        #[serde(rename = "$value", default)]
         pub properties: Vec<Property>,
     }
 
@@ -312,7 +312,7 @@ pub mod resp {
 
     #[derive(Debug, serde::Deserialize, PartialEq)]
     pub struct IReturnValueNamedInstance {
-        #[serde(rename = "VALUE.NAMEDINSTANCE")]
+        #[serde(rename = "VALUE.NAMEDINSTANCE", default)]
         pub named_instance: Vec<NamedInstance>,
     }
 
@@ -378,6 +378,16 @@ pub mod resp {
             let xml = include_bytes!("../fixtures/instance.xml");
 
             let r: Cim<IReturnValueInstance> =
+                quick_xml::de::from_str(std::str::from_utf8(xml).unwrap()).unwrap();
+
+            insta::assert_debug_snapshot!(r);
+        }
+
+        #[test]
+        fn test_empty() {
+            let xml = include_bytes!("../fixtures/empty.xml");
+
+            let r: Cim<IReturnValueNamedInstance> =
                 quick_xml::de::from_str(std::str::from_utf8(xml).unwrap()).unwrap();
 
             insta::assert_debug_snapshot!(r);

@@ -396,7 +396,7 @@ where
 fn handle_invalid_profile_tests(
     term: &Term,
     profile: &ServerProfile,
-    failed_tests: &Vec<&ProfileTest>,
+    failed_tests: &[&ProfileTest],
 ) {
     if !failed_tests.is_empty() {
         display_error(format!("Profile {} is invalid:\n\n", profile.name));

@@ -30,6 +30,7 @@ pub struct SfaController {
     pub enclosure_index: i32,
     pub health_state: HealthState,
     pub health_state_reason: String,
+    pub child_health_state: HealthState,
     pub storage_system: String,
 }
 
@@ -43,7 +44,7 @@ impl crate::Identifiable for SfaController {
 
 #[cfg(feature = "postgres-interop")]
 impl Queryable<sc::SqlType, Pg> for SfaController {
-    type Row = (i32, i32, i32, HealthState, String, String);
+    type Row = (i32, i32, i32, HealthState, String, HealthState, String);
 
     fn build(row: Self::Row) -> Self {
         Self {
@@ -51,7 +52,8 @@ impl Queryable<sc::SqlType, Pg> for SfaController {
             enclosure_index: row.2,
             health_state: row.3,
             health_state_reason: row.4,
-            storage_system: row.5,
+            child_health_state: row.5,
+            storage_system: row.6,
         }
     }
 }
@@ -71,6 +73,7 @@ impl SfaController {
                 sc::enclosure_index.eq(excluded(sc::enclosure_index)),
                 sc::health_state.eq(excluded(sc::health_state)),
                 sc::health_state_reason.eq(excluded(sc::health_state_reason)),
+                sc::child_health_state.eq(excluded(sc::child_health_state)),
             ))
     }
     fn batch_delete_filter<'a>(xs: Vec<&'a Self>) -> ByRecords<'a> {

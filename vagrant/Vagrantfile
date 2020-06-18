@@ -83,6 +83,7 @@ Vagrant.configure('2') do |config|
 
   config.vm.provision 'deps', type: 'shell', inline: <<-SHELL
     yum install -y epel-release
+    yum clean all
     yum install -y jq htop vim
   SHELL
 
@@ -192,7 +193,7 @@ Vagrant.configure('2') do |config|
                      type: 'shell',
                      run: 'never',
                      path: 'scripts/install_iml.sh',
-                     args: 'https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/v6.0.1/chroma_support.repo'
+                     args: 'https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/v6.1.0/chroma_support.repo'
 
     # Install IML 4.0.10.x onto the admin node
     # Using the mfl 4.0.10 copr repo
@@ -792,6 +793,10 @@ Vagrant.configure('2') do |config|
 
       configure_lustre_network c
 
+      configure_ntp c
+
+      configure_ntp_docker c
+
       c.vm.provision 'install-iml-local',
             type: 'shell',
             run: 'never',
@@ -866,6 +871,7 @@ end
 def provision_fence_agents(config)
   config.vm.provision 'fence-agents', type: 'shell', inline: <<-SHELL
     yum install -y epel-release
+    yum clean all
     yum install -y yum-plugin-copr
     yum -y copr enable managerforlustre/manager-for-lustre-devel
     yum install -y fence-agents-vbox

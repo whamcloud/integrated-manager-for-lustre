@@ -20,7 +20,7 @@ pub fn wrap_fut<T>(msg: &str, fut: impl Future<Output = T>) -> impl Future<Outpu
     fut.inspect(move |_| pb.finish_and_clear())
 }
 
-pub fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) -> () {
+pub fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) {
     let sp = Spinner::new(Spinners::Dots9, style(msg).dim().to_string());
 
     move |msg_opt| match msg_opt {

@@ -1077,6 +1077,7 @@ table! {
         enclosure_index -> Int4,
         health_state -> Int2,
         health_state_reason -> Text,
+        child_health_state -> Int2,
         storage_system -> Text,
     }
 }
@@ -1150,6 +1151,7 @@ table! {
     chroma_core_sfastoragesystem (id) {
         id -> Int4,
         uuid -> Text,
+        platform -> Text,
         health_state_reason -> Text,
         health_state -> Int2,
         child_health_state -> Int2,

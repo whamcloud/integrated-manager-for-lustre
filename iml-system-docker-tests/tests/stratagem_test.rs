@@ -10,7 +10,7 @@ async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError
         &config,
         &SetupConfigType::DockerSetup(SetupConfig {
             use_stratagem: true,
-            branding: iml_wire_types::Branding::DdnAi400,
+            branding: iml_wire_types::Branding::DDN(iml_wire_types::DdnBranding::Exascaler),
         }),
         vec![
             ("stratagem_server".into(), &config.mds_servers()[..]),

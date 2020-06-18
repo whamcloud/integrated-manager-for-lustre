@@ -67,6 +67,9 @@ class Command(BaseCommand):
             "USE_STRATAGEM": settings.USE_STRATAGEM,
         }
 
+        if settings.EXA_VERSION:
+            config["EXA_VERSION"] = settings.EXA_VERSION
+
         xs = map(lambda x: "{0}={1}".format(x[0], x[1]), config.items())
 
         print("\n".join(xs))

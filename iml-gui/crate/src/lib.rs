@@ -10,6 +10,7 @@ pub mod components;
 pub mod dependency_tree;
 pub mod key_codes;
 pub mod page;
+pub mod resize_observer;
 
 mod auth;
 mod breakpoints;
@@ -373,7 +374,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::LoadPage => {
             if model.loading.loaded() && !model.page.is_active(&model.route) {
-                model.page = (&model.records, &model.route).into();
+                model.page = (&model.records, &model.conf, &model.route).into();
                 orders.send_msg(Msg::UpdatePageTitle);
                 model.page.init(&model.records, &mut orders.proxy(Msg::Page));
             } else {
@@ -403,7 +404,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 warp_drive::Message::RecordChange(record_change) => Msg::RecordChange(Box::new(record_change)),
             };
 
-            orders.send_msg(msg);
+            orders.skip().send_msg(msg);
         }
         Msg::EventSourceError(_) => {
             log("EventSource error.");
@@ -939,7 +940,7 @@ pub fn main_panels(model: &Model, children: impl View<page::Msg>) -> impl View<M
                     class![C.flex_grow, C.overflow_x_auto, C.overflow_y_auto, C.p_6],
                     children.els().map_msg(Msg::Page)
                 ],
-                page::partial::footer::view().els(),
+                page::partial::footer::view(&model.conf).els(),
             ],
             // Side buttons panel
             status_section::view(
@@ -1000,7 +1001,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
             main_panels(model, page::fs_dashboard::view(page).map_msg(page::Msg::FsDashboard)).els()
         }
         Page::Jobstats => main_panels(model, page::jobstats::view(model).els().map_msg(page::Msg::Jobstats)).els(),
-        Page::Login(x) => page::login::view(x, model.conf.branding)
+        Page::Login(x) => page::login::view(x, model.conf.branding, &model.conf.exa_version)
             .els()
             .map_msg(|x| page::Msg::Login(Box::new(x)))
             .map_msg(Msg::Page),
@@ -1058,6 +1059,13 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::Volumes(x) => main_panels(model, page::volumes::view(x).els().map_msg(page::Msg::Volumes)).els(),
         Page::ServerVolumes(x) => main_panels(model, page::volumes::view(x).els().map_msg(page::Msg::Volumes)).els(),
         Page::Volume(x) => main_panels(model, page::volume::view(x).els().map_msg(page::Msg::Volume)).els(),
+        Page::SfaEnclosure(x) => main_panels(
+            model,
+            page::sfa_enclosure::view(&model.records, x)
+                .els()
+                .map_msg(page::Msg::SfaEnclosure),
+        )
+        .els(),
     };
 
     // command modal is the global singleton, therefore is being showed here

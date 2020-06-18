@@ -173,7 +173,7 @@ pub async fn get_retry<T: DeserializeOwned + Debug>(
     let query = &query;
 
     retry_future(
-        move || get(client2.clone(), path.to_string(), query),
+        move |_| get(client2.clone(), path.to_string(), query),
         &mut policy,
     )
     .await

@@ -11,6 +11,7 @@ class SfaStorageSystem(models.Model):
         app_label = "chroma_core"
 
     uuid = models.TextField(unique=True,)
+    platform = models.TextField()
     health_state_reason = models.TextField()
     health_state = models.PositiveSmallIntegerField()
     child_health_state = models.PositiveSmallIntegerField()
@@ -105,6 +106,7 @@ class SfaController(models.Model):
     enclosure_index = models.PositiveIntegerField()
     health_state = models.PositiveSmallIntegerField()
     health_state_reason = models.TextField()
+    child_health_state = models.PositiveSmallIntegerField()
     storage_system = models.ForeignKey(
         "SfaStorageSystem", to_field="uuid", db_column="storage_system", on_delete=CASCADE
     )

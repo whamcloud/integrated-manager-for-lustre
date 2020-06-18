@@ -14,8 +14,9 @@ use iml_orm::{
     AsyncRunQueryDslPostgres, Changeable, DbPool, Executable, GetChanges as _, Identifiable,
     Upserts,
 };
+use iml_request_retry::{retry_future, RetryAction, RetryPolicy};
 use iml_tracing::tracing;
-use std::{convert::TryInto as _, time::Duration};
+use std::{convert::TryInto as _, fmt::Debug, time::Duration};
 use thiserror::Error;
 use tokio::time;
 use url::Url;
@@ -31,6 +32,16 @@ enum ImlSfaError {
     Async(#[from] AsyncError),
     #[error(transparent)]
     ImlOrm(#[from] iml_orm::ImlOrmError),
+}
+
+fn create_retry_endpoint_policy<E: Debug>(len: u32) -> impl RetryPolicy<E> + Send {
+    move |k: u32, e| {
+        if k < len {
+            RetryAction::RetryNow
+        } else {
+            RetryAction::ReturnError(e)
+        }
+    }
 }
 
 #[tokio::main]
@@ -75,22 +86,45 @@ async fn main() -> Result<(), ImlSfaError> {
     loop {
         interval.tick().await;
 
-        let fut1 = client.fetch_sfa_enclosures(endpoints[0][0].clone());
+        let mut fut1_policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
+        let fut1 = retry_future(
+            |c| client.fetch_sfa_enclosures(endpoints[0][c as usize].clone()),
+            &mut fut1_policy,
+        );
 
-        let fut2 = client.fetch_sfa_storage_system(endpoints[0][0].clone());
+        let mut fut2_policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
+        let fut2 = retry_future(
+            |c| client.fetch_sfa_storage_system(endpoints[0][c as usize].clone()),
+            &mut fut2_policy,
+        );
 
-        let fut3 = client.fetch_sfa_disk_drives(endpoints[0][0].clone());
+        let mut fut3_policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
+        let fut3 = retry_future(
+            |c| client.fetch_sfa_disk_drives(endpoints[0][c as usize].clone()),
+            &mut fut3_policy,
+        );
 
-        let fut4 = client.fetch_sfa_jobs(endpoints[0][0].clone());
+        let mut fut4_policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
+        let fut4 = retry_future(
+            |c| client.fetch_sfa_jobs(endpoints[0][c as usize].clone()),
+            &mut fut4_policy,
+        );
 
-        let fut5 = client.fetch_sfa_power_supply(endpoints[0][0].clone());
+        let mut fut5_policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
+        let fut5 = retry_future(
+            |c| client.fetch_sfa_power_supply(endpoints[0][c as usize].clone()),
+            &mut fut5_policy,
+        );
 
         let (new_enclosures, x, new_drives, new_jobs, new_power_supplies) =
             future::try_join5(fut1, fut2, fut3, fut4, fut5).await?;
 
-        let new_controllers = client
-            .fetch_sfa_controllers(endpoints[0][0].clone())
-            .await?;
+        let mut policy = create_retry_endpoint_policy((endpoints[0].len() - 1) as u32);
+        let new_controllers = retry_future(
+            |c| client.fetch_sfa_controllers(endpoints[0][c as usize].clone()),
+            &mut policy,
+        )
+        .await?;
 
         tracing::trace!("SfaStorageSystem {:?}", x);
         tracing::trace!("SfaEnclosures {:?}", new_enclosures);

@@ -46,6 +46,7 @@ features = ["std", "unicode-perl"]
 version = "^0.3"
 features = [
   "DomRect",
+  "DomRectReadOnly",
   "Element",
   "EventSource",
   "HtmlDocument",
@@ -55,11 +56,11 @@ features = [
   "NotificationOptions",
   "NotificationPermission",
   "ServiceWorkerContainer",
-
   "ServiceWorkerRegistration",
   "Window",
 ]
 
 [profile.release]
 lto = true
-opt-level = 's'
+opt-level = 'z'
+codegen-units = 1
