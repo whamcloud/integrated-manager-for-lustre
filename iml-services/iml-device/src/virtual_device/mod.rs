@@ -548,7 +548,7 @@ mod tests {
 
         let devices = deser_fixture(path1, path2, Fqdn(fqdn1.into()), Fqdn(fqdn2.into()));
 
-        let results = update_virtual_devices(Vec::new(), devices, &Vec::new());
+        let results = update_virtual_devices(devices, Vec::new(), &Vec::new());
 
         compare_results(results, test_name);
     }
