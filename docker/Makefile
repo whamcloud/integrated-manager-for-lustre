@@ -15,8 +15,6 @@ build: clean
 	COMPOSE_DOCKER_CLI_BUILD=1 docker-compose build
 
 save: build
-	COMPOSE_DOCKER_CLI_BUILD=1 docker-compose pull postgres rabbit update-handler
+	COMPOSE_DOCKER_CLI_BUILD=1 docker-compose pull postgres update-handler
 	docker save -o iml-images.tar $(COMPOSE_IMAGES)
 	gzip -9 < iml-images.tar > iml-images.tgz
-
-
