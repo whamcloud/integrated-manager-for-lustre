@@ -106,6 +106,8 @@ services:
       dockerfile: ./docker/nginx.dockerfile
     hostname: "nginx"
     deploy: *default-deploy
+    environment:
+      - BRANDING_PATH=whamcloud-favicons
     volumes:
       - "manager-config:/var/lib/chroma"
       - "mailbox:/var/spool/iml/mailbox"
