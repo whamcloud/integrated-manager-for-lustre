@@ -14,7 +14,7 @@ use futures::{
     stream::{StreamExt as _, TryStreamExt},
     Future, FutureExt,
 };
-use inotify::{Inotify, WatchDescriptor, WatchMask};
+use inotify::{Inotify, WatchMask};
 use std::{
     collections::{HashMap, HashSet},
     pin::Pin,
@@ -24,21 +24,17 @@ use stream_cancel::{Trigger, Tripwire};
 use tokio::{fs, net::UnixListener, sync::Mutex};
 use tokio_util::codec::{BytesCodec, FramedRead};
 
-pub struct POWD(pub Option<WatchDescriptor>);
-
 pub struct PostOffice {
     // individual mailbox socket listeners
     routes: Arc<Mutex<HashMap<String, Trigger>>>,
-    inotify: Arc<Mutex<Inotify>>,
-    wd: Arc<Mutex<POWD>>,
+    inotify: Arc<Mutex<Option<Inotify>>>,
 }
 
 pub fn create() -> impl DaemonPlugin {
     PostOffice {
-        wd: Arc::new(Mutex::new(POWD(None))),
-        inotify: Arc::new(Mutex::new(
+        inotify: Arc::new(Mutex::new(Some(
             Inotify::init().expect("Failed to initialize inotify"),
-        )),
+        ))),
         routes: Arc::new(Mutex::new(HashMap::new())),
     }
 }
@@ -67,7 +63,7 @@ fn start_route(mailbox: String) -> Trigger {
     let rc = async move {
         // remove old unix socket
         let _ = fs::remove_file(&addr).await.map_err(|e| {
-            tracing::error!("Failed to remove file {}: {}", &addr, &e);
+            tracing::debug!("Failed to remove file {}: {}", &addr, &e);
         });
         let mut listener = UnixListener::bind(addr.clone()).map_err(|e| {
             tracing::error!("Failed to open unix socket {}: {}", &addr, &e);
@@ -109,7 +105,6 @@ impl DaemonPlugin for PostOffice {
     ) -> Pin<Box<dyn Future<Output = Result<Output, ImlAgentError>> + Send>> {
         let routes = Arc::clone(&self.routes);
         let inotify = Arc::clone(&self.inotify);
-        let wd = Arc::clone(&self.wd);
         let conf_file = env::get_var("POSTMAN_CONF_PATH");
 
         async move {
@@ -127,16 +122,23 @@ impl DaemonPlugin for PostOffice {
                     .await?;
             }
 
-            wd.lock().await.0 = inotify
+            inotify
                 .lock()
                 .await
+                .as_mut()
+                .unwrap()
                 .add_watch(&conf_file, WatchMask::MODIFY)
                 .map_err(|e| tracing::error!("Failed to watch configuration: {}", e))
                 .ok();
 
             let watcher = async move {
                 let mut buffer = [0; 32];
-                let mut stream = inotify.lock().await.event_stream(&mut buffer)?;
+                let mut stream = inotify
+                    .lock()
+                    .await
+                    .as_mut()
+                    .unwrap()
+                    .event_stream(&mut buffer)?;
 
                 while let Some(event_or_error) = stream.next().await {
                     tracing::debug!("event: {:?}", event_or_error);
@@ -173,11 +175,14 @@ impl DaemonPlugin for PostOffice {
     }
 
     async fn teardown(&mut self) -> Result<(), ImlAgentError> {
-        if let Some(wd) = self.wd.lock().await.0.clone() {
-            let _ = self.inotify.lock().await.rm_watch(wd);
-        }
         // drop all triggers
         self.routes.lock().await.clear();
+        let inotify = std::mem::replace(&mut *self.inotify.lock().await, None);
+        inotify
+            .unwrap()
+            .close()
+            .map_err(|e| tracing::error!("Failed to close watch: {}", e))
+            .ok();
 
         Ok(())
     }
