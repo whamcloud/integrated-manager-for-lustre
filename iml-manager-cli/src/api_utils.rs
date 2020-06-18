@@ -375,14 +375,8 @@ fn update_commands(commands: &mut HashMap<i32, RichCommand>, loaded_cmds: Vec<Co
         .into_iter()
         .map(|t| {
             let (id, deps) = extract_children_from_cmd(&t);
-            (
-                id,
-                Rich {
-                    id,
-                    deps,
-                    inner: Arc::new(t),
-                },
-            )
+            let inner = Arc::new(t);
+            (id, Rich { id, deps, inner } )
         })
         .collect::<HashMap<i32, RichCommand>>();
     commands.extend(new_commands);
@@ -393,14 +387,8 @@ fn update_jobs(jobs: &mut HashMap<i32, RichJob>, loaded_jobs: Vec<Job0>) {
         .into_iter()
         .map(|t| {
             let (id, deps) = extract_children_from_job(&t);
-            (
-                id,
-                Rich {
-                    id,
-                    deps,
-                    inner: Arc::new(t),
-                },
-            )
+            let inner = Arc::new(t);
+            (id, Rich { id, deps, inner } )
         })
         .collect::<HashMap<i32, RichJob>>();
     jobs.extend(new_jobs);
@@ -411,14 +399,8 @@ fn update_steps(steps: &mut HashMap<i32, RichStep>, loaded_steps: Vec<Step>) {
         .into_iter()
         .map(|t| {
             let (id, deps) = extract_children_from_step(&t);
-            (
-                id,
-                Rich {
-                    id,
-                    deps,
-                    inner: Arc::new(t),
-                },
-            )
+            let inner = Arc::new(t);
+            (id, Rich { id, deps, inner } )
         })
         .collect::<HashMap<i32, RichStep>>();
     steps.extend(new_steps);
