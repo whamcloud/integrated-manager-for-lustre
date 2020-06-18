@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{delete, first, get, post, put, wait_for_cmd},
+    api_utils::{delete, first, get, post, put, wait_for_command},
     display_utils::{display_cmd_state, start_spinner, DisplayType, IntoDisplayType as _},
     error::{
         DurationParseError, ImlManagerCliError, RunStratagemCommandResult,
@@ -181,7 +181,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 
             let stop_spinner = start_spinner(&command.message);
 
-            let command = wait_for_cmd(command).await?;
+            let command = wait_for_command(command).await?;
 
             stop_spinner(None);
 
@@ -213,7 +213,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 
                 let stop_spinner = start_spinner(&command.message);
 
-                let command = wait_for_cmd(command).await?;
+                let command = wait_for_command(command).await?;
 
                 stop_spinner(None);
 
@@ -232,7 +232,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 
                 let stop_spinner = start_spinner(&command.message);
 
-                let command = wait_for_cmd(command).await?;
+                let command = wait_for_command(command).await?;
 
                 stop_spinner(None);
 
@@ -251,7 +251,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 
                 let stop_spinner = start_spinner(&command.message);
 
-                let command = wait_for_cmd(command).await?;
+                let command = wait_for_command(command).await?;
 
                 stop_spinner(None);
 

@@ -56,11 +56,11 @@ pub fn format_job_state<T>(indent: usize, job: &Job<T>) -> String {
     let indent = "  ".repeat(indent);
     indent
         + &if job.cancelled {
-            format_cancelled(&format!("{} (job) cancelled", job.description))
+            format_cancelled(&format!("{} cancelled", job.description))
         } else if job.errored {
-            format_error(format!("{} (job) errored", job.description))
+            format_error(format!("{} errored", job.description))
         } else if job.state == "complete" {
-            format_success(format!("{} (job) successful", job.description))
+            format_success(format!("{} successful", job.description))
         } else {
             format_in_progress(&job.description)
         }
@@ -70,10 +70,10 @@ pub fn format_step_state(indent: usize, step: &Step) -> String {
     let indent = "  ".repeat(indent);
     indent
         + &match &step.state[..] {
-        "cancelled" => format_cancelled(&format!("{} (step) cancelled", step.class_name)),
-        "failed" => format_error(format!("{} (step) errored", step.class_name)),
-        "success" => format_success(format!("{} (step) successful", step.class_name)),
-        _ /* "incomplete" */ => format_in_progress(&step.class_name),
+        "cancelled" => format_cancelled(&format!("(step) {} cancelled", step.class_name)),
+        "failed" => format_error(format!("(step) {} errored", step.class_name)),
+        "success" => format_success(format!("(step) {} successful", step.class_name)),
+        _ /* "incomplete" */ => format_in_progress(format!("(step) {}", step.class_name)),
     }
 }
 
