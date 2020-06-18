@@ -93,6 +93,8 @@ pub struct LustreFid {
     pub oid: i32,
     pub ver: i32,
 }
+
+#[cfg(feature = "postgres-interop")]
 impl fmt::Display for LustreFid {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -104,6 +106,7 @@ impl fmt::Display for LustreFid {
 }
 
 /// Record from the `chroma_core_fidtaskqueue` table
+#[cfg(feature = "postgres-interop")]
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct FidTaskQueue {
     pub id: i32,
