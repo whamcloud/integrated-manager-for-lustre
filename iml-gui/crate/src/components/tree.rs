@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    components::{alert_indicator, font_awesome, paging, Placement},
+    components::{attrs, alert_indicator, font_awesome, paging, Placement, tooltip},
     generated::css_classes::C,
     route::RouteId,
     GMsg, Route,
@@ -571,10 +571,12 @@ fn tree_host_item_view(cache: &ArcCache, model: &Model, host: &Host) -> Option<N
         toggle_view(address.clone(), tree_node.open),
         item_view("server", &host.label, Route::Server(host.id.into())),
         a![
-            class![C.hover__underline, C.hover__text_gray_300, C.mr_1],
+            class![C.hover__underline, C.text_blue_500, C.hover__text_blue_400, C.mr_1],
             attrs! {
                 At::Href => Route::ServerDashboard(host.nodename.to_string().into()).to_href()
             },
+            attrs::container(),
+            tooltip::view(&format!("{} Server Dashboard", host.label), Placement::Bottom),
             font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chart-bar"),
         ],
         alert_indicator(&cache.active_alert, &host, true, Placement::Bottom),
@@ -613,10 +615,12 @@ fn tree_fs_item_view(cache: &ArcCache, model: &Model, fs: &Filesystem) -> Option
         toggle_view(address.clone(), tree_node.open),
         item_view("server", &fs.label, Route::Filesystem(fs.id.into())),
         a![
-            class![C.hover__underline, C.hover__text_gray_300, C.mr_1],
+            class![C.hover__underline, C.text_blue_500, C.hover__text_blue_400, C.mr_1],
             attrs! {
                 At::Href => Route::FsDashboard(fs.name.to_string().into()).to_href()
             },
+            attrs::container(),
+            tooltip::view(&format!("{} Filesystem Dashboard", fs.name), Placement::Bottom),
             font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chart-bar"),
         ],
         alert_indicator(&cache.active_alert, &fs, true, Placement::Bottom),
@@ -778,10 +782,12 @@ fn tree_target_collection_view(
                         class![C.py_1],
                         item_view("bullseye", x.label(), Route::Target(x.id.into())),
                         a![
-                            class![C.hover__underline, C.hover__text_gray_300, C.mr_1],
+                            class![C.hover__underline, C.text_blue_500, C.hover__text_blue_400, C.mr_1],
                             attrs! {
                                 At::Href => Route::TargetDashboard(x.name.to_string().into()).to_href()
                             },
+                            attrs::container(),
+                            tooltip::view(&format!("{} Target Dashboard", x.name), Placement::Bottom),
                             font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chart-bar"),
                         ],
                         alert_indicator(&cache.active_alert, &x, true, Placement::Bottom),
