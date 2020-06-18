@@ -154,8 +154,13 @@ class MountLustreClientJob(StateChangeJob):
     def get_steps(self):
         host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == self.lustre_client_mount.host_id)
 
+        mountpoint = (
+            self.lustre_client_mount.mountpoint
+            if self.lustre_client_mount.mountpoint
+            else "/mnt/{}".format(self.lustre_client_mount.filesystem)
+        )
         filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.name == self.lustre_client_mount.filesystem)
-        args = dict(host=host, filesystems=[(filesystem.mount_path(), self.lustre_client_mount.mountpoint)])
+        args = {"host": host, "filesystems": [(filesystem.mount_path(), mountpoint)]}
         return [(MountLustreFilesystemsStep, args)]
 
     def get_deps(self):
@@ -298,7 +303,7 @@ class MountLustreFilesystemsJob(AdvertisedJob):
             "filesystems": [
                 (
                     ObjectCache.get_one(ManagedFilesystem, lambda mf, mtd=m: mf.name == mtd.filesystem).mount_path(),
-                    m.mountpoint,
+                    m.mountpoint if m.mountpoint else "/mnt/{}".format(m.filesystem),
                 )
                 for m in unmounted
             ],
