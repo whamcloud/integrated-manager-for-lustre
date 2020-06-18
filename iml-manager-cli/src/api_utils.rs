@@ -102,7 +102,7 @@ fn step_finished(step: &Step) -> bool {
     step.state != "incomplete"
 }
 
-pub async fn wait_for_cmd(cmd: Command) -> Result<Command, ImlManagerCliError> {
+pub async fn wait_for_command(cmd: Command) -> Result<Command, ImlManagerCliError> {
     loop {
         if cmd_finished(&cmd) {
             return Ok(cmd);
