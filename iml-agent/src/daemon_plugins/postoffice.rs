@@ -14,7 +14,7 @@ use futures::{
     stream::{StreamExt as _, TryStreamExt},
     Future, FutureExt,
 };
-use inotify::{Inotify, WatchDescriptor, WatchMask};
+use inotify::{Inotify, WatchMask};
 use std::{
     collections::{HashMap, HashSet},
     pin::Pin,
@@ -24,22 +24,20 @@ use stream_cancel::{Trigger, Tripwire};
 use tokio::{fs, net::UnixListener, sync::Mutex};
 use tokio_util::codec::{BytesCodec, FramedRead};
 
-pub struct POWD(pub Option<WatchDescriptor>);
-
 pub struct PostOffice {
     // individual mailbox socket listeners
     routes: Arc<Mutex<HashMap<String, Trigger>>>,
     inotify: Arc<Mutex<Inotify>>,
-    wd: Arc<Mutex<POWD>>,
+    trigger: Option<Trigger>,
 }
 
 pub fn create() -> impl DaemonPlugin {
     PostOffice {
-        wd: Arc::new(Mutex::new(POWD(None))),
         inotify: Arc::new(Mutex::new(
             Inotify::init().expect("Failed to initialize inotify"),
         )),
         routes: Arc::new(Mutex::new(HashMap::new())),
+        trigger: None,
     }
 }
 
@@ -59,7 +57,7 @@ impl std::fmt::Debug for PostOffice {
     }
 }
 
-// Returned trigger should bed drop'd to cause route to stop
+// Returned trigger should be dropped to cause route to stop
 fn start_route(mailbox: String) -> Trigger {
     let (trigger, tripwire) = Tripwire::new();
     let addr = socket_name(&mailbox);
@@ -67,7 +65,7 @@ fn start_route(mailbox: String) -> Trigger {
     let rc = async move {
         // remove old unix socket
         let _ = fs::remove_file(&addr).await.map_err(|e| {
-            tracing::error!("Failed to remove file {}: {}", &addr, &e);
+            tracing::debug!("Failed to remove file {}: {}", &addr, &e);
         });
         let mut listener = UnixListener::bind(addr.clone()).map_err(|e| {
             tracing::error!("Failed to open unix socket {}: {}", &addr, &e);
@@ -109,8 +107,11 @@ impl DaemonPlugin for PostOffice {
     ) -> Pin<Box<dyn Future<Output = Result<Output, ImlAgentError>> + Send>> {
         let routes = Arc::clone(&self.routes);
         let inotify = Arc::clone(&self.inotify);
-        let wd = Arc::clone(&self.wd);
         let conf_file = env::get_var("POSTMAN_CONF_PATH");
+
+        let (trigger, tripwire) = Tripwire::new();
+
+        self.trigger = Some(trigger);
 
         async move {
             if let Ok(file) = fs::read_to_string(&conf_file).await {
@@ -127,7 +128,7 @@ impl DaemonPlugin for PostOffice {
                     .await?;
             }
 
-            wd.lock().await.0 = inotify
+            inotify
                 .lock()
                 .await
                 .add_watch(&conf_file, WatchMask::MODIFY)
@@ -136,10 +137,11 @@ impl DaemonPlugin for PostOffice {
 
             let watcher = async move {
                 let mut buffer = [0; 32];
-                let mut stream = inotify.lock().await.event_stream(&mut buffer)?;
+                let stream = inotify.lock().await.event_stream(&mut buffer)?;
+                let mut events = stream.take_until(tripwire);
 
-                while let Some(event_or_error) = stream.next().await {
-                    tracing::debug!("event: {:?}", event_or_error);
+                while let Some(ev) = events.next().await {
+                    tracing::debug!("inotify event: {:?}", ev);
                     match fs::read_to_string(&conf_file).await {
                         Ok(file) => {
                             let newset: HashSet<String> =
@@ -161,11 +163,12 @@ impl DaemonPlugin for PostOffice {
                         Err(e) => {
                             tracing::error!("Failed to open configuration {}: {}", &conf_file, e)
                         }
-                    }
+                    };
                 }
                 tracing::debug!("Ending Inotify Listen for {}", &conf_file);
                 Ok::<_, ImlAgentError>(())
             };
+
             tokio::spawn(watcher);
             Ok(None)
         }
@@ -173,12 +176,9 @@ impl DaemonPlugin for PostOffice {
     }
 
     async fn teardown(&mut self) -> Result<(), ImlAgentError> {
-        if let Some(wd) = self.wd.lock().await.0.clone() {
-            let _ = self.inotify.lock().await.rm_watch(wd);
-        }
         // drop all triggers
         self.routes.lock().await.clear();
-
+        self.trigger.take();
         Ok(())
     }
 }
