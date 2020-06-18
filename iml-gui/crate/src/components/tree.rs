@@ -576,7 +576,7 @@ fn tree_host_item_view(cache: &ArcCache, model: &Model, host: &Host) -> Option<N
                 At::Href => Route::ServerDashboard(host.nodename.to_string().into()).to_href()
             },
             attrs::container(),
-            tooltip::view(&format!("{} Server Dashboard", host.label), Placement::Bottom),
+            tooltip::view(&"View statistics", Placement::Bottom),
             font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chart-bar"),
         ],
         alert_indicator(&cache.active_alert, &host, true, Placement::Bottom),
@@ -620,7 +620,7 @@ fn tree_fs_item_view(cache: &ArcCache, model: &Model, fs: &Filesystem) -> Option
                 At::Href => Route::FsDashboard(fs.name.to_string().into()).to_href()
             },
             attrs::container(),
-            tooltip::view(&format!("{} Filesystem Dashboard", fs.name), Placement::Bottom),
+            tooltip::view(&"View statistics", Placement::Bottom),
             font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chart-bar"),
         ],
         alert_indicator(&cache.active_alert, &fs, true, Placement::Bottom),
@@ -787,7 +787,7 @@ fn tree_target_collection_view(
                                 At::Href => Route::TargetDashboard(x.name.to_string().into()).to_href()
                             },
                             attrs::container(),
-                            tooltip::view(&format!("{} Target Dashboard", x.name), Placement::Bottom),
+                            tooltip::view(&"View statistics", Placement::Bottom),
                             font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chart-bar"),
                         ],
                         alert_indicator(&cache.active_alert, &x, true, Placement::Bottom),
