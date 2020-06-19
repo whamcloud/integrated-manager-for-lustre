@@ -208,7 +208,7 @@ exit(missing_electric_fence)"
                 job_log.error("Failed configuration check on '%s': Unable to access any yum mirrors" % address)
         except AgentException:
             job_log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
-            return False, False
+            return False
 
         return can_update
 
