@@ -1310,6 +1310,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-config"
+version = "0.3.0"
+dependencies = [
+ "console 0.11.3",
+ "futures",
+ "iml-tracing",
+ "iml-wire-types",
+ "indicatif",
+ "insta",
+ "spinners",
+ "structopt",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "iml-device"
 version = "0.3.0"
 dependencies = [
