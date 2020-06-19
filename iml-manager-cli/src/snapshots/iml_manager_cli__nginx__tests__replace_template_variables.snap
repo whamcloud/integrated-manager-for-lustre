@@ -74,10 +74,6 @@ server {
 
     gzip_comp_level 5;
 
-    location /favicon.ico {
-      alias /usr/lib/iml-manager/iml-gui/favicon.ico;
-    }
-
     location /certificate/ {
         return 301 https://$http_host/certificate;
     }
@@ -409,5 +405,9 @@ server {
 
     location / {
         try_files $uri $uri/ /index.html;
+    }
+
+    location /(favicon.*|android-chrome.*|apple-touch-icon\.png|mstile-150x150\.png|safari-pinned-tab\.svg) {
+        try_files /var/lib/chroma/branding/$1 $uri/branding/$1;
     }
 }

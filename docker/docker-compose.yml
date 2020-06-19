@@ -107,6 +107,7 @@ services:
     hostname: "nginx"
     deploy: *default-deploy
     volumes:
+      - "/etc/iml-docker/setup/branding:/var/lib/chroma/branding"
       - "manager-config:/var/lib/chroma"
       - "mailbox:/var/spool/iml/mailbox"
       - "static-config1:/usr/lib/iml-manager"
