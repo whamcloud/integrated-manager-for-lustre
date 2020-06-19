@@ -25,8 +25,10 @@ use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::Fqdn;
 use std::{
     collections::{BTreeMap, HashMap},
+    io::Write,
     sync::Arc,
 };
+use tokio::{fs::File, io::AsyncWriteExt};
 use warp::Filter;
 
 type Cache = Arc<Mutex<HashMap<Fqdn, Device>>>;
@@ -117,6 +119,13 @@ async fn main() -> Result<(), ImlDeviceError> {
     while let Some((f, output)) = s.try_next().await? {
         let begin: DateTime<Local> = Local::now();
         tracing::info!("Iteration {}: begin: {}", i, begin);
+
+        {
+            let s = serde_json::to_string_pretty(&output).unwrap();
+            let filename = format!("/tmp/output-{}-{}.json", f, i);
+            let mut ff = File::create(&filename).await.unwrap();
+            ff.write_all(&s.as_bytes()).await.unwrap();
+        }
 
         let (d, cs) = output;
 

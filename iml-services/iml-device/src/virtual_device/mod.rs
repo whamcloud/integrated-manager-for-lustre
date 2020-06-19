@@ -476,8 +476,9 @@ fn new_children(d: Device, actions: &mut collections::HashSet<Action>) -> OrdSet
 #[cfg(test)]
 mod tests {
     use super::*;
+    use device_types::Output;
     use insta::assert_json_snapshot;
-    use std::fs;
+    use std::{fs, rc::Rc};
     use test_case::test_case;
 
     fn init_subscriber() {
@@ -496,6 +497,19 @@ mod tests {
         let device2: Device = serde_json::from_str(&device2).unwrap();
 
         vec![(fqdn1, device1), (fqdn2, device2)]
+    }
+
+    fn deser_fixture_2(paths: &[&str], fqdns: &[Fqdn]) -> Vec<(Fqdn, (Device, Vec<Command>))> {
+        let mut results = vec![];
+
+        for (p, f) in paths.iter().zip(fqdns) {
+            let output = fs::read_to_string(p).unwrap();
+            let o: (Device, Vec<Command>) = serde_json::from_str(&output).unwrap();
+
+            results.push((f.clone(), o));
+        }
+
+        results
     }
 
     // This function gets top-level children and snapshots them one-by-one.
@@ -551,5 +565,41 @@ mod tests {
         let results = update_virtual_devices(devices, Vec::new(), &Vec::new());
 
         compare_results(results, test_name);
+    }
+
+    #[test_case(
+        "simple_commands_test",
+        &[
+            "fixtures/output-mds2.local-8-pruned.json",
+            "fixtures/output-mds1.local-9-pruned.json",
+            "fixtures/output-mds2.local-10-pruned.json",
+        ],
+        &[   
+            "mds2.local",
+            "mds1.local",
+            "mds2.local"
+        ]
+    )]
+    fn test_2(test_name: &str, paths: &[&str], fqdns: &[&str]) {
+        init_subscriber();
+
+        let fqdns: Vec<Fqdn> = fqdns.into_iter().map(|s| Fqdn(s.to_string())).collect();
+        let outputs = deser_fixture_2(paths, &fqdns);
+
+        let mut incoming_devices = vec![];
+        let mut resolved_devices = vec![];
+
+        for (f, o) in outputs {
+            tracing::info!("Handling {}", f.to_string());
+            let (d, cs) = o;
+            incoming_devices.push((f, d));
+            let incoming_devices_2 = incoming_devices.clone();
+            let resolved_devices_2 = incoming_devices.clone();
+            let results = update_virtual_devices(incoming_devices_2, resolved_devices_2, &cs);
+
+            compare_results(results.clone(), test_name);
+
+            std::mem::replace(&mut resolved_devices, results);
+        }
     }
 }
