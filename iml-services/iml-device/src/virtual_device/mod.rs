@@ -574,7 +574,7 @@ mod tests {
             "fixtures/output-mds1.local-9-pruned.json",
             "fixtures/output-mds2.local-10-pruned.json",
         ],
-        &[   
+        &[
             "mds2.local",
             "mds1.local",
             "mds2.local"
@@ -586,20 +586,29 @@ mod tests {
         let fqdns: Vec<Fqdn> = fqdns.into_iter().map(|s| Fqdn(s.to_string())).collect();
         let outputs = deser_fixture_2(paths, &fqdns);
 
-        let mut incoming_devices = vec![];
-        let mut resolved_devices = vec![];
+        let mut incoming_devices = HashMap::new();
+        let mut resolved_devices: HashMap<Fqdn, Device> = HashMap::new();
 
         for (f, o) in outputs {
             tracing::info!("Handling {}", f.to_string());
             let (d, cs) = o;
-            incoming_devices.push((f, d));
-            let incoming_devices_2 = incoming_devices.clone();
-            let resolved_devices_2 = incoming_devices.clone();
+            incoming_devices.insert(f.clone(), d.clone());
+            resolved_devices.entry(f).or_insert(d);
+            let incoming_devices_2 = incoming_devices
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect();
+            let resolved_devices_2 = resolved_devices
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect();
             let results = update_virtual_devices(incoming_devices_2, resolved_devices_2, &cs);
 
             compare_results(results.clone(), test_name);
 
-            std::mem::replace(&mut resolved_devices, results);
+            for (k, v) in results {
+                resolved_devices.insert(k, v);
+            }
         }
     }
 }
