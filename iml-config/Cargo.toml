@@ -1,0 +1,24 @@
+[package]
+name = "iml-config"
+version = "0.3.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+console = "0.11"
+futures = "0.3"
+iml-tracing = { version = "0.2", path="../iml-tracing"}
+iml-wire-types = { path = "../iml-wire-types", version = "0.3" }
+indicatif = "0.14"
+spinners = "1.2.0"
+structopt = "0.3"
+thiserror = "1.0"
+tokio = { version = "0.2", features = ["macros", "io-std", "io-util", "fs"] }
+tracing = "0.1"
+
+[dev-dependencies]
+insta = "0.16"
+
+[[bin]]
+name = "iml-config"
+path = "src/main.rs"
