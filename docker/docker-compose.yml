@@ -28,7 +28,13 @@ services:
       context: ../
       dockerfile: ./docker/influxdb.dockerfile
     hostname: "influxdb"
-    deploy: *default-deploy
+    deploy:
+      <<: *default-deploy
+      resources:
+        limits:
+          cpus: "2"
+        reservations:
+          cpus: "1.5"
     volumes:
       - influxdb:/var/lib/influxdb/
       - "manager-config:/var/lib/chroma"
@@ -72,6 +78,11 @@ services:
     deploy:
       <<: *default-deploy
       endpoint_mode: dnsrr
+      resources:
+        limits:
+          cpus: "1"
+        reservations:
+          cpus: "0.5"
     environment:
       - RABBITMQ_DEFAULT_USER=chroma
       - RABBITMQ_DEFAULT_PASS=chroma123
