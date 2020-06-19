@@ -31,7 +31,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     if let Err(e) = r {
-        println!("Error: {}", e);
+        eprintln!("Error: {}", e);
         exit(1);
     }
 
