@@ -6,6 +6,7 @@ members = [
     'iml-api-utils',
     'iml-api',
     'iml-cmd',
+    'iml-config',
     'iml-fs',
     'iml-influx',
     'iml-job-scheduler-rpc',
