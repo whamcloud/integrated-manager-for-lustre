@@ -22,7 +22,7 @@ pub enum NginxCommand {
     },
 }
 
-const TEMPLATE_VARS: &'static [&'static str] = &[
+const TEMPLATE_VARS: &[&str] = &[
     "REPO_PATH",
     "HTTP_FRONTEND_PORT",
     "HTTPS_FRONTEND_PORT",
@@ -50,7 +50,7 @@ fn replace_template_variables(contents: &str, template_vars: &[&str]) -> String 
         updated_contents = updated_contents.replace(
             // find a better way to do this
             &format!("{{{{{}}}}}", var),
-            &env::var(var).expect(&format!("{} variable not set", var)),
+            &env::var(var).unwrap_or_else(|_| panic!("{} variable not set", var)),
         );
     }
 
@@ -64,9 +64,9 @@ pub async fn nginx_cli(command: NginxCommand) -> Result<(), ImlConfigError> {
             output_path,
         } => {
             let nginx_template_bytes = fs::read(template_path).await?;
-            let mut nginx_template = String::from_utf8(nginx_template_bytes)?;
+            let nginx_template = String::from_utf8(nginx_template_bytes)?;
 
-            let config = replace_template_variables(&mut nginx_template, TEMPLATE_VARS);
+            let config = replace_template_variables(&nginx_template, TEMPLATE_VARS);
 
             if let Some(path) = output_path {
                 fs::write(path, config).await?;
