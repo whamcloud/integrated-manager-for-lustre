@@ -68,7 +68,6 @@ cp iml-settings-populator.service iml-syslog.service /lib/systemd/system
 pip install -r requirements.txt
 pip install -r requirements.test
 echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py
-PYTHONPATH=. python -c 'from chroma_core.lib.service_config import ServiceConfig; ServiceConfig().set_nginx_config()'
 
 cp -r /integrated-manager-for-lustre /usr/share/chroma-manager
 mkdir /var/log/chroma
