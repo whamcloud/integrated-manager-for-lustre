@@ -1317,8 +1317,10 @@ dependencies = [
  "futures",
  "iml-tracing",
  "iml-wire-types",
- "indicatif",
+ "indicatif 0.15.0",
  "insta",
+ "lazy_static",
+ "regex",
  "spinners",
  "structopt",
  "thiserror",
@@ -1415,7 +1417,7 @@ dependencies = [
  "iml-orm",
  "iml-tracing",
  "iml-wire-types",
- "indicatif",
+ "indicatif 0.14.0",
  "number-formatter",
  "prettytable-rs",
  "reqwest",
@@ -1713,6 +1715,18 @@ name = "indicatif"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49a68371cf417889c9d7f98235b7102ea7c54fc59bcbd22f3dea785be9d27e40"
+dependencies = [
+ "console 0.11.3",
+ "lazy_static",
+ "number_prefix",
+ "regex",
+]
+
+[[package]]
+name = "indicatif"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7baab56125e25686df467fe470785512329883aab42696d661247aca2a2896e4"
 dependencies = [
  "console 0.11.3",
  "lazy_static",
