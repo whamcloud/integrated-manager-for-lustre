@@ -41,6 +41,7 @@ const TEMPLATE_VARS: &[&str] = &[
     "GRAFANA_PROXY_PASS",
     "INFLUXDB_PROXY_PASS",
     "TIMER_PROXY_PASS",
+    "BRANDING_PATH",
     "INCLUDES",
 ];
 
@@ -121,6 +122,7 @@ mod tests {
         env::set_var("GRAFANA_PROXY_PASS", "http://127.0.0.1:3000");
         env::set_var("INFLUXDB_PROXY_PASS", "http://127.0.0.1:8086");
         env::set_var("TIMER_PROXY_PASS", "http://127.0.0.1:8892");
+        env::set_var("BRANDING_PATH", "ddn-favicons");
         env::set_var("INCLUDES", "");
 
         let config = replace_template_variables(
