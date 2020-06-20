@@ -6,7 +6,7 @@ use crate::error::ImlConfigError;
 use console::Term;
 use lazy_static::*;
 use regex::{Captures, Regex};
-use std::{env, str};
+use std::{collections::HashMap, env, str};
 use structopt::StructOpt;
 use tokio::fs;
 
@@ -24,11 +24,7 @@ pub enum NginxCommand {
     },
 }
 
-fn get_var_value(key: &str) -> String {
-    env::var(key).unwrap_or_else(|_| panic!("{} variable not set", key))
-}
-
-fn replace_template_variables(contents: &str, get_var_value: fn(&str) -> String) -> String {
+fn replace_template_variables(contents: &str, vars: HashMap<String, String>) -> String {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"^.*\{\{(?P<template_var>.*)\}\}.*$").unwrap();
     }
@@ -38,7 +34,8 @@ fn replace_template_variables(contents: &str, get_var_value: fn(&str) -> String)
         .map(|l| {
             RE.replace(l, |caps: &Captures| {
                 let key = &caps[1];
-                let val = get_var_value(key);
+                let val = vars.get(key).expect(&format!("{} variable not set", key));
+
                 l.replace(&format!("{{{{{}}}}}", key), &val)
             })
             .to_string()
@@ -58,7 +55,9 @@ pub async fn nginx_cli(command: NginxCommand) -> Result<(), ImlConfigError> {
             let nginx_template_bytes = fs::read(template_path).await?;
             let nginx_template = String::from_utf8(nginx_template_bytes)?;
 
-            let config = replace_template_variables(&nginx_template, get_var_value);
+            let vars: HashMap<String, String> = env::vars().into_iter().collect();
+
+            let config = replace_template_variables(&nginx_template, vars);
 
             if let Some(path) = output_path {
                 fs::write(path, config).await?;
@@ -81,8 +80,11 @@ mod tests {
     use insta::*;
     use std::collections::HashMap;
 
-    fn get_var_value(key: &str) -> String {
-        let template_vars = [
+    #[test]
+    fn test_replace_template_variables() {
+        let template: &[u8] = include_bytes!("../../chroma-manager.conf.template");
+
+        let vars: HashMap<String, String> = [
             ("REPO_PATH", "/var/lib/chroma/repo"),
             ("HTTP_FRONTEND_PORT", "80"),
             ("HTTPS_FRONTEND_PORT", "443"),
@@ -107,26 +109,26 @@ mod tests {
             ("INCLUDES", ""),
         ]
         .iter()
-        .cloned()
-        .collect::<HashMap<&str, &str>>();
-
-        template_vars
-            .get(key)
-            .unwrap_or_else(|| {
-                panic!("Variable {} not found!", key);
-            })
-            .to_string()
-    }
-
-    #[test]
-    fn test_replace_template_variables() {
-        let template: &[u8] = include_bytes!("../../chroma-manager.conf.template");
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect();
 
         let config = replace_template_variables(
             &str::from_utf8(template).expect("Couldn't parse template"),
-            get_var_value,
+            vars,
         );
 
         assert_display_snapshot!(config);
+    }
+
+    #[test]
+    fn test_multiple_replacements() {
+        let vars: HashMap<String, String> = [("FOO", "foo"), ("BAR", "bar")]
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
+
+        let cfg = replace_template_variables("{{FOO}}/{{BAR}}", vars);
+
+        assert_eq!(cfg, "foo/bar");
     }
 }
