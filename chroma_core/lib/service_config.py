@@ -699,6 +699,7 @@ class ServiceConfig(CommandLine):
             "GRAFANA_PROXY_PASS",
             "INFLUXDB_PROXY_PASS",
             "TIMER_PROXY_PASS",
+            "BRANDING_PATH",
             "INCLUDES",
         ]
 
