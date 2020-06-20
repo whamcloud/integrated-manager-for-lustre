@@ -30,7 +30,7 @@ fn get_var_value(key: &str) -> String {
 
 fn replace_template_variables(contents: &str, get_var_value: fn(&str) -> String) -> String {
     lazy_static! {
-        static ref RE:Regex = Regex::new(r"^.*\{\{(?P<template_var>.*)\}\}.*$").unwrap();
+        static ref RE: Regex = Regex::new(r"^.*\{\{(?P<template_var>.*)\}\}.*$").unwrap();
     }
 
     let config: String = contents
