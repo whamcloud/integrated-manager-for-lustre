@@ -74,10 +74,6 @@ server {
 
     gzip_comp_level 5;
 
-    location /favicon.ico {
-      alias /usr/lib/iml-manager/iml-gui/favicon.ico;
-    }
-
     location /certificate/ {
         return 301 https://$http_host/certificate;
     }
@@ -409,5 +405,25 @@ server {
 
     location / {
         try_files $uri $uri/ /index.html;
+    }
+
+    location ~ ^.*/favicon(.*) {
+        alias /usr/share/iml-manager/rust-iml-gui/ddn-favicons/favicon$1;
+    }
+
+    location ~ ^.*/android-chrome(.*) {
+        alias /usr/share/iml-manager/rust-iml-gui/ddn-favicons/android-chrome$1;
+    }
+
+    location ~ ^.*/apple-touch-icon.png {
+        alias /usr/share/iml-manager/rust-iml-gui/ddn-favicons/apple-touch-icon.png;
+    }
+
+    location ~ ^.*/mstile-150x150.png {
+        alias /usr/share/iml-manager/rust-iml-gui/ddn-favicons/mstile-150x150.png;
+    }
+
+    location ~ ^.*/safari-pinned-tab.svg {
+        alias /usr/share/iml-manager/rust-iml-gui/ddn-favicons/safari-pinned-tab.svg;
     }
 }
