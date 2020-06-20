@@ -32,7 +32,7 @@ services:
       <<: *default-deploy
       resources:
         limits:
-          cpus: "2"
+          cpus: "2.5"
         reservations:
           cpus: "1.5"
     volumes:
