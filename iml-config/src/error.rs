@@ -6,8 +6,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ImlConfigError {
-    #[error("IO Error")]
+    #[error(transparent)]
     IoError(#[from] std::io::Error),
-    #[error("Couldn't convert bytes to string")]
+    #[error(transparent)]
     FromUtf8Error(#[from] std::string::FromUtf8Error),
 }
