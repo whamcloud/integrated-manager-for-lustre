@@ -407,23 +407,7 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    location ~ ^.*/favicon(.*) {
-        alias /usr/share/iml-manager/rust-iml-gui/ddn-favicons/favicon$1;
-    }
-
-    location ~ ^.*/android-chrome(.*) {
-        alias /usr/share/iml-manager/rust-iml-gui/ddn-favicons/android-chrome$1;
-    }
-
-    location ~ ^.*/apple-touch-icon.png {
-        alias /usr/share/iml-manager/rust-iml-gui/ddn-favicons/apple-touch-icon.png;
-    }
-
-    location ~ ^.*/mstile-150x150.png {
-        alias /usr/share/iml-manager/rust-iml-gui/ddn-favicons/mstile-150x150.png;
-    }
-
-    location ~ ^.*/safari-pinned-tab.svg {
-        alias /usr/share/iml-manager/rust-iml-gui/ddn-favicons/safari-pinned-tab.svg;
+    location ~ ^.*/(favicon.*|android-chrome.*|apple-touch-icon\.png|mstile-150x150\.png|safari-pinned-tab\.svg) {
+        alias /usr/share/iml-manager/rust-iml-gui/ddn-favicons/$1;
     }
 }
