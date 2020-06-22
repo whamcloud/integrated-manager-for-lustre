@@ -23,9 +23,6 @@ class Command(BaseCommand):
         (API_USER, API_KEY) = cursor.fetchone()
         cursor.close()
 
-        source_map_paths = glob.glob("/usr/share/iml-manager/iml-gui/main*.map")
-        SOURCE_MAP_PATH = next(iter(source_map_paths), None)
-
         DB = settings.DATABASES.get("default")
 
         config = {
@@ -45,7 +42,6 @@ class Command(BaseCommand):
             "VERSION": settings.VERSION,
             "API_USER": API_USER,
             "API_KEY": API_KEY,
-            "SOURCE_MAP_PATH": SOURCE_MAP_PATH,
             "MAILBOX_PATH": settings.MAILBOX_PATH,
             "PROXY_HOST": settings.PROXY_HOST,
             "INFLUXDB_IML_DB": settings.INFLUXDB_IML_DB,
