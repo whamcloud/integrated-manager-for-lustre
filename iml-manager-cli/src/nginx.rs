@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::error::ImlConfigError;
+use crate::error::ImlManagerCliError;
 use console::Term;
 use lazy_static::*;
 use regex::{Captures, Regex};
@@ -26,17 +26,17 @@ pub enum NginxCommand {
 
 fn replace_template_variables(contents: &str, vars: HashMap<String, String>) -> String {
     lazy_static! {
-        static ref RE: Regex = Regex::new(r"^.*\{\{(?P<template_var>.*)\}\}.*$").unwrap();
+        static ref RE: Regex = Regex::new(r"\{\{(\w*)\}\}").unwrap();
     }
 
     let config: String = contents
         .lines()
         .map(|l| {
-            RE.replace(l, |caps: &Captures| {
+            RE.replace_all(l, |caps: &Captures| {
                 let key = &caps[1];
                 let val = vars.get(key).expect(&format!("{} variable not set", key));
 
-                l.replace(&format!("{{{{{}}}}}", key), &val)
+                caps[0].replace(&format!("{{{{{}}}}}", key), &val)
             })
             .to_string()
         })
@@ -46,7 +46,7 @@ fn replace_template_variables(contents: &str, vars: HashMap<String, String>) -> 
     config
 }
 
-pub async fn nginx_cli(command: NginxCommand) -> Result<(), ImlConfigError> {
+pub async fn nginx_cli(command: NginxCommand) -> Result<(), ImlManagerCliError> {
     match command {
         NginxCommand::GenerateConfig {
             template_path,
