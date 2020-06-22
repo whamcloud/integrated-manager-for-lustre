@@ -27,15 +27,11 @@ use tokio_util::codec::{BytesCodec, FramedRead};
 pub struct PostOffice {
     // individual mailbox socket listeners
     routes: Arc<Mutex<HashMap<String, Trigger>>>,
-    inotify: Arc<Mutex<Inotify>>,
     trigger: Option<Trigger>,
 }
 
 pub fn create() -> impl DaemonPlugin {
     PostOffice {
-        inotify: Arc::new(Mutex::new(
-            Inotify::init().expect("Failed to initialize inotify"),
-        )),
         routes: Arc::new(Mutex::new(HashMap::new())),
         trigger: None,
     }
@@ -106,7 +102,7 @@ impl DaemonPlugin for PostOffice {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<Output, ImlAgentError>> + Send>> {
         let routes = Arc::clone(&self.routes);
-        let inotify = Arc::clone(&self.inotify);
+        let mut inotify = Inotify::init().expect("Failed to initialize inotify");
         let conf_file = env::get_var("POSTMAN_CONF_PATH");
 
         let (trigger, tripwire) = Tripwire::new();
@@ -129,15 +125,13 @@ impl DaemonPlugin for PostOffice {
             }
 
             inotify
-                .lock()
-                .await
                 .add_watch(&conf_file, WatchMask::MODIFY)
                 .map_err(|e| tracing::error!("Failed to watch configuration: {}", e))
                 .ok();
 
             let watcher = async move {
                 let mut buffer = [0; 32];
-                let stream = inotify.lock().await.event_stream(&mut buffer)?;
+                let stream = inotify.event_stream(&mut buffer)?;
                 let mut events = stream.take_until(tripwire);
 
                 while let Some(ev) = events.next().await {
