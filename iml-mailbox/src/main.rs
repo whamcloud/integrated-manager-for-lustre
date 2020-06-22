@@ -36,7 +36,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(
             |mailbox_senders: SharedMailboxSenders,
              task_name: String,
-             mut s: Pin<Box<dyn Stream<Item = Result<String, warp::Rejection>> + Send>>| {
+            mut s: Pin<Box<dyn Stream<Item = Result<String, warp::Rejection>> + Send>>| {
+		tracing::error!("task_name {}", task_name);
                 async move {
                     let tx = {
                         let mut lock = mailbox_senders.lock().await;
