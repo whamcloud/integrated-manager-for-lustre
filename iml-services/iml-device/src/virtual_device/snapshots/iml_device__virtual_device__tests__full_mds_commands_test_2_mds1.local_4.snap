@@ -1,0 +1,53 @@
+---
+source: iml-services/iml-device/src/virtual_device/mod.rs
+expression: c
+---
+{
+  "ScsiDevice": {
+    "serial": "36001405c476be7a53a94ca9a1ecc4512",
+    "scsi80": "SLIO-ORG mdt2            c476be7a-53a9-4ca9-a1ec-c45123444aaf",
+    "major": "8",
+    "minor": "96",
+    "devpath": "/devices/platform/host2/session1/target2:0:0/2:0:0:2/block/sdg",
+    "size": 5368709120,
+    "filesystem_type": "mpath_member",
+    "fs_uuid": "15735427682094461090",
+    "fs_label": "mdt1",
+    "paths": [
+      "/dev/disk/by-id/scsi-36001405c476be7a53a94ca9a1ecc4512",
+      "/dev/disk/by-id/wwn-0x6001405c476be7a53a94ca9a1ecc4512",
+      "/dev/disk/by-path/fc---lun-2",
+      "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:mds-lun-2",
+      "/dev/disk/by-label/mdt1",
+      "/dev/disk/by-uuid/15735427682094461090",
+      "/dev/sdg"
+    ],
+    "mount": null,
+    "children": [
+      {
+        "Mpath": {
+          "devpath": "/devices/virtual/block/dm-2",
+          "serial": "36001405c476be7a53a94ca9a1ecc4512",
+          "scsi80": "SLIO-ORG mdt2            c476be7a-53a9-4ca9-a1ec-c45123444aaf",
+          "dm_name": "mpathc",
+          "size": 5368709120,
+          "major": "253",
+          "minor": "2",
+          "filesystem_type": "zfs_member",
+          "fs_uuid": "15735427682094461090",
+          "fs_label": "mdt1",
+          "paths": [
+            "/dev/mapper/mpathc",
+            "/dev/disk/by-id/dm-name-mpathc",
+            "/dev/disk/by-id/dm-uuid-mpath-36001405c476be7a53a94ca9a1ecc4512",
+            "/dev/disk/by-label/mdt1",
+            "/dev/disk/by-uuid/15735427682094461090",
+            "/dev/dm-2"
+          ],
+          "children": [],
+          "mount": null
+        }
+      }
+    ]
+  }
+}

@@ -536,6 +536,30 @@ mod tests {
         }
     }
 
+    // This function gets top-level children and snapshots them one-by-one.
+    // This way you can compare i.e.
+    // snapshots/iml_device__virtual_device__tests__full_mds_test_mds1.local_0.snap
+    // and
+    // snapshots/iml_device__virtual_device__tests__full_mds_test_mds2.local_0.snap
+    // and find those are the same modulo devpath, paths, major, minor fields.
+    fn compare_results_numbered(results: Vec<(Fqdn, Device)>, test_name: &str, number: usize) {
+        for (f, d) in results {
+            let mut children = vec![];
+            match d {
+                Device::Root(dd) => {
+                    for c in dd.children {
+                        children.push(c);
+                    }
+                }
+                _ => unreachable!(),
+            }
+
+            for (i, c) in children.iter().enumerate() {
+                assert_json_snapshot!(format!("{}_{}_{}_{}", test_name, number, f, i), c);
+            }
+        }
+    }
+
     #[test_case(
         "simple_test",
         "fixtures/device-mds1.local-2034-pruned.json",
@@ -593,6 +617,25 @@ mod tests {
             "mds2.local"
         ]
     )]
+    #[test_case(
+        "full_mds_commands_test",
+        &[
+            "fixtures/output-mds2.local-319.json",
+            "fixtures/output-mds1.local-320.json",
+            "fixtures/output-mds1.local-321.json",
+            "fixtures/output-mds1.local-322.json",
+            "fixtures/output-mds2.local-323.json",
+            "fixtures/output-mds2.local-325.json",
+        ],
+        &[
+            "mds2.local",
+            "mds1.local",
+            "mds1.local",
+            "mds1.local",
+            "mds2.local",
+            "mds2.local",
+        ]
+    )]
     fn test_2(test_name: &str, paths: &[&str], fqdns: &[&str]) {
         init_subscriber();
 
@@ -602,7 +645,7 @@ mod tests {
         let mut incoming_devices = HashMap::new();
         let mut resolved_devices: HashMap<Fqdn, Device> = HashMap::new();
 
-        for (f, o) in outputs {
+        for (i, (f, o)) in outputs.into_iter().enumerate() {
             tracing::info!("Handling {}", f.to_string());
             let (d, cs) = o;
             incoming_devices.insert(f.clone(), d.clone());
@@ -617,7 +660,7 @@ mod tests {
                 .collect();
             let results = update_virtual_devices(incoming_devices_2, resolved_devices_2, &cs);
 
-            compare_results(results.clone(), test_name);
+            compare_results_numbered(results.clone(), test_name, i);
 
             for (k, v) in results {
                 resolved_devices.insert(k, v);

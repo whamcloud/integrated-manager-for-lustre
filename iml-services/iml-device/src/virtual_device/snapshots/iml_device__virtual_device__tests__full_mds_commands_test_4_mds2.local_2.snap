@@ -1,0 +1,49 @@
+---
+source: iml-services/iml-device/src/virtual_device/mod.rs
+expression: c
+---
+{
+  "ScsiDevice": {
+    "serial": "3600140509e95bcb86e24685b75b6ec26",
+    "scsi80": "SLIO-ORG mdt3            09e95bcb-86e2-4685-b75b-6ec2622b5343",
+    "major": "8",
+    "minor": "64",
+    "devpath": "/devices/platform/host3/session2/target3:0:0/3:0:0:3/block/sde",
+    "size": 5368709120,
+    "filesystem_type": "mpath_member",
+    "fs_uuid": null,
+    "fs_label": null,
+    "paths": [
+      "/dev/disk/by-id/scsi-3600140509e95bcb86e24685b75b6ec26",
+      "/dev/disk/by-id/wwn-0x600140509e95bcb86e24685b75b6ec26",
+      "/dev/disk/by-path/fc---lun-3",
+      "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:mds-lun-3",
+      "/dev/sde"
+    ],
+    "mount": null,
+    "children": [
+      {
+        "Mpath": {
+          "devpath": "/devices/virtual/block/dm-1",
+          "serial": "3600140509e95bcb86e24685b75b6ec26",
+          "scsi80": "SLIO-ORG mdt3            09e95bcb-86e2-4685-b75b-6ec2622b5343",
+          "dm_name": "mpathd",
+          "size": 5368709120,
+          "major": "253",
+          "minor": "1",
+          "filesystem_type": null,
+          "fs_uuid": null,
+          "fs_label": null,
+          "paths": [
+            "/dev/mapper/mpathd",
+            "/dev/disk/by-id/dm-name-mpathd",
+            "/dev/disk/by-id/dm-uuid-mpath-3600140509e95bcb86e24685b75b6ec26",
+            "/dev/dm-1"
+          ],
+          "children": [],
+          "mount": null
+        }
+      }
+    ]
+  }
+}
