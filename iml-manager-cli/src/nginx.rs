@@ -26,19 +26,19 @@ pub enum NginxCommand {
 
 fn replace_template_variables(contents: &str, vars: HashMap<String, String>) -> String {
     lazy_static! {
-        static ref RE: Regex = Regex::new(r"\{\{(\w+)\}\}").unwrap();
+        static ref RE: Regex = Regex::new(r"(\{\{\w+\}\})").unwrap();
     }
 
     let config: String = contents
         .lines()
         .map(|l| {
             RE.replace_all(l, |caps: &Captures| {
-                let key = &caps[1];
+                let key = &caps[1].replace("{", "").replace("}", "");
                 let val = vars
                     .get(key)
                     .unwrap_or_else(|| panic!("{} variable not set", key));
 
-                caps[0].replace(&format!("{{{{{}}}}}", key), &val)
+                caps[0].replace(&caps[1], &val)
             })
             .to_string()
         })
