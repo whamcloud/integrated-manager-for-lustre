@@ -157,7 +157,7 @@ pub async fn process_fids(
             async move {
                 let xs = join_all(
                     xs.into_iter()
-                        .map(move |x| fi2path(llapi.clone(), x)),
+                        .map(move |x| item2path(llapi.clone(), x)),
                 )
                 .await;
 

@@ -54,7 +54,7 @@ pub async fn read_mailbox(
         .try_filter_map(future::ok)
         .chunks(rmfids_size)
         .map(|xs| xs.into_iter().collect())
-        .try_for_each(|fids| {
+        .try_for_each_concurrent(10, |fids| {
             rm_fids(llapi.clone(), fids)
                 .or_else(|e| {
                     warn!("Error removing fid {}", e);
@@ -76,7 +76,7 @@ pub async fn process_fids(
     stream::iter(fids)
         .chunks(rmfids_size)
         .map(|xs| Ok::<_, ImlAgentError>(xs.into_iter().collect()))
-        .try_for_each(|fids| {
+        .try_for_each_concurrent(10, |fids| {
             rm_fids(llapi.clone(), fids)
                 .or_else(|e| {
                     warn!("Error removing fid {}", e);

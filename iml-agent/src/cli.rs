@@ -28,7 +28,7 @@ use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 pub enum StratagemCommand {
-    /// Kickoff a Stratagem scanny thing
+    /// Kickoff a Stratagem scan
     #[structopt(name = "scan")]
     Scan {
         /// The full path of the device to scan
@@ -484,7 +484,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	    } => {
 		let device = fidopts.fsname;
 		let dest_str = target_fs;
-		
+
 		if action_filesync::filesync_files(&device, fidopts.fidlist, dest_str).is_err() {
 		    exit(exitcode::IOERR);
 		}
