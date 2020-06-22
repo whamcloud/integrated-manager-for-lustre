@@ -64,7 +64,7 @@ pub async fn nginx_cli(command: NginxCommand) -> Result<(), ImlManagerCliError> 
             } else {
                 let term = Term::stdout();
 
-                tracing::debug!("Nginx Config: {}", config);
+                iml_tracing::tracing::debug!("Nginx Config: {}", config);
 
                 term.write_line(&config).unwrap();
             }
