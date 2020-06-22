@@ -69,12 +69,13 @@ pip install -r requirements.txt
 pip install -r requirements.test
 echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py
 
-export PQ_LIB_DIR=/usr/pgsql-9.6/lib
-env $(python manage.py print-settings 2> /dev/null) cargo run --bin iml-config nginx generate-config --path /integrated-manager-for-lustre/chroma-manager.conf.template > /etc/nginx/conf.d/chroma-manager.conf
-
 cp -r /integrated-manager-for-lustre /usr/share/chroma-manager
 mkdir /var/log/chroma
 cd /usr/share/chroma-manager
 
 python ./manage.py dev_setup
+
+export PQ_LIB_DIR=/usr/pgsql-9.6/lib
+env $(python manage.py print-settings 2> /dev/null | xargs) cargo run --bin iml-config nginx generate-config --path /integrated-manager-for-lustre/chroma-manager.conf.template --output /etc/nginx/conf.d/chroma-manager.conf
+
 PYTHONPATH=. nosetests tests/services/ --stop
