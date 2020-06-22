@@ -10,6 +10,7 @@ URL: https://github.com/whamcloud/integrated-manager-for-lustre
 Source0: iml-docker.tar.gz
 
 Requires: docker-ce
+Requires: sed
 
 %description
 %{summary}
@@ -30,6 +31,7 @@ mkdir -p %{buildroot}%{_unitdir}
 cp docker-compose.yml %{buildroot}%{_sysconfdir}/iml-docker
 mv iml-images.tgz %{buildroot}%{_tmppath}
 mv iml-cli-proxy.sh %{buildroot}%{_bindir}/iml
+mv update-embedded.sh %{buildroot}%{_bindir}/update-embedded
 mv iml-docker.service %{buildroot}%{_unitdir}
 
 
@@ -37,6 +39,7 @@ mv iml-docker.service %{buildroot}%{_unitdir}
 %{_sysconfdir}/iml-docker
 %attr(750, root, root) %config(missingok) %{_tmppath}/iml-images.tgz
 %attr(754, root, root) %{_bindir}/iml
+%attr(754, root, root) %{_bindir}/update-embedded
 %attr(0644,root,root) %{_unitdir}/iml-docker.service
 
 
