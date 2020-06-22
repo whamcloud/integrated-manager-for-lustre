@@ -1,5 +1,5 @@
 ---
-source: iml-services/iml-device/src/virtual_device.rs
+source: iml-services/iml-device/src/virtual_device/mod.rs
 expression: c
 ---
 {
@@ -7,20 +7,20 @@ expression: c
     "serial": "36001405e7ca5156565041c1a626ac2f6",
     "scsi80": "SLIO-ORG mgt1            e7ca5156-5650-41c1-a626-ac2f688929f5",
     "major": "8",
-    "minor": "16",
-    "devpath": "/devices/platform/host2/session1/target2:0:0/2:0:0:0/block/sdb",
+    "minor": "32",
+    "devpath": "/devices/platform/host3/session2/target3:0:0/3:0:0:0/block/sdc",
     "size": 536870912,
     "filesystem_type": "mpath_member",
-    "fs_uuid": "15884990715732293275",
+    "fs_uuid": "6323713067103715180",
     "fs_label": "mgt",
     "paths": [
       "/dev/disk/by-id/scsi-36001405e7ca5156565041c1a626ac2f6",
       "/dev/disk/by-id/wwn-0x6001405e7ca5156565041c1a626ac2f6",
       "/dev/disk/by-path/fc---lun-0",
-      "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:mds-lun-0",
+      "/dev/disk/by-path/ip-10.73.50.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:mds-lun-0",
       "/dev/disk/by-label/mgt",
-      "/dev/disk/by-uuid/15884990715732293275",
-      "/dev/sdb"
+      "/dev/disk/by-uuid/6323713067103715180",
+      "/dev/sdc"
     ],
     "mount": null,
     "children": [
@@ -34,20 +34,20 @@ expression: c
           "major": "253",
           "minor": "0",
           "filesystem_type": "zfs_member",
-          "fs_uuid": "15884990715732293275",
+          "fs_uuid": "6323713067103715180",
           "fs_label": "mgt",
           "paths": [
             "/dev/mapper/mpatha",
             "/dev/disk/by-id/dm-name-mpatha",
             "/dev/disk/by-id/dm-uuid-mpath-36001405e7ca5156565041c1a626ac2f6",
             "/dev/disk/by-label/mgt",
-            "/dev/disk/by-uuid/15884990715732293275",
+            "/dev/disk/by-uuid/6323713067103715180",
             "/dev/dm-0"
           ],
           "children": [
             {
               "Zpool": {
-                "guid": 15884990715732293275,
+                "guid": 6323713067103715180,
                 "name": "mgt",
                 "health": "ONLINE",
                 "state": "ACTIVE",
@@ -57,7 +57,7 @@ expression: c
                     "children": [
                       {
                         "Disk": {
-                          "guid": 4609626733452420597,
+                          "guid": 4548129379425950464,
                           "state": "ONLINE",
                           "path": "/dev/mapper/mpatha",
                           "dev_id": "dm-uuid-mpath-36001405e7ca5156565041c1a626ac2f6",
@@ -75,7 +75,7 @@ expression: c
                 "children": [
                   {
                     "Dataset": {
-                      "guid": 5501061331495424960,
+                      "guid": 5895517485023414823,
                       "name": "mgt/mgt",
                       "kind": "filesystem",
                       "props": [
@@ -89,7 +89,7 @@ expression: c
                         },
                         {
                           "name": "creation",
-                          "value": "1587120087"
+                          "value": "1587638032"
                         },
                         {
                           "name": "used",
@@ -97,7 +97,7 @@ expression: c
                         },
                         {
                           "name": "available",
-                          "value": "382558720"
+                          "value": "382489600"
                         },
                         {
                           "name": "referenced",
@@ -225,7 +225,7 @@ expression: c
                         },
                         {
                           "name": "guid",
-                          "value": "5501061331495424960"
+                          "value": "5895517485023414823"
                         },
                         {
                           "name": "primarycache",
@@ -344,24 +344,24 @@ expression: c
                           "value": "off"
                         },
                         {
-                          "name": "lustre:failover.node",
-                          "value": "10.73.20.11@tcp:10.73.20.12@tcp"
+                          "name": "lustre:svname",
+                          "value": "MGS"
                         },
                         {
                           "name": "lustre:flags",
                           "value": "4132"
                         },
                         {
-                          "name": "lustre:version",
-                          "value": "1"
+                          "name": "lustre:failover.node",
+                          "value": "10.73.20.11@tcp:10.73.20.12@tcp"
                         },
                         {
                           "name": "lustre:index",
                           "value": "65535"
                         },
                         {
-                          "name": "lustre:svname",
-                          "value": "MGS"
+                          "name": "lustre:version",
+                          "value": "1"
                         }
                       ],
                       "mount": null
