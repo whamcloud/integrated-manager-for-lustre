@@ -88,11 +88,11 @@ impl MailboxSenders {
     /// Removes an task.
     ///
     /// Usually called when the associated rx stream has finished.
-    pub fn remove(&mut self, task: &String) {
+    pub fn remove(&mut self, task: &str) {
         self.0.remove(task);
     }
     /// Returns a cloned reference to a tx handle matching the provided task, if one exists.
-    pub fn get(&mut self, task: &String) -> Option<mpsc::UnboundedSender<Incoming>> {
+    pub fn get(&mut self, task: &str) -> Option<mpsc::UnboundedSender<Incoming>> {
         self.0.get(task).cloned()
     }
     /// Creates a new sender entry.

@@ -118,7 +118,7 @@ pub async fn read_mailbox(
     Ok(txt_path)
 }
 
-async fn fi2path(llapi: LlapiFid, fi: FidItem) -> Option<String> {
+async fn item2path(llapi: LlapiFid, fi: FidItem) -> Option<String> {
     let pfids: Vec<fidlist::LinkEA> = serde_json::from_value(fi.data).unwrap_or(vec![]);
 
     let path = if let Some(pfid) = pfids.get(0) {
@@ -154,7 +154,7 @@ pub async fn process_fids(
             let llapi = llapi.clone();
 
             async move {
-                let xs = join_all(xs.into_iter().map(move |x| fi2path(llapi.clone(), x))).await;
+                let xs = join_all(xs.into_iter().map(move |x| item2path(llapi.clone(), x))).await;
 
                 Ok(xs)
             }
