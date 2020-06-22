@@ -1,5 +1,5 @@
 ---
-source: iml-config/src/nginx.rs
+source: iml-manager-cli/src/nginx.rs
 expression: config
 ---
 map $ssl_client_s_dn $ssl_client_s_dn_cn {
@@ -411,4 +411,3 @@ server {
         try_files $uri $uri/ /index.html;
     }
 }
-
