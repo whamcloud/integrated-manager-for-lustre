@@ -580,6 +580,19 @@ mod tests {
             "mds2.local"
         ]
     )]
+    #[test_case(
+        "mgt_commands_test",
+        &[
+            "fixtures/output-mds2.local-8.json",
+            "fixtures/output-mds1.local-9.json",
+            "fixtures/output-mds2.local-10.json",
+        ],
+        &[
+            "mds2.local",
+            "mds1.local",
+            "mds2.local"
+        ]
+    )]
     fn test_2(test_name: &str, paths: &[&str], fqdns: &[&str]) {
         init_subscriber();
 
