@@ -26,7 +26,7 @@ pub enum NginxCommand {
 
 fn replace_template_variables(contents: &str, vars: HashMap<String, String>) -> String {
     lazy_static! {
-        static ref RE: Regex = Regex::new(r"\{\{(\w*)\}\}").unwrap();
+        static ref RE: Regex = Regex::new(r"\{\{(\w+)\}\}").unwrap();
     }
 
     let config: String = contents
@@ -34,7 +34,9 @@ fn replace_template_variables(contents: &str, vars: HashMap<String, String>) -> 
         .map(|l| {
             RE.replace_all(l, |caps: &Captures| {
                 let key = &caps[1];
-                let val = vars.get(key).expect(&format!("{} variable not set", key));
+                let val = vars
+                    .get(key)
+                    .unwrap_or_else(|| panic!("{} variable not set", key));
 
                 caps[0].replace(&format!("{{{{{}}}}}", key), &val)
             })
@@ -55,7 +57,7 @@ pub async fn nginx_cli(command: NginxCommand) -> Result<(), ImlManagerCliError> 
             let nginx_template_bytes = fs::read(template_path).await?;
             let nginx_template = String::from_utf8(nginx_template_bytes)?;
 
-            let vars: HashMap<String, String> = env::vars().into_iter().collect();
+            let vars: HashMap<String, String> = env::vars().collect();
 
             let config = replace_template_variables(&nginx_template, vars);
 
