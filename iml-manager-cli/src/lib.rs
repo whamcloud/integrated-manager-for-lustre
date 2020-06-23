@@ -6,6 +6,7 @@ pub mod api_utils;
 pub mod display_utils;
 pub mod error;
 pub mod filesystem;
+pub mod nginx;
 pub mod ostpool;
 pub mod profile;
 pub mod server;
