@@ -49,3 +49,19 @@ baseurl=https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-$releaseve
 enabled=1
 gpgcheck=1
 gpgkey=https://download.postgresql.org/pub/repos/yum/RPM-GPG-KEY-PGDG-96
+
+[nodesource]
+name=Node.js Packages for Enterprise Linux 7 - x86_64/
+baseurl=https://rpm.nodesource.com/pub_12.x/el/7/x86_64/
+failovermethod=priority
+enabled=1
+gpgcheck=0
+gpgkey=file:///etc/pki/rpm-gpg/NODESOURCE-GPG-SIGNING-KEY-EL
+
+[yarn]
+name=Yarn Repository
+baseurl=https://dl.yarnpkg.com/rpm/
+enabled=1
+gpgcheck=0
+gpgkey=https://dl.yarnpkg.com/rpm/pubkey.gpg
+

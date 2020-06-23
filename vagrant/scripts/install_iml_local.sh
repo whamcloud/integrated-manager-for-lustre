@@ -7,8 +7,9 @@ set +e
 useradd mocker
 usermod -a -G mock mocker
 
-mkdir -p /home/mocker/.cargo
-mkdir -p /home/mocker/target
+CACHE_DIR=/var/tmp/iml-mocker
+
+mkdir -p "$CACHE_DIR"
 
 set -e
 
@@ -24,9 +25,13 @@ config_opts['dist'] = 'el7'  # only useful for --resultdir variable subst
 config_opts['releasever'] = '7'
 
 config_opts['plugin_conf']['bind_mount_enable'] = True
-config_opts['plugin_conf']['bind_mount_opts']['dirs'].append(('/home/mocker/.cargo', '/tmp/.cargo' ))
-config_opts['plugin_conf']['bind_mount_opts']['dirs'].append(('/home/mocker/target', '/tmp/target' ))
+config_opts['plugin_conf']['bind_mount_opts']['dirs'].append(('$CACHE_DIR', '$CACHE_DIR' ))
 config_opts['nosync'] = True
+
+config_opts['environment']['CARGO_HOME'] = '$CACHE_DIR/.cargo'
+config_opts['environment']['CARGO_TARGET_DIR'] = '$CACHE_DIR/target'
+config_opts['environment']['PATH'] = '$CACHE_DIR/.cargo/bin:/usr/bin'
+config_opts['environment']['RUSTUP_HOME'] = '$CACHE_DIR/.rustup'
 
 config_opts['yum.conf'] = """
 [main]
@@ -107,6 +112,21 @@ name=ZFS on Linux for EL7 - dkms
 baseurl=http://download.zfsonlinux.org/epel/7.6/x86_64/
 enabled=1
 gpgcheck=0
+
+[nodesource]
+name=Node.js Packages for Enterprise Linux 7 - x86_64/
+baseurl=https://rpm.nodesource.com/pub_12.x/el/7/x86_64/
+failovermethod=priority
+enabled=1
+gpgcheck=0
+gpgkey=file:///etc/pki/rpm-gpg/NODESOURCE-GPG-SIGNING-KEY-EL
+
+[yarn]
+name=Yarn Repository
+baseurl=https://dl.yarnpkg.com/rpm/
+enabled=1
+gpgcheck=0
+gpgkey=https://dl.yarnpkg.com/rpm/pubkey.gpg
 """
 EOF
 
@@ -116,11 +136,18 @@ fi
 
 rm -rf /tmp/iml/_topdir/
 
+RPM_DIST=$(date +%s)
 su -l mocker << EOF
+set -ex
 mock -r /etc/mock/iml.cfg --init
 mock -r /etc/mock/iml.cfg --copyin /integrated-manager-for-lustre /iml
-mock -r /etc/mock/iml.cfg -i cargo git ed epel-release python-setuptools gcc openssl-devel python2-devel python2-setuptools ed zfs libzfs2-devel
-mock -r /etc/mock/iml.cfg --shell 'export CARGO_HOME=/tmp/.cargo CARGO_TARGET_DIR=/tmp/target && cd /iml && make local'
+mock -r /etc/mock/iml.cfg -i git ed epel-release python-setuptools gcc openssl-devel python2-devel python2-setuptools ed zfs libzfs2-devel yarn
+
+mock -r /etc/mock/iml.cfg --shell 'curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable'
+mock -r /etc/mock/iml.cfg --shell 'rustup target add wasm32-unknown-unknown'
+mock -r /etc/mock/iml.cfg --shell 'cargo install wasm-bindgen-cli wasm-pack'
+
+mock -r /etc/mock/iml.cfg --shell 'make RPM_DIST="$RPM_DIST" -C /iml copr-rpms rpms device-scanner-rpms iml-gui-rpm'
 mock -r /etc/mock/iml.cfg --copyout /iml/_topdir /tmp/iml/_topdir
 mock -r /etc/mock/iml.cfg --copyout /iml/chroma_support.repo /tmp/iml/
 EOF
@@ -130,6 +157,7 @@ mkdir -p /tmp/{manager,agent}-rpms
 
 cp /tmp/iml/_topdir/RPMS/rust-iml-{action-runner,agent-comms,api,cli,corosync,config-cli,journal,mailbox,network,ntp,ostpool,postoffice,report,sfa,snapshot,stats,task-runner,device,warp-drive,timer}-*.rpm /tmp/manager-rpms/
 cp /tmp/iml/_topdir/RPMS/python2-iml-manager-*.rpm /tmp/manager-rpms/
+cp /tmp/iml/_topdir/RPMS/rust-iml-gui-*.rpm /tmp/manager-rpms/
 cp /tmp/iml/_topdir/RPMS/rust-iml-agent-[0-9]*.rpm /tmp/agent-rpms
 cp /tmp/iml/_topdir/RPMS/iml-device-scanner-*.rpm /tmp/agent-rpms
 cp /tmp/iml/chroma_support.repo /etc/yum.repos.d/
