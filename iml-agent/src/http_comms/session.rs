@@ -6,7 +6,7 @@ use crate::{
     agent_error::{NoSessionError, Result},
     daemon_plugins::{DaemonBox, OutputValue},
 };
-use futures::{channel::oneshot, future, Future, future::Either};
+use futures::{channel::oneshot, future, future::Either, Future};
 use iml_wire_types::{AgentResult, Id, PluginName, Seq};
 use std::{
     collections::HashMap,
