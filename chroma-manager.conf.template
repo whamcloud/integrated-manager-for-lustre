@@ -404,6 +404,6 @@ server {
     }
 
     location ~ ^.*/(favicon.*|android-chrome.*|apple-touch-icon\.png|mstile-150x150\.png|safari-pinned-tab\.svg) {
-        alias /var/lib/chroma/branding/$1;
+        try_files /var/lib/chroma/branding/$1 /usr/share/iml-manager/rust-iml-gui/branding/$1;
     }
 }
