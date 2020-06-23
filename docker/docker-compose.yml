@@ -107,7 +107,7 @@ services:
     hostname: "nginx"
     deploy: *default-deploy
     environment:
-      - BRANDING_PATH=whamcloud-favicons
+      - BRANDING_PATH=whamcloud
     volumes:
       - "manager-config:/var/lib/chroma"
       - "mailbox:/var/spool/iml/mailbox"
