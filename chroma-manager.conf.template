@@ -403,7 +403,7 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    location ~ ^.*/(favicon.*|android-chrome.*|apple-touch-icon\.png|mstile-150x150\.png|safari-pinned-tab\.svg) {
-        try_files /var/lib/chroma/branding/$1 /usr/share/iml-manager/rust-iml-gui/branding/$1;
+    location /(favicon.*|android-chrome.*|apple-touch-icon\.png|mstile-150x150\.png|safari-pinned-tab\.svg) {
+        try_files /var/lib/chroma/branding/$1 $uri/branding/$1;
     }
 }
