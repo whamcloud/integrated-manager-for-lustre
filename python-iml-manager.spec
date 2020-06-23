@@ -91,6 +91,7 @@ Requires:       rust-iml-warp-drive >= 0.3.0
 Requires:       rust-iml-device >= 0.3.0
 Requires:       rust-iml-ntp >= 0.3.0
 Requires:       rust-iml-sfa >= 0.3.0
+Requires:       rust-iml-config-cli >= 0.3.0
 # Other Repos
 Requires:       influxdb
 Requires:       grafana
@@ -186,6 +187,9 @@ mv $RPM_BUILD_ROOT%{manager_root}/grafana/dashboards/iml-dashboards.yaml $RPM_BU
 mv $RPM_BUILD_ROOT%{manager_root}/grafana/datasources/influxdb-iml-datasource.yml $RPM_BUILD_ROOT%{_sysconfdir}/grafana/provisioning/datasources
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}/grafana-server.service.d/
 mv $RPM_BUILD_ROOT%{manager_root}/grafana/dropin-iml.conf $RPM_BUILD_ROOT%{_unitdir}/grafana-server.service.d/90-iml.conf
+cp -r nginx $RPM_BUILD_ROOT%{manager_root}
+mkdir -p $RPM_BUILD_ROOT%{_unitdir}/nginx.service.d/
+mv $RPM_BUILD_ROOT%{manager_root}/nginx/nginx-dropin-iml.conf $RPM_BUILD_ROOT%{_unitdir}/nginx.service.d/90-nginx-dropin-iml.conf
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}/rabbitmq-server.service.d
 mv rabbitmq-server-dropin.conf $RPM_BUILD_ROOT%{_unitdir}/rabbitmq-server.service.d/90-rabbitmq-server-dropin.conf
 cp iml-manager-redirect.conf $RPM_BUILD_ROOT%{_sysconfdir}/nginx/default.d/iml-manager-redirect.conf
@@ -298,6 +302,7 @@ fi
 %{_sysconfdir}/grafana/grafana-iml.ini
 %{_unitdir}/grafana-server.service.d/90-iml.conf
 %{_unitdir}/rabbitmq-server.service.d/90-rabbitmq-server-dropin.conf
+%{_unitdir}/nginx.service.d/90-nginx-dropin-iml.conf
 %attr(0755,root,root)%{_mandir}/man1/chroma-config.1.gz
 %attr(0644,root,root)%{_sysconfdir}/logrotate.d/chroma-manager
 %attr(0644,root,grafana)%{_sysconfdir}/grafana/provisioning/dashboards/iml-dashboards.yaml

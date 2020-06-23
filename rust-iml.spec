@@ -28,6 +28,7 @@ ExclusiveArch: x86_64
 %install
 mkdir -p %{buildroot}%{_bindir}
 cp iml %{buildroot}%{_bindir}
+cp iml-config %{buildroot}%{_bindir}
 cp iml-agent %{buildroot}%{_bindir}
 cp iml-agent-daemon %{buildroot}%{_bindir}
 cp iml-api %{buildroot}%{_bindir}
@@ -74,6 +75,17 @@ Group: System Environment/Libraries
 
 %files cli
 %{_bindir}/iml
+
+%package config-cli
+Summary: IML manager Config CLI
+License: MIT
+Group: System Environment/Libraries
+
+%description config-cli
+%{summary}
+
+%files config-cli
+%{_bindir}/iml-config
 
 %package agent
 Summary: IML Agent Daemon and CLI

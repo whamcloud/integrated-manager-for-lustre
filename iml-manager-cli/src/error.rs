@@ -63,6 +63,7 @@ pub enum ImlManagerCliError {
     CombineEasyError(combine::stream::easy::Errors<char, &'static str, usize>),
     DoesNotExist(&'static str),
     FailedCommandError(Vec<Command>),
+    FromUtf8Error(#[from] std::string::FromUtf8Error),
     ImlOrmError(#[from] iml_orm::ImlOrmError),
     IntParseError(#[from] std::num::ParseIntError),
     IoError(#[from] std::io::Error),
@@ -90,6 +91,7 @@ impl std::fmt::Display for ImlManagerCliError {
 
                 write!(f, "{}", failed_msg)
             }
+            ImlManagerCliError::FromUtf8Error(ref err) => write!(f, "{}", err),
             ImlManagerCliError::ImlOrmError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::IntParseError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::IoError(ref err) => write!(f, "{}", err),
