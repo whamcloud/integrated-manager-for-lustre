@@ -113,7 +113,7 @@ name=Node.js Packages for Enterprise Linux 7 - x86_64/
 baseurl=https://rpm.nodesource.com/pub_12.x/el/7/x86_64/
 failovermethod=priority
 enabled=1
-gpgcheck=1
+gpgcheck=0
 gpgkey=file:///etc/pki/rpm-gpg/NODESOURCE-GPG-SIGNING-KEY-EL
 
 [yarn]
@@ -134,8 +134,10 @@ rm -rf /tmp/iml/_topdir/
 su -l mocker << EOF
 mock -r /etc/mock/iml.cfg --init
 mock -r /etc/mock/iml.cfg --copyin /integrated-manager-for-lustre /iml
-mock -r /etc/mock/iml.cfg -i cargo git ed epel-release python-setuptools gcc openssl-devel postgresql96-devel python2-devel python2-setuptools ed yum
-mock -r /etc/mock/iml.cfg --shell 'export CARGO_HOME=/tmp/.cargo CARGO_TARGET_DIR=/tmp/target PATH=$PATH:/tmp/.cargo/bin && cargo install wasm-pack && cd /iml && make local'
+mock -r /etc/mock/iml.cfg -i git ed epel-release python-setuptools gcc openssl-devel postgresql96-devel python2-devel python2-setuptools ed yarn
+mock -r /etc/mock/iml.cfg --shell 'export CARGO_HOME=/tmp/.cargo CARGO_TARGET_DIR=/tmp/target PATH=$PATH:/tmp/.cargo/bin && \
+    curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable && source /tmp/.cargo/env && rustup target add wasm32-unknown-unknown && \
+    cargo install -f wasm-bindgen-cli && cargo install -f wasm-pack && cd /iml && make local'
 mock -r /etc/mock/iml.cfg --copyout /iml/_topdir /tmp/iml/_topdir
 mock -r /etc/mock/iml.cfg --copyout /iml/chroma_support.repo /tmp/iml/
 EOF
@@ -143,9 +145,8 @@ EOF
 rm -rf /tmp/{manager,agent}-rpms
 mkdir -p /tmp/{manager,agent}-rpms
 
-cp /tmp/iml/_topdir/RPMS/rust-iml-{action-runner,agent-comms,api,cli,config-cli,mailbox,ntp,ostpool,postoffice,sfa,stats,device,warp-drive}-*.rpm /tmp/manager-rpms/
+cp /tmp/iml/_topdir/RPMS/rust-iml-{action-runner,agent-comms,api,cli,config-cli,mailbox,ntp,ostpool,postoffice,sfa,stats,device,warp-drive,gui}-*.rpm /tmp/manager-rpms/
 cp /tmp/iml/_topdir/RPMS/python2-iml-manager-*.rpm /tmp/manager-rpms/
-cp /tmp/iml/_topdir/RPMS/rust-iml-gui-[0-9]*.rpm /tmp/manager-rpms/
 cp /tmp/iml/_topdir/RPMS/rust-iml-agent-[0-9]*.rpm /tmp/agent-rpms/
 cp /tmp/iml/chroma_support.repo /etc/yum.repos.d/
 

@@ -73,7 +73,7 @@ module.exports = (env, argv) => {
           },
           {
             from: "favicons",
-            to: "whamcloud",
+            to: "branding",
           },
           {
             from: "node_modules/@fortawesome/fontawesome-free/sprites",
