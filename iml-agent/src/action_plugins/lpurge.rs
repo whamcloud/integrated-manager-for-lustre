@@ -26,10 +26,9 @@ pub struct Config {
     mailbox: String,
 }
 
-impl fmt::Display for Config {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
+impl Config {
+    fn generate_unit(&self, socket: String) -> String {
+        format!(
             "\
              device={fs}-OST{ost:04x}\n\
              dryrun=true\n\
@@ -41,7 +40,7 @@ impl fmt::Display for Config {
              ",
             freehi = self.freehi,
             freelo = self.freelo,
-            socket = postoffice::socket_name(&self.mailbox),
+            socket = socket,
             ost = self.ost,
             fs = self.fs,
             pool = self.pool,
@@ -65,21 +64,24 @@ fn expand_path_fmt(path_fmt: &str, c: &Config) -> strfmt::Result<String> {
 }
 
 pub async fn create_lpurge_conf(c: Config) -> Result<(), ImlAgentError> {
-    let file = conf_name(&c).await?;
-    write(file, &c).err_into().await
+    let path_fmt = env::get_var("LPURGE_CONF_PATH");
+    let socket = env::mailbox_sock(&c.mailbox);
+    let file = conf_name(&c, &path_fmt).await?;
+    write(file, &c, socket).err_into().await
 }
 
-async fn conf_name(c: &Config) -> Result<PathBuf, ImlAgentError> {
-    let path_fmt = env::get_var("LPURGE_CONF_PATH");
-    let path = PathBuf::from(expand_path_fmt(&path_fmt, c)?);
+async fn conf_name(c: &Config, path_fmt: &str) -> Result<PathBuf, ImlAgentError> {
+    let path = PathBuf::from(expand_path_fmt(path_fmt, c)?);
     Ok(path)
 }
 
-async fn write(file: PathBuf, c: &Config) -> std::io::Result<()> {
+async fn write(file: PathBuf, c: &Config, socket: String) -> std::io::Result<()> {
     if let Some(parent) = file.parent() {
         fs::create_dir_all(&parent).await?;
     }
-    let cnt = format!("{}", c);
+
+    let cnt = c.generate_unit(socket);
+
     fs::write(file, cnt.as_bytes()).await
 }
 
@@ -92,8 +94,6 @@ mod lpurge_conf_tests {
 
     #[tokio::test]
     async fn works() {
-        // for postoffice::socket_name()
-        env::set_var("SOCK_DIR", "/run/iml");
         let cfg = Config {
             fs: "lima".to_string(),
             pool: "santiago".to_string(),
@@ -107,7 +107,9 @@ mod lpurge_conf_tests {
         let file = dir.path().join("config");
         let file2 = file.clone();
 
-        write(file, &cfg).await.expect("could not write");
+        write(file, &cfg, "foobar".to_string())
+            .await
+            .expect("could not write");
 
         let cnt = String::from_utf8(std::fs::read(&file2).expect("could not read file")).unwrap();
 
@@ -116,7 +118,6 @@ mod lpurge_conf_tests {
 
     #[tokio::test]
     async fn config_name() {
-        env::set_var("LPURGE_CONF_PATH", "/etc/lpurge/{fs}/{ost}-{pool}.conf");
         let cfg = Config {
             fs: "lima".to_string(),
             pool: "santiago".to_string(),
@@ -125,7 +126,9 @@ mod lpurge_conf_tests {
             freelo: 60,
             mailbox: "foobar".to_string(),
         };
-        let file = conf_name(&cfg).await.expect("name could not be created");
+        let file = conf_name(&cfg, "/etc/lpurge/{fs}/{ost}-{pool}.conf")
+            .await
+            .expect("name could not be created");
 
         assert_eq!(
             file,

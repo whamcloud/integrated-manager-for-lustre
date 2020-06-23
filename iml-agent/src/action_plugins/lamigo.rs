@@ -42,10 +42,9 @@ pub struct Config {
     mailbox: String,
 }
 
-impl fmt::Display for Config {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
+impl Config {
+    fn generate_unit(&self, mailbox: String) -> String {
+        format!(
             "mdt={fs}-MDT{mdt:04x}\n\
              mountpoint={mountpoint}\n\
              user={user}\n\
@@ -61,7 +60,7 @@ impl fmt::Display for Config {
             age = self.min_age,
             fast = self.hot_pool,
             slow = self.cold_pool,
-            mailbox = postoffice::socket_name(&self.mailbox),
+            mailbox = mailbox,
         )
     }
 }
@@ -80,9 +79,8 @@ fn expand_path_fmt(path_fmt: &str, c: &Config) -> strfmt::Result<String> {
     strfmt::strfmt(&path_fmt, &vars)
 }
 
-fn format_lamigo_conf_file(c: &Config) -> Result<PathBuf, ImlAgentError> {
-    let path_fmt = env::get_var("LAMIGO_CONF_PATH");
-    Ok(PathBuf::from(expand_path_fmt(&path_fmt, &c)?))
+fn format_lamigo_conf_file(c: &Config, path_fmt: &str) -> Result<PathBuf, ImlAgentError> {
+    Ok(PathBuf::from(expand_path_fmt(path_fmt, &c)?))
 }
 
 fn format_lamigo_unit_file(c: &Config) -> PathBuf {
@@ -92,7 +90,7 @@ fn format_lamigo_unit_file(c: &Config) -> PathBuf {
     ))
 }
 
-fn format_lamigo_unit_contents(c: &Config) -> Result<String, ImlAgentError> {
+fn format_lamigo_unit_contents(c: &Config, path_fmt: &str) -> Result<String, ImlAgentError> {
     Ok(format!(
         "[Unit]\n\
          Description=Run lamigo service for {fs}-MDT{mdt:04x}\n\
@@ -101,7 +99,7 @@ fn format_lamigo_unit_contents(c: &Config) -> Result<String, ImlAgentError> {
          ExecStartPre=/usr/bin/lfs df {mountpoint}\n\
          ExecStart=/usr/bin/lamigo -f {conf}\n",
         mountpoint = c.mountpoint,
-        conf = format_lamigo_conf_file(c)?.to_string_lossy(),
+        conf = format_lamigo_conf_file(c, path_fmt)?.to_string_lossy(),
         fs = c.fs,
         mdt = c.mdt,
     ))
@@ -115,12 +113,14 @@ async fn write(file: PathBuf, cnt: String) -> Result<(), ImlAgentError> {
 }
 
 pub async fn create_lamigo_service_unit(c: Config) -> Result<(), ImlAgentError> {
-    let path = format_lamigo_conf_file(&c)?;
-    let cnt = format!("{}", &c);
+    let path_fmt = env::get_var("LAMIGO_CONF_PATH");
+
+    let path = format_lamigo_conf_file(&c, &path_fmt)?;
+    let cnt = c.generate_unit(env::mailbox_sock(&c.mailbox));
     write(path, cnt).await?;
 
     let path = format_lamigo_unit_file(&c);
-    let cnt = format_lamigo_unit_contents(&c)?;
+    let cnt = format_lamigo_unit_contents(&c, &path_fmt)?;
     write(path, cnt).await
 }
 
@@ -170,18 +170,15 @@ mod lamigo_tests {
             mountpoint: "/mnt/spfs".into(),
             mailbox: "mailbox".into(),
         };
-        env::set_var("LAMIGO_CONF_PATH", "/etc/lamigo/{fs}-{mdt}.conf");
+
         assert_eq!(
-            format_lamigo_conf_file(&config).unwrap(),
+            format_lamigo_conf_file(&config, "/etc/lamigo/{fs}-{mdt}.conf").unwrap(),
             PathBuf::from("/etc/lamigo/LU_TEST1-MDT0010.conf")
         )
     }
 
     #[tokio::test]
     async fn test_works() {
-        // for postoffice::socket_name()
-        env::set_var("SOCK_DIR", "/run");
-        env::set_var("LAMIGO_CONF_PATH", "/etc/lamigo/{fs}-{mdt}.conf");
         let config = Config {
             fs: "LU_TEST2".into(),
             mdt: 17,
@@ -193,7 +190,9 @@ mod lamigo_tests {
             cold_pool: "SLOW_POOL".into(),
         };
 
-        let content = format_lamigo_unit_contents(&config).expect("cannot generate unit");
+        let content = format_lamigo_unit_contents(&config, "/etc/lamigo/{fs}-{mdt}.conf")
+            .expect("cannot generate unit");
+
         assert_display_snapshot!(content);
     }
 }
