@@ -106,8 +106,6 @@ services:
       dockerfile: ./docker/nginx.dockerfile
     hostname: "nginx"
     deploy: *default-deploy
-    environment:
-      - BRANDING_PATH=whamcloud
     volumes:
       - "/etc/iml-docker/setup/branding:/var/lib/chroma/branding"
       - "manager-config:/var/lib/chroma"

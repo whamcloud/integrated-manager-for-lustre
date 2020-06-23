@@ -108,7 +108,6 @@ mod tests {
             ("GRAFANA_PROXY_PASS", "http://127.0.0.1:3000"),
             ("INFLUXDB_PROXY_PASS", "http://127.0.0.1:8086"),
             ("TIMER_PROXY_PASS", "http://127.0.0.1:8892"),
-            ("BRANDING_PATH", "ddn"),
             ("INCLUDES", ""),
         ]
         .iter()

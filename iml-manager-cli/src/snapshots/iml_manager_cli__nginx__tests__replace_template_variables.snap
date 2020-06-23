@@ -408,6 +408,6 @@ server {
     }
 
     location ~ ^.*/(favicon.*|android-chrome.*|apple-touch-icon\.png|mstile-150x150\.png|safari-pinned-tab\.svg) {
-        alias /usr/share/iml-manager/rust-iml-gui/ddn/$1;
+        alias /var/lib/chroma/branding/$1;
     }
 }

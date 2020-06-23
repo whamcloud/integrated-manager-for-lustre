@@ -74,7 +74,6 @@ class Command(BaseCommand):
             "AMQP_BROKER_PORT": settings.AMQP_BROKER_PORT,
             "AMQP_BROKER_URL": settings.BROKER_URL,
             "BRANDING": settings.BRANDING,
-            "BRANDING_PATH": settings.BRANDING_PATH,
             "USE_STRATAGEM": settings.USE_STRATAGEM,
             "INCLUDES": settings.INCLUDES,
         }

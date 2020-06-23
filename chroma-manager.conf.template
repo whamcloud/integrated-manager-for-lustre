@@ -404,6 +404,6 @@ server {
     }
 
     location ~ ^.*/(favicon.*|android-chrome.*|apple-touch-icon\.png|mstile-150x150\.png|safari-pinned-tab\.svg) {
-        alias {{BRANDING_PATH}}/$1;
+        alias /var/lib/chroma/branding/$1;
     }
 }

@@ -96,8 +96,6 @@ EXA_VERSION = os.getenv("EXA_VERSION")
 
 USE_STRATAGEM = os.getenv("USE_STRATAGEM", "false")
 
-BRANDING_PATH = os.getenv("BRANDING_PATH", "whamcloud")
-
 ALLOWED_HOSTS = ["*"]
 
 ADMINS = (
