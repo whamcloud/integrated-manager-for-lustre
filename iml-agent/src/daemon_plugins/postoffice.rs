@@ -10,7 +10,6 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::{
-    executor::block_on,
     stream::{StreamExt as _, TryStreamExt},
     Future, FutureExt,
 };
@@ -45,11 +44,7 @@ pub fn socket_name(mailbox: &str) -> String {
 
 impl std::fmt::Debug for PostOffice {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "PostOffice {{ {:?} }}",
-            block_on(self.routes.lock()).keys()
-        )
+        write!(f, "PostOffice {{ {:?} }}", self.routes)
     }
 }
 
