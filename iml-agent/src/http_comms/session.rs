@@ -6,7 +6,7 @@ use crate::{
     agent_error::{NoSessionError, Result},
     daemon_plugins::{DaemonBox, OutputValue},
 };
-use futures::{future, Future, TryFutureExt};
+use futures::{channel::oneshot, future, Future, future::Either};
 use iml_wire_types::{AgentResult, Id, PluginName, Seq};
 use std::{
     collections::HashMap,
@@ -33,6 +33,7 @@ pub fn backoff_schedule(d: Duration) -> Duration {
 #[derive(Debug)]
 pub struct Active {
     pub session: Session,
+    pub in_flight: Option<oneshot::Receiver<()>>,
     pub instant: Instant,
 }
 
@@ -56,13 +57,15 @@ impl State {
     pub fn reset_active(&mut self) {
         if let State::Active(a) = self {
             a.instant = Instant::now() + Duration::from_secs(10);
+            a.in_flight = None;
         }
     }
-    pub fn create_active(&mut self, session: Session) {
+    pub fn create_active(&mut self, session: Session, in_flight: oneshot::Receiver<()>) {
         std::mem::replace(
             self,
             State::Active(Active {
                 session,
+                in_flight: Some(in_flight),
                 instant: Instant::now() + Duration::from_secs(10),
             }),
         );
@@ -111,14 +114,19 @@ impl Sessions {
             x.write().await.convert_to_pending()
         }
     }
-    pub async fn insert_session(&self, name: PluginName, s: Session) -> Result<()> {
+    pub async fn insert_session(
+        &self,
+        name: PluginName,
+        s: Session,
+        in_flight: oneshot::Receiver<()>,
+    ) -> Result<()> {
         let state = self
             .0
             .get(&name)
             .ok_or_else(|| NoSessionError(name))?
             .clone();
 
-        state.write().await.create_active(s);
+        state.write().await.create_active(s, in_flight);
 
         Ok(())
     }
@@ -202,33 +210,83 @@ impl Session {
             plugin,
         }
     }
-    pub fn start(&mut self) -> impl Future<Output = Result<Option<(SessionInfo, OutputValue)>>> {
+    pub fn start(
+        &mut self,
+    ) -> (
+        oneshot::Receiver<()>,
+        impl Future<Output = Result<Option<(SessionInfo, OutputValue)>>>,
+    ) {
         let info = Arc::clone(&self.info);
 
-        self.plugin.start_session().and_then(|x| async move {
-            match x {
-                Some(x) => {
+        let (mut tx, rx) = oneshot::channel();
+
+        let fut = self.plugin.start_session();
+
+        let fut = async move {
+            let either = future::select(tx.cancellation(), fut).await;
+
+            match either {
+                Either::Left(_) => {
+                    let info = info.lock().await;
+
+                    tracing::warn!(
+                        "Session start for {}/{} has been cancelled. Will try again",
+                        info.name,
+                        info.id
+                    );
+
+                    Ok(None)
+                }
+                Either::Right((Ok(Some(x)), _)) => {
                     let mut info = info.lock().await;
 
                     Ok(Some(addon_info(&mut info, x)))
                 }
-                None => Ok(None),
+                Either::Right((Ok(None), _)) => Ok(None),
+                Either::Right((Err(e), _)) => Err(e),
             }
-        })
+        };
+
+        (rx, fut)
     }
-    pub fn poll(&self) -> impl Future<Output = Result<Option<(SessionInfo, OutputValue)>>> {
+    pub fn poll(
+        &self,
+    ) -> (
+        oneshot::Receiver<()>,
+        impl Future<Output = Result<Option<(SessionInfo, OutputValue)>>>,
+    ) {
         let info = Arc::clone(&self.info);
 
-        self.plugin.update_session().and_then(|x| async move {
-            match x {
-                Some(x) => {
+        let (mut tx, rx) = oneshot::channel();
+
+        let fut = self.plugin.update_session();
+
+        let fut = async move {
+            let either = future::select(tx.cancellation(), fut).await;
+
+            match either {
+                Either::Left(_) => {
+                    let info = info.lock().await;
+
+                    tracing::warn!(
+                        "Session poll for {}/{} has been cancelled. Will try again",
+                        info.name,
+                        info.id
+                    );
+
+                    Ok(None)
+                }
+                Either::Right((Ok(Some(x)), _)) => {
                     let mut info = info.lock().await;
 
                     Ok(Some(addon_info(&mut info, x)))
                 }
-                None => Ok(None),
+                Either::Right((Ok(None), _)) => Ok(None),
+                Either::Right((Err(e), _)) => Err(e),
             }
-        })
+        };
+
+        (rx, fut)
     }
     pub async fn message(&self, body: serde_json::Value) -> Result<(SessionInfo, AgentResult)> {
         let info = Arc::clone(&self.info);
@@ -254,6 +312,7 @@ mod tests {
     use crate::{
         agent_error::Result, daemon_plugins::daemon_plugin::test_plugin::TestDaemonPlugin,
     };
+    use futures::channel::oneshot;
     use serde_json::json;
     use std::{ops::Deref, time::Instant};
 
@@ -275,9 +334,26 @@ mod tests {
             seq: 1.into(),
         };
 
-        let actual = session.start().await?;
+        let (_rx, fut) = session.start();
+
+        let actual = fut.await?;
 
         assert_eq!(actual, Some((session_info, json!(0))));
+
+        Ok(())
+    }
+
+    #[tokio::test(core_threads = 2)]
+    async fn test_session_start_cancel() -> Result<()> {
+        let mut session = create_session();
+
+        let (rx, fut) = session.start();
+
+        drop(rx);
+
+        let actual = fut.await?;
+
+        assert_eq!(actual, None);
 
         Ok(())
     }
@@ -286,9 +362,13 @@ mod tests {
     async fn test_session_update() -> Result<()> {
         let mut session = create_session();
 
-        session.start().await?;
+        let (_rx, fut) = session.start();
 
-        let actual = session.poll().await?;
+        fut.await?;
+
+        let (_rx, fut) = session.poll();
+
+        let actual = fut.await?;
 
         let session_info = SessionInfo {
             name: "test_plugin".into(),
@@ -302,10 +382,31 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_session_update_cancel() -> Result<()> {
+        let mut session = create_session();
+
+        let (_rx, fut) = session.start();
+
+        fut.await?;
+
+        let (rx, fut) = session.poll();
+
+        drop(rx);
+
+        let actual = fut.await?;
+
+        assert_eq!(actual, None);
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_session_message() -> Result<()> {
         let mut session = create_session();
 
-        session.start().await?;
+        let (_rx, fut) = session.start();
+
+        fut.await?;
 
         let actual = session.message(json!("hi!")).await?;
 
@@ -353,8 +454,10 @@ mod tests {
 
         let session = create_session();
 
+        let (_tx, rx) = oneshot::channel();
+
         sessions
-            .insert_session("test_plugin".into(), session)
+            .insert_session("test_plugin".into(), session, rx)
             .await?;
 
         let state = sessions.0.get(&"test_plugin".into()).cloned().unwrap();
@@ -372,8 +475,10 @@ mod tests {
 
         let session = create_session();
 
+        let (_tx, rx) = oneshot::channel();
+
         sessions
-            .insert_session("test_plugin".into(), session)
+            .insert_session("test_plugin".into(), session, rx)
             .await?;
 
         let plugin_name = "test_plugin".into();
