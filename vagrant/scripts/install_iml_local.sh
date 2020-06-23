@@ -109,20 +109,12 @@ enabled=1
 enabled_metadata=1
 
 [nodesource]
-name=Node.js Packages for Enterprise Linux 7 - $basearch
-baseurl=https://rpm.nodesource.com/pub_12.x/el/7/$basearch
+name=Node.js Packages for Enterprise Linux 7 - x86_64/
+baseurl=https://rpm.nodesource.com/pub_12.x/el/7/x86_64/
 failovermethod=priority
 enabled=1
 gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/NODESOURCE-GPG-SIGNING-KEY-EL
-
-[nodesource-source]
-name=Node.js for Enterprise Linux 7 - $basearch - Source
-baseurl=https://rpm.nodesource.com/pub_12.x/el/7/SRPMS
-failovermethod=priority
-enabled=0
-gpgkey=file:///etc/pki/rpm-gpg/NODESOURCE-GPG-SIGNING-KEY-EL
-gpgcheck=1
 
 [yarn]
 name=Yarn Repository
@@ -143,7 +135,7 @@ su -l mocker << EOF
 mock -r /etc/mock/iml.cfg --init
 mock -r /etc/mock/iml.cfg --copyin /integrated-manager-for-lustre /iml
 mock -r /etc/mock/iml.cfg -i cargo git ed epel-release python-setuptools gcc openssl-devel postgresql96-devel python2-devel python2-setuptools ed yum
-mock -r /etc/mock/iml.cfg --shell 'export CARGO_HOME=/tmp/.cargo CARGO_TARGET_DIR=/tmp/target PATH=$PATH:/tmp/.cargo/bin && cd /iml && make local'
+mock -r /etc/mock/iml.cfg --shell 'export CARGO_HOME=/tmp/.cargo CARGO_TARGET_DIR=/tmp/target PATH=$PATH:/tmp/.cargo/bin && cargo install wasm-pack && cd /iml && make local'
 mock -r /etc/mock/iml.cfg --copyout /iml/_topdir /tmp/iml/_topdir
 mock -r /etc/mock/iml.cfg --copyout /iml/chroma_support.repo /tmp/iml/
 EOF
