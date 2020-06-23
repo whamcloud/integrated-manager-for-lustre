@@ -3,7 +3,7 @@
 yum install -y epel-release
 yum clean all
 yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql96-server postgresql96-contrib rabbitmq-server telnet python-ethtool erlang-inets patch gcc-c++ systemd-devel python-pip python2-pbr curl libcurl-devel nss openssl-devel cargo
+yum install -y cargo curl erlang-inets gcc gcc-c++ git graphviz-devel libcurl-devel make nss openssl-devel patch postgresql96-contrib postgresql96-server python2-pbr python-devel python-ethtool python-pip python-setuptools python-virtualenv rabbitmq-server systemd-devel telnet yarn
 systemctl enable rabbitmq-server
 
 export PATH=$PATH:/usr/lib/rabbitmq/bin/
