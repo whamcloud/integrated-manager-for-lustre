@@ -13,6 +13,7 @@ use iml_orm::{
     DbPool,
 };
 use iml_postgres::pool;
+use iml_tracing::tracing;
 use iml_wire_types::{db::FidTaskQueue, AgentResult, FidError, FidItem, TaskAction};
 use std::{
     collections::{HashMap, HashSet},
@@ -128,8 +129,7 @@ async fn send_work(
     // send fids to actions runner
     // action names on Agents are "action.ACTION_NAME"
     for action in task.actions.iter().map(|a| format!("action.{}", a)) {
-        let (_, fut) = invoke_rust_agent(&fqdn, &action, &args);
-        match fut.await {
+        match invoke_rust_agent(&fqdn, &action, &args).await {
             Err(e) => {
                 tracing::info!("Failed to send {} to {}: {}", &action, &fqdn, e);
                 return trans.rollback().err_into().await;

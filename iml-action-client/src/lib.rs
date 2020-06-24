@@ -20,12 +20,14 @@ use uuid::Uuid;
 pub enum ImlActionClientError {
     #[error(transparent)]
     HyperError(#[from] hyper::Error),
+    #[error(transparent)]
+    UriError(hyper::http::uri::InvalidUri),
     #[error("Request Cancelled")]
     CancelledRequest,
-    #[error("HTTP Error {0}")]
-    HttpError(String),
     #[error(transparent)]
-    SerdeJsonError(serde_json::error::Error),
+    HttpError(#[from] hyper::http::Error),
+    #[error(transparent)]
+    SerdeJsonError(#[from] serde_json::error::Error),
 }
 
 enum ClientWrapper {
@@ -50,24 +52,40 @@ fn client() -> ClientWrapper {
     }
 }
 
-fn connect_uri() -> hyper::Uri {
+fn connect_uri() -> Result<hyper::Uri, ImlActionClientError> {
     if running_in_docker() {
-        get_action_runner_http().parse::<hyper::Uri>().unwrap()
+        get_action_runner_http()
+            .parse::<hyper::Uri>()
+            .map_err(ImlActionClientError::UriError)
     } else {
-        hyperlocal::Uri::new(get_action_runner_uds(), "/").into()
+        Ok(hyperlocal::Uri::new(get_action_runner_uds(), "/").into())
     }
 }
 
-pub fn invoke_rust_agent(
+pub async fn invoke_rust_agent(
     host: impl Into<Fqdn> + Clone,
     command: impl Into<ActionName>,
     args: impl serde::Serialize,
-) -> (
-    oneshot::Sender<()>,
-    impl Future<Output = Result<serde_json::Value, ImlActionClientError>>,
-) {
+) -> Result<serde_json::Value, ImlActionClientError> {
+    match invoke_rust_agent_cancelable(host, command, args) {
+        Ok((_, fut)) => fut.await,
+        Err(e) => Err(e),
+    }
+}
+
+pub fn invoke_rust_agent_cancelable(
+    host: impl Into<Fqdn> + Clone,
+    command: impl Into<ActionName>,
+    args: impl serde::Serialize,
+) -> Result<
+    (
+        oneshot::Sender<()>,
+        impl Future<Output = Result<serde_json::Value, ImlActionClientError>>,
+    ),
+    ImlActionClientError,
+> {
     let request_id = Uuid::new_v4().to_hyphenated().to_string();
-    let uri = connect_uri();
+    let uri = connect_uri()?;
 
     let action = ActionType::Remote((
         host.clone().into(),
@@ -80,24 +98,23 @@ pub fn invoke_rust_agent(
 
     let client = client();
 
-    let (p, c) = oneshot::channel::<()>();
-
     let req = Request::builder()
         .method(hyper::Method::POST)
         .header(hyper::header::ACCEPT, "application/json")
         .header(hyper::header::CONTENT_TYPE, "application/json")
         .uri(&uri)
-        .body(Body::from(serde_json::to_string(&action).unwrap()))
-        .unwrap();
+        .body(Body::from(serde_json::to_string(&action)?))?;
 
     let post = client
         .request(req)
         .err_into()
         .and_then(|resp| hyper::body::aggregate(resp).err_into())
         .map_ok(|body| {
-            serde_json::from_reader(body.reader()).unwrap_or(serde_json::from_str("[]").unwrap())
+            serde_json::from_reader(body.reader()).unwrap_or_else(|_| serde_json::json!("[]"))
         })
         .boxed();
+
+    let (p, c) = oneshot::channel::<()>();
 
     let fut = async move {
         let either = future::select(c, post).await;
@@ -116,15 +133,16 @@ pub fn invoke_rust_agent(
                 let req = Request::builder()
                     .method("POST")
                     .uri(&uri)
-                    .body(Body::from(serde_json::to_string(&cancel).unwrap()))
-                    .unwrap();
+                    .body(Body::from(serde_json::to_string(&cancel)?));
 
-                let _rc = client.request(req).await;
+                if let Ok(req) = req {
+                    let _rc = client.request(req).await;
+                }
                 Err(ImlActionClientError::CancelledRequest)
             }
             Either::Right((x, _)) => x,
         }
     };
 
-    (p, fut)
+    Ok((p, fut))
 }

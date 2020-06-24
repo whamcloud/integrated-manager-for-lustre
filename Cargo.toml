@@ -21,7 +21,6 @@ members = [
     'iml-services/iml-device',
     'iml-services/iml-ntp',
     'iml-services/iml-ostpool',
-    'iml-services/iml-ntp',
     'iml-services/iml-postoffice',
     'iml-services/iml-service-queue',
     'iml-services/iml-stats',

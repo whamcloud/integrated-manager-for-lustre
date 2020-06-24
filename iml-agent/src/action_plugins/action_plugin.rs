@@ -29,8 +29,6 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("package_version", package::version)
         .add_plugin("start_scan_stratagem", server::trigger_scan)
         .add_plugin("stream_fidlists_stratagem", server::stream_fidlists)
-        .add_plugin("action_warning_stratagem", action_warning::read_mailbox)
-        .add_plugin("action_purge_stratagem", action_purge::read_mailbox)
         .add_plugin("action_check_ha", high_availability::check_ha)
         .add_plugin("action_check_stonith", check_stonith::check_stonith)
         .add_plugin("get_kernel", check_kernel::get_kernel)

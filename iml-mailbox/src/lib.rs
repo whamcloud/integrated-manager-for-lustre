@@ -154,9 +154,9 @@ pub async fn ingest_data(
                 let mut map: HashMap<String, serde_json::Value> = serde_json::from_str(&line)?;
 
                 if let Some(fid) = map.remove("fid".into()) {
-                    let fid = LustreFid::from_str(fid.as_str().ok_or_else(|| MailboxError::NotFound(
-                        format!("Failed to find fid in {}", line),
-                    ))?)?;
+                    let fid = LustreFid::from_str(fid.as_str().ok_or_else(|| {
+                        MailboxError::NotFound(format!("Failed to find fid in {}", line))
+                    })?)?;
 
                     // Get "other" data if it exists
                     let data = match map.iter().next() {
