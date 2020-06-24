@@ -626,6 +626,7 @@ mod tests {
             "fixtures/output-oss2.local-133.json",
         ]
     )]
+    // TODO: Add a removal test
     fn test_2(test_name: &str, paths: &[&str]) {
         init_subscriber();
 
