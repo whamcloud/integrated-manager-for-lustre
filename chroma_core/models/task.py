@@ -34,6 +34,14 @@ class Task(models.Model):
     start = models.DateTimeField(null=False)
     finish = models.DateTimeField(null=True, blank=True)
 
+    # states = [ "started", "finished", "closed" ]
+    # Started - Task is started and mailbox is created on servers
+    #   - main ingest phase
+    #   - outgest can run
+    # Finished - Mailbox is removed from servers
+    #   - ingest is complete
+    #   - outgest is running
+    # Closed - outgest is completed
     state = models.CharField(max_length=16)
 
     fids_total = models.BigIntegerField(default=0)
@@ -125,6 +133,17 @@ class RemoveTaskStep(Step):
 
 
 class FidTaskQueue(models.Model):
+    class Meta:
+        app_label = "chroma_core"
+
+    fid = LustreFidField()
+
+    task = models.ForeignKey("Task", on_delete=CASCADE)
+
+    data = JSONField(default={})
+
+
+class FidTaskError(models.Model):
     class Meta:
         app_label = "chroma_core"
 
