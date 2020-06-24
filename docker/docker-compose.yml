@@ -28,14 +28,20 @@ services:
       context: ../
       dockerfile: ./docker/influxdb.dockerfile
     hostname: "influxdb"
-    deploy: *default-deploy
+    deploy:
+      <<: *default-deploy
+      resources:
+        limits:
+          cpus: "2.5"
+        reservations:
+          cpus: "1.5"
     volumes:
       - influxdb:/var/lib/influxdb/
       - "manager-config:/var/lib/chroma"
     healthcheck:
-      test: ["CMD-SHELL", "influx -host influxdb -execute 'show databases'"]
-      interval: 5s
-      timeout: 5s
+      test: ["CMD-SHELL", "curl --fail influxdb:8086/ping?wait_for_leader=10s"]
+      interval: 30s
+      timeout: 15s
       retries: 5
       start_period: 60s
     ports:
@@ -64,11 +70,19 @@ services:
     ports:
       - 3000:3000
   rabbit:
-    image: "rabbitmq:3.6-management-alpine"
+    image: "imlteam/rabbitmq:6.2.0-dev"
+    build:
+      context: ../
+      dockerfile: ./docker/rabbitmq.dockerfile
     hostname: "rabbit"
     deploy:
       <<: *default-deploy
       endpoint_mode: dnsrr
+      resources:
+        limits:
+          cpus: "1"
+        reservations:
+          cpus: "0.5"
     environment:
       - RABBITMQ_DEFAULT_USER=chroma
       - RABBITMQ_DEFAULT_PASS=chroma123
@@ -76,11 +90,15 @@ services:
       - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit heartbeat 0
       - RABBITMQ_ERLANG_COOKIE='lustre-secret'
     healthcheck:
-      test: ["CMD-SHELL", "rabbitmqctl status"]
+      test:
+        [
+          "CMD-SHELL",
+          "curl --fail http://chroma:chroma123@rabbit:15672/api/aliveness-test/chromavhost/",
+        ]
       timeout: 5s
-      interval: 5s
+      interval: 30s
       retries: 5
-      start_period: 10s
+      start_period: 30s
   nginx:
     image: "imlteam/manager-nginx:6.2.0-dev"
     build:

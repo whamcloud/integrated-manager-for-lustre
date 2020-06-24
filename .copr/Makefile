@@ -59,6 +59,7 @@ srpm:
 		iml-sfa.service \
 		${TMPDIR}/release/rust-iml
 	cp ${TARGET}/release/iml ${TMPDIR}/release/rust-iml
+	cp ${TARGET}/release/iml-config ${TMPDIR}/release/rust-iml
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/rust-iml.tar.gz -C ${TMPDIR}/release/rust-iml .
 	cp rust-iml.spec ${TMPDIR}/_topdir/SPECS/
 	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-iml.spec
@@ -69,7 +70,7 @@ iml-docker-srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/scratch/iml-docker
 
-	cp -r docker/{docker-compose.yml,iml-images.tgz,iml-cli-proxy.sh} ${TMPDIR}/scratch/iml-docker/
+	cp -r docker/{docker-compose.yml,iml-images.tgz,iml-cli-proxy.sh,update-embedded.sh} ${TMPDIR}/scratch/iml-docker/
 	cp iml-docker.service ${TMPDIR}/scratch/iml-docker/
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/iml-docker.tar.gz -C ${TMPDIR}/scratch/iml-docker .
 
@@ -96,6 +97,7 @@ iml-srpm: iml-deps substs
 	cp ${BUILDROOT}/python-iml-manager.spec ${TMPDIR}/_topdir/SPECS
 
 	cp -r ${BUILDROOT}/grafana ${TMPDIR}/configuration
+	cp -r ${BUILDROOT}/nginx ${TMPDIR}/configuration
 	cp ${BUILDROOT}/iml-*.service \
 		${BUILDROOT}/rabbitmq-env.conf \
 		${BUILDROOT}/rabbitmq-server-dropin.conf \
