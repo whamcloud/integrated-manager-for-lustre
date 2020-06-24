@@ -386,11 +386,23 @@ table! {
     use diesel::sql_types::*;
     use super::SqlLustreFid;
 
-    chroma_core_fidtaskqueue (id) {
+    chroma_core_fidtaskerror (id) {
         id -> Int4,
         fid -> SqlLustreFid,
         data -> Jsonb,
         errno -> Int2,
+        task_id -> Int4,
+    }
+}
+
+table! {
+    use diesel::sql_types::*;
+    use super::SqlLustreFid;
+
+    chroma_core_fidtaskqueue (id) {
+        id -> Int4,
+        fid -> SqlLustreFid,
+        data -> Jsonb,
         task_id -> Int4,
     }
 }
@@ -1690,6 +1702,7 @@ joinable!(chroma_core_failbacktargetjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_failbacktargetjob -> chroma_core_managedtarget (target_id));
 joinable!(chroma_core_failovertargetjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_failovertargetjob -> chroma_core_managedtarget (target_id));
+joinable!(chroma_core_fidtaskerror -> chroma_core_task (task_id));
 joinable!(chroma_core_fidtaskqueue -> chroma_core_task (task_id));
 joinable!(chroma_core_filesystemclientconfparam -> chroma_core_confparam (confparam_ptr_id));
 joinable!(chroma_core_filesystemclientconfparam -> chroma_core_managedfilesystem (filesystem_id));
@@ -1938,6 +1951,7 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_enablelnetjob,
     chroma_core_failbacktargetjob,
     chroma_core_failovertargetjob,
+    chroma_core_fidtaskerror,
     chroma_core_fidtaskqueue,
     chroma_core_filesystemclientconfparam,
     chroma_core_filesystemglobalconfparam,
