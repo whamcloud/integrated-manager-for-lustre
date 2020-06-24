@@ -636,7 +636,6 @@ mod tests {
             "mds2.local",
         ]
     )]
-    // FIXME: This test is failing because ost7/ost7 is only present on oss1.local, but not oss2.local
     #[test_case(
         "full_oss_commands_test",
         &[
