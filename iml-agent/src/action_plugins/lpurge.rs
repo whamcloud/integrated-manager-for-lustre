@@ -2,9 +2,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, daemon_plugins::postoffice, env};
+use crate::{agent_error::ImlAgentError, env};
 use futures::future::TryFutureExt;
-use std::{collections::HashMap, fmt, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf};
 use tokio::fs;
 
 #[derive(serde::Deserialize, structopt::StructOpt, Debug)]
