@@ -106,7 +106,13 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     tokio::spawn(server);
 
-    let mut s = consume_data::<Device>("rust_agent_device_rx");
+    let rabbit_pool = iml_rabbit::connect_to_rabbit(1);
+
+    let conn = iml_rabbit::get_conn(rabbit_pool).await?;
+
+    let ch = iml_rabbit::create_channel(&conn).await?;
+
+    let mut s = consume_data::<Device>(&ch, "rust_agent_device_rx");
 
     while let Some((f, d)) = s.try_next().await? {
         let mut cache = cache2.lock().await;

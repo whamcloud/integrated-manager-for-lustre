@@ -23,7 +23,13 @@ fn create_random_string() -> String {
 }
 
 async fn create_test_connection() -> Result<iml_rabbit::Connection, iml_rabbit::ImlRabbitError> {
-    iml_rabbit::connect("amqp://127.0.0.1:5672//", ConnectionProperties::default()).await
+    let pool = iml_rabbit::create_pool(
+        "amqp://127.0.0.1:5672//".to_string(),
+        1,
+        ConnectionProperties::default(),
+    );
+
+    iml_rabbit::get_conn(pool).await
 }
 
 fn create_shared_state() -> (
@@ -101,7 +107,7 @@ async fn test_data_sent_to_active_session() -> Result<(), Box<dyn std::error::Er
 
             let ch = iml_rabbit::create_channel(&conn).await?;
 
-            let _ = consume_agent_tx_queue(ch, queue_name2)
+            let _ = consume_agent_tx_queue(&ch, queue_name2)
                 .await?
                 .into_future()
                 .await;
@@ -194,7 +200,7 @@ async fn test_cancel_sent_to_active_session() -> Result<(), Box<dyn std::error::
 
             let ch = iml_rabbit::create_channel(&conn).await?;
 
-            consume_agent_tx_queue(ch, queue_name2)
+            consume_agent_tx_queue(&ch, queue_name2)
                 .await?
                 .try_collect::<Vec<_>>()
                 .await?;
