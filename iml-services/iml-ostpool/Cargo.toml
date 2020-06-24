@@ -8,6 +8,7 @@ edition = "2018"
 futures = "0.3"
 futures-util = "0.3"
 iml-postgres = { path = "../../iml-postgres", version = "0.3" }
+iml-rabbit = { path = "../../iml-rabbit", version = "0.3"}
 iml-service-queue = { path = "../iml-service-queue", version = "0.3" }
 iml-tracing = { version = "0.2", path="../../iml-tracing"}
 iml-wire-types = { path = "../../iml-wire-types", version = "0.3" }

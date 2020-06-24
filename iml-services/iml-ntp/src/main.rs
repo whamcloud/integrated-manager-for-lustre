@@ -27,7 +27,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let pool = iml_orm::pool()?;
 
-    let mut s = consume_data::<State>("rust_agent_ntp_rx");
+    let rabbit_pool = iml_rabbit::connect_to_rabbit(1);
+
+    let conn = iml_rabbit::get_conn(rabbit_pool).await?;
+
+    let ch = iml_rabbit::create_channel(&conn).await?;
+
+    let mut s = consume_data::<State>(&ch, "rust_agent_ntp_rx");
 
     while let Some((fqdn, state)) = s.try_next().await? {
         tracing::debug!("fqdn: {:?} state: {:?}", fqdn, state);

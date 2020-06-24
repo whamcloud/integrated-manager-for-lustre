@@ -17,6 +17,8 @@ pub enum ImlDeviceError {
     ImlServiceQueueError(#[from] ImlServiceQueueError),
     #[error(transparent)]
     SerdeJsonError(#[from] serde_json::Error),
+    #[error(transparent)]
+    ImlRabbitError(#[from] iml_rabbit::ImlRabbitError),
 }
 
 impl reject::Reject for ImlDeviceError {}

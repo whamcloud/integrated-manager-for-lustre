@@ -35,9 +35,9 @@ async fn get_delivery(
             } => {
                 let plugin_instance = get_plugin(&plugin, &registry)?;
                 let mut s = Session::new(plugin.clone(), session_id, plugin_instance);
-                let fut = s.start();
+                let (rx, fut) = s.start();
 
-                sessions2.insert_session(plugin.clone(), s).await?;
+                sessions2.insert_session(plugin.clone(), s, rx).await?;
 
                 let agent_client3 = agent_client2.clone();
 
