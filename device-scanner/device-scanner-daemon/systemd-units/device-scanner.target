@@ -1,0 +1,17 @@
+[Unit]
+Description=Device Scanner Services
+
+Requires=device-scanner.socket
+After=device-scanner.socket
+Requires=block-device-populator.service
+Requires=swap-emitter.timer
+Requires=mount-emitter.service
+Wants=zed-enhancer.socket
+
+[Install]
+WantedBy=multi-user.target
+Also=device-scanner.socket
+Also=block-device-populator.service
+Also=zed-enhancer.socket
+Also=swap-emitter.timer
+Also=mount-emitter.service

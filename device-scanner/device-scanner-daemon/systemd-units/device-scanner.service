@@ -1,0 +1,16 @@
+
+[Unit]
+Description=IML Device Scanner Daemon
+RefuseManualStart=true
+DefaultDependencies=false
+Requires=device-scanner.socket
+BindsTo=device-scanner.socket
+After=device-scanner.socket
+OnFailure=block-device-populator.service zed-populator.service mount-populator.service
+
+[Service]
+Restart=always
+Environment=RUST_LOG=info
+ExecStart=/usr/bin/device-scanner-daemon
+StandardOutput=journal
+StandardError=journal

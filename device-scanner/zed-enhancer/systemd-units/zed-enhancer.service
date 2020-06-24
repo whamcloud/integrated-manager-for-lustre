@@ -1,0 +1,14 @@
+[Unit]
+Description=IML ZED Enhancer Daemon
+Requires=zfs-zed.service
+After=zfs-zed.service
+BindsTo=zed-enhancer.socket
+After=zed-enhancer.socket
+After=device-scanner.socket
+
+[Service]
+Restart=on-failure
+Environment=RUST_LOG=info
+ExecStart=/usr/bin/zed-enhancer
+StandardOutput=journal
+StandardError=journal

@@ -1,0 +1,6 @@
+[Unit]
+Description=IML Swap Emitter
+
+[Service]
+ExecStart=/bin/bash -c 'exec /usr/bin/findmnt -P -s -e -t swap | /usr/bin/mount-emitter'
+Type=oneshot

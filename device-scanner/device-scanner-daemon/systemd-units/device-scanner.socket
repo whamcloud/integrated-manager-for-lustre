@@ -1,0 +1,12 @@
+[Unit]
+Description=IML Device Scanner Socket
+DefaultDependencies=false
+PartOf=device-scanner.target
+
+[Socket]
+ListenStream=/var/run/device-scanner.sock
+RemoveOnStop=true
+
+[Install]
+WantedBy=sockets.target
+WantedBy=device-scanner.target

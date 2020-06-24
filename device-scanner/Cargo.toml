@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    'device-scanner-daemon',
+    'device-scanner-zedlets',
+    'device-types',
+    'futures-failure',
+    'mount-emitter',
+    'uevent-listener',
+    'zed-enhancer'
+]

@@ -1,0 +1,13 @@
+[Unit]
+Description=IML ZED Enhancer Socket
+DefaultDependencies=false
+After=zfs-zed.service
+After=device-scanner.socket
+PartOf=device-scanner.target
+
+[Socket]
+ListenStream=/var/run/zed-enhancer.sock
+RemoveOnStop=true
+
+[Install]
+WantedBy=device-scanner.target

@@ -1,0 +1,88 @@
+name: Device Scanner CI
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --locked --manifest-path device-scanner/Cargo.toml --exclude zed-enhancer --all
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - run: rustup component add clippy
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --locked --manifest-path device-scanner/Cargo.toml --exclude zed-enhancer --all -- -W warnings
+
+  rustfmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - run: rustup component add rustfmt
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --manifest-path device-scanner/Cargo.toml --all -- --check
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --locked --manifest-path device-scanner/Cargo.toml --exclude zed-enhancer --all
+
+  check_rpm_build:
+    name: Check RPM build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Build rpm
+        uses: ./.github/actions/copr-zfs
+        env:
+          SPEC: device-scanner/iml-device-scanner.spec
+          LOCAL_ONLY: true
+          SRPM_TASK: device-scanner-srpm
+          WORKSPACE: ${{ github.workspace }}
+          RUSTUP_TOOLCHAIN: stable-x86_64-unknown-linux-gnu
+      - name: Archive rpm
+        uses: actions/upload-artifact@v1
+        with:
+          name: rpm
+          path: _topdir/RPMS/x86_64

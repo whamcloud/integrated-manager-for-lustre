@@ -1,0 +1,16 @@
+[Unit]
+Description=IML Mount Emitter
+PartOf=device-scanner.target
+After=local-fs.target
+After=device-scanner.socket
+Requires=mount-populator.service
+After=mount-populator.service
+
+[Service]
+Restart=always
+ExecStart=/bin/bash -c 'exec /usr/bin/stdbuf -o L /usr/bin/findmnt --poll -P -e -o ACTION,TARGET,SOURCE,FSTYPE,OPTIONS,OLD-TARGET,OLD-OPTIONS | /usr/bin/mount-emitter'
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=device-scanner.target
