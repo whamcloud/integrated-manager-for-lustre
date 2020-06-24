@@ -72,7 +72,7 @@ pub async fn process_fids(
 
     let rmfids_size = llapi.rmfids_size();
 
-    let fids = fid_list.into_iter().map(|fi| fi.fid.clone());
+    let fids = fid_list.into_iter().map(|fi| fi.fid);
     stream::iter(fids)
         .chunks(rmfids_size)
         .map(|xs| Ok::<_, ImlAgentError>(xs.into_iter().collect()))

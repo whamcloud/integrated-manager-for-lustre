@@ -8,7 +8,6 @@ use crate::{
     task::ChromaCoreTask, Executable,
 };
 use diesel::{dsl, prelude::*};
-use serde_json;
 
 pub type Table = fidq::table;
 pub type WithFid = dsl::Eq<fidq::fid, LustreFid>;

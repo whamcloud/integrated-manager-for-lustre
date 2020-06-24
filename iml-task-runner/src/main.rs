@@ -196,7 +196,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let workers = available_workers(&orm_pool, activeclients.clone())
             .await
-            .unwrap_or(vec![]);
+            .unwrap_or_default();
         activeclients
             .lock()
             .await

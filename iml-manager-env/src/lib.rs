@@ -300,7 +300,7 @@ pub fn get_db_conn_hash() -> HashMap<String, String> {
     }
 
     // Convert executable name to application_name for Postgres
-    if let Some(x) = std::env::current_exe().unwrap_or("".into()).file_name() {
+    if let Some(x) = std::env::current_exe().unwrap_or_else(|_| "".into()).file_name() {
         xs.insert(
             "application_name".to_string(),
             x.to_string_lossy().to_string(),
