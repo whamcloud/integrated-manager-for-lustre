@@ -36,12 +36,6 @@ pub fn create() -> impl DaemonPlugin {
     }
 }
 
-/// Return socket address for a given mailbox
-pub fn socket_name(mailbox: &str) -> String {
-    let sock_dir = env::get_var("SOCK_DIR");
-    format!("{}/postman-{}.sock", sock_dir, mailbox)
-}
-
 impl std::fmt::Debug for PostOffice {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "PostOffice {{ {:?} }}", self.routes)
@@ -51,7 +45,7 @@ impl std::fmt::Debug for PostOffice {
 // Returned trigger should be dropped to cause route to stop
 fn start_route(mailbox: String) -> Trigger {
     let (trigger, tripwire) = Tripwire::new();
-    let addr = socket_name(&mailbox);
+    let addr = env::mailbox_sock(&mailbox);
 
     let rc = async move {
         // remove old unix socket
