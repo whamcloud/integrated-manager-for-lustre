@@ -563,26 +563,23 @@ mod tests {
     #[test_case(
         "simple_test",
         "fixtures/device-mds1.local-2034-pruned.json",
-        "fixtures/device-mds2.local-2033-pruned.json",
-        "mds1.local",
-        "mds2.local"
+        "fixtures/device-mds2.local-2033-pruned.json"
     )]
     #[test_case(
         "full_mds_test",
         "fixtures/device-mds1.local-2034.json",
-        "fixtures/device-mds2.local-2033.json",
-        "mds1.local",
-        "mds2.local"
+        "fixtures/device-mds2.local-2033.json"
     )]
     #[test_case(
         "full_oss_test",
         "fixtures/device-oss1.local-62.json",
-        "fixtures/device-oss2.local-61.json",
-        "oss1.local",
-        "oss2.local"
+        "fixtures/device-oss2.local-61.json"
     )]
-    fn test(test_name: &str, path1: &str, path2: &str, fqdn1: &str, fqdn2: &str) {
+    fn test(test_name: &str, path1: &str, path2: &str) {
         init_subscriber();
+
+        let fqdn1 = parse_fqdn(path1);
+        let fqdn2 = parse_fqdn(path2);
 
         let devices = deser_fixture(path1, path2, Fqdn(fqdn1.into()), Fqdn(fqdn2.into()));
 
@@ -597,11 +594,6 @@ mod tests {
             "fixtures/output-mds2.local-8-pruned.json",
             "fixtures/output-mds1.local-9-pruned.json",
             "fixtures/output-mds2.local-10-pruned.json",
-        ],
-        &[
-            "mds2.local",
-            "mds1.local",
-            "mds2.local"
         ]
     )]
     #[test_case(
@@ -610,11 +602,6 @@ mod tests {
             "fixtures/output-mds2.local-8.json",
             "fixtures/output-mds1.local-9.json",
             "fixtures/output-mds2.local-10.json",
-        ],
-        &[
-            "mds2.local",
-            "mds1.local",
-            "mds2.local"
         ]
     )]
     #[test_case(
@@ -626,14 +613,6 @@ mod tests {
             "fixtures/output-mds1.local-322.json",
             "fixtures/output-mds2.local-323.json",
             "fixtures/output-mds2.local-325.json",
-        ],
-        &[
-            "mds2.local",
-            "mds1.local",
-            "mds1.local",
-            "mds1.local",
-            "mds2.local",
-            "mds2.local",
         ]
     )]
     #[test_case(
@@ -645,21 +624,12 @@ mod tests {
             "fixtures/output-oss2.local-131.json",
             "fixtures/output-oss1.local-132.json",
             "fixtures/output-oss2.local-133.json",
-        ],
-        &[
-            "oss1.local",
-            "oss2.local",
-            "oss1.local",
-            "oss2.local",
-            "oss1.local",
-            "oss2.local",
         ]
     )]
-
-    fn test_2(test_name: &str, paths: &[&str], fqdns: &[&str]) {
+    fn test_2(test_name: &str, paths: &[&str]) {
         init_subscriber();
 
-        let fqdns: Vec<Fqdn> = fqdns.into_iter().map(|s| Fqdn(s.to_string())).collect();
+        let fqdns: Vec<Fqdn> = paths.into_iter().map(|s| parse_fqdn(s)).collect();
         let outputs = deser_fixture_2(paths, &fqdns);
 
         let mut incoming_devices = HashMap::new();
@@ -686,5 +656,36 @@ mod tests {
                 resolved_devices.insert(k, v);
             }
         }
+    }
+
+    fn parse_fqdn(filename: &str) -> Fqdn {
+        let mut components = 0;
+        let mut f = String::new();
+        let mut is_fqdn = false;
+        for c in filename.chars() {
+            if c == '-' {
+                is_fqdn = !is_fqdn;
+                components += 1;
+                if components >= 2 {
+                    break;
+                }
+            } else if is_fqdn {
+                f.push(c);
+            }
+        }
+        Fqdn(f)
+    }
+
+    #[test]
+    fn test_parse_fqdn() {
+        let s = "fixtures/output-oss1.local-126.json";
+        let f = parse_fqdn(s);
+
+        assert_eq!(f.0, "oss1.local");
+
+        let s = "fixtures/output-mds2.local-8-pruned.json";
+        let f = parse_fqdn(s);
+
+        assert_eq!(f.0, "mds2.local");
     }
 }
