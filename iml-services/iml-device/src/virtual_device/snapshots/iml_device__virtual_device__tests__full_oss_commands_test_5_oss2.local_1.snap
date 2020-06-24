@@ -1,0 +1,392 @@
+---
+source: iml-services/iml-device/src/virtual_device/mod.rs
+expression: c
+---
+{
+  "ScsiDevice": {
+    "serial": "3600140502285abb1d7942198966b06b7",
+    "scsi80": "SLIO-ORG ost18           02285abb-1d79-4219-8966-b06b7c8dbcde",
+    "major": "8",
+    "minor": "112",
+    "devpath": "/devices/platform/host4/session3/target4:0:0/4:0:0:17/block/sdh",
+    "size": 5368709120,
+    "filesystem_type": "mpath_member",
+    "fs_uuid": "13794713306198853913",
+    "fs_label": "ost9",
+    "paths": [
+      "/dev/disk/by-id/scsi-3600140502285abb1d7942198966b06b7",
+      "/dev/disk/by-id/wwn-0x600140502285abb1d7942198966b06b7",
+      "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-17",
+      "/dev/disk/by-label/ost9",
+      "/dev/disk/by-uuid/13794713306198853913",
+      "/dev/sdh"
+    ],
+    "mount": null,
+    "children": [
+      {
+        "Mpath": {
+          "devpath": "/devices/virtual/block/dm-3",
+          "serial": "3600140502285abb1d7942198966b06b7",
+          "scsi80": "SLIO-ORG ost18           02285abb-1d79-4219-8966-b06b7c8dbcde",
+          "dm_name": "mpathj",
+          "size": 5368709120,
+          "major": "253",
+          "minor": "3",
+          "filesystem_type": "zfs_member",
+          "fs_uuid": "13794713306198853913",
+          "fs_label": "ost9",
+          "paths": [
+            "/dev/mapper/mpathj",
+            "/dev/disk/by-id/dm-name-mpathj",
+            "/dev/disk/by-id/dm-uuid-mpath-3600140502285abb1d7942198966b06b7",
+            "/dev/disk/by-label/ost9",
+            "/dev/disk/by-uuid/13794713306198853913",
+            "/dev/dm-3"
+          ],
+          "children": [
+            {
+              "Zpool": {
+                "guid": 13794713306198853913,
+                "name": "ost9",
+                "health": "ONLINE",
+                "state": "ACTIVE",
+                "size": 5335154688,
+                "vdev": {
+                  "Root": {
+                    "children": [
+                      {
+                        "Disk": {
+                          "guid": 5444565101906766838,
+                          "state": "ONLINE",
+                          "path": "/dev/mapper/mpathj",
+                          "dev_id": "dm-uuid-mpath-3600140502285abb1d7942198966b06b7",
+                          "phys_path": null,
+                          "whole_disk": false,
+                          "is_log": false
+                        }
+                      }
+                    ],
+                    "spares": [],
+                    "cache": []
+                  }
+                },
+                "props": [],
+                "children": [
+                  {
+                    "Dataset": {
+                      "guid": 14128418477901190737,
+                      "name": "ost9/ost9",
+                      "kind": "filesystem",
+                      "props": [
+                        {
+                          "name": "name",
+                          "value": "ost9/ost9"
+                        },
+                        {
+                          "name": "type",
+                          "value": "filesystem"
+                        },
+                        {
+                          "name": "creation",
+                          "value": "1592914481"
+                        },
+                        {
+                          "name": "used",
+                          "value": "3624960"
+                        },
+                        {
+                          "name": "available",
+                          "value": "5164681728"
+                        },
+                        {
+                          "name": "referenced",
+                          "value": "3624960"
+                        },
+                        {
+                          "name": "compressratio",
+                          "value": "1.00x"
+                        },
+                        {
+                          "name": "mounted",
+                          "value": "no"
+                        },
+                        {
+                          "name": "quota",
+                          "value": "0"
+                        },
+                        {
+                          "name": "reservation",
+                          "value": "0"
+                        },
+                        {
+                          "name": "recordsize",
+                          "value": "1048576"
+                        },
+                        {
+                          "name": "mountpoint",
+                          "value": "/ost9/ost9"
+                        },
+                        {
+                          "name": "sharenfs",
+                          "value": "off"
+                        },
+                        {
+                          "name": "checksum",
+                          "value": "on"
+                        },
+                        {
+                          "name": "compression",
+                          "value": "off"
+                        },
+                        {
+                          "name": "atime",
+                          "value": "on"
+                        },
+                        {
+                          "name": "devices",
+                          "value": "on"
+                        },
+                        {
+                          "name": "exec",
+                          "value": "on"
+                        },
+                        {
+                          "name": "setuid",
+                          "value": "on"
+                        },
+                        {
+                          "name": "readonly",
+                          "value": "off"
+                        },
+                        {
+                          "name": "zoned",
+                          "value": "off"
+                        },
+                        {
+                          "name": "snapdir",
+                          "value": "hidden"
+                        },
+                        {
+                          "name": "aclinherit",
+                          "value": "restricted"
+                        },
+                        {
+                          "name": "createtxg",
+                          "value": "11"
+                        },
+                        {
+                          "name": "canmount",
+                          "value": "off"
+                        },
+                        {
+                          "name": "xattr",
+                          "value": "sa"
+                        },
+                        {
+                          "name": "copies",
+                          "value": "1"
+                        },
+                        {
+                          "name": "version",
+                          "value": "5"
+                        },
+                        {
+                          "name": "utf8only",
+                          "value": "off"
+                        },
+                        {
+                          "name": "normalization",
+                          "value": "none"
+                        },
+                        {
+                          "name": "casesensitivity",
+                          "value": "sensitive"
+                        },
+                        {
+                          "name": "vscan",
+                          "value": "off"
+                        },
+                        {
+                          "name": "nbmand",
+                          "value": "off"
+                        },
+                        {
+                          "name": "sharesmb",
+                          "value": "off"
+                        },
+                        {
+                          "name": "refquota",
+                          "value": "0"
+                        },
+                        {
+                          "name": "refreservation",
+                          "value": "0"
+                        },
+                        {
+                          "name": "guid",
+                          "value": "14128418477901190737"
+                        },
+                        {
+                          "name": "primarycache",
+                          "value": "all"
+                        },
+                        {
+                          "name": "secondarycache",
+                          "value": "all"
+                        },
+                        {
+                          "name": "usedbysnapshots",
+                          "value": "0"
+                        },
+                        {
+                          "name": "usedbydataset",
+                          "value": "3624960"
+                        },
+                        {
+                          "name": "usedbychildren",
+                          "value": "0"
+                        },
+                        {
+                          "name": "usedbyrefreservation",
+                          "value": "0"
+                        },
+                        {
+                          "name": "logbias",
+                          "value": "latency"
+                        },
+                        {
+                          "name": "dedup",
+                          "value": "off"
+                        },
+                        {
+                          "name": "mlslabel",
+                          "value": "none"
+                        },
+                        {
+                          "name": "sync",
+                          "value": "standard"
+                        },
+                        {
+                          "name": "dnodesize",
+                          "value": "auto"
+                        },
+                        {
+                          "name": "refcompressratio",
+                          "value": "1.00x"
+                        },
+                        {
+                          "name": "written",
+                          "value": "3624960"
+                        },
+                        {
+                          "name": "logicalused",
+                          "value": "1833984"
+                        },
+                        {
+                          "name": "logicalreferenced",
+                          "value": "1833984"
+                        },
+                        {
+                          "name": "volmode",
+                          "value": "default"
+                        },
+                        {
+                          "name": "filesystem_limit",
+                          "value": "18446744073709551615"
+                        },
+                        {
+                          "name": "snapshot_limit",
+                          "value": "18446744073709551615"
+                        },
+                        {
+                          "name": "filesystem_count",
+                          "value": "18446744073709551615"
+                        },
+                        {
+                          "name": "snapshot_count",
+                          "value": "18446744073709551615"
+                        },
+                        {
+                          "name": "snapdev",
+                          "value": "hidden"
+                        },
+                        {
+                          "name": "acltype",
+                          "value": "off"
+                        },
+                        {
+                          "name": "context",
+                          "value": "none"
+                        },
+                        {
+                          "name": "fscontext",
+                          "value": "none"
+                        },
+                        {
+                          "name": "defcontext",
+                          "value": "none"
+                        },
+                        {
+                          "name": "rootcontext",
+                          "value": "none"
+                        },
+                        {
+                          "name": "relatime",
+                          "value": "off"
+                        },
+                        {
+                          "name": "redundant_metadata",
+                          "value": "all"
+                        },
+                        {
+                          "name": "overlay",
+                          "value": "off"
+                        },
+                        {
+                          "name": "lustre:svname",
+                          "value": "zfsmo-OST0009"
+                        },
+                        {
+                          "name": "lustre:mgsnode",
+                          "value": "10.73.20.11@tcp:10.73.20.12@tcp"
+                        },
+                        {
+                          "name": "lustre:failover.node",
+                          "value": "10.73.20.22@tcp"
+                        },
+                        {
+                          "name": "lustre:flags",
+                          "value": "34"
+                        },
+                        {
+                          "name": "lustre:fsname",
+                          "value": "zfsmo"
+                        },
+                        {
+                          "name": "lustre:index",
+                          "value": "9"
+                        },
+                        {
+                          "name": "lustre:version",
+                          "value": "1"
+                        }
+                      ],
+                      "mount": null
+                    }
+                  }
+                ],
+                "mount": {
+                  "source": "ost9",
+                  "target": "/ost9",
+                  "fs_type": "zfs",
+                  "opts": "rw,xattr,noacl"
+                }
+              }
+            }
+          ],
+          "mount": null
+        }
+      }
+    ]
+  }
+}

@@ -636,6 +636,27 @@ mod tests {
             "mds2.local",
         ]
     )]
+    // FIXME: This test is failing because ost7/ost7 is only present on oss1.local, but not oss2.local
+    #[test_case(
+        "full_oss_commands_test",
+        &[
+            "fixtures/output-oss1.local-126.json",
+            "fixtures/output-oss2.local-127.json",
+            "fixtures/output-oss1.local-130.json",
+            "fixtures/output-oss2.local-131.json",
+            "fixtures/output-oss1.local-132.json",
+            "fixtures/output-oss2.local-133.json",
+        ],
+        &[
+            "oss1.local",
+            "oss2.local",
+            "oss1.local",
+            "oss2.local",
+            "oss1.local",
+            "oss2.local",
+        ]
+    )]
+
     fn test_2(test_name: &str, paths: &[&str], fqdns: &[&str]) {
         init_subscriber();
 

@@ -1,0 +1,52 @@
+---
+source: iml-services/iml-device/src/virtual_device/mod.rs
+expression: c
+---
+{
+  "ScsiDevice": {
+    "serial": "1ATA     VBOX HARDDISK                           VB0f128f57-092491b7",
+    "scsi80": "SATA     VBOX HARDDISK   VB0f128f57-092491b7",
+    "major": "8",
+    "minor": "0",
+    "devpath": "/devices/pci0000:00/0000:00:01.1/ata1/host0/target0:0:0/0:0:0:0/block/sda",
+    "size": 42949672960,
+    "filesystem_type": null,
+    "fs_uuid": null,
+    "fs_label": null,
+    "paths": [
+      "/dev/disk/by-id/ata-VBOX_HARDDISK_VB0f128f57-092491b7",
+      "/dev/disk/by-path/pci-0000:00:01.1-ata-1.0",
+      "/dev/sda"
+    ],
+    "mount": null,
+    "children": [
+      {
+        "Partition": {
+          "serial": "1ATA     VBOX HARDDISK                           VB0f128f57-092491b7",
+          "scsi80": "SATA     VBOX HARDDISK   VB0f128f57-092491b7",
+          "partition_number": 1,
+          "size": 42948624384,
+          "major": "8",
+          "minor": "1",
+          "devpath": "/devices/pci0000:00/0000:00:01.1/ata1/host0/target0:0:0/0:0:0:0/block/sda/sda1",
+          "filesystem_type": "xfs",
+          "fs_uuid": "38c59e02-29d1-45a0-bc15-28f771f62734",
+          "fs_label": null,
+          "paths": [
+            "/dev/disk/by-id/ata-VBOX_HARDDISK_VB0f128f57-092491b7-part1",
+            "/dev/disk/by-path/pci-0000:00:01.1-ata-1.0-part1",
+            "/dev/disk/by-uuid/38c59e02-29d1-45a0-bc15-28f771f62734",
+            "/dev/sda1"
+          ],
+          "mount": {
+            "source": "/dev/sda1",
+            "target": "/",
+            "fs_type": "xfs",
+            "opts": "rw,relatime,attr2,inode64,noquota"
+          },
+          "children": []
+        }
+      }
+    ]
+  }
+}
