@@ -26,59 +26,45 @@ dependencies = [
 
 [[package]]
 name = "amq-protocol"
-version = "5.1.0"
+version = "6.0.0-rc11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d896bf7bcb337452cb5b4c6e2fc32d804a4e3c088456233a6107f8ba81a0b75b"
+checksum = "87ef73bc41e9b11abddb726674222ead7cc7ca213792c4e6975b32d336a91fcd"
 dependencies = [
- "amq-protocol-codegen",
  "amq-protocol-tcp",
  "amq-protocol-types",
  "amq-protocol-uri",
  "cookie-factory",
- "nom 5.1.2",
-]
-
-[[package]]
-name = "amq-protocol-codegen"
-version = "5.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "574b355c842fd7c9338896552e85eb297d16ae3552921d17f7b746204ba4f3e0"
-dependencies = [
- "amq-protocol-types",
- "handlebars",
- "serde",
- "serde_json",
+ "nom 6.0.0-alpha1",
 ]
 
 [[package]]
 name = "amq-protocol-tcp"
-version = "5.1.0"
+version = "6.0.0-rc11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9daafd369c8f224b0c90ffc0d8c2c1bbb811e9e9e1b050a702dfef6d9e5add5f"
+checksum = "cd1d31f96067568d994879cc88dd76bee92dd87129dc6f11e22a0c0b29c5c32a"
 dependencies = [
  "amq-protocol-uri",
  "log 0.4.8",
- "mio 0.7.0",
  "tcp-stream",
 ]
 
 [[package]]
 name = "amq-protocol-types"
-version = "5.1.0"
+version = "6.0.0-rc11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e09bf15149a94d87348c6c8cc7c68de4353542a294eb69e9cb4884325cba888b"
+checksum = "77086efe0607b5ac2da723d3af9a087a2d7ba305d0010ae200aa4f548c330e34"
 dependencies = [
  "cookie-factory",
- "nom 5.1.2",
+ "nom 6.0.0-alpha1",
  "serde",
  "serde_json",
 ]
 
 [[package]]
 name = "amq-protocol-uri"
-version = "5.1.0"
+version = "6.0.0-rc11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be7bc8477f77dacaaf8ba07d7d168c36bf17f298d4670b4f91ce86d35f1e919a"
+checksum = "cc4f4f1813c1dbc0c4f8f7bee2bc0a2cf32ff63d5de12bca46aff68a33a13668"
 dependencies = [
  "percent-encoding",
  "url",
@@ -127,6 +113,12 @@ dependencies = [
  "serde",
  "serde_json",
 ]
+
+[[package]]
+name = "async-task"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c17772156ef2829aadc587461c7753af20b7e8db1529bc66855add962a3b35d3"
 
 [[package]]
 name = "async-trait"
@@ -507,6 +499,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "crossbeam-queue"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "774ba60a54c213d409d5353bda12d49cd68d14e45036a285234c8d6f91f92570"
+dependencies = [
+ "cfg-if",
+ "crossbeam-utils",
+ "maybe-uninit",
+]
+
+[[package]]
 name = "crossbeam-utils"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -547,6 +550,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b2466559f260f48ad25fe6317b3c8dac77b5bdb5763ac7d9d6103530663bc90"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "deadpool"
+version = "0.5.1"
+source = "git+https://github.com/bikeshedder/deadpool#2f8c2b28dd23f0763f9c0b3e6af94c068a08393c"
+dependencies = [
+ "async-trait",
+ "crossbeam-queue",
+ "num_cpus",
+ "tokio",
+]
+
+[[package]]
+name = "deadpool-lapin"
+version = "0.5.0"
+source = "git+https://github.com/bikeshedder/deadpool#2f8c2b28dd23f0763f9c0b3e6af94c068a08393c"
+dependencies = [
+ "async-trait",
+ "deadpool",
+ "futures",
+ "lapin",
+ "log 0.4.8",
 ]
 
 [[package]]
@@ -996,20 +1022,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "handlebars"
-version = "3.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b37819efea9045a64bf9e40983ee62e20b4e9f0b14aa293e53dde8ac7c517f91"
-dependencies = [
- "log 0.4.8",
- "pest",
- "pest_derive",
- "quick-error",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "headers"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1300,6 +1312,7 @@ dependencies = [
  "itertools 0.8.2",
  "serde",
  "serde_json",
+ "thiserror",
  "tokio",
  "tracing",
  "warp",
@@ -1491,6 +1504,7 @@ dependencies = [
  "futures",
  "futures-util",
  "iml-postgres",
+ "iml-rabbit",
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
@@ -1525,12 +1539,15 @@ dependencies = [
 name = "iml-rabbit"
 version = "0.3.0"
 dependencies = [
+ "deadpool-lapin",
  "futures",
  "iml-manager-env",
  "iml-wire-types",
  "lapin",
  "serde_json",
+ "thiserror",
  "tokio",
+ "tokio-amqp",
  "tracing",
  "warp",
 ]
@@ -1562,6 +1579,7 @@ dependencies = [
  "iml-wire-types",
  "serde",
  "serde_json",
+ "thiserror",
  "tracing",
 ]
 
@@ -1587,11 +1605,13 @@ version = "0.3.0"
 dependencies = [
  "futures",
  "iml-manager-env",
+ "iml-rabbit",
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
  "influx_db_client",
  "lustre_collector",
+ "thiserror",
  "tokio",
  "tracing",
  "url",
@@ -1842,19 +1862,18 @@ dependencies = [
 
 [[package]]
 name = "lapin"
-version = "0.34.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8932074120af0ddaf77672e903101f2e939fba36fd43e875196e58f7589304ee"
+checksum = "e8cea80315b4bf8f362dd1866242e51889fd78e0ac8ed954f8c718553779ab28"
 dependencies = [
  "amq-protocol",
- "amq-protocol-codegen",
+ "async-task",
  "crossbeam-channel",
  "futures-core",
  "log 0.4.8",
  "mio 0.7.0",
  "parking_lot",
  "pinky-swear",
- "serde_json",
 ]
 
 [[package]]
@@ -1977,12 +1996,6 @@ dependencies = [
  "serde_json",
  "serde_yaml",
 ]
-
-[[package]]
-name = "maplit"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 
 [[package]]
 name = "matchers"
@@ -2224,9 +2237,9 @@ dependencies = [
 
 [[package]]
 name = "nom"
-version = "5.1.2"
+version = "6.0.0-alpha1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ffb4262d26ed83a1c0a33a38fe2bb15797329c85770da05e6b828ddb782627af"
+checksum = "25020779544bf717b917323b42f23c9dbef1bd2b97b576df6484a0c8709705c6"
 dependencies = [
  "lexical-core",
  "memchr",
@@ -2363,53 +2376,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
 
 [[package]]
+name = "pem"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "59698ea79df9bf77104aefd39cc3ec990cb9693fb59c3b0a70ddf2646fdffb4b"
+dependencies = [
+ "base64 0.12.2",
+ "once_cell",
+ "regex",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
-
-[[package]]
-name = "pest"
-version = "2.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10f4872ae94d7b90ae48754df22fd42ad52ce740b8f370b03da4835417403e53"
-dependencies = [
- "ucd-trie",
-]
-
-[[package]]
-name = "pest_derive"
-version = "2.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "833d1ae558dc601e9a60366421196a8d94bc0ac980476d0b67e1d0988d72b2d0"
-dependencies = [
- "pest",
- "pest_generator",
-]
-
-[[package]]
-name = "pest_generator"
-version = "2.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99b8db626e31e5b81787b9783425769681b347011cc59471e33ea46d2ea0cf55"
-dependencies = [
- "pest",
- "pest_meta",
- "proc-macro2 1.0.18",
- "quote 1.0.7",
- "syn 1.0.33",
-]
-
-[[package]]
-name = "pest_meta"
-version = "2.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54be6e404f5317079812fc8f9f5279de376d8856929e21c184ecf6bbd692a11d"
-dependencies = [
- "maplit",
- "pest",
- "sha-1",
-]
 
 [[package]]
 name = "phf"
@@ -2502,9 +2483,9 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "pinky-swear"
-version = "1.7.0"
+version = "4.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ebd81d4c98559db07561aa46c79fa83c985efb7d60e5657ca9353c34774905e7"
+checksum = "5c1e26b89412ebb77b27ff1c04ab91568d572b0780e86800945a07df42eddbdf"
 dependencies = [
  "doc-comment",
  "log 0.4.8",
@@ -3425,13 +3406,14 @@ dependencies = [
 
 [[package]]
 name = "tcp-stream"
-version = "0.10.7"
+version = "0.19.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae73d8436406c3db72ee8c71afb734b8e9b35deb58ccda9fb9c76fc9111d0b90"
+checksum = "9be1176f6da7ecc64c24ee636ebad264eba7051ada9c5103aa3e99d49d88694c"
 dependencies = [
  "cfg-if",
  "mio 0.7.0",
  "native-tls",
+ "pem",
 ]
 
 [[package]]
@@ -3583,6 +3565,16 @@ dependencies = [
  "slab",
  "tokio-macros",
  "winapi 0.3.8",
+]
+
+[[package]]
+name = "tokio-amqp"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d413079912fe99555ab4e1f786d7303a1a5ea67f436ba7d1dce8fbb08578dd3"
+dependencies = [
+ "lapin",
+ "tokio",
 ]
 
 [[package]]
@@ -3805,12 +3797,6 @@ name = "typenum"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "373c8a200f9e67a0c95e62a4f52fbf80c23b4381c05a17845531982fa99e6b33"
-
-[[package]]
-name = "ucd-trie"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56dee185309b50d1f11bfedef0fe6d036842e3fb77413abef29f8f8d1c5d4c1c"
 
 [[package]]
 name = "unicase"

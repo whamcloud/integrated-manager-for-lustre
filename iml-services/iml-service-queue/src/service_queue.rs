@@ -4,45 +4,17 @@
 
 use futures::{future, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use iml_rabbit::{
-    basic_consume, connect_to_queue, connect_to_rabbit, purge_queue, BasicConsumeOptions,
-    Connection, ImlRabbitError,
+    basic_consume, connect_to_queue, purge_queue, BasicConsumeOptions, Channel, ImlRabbitError,
 };
 use iml_wire_types::{Fqdn, PluginMessage};
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ImlServiceQueueError {
-    ImlRabbitError(ImlRabbitError),
-    SerdeJsonError(serde_json::error::Error),
-}
-
-impl std::fmt::Display for ImlServiceQueueError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match *self {
-            ImlServiceQueueError::ImlRabbitError(ref err) => write!(f, "{}", err),
-            ImlServiceQueueError::SerdeJsonError(ref err) => write!(f, "{}", err),
-        }
-    }
-}
-
-impl std::error::Error for ImlServiceQueueError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match *self {
-            ImlServiceQueueError::ImlRabbitError(ref err) => Some(err),
-            ImlServiceQueueError::SerdeJsonError(ref err) => Some(err),
-        }
-    }
-}
-
-impl From<ImlRabbitError> for ImlServiceQueueError {
-    fn from(err: ImlRabbitError) -> Self {
-        ImlServiceQueueError::ImlRabbitError(err)
-    }
-}
-
-impl From<serde_json::error::Error> for ImlServiceQueueError {
-    fn from(err: serde_json::error::Error) -> Self {
-        ImlServiceQueueError::SerdeJsonError(err)
-    }
+    #[error(transparent)]
+    ImlRabbitError(#[from] ImlRabbitError),
+    #[error(transparent)]
+    SerdeJsonError(#[from] serde_json::error::Error),
 }
 
 /// Creates a consumer for an iml-service.
@@ -50,39 +22,38 @@ impl From<serde_json::error::Error> for ImlServiceQueueError {
 /// and then consume from it.
 ///
 /// This is expected to be called once during startup.
-pub fn consume_service_queue(
-    client: Connection,
-    name: &'static str,
-) -> impl Stream<Item = Result<PluginMessage, ImlServiceQueueError>> {
+pub async fn consume_service_queue<'a>(
+    ch: &Channel,
+    name: &'a str,
+) -> Result<
+    impl Stream<Item = Result<PluginMessage, ImlServiceQueueError>> + 'a,
+    ImlServiceQueueError,
+> {
     let name2 = name.to_string();
 
-    connect_to_queue(name.to_string(), client)
-        .map_err(ImlServiceQueueError::from)
-        .and_then(move |(c, q)| async {
-            let c = purge_queue(c, name2).await?;
+    let q = connect_to_queue(name.to_string(), ch).await?;
 
-            Ok((c, q))
-        })
-        .and_then(move |(c, q)| {
-            basic_consume(
-                c,
-                q,
-                name,
-                Some(BasicConsumeOptions {
-                    no_ack: true,
-                    ..BasicConsumeOptions::default()
-                }),
-            )
-            .map_err(ImlServiceQueueError::from)
-        })
-        .map_ok(|s| s.map_err(ImlServiceQueueError::from))
-        .try_flatten_stream()
-        .and_then(|m| {
-            tracing::debug!("Incoming message: {}", String::from_utf8_lossy(&m.data));
+    purge_queue(ch, name2).await?;
 
-            future::ready(serde_json::from_slice(&m.data).map_err(ImlServiceQueueError::from))
-        })
-        .boxed()
+    let s = basic_consume(
+        ch,
+        q,
+        name,
+        Some(BasicConsumeOptions {
+            no_ack: true,
+            ..BasicConsumeOptions::default()
+        }),
+    )
+    .await?
+    .map_err(ImlServiceQueueError::from)
+    .map_ok(|(_, x)| x)
+    .and_then(|m| {
+        tracing::debug!("Incoming message: {}", String::from_utf8_lossy(&m.data));
+
+        future::ready(serde_json::from_slice(&m.data).map_err(ImlServiceQueueError::from))
+    });
+
+    Ok(s)
 }
 
 /// Given an incoming message Return an `Option` of fqdn and body
@@ -101,12 +72,11 @@ pub fn into_deserialized<T: serde::de::DeserializeOwned>(
     Ok((fqdn, v))
 }
 
-pub fn consume_data<T: serde::de::DeserializeOwned + Send + 'static>(
-    queue_name: &'static str,
-) -> impl Stream<Item = Result<(Fqdn, T), ImlServiceQueueError>> {
-    connect_to_rabbit()
-        .map_err(ImlServiceQueueError::from)
-        .map_ok(move |client| consume_service_queue(client, queue_name))
+pub fn consume_data<'a, T: serde::de::DeserializeOwned + Send + 'a>(
+    ch: &'a Channel,
+    queue_name: &'a str,
+) -> impl Stream<Item = Result<(Fqdn, T), ImlServiceQueueError>> + 'a {
+    consume_service_queue(ch, queue_name)
         .try_flatten_stream()
         .try_filter_map(|x| future::ok(data_only(x)))
         .and_then(|x| future::ready(into_deserialized(x)))

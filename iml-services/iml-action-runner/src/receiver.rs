@@ -6,7 +6,8 @@ use crate::{
     data::{create_data_message, remove_action_in_flight, SessionToRpcs},
     Sessions, Shared,
 };
-use iml_rabbit::{send_message, Connection};
+use futures::TryFutureExt;
+use iml_rabbit::{create_channel, send_message, Connection, ImlRabbitError};
 use iml_wire_types::{ActionResult, Fqdn, Id, PluginMessage};
 
 pub static AGENT_TX_RUST: &str = "agent_tx_rust";
@@ -27,7 +28,7 @@ fn terminate_session(fqdn: &Fqdn, sessions: &mut Sessions, session_to_rpcs: &mut
 }
 
 async fn create_session(
-    client: Connection,
+    conn: Connection,
     sessions: Shared<Sessions>,
     rpcs: Shared<SessionToRpcs>,
     fqdn: Fqdn,
@@ -43,19 +44,31 @@ async fn create_session(
     if let Some(old_id) = maybe_old_id {
         if let Some(xs) = { rpcs.lock().await.remove(&old_id) } {
             for action_in_flight in xs.values() {
+                let ch = create_channel(&conn)
+                    .await
+                    .expect("Could not create channel");
+
                 let session_id = session_id.clone();
                 let fqdn = fqdn.clone();
                 let body = action_in_flight.action.clone();
 
                 let msg = create_data_message(session_id, fqdn, body);
 
-                let fut = send_message(client.clone(), "", AGENT_TX_RUST, msg);
+                tokio::spawn(
+                    async move {
+                        send_message(&ch, "", AGENT_TX_RUST, msg).await?;
 
-                tokio::spawn(async move {
-                    fut.await
-                        .unwrap_or_else(|e| tracing::error!("Got an error resending rpcs {:?}", e));
-                });
+                        iml_rabbit::close_channel(&ch).await?;
+
+                        Ok(())
+                    }
+                    .unwrap_or_else(|e: ImlRabbitError| {
+                        tracing::error!("Got an error resending rpcs {:?}", e)
+                    }),
+                );
             }
+
+            drop(conn);
 
             rpcs.lock().await.insert(session_id.clone(), xs);
         };
@@ -113,7 +126,7 @@ async fn handle_data(
 }
 
 pub async fn handle_agent_data(
-    client: Connection,
+    conn: Connection,
     m: PluginMessage,
     sessions: Shared<Sessions>,
     rpcs: Shared<SessionToRpcs>,
@@ -121,7 +134,7 @@ pub async fn handle_agent_data(
     match m {
         PluginMessage::SessionCreate {
             fqdn, session_id, ..
-        } => return create_session(client, sessions, rpcs, fqdn, session_id).await,
+        } => return create_session(conn, sessions, rpcs, fqdn, session_id).await,
         PluginMessage::SessionTerminate {
             fqdn, session_id, ..
         } => {
