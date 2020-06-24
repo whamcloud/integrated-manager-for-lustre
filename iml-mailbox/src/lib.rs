@@ -138,7 +138,7 @@ pub async fn ingest_data(
     let task = match get_task_by_name(&task, &pool).await? {
         Some(t) => t,
         None => {
-            tracing::info!("Task {} not found.  Creating.", task);
+            tracing::info!("Task {} not found", task);
 
             return Err(MailboxError::NotFound(format!("Failed to find {}", task)));
         }

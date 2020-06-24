@@ -121,7 +121,7 @@ async fn send_work(
         trans.execute(&s, &[&host_id, &task.id]).await?;
     }
 
-    let mut completed = fidlist.len();
+    let completed = fidlist.len();
     let mut failed = 0;
     let args = TaskAction(fsname, taskargs, fidlist);
 
@@ -141,7 +141,6 @@ async fn send_work(
                         tracing::debug!("Success {} on {}: {:?}", &action, &fqdn, data);
                         let errors: Vec<FidError> = serde_json::from_value(data)?;
                         failed += errors.len();
-                        completed -= errors.len();
 
                         if task.keep_failed {
                             let sql = "INSERT INTO chroma_core_fidtaskerror (fid, task, data, errno) VALUES ($1, $2, $3, $4)";
