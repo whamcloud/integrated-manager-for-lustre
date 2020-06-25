@@ -135,35 +135,26 @@ async fn send_work(
                 return trans.rollback().err_into().await;
             }
             Ok(res) => {
-                let agent_result: AgentResult = serde_json::from_value(res)?;
-                match agent_result {
-                    Ok(data) => {
-                        tracing::debug!("Success {} on {}: {:?}", &action, &fqdn, data);
-                        let errors: Vec<FidError> = serde_json::from_value(data)?;
-                        failed += errors.len();
+                tracing::debug!("Success {} on {}: {:?}", &action, &fqdn, data);
+                let errors: Vec<FidError> = serde_json::from_value(res)?;
+                failed += errors.len();
 
-                        if task.keep_failed {
-                            let sql = "INSERT INTO chroma_core_fidtaskerror (fid, task, data, errno) VALUES ($1, $2, $3, $4)";
-                            let s = trans.prepare(sql).await?;
-                            let task_id = task.id;
-                            for err in errors.iter() {
-                                if let Err(e) = trans
-                                    .execute(&s, &[&err.fid, &task_id, &err.data, &err.errno])
-                                    .await
-                                {
-                                    tracing::info!(
-                                        "Failed to insert fid error ({} : {}): {}",
-                                        err.fid,
-                                        err.errno,
-                                        e
-                                    );
-                                }
-                            }
+                if task.keep_failed {
+                    let sql = "INSERT INTO chroma_core_fidtaskerror (fid, task, data, errno) VALUES ($1, $2, $3, $4)";
+                    let s = trans.prepare(sql).await?;
+                    let task_id = task.id;
+                    for err in errors.iter() {
+                        if let Err(e) = trans
+                            .execute(&s, &[&err.fid, &task_id, &err.data, &err.errno])
+                            .await
+                        {
+                            tracing::info!(
+                                "Failed to insert fid error ({} : {}): {}",
+                                err.fid,
+                                err.errno,
+                                e
+                            );
                         }
-                    }
-                    Err(err) => {
-                        tracing::info!("Failed {} on {}: {}", &action, &fqdn, err);
-                        return trans.rollback().err_into().await;
                     }
                 }
             }
