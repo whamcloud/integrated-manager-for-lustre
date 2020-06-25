@@ -135,7 +135,7 @@ async fn send_work(
                 return trans.rollback().err_into().await;
             }
             Ok(res) => {
-                tracing::debug!("Success {} on {}: {:?}", &action, &fqdn, data);
+                tracing::debug!("Success {} on {}: {:?}", &action, &fqdn, res);
                 let errors: Vec<FidError> = serde_json::from_value(res)?;
                 failed += errors.len();
 

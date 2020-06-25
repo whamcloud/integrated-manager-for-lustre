@@ -7,7 +7,7 @@ use crate::{
     fidlist,
 };
 use futures::{
-    channel::mpsc, future::join_all, join, sink::SinkExt, stream, StreamExt, TryFutureExt,
+    channel::mpsc, future::join_all, sink::SinkExt, stream, StreamExt, TryFutureExt,
     TryStreamExt,
 };
 use iml_wire_types::{FidError, FidItem};
@@ -103,39 +103,39 @@ pub async fn process_fids(
 
     let (tx, rx) = mpsc::unbounded::<FidError>();
 
-    let warn = stream::iter(fid_list)
-        .chunks(1000)
-        .map(|xs| Ok::<_, ImlAgentError>(xs.into_iter().collect()))
-        .and_then(|xs: Vec<_>| {
-            let llapi = llapi.clone();
-            let tx = tx.clone();
-            async move {
-                let xs = join_all(
+    tokio::spawn(
+        stream::iter(fid_list)
+            .chunks(1000)
+            .map(|xs| Ok::<_, ImlAgentError>(xs.into_iter().collect()))
+            .and_then(move |xs: Vec<_>| {
+                let llapi = llapi.clone();
+                let tx = tx.clone();
+                async move {
+                    let xs = join_all(
                     xs.into_iter()
-                        .map(move |x| item2path(llapi.clone(), x, tx.clone())),
-                )
-                .await;
+                            .map(move |x| item2path(llapi.clone(), x, tx.clone())),
+                    )
+                        .await;
 
-                Ok(xs)
-            }
-        })
-        .inspect(|_| debug!("Resolved 1000 Fids"))
-        .map_ok(move |xs| {
-            xs.into_iter()
-                .filter_map(std::convert::identity)
-                .map(|x| format!("{}/{}", mntpt, x))
-                .collect()
-        })
-        .map_ok(|xs: Vec<String>| bytes::BytesMut::from(xs.join("\n").as_str()))
-        .map_ok(|mut x: bytes::BytesMut| {
-            if !x.is_empty() {
-                x.extend_from_slice(b"\n");
-            }
-            x.freeze()
-        })
-        .forward(f.sink_err_into());
-
-    let errs = rx.collect();
-
-    Ok(join!(warn, errs).1)
+                    Ok(xs)
+                }
+            })
+            .inspect(|_| debug!("Resolved 1000 Fids"))
+            .map_ok(move |xs| {
+                xs.into_iter()
+                    .filter_map(std::convert::identity)
+                    .map(|x| format!("{}/{}", mntpt, x))
+                    .collect()
+            })
+            .map_ok(|xs: Vec<String>| bytes::BytesMut::from(xs.join("\n").as_str()))
+            .map_ok(|mut x: bytes::BytesMut| {
+                if !x.is_empty() {
+                    x.extend_from_slice(b"\n");
+                }
+                x.freeze()
+            })
+            .forward(f.sink_err_into())
+    );
+    
+    Ok(rx.collect().await)
 }
