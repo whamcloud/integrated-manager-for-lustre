@@ -4,12 +4,16 @@ pub mod ssh;
 pub mod vagrant;
 
 use async_trait::async_trait;
-use iml_cmd::CmdError;
+use iml_cmd::{CheckedCommandExt, CmdError};
 use iml_systemd::SystemdError;
 use iml_wire_types::Branding;
 use ssh::create_iml_diagnostics;
-use std::{io, time::Duration};
-use tokio::{process::Command, time::delay_for};
+use std::{
+    io,
+    time::Duration,
+    time::{SystemTime, UNIX_EPOCH},
+};
+use tokio::{fs::canonicalize, process::Command, time::delay_for};
 
 pub struct SetupConfig {
     pub use_stratagem: bool,
@@ -158,14 +162,62 @@ impl ServerList for Vec<(String, &[&str])> {
     }
 }
 
+async fn create_sos_report() -> Result<(), CmdError> {
+    let mut x = Command::new("sh");
+
+    let path_buf = canonicalize("../vagrant/").await?;
+    let vagrant_path = path_buf.as_path().to_str().expect("Couldn't get path.");
+
+    x.current_dir(vagrant_path);
+
+    x.args(&["scripts/create_iml_diagnostics.sh"])
+        .checked_status()
+        .await?;
+
+    let now = SystemTime::now();
+    let ts = now.duration_since(UNIX_EPOCH).unwrap().as_millis();
+
+    let report_dir = format!("sosreport_{}", ts);
+    let mut mkdir = Command::new("mkdir");
+
+    mkdir
+        .current_dir(vagrant_path)
+        .arg(&report_dir)
+        .checked_status()
+        .await?;
+
+    let mut chmod = Command::new("chmod");
+    chmod
+        .current_dir(vagrant_path)
+        .arg("777")
+        .arg("-R")
+        .arg(report_dir)
+        .checked_status()
+        .await
+}
+
 #[async_trait]
 pub trait WithSos {
-    async fn handle_test_result(self, hosts: &[&str], prefix: &str) -> Result<(), SystemTestError>;
+    async fn handle_test_result(
+        self,
+        include_host: bool,
+        hosts: &[&str],
+        prefix: &str,
+    ) -> Result<(), SystemTestError>;
 }
 
 #[async_trait]
 impl<T: Into<SystemTestError> + Send> WithSos for Result<(), T> {
-    async fn handle_test_result(self, hosts: &[&str], prefix: &str) -> Result<(), SystemTestError> {
+    async fn handle_test_result(
+        self,
+        include_host: bool,
+        hosts: &[&str],
+        prefix: &str,
+    ) -> Result<(), SystemTestError> {
+        if include_host {
+            create_sos_report().await?;
+        }
+
         create_iml_diagnostics(hosts, prefix).await?;
 
         self.map_err(|e| e.into())

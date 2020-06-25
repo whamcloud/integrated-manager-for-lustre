@@ -28,6 +28,10 @@ async fn test_docker_ldiskfs_setup() -> Result<(), SystemTestError> {
 
     run_test(&config)
         .await
-        .handle_test_result(&config.storage_server_ips()[..], "docker_ldiskfs_test")
+        .handle_test_result(
+            true,
+            &config.storage_server_ips()[..],
+            "docker_ldiskfs_test",
+        )
         .await
 }

@@ -28,6 +28,7 @@ async fn test_ldiskfs_setup() -> Result<(), SystemTestError> {
     run_test(&config)
         .await
         .handle_test_result(
+            false,
             &vec![&config.manager_ip()[..], &config.storage_server_ips()[..]].concat()[..],
             "rpm_ldiskfs_test",
         )

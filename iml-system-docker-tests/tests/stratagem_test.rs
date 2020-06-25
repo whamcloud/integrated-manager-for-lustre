@@ -33,6 +33,7 @@ async fn test_docker_stratagem_setup() -> Result<(), SystemTestError> {
     run_test(&config)
         .await
         .handle_test_result(
+            true,
             &[
                 &config.storage_server_ips()[..],
                 &config.client_server_ips()[..],
