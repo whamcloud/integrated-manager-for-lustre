@@ -626,7 +626,20 @@ mod tests {
             "fixtures/output-oss2.local-133.json",
         ]
     )]
-    // TODO: Add a removal test
+    // We need entire sequence from the beginning - where devices get added.
+    // Otherwise we won't resolve shared devices because we're only looking at changes.
+    #[test_case(
+        "full_oss_removal_commands_test",
+        &[
+            "fixtures/output-oss2.local-1.json",
+            "fixtures/output-oss1.local-2.json",
+            "fixtures/output-oss1.local-6.json",
+            "fixtures/output-oss2.local-7.json",
+            "fixtures/output-oss2.local-8.json",
+            "fixtures/output-oss1.local-9.json",
+            "fixtures/output-oss2.local-10.json",
+        ]
+    )]
     fn test_2(test_name: &str, paths: &[&str]) {
         init_subscriber();
 

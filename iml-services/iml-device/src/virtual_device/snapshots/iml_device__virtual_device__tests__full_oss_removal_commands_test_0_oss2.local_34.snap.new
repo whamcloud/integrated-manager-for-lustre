@@ -1,0 +1,52 @@
+---
+source: iml-services/iml-device/src/virtual_device/mod.rs
+expression: c
+---
+{
+  "ScsiDevice": {
+    "serial": "36001405a5572d970ea7406ab6f78eccb",
+    "scsi80": "SLIO-ORG ost5            a5572d97-0ea7-406a-b6f7-8eccb928a4d6",
+    "major": "66",
+    "minor": "80",
+    "devpath": "/devices/platform/host5/session4/target5:0:0/5:0:0:4/block/sdal",
+    "size": 5368709120,
+    "filesystem_type": "mpath_member",
+    "fs_uuid": "17519314907227531020",
+    "fs_label": "ost14",
+    "paths": [
+      "/dev/disk/by-id/scsi-36001405a5572d970ea7406ab6f78eccb",
+      "/dev/disk/by-id/wwn-0x6001405a5572d970ea7406ab6f78eccb",
+      "/dev/disk/by-path/ip-10.73.40.10:3260-iscsi-iqn.2015-01.com.whamcloud.lu:oss-lun-4",
+      "/dev/disk/by-label/ost14",
+      "/dev/disk/by-uuid/17519314907227531020",
+      "/dev/sdal"
+    ],
+    "mount": null,
+    "children": [
+      {
+        "Mpath": {
+          "devpath": "/devices/virtual/block/dm-16",
+          "serial": "36001405a5572d970ea7406ab6f78eccb",
+          "scsi80": "SLIO-ORG ost5            a5572d97-0ea7-406a-b6f7-8eccb928a4d6",
+          "dm_name": "mpatho",
+          "size": 5368709120,
+          "major": "253",
+          "minor": "16",
+          "filesystem_type": "zfs_member",
+          "fs_uuid": "17519314907227531020",
+          "fs_label": "ost14",
+          "paths": [
+            "/dev/mapper/mpatho",
+            "/dev/disk/by-id/dm-name-mpatho",
+            "/dev/disk/by-id/dm-uuid-mpath-36001405a5572d970ea7406ab6f78eccb",
+            "/dev/disk/by-label/ost14",
+            "/dev/disk/by-uuid/17519314907227531020",
+            "/dev/dm-16"
+          ],
+          "children": [],
+          "mount": null
+        }
+      }
+    ]
+  }
+}
