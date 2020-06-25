@@ -30,6 +30,7 @@ pub enum ImlActionClientError {
     SerdeJsonError(#[from] serde_json::error::Error),
 }
 
+#[derive(Clone)]
 enum ClientWrapper {
     Http(Client<HttpConnector>),
     Unix(Client<UnixConnector>),
@@ -62,29 +63,13 @@ fn connect_uri() -> Result<hyper::Uri, ImlActionClientError> {
     }
 }
 
-pub async fn invoke_rust_agent(
-    host: impl Into<Fqdn> + Clone,
-    command: impl Into<ActionName>,
-    args: impl serde::Serialize,
+async fn build_invoke_rust_agent(
+    host: impl Into<Fqdn> + Clone + Send,
+    command: impl Into<ActionName> + Send,
+    args: impl serde::Serialize + Send,
+    client: ClientWrapper,
+    request_id: String,
 ) -> Result<serde_json::Value, ImlActionClientError> {
-    match invoke_rust_agent_cancelable(host, command, args) {
-        Ok((_, fut)) => fut.await,
-        Err(e) => Err(e),
-    }
-}
-
-pub fn invoke_rust_agent_cancelable(
-    host: impl Into<Fqdn> + Clone,
-    command: impl Into<ActionName>,
-    args: impl serde::Serialize,
-) -> Result<
-    (
-        oneshot::Sender<()>,
-        impl Future<Output = Result<serde_json::Value, ImlActionClientError>>,
-    ),
-    ImlActionClientError,
-> {
-    let request_id = Uuid::new_v4().to_hyphenated().to_string();
     let uri = connect_uri()?;
 
     let action = ActionType::Remote((
@@ -96,8 +81,6 @@ pub fn invoke_rust_agent_cancelable(
         },
     ));
 
-    let client = client();
-
     let req = Request::builder()
         .method(hyper::Method::POST)
         .header(hyper::header::ACCEPT, "application/json")
@@ -105,19 +88,50 @@ pub fn invoke_rust_agent_cancelable(
         .uri(&uri)
         .body(Body::from(serde_json::to_string(&action)?))?;
 
-    let post = client
+    client
         .request(req)
         .err_into()
         .and_then(|resp| hyper::body::aggregate(resp).err_into())
         .map_ok(|body| {
             serde_json::from_reader(body.reader()).unwrap_or_else(|_| serde_json::json!("[]"))
         })
-        .boxed();
+        .await
+}
+
+pub async fn invoke_rust_agent(host: impl Into<Fqdn> + Clone + Send,
+    command: impl Into<ActionName> + Send,
+    args: impl serde::Serialize + Send,
+) -> Result<serde_json::Value, ImlActionClientError> {
+    let client = client();
+    let request_id = Uuid::new_v4().to_hyphenated().to_string();
+
+    build_invoke_rust_agent(host, command, args, client, request_id).await
+}
+
+pub fn invoke_rust_agent_cancelable(
+    host: impl Into<Fqdn> + Clone + Send,
+    command: impl Into<ActionName> + Send,
+    args: impl serde::Serialize + Send,
+) -> Result<
+    (
+        oneshot::Sender<()>,
+        impl Future<Output = Result<serde_json::Value, ImlActionClientError>>,
+    ),
+    ImlActionClientError,
+> {
+    let client = client();
+    let request_id = Uuid::new_v4().to_hyphenated().to_string();
+
+    let host2 = host.clone();
+    let client2 = client.clone();
+    let request_id2 = request_id.clone();
+
+    let post = build_invoke_rust_agent(host, command, args, client, request_id);
 
     let (p, c) = oneshot::channel::<()>();
 
     let fut = async move {
-        let either = future::select(c, post).await;
+        let either = future::select(c, post.boxed()).await;
 
         match either {
             Either::Left((x, f)) => {
@@ -125,18 +139,19 @@ pub fn invoke_rust_agent_cancelable(
                     return f.await;
                 }
                 let cancel = ActionType::Remote((
-                    host.into(),
+                    host2.into(),
                     Action::ActionCancel {
-                        id: ActionId(request_id),
+                        id: ActionId(request_id2),
                     },
                 ));
+                let uri = connect_uri()?;
                 let req = Request::builder()
                     .method("POST")
                     .uri(&uri)
                     .body(Body::from(serde_json::to_string(&cancel)?));
 
                 if let Ok(req) = req {
-                    let _rc = client.request(req).await;
+                    let _rc = client2.request(req).await;
                 }
                 Err(ImlActionClientError::CancelledRequest)
             }
