@@ -6,7 +6,10 @@ use crate::{
     agent_error::{ImlAgentError, RequiredError},
     fidlist,
 };
-use futures::{future::join_all, sink::SinkExt, stream, StreamExt, TryFutureExt, TryStreamExt};
+use futures::{
+    channel::mpsc, future::join_all, join, sink::SinkExt, stream, StreamExt, TryFutureExt,
+    TryStreamExt,
+};
 use iml_wire_types::{FidError, FidItem};
 use liblustreapi::LlapiFid;
 use std::{collections::HashMap, io};
@@ -37,19 +40,32 @@ async fn search_rootpath(device: String) -> Result<LlapiFid, ImlAgentError> {
         .and_then(std::convert::identity)
 }
 
-async fn item2path(llapi: LlapiFid, fi: FidItem) -> Option<String> {
-    let pfids: Vec<fidlist::LinkEA> = serde_json::from_value(fi.data).unwrap_or(vec![]);
+async fn item2path(
+    llapi: LlapiFid,
+    fi: FidItem,
+    mut tx: mpsc::UnboundedSender<FidError>,
+) -> Option<String> {
+    let pfids: Vec<fidlist::LinkEA> = serde_json::from_value(fi.data.clone()).unwrap_or(vec![]);
 
-    let path = if let Some(pfid) = pfids.get(0) {
-        format!(
-            "{}/{}",
-            fid2path(llapi, pfid.pfid.clone()).await?,
-            pfid.name
-        )
+    for pfid in pfids.iter() {
+        if let Some(path) = fid2path(llapi.clone(), pfid.pfid.clone()).await {
+            return Some(format!("{}/{}", path, pfid.name));
+        }
+    }
+
+    if let Some(path) = fid2path(llapi.clone(), fi.fid.clone()).await {
+        Some(path)
     } else {
-        fid2path(llapi.clone(), fi.fid).await?
-    };
-    Some(path)
+        let _rc = tx
+            .send(FidError {
+                fid: fi.fid.clone(),
+                data: fi.data.clone(),
+                errno: 2,
+            })
+            .await;
+
+        None
+    }
 }
 
 pub fn write_records(
@@ -85,14 +101,20 @@ pub async fn process_fids(
 
     let mntpt = llapi.mntpt();
 
-    stream::iter(fid_list)
+    let (tx, rx) = mpsc::unbounded::<FidError>();
+
+    let warn = stream::iter(fid_list)
         .chunks(1000)
         .map(|xs| Ok::<_, ImlAgentError>(xs.into_iter().collect()))
         .and_then(|xs: Vec<_>| {
             let llapi = llapi.clone();
-
+            let tx = tx.clone();
             async move {
-                let xs = join_all(xs.into_iter().map(move |x| item2path(llapi.clone(), x))).await;
+                let xs = join_all(
+                    xs.into_iter()
+                        .map(move |x| item2path(llapi.clone(), x, tx.clone())),
+                )
+                .await;
 
                 Ok(xs)
             }
@@ -111,7 +133,9 @@ pub async fn process_fids(
             }
             x.freeze()
         })
-        .forward(f.sink_err_into())
-        .await?;
-    Ok(vec![])
+        .forward(f.sink_err_into());
+
+    let errs = rx.collect();
+
+    Ok(join!(warn, errs).1)
 }
