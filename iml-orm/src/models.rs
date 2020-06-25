@@ -14,7 +14,7 @@ use serde_json;
     feature = "postgres-interop",
     derive(Debug, PartialEq, FromSqlRow, AsExpression)
 )]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 #[cfg_attr(feature = "postgres-interop", sql_type = "SqlLustreFid")]
 pub struct LustreFid {
     pub seq: u64,
@@ -541,12 +541,25 @@ pub struct ChromaCoreFailbacktargetjob {
     derive(Queryable, Debug, Insertable, Identifiable)
 )]
 #[derive(serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_fidtaskerror")]
+pub struct ChromaCoreFidtaskerror {
+    pub id: i32,
+    pub fid: LustreFid,
+    pub data: serde_json::Value,
+    pub errno: i16,
+    pub task_id: i32,
+}
+
+#[cfg_attr(
+    feature = "postgres-interop",
+    derive(Queryable, Debug, Insertable, Identifiable)
+)]
+#[derive(serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_fidtaskqueue")]
 pub struct ChromaCoreFidtaskqueue {
     pub id: i32,
     pub fid: LustreFid,
     pub data: serde_json::Value,
-    pub errno: i16,
     pub task_id: i32,
 }
 
