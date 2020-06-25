@@ -67,7 +67,7 @@ class LustreClientMount(DeletableStatefulObject):
             except ManagedFilesystem.DoesNotExist:
                 pass
 
-            # If the host is is removed, the
+            # If the host is removed, the
             # mount should follow.
             deps.append(
                 DependOn(
