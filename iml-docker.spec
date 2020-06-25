@@ -24,7 +24,7 @@ Requires: sed
 
 %install
 rm -rf %{buildroot}
-mkdir -p %{buildroot}%{_sysconfdir}/iml-docker/setup
+mkdir -p %{buildroot}%{_sysconfdir}/iml-docker/setup/branding
 mkdir -p %{buildroot}%{_tmppath}
 mkdir -p %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
