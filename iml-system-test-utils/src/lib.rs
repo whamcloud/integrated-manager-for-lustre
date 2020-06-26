@@ -163,11 +163,19 @@ impl ServerList for Vec<(String, &[&str])> {
     }
 }
 
-// rm -f /var/tmp/*sosreport*
-// sosreport --batch
-// cd /var/tmp || exit 1
-// for f in *sosreport*.tar.xz; do mv "$f" "$PREFIX"_"$f"; done
+async fn is_dep_available(dep: &str) -> Result<bool, CmdError> {
+    let mut rpm = Command::new("rpm");
+    let result = rpm.args(&["-q", &dep]).checked_status().await;
+
+    Ok(result.is_ok())
+}
+
 async fn create_sos_report(prefix: &str) -> Result<(), CmdError> {
+    if !is_dep_available("sos").await? {
+        eprintln!("Sos package not available on host.");
+        return Ok(());
+    }
+
     let path_buf = canonicalize("../vagrant/").await?;
     let vagrant_path = path_buf.as_path().to_str().expect("Couldn't get path.");
 
