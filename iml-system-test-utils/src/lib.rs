@@ -4,12 +4,13 @@ pub mod ssh;
 pub mod vagrant;
 
 use async_trait::async_trait;
+use futures::future::try_join_all;
 use iml_cmd::{CheckedCommandExt, CmdError};
 use iml_systemd::SystemdError;
 use iml_wire_types::Branding;
 use ssh::create_iml_diagnostics;
 use std::{
-    io,
+    io, str,
     time::Duration,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -162,17 +163,13 @@ impl ServerList for Vec<(String, &[&str])> {
     }
 }
 
-async fn create_sos_report() -> Result<(), CmdError> {
-    let mut x = Command::new("sh");
-
+// rm -f /var/tmp/*sosreport*
+// sosreport --batch
+// cd /var/tmp || exit 1
+// for f in *sosreport*.tar.xz; do mv "$f" "$PREFIX"_"$f"; done
+async fn create_sos_report(prefix: &str) -> Result<(), CmdError> {
     let path_buf = canonicalize("../vagrant/").await?;
     let vagrant_path = path_buf.as_path().to_str().expect("Couldn't get path.");
-
-    x.current_dir(vagrant_path);
-
-    x.args(&["scripts/create_iml_diagnostics.sh"])
-        .checked_status()
-        .await?;
 
     let now = SystemTime::now();
     let ts = now.duration_since(UNIX_EPOCH).unwrap().as_millis();
@@ -191,9 +188,47 @@ async fn create_sos_report() -> Result<(), CmdError> {
         .current_dir(vagrant_path)
         .arg("777")
         .arg("-R")
-        .arg(report_dir)
+        .arg(&report_dir)
         .checked_status()
-        .await
+        .await?;
+
+    let mut rm = Command::new("rm");
+    rm.args(&["-f", "/var/tmp/*sosreport*"])
+        .checked_status()
+        .await?;
+
+    let mut sosreport = Command::new("sosreport");
+    sosreport.arg("--batch").checked_status().await?;
+
+    let mut find_reports = Command::new("find");
+    let reports_output = find_reports
+        .args(&["/var/tmp", "-name", "*sosreport*.tar.xz", "-printf", "%f\n"])
+        .checked_output()
+        .await?;
+
+    let reports = str::from_utf8(&reports_output.stdout)
+        .expect("Couldn't get output.")
+        .lines()
+        .collect::<Vec<&str>>();
+
+    let xs = reports.into_iter().map(|name| {
+        let report_directory = &report_dir;
+        async move {
+            let mut mv = Command::new("mv");
+            mv.args(&[
+                format!("/var/tmp/{}", name),
+                format!("{}/{}_{}", &report_directory, prefix, name),
+            ])
+            .checked_output()
+            .await?;
+
+            Ok::<(), CmdError>(())
+        }
+    });
+
+    try_join_all(xs).await?;
+
+    Ok(())
 }
 
 #[async_trait]
@@ -215,7 +250,7 @@ impl<T: Into<SystemTestError> + Send> WithSos for Result<(), T> {
         prefix: &str,
     ) -> Result<(), SystemTestError> {
         if include_host {
-            create_sos_report().await?;
+            create_sos_report("docker_host").await?;
         }
 
         create_iml_diagnostics(hosts, prefix).await?;
