@@ -98,7 +98,8 @@ async fn build_invoke_rust_agent(
         .await
 }
 
-pub async fn invoke_rust_agent(host: impl Into<Fqdn> + Clone + Send,
+pub async fn invoke_rust_agent(
+    host: impl Into<Fqdn> + Clone + Send,
     command: impl Into<ActionName> + Send,
     args: impl serde::Serialize + Send,
 ) -> Result<serde_json::Value, ImlActionClientError> {

@@ -7,8 +7,7 @@ use crate::{
     fidlist,
 };
 use futures::{
-    channel::mpsc, future::join_all, sink::SinkExt, stream, StreamExt, TryFutureExt,
-    TryStreamExt,
+    channel::mpsc, future::join_all, sink::SinkExt, stream, StreamExt, TryFutureExt, TryStreamExt,
 };
 use iml_wire_types::{FidError, FidItem};
 use liblustreapi::LlapiFid;
@@ -112,10 +111,10 @@ pub async fn process_fids(
                 let tx = tx.clone();
                 async move {
                     let xs = join_all(
-                    xs.into_iter()
+                        xs.into_iter()
                             .map(move |x| item2path(llapi.clone(), x, tx.clone())),
                     )
-                        .await;
+                    .await;
 
                     Ok(xs)
                 }
@@ -134,8 +133,8 @@ pub async fn process_fids(
                 }
                 x.freeze()
             })
-            .forward(f.sink_err_into())
+            .forward(f.sink_err_into()),
     );
-    
+
     Ok(rx.collect().await)
 }

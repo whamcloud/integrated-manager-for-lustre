@@ -4,10 +4,9 @@
 
 //! # Mailbox processor
 //!
-//! This crate allows N incoming writers to stream data to a known
-//! file-backed address concurrently.
+//! This crate allows N incoming writers to stream data to a single database table concurrently.
 //!
-//! Data has the requirement that is line-delimited so writes can be processed
+//! Data has the requirement that it is line-delimited json so writes can be processed
 //! concurrently
 
 use futures::{lock::Mutex, Stream, TryFutureExt, TryStreamExt};

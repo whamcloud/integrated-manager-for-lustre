@@ -5,6 +5,7 @@
 use bytes::Buf;
 use futures::{
     channel::{mpsc, oneshot},
+    future::try_join,
     stream::BoxStream,
     Future, Stream, StreamExt, TryStreamExt,
 };
@@ -122,11 +123,9 @@ async fn get_task_by_name(
     Task::by_name(x).first_async(pool).await.optional()
 }
 
-/// Given an task name and `mpsc::UnboundedReceiver` handle,
-/// this fn will create or open an existing file in append mode.
-///
-/// It will then write any incoming lines from the passed `mpsc::UnboundedReceiver`
-/// to that file.
+/// Given an task name and `mpsc::UnboundedReceiver` handle, this fn
+/// will process incoming lines and write them into FidTaskQueue
+/// associating the new item with the existing named task.
 pub async fn ingest_data(
     task: String,
     mut rx: mpsc::UnboundedReceiver<Incoming>,
@@ -143,8 +142,6 @@ pub async fn ingest_data(
             return Err(MailboxError::NotFound(format!("Failed to find {}", task)));
         }
     };
-
-    let mut count: i64 = 0;
 
     while let Some(incoming) = rx.next().await {
         match incoming {
@@ -165,11 +162,12 @@ pub async fn ingest_data(
                     };
 
                     tracing::trace!("Inserting fid:{:?} data:{:?} task:{:?}", fid, data, task);
-                    insert_fidtask(fid, data, &task)
-                        .execute_async(&pool)
-                        .await?;
 
-                    count += 1;
+                    let ft1 = insert_fidtask(fid, data, &task).execute_async(&pool);
+
+                    let ft2 = task::increase_total(task.id, 1).execute_async(&pool);
+
+                    try_join(ft1, ft2).await?;
                 } else {
                     tracing::error!("No FID for task {} in line {:?}", &task.name, &line);
                 }
@@ -179,10 +177,6 @@ pub async fn ingest_data(
             }
         }
     }
-
-    task::increase_total(task.id, count)
-        .execute_async(&pool)
-        .await?;
 
     Ok(())
 }
