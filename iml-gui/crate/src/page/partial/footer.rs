@@ -17,9 +17,9 @@ pub fn view(conf: &Conf) -> impl View<Msg> {
         ),
         _ => {
             if let Some(version) = &conf.exa_version {
-                format!("DDN EXAScaler v{} ", version)
+                format!("© 2020 - DDN EXAScaler v{} ", version)
             } else {
-                "DDN EXAScaler ".to_string()
+                "© 2020 - DDN EXAScaler ".to_string()
             }
         }
     };
