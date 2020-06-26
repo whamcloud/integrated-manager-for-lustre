@@ -217,7 +217,10 @@ async fn create_sos_report(prefix: &str) -> Result<(), CmdError> {
             let mut mv = Command::new("mv");
             mv.args(&[
                 format!("/var/tmp/{}", name),
-                format!("{}/{}/{}_{}", &vagrant_path, &report_directory, prefix, name),
+                format!(
+                    "{}/{}/{}_{}",
+                    &vagrant_path, &report_directory, prefix, name
+                ),
             ])
             .checked_output()
             .await?;
