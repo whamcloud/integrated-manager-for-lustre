@@ -78,6 +78,25 @@ async fn send_work(
 
     tracing::debug!("send_work({}, {}, {})", fqdn, fsname, task.name);
 
+    if task.single_runner && task.running_on_id.is_none() {
+        tracing::debug!(
+            "Attempting to Set Task {} ({}) Running to host {} ({})",
+            task.name,
+            task.id,
+            fqdn,
+            host_id
+        );
+        let rc = task::set_running_on(task.id, host_id)
+            .execute_async(orm_pool)
+            .await?;
+        if rc == 1 {
+            tracing::info!("Set Task {} ({}) running on host {} ({})", task.name, task.id, fqdn, host_id);
+        } else {
+            tracing::debug!("Failed to Set host {} as running for task {}", fqdn, task.name);
+            return Ok(0);
+        }
+    }
+
     let trans = client.transaction().await?;
 
     let sql = "DELETE FROM chroma_core_fidtaskqueue WHERE id in ( SELECT id FROM chroma_core_fidtaskqueue WHERE task_id = $1 LIMIT $2 FOR UPDATE SKIP LOCKED ) RETURNING *";
@@ -108,19 +127,6 @@ async fn send_work(
             }
         })
         .collect();
-
-    if task.single_runner && task.running_on_id.is_none() {
-        tracing::debug!(
-            "Setting Task {} ({}) Running to host {} ({})",
-            task.name,
-            task.id,
-            fqdn,
-            host_id
-        );
-        let sql = "UPDATE chroma_core_task SET running_on_id = $1 WHERE id = $2";
-        let s = trans.prepare(sql).await?;
-        trans.execute(&s, &[&host_id, &task.id]).await?;
-    }
 
     let completed = fidlist.len();
     let mut failed = 0;

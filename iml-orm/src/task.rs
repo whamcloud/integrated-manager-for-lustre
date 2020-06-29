@@ -15,10 +15,12 @@ use std::{fmt, io::Write};
 
 pub type Table = task::table;
 pub type WithId = dsl::Eq<task::id, i32>;
+pub type WithIdNoRO = dsl::And<WithId, dsl::IsNotNull<task::running_on_id>>;
 pub type WithName = dsl::Eq<task::name, String>;
 pub type WithFs = dsl::Eq<task::filesystem_id, i32>;
 pub type WithOutState = dsl::NotEq<task::state, String>;
 pub type ById = dsl::Filter<task::table, WithId>;
+pub type ByIdNoRO = dsl::Filter<task::table, WithIdNoRO>;
 pub type ByName = dsl::Filter<task::table, WithName>;
 pub type OutgestHost = dsl::Filter<
     task::table,
@@ -69,11 +71,17 @@ impl ChromaCoreTask {
     pub fn with_id(id: i32) -> WithId {
         task::id.eq(id)
     }
+    pub fn with_id_no_ro(id: i32) -> WithIdNoRO {
+        task::id.eq(id).and(task::running_on_id.is_not_null())
+    }
     pub fn with_fs(fs_id: i32) -> WithFs {
         task::filesystem_id.eq(fs_id)
     }
     pub fn without_state(state: TaskState) -> WithOutState {
         task::state.ne(state.to_string())
+    }
+    pub fn by_id_no_ro(id: i32) -> ByIdNoRO {
+        task::table.filter(Self::with_id_no_ro(id))
     }
     pub fn by_id(id: i32) -> ById {
         task::table.filter(Self::with_id(id))
@@ -92,6 +100,11 @@ impl ChromaCoreTask {
             ),
         )
     }
+}
+
+pub fn set_running_on(task_id: i32, host_id: i32) -> impl Executable {
+    diesel::update(ChromaCoreTask::by_id_no_ro(task_id))
+        .set(task::running_on_id.eq(host_id))
 }
 
 pub fn increase_total(task_id: i32, amount: i64) -> impl Executable {
