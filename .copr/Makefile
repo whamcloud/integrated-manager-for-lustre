@@ -135,3 +135,30 @@ iml-gui-srpm:
 
 	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
 	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)
+
+device-scanner-srpm: 
+	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
+
+	mkdir -p ${TMPDIR}/release/iml-device-scanner
+	rm -rf ${BUILDROOT}/_topdir
+
+	cd device-scanner; \
+	cargo build --release; \
+	cp {device-scanner-daemon,mount-emitter,zed-enhancer}/systemd-units/* \
+		{zed-enhancer,uevent-listener}/udev-rules/* \
+		target/release/device-scanner-daemon \
+		target/release/{history_event,pool_create,pool_destroy,pool_export,pool_import,vdev_add}-scanner \
+		target/release/mount-emitter \
+		target/release/uevent-listener \
+		target/release/zed-enhancer \
+		${TMPDIR}/release/iml-device-scanner
+
+
+	tar -czvf ${TMPDIR}/_topdir/SOURCES/iml-device-scanner.tar.gz -C ${TMPDIR}/release/iml-device-scanner .
+	cp device-scanner/iml-device-scanner.spec ${TMPDIR}/_topdir/SPECS/
+
+	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/iml-device-scanner.spec
+
+	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
+	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)
+	rm -rf ${TMPDIR}
