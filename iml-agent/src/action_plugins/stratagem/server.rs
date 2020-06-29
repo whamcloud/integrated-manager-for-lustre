@@ -378,7 +378,7 @@ pub async fn trigger_scan(
 ///
 /// It will *not* stream data for processing
 pub async fn trigger_scan_single(
-    data: StratagemConfig,
+    _data: StratagemConfig,
 ) -> Result<(String, StratagemResult, MailboxFiles), ImlAgentError> {
     let id = Uuid::new_v4().to_hyphenated().to_string();
 
