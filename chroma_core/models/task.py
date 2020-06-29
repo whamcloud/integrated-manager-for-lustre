@@ -126,6 +126,11 @@ class RemoveTaskJob(AdvertisedJob):
 
         return steps
 
+    def on_success(self):
+        self.task.finish = django.utils.timezone.now()
+        self.task.state = "removed"
+        self.task.save()
+
 
 class RemoveTaskStep(Step):
     def run(self, args):

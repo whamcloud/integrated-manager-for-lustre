@@ -1972,10 +1972,6 @@ class JobScheduler(object):
             task = Task.objects.get(pk=task_id)
 
             with transaction.atomic():
-                task.finish = django.utils.timezone.now()
-                task.state = "removed"
-                task.save()
-
                 cmds = [{"class_name": "RemoveTaskJob", "args": {"task": task}}]
 
                 command_id = self.CommandPlan.command_run_jobs(cmds, help_text["create_task"],)
