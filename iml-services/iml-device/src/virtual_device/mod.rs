@@ -14,8 +14,10 @@ use device_types::{
         Dataset, Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup,
         Zpool,
     },
+    mount::MountCommand,
+    udev::UdevCommand,
     zed::PoolCommand,
-    Command,
+    Command, uevent::UEvent,
 };
 use diesel::{self, pg::upsert::excluded, prelude::*};
 use im::OrdSet;
@@ -184,11 +186,109 @@ fn transform_commands_to_changes(commands: &[Command]) -> ChangesMap {
                     _ => {}
                 }
             }
+            Command::MountCommand(mc) => {
+                tracing::info!("Got MountCommand");
+                match mc {
+                    MountCommand::AddMount(mount_point, device_path, fs_type, mount_opts) => {
+                        tracing::debug!("AddMount: {:?}", mount_point);
+                    }
+                    MountCommand::RemoveMount(mount_point, device_path, fs_type, mount_opts) => {
+                        tracing::debug!("RemoveMount: {:?}", mount_point);
+                    }
+                    MountCommand::ReplaceMount(
+                        mount_point,
+                        device_path,
+                        fs_type,
+                        mount_opts_1,
+                        mount_opts_2,
+                    ) => {
+                        tracing::debug!("ReplaceMount: {:?}", mount_point);
+                    }
+                    MountCommand::MoveMount(
+                        mount_point_1,
+                        device_path,
+                        fs_type,
+                        mount_opts,
+                        mount_point_2,
+                    ) => {
+                        tracing::debug!("MoveMount: {:?}", mount_point_1);
+                    }
+                }
+            }
+            Command::UdevCommand(uc) => {
+                tracing::info!("Got UdevCommand");
+                match uc {
+                    UdevCommand::Add(ue) => {
+                        tracing::debug!(
+                            "Add serial: {:?}, scsi80: {:?}, scsi83: {:?}, lv_uuid: {:?}, vg_uuid: {:?}, md_uuid: {:?}",
+                            ue.serial,
+                            ue.scsi80,
+                            ue.scsi83,
+                            ue.lv_uuid,
+                            ue.vg_uuid,
+                            ue.md_uuid,
+                        );
+
+                        let id = get_id_from_uevent(ue);
+
+                        id.map(|i| {
+                            results.insert(i.clone(), Change::Upsert(i));
+                        });
+                    }
+                    UdevCommand::Change(ue) => {
+                        tracing::debug!(
+                            "Change serial: {:?}, scsi80: {:?}, scsi83: {:?}, lv_uuid: {:?}, vg_uuid: {:?}, md_uuid: {:?}",
+                            ue.serial,
+                            ue.scsi80,
+                            ue.scsi83,
+                            ue.lv_uuid,
+                            ue.vg_uuid,
+                            ue.md_uuid,
+                        );
+
+                        let id = get_id_from_uevent(ue);
+
+                        id.map(|i| {
+                            results.insert(i.clone(), Change::Upsert(i));
+                        });
+                    }
+                    UdevCommand::Remove(ue) => {
+                        tracing::debug!(
+                            "Remove serial: {:?}, scsi80: {:?}, scsi83: {:?}, lv_uuid: {:?}, vg_uuid: {:?}, md_uuid: {:?}",
+                            ue.serial,
+                            ue.scsi80,
+                            ue.scsi83,
+                            ue.lv_uuid,
+                            ue.vg_uuid,
+                            ue.md_uuid,
+                        );
+
+                        let id = get_id_from_uevent(ue);
+
+                        id.map(|i| {
+                            results.insert(i.clone(), Change::Remove(i));
+                        });
+                    }
+                }
+            }
             _ => {}
         }
     }
 
     results
+}
+
+// XXX: This probably has to prioritise some IDs, because we have VG and LV ids in same event
+fn get_id_from_uevent(ue: &UEvent) -> Option<Id> {
+    if let Some(ref md) = ue.md_uuid {
+        Some(Id::MdRaidUuid(md.clone()))
+    } else if let Some(ref vg) = ue.vg_uuid {
+        Some(Id::VolumeGroupUuid(vg.clone()))
+    } else if let Some(ref lv) = ue.lv_uuid { 
+        Some(Id::LogicalVolumeUuid(lv.clone()))
+    } else {
+        None
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
