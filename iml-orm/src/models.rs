@@ -506,14 +506,6 @@ pub struct ChromaCoreDevice {
     pub devices: serde_json::Value,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "postgres-interop", derive(Insertable))]
-#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_device")]
-pub struct NewChromaCoreDevice {
-    pub fqdn: String,
-    pub devices: serde_json::Value,
-}
-
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "postgres-interop", primary_key(job_ptr_id))]

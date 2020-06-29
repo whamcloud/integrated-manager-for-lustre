@@ -17,6 +17,7 @@ _topdir
 *.swp
 **/.vagrant
 **/*.rs.bk
+**/.env
 *~
 artifacts
 base.repo
