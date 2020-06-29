@@ -76,11 +76,10 @@ async fn send_work(
 ) -> Result<i64, error::ImlTaskRunnerError> {
     let taskargs: HashMap<String, String> = serde_json::from_value(task.args.clone())?;
 
-    tracing::debug!("send_work({}, {}, {})", fqdn, fsname, task.name);
-
+    // Setup running_on if unset
     if task.single_runner && task.running_on_id.is_none() {
         tracing::debug!(
-            "Attempting to Set Task {} ({}) Running to host {} ({})",
+            "Attempting to Set Task {} ({}) running_on to host {} ({})",
             task.name,
             task.id,
             fqdn,
@@ -92,10 +91,12 @@ async fn send_work(
         if rc == 1 {
             tracing::info!("Set Task {} ({}) running on host {} ({})", task.name, task.id, fqdn, host_id);
         } else {
-            tracing::debug!("Failed to Set host {} as running for task {}", fqdn, task.name);
+            tracing::debug!("Failed to Set Task {} running_on to host {}: {}", task.name, fqdn, rc);
             return Ok(0);
         }
     }
+
+    tracing::debug!("send_work({}, {}, {})", fqdn, fsname, task.name);
 
     let trans = client.transaction().await?;
 

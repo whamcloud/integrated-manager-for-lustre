@@ -15,12 +15,13 @@ use std::{fmt, io::Write};
 
 pub type Table = task::table;
 pub type WithId = dsl::Eq<task::id, i32>;
-pub type WithIdNoRO = dsl::And<WithId, dsl::IsNotNull<task::running_on_id>>;
+pub type WithOutRunOn = dsl::IsNull<task::running_on_id>;
+pub type WithIdNoRunOn = dsl::And<WithId, WithOutRunOn>;
 pub type WithName = dsl::Eq<task::name, String>;
 pub type WithFs = dsl::Eq<task::filesystem_id, i32>;
 pub type WithOutState = dsl::NotEq<task::state, String>;
 pub type ById = dsl::Filter<task::table, WithId>;
-pub type ByIdNoRO = dsl::Filter<task::table, WithIdNoRO>;
+pub type ByIdNoRunOn = dsl::Filter<task::table, WithIdNoRunOn>;
 pub type ByName = dsl::Filter<task::table, WithName>;
 pub type OutgestHost = dsl::Filter<
     task::table,
@@ -28,7 +29,7 @@ pub type OutgestHost = dsl::Filter<
         WithOutState,
         dsl::And<
             WithFs,
-            dsl::Or<dsl::IsNull<task::running_on_id>, dsl::Eq<task::running_on_id, i32>>,
+            dsl::Or<WithOutRunOn, dsl::Eq<task::running_on_id, i32>>,
         >,
     >,
 >;
@@ -71,8 +72,8 @@ impl ChromaCoreTask {
     pub fn with_id(id: i32) -> WithId {
         task::id.eq(id)
     }
-    pub fn with_id_no_ro(id: i32) -> WithIdNoRO {
-        task::id.eq(id).and(task::running_on_id.is_not_null())
+    pub fn with_id_no_ro(id: i32) -> WithIdNoRunOn {
+        task::id.eq(id).and(task::running_on_id.is_null())
     }
     pub fn with_fs(fs_id: i32) -> WithFs {
         task::filesystem_id.eq(fs_id)
@@ -80,7 +81,7 @@ impl ChromaCoreTask {
     pub fn without_state(state: TaskState) -> WithOutState {
         task::state.ne(state.to_string())
     }
-    pub fn by_id_no_ro(id: i32) -> ByIdNoRO {
+    pub fn by_id_no_runon(id: i32) -> ByIdNoRunOn {
         task::table.filter(Self::with_id_no_ro(id))
     }
     pub fn by_id(id: i32) -> ById {
@@ -103,7 +104,7 @@ impl ChromaCoreTask {
 }
 
 pub fn set_running_on(task_id: i32, host_id: i32) -> impl Executable {
-    diesel::update(ChromaCoreTask::by_id_no_ro(task_id))
+    diesel::update(ChromaCoreTask::by_id_no_runon(task_id))
         .set(task::running_on_id.eq(host_id))
 }
 
