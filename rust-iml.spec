@@ -106,7 +106,7 @@ Obsoletes: iml-device-scanner-proxy
 %{_tmpfilesdir}/iml-agent.conf
 
 %post agent
-systemctl preset rust-iml-agent.path
+%systemd_post rust-iml-agent.path
 %tmpfiles_create %{_tmpfilesdir}/iml-agent.conf
 
 %preun agent
@@ -125,7 +125,7 @@ Group: System Environment/Libraries
 %{summary}
 
 %post agent-comms
-systemctl preset iml-agent-comms.service
+%systemd_post iml-agent-comms.service
 
 %preun agent-comms
 %systemd_preun iml-agent-comms.service
@@ -146,7 +146,7 @@ Group: System Environment/Libraries
 %{summary}
 
 %post api
-systemctl preset iml-api.service
+%systemd_post iml-api.service
 
 %preun api
 %systemd_preun iml-api.service
@@ -167,8 +167,8 @@ Group: System Environment/Libraries
 %{summary}
 
 %post action-runner
-systemctl preset iml-action-runner.socket
-systemctl preset iml-action-runner.service
+%systemd_post iml-action-runner.socket
+%systemd_post iml-action-runner.service
 
 %preun action-runner
 %systemd_preun iml-action-runner.socket
@@ -193,7 +193,7 @@ Requires: rust-iml-agent-comms
 %{summary}
 
 %post ostpool
-systemctl preset iml-ostpool.service
+%systemd_post iml-ostpool.service
 
 %preun ostpool
 %systemd_preun iml-ostpool.service
@@ -215,7 +215,7 @@ Requires: rust-iml-agent-comms
 %{summary}
 
 %post stats
-systemctl preset iml-rust-stats.service
+%systemd_post iml-rust-stats.service
 
 %preun stats
 %systemd_preun iml-rust-stats.service
@@ -236,7 +236,7 @@ Group: System Environment/Libraries
 %{summary}
 
 %post warp-drive
-systemctl preset iml-warp-drive.service
+%systemd_post iml-warp-drive.service
 
 %preun warp-drive
 %systemd_preun iml-warp-drive.service
@@ -257,7 +257,7 @@ Group: System Environment/Libraries
 %{summary}
 
 %post mailbox
-systemctl preset iml-mailbox.service
+%systemd_post iml-mailbox.service
 
 %preun mailbox
 %systemd_preun mailbox.service
@@ -279,7 +279,7 @@ Group: System Environment/Libraries
 %{summary}
 
 %post ntp
-systemctl preset iml-ntp.service
+%systemd_post iml-ntp.service
 
 %preun ntp
 %systemd_preun iml-ntp.service
@@ -301,7 +301,7 @@ Requires: rust-iml-agent-comms
 %{summary}
 
 %post postoffice
-systemctl preset iml-postoffice.service
+%systemd_post iml-postoffice.service
 
 %preun postoffice
 %systemd_preun iml-postoffice.service
@@ -322,7 +322,7 @@ Group: System Environment/Libraries
 %{summary}
 
 %post sfa
-systemctl preset iml-sfa.service
+%systemd_post iml-sfa.service
 
 %preun sfa
 %systemd_preun iml-sfa.service
@@ -344,7 +344,7 @@ Requires: rust-iml-agent-comms
 %{summary}
 
 %post device
-systemctl preset iml-device.service
+%systemd_post iml-device.service
 
 %preun device
 %systemd_preun iml-device.service
