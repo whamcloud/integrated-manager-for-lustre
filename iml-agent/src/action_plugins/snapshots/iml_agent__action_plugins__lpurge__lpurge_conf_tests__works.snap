@@ -6,7 +6,7 @@ device=lima-OST0010
 dryrun=true
 freehi=123
 freelo=60
-listen_socket=/run/iml/postman-foobar.sock
+listen_socket=foobar
 max_jobs=0
 pool=lima.santiago
 
