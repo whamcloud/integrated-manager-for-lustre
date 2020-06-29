@@ -5,6 +5,7 @@
 from django.db import models
 from django.db.models import CASCADE, SET_NULL
 from django.contrib.postgres.fields import ArrayField, JSONField
+import django.utils.timezone
 
 from chroma_core.lib.job import DependOn, DependAll, Step
 from chroma_core.models import ManagedFilesystem, ManagedHost
