@@ -247,6 +247,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let orm_pool = orm_pool.clone();
                         let fsname = fsname.clone();
                         let fqdn = fqdn.clone();
+
+			tracing::info!("try_join_all 2");
+
                         async move {
                             let mut count = 0;
                             loop {
