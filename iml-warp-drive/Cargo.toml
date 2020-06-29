@@ -7,14 +7,17 @@ version = "0.4.0"
 [dependencies]
 futures = "0.3"
 im = {version = "15.0", features = ["serde"]}
+iml-action-client = {path = "../iml-action-client", version = "0.1"}
 iml-manager-client = {path = "../iml-manager-client", version = "0.4"}
 iml-manager-env = {path = "../iml-manager-env", version = "0.4"}
 iml-postgres = {path = "../iml-postgres", version = "0.4"}
 iml-rabbit = {path = "../iml-rabbit", version = "0.4"}
+iml-state-machine = {path = "../iml-state-machine", version = "0.1"}
 iml-tracing = {version = "0.3", path = "../iml-tracing"}
 iml-wire-types = {path = "../iml-wire-types", version = "0.4", features = ["postgres-interop"]}
 serde = {version = "1", features = ["derive"]}
 serde_json = "1.0"
+thiserror = "1.0"
 tokio = {version = "0.2", features = ["macros", "rt-threaded"]}
 tokio-runtime-shutdown = {path = "../tokio-runtime-shutdown", version = "0.4"}
 tracing = "0.1"

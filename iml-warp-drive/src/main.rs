@@ -8,14 +8,12 @@ use iml_postgres::get_db_pool;
 use iml_warp_drive::{
     cache::{populate_from_api, populate_from_db, SharedCache},
     error, listen,
-    locks::{self, create_locks_consumer, Locks},
+    locks::{self, create_locks_consumer, SharedLocks},
     users,
 };
 use iml_wire_types::warp_drive::{Cache, Message};
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use warp::Filter;
-
-type SharedLocks = Arc<Mutex<Locks>>;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -28,6 +26,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let lock_state: SharedLocks = Arc::new(Mutex::new(im::hashmap! {}));
 
     let api_cache_state: SharedCache = Arc::new(Mutex::new(Cache::default()));
+
+    let job_states = Arc::new(Mutex::new(HashMap::new()));
 
     // Clone here to allow SSE route to get a ref.
     let user_state2 = Arc::clone(&user_state);
@@ -79,11 +79,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Started listening to NOTIFY events");
 
-    {
-        let pool = get_db_pool(2).await?;
+    let pg_pool = get_db_pool(4).await?;
 
-        populate_from_db(Arc::clone(&api_cache_state3), &pool).await?;
-    }
+    tokio::spawn(iml_state_machine::run_jobs(
+        iml_action_client::Client::default(),
+        pg_pool.clone(),
+        Arc::clone(&job_states),
+    ));
+
+    populate_from_db(Arc::clone(&api_cache_state3), &pg_pool).await?;
 
     let pool = iml_rabbit::connect_to_rabbit(1);
 
@@ -138,42 +142,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }),
     );
 
-    // GET -> messages stream
-    let routes = warp::get()
-        .and(warp::any().map(move || Arc::clone(&user_state2)))
-        .and(warp::any().map(move || Arc::clone(&lock_state2)))
-        .and(warp::any().map(move || Arc::clone(&api_cache_state2)))
-        .and_then(
-            |users: users::SharedUsers, locks: SharedLocks, api_cache: SharedCache| {
-                tracing::debug!("Inside user route");
-
-                async move {
-                    // reply using server-sent events
-                    let stream = users::user_connected(
-                        users,
-                        locks.lock().await.clone(),
-                        api_cache.lock().await.clone(),
-                    )
-                    .await;
-
-                    Ok::<_, error::ImlWarpDriveError>(warp::sse::reply(
-                        warp::sse::keep_alive().stream(stream),
-                    ))
-                }
-                .map_err(warp::reject::custom)
-            },
-        )
-        .with(warp::log("iml-warp-drive::api"));
-
     let addr = iml_manager_env::get_warp_drive_addr();
 
     tracing::info!("Listening on {}", addr);
 
-    let (_, fut) = warp::serve(routes).bind_with_graceful_shutdown(
-        addr,
-        tokio_runtime_shutdown::when_finished(&valve)
-            .then(move |_| users::disconnect_all_users(user_state3)),
-    );
+    let messaging_route =
+        iml_warp_drive::messaging::route(user_state2, Arc::clone(&api_cache_state2), lock_state2);
+
+    let state_machine_routes =
+        iml_warp_drive::state_machine::route(api_cache_state2, job_states, pg_pool);
+
+    let (_, fut) = warp::serve(messaging_route.or(state_machine_routes))
+        .bind_with_graceful_shutdown(
+            addr,
+            tokio_runtime_shutdown::when_finished(&valve)
+                .then(move |_| users::disconnect_all_users(user_state3)),
+        );
 
     fut.await;
 

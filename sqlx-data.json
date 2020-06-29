@@ -195,6 +195,27 @@
       "nullable": []
     }
   },
+  "0b1ae42a49266622456c9c8b5fa836054b0bc0258d3bab66cdb4e130665547ef": {
+    "query": "SELECT id FROM snapshot WHERE snapshot_name = $1 AND filesystem_name = $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "1167f9862155b35e2bb59ba77286ccfc35c7f6113227d8dce116b3def418e2f9": {
     "query": "\n        INSERT INTO chroma_core_sfastoragesystem\n        (\n            uuid,\n            platform,\n            health_state_reason,\n            health_state,\n            child_health_state\n        )\n        VALUES ($1, $2, $3, $4, $5)\n        ON CONFLICT (uuid) DO UPDATE\n        SET\n            platform = excluded.platform,\n            health_state_reason = excluded.health_state_reason,\n            health_state = excluded.health_state,\n            child_health_state = excluded.child_health_state\n    ",
     "describe": {
@@ -342,6 +363,32 @@
         ]
       },
       "nullable": [
+        false
+      ]
+    }
+  },
+  "158e5a5a3a32a58a0487c92e8f05ef0bcdc16d6c4ae1e9d3016a66d2836a2f36": {
+    "query": "SELECT filesystem_name, snapshot_name FROM snapshot WHERE id = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "filesystem_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "snapshot_name",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false,
         false
       ]
     }
@@ -2836,6 +2883,31 @@
       ]
     }
   },
+  "9557d6d9a74d1ad2d597c1f786dbcc7c6a3be86535a7c781d4a707ae2b88dd00": {
+    "query": "\n                    UPDATE job\n                    SET\n                        state = $1,\n                        end_time = now()\n                ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          {
+            "Custom": {
+              "name": "machine_state",
+              "kind": {
+                "Enum": [
+                  "pending",
+                  "progress",
+                  "failed",
+                  "succeeded",
+                  "cancelled"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "nullable": []
+    }
+  },
   "9a4c05da9d9233e6b3fa63ca2f50cf90feb0c305b1cc05e0eb2edcf2572db4ba": {
     "query": "select * from chroma_core_volume where not_deleted = 't'",
     "describe": {
@@ -3304,6 +3376,28 @@
       "parameters": {
         "Left": [
           "TextArray"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "b0795a0f0b333b7bd65f5a336b62463aa30a6c1b4e23079d1057c11fe416fbde": {
+    "query": "\n            INSERT INTO job (command_id, job, wait_for_jobs, locked_records)\n            VALUES ($1, $2, array[]::int[], $3)\n            RETURNING id\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Jsonb",
+          "JsonbArray"
         ]
       },
       "nullable": [
@@ -4387,6 +4481,69 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "ea4c0d5efc5eb5fb0db892f9236e98688edea23676210d0b3e6a29a4c733a9ba": {
+    "query": "\n        INSERT INTO command (message)\n        VALUES ($1)\n        RETURNING id, start_time, end_time, state as \"state: CurrentState\", message, jobs\n    ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "start_time",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 2,
+          "name": "end_time",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 3,
+          "name": "state: CurrentState",
+          "type_info": {
+            "Custom": {
+              "name": "machine_state",
+              "kind": {
+                "Enum": [
+                  "pending",
+                  "progress",
+                  "failed",
+                  "succeeded",
+                  "cancelled"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "ordinal": 4,
+          "name": "message",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 5,
+          "name": "jobs",
+          "type_info": "Int4Array"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        false
+      ]
     }
   },
   "ec70b9a5caeadc31f5d1359737cc1c6da64e41db8315a81d81420d3b37b182c5": {

@@ -11,6 +11,7 @@ use crate::{
     },
     sfa::{SfaController, SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem},
     snapshot::{SnapshotInterval, SnapshotRecord, SnapshotRetention},
+    state_machine::{self, State},
     Alert, CompositeId, EndpointNameSelf, Filesystem, Host, Label, LockChange, Target,
     TargetConfParam, ToCompositeId,
 };
@@ -671,6 +672,96 @@ impl Deref for RecordId {
             | Self::Volume(x)
             | Self::VolumeNode(x)
             | Self::LnetConfiguration(x) => x,
+        }
+    }
+}
+
+impl RecordId {
+    pub fn to_state(&self, cache: &Cache) -> Option<State> {
+        match self {
+            RecordId::Snapshot(id) => {
+                let snap = cache.snapshot.get(&id)?;
+
+                let snap = if snap.mounted == Some(true) {
+                    State::Snapshot(state_machine::snapshot::State::Mounted)
+                } else {
+                    State::Snapshot(state_machine::snapshot::State::Unmounted)
+                };
+
+                Some(snap)
+            }
+            _ => None,
+        }
+    }
+}
+
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
+pub enum RecordType {
+    ActiveAlert,
+    ContentType,
+    CorosyncConfiguration,
+    Filesystem,
+    Group,
+    Host,
+    LnetConfiguration,
+    ManagedTargetMount,
+    OstPool,
+    OstPoolOsts,
+    PacemakerConfiguration,
+    SfaDiskDrive,
+    SfaEnclosure,
+    SfaStorageSystem,
+    SfaJob,
+    SfaPowerSupply,
+    SfaController,
+    StratagemConfig,
+    Snapshot,
+    SnapshotInterval,
+    SnapshotRetention,
+    Target,
+    User,
+    UserGroup,
+    Volume,
+    VolumeNode,
+}
+
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLInputObject))]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
+pub struct GraphqlRecordId {
+    pub r#type: RecordType,
+    pub id: i32,
+}
+
+impl From<GraphqlRecordId> for RecordId {
+    fn from(GraphqlRecordId { r#type, id }: GraphqlRecordId) -> Self {
+        match r#type {
+            RecordType::ActiveAlert => RecordId::ActiveAlert(id),
+            RecordType::ContentType => RecordId::ContentType(id),
+            RecordType::CorosyncConfiguration => RecordId::CorosyncConfiguration(id),
+            RecordType::Filesystem => RecordId::Filesystem(id),
+            RecordType::Group => RecordId::Group(id),
+            RecordType::Host => RecordId::Host(id),
+            RecordType::LnetConfiguration => RecordId::LnetConfiguration(id),
+            RecordType::ManagedTargetMount => RecordId::ManagedTargetMount(id),
+            RecordType::OstPool => RecordId::OstPool(id),
+            RecordType::OstPoolOsts => RecordId::OstPoolOsts(id),
+            RecordType::PacemakerConfiguration => RecordId::PacemakerConfiguration(id),
+            RecordType::SfaDiskDrive => RecordId::SfaDiskDrive(id),
+            RecordType::SfaEnclosure => RecordId::SfaEnclosure(id),
+            RecordType::SfaStorageSystem => RecordId::SfaStorageSystem(id),
+            RecordType::SfaJob => RecordId::SfaJob(id),
+            RecordType::SfaPowerSupply => RecordId::SfaPowerSupply(id),
+            RecordType::SfaController => RecordId::SfaController(id),
+            RecordType::StratagemConfig => RecordId::StratagemConfig(id),
+            RecordType::Snapshot => RecordId::Snapshot(id),
+            RecordType::SnapshotInterval => RecordId::SnapshotInterval(id),
+            RecordType::SnapshotRetention => RecordId::SnapshotRetention(id),
+            RecordType::Target => RecordId::Target(id),
+            RecordType::User => RecordId::User(id),
+            RecordType::UserGroup => RecordId::UserGroup(id),
+            RecordType::Volume => RecordId::Volume(id),
+            RecordType::VolumeNode => RecordId::VolumeNode(id),
         }
     }
 }

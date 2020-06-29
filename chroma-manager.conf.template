@@ -238,7 +238,16 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_http_version 1.1;
         proxy_set_header Connection '';
-        proxy_pass {{WARP_DRIVE_PROXY_PASS}};
+        proxy_pass {{WARP_DRIVE_PROXY_PASS}}/messaging;
+    }
+
+    location /state_machine {
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_http_version 1.1;
+        proxy_set_header Connection '';
+        proxy_pass {{WARP_DRIVE_PROXY_PASS}}/state_machine;
     }
 
     location /mailbox {

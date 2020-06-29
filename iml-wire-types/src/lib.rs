@@ -8,6 +8,7 @@ pub mod graphql_duration;
 pub mod high_availability;
 pub mod sfa;
 pub mod snapshot;
+pub mod state_machine;
 pub mod stratagem;
 pub mod task;
 pub mod warp_drive;

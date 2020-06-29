@@ -7,7 +7,9 @@ pub mod db_record;
 pub mod error;
 pub mod listen;
 pub mod locks;
+pub mod messaging;
 pub mod request;
+pub mod state_machine;
 pub mod users;
 
 pub use db_record::*;
