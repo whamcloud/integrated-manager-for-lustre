@@ -14,7 +14,7 @@ use web_sys::HtmlDocument;
 #[derive(Default)]
 pub struct Model {
     session: Option<Session>,
-    pub state: State,
+    state: State,
     request_controller: Option<fetch::RequestController>,
     cancel: Option<oneshot::Sender<()>>,
 }
@@ -42,9 +42,9 @@ impl Default for State {
 pub enum Msg {
     Fetch,
     Fetched(fetch::FetchObject<Session>),
-    SetSession(Session),
+    Logout,
+    LoggedIn,
     Loop,
-    Stop,
     Noop,
 }
 
@@ -57,13 +57,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             let request = fetch_session().controller(|controller| model.request_controller = Some(controller));
 
             orders.skip().perform_cmd(request.fetch_json(Msg::Fetched));
-        }
-        Msg::SetSession(session) => {
-            if session.needs_login() {
-                orders.send_g_msg(GMsg::RouteChange(Route::Login.into()));
-            }
-
-            model.session = Some(session);
         }
         Msg::Fetched(data) => {
             match data.response() {
@@ -95,6 +88,19 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 }
             };
         }
+        Msg::LoggedIn => {
+            orders.skip();
+            orders.send_msg(Msg::Fetch);
+            orders.send_g_msg(GMsg::RouteChange(Route::Dashboard.into()));
+        }
+
+        Msg::Logout => {
+            orders.perform_g_cmd(
+                fetch_session()
+                    .method(fetch::Method::Delete)
+                    .fetch(|_| GMsg::AuthProxy(Box::new(Msg::LoggedIn))),
+            );
+        }
         Msg::Loop => {
             orders.skip();
 
@@ -107,14 +113,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             model.cancel = Some(cancel);
 
             orders.perform_cmd(fut);
-        }
-        Msg::Stop => {
-            model.state = State::Stopped;
-            model.cancel = None;
-
-            if let Some(c) = model.request_controller.take() {
-                c.abort();
-            }
         }
         Msg::Noop => {}
     };

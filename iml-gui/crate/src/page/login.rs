@@ -6,10 +6,10 @@ use crate::{
     auth,
     components::{ddn_logo, ddn_logo_lettering, whamcloud_logo},
     generated::css_classes::C,
-    FailReasonExt, GMsg, MergeAttrs, Route,
+    GMsg, MergeAttrs,
 };
 use core::fmt;
-use iml_wire_types::{Branding, Session};
+use iml_wire_types::Branding;
 use seed::{browser::service::fetch, prelude::*, *};
 
 #[derive(Clone, Default, serde::Serialize)]
@@ -45,8 +45,6 @@ pub enum Msg {
     PasswordChange(String),
     SubmitResp(fetch::FetchObject<Errors>),
     Submit,
-    GetSession,
-    GotSession(fetch::ResponseDataResult<Session>),
 }
 
 impl fmt::Debug for Msg {
@@ -80,7 +78,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 Err(e) => error!("Response error {:?}", e),
                 Ok(x) => {
                     if x.status.code < 400 {
-                        orders.skip().send_msg(Msg::GetSession);
+                        orders.skip().send_g_msg(GMsg::AuthProxy(Box::new(auth::Msg::LoggedIn)));
                     } else {
                         model.logging_in = false;
 
@@ -89,27 +87,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                             Err(e) => error!("DataError {:?}", e),
                         }
                     }
-                }
-            };
-        }
-        Msg::GetSession => {
-            orders
-                .skip()
-                .perform_cmd(auth::fetch_session().fetch_json_data(Msg::GotSession));
-        }
-        Msg::GotSession(data_result) => {
-            match data_result {
-                Ok(resp) => {
-                    orders
-                        .send_g_msg(GMsg::AuthProxy(Box::new(auth::Msg::SetSession(resp))))
-                        .send_g_msg(GMsg::RouteChange(Route::Dashboard.into()));
-
-                    model.logging_in = false;
-                }
-                Err(fail_reason) => {
-                    error!("Error fetching login session {:?}", fail_reason.message());
-
-                    orders.skip();
                 }
             };
         }
