@@ -10,7 +10,7 @@ use iml_agent::action_plugins::{
     stratagem::{
         action_purge, action_warning, action_filesync,
         server::{
-            generate_cooked_config, stream_fidlists, trigger_scan, trigger_scan_single, Counter, StratagemCounters,
+            generate_cooked_config, stream_fidlists, trigger_scan, Counter, StratagemCounters,
         },
     },
 };
