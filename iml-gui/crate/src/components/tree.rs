@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    components::{attrs, alert_indicator, font_awesome, paging, Placement, tooltip},
+    components::{alert_indicator, attrs, font_awesome, paging, tooltip, Placement},
     generated::css_classes::C,
     route::RouteId,
     GMsg, Route,
