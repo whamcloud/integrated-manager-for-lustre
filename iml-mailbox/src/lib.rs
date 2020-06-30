@@ -165,6 +165,9 @@ pub async fn ingest_data(
 
                     let ft1 = insert_fidtask(fid, data, &task).execute_async(&pool);
 
+                    // @@ this is SLOW!
+                    // Fix by rewriting main.rs to not use MailboxSenders since the
+                    // single writer is not required anymore.
                     let ft2 = task::increase_total(task.id, 1).execute_async(&pool);
 
                     try_join(ft1, ft2).await?;
