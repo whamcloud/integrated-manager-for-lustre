@@ -57,16 +57,22 @@ docker-rpms:
 	$(MAKE) -f .copr/Makefile iml-docker-srpm outdir=.
 	rpmbuild --rebuild ${RPM_OPTS} _topdir/SRPMS/iml-docker-*.src.rpm
 
+device-scanner-rpms:
+	$(MAKE) -f .copr/Makefile device-scanner-srpm outdir=.
+	rpmbuild --rebuild ${RPM_OPTS} _topdir/SRPMS/iml-device-scanner-*.src.rpm
+
 cleandist:
 	rm -rf dist
 	mkdir dist
 
 nuke_db:
-	@$(ALWAYS_NUKE_DB) && { \
-		echo "Wiping $(DB_NAME) DB..."; \
-		dropdb $(DB_NAME); \
-		createdb -O $(DB_USER) $(DB_NAME); \
-	} || true
+	echo "Wiping $(DB_NAME) DB..."; \
+	dropdb $(DB_NAME); \
+	createdb -O $(DB_USER) $(DB_NAME)
+
+migrate_db:
+	@./manage.py migrate
+
 
 nuke_logs:
 	@$(ALWAYS_NUKE_LOGS) && { \
