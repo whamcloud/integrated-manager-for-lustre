@@ -47,7 +47,6 @@ class UpdateScan(object):
         self.update_resource_locations()
 
         self.update_target_mounts()
-        self.update_client_mounts()
 
     def run(self, host_id, host_data):
         host = ManagedHost.objects.get(pk=host_id)
@@ -124,45 +123,6 @@ class UpdateScan(object):
 
         log.info("update_packages(%s): updates=%s" % (self.host, updates))
         job_scheduler_notify.notify(self.host, self.started_at, {"needs_update": updates})
-
-    def update_client_mounts(self):
-        # Client mount audit comes in via metrics due to the way the
-        # ClientAudit is implemented.
-        try:
-            client_mounts = self.host_data["metrics"]["raw"]["lustre_client_mounts"]
-        except KeyError:
-            client_mounts = []
-
-        # If lustre_client_mounts is None then nothing changed since the last update and so we can just return.
-        # Not the same as [] empty list which means no mounts
-        if client_mounts is None:
-            return
-
-        expected_fs_mounts = LustreClientMount.objects.filter(host=self.host)
-        actual_fs_mounts = [m["mountspec"].split(":/")[1] for m in client_mounts]
-
-        # Don't bother with the rest if there's nothing to do.
-        if len(expected_fs_mounts) == 0 and len(actual_fs_mounts) == 0:
-            return
-
-        for expected_mount in expected_fs_mounts:
-            if expected_mount.active and expected_mount.filesystem not in actual_fs_mounts:
-                update = dict(state="unmounted", mountpoint=None)
-                job_scheduler_notify.notify(expected_mount, self.started_at, update)
-                log.info("updated mount %s on %s -> inactive" % (expected_mount.mountpoint, self.host))
-
-        for actual_mount in client_mounts:
-            fsname = actual_mount["mountspec"].split(":/")[1]
-            try:
-                mount = [m for m in expected_fs_mounts if m.filesystem == fsname][0]
-                log.debug("mount: %s" % mount)
-                if not mount.active:
-                    update = dict(state="mounted", mountpoint=actual_mount["mountpoint"])
-                    job_scheduler_notify.notify(mount, self.started_at, update)
-                    log.info("updated mount %s on %s -> active" % (actual_mount["mountpoint"], self.host))
-            except IndexError:
-                log.info("creating new mount %s on %s" % (actual_mount["mountpoint"], self.host))
-                JobSchedulerClient.create_client_mount(self.host, fsname, actual_mount["mountpoint"])
 
     def update_target_mounts(self):
         # If mounts is None then nothing changed since the last update and so we can just return.

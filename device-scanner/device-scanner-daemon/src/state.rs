@@ -486,7 +486,7 @@ pub fn produce_device_graph(state: &state::State) -> Result<bytes::Bytes> {
 
     build_device_graph(&mut root, &dev_list, &state.local_mounts)?;
 
-    let v = serde_json::to_string(&root)?;
+    let v = serde_json::to_string(&(&root, &state.local_mounts))?;
     let b = bytes::BytesMut::from(v + "\n");
     Ok(b.freeze())
 }

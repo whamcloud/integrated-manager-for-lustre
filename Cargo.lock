@@ -1349,9 +1349,11 @@ dependencies = [
 name = "iml-device"
 version = "0.3.0"
 dependencies = [
+ "chrono",
  "device-types",
  "diesel",
  "futures",
+ "im 13.0.0",
  "iml-manager-env",
  "iml-orm",
  "iml-postgres",
