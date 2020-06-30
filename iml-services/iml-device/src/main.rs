@@ -77,11 +77,11 @@ async fn update_devices(
 
     sqlx::query!(
         r#"
-    INSERT INTO chroma_core_device
-    (fqdn, devices)
-    VALUES ($1, $2)
-    ON CONFLICT (fqdn) DO UPDATE
-    SET devices = EXCLUDED.devices
+        INSERT INTO chroma_core_device
+        (fqdn, devices)
+        VALUES ($1, $2)
+        ON CONFLICT (fqdn) DO UPDATE
+        SET devices = EXCLUDED.devices
     "#,
         host.to_string(),
         serde_json::to_value(devices)?
@@ -115,7 +115,7 @@ async fn update_client_mounts(
         }
     };
 
-    let lustre_mounts = mounts
+    let (filesystems, mountpoints): (Vec<_>, Vec<_>) = mounts
         .into_iter()
         .filter(|m| m.fs_type.0 == "lustre")
         .filter_map(|m| {
@@ -125,34 +125,23 @@ async fn update_client_mounts(
                 .and_then(|p| p.splitn(2, ":/").nth(1))
                 .map(|fs| (fs.to_string(), m.target.0.to_string_lossy().to_string()))
         })
-        .collect::<Vec<(String, String)>>();
+        .unzip();
 
     tracing::debug!(
-        "Client mounts at {}({}): {:?}",
+        "Client mounts at {}({}): {:?} {:?}",
         host,
         host_id,
-        &lustre_mounts
+        &filesystems,
+        &mountpoints
     );
 
-    let xs =
-        lustre_mounts
-            .into_iter()
-            .fold((vec![], vec![], vec![], vec![]), |mut acc, (fs, tg)| {
-                acc.0.push(host_id);
-                acc.1.push(fs);
-                acc.2.push(tg);
-                acc.3.push(ct_id);
-
-                acc
-            });
-
     let filesystems: Vec<_> = sqlx::query!(
-        r#"
+    r#"
         INSERT INTO chroma_core_lustreclientmount
         (host_id, filesystem, mountpoint, state, state_modified_at, immutable_state, not_deleted, content_type_id)
-        SELECT host_id, filesystem, mountpoint, 'mounted', now(), 'f', 't', $4
-        FROM UNNEST($1::integer[], $2::text[], $3::text[]) 
-        AS t(host_id, filesystem, mountpoint)
+        SELECT $1, filesystem, mountpoint, 'mounted', now(), 'f', 't', $4
+        FROM UNNEST($2::text[], $3::text[])
+        AS t(filesystem, mountpoint)
         ON CONFLICT (host_id, filesystem, not_deleted) DO UPDATE
         SET 
             mountpoint = excluded.mountpoint,
@@ -160,9 +149,9 @@ async fn update_client_mounts(
             state_modified_at = excluded.state_modified_at
         RETURNING filesystem
     "#,
-        &xs.0,
-        &xs.1,
-        &xs.2,
+        host_id,
+        &filesystems,
+        &mountpoints,
         ct_id,
     ).fetch_all(pool).await?
         .into_iter()

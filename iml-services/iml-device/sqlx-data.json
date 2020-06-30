@@ -1,10 +1,10 @@
 {
   "db": "PostgreSQL",
-  "4f0e9f26c1ff255719d3cb6ecbf998fb2886b917a4ab5e282b0bf019935ca845": {
-    "query": "\n        INSERT INTO chroma_core_lustreclientmount\n        (host_id, filesystem, mountpoint, state, state_modified_at, immutable_state, not_deleted, content_type_id)\n        SELECT host_id, filesystem, mountpoint, 'mounted', now(), 'f', 't', $4\n        FROM UNNEST($1::integer[], $2::text[], $3::text[]) \n        AS t(host_id, filesystem, mountpoint)\n        ON CONFLICT (host_id, filesystem, not_deleted) DO UPDATE\n        SET \n            mountpoint = excluded.mountpoint,\n            state = excluded.state,\n            state_modified_at = excluded.state_modified_at\n        RETURNING filesystem\n    ",
+  "5877ca72fdeb2cf620a876cae7e6be24f77c091fd3cc61bb89bc096b2786e2a7": {
+    "query": "\n        INSERT INTO chroma_core_lustreclientmount\n        (host_id, filesystem, mountpoint, state, state_modified_at, immutable_state, not_deleted, content_type_id)\n        SELECT $1, filesystem, mountpoint, 'mounted', now(), 'f', 't', $4\n        FROM UNNEST($2::text[], $3::text[])\n        AS t(filesystem, mountpoint)\n        ON CONFLICT (host_id, filesystem, not_deleted) DO UPDATE\n        SET \n            mountpoint = excluded.mountpoint,\n            state = excluded.state,\n            state_modified_at = excluded.state_modified_at\n        RETURNING filesystem\n    ",
     "describe": {
       "params": [
-        "Int4Array",
+        "Int4",
         "TextArray",
         "TextArray",
         "Int4"
@@ -42,8 +42,8 @@
       "columns": []
     }
   },
-  "b8ba4ed41c45f3c2eb645b7cf7eec6ff4af7fa15d53664cfe32994e7674c56ee": {
-    "query": "\n    INSERT INTO chroma_core_device\n    (fqdn, devices)\n    VALUES ($1, $2)\n    ON CONFLICT (fqdn) DO UPDATE\n    SET devices = EXCLUDED.devices\n    ",
+  "bb7fb337cfeac9a17eefb21a498e76be70c2f395473ba42331f51cc5e6d48679": {
+    "query": "\n        INSERT INTO chroma_core_device\n        (fqdn, devices)\n        VALUES ($1, $2)\n        ON CONFLICT (fqdn) DO UPDATE\n        SET devices = EXCLUDED.devices\n    ",
     "describe": {
       "params": [
         "Varchar",
