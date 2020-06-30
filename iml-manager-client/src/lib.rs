@@ -150,7 +150,7 @@ pub async fn get_influx<T: DeserializeOwned + Debug>(
     Ok(json)
 }
 
-fn create_policy<E: Debug>() -> impl RetryPolicy<E> + Send {
+fn create_policy<E: Debug>() -> impl RetryPolicy<E> {
     |k: u32, e| match k {
         0 => RetryAction::RetryNow,
         k if k < 3 => RetryAction::WaitFor(Duration::from_secs((2 * k) as u64)),
@@ -168,13 +168,13 @@ pub async fn get_retry<T: DeserializeOwned + Debug>(
 ) -> Result<T, ImlManagerClientError> {
     let client2 = client.clone();
 
-    let mut policy = create_policy();
+    let policy = create_policy();
 
     let query = &query;
 
     retry_future(
         move |_| get(client2.clone(), path.to_string(), query),
-        &mut policy,
+        policy,
     )
     .await
 }
