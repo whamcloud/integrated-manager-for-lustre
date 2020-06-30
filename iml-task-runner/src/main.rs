@@ -89,9 +89,20 @@ async fn send_work(
             .execute_async(orm_pool)
             .await?;
         if rc == 1 {
-            tracing::info!("Set Task {} ({}) running on host {} ({})", task.name, task.id, fqdn, host_id);
+            tracing::info!(
+                "Set Task {} ({}) running on host {} ({})",
+                task.name,
+                task.id,
+                fqdn,
+                host_id
+            );
         } else {
-            tracing::debug!("Failed to Set Task {} running_on to host {}: {}", task.name, fqdn, rc);
+            tracing::debug!(
+                "Failed to Set Task {} running_on to host {}: {}",
+                task.name,
+                fqdn,
+                rc
+            );
             return Ok(0);
         }
     }

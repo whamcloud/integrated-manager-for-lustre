@@ -20,17 +20,15 @@ pub type WithIdNoRunOn = dsl::And<WithId, WithOutRunOn>;
 pub type WithName = dsl::Eq<task::name, String>;
 pub type WithFs = dsl::Eq<task::filesystem_id, i32>;
 pub type WithOutState = dsl::NotEq<task::state, String>;
+pub type MoreFids = dsl::Gt<task::fids_total, task::fids_completed>;
 pub type ById = dsl::Filter<task::table, WithId>;
 pub type ByIdNoRunOn = dsl::Filter<task::table, WithIdNoRunOn>;
 pub type ByName = dsl::Filter<task::table, WithName>;
 pub type OutgestHost = dsl::Filter<
     task::table,
     dsl::And<
-        WithOutState,
-        dsl::And<
-            WithFs,
-            dsl::Or<WithOutRunOn, dsl::Eq<task::running_on_id, i32>>,
-        >,
+        dsl::And<dsl::And<WithFs, WithOutState>, MoreFids>,
+        dsl::Or<WithOutRunOn, dsl::Eq<task::running_on_id, i32>>,
     >,
 >;
 pub type IncreaseTotal = dsl::Update<task::table, task::fids_total>;
@@ -81,6 +79,9 @@ impl ChromaCoreTask {
     pub fn without_state(state: TaskState) -> WithOutState {
         task::state.ne(state.to_string())
     }
+    pub fn more_fids() -> MoreFids {
+        task::fids_total.gt(task::fids_completed)
+    }
     pub fn by_id_no_runon(id: i32) -> ByIdNoRunOn {
         task::table.filter(Self::with_id_no_ro(id))
     }
@@ -92,20 +93,20 @@ impl ChromaCoreTask {
     }
     pub fn outgestable(fs_id: i32, host_id: i32) -> OutgestHost {
         task::table.filter(
-            Self::without_state(TaskState::Closed).and(
-                Self::with_fs(fs_id).and(
+            Self::with_fs(fs_id)
+                .and(Self::without_state(TaskState::Closed))
+                .and(Self::more_fids())
+                .and(
                     task::running_on_id
                         .is_null()
                         .or(task::running_on_id.eq(host_id)),
                 ),
-            ),
         )
     }
 }
 
 pub fn set_running_on(task_id: i32, host_id: i32) -> impl Executable {
-    diesel::update(ChromaCoreTask::by_id_no_runon(task_id))
-        .set(task::running_on_id.eq(host_id))
+    diesel::update(ChromaCoreTask::by_id_no_runon(task_id)).set(task::running_on_id.eq(host_id))
 }
 
 pub fn increase_total(task_id: i32, amount: i64) -> impl Executable {
