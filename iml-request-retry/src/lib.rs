@@ -62,14 +62,7 @@ where
     }
 }
 
-/// *NOTE*: the constraint `(dyn RetryPolicy<E> + Send)` (not just `dyn RetryPolicy<E>`) is needed,
-/// otherwise we might have e.g. error
-/// [E0277]: `dyn iml_request_retry::RetryPolicy<reqwest::error::Error>` cannot be sent between threads safely
-/// on the caller side. See `examples/demo-server-client.rs`.
-pub async fn retry_future<T, E, F, FF>(
-    factory: FF,
-    policy: &mut (dyn RetryPolicy<E> + Send),
-) -> Result<T, E>
+pub async fn retry_future<T, E, F, FF>(factory: FF, mut policy: impl RetryPolicy<E>) -> Result<T, E>
 where
     E: Debug,
     F: Future<Output = Result<T, E>>,
