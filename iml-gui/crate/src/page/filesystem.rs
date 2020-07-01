@@ -232,7 +232,7 @@ pub(crate) fn view(
     };
 
     div![
-        details_table(cache, all_locks, model),
+        details(cache, all_locks, model),
         stratagem_content,
         targets(
             "Management Target",
@@ -264,7 +264,18 @@ pub(crate) fn view(
     ]
 }
 
-fn details_table(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg> {
+fn details(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg> {
+    let label_cls = class![C.col_span_2, C.p_4, C.self_center];
+    let item_cls = class![
+        C.bg_gray_100,
+        C.col_span_10,
+        C.grid,
+        C.h_full
+        C.items_center,
+        C.p_2,
+        C.self_center,
+    ];
+
     div![
         class![C.bg_white, C.border_t, C.border_b, C.border, C.rounded_lg, C.shadow],
         div![
@@ -274,45 +285,40 @@ fn details_table(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg
                 format!("Filesystem {}", &model.fs.label)
             ]
         ],
-        t::wrapper_view(vec![
-            tr![
-                t::th_left(plain!("Space Used / Available")),
-                t::td_view(space_used_view(
-                    model.stats.bytes_free,
-                    model.stats.bytes_total,
-                    model.stats.bytes_avail
-                ))
+        div![
+            class![C.grid, C.grid_cols_12, C.gap_2, C.m_4],
+            div![&label_cls, "Space Used / Available"],
+            div![
+                &item_cls,
+                space_used_view(model.stats.bytes_free, model.stats.bytes_total, model.stats.bytes_avail)
             ],
-            tr![
-                t::th_left(plain!("Files Created / Available")),
-                t::td_view(files_created_view(model.stats.files_free, model.stats.files_total))
+            div![&label_cls, "Files Created / Available"],
+            div![
+                &item_cls,
+                files_created_view(model.stats.files_free, model.stats.files_total)
             ],
-            tr![
-                t::th_left(plain!("State")),
-                t::td_view(plain![model.fs.state.to_string()])
-            ],
-            tr![t::th_left(plain!("MGS")), t::td_view(mgs(&model.mgt, &model.fs)),],
-            tr![
-                t::th_left(plain!("Number of MDTs")),
-                t::td_view(plain!(model.mdts.len().to_string()))
-            ],
-            tr![
-                t::th_left(plain!("Number of OSTs")),
-                t::td_view(plain!(model.osts.len().to_string()))
-            ],
-            tr![
-                t::th_left(plain!["Number of Connected Clients"]),
-                t::td_view(clients_view(model.stats.clients))
-            ],
-            tr![
-                t::th_left(plain!["Status"]),
-                t::td_view(status_view(cache, all_locks, &model.fs))
-            ],
-            tr![
-                t::th_left(plain!["Client mount command"]),
-                t::td_view(plain![model.fs.mount_command.to_string()])
-            ],
-        ]),
+            div![&label_cls, "State"],
+            div![&item_cls, model.fs.state.to_string()],
+            div![&label_cls, "MGS"],
+            div![&item_cls, mgs(&model.mgt, &model.fs)],
+            div![&label_cls, "Number of MDTs"],
+            div![&item_cls, model.mdts.len().to_string()],
+            div![&label_cls, "Number of OSTs"],
+            div![&item_cls, model.osts.len().to_string()],
+            div![&label_cls, "Number of Connected Clients"],
+            div![&item_cls, clients_view(model.stats.clients)],
+            div![&label_cls, "Status"],
+            div![&item_cls, status_view(cache, all_locks, &model.fs)],
+            div![&label_cls, "Client mount command"],
+            pre![
+                class![C.break_all, C.text_white, C.whitespace_pre_line],
+                &item_cls,
+                style! {
+                    St::BackgroundColor => "black"
+                },
+                model.fs.mount_command.to_string()
+            ]
+        ],
     ]
 }
 
