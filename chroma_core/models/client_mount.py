@@ -48,26 +48,32 @@ class LustreClientMount(DeletableStatefulObject):
             deps.append(DependOn(self.host.lnet_configuration, "lnet_up", fix_state="unmounted"))
 
         if state != "removed":
-            fs = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.name == self.filesystem)
+            try:
+                fs = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.name == self.filesystem)
 
-            # Depend on the fs being available.
-            deps.append(DependOn(fs, "available", fix_state="unmounted"))
+                # Depend on the fs being available.
+                deps.append(DependOn(fs, "available", fix_state="unmounted"))
 
-            # But if either the host or the filesystem are removed, the
+                # If the filesystem is removed, the
+                # mount should follow.
+                deps.append(
+                    DependOn(
+                        fs,
+                        "available",
+                        acceptable_states=list(set(fs.states) - set(["removed", "forgotten"])),
+                        fix_state="removed",
+                    )
+                )
+            except ManagedFilesystem.DoesNotExist:
+                pass
+
+            # If the host is removed, the
             # mount should follow.
             deps.append(
                 DependOn(
                     self.host,
                     "lnet_up",
                     acceptable_states=list(set(self.host.states) - set(["removed", "forgotten"])),
-                    fix_state="removed",
-                )
-            )
-            deps.append(
-                DependOn(
-                    fs,
-                    "available",
-                    acceptable_states=list(set(fs.states) - set(["removed", "forgotten"])),
                     fix_state="removed",
                 )
             )

@@ -1,0 +1,3 @@
+enable device-scanner.*
+enable mount-emitter.service
+enable swap-emitter.*

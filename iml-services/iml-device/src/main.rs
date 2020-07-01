@@ -2,9 +2,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use device_types::devices::Device;
-use diesel::{self, pg::upsert::excluded, prelude::*};
+use device_types::{devices::Device, mount::Mount};
 use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
+use im::HashSet;
 use iml_device::{
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
@@ -12,14 +12,10 @@ use iml_device::{
     },
     ImlDeviceError,
 };
-use iml_orm::{
-    models::{ChromaCoreDevice, NewChromaCoreDevice},
-    schema::chroma_core_device::{devices, fqdn, table},
-    tokio_diesel::*,
-    DbPool,
-};
 use iml_service_queue::service_queue::consume_data;
+use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
+use sqlx::postgres::{PgConnectOptions, PgPool};
 use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
@@ -28,21 +24,157 @@ use warp::Filter;
 
 type Cache = Arc<Mutex<HashMap<Fqdn, Device>>>;
 
-async fn create_cache(pool: &DbPool) -> Result<Cache, ImlDeviceError> {
-    let data: HashMap<Fqdn, Device> = table
-        .load_async(&pool)
+async fn get_db_pool() -> Result<PgPool, ImlDeviceError> {
+    let mut opts = PgConnectOptions::default().username(&iml_manager_env::get_db_user());
+
+    opts = if let Some(x) = iml_manager_env::get_db_host() {
+        opts.host(&x)
+    } else {
+        opts
+    };
+
+    opts = if let Some(x) = iml_manager_env::get_db_name() {
+        opts.database(&x)
+    } else {
+        opts
+    };
+
+    opts = if let Some(x) = iml_manager_env::get_db_password() {
+        opts.password(&x)
+    } else {
+        opts
+    };
+
+    let x = PgPool::builder().max_size(5).build_with(opts).await?;
+
+    Ok(x)
+}
+
+/// Given a db pool, create a new cache and fill it with initial data.
+/// This will start the device tree with the previous items it left off with.
+async fn create_cache(pool: &PgPool) -> Result<Cache, ImlDeviceError> {
+    let data = sqlx::query!("select * from chroma_core_device")
+        .fetch_all(pool)
         .await?
         .into_iter()
-        .map(
-            |x: ChromaCoreDevice| -> Result<(Fqdn, Device), ImlDeviceError> {
-                let d = serde_json::from_value(x.devices)?;
+        .map(|x| -> Result<(Fqdn, Device), ImlDeviceError> {
+            let d = serde_json::from_value(x.devices)?;
 
-                Ok((Fqdn(x.fqdn), d))
-            },
-        )
+            Ok((Fqdn(x.fqdn), d))
+        })
         .collect::<Result<_, _>>()?;
 
     Ok(Arc::new(Mutex::new(data)))
+}
+
+async fn update_devices(
+    pool: &PgPool,
+    host: &Fqdn,
+    devices: &Device,
+) -> Result<(), ImlDeviceError> {
+    tracing::info!("Inserting devices from host '{}'", host);
+    tracing::debug!("Inserting {:?}", devices);
+
+    sqlx::query!(
+        r#"
+        INSERT INTO chroma_core_device
+        (fqdn, devices)
+        VALUES ($1, $2)
+        ON CONFLICT (fqdn) DO UPDATE
+        SET devices = EXCLUDED.devices
+    "#,
+        host.to_string(),
+        serde_json::to_value(devices)?
+    )
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+async fn update_client_mounts(
+    pool: &PgPool,
+    ct_id: Option<i32>,
+    host: &Fqdn,
+    mounts: &HashSet<Mount>,
+) -> Result<(), ImlDeviceError> {
+    let host_id: Option<i32> = sqlx::query!(
+        "select id from chroma_core_managedhost where fqdn = $1 and not_deleted = 't'",
+        host.to_string()
+    )
+    .fetch_optional(pool)
+    .await?
+    .map(|x| x.id);
+
+    let host_id = match host_id {
+        Some(id) => id,
+        None => {
+            tracing::warn!("Host '{}' is unknown", host);
+
+            return Ok(());
+        }
+    };
+
+    let (filesystems, mountpoints): (Vec<_>, Vec<_>) = mounts
+        .into_iter()
+        .filter(|m| m.fs_type.0 == "lustre")
+        .filter_map(|m| {
+            m.source
+                .0
+                .to_str()
+                .and_then(|p| p.splitn(2, ":/").nth(1))
+                .map(|fs| (fs.to_string(), m.target.0.to_string_lossy().to_string()))
+        })
+        .unzip();
+
+    tracing::debug!(
+        "Client mounts at {}({}): {:?} {:?}",
+        host,
+        host_id,
+        &filesystems,
+        &mountpoints
+    );
+
+    let filesystems: Vec<_> = sqlx::query!(
+    r#"
+        INSERT INTO chroma_core_lustreclientmount
+        (host_id, filesystem, mountpoint, state, state_modified_at, immutable_state, not_deleted, content_type_id)
+        SELECT $1, filesystem, mountpoint, 'mounted', now(), 'f', 't', $4
+        FROM UNNEST($2::text[], $3::text[])
+        AS t(filesystem, mountpoint)
+        ON CONFLICT (host_id, filesystem, not_deleted) DO UPDATE
+        SET 
+            mountpoint = excluded.mountpoint,
+            state = excluded.state,
+            state_modified_at = excluded.state_modified_at
+        RETURNING filesystem
+    "#,
+        host_id,
+        &filesystems,
+        &mountpoints,
+        ct_id,
+    ).fetch_all(pool).await?
+        .into_iter()
+        .map(|x| x.filesystem)
+        .collect();
+
+    let updated = sqlx::query!(
+        r#"
+            UPDATE chroma_core_lustreclientmount
+            SET 
+                mountpoint = Null,
+                state = 'unmounted',
+                state_modified_at = now()
+            WHERE filesystem != ALL ($1)
+        "#,
+        &filesystems
+    )
+    .execute(pool)
+    .await?;
+
+    tracing::debug!("Updated client mounts: {:?}", updated);
+
+    Ok(())
 }
 
 #[tokio::main]
@@ -51,9 +183,10 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let addr = iml_manager_env::get_device_aggregator_addr();
 
-    let pool = iml_orm::pool()?;
+    let pool = get_db_pool().await?;
 
     let cache = create_cache(&pool).await?;
+
     let cache2 = Arc::clone(&cache);
     let cache = warp::any().map(move || Arc::clone(&cache));
 
@@ -112,29 +245,21 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let ch = iml_rabbit::create_channel(&conn).await?;
 
-    let mut s = consume_data::<Device>(&ch, "rust_agent_device_rx");
+    let mut s = consume_data::<(Device, HashSet<Mount>)>(&ch, "rust_agent_device_rx");
 
-    while let Some((f, d)) = s.try_next().await? {
+    // Django's artifact:
+    let lustreclientmount_ct_id =
+        sqlx::query!("select id from django_content_type where model = 'lustreclientmount'")
+            .fetch_optional(&pool)
+            .await?
+            .map(|x| x.id);
+
+    while let Some((host, (devices, mounts))) = s.try_next().await? {
+        update_devices(&pool, &host, &devices).await?;
+        update_client_mounts(&pool, lustreclientmount_ct_id, &host, &mounts).await?;
+
         let mut cache = cache2.lock().await;
-
-        cache.insert(f.clone(), d.clone());
-
-        let device_to_insert = NewChromaCoreDevice {
-            fqdn: f.to_string(),
-            devices: serde_json::to_value(d).expect("Could not convert incoming Devices to JSON."),
-        };
-
-        let new_device = diesel::insert_into(table)
-            .values(device_to_insert)
-            .on_conflict(fqdn)
-            .do_update()
-            .set(devices.eq(excluded(devices)))
-            .get_result_async::<ChromaCoreDevice>(&pool)
-            .await
-            .expect("Error saving new device");
-
-        tracing::info!("Inserted device from host {}", new_device.fqdn);
-        tracing::trace!("Inserted device {:?}", new_device);
+        cache.insert(host, devices);
     }
 
     Ok(())

@@ -1,0 +1,24 @@
+---
+source: device-types/src/lib.rs
+expression: xs
+---
+{
+    DevicePath(
+        "/dev/mapper/mpathd1",
+    ),
+    DevicePath(
+        "/dev/disk/by-id/dm-name-mpathd1",
+    ),
+    DevicePath(
+        "/dev/disk/by-id/dm-uuid-part1-mpath-3600140550e41a841db244a992c31e7df",
+    ),
+    DevicePath(
+        "/dev/disk/by-partuuid/d643e32f-b6b9-4863-af8f-8950376e28da",
+    ),
+    DevicePath(
+        "/dev/disk/by-uuid/b4550256-cf48-4013-8363-bfee5f52da12",
+    ),
+    DevicePath(
+        "/dev/dm-20",
+    ),
+}

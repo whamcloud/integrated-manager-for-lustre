@@ -42,6 +42,26 @@ jobs:
           WORKSPACE: ${{ github.workspace }}
           KEY: ${{ secrets.key }}
           IV: ${{ secrets.iv }}
+  push_device_scanner:
+    name: Push to Copr devel (device-scanner)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Push rpm
+        uses: ./.github/actions/copr-zfs
+        env:
+          PROD: true
+          OWNER: managerforlustre
+          PROJECT: manager-for-lustre-6.1
+          PACKAGE: iml-device-scanner
+          SPEC: device-scanner/iml-device-scanner.spec
+          SRPM_TASK: device-scanner-srpm
+          WORKSPACE: ${{ github.workspace }}
+          RUSTUP_TOOLCHAIN: stable-x86_64-unknown-linux-gnu
+          KEY: ${{ secrets.key }}
+          IV: ${{ secrets.iv }}
   push_iml_docker:
     name: Push to Copr prod (iml-docker)
     runs-on: ubuntu-latest

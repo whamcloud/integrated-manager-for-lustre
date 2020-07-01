@@ -43,7 +43,8 @@ members = [
 ]
 
 exclude = [
+    'device-scanner',
     'iml-gui/crate',
-    'iml-system-rpm-tests',
     'iml-system-docker-tests',
+    'iml-system-rpm-tests',
 ]

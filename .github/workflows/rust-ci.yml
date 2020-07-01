@@ -51,6 +51,49 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
+  sqlx_schema_check:
+    name: Sqlx Schema Check
+    runs-on: ubuntu-latest
+    services:
+      # Label used to access the service container
+      postgres:
+        image: postgres:9.6.17
+        env:
+          POSTGRES_USER: chroma
+          POSTGRES_PASSWORD: chroma
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - uses: actions/setup-python@v1
+      - uses: dschep/install-pipenv-action@v1
+      - run: pipenv install
+      - run: pipenv run ./manage.py migrate
+        env:
+          DB_PASSWORD: chroma
+          DB_HOST: localhost
+          DB_PORT: 5432
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - run: cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/launchbadge/sqlx
+      - uses: marcopolo/cargo@master
+        env:
+          DATABASE_URL: postgres://chroma:chroma@localhost:5432/chroma
+        with:
+          command: sqlx
+          args: prepare --check -- --bin iml-device
+          working-directory: iml-services/iml-device
 
   test:
     name: Test Suite
