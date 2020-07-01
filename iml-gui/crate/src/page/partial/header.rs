@@ -245,7 +245,7 @@ fn nav(model: &Model) -> Node<Msg> {
                     C.lg__h_16,
                 ],
                 main_menu_items(model),
-                auth_view(&model.auth, model.logging_out),
+                auth_view(&model.auth),
             ]
         } else {
             empty![]
@@ -255,13 +255,11 @@ fn nav(model: &Model) -> Node<Msg> {
 
 /// Show the logged in user if available.
 /// Also show the Login / Logout link
-pub fn auth_view(auth: &auth::Model, logging_out: bool) -> Node<Msg> {
+pub fn auth_view(auth: &auth::Model) -> Node<Msg> {
     let x = match auth.get_session() {
         Some(session) => session,
         None => return empty![],
     };
-
-    let disabled = attrs! { At::Disabled => logging_out.as_at_value() };
 
     let cls = class![
         C.block,
@@ -283,14 +281,14 @@ pub fn auth_view(auth: &auth::Model, logging_out: bool) -> Node<Msg> {
         C.text_gray_300
     ];
 
-    let mut auth_link = a![&cls, &disabled, if !x.has_user() { "Login" } else { "Logout" }];
+    let mut auth_link = a![&cls, if !x.has_user() { "Login" } else { "Logout" }];
 
     let auth_link = if !x.has_user() {
         auth_link.merge_attrs(attrs! {
             At::Href => Route::Login.to_href(),
         })
     } else {
-        auth_link.add_listener(simple_ev(Ev::Click, Msg::Logout));
+        auth_link.add_listener(simple_ev(Ev::Click, Msg::Auth(Box::new(auth::Msg::Logout))));
 
         auth_link
     };
@@ -301,7 +299,6 @@ pub fn auth_view(auth: &auth::Model, logging_out: bool) -> Node<Msg> {
             Some(user) => {
                 a![
                     &cls,
-                    &disabled,
                     attrs! {
                         At::Href => Route::User(user.id.into()).to_href()
                     },
