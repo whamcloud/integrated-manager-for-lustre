@@ -34,10 +34,7 @@ enum ImlSfaError {
     ImlOrm(#[from] iml_orm::ImlOrmError),
 }
 
-fn retry_fn<F, T, E>(
-    endpoints: &Vec<Url>,
-    f: impl Fn(u32) -> F,
-) -> impl Future<Output = Result<T, E>>
+fn retry_fn<F, T, E>(endpoints: &[Url], f: impl Fn(u32) -> F) -> impl Future<Output = Result<T, E>>
 where
     F: Future<Output = Result<T, E>>,
     E: Debug,
