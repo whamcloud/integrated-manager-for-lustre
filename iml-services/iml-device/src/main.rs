@@ -135,7 +135,7 @@ async fn update_client_mounts(
         &mountpoints
     );
 
-    let filesystems: Vec<_> = sqlx::query!(
+    let ids: Vec<_> = sqlx::query!(
     r#"
         INSERT INTO chroma_core_lustreclientmount
         (host_id, filesystem, mountpoint, state, state_modified_at, immutable_state, not_deleted, content_type_id)
@@ -147,7 +147,7 @@ async fn update_client_mounts(
             mountpoint = excluded.mountpoint,
             state = excluded.state,
             state_modified_at = excluded.state_modified_at
-        RETURNING filesystem
+        RETURNING id
     "#,
         host_id,
         &filesystems,
@@ -155,7 +155,7 @@ async fn update_client_mounts(
         ct_id,
     ).fetch_all(pool).await?
         .into_iter()
-        .map(|x| x.filesystem)
+        .map(|x| x.id)
         .collect();
 
     let updated = sqlx::query!(
@@ -165,9 +165,11 @@ async fn update_client_mounts(
                 mountpoint = Null,
                 state = 'unmounted',
                 state_modified_at = now()
-            WHERE filesystem != ALL ($1)
+            WHERE host_id = $1
+            AND id != ALL($2)
         "#,
-        &filesystems
+        host_id,
+        &ids
     )
     .execute(pool)
     .await?;

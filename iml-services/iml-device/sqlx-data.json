@@ -1,21 +1,13 @@
 {
   "db": "PostgreSQL",
-  "5877ca72fdeb2cf620a876cae7e6be24f77c091fd3cc61bb89bc096b2786e2a7": {
-    "query": "\n        INSERT INTO chroma_core_lustreclientmount\n        (host_id, filesystem, mountpoint, state, state_modified_at, immutable_state, not_deleted, content_type_id)\n        SELECT $1, filesystem, mountpoint, 'mounted', now(), 'f', 't', $4\n        FROM UNNEST($2::text[], $3::text[])\n        AS t(filesystem, mountpoint)\n        ON CONFLICT (host_id, filesystem, not_deleted) DO UPDATE\n        SET \n            mountpoint = excluded.mountpoint,\n            state = excluded.state,\n            state_modified_at = excluded.state_modified_at\n        RETURNING filesystem\n    ",
+  "12d9fbb68667d0736540204875e398e42ad02c037a3d9e98e6f5555b68a4f14e": {
+    "query": "\n            UPDATE chroma_core_lustreclientmount\n            SET \n                mountpoint = Null,\n                state = 'unmounted',\n                state_modified_at = now()\n            WHERE host_id = $1\n            AND id != ALL($2)\n        ",
     "describe": {
       "params": [
         "Int4",
-        "TextArray",
-        "TextArray",
-        "Int4"
+        "Int4Array"
       ],
-      "columns": [
-        {
-          "name": "filesystem",
-          "type_info": "Varchar",
-          "not_null": true
-        }
-      ]
+      "columns": []
     }
   },
   "7c2641e656178536cc5c92aba41d7fd20ae6bc350296758d3a96cf1cb97fb7f5": {
@@ -33,13 +25,22 @@
       ]
     }
   },
-  "847fcf3e5cc1a77876af50619ebdd12864bfbf60c911523f7efcdc25d4b3de87": {
-    "query": "\n            UPDATE chroma_core_lustreclientmount\n            SET \n                mountpoint = Null,\n                state = 'unmounted',\n                state_modified_at = now()\n            WHERE filesystem != ALL ($1)\n        ",
+  "b893c2757172bc35e44cfdef7a2b746f61fad436c7b08734eabdfdc42f1502dd": {
+    "query": "\n        INSERT INTO chroma_core_lustreclientmount\n        (host_id, filesystem, mountpoint, state, state_modified_at, immutable_state, not_deleted, content_type_id)\n        SELECT $1, filesystem, mountpoint, 'mounted', now(), 'f', 't', $4\n        FROM UNNEST($2::text[], $3::text[])\n        AS t(filesystem, mountpoint)\n        ON CONFLICT (host_id, filesystem, not_deleted) DO UPDATE\n        SET \n            mountpoint = excluded.mountpoint,\n            state = excluded.state,\n            state_modified_at = excluded.state_modified_at\n        RETURNING id\n    ",
     "describe": {
       "params": [
-        "TextArray"
+        "Int4",
+        "TextArray",
+        "TextArray",
+        "Int4"
       ],
-      "columns": []
+      "columns": [
+        {
+          "name": "id",
+          "type_info": "Int4",
+          "not_null": true
+        }
+      ]
     }
   },
   "bb7fb337cfeac9a17eefb21a498e76be70c2f395473ba42331f51cc5e6d48679": {

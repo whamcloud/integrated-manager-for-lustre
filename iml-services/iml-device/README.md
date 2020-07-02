@@ -15,7 +15,7 @@ DATABASE_URL=postgres://chroma@localhost:5432/chroma
 Once a change has been made to a query, run the following in this directory:
 
 ```sh
-cargo sqlx prepare --check -- --bin iml-device
+cargo sqlx prepare -- --bin iml-device
 ```
 
 You may need to install the sqlx-cli as well:
