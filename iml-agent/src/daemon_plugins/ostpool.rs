@@ -10,7 +10,12 @@ use crate::{
 };
 use futures::{future::join_all, lock::Mutex, Future, FutureExt};
 use iml_wire_types::{FsPoolMap, OstPool};
-use std::{collections::BTreeSet, pin::Pin, sync::Arc, time::{Duration, Instant}};
+use std::{
+    collections::BTreeSet,
+    pin::Pin,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 /// Resend full tree every 5 min
 const DEFAULT_RESEND: Duration = Duration::from_secs(300);
