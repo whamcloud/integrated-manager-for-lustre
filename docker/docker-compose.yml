@@ -343,9 +343,6 @@ services:
       dockerfile: ./docker/iml-mailbox.dockerfile
     deploy: *default-deploy
     volumes:
-      - "mailbox:/var/spool/iml/mailbox"
-      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
-      - "mailbox_run:/run"
       - "manager-config:/var/lib/chroma"
   iml-stats:
     image: "imlteam/iml-stats:6.2.0-dev"

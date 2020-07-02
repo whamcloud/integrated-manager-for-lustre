@@ -58,7 +58,6 @@ cp iml-ntp.service %{buildroot}%{_unitdir}
 cp iml-postoffice.service %{buildroot}%{_unitdir}
 cp iml-sfa.service %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_tmpfilesdir}
-cp iml-mailbox.conf %{buildroot}%{_tmpfilesdir}
 cp tmpfiles.conf %{buildroot}%{_tmpfilesdir}/iml-agent.conf
 mkdir -p %{buildroot}%{_presetdir}
 cp 00-rust-iml-agent.preset %{buildroot}%{_presetdir}
@@ -291,7 +290,6 @@ Group: System Environment/Libraries
 %files mailbox
 %{_bindir}/iml-mailbox
 %attr(0644,root,root)%{_unitdir}/iml-mailbox.service
-%attr(0644,root,root)%{_tmpfilesdir}/iml-mailbox.conf
 
 %package ntp
 Summary: Consumer of IML Agent Ntp push queue
