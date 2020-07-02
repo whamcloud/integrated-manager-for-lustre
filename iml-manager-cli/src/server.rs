@@ -56,7 +56,7 @@ pub struct AddHosts {
 
 #[derive(Debug, StructOpt)]
 pub enum ServerCommand {
-    /// List all configured storage servers
+    /// List all configured storage servers (default)
     #[structopt(name = "list")]
     List {
         /// Set the display type
@@ -241,14 +241,18 @@ fn get_confirm() -> bool {
         .unwrap_or(false)
 }
 
-fn list_server(hosts: Vec<Host>, display_type: DisplayType) {
+async fn list_server(display_type: DisplayType) -> Result<(), ImlManagerCliError> {
+    let hosts: ApiList<Host> = wrap_fut("Fetching hosts...", get_hosts()).await?;
+
     let term = Term::stdout();
 
     tracing::debug!("Hosts: {:?}", hosts);
 
-    let x = hosts.into_display_type(display_type);
+    let x = hosts.objects.into_display_type(display_type);
 
     term.write_line(&x).unwrap();
+
+    Ok(())
 }
 
 fn get_profile_by_name<'a>(xs: &'a [ServerProfile], name: &str) -> Option<&'a ServerProfile> {
@@ -535,12 +539,16 @@ async fn add_server(config: AddHosts) -> Result<(), ImlManagerCliError> {
     Ok(())
 }
 
-pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError> {
+pub async fn server_cli(command: Option<ServerCommand>) -> Result<(), ImlManagerCliError> {
+    server(command.unwrap_or(ServerCommand::List {
+        display_type: DisplayType::Tabular,
+    }))
+    .await
+}
+
+async fn server(command: ServerCommand) -> Result<(), ImlManagerCliError> {
     match command {
-        ServerCommand::List { display_type } => {
-            let hosts: ApiList<Host> = wrap_fut("Fetching hosts...", get_hosts()).await?;
-            list_server(hosts.objects, display_type);
-        }
+        ServerCommand::List { display_type } => list_server(display_type).await?,
         ServerCommand::Add(config) => add_server(config).await?,
         ServerCommand::ForceRemove { hosts } => {
             let remove_hosts = parse_hosts(&hosts)?;
