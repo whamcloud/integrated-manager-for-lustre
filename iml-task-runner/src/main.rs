@@ -34,7 +34,7 @@ async fn available_workers(
     active: Arc<Mutex<HashSet<i32>>>,
 ) -> Result<Vec<Client>, error::ImlTaskRunnerError> {
     let list = active.lock().await;
-    let clients: Vec<Client> = Client::not_ids(list.iter().copied())
+    let clients: Vec<Client> = Client::available(list.iter().copied())
         .get_results_async(pool)
         .await?;
     Ok(clients)
