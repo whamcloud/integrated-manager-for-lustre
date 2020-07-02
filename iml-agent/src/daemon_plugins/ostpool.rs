@@ -13,7 +13,7 @@ use iml_wire_types::{FsPoolMap, OstPool};
 use std::{collections::BTreeSet, pin::Pin, sync::Arc, time::{Duration, Instant}};
 
 /// Resend full tree every 5 min
-const DEFAULT_RESEND: u64 = 300;
+const DEFAULT_RESEND: Duration = Duration::from_secs(300);
 
 struct PoolStateSub {
     last: Instant,
@@ -100,8 +100,8 @@ impl DaemonPlugin for PoolState {
             let mut state = state.lock().await;
 
             let now = Instant::now();
-            let duration = Duration::new(DEFAULT_RESEND, 0);
-            if state.output != newout || state.last + duration > now {
+
+            if state.output != newout || state.last + DEFAULT_RESEND > now {
                 state.last = now;
                 state.output = newout;
 
