@@ -29,17 +29,7 @@ use structopt::StructOpt;
 use tokio::io::{stdin, AsyncReadExt};
 
 #[derive(StructOpt, Debug)]
-pub struct RemoveHosts {
-    /// The host(s) to remove. Takes a hostlist expression
-    #[structopt(short = "d", long = "delete_hosts")]
-    hosts: String,
-}
-
-#[derive(StructOpt, Debug)]
 pub struct AddHosts {
-    /// The host(s) to update. Takes a hostlist expression
-    #[structopt(short = "h", long = "hosts")]
-    hosts: String,
     /// The profile to deploy to each host
     #[structopt(short = "p", long = "profile")]
     profile: String,
@@ -58,6 +48,10 @@ pub struct AddHosts {
     /// Password for "password" or password for "private" key
     #[structopt(long, short = "P", required_if("auth", "password"))]
     password: Option<String>,
+
+    /// Hostlist expressions, e. g. mds[1,2].local
+    #[structopt(required = true, min_values = 1)]
+    hosts: Vec<String>,
 }
 
 #[derive(Debug, StructOpt)]
@@ -79,11 +73,19 @@ pub enum ServerCommand {
     Add(AddHosts),
     /// Remove servers from IML
     #[structopt(name = "remove")]
-    Remove(RemoveHosts),
+    Remove {
+        /// Hostlist expressions, e. g. mds[1,2].local
+        #[structopt(required = true, min_values = 1)]
+        hosts: Vec<String>,
+    },
     /// Remove servers from IML DB, but leave agents in place.
     /// Takes a hostlist expression of servers to remove.
     #[structopt(name = "force-remove")]
-    ForceRemove { hosts: String },
+    ForceRemove {
+        /// Hostlist expressions, e. g. mds[1,2].local
+        #[structopt(required = true, min_values = 1)]
+        hosts: Vec<String>,
+    },
     /// Work with Server Profiles
     #[structopt(name = "profile")]
     Profile {
@@ -181,6 +183,19 @@ struct HostProfileCmdWrapper {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Objects<T> {
     objects: Vec<T>,
+}
+
+fn parse_hosts(hosts: &[String]) -> Result<BTreeSet<String>, ImlManagerCliError> {
+    let parsed: Vec<BTreeSet<String>> = hosts
+        .iter()
+        .map(|x| hostlist_parser::parse(x))
+        .collect::<Result<_, _>>()?;
+
+    let union = parsed
+        .into_iter()
+        .fold(BTreeSet::new(), |acc, h| acc.union(&h).cloned().collect());
+
+    Ok(union)
 }
 
 /// Given an expanded hostlist and a list of API host objects
@@ -492,7 +507,7 @@ async fn deploy_agents(
 async fn add_server(config: AddHosts) -> Result<(), ImlManagerCliError> {
     let term = Term::stdout();
 
-    let new_hosts = hostlist_parser::parse(&config.hosts)?;
+    let new_hosts = parse_hosts(&config.hosts)?;
 
     tracing::debug!("Parsed hosts {:?}", new_hosts);
 
@@ -528,7 +543,7 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
         }
         ServerCommand::Add(config) => add_server(config).await?,
         ServerCommand::ForceRemove { hosts } => {
-            let remove_hosts = hostlist_parser::parse(&hosts)?;
+            let remove_hosts = parse_hosts(&hosts)?;
 
             tracing::debug!("Parsed hosts {:?}", remove_hosts);
 
@@ -597,8 +612,8 @@ pub async fn server_cli(command: ServerCommand) -> Result<(), ImlManagerCliError
 
             wait_for_cmds_success(&[command]).await?;
         }
-        ServerCommand::Remove(config) => {
-            let remove_hosts = hostlist_parser::parse(&config.hosts)?;
+        ServerCommand::Remove { hosts } => {
+            let remove_hosts = parse_hosts(&hosts)?;
 
             tracing::debug!("Parsed hosts {:?}", remove_hosts);
 
