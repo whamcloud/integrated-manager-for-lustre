@@ -537,6 +537,9 @@ class ServiceConfig(CommandLine):
 
             log.info("Creating database '%s'...\n" % database["NAME"])
             self.try_shell(["su", "postgres", "-c", "createdb -O %s %s;" % (database["USER"], database["NAME"])])
+
+            self.try_shell(["su", "postgres", "-c", "psql -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;'"])
+
         return None
 
     @staticmethod
