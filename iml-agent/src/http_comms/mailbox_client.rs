@@ -14,7 +14,7 @@ pub async fn send(
 ) -> Result<(), ImlAgentError> {
     tracing::debug!("Sending mailbox message to {}", message_name);
 
-    let id = crypto_client::get_id(&env::PFX)?;
+    let id = crypto_client::get_id(&env::PEM)?;
     let client = crypto_client::create_client(id)?;
 
     let body = Body::wrap_stream(stream);
@@ -39,7 +39,7 @@ pub async fn send(
 pub fn get(message_name: String) -> impl Stream<Item = Result<String, ImlAgentError>> {
     let q: Vec<(String, String)> = vec![];
 
-    future::ready(crypto_client::get_id(&env::PFX))
+    future::ready(crypto_client::get_id(&env::PEM))
         .err_into()
         .and_then(|id| async { crypto_client::create_client(id) })
         .and_then(move |client| async move {

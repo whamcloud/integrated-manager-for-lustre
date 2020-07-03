@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use lazy_static::lazy_static;
-use std::{env, path::Path, process::Command};
+use std::{env, fs::File, io::Read, path::Path, process::Command};
 use url::Url;
 
 /// Checks if the given path exists in the FS
@@ -97,5 +97,36 @@ lazy_static! {
             .expect("Error creating pfx");
 
         std::fs::read(&pfx_path).expect("Could not read pfx")
+    };
+}
+
+lazy_static! {
+    pub static ref PEM: Vec<u8> = {
+        let mut result = Vec::new();
+
+        let private_pem_path = get_private_pem_path();
+
+        let mut private_pem = File::open(private_pem_path)
+            .unwrap_or_else(|_| panic!("{} does not exist", get_private_pem_path()));
+        private_pem
+            .read_to_end(&mut result)
+            .expect("Couldn't read PEM");
+
+        let cert_path = get_cert_path();
+
+        let mut cert =
+            File::open(cert_path).unwrap_or_else(|_| panic!("{} does not exist", get_cert_path()));
+        cert.read_to_end(&mut result)
+            .expect("Couldn't read the certificate");
+
+        let authority_cert_path = get_authority_cert_path();
+
+        let mut auth_cert = File::open(authority_cert_path)
+            .unwrap_or_else(|_| panic!("{} does not exist", get_authority_cert_path()));
+        auth_cert
+            .read_to_end(&mut result)
+            .expect("Couldn't read the authority certificate");
+
+        result
     };
 }
