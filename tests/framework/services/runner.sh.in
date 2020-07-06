@@ -53,6 +53,8 @@ systemctl start postgresql-9.6
 sleep 5  # Unfortunately postgresql start seems to return before its truly up and ready for business
 su postgres -c 'createuser -R -S -d chroma'
 su postgres -c 'createdb -O chroma chroma'
+su postgres -c "psql -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;'"
+
 sed -i -e '/local[[:space:]]\+all/i\
 local   all         chroma                            trust' /var/lib/pgsql/9.6/data/pg_hba.conf
 systemctl restart postgresql-9.6
