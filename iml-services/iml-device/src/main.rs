@@ -6,16 +6,17 @@ use device_types::{devices::Device, mount::Mount};
 use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
 use im::HashSet;
 use iml_device::{
+    get_db_pool,
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
     },
-    ImlDeviceError,
+    update_client_mounts, ImlDeviceError,
 };
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
-use sqlx::postgres::{PgConnectOptions, PgPool};
+use sqlx::postgres::PgPool;
 use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
@@ -23,32 +24,6 @@ use std::{
 use warp::Filter;
 
 type Cache = Arc<Mutex<HashMap<Fqdn, Device>>>;
-
-async fn get_db_pool() -> Result<PgPool, ImlDeviceError> {
-    let mut opts = PgConnectOptions::default().username(&iml_manager_env::get_db_user());
-
-    opts = if let Some(x) = iml_manager_env::get_db_host() {
-        opts.host(&x)
-    } else {
-        opts
-    };
-
-    opts = if let Some(x) = iml_manager_env::get_db_name() {
-        opts.database(&x)
-    } else {
-        opts
-    };
-
-    opts = if let Some(x) = iml_manager_env::get_db_password() {
-        opts.password(&x)
-    } else {
-        opts
-    };
-
-    let x = PgPool::builder().max_size(5).build_with(opts).await?;
-
-    Ok(x)
-}
 
 /// Given a db pool, create a new cache and fill it with initial data.
 /// This will start the device tree with the previous items it left off with.
@@ -88,93 +63,6 @@ async fn update_devices(
     )
     .execute(pool)
     .await?;
-
-    Ok(())
-}
-
-async fn update_client_mounts(
-    pool: &PgPool,
-    ct_id: Option<i32>,
-    host: &Fqdn,
-    mounts: &HashSet<Mount>,
-) -> Result<(), ImlDeviceError> {
-    let host_id: Option<i32> = sqlx::query!(
-        "select id from chroma_core_managedhost where fqdn = $1 and not_deleted = 't'",
-        host.to_string()
-    )
-    .fetch_optional(pool)
-    .await?
-    .map(|x| x.id);
-
-    let host_id = match host_id {
-        Some(id) => id,
-        None => {
-            tracing::warn!("Host '{}' is unknown", host);
-
-            return Ok(());
-        }
-    };
-
-    let (filesystems, mountpoints): (Vec<_>, Vec<_>) = mounts
-        .into_iter()
-        .filter(|m| m.fs_type.0 == "lustre")
-        .filter_map(|m| {
-            m.source
-                .0
-                .to_str()
-                .and_then(|p| p.splitn(2, ":/").nth(1))
-                .map(|fs| (fs.to_string(), m.target.0.to_string_lossy().to_string()))
-        })
-        .unzip();
-
-    tracing::debug!(
-        "Client mounts at {}({}): {:?} {:?}",
-        host,
-        host_id,
-        &filesystems,
-        &mountpoints
-    );
-
-    let ids: Vec<_> = sqlx::query!(
-    r#"
-        INSERT INTO chroma_core_lustreclientmount
-        (host_id, filesystem, mountpoint, state, state_modified_at, immutable_state, not_deleted, content_type_id)
-        SELECT $1, filesystem, mountpoint, 'mounted', now(), 'f', 't', $4
-        FROM UNNEST($2::text[], $3::text[])
-        AS t(filesystem, mountpoint)
-        ON CONFLICT (host_id, filesystem, not_deleted) DO UPDATE
-        SET 
-            mountpoint = excluded.mountpoint,
-            state = excluded.state,
-            state_modified_at = excluded.state_modified_at
-        RETURNING id
-    "#,
-        host_id,
-        &filesystems,
-        &mountpoints,
-        ct_id,
-    ).fetch_all(pool).await?
-        .into_iter()
-        .map(|x| x.id)
-        .collect();
-
-    let updated = sqlx::query!(
-        r#"
-            UPDATE chroma_core_lustreclientmount
-            SET 
-                mountpoint = Null,
-                state = 'unmounted',
-                state_modified_at = now()
-            WHERE host_id = $1
-            AND id != ALL($2)
-        "#,
-        host_id,
-        &ids
-    )
-    .execute(pool)
-    .await?;
-
-    tracing::debug!("Updated client mounts: {:?}", updated);
 
     Ok(())
 }

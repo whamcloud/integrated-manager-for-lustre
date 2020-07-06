@@ -1,25 +1,29 @@
 [package]
-name = "iml-device"
-version = "0.3.0"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
+name = "iml-device"
+version = "0.3.0"
 
 [dependencies]
 device-types = "0.1"
 futures = "0.3"
-im = { version = "13.0", features = ["serde"] }
-iml-manager-env = { path = "../../iml-manager-env", version = "0.3" }
-iml-postgres = { path = "../../iml-postgres", version = "0.3" }
-iml-rabbit = { path = "../../iml-rabbit", version = "0.3" }
-iml-service-queue = { path = "../iml-service-queue", version = "0.3" }
-iml-tracing = { version = "0.2", path="../../iml-tracing" }
-iml-wire-types = { path = "../../iml-wire-types", version = "0.3", features = ["postgres-interop"] }
-serde = { version = "1", features = ["derive"] }
+im = {version = "13.0", features = ["serde"]}
+iml-manager-env = {path = "../../iml-manager-env", version = "0.3"}
+iml-postgres = {path = "../../iml-postgres", version = "0.3"}
+iml-rabbit = {path = "../../iml-rabbit", version = "0.3"}
+iml-service-queue = {path = "../iml-service-queue", version = "0.3"}
+iml-tracing = {version = "0.2", path = "../../iml-tracing"}
+iml-wire-types = {path = "../../iml-wire-types", version = "0.3", features = ["postgres-interop"]}
+serde = {version = "1", features = ["derive"]}
 serde_json = "1.0"
-sqlx = { git = "https://github.com/launchbadge/sqlx", default-features = false, features = ["json", "macros", "offline", "postgres", "runtime-tokio" ] }
+sqlx = {git = "https://github.com/launchbadge/sqlx", default-features = false, features = ["json", "macros", "offline", "postgres", "runtime-tokio"]}
 thiserror = "1.0"
-tokio = { version = "0.2", features = ["macros"] }
+tokio = {version = "0.2", features = ["macros"]}
 warp = "0.2"
 
 [dev-dependencies]
-insta = "0.16"
+chrono = "0.4"
+dotenv = "0.15"
+insta = {version = "0.16", features = ["redactions"]}
+sqlx = {git = "https://github.com/launchbadge/sqlx", default-features = false, features = ["json", "macros", "offline", "postgres", "runtime-tokio", "chrono"]}
+tokio-test = "0.2"

@@ -1419,7 +1419,9 @@ dependencies = [
 name = "iml-device"
 version = "0.3.0"
 dependencies = [
+ "chrono",
  "device-types",
+ "dotenv",
  "futures",
  "im 13.0.0",
  "iml-manager-env",
@@ -1434,6 +1436,7 @@ dependencies = [
  "sqlx",
  "thiserror",
  "tokio",
+ "tokio-test",
  "warp",
 ]
 
@@ -1871,6 +1874,8 @@ dependencies = [
  "console 0.11.3",
  "difference",
  "lazy_static",
+ "pest",
+ "pest_derive",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -2541,6 +2546,49 @@ name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
+
+[[package]]
+name = "pest"
+version = "2.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10f4872ae94d7b90ae48754df22fd42ad52ce740b8f370b03da4835417403e53"
+dependencies = [
+ "ucd-trie",
+]
+
+[[package]]
+name = "pest_derive"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "833d1ae558dc601e9a60366421196a8d94bc0ac980476d0b67e1d0988d72b2d0"
+dependencies = [
+ "pest",
+ "pest_generator",
+]
+
+[[package]]
+name = "pest_generator"
+version = "2.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "99b8db626e31e5b81787b9783425769681b347011cc59471e33ea46d2ea0cf55"
+dependencies = [
+ "pest",
+ "pest_meta",
+ "proc-macro2 1.0.18",
+ "quote 1.0.7",
+ "syn 1.0.33",
+]
+
+[[package]]
+name = "pest_meta"
+version = "2.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54be6e404f5317079812fc8f9f5279de376d8856929e21c184ecf6bbd692a11d"
+dependencies = [
+ "maplit",
+ "pest",
+ "sha-1 0.8.2",
+]
 
 [[package]]
 name = "phf"
@@ -3494,6 +3542,7 @@ dependencies = [
  "bitflags",
  "byteorder",
  "bytes",
+ "chrono",
  "crossbeam-channel",
  "crossbeam-queue",
  "crossbeam-utils",
@@ -4121,6 +4170,12 @@ name = "typenum"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "373c8a200f9e67a0c95e62a4f52fbf80c23b4381c05a17845531982fa99e6b33"
+
+[[package]]
+name = "ucd-trie"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56dee185309b50d1f11bfedef0fe6d036842e3fb77413abef29f8f8d1c5d4c1c"
 
 [[package]]
 name = "unicase"
