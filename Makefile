@@ -85,6 +85,7 @@ dev_setup: nuke_db nuke_logs
 
 service_tests: dev_setup
 	@echo "Running service tests..."
+	@psql -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -U postgres
 	@PYTHONPATH=. nosetests $(NOSE_ARGS) tests/services 2>&1 | tee test-services.log; \
 	exit $${PIPESTATUS[0]}
 
