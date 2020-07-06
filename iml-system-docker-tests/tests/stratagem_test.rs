@@ -2,10 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use iml_cmd::CmdError;
 use iml_system_docker_tests::{run_fs_test, wait_for_ntp};
 use iml_system_test_utils::*;
 
-async fn run_test(config: Config) -> Result<(), SystemTestError> {
+async fn run_test(config: Config) -> Result<(), CmdError> {
     let config = run_fs_test(config).await?;
 
     wait_for_ntp(&config).await?;
@@ -14,7 +15,7 @@ async fn run_test(config: Config) -> Result<(), SystemTestError> {
 }
 
 #[tokio::test]
-async fn test_docker_stratagem_setup() -> Result<(), SystemTestError> {
+async fn test_docker_stratagem_setup() -> Result<(), CmdError> {
     let config: Config = Config::default();
     let config: Config = Config {
         profile_map: vec![
@@ -29,11 +30,7 @@ async fn test_docker_stratagem_setup() -> Result<(), SystemTestError> {
         ..config
     };
 
-    let result_servers: Vec<&str> = [
-        &config.storage_server_ips()[..],
-        &config.client_server_ips()[..],
-    ]
-    .concat();
+    let result_servers = config.manager_and_storage_server_and_client_ips();
 
     run_test(config)
         .await

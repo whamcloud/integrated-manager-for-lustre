@@ -233,7 +233,7 @@ pub async fn create_iml_diagnostics<'a, 'b>(
 
     scp_down_parallel(
         hosts2,
-        "/var/tmp/*sosreport*",
+        "/var/tmp/*sosreport*.tar.xz",
         format!("./{}/", &report_dir).as_str(),
     )
     .await?;
@@ -246,4 +246,29 @@ pub async fn create_iml_diagnostics<'a, 'b>(
         .arg(report_dir)
         .checked_status()
         .await
+}
+
+pub async fn detect_fs(host: &str) -> Result<(), CmdError> {
+    ssh_exec_cmd(host, "iml filesystem detect")
+        .await?
+        .checked_status()
+        .await
+}
+
+pub async fn systemd_status(host: &str, service_name: &str) -> Result<Command, CmdError> {
+    let cmd = ssh_exec_cmd(host, format!("systemctl status {}", service_name).as_str()).await?;
+
+    Ok(cmd)
+}
+
+pub async fn add_servers(host: &str, profile: &str, hosts: Vec<String>) -> Result<(), CmdError> {
+    ssh_exec_cmd(
+        host,
+        &format!("iml server add {} -p {}", hosts.join(","), profile),
+    )
+    .await?
+    .checked_status()
+    .await?;
+
+    Ok(())
 }

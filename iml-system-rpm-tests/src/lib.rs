@@ -7,27 +7,11 @@ use iml_system_test_utils::*;
 use tracing::Level;
 use tracing_subscriber::fmt::Subscriber;
 
-pub async fn setup() -> Result<(), CmdError> {
+pub async fn run_fs_test(config: Config) -> Result<Config, CmdError> {
     Subscriber::builder().with_max_level(Level::DEBUG).init();
 
-    Ok(())
-}
-
-pub async fn cleanup(config: &Config) -> Result<(), CmdError> {
-    vagrant::destroy(config).await?;
-    vagrant::global_prune().await?;
-    vagrant::poweroff_running_vms().await?;
-    vagrant::unregister_vms().await?;
-    vagrant::clear_vbox_machine_folder().await?;
-
-    Ok(())
-}
-
-pub async fn run_fs_test(config: Config) -> Result<Config, CmdError> {
-    setup().await?;
-
     let snapshot_map = snapshots::get_snapshots().await?;
-    let graph = snapshots::create_graph(&snapshot_map["iscsi"], &config);
+    let graph = snapshots::create_graph(&snapshot_map["iscsi"]);
     let active_snapshots = snapshots::get_active_snapshots(&config, &graph);
     let target_snapshot = active_snapshots.last().expect("target snapshot not found.");
     println!("target snapshot: {:?}", target_snapshot);
