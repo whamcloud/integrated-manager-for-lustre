@@ -17,6 +17,4 @@ class Migration(migrations.Migration):
 
     dependencies = [("chroma_core", "0020_clientmounts_remove_fk")]
 
-    operations = [
-        migrations.RunSQL(sql=forward, reverse_sql=backward)
-    ]
+    operations = [migrations.RunSQL(sql=forward, reverse_sql=backward)]
