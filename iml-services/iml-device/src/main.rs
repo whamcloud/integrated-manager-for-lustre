@@ -3,69 +3,24 @@
 // license that can be found in the LICENSE file.
 
 use device_types::{devices::Device, mount::Mount};
-use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
+use futures::{TryFutureExt, TryStreamExt};
 use im::HashSet;
 use iml_device::{
-    get_db_pool,
+    client_mount_content_id, create_cache, get_db_pool,
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
     },
-    update_client_mounts, ImlDeviceError,
+    update_client_mounts, update_devices, Cache, ImlDeviceError,
 };
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
-use sqlx::postgres::PgPool;
 use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
 };
 use warp::Filter;
-
-type Cache = Arc<Mutex<HashMap<Fqdn, Device>>>;
-
-/// Given a db pool, create a new cache and fill it with initial data.
-/// This will start the device tree with the previous items it left off with.
-async fn create_cache(pool: &PgPool) -> Result<Cache, ImlDeviceError> {
-    let data = sqlx::query!("select * from chroma_core_device")
-        .fetch_all(pool)
-        .await?
-        .into_iter()
-        .map(|x| -> Result<(Fqdn, Device), ImlDeviceError> {
-            let d = serde_json::from_value(x.devices)?;
-
-            Ok((Fqdn(x.fqdn), d))
-        })
-        .collect::<Result<_, _>>()?;
-
-    Ok(Arc::new(Mutex::new(data)))
-}
-
-async fn update_devices(
-    pool: &PgPool,
-    host: &Fqdn,
-    devices: &Device,
-) -> Result<(), ImlDeviceError> {
-    tracing::info!("Inserting devices from host '{}'", host);
-    tracing::debug!("Inserting {:?}", devices);
-
-    sqlx::query!(
-        r#"
-        INSERT INTO chroma_core_device
-        (fqdn, devices)
-        VALUES ($1, $2)
-        ON CONFLICT (fqdn) DO UPDATE
-        SET devices = EXCLUDED.devices
-    "#,
-        host.to_string(),
-        serde_json::to_value(devices)?
-    )
-    .execute(pool)
-    .await?;
-
-    Ok(())
-}
 
 #[tokio::main]
 async fn main() -> Result<(), ImlDeviceError> {
@@ -137,12 +92,7 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let mut s = consume_data::<(Device, HashSet<Mount>)>(&ch, "rust_agent_device_rx");
 
-    // Django's artifact:
-    let lustreclientmount_ct_id =
-        sqlx::query!("select id from django_content_type where model = 'lustreclientmount'")
-            .fetch_optional(&pool)
-            .await?
-            .map(|x| x.id);
+    let lustreclientmount_ct_id = client_mount_content_id(&pool).await?;
 
     while let Some((host, (devices, mounts))) = s.try_next().await? {
         update_devices(&pool, &host, &devices).await?;

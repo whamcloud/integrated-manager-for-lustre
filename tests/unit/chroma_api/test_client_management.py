@@ -21,7 +21,7 @@ class LustreClientMountTests(ChromaApiTestCase):
     @mock.patch("chroma_core.lib.job.Step.invoke_agent", new=mock.Mock(return_value=agent_result_ok))
     @remove_host_resources_patch
     def test_removed_host_deletes_mount(self):
-        mount = LustreClientMount.objects.create(host=self.host, filesystem=self.fs.name, mountpoint="/mnt/testfs")
+        mount = LustreClientMount.objects.create(host=self.host, filesystem=self.fs.name, mountpoints=["/mnt/testfs"])
 
         # Make sure it was created and that we can see it via API
         self.assertEqual(self.api_get("/api/client_mount/%s/" % mount.id)["id"], mount.id)
@@ -40,7 +40,7 @@ class LustreClientMountTests(ChromaApiTestCase):
     @mock.patch("chroma_core.services.job_scheduler.agent_rpc.AgentRpc.remove", new=mock.Mock())
     @remove_host_resources_patch
     def test_force_removed_host_deletes_mount(self):
-        mount = LustreClientMount.objects.create(host=self.host, filesystem=self.fs, mountpoint="/mnt/testfs")
+        mount = LustreClientMount.objects.create(host=self.host, filesystem=self.fs, mountpoints=["/mnt/testfs"])
 
         # Make sure it was created and that we can see it via API
         self.assertEqual(self.api_get("/api/client_mount/%s/" % mount.id)["id"], mount.id)

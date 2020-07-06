@@ -99,7 +99,8 @@ async fn test_insert() -> Result<(), Box<dyn Error>> {
 
     assert_json_snapshot!(xs, {
         "[].id" => "<ID>",
-        "[].state_modified_at" => "<STATE_MODIFIED_AT>"
+        "[].state_modified_at" => "<STATE_MODIFIED_AT>",
+        "[].host_id" => "<HOST_ID>"
     });
 
     // Remove Some mounts
@@ -119,7 +120,8 @@ async fn test_insert() -> Result<(), Box<dyn Error>> {
 
     assert_json_snapshot!(xs, {
         "[].id" => "<ID>",
-        "[].state_modified_at" => "<STATE_MODIFIED_AT>"
+        "[].state_modified_at" => "<STATE_MODIFIED_AT>",
+        "[].host_id" => "<HOST_ID>"
     });
 
     // Remove all mounts
@@ -134,7 +136,8 @@ async fn test_insert() -> Result<(), Box<dyn Error>> {
 
     assert_json_snapshot!(xs, {
         "[].id" => "<ID>",
-        "[].state_modified_at" => "<STATE_MODIFIED_AT>"
+        "[].state_modified_at" => "<STATE_MODIFIED_AT>",
+        "[].host_id" => "<HOST_ID>"
     });
 
     Ok(())

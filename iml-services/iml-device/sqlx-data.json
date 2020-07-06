@@ -3,156 +3,203 @@
   "07317ab9fddc66855470ba840c4b68a340b188eabcfce0bc8fed4f410df1b7db": {
     "query": "INSERT INTO chroma_core_managedhost\n        (\n            state_modified_at,\n            state,\n            immutable_state,\n            not_deleted,\n            address,\n            fqdn,\n            nodename,\n            boot_time,\n            needs_update,\n            corosync_ring0,\n            install_method,\n            content_type_id,\n            server_profile_id)\n        VALUES\n        ('2020-07-02 15:50:34.356076-04', 'unconfigured', 'f', 't', 'foo', 'foo.bar', '', Null, 'f', '', '', Null, 'foo')\n        ON CONFLICT DO NOTHING",
     "describe": {
-      "params": [],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
     }
   },
   "2eedae727c7336f9edd217051685ebfd1e7a8e28597a0803aad92147c49f6805": {
     "query": "SELECT * FROM chroma_core_lustreclientmount",
     "describe": {
-      "params": [],
       "columns": [
         {
+          "ordinal": 0,
           "name": "id",
-          "type_info": "Int4",
-          "not_null": true
+          "type_info": "Int4"
         },
         {
+          "ordinal": 1,
           "name": "state_modified_at",
-          "type_info": "Timestamptz",
-          "not_null": true
+          "type_info": "Timestamptz"
         },
         {
+          "ordinal": 2,
           "name": "state",
-          "type_info": "Varchar",
-          "not_null": true
+          "type_info": "Varchar"
         },
         {
+          "ordinal": 3,
           "name": "immutable_state",
-          "type_info": "Bool",
-          "not_null": true
+          "type_info": "Bool"
         },
         {
+          "ordinal": 4,
           "name": "not_deleted",
-          "type_info": "Bool",
-          "not_null": false
+          "type_info": "Bool"
         },
         {
+          "ordinal": 5,
           "name": "content_type_id",
-          "type_info": "Int4",
-          "not_null": false
+          "type_info": "Int4"
         },
         {
+          "ordinal": 6,
           "name": "filesystem",
-          "type_info": "Varchar",
-          "not_null": true
+          "type_info": "Varchar"
         },
         {
+          "ordinal": 7,
           "name": "host_id",
-          "type_info": "Int4",
-          "not_null": true
+          "type_info": "Int4"
         },
         {
+          "ordinal": 8,
           "name": "mountpoints",
-          "type_info": "TextArray",
-          "not_null": true
+          "type_info": "TextArray"
         }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false
       ]
     }
   },
   "7c2641e656178536cc5c92aba41d7fd20ae6bc350296758d3a96cf1cb97fb7f5": {
     "query": "select id from chroma_core_managedhost where fqdn = $1 and not_deleted = 't'",
     "describe": {
-      "params": [
-        "Text"
-      ],
       "columns": [
         {
+          "ordinal": 0,
           "name": "id",
-          "type_info": "Int4",
-          "not_null": true
+          "type_info": "Int4"
         }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
       ]
     }
   },
   "b8e774ab32b79eb3f2d87b7f373b609831f72f63f716dcbb7917871531466b1a": {
     "query": "\n        INSERT INTO chroma_core_serverprofile\n        (name, ui_name, ui_description, managed, worker, user_selectable, initial_state, ntp, corosync, corosync2, pacemaker, \"default\")\n        VALUES\n        ('foo', 'foo', 'foo', 'f', 'f', 't', 'bar', 'f', 'f', 'f', 'f', 't')\n        ON CONFLICT DO NOTHING\n    ",
     "describe": {
-      "params": [],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
     }
   },
   "bb7fb337cfeac9a17eefb21a498e76be70c2f395473ba42331f51cc5e6d48679": {
     "query": "\n        INSERT INTO chroma_core_device\n        (fqdn, devices)\n        VALUES ($1, $2)\n        ON CONFLICT (fqdn) DO UPDATE\n        SET devices = EXCLUDED.devices\n    ",
     "describe": {
-      "params": [
-        "Varchar",
-        "Jsonb"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Jsonb"
+        ]
+      },
+      "nullable": []
     }
   },
   "beba469f5047ef7449f5e4fc77e04ded6264098d0f39554b3a4b84833568df73": {
     "query": "\n            UPDATE chroma_core_lustreclientmount\n            SET \n                mountpoints = array[]::text[],\n                state = 'unmounted',\n                state_modified_at = now()\n            WHERE host_id = $1\n            AND id != ALL($2)\n        ",
     "describe": {
-      "params": [
-        "Int4",
-        "Int4Array"
-      ],
-      "columns": []
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4Array"
+        ]
+      },
+      "nullable": []
     }
   },
   "d21d5385bab3f2131870f7eb192ae2e6a6e44ea485f571a20861dd0cedb2070b": {
     "query": "select id from django_content_type where model = 'lustreclientmount'",
     "describe": {
-      "params": [],
       "columns": [
         {
+          "ordinal": 0,
           "name": "id",
-          "type_info": "Int4",
-          "not_null": true
+          "type_info": "Int4"
         }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false
       ]
     }
   },
   "d7d2f630597f24da27fd997508e60805e8e626e78775dd524b8de3bbf517e624": {
     "query": "\n        INSERT INTO chroma_core_lustreclientmount\n        (host_id, filesystem, mountpoints, state, state_modified_at, immutable_state, not_deleted, content_type_id)\n        VALUES ($1, $2, $3, 'mounted', now(), 'f', 't', $4)\n        ON CONFLICT (host_id, filesystem, not_deleted) DO UPDATE\n        SET \n            mountpoints = excluded.mountpoints,\n            state = excluded.state,\n            state_modified_at = excluded.state_modified_at\n        RETURNING id\n    ",
     "describe": {
-      "params": [
-        "Int4",
-        "Varchar",
-        "TextArray",
-        "Int4"
-      ],
       "columns": [
         {
+          "ordinal": 0,
           "name": "id",
-          "type_info": "Int4",
-          "not_null": true
+          "type_info": "Int4"
         }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Varchar",
+          "TextArray",
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
       ]
     }
   },
   "db376dc602b8672ed6efcb337fe708665edce6970e9302e50f8fb2a38365d7d2": {
     "query": "select * from chroma_core_device",
     "describe": {
-      "params": [],
       "columns": [
         {
+          "ordinal": 0,
           "name": "id",
-          "type_info": "Int4",
-          "not_null": true
+          "type_info": "Int4"
         },
         {
+          "ordinal": 1,
           "name": "fqdn",
-          "type_info": "Varchar",
-          "not_null": true
+          "type_info": "Varchar"
         },
         {
+          "ordinal": 2,
           "name": "devices",
-          "type_info": "Jsonb",
-          "not_null": true
+          "type_info": "Jsonb"
         }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false
       ]
     }
   }

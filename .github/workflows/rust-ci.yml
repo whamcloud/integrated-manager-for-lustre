@@ -85,13 +85,14 @@ jobs:
           toolchain: stable
           override: true
 
-      - run: cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/launchbadge/sqlx
+      - run: cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/jgrund/sqlx --branch workspace-prepare
+
       - uses: marcopolo/cargo@master
         env:
           DATABASE_URL: postgres://chroma:chroma@localhost:5432/chroma
         with:
           command: sqlx
-          args: prepare --check -- --bin iml-device
+          args: prepare --check -- --tests
           working-directory: iml-services/iml-device
 
   test:
@@ -148,6 +149,12 @@ jobs:
 
       - name: Run db tests
         uses: actions-rs/cargo@v1
+        env:
+          DATABASE_URL: postgres://chroma:chroma@localhost:5432/chroma
+          DB_USER: chroma
+          DB_HOST: localhost
+          DB_NAME: chroma
+          DB_PASSWORD: chroma
         with:
           command: test
           args: --test integration_tests --locked -- --ignored

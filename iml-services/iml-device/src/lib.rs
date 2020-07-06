@@ -7,13 +7,16 @@ pub mod linux_plugin_transforms;
 
 pub use error::ImlDeviceError;
 
-use device_types::mount::Mount;
-use futures::future::try_join_all;
+use device_types::{devices::Device, mount::Mount};
+use futures::{future::try_join_all, lock::Mutex};
 use im::HashSet;
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
 use sqlx::postgres::{PgConnectOptions, PgPool};
-use std::collections::{BTreeSet, HashMap};
+use std::{
+    collections::{BTreeSet, HashMap},
+    sync::Arc,
+};
 
 pub async fn get_db_pool() -> Result<PgPool, ImlDeviceError> {
     let mut opts = PgConnectOptions::default().username(&iml_manager_env::get_db_user());
@@ -39,6 +42,59 @@ pub async fn get_db_pool() -> Result<PgPool, ImlDeviceError> {
     let x = PgPool::builder().max_size(5).build_with(opts).await?;
 
     Ok(x)
+}
+
+pub type Cache = Arc<Mutex<HashMap<Fqdn, Device>>>;
+
+/// Given a db pool, create a new cache and fill it with initial data.
+/// This will start the device tree with the previous items it left off with.
+pub async fn create_cache(pool: &PgPool) -> Result<Cache, ImlDeviceError> {
+    let data = sqlx::query!("select * from chroma_core_device")
+        .fetch_all(pool)
+        .await?
+        .into_iter()
+        .map(|x| -> Result<(Fqdn, Device), ImlDeviceError> {
+            let d = serde_json::from_value(x.devices)?;
+
+            Ok((Fqdn(x.fqdn), d))
+        })
+        .collect::<Result<_, _>>()?;
+
+    Ok(Arc::new(Mutex::new(data)))
+}
+
+pub async fn update_devices(
+    pool: &PgPool,
+    host: &Fqdn,
+    devices: &Device,
+) -> Result<(), ImlDeviceError> {
+    tracing::info!("Inserting devices from host '{}'", host);
+    tracing::debug!("Inserting {:?}", devices);
+
+    sqlx::query!(
+        r#"
+        INSERT INTO chroma_core_device
+        (fqdn, devices)
+        VALUES ($1, $2)
+        ON CONFLICT (fqdn) DO UPDATE
+        SET devices = EXCLUDED.devices
+    "#,
+        host.to_string(),
+        serde_json::to_value(devices)?
+    )
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+pub async fn client_mount_content_id(pool: &PgPool) -> Result<Option<i32>, ImlDeviceError> {
+    let id = sqlx::query!("select id from django_content_type where model = 'lustreclientmount'")
+        .fetch_optional(pool)
+        .await?
+        .map(|x| x.id);
+
+    Ok(id)
 }
 
 pub async fn update_client_mounts(

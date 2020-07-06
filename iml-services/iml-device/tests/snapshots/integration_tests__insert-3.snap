@@ -11,7 +11,7 @@ expression: xs
     "not_deleted": true,
     "content_type_id": 41,
     "filesystem": "fs0a9c",
-    "host_id": 6,
+    "host_id": "<HOST_ID>",
     "mountpoints": []
   }
 ]
