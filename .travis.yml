@@ -4,6 +4,11 @@ sudo: required
 services:
   - docker
   - postgresql
+addons:
+  apt:
+    packages:
+    - postgresql-9.6-contrib
+
 jobs:
   include:
     - stage: test
