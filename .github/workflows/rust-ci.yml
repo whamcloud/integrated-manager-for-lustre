@@ -73,10 +73,7 @@ jobs:
 
       - uses: actions/setup-python@v1
       - uses: dschep/install-pipenv-action@v1
-      - env:
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }} # get randomly assigned published port
-        run: sudo -u postgres psql -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -d template1
+        run: sudo -u postgres -h localhost -p 5432 psql -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -d template1
       - run: pipenv install
       - run: pipenv run ./manage.py migrate
         env:
