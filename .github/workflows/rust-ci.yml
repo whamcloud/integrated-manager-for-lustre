@@ -74,7 +74,9 @@ jobs:
 
       - uses: actions/setup-python@v1
       - uses: dschep/install-pipenv-action@v1
-      - run: sudo -u postgres PGPASSWORD=postgres psql -h localhost -p ${{ job.services.postgres.ports[5432] }} -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -d template1
+      - run: |
+          sudo -u postgres PGPASSWORD=chroma psql -h localhost -p ${{ job.services.postgres.ports[5432] }} -c 'ALTER USER postgres PASSWORD 'postgres';' -U chroma
+          sudo -u postgres PGPASSWORD=postgres psql -h localhost -p ${{ job.services.postgres.ports[5432] }} -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -d template1
       - run: pipenv install
       - run: pipenv run ./manage.py migrate
         env:
