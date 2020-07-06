@@ -109,7 +109,6 @@ services:
     volumes:
       - "/etc/iml-docker/setup/branding:/var/lib/chroma/branding"
       - "manager-config:/var/lib/chroma"
-      - "mailbox:/var/spool/iml/mailbox"
       - "static-config1:/usr/lib/iml-manager"
       - "static-config2:/usr/lib/node_modules/@iml"
     ports:
@@ -216,7 +215,6 @@ services:
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
-      - "mailbox:/var/spool/iml/mailbox"
       - "/root/.ssh:/root/.ssh"
     environment:
       - DEVICE_AGGREGATOR_URL=http://device:8008
@@ -407,7 +405,6 @@ volumes:
   grafana-storage:
   static-config1:
   static-config2:
-  mailbox:
   mailbox_run:
     driver_opts:
       type: tmpfs

@@ -55,7 +55,6 @@ srpm:
 		iml-action-runner.socket \
 		iml-agent/systemd-units/* \
 		iml-warp-drive/systemd-units/* \
-		iml-mailbox.conf \
 		iml-ntp.service \
 		iml-sfa.service \
 		${TMPDIR}/release/rust-iml

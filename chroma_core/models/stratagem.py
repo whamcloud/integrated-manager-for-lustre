@@ -7,7 +7,7 @@ import os
 
 from os import path
 from toolz.functoolz import pipe, partial, flip
-from settings import MAILBOX_PATH, SERVER_HTTP_URL
+from settings import SERVER_HTTP_URL
 from django.db import models
 from django.db.models import CASCADE, Q
 from chroma_core.lib.cache import ObjectCache
