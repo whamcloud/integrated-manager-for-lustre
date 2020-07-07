@@ -343,8 +343,11 @@ class ServiceConfig(CommandLine):
                 "-database",
                 settings.INFLUXDB_IML_STATS_DB,
                 "-execute",
-                'CREATE RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
-                    settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_LONG_DURATION,
+                "{}; {};".format(
+                    'DROP RETENTION POLICY "long_term" ON "{}"'.format(settings.INFLUXDB_IML_STATS_DB),
+                    'CREATE RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
+                        settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_LONG_DURATION,
+                    ),
                 ),
             ]
         )
