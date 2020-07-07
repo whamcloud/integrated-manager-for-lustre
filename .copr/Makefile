@@ -35,10 +35,6 @@ substs: $(SUBSTS)
 	chmod +x $(SUBSTS_SHELL)
 
 srpm:
-	if ! rpm -q postgresql96-devel 2> /dev/null; then \
-		yum install -y postgresql96-devel; \
-	fi
-
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/release/rust-iml
 	PQ_LIB_DIR=/usr/pgsql-9.6/lib cargo build --release
