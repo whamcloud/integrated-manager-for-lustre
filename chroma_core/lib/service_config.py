@@ -608,10 +608,15 @@ class ServiceConfig(CommandLine):
 
         return username, email, password
 
-    def _syncdb(self, database):
+    def _syncdb(self):
         log.info("Enabling database extensions...")
         self.try_shell(
-            ["su", "postgres", "-c", "psql -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -d %s" % database["NAME"],]
+            [
+                "su",
+                "postgres",
+                "-c",
+                "psql -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -d %s" % settings.DATABASES["default"]["NAME"],
+            ]
         )
 
         if not self._db_current():
@@ -644,7 +649,7 @@ class ServiceConfig(CommandLine):
         if "grafana" not in out:
             self.try_shell(["su", "postgres", "-c", "createdb -O %s grafana;" % (databases["default"]["USER"])])
 
-        self._syncdb(databases["default"])
+        self._syncdb()
 
     def _populate_database(self, username, password):
         if not self._users_exist():
