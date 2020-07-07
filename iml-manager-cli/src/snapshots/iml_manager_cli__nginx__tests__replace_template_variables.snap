@@ -228,19 +228,6 @@ server {
         proxy_pass http://127.0.0.1:8890;
     }
 
-    location ~ /mailbox/(.+)$ {
-        if ($ssl_client_verify != SUCCESS) {
-            return 401;
-        }
-
-        sendfile on;
-        tcp_nopush on;
-        tcp_nodelay on;
-        sendfile_max_chunk 1m;
-
-        alias /var/spool/iml/mailbox/$1;
-    }
-
     location /mailbox {
         if ($ssl_client_verify != SUCCESS) {
             return 401;
