@@ -40,6 +40,7 @@ async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError
             break;
         }
     }
+
     Ok(())
 }
 
