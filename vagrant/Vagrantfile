@@ -867,7 +867,9 @@ def provision_mgmt_net(config, num)
   config.vm.network 'private_network',
                     ip: "#{MGMT_NET_PFX}.#{num}",
                     netmask: '255.255.255.0',
-                    name: interface_name
+                    name: interface_name,
+                    nm_controlled: false
+
 end
 
 def provision_mpath(config)
