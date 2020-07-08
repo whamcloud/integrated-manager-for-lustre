@@ -31,15 +31,18 @@ async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError
     // run stratagem scan
     ssh::ssh_exec(config.manager_ip, "iml stratagem scan -r 1s -f fs").await?;
 
+    let mut n: u32 = 0;
+
     // check output on client
     for ip in config.client_server_ips() {
         if let Ok((_, output)) = ssh::ssh_exec(ip, "wc -l /tmp/expiring_fids-fs-*.txt").await {
-            let n: u32 = output.stdout.parse();
-
-            assert_eq!(n, 100);
+            assert_eq!(n, 0);
+            n = output.stdout.parse();
             break;
         }
     }
+
+    assert_eq!(n, 100);
 
     Ok(())
 }
