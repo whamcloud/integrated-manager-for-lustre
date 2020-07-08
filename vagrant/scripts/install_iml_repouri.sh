@@ -68,4 +68,4 @@ repo_gpgcheck=0
 enabled=1
 EOF
 
-chroma-config setup admin lustre localhost --no-dbspace-check
+chroma-config setup admin lustre localhost --no-dbspace-check -v
