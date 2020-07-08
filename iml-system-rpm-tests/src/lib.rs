@@ -37,6 +37,8 @@ pub async fn run_fs_test(
 
     vagrant::detect_fs(&config).await?;
 
+    vagrant::mount_clients(&config).await?;
+
     Ok(())
 }
 

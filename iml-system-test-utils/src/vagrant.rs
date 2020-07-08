@@ -452,6 +452,27 @@ pub async fn setup_deploy_docker_servers(
     Ok(())
 }
 
+pub async fn mount_clients(config: &ClusterConfig) -> Result<(), CmdError> {
+    let xs = config.client_servers().into_iter().map(|x| {
+        tracing::debug!("provisioning client {}", x);
+        async move {
+            provision_node(
+                x,
+                "install-lustre-client,configure-lustre-client-network,mount-lustre-client",
+            )
+            .await?
+            .checked_status()
+            .await?;
+
+            Ok::<_, CmdError>(())
+        }
+    });
+
+    try_join_all(xs).await?;
+
+    Ok(())
+}
+
 pub async fn configure_docker_network(hosts: &[&str]) -> Result<(), CmdError> {
     // The configure-docker-network provisioner must be run individually on
     // each server node.
