@@ -119,14 +119,6 @@ lazy_static! {
         cert.read_to_end(&mut result)
             .expect("Couldn't read the certificate");
 
-        let authority_cert_path = get_authority_cert_path();
-
-        let mut auth_cert = File::open(authority_cert_path)
-            .unwrap_or_else(|_| panic!("{} does not exist", get_authority_cert_path()));
-        auth_cert
-            .read_to_end(&mut result)
-            .expect("Couldn't read the authority certificate");
-
         result
     };
 }
