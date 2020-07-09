@@ -23,25 +23,6 @@ async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError
 
     wait_for_ntp(&config).await?;
 
-    // create 10 directories of 10 files
-    ssh::ssh_exec(config.client_server_ips()[0], "for i in $(seq -w 0 10); do mkdir /mnt/fs/dir.$i; for j in $(seq -w 0 10); do dd if=/dev/null of=/mnt/fs/dir.$i/file.$j bs=1M count=1; done; done").await?;
-
-    // run stratagem scan
-    ssh::ssh_exec(config.manager_ip, "iml stratagem scan -r 1s -f fs").await?;
-
-    let mut n: u32 = 0;
-
-    // check output on client
-    for ip in config.client_server_ips() {
-        if let Ok((_, output)) = ssh::ssh_exec(ip, "wc -l /tmp/expiring_fids-fs-*.txt").await {
-            assert_eq!(n, 0);
-            n = output.stdout.parse();
-            break;
-        }
-    }
-
-    assert_eq!(n, 100);
-
     Ok(())
 }
 

@@ -2,10 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use iml_manager_cli::api_utils::post;
 use iml_system_rpm_tests::{run_fs_test, wait_for_ntp};
 use iml_system_test_utils::{
     ssh, vagrant, SetupConfig, SetupConfigType, SystemTestError, WithSos as _,
 };
+use std::time::Duration;
+use tokio::time::delay_for;
 
 async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError> {
     run_fs_test(
@@ -25,24 +28,41 @@ async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError
 
     wait_for_ntp(&config).await?;
 
-    // create 10 directories of 10 files
-    ssh::ssh_exec(config.client_server_ips()[0], "for i in $(seq -w 0 10); do mkdir /mnt/fs/dir.$i; for j in $(seq -w 0 10); do dd if=/dev/null of=/mnt/fs/dir.$i/file.$j bs=1M count=1; done; done").await?;
+    let task = r#"{"filesystem": 1, "name": "testfile", "state": "created", "keep_failed": false, "actions": [ "stratagem.warning" ], "single_runner": true, "args": { "report_file": "/tmp/test-taskfile.txt" } }"#;
 
-    // run stratagem scan
-    ssh::ssh_exec(config.manager_ip, "iml stratagem scan -r 1s -f fs").await?;
+    // create file
+    let file_fut = ssh::ssh_exec(
+        config.client_server_ips()[0],
+        "touch /mnt/fs/reportfile; lfs path2fid /mnt/fs/reportfile",
+    );
 
-    let mut n: u32 = 0;
+    // Create Task
+    let task_fut = post("task", task);
+
+    let ((_, output), _) = try_join(file_fut, task_fut).await?;
+
+    let cmd = format!(
+        "echo {} | socat - unix-connect:/run/iml/postman-testfile.sock",
+        fid
+    );
+
+    ssh::ssh_exec(config.mds_server_ips()[0], cmd).await?;
+
+    // @@ wait for fid to process by checking Task
+    delay_for(Duration::from_secs(20)).await;
+
+    let mut found = false;
 
     // check output on client
     for ip in config.client_server_ips() {
-        if let Ok((_, output)) = ssh::ssh_exec(ip, "wc -l /tmp/expiring_fids-fs-*.txt").await {
-            assert_eq!(n, 0);
-            n = output.stdout.parse();
+        if let Ok((_, output)) = ssh::ssh_exec(ip, "cat /tmp/test-taskfile.txt").await {
+            assert_eq!(output.stdout, b#"/mnt/fs/reportfile\n"#);
+            found = true;
             break;
         }
     }
 
-    assert_eq!(n, 100);
+    assert_eq!(found, true);
 
     Ok(())
 }
