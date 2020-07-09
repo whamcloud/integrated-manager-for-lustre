@@ -8,7 +8,7 @@ use std::{
     cmp::{Ord, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap},
     convert::TryFrom,
-    fmt,
+    fmt, io,
     ops::Deref,
     sync::Arc,
 };
@@ -1099,6 +1099,18 @@ pub enum AlertSeverity {
     CRITICAL,
 }
 
+impl From<AlertSeverity> for i32 {
+    fn from(x: AlertSeverity) -> Self {
+        match x {
+            AlertSeverity::DEBUG => 10,
+            AlertSeverity::INFO => 20,
+            AlertSeverity::WARNING => 30,
+            AlertSeverity::ERROR => 40,
+            AlertSeverity::CRITICAL => 50,
+        }
+    }
+}
+
 /// An Alert record from /api/alert/
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct Alert {
@@ -1534,6 +1546,54 @@ impl PartialOrd for OstPool {
 impl PartialEq for OstPool {
     fn eq(&self, other: &Self) -> bool {
         self.filesystem == other.filesystem && self.name == other.name
+    }
+}
+
+#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct JournalMessage {
+    pub datetime: std::time::Duration,
+    pub severity: JournalPriority,
+    pub facility: i16,
+    pub source: String,
+    pub message: String,
+}
+
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde(try_from = "String")]
+#[repr(i16)]
+pub enum JournalPriority {
+    Emerg,
+    Alert,
+    Crit,
+    Err,
+    Warning,
+    Notice,
+    Info,
+    Debug,
+}
+
+impl TryFrom<String> for JournalPriority {
+    type Error = io::Error;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        let x = s
+            .parse::<u8>()
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+        match x {
+            0 => Ok(Self::Emerg),
+            1 => Ok(Self::Alert),
+            2 => Ok(Self::Crit),
+            3 => Ok(Self::Err),
+            4 => Ok(Self::Warning),
+            5 => Ok(Self::Notice),
+            6 => Ok(Self::Info),
+            7 => Ok(Self::Debug),
+            x => Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Priority {} not in range", x),
+            )),
+        }
     }
 }
 

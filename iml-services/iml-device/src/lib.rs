@@ -12,7 +12,7 @@ use futures::{future::try_join_all, lock::Mutex};
 use im::HashSet;
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
-use sqlx::postgres::{PgConnectOptions, PgPool};
+use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use std::{
     collections::{BTreeSet, HashMap},
     sync::Arc,
@@ -39,7 +39,10 @@ pub async fn get_db_pool() -> Result<PgPool, ImlDeviceError> {
         opts
     };
 
-    let x = PgPool::builder().max_size(5).build_with(opts).await?;
+    let x = PgPoolOptions::new_with(opts)
+        .max_connections(5)
+        .connect()
+        .await?;
 
     Ok(x)
 }
