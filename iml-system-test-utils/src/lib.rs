@@ -514,22 +514,36 @@ pub async fn configure_docker_network(config: &Config) -> Result<(), CmdError> {
 }
 
 async fn create_monitored_ldiskfs(config: &Config) -> Result<(), CmdError> {
-    let xs = config
-        .storage_servers()
-        .into_iter()
-        .map(|x| {
-            tracing::debug!("creating ldiskfs fs for {}", x);
-            async move {
-                vagrant::provision_node(x, "configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2")
-                    .await?
-                    .checked_status()
-                    .await?;
+    let futures = config.storage_servers().into_iter().map(|x| {
+        tracing::debug!("creating ldiskfs fs for {}", x);
+        async move {
+            vagrant::provision_node(
+                x,
+                "configure-lustre-network,create-ldiskfs-lvm-fs,ha-ldiskfs-lvm-fs-prep",
+            )
+            .await?
+            .checked_status()
+            .await?;
 
-                Ok::<_, CmdError>(())
-            }
-        });
+            Ok::<_, CmdError>(())
+        }
+    });
 
-    try_join_all(xs).await?;
+    try_join_all(futures).await?;
+
+    let futures = config.storage_servers().into_iter().map(|x| {
+        tracing::debug!("setting up HA for {}", x);
+        async move {
+            vagrant::provision_node(x, "ha-ldiskfs-lvm-fs-setup")
+                .await?
+                .checked_status()
+                .await?;
+
+            Ok::<_, CmdError>(())
+        }
+    });
+
+    try_join_all(futures).await?;
 
     Ok(())
 }
