@@ -5,7 +5,9 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
+futures = "0.3"
 iml-cmd = { version = "0.3", path = "../iml-cmd" }
+iml-manager-cli = { version = "0.3", path = "../iml-manager-cli" }
 iml-system-test-utils = { version = "0.3", path = "../iml-system-test-utils" }
 iml-wire-types = { version = "0.3", path = "../iml-wire-types" }
 tokio = { version="0.2", features=["macros"] }

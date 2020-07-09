@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use futures::try_join;
 use iml_manager_cli::api_utils::post;
 use iml_system_rpm_tests::{run_fs_test, wait_for_ntp};
 use iml_system_test_utils::{
@@ -46,7 +47,7 @@ async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError
         fid
     );
 
-    ssh::ssh_exec(config.mds_server_ips()[0], cmd).await?;
+    ssh::ssh_exec(config.mds_server_ips()[0], &cmd).await?;
 
     // @@ wait for fid to process by checking Task
     delay_for(Duration::from_secs(20)).await;
@@ -56,7 +57,7 @@ async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError
     // check output on client
     for ip in config.client_server_ips() {
         if let Ok((_, output)) = ssh::ssh_exec(ip, "cat /tmp/test-taskfile.txt").await {
-            assert_eq!(output.stdout, b#"/mnt/fs/reportfile\n"#);
+            assert_eq!(output.stdout, b"/mnt/fs/reportfile\n");
             found = true;
             break;
         }
