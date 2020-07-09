@@ -48,9 +48,3 @@ pub async fn run_fs_test(config: Config) -> Result<Config, CmdError> {
 
     Ok(config)
 }
-
-pub async fn wait_for_ntp(config: &Config) -> Result<(), CmdError> {
-    ssh::wait_for_ntp(config.storage_server_ips()).await?;
-
-    Ok(())
-}

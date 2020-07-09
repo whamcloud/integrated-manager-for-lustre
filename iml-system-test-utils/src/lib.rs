@@ -142,12 +142,12 @@ impl ServerList for Vec<(&str, Vec<&str>)> {
 
 #[async_trait]
 pub trait WithSos {
-    async fn handle_test_result(self, hosts: Vec<&str>, prefix: &str) -> Result<(), CmdError>;
+    async fn handle_test_result(self, hosts: Vec<&str>, prefix: &str) -> Result<Config, CmdError>;
 }
 
 #[async_trait]
-impl<T: Into<CmdError> + Send> WithSos for Result<(), T> {
-    async fn handle_test_result(self, hosts: Vec<&str>, prefix: &str) -> Result<(), CmdError> {
+impl<T: Into<CmdError> + Send> WithSos for Result<Config, T> {
+    async fn handle_test_result(self, hosts: Vec<&str>, prefix: &str) -> Result<Config, CmdError> {
         create_iml_diagnostics(hosts, prefix).await?;
 
         self.map_err(|e| e.into())
@@ -286,6 +286,12 @@ BRANDING={}"#,
             ),
         }
     }
+}
+
+pub async fn wait_for_ntp(config: &Config) -> Result<(), CmdError> {
+    ssh::wait_for_ntp(config.storage_server_ips()).await?;
+
+    Ok(())
 }
 
 pub async fn wait_on_services_ready(config: &Config) -> Result<(), CmdError> {
@@ -428,6 +434,7 @@ pub async fn configure_iml(config: Config) -> Result<Config, CmdError> {
         .checked_status()
         .await?;
 
+    wait_for_ntp(&config).await?;
     wait_on_services_ready(&config).await?;
 
     Ok(config)
@@ -478,6 +485,7 @@ pub async fn deploy_servers(config: Config) -> Result<Config, CmdError> {
         .checked_status()
         .await?;
 
+    wait_for_ntp(&config).await?;
     wait_on_services_ready(&config).await?;
 
     Ok(config)
@@ -573,6 +581,9 @@ pub async fn install_fs(config: Config) -> Result<Config, CmdError> {
         .checked_status()
         .await?;
 
+    wait_for_ntp(&config).await?;
+    wait_on_services_ready(&config).await?;
+
     Ok(config)
 }
 
@@ -582,13 +593,15 @@ pub async fn create_fs(config: Config) -> Result<Config, CmdError> {
         FsType::ZFS => create_monitored_zfs(&config).await?,
     };
 
-    delay_for(Duration::from_secs(30)).await;
+    wait_for_ntp(&config).await?;
+    wait_on_services_ready(&config).await?;
+
+    delay_for(Duration::from_secs(10)).await;
 
     Ok(config)
 }
 
 pub async fn detect_fs(config: Config) -> Result<Config, CmdError> {
-    wait_on_services_ready(&config).await?;
     ssh::detect_fs(config.manager_ip).await?;
 
     Ok(config)

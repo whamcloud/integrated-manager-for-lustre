@@ -3,16 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use iml_cmd::CmdError;
-use iml_system_rpm_tests::{run_fs_test, wait_for_ntp};
+use iml_system_rpm_tests::run_fs_test;
 use iml_system_test_utils::*;
-
-async fn run_test(config: Config) -> Result<(), CmdError> {
-    let config = run_fs_test(config).await?;
-
-    wait_for_ntp(&config).await?;
-
-    Ok(())
-}
 
 #[tokio::test]
 async fn test_ldiskfs_setup() -> Result<(), CmdError> {
@@ -25,8 +17,10 @@ async fn test_ldiskfs_setup() -> Result<(), CmdError> {
 
     let result_servers = config.manager_and_storage_server_ips();
 
-    run_test(config)
+    run_fs_test(config)
         .await
         .handle_test_result(result_servers, "rpm_ldiskfs_test")
-        .await
+        .await?;
+
+    Ok(())
 }
