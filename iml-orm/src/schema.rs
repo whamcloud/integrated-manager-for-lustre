@@ -573,10 +573,10 @@ table! {
         state -> Varchar,
         immutable_state -> Bool,
         not_deleted -> Nullable<Bool>,
-        mountpoint -> Nullable<Varchar>,
         content_type_id -> Nullable<Int4>,
         filesystem -> Varchar,
         host_id -> Int4,
+        mountpoints -> Array<Text>,
     }
 }
 
@@ -1034,18 +1034,18 @@ table! {
 }
 
 table! {
-    chroma_core_serverprofilepackage (id) {
-        id -> Int4,
-        package_name -> Varchar,
-        server_profile_id -> Varchar,
-    }
-}
-
-table! {
     chroma_core_serverprofile_repolist (id) {
         id -> Int4,
         serverprofile_id -> Varchar,
         repo_id -> Varchar,
+    }
+}
+
+table! {
+    chroma_core_serverprofilepackage (id) {
+        id -> Int4,
+        package_name -> Varchar,
+        server_profile_id -> Varchar,
     }
 }
 

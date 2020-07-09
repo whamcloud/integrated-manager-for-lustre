@@ -1122,8 +1122,10 @@ class JobScheduler(object):
 
             with transaction.atomic():
                 mount, created = LustreClientMount.objects.get_or_create(host=host, filesystem=filesystem_name)
-                mount.mountpoint = mountpoint
-                mount.save()
+
+                if mountpoint not in mount.mountpoints:
+                    mount.mountpoints.append(mountpoint)
+                    mount.save()
 
             ObjectCache.add(LustreClientMount, mount)
 

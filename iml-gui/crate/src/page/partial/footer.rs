@@ -24,20 +24,17 @@ pub fn view(conf: &Conf) -> impl View<Msg> {
         }
     };
 
-    let footer_text =  match conf.branding {
+    let footer_text = match conf.branding {
         Branding::Whamcloud => div![
             footer_string,
             year.to_string(),
             " DDN. All rights reserved.".to_string(),
         ],
-        _ => div![footer_string]
+        _ => div![footer_string],
     };
 
     footer![
         class![C.h_5, C.flex, C.justify_center],
-        div![
-            class![C.px_5, C.text_sm, C.items_center,],
-            footer_text
-        ]
+        div![class![C.px_5, C.text_sm, C.items_center,], footer_text]
     ]
 }

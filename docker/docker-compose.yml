@@ -52,6 +52,7 @@ services:
       - INFLUXDB_REPORTING_DISABLED=true
       - INFLUXDB_HTTP_BIND_ADDRESS=influxdb:8086
       - INFLUXDB_HTTP_LOG_ENABLED=false
+      - INFLUXDB_IML_STATS_LONG_DURATION
   grafana:
     image: "imlteam/grafana:6.2.0-dev"
     build:
@@ -393,6 +394,7 @@ services:
       - BRANDING
       - USE_STRATAGEM
       - EXA_VERSION
+      - INFLUXDB_IML_STATS_LONG_DURATION
     deploy:
       restart_policy:
         condition: on-failure

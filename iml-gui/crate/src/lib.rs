@@ -37,7 +37,7 @@ use futures::channel::oneshot;
 use generated::css_classes::C;
 use iml_wire_types::{
     warp_drive::{self, ArcRecord},
-    Conf, GroupType, Session,
+    Conf, GroupType,
 };
 use lazy_static::lazy_static;
 use page::{Page, RecordChange};
@@ -157,7 +157,6 @@ pub struct Model {
     conf: Conf,
     loading: Loading,
     locks: warp_drive::Locks,
-    logging_out: bool,
     manage_menu_state: WatchState,
     menu_visibility: Visibility,
     notification: notification::Model,
@@ -225,7 +224,6 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
             conf: Some(conf_tx),
         },
         locks: im::hashmap!(),
-        logging_out: false,
         manage_menu_state: WatchState::default(),
         menu_visibility: Visible,
         notification: notification::Model::default(),
@@ -302,13 +300,9 @@ pub enum Msg {
     EventSourceMessage(MessageEvent),
     FetchConf,
     FetchedConf(fetch::ResponseDataResult<Conf>),
-    GetSession,
-    GotSession(fetch::ResponseDataResult<Session>),
     HideMenu,
     LoadPage,
     Locks(warp_drive::Locks),
-    LoggedOut(fetch::FetchObject<()>),
-    Logout,
     ManageMenuState,
     Notification(notification::Msg),
     RecordChange(Box<warp_drive::RecordChange>),
@@ -331,10 +325,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
     match msg {
         Msg::RouteChanged(url) => {
             model.route = Route::from(url);
-
-            if model.route == Route::Login {
-                orders.send_msg(Msg::Logout);
-            }
 
             if model.route == Route::Dashboard {
                 model.breadcrumbs.clear();
@@ -409,23 +399,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::EventSourceError(_) => {
             log("EventSource error.");
         }
-        Msg::GetSession => {
-            orders
-                .skip()
-                .perform_cmd(auth::fetch_session().fetch_json_data(Msg::GotSession));
-        }
-        Msg::GotSession(data_result) => match data_result {
-            Ok(resp) => {
-                orders.send_g_msg(GMsg::AuthProxy(Box::new(auth::Msg::SetSession(resp))));
-
-                model.logging_out = false;
-            }
-            Err(fail_reason) => {
-                error!("Error fetching login session {:?}", fail_reason.message());
-
-                orders.skip();
-            }
-        },
         Msg::Records(records) => {
             model.records = (&*records).into();
 
@@ -581,20 +554,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 &mut model.status_section,
                 &mut orders.proxy(Msg::StatusSection),
             );
-        }
-        Msg::Logout => {
-            model.logging_out = true;
-
-            orders.proxy(Msg::Auth).send_msg(Box::new(auth::Msg::Stop));
-
-            orders.perform_cmd(
-                auth::fetch_session()
-                    .method(fetch::Method::Delete)
-                    .fetch(Msg::LoggedOut),
-            );
-        }
-        Msg::LoggedOut(_) => {
-            orders.send_msg(Msg::GetSession);
         }
         Msg::WindowClick => {
             if model.manage_menu_state.should_update() {

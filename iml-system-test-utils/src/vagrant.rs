@@ -381,7 +381,7 @@ pub async fn setup_deploy_servers(
 
         run_vm_command(
             config.manager,
-            &format!("iml server add -h {} -p {}", hosts.join(","), profile),
+            &format!("iml server add -p {} {}", profile, hosts.join(",")),
         )
         .await?
         .checked_status()

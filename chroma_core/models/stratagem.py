@@ -691,7 +691,7 @@ class SendStratagemResultsToClientJob(Job):
                 {
                     "client_args": (
                         client_host.fqdn,
-                        client_mount.mountpoint,
+                        client_mount.mountpoints[0],
                         self.uuid,
                         self.report_duration,
                         self.purge_duration,
