@@ -497,7 +497,7 @@ impl EndpointName for NtpConfiguration {
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct ClientMount {
     pub filesystem_name: String,
-    pub mountpoint: Option<String>,
+    pub mountpoints: Vec<String>,
     pub state: String,
 }
 

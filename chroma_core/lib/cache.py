@@ -158,7 +158,7 @@ class ObjectCache(object):
         try:
             client_mount = cls.get_one(LustreClientMount, lambda ccm: ccm.id == cm_id)
             return cls.get(
-                Copytool, lambda ct: (client_mount.host_id == ct.host_id and client_mount.mountpoint == ct.mountpoint)
+                Copytool, lambda ct: (client_mount.host_id == ct.host_id and ct.mountpoint in client_mount.mountpoints)
             )
         except LustreClientMount.DoesNotExist:
             return []

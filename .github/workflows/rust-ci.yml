@@ -55,7 +55,6 @@ jobs:
     name: Sqlx Schema Check
     runs-on: ubuntu-latest
     services:
-      # Label used to access the service container
       postgres:
         image: postgres:9.6.17
         env:
@@ -86,13 +85,14 @@ jobs:
           toolchain: stable
           override: true
 
-      - run: cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/launchbadge/sqlx
+      - run: cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/jgrund/sqlx --branch workspace-prepare
+
       - uses: marcopolo/cargo@master
         env:
           DATABASE_URL: postgres://chroma:chroma@localhost:5432/chroma
         with:
           command: sqlx
-          args: prepare --check -- --bin iml-device
+          args: prepare --check -- --tests
           working-directory: iml-services/iml-device
 
   test:
@@ -107,6 +107,18 @@ jobs:
         image: rabbitmq:3.6
         ports:
           - 5672:5672
+      postgres:
+        image: postgres:9.6.17
+        env:
+          POSTGRES_USER: chroma
+          POSTGRES_PASSWORD: chroma
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - name: Checkout sources
         uses: actions/checkout@v1
@@ -120,11 +132,32 @@ jobs:
           toolchain: ${{ matrix.rust }}
           override: true
 
+      - uses: actions/setup-python@v1
+      - uses: dschep/install-pipenv-action@v1
+      - run: pipenv install
+      - run: pipenv run ./manage.py migrate
+        env:
+          DB_PASSWORD: chroma
+          DB_HOST: localhost
+          DB_PORT: 5432
+
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --locked
+
+      - name: Run db tests
+        uses: actions-rs/cargo@v1
+        env:
+          DATABASE_URL: postgres://chroma:chroma@localhost:5432/chroma
+          DB_USER: chroma
+          DB_HOST: localhost
+          DB_NAME: chroma
+          DB_PASSWORD: chroma
+        with:
+          command: test
+          args: --test integration_tests --locked -- --ignored
 
   check_rpm_build:
     name: Check RPM build
