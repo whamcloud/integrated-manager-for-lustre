@@ -374,7 +374,7 @@ pub async fn setup_deploy_servers(
 
     for (profile, hosts) in server_map {
         let host_ips = config.hosts_to_ips(&hosts);
-        for host in host_ips {
+        for host in &host_ips {
             tracing::debug!("pinging host to make sure it is up.");
             ssh::ssh_exec(host, "uname -r").await?;
         }
@@ -386,6 +386,8 @@ pub async fn setup_deploy_servers(
         .await?
         .checked_status()
         .await?;
+
+        ssh::enable_debug_on_hosts(&host_ips).await?;
     }
 
     halt().await?.args(config.all()).checked_status().await?;
@@ -408,7 +410,7 @@ pub async fn add_docker_servers(
     config: &ClusterConfig,
     server_map: &[(String, &[&str])],
 ) -> Result<(), CmdError> {
-    iml::server_add(&server_map).await?;
+    iml::server_add(config, &server_map).await?;
 
     halt()
         .await?
@@ -544,12 +546,13 @@ pub async fn configure_rpm_setup(
 
     let vagrant_path = canonicalize("../vagrant/").await?;
     let mut config_path = vagrant_path.clone();
-    config_path.push("local_settings.py");
+    config_path.push("overrides");
 
     let mut file = File::create(config_path).await?;
     file.write_all(config.as_bytes()).await?;
 
-    let mut vm_cmd: String = "sudo cp /vagrant/local_settings.py /usr/share/chroma-manager/".into();
+    let mut vm_cmd: String =
+        "mkdir -p /var/lib/chroma && sudo cp /vagrant/overrides /var/lib/chroma".into();
     let setup_config: &SetupConfig = setup.into();
     if setup_config.use_stratagem {
         let mut server_profile_path = vagrant_path.clone();

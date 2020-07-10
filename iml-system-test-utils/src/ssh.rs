@@ -213,6 +213,12 @@ pub async fn wait_for_ntp_for_adm<'a, 'b>(
     ssh_script_parallel(hosts, "scripts/wait_for_ntp.sh", &["adm.local"]).await
 }
 
+pub async fn enable_debug_on_hosts<'a, 'b>(
+    hosts: &'b [&'a str],
+) -> Result<Vec<(&'a str, Output)>, CmdError> {
+    ssh_script_parallel(hosts, "scripts/enable_debug.sh", &[]).await
+}
+
 pub async fn create_iml_diagnostics<'a, 'b>(
     hosts: &'b [&'a str],
     prefix: &'a str,

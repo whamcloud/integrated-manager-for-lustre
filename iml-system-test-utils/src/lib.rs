@@ -25,14 +25,22 @@ impl From<&SetupConfigType> for String {
     fn from(config: &SetupConfigType) -> Self {
         match config {
             SetupConfigType::RpmSetup(c) => format!(
-                r#"USE_STRATAGEM = {}
-BRANDING = "{}""#,
+                r#"USE_STRATAGEM={}
+BRANDING="{}"
+LOG_LEVEL=10
+RUST_LOG="debug"
+NTP_SERVER_HOSTNAME=adm.local
+"#,
                 if c.use_stratagem { "True" } else { "False" },
                 c.branding.to_string()
             ),
             SetupConfigType::DockerSetup(c) => format!(
                 r#"USE_STRATAGEM={}
-            BRANDING={}"#,
+BRANDING={}
+LOG_LEVEL=10
+RUST_LOG=debug
+NTP_SERVER_HOSTNAME=10.73.10.1
+"#,
                 c.use_stratagem,
                 c.branding.to_string()
             ),

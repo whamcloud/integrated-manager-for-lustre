@@ -145,29 +145,6 @@ services:
       - "oss1.local:10.73.10.21"
       - "oss2.local:10.73.10.22"
       - "c1.local:10.73.10.31"
-    environment:
-      - "NTP_SERVER_HOSTNAME=10.73.10.1"
-  iml-warp-drive:
-    environment:
-      - RUST_LOG=debug
-  iml-action-runner:
-    environment:
-      - RUST_LOG=debug
-  iml-api:
-    environment:
-      - RUST_LOG=debug
-  iml-ostpool:
-    environment:
-      - RUST_LOG=debug
-  iml-stats:
-    environment:
-      - RUST_LOG=debug
-  iml-agent-comms:
-    environment:
-      - RUST_LOG=debug
-  device:
-    environment:
-      - RUST_LOG=debug
 "#;
 
     let mut path = canonicalize(IML_DOCKER_PATH).await?;

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::get_local_server_names;
+use crate::*;
 use iml_cmd::{CheckedCommandExt, CmdError};
 use tokio::{fs, process::Command};
 
@@ -26,7 +26,10 @@ pub async fn list_servers() -> Result<Command, CmdError> {
     Ok(x)
 }
 
-pub async fn server_add(host_map: &[(String, &[&str])]) -> Result<(), CmdError> {
+pub async fn server_add(
+    config: &vagrant::ClusterConfig,
+    host_map: &[(String, &[&str])],
+) -> Result<(), CmdError> {
     for (profile, hosts) in host_map {
         let mut x = iml().await?;
         x.arg("server")
@@ -36,6 +39,9 @@ pub async fn server_add(host_map: &[(String, &[&str])]) -> Result<(), CmdError> 
             .arg(profile)
             .checked_status()
             .await?;
+
+        let host_ips = config.hosts_to_ips(&hosts);
+        ssh::enable_debug_on_hosts(&host_ips).await?;
     }
 
     Ok(())
