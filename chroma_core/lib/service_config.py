@@ -337,20 +337,39 @@ class ServiceConfig(CommandLine):
             ]
         )
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_IML_STATS_DB)])
-        self.try_shell(
-            [
-                "influx",
-                "-database",
-                settings.INFLUXDB_IML_STATS_DB,
-                "-execute",
-                "{}; {};".format(
-                    'DROP RETENTION POLICY "long_term" ON "{}"'.format(settings.INFLUXDB_IML_STATS_DB),
-                    'CREATE RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
-                        settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_LONG_DURATION,
+
+        try:
+            self.try_shell(
+                [
+                    "influx",
+                    "-database",
+                    settings.INFLUXDB_IML_STATS_DB,
+                    "-execute",
+                    "{};".format(
+                        'CREATE RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
+                            settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_LONG_DURATION,
+                        ),
                     ),
-                ),
-            ]
-        )
+                ]
+            )
+        except CommandError as e:
+            if "retention policy already exists" in e.stderr:
+                self.try_shell(
+                    [
+                        "influx",
+                        "-database",
+                        settings.INFLUXDB_IML_STATS_DB,
+                        "-execute",
+                        "{};".format(
+                            'ALTER RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
+                                settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_LONG_DURATION,
+                            ),
+                        ),
+                    ]
+                )
+            else:
+                raise
+
         self.try_shell(
             [
                 "influx",
