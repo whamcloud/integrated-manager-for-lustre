@@ -299,9 +299,9 @@ pub async fn setup_bare(config: Config) -> Result<Config, CmdError> {
 
     match config.ntp_server {
         NtpServer::HostOnly => {
-            ssh::configure_ntp_for_host_only_if(config.storage_server_ips()).await?
+            ssh::configure_ntp_for_host_only_if(&config.storage_server_ips()).await?
         }
-        NtpServer::Adm => ssh::configure_ntp_for_adm(config.storage_server_ips()).await?,
+        NtpServer::Adm => ssh::configure_ntp_for_adm(&config.storage_server_ips()).await?,
     };
 
     halt()

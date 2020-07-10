@@ -34,7 +34,7 @@ pub async fn scp(from: String, to: String) -> Result<(), CmdError> {
 }
 
 pub async fn scp_down_parallel(
-    servers: Vec<&str>,
+    servers: &[&str],
     remote_path: &str,
     to: &str,
 ) -> Result<(), CmdError> {
@@ -147,7 +147,7 @@ pub async fn ssh_script<'a, 'b>(
 }
 
 async fn ssh_script_parallel<'a, 'b>(
-    servers: Vec<&'a str>,
+    servers: &'b [&'a str],
     script: &'b str,
     args: &[&'b str],
 ) -> Result<Vec<(&'a str, Output)>, CmdError> {
@@ -170,7 +170,7 @@ pub async fn install_ldiskfs_no_iml<'a, 'b>(
     config: &Config,
 ) -> Result<Vec<(&'a str, Output)>, CmdError> {
     ssh_script_parallel(
-        config.storage_server_ips(),
+        &config.storage_server_ips(),
         "scripts/install_ldiskfs_no_iml.sh",
         &[config.lustre_version()],
     )
@@ -181,7 +181,7 @@ pub async fn install_zfs_no_iml<'a, 'b>(
     config: &Config,
 ) -> Result<Vec<(&'a str, Output)>, CmdError> {
     ssh_script_parallel(
-        config.storage_server_ips(),
+        &config.storage_server_ips(),
         "scripts/install_zfs_no_iml.sh",
         &[config.lustre_version()],
     )
@@ -193,13 +193,13 @@ pub async fn yum_update<'a, 'b>(hosts: &'b [&'a str]) -> Result<Vec<(&'a str, Ou
 }
 
 pub async fn configure_ntp_for_host_only_if<'a, 'b>(
-    hosts: Vec<&'a str>,
+    hosts: &'b [&'a str],
 ) -> Result<Vec<(&'a str, Output)>, CmdError> {
     ssh_script_parallel(hosts, "scripts/configure_ntp.sh", &["10.73.10.1"]).await
 }
 
 pub async fn configure_ntp_for_adm<'a, 'b>(
-    hosts: Vec<&'a str>,
+    hosts: &'b [&'a str],
 ) -> Result<Vec<(&'a str, Output)>, CmdError> {
     ssh_script_parallel(hosts, "scripts/configure_ntp.sh", &["adm.local"]).await
 }
@@ -217,12 +217,11 @@ pub async fn wait_for_ntp_for_adm<'a, 'b>(
 }
 
 pub async fn create_iml_diagnostics<'a, 'b>(
-    hosts: Vec<&'a str>,
+    hosts: &'b [&'a str],
     prefix: &'a str,
 ) -> Result<(), CmdError> {
     let path_buf = canonicalize("../vagrant/").await?;
     let path = path_buf.as_path().to_str().expect("Couldn't get path.");
-    let hosts2 = hosts.clone();
 
     tracing::debug!("Creating diagnostics on: {:?}", hosts);
     ssh_script_parallel(hosts, "scripts/create_iml_diagnostics.sh", &[prefix]).await?;
@@ -240,7 +239,7 @@ pub async fn create_iml_diagnostics<'a, 'b>(
         .await?;
 
     scp_down_parallel(
-        hosts2,
+        hosts,
         "/var/tmp/*sosreport*",
         format!("./{}/", &report_dir).as_str(),
     )

@@ -163,7 +163,7 @@ impl<T: Into<SystemTestError> + Send> WithSos for Result<(), T> {
         hosts: Vec<&str>,
         prefix: &str,
     ) -> Result<(), SystemTestError> {
-        create_iml_diagnostics(hosts, prefix).await?;
+        create_iml_diagnostics(&hosts, prefix).await?;
 
         self.map_err(|e| e.into())
     }
