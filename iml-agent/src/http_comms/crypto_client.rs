@@ -8,11 +8,11 @@ use futures::{stream, Future, Stream, TryFutureExt, TryStreamExt};
 use reqwest::{Client, Identity, IntoUrl, Response};
 use std::time::Duration;
 
-/// Creates an `Identity` from the given pfx buffer
+/// Creates an `Identity` from the given pem buffer
 ///
 /// # Arguments
 ///
-/// * `pfx` - The incoming pfx buffer
+/// * `pem` - The incoming pem buffer
 pub fn get_id(pem: &[u8]) -> Result<Identity, ImlAgentError> {
     Identity::from_pem(pem).map_err(ImlAgentError::Reqwest)
 }
