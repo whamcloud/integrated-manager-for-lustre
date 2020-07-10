@@ -23,6 +23,9 @@ pub enum StratagemCommand {
     /// Configure Stratagem scanning interval
     #[structopt(name = "interval")]
     StratagemInterval(StratagemInterval),
+    /// Kickoff a Stratagem Filesync
+    #[structopt(name = "filesync")]
+    Filesync(StratagemFilesyncData),
 }
 
 #[derive(Debug, StructOpt)]
@@ -84,9 +87,24 @@ pub struct StratagemScanData {
     /// The purge duration
     #[structopt(short = "p", long = "purge", parse(try_from_str = parse_duration))]
     purge_duration: Option<u64>,
-    /// filesync
-    #[structopt(name = "filesync")]
-    filesync: Option<bool>,
+}
+
+#[derive(serde::Serialize, StructOpt, Debug)]
+pub struct StratagemFilesyncData {
+    /// The name of the filesystem to scan
+    #[structopt(short = "f", long = "filesystem")]
+    filesystem: String,
+    /// The remote filesystem
+    #[structopt(short = "r", long = "remote")]
+    remote: String,
+    /// Match expression
+    #[structopt(short = "e", long = "expression")]
+    expression: String,
+    /// Policy
+    #[structopt(short = "p", long = "policy")]
+    policy: String,
+    #[structopt(skip = true)]
+    filesync: bool,
 }
 
 fn parse_duration(src: &str) -> Result<u64, ImlManagerCliError> {
@@ -190,6 +208,25 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 
             display_cmd_state(&command);
         }
+	StratagemCommand::Filesync(data) => {
+	    let r = post("run_stratagem", data).await?;
+
+	    tracing::error!("fs {:?}", r);
+
+	    let CmdWrapper { command } = handle_cmd_resp(r).await?;
+
+	    tracing::error!("fs {:?}", command);
+	    
+	    let stop_spinner = start_spinner(&command.message);
+
+	    let command = wait_for_cmd(command).await?;
+
+	    tracing::error!("fs {:?}", command);
+	    
+	    stop_spinner(None);
+
+	    display_cmd_state(&command);
+	}
         StratagemCommand::StratagemInterval(x) => match x {
             StratagemInterval::List { display_type } => {
                 let stop_spinner = start_spinner("Finding existing intervals...");
