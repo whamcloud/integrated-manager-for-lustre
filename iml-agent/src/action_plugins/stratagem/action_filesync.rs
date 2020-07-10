@@ -3,9 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    agent_error::ImlAgentError,
-    env,
-    http_comms::mailbox_client,
+    agent_error::{ImlAgentError, RequiredError},
 };
 use futures::{
     future::self,
@@ -87,13 +85,12 @@ pub fn filesync_files(device: &str,
 
 /// Process FIDs
 pub async fn process_fids(
-    (fsname_or_mntpath, _task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
+    (fsname_or_mntpath, task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
 ) -> Result<Vec<FidError>, ImlAgentError> {
     let llapi = search_rootpath(fsname_or_mntpath).await?;
-/*    let dest_src = task_args.get("target_fs".into()).ok_or(RequiredError(
-        "Task missing 'target_fs' argument".to_string(),
-))?;*/
-    let dest_src = "/mnt/lustre/filesync";
+    let dest_src = task_args.get("remote".into()).ok_or(RequiredError(
+        "Task missing 'remote' argument".to_string(),
+))?;
 
     let dest_path = PathBuf::from(dest_src);
     let cp_chunks = 10;

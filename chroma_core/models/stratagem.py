@@ -368,6 +368,8 @@ class RunStratagemStep(Step):
         target_name = args["target_name"]
         report_duration = args["report_duration"]
         purge_duration = args["purge_duration"]
+        filesync_expression = args["filesync_expression"]
+        filesync_duration = args["filesync_duration"]
 
         def calc_warn_duration(report_duration, purge_duration):
             if report_duration is not None and purge_duration is not None:
@@ -377,11 +379,11 @@ class RunStratagemStep(Step):
 
             return "&& != type S_IFDIR < atime - sys_time {}".format(report_duration or 0)
 
-        def get_body(mount_point, report_duration, purge_duration):
+        def get_body(mount_point, report_duration, purge_duration, filesync_expression):
             rule_map = {
                 "fids_expiring_soon": report_duration is not None and "warn_fids",
                 "fids_expired": purge_duration is not None and "purge_fids",
-                "filesync": mount_point is not None and "filesync",
+                "filesync": filesync_expression is not None and "filesync",
             }
 
             groups = ["size_distribution", "user_distribution"] + filter(bool, rule_map.values())
@@ -416,7 +418,7 @@ class RunStratagemStep(Step):
                         "rules": [
                             {
                                 "action": "LAT_SHELL_CMD_FID",
-                                "expression": "&& <= size 1048576 != type S_IFDIR",
+                                "expression": "{}".format("filesync_expression"),
                                 "argument": "filesync",
                                 "counter_name": "filesync",
                             }
@@ -473,7 +475,7 @@ class RunStratagemStep(Step):
         def generate_output_from_results(result):
             return u"\u2713 Scan finished for target {}.\nResults located in {}".format(target_name, result[0])
 
-        body = get_body(path, report_duration, purge_duration)
+        body = get_body(path, report_duration, purge_duration, filesync_expression)
         result = self.invoke_rust_agent_expect_result(host, "start_scan_stratagem", body)
 
         self.log(generate_output_from_results(result))
@@ -531,6 +533,8 @@ class RunStratagemJob(Job):
     uuid = models.CharField(max_length=64, null=False, default="")
     report_duration = models.BigIntegerField(null=True)
     purge_duration = models.BigIntegerField(null=True)
+    filesync_expression = models.CharField(max_length=512, null=True)
+    filesync_duration = models.BigIntegerField(null=True)
     fqdn = models.CharField(max_length=255, null=False, default="")
     target_name = models.CharField(max_length=64, null=False, default="")
     filesystem_type = models.CharField(max_length=32, null=False, default="")
@@ -585,6 +589,8 @@ class RunStratagemJob(Job):
                     "target_name": self.target_name,
                     "report_duration": self.report_duration,
                     "purge_duration": self.purge_duration,
+                    "filesync_expression": self.filesync_expression,
+                    "filesync_duration": self.filesync_duration,
                 },
             ),
             (StreamFidlistStep, {"host": self.fqdn, "uuid": self.uuid, "fs_name": self.filesystem.name}),
