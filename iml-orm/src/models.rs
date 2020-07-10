@@ -1357,6 +1357,8 @@ pub struct ChromaCoreRunstratagemjob {
     pub uuid: String,
     pub report_duration: Option<i64>,
     pub purge_duration: Option<i64>,
+    pub filesync_duration: Option<i64>,
+    pub filesync_expression: Option<String>,
     pub fqdn: String,
     pub target_name: String,
     pub filesystem_type: String,
