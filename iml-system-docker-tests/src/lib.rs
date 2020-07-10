@@ -57,7 +57,7 @@ pub async fn run_fs_test(
 }
 
 pub async fn wait_for_ntp(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {
-    ssh::wait_for_ntp(&config.storage_server_ips()).await?;
+    ssh::wait_for_ntp_for_host_only_if(&config.storage_server_ips()).await?;
 
     Ok(())
 }
