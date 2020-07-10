@@ -1165,7 +1165,7 @@ class JobScheduler(object):
         with self._lock:
             ostpool = OstPool.objects.get(pk=ostpool_data["id"])
 
-            current = set(ostpool.osts.all())
+            current = set(ostpool.osts.values_list("name", flat=True).all())
             to_add = newlist - current
             to_remove = current - newlist
 
