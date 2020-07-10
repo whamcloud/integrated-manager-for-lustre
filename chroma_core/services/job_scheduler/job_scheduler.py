@@ -1904,6 +1904,7 @@ class JobScheduler(object):
                 "state": "created",
                 "keep_failed": False,
                 "actions": ["stratagem.filesync"],
+                "args": {"remote": stratagem_data.get("remote"), "expression": stratagem_data.get("expression"), "policy": stratagem_data.get("policy")},
             }
             task = Task.objects.create(**task_data)
 
@@ -1917,6 +1918,8 @@ class JobScheduler(object):
                     "uuid": unique_id,
                     "report_duration": stratagem_data.get("report_duration"),
                     "purge_duration": stratagem_data.get("purge_duration"),
+                    "filesync_expression": stratagem_data.get("expression"),
+                    "filesync_duration": stratagem_data.get("filesync_duration", 0),
                     "filesystem": filesystem,
                     "depends_on_job_range": range(0, len(run_stratagem_list)),
                 },
