@@ -345,10 +345,8 @@ class ServiceConfig(CommandLine):
                     "-database",
                     settings.INFLUXDB_IML_STATS_DB,
                     "-execute",
-                    "{};".format(
-                        'CREATE RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
-                            settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_LONG_DURATION,
-                        ),
+                    'CREATE RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
+                        settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_LONG_DURATION,
                     ),
                 ]
             )
@@ -360,10 +358,8 @@ class ServiceConfig(CommandLine):
                         "-database",
                         settings.INFLUXDB_IML_STATS_DB,
                         "-execute",
-                        "{};".format(
-                            'ALTER RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
-                                settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_LONG_DURATION,
-                            ),
+                        'ALTER RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
+                            settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_LONG_DURATION,
                         ),
                     ]
                 )
