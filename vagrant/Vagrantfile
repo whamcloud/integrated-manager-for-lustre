@@ -18,7 +18,7 @@ VBOX_PASSWD = (ENV['VBOX_PASSWD'] || "").freeze
 VBOX_SSHKEY = (ENV['VBOX_SSHKEY'] || "").freeze
 
 # Lustre version
-LUSTRE = (ENV['LUSTRE'] || "2.12.4").freeze
+LUSTRE = (ENV['LUSTRE'] || "2.12.5").freeze
 
 REPO_URI = (ENV['REPO_URI'] || '').freeze
 
@@ -39,10 +39,7 @@ ISCI_IP = "#{SUBNET_PREFIX}.40.10".freeze
 ISCI_IP2 = "#{SUBNET_PREFIX}.50.10".freeze
 
 Vagrant.configure('2') do |config|
-  config.vm.box = 'centos/7.7'
-  config.vm.box_url = 'http://cloud.centos.org/centos/7/vagrant/x86_64/images/CentOS-7-x86_64-Vagrant-2001_01.VirtualBox.box'
-  config.vm.box_download_checksum = 'e1a26038fb036ab8e76a6a4dfcd49856'
-  config.vm.box_download_checksum_type = 'md5'
+  config.vm.box = 'centos/7'
 
   config.vm.provider 'virtualbox' do |vbx|
     vbx.linked_clone = true
