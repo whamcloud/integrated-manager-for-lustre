@@ -386,6 +386,7 @@ pub(crate) fn view(model: &Model, all_locks: &Locks) -> Node<Msg> {
             );
 
             div![
+                stratagem_config(config, locked),
                 scan_stratagem_button::view(&config.scan_stratagem_button).map_msg(Msg::ScanStratagemButton),
                 inode_table::view(&config.inode_table).map_msg(Msg::InodeTable),
                 caption_wrapper(
@@ -398,7 +399,6 @@ pub(crate) fn view(model: &Model, all_locks: &Locks) -> Node<Msg> {
                     Some(&last_scan),
                     stratagem_chart(grafana_chart::create_chart_params(3, "1m", config.grafana_vars.clone()))
                 ),
-                stratagem_config(config, locked)
             ]
         }
     }

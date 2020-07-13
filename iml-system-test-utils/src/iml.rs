@@ -31,7 +31,6 @@ pub async fn server_add(host_map: &[(String, &[&str])]) -> Result<(), CmdError> 
         let mut x = iml().await?;
         x.arg("server")
             .arg("add")
-            .arg("-h")
             .arg(get_local_server_names(hosts).join(","))
             .arg("-p")
             .arg(profile)

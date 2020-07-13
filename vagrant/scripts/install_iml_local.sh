@@ -142,4 +142,4 @@ cp /tmp/iml/chroma_support.repo /etc/yum.repos.d/
 
 yum install -y /tmp/manager-rpms/*.rpm
 
-chroma-config setup admin lustre localhost --no-dbspace-check
+chroma-config setup admin lustre localhost --no-dbspace-check -v
