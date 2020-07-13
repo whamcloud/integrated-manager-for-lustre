@@ -1,7 +1,7 @@
 // Copyright (c) 2020 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
-
+use crate::Config;
 use futures::future::try_join_all;
 use iml_cmd::{CheckedChildExt, CheckedCommandExt, CmdError};
 use std::{
@@ -147,7 +147,7 @@ pub async fn ssh_script<'a, 'b>(
 }
 
 async fn ssh_script_parallel<'a, 'b>(
-    servers: &[&'a str],
+    servers: &'b [&'a str],
     script: &'b str,
     args: &[&'b str],
 ) -> Result<Vec<(&'a str, Output)>, CmdError> {
@@ -167,22 +167,25 @@ async fn ssh_script_parallel<'a, 'b>(
 }
 
 pub async fn install_ldiskfs_no_iml<'a, 'b>(
-    hosts: &[&'a str],
-    lustre_version: &'b str,
+    config: &Config,
 ) -> Result<Vec<(&'a str, Output)>, CmdError> {
     ssh_script_parallel(
-        hosts,
+        &config.storage_server_ips(),
         "scripts/install_ldiskfs_no_iml.sh",
-        &[lustre_version],
+        &[config.lustre_version()],
     )
     .await
 }
 
 pub async fn install_zfs_no_iml<'a, 'b>(
-    hosts: &[&'a str],
-    lustre_version: &'b str,
+    config: &Config,
 ) -> Result<Vec<(&'a str, Output)>, CmdError> {
-    ssh_script_parallel(hosts, "scripts/install_zfs_no_iml.sh", &[lustre_version]).await
+    ssh_script_parallel(
+        &config.storage_server_ips(),
+        "scripts/install_zfs_no_iml.sh",
+        &[config.lustre_version()],
+    )
+    .await
 }
 
 pub async fn yum_update<'a, 'b>(hosts: &'b [&'a str]) -> Result<Vec<(&'a str, Output)>, CmdError> {
@@ -201,10 +204,16 @@ pub async fn configure_ntp_for_adm<'a, 'b>(
     ssh_script_parallel(hosts, "scripts/configure_ntp.sh", &["adm.local"]).await
 }
 
-pub async fn wait_for_ntp<'a, 'b>(
+pub async fn wait_for_ntp_for_host_only_if<'a, 'b>(
     hosts: &'b [&'a str],
 ) -> Result<Vec<(&'a str, Output)>, CmdError> {
-    ssh_script_parallel(hosts, "scripts/wait_for_ntp.sh", &[]).await
+    ssh_script_parallel(hosts, "scripts/wait_for_ntp.sh", &["10.73.10.1"]).await
+}
+
+pub async fn wait_for_ntp_for_adm<'a, 'b>(
+    hosts: &'b [&'a str],
+) -> Result<Vec<(&'a str, Output)>, CmdError> {
+    ssh_script_parallel(hosts, "scripts/wait_for_ntp.sh", &["adm.local"]).await
 }
 
 pub async fn create_iml_diagnostics<'a, 'b>(
