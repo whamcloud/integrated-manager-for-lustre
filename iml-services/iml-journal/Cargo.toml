@@ -7,6 +7,7 @@ version = "0.3.0"
 [dependencies]
 futures = "0.3"
 iml-manager-env = {path = "../../iml-manager-env", version = "0.3"}
+iml-postgres = {path = "../../iml-postgres", version = "0.3"}
 iml-rabbit = {path = "../../iml-rabbit", version = "0.3"}
 iml-service-queue = {path = "../iml-service-queue", version = "0.3"}
 iml-tracing = {version = "0.2", path = "../../iml-tracing"}
@@ -14,7 +15,6 @@ iml-wire-types = {path = "../../iml-wire-types", version = "0.3", features = ["p
 lazy_static = "1.4.0"
 serde = {version = "1", features = ["derive"]}
 serde_json = "1.0"
-sqlx = {git = "https://github.com/jgrund/sqlx", branch = "support-offline-workspaces", default-features = false, features = ["time", "json", "macros", "offline", "postgres", "runtime-tokio"]}
 thiserror = "1.0"
 time = {version = "0.2", features = ["serde"]}
 tokio = {version = "0.2", features = ["macros"]}

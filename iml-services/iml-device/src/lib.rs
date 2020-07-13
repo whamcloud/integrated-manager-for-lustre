@@ -10,42 +10,13 @@ pub use error::ImlDeviceError;
 use device_types::{devices::Device, mount::Mount};
 use futures::{future::try_join_all, lock::Mutex};
 use im::HashSet;
+use iml_postgres::sqlx::{self, PgPool};
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
-use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use std::{
     collections::{BTreeSet, HashMap},
     sync::Arc,
 };
-
-pub async fn get_db_pool() -> Result<PgPool, ImlDeviceError> {
-    let mut opts = PgConnectOptions::default().username(&iml_manager_env::get_db_user());
-
-    opts = if let Some(x) = iml_manager_env::get_db_host() {
-        opts.host(&x)
-    } else {
-        opts
-    };
-
-    opts = if let Some(x) = iml_manager_env::get_db_name() {
-        opts.database(&x)
-    } else {
-        opts
-    };
-
-    opts = if let Some(x) = iml_manager_env::get_db_password() {
-        opts.password(&x)
-    } else {
-        opts
-    };
-
-    let x = PgPoolOptions::new_with(opts)
-        .max_connections(5)
-        .connect()
-        .await?;
-
-    Ok(x)
-}
 
 pub type Cache = Arc<Mutex<HashMap<Fqdn, Device>>>;
 

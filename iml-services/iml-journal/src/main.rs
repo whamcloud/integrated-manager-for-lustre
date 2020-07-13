@@ -4,41 +4,11 @@
 
 use futures::TryStreamExt;
 use iml_journal::{execute_handlers, get_message_class, ImlJournalError};
+use iml_postgres::{get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::JournalMessage;
-use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use std::convert::TryInto;
-
-//@FIXME Extract into seprate crate
-pub async fn get_db_pool() -> Result<PgPool, ImlJournalError> {
-    let mut opts = PgConnectOptions::default().username(&iml_manager_env::get_db_user());
-
-    opts = if let Some(x) = iml_manager_env::get_db_host() {
-        opts.host(&x)
-    } else {
-        opts
-    };
-
-    opts = if let Some(x) = iml_manager_env::get_db_name() {
-        opts.database(&x)
-    } else {
-        opts
-    };
-
-    opts = if let Some(x) = iml_manager_env::get_db_password() {
-        opts.password(&x)
-    } else {
-        opts
-    };
-
-    let x = PgPoolOptions::new_with(opts)
-        .max_connections(5)
-        .connect()
-        .await?;
-
-    Ok(x)
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

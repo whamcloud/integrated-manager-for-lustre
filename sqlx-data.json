@@ -54,6 +54,104 @@
       "nullable": []
     }
   },
+  "1f0a3d6d1b9f42c2eeca372f6a030e76015214803fb010c2b2e9f2899c57ac38": {
+    "query": "select * from chroma_core_managedhost where fqdn = $1 and not_deleted = 't'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "state_modified_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 2,
+          "name": "state",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "immutable_state",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 4,
+          "name": "not_deleted",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 5,
+          "name": "address",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 6,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 7,
+          "name": "nodename",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 8,
+          "name": "boot_time",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 9,
+          "name": "needs_update",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 10,
+          "name": "corosync_ring0",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 11,
+          "name": "install_method",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 12,
+          "name": "content_type_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 13,
+          "name": "server_profile_id",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true
+      ]
+    }
+  },
   "2c9083284f77e37686b8447e1778f2479a187909660afd592ca6272a3ac2950e": {
     "query": "SELECT COUNT(*) FROM chroma_core_logmessage",
     "describe": {

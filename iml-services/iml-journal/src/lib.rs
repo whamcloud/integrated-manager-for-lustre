@@ -3,12 +3,15 @@
 // license that can be found in the LICENSE file.
 
 use future::BoxFuture;
-use futures::{future, FutureExt};
+use futures::{future, FutureExt, TryFutureExt};
+use iml_postgres::{
+    alert,
+    sqlx::{self, PgPool},
+};
 use iml_service_queue::service_queue::ImlServiceQueueError;
 use iml_wire_types::{AlertRecordType, AlertSeverity};
 use lazy_static::lazy_static;
 use regex::Regex;
-use sqlx::PgPool;
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -74,80 +77,13 @@ pub fn get_message_class(message: &str) -> LogMessageClass {
     }
 }
 
-pub async fn lower(
-    pool: &PgPool,
-    xs: Vec<AlertRecordType>,
-    host_id: i32,
-) -> Result<(), ImlJournalError> {
-    let xs: Vec<_> = xs.iter().map(|x| x.to_string()).collect();
-
-    sqlx::query!(
-        r#"UPDATE chroma_core_alertstate
-            SET active = Null, "end" = now()
-            WHERE
-                active = true
-                AND alert_item_id = $1
-                AND record_type = ANY($2)
-        "#,
-        host_id,
-        &xs
-    )
-    .execute(pool)
-    .await?;
-
-    Ok(())
-}
-
-pub async fn raise(
-    pool: &PgPool,
-    record_type: AlertRecordType,
-    msg: String,
-    item_content_type_id: i32,
-    lustre_pid: Option<i32>,
-    severity: AlertSeverity,
-    item_id: i32,
-) -> Result<(), ImlJournalError> {
-    let record_type = record_type.to_string();
-    let severity: i32 = severity.into();
-
-    sqlx::query!(
-        r#"INSERT INTO chroma_core_alertstate
-        (
-            record_type,
-            variant,
-            alert_item_id,
-            alert_type,
-            begin,
-            message,
-            active,
-            dismissed,
-            severity,
-            lustre_pid,
-            alert_item_type_id
-        )
-        VALUES ($1, '{}', $2, $1, now(), $3, true, false, $4, $5, $6)
-        ON CONFLICT DO NOTHING
-        "#,
-        &record_type,
-        item_id,
-        msg,
-        severity,
-        lustre_pid,
-        item_content_type_id
-    )
-    .execute(pool)
-    .await?;
-
-    Ok(())
-}
-
 fn port_used_handler<'a>(
     pool: &'a PgPool,
     _: &str,
     host_id: i32,
     host_content_type_id: i32,
 ) -> BoxFuture<'a, Result<(), ImlJournalError>> {
-    raise(
+    alert::raise(
         pool,
         AlertRecordType::SyslogEvent,
         "Lustre port already being used".into(),
@@ -156,6 +92,7 @@ fn port_used_handler<'a>(
         AlertSeverity::ERROR,
         host_id,
     )
+    .err_into()
     .boxed()
 }
 
@@ -166,7 +103,7 @@ fn client_connection_handler<'a>(
     host_content_type_id: i32,
 ) -> HandlerFut<'a> {
     if let Some((lustre_pid, msg)) = client_connection_parser(msg) {
-        return raise(
+        return alert::raise(
             pool,
             AlertRecordType::ClientConnectEvent,
             msg,
@@ -175,6 +112,7 @@ fn client_connection_handler<'a>(
             AlertSeverity::INFO,
             host_id,
         )
+        .err_into()
         .boxed();
     };
 
@@ -279,7 +217,7 @@ fn admin_client_eviction_handler<'a>(
     host_content_type_id: i32,
 ) -> HandlerFut<'a> {
     if let Some((lustre_pid, msg)) = admin_client_eviction_parser(msg) {
-        return raise(
+        return alert::raise(
             pool,
             AlertRecordType::ClientConnectEvent,
             msg,
@@ -288,6 +226,7 @@ fn admin_client_eviction_handler<'a>(
             AlertSeverity::WARNING,
             host_id,
         )
+        .err_into()
         .boxed();
     };
 
@@ -311,7 +250,7 @@ fn client_eviction_handler<'a>(
     host_content_type_id: i32,
 ) -> HandlerFut<'a> {
     if let Some((lustre_pid, msg)) = client_eviction_parser(msg) {
-        return raise(
+        return alert::raise(
             pool,
             AlertRecordType::ClientConnectEvent,
             msg,
@@ -320,6 +259,7 @@ fn client_eviction_handler<'a>(
             AlertSeverity::WARNING,
             host_id,
         )
+        .err_into()
         .boxed();
     };
 

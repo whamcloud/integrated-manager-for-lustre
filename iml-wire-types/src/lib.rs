@@ -2,7 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-pub use iml_orm::alerts::AlertRecordType;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{
     cmp::{Ord, Ordering},
@@ -1086,6 +1085,50 @@ impl EndpointName for Filesystem {
 pub struct FilesystemShort {
     pub id: i32,
     pub name: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Debug)]
+pub enum AlertRecordType {
+    AlertState,
+    LearnEvent,
+    AlertEvent,
+    SyslogEvent,
+    ClientConnectEvent,
+    CommandRunningAlert,
+    CommandSuccessfulAlert,
+    CommandCancelledAlert,
+    CommandErroredAlert,
+    CorosyncUnknownPeersAlert,
+    CorosyncToManyPeersAlert,
+    CorosyncNoPeersAlert,
+    CorosyncStoppedAlert,
+    StonithNotEnabledAlert,
+    PacemakerStoppedAlert,
+    HostContactAlert,
+    HostOfflineAlert,
+    HostRebootEvent,
+    UpdatesAvailableAlert,
+    TargetOfflineAlert,
+    TargetFailoverAlert,
+    TargetRecoveryAlert,
+    StorageResourceOffline,
+    StorageResourceAlert,
+    StorageResourceLearnEvent,
+    PowerControlDeviceUnavailableAlert,
+    IpmiBmcUnavailableAlert,
+    LNetOfflineAlert,
+    LNetNidsChangedAlert,
+    StratagemUnconfiguredAlert,
+    TimeOutOfSyncAlert,
+    NoTimeSyncAlert,
+    MultipleTimeSyncAlert,
+    UnknownTimeSyncAlert,
+}
+
+impl ToString for AlertRecordType {
+    fn to_string(&self) -> String {
+        serde_json::to_string(self).unwrap().replace("\"", "")
+    }
 }
 
 #[derive(
