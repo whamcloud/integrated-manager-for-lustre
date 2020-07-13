@@ -207,7 +207,7 @@ class HostResource(StatefulModelResource, BulkResourceOperation):
         search = lambda cm: cm.host == bundle.obj
         mounts = ObjectCache.get(LustreClientMount, search)
         return [
-            {"filesystem_name": mount.filesystem, "mountpoint": mount.mountpoint, "state": mount.state}
+            {"filesystem_name": mount.filesystem, "mountpoints": mount.mountpoints, "state": mount.state}
             for mount in mounts
         ]
 

@@ -82,6 +82,13 @@ Vagrant.configure('2') do |config|
   config.vm.provision 'ssh', type: 'shell', path: './scripts/key_config.sh'
 
   config.vm.provision 'deps', type: 'shell', inline: <<-SHELL
+    # If there is a newer EPEL available, we first need to install EPEL
+    yum install -y epel-release
+    # Then clean metadata (due to non-matching metalinks)
+    yum clean all
+    # Then recognize the new version
+    yum check-update epel-release
+    # Then install the new version
     yum install -y epel-release
     yum clean all
     yum install -y jq htop vim
@@ -860,7 +867,9 @@ def provision_mgmt_net(config, num)
   config.vm.network 'private_network',
                     ip: "#{MGMT_NET_PFX}.#{num}",
                     netmask: '255.255.255.0',
-                    name: interface_name
+                    name: interface_name,
+                    nm_controlled: false
+
 end
 
 def provision_mpath(config)
