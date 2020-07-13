@@ -536,6 +536,7 @@ async fn create_monitored_ldiskfs(config: &Config) -> Result<(), CmdError> {
         async move {
             vagrant::provision_node(x, "ha-ldiskfs-lvm-fs-setup")
                 .await?
+                .env("VBOX_PASSWD", env::var("VBOX_PASSWD")?)
                 .checked_status()
                 .await?;
 
