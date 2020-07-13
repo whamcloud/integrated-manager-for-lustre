@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::get_local_server_names;
+use crate::*;
 use iml_cmd::{CheckedCommandExt, CmdError};
 use tokio::{fs, process::Command};
 
@@ -26,8 +26,8 @@ pub async fn list_servers() -> Result<Command, CmdError> {
     Ok(x)
 }
 
-pub async fn server_add(host_map: &[(String, &[&str])]) -> Result<(), CmdError> {
-    for (profile, hosts) in host_map {
+pub async fn server_add(config: &Config) -> Result<(), CmdError> {
+    for (profile, hosts) in &config.profile_map {
         let mut x = iml().await?;
         x.arg("server")
             .arg("add")
