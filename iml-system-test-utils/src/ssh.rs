@@ -217,14 +217,14 @@ pub async fn wait_for_ntp_for_adm<'a, 'b>(
 }
 
 pub async fn create_iml_diagnostics<'a, 'b>(
-    hosts: &'b [&'a str],
+    hosts: Vec<&'a str>,
     prefix: &'a str,
 ) -> Result<(), CmdError> {
     let path_buf = canonicalize("../vagrant/").await?;
     let path = path_buf.as_path().to_str().expect("Couldn't get path.");
 
     tracing::debug!("Creating diagnostics on: {:?}", hosts);
-    ssh_script_parallel(hosts, "scripts/create_iml_diagnostics.sh", &[prefix]).await?;
+    ssh_script_parallel(&hosts, "scripts/create_iml_diagnostics.sh", &[prefix]).await?;
 
     let now = SystemTime::now();
     let ts = now.duration_since(UNIX_EPOCH).unwrap().as_millis();
@@ -239,8 +239,8 @@ pub async fn create_iml_diagnostics<'a, 'b>(
         .await?;
 
     scp_down_parallel(
-        hosts,
-        "/var/tmp/*sosreport*",
+        &hosts,
+        "/var/tmp/*sosreport*.tar.xz",
         format!("./{}/", &report_dir).as_str(),
     )
     .await?;
@@ -253,4 +253,29 @@ pub async fn create_iml_diagnostics<'a, 'b>(
         .arg(report_dir)
         .checked_status()
         .await
+}
+
+pub async fn detect_fs(host: &str) -> Result<(), CmdError> {
+    ssh_exec_cmd(host, "iml filesystem detect")
+        .await?
+        .checked_status()
+        .await
+}
+
+pub async fn systemd_status(host: &str, service_name: &str) -> Result<Command, CmdError> {
+    let cmd = ssh_exec_cmd(host, format!("systemctl status {}", service_name).as_str()).await?;
+
+    Ok(cmd)
+}
+
+pub async fn add_servers(host: &str, profile: &str, hosts: Vec<String>) -> Result<(), CmdError> {
+    ssh_exec_cmd(
+        host,
+        &format!("iml server add {} -p {}", hosts.join(","), profile),
+    )
+    .await?
+    .checked_status()
+    .await?;
+
+    Ok(())
 }

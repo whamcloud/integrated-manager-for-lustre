@@ -131,6 +131,7 @@ Vagrant.configure('2') do |config|
     adm.vm.hostname = 'adm.local'
 
     adm.vm.network 'forwarded_port', guest: 443, host: 8443
+    adm.vm.network 'forwarded_port', guest: 7443, host: 7443
 
     # Admin / management network
     provision_mgmt_net adm, '10'
@@ -217,6 +218,19 @@ Vagrant.configure('2') do |config|
                      type: 'shell',
                      run: 'never',
                      path: 'scripts/install_iml_local.sh'
+
+    # Install iml-docker onto the admin node
+    adm.vm.provision 'install-iml-docker-local',
+                     type: 'shell',
+                     run: 'never',
+                     path: 'scripts/install_iml_docker_local.sh'
+
+    # Install iml-docker onto the admin node
+    adm.vm.provision 'install-iml-docker-repouri',
+                     type: 'shell',
+                     run: 'never',
+                     path: 'scripts/install_iml_docker_repouri.sh',
+                     env: {"REPO_URI" => REPO_URI}
 
     adm.vm.provision 'deploy-managed-hosts',
                      type: 'shell',
