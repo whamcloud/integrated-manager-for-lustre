@@ -15,6 +15,6 @@ ALTER TABLE chroma_core_managedfilesystem DROP CONSTRAINT unique_name;
 
 class Migration(migrations.Migration):
 
-    dependencies = [("chroma_core", "0020_clientmounts_remove_fk")]
+    dependencies = [("chroma_core", "0021_many_mountpoint")]
 
     operations = [migrations.RunSQL(sql=forward, reverse_sql=backward)]
