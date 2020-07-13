@@ -261,6 +261,10 @@ services:
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
+    environment:
+      - RUST_LOG=info
+      - DBLOG_HW
+      - DBLOG_LW
   iml-warp-drive:
     image: "imlteam/iml-warp-drive:6.2.0-dev"
     hostname: "iml-warp-drive"

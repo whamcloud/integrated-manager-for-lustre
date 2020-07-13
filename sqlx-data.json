@@ -295,6 +295,26 @@
       ]
     }
   },
+  "9e69b2d4692f2bcd76349322b1bbdbb71ada4d3144fc543bff0417ccc576a62a": {
+    "query": "\n                DELETE FROM chroma_core_logmessage\n                WHERE id in ( \n                    SELECT id FROM chroma_core_logmessage ORDER BY id LIMIT $1\n                )\n                RETURNING id",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "b0991443ae430ca73d4369f314b88f731ead796ec9ac353c3d237be9203c95bf": {
     "query": "UPDATE chroma_core_alertstate\n            SET active = Null, \"end\" = now()\n            WHERE\n                active = true\n                AND alert_item_id = $1\n                AND record_type = ANY($2)\n        ",
     "describe": {

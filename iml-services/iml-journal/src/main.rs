@@ -4,11 +4,52 @@
 
 use futures::TryStreamExt;
 use iml_journal::{execute_handlers, get_message_class, ImlJournalError};
-use iml_postgres::{get_db_pool, sqlx};
+use iml_postgres::{
+    get_db_pool,
+    sqlx::{self, PgPool},
+};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::JournalMessage;
+use lazy_static::lazy_static;
 use std::convert::TryInto;
+
+lazy_static! {
+    static ref DBLOG_HW: i64 = iml_manager_env::get_dblog_hw() as i64;
+    static ref DBLOG_LW: i64 = iml_manager_env::get_dblog_lw() as i64;
+}
+
+async fn purge_excess(pool: &PgPool, num_rows: i64) -> Result<i64, ImlJournalError> {
+    if num_rows <= *DBLOG_HW {
+        return Ok(num_rows);
+    }
+
+    let mut num_remove: i64 = num_rows - *DBLOG_LW;
+
+    while num_remove > 0 {
+        let xs = sqlx::query!(
+            r#"
+                DELETE FROM chroma_core_logmessage
+                WHERE id in ( 
+                    SELECT id FROM chroma_core_logmessage ORDER BY id LIMIT $1
+                )
+                RETURNING id"#,
+            std::cmp::min(10_000, num_remove)
+        )
+        .fetch_all(pool)
+        .await?;
+
+        num_remove -= xs.len() as i64;
+
+        tracing::info!(
+            "Purged {} rows, {} remain for purging",
+            xs.len(),
+            num_remove
+        );
+    }
+
+    Ok(num_rows)
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -34,6 +75,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     while let Some((host, xs)) = s.try_next().await? {
         tracing::info!("{:?}", xs);
+
+        num_rows = purge_excess(&pool, num_rows).await?;
 
         struct Row {
             id: i32,
