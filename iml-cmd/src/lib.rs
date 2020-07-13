@@ -4,7 +4,7 @@
 
 use futures::{future::BoxFuture, Future, FutureExt, TryFutureExt};
 use std::{
-    error, fmt, io,
+    env, error, fmt, io,
     pin::Pin,
     process::{ExitStatus, Output},
 };
@@ -17,6 +17,7 @@ use warp::reject;
 pub enum CmdError {
     Io(io::Error),
     Output(Output),
+    VarError(env::VarError),
 }
 
 #[cfg(feature = "warp-errs")]
@@ -33,6 +34,7 @@ impl fmt::Display for CmdError {
                 String::from_utf8_lossy(&err.stdout),
                 String::from_utf8_lossy(&err.stderr)
             ),
+            CmdError::VarError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -42,6 +44,7 @@ impl std::error::Error for CmdError {
         match *self {
             CmdError::Io(ref err) => Some(err),
             CmdError::Output(_) => None,
+            CmdError::VarError(ref err) => Some(err),
         }
     }
 }
@@ -55,6 +58,12 @@ impl From<io::Error> for CmdError {
 impl From<Output> for CmdError {
     fn from(output: Output) -> Self {
         CmdError::Output(output)
+    }
+}
+
+impl From<env::VarError> for CmdError {
+    fn from(err: env::VarError) -> Self {
+        CmdError::VarError(err)
     }
 }
 
