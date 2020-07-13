@@ -26,7 +26,6 @@ pub fn get_id(pem: &[u8]) -> Result<Identity, ImlAgentError> {
 pub fn create_client(id: Identity) -> Result<Client, ImlAgentError> {
     Client::builder()
         .use_rustls_tls()
-        .danger_accept_invalid_certs(true)
         .identity(id)
         .timeout(Duration::from_secs(900))
         .build()
