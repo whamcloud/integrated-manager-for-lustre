@@ -273,14 +273,22 @@ impl Config {
     pub fn get_setup_config(&self) -> String {
         match &self.test_type {
             TestType::Rpm => format!(
-                r#"USE_STRATAGEM = {}
-BRANDING = "{}""#,
+                r#"USE_STRATAGEM={}
+BRANDING={}
+LOG_LEVEL=10
+RUST_LOG=debug
+NTP_SERVER_HOSTNAME=adm.local
+"#,
                 if self.use_stratagem { "True" } else { "False" },
                 self.branding.to_string()
             ),
             TestType::Docker => format!(
                 r#"USE_STRATAGEM={}
-BRANDING={}"#,
+BRANDING={}
+LOG_LEVEL=10
+RUST_LOG=debug
+NTP_SERVER_HOSTNAME=10.73.10.1
+"#,
                 self.use_stratagem,
                 self.branding.to_string()
             ),
@@ -447,7 +455,7 @@ pub async fn configure_iml(config: Config) -> Result<Config, CmdError> {
 pub async fn deploy_servers(config: Config) -> Result<Config, CmdError> {
     for (profile, hosts) in &config.profile_map {
         let host_ips = config.hosts_to_ips(&hosts);
-        for host in host_ips {
+        for host in &host_ips {
             tracing::debug!("pinging host to make sure it is up.");
             ssh::ssh_exec_cmd(host, "uname -r")
                 .await?
@@ -463,6 +471,7 @@ pub async fn deploy_servers(config: Config) -> Result<Config, CmdError> {
         };
 
         ssh::add_servers(&config.manager_ip, profile, hosts).await?;
+        ssh::enable_debug_on_hosts(&host_ips).await?;
     }
 
     vagrant::halt()
@@ -616,12 +625,12 @@ pub async fn configure_rpm_setup(config: &Config) -> Result<(), CmdError> {
 
     let vagrant_path = canonicalize("../vagrant/").await?;
     let mut config_path = vagrant_path.clone();
-    config_path.push("local_settings.py");
+    config_path.push("overrides.conf");
 
     let mut file = File::create(config_path).await?;
     file.write_all(config_content.as_bytes()).await?;
 
-    let mut vm_cmd: String = "sudo cp /vagrant/local_settings.py /usr/share/chroma-manager/".into();
+    let mut vm_cmd: String = "mkdir -p /var/lib/chroma && sudo cp /vagrant/overrides.conf /var/lib/chroma".into();
     if config.use_stratagem {
         let mut server_profile_path = vagrant_path.clone();
         server_profile_path.push("stratagem-server.profile");
