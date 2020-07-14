@@ -64,6 +64,8 @@ pub enum SnapshotName {
     ZfsCreated,
     StratagemCreated,
     FilesystemDetected,
+    StratagemMountedClient,
+    StratagemTestTaskQueue,
 }
 
 impl SnapshotName {
@@ -82,6 +84,8 @@ impl SnapshotName {
             Self::ZfsCreated => 10,
             Self::StratagemCreated => 11,
             Self::FilesystemDetected => 12,
+            Self::StratagemMountedClient => 13,
+            Self::StratagemTestTaskQueue => 14,
         }
     }
 }
@@ -108,6 +112,8 @@ impl From<&String> for SnapshotName {
             "zfs-created" => Self::ZfsCreated,
             "stratagem-created" => Self::StratagemCreated,
             "filesystem-detected" => Self::FilesystemDetected,
+            "stratagem-mounted-client" => Self::StratagemMountedClient,
+            "stratagem-test-taskqueue" => Self::StratagemTestTaskQueue,
             _ => Self::Bare,
         }
     }
@@ -129,6 +135,8 @@ impl fmt::Display for SnapshotName {
             Self::ZfsCreated => write!(f, "zfs-created"),
             Self::StratagemCreated => write!(f, "stratagem-created"),
             Self::FilesystemDetected => write!(f, "filesystem-detected"),
+            Self::StratagemMountedClient => write!(f, "stratagem-mounted-client"),
+            Self::StratagemTestTaskQueue => write!(f, "stratagem-test-taskqueue"),
         }
     }
 }
@@ -234,6 +242,14 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
     let filesystem_detected = graph.add_node(Snapshot {
         name: SnapshotName::FilesystemDetected,
         available: snapshots.contains(&SnapshotName::FilesystemDetected),
+    });
+    let stratagem_mounted_client = graph.add_node(Snapshot {
+        name: SnapshotName::StratagemMountedClient,
+        available: snapshots.contains(&SnapshotName::StratagemMountedClient),
+    });
+    let stratagem_test_taskqueue = graph.add_node(Snapshot {
+        name: SnapshotName::StratagemTestTaskQueue,
+        available: snapshots.contains(&SnapshotName::StratagemTestTaskQueue),
     });
 
     graph.add_edge(
@@ -359,6 +375,24 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
         Transition {
             path: SnapshotPath::All,
             transition: mk_transition(detect_fs),
+        },
+    );
+
+    graph.add_edge(
+        filesystem_detected,
+        stratagem_mounted_client,
+        Transition {
+            path: SnapshotPath::Stratagem,
+            transition: mk_transition(mount_clients),
+        },
+    );
+
+    graph.add_edge(
+        stratagem_mounted_client,
+        stratagem_test_taskqueue,
+        Transition {
+            path: SnapshotPath::Stratagem,
+            transition: mk_transition(test_stratagem_taskqueue),
         },
     );
 
