@@ -5,9 +5,11 @@
 use crate::{
     agent_error::ImlAgentError,
     daemon_plugins::{DaemonPlugin, Output},
+    env::get_journal_port,
 };
 use futures::{lock::Mutex, Future, FutureExt, Stream, TryStreamExt};
 use iml_wire_types::{JournalMessage, JournalPriority};
+use lazy_static::lazy_static;
 use std::{io, pin::Pin, str, sync::Arc};
 use tokio::io::stream_reader;
 use tokio_util::codec::{FramedRead, LinesCodec};
@@ -20,7 +22,6 @@ enum Msg {
 }
 
 #[derive(Debug, PartialEq, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct IncomingMessage {
     #[serde(rename = "__CURSOR")]
     pub cursor: String,
@@ -47,6 +48,10 @@ pub fn create() -> impl DaemonPlugin {
     }
 }
 
+lazy_static! {
+    static ref URL: String = format!("http://localhost:{}/entries", get_journal_port());
+}
+
 async fn read_entries(
     cursor: &Option<String>,
 ) -> Result<impl Stream<Item = Result<(String, JournalMessage), ImlAgentError>>, ImlAgentError> {
@@ -59,7 +64,7 @@ async fn read_entries(
     };
 
     let s = client
-        .get("http://localhost:19531/entries")
+        .get(URL.as_str())
         .header(reqwest::header::RANGE, range)
         .header(reqwest::header::ACCEPT, "application/json")
         .send()

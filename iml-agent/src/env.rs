@@ -53,6 +53,12 @@ pub fn sock_dir() -> String {
     get_var("SOCK_DIR")
 }
 
+pub fn get_journal_port() -> u32 {
+    get_var_else("JOURNAL_PORT", "19531")
+        .parse::<u32>()
+        .expect("Could not parse JOURNAL_PORT")
+}
+
 /// Return socket address for a given mailbox
 pub fn mailbox_sock(mailbox: &str) -> String {
     format!("{}/postman-{}.sock", sock_dir(), mailbox)
