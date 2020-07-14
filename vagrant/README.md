@@ -45,10 +45,43 @@ The IML Team typically uses [Vagrant](https://www.vagrantup.com) and [VirtualBox
    vagrant reload
    ```
 
-1. Install the latest IML from [copr-devel](https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre-devel/)
+1. Install IML. IML Can be installed using either rpm-based / systemd or docker. Install IML by using one of the following provisioning scripts:
+   1. Latest RPM from [copr-devel](https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre-devel/)
 
-   ```sh
-   vagrant provision --provision-with=install-iml-devel
+      ```sh
+      vagrant provision --provision-with=install-iml-devel
+      ```
+
+   1. Local RPM Install
+
+      ```sh
+      vagrant provision --provision-with=install-iml-local
+      ```
+
+   1. Local Docker Install
+
+      ```sh
+      vagrant provision --provision-with=install-iml-docker-local
+      ```
+
+   1. RPM Install from a specific repo:
+
+      ```sh
+      REPO_URI=<uri> vagrant provision --provision-with=install-iml-repouri
+      ```
+
+   1. Docker Install from a specific repo:
+
+      ```sh
+      REPO_URI=<uri> vagrant provision --provision-with=install-iml-docker-repouri
+      ```
+
+   \* Note there are other version specific provisioners available as well. See the Vagrantfile for these options.
+
+1. Setup the clients
+
+    ```sh
+   vagrant provision --provision-with=install-lustre-client,configure-lustre-client-network
    ```
 
 At this point you should be able to access the IML GUI on your host at https://localhost:8443

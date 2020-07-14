@@ -2,34 +2,25 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_system_rpm_tests::{run_fs_test, wait_for_ntp};
-use iml_system_test_utils::{vagrant, SetupConfig, SetupConfigType, SystemTestError, WithSos as _};
-
-async fn run_test(config: &vagrant::ClusterConfig) -> Result<(), SystemTestError> {
-    run_fs_test(
-        &config,
-        &SetupConfigType::RpmSetup(SetupConfig {
-            use_stratagem: false,
-            branding: iml_wire_types::Branding::Whamcloud,
-        }),
-        vec![("base_monitored".into(), &config.storage_servers()[..])],
-        vagrant::FsType::ZFS,
-    )
-    .await?;
-
-    wait_for_ntp(&config).await?;
-
-    Ok(())
-}
+use iml_cmd::CmdError;
+use iml_system_rpm_tests::run_fs_test;
+use iml_system_test_utils::*;
 
 #[tokio::test]
-async fn test_zfs_setup() -> Result<(), SystemTestError> {
-    let config = vagrant::ClusterConfig::default();
-    run_test(&config)
+async fn test_zfs_setup() -> Result<(), CmdError> {
+    let config = Config::default();
+    let config: Config = Config {
+        profile_map: vec![("base_monitored".into(), config.storage_servers())],
+        fs_type: FsType::ZFS,
+        ..config
+    };
+
+    let result_servers = config.manager_and_storage_server_ips();
+
+    run_fs_test(config)
         .await
-        .handle_test_result(
-            &vec![&config.manager_ip()[..], &config.storage_server_ips()[..]].concat()[..],
-            "rpm_zfs_test",
-        )
-        .await
+        .handle_test_result(result_servers, "rpm_zfs_test")
+        .await?;
+
+    Ok(())
 }
