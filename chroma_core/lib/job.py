@@ -221,7 +221,11 @@ class Step(object):
         try:
             result = json.loads(result)
         except ValueError as e:
-            raise LocalActionException(command, args, "Error parsing json: {}; result: {}; command: {}; args: {}".format(e, result, command, args))
+            raise LocalActionException(
+                command,
+                args,
+                "Error parsing json: {}; result: {}; command: {}; args: {}".format(e, result, command, args),
+            )
 
         if "Err" in result:
             self.log(json.dumps(result["Err"], indent=2))
@@ -249,7 +253,12 @@ class Step(object):
         try:
             result = json.loads(result)
         except ValueError as e:
-            raise AgentException(host, command, args, "Error parsing json: {}; result: {}; command: {}; args: {}".format(e, result, command, args))
+            raise AgentException(
+                host,
+                command,
+                args,
+                "Error parsing json: {}; result: {}; command: {}; args: {}".format(e, result, command, args),
+            )
 
         if "Err" in result:
             self.log(json.dumps(result["Err"], indent=2))
