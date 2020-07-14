@@ -3,11 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use bytes::Buf;
-use futures::{
-    future::try_join_all,
-    stream::BoxStream,
-    Stream, StreamExt, TryStreamExt,
-};
+use futures::{future::try_join_all, stream::BoxStream, Stream, StreamExt, TryStreamExt};
 use iml_orm::{
     fidtaskqueue::insert_fidtask,
     lustrefid::LustreFid,
@@ -51,7 +47,6 @@ fn streamer<'a>(
         .boxed()
 }
 
-
 /// Warp Filter that streams a newline delimited body
 pub fn line_stream<'a>() -> BoxedFilter<(BoxStream<'a, Result<String, warp::Rejection>>,)> {
     warp::body::stream().map(streamer).boxed()
@@ -67,10 +62,7 @@ async fn get_task_by_name(
 /// Given an task name and `mpsc::UnboundedReceiver` handle, this fn
 /// will process incoming lines and write them into FidTaskQueue
 /// associating the new item with the existing named task.
-pub async fn ingest_data(
-    task: String,
-    lines: Vec<String>,
-) -> Result<(), MailboxError> {
+pub async fn ingest_data(task: String, lines: Vec<String>) -> Result<(), MailboxError> {
     tracing::info!("Starting ingest for {:?}", task);
 
     let pool = iml_orm::pool()?;
@@ -90,10 +82,14 @@ pub async fn ingest_data(
         let mut map: HashMap<String, serde_json::Value> = serde_json::from_str(&line).ok()?;
 
         if let Some(fid) = map.remove("fid".into()) {
-            let fid = LustreFid::from_str(fid.as_str().ok_or_else(|| {
-                
-                MailboxError::NotFound(format!("Failed to find fid in {}", line))
-            }).ok()?).ok()?;
+            let fid = LustreFid::from_str(
+                fid.as_str()
+                    .ok_or_else(|| {
+                        MailboxError::NotFound(format!("Failed to find fid in {}", line))
+                    })
+                    .ok()?,
+            )
+            .ok()?;
 
             // Get "other" data if it exists
             let data = match map.iter().next() {
@@ -110,10 +106,11 @@ pub async fn ingest_data(
         }
     });
 
-
     let res = try_join_all(xs).await?;
 
-    task::increase_total(task.id, res.len() as i64).execute_async(&pool).await?;
+    task::increase_total(task.id, res.len() as i64)
+        .execute_async(&pool)
+        .await?;
 
     Ok(())
 }

@@ -28,9 +28,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and(iml_mailbox::line_stream())
         .and_then(
             |task_name: String,
-            s: Pin<Box<dyn Stream<Item = Result<String, warp::Rejection>> + Send>>| {
+             s: Pin<Box<dyn Stream<Item = Result<String, warp::Rejection>> + Send>>| {
                 async move {
-
                     s.filter_map(|l| async move { l.ok() })
                         .chunks(100)
                         .for_each_concurrent(10, |lines| {
@@ -40,7 +39,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     tracing::warn!("Failed to process line: {:?}", e);
                                 }
                             }
-                        }).await;
+                        })
+                        .await;
 
                     Ok::<_, warp::reject::Rejection>(())
                 }
