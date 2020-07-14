@@ -1,4 +1,4 @@
-// Copyright (c) 2019 DDN. All rights reserved.
+// Copyright (c) 2020 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -487,6 +487,6 @@ pub fn produce_device_graph(state: &state::State) -> Result<bytes::Bytes> {
     build_device_graph(&mut root, &dev_list, &state.local_mounts)?;
 
     let v = serde_json::to_string(&(&root, &state.local_mounts))?;
-    let b = bytes::BytesMut::from(v + "\n");
+    let b = bytes::BytesMut::from((v + "\n").as_str());
     Ok(b.freeze())
 }

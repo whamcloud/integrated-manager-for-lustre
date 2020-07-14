@@ -1,4 +1,4 @@
-// Copyright (c) 2019 DDN. All rights reserved.
+// Copyright (c) 2020 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -13,10 +13,10 @@ use futures::{
     TryStreamExt,
 };
 use tokio::{
-    codec::{FramedRead, LinesCodec},
     io::AsyncWriteExt,
     net::{UnixListener, UnixStream},
 };
+use tokio_util::codec::{FramedRead, LinesCodec};
 
 pub enum WriterCmd {
     Add(UnixStream),
@@ -58,7 +58,7 @@ pub async fn writer(mut rx: UnboundedReceiver<WriterCmd>) {
 }
 
 pub async fn reader(
-    listener: UnixListener,
+    mut listener: UnixListener,
     tx: UnboundedSender<WriterCmd>,
 ) -> Result<(), error::Error> {
     let mut listener = listener
@@ -89,7 +89,7 @@ pub async fn reader(
                 }
                 Command::GetMounts => {
                     let v = serde_json::to_string(&state.local_mounts)?;
-                    let b = bytes::BytesMut::from(v + "\n");
+                    let b = bytes::BytesMut::from((v + "\n").as_str());
                     let b = b.freeze();
 
                     sock.shutdown(std::net::Shutdown::Read)?;
