@@ -1,49 +1,30 @@
-// Copyright (c) 2018 DDN. All rights reserved.
+// Copyright (c) 2020 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
 use device_types::zed::{zfs, zpool, PoolCommand, ZedCommand};
 use futures::TryStreamExt;
-use std::{error, fmt, io, num, result};
+use std::{io, num, result};
 use tokio::{
-    codec::{FramedRead, LinesCodec, LinesCodecError},
     io::{AsyncWrite, AsyncWriteExt},
     net::UnixStream,
 };
+use tokio_util::codec::{FramedRead, LinesCodec, LinesCodecError};
 
 type Result<T> = result::Result<T, Error>;
 
-#[derive(Debug, derive_more::From)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
-    Io(io::Error),
-    SerdeJson(serde_json::Error),
-    LibZfsError(libzfs::LibZfsError),
-    ParseIntError(num::ParseIntError),
-    LinesCodecError(LinesCodecError),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Error::Io(ref err) => write!(f, "{}", err),
-            Error::SerdeJson(ref err) => write!(f, "{}", err),
-            Error::LibZfsError(ref err) => write!(f, "{}", err),
-            Error::ParseIntError(ref err) => write!(f, "{}", err),
-            Error::LinesCodecError(ref err) => write!(f, "{}", err),
-        }
-    }
-}
-
-impl error::Error for Error {
-    fn cause(&self) -> Option<&dyn error::Error> {
-        match *self {
-            Error::Io(ref err) => Some(err),
-            Error::SerdeJson(ref err) => Some(err),
-            Error::LibZfsError(ref err) => Some(err),
-            Error::ParseIntError(ref err) => Some(err),
-            Error::LinesCodecError(ref err) => Some(err),
-        }
-    }
+    #[error(transparent)]
+    Io(#[from] io::Error),
+    #[error(transparent)]
+    SerdeJson(#[from] serde_json::Error),
+    #[error(transparent)]
+    LibZfsError(#[from] libzfs::LibZfsError),
+    #[error(transparent)]
+    ParseIntError(#[from] num::ParseIntError),
+    #[error(transparent)]
+    LinesCodecError(#[from] LinesCodecError),
 }
 
 fn guid_to_u64(guid: zpool::Guid) -> Result<u64> {

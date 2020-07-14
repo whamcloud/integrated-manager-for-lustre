@@ -57,7 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Starting");
 
-    let pool = get_db_pool().await?;
+    let pool = get_db_pool(5).await?;
 
     let rabbit_pool = iml_rabbit::connect_to_rabbit(1);
 

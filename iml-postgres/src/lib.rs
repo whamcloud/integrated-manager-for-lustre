@@ -21,7 +21,7 @@ pub use tokio_postgres::{
 };
 use tokio_postgres::{tls::NoTlsStream, Connection, NoTls, Socket};
 
-pub async fn get_db_pool() -> Result<PgPool, sqlx::Error> {
+pub async fn get_db_pool(pool_size: u32) -> Result<PgPool, sqlx::Error> {
     let mut opts = PgConnectOptions::default().username(&iml_manager_env::get_db_user());
 
     opts = if let Some(x) = iml_manager_env::get_db_host() {
@@ -42,9 +42,9 @@ pub async fn get_db_pool() -> Result<PgPool, sqlx::Error> {
         opts
     };
 
-    let x = PgPoolOptions::new_with(opts)
-        .max_connections(5)
-        .connect()
+    let x = PgPoolOptions::new()
+        .max_connections(pool_size)
+        .connect_with(opts)
         .await?;
 
     Ok(x)
