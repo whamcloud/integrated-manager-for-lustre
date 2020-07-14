@@ -350,21 +350,18 @@ class ServiceConfig(CommandLine):
                     ),
                 ]
             )
-        except CommandError as e:
-            if "retention policy already exists" in e.stderr:
-                self.try_shell(
-                    [
-                        "influx",
-                        "-database",
-                        settings.INFLUXDB_IML_STATS_DB,
-                        "-execute",
-                        'ALTER RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
-                            settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_LONG_DURATION,
-                        ),
-                    ]
-                )
-            else:
-                raise
+        except CommandError:
+            self.try_shell(
+                [
+                    "influx",
+                    "-database",
+                    settings.INFLUXDB_IML_STATS_DB,
+                    "-execute",
+                    'ALTER RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
+                        settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_LONG_DURATION,
+                    ),
+                ]
+            )
 
         self.try_shell(
             [
