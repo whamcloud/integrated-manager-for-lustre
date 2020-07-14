@@ -11,6 +11,7 @@
 
 use futures::{Stream, StreamExt};
 use iml_mailbox::ingest_data;
+use iml_tracing::tracing;
 use std::pin::Pin;
 use warp::Filter as _;
 
@@ -30,13 +31,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             |task_name: String,
              s: Pin<Box<dyn Stream<Item = Result<String, warp::Rejection>> + Send>>| {
                 async move {
+                    tracing::debug!("Listening for task {}", &task_name);
                     s.filter_map(|l| async move { l.ok() })
                         .chunks(100)
                         .for_each_concurrent(10, |lines| {
                             let task_name = task_name.clone();
                             async move {
                                 if let Err(e) = ingest_data(task_name, lines).await {
-                                    tracing::warn!("Failed to process line: {:?}", e);
+                                    tracing::warn!("Failed to process lines: {:?}", e);
                                 }
                             }
                         })

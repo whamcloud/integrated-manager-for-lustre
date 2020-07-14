@@ -10,6 +10,7 @@ use iml_orm::{
     task::{self, ChromaCoreTask as Task},
     tokio_diesel::{AsyncRunQueryDsl as _, OptionalExtension as _},
 };
+use iml_tracing::tracing;
 use serde_json::json;
 use std::{collections::HashMap, str::FromStr};
 use thiserror::Error;
@@ -63,14 +64,14 @@ async fn get_task_by_name(
 /// will process incoming lines and write them into FidTaskQueue
 /// associating the new item with the existing named task.
 pub async fn ingest_data(task: String, lines: Vec<String>) -> Result<(), MailboxError> {
-    tracing::info!("Starting ingest for {:?}", task);
+    tracing::debug!("Starting ingest for {:?}", task);
 
     let pool = iml_orm::pool()?;
 
     let task = match get_task_by_name(&task, &pool).await? {
         Some(t) => t,
         None => {
-            tracing::info!("Task {} not found", task);
+            tracing::error!("Task {} not found", task);
 
             return Err(MailboxError::NotFound(format!("Failed to find {}", task)));
         }
