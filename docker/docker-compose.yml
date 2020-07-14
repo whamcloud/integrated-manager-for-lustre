@@ -343,6 +343,9 @@ services:
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
+    environment:
+      - PROXY_HOST=iml-mailbox
+      - RUST_LOG=info
   iml-stats:
     image: "imlteam/iml-stats:6.2.0-dev"
     hostname: "iml-stats"
