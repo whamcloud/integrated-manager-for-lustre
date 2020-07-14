@@ -643,13 +643,19 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, CmdError
     .await?;
 
     // Create Task
-    let cmd = format!(r#". /var/lib/chroma/iml-settings.conf; curl -d '{}' -H "Content-Type: application/json" -H "Authorization: ApiKey $API_USER:$API_KEY" --cacert /var/lib/chroma/authority.crt https://adm.local/api/task/"#, task);
+    let cmd = format!(
+        r#". /var/lib/chroma/iml-settings.conf; curl -d '{}' -H "Content-Type: application/json" -H "Authorization: ApiKey $API_USER:$API_KEY" --cacert /var/lib/chroma/authority.crt https://adm.local/api/task/"#,
+        task
+    );
     ssh::ssh_exec_cmd(config.manager_ip, &cmd)
         .await?
         .checked_status()
         .await?;
 
-    let fid = format!("{{ \"fid\": \"{}\" }}", String::from_utf8(output.stdout).unwrap().trim());
+    let fid = format!(
+        "{{ \"fid\": \"{}\" }}",
+        String::from_utf8(output.stdout).unwrap().trim()
+    );
 
     let cmd = format!(
         "echo {} | socat - unix-connect:/run/iml/postman-testfile.sock",
