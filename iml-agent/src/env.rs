@@ -32,14 +32,6 @@ fn get_cert_path() -> String {
     get_var("CRT_PATH")
 }
 
-fn _get_pfx_path() -> String {
-    get_var("PFX_PATH")
-}
-
-fn _get_authority_cert_path() -> String {
-    get_var("AUTHORITY_CRT_PATH")
-}
-
 pub fn sock_dir() -> String {
     get_var("SOCK_DIR")
 }
@@ -56,15 +48,15 @@ lazy_static! {
         let private_pem_path = get_private_pem_path();
 
         let mut private_pem = File::open(private_pem_path)
-            .unwrap_or_else(|_| panic!("{} does not exist", get_private_pem_path()));
+            .unwrap_or_else(|e| panic!("Error opening {}: {}", get_private_pem_path(), e));
         private_pem
             .read_to_end(&mut result)
             .expect("Couldn't read PEM");
 
         let cert_path = get_cert_path();
 
-        let mut cert =
-            File::open(cert_path).unwrap_or_else(|_| panic!("{} does not exist", get_cert_path()));
+        let mut cert = File::open(cert_path)
+            .unwrap_or_else(|e| panic!("Error opening {}: {}", get_cert_path(), e));
         cert.read_to_end(&mut result)
             .expect("Couldn't read the certificate");
 
