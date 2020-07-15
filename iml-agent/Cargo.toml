@@ -1,11 +1,11 @@
 [package]
-name = "iml-agent"
-version = "0.3.0"
 authors = ["IML Team <iml@whamcloud.com>"]
-edition = "2018"
 description = "Core library for Integrated Manager for Lustre Agent"
+edition = "2018"
 license = "MIT"
+name = "iml-agent"
 repository = "https://github.com/whamcloud/integrated-manager-for-lustre/tree/master/iml-agent"
+version = "0.3.0"
 
 [dependencies]
 async-trait = "0.1"
@@ -20,44 +20,44 @@ exitcode = "1.1"
 futures = "0.3"
 futures-util = "0.3"
 http = "0.2"
-iml-cmd = { path = "../iml-cmd", version = "0.3.0" }
-iml-fs = { path = "../iml-fs", version = "0.3.0" }
-iml-systemd = { path = "../iml-systemd", version = "0.3.0" }
-iml-tracing = { version = "0.2", path = "../iml-tracing" }
-iml-util = { path = "../iml-util", version = "0.3.0" }
-iml-wire-types = { path = "../iml-wire-types", version = "0.3" }
+iml-cmd = {path = "../iml-cmd", version = "0.3.0"}
+iml-fs = {path = "../iml-fs", version = "0.3.0"}
+iml-systemd = {path = "../iml-systemd", version = "0.3.0"}
+iml-tracing = {version = "0.2", path = "../iml-tracing"}
+iml-util = {path = "../iml-util", version = "0.3.0"}
+iml-wire-types = {path = "../iml-wire-types", version = "0.3"}
 inotify = "0.8"
 lazy_static = "1.4.0"
 libc = "0.2"
-liblustreapi = { path = "../liblustreapi", version = "0.3" }
+liblustreapi = {path = "../liblustreapi", version = "0.3"}
 lustre_collector = "0.2.13"
 native-tls = "0.2"
 prettytable-rs = "0.8"
-reqwest = { version = "0.10", features = ["default-tls", "native-tls", "json", "stream"] }
-serde = { version = "1", features = ["derive"] }
+reqwest = {version = "0.10", features = ["default-tls", "native-tls", "json", "stream"]}
+serde = {version = "1", features = ["derive"]}
 serde_json = "1"
 spinners = "1.2"
 stream-cancel = "0.6"
 strfmt = "0.1.6"
 structopt = "0.3"
-tokio = { version = "0.2", features = ["fs", "process", "macros", "net"] }
-tokio-util = { version = "0.3", features = ["codec"] }
+tokio = {version = "0.2", features = ["fs", "process", "macros", "net"]}
+tokio-util = {version = "0.3", features = ["codec"]}
 tracing = "0.1"
 url = "2.1"
-uuid = { version = "0.8", features = ["v4"] }
+uuid = {version = "0.8", features = ["v4"]}
 v_hist = "0.1.2"
-version-utils = { path = "../version-utils", version = "0.1.0" }
+version-utils = {path = "../version-utils", version = "0.1.0"}
 
 [dependencies.regex]
-version = "1.3"
 default-features = false
 features = ["std"]
+version = "1.3"
 
 [dev-dependencies]
-mockito = "0.25"
 insta = "0.16"
+mockito = "0.25"
 tempfile = "3.1.0"
-tokio = { version = "0.2", features = ["rt-threaded"]}
+tokio = {version = "0.2", features = ["rt-threaded"]}
 
 [[bin]]
 name = "iml-agent-daemon"

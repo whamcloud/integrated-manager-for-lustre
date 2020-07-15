@@ -86,15 +86,14 @@ jobs:
           toolchain: stable
           override: true
 
-      - run: cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/jgrund/sqlx --branch workspace-prepare
+      - run: cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/jgrund/sqlx --branch support-offline-workspaces
 
-      - uses: marcopolo/cargo@master
+      - uses: actions-rs/cargo@v1
         env:
           DATABASE_URL: postgres://chroma:chroma@localhost:5432/chroma
         with:
           command: sqlx
           args: prepare --check -- --tests
-          working-directory: iml-services/iml-device
 
   test:
     name: Test Suite

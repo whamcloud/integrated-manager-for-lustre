@@ -3,29 +3,15 @@
 // license that can be found in the LICENSE file.
 
 use futures::TryStreamExt;
-use iml_orm::{
-    alerts::{self, AlertRecordType},
-    hosts::ChromaCoreManagedhost,
-    tokio_diesel::{self, AsyncRunQueryDsl as _, OptionalExtension as _},
-};
+use iml_postgres::{alert, get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
-use iml_wire_types::time::State;
-
-pub async fn get_host_by_fqdn(
-    x: impl ToString,
-    pool: &iml_orm::DbPool,
-) -> Result<Option<ChromaCoreManagedhost>, tokio_diesel::AsyncError> {
-    ChromaCoreManagedhost::by_fqdn(x)
-        .first_async(pool)
-        .await
-        .optional()
-}
+use iml_wire_types::{db::ManagedHostRecord, time::State, AlertRecordType, AlertSeverity};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    let pool = iml_orm::pool()?;
+    let pool = get_db_pool().await?;
 
     let rabbit_pool = iml_rabbit::connect_to_rabbit(1);
 
@@ -38,16 +24,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     while let Some((fqdn, state)) = s.try_next().await? {
         tracing::debug!("fqdn: {:?} state: {:?}", fqdn, state);
 
-        let host = get_host_by_fqdn(&fqdn.0, &pool).await?;
+        let host: Option<ManagedHostRecord> = sqlx::query_as!(
+            ManagedHostRecord,
+            "select * from chroma_core_managedhost where fqdn = $1 and not_deleted = 't'",
+            fqdn.to_string()
+        )
+        .fetch_optional(&pool)
+        .await?;
 
         let host = match host {
-            Some(host) => host,
-            None => continue,
+            Some(x) => x,
+            None => {
+                tracing::warn!("Host '{}' is unknown", fqdn);
+
+                continue;
+            }
         };
 
         match state {
             State::Synced => {
-                alerts::lower(
+                alert::lower(
+                    &pool,
                     vec![
                         AlertRecordType::TimeOutOfSyncAlert,
                         AlertRecordType::NoTimeSyncAlert,
@@ -56,11 +53,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ],
                     host.id,
                 )
-                .execute_async(&pool)
                 .await?;
             }
             State::None => {
-                alerts::lower(
+                alert::lower(
+                    &pool,
                     vec![
                         AlertRecordType::TimeOutOfSyncAlert,
                         AlertRecordType::MultipleTimeSyncAlert,
@@ -68,22 +65,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ],
                     host.id,
                 )
-                .execute_async(&pool)
                 .await?;
 
                 if host.is_setup() {
-                    alerts::raise(
+                    alert::raise(
+                        &pool,
                         AlertRecordType::NoTimeSyncAlert,
                         format!("No running time sync clients found on {}", fqdn),
                         host.content_type_id.expect("Host has no content_type_id"),
+                        None,
+                        AlertSeverity::ERROR,
                         host.id,
                     )
-                    .execute_async(&pool)
                     .await?;
                 }
             }
             State::Multiple => {
-                alerts::lower(
+                alert::lower(
+                    &pool,
                     vec![
                         AlertRecordType::TimeOutOfSyncAlert,
                         AlertRecordType::NoTimeSyncAlert,
@@ -91,22 +90,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ],
                     host.id,
                 )
-                .execute_async(&pool)
                 .await?;
 
                 if host.is_setup() {
-                    alerts::raise(
+                    alert::raise(
+                        &pool,
                         AlertRecordType::MultipleTimeSyncAlert,
                         format!("Multiple running time sync clients found on {}", fqdn),
                         host.content_type_id.expect("Host has no content_type_id"),
+                        None,
+                        AlertSeverity::ERROR,
                         host.id,
                     )
-                    .execute_async(&pool)
                     .await?;
                 }
             }
             State::Unsynced(_) => {
-                alerts::lower(
+                alert::lower(
+                    &pool,
                     vec![
                         AlertRecordType::MultipleTimeSyncAlert,
                         AlertRecordType::NoTimeSyncAlert,
@@ -114,22 +115,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ],
                     host.id,
                 )
-                .execute_async(&pool)
                 .await?;
 
                 if host.is_setup() {
-                    alerts::raise(
+                    alert::raise(
+                        &pool,
                         AlertRecordType::TimeOutOfSyncAlert,
                         format!("Time is out of sync on server {}", fqdn),
                         host.content_type_id.expect("Host has no content_type_id"),
+                        None,
+                        AlertSeverity::ERROR,
                         host.id,
                     )
-                    .execute_async(&pool)
                     .await?;
                 }
             }
             State::Unknown => {
-                alerts::lower(
+                alert::lower(
+                    &pool,
                     vec![
                         AlertRecordType::MultipleTimeSyncAlert,
                         AlertRecordType::NoTimeSyncAlert,
@@ -137,17 +140,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ],
                     host.id,
                 )
-                .execute_async(&pool)
                 .await?;
 
                 if host.is_setup() {
-                    alerts::raise(
+                    alert::raise(
+                        &pool,
                         AlertRecordType::UnknownTimeSyncAlert,
                         format!("Unable to determine time sync status on {}", fqdn),
                         host.content_type_id.expect("Host has no content_type_id"),
+                        None,
+                        AlertSeverity::ERROR,
                         host.id,
                     )
-                    .execute_async(&pool)
                     .await?;
                 }
             }
