@@ -12,7 +12,7 @@ use std::{
 use url::Url;
 
 lazy_static! {
-    static ref RUNNING_IN_DOCKER: bool = { std::fs::metadata("/.dockerenv").is_ok() };
+    static ref RUNNING_IN_DOCKER: bool = std::fs::metadata("/.dockerenv").is_ok();
 }
 
 /// Get the environment variable or panic
