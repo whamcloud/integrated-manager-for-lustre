@@ -630,7 +630,8 @@ pub async fn configure_rpm_setup(config: &Config) -> Result<(), CmdError> {
     let mut file = File::create(config_path).await?;
     file.write_all(config_content.as_bytes()).await?;
 
-    let mut vm_cmd: String = "mkdir -p /var/lib/chroma && sudo cp /vagrant/overrides.conf /var/lib/chroma".into();
+    let mut vm_cmd: String =
+        "mkdir -p /var/lib/chroma && sudo cp /vagrant/overrides.conf /var/lib/chroma".into();
     if config.use_stratagem {
         let mut server_profile_path = vagrant_path.clone();
         server_profile_path.push("stratagem-server.profile");

@@ -269,12 +269,11 @@ services:
       context: ../
       dockerfile: ./docker/journal.dockerfile
     deploy: *default-deploy
-    environment:
-      - LOG_LEVEL=20
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
       - RUST_LOG=info
+      - LOG_LEVEL=20
       - DBLOG_HW
       - DBLOG_LW
   iml-warp-drive:
