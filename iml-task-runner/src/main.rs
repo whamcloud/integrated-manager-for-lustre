@@ -149,7 +149,7 @@ async fn send_work(
     for action in task.actions.iter().map(|a| format!("action.{}", a)) {
         match invoke_rust_agent(fqdn, &action, &args).await {
             Err(e) => {
-                tracing::info!("Failed to send {} to {}: {}", &action, fqdn, e);
+                tracing::info!("Failed to send {} to {}: {:?}", &action, fqdn, e);
                 return trans.rollback().map_ok(|_| 0).err_into().await;
             }
             Ok(res) => {
