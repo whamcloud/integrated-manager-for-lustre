@@ -2,62 +2,49 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_cmd::CmdError;
-use iml_system_test_utils::{docker, iml, ssh, vagrant, SetupConfigType};
-use iml_systemd::SystemdError;
-use std::time::Duration;
-use tokio::time::delay_for;
+use iml_cmd::{CheckedCommandExt, CmdError};
+use iml_system_test_utils::*;
 use tracing::Level;
 use tracing_subscriber::fmt::Subscriber;
 
-pub async fn setup(config: &vagrant::ClusterConfig) -> Result<(), SystemdError> {
+pub async fn run_fs_test(config: Config) -> Result<Config, CmdError> {
     Subscriber::builder().with_max_level(Level::DEBUG).init();
 
-    // remove the stack if it is running and clean up volumes and network
-    docker::remove_iml_stack().await?;
-    docker::system_prune().await?;
-    docker::volume_prune().await?;
-    docker::configure_docker_overrides().await?;
-    docker::stop_swarm().await?;
-    docker::remove_password().await?;
+    let snapshot_map = snapshots::get_snapshots().await?;
+    let graph = snapshots::create_graph(&snapshot_map["iscsi"]);
+    let active_snapshots = snapshots::get_active_snapshots(&config, &graph);
+    let target_snapshot = active_snapshots.last().expect("target snapshot not found.");
+    println!("target snapshot: {:?}", target_snapshot);
 
-    docker::start_swarm().await?;
-    docker::set_password().await?;
+    if target_snapshot.name != snapshots::SnapshotName::Init {
+        vagrant::halt()
+            .await?
+            .args(&config.all_hosts())
+            .checked_status()
+            .await?;
 
-    // Destroy any vagrant nodes that are currently running
-    vagrant::destroy(config).await?;
-    vagrant::global_prune().await?;
-    vagrant::poweroff_running_vms().await?;
-    vagrant::unregister_vms().await?;
-    vagrant::clear_vbox_machine_folder().await?;
+        for host in config.all_hosts() {
+            let result = vagrant::snapshot_restore(host, target_snapshot.name.to_string().as_str())
+                .await?
+                .checked_status()
+                .await;
 
-    Ok(())
-}
+            if result.is_err() {
+                println!(
+                    "Snapshot {} not available on host {}. Skipping.",
+                    target_snapshot.name.to_string(),
+                    host
+                );
+            }
+        }
+    }
 
-pub async fn run_fs_test(
-    config: &vagrant::ClusterConfig,
-    docker_setup: &SetupConfigType,
-    server_map: Vec<(String, &[&str])>,
-    fs_type: vagrant::FsType,
-) -> Result<(), SystemdError> {
-    setup(config).await?;
-    docker::configure_docker_setup(&docker_setup).await?;
+    let actions = snapshots::get_active_test_path(&config, &graph, &target_snapshot.name);
 
-    docker::deploy_iml_stack().await?;
+    let mut config = config;
+    for action in actions {
+        config = (graph[action].transition)(config).await?;
+    }
 
-    vagrant::setup_deploy_docker_servers(&config, server_map).await?;
-
-    vagrant::create_fs(fs_type, &config).await?;
-
-    delay_for(Duration::from_secs(30)).await;
-
-    iml::detect_fs().await?;
-
-    Ok(())
-}
-
-pub async fn wait_for_ntp(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {
-    ssh::wait_for_ntp(&config.storage_server_ips()).await?;
-
-    Ok(())
+    Ok(config)
 }

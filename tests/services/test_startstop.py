@@ -18,7 +18,6 @@ class TestStartStop(SystemdTestCase):
             "iml-lustre-audit.service",
             "iml-plugin-runner.service",
             "iml-power-control.service",
-            "iml-syslog.service",
             "iml-corosync.service",
             "iml-gunicorn.service",
         ]
