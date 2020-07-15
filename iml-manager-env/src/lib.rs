@@ -4,7 +4,7 @@
 
 use lazy_static::lazy_static;
 use std::{
-    collections::{HashMap, BTreeMap},
+    collections::{BTreeMap, HashMap},
     env,
     net::{SocketAddr, ToSocketAddrs},
     path::PathBuf,
@@ -12,9 +12,7 @@ use std::{
 use url::Url;
 
 lazy_static! {
-    static ref RUNNING_IN_DOCKER: bool = {
-        std::fs::metadata("/.dockerenv").is_ok()
-    };
+    static ref RUNNING_IN_DOCKER: bool = { std::fs::metadata("/.dockerenv").is_ok() };
 }
 
 /// Get the environment variable or panic
