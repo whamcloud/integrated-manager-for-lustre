@@ -122,6 +122,11 @@ From here you can decide what type of setup to run.
    vagrant provision --provision-with=ha-ldiskfs-lvm-fs-setup
   ```
 
+1. Setup and mount the clients
+   ```sh
+   vagrant provision --provision-with=install-lustre-client,configure-lustre-client-network,mount-lustre-client
+   ```
+
 ### Windows
 
 This is tested on Windows 10 1909.

@@ -834,6 +834,11 @@ Vagrant.configure('2') do |config|
                       run: 'never',
                       path: './scripts/configure_lustre_network.sh'
 
+      c.vm.provision 'mount-lustre-client',
+                      type: 'shell',
+                      run: 'never',
+                      path: './scripts/mount_lustre_client.sh'
+
     end
   end
 end
