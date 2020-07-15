@@ -109,6 +109,8 @@ pub async fn ingest_data(task: String, lines: Vec<String>) -> Result<(), Mailbox
 
     let count = join_all(xs).await.into_iter().filter(|x| x.is_ok()).count();
 
+    tracing::debug!("Increasing task {} ({}) by {}", task.name, task.id, count);
+
     task::increase_total(task.id, count as i64)
         .execute_async(&pool)
         .await?;
