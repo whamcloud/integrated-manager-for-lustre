@@ -3,13 +3,17 @@
 // license that can be found in the LICENSE file.
 
 use env::{MANAGER_URL, PFX};
-use futures::{FutureExt, TryFutureExt};
+use futures::{
+    future::{AbortHandle, Abortable},
+    FutureExt, TryFutureExt,
+};
 use iml_agent::{
     agent_error::Result,
     daemon_plugins, env,
     http_comms::{agent_client::AgentClient, crypto_client, session},
     poller, reader,
 };
+use tokio::signal::unix::{signal, SignalKind};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -31,15 +35,33 @@ async fn main() -> Result<()> {
     let registry_keys: Vec<iml_wire_types::PluginName> = registry.keys().cloned().collect();
     let sessions = session::Sessions::new(&registry_keys);
 
-    tokio::spawn(
+    let (reader, reader_reg) = AbortHandle::new_pair();
+    tokio::spawn(Abortable::new(
         reader::create_reader(sessions.clone(), agent_client.clone(), registry)
             .map_err(|e| {
                 tracing::error!("{}", e);
             })
             .map(drop),
-    );
+        reader_reg,
+    ));
 
-    poller::create_poller(agent_client, sessions).await;
+    let (poller, poller_reg) = AbortHandle::new_pair();
+    tokio::spawn(Abortable::new(
+        poller::create_poller(agent_client, sessions.clone()),
+        poller_reg,
+    ));
+
+    let mut sigterm = signal(SignalKind::terminate()).expect("Could not listen to SIGTERM");
+    let mut sigint = signal(SignalKind::interrupt()).expect("Could not listen to SIGINT");
+    futures::select! {
+        () = sigterm.recv().fuse().map(drop) => (),
+        () = sigint.recv().fuse().map(drop) => ()
+    }
+
+    tracing::info!("Terminating on signal...");
+    poller.abort();
+    reader.abort();
+    sessions.terminate_all_sessions().await?;
 
     Ok(())
 }
