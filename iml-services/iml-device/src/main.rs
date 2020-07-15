@@ -29,7 +29,7 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let addr = iml_manager_env::get_device_aggregator_addr();
 
-    let pool = get_db_pool().await?;
+    let pool = get_db_pool(5).await?;
 
     let cache = create_cache(&pool).await?;
 

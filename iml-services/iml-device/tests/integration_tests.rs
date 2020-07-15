@@ -34,7 +34,7 @@ struct ClientMount {
 async fn test_insert() -> Result<(), Box<dyn Error>> {
     dotenv().ok();
 
-    let pool = get_db_pool().await?;
+    let pool = get_db_pool(5).await?;
 
     sqlx::query!(r#"
         INSERT INTO chroma_core_serverprofile
