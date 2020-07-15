@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use bytes::Buf;
-use futures::{future::try_join_all, stream::BoxStream, Stream, StreamExt, TryStreamExt};
+use futures::{future::join_all, stream::BoxStream, Stream, StreamExt, TryStreamExt};
 use iml_orm::{
     fidtaskqueue::insert_fidtask,
     lustrefid::LustreFid,
@@ -64,16 +64,16 @@ async fn get_task_by_name(
 /// will process incoming lines and write them into FidTaskQueue
 /// associating the new item with the existing named task.
 pub async fn ingest_data(task: String, lines: Vec<String>) -> Result<(), MailboxError> {
-    tracing::debug!("Starting ingest for {:?}", task);
+    tracing::debug!("Starting ingest for {}", &task);
 
     let pool = iml_orm::pool()?;
 
     let task = match get_task_by_name(&task, &pool).await? {
         Some(t) => t,
         None => {
-            tracing::error!("Task {} not found", task);
+            tracing::error!("Task {} not found", &task);
 
-            return Err(MailboxError::NotFound(format!("Failed to find {}", task)));
+            return Err(MailboxError::NotFound(format!("Failed to find {}", &task)));
         }
     };
 
@@ -107,9 +107,9 @@ pub async fn ingest_data(task: String, lines: Vec<String>) -> Result<(), Mailbox
         }
     });
 
-    let res = try_join_all(xs).await?;
+    let count = join_all(xs).await.into_iter().filter(|x| x.is_ok()).count();
 
-    task::increase_total(task.id, res.len() as i64)
+    task::increase_total(task.id, count as i64)
         .execute_async(&pool)
         .await?;
 
