@@ -464,6 +464,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "config"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19b076e143e1d9538dde65da30f8481c2a6c44040edb8e02b9bf1351edb92ce3"
+dependencies = [
+ "lazy_static",
+ "nom 5.1.2",
+ "serde",
+]
+
+[[package]]
 name = "console"
 version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -606,15 +617,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "deadpool"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4aaff9a7a1de9893f4004fa08527b31cb2ae4121c44e053cf53f29203c73bd23"
+dependencies = [
+ "async-trait",
+ "config",
+ "crossbeam-queue",
+ "num_cpus",
+ "serde",
+ "tokio",
+]
+
+[[package]]
 name = "deadpool-lapin"
 version = "0.5.0"
 source = "git+https://github.com/bikeshedder/deadpool#38c235e86b040f988fe2d3d2827bdeb4ab1f3a9f"
 dependencies = [
  "async-trait",
- "deadpool",
+ "deadpool 0.5.1",
  "futures",
  "lapin",
  "log 0.4.8",
+]
+
+[[package]]
+name = "deadpool-postgres"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "faad41e7f93dd682108c72aec029e5bc6238e7df64c9d84832525d4033d2e726"
+dependencies = [
+ "async-trait",
+ "config",
+ "deadpool 0.5.2",
+ "futures",
+ "log 0.4.8",
+ "serde",
+ "tokio",
+ "tokio-postgres",
 ]
 
 [[package]]
@@ -1629,6 +1670,7 @@ dependencies = [
 name = "iml-postgres"
 version = "0.3.0"
 dependencies = [
+ "deadpool-postgres",
  "futures",
  "iml-manager-env",
  "iml-wire-types",
@@ -2385,6 +2427,17 @@ checksum = "2ad2a91a8e869eeb30b9cb3119ae87773a8f4ae617f41b1eb9c154b2905f7bd6"
 dependencies = [
  "memchr",
  "version_check 0.1.5",
+]
+
+[[package]]
+name = "nom"
+version = "5.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffb4262d26ed83a1c0a33a38fe2bb15797329c85770da05e6b828ddb782627af"
+dependencies = [
+ "lexical-core",
+ "memchr",
+ "version_check 0.9.2",
 ]
 
 [[package]]

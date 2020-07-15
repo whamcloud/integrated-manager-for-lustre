@@ -50,6 +50,9 @@ pub async fn get_db_pool() -> Result<PgPool, sqlx::Error> {
     Ok(x)
 }
 
+#[cfg(feature = "pool")]
+pub mod pool;
+
 /// Connect to the postgres instance running on the IML manager
 ///
 /// This fn is useful for production code as it reads in env vars
