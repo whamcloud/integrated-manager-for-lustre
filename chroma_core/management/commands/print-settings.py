@@ -76,6 +76,8 @@ class Command(BaseCommand):
             "BRANDING": settings.BRANDING,
             "USE_STRATAGEM": settings.USE_STRATAGEM,
             "INCLUDES": settings.INCLUDES,
+            "DBLOG_HW": settings.DBLOG_HW,
+            "DBLOG_LW": settings.DBLOG_LW,
         }
 
         if settings.EXA_VERSION:

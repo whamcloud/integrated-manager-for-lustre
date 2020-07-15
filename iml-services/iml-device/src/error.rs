@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use iml_postgres::sqlx;
 use iml_service_queue::service_queue::ImlServiceQueueError;
 use thiserror::Error;
 use warp::reject;
@@ -15,7 +16,7 @@ pub enum ImlDeviceError {
     #[error(transparent)]
     SerdeJsonError(#[from] serde_json::Error),
     #[error(transparent)]
-    SqlxCoreError(#[from] sqlx::error::Error),
+    SqlxCoreError(#[from] sqlx::Error),
 }
 
 impl reject::Reject for ImlDeviceError {}
