@@ -6,13 +6,14 @@ use device_types::{devices::Device, mount::Mount};
 use futures::{TryFutureExt, TryStreamExt};
 use im::HashSet;
 use iml_device::{
-    client_mount_content_id, create_cache, get_db_pool,
+    client_mount_content_id, create_cache,
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
     },
     update_client_mounts, update_devices, Cache, ImlDeviceError,
 };
+use iml_postgres::get_db_pool;
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;

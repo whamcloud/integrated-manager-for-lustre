@@ -340,10 +340,10 @@ SESSION_COOKIE_HTTPONLY = False
 
 # The value at which log entries in the database will be aged out to a
 # flat text file in /var/log/chroma/db_log
-DBLOG_HW = 1200000
+DBLOG_HW = int(os.getenv("DBLOG_HW", 1200000))
 # The value at which we stop aging database log entries out to a flat
 # text file
-DBLOG_LW = 1000000
+DBLOG_LW = int(os.getenv("DBLOG_LW", 1000000))
 
 # In development, where to serve repos from
 DEV_REPO_PATH = os.path.join(os.path.dirname(os.path.abspath(sys.modules["settings"].__file__)), "repo")

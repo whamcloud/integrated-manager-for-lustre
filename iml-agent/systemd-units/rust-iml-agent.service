@@ -1,5 +1,7 @@
 [Unit]
 Description=Rust IML Agent Daemon
+Requires=systemd-journal-gatewayd.socket
+After=systemd-journal-gatewayd.socket
 After=network.target
 PartOf=rust-iml-agent.path
 After=rust-iml-agent.path

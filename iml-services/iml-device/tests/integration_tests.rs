@@ -10,7 +10,8 @@ use device_types::{
     DevicePath,
 };
 use dotenv::dotenv;
-use iml_device::{get_db_pool, update_client_mounts};
+use iml_device::update_client_mounts;
+use iml_postgres::{get_db_pool, sqlx};
 use iml_wire_types::Fqdn;
 use insta::assert_json_snapshot;
 use std::error::Error;

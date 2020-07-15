@@ -34,6 +34,7 @@ cp iml-agent-daemon %{buildroot}%{_bindir}
 cp iml-api %{buildroot}%{_bindir}
 cp iml-ostpool %{buildroot}%{_bindir}
 cp iml-device %{buildroot}%{_bindir}
+cp iml-journal %{buildroot}%{_bindir}
 cp iml-stats %{buildroot}%{_bindir}
 cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-action-runner %{buildroot}%{_bindir}
@@ -45,6 +46,7 @@ cp iml-sfa %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp iml-api.service %{buildroot}%{_unitdir}
 cp iml-device.service %{buildroot}%{_unitdir}
+cp iml-journal.service %{buildroot}%{_unitdir}
 cp iml-ostpool.service %{buildroot}%{_unitdir}
 cp iml-rust-stats.service %{buildroot}%{_unitdir}
 cp iml-agent-comms.service %{buildroot}%{_unitdir}
@@ -89,6 +91,7 @@ Group: System Environment/Libraries
 Summary: IML Agent Daemon and CLI
 License: MIT
 Group: System Environment/Libraries
+Requires: systemd-journal-gateway
 Requires: iml-device-scanner >= 4.0
 Obsoletes: iml-device-scanner-proxy
 
@@ -107,6 +110,7 @@ Obsoletes: iml-device-scanner-proxy
 
 %post agent
 %systemd_post rust-iml-agent.path
+%systemd_post systemd-journal-gatewayd.socket
 %tmpfiles_create %{_tmpfilesdir}/iml-agent.conf
 
 %preun agent
@@ -115,6 +119,7 @@ Obsoletes: iml-device-scanner-proxy
 
 %postun agent
 %systemd_postun_with_restart rust-iml-agent.path
+%systemd_postun_with_restart systemd-journal-gatewayd.socket
 
 %package agent-comms
 Summary: Communicates with iml-agents
@@ -355,6 +360,28 @@ Requires: rust-iml-agent-comms
 %files device
 %{_bindir}/iml-device
 %attr(0644,root,root)%{_unitdir}/iml-device.service
+
+%package journal
+Summary: Consumer of cluster journal messages
+License: MIT
+Group: System Environment/Libraries
+Requires: rust-iml-agent-comms
+
+%description journal
+%{summary}
+
+%post journal
+%systemd_post iml-journal.service
+
+%preun journal
+%systemd_preun iml-journal.service
+
+%postun journal
+%systemd_postun_with_restart iml-journal.service
+
+%files journal
+%{_bindir}/iml-journal
+%attr(0644,root,root)%{_unitdir}/iml-journal.service
 
 %changelog
 * Wed Sep 18 2019 Will Johnson <wjohnson@whamcloud.com> - 0.2.0-1 

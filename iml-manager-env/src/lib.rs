@@ -61,6 +61,18 @@ fn string_to_bool(x: String) -> bool {
     }
 }
 
+pub fn get_log_path() -> PathBuf {
+    get_var("LOG_PATH").into()
+}
+
+pub fn get_dblog_hw() -> u32 {
+    get_var("DBLOG_HW").parse().unwrap()
+}
+
+pub fn get_dblog_lw() -> u32 {
+    get_var("DBLOG_LW").parse().unwrap()
+}
+
 /// Determine if local node is a docker volume
 pub fn running_in_docker() -> bool {
     *RUNNING_IN_DOCKER
