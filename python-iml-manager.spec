@@ -89,6 +89,7 @@ Requires:       rust-iml-task-runner >= 0.3.0
 Requires:       rust-iml-stats >= 0.3.0
 Requires:       rust-iml-warp-drive >= 0.3.0
 Requires:       rust-iml-device >= 0.3.0
+Requires:       rust-iml-journal >= 0.3.0
 Requires:       rust-iml-ntp >= 0.3.0
 Requires:       rust-iml-sfa >= 0.3.0
 Requires:       rust-iml-config-cli >= 0.3.0
@@ -207,7 +208,6 @@ install -m 644 iml-lustre-audit.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-plugin-runner.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-power-control.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-settings-populator.service $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-syslog.service $RPM_BUILD_ROOT%{_unitdir}/
 mkdir -p $RPM_BUILD_ROOT/var/log/chroma
 
 # only include modules in the main package

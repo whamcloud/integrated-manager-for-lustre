@@ -250,15 +250,19 @@ services:
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
-  syslog:
-    image: "imlteam/manager-syslog:6.2.0-dev"
-    hostname: "syslog"
+  journal:
+    image: "imlteam/journal:6.2.0-dev"
+    hostname: "journal"
     build:
-      context: .
-      dockerfile: ./syslog.dockerfile
+      context: ../
+      dockerfile: ./docker/journal.dockerfile
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
+    environment:
+      - RUST_LOG=info
+      - DBLOG_HW
+      - DBLOG_LW
   iml-warp-drive:
     image: "imlteam/iml-warp-drive:6.2.0-dev"
     hostname: "iml-warp-drive"

@@ -5,6 +5,7 @@
 use crate::CompositeId;
 use crate::ToCompositeId;
 use crate::{EndpointName, Fqdn, Label};
+use chrono::{offset::Utc, DateTime};
 pub use iml_orm::sfa::{EnclosureType, HealthState, JobState, JobType, MemberState, SubTargetType};
 use std::{collections::BTreeSet, fmt, ops::Deref, path::PathBuf};
 
@@ -517,20 +518,20 @@ impl Name for ManagedMdtRecord {
 /// Record from the `chroma_core_managedhost` table
 #[derive(serde::Deserialize, Debug)]
 pub struct ManagedHostRecord {
-    id: i32,
-    state_modified_at: String,
-    state: String,
-    immutable_state: bool,
-    not_deleted: Option<bool>,
-    content_type_id: Option<i32>,
-    address: String,
-    fqdn: String,
-    nodename: String,
-    boot_time: Option<String>,
-    server_profile_id: Option<String>,
-    needs_update: bool,
-    install_method: String,
-    corosync_ring0: String,
+    pub id: i32,
+    pub state_modified_at: DateTime<Utc>,
+    pub state: String,
+    pub immutable_state: bool,
+    pub not_deleted: Option<bool>,
+    pub content_type_id: Option<i32>,
+    pub address: String,
+    pub fqdn: String,
+    pub nodename: String,
+    pub boot_time: Option<DateTime<Utc>>,
+    pub server_profile_id: Option<String>,
+    pub needs_update: bool,
+    pub install_method: String,
+    pub corosync_ring0: String,
 }
 
 impl Id for ManagedHostRecord {
@@ -550,6 +551,14 @@ pub const MANAGED_HOST_TABLE_NAME: TableName = TableName("chroma_core_managedhos
 impl Name for ManagedHostRecord {
     fn table_name() -> TableName<'static> {
         MANAGED_HOST_TABLE_NAME
+    }
+}
+
+impl ManagedHostRecord {
+    pub fn is_setup(&self) -> bool {
+        ["monitored", "managed", "working"]
+            .iter()
+            .any(|&x| x == self.state)
     }
 }
 
