@@ -3,9 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use futures::{future, Stream, StreamExt, TryFutureExt, TryStreamExt};
-use iml_rabbit::{
-    basic_consume, connect_to_queue, purge_queue, BasicConsumeOptions, Channel, ImlRabbitError,
-};
+use iml_rabbit::{basic_consume, connect_to_queue, BasicConsumeOptions, Channel, ImlRabbitError};
 use iml_wire_types::{Fqdn, PluginMessage};
 use thiserror::Error;
 
@@ -18,8 +16,6 @@ pub enum ImlServiceQueueError {
 }
 
 /// Creates a consumer for an iml-service.
-/// This fn will first purge the queue
-/// and then consume from it.
 ///
 /// This is expected to be called once during startup.
 pub async fn consume_service_queue<'a>(
@@ -29,11 +25,7 @@ pub async fn consume_service_queue<'a>(
     impl Stream<Item = Result<PluginMessage, ImlServiceQueueError>> + 'a,
     ImlServiceQueueError,
 > {
-    let name2 = name.to_string();
-
     let q = connect_to_queue(name.to_string(), ch).await?;
-
-    purge_queue(ch, name2).await?;
 
     let s = basic_consume(
         ch,
