@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use env::{MANAGER_URL, PFX};
+use env::{MANAGER_URL, PEM};
 use futures::{FutureExt, TryFutureExt};
 use iml_agent::{
     agent_error::Result,
@@ -21,7 +21,7 @@ async fn main() -> Result<()> {
 
     let start_time = chrono::Utc::now().format("%Y-%m-%dT%T%.6f%:zZ").to_string();
 
-    let identity = crypto_client::get_id(&PFX)?;
+    let identity = crypto_client::get_id(&PEM)?;
     let client = crypto_client::create_client(identity)?;
 
     let agent_client =
