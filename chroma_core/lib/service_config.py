@@ -612,8 +612,13 @@ class ServiceConfig(CommandLine):
         log.info("Enabling database extensions...")
         self.try_shell(
             [
-                "psql -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -d %s -U %s"
-                % (settings.DATABASES["default"]["NAME"], settings.DATABASES["default"]["USER"]),
+                "psql",
+                "-c",
+                "CREATE EXTENSION IF NOT EXISTS btree_gist;",
+                "-d",
+                settings.DATABASES["default"]["NAME"],
+                "-U",
+                settings.DATABASES["default"]["USER"],
             ]
         )
 
