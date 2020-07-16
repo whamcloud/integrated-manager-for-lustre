@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use lazy_static::lazy_static;
-use std::io::BufRead;
 use std::{
     collections::{BTreeMap, HashMap},
     env,
@@ -12,17 +11,7 @@ use std::{
 use url::Url;
 
 lazy_static! {
-    static ref RUNNING_IN_DOCKER: bool = {
-        match std::fs::File::open("/proc/self/cgroup") {
-            Err(_) => false,
-            Ok(file) => {
-                let reader = std::io::BufReader::new(file);
-                reader.lines().any(|l| {
-                    l.as_ref().unwrap_or(&"".to_string()).split(':').nth(1) == Some("docker")
-                })
-            }
-        }
-    };
+    static ref RUNNING_IN_DOCKER: bool = std::fs::metadata("/.dockerenv").is_ok();
 }
 
 /// Get the environment variable or panic
