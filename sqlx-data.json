@@ -236,6 +236,66 @@
       ]
     }
   },
+  "5755ec79ff7be6cdfe0ba5fa9c2cd9c280a99db0c802ce3b795a4f5ebd5a9e35": {
+    "query": "\n        DELETE FROM chroma_core_fidtaskqueue \n        WHERE id in ( \n            SELECT id FROM chroma_core_fidtaskqueue WHERE task_id = $1 LIMIT $2 FOR UPDATE SKIP LOCKED \n        ) RETURNING id, fid as \"fid: _\", data, task_id",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "fid: _",
+          "type_info": {
+            "Custom": {
+              "oid": 29102,
+              "name": "lustre_fid",
+              "kind": {
+                "Composite": [
+                  [
+                    "seq",
+                    "Int8"
+                  ],
+                  [
+                    "oid",
+                    "Int4"
+                  ],
+                  [
+                    "ver",
+                    "Int4"
+                  ]
+                ]
+              }
+            }
+          }
+        },
+        {
+          "ordinal": 2,
+          "name": "data",
+          "type_info": "Jsonb"
+        },
+        {
+          "ordinal": 3,
+          "name": "task_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int8"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "7c2641e656178536cc5c92aba41d7fd20ae6bc350296758d3a96cf1cb97fb7f5": {
     "query": "select id from chroma_core_managedhost where fqdn = $1 and not_deleted = 't'",
     "describe": {
@@ -420,6 +480,42 @@
       "nullable": [
         false
       ]
+    }
+  },
+  "da7a10e4d6f2a2456eccd0753df9d743ebcaebff8c13bae8f93c036dcfc8171b": {
+    "query": "\n                                                INSERT INTO chroma_core_fidtaskerror (fid, task_id, data, errno)\n                                                VALUES ($1, $2, $3, $4)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          {
+            "Custom": {
+              "oid": 29102,
+              "name": "lustre_fid",
+              "kind": {
+                "Composite": [
+                  [
+                    "seq",
+                    "Int8"
+                  ],
+                  [
+                    "oid",
+                    "Int4"
+                  ],
+                  [
+                    "ver",
+                    "Int4"
+                  ]
+                ]
+              }
+            }
+          },
+          "Int4",
+          "Jsonb",
+          "Int2"
+        ]
+      },
+      "nullable": []
     }
   },
   "db376dc602b8672ed6efcb337fe708665edce6970e9302e50f8fb2a38365d7d2": {

@@ -12,13 +12,17 @@ use iml_orm::{
     tokio_diesel::{AsyncRunQueryDsl as _, OptionalExtension as _},
     DbPool,
 };
-use iml_postgres::pool;
+use iml_postgres::{
+    get_db_pool,
+    sqlx::{self, prelude::Executor, PgPool},
+};
 use iml_tracing::tracing;
-use iml_wire_types::{db::FidTaskQueue, AgentResult, FidError, FidItem, TaskAction};
+use iml_wire_types::{db::{FidTaskQueue, LustreFid}, AgentResult, FidError, FidItem, TaskAction};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
     time::Duration,
+    str::FromStr
 };
 use tokio::time;
 
@@ -109,13 +113,19 @@ async fn send_work(
 
     tracing::debug!("send_work({}, {}, {})", fqdn, fsname, task.name);
 
-    let trans = client.transaction().await?;
+    let mut trans = pg_pool.begin().await?;
 
-    let sql = "DELETE FROM chroma_core_fidtaskqueue WHERE id in ( SELECT id FROM chroma_core_fidtaskqueue WHERE task_id = $1 LIMIT $2 FOR UPDATE SKIP LOCKED ) RETURNING *";
-    let s = trans.prepare(sql).await?;
-
-    // @@ could convert this to query_raw and map stream then collect
-    let rowlist = trans.query(&s, &[&task.id, &FID_LIMIT]).await?;
+    let rowlist = sqlx::query_as!(
+        FidTaskQueue,
+        r#"
+        DELETE FROM chroma_core_fidtaskqueue 
+        WHERE id in ( 
+            SELECT id FROM chroma_core_fidtaskqueue WHERE task_id = $1 LIMIT $2 FOR UPDATE SKIP LOCKED 
+        ) RETURNING id, fid as "fid: _", data, task_id"#,
+        task.id, FID_LIMIT,
+    )
+        .fetch_all(&mut trans)
+        .await?;
 
     tracing::debug!(
         "send_work({}, {}, {}) found {} fids",
@@ -161,12 +171,24 @@ async fn send_work(
                         failed += errors.len();
 
                         if task.keep_failed {
-                            let sql = "INSERT INTO chroma_core_fidtaskerror (fid, task, data, errno) VALUES ($1, $2, $3, $4)";
-                            let s = trans.prepare(sql).await?;
                             let task_id = task.id;
                             for err in errors.iter() {
+                                let fid = LustreFid::from_str(&err.fid).expect("FIXME: This needs proper error handling");
+
+                                // #FIXME: This would be better as a bulk insert
                                 if let Err(e) = trans
-                                    .execute(&s, &[&err.fid, &task_id, &err.data, &err.errno])
+                                    .execute(
+                                        sqlx::query!(
+                                            r#"
+                                                INSERT INTO chroma_core_fidtaskerror (fid, task_id, data, errno)
+                                                VALUES ($1, $2, $3, $4)"#,
+                                            fid as LustreFid,
+                                            task_id,
+                                            err.data,
+                                            err.errno
+                                        )
+                                        
+                                    )
                                     .await
                                 {
                                     tracing::info!(
@@ -240,41 +262,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let tasks = tasks_per_worker(&orm_pool, &worker).await?;
                     let fqdn = worker_fqdn(&orm_pool, &worker).await?;
                     let host_id = worker.host_id;
-		    tracing::info!("fqdn {} id {} tasks {:?}", fqdn, host_id, tasks);
-		    
-                    let rc = try_join_all(tasks.into_iter().map(|task| {
-                        let pg_pool = pg_pool.clone();
-                        let orm_pool = orm_pool.clone();
-                        let fsname = fsname.clone();
-                        let fqdn = fqdn.clone();
-
-			tracing::info!("try_join_all 2");
-
-                        async move {
-                            let mut count = 0;
-                            loop {
-                                let rc = send_work(
-                                    &orm_pool,
-                                    pg_pool.get().await?,
-                                    &fqdn,
-                                    &fsname,
-                                    &task,
-                                    host_id,
-                                )
-                                .await
-                                .map_err(|e| {
-                                    tracing::warn!("send_work({}) failed {:?}", task.name, e);
-                                    e
-                                })?;
-                                count += 1;
-                                if rc < FID_LIMIT || count > 10 {
-                                    break;
+                    let rc =
+                        try_join_all(tasks.into_iter().map(|task| {
+                            let pg_pool = pg_pool.clone();
+                            let orm_pool = orm_pool.clone();
+                            let fsname = fsname.clone();
+                            let fqdn = fqdn.clone();
+                            async move {
+                                let mut count = 0;
+                                loop {
+                                    let rc = send_work(
+                                        &orm_pool, &pg_pool, &fqdn, &fsname, &task, host_id,
+                                    )
+                                    .await
+                                    .map_err(|e| {
+                                        tracing::warn!("send_work({}) failed {:?}", task.name, e);
+                                        e
+                                    })?;
+                                    count += 1;
+                                    if rc < FID_LIMIT || count > 10 {
+                                        break;
+                                    }
                                 }
+                                Ok::<_, error::ImlTaskRunnerError>(())
                             }
-                            Ok::<_, error::ImlTaskRunnerError>(())
-                        }
-                    }))
-                    .await;
+                        }))
+                        .await;
 
                     activeclients.lock().await.remove(&worker.id);
                     rc
