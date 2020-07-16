@@ -106,6 +106,7 @@ impl fmt::Display for LustreFid {
     }
 }
 
+#[cfg(feature = "postgres-interop")]
 impl FromStr for LustreFid {
     type Err = std::num::ParseIntError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
