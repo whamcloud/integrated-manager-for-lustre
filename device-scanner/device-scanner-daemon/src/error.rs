@@ -1,10 +1,10 @@
-// Copyright (c) 2019 DDN. All rights reserved.
+// Copyright (c) 2020 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
 use futures::channel::mpsc::TrySendError;
 use std::{error, fmt, io, num, result};
-use tokio::codec::LinesCodecError;
+use tokio_util::codec::LinesCodecError;
 
 pub type Result<T> = result::Result<T, Error>;
 

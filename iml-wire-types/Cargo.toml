@@ -1,21 +1,22 @@
 [package]
-name = "iml-wire-types"
-description = "Shared types for the IML project"
-license = "MIT"
-version = "0.3.0"
 authors = ["IML Team <iml@whamcloud.com>"]
+description = "Shared types for the IML project"
 edition = "2018"
+license = "MIT"
+name = "iml-wire-types"
+version = "0.3.0"
 
 [dependencies]
-bytes = { version = "0.5", optional = true }
-im = { version = "14.3", features = ["serde"] }
-iml-api-utils = { path = "../iml-api-utils", version = "0.3" }
-iml-orm = { path = "../iml-orm", version = "0.3" }
-postgres-types = { version = "0.1", features = ["derive"], optional = true }
-serde = { version = "1", features = ["derive"] }
+bytes = {version = "0.5", optional = true}
+chrono = {version = "0.4", features = ["wasmbind", "serde"]}
+im = {version = "15.0", features = ["serde"]}
+iml-api-utils = {path = "../iml-api-utils", version = "0.3"}
+iml-orm = {path = "../iml-orm", version = "0.3"}
+postgres-types = {version = "0.1", features = ["derive"], optional = true}
+serde = {version = "1", features = ["derive"]}
 serde_json = "1.0"
 serde_repr = "0.1"
-tokio-postgres = { version = "0.5", features = ["with-serde_json-1"], optional = true }
+tokio-postgres = {version = "0.5", features = ["with-serde_json-1"], optional = true}
 
 [features]
 postgres-interop = ["tokio-postgres", "postgres-types", "bytes"]

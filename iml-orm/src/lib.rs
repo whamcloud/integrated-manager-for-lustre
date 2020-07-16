@@ -13,8 +13,6 @@ pub mod models;
 #[cfg(feature = "postgres-interop")]
 pub mod schema;
 
-pub mod alerts;
-
 #[cfg(feature = "postgres-interop")]
 pub mod clientmount;
 

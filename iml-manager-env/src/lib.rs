@@ -3,26 +3,16 @@
 // license that can be found in the LICENSE file.
 
 use lazy_static::lazy_static;
-use std::io::BufRead;
 use std::{
     collections::{BTreeMap, HashMap},
     env,
     net::{SocketAddr, ToSocketAddrs},
+    path::PathBuf,
 };
 use url::Url;
 
 lazy_static! {
-    static ref RUNNING_IN_DOCKER: bool = {
-        match std::fs::File::open("/proc/self/cgroup") {
-            Err(_) => false,
-            Ok(file) => {
-                let reader = std::io::BufReader::new(file);
-                reader.lines().any(|l| {
-                    l.as_ref().unwrap_or(&"".to_string()).split(':').nth(1) == Some("docker")
-                })
-            }
-        }
-    };
+    static ref RUNNING_IN_DOCKER: bool = std::fs::metadata("/.dockerenv").is_ok();
 }
 
 /// Get the environment variable or panic
@@ -58,6 +48,18 @@ fn string_to_bool(x: String) -> bool {
         "true" => true,
         _ => false,
     }
+}
+
+pub fn get_log_path() -> PathBuf {
+    get_var("LOG_PATH").into()
+}
+
+pub fn get_dblog_hw() -> u32 {
+    get_var("DBLOG_HW").parse().unwrap()
+}
+
+pub fn get_dblog_lw() -> u32 {
+    get_var("DBLOG_LW").parse().unwrap()
 }
 
 /// Determine if local node is a docker volume

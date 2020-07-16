@@ -12,8 +12,8 @@ use iml_orm::{
     tokio_diesel::{AsyncRunQueryDsl as _, OptionalExtension as _},
     DbPool,
 };
-use iml_postgres::pool;
 use iml_tracing::tracing;
+use iml_postgres::{get_db_pool, sqlx::{self, prelude::Executor}, PgPool};
 use iml_wire_types::{db::FidTaskQueue, AgentResult, FidError, FidItem, TaskAction};
 use std::{
     collections::{HashMap, HashSet},
@@ -68,7 +68,7 @@ async fn worker_fqdn(pool: &DbPool, worker: &Client) -> Result<String, error::Im
 
 async fn send_work(
     orm_pool: &DbPool,
-    mut client: pool::Client,
+    pg_pool: &PgPool,
     fqdn: &str,
     fsname: &str,
     task: &Task,
@@ -109,13 +109,15 @@ async fn send_work(
 
     tracing::debug!("send_work({}, {}, {})", fqdn, fsname, task.name);
 
-    let trans = client.transaction().await?;
+    let trans = pg_pool.begin().await?;
 
-    let sql = "DELETE FROM chroma_core_fidtaskqueue WHERE id in ( SELECT id FROM chroma_core_fidtaskqueue WHERE task_id = $1 LIMIT $2 FOR UPDATE SKIP LOCKED ) RETURNING *";
-    let s = trans.prepare(sql).await?;
-
-    // @@ could convert this to query_raw and map stream then collect
-    let rowlist = trans.query(&s, &[&task.id, &FID_LIMIT]).await?;
+    let rowlist = sqlx::query_as!(
+        Vec<FidTaskQueue>,
+        "DELETE FROM chroma_core_fidtaskqueue WHERE id in ( SELECT id FROM chroma_core_fidtaskqueue WHERE task_id = $1 LIMIT $2 FOR UPDATE SKIP LOCKED ) RETURNING *",
+        &task.id, &FID_LIMIT,
+    )
+        .fetch_all(trans)
+        .await?;
 
     tracing::debug!(
         "send_work({}, {}, {}) found {} fids",
@@ -161,12 +163,17 @@ async fn send_work(
                         failed += errors.len();
 
                         if task.keep_failed {
-                            let sql = "INSERT INTO chroma_core_fidtaskerror (fid, task, data, errno) VALUES ($1, $2, $3, $4)";
-                            let s = trans.prepare(sql).await?;
+                            let s = sqlx::query("INSERT INTO chroma_core_fidtaskerror (fid, task, data, errno) VALUES ($1, $2, $3, $4)");
                             let task_id = task.id;
                             for err in errors.iter() {
                                 if let Err(e) = trans
-                                    .execute(&s, &[&err.fid, &task_id, &err.data, &err.errno])
+                                    .execute(
+                                        s
+                                            .bind(&err.fid)
+                                            .bind(&task_id)
+                                            .bind(&err.data)
+                                            .bind(&err.errno)
+                                    )
                                     .await
                                 {
                                     tracing::info!(
@@ -204,7 +211,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
     let orm_pool = iml_orm::pool()?;
-    let pg_pool = pool::pool().await?;
+    let pg_pool = get_db_pool(5).await?;
     let activeclients = Arc::new(Mutex::new(HashSet::new()));
 
     // Task Runner Loop
@@ -244,7 +251,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             loop {
                                 let rc = send_work(
                                     &orm_pool,
-                                    pg_pool.get().await?,
+                                    &pg_pool,
                                     &fqdn,
                                     &fsname,
                                     &task,

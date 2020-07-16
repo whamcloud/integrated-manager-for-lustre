@@ -134,7 +134,7 @@ EOF
 rm -rf /tmp/{manager,agent}-rpms
 mkdir -p /tmp/{manager,agent}-rpms
 
-cp /tmp/iml/_topdir/RPMS/rust-iml-{action-runner,agent-comms,api,cli,config-cli,mailbox,ntp,ostpool,postoffice,sfa,stats,task-runner,device,warp-drive}-*.rpm /tmp/manager-rpms/
+cp /tmp/iml/_topdir/RPMS/rust-iml-{action-runner,agent-comms,api,cli,config-cli,journal,mailbox,ntp,ostpool,postoffice,sfa,stats,task-runner,device,warp-drive}-*.rpm /tmp/manager-rpms/
 cp /tmp/iml/_topdir/RPMS/python2-iml-manager-*.rpm /tmp/manager-rpms/
 cp /tmp/iml/_topdir/RPMS/rust-iml-agent-[0-9]*.rpm /tmp/agent-rpms
 cp /tmp/iml/_topdir/RPMS/iml-device-scanner-*.rpm /tmp/agent-rpms

@@ -15,7 +15,5 @@ pub enum ImlTaskRunnerError {
     #[error(transparent)]
     JsonError(#[from] serde_json::Error),
     #[error(transparent)]
-    ImlPgConfigError(#[from] iml_postgres::pool::ConfigError),
-    #[error(transparent)]
-    ImlPgPoolError(#[from] iml_postgres::pool::PoolError),
+    ImlPgPoolError(#[from] iml_postgres::sqlx::Error),
 }
