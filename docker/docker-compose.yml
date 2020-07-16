@@ -169,6 +169,8 @@ services:
       context: .
       dockerfile: ./corosync.dockerfile
     deploy: *default-deploy
+    environment:
+      - LOG_LEVEL
     volumes:
       - "manager-config:/var/lib/chroma"
   gunicorn:
@@ -181,6 +183,7 @@ services:
     environment:
       - USE_CONSOLE=1
       - PROXY_HOST=gunicorn
+      - LOG_LEVEL
     volumes:
       - "manager-config:/var/lib/chroma"
   http-agent:
@@ -194,6 +197,7 @@ services:
     deploy: *default-deploy
     environment:
       - PROXY_HOST=http-agent
+      - LOG_LEVEL
   iml-agent-comms:
     image: "imlteam/iml-agent-comms:6.2.0-dev"
     volumes:
@@ -221,6 +225,7 @@ services:
       - DEVICE_AGGREGATOR_URL=http://device:8008
       - PROXY_HOST=iml-action-runner
       - INFLUXDB_SERVER_FQDN=influxdb
+      - LOG_LEVEL
   lustre-audit:
     image: "imlteam/manager-lustre-audit:6.2.0-dev"
     hostname: "lustre-audit"
@@ -228,6 +233,8 @@ services:
       context: .
       dockerfile: ./lustre-audit.dockerfile
     deploy: *default-deploy
+    environment:
+      - LOG_LEVEL
     volumes:
       - "manager-config:/var/lib/chroma"
   plugin-runner:
@@ -241,6 +248,7 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - DEVICE_AGGREGATOR_URL=http://device:8008
+      - LOG_LEVEL
   power-control:
     image: "imlteam/manager-power-control:6.2.0-dev"
     hostname: "power-control"
@@ -248,6 +256,8 @@ services:
       context: .
       dockerfile: ./power-control.dockerfile
     deploy: *default-deploy
+    environment:
+      - LOG_LEVEL
     volumes:
       - "manager-config:/var/lib/chroma"
   journal:
@@ -261,6 +271,7 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - RUST_LOG=info
+      - LOG_LEVEL
       - DBLOG_HW
       - DBLOG_LW
   iml-warp-drive:
@@ -329,6 +340,7 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - SERVER_HTTP_URL=gunicorn
+      - RUST_LOG=info
   iml-ostpool:
     image: "imlteam/iml-ostpool:6.2.0-dev"
     hostname: "iml-ostpool"
@@ -347,6 +359,8 @@ services:
       context: ../
       dockerfile: ./docker/iml-mailbox.dockerfile
     deploy: *default-deploy
+    environment:
+      - RUST_LOG=info
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
@@ -375,6 +389,7 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - PROXY_HOST=iml-postoffice
+      - RUST_LOG=info
   iml-timer:
     image: "imlteam/iml-timer:6.2.0-dev"
     hostname: "iml-timer"
@@ -382,6 +397,8 @@ services:
       context: ../
       dockerfile: ./docker/iml-timer.dockerfile
     deploy: *default-deploy
+    environment:
+      - RUST_LOG=info
     volumes:
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
       - "timer_run:/run"
@@ -404,6 +421,7 @@ services:
       - USE_STRATAGEM
       - EXA_VERSION
       - INFLUXDB_IML_STATS_LONG_DURATION
+      - LOG_LEVEL
     deploy:
       restart_policy:
         condition: on-failure

@@ -467,6 +467,10 @@ Vagrant.configure('2') do |config|
                          mkdir -p /mnt/mdt{0,1}
                        SHELL
 
+      mds.vm.provision 'enable-debug',
+                       type: 'shell',
+                       run: 'never',
+                       path: 'scripts/enable_debug.sh'
     end
   end
 
@@ -793,6 +797,10 @@ Vagrant.configure('2') do |config|
                          mkdir -p /mnt/ost{0..9}
                        SHELL
 
+      oss.vm.provision 'enable-debug',
+                       type: 'shell',
+                       run: 'never',
+                       path: 'scripts/enable_debug.sh'
     end
   end
 
@@ -833,6 +841,10 @@ Vagrant.configure('2') do |config|
                       type: 'shell',
                       run: 'never',
                       path: './scripts/configure_lustre_network.sh'
+      c.vm.provision 'enable-debug',
+                       type: 'shell',
+                       run: 'never',
+                       path: 'scripts/enable_debug.sh'
 
       c.vm.provision 'mount-lustre-client',
                       type: 'shell',
