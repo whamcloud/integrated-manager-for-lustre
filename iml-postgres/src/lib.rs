@@ -10,8 +10,8 @@ use futures::{
     Stream,
 };
 use iml_manager_env::get_db_conn_string;
-pub use sqlx::{self, postgres::PgPool};
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
+pub use sqlx::{self, postgres::PgPool};
 use std::{pin::Pin, sync::Arc};
 pub use tokio_postgres::{
     error::DbError,
