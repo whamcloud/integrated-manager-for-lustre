@@ -42,13 +42,13 @@ impl WatchState {
     pub fn update(&mut self) {
         match self {
             Self::Close => {
-                mem::replace(self, Self::Watching);
+                let _ = mem::replace(self, Self::Watching);
             }
             Self::Watching => {
-                mem::replace(self, Self::Open);
+                let _ = mem::replace(self, Self::Open);
             }
             Self::Open => {
-                mem::replace(self, Self::Close);
+                let _ = mem::replace(self, Self::Close);
             }
         }
     }

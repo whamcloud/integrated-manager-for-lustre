@@ -37,10 +37,10 @@ pub enum Msg {
 pub fn update(msg: Msg, model: &mut Model) {
     match msg {
         Msg::Open => {
-            mem::replace(model, Model::Open);
+            let _ = mem::replace(model, Model::Open);
         }
         Msg::Close => {
-            mem::replace(model, Model::Close);
+            let _ = mem::replace(model, Model::Close);
         }
         Msg::Toggle => {
             let next_state = match model {
@@ -48,7 +48,7 @@ pub fn update(msg: Msg, model: &mut Model) {
                 Model::Close => Model::Open,
             };
 
-            mem::replace(model, next_state);
+            let _ = mem::replace(model, next_state);
         }
     }
 }
