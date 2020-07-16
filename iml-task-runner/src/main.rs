@@ -17,12 +17,15 @@ use iml_postgres::{
     sqlx::{self, prelude::Executor, PgPool},
 };
 use iml_tracing::tracing;
-use iml_wire_types::{db::{FidTaskQueue, LustreFid}, AgentResult, FidError, FidItem, TaskAction};
+use iml_wire_types::{
+    db::{FidTaskQueue, LustreFid},
+    AgentResult, FidError, FidItem, TaskAction,
+};
 use std::{
     collections::{HashMap, HashSet},
+    str::FromStr,
     sync::Arc,
     time::Duration,
-    str::FromStr
 };
 use tokio::time;
 
@@ -173,7 +176,8 @@ async fn send_work(
                         if task.keep_failed {
                             let task_id = task.id;
                             for err in errors.iter() {
-                                let fid = LustreFid::from_str(&err.fid).expect("FIXME: This needs proper error handling");
+                                let fid = LustreFid::from_str(&err.fid)
+                                    .expect("FIXME: This needs proper error handling");
 
                                 // #FIXME: This would be better as a bulk insert
                                 if let Err(e) = trans
@@ -187,7 +191,6 @@ async fn send_work(
                                             err.data,
                                             err.errno
                                         )
-                                        
                                     )
                                     .await
                                 {
