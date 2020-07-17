@@ -618,7 +618,7 @@ class ServiceConfig(CommandLine):
                 "-d",
                 settings.DATABASES["default"]["NAME"],
                 "-U",
-                settings.DATABASES["default"]["USER"],
+                "postgres",
             ]
         )
 
