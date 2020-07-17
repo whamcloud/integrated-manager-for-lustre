@@ -144,12 +144,9 @@ async fn send_work(
 
     let fidlist: Vec<FidItem> = rowlist
         .into_iter()
-        .map(|row| {
-            let ft: FidTaskQueue = row.into();
-            FidItem {
-                fid: ft.fid.to_string(),
-                data: ft.data,
-            }
+        .map(|ft| FidItem {
+            fid: ft.fid.to_string(),
+            data: ft.data,
         })
         .collect();
 
