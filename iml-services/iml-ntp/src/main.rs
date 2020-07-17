@@ -11,7 +11,7 @@ use iml_wire_types::{db::ManagedHostRecord, time::State, AlertRecordType, AlertS
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    let pool = get_db_pool().await?;
+    let pool = get_db_pool(5).await?;
 
     let rabbit_pool = iml_rabbit::connect_to_rabbit(1);
 

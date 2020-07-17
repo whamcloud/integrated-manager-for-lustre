@@ -1,13 +1,13 @@
 [package]
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+license = "MIT"
 name = "uevent-listener"
 version = "0.1.0"
-authors = ["IML Team <iml@whamcloud.com>"]
-license = "MIT"
-edition = "2018"
 
 [dependencies]
-device-types = { path = "../device-types", version = "0.1.0" }
-im = { version = "13.0", features = ["serde"] }
+device-types = {path = "../device-types", version = "0.1.0"}
+im = {version = "15.0", features = ["serde"]}
 serde_json = "1.0"
 
 [dev-dependencies]

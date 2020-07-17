@@ -8,13 +8,13 @@ use futures::{stream, Future, Stream, TryFutureExt, TryStreamExt};
 use reqwest::{Client, Identity, IntoUrl, Response};
 use std::time::Duration;
 
-/// Creates an `Identity` from the given pfx buffer
+/// Creates an `Identity` from the given pem buffer
 ///
 /// # Arguments
 ///
-/// * `pfx` - The incoming pfx buffer
-pub fn get_id(pfx: &[u8]) -> Result<Identity, ImlAgentError> {
-    Identity::from_pkcs12_der(pfx, "").map_err(ImlAgentError::Reqwest)
+/// * `pem` - The incoming pem buffer
+pub fn get_id(pem: &[u8]) -> Result<Identity, ImlAgentError> {
+    Identity::from_pem(pem).map_err(ImlAgentError::Reqwest)
 }
 
 /// Creates a client that is authenticated to
@@ -25,6 +25,7 @@ pub fn get_id(pfx: &[u8]) -> Result<Identity, ImlAgentError> {
 /// * `id` - The client identity to use
 pub fn create_client(id: Identity) -> Result<Client, ImlAgentError> {
     Client::builder()
+        .use_rustls_tls()
         .danger_accept_invalid_certs(true)
         .identity(id)
         .timeout(Duration::from_secs(900))
