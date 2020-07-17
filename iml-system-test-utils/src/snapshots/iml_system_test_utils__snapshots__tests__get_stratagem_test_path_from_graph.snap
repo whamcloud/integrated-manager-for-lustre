@@ -5,6 +5,8 @@ expression: "print_edges(&graph, &edges)"
 edge: All has nodes (Snapshot { name: Init, available: true }, Snapshot { name: Bare, available: false })
 edge: Stratagem has nodes (Snapshot { name: Bare, available: false }, Snapshot { name: ImlStratagemConfigured, available: false })
 edge: All has nodes (Snapshot { name: LdiskfsCreated, available: false }, Snapshot { name: FilesystemDetected, available: false })
+edge: Stratagem has nodes (Snapshot { name: FilesystemDetected, available: false }, Snapshot { name: StratagemMountedClient, available: false })
+edge: Stratagem has nodes (Snapshot { name: StratagemMountedClient, available: false }, Snapshot { name: StratagemTestTaskQueue, available: false })
 edge: All has nodes (Snapshot { name: ZfsCreated, available: false }, Snapshot { name: FilesystemDetected, available: false })
 edge: Stratagem has nodes (Snapshot { name: ImlStratagemConfigured, available: false }, Snapshot { name: StratagemServersDeployed, available: false })
 edge: Stratagem has nodes (Snapshot { name: StratagemServersDeployed, available: false }, Snapshot { name: StratagemInstalled, available: false })

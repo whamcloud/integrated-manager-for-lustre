@@ -92,8 +92,11 @@ async fn build_invoke_rust_agent(
         .request(req)
         .err_into()
         .and_then(|resp| hyper::body::aggregate(resp).err_into())
-        .map_ok(|body| {
-            serde_json::from_reader(body.reader()).unwrap_or_else(|_| serde_json::json!("[]"))
+        .map(|xs| match xs {
+            Ok(body) => {
+                serde_json::from_reader(body.reader()).map_err(ImlActionClientError::SerdeJsonError)
+            }
+            Err(e) => Err(e),
         })
         .await
 }

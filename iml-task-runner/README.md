@@ -5,7 +5,7 @@ Purpose
 -------
 
 This crate runs work assigned to Tasks.  It polls work from the database, and
-parsals it out to the available workers.
+parcels it out to the available workers.
 
 Architecture
 ------------
