@@ -17,12 +17,12 @@ ENV LOG_PATH .
 WORKDIR /usr/share/chroma-manager/
 COPY . .
 COPY --from=builder /build/base.repo .
-RUN yum update -y \
-  && yum install -y epel-release \
+RUN yum install -y epel-release \
   && yum clean all \
   && yum check-update epel-release \
   && yum install -y epel-release \
   && yum clean all \
+  && yum update -y \
   && yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm \
   && yum install -y python python-pip python-devel postgresql96 openssl gcc-c++ \
   && pip install -r requirements.txt \
