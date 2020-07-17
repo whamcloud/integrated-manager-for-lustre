@@ -609,19 +609,6 @@ class ServiceConfig(CommandLine):
         return username, email, password
 
     def _syncdb(self):
-        log.info("Enabling database extensions...")
-        self.try_shell(
-            [
-                "psql",
-                "-c",
-                "CREATE EXTENSION IF NOT EXISTS btree_gist;",
-                "-d",
-                settings.DATABASES["default"]["NAME"],
-                "-U",
-                "postgres",
-            ]
-        )
-
         if not self._db_current():
             log.info("Creating database tables...")
             args = ["", "migrate", "--noinput"]
@@ -647,6 +634,19 @@ class ServiceConfig(CommandLine):
 
         if error:
             return error
+
+        log.info("Enabling database extensions...")
+        self.try_shell(
+            [
+                "psql",
+                "-c",
+                "CREATE EXTENSION IF NOT EXISTS btree_gist;",
+                "-d",
+                settings.DATABASES["default"]["NAME"],
+                "-U",
+                "postgres",
+            ]
+        )
 
         _, out, _ = self._try_psql_sql("SELECT datname FROM pg_catalog.pg_database WHERE datname = 'grafana'")
         if "grafana" not in out:
@@ -765,6 +765,24 @@ proxy=_none_
             os.remove(os.path.join("/usr/share/chroma-manager", "{}.repo".format(reponame)))
 
     def container_setup(self, username, password):
+        log.info("Ping postgres")
+        self.try_shell(["ping", "-c", "3", "postgres"])
+
+        log.info("Try to install the extension")
+        self.try_shell(
+            [
+                "psql",
+                "-h",
+                "postgres",
+                "-U",
+                "postgres",
+                "-d",
+                settings.DATABASES["default"]["NAME"],
+                "-c",
+                "CREATE EXTENSION IF NOT EXISTS btree_gist;",
+            ]
+        )
+
         self._syncdb()
         self.scan_repos()
         self._register_profiles()
