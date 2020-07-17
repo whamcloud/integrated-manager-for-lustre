@@ -40,6 +40,16 @@ all: copr-rpms rpms
 local:
 	$(MAKE) RPM_DIST="0.$(shell date '+%s')" all
 
+check:
+	black --check ./
+	cargo fmt --all -- --check
+	PQ_LIB_DIR=/usr/pgsql-9.6/lib cargo check
+	PQ_LIB_DIR=/usr/pgsql-9.6/lib cargo clippy -- -W warnings
+
+fmt:
+	black ./
+	cargo fmt --all
+
 iml-gui-rpm:
 	$(MAKE) -f .copr/Makefile iml-gui-srpm outdir=.
 	rpmbuild --rebuild ${RPM_OPTS} _topdir/SRPMS/rust-iml-gui-*.src.rpm
