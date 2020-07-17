@@ -82,7 +82,7 @@ pub async fn ingest_data(task: String, lines: Vec<String>) -> Result<(), Mailbox
 
         let mut map: HashMap<String, serde_json::Value> = serde_json::from_str(&line).ok()?;
 
-        if let Some(fid) = map.remove("fid".into()) {
+        if let Some(fid) = map.remove("fid") {
             let fid = LustreFid::from_str(
                 fid.as_str()
                     .ok_or_else(|| {
@@ -93,8 +93,8 @@ pub async fn ingest_data(task: String, lines: Vec<String>) -> Result<(), Mailbox
             .ok()?;
 
             // Get "other" data if it exists
-            let data = match map.iter().next() {
-                Some((_, v)) => v.clone(),
+            let data = match map.into_iter().next() {
+                Some((_, v)) => v,
                 None => json!({}),
             };
 
