@@ -20,7 +20,6 @@ COPY --from=builder /build/base.repo .
 RUN yum --disablerepo=extras,epel -y update ca-certificates \
   && yum install --enablerepo=extras -y epel-release \
   && yum clean all \
-  && yum check-update epel-release \
   && yum install --enablerepo=extras -y epel-release \
   && yum clean all \
   && yum update -y \
