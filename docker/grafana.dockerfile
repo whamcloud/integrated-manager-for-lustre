@@ -1,6 +1,6 @@
 FROM grafana/grafana
 USER root
-RUN apk add postgresql-client curl python \
+RUN apk add postgresql-client curl python2 \
   && mkdir -p /usr/share/chroma-manager/grafana/dashboards/
 
 COPY docker/grafana/setup-grafana /usr/share/grafana/

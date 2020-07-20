@@ -1,4 +1,4 @@
-// Copyright (c) 2019 DDN. All rights reserved.
+// Copyright (c) 2020 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -16,45 +16,50 @@ use std::{
     convert::TryFrom,
     os::unix::{io::FromRawFd, net::UnixListener as NetUnixListener},
 };
-use tokio::net::UnixListener;
-use tokio_net::process::Command;
+use tokio::{net::UnixListener, process::Command, runtime};
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use zed_enhancer::{handle_zed_commands, processor, send_to_device_scanner};
 
-#[tokio::main(single_thread)]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let subscriber = Subscriber::builder()
         .with_env_filter(EnvFilter::from_default_env())
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    let zfs_loaded = Command::new("/usr/sbin/udevadm")
-        .args(&["info", "--path=/module/zfs"])
-        .output()
-        .await?
-        .status
-        .success();
+    let mut rt = runtime::Builder::new()
+        .basic_scheduler()
+        .enable_all()
+        .build()?;
 
-    if zfs_loaded {
-        tracing::debug!("Sending initial data");
+    rt.block_on(async {
+        let zfs_loaded = Command::new("/usr/sbin/udevadm")
+            .args(&["info", "--path=/module/zfs"])
+            .output()
+            .await?
+            .status
+            .success();
 
-        let pool_command = handle_zed_commands(ZedCommand::Init)?;
+        if zfs_loaded {
+            tracing::debug!("Sending initial data");
 
-        send_to_device_scanner(pool_command).await?;
-    }
+            let pool_command = handle_zed_commands(ZedCommand::Init)?;
 
-    tracing::info!("Server starting");
+            send_to_device_scanner(pool_command).await?;
+        }
 
-    let addr = unsafe { NetUnixListener::from_raw_fd(3) };
+        tracing::info!("Server starting");
 
-    let listener = UnixListener::try_from(addr)?;
+        let addr = unsafe { NetUnixListener::from_raw_fd(3) };
 
-    let mut stream = listener.incoming();
+        let mut listener = UnixListener::try_from(addr)?;
 
-    while let Some(socket) = stream.try_next().await? {
-        processor(socket).await?;
-    }
+        let mut stream = listener.incoming();
 
-    Ok(())
+        while let Some(socket) = stream.try_next().await? {
+            processor(socket).await?;
+        }
+
+        Ok(())
+    })
 }

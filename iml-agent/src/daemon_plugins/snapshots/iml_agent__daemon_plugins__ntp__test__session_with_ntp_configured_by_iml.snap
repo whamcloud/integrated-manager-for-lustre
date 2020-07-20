@@ -1,5 +1,5 @@
 ---
-source: iml-agent/src/lib.rs
+source: iml-agent/src/daemon_plugins/ntp.rs
 expression: r
 ---
 Some(
