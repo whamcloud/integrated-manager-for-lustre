@@ -43,7 +43,7 @@ from tastypie.models import ApiKey
 from kombu.connection import BrokerConnection
 from chroma_core.services.crypto import Crypto
 from chroma_core.models import ServerProfile, ServerProfilePackage, ServerProfileValidation, Repo
-from chroma_core.lib.util import CommandLine, CommandError
+from chroma_core.lib.util import CommandLine, CommandError, runningInDocker
 from iml_common.lib.ntp import NTPConfig
 from iml_common.lib.firewall_control import FirewallControl
 from iml_common.lib.service_control import ServiceControl, ServiceControlEL7
@@ -636,6 +636,8 @@ class ServiceConfig(CommandLine):
             return error
 
         log.info("Enabling database extensions...")
+        # if runningInDocker():
+        # pass
         self.try_shell(
             [
                 "su",
@@ -766,20 +768,28 @@ proxy=_none_
         log.info("Ping postgres")
         self.try_shell(["ping", "-c", "3", "postgres"])
 
-        log.info("Try to install the extension")
-        self.try_shell(
-            [
-                "psql",
-                "-h",
-                "postgres",
-                "-U",
-                "postgres",
-                "-d",
-                settings.DATABASES["default"]["NAME"],
-                "-c",
-                "CREATE EXTENSION IF NOT EXISTS btree_gist;",
-            ]
-        )
+        user = User.objects.create_superuser("postgres", "", "postgres")
+        user.groups.add(Group.objects.get(name="superusers"))
+        log.info("User '%s' successfully created." % "postgres")
+
+        try:
+            log.info("Try to install the extension")
+            self.try_shell(
+                [
+                    "psql",
+                    "-h",
+                    "postgres",
+                    "-U",
+                    "postgres",
+                    "-d",
+                    settings.DATABASES["default"]["NAME"],
+                    "-c",
+                    "CREATE EXTENSION IF NOT EXISTS btree_gist;",
+                ]
+            )
+        finally:
+            user.delete()
+            log.info("User '%s' removed." % "postgres")
 
         self._syncdb()
         self.scan_repos()
