@@ -636,8 +636,6 @@ class ServiceConfig(CommandLine):
             return error
 
         log.info("Enabling database extensions...")
-        # if runningInDocker():
-        # pass
         self.try_shell(
             [
                 "su",
@@ -765,32 +763,6 @@ proxy=_none_
             os.remove(os.path.join("/usr/share/chroma-manager", "{}.repo".format(reponame)))
 
     def container_setup(self, username, password):
-        log.info("Ping postgres")
-        self.try_shell(["ping", "-c", "3", "postgres"])
-
-        user = User.objects.create_superuser("postgres", "", "postgres")
-        user.groups.add(Group.objects.get(name="superusers"))
-        log.info("User '%s' successfully created." % "postgres")
-
-        try:
-            log.info("Try to install the extension")
-            self.try_shell(
-                [
-                    "psql",
-                    "-h",
-                    "postgres",
-                    "-U",
-                    "postgres",
-                    "-d",
-                    settings.DATABASES["default"]["NAME"],
-                    "-c",
-                    "CREATE EXTENSION IF NOT EXISTS btree_gist;",
-                ]
-            )
-        finally:
-            user.delete()
-            log.info("User '%s' removed." % "postgres")
-
         self._syncdb()
         self.scan_repos()
         self._register_profiles()
