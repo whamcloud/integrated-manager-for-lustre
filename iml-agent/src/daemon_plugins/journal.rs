@@ -7,12 +7,10 @@ use crate::{
     daemon_plugins::{DaemonPlugin, Output},
     env::get_journal_port,
 };
-use futures::{lock::Mutex, Future, FutureExt, Stream, TryStreamExt};
+use futures::{lock::Mutex, Future, FutureExt};
 use iml_wire_types::{JournalMessage, JournalPriority};
 use lazy_static::lazy_static;
-use std::{io, pin::Pin, str, sync::Arc};
-use tokio::io::stream_reader;
-use tokio_util::codec::{FramedRead, LinesCodec};
+use std::{pin::Pin, str, sync::Arc};
 
 #[derive(Debug, PartialEq, serde::Deserialize)]
 #[serde(untagged)]
@@ -53,58 +51,54 @@ lazy_static! {
 }
 
 async fn read_entries(
-    cursor: &Option<String>,
-) -> Result<impl Stream<Item = Result<(String, JournalMessage), ImlAgentError>>, ImlAgentError> {
+    cursor: Option<String>,
+) -> Result<Vec<(String, JournalMessage)>, ImlAgentError> {
     let client = reqwest::Client::new();
 
     let range = if let Some(x) = cursor {
         format!("entries={}:1:1000", x)
     } else {
-        "entries=:-1000:".into()
+        "entries=:-999:".into()
     };
 
-    let s = client
+    tracing::debug!("Journal Range header: {}", range);
+
+    let xs = client
         .get(URL.as_str())
         .header(reqwest::header::RANGE, range)
         .header(reqwest::header::ACCEPT, "application/json")
         .send()
         .await?
-        .bytes_stream()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e));
+        .text()
+        .await?
+        .lines()
+        .map(|x| serde_json::from_str(&x))
+        .collect::<Result<Vec<IncomingMessage>, _>>()?;
 
-    let s = stream_reader(s);
-
-    let s = FramedRead::new(s, LinesCodec::new())
-        .map_err(ImlAgentError::from)
-        .and_then(|x| async move {
-            let x: IncomingMessage = serde_json::from_str(&x)?;
-
-            Ok(x)
-        })
-        .and_then(|x| async move {
+    let xs = xs
+        .into_iter()
+        .map(|x| {
             let message = match x.message {
                 Msg::String(x) => x,
                 Msg::Bytes(x) => std::str::from_utf8(&x)?.to_string(),
             };
 
-            Ok((
-                x.cursor,
-                JournalMessage {
-                    datetime: std::time::Duration::from_micros(
-                        x.realtime_timestamp.parse::<u64>()?,
-                    ),
-                    severity: x.priority.unwrap_or(JournalPriority::Info),
-                    facility: x
-                        .syslog_facility
-                        .unwrap_or_else(|| "3".to_string())
-                        .parse::<i16>()?,
-                    source: x.syslog_identifier.unwrap_or_else(|| "unknown".to_string()),
-                    message,
-                },
-            ))
-        });
+            let journal_message = JournalMessage {
+                datetime: std::time::Duration::from_micros(x.realtime_timestamp.parse::<u64>()?),
+                severity: x.priority.unwrap_or(JournalPriority::Info),
+                facility: x
+                    .syslog_facility
+                    .unwrap_or_else(|| "3".to_string())
+                    .parse::<i16>()?,
+                source: x.syslog_identifier.unwrap_or_else(|| "unknown".to_string()),
+                message,
+            };
 
-    Ok(s)
+            Ok((x.cursor, journal_message))
+        })
+        .collect::<Result<Vec<_>, ImlAgentError>>()?;
+
+    Ok(xs)
 }
 
 impl DaemonPlugin for Journal {
@@ -119,17 +113,21 @@ impl DaemonPlugin for Journal {
         let cursor_lock = Arc::clone(&self.cursor);
 
         async move {
-            let cursor = cursor_lock.lock().await;
+            let cursor = { cursor_lock.lock().await.as_ref().cloned() };
 
-            let xs: Vec<_> = read_entries(&cursor).await?.try_collect().await?;
+            let xs = read_entries(cursor).await?;
             let (cursors, messages): (Vec<String>, Vec<JournalMessage>) = xs.into_iter().unzip();
 
             if messages.is_empty() {
+                tracing::debug!("No new journal messages since last tick");
+
                 return Ok(None);
             }
 
             if let Some(new_cursor) = cursors.last() {
                 let mut cursor = cursor_lock.lock().await;
+
+                tracing::debug!("Replacing cursor with {}", new_cursor);
 
                 cursor.replace(new_cursor.clone());
             }
