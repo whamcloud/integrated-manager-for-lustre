@@ -74,8 +74,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("count returned None");
 
     while let Some((host, xs)) = s.try_next().await? {
-        tracing::info!("{:?}", xs);
-
         num_rows = purge_excess(&pool, num_rows).await?;
 
         struct Row {
@@ -95,7 +93,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             None => {
                 tracing::warn!("Host '{}' is unknown", host);
 
-                return Ok(());
+                continue;
             }
         };
 
