@@ -7,7 +7,7 @@ systemctl stop ntpd.service
 sntp -s "$NTP_SERVER"
 sntp -s "$NTP_SERVER"
 
-systemctl restart ntpd.service
+systemctl start ntpd.service
 
 until ntpstat;
 do
