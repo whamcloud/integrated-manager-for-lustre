@@ -1924,6 +1924,36 @@ class JobScheduler(object):
         run_stratagem_list.append(
             {
                 "class_name": "AggregateStratagemResultsJob",
+                "args": {"depends_on_job_range": range(1, len(run_stratagem_list)), "fs_name": filesystem.name},
+            }
+        )
+
+        client_host = ManagedHost.objects.get(
+            Q(server_profile_id="stratagem_client") | Q(server_profile_id="stratagem_existing_client")
+        )
+        client_mount_exists = LustreClientMount.objects.filter(
+            host_id=client_host.id, filesystem=filesystem.name
+        ).exists()
+
+        mountpoint = "/mnt/{}".format(filesystem.name)
+        if not client_mount_exists:
+            self._create_client_mount(client_host, filesystem.name, mountpoint)
+
+        client_mount = ObjectCache.get_one(
+            LustreClientMount, lambda mnt: mnt.host_id == client_host.id and mnt.filesystem == filesystem.name
+        )
+        client_mount.state = "unmounted"
+
+        if mountpoint not in client_mount.mountpoints:
+            client_mount.mountpoints.append(mountpoint)
+
+        client_mount.filesystem = filesystem.name
+        client_mount.save()
+        ObjectCache.update(client_mount)
+
+        run_stratagem_list.append(
+            {
+                "class_name": "MountLustreClientJob",
                 "args": {
                     "depends_on_job_range": range(len(run_stratagem_list) - len(mdts), len(run_stratagem_list)),
                     "fs_name": filesystem.name,
