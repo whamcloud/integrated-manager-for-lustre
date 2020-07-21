@@ -1353,7 +1353,6 @@ dependencies = [
  "liblustreapi",
  "lustre_collector",
  "mockito",
- "native-tls",
  "prettytable-rs",
  "regex",
  "reqwest",
