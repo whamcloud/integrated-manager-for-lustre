@@ -29,7 +29,7 @@ mkdir -p %{buildroot}%{_tmppath}
 mkdir -p %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp docker-compose.yml %{buildroot}%{_sysconfdir}/iml-docker
-cp postgres/enable_btree_gist.sh %{buildroot}%{_sysconfdir}/iml-docker
+cp enable_btree_gist.sh %{buildroot}%{_sysconfdir}/iml-docker
 mv iml-images.tgz %{buildroot}%{_tmppath}
 mv iml-cli-proxy.sh %{buildroot}%{_bindir}/iml
 mv update-embedded.sh %{buildroot}%{_bindir}/update-embedded
