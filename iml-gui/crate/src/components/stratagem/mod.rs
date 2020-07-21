@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    components::{duration_picker, grafana_chart},
+    components::{command_modal, duration_picker, grafana_chart},
     extensions::MergeAttrs,
     generated::css_classes::C,
     GMsg,
@@ -283,8 +283,10 @@ pub(crate) fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut
                 }
             }
             Msg::CmdSent(fetch_object) => match fetch_object.response() {
-                Ok(_) => {
-                    orders.skip();
+                Ok(x) => {
+                    let x = command_modal::Input::Commands(vec![Arc::new(x.data.command)]);
+
+                    orders.send_g_msg(GMsg::OpenCommandModal(x));
                 }
                 Err(fail_reason) => {
                     config.disabled = false;
