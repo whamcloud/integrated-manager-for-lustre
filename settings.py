@@ -58,7 +58,7 @@ INFLUXDB_STRATAGEM_SCAN_DB = "iml_stratagem_scans"
 
 INFLUXDB_IML_STATS_DB = "iml_stats"
 
-INFLUXDB_IML_STATS_LONG_DURATION = "52w"
+INFLUXDB_IML_STATS_LONG_DURATION = os.getenv("INFLUXDB_IML_STATS_LONG_DURATION", "52w")
 
 MAILBOX_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, MAILBOX_PORT)
 
@@ -90,9 +90,11 @@ TIMER_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, TIMER_PORT)
 
 INCLUDES = ""
 
-BRANDING = "Whamcloud"
+BRANDING = os.getenv("BRANDING", "Whamcloud")
 
-USE_STRATAGEM = False
+EXA_VERSION = os.getenv("EXA_VERSION")
+
+USE_STRATAGEM = os.getenv("USE_STRATAGEM", "false")
 
 ALLOWED_HOSTS = ["*"]
 
@@ -107,7 +109,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.postgresql_psycopg2",  # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
         "NAME": "chroma",  # Or path to database file if using sqlite3.
         "USER": "chroma",  # Not used with sqlite3.
-        "PASSWORD": "",  # Not used with sqlite3.
+        "PASSWORD": os.getenv("DB_PASSWORD", ""),  # Not used with sqlite3.
         "HOST": os.getenv("DB_HOST", ""),  # Set to empty string for localhost. Not used with sqlite3.
         "PORT": os.getenv("DB_PORT", ""),  # Set to empty string for default. Not used with sqlite3.
         "OPTIONS": {},
@@ -284,7 +286,7 @@ CRYPTO_FOLDER = "/var/lib/chroma"
 
 GUNICORN_PID_PATH = "/var/run/gunicorn.pid"
 
-LOG_LEVEL = logging.INFO
+LOG_LEVEL = int(os.getenv("LOG_LEVEL", logging.INFO))
 
 EMAIL_HOST = None
 EMAIL_SUBJECT_PREFIX = "[Chroma Server]"
@@ -338,10 +340,10 @@ SESSION_COOKIE_HTTPONLY = False
 
 # The value at which log entries in the database will be aged out to a
 # flat text file in /var/log/chroma/db_log
-DBLOG_HW = 1200000
+DBLOG_HW = int(os.getenv("DBLOG_HW", 1200000))
 # The value at which we stop aging database log entries out to a flat
 # text file
-DBLOG_LW = 1000000
+DBLOG_LW = int(os.getenv("DBLOG_LW", 1000000))
 
 # In development, where to serve repos from
 DEV_REPO_PATH = os.path.join(os.path.dirname(os.path.abspath(sys.modules["settings"].__file__)), "repo")
@@ -371,9 +373,6 @@ SILENCED_SYSTEM_CHECKS = ["contenttypes.E001", "contenttypes.E002"]
 LOCAL_SETTINGS_FILE = "local_settings.py"
 
 try:
-    LOCAL_SETTINGS
-except NameError:
-    try:
-        from local_settings import *
-    except ImportError:
-        pass
+    from local_settings import *
+except ImportError:
+    pass

@@ -201,7 +201,7 @@ fn log_item_view(log: &Log, cache: &ArcCache) -> Node<Msg> {
     ]
 }
 
-fn server_link<T>(fqdn: &str, hosts: &im::HashMap<u32, Arc<Host>>) -> Node<T> {
+fn server_link<T>(fqdn: &str, hosts: &im::HashMap<i32, Arc<Host>>) -> Node<T> {
     let x = hosts.values().find(|x| x.fqdn == fqdn);
 
     match x {

@@ -1,6 +1,6 @@
 #[derive(SqlType)]
 #[postgres(type_name = "lustre_fid")]
-pub struct LustreFid;
+pub struct SqlLustreFid;
 
 table! {
     auth_group (id) {
@@ -55,13 +55,6 @@ table! {
         id -> Int4,
         user_id -> Int4,
         permission_id -> Int4,
-    }
-}
-
-table! {
-    chroma_core_actiontype (id) {
-        id -> Int4,
-        name -> Varchar,
     }
 }
 
@@ -331,6 +324,13 @@ table! {
 }
 
 table! {
+    chroma_core_createtaskjob (job_ptr_id) {
+        job_ptr_id -> Int4,
+        task_id -> Int4,
+    }
+}
+
+table! {
     chroma_core_deployhostjob (job_ptr_id) {
         job_ptr_id -> Int4,
         old_state -> Varchar,
@@ -384,14 +384,26 @@ table! {
 
 table! {
     use diesel::sql_types::*;
-    use super::LustreFid;
+    use super::SqlLustreFid;
 
-    chroma_core_fidactionqueue (id) {
+    chroma_core_fidtaskerror (id) {
         id -> Int4,
-        fid -> LustreFid,
-        entries -> Jsonb,
-        failed -> Int2,
-        mailbox_id -> Int4,
+        fid -> SqlLustreFid,
+        data -> Jsonb,
+        errno -> Int2,
+        task_id -> Int4,
+    }
+}
+
+table! {
+    use diesel::sql_types::*;
+    use super::SqlLustreFid;
+
+    chroma_core_fidtaskqueue (id) {
+        id -> Int4,
+        fid -> SqlLustreFid,
+        data -> Jsonb,
+        task_id -> Int4,
     }
 }
 
@@ -561,28 +573,10 @@ table! {
         state -> Varchar,
         immutable_state -> Bool,
         not_deleted -> Nullable<Bool>,
-        mountpoint -> Nullable<Varchar>,
         content_type_id -> Nullable<Int4>,
-        filesystem_id -> Int4,
+        filesystem -> Varchar,
         host_id -> Int4,
-    }
-}
-
-table! {
-    chroma_core_mailboxes (id) {
-        id -> Int4,
-        name -> Varchar,
-        start -> Timestamptz,
-        finish -> Timestamptz,
-        state -> Varchar,
-        fids_total -> Int8,
-        fids_completed -> Int8,
-        fids_failed -> Int8,
-        data_transfered -> Int8,
-        keep_failed -> Bool,
-        actions -> Array<Int4>,
-        args -> Jsonb,
-        filesystem_id -> Int4,
+        mountpoints -> Array<Text>,
     }
 }
 
@@ -623,7 +617,6 @@ table! {
         needs_update -> Bool,
         corosync_ring0 -> Varchar,
         install_method -> Varchar,
-        properties -> Text,
         content_type_id -> Nullable<Int4>,
         server_profile_id -> Nullable<Varchar>,
     }
@@ -960,6 +953,13 @@ table! {
 }
 
 table! {
+    chroma_core_removetaskjob (job_ptr_id) {
+        job_ptr_id -> Int4,
+        task_id -> Int4,
+    }
+}
+
+table! {
     chroma_core_removeunconfiguredcopytooljob (job_ptr_id) {
         job_ptr_id -> Int4,
         old_state -> Varchar,
@@ -1034,14 +1034,6 @@ table! {
 }
 
 table! {
-    chroma_core_serverprofilepackage (id) {
-        id -> Int4,
-        package_name -> Varchar,
-        server_profile_id -> Varchar,
-    }
-}
-
-table! {
     chroma_core_serverprofile_repolist (id) {
         id -> Int4,
         serverprofile_id -> Varchar,
@@ -1050,18 +1042,18 @@ table! {
 }
 
 table! {
-    chroma_core_serverprofilevalidation (id) {
+    chroma_core_serverprofilepackage (id) {
         id -> Int4,
-        test -> Varchar,
-        description -> Varchar,
+        package_name -> Varchar,
         server_profile_id -> Varchar,
     }
 }
 
 table! {
-    chroma_core_sethostprofilejob (job_ptr_id) {
-        job_ptr_id -> Int4,
-        host_id -> Int4,
+    chroma_core_serverprofilevalidation (id) {
+        id -> Int4,
+        test -> Varchar,
+        description -> Varchar,
         server_profile_id -> Varchar,
     }
 }
@@ -1087,6 +1079,94 @@ table! {
         job_ptr_id -> Int4,
         old_state -> Varchar,
         target_object_id -> Int4,
+    }
+}
+
+table! {
+    chroma_core_sfacontroller (id) {
+        id -> Int4,
+        index -> Int4,
+        enclosure_index -> Int4,
+        health_state -> Int2,
+        health_state_reason -> Text,
+        child_health_state -> Int2,
+        storage_system -> Text,
+    }
+}
+
+table! {
+    chroma_core_sfadiskdrive (id) {
+        id -> Int4,
+        index -> Int4,
+        enclosure_index -> Int4,
+        failed -> Bool,
+        slot_number -> Int4,
+        health_state -> Int2,
+        health_state_reason -> Text,
+        member_index -> Nullable<Int2>,
+        member_state -> Int2,
+        storage_system -> Text,
+    }
+}
+
+table! {
+    chroma_core_sfadiskslot (id) {
+        id -> Int4,
+        index -> Int4,
+        enclosure_index -> Int4,
+        disk_drive_index -> Int4,
+        storage_system -> Text,
+    }
+}
+
+table! {
+    chroma_core_sfaenclosure (id) {
+        id -> Int4,
+        index -> Int4,
+        element_name -> Text,
+        health_state -> Int2,
+        health_state_reason -> Text,
+        child_health_state -> Int2,
+        model -> Text,
+        position -> Int2,
+        enclosure_type -> Int2,
+        canister_location -> Text,
+        storage_system -> Text,
+    }
+}
+
+table! {
+    chroma_core_sfajob (id) {
+        id -> Int4,
+        index -> Int4,
+        sub_target_index -> Nullable<Int4>,
+        sub_target_type -> Nullable<Int2>,
+        job_type -> Int2,
+        state -> Int2,
+        storage_system -> Text,
+    }
+}
+
+table! {
+    chroma_core_sfapowersupply (id) {
+        id -> Int4,
+        index -> Int4,
+        enclosure_index -> Int4,
+        health_state -> Int2,
+        health_state_reason -> Text,
+        position -> Int2,
+        storage_system -> Text,
+    }
+}
+
+table! {
+    chroma_core_sfastoragesystem (id) {
+        id -> Int4,
+        uuid -> Text,
+        platform -> Text,
+        health_state_reason -> Text,
+        health_state -> Int2,
+        child_health_state -> Int2,
     }
 }
 
@@ -1323,6 +1403,26 @@ table! {
         id -> Int4,
         recovery_status -> Text,
         target_id -> Int4,
+    }
+}
+
+table! {
+    chroma_core_task (id) {
+        id -> Int4,
+        name -> Varchar,
+        start -> Timestamptz,
+        finish -> Nullable<Timestamptz>,
+        state -> Varchar,
+        fids_total -> Int8,
+        fids_completed -> Int8,
+        fids_failed -> Int8,
+        data_transfered -> Int8,
+        single_runner -> Bool,
+        keep_failed -> Bool,
+        actions -> Array<Text>,
+        args -> Jsonb,
+        filesystem_id -> Int4,
+        running_on_id -> Nullable<Int4>,
     }
 }
 
@@ -1589,6 +1689,8 @@ joinable!(chroma_core_corosyncconfiguration -> chroma_core_managedhost (host_id)
 joinable!(chroma_core_corosyncconfiguration -> django_content_type (content_type_id));
 joinable!(chroma_core_createostpooljob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_createostpooljob -> chroma_core_ostpool (pool_id));
+joinable!(chroma_core_createtaskjob -> chroma_core_job (job_ptr_id));
+joinable!(chroma_core_createtaskjob -> chroma_core_task (task_id));
 joinable!(chroma_core_deployhostjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_deployhostjob -> chroma_core_managedhost (managed_host_id));
 joinable!(chroma_core_destroyostpooljob -> chroma_core_job (job_ptr_id));
@@ -1600,7 +1702,8 @@ joinable!(chroma_core_failbacktargetjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_failbacktargetjob -> chroma_core_managedtarget (target_id));
 joinable!(chroma_core_failovertargetjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_failovertargetjob -> chroma_core_managedtarget (target_id));
-joinable!(chroma_core_fidactionqueue -> chroma_core_mailboxes (mailbox_id));
+joinable!(chroma_core_fidtaskerror -> chroma_core_task (task_id));
+joinable!(chroma_core_fidtaskqueue -> chroma_core_task (task_id));
 joinable!(chroma_core_filesystemclientconfparam -> chroma_core_confparam (confparam_ptr_id));
 joinable!(chroma_core_filesystemclientconfparam -> chroma_core_managedfilesystem (filesystem_id));
 joinable!(chroma_core_filesystemglobalconfparam -> chroma_core_confparam (confparam_ptr_id));
@@ -1636,10 +1739,8 @@ joinable!(chroma_core_lnetconfiguration -> chroma_core_managedhost (host_id));
 joinable!(chroma_core_lnetconfiguration -> django_content_type (content_type_id));
 joinable!(chroma_core_loadlnetjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_loadlnetjob -> chroma_core_lnetconfiguration (lnet_configuration_id));
-joinable!(chroma_core_lustreclientmount -> chroma_core_managedfilesystem (filesystem_id));
 joinable!(chroma_core_lustreclientmount -> chroma_core_managedhost (host_id));
 joinable!(chroma_core_lustreclientmount -> django_content_type (content_type_id));
-joinable!(chroma_core_mailboxes -> chroma_core_managedfilesystem (filesystem_id));
 joinable!(chroma_core_makeavailablefilesystemunavailable -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_makeavailablefilesystemunavailable -> chroma_core_managedfilesystem (filesystem_id));
 joinable!(chroma_core_managedfilesystem -> chroma_core_managedmgs (mgs_id));
@@ -1710,6 +1811,8 @@ joinable!(chroma_core_removestratagemjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_removestratagemjob -> chroma_core_stratagemconfiguration (stratagem_configuration_id));
 joinable!(chroma_core_removetargetjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_removetargetjob -> chroma_core_managedtarget (target_id));
+joinable!(chroma_core_removetaskjob -> chroma_core_job (job_ptr_id));
+joinable!(chroma_core_removetaskjob -> chroma_core_task (task_id));
 joinable!(chroma_core_removeunconfiguredcopytooljob -> chroma_core_copytool (copytool_id));
 joinable!(chroma_core_removeunconfiguredcopytooljob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_removeunconfiguredhostjob -> chroma_core_job (job_ptr_id));
@@ -1724,9 +1827,6 @@ joinable!(chroma_core_serverprofile_repolist -> chroma_core_repo (repo_id));
 joinable!(chroma_core_serverprofile_repolist -> chroma_core_serverprofile (serverprofile_id));
 joinable!(chroma_core_serverprofilepackage -> chroma_core_serverprofile (server_profile_id));
 joinable!(chroma_core_serverprofilevalidation -> chroma_core_serverprofile (server_profile_id));
-joinable!(chroma_core_sethostprofilejob -> chroma_core_job (job_ptr_id));
-joinable!(chroma_core_sethostprofilejob -> chroma_core_managedhost (host_id));
-joinable!(chroma_core_sethostprofilejob -> chroma_core_serverprofile (server_profile_id));
 joinable!(chroma_core_setuphostjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_setuphostjob -> chroma_core_managedhost (target_object_id));
 joinable!(chroma_core_setupmonitoredhostjob -> chroma_core_job (job_ptr_id));
@@ -1773,6 +1873,8 @@ joinable!(chroma_core_storageresourceclass -> chroma_core_storagepluginrecord (s
 joinable!(chroma_core_storageresourcerecord -> chroma_core_storageresourceclass (resource_class_id));
 joinable!(chroma_core_stratagemconfiguration -> chroma_core_managedfilesystem (filesystem_id));
 joinable!(chroma_core_targetrecoveryinfo -> chroma_core_managedtarget (target_id));
+joinable!(chroma_core_task -> chroma_core_managedfilesystem (filesystem_id));
+joinable!(chroma_core_task -> chroma_core_managedhost (running_on_id));
 joinable!(chroma_core_testhostconnectionjob -> chroma_core_job (job_ptr_id));
 joinable!(chroma_core_ticket -> django_content_type (content_type_id));
 joinable!(chroma_core_triggerpluginupdatesjob -> chroma_core_job (job_ptr_id));
@@ -1813,7 +1915,6 @@ allow_tables_to_appear_in_same_query!(
     auth_user,
     auth_user_groups,
     auth_user_user_permissions,
-    chroma_core_actiontype,
     chroma_core_addostpooljob,
     chroma_core_aggregatestratagemresultsjob,
     chroma_core_alertemail,
@@ -1842,6 +1943,7 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_corosync2configuration,
     chroma_core_corosyncconfiguration,
     chroma_core_createostpooljob,
+    chroma_core_createtaskjob,
     chroma_core_deployhostjob,
     chroma_core_destroyostpooljob,
     chroma_core_detecttargetsjob,
@@ -1849,7 +1951,8 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_enablelnetjob,
     chroma_core_failbacktargetjob,
     chroma_core_failovertargetjob,
-    chroma_core_fidactionqueue,
+    chroma_core_fidtaskerror,
+    chroma_core_fidtaskqueue,
     chroma_core_filesystemclientconfparam,
     chroma_core_filesystemglobalconfparam,
     chroma_core_filesystemticket,
@@ -1870,7 +1973,6 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_loadlnetjob,
     chroma_core_logmessage,
     chroma_core_lustreclientmount,
-    chroma_core_mailboxes,
     chroma_core_makeavailablefilesystemunavailable,
     chroma_core_managedfilesystem,
     chroma_core_managedhost,
@@ -1909,6 +2011,7 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_removeostpooljob,
     chroma_core_removestratagemjob,
     chroma_core_removetargetjob,
+    chroma_core_removetaskjob,
     chroma_core_removeunconfiguredcopytooljob,
     chroma_core_removeunconfiguredhostjob,
     chroma_core_repo,
@@ -1916,13 +2019,19 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_runstratagemjob,
     chroma_core_sendstratagemresultstoclientjob,
     chroma_core_serverprofile,
-    chroma_core_serverprofilepackage,
     chroma_core_serverprofile_repolist,
+    chroma_core_serverprofilepackage,
     chroma_core_serverprofilevalidation,
-    chroma_core_sethostprofilejob,
     chroma_core_setuphostjob,
     chroma_core_setupmonitoredhostjob,
     chroma_core_setupworkerjob,
+    chroma_core_sfacontroller,
+    chroma_core_sfadiskdrive,
+    chroma_core_sfadiskslot,
+    chroma_core_sfaenclosure,
+    chroma_core_sfajob,
+    chroma_core_sfapowersupply,
+    chroma_core_sfastoragesystem,
     chroma_core_shutdownhostjob,
     chroma_core_startcopytooljob,
     chroma_core_startcorosync2job,
@@ -1950,6 +2059,7 @@ allow_tables_to_appear_in_same_query!(
     chroma_core_storageresourcerecord_reported_by,
     chroma_core_stratagemconfiguration,
     chroma_core_targetrecoveryinfo,
+    chroma_core_task,
     chroma_core_testhostconnectionjob,
     chroma_core_ticket,
     chroma_core_triggerpluginupdatesjob,

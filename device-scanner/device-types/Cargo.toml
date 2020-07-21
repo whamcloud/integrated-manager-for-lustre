@@ -1,0 +1,18 @@
+[package]
+authors = ["IML Team <iml@whamcloud.com>"]
+description = "shared device types used throughout device-scanner and IML"
+edition = "2018"
+license = "MIT"
+name = "device-types"
+version = "0.1.4"
+
+[dependencies]
+im = {version = "15.0", features = ["serde"]}
+libzfs-types = {git = "https://github.com/whamcloud/rust-libzfs.git", version = "0.1.2"}
+log = "0.4"
+serde = {version = "1", features = ["derive"]}
+
+[dev-dependencies]
+insta = "0.15"
+pretty_assertions = "0.6.1"
+serde_json = "1.0"

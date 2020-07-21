@@ -417,7 +417,7 @@ fn add_counter_entry(x: impl Counter, t: &mut Table, h: &mut v_hist::Histogram) 
 
     let b = byte_unit::Byte::from_bytes(x.size().into()).get_appropriate_unit(true);
 
-    t.add_row(row![name.clone(), x.count(), b.to_string()]);
+    t.add_row(row![name, x.count(), b.to_string()]);
 
     h.add_entry(name, x.count().try_into().unwrap());
 }
@@ -555,7 +555,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             NtpClientCommand::IsConfigured => {
                 match is_ntp_configured::is_ntp_configured(()).await {
                     Ok(configured) => {
-                        if configured == true {
+                        if configured {
                             println!("Ntp is configured for IML on this server.");
                         } else {
                             println!("Ntp is not configured for IML on this server.");

@@ -11,7 +11,7 @@ use iml_wire_types::{EndpointName, StratagemConfiguration};
 use seed::{prelude::*, *};
 
 pub async fn delete_stratagem<T: serde::de::DeserializeOwned + 'static>(
-    config_id: u32,
+    config_id: i32,
 ) -> Result<fetch::FetchObject<T>, fetch::FetchObject<T>> {
     Request::api_item(StratagemConfiguration::endpoint_name(), config_id)
         .method(fetch::Method::Delete)

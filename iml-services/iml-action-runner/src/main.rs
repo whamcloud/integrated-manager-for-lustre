@@ -29,16 +29,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let log = warp::log("iml_action_runner::sender");
 
-    let (fut, client_filter) = create_connection_filter().await?;
-
-    tokio::spawn(fut);
+    let pool = iml_rabbit::connect_to_rabbit(3);
 
     let routes = sender(
         AGENT_TX_RUST,
         Arc::clone(&sessions),
         Arc::clone(&rpcs),
         Arc::clone(&local_actions),
-        client_filter,
+        create_connection_filter(pool.clone()),
     )
     .map(|x| warp::reply::json(&x))
     .with(log);
@@ -47,19 +45,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let incoming = listener.incoming();
 
-    let client = iml_rabbit::connect_to_rabbit().await?;
+    let conn = iml_rabbit::get_conn(pool.clone()).await?;
+    let ch = iml_rabbit::create_channel(&conn).await?;
 
-    let mut s = exit.wrap(valve.wrap(consume_service_queue(
-        client.clone(),
-        "rust_agent_action_runner_rx",
-    )));
+    let s = consume_service_queue(&ch, "rust_agent_action_runner_rx").await?;
+
+    let mut s = exit.wrap(valve.wrap(s));
+
+    drop(conn);
 
     tokio::spawn(
         async move {
             while let Some(m) = s.try_next().await? {
                 tracing::debug!("Incoming message from agent: {:?}", m);
 
-                handle_agent_data(client.clone(), m, Arc::clone(&sessions), Arc::clone(&rpcs))
+                let conn = iml_rabbit::get_conn(pool.clone()).await?;
+
+                handle_agent_data(conn, m, Arc::clone(&sessions), Arc::clone(&rpcs))
                     .await
                     .unwrap_or_else(drop);
             }

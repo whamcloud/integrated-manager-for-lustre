@@ -9,14 +9,14 @@ use std::{borrow::Cow, ops::Deref};
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct RouteId<'a>(Cow<'a, str>);
 
-impl<'a> From<u32> for RouteId<'a> {
-    fn from(n: u32) -> Self {
+impl<'a> From<i32> for RouteId<'a> {
+    fn from(n: i32) -> Self {
         RouteId(Cow::from(n.to_string()))
     }
 }
 
-impl<'a> From<&u32> for RouteId<'a> {
-    fn from(n: &u32) -> Self {
+impl<'a> From<&i32> for RouteId<'a> {
+    fn from(n: &i32) -> Self {
         RouteId(Cow::from(n.to_string()))
     }
 }
@@ -65,6 +65,7 @@ pub enum Route<'a> {
     Volumes,
     ServerVolumes(RouteId<'a>),
     Volume(RouteId<'a>),
+    SfaEnclosure(RouteId<'a>),
 }
 
 impl<'a> Route<'a> {
@@ -93,6 +94,7 @@ impl<'a> Route<'a> {
             Self::Volumes => vec!["volumes"],
             Self::ServerVolumes(id) => vec!["servers", id, "volumes"],
             Self::Volume(id) => vec!["volumes", id],
+            Self::SfaEnclosure(id) => vec!["sfa_enclosure", id],
         };
 
         if let Some(base) = crate::UI_BASE.as_ref() {
@@ -169,6 +171,10 @@ impl<'a> From<Url> for Route<'a> {
             Some("volumes") => match path.next() {
                 None => Self::Volumes,
                 Some(id) => Self::Volume(RouteId::from(id)),
+            },
+            Some("sfa_enclosure") => match path.next() {
+                Some(id) => Self::SfaEnclosure(RouteId::from(id)),
+                None => Self::NotFound,
             },
             _ => Self::NotFound,
         }

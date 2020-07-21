@@ -1,35 +1,48 @@
 [package]
-name = "iml-manager-cli"
-version = "0.2.0"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
+name = "iml-manager-cli"
+version = "0.3.0"
 
 [dependencies]
-combine = "=4.0.1"
-console = "0.10"
-dialoguer = "0.5"
+combine = "=4.1.0"
+console = "0.11"
+dialoguer = "0.6"
 dotenv = "0.15"
 futures = "0.3"
-hostlist-parser = "0.1.2"
-iml-api-utils = { path = "../iml-api-utils", version = "0.2" }
-iml-influx = { path = "../iml-influx", version = "0.1" }
-iml-manager-client = { path = "../iml-manager-client", version = "0.2.0" }
-iml-orm = { path = "../iml-orm", version = "0.2.0", features = ["postgres-interop"]}
-iml-tracing = { version = "0.1", path="../iml-tracing"}
-iml-wire-types = { path = "../iml-wire-types", version = "0.2" }
+hostlist-parser = "0.1.3"
+iml-api-utils = {path = "../iml-api-utils", version = "0.3"}
+iml-influx = {path = "../iml-influx", version = "0.1"}
+iml-manager-client = {path = "../iml-manager-client", version = "0.3"}
+iml-orm = {path = "../iml-orm", version = "0.3", features = ["postgres-interop"]}
+iml-tracing = {version = "0.2", path = "../iml-tracing"}
+iml-wire-types = {path = "../iml-wire-types", version = "0.3"}
 indicatif = "0.14"
-number-formatter = { path = "../number-formatter", version = "0.1" }
+lazy_static = "1.4"
+number-formatter = {path = "../number-formatter", version = "0.1"}
 prettytable-rs = "0.8"
-reqwest = { version = "0.10", features = ["default-tls", "json"] }
-serde = { version = "1", features = ["derive"] }
+reqwest = {version = "0.10", features = ["rustls-tls", "json"]}
+serde = {version = "1", features = ["derive"]}
 serde_json = "1"
 serde_yaml = "0.8"
 spinners = "1.2.0"
 structopt = "0.3"
 thiserror = "1.0"
-tokio = { version = "0.2", features = ["macros", "io-std", "io-util"] }
+tokio = {version = "0.2", features = ["macros", "io-std", "io-util", "fs", "rt-threaded"]}
 tracing = "0.1"
+
+[dependencies.regex]
+default-features = false
+features = ["std"]
+version = "1.3"
+
+[dev-dependencies]
+insta = "0.16"
 
 [[bin]]
 name = "iml"
 path = "src/main.rs"
+
+[[bin]]
+name = "iml-config"
+path = "src/config-main.rs"

@@ -321,6 +321,7 @@ class ServiceConfig(CommandLine):
             expected_exception_classes=[CommandError],
         )
 
+        # When changing any of the following also change: docker/influxdb/setup-influxdb.sh
         log.info("Creating InfluxDB database...")
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_IML_DB)])
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_STRATAGEM_SCAN_DB)])
@@ -336,25 +337,45 @@ class ServiceConfig(CommandLine):
             ]
         )
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_IML_STATS_DB)])
+
+        try:
+            self.try_shell(
+                [
+                    "influx",
+                    "-database",
+                    settings.INFLUXDB_IML_STATS_DB,
+                    "-execute",
+                    'CREATE RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
+                        settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_LONG_DURATION,
+                    ),
+                ]
+            )
+        except CommandError:
+            self.try_shell(
+                [
+                    "influx",
+                    "-database",
+                    settings.INFLUXDB_IML_STATS_DB,
+                    "-execute",
+                    'ALTER RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
+                        settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_LONG_DURATION,
+                    ),
+                ]
+            )
+
         self.try_shell(
             [
                 "influx",
                 "-database",
                 settings.INFLUXDB_IML_STATS_DB,
                 "-execute",
-                'CREATE RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
-                    settings.INFLUXDB_IML_STATS_DB, settings.INFLUXDB_IML_STATS_LONG_DURATION,
-                ),
-            ]
-        )
-        self.try_shell(
-            [
-                "influx",
-                "-database",
-                settings.INFLUXDB_IML_STATS_DB,
-                "-execute",
-                "{}; {}; {}; {}".format(
-                    'CREATE CONTINUOUS QUERY "downsample_means" ON "{}" BEGIN SELECT mean(*) INTO "{}"."long_term".:MEASUREMENT FROM "{}"."autogen"."target","{}"."autogen"."host" GROUP BY time(30m),* END'.format(
+                "{}; {}; {}; {}; {}; {}; {}; {}".format(
+                    'DROP CONTINUOUS QUERY "downsample_means" ON "{}"'.format(settings.INFLUXDB_IML_STATS_DB),
+                    'DROP CONTINUOUS QUERY "downsample_lnet" ON "{}"'.format(settings.INFLUXDB_IML_STATS_DB),
+                    'DROP CONTINUOUS QUERY "downsample_samples" ON "{}"'.format(settings.INFLUXDB_IML_STATS_DB),
+                    'DROP CONTINUOUS QUERY "downsample_sums" ON "{}"'.format(settings.INFLUXDB_IML_STATS_DB),
+                    'CREATE CONTINUOUS QUERY "downsample_means" ON "{}" BEGIN SELECT mean(*) INTO "{}"."long_term".:MEASUREMENT FROM "{}"."autogen"."target","{}"."autogen"."host","{}"."autogen"."node" GROUP BY time(30m),* END'.format(
+                        settings.INFLUXDB_IML_STATS_DB,
                         settings.INFLUXDB_IML_STATS_DB,
                         settings.INFLUXDB_IML_STATS_DB,
                         settings.INFLUXDB_IML_STATS_DB,
@@ -670,40 +691,6 @@ class ServiceConfig(CommandLine):
                 self.try_shell(["firewall-cmd", "--permanent", "--add-port={}/tcp".format(port)])
                 self.try_shell(["firewall-cmd", "--add-port={}/tcp".format(port)])
 
-    def set_nginx_config(self):
-        project_dir = os.path.dirname(os.path.realpath(settings.__file__))
-        conf_template = os.path.join(project_dir, "chroma-manager.conf.template")
-
-        nginx_settings = [
-            "REPO_PATH",
-            "HTTP_FRONTEND_PORT",
-            "HTTPS_FRONTEND_PORT",
-            "HTTP_AGENT_PROXY_PASS",
-            "HTTP_AGENT2_PROXY_PASS",
-            "HTTP_API_PROXY_PASS",
-            "IML_API_PROXY_PASS",
-            "WARP_DRIVE_PROXY_PASS",
-            "MAILBOX_PATH",
-            "MAILBOX_PROXY_PASS",
-            "SSL_PATH",
-            "DEVICE_AGGREGATOR_PORT",
-            "DEVICE_AGGREGATOR_PROXY_PASS",
-            "UPDATE_HANDLER_PROXY_PASS",
-            "GRAFANA_PORT",
-            "GRAFANA_PROXY_PASS",
-            "INFLUXDB_PROXY_PASS",
-            "TIMER_PROXY_PASS",
-            "INCLUDES",
-        ]
-
-        with open(conf_template, "r") as f:
-            config = f.read()
-            for setting in nginx_settings:
-                config = config.replace("{{%s}}" % setting, str(getattr(settings, setting)))
-
-            with open("/etc/nginx/conf.d/chroma-manager.conf", "w") as f2:
-                f2.write(config)
-
     def _register_profiles(self):
         for x in glob.glob("/usr/share/chroma-manager/*.profile"):
             print("Registering profile: {}".format(x))
@@ -786,8 +773,6 @@ proxy=_none_
 
         self._configure_selinux()
         self._configure_firewall()
-
-        self.set_nginx_config()
 
         self._setup_influxdb()
 

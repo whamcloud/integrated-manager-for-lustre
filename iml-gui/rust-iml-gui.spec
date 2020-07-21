@@ -1,7 +1,7 @@
 %define managerdir /iml-manager/
 
 Name:       rust-iml-gui
-Version:    0.1.0
+Version:    0.2.0
 # Release Start
 Release:    1%{?dist}
 # Release End

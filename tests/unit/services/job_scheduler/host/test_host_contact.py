@@ -88,6 +88,7 @@ class TestHostAddValidations(JobTestCase):
         self.expected_result = {
             u"valid": True,
             u"address": u"test-server",
+            u"profiles": {},
             "status": [
                 {u"name": u"resolve", u"value": True},
                 {u"name": u"ping", u"value": True},
@@ -121,6 +122,7 @@ class TestHostAddValidations(JobTestCase):
         self.expected_result["valid"] = False
 
     def test_host_no_problems(self):
+        self.expected_result["profiles"]["test_profile"] = []
         self._test_host_contact()
 
     def test_unresolvable_server_name(self):

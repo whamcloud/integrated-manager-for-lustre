@@ -3,9 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    components::{action_dropdown, alert_indicator, lnet_status, lock_indicator, paging, table, Placement},
+    components::{action_dropdown, alert_indicator, date, lnet_status, lock_indicator, paging, table, Placement},
     generated::css_classes::C,
-    GMsg, MergeAttrs, Route, ServerDate,
+    page::server::date_view,
+    GMsg, MergeAttrs, Route,
 };
 use iml_wire_types::db::CorosyncConfigurationRecord;
 use iml_wire_types::{
@@ -35,7 +36,7 @@ struct Row {
 #[derive(Default)]
 pub struct Model {
     hosts: Vec<Arc<Host>>,
-    rows: HashMap<u32, Row>,
+    rows: HashMap<i32, Row>,
     pager: paging::Model,
     sort: (SortField, paging::Dir),
 }
@@ -44,9 +45,9 @@ pub struct Model {
 pub enum Msg {
     SetHosts(
         Vec<Arc<Host>>,
-        im::HashMap<u32, Arc<LnetConfigurationRecord>>,
-        im::HashMap<u32, Arc<PacemakerConfigurationRecord>>,
-        im::HashMap<u32, Arc<CorosyncConfigurationRecord>>,
+        im::HashMap<i32, Arc<LnetConfigurationRecord>>,
+        im::HashMap<i32, Arc<PacemakerConfigurationRecord>>,
+        im::HashMap<i32, Arc<CorosyncConfigurationRecord>>,
     ), // @FIXME: This should be more granular so row state isn't lost.
     Page(paging::Msg),
     Sort,
@@ -164,7 +165,7 @@ pub fn view(
     session: Option<&Session>,
     model: &Model,
     all_locks: &Locks,
-    sd: &ServerDate,
+    sd: &date::Model,
 ) -> impl View<Msg> {
     div![
         class![C.bg_white],
@@ -200,13 +201,10 @@ pub fn view(
                                     alert_indicator(&cache.active_alert, &x, true, Placement::Top)
                                 ])
                                 .merge_attrs(class![C.text_center]),
-                                table::td_view(plain!(humanize_time(&x.boot_time, sd)))
-                                    .merge_attrs(class![C.text_center]),
+                                table::td_view(date_view(sd, &x.boot_time)).merge_attrs(class![C.text_center]),
                                 table::td_view(span![x.server_profile.ui_name]).merge_attrs(class![C.text_center]),
-                                table::td_view(
-                                    div![lnet_by_server_view(x, cache, all_locks).unwrap_or_else(|| vec![])]
-                                )
-                                .merge_attrs(class![C.text_center]),
+                                table::td_view(div![lnet_by_server_view(x, cache, all_locks).unwrap_or_else(Vec::new)])
+                                    .merge_attrs(class![C.text_center]),
                                 td![
                                     class![C.p_3, C.text_center],
                                     action_dropdown::view(x.id, &row.dropdown, all_locks, session)
@@ -226,12 +224,6 @@ pub fn view(
             ]
         }
     ]
-}
-
-pub fn humanize_time(x: &Option<String>, sd: &ServerDate) -> String {
-    x.as_ref()
-        .map(|bt| sd.timeago(chrono::DateTime::parse_from_rfc3339(&format!("{}-00:00", bt)).unwrap()))
-        .unwrap_or_else(|| "---".into())
 }
 
 fn lnet_by_server_view<T>(x: &Host, cache: &ArcCache, all_locks: &Locks) -> Option<Vec<Node<T>>> {

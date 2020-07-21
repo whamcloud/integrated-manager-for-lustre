@@ -54,13 +54,13 @@ async fn server(addr: &SocketAddr) {
 }
 
 async fn retry_client_obj(addr: &SocketAddr, client_id: u32) -> Result<String, reqwest::Error> {
-    let mut policy_1 = |k: u32, e| match k {
+    let policy_1 = |k: u32, e| match k {
         0 => RetryAction::RetryNow,
         k if k < 3 => RetryAction::WaitFor(Duration::from_secs((2 * k) as u64)),
         _ => RetryAction::ReturnError(e),
     };
 
-    retry_future(|| http_call(addr, client_id), &mut policy_1).await
+    retry_future(|_| http_call(addr, client_id), policy_1).await
 }
 
 async fn retry_client_fun(addr: &SocketAddr, client_id: u32) -> Result<String, reqwest::Error> {
@@ -71,7 +71,7 @@ async fn retry_client_fun(addr: &SocketAddr, client_id: u32) -> Result<String, r
             RetryAction::WaitFor(Duration::from_secs(5))
         }
     }
-    retry_future_gen(|| http_call(addr, client_id), policy_2).await
+    retry_future_gen(|_| http_call(addr, client_id), policy_2).await
 }
 
 async fn server_reply(mut hello: Hello) -> Result<Box<dyn warp::Reply>, warp::Rejection> {

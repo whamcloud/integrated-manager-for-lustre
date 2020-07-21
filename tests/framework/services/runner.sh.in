@@ -1,8 +1,9 @@
 #!/bin/bash -ex
 
 yum install -y epel-release
+yum clean all
 yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql96-server postgresql96-devel rabbitmq-server telnet python-ethtool erlang-inets patch gcc-c++ systemd-devel python-pip curl libcurl-devel nss
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql96-server postgresql96-devel rabbitmq-server telnet python-ethtool erlang-inets patch gcc-c++ systemd-devel python-pip curl libcurl-devel nss openssl-devel cargo
 systemctl enable rabbitmq-server
 
 export PATH=$PATH:/usr/lib/rabbitmq/bin/
@@ -63,15 +64,18 @@ yum -y install ed npm nginx libuv iml-gui iml-online-help
 cd /integrated-manager-for-lustre
 cp iml-corosync.service iml-gunicorn.service iml-http-agent.service iml-job-scheduler.service /lib/systemd/system
 cp iml-lustre-audit.service iml-manager.target iml-plugin-runner.service iml-power-control.service /lib/systemd/system
-cp iml-settings-populator.service iml-syslog.service /lib/systemd/system
+cp iml-settings-populator.service /lib/systemd/system
 pip install -r requirements.txt
 pip install -r requirements.test
 echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py
-PYTHONPATH=. python -c 'from chroma_core.lib.service_config import ServiceConfig; ServiceConfig().set_nginx_config()'
 
 cp -r /integrated-manager-for-lustre /usr/share/chroma-manager
 mkdir /var/log/chroma
 cd /usr/share/chroma-manager
 
 python ./manage.py dev_setup
+
+export PQ_LIB_DIR=/usr/pgsql-9.6/lib
+env $(python manage.py print-settings 2> /dev/null | xargs) cargo run --bin iml-config nginx generate-config --path /integrated-manager-for-lustre/chroma-manager.conf.template --output /etc/nginx/conf.d/chroma-manager.conf
+
 PYTHONPATH=. nosetests tests/services/ --stop

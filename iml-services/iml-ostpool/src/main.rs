@@ -4,10 +4,7 @@
 
 use futures::future::try_join_all;
 use futures_util::stream::TryStreamExt;
-use iml_ostpool::{
-    db::{self},
-    error::Error,
-};
+use iml_ostpool::{db, error::Error};
 use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::FsPoolMap;
 use std::collections::BTreeSet;
@@ -16,7 +13,13 @@ use std::collections::BTreeSet;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    let mut s = consume_data::<FsPoolMap>("rust_agent_ostpool_rx");
+    let pool = iml_rabbit::connect_to_rabbit(1);
+
+    let conn = iml_rabbit::get_conn(pool).await?;
+
+    let ch = iml_rabbit::create_channel(&conn).await?;
+
+    let mut s = consume_data::<FsPoolMap>(&ch, "rust_agent_ostpool_rx");
 
     while let Some((fqdn, fspools)) = s.try_next().await? {
         tracing::debug!("Pools from {}: {:?}", fqdn, fspools);

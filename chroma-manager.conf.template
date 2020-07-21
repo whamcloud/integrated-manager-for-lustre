@@ -15,6 +15,8 @@ map $uri $cache_control {
 }
 
 server {
+    root /var/lib/chroma;
+
     listen {{HTTPS_FRONTEND_PORT}} ssl http2;
 
     error_page 497 https://$http_host$request_uri;
@@ -70,10 +72,6 @@ server {
 
     gzip_comp_level 5;
 
-    location /favicon.ico {
-      alias /usr/lib/iml-manager/iml-gui/favicon.ico;
-    }
-
     location /certificate/ {
         return 301 https://$http_host/certificate;
     }
@@ -98,8 +96,10 @@ server {
         index index.html;
     }
 
-    # This is temporary until the /ui location has been ported
-    # Then this will become /ui
+    location ~ ^/ui/(favicon.*|android-chrome.*|apple-touch-icon\.png|mstile-150x150\.png|safari-pinned-tab\.svg)$ {
+        try_files /branding/$1 /../../../usr/share/iml-manager/rust-iml-gui/$1;
+    }
+
     location /ui {
         proxy_pass http://ui.fake/;
 
@@ -187,6 +187,18 @@ server {
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_pass {{IML_API_PROXY_PASS}}/action;
+
+        gzip on;
+        gzip_types application/json;
+    }
+
+    location /api/task {
+        proxy_set_header Host $http_host;
+        auth_request /auth;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass {{IML_API_PROXY_PASS}}/task;
 
         gzip on;
         gzip_types application/json;
@@ -290,6 +302,9 @@ server {
     }
 
     location /agent2/message {
+        client_body_buffer_size 1m;
+        client_max_body_size 8m;
+
         if ($ssl_client_verify != SUCCESS) {
             return 401;
         }

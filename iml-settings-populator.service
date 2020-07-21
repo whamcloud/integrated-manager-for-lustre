@@ -5,5 +5,5 @@ After=postgresql-9.6.service
 
 [Service]
 WorkingDirectory=/usr/share/chroma-manager
-ExecStart=/bin/bash -c "exec /bin/python ./manage.py print-settings > /var/lib/chroma/iml-settings.conf"
+ExecStart=/bin/bash -c "/bin/python ./manage.py print-settings > /tmp/temp-settings.conf && mv /tmp/temp-settings.conf /var/lib/chroma/iml-settings.conf"
 Type=oneshot

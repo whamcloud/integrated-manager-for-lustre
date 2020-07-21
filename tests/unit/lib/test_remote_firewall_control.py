@@ -4,7 +4,7 @@ import mock
 from tests.utils.remote_firewall_control import RemoteFirewallControl
 from tests.utils.remote_firewall_control import RemoteFirewallControlIpTables
 from tests.utils.remote_firewall_control import RemoteFirewallControlFirewallCmd
-from tests.integration.core.remote_operations import RealRemoteOperations as RRO
+from tests.unit.remote_operations import RealRemoteOperations as RRO
 from iml_common.lib.shell import Shell
 
 
@@ -64,7 +64,7 @@ num  target     prot opt source               destination
         # reset controller_instances cls cache
         RemoteFirewallControl.controller_instances = {}
 
-        self.mock_ssh = mock.patch("tests.integration.core.remote_operations.RealRemoteOperations._ssh_address").start()
+        self.mock_ssh = mock.patch("tests.unit.remote_operations.RealRemoteOperations._ssh_address").start()
 
     def tearDown(self):
         self.mock_ssh.stop()
@@ -180,7 +180,7 @@ class TestRemoteFirewallControlFirewallCmd(unittest.TestCase):
         # reset controller_instances cls cache
         RemoteFirewallControl.controller_instances = {}
 
-        self.mock_ssh = mock.patch("tests.integration.core.remote_operations.RealRemoteOperations._ssh_address").start()
+        self.mock_ssh = mock.patch("tests.unit.remote_operations.RealRemoteOperations._ssh_address").start()
 
     def tearDown(self):
         self.mock_ssh.stop()

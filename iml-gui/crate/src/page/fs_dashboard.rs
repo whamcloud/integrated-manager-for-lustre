@@ -69,7 +69,7 @@ pub fn view(model: &Model) -> Node<Msg> {
             dashboard_container::view(
                 "Filesystem Usage",
                 div![
-                    class![C.h_80, C.p_2],
+                    class![C.h_full, C.min_h_80, C.p_2],
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
@@ -90,7 +90,7 @@ pub fn view(model: &Model) -> Node<Msg> {
             dashboard_container::view(
                 "OST Balance",
                 div![
-                    class![C.h_80, C.p_2],
+                    class![C.h_full, C.min_h_80, C.p_2],
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
@@ -102,7 +102,7 @@ pub fn view(model: &Model) -> Node<Msg> {
             dashboard_container::view(
                 "MDT Usage",
                 div![
-                    class![C.h_80, C.p_2],
+                    class![C.h_full, C.min_h_80, C.p_2],
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,

@@ -14,7 +14,9 @@ forward_function_template = fill_template(
     """
 CREATE OR REPLACE FUNCTION table_%(function_name)s_update_notify() RETURNS trigger AS $$
 BEGIN
-    IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+    IF TG_OP = 'INSERT' THEN
+        PERFORM pg_notify('table_update', '[ "' || TG_OP || '", "' || TG_TABLE_NAME || '", ' || row_to_json(NEW) || ']');
+    ELSEIF TG_OP = 'UPDATE' AND OLD IS DISTINCT FROM NEW THEN
         PERFORM pg_notify('table_update', '[ "' || TG_OP || '", "' || TG_TABLE_NAME || '", ' || row_to_json(NEW) || ']');
     ELSE
         PERFORM pg_notify('table_update', '[ "' || TG_OP || '", "' || TG_TABLE_NAME || '", ' || row_to_json(OLD) || ']');
@@ -70,7 +72,13 @@ ON %(name)s;
 """
 )
 
-forward_lustre_fid = "CREATE TYPE lustre_fid AS (seq bigint, oid integer, ver integer);"
+forward_lustre_fid = """
+DO $$ BEGIN
+    CREATE TYPE lustre_fid AS (seq bigint, oid integer, ver integer);
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+"""
 
 backward_lustre_fid = "DROP TYPE IF EXISTS lustre_fid;"
 

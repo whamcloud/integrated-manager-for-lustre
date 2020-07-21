@@ -2,6 +2,14 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum CimXmlError {
+    #[error("Property {0} not found")]
+    PropertyNotfound(String),
+}
+
 pub mod req {
     use quick_xml::{
         events::{self, Event},
@@ -95,12 +103,14 @@ pub mod req {
 
     pub enum ParamValue {
         ClassName(String),
+        InstanceName(String),
     }
 
     impl<'a> From<ParamValue> for Event<'a> {
         fn from(x: ParamValue) -> Self {
             match x {
-                ParamValue::ClassName(s) => classname(&s),
+                ParamValue::ClassName(s) => class_name(&s),
+                ParamValue::InstanceName(s) => instance_name(&s),
             }
         }
     }
@@ -120,9 +130,16 @@ pub mod req {
     }
 
     /// The CLASSNAME element defines the qualifying name of a CIM Class.
-    pub(crate) fn classname<'a>(name: &str) -> Event<'a> {
+    pub(crate) fn class_name<'a>(name: &str) -> Event<'a> {
         Event::Empty(
             events::BytesStart::borrowed_name(b"CLASSNAME").with_attributes(vec![("NAME", name)]),
+        )
+    }
+
+    pub(crate) fn instance_name<'a>(name: &str) -> Event<'a> {
+        Event::Empty(
+            events::BytesStart::borrowed_name(b"INSTANCENAME")
+                .with_attributes(vec![("CLASSNAME", name)]),
         )
     }
 
@@ -173,7 +190,37 @@ pub mod req {
                         "EnumerateInstances",
                         vec![
                             local_namespace_path(vec![namespace("root"), namespace("ddn")]),
-                            iparamvalue("ClassName", classname("DDN_SFAController")),
+                            iparamvalue("ClassName", class_name("DDN_SFAController")),
+                        ]
+                        .concat(),
+                    )),
+                ),
+            ));
+
+            let mut writer = Writer::new_with_indent(Cursor::new(Vec::new()), b' ', 4);
+
+            for x in xs {
+                writer.write_event(x).unwrap();
+            }
+
+            let xs = writer.into_inner().into_inner();
+
+            insta::assert_display_snapshot!(String::from_utf8_lossy(&xs));
+        }
+
+        #[test]
+        fn test_build_imethodcall_instance() {
+            let xs = decl(cim(
+                "2.0",
+                "2.0",
+                message(
+                    "1001",
+                    "1.0",
+                    simple_req(imethodcall(
+                        "GetInstance",
+                        vec![
+                            local_namespace_path(vec![namespace("root"), namespace("ddn")]),
+                            iparamvalue("InstanceName", instance_name("DDN_SFAStorageSystem")),
                         ]
                         .concat(),
                     )),
@@ -194,6 +241,8 @@ pub mod req {
 }
 
 pub mod resp {
+    use crate::cim_xml::CimXmlError;
+
     #[derive(Debug, serde::Deserialize, PartialEq)]
     pub struct ValueArray {
         #[serde(rename = "$value", default)]
@@ -235,8 +284,24 @@ pub mod resp {
     pub struct Instance {
         #[serde(rename = "CLASSNAME")]
         pub class_name: String,
-        #[serde(rename = "$value")]
+        #[serde(rename = "$value", default)]
         pub properties: Vec<Property>,
+    }
+
+    impl Instance {
+        pub fn try_get_property<'a>(&'a self, name: &str) -> Result<&'a str, CimXmlError> {
+            self.get_property(name)
+                .ok_or_else(|| CimXmlError::PropertyNotfound(name.into()))
+        }
+        pub fn get_property<'a>(&'a self, name: &str) -> Option<&'a str> {
+            self.properties
+                .iter()
+                .find(|p| p.name() == Some(name))
+                .and_then(|p| match p {
+                    Property::Single { value, .. } => value.as_deref(),
+                    _ => None,
+                })
+        }
     }
 
     #[derive(Debug, serde::Deserialize, PartialEq)]
@@ -246,33 +311,52 @@ pub mod resp {
     }
 
     #[derive(Debug, serde::Deserialize, PartialEq)]
-    pub struct IReturnValue {
-        #[serde(rename = "VALUE.NAMEDINSTANCE")]
+    pub struct IReturnValueNamedInstance {
+        #[serde(rename = "VALUE.NAMEDINSTANCE", default)]
         pub named_instance: Vec<NamedInstance>,
     }
 
     #[derive(Debug, serde::Deserialize, PartialEq)]
-    pub struct IMethodResponse {
+    pub struct IReturnValueInstance {
+        #[serde(rename = "INSTANCE")]
+        pub instance: Instance,
+    }
+
+    #[derive(Debug, serde::Deserialize, PartialEq)]
+    pub struct IMethodResponse<T> {
         #[serde(rename = "IRETURNVALUE")]
-        pub i_return_value: IReturnValue,
+        pub i_return_value: T,
     }
 
     #[derive(Debug, serde::Deserialize, PartialEq)]
-    pub struct SimpleRsp {
+    pub struct SimpleRsp<T> {
         #[serde(rename = "IMETHODRESPONSE")]
-        pub imethodresponse: IMethodResponse,
+        pub imethodresponse: IMethodResponse<T>,
     }
 
     #[derive(Debug, serde::Deserialize, PartialEq)]
-    pub struct Message {
+    pub struct Message<T> {
         #[serde(rename = "SIMPLERSP")]
-        pub simplersp: SimpleRsp,
+        pub simplersp: SimpleRsp<T>,
     }
 
     #[derive(Debug, serde::Deserialize, PartialEq)]
-    pub struct Cim {
+    pub struct Cim<T> {
         #[serde(rename = "MESSAGE")]
-        pub message: Message,
+        pub message: Message<T>,
+    }
+
+    impl From<Cim<IReturnValueNamedInstance>> for Vec<Instance> {
+        fn from(x: Cim<IReturnValueNamedInstance>) -> Self {
+            x.message
+                .simplersp
+                .imethodresponse
+                .i_return_value
+                .named_instance
+                .into_iter()
+                .map(|x| x.instance)
+                .collect()
+        }
     }
 
     #[cfg(test)]
@@ -283,7 +367,28 @@ pub mod resp {
         fn test_instance_list() {
             let xml = include_bytes!("../fixtures/instance_list.xml");
 
-            let r: Cim = quick_xml::de::from_str(std::str::from_utf8(xml).unwrap()).unwrap();
+            let r: Cim<IReturnValueNamedInstance> =
+                quick_xml::de::from_str(std::str::from_utf8(xml).unwrap()).unwrap();
+
+            insta::assert_debug_snapshot!(r);
+        }
+
+        #[test]
+        fn test_instance() {
+            let xml = include_bytes!("../fixtures/instance.xml");
+
+            let r: Cim<IReturnValueInstance> =
+                quick_xml::de::from_str(std::str::from_utf8(xml).unwrap()).unwrap();
+
+            insta::assert_debug_snapshot!(r);
+        }
+
+        #[test]
+        fn test_empty() {
+            let xml = include_bytes!("../fixtures/empty.xml");
+
+            let r: Cim<IReturnValueNamedInstance> =
+                quick_xml::de::from_str(std::str::from_utf8(xml).unwrap()).unwrap();
 
             insta::assert_debug_snapshot!(r);
         }

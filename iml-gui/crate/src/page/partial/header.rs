@@ -4,7 +4,7 @@
 
 use crate::{
     auth, breakpoints,
-    components::{breadcrumbs, ddn_logo, font_awesome, restrict, whamcloud_logo},
+    components::{breadcrumbs, ddn_logo, ddn_logo_lettering, font_awesome, restrict, whamcloud_logo},
     generated::css_classes::C,
     MergeAttrs, Model, Msg, Route, SessionExt,
     Visibility::*,
@@ -177,15 +177,24 @@ fn toggle_nav_view() -> Node<Msg> {
     ]
 }
 
+fn ddn_logo_full<T>() -> Node<T> {
+    div![
+        class![C.inline_flex],
+        ddn_logo().merge_attrs(class![C.h_8, C.mr_1]),
+        ddn_logo_lettering().merge_attrs(class![C.h_6, C.m_px])
+    ]
+}
+
 /// The navbar logo
 fn logo_nav_view<T>(branding: Branding) -> Node<T> {
-    let (logo, txt, color) = match branding {
-        Branding::Whamcloud => (whamcloud_logo(), empty![], C.text_white),
-        Branding::Ddn => (ddn_logo(), empty![], C.text_red_600),
-        Branding::DdnAi400 => (
-            ddn_logo(),
-            span![class![C.font_semibold, C.text_3xl, C.tracking_tight], "AI400"],
-            C.text_red_600,
+    let (logo, txt) = match branding {
+        Branding::Whamcloud => (whamcloud_logo().merge_attrs(class![C.h_12, C.w_24, C.mr_3]), empty![]),
+        Branding::DDN(ddn_brand) => (
+            ddn_logo_full(),
+            span![
+                class![C.font_semibold, C.text_2xl, C.tracking_tight, C.ml_2],
+                ddn_brand.to_string()
+            ],
         ),
     };
 
@@ -199,10 +208,10 @@ fn logo_nav_view<T>(branding: Branding) -> Node<T> {
             C.lg__my_0,
             C.ml_6,
             C.my_2,
-            color,
+            C.text_white,
             C.xl__mr_12
         ],
-        logo.merge_attrs(class![C.h_12, C.w_24, C.mr_3]),
+        logo,
         txt,
     ]
 }
@@ -236,7 +245,7 @@ fn nav(model: &Model) -> Node<Msg> {
                     C.lg__h_16,
                 ],
                 main_menu_items(model),
-                auth_view(&model.auth, model.logging_out),
+                auth_view(&model.auth),
             ]
         } else {
             empty![]
@@ -246,13 +255,11 @@ fn nav(model: &Model) -> Node<Msg> {
 
 /// Show the logged in user if available.
 /// Also show the Login / Logout link
-pub fn auth_view(auth: &auth::Model, logging_out: bool) -> Node<Msg> {
+pub fn auth_view(auth: &auth::Model) -> Node<Msg> {
     let x = match auth.get_session() {
         Some(session) => session,
         None => return empty![],
     };
-
-    let disabled = attrs! { At::Disabled => logging_out.as_at_value() };
 
     let cls = class![
         C.block,
@@ -274,14 +281,14 @@ pub fn auth_view(auth: &auth::Model, logging_out: bool) -> Node<Msg> {
         C.text_gray_300
     ];
 
-    let mut auth_link = a![&cls, &disabled, if !x.has_user() { "Login" } else { "Logout" }];
+    let mut auth_link = a![&cls, if !x.has_user() { "Login" } else { "Logout" }];
 
     let auth_link = if !x.has_user() {
         auth_link.merge_attrs(attrs! {
             At::Href => Route::Login.to_href(),
         })
     } else {
-        auth_link.add_listener(simple_ev(Ev::Click, Msg::Logout));
+        auth_link.add_listener(simple_ev(Ev::Click, Msg::Auth(Box::new(auth::Msg::Logout))));
 
         auth_link
     };
@@ -292,7 +299,6 @@ pub fn auth_view(auth: &auth::Model, logging_out: bool) -> Node<Msg> {
             Some(user) => {
                 a![
                     &cls,
-                    &disabled,
                     attrs! {
                         At::Href => Route::User(user.id.into()).to_href()
                     },

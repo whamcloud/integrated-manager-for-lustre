@@ -14,12 +14,12 @@ use seed::{prelude::*, *};
 pub struct Model {
     pub disabled: bool,
     pub locked: bool,
-    pub fs_id: u32,
+    pub fs_id: i32,
     pub scan_stratagem_modal: scan_stratagem_modal::Model,
 }
 
 impl Model {
-    pub fn new(fs_id: u32) -> Self {
+    pub fn new(fs_id: i32) -> Self {
         Self {
             fs_id,
             scan_stratagem_modal: scan_stratagem_modal::Model::new(fs_id),
@@ -51,7 +51,7 @@ pub fn view(model: &Model) -> Vec<Node<Msg>> {
             C.bg_blue_500,
             C.hover__bg_blue_700,
             C.text_white,
-            C.mt_24,
+            C.mt_12,
             C.font_bold,
             C.py_2,
             C.px_2,

@@ -2,42 +2,49 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_cmd::CmdError;
-use iml_system_test_utils::{ssh, vagrant, SetupConfigType};
-use std::{collections::HashMap, time::Duration};
-use tokio::time::delay_for;
+use iml_cmd::{CheckedCommandExt, CmdError};
+use iml_system_test_utils::*;
+use tracing::Level;
+use tracing_subscriber::fmt::Subscriber;
 
-pub async fn setup() -> Result<(), CmdError> {
-    vagrant::destroy().await?;
-    vagrant::global_prune().await?;
-    vagrant::poweroff_running_vms().await?;
-    vagrant::unregister_vms().await?;
-    vagrant::clear_vbox_machine_folder().await?;
+pub async fn run_fs_test(config: Config) -> Result<Config, CmdError> {
+    Subscriber::builder().with_max_level(Level::DEBUG).init();
 
-    Ok(())
-}
+    let snapshot_map = snapshots::get_snapshots().await?;
+    let graph = snapshots::create_graph(&snapshot_map["iscsi"]);
+    let active_snapshots = snapshots::get_active_snapshots(&config, &graph);
+    let target_snapshot = active_snapshots.last().expect("target snapshot not found.");
+    println!("target snapshot: {:?}", target_snapshot);
 
-pub async fn run_fs_test<S: std::hash::BuildHasher>(
-    config: &vagrant::ClusterConfig,
-    setup_config: &SetupConfigType,
-    server_map: HashMap<String, &[&str], S>,
-    fs_type: vagrant::FsType,
-) -> Result<(), CmdError> {
-    setup().await?;
+    if target_snapshot.name != snapshots::SnapshotName::Init {
+        vagrant::halt()
+            .await?
+            .args(&config.all_hosts())
+            .checked_status()
+            .await?;
 
-    vagrant::setup_deploy_servers(&config, &setup_config, server_map).await?;
+        for host in config.all_hosts() {
+            let result = vagrant::snapshot_restore(host, target_snapshot.name.to_string().as_str())
+                .await?
+                .checked_status()
+                .await;
 
-    vagrant::create_fs(fs_type, &config).await?;
+            if result.is_err() {
+                println!(
+                    "Snapshot {} not available on host {}. Skipping.",
+                    target_snapshot.name.to_string(),
+                    host
+                );
+            }
+        }
+    }
 
-    delay_for(Duration::from_secs(30)).await;
+    let actions = snapshots::get_active_test_path(&config, &graph, &target_snapshot.name);
 
-    vagrant::detect_fs(&config).await?;
+    let mut config = config;
+    for action in actions {
+        config = (graph[action].transition)(config).await?;
+    }
 
-    Ok(())
-}
-
-pub async fn wait_for_ntp(config: &vagrant::ClusterConfig) -> Result<(), CmdError> {
-    ssh::wait_for_ntp(&config.storage_server_ips()).await?;
-
-    Ok(())
+    Ok(config)
 }

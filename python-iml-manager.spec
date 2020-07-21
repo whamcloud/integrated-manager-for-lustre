@@ -4,7 +4,7 @@ BuildRequires: systemd
 # The install directory for the manager
 %{?!manager_root: %global manager_root /usr/share/chroma-manager}
 %global pypi_name iml-manager
-%global version 6.0.0
+%global version 6.1.0
 %{?!python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
 %{?dist_version: %global source https://github.com/whamcloud/%{pypi_name}/archive/%{dist_version}.tar.gz}
@@ -69,7 +69,7 @@ Requires(post): selinux-policy-targeted
 # IML Repo
 Requires:       python2-django-tastypie = 0.14.1
 Requires:       python2-django-picklefield >= 1.0.0
-Requires:       iml-online-help >= 3.0.0
+Requires:       iml-online-help >= 3.1.0
 Requires:       iml_sos_plugin >= 2.3.1
 Requires:       iml-update-handler >= 1.0.4, iml-update-handler < 2
 Requires:       python2-gevent >= 1.0.1
@@ -77,18 +77,21 @@ Requires:       python2-httpagentparser >= 1.5
 Requires:       python2-iml-manager-cli = %{version}-%{release}
 Requires:       python2-requests-unixsocket >= 0.2.0
 Requires:       python2-massiviu >= 0.1.0-2
-Requires:       rust-iml-action-runner >= 0.2.0
-Requires:       rust-iml-agent-comms >= 0.2.0
-Requires:       rust-iml-api >= 0.2.0
-Requires:       rust-iml-cli >= 0.2.0
-Requires:       rust-iml-gui >= 0.1.0
-Requires:       rust-iml-mailbox >= 0.2.0
-Requires:       rust-iml-ostpool >= 0.2.0
-Requires:       rust-iml-postoffice >= 0.2.0
-Requires:       rust-iml-stats >= 0.2.0
-Requires:       rust-iml-warp-drive >= 0.2.0
-Requires:       rust-iml-device >= 0.2.0
-Requires:       rust-iml-ntp >= 0.2.0
+Requires:       rust-iml-action-runner >= 0.3.0
+Requires:       rust-iml-agent-comms >= 0.3.0
+Requires:       rust-iml-api >= 0.3.0
+Requires:       rust-iml-cli >= 0.3.0
+Requires:       rust-iml-gui >= 0.2.0
+Requires:       rust-iml-mailbox >= 0.3.0
+Requires:       rust-iml-ostpool >= 0.3.0
+Requires:       rust-iml-postoffice >= 0.3.0
+Requires:       rust-iml-stats >= 0.3.0
+Requires:       rust-iml-warp-drive >= 0.3.0
+Requires:       rust-iml-device >= 0.3.0
+Requires:       rust-iml-journal >= 0.3.0
+Requires:       rust-iml-ntp >= 0.3.0
+Requires:       rust-iml-sfa >= 0.3.0
+Requires:       rust-iml-config-cli >= 0.3.0
 # Other Repos
 Requires:       influxdb
 Requires:       grafana
@@ -184,6 +187,11 @@ mv $RPM_BUILD_ROOT%{manager_root}/grafana/dashboards/iml-dashboards.yaml $RPM_BU
 mv $RPM_BUILD_ROOT%{manager_root}/grafana/datasources/influxdb-iml-datasource.yml $RPM_BUILD_ROOT%{_sysconfdir}/grafana/provisioning/datasources
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}/grafana-server.service.d/
 mv $RPM_BUILD_ROOT%{manager_root}/grafana/dropin-iml.conf $RPM_BUILD_ROOT%{_unitdir}/grafana-server.service.d/90-iml.conf
+cp -r nginx $RPM_BUILD_ROOT%{manager_root}
+mkdir -p $RPM_BUILD_ROOT%{_unitdir}/nginx.service.d/
+mv $RPM_BUILD_ROOT%{manager_root}/nginx/nginx-dropin-iml.conf $RPM_BUILD_ROOT%{_unitdir}/nginx.service.d/90-nginx-dropin-iml.conf
+mkdir -p $RPM_BUILD_ROOT%{_unitdir}/rabbitmq-server.service.d
+mv rabbitmq-server-dropin.conf $RPM_BUILD_ROOT%{_unitdir}/rabbitmq-server.service.d/90-rabbitmq-server-dropin.conf
 cp iml-manager-redirect.conf $RPM_BUILD_ROOT%{_sysconfdir}/nginx/default.d/iml-manager-redirect.conf
 cp rabbitmq-env.conf $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq/rabbitmq-env.conf
 mkdir -p $RPM_BUILD_ROOT%{_mandir}/man1
@@ -199,7 +207,6 @@ install -m 644 iml-lustre-audit.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-plugin-runner.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-power-control.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-settings-populator.service $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-syslog.service $RPM_BUILD_ROOT%{_unitdir}/
 mkdir -p $RPM_BUILD_ROOT/var/log/chroma
 
 # only include modules in the main package
@@ -293,6 +300,8 @@ fi
 %{_sysconfdir}/rabbitmq/rabbitmq-env.conf
 %{_sysconfdir}/grafana/grafana-iml.ini
 %{_unitdir}/grafana-server.service.d/90-iml.conf
+%{_unitdir}/rabbitmq-server.service.d/90-rabbitmq-server-dropin.conf
+%{_unitdir}/nginx.service.d/90-nginx-dropin-iml.conf
 %attr(0755,root,root)%{_mandir}/man1/chroma-config.1.gz
 %attr(0644,root,root)%{_sysconfdir}/logrotate.d/chroma-manager
 %attr(0644,root,grafana)%{_sysconfdir}/grafana/provisioning/dashboards/iml-dashboards.yaml
@@ -322,11 +331,3 @@ fi
 %files -f cli.files -n python2-%{pypi_name}-cli
 %defattr(-,root,root)
 %{_bindir}/chroma
-
-%files -n python2-%{pypi_name}-integration-tests
-%defattr(-,root,root)
-%{manager_root}/tests/__init__.py
-%{manager_root}/tests/utils/*
-%{manager_root}/tests/sample_data/*
-%{manager_root}/tests/plugins/*
-%{manager_root}/tests/integration/*

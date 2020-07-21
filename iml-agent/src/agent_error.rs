@@ -86,7 +86,6 @@ pub enum ImlAgentError {
     LinesCodecError(LinesCodecError),
     LustreCollectorError(lustre_collector::error::LustreCollectorError),
     MarkerNotFound,
-    NativeTls(native_tls::Error),
     NoPluginError(NoPluginError),
     NoSessionError(NoSessionError),
     OneshotCanceled(futures::channel::oneshot::Canceled),
@@ -121,7 +120,6 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::LinesCodecError(ref err) => write!(f, "{}", err),
             ImlAgentError::LustreCollectorError(ref err) => write!(f, "{}", err),
             ImlAgentError::MarkerNotFound => write!(f, "Marker not found"),
-            ImlAgentError::NativeTls(ref err) => write!(f, "{}", err),
             ImlAgentError::NoPluginError(ref err) => write!(f, "{}", err),
             ImlAgentError::NoSessionError(ref err) => write!(f, "{}", err),
             ImlAgentError::OneshotCanceled(ref err) => write!(f, "{}", err),
@@ -158,7 +156,6 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::LinesCodecError(ref err) => Some(err),
             ImlAgentError::LustreCollectorError(ref err) => Some(err),
             ImlAgentError::MarkerNotFound => None,
-            ImlAgentError::NativeTls(ref err) => Some(err),
             ImlAgentError::NoPluginError(ref err) => Some(err),
             ImlAgentError::NoSessionError(ref err) => Some(err),
             ImlAgentError::OneshotCanceled(ref err) => Some(err),
@@ -325,12 +322,6 @@ impl From<http::uri::InvalidUriParts> for ImlAgentError {
 impl From<http::uri::InvalidUri> for ImlAgentError {
     fn from(err: http::uri::InvalidUri) -> Self {
         ImlAgentError::InvalidUri(err)
-    }
-}
-
-impl From<native_tls::Error> for ImlAgentError {
-    fn from(err: native_tls::Error) -> Self {
-        ImlAgentError::NativeTls(err)
     }
 }
 

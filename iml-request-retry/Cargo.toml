@@ -1,13 +1,13 @@
 [package]
 name = "iml-request-retry"
-version = "0.2.0"
+version = "0.3.0"
 description = "IML async request retry Library"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
 futures = "0.3"
-tokio = "0.2"
+tokio = { version = "0.2", features = ["macros"] }
 rand = "0.7"
 tracing = "0.1"
 

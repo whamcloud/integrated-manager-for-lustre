@@ -12,7 +12,7 @@ use crate::{
     ActionType, Sessions, Shared,
 };
 use futures::{channel::oneshot, TryFutureExt};
-use iml_rabbit::{send_message, Connection};
+use iml_rabbit::{send_message, Channel, Connection};
 use iml_wire_types::{Action, ActionId, Id, ManagerMessage};
 use std::{sync::Arc, time::Duration};
 use warp::{self, Filter};
@@ -24,7 +24,7 @@ use warp::{self, Filter};
 ///
 /// If unsuccessful, this fn will keep the `ActionInFlight` within the rpcs.
 async fn cancel_running_action(
-    client: Connection,
+    ch: Channel,
     msg: ManagerMessage,
     queue_name: impl Into<String>,
     session_id: Id,
@@ -37,7 +37,7 @@ async fn cancel_running_action(
     };
 
     if has_action_in_flight {
-        send_message(client.clone(), "", queue_name, msg).await?;
+        send_message(&ch, "", queue_name, msg).await?;
 
         let mut lock = session_to_rpcs.lock().await;
 
@@ -81,7 +81,7 @@ pub fn sender(
         move |shared_sessions: Shared<Sessions>,
               shared_session_to_rpcs: Shared<SessionToRpcs>,
               local_actions: SharedLocalActionsInFlight,
-              client: Connection,
+              conn: Connection,
               queue_name: String,
               action_type: ActionType| {
             async move {
@@ -100,10 +100,14 @@ pub fn sender(
 
                         let msg = create_data_message(session_id.clone(), fqdn, action.clone());
 
-                        match action {
+                        let ch = iml_rabbit::create_channel(&conn).await?;
+
+                        drop(conn);
+
+                        let r = match action {
                             Action::ActionCancel { id } => {
                                 cancel_running_action(
-                                    client.clone(),
+                                    ch.clone(),
                                     msg,
                                     queue_name,
                                     session_id,
@@ -115,20 +119,39 @@ pub fn sender(
                             action => {
                                 let (tx, rx) = oneshot::channel();
 
-                                send_message(client.clone(), "", queue_name, msg).await?;
-
                                 let action_id: ActionId = action.get_id().clone();
                                 let af = ActionInFlight::new(action, tx);
 
                                 {
                                     let mut lock = shared_session_to_rpcs.lock().await;
 
-                                    insert_action_in_flight(session_id, action_id, af, &mut lock);
+                                    insert_action_in_flight(
+                                        session_id.clone(),
+                                        action_id.clone(),
+                                        af,
+                                        &mut lock,
+                                    );
+                                }
+
+                                let x = send_message(&ch, "", queue_name, msg).err_into().await;
+
+                                if let Err(e) = x {
+                                    tracing::error!("Message send failed {}", e);
+
+                                    let mut lock = shared_session_to_rpcs.lock().await;
+
+                                    remove_action_in_flight(&session_id, &action_id, &mut lock);
+
+                                    return Err(e);
                                 }
 
                                 rx.await.map_err(|e| e.into())
                             }
-                        }
+                        };
+
+                        iml_rabbit::close_channel(&ch).await?;
+
+                        r
                     }
                 }
             }

@@ -14,7 +14,11 @@ use futures::{
     Future, FutureExt, TryFutureExt,
 };
 use iml_wire_types::PluginName;
-use std::time::{Duration, Instant};
+use std::{
+    ops::DerefMut,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use tokio::time::interval;
 use tracing::error;
 
@@ -22,33 +26,39 @@ use tracing::error;
 /// this function will handle the state and move it to it's next state.
 ///
 fn handle_state(
-    state: &State,
+    state: &mut State,
     agent_client: AgentClient,
-    mut sessions: Sessions,
+    sessions: Sessions,
     name: PluginName,
     now: Instant,
 ) -> impl Future<Output = Result<(), ImlAgentError>> {
     tracing::trace!("handling state for {:?}: {:?}, ", name, state);
 
     match state {
-        State::Active(a) if a.instant <= now => Either::Left(
-            a.session
-                .poll()
-                .and_then(move |x| async move {
+        State::Active(a) if a.instant <= now => {
+            let (rx, fut) = a.session.poll();
+
+            a.in_flight = Some(rx);
+
+            Either::Left(
+                fut.and_then(move |x| async move {
                     if let Some((info, output)) = x {
                         agent_client.send_data(info, output).await?;
                     }
 
                     Ok(())
                 })
-                .then(move |r| match r {
-                    Ok(_) => {
-                        sessions.reset_active(&name);
-                        future::ok(())
+                .then(move |r| async move {
+                    match r {
+                        Ok(_) => {
+                            sessions.reset_active(&name).await;
+                            Ok(())
+                        }
+                        Err(_) => sessions.terminate_session(&name).await,
                     }
-                    Err(_) => future::ready(sessions.terminate_session(&name)),
                 }),
-        ),
+            )
+        }
         _ => Either::Right(future::ok(())),
     }
 }
@@ -64,32 +74,40 @@ pub async fn create_poller(agent_client: AgentClient, sessions: Sessions) {
         let now = s.tick().await.into_std();
         tracing::trace!("interval triggered for {:?}", now);
 
-        for (name, state) in sessions.clone().write().iter_mut() {
+        for (name, locked) in sessions.0.iter() {
+            let locked = Arc::clone(locked);
+            let mut write_lock = locked.write().await;
+
+            let state: &mut State = write_lock.deref_mut();
+
             match state {
                 State::Empty(wait) if *wait <= now => {
                     state.convert_to_pending();
 
-                    let mut sessions = sessions.clone();
+                    let sessions = sessions.clone();
                     let name = name.clone();
 
                     tracing::info!("sending session create request for {}", name);
 
-                    let fut = agent_client.create_session(name.clone()).map_err(move |e| {
-                        tracing::info!("session create request for {} failed: {:?}", name, e);
-                        sessions.reset_empty(&name)
-                    });
+                    let r = agent_client.create_session(name.clone());
 
-                    tokio::spawn(async {
-                        fut.map(drop).await;
+                    tokio::spawn(async move {
+                        if let Err(e) = r.await {
+                            tracing::info!("session create request for {} failed: {:?}", name, e);
+
+                            sessions.reset_empty(&name).await;
+                        };
+
+                        Ok::<_, ImlAgentError>(())
                     });
                 }
                 _ => (),
             };
         }
 
-        for (name, state) in sessions.clone().read().iter() {
+        for (name, state) in sessions.0.iter() {
             let fut = handle_state(
-                state,
+                Arc::clone(&state).write().await.deref_mut(),
                 agent_client.clone(),
                 sessions.clone(),
                 name.clone(),

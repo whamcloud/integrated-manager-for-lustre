@@ -41,7 +41,7 @@ diesel print-schema --database-url postgres://chroma@
 
 ```sh
 cargo install diesel_cli_ext
-diesel_ext --add-table-name --model > models.rs
+diesel_ext --add-table-name --model -M "Jsonb serde_json::Value" -M "Lustre_fid LustreFid" -M "SqlLustreFid LustreFid" > models.rs
 ```
 
 ## Background

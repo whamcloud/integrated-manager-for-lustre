@@ -34,8 +34,8 @@ pub(crate) fn base_color_view<T>(content: &str, placement: Placement, color: &st
     };
 
     let tooltip_left_styles = style! {
-        St::Bottom => percent(50),
         St::Transform => "translate(calc(-100% - 8px),50%)",
+        St::Bottom => percent(50),
     };
 
     let tooltip_style = match placement {
@@ -47,6 +47,9 @@ pub(crate) fn base_color_view<T>(content: &str, placement: Placement, color: &st
 
     div![
         class![C.absolute, C.pointer_events_none, C.z_20, C.whitespace_normal],
+        style! {
+            St::WillChange => "transform"
+        },
         tooltip_style,
         arrow(placement, color),
         div![

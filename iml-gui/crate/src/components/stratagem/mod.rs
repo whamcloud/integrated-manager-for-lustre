@@ -3,13 +3,15 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    components::{duration_picker, grafana_chart},
+    components::{command_modal, duration_picker, grafana_chart},
     extensions::MergeAttrs,
     generated::css_classes::C,
     GMsg,
 };
 use futures::TryFutureExt;
-use iml_wire_types::{db::StratagemConfiguration, warp_drive::ArcCache, warp_drive::Locks, Filesystem, ToCompositeId};
+use iml_wire_types::{
+    db::StratagemConfiguration, warp_drive::ArcCache, warp_drive::Locks, CmdWrapper, Filesystem, ToCompositeId,
+};
 use seed::{prelude::*, *};
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -21,11 +23,6 @@ pub(crate) mod scan_stratagem_modal;
 pub(crate) mod update_stratagem_button;
 pub(crate) mod validation;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct ActionResponse {
-    command: iml_wire_types::Command,
-}
-
 #[derive(Default)]
 pub struct TargetConfig {
     pub interval: u64,
@@ -35,8 +32,8 @@ pub struct TargetConfig {
 
 #[derive(Debug, Default, Clone, serde::Serialize)]
 pub struct StratagemUpdate {
-    pub id: u32,
-    pub filesystem: u32,
+    pub id: i32,
+    pub filesystem: i32,
     pub interval: u64,
     pub report_duration: Option<u64>,
     pub purge_duration: Option<u64>,
@@ -44,7 +41,7 @@ pub struct StratagemUpdate {
 
 #[derive(Debug, Default, Clone, serde::Serialize)]
 pub struct StratagemEnable {
-    pub filesystem: u32,
+    pub filesystem: i32,
     pub interval: u64,
     pub report_duration: Option<u64>,
     pub purge_duration: Option<u64>,
@@ -52,7 +49,7 @@ pub struct StratagemEnable {
 
 #[derive(Debug, serde::Serialize)]
 pub struct StratagemScan {
-    pub filesystem: u32,
+    pub filesystem: i32,
     pub report_duration: Option<u64>,
     pub purge_duration: Option<u64>,
 }
@@ -95,7 +92,7 @@ pub struct Config {
     pub scan_duration_picker: duration_picker::Model,
     pub report_duration_picker: duration_picker::Model,
     pub purge_duration_picker: duration_picker::Model,
-    pub id: Option<u32>,
+    pub id: Option<i32>,
     pub destroyed: bool,
     pub disabled: bool,
     pub target_config: TargetConfig,
@@ -108,7 +105,7 @@ impl Config {
             && self.report_duration_picker.validation_message.is_none()
             && self.purge_duration_picker.validation_message.is_none()
     }
-    fn get_stratagem_update_config(&self, fs_id: u32) -> Option<StratagemUpdate> {
+    fn get_stratagem_update_config(&self, fs_id: i32) -> Option<StratagemUpdate> {
         Some(StratagemUpdate {
             id: self.id?,
             filesystem: fs_id,
@@ -118,7 +115,7 @@ impl Config {
         })
     }
 
-    fn create_enable_stratagem_model(&self, fs_id: u32) -> Option<StratagemEnable> {
+    fn create_enable_stratagem_model(&self, fs_id: i32) -> Option<StratagemEnable> {
         Some(StratagemEnable {
             filesystem: fs_id,
             interval: self.scan_duration_picker.value_as_ms()?,
@@ -141,7 +138,7 @@ pub enum Msg {
     CheckStratagem,
     EnableStratagem,
     DisableStratagem,
-    CmdSent(Box<fetch::FetchObject<ActionResponse>>),
+    CmdSent(Box<fetch::FetchObject<CmdWrapper>>),
     ScanStratagemButton(scan_stratagem_button::Msg),
     Noop,
 }
@@ -286,8 +283,10 @@ pub(crate) fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut
                 }
             }
             Msg::CmdSent(fetch_object) => match fetch_object.response() {
-                Ok(_) => {
-                    orders.skip();
+                Ok(x) => {
+                    let x = command_modal::Input::Commands(vec![Arc::new(x.data.command)]);
+
+                    orders.send_g_msg(GMsg::OpenCommandModal(x));
                 }
                 Err(fail_reason) => {
                     config.disabled = false;
@@ -389,6 +388,7 @@ pub(crate) fn view(model: &Model, all_locks: &Locks) -> Node<Msg> {
             );
 
             div![
+                stratagem_config(config, locked),
                 scan_stratagem_button::view(&config.scan_stratagem_button).map_msg(Msg::ScanStratagemButton),
                 inode_table::view(&config.inode_table).map_msg(Msg::InodeTable),
                 caption_wrapper(
@@ -401,7 +401,6 @@ pub(crate) fn view(model: &Model, all_locks: &Locks) -> Node<Msg> {
                     Some(&last_scan),
                     stratagem_chart(grafana_chart::create_chart_params(3, "1m", config.grafana_vars.clone()))
                 ),
-                stratagem_config(config, locked)
             ]
         }
     }

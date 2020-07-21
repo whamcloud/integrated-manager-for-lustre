@@ -4,8 +4,9 @@
 
 use crate::{
     agent_error::{NoPluginError, Result},
-    daemon_plugins::{action_runner, device, ntp, ostpool, postoffice, stats},
+    daemon_plugins::{action_runner, device, journal, ntp, ostpool, postoffice, stats},
 };
+use async_trait::async_trait;
 use futures::{future, Future, FutureExt};
 use iml_wire_types::{AgentResult, PluginName};
 use std::{collections::HashMap, pin::Pin};
@@ -21,7 +22,8 @@ pub type Output = Option<OutputValue>;
 ///
 /// Implementors of this trait should add themselves
 /// to the `plugin_registry` below.
-pub trait DaemonPlugin: std::fmt::Debug {
+#[async_trait]
+pub trait DaemonPlugin: std::fmt::Debug + Send + Sync {
     /// Returns full listing of information upon session esablishment
     fn start_session(&mut self) -> Pin<Box<dyn Future<Output = Result<Output>> + Send>> {
         future::ok(None).boxed()
@@ -39,13 +41,10 @@ pub trait DaemonPlugin: std::fmt::Debug {
     }
     /// Handle a message sent from the manager (may be called concurrently with respect to
     /// start_session and update_session).
-    fn on_message(
-        &self,
-        _body: serde_json::Value,
-    ) -> Pin<Box<dyn Future<Output = Result<AgentResult>> + Send>> {
-        future::ok(Ok(serde_json::Value::Null)).boxed()
+    async fn on_message(&self, _body: serde_json::Value) -> Result<AgentResult> {
+        Ok(Ok(serde_json::Value::Null))
     }
-    fn teardown(&mut self) -> Result<()> {
+    async fn teardown(&mut self) -> Result<()> {
         Ok(())
     }
 }
@@ -72,6 +71,7 @@ pub fn plugin_registry() -> DaemonPlugins {
         ("postoffice".into(), mk_callback(postoffice::create)),
         ("stats".into(), mk_callback(stats::create)),
         ("device".into(), mk_callback(device::create)),
+        ("journal".into(), mk_callback(journal::create)),
     ]
     .into_iter()
     .collect();
@@ -102,6 +102,7 @@ pub fn get_plugin(name: &PluginName, registry: &DaemonPlugins) -> Result<DaemonB
 pub mod test_plugin {
     use super::{DaemonPlugin, Output};
     use crate::agent_error::Result;
+    use async_trait::async_trait;
     use futures::{future, Future, TryFutureExt};
     use iml_wire_types::AgentResult;
     use std::{
@@ -122,6 +123,7 @@ pub mod test_plugin {
         }
     }
 
+    #[async_trait]
     impl DaemonPlugin for TestDaemonPlugin {
         fn start_session(&mut self) -> Pin<Box<dyn Future<Output = Result<Output>> + Send>> {
             Box::pin(future::ok(self.0.fetch_add(1, Ordering::Relaxed)).and_then(as_output))
@@ -129,13 +131,10 @@ pub mod test_plugin {
         fn update_session(&self) -> Pin<Box<dyn Future<Output = Result<Output>> + Send>> {
             Box::pin(future::ok(self.0.fetch_add(1, Ordering::Relaxed)).and_then(as_output))
         }
-        fn on_message(
-            &self,
-            body: serde_json::Value,
-        ) -> Pin<Box<dyn Future<Output = Result<AgentResult>> + Send>> {
-            Box::pin(future::ok(Ok(body)))
+        async fn on_message(&self, body: serde_json::Value) -> Result<AgentResult> {
+            Ok(Ok(body))
         }
-        fn teardown(&mut self) -> Result<()> {
+        async fn teardown(&mut self) -> Result<()> {
             self.0.store(0, Ordering::Relaxed);
 
             Ok(())
@@ -183,7 +182,7 @@ mod tests {
         let mut x = TestDaemonPlugin::default();
 
         x.start_session().await?;
-        x.teardown()?;
+        x.teardown().await?;
 
         assert_eq!(x.0.get_mut(), &mut 0);
 

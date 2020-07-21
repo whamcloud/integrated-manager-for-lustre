@@ -20,7 +20,7 @@ pub fn wrap_fut<T>(msg: &str, fut: impl Future<Output = T>) -> impl Future<Outpu
     fut.inspect(move |_| pb.finish_and_clear())
 }
 
-pub fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) -> () {
+pub fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) {
     let sp = Spinner::new(Spinners::Dots9, style(msg).dim().to_string());
 
     move |msg_opt| match msg_opt {
@@ -106,6 +106,16 @@ pub fn usage(
             .as_deref()
             .unwrap_or("---")
     )
+}
+
+pub trait IsEmpty {
+    fn is_empty(&self) -> bool;
+}
+
+impl<T> IsEmpty for Vec<T> {
+    fn is_empty(&self) -> bool {
+        self.is_empty()
+    }
 }
 
 pub trait IntoTable {
@@ -196,7 +206,10 @@ pub trait IntoDisplayType {
     fn into_display_type(self, display_type: DisplayType) -> String;
 }
 
-impl<T: IntoTable + serde::Serialize> IntoDisplayType for T {
+impl<T> IntoDisplayType for T
+where
+    T: IsEmpty + IntoTable + serde::Serialize,
+{
     fn into_display_type(self, display_type: DisplayType) -> String {
         match display_type {
             DisplayType::Json => {
@@ -205,7 +218,13 @@ impl<T: IntoTable + serde::Serialize> IntoDisplayType for T {
             DisplayType::Yaml => {
                 serde_yaml::to_string(&self).expect("Cannot serialize item to YAML")
             }
-            DisplayType::Tabular => self.into_table().to_string(),
+            DisplayType::Tabular => {
+                if self.is_empty() {
+                    "".to_string()
+                } else {
+                    self.into_table().to_string()
+                }
+            }
         }
     }
 }

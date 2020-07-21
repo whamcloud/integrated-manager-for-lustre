@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_orm::{r2d2, tokio_diesel};
+use iml_orm::tokio_diesel;
 use iml_wire_types::Command;
 use thiserror::Error;
 
@@ -63,10 +63,11 @@ pub enum ImlManagerCliError {
     CombineEasyError(combine::stream::easy::Errors<char, &'static str, usize>),
     DoesNotExist(&'static str),
     FailedCommandError(Vec<Command>),
+    FromUtf8Error(#[from] std::string::FromUtf8Error),
+    ImlOrmError(#[from] iml_orm::ImlOrmError),
     IntParseError(#[from] std::num::ParseIntError),
     IoError(#[from] std::io::Error),
     ParseDurationError(#[from] DurationParseError),
-    R2D2Error(#[from] r2d2::Error),
     ReqwestError(#[from] reqwest::Error),
     RunStratagemValidationError(#[from] RunStratagemValidationError),
     SerdeJsonError(#[from] serde_json::error::Error),
@@ -90,7 +91,8 @@ impl std::fmt::Display for ImlManagerCliError {
 
                 write!(f, "{}", failed_msg)
             }
-            ImlManagerCliError::R2D2Error(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::FromUtf8Error(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::ImlOrmError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::IntParseError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::IoError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::ParseDurationError(ref err) => write!(f, "{}", err),

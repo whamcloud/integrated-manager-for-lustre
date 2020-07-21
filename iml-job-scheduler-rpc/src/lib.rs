@@ -72,7 +72,7 @@ impl From<serde_json::error::Error> for ImlJobSchedulerRpcError {
 
 /// Performs an RPC call to the `job_scheduler`.
 pub async fn call<I: Debug + serde::Serialize, T: serde::de::DeserializeOwned>(
-    client: &Connection,
+    conn: &Connection,
     method: impl Into<String>,
     args: impl Into<Option<Vec<I>>>,
     kwargs: impl Into<Option<HashMap<String, String>>>,
@@ -94,11 +94,11 @@ pub async fn call<I: Debug + serde::Serialize, T: serde::de::DeserializeOwned>(
 
     tracing::debug!("--> to job scheduler {} {:?}", method, req);
 
-    let channel = create_channel(client).await?;
-    let channel = declare_transient_exchange(channel, RPC, ExchangeKind::Topic).await?;
+    let channel = create_channel(conn).await?;
+    declare_transient_exchange(&channel, RPC, ExchangeKind::Topic).await?;
 
-    let (channel, queue) = declare_queue(
-        channel,
+    let queue = declare_queue(
+        &channel,
         &response_key,
         QueueDeclareOptions {
             durable: false,
@@ -109,13 +109,18 @@ pub async fn call<I: Debug + serde::Serialize, T: serde::de::DeserializeOwned>(
     )
     .await?;
 
-    let channel = bind_queue(channel, RPC, &response_key, &response_key).await?;
+    bind_queue(&channel, RPC, &response_key, &response_key).await?;
 
-    let channel =
-        basic_publish(channel, RPC, format!("{}.requests", JOB_SCHEDULER_RPC), req).await?;
+    basic_publish(
+        &channel,
+        RPC,
+        format!("{}.requests", JOB_SCHEDULER_RPC),
+        req,
+    )
+    .await?;
 
-    let (delivery, channel) = basic_consume_one(
-        channel,
+    let (channel, delivery) = basic_consume_one(
+        &channel,
         queue,
         &response_key,
         Some(BasicConsumeOptions {
@@ -131,7 +136,7 @@ pub async fn call<I: Debug + serde::Serialize, T: serde::de::DeserializeOwned>(
         std::str::from_utf8(&delivery.data)
     );
 
-    close_channel(channel).await?;
+    close_channel(&channel).await?;
 
     let resp: Response<T> = serde_json::from_slice(&delivery.data)?;
 
@@ -154,12 +159,12 @@ pub struct Transition {
 }
 
 pub async fn available_transitions(
-    client: &Connection,
+    conn: &Connection,
     ids: &[CompositeId],
 ) -> Result<HashMap<CompositeId, Vec<Transition>>, ImlJobSchedulerRpcError> {
     let ids: Vec<_> = ids.iter().map(|x| (x.0, x.1)).collect();
 
-    call(client, "available_transitions", vec![ids], None).await
+    call(conn, "available_transitions", vec![ids], None).await
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]

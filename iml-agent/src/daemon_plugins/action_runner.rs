@@ -7,15 +7,15 @@ use crate::{
     agent_error::{ImlAgentError, RequiredError, Result},
     daemon_plugins::DaemonPlugin,
 };
+use async_trait::async_trait;
 use futures::{
     channel::oneshot,
     future::{self, Either},
-    Future, FutureExt,
 };
 use iml_util::action_plugins::Actions;
 use iml_wire_types::{Action, ActionId, ActionResult, AgentResult, ToJsonValue};
-use parking_lot::Mutex;
-use std::{collections::HashMap, pin::Pin, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::Mutex;
 
 pub struct ActionRunner {
     ids: Arc<Mutex<HashMap<ActionId, oneshot::Sender<()>>>>,
@@ -39,14 +39,12 @@ pub fn create() -> impl DaemonPlugin {
     }
 }
 
+#[async_trait]
 impl DaemonPlugin for ActionRunner {
-    fn on_message(
-        &self,
-        v: serde_json::Value,
-    ) -> Pin<Box<dyn Future<Output = Result<AgentResult>> + Send>> {
+    async fn on_message(&self, v: serde_json::Value) -> Result<AgentResult> {
         let action: Action = match serde_json::from_value(v) {
             Ok(x) => x,
-            Err(e) => return Box::pin(future::err(ImlAgentError::Serde(e))),
+            Err(e) => return Err(ImlAgentError::Serde(e)),
         };
 
         match action {
@@ -62,56 +60,54 @@ impl DaemonPlugin for ActionRunner {
                             result: Err(format!("{:?}", err)),
                         };
 
-                        return Box::pin(future::ok(result.to_json_value()));
+                        return Ok(result.to_json_value());
                     }
                 };
 
                 let (tx, rx) = oneshot::channel();
 
-                self.ids.lock().insert(id.clone(), tx);
+                self.ids.lock().await.insert(id.clone(), tx);
 
                 let fut = action_plugin_fn(args);
 
                 let ids = self.ids.clone();
 
-                Box::pin(
-                    future::select(fut, rx)
-                        .map(move |r| match r {
-                            Either::Left((result, _)) => {
-                                ids.lock().remove(&id);
-                                ActionResult { id, result }
-                            }
-                            Either::Right((_, z)) => {
-                                drop(z);
-                                ActionResult {
-                                    id,
-                                    result: ().to_json_value(),
-                                }
-                            }
-                        })
-                        .map(|r| Ok(r.to_json_value())),
-                )
+                let r = future::select(fut, rx).await;
+
+                let r = match r {
+                    Either::Left((result, _)) => {
+                        ids.lock().await.remove(&id);
+                        ActionResult { id, result }
+                    }
+                    Either::Right((_, z)) => {
+                        drop(z);
+                        ActionResult {
+                            id,
+                            result: ().to_json_value(),
+                        }
+                    }
+                };
+
+                Ok(r.to_json_value())
             }
             Action::ActionCancel { id } => {
-                let tx = self.ids.lock().remove(&id);
+                let tx = self.ids.lock().await.remove(&id);
 
                 if let Some(tx) = tx {
                     // We don't care what the result is here.
                     let _ = tx.send(()).is_ok();
                 }
 
-                Box::pin(future::ok(
-                    ActionResult {
-                        id,
-                        result: ().to_json_value(),
-                    }
-                    .to_json_value(),
-                ))
+                Ok(ActionResult {
+                    id,
+                    result: ().to_json_value(),
+                }
+                .to_json_value())
             }
         }
     }
-    fn teardown(&mut self) -> Result<()> {
-        for (_, tx) in self.ids.lock().drain() {
+    async fn teardown(&mut self) -> Result<()> {
+        for (_, tx) in self.ids.lock().await.drain() {
             // We don't care what the result is here.
             let _ = tx.send(()).is_ok();
         }

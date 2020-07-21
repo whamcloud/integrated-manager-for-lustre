@@ -2,12 +2,16 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+pub mod alert;
+
 use futures::{
     lock::Mutex,
     task::{Context, Poll},
     Stream,
 };
 use iml_manager_env::get_db_conn_string;
+pub use sqlx;
+use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use std::{pin::Pin, sync::Arc};
 pub use tokio_postgres::{
     error::DbError,
@@ -16,6 +20,35 @@ pub use tokio_postgres::{
     AsyncMessage, Client, Error, Transaction,
 };
 use tokio_postgres::{tls::NoTlsStream, Connection, NoTls, Socket};
+
+pub async fn get_db_pool(pool_size: u32) -> Result<PgPool, sqlx::Error> {
+    let mut opts = PgConnectOptions::default().username(&iml_manager_env::get_db_user());
+
+    opts = if let Some(x) = iml_manager_env::get_db_host() {
+        opts.host(&x)
+    } else {
+        opts
+    };
+
+    opts = if let Some(x) = iml_manager_env::get_db_name() {
+        opts.database(&x)
+    } else {
+        opts
+    };
+
+    opts = if let Some(x) = iml_manager_env::get_db_password() {
+        opts.password(&x)
+    } else {
+        opts
+    };
+
+    let x = PgPoolOptions::new()
+        .max_connections(pool_size)
+        .connect_with(opts)
+        .await?;
+
+    Ok(x)
+}
 
 /// Connect to the postgres instance running on the IML manager
 ///

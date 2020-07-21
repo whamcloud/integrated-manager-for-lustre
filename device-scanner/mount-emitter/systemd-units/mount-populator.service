@@ -1,0 +1,7 @@
+[Unit]
+Description=IML Mount Populator
+After=device-scanner.socket
+
+[Service]
+ExecStart=/bin/bash -c 'exec /usr/bin/findmnt -P -e | /usr/bin/mount-emitter'
+Type=oneshot

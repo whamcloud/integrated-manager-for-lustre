@@ -8,7 +8,7 @@ function* range(start, end, step) {
 // For NodeJS < 12
 Object.fromEntries =
   Object.fromEntries ||
-  (iterable => {
+  ((iterable) => {
     return [...iterable].reduce((obj, [key, val]) => {
       obj[key] = val;
       return obj;
@@ -27,7 +27,7 @@ module.exports = {
       lg: "1025px",
       // => @media (min-width: 1025px) { ... }
 
-      xl: "1701px"
+      xl: "1701px",
       // => @media (min-width: 1701px) { ... }
     },
     fontFamily: {
@@ -47,16 +47,16 @@ module.exports = {
         "Apple Color Emoji",
         "Segoe UI Emoji",
         "Segoe UI Symbol",
-        "Noto Color Emoji"
-      ]
+        "Noto Color Emoji",
+      ],
     },
     fontSize: (() => {
       const x = Object.fromEntries(
         [
           ...range(15, 35, 1),
           ...range(40, 60, 5),
-          ...range(70, 120, 10)
-        ].map(i => [i, `${i}px`])
+          ...range(70, 120, 10),
+        ].map((i) => [i, `${i}px`])
       );
 
       return {
@@ -70,17 +70,19 @@ module.exports = {
         "3xl": "1.875rem",
         "4xl": "2.25rem",
         "5xl": "3rem",
-        "6xl": "4rem"
+        "6xl": "4rem",
       };
     })(),
     opacity: (() => {
-      return Object.fromEntries([...range(0, 100, 10)].map(i => [i, i / 100]));
+      return Object.fromEntries(
+        [...range(0, 100, 10)].map((i) => [i, i / 100])
+      );
     })(),
     extend: {
       boxShadow: {
         "2xl-above":
           "0 25px 50px 15px rgba(0, 0, 0, 0.25), 0 10px 10px 10px rgba(0, 0, 0, 0.25)",
-        glow: "0 0 5px 2px hsl(205, 97%, 85%)"
+        glow: "0 0 5px 2px hsl(205, 97%, 85%)",
       },
       margin: {
         "-10vh": "-10vh",
@@ -109,17 +111,17 @@ module.exports = {
         "3040px": "3040px",
         "3870px": "3870px",
         "5030px": "5030px",
-        "6070px": "6070px"
+        "6070px": "6070px",
       },
       padding: {
         "84": "21rem",
-        "96": "24rem"
+        "96": "24rem",
       },
       inset: {
         "1/2": "50%",
         full: "100%",
         "-full": "-100%",
-        "-50vw": "-50vw"
+        "-50vw": "-50vw",
       },
       width: {
         "36": "9rem",
@@ -148,12 +150,15 @@ module.exports = {
         "2460px": "2460px",
         "2560px": "2560px",
         "50vh": "50vh",
-        "50vw": "50vw"
+        "50vw": "50vw",
       },
       maxWidth: {
         none: "none",
         "8xl": "88rem",
-        "400": "100rem"
+        "400": "100rem",
+      },
+      minWidth: {
+        "6": "1.5rem",
       },
       height: {
         "main-content": "calc(100vh - 6.6rem)",
@@ -186,7 +191,10 @@ module.exports = {
         "2560px": "2560px",
         "3670px": "3670px",
         "80": "20rem",
-        "96": "24rem"
+        "96": "24rem",
+      },
+      minHeight: {
+        "80": "20rem",
       },
       borderRadius: {
         "28px": "28px",
@@ -196,13 +204,16 @@ module.exports = {
         "110px": "110px",
         "140px": "140px",
         "260px": "260px",
-        "330px": "330px"
+        "330px": "330px",
+      },
+      borderWidth: {
+        "3": "3px",
       },
       textColor: {
-        active: "#3793FF"
+        active: "#3793FF",
       },
       cursor: {
-        "ew-resize": "ew-resize"
+        "ew-resize": "ew-resize",
       },
       colors: {
         black: "#000",
@@ -210,33 +221,36 @@ module.exports = {
         menu: "#344151",
         "menu-active": "#1C2A3C",
         "blue-1000": "#0D1B2C",
-        "throughput-background": "#5350FB"
+        "throughput-background": "#5350FB",
       },
       strokeWidth: {
         "3": "3",
         "4": "4",
         "5": "5",
-        "6": "6"
+        "6": "6",
+        "8": "8",
+        "10": "10",
+        "20": "20",
       },
       transitionProperty: {
-        stroke_dashoffset: "stroke-dashoffset"
-      }
-    }
+        stroke_dashoffset: "stroke-dashoffset",
+      },
+    },
   },
   variants: {
     display: ["group-hover", "group-focus", "responsive"],
     textColor: ["hover", "group-hover", "focus"],
-    borderWidth: ["responsive", "last", "hover", "focus"]
+    borderWidth: ["responsive", "last", "hover", "focus"],
   },
   plugins: [
-    function({ addVariant }) {
+    function ({ addVariant }) {
       addVariant("group-focus", ({ container, separator }) => {
-        container.walkRules(rule => {
+        container.walkRules((rule) => {
           rule.selector = `.group:focus-within .group-focus\\:${rule.selector.slice(
             1
           )}`;
         });
       });
-    }
-  ]
+    },
+  ],
 };

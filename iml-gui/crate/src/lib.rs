@@ -7,8 +7,10 @@
 #![allow(clippy::enum_glob_use)]
 
 pub mod components;
+pub mod dependency_tree;
 pub mod key_codes;
 pub mod page;
+pub mod resize_observer;
 
 mod auth;
 mod breakpoints;
@@ -19,7 +21,6 @@ mod extensions;
 mod generated;
 mod notification;
 mod route;
-mod server_date;
 mod sleep;
 mod status_section;
 mod watch_state;
@@ -28,7 +29,7 @@ mod watch_state;
 mod test_utils;
 
 use components::{
-    breadcrumbs, command_modal, font_awesome, font_awesome_outline, loading, restrict, stratagem, tree,
+    breadcrumbs, command_modal, date, font_awesome, font_awesome_outline, loading, restrict, stratagem, tree,
     update_activity_health, ActivityHealth,
 };
 pub(crate) use extensions::*;
@@ -36,13 +37,12 @@ use futures::channel::oneshot;
 use generated::css_classes::C;
 use iml_wire_types::{
     warp_drive::{self, ArcRecord},
-    Conf, GroupType, Session,
+    Conf, GroupType,
 };
 use lazy_static::lazy_static;
 use page::{Page, RecordChange};
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, EventHandler, *};
-pub(crate) use server_date::ServerDate;
 pub(crate) use sleep::sleep_with_handle;
 use std::{cmp, sync::Arc};
 pub use watch_state::*;
@@ -157,7 +157,6 @@ pub struct Model {
     conf: Conf,
     loading: Loading,
     locks: warp_drive::Locks,
-    logging_out: bool,
     manage_menu_state: WatchState,
     menu_visibility: Visibility,
     notification: notification::Model,
@@ -168,7 +167,7 @@ pub struct Model {
     status_section: status_section::Model,
     track_slider: bool,
     tree: tree::Model,
-    server_date: ServerDate,
+    server_date: date::Model,
 }
 
 // ------ ------
@@ -225,7 +224,6 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
             conf: Some(conf_tx),
         },
         locks: im::hashmap!(),
-        logging_out: false,
         manage_menu_state: WatchState::default(),
         menu_visibility: Visible,
         notification: notification::Model::default(),
@@ -236,7 +234,7 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
         status_section: status_section::Model::default(),
         track_slider: false,
         tree: tree::Model::default(),
-        server_date: ServerDate::default(),
+        server_date: date::Model::default(),
     })
 }
 
@@ -279,7 +277,7 @@ fn sink(g_msg: GMsg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
         GMsg::AuthProxy(msg) => {
             orders.proxy(Msg::Auth).send_msg(msg);
         }
-        GMsg::ServerDate(d) => model.server_date.set(d),
+        GMsg::ServerDate(d) => model.server_date.basedate = Some(d),
         GMsg::OpenCommandModal(x) => {
             orders
                 .proxy(Msg::CommandModal)
@@ -302,13 +300,9 @@ pub enum Msg {
     EventSourceMessage(MessageEvent),
     FetchConf,
     FetchedConf(fetch::ResponseDataResult<Conf>),
-    GetSession,
-    GotSession(fetch::ResponseDataResult<Session>),
     HideMenu,
     LoadPage,
     Locks(warp_drive::Locks),
-    LoggedOut(fetch::FetchObject<()>),
-    Logout,
     ManageMenuState,
     Notification(notification::Msg),
     RecordChange(Box<warp_drive::RecordChange>),
@@ -331,10 +325,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
     match msg {
         Msg::RouteChanged(url) => {
             model.route = Route::from(url);
-
-            if model.route == Route::Login {
-                orders.send_msg(Msg::Logout);
-            }
 
             if model.route == Route::Dashboard {
                 model.breadcrumbs.clear();
@@ -374,7 +364,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::LoadPage => {
             if model.loading.loaded() && !model.page.is_active(&model.route) {
-                model.page = (&model.records, &model.route).into();
+                model.page = (&model.records, &model.conf, &model.route).into();
                 orders.send_msg(Msg::UpdatePageTitle);
                 model.page.init(&model.records, &mut orders.proxy(Msg::Page));
             } else {
@@ -404,28 +394,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 warp_drive::Message::RecordChange(record_change) => Msg::RecordChange(Box::new(record_change)),
             };
 
-            orders.send_msg(msg);
+            orders.skip().send_msg(msg);
         }
         Msg::EventSourceError(_) => {
             log("EventSource error.");
         }
-        Msg::GetSession => {
-            orders
-                .skip()
-                .perform_cmd(auth::fetch_session().fetch_json_data(Msg::GotSession));
-        }
-        Msg::GotSession(data_result) => match data_result {
-            Ok(resp) => {
-                orders.send_g_msg(GMsg::AuthProxy(Box::new(auth::Msg::SetSession(resp))));
-
-                model.logging_out = false;
-            }
-            Err(fail_reason) => {
-                error!("Error fetching login session {:?}", fail_reason.message());
-
-                orders.skip();
-            }
-        },
         Msg::Records(records) => {
             model.records = (&*records).into();
 
@@ -582,20 +555,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 &mut orders.proxy(Msg::StatusSection),
             );
         }
-        Msg::Logout => {
-            model.logging_out = true;
-
-            orders.proxy(Msg::Auth).send_msg(Box::new(auth::Msg::Stop));
-
-            orders.perform_cmd(
-                auth::fetch_session()
-                    .method(fetch::Method::Delete)
-                    .fetch(Msg::LoggedOut),
-            );
-        }
-        Msg::LoggedOut(_) => {
-            orders.send_msg(Msg::GetSession);
-        }
         Msg::WindowClick => {
             if model.manage_menu_state.should_update() {
                 model.manage_menu_state.update();
@@ -716,6 +675,24 @@ fn handle_record_change(
                             .proxy(Msg::Tree)
                             .send_msg(tree::Msg::Add(warp_drive::RecordId::OstPoolOsts(id)));
                     };
+                }
+                ArcRecord::SfaDiskDrive(x) => {
+                    model.records.sfa_disk_drive.insert(x.id, Arc::clone(&x));
+                }
+                ArcRecord::SfaEnclosure(x) => {
+                    model.records.sfa_enclosure.insert(x.id, Arc::clone(&x));
+                }
+                ArcRecord::SfaStorageSystem(x) => {
+                    model.records.sfa_storage_system.insert(x.id, Arc::clone(&x));
+                }
+                ArcRecord::SfaJob(x) => {
+                    model.records.sfa_job.insert(x.id, Arc::clone(&x));
+                }
+                ArcRecord::SfaPowerSupply(x) => {
+                    model.records.sfa_power_supply.insert(x.id, Arc::clone(&x));
+                }
+                ArcRecord::SfaController(x) => {
+                    model.records.sfa_controller.insert(x.id, Arc::clone(&x));
                 }
                 ArcRecord::StratagemConfig(x) => {
                     model.records.stratagem_config.insert(x.id, Arc::clone(&x));
@@ -922,7 +899,7 @@ pub fn main_panels(model: &Model, children: impl View<page::Msg>) -> impl View<M
                     class![C.flex_grow, C.overflow_x_auto, C.overflow_y_auto, C.p_6],
                     children.els().map_msg(Msg::Page)
                 ],
-                page::partial::footer::view().els(),
+                page::partial::footer::view(&model.conf).els(),
             ],
             // Side buttons panel
             status_section::view(
@@ -983,7 +960,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
             main_panels(model, page::fs_dashboard::view(page).map_msg(page::Msg::FsDashboard)).els()
         }
         Page::Jobstats => main_panels(model, page::jobstats::view(model).els().map_msg(page::Msg::Jobstats)).els(),
-        Page::Login(x) => page::login::view(x, model.conf.branding)
+        Page::Login(x) => page::login::view(x, model.conf.branding, &model.conf.exa_version)
             .els()
             .map_msg(|x| page::Msg::Login(Box::new(x)))
             .map_msg(Msg::Page),
@@ -1041,6 +1018,13 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::Volumes(x) => main_panels(model, page::volumes::view(x).els().map_msg(page::Msg::Volumes)).els(),
         Page::ServerVolumes(x) => main_panels(model, page::volumes::view(x).els().map_msg(page::Msg::Volumes)).els(),
         Page::Volume(x) => main_panels(model, page::volume::view(x).els().map_msg(page::Msg::Volume)).els(),
+        Page::SfaEnclosure(x) => main_panels(
+            model,
+            page::sfa_enclosure::view(&model.records, x)
+                .els()
+                .map_msg(page::Msg::SfaEnclosure),
+        )
+        .els(),
     };
 
     // command modal is the global singleton, therefore is being showed here

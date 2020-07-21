@@ -8,10 +8,12 @@ use crate::{
         dashboard::{dashboard_container, dashboard_fs_usage, performance_container},
         datepicker,
         grafana_chart::{self, create_chart_params, no_vars, IML_METRICS_DASHBOARD_ID, IML_METRICS_DASHBOARD_NAME},
+        sfa_overview,
     },
     generated::css_classes::C,
-    GMsg,
+    GMsg, RecordChange,
 };
+use iml_wire_types::warp_drive::{ArcCache, ArcRecord, RecordId};
 use seed::{class, prelude::*, *};
 
 #[derive(Default)]
@@ -19,6 +21,25 @@ pub struct Model {
     pub fs_usage: fs_usage::Model,
     pub io_date_picker: datepicker::Model,
     pub lnet_date_picker: datepicker::Model,
+    pub sfa_overview: Option<sfa_overview::Model>,
+}
+
+impl RecordChange<Msg> for Model {
+    fn update_record(&mut self, record: ArcRecord, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+        if let Some(overview) = self.sfa_overview.as_mut() {
+            overview.update_record(record, cache, &mut orders.proxy(Msg::SfaOverview));
+        }
+    }
+    fn remove_record(&mut self, id: RecordId, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+        if let Some(overview) = self.sfa_overview.as_mut() {
+            overview.remove_record(id, cache, &mut orders.proxy(Msg::SfaOverview));
+        }
+    }
+    fn set_records(&mut self, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+        if let Some(overview) = self.sfa_overview.as_mut() {
+            overview.set_records(cache, &mut orders.proxy(Msg::SfaOverview));
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -26,6 +47,7 @@ pub enum Msg {
     FsUsage(fs_usage::Msg),
     IoChart(datepicker::Msg),
     LNetChart(datepicker::Msg),
+    SfaOverview(sfa_overview::Msg),
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -39,12 +61,17 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::LNetChart(msg) => {
             datepicker::update(msg, &mut model.lnet_date_picker, &mut orders.proxy(Msg::LNetChart));
         }
+        Msg::SfaOverview(msg) => {
+            if let Some(overview) = model.sfa_overview.as_mut() {
+                sfa_overview::update(msg, overview, &mut orders.proxy(Msg::SfaOverview));
+            }
+        }
     }
 }
 
 pub fn view(model: &Model) -> Node<Msg> {
     div![
-        class![C.grid, C.lg__grid_cols_2, C.gap_6],
+        class![C.grid, C.lg__grid_cols_2, C.gap_6, C.h_full],
         vec![
             dashboard_fs_usage::view(&model.fs_usage),
             dashboard_container::view(
@@ -57,22 +84,26 @@ pub fn view(model: &Model) -> Node<Msg> {
                 )
                 .map_msg(Msg::IoChart)
             ),
-            dashboard_container::view(
-                "OST Balance",
-                div![
-                    class![C.h_80, C.p_2],
-                    grafana_chart::view(
-                        IML_METRICS_DASHBOARD_ID,
-                        IML_METRICS_DASHBOARD_NAME,
-                        create_chart_params(26, "10s", no_vars()),
-                        "90%",
-                    )
-                ]
-            ),
+            if let Some(overview) = model.sfa_overview.as_ref() {
+                sfa_overview::view(overview)
+            } else {
+                dashboard_container::view(
+                    "OST Balance",
+                    div![
+                        class![C.h_full, C.min_h_80, C.p_2],
+                        grafana_chart::view(
+                            IML_METRICS_DASHBOARD_ID,
+                            IML_METRICS_DASHBOARD_NAME,
+                            create_chart_params(26, "10s", no_vars()),
+                            "90%",
+                        )
+                    ],
+                )
+            },
             dashboard_container::view(
                 "LNET Performance",
                 div![
-                    class![C.h_80, C.p_2],
+                    class![C.h_full, C.min_h_80, C.p_2],
                     grafana_chart::view(
                         IML_METRICS_DASHBOARD_ID,
                         IML_METRICS_DASHBOARD_NAME,
@@ -93,6 +124,12 @@ pub fn view(model: &Model) -> Node<Msg> {
     ]
 }
 
-pub fn init(orders: &mut impl Orders<Msg, GMsg>) {
+pub fn init(cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
+    model.set_records(cache, orders);
+
+    if let Some(overview) = model.sfa_overview.as_mut() {
+        sfa_overview::init(overview, &mut orders.proxy(Msg::SfaOverview));
+    }
+
     orders.proxy(Msg::FsUsage).send_msg(fs_usage::Msg::FetchData);
 }

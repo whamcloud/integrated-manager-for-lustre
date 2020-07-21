@@ -29,7 +29,7 @@ async fn search_rootpath(device: String) -> Result<LlapiFid, ImlAgentError> {
 }
 
 async fn rm_fids(llapi: LlapiFid, fids: Vec<String>) -> Result<(), ImlAgentError> {
-    spawn_blocking(move || llapi.clone().rmfids(fids).map_err(ImlAgentError::from))
+    spawn_blocking(move || llapi.rmfids(fids).map_err(ImlAgentError::from))
         .err_into()
         .await
         .and_then(std::convert::identity)

@@ -17,28 +17,11 @@ class Command(BaseCommand):
 
     help = """Prints out selected settings in env variable format"""
 
-    def _load_config(self, config_file):
-        config = {}
-        if os.path.exists(config_file):
-            with open(config_file) as file:
-                content = file.read()
-
-                for line in content.splitlines():
-                    key_val = line.split("=", 1)
-                    config[key_val[0]] = key_val[1]
-
-        return config
-
     def handle(self, *args, **kwargs):
         cursor = connection.cursor()
         cursor.execute("SELECT * from api_key()")
         (API_USER, API_KEY) = cursor.fetchone()
         cursor.close()
-
-        source_map_paths = glob.glob("/usr/share/iml-manager/iml-gui/main*.map")
-        SOURCE_MAP_PATH = next(iter(source_map_paths), None)
-
-        overrides = self._load_config(os.path.join("/var/lib/chroma-setup", "config"))
 
         DB = settings.DATABASES.get("default")
 
@@ -46,10 +29,23 @@ class Command(BaseCommand):
             "WARP_DRIVE_PORT": settings.WARP_DRIVE_PORT,
             "MAILBOX_PORT": settings.MAILBOX_PORT,
             "DEVICE_AGGREGATOR_PORT": settings.DEVICE_AGGREGATOR_PORT,
+            "HTTP_FRONTEND_PORT": settings.HTTP_FRONTEND_PORT,
+            "HTTPS_FRONTEND_PORT": settings.HTTPS_FRONTEND_PORT,
+            "HTTP_AGENT_PROXY_PASS": settings.HTTP_AGENT_PROXY_PASS,
             "HTTP_AGENT2_PORT": settings.HTTP_AGENT2_PORT,
             "HTTP_AGENT2_PROXY_PASS": settings.HTTP_AGENT2_PROXY_PASS,
+            "HTTP_API_PROXY_PASS": settings.HTTP_API_PROXY_PASS,
             "IML_API_PORT": settings.IML_API_PORT,
             "IML_API_PROXY_PASS": settings.IML_API_PROXY_PASS,
+            "WARP_DRIVE_PROXY_PASS": settings.WARP_DRIVE_PROXY_PASS,
+            "MAILBOX_PROXY_PASS": settings.MAILBOX_PROXY_PASS,
+            "SSL_PATH": settings.SSL_PATH,
+            "DEVICE_AGGREGATOR_PROXY_PASS": settings.DEVICE_AGGREGATOR_PROXY_PASS,
+            "UPDATE_HANDLER_PROXY_PASS": settings.UPDATE_HANDLER_PROXY_PASS,
+            "GRAFANA_PORT": settings.GRAFANA_PORT,
+            "GRAFANA_PROXY_PASS": settings.GRAFANA_PROXY_PASS,
+            "INFLUXDB_PROXY_PASS": settings.INFLUXDB_PROXY_PASS,
+            "TIMER_PROXY_PASS": settings.TIMER_PROXY_PASS,
             "ALLOW_ANONYMOUS_READ": json.dumps(settings.ALLOW_ANONYMOUS_READ),
             "BUILD": settings.BUILD,
             "IS_RELEASE": json.dumps(settings.IS_RELEASE),
@@ -59,7 +55,6 @@ class Command(BaseCommand):
             "VERSION": settings.VERSION,
             "API_USER": API_USER,
             "API_KEY": API_KEY,
-            "SOURCE_MAP_PATH": SOURCE_MAP_PATH,
             "MAILBOX_PATH": settings.MAILBOX_PATH,
             "PROXY_HOST": settings.PROXY_HOST,
             "INFLUXDB_IML_DB": settings.INFLUXDB_IML_DB,
@@ -71,6 +66,7 @@ class Command(BaseCommand):
             "DB_NAME": DB.get("NAME"),
             "DB_USER": DB.get("USER"),
             "DB_PASSWORD": DB.get("PASSWORD"),
+            "REPO_PATH": settings.REPO_PATH,
             "AMQP_BROKER_USER": settings.AMQP_BROKER_USER,
             "AMQP_BROKER_PASSWORD": settings.AMQP_BROKER_PASSWORD,
             "AMQP_BROKER_VHOST": settings.AMQP_BROKER_VHOST,
@@ -78,10 +74,15 @@ class Command(BaseCommand):
             "AMQP_BROKER_PORT": settings.AMQP_BROKER_PORT,
             "AMQP_BROKER_URL": settings.BROKER_URL,
             "BRANDING": settings.BRANDING,
-            "USE_STRATAGEM": json.dumps(settings.USE_STRATAGEM),
+            "USE_STRATAGEM": settings.USE_STRATAGEM,
+            "INCLUDES": settings.INCLUDES,
+            "DBLOG_HW": settings.DBLOG_HW,
+            "DBLOG_LW": settings.DBLOG_LW,
         }
 
-        config.update(overrides)
+        if settings.EXA_VERSION:
+            config["EXA_VERSION"] = settings.EXA_VERSION
+
         xs = map(lambda x: "{0}={1}".format(x[0], x[1]), config.items())
 
         print("\n".join(xs))

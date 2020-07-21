@@ -7,7 +7,7 @@ use std::{
     cmp::{Ord, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap},
     convert::TryFrom,
-    fmt,
+    fmt, io,
     ops::Deref,
     sync::Arc,
 };
@@ -199,6 +199,12 @@ impl From<&str> for ActionName {
     }
 }
 
+impl From<String> for ActionName {
+    fn from(name: String) -> Self {
+        Self(name)
+    }
+}
+
 impl fmt::Display for ActionName {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
@@ -280,7 +286,7 @@ impl<T: serde::Serialize> ToBytes for T {
 )]
 #[serde(try_from = "String")]
 #[serde(into = "String")]
-pub struct CompositeId(pub u32, pub u32);
+pub struct CompositeId(pub i32, pub i32);
 
 impl fmt::Display for CompositeId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -304,8 +310,8 @@ impl TryFrom<String> for CompositeId {
             return Err("Could not convert to CompositeId, String did not contain 2 parts.".into());
         }
 
-        let x = xs[0].parse::<u32>()?;
-        let y = xs[1].parse::<u32>()?;
+        let x = xs[0].parse::<i32>()?;
+        let y = xs[1].parse::<i32>()?;
 
         Ok(Self(x, y))
     }
@@ -370,8 +376,8 @@ pub enum LockAction {
 pub struct LockChange {
     pub uuid: String,
     pub job_id: u64,
-    pub content_type_id: u32,
-    pub item_id: u32,
+    pub content_type_id: i32,
+    pub item_id: i32,
     pub description: String,
     pub lock_type: LockType,
     pub action: LockAction,
@@ -420,9 +426,11 @@ pub struct Conf {
     pub allow_anonymous_read: bool,
     pub build: String,
     pub version: String,
+    pub exa_version: Option<String>,
     pub is_release: bool,
     pub branding: Branding,
     pub use_stratagem: bool,
+    pub monitor_sfa: bool,
 }
 
 impl Default for Conf {
@@ -431,9 +439,11 @@ impl Default for Conf {
             allow_anonymous_read: true,
             build: "Not Loaded".into(),
             version: "0".into(),
+            exa_version: None,
             is_release: false,
             branding: Branding::default(),
             use_stratagem: false,
+            monitor_sfa: false,
         }
     }
 }
@@ -467,8 +477,8 @@ impl EndpointName for AvailableAction {
 /// A `NtpConfiguration` record from `/api/ntp_configuration/`
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct NtpConfiguration {
-    pub content_type_id: u32,
-    pub id: u32,
+    pub content_type_id: i32,
+    pub id: i32,
     pub immutable_state: bool,
     pub label: String,
     pub not_deleted: Option<bool>,
@@ -486,7 +496,7 @@ impl EndpointName for NtpConfiguration {
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct ClientMount {
     pub filesystem_name: String,
-    pub mountpoint: Option<String>,
+    pub mountpoints: Vec<String>,
     pub state: String,
 }
 
@@ -496,11 +506,11 @@ pub struct Host {
     pub address: String,
     pub boot_time: Option<String>,
     pub client_mounts: Option<Vec<ClientMount>>,
-    pub content_type_id: u32,
+    pub content_type_id: i32,
     pub corosync_configuration: Option<String>,
     pub corosync_ring0: String,
     pub fqdn: String,
-    pub id: u32,
+    pub id: i32,
     pub immutable_state: bool,
     pub install_method: String,
     pub label: String,
@@ -512,7 +522,6 @@ pub struct Host {
     pub pacemaker_configuration: Option<String>,
     pub private_key: Option<String>,
     pub private_key_passphrase: Option<String>,
-    pub properties: String,
     pub resource_uri: String,
     pub root_pw: Option<String>,
     pub server_profile: ServerProfile,
@@ -522,22 +531,22 @@ pub struct Host {
 
 impl Host {
     /// Get associated LNet configuration id
-    pub fn lnet_id(&self) -> Option<u32> {
+    pub fn lnet_id(&self) -> Option<i32> {
         let id = iml_api_utils::extract_id(&self.lnet_configuration)?;
 
-        id.parse::<u32>().ok()
+        id.parse::<i32>().ok()
     }
     /// Get associated Corosync configuration id
-    pub fn corosync_id(&self) -> Option<u32> {
+    pub fn corosync_id(&self) -> Option<i32> {
         let id = iml_api_utils::extract_id(self.corosync_configuration.as_ref()?)?;
 
-        id.parse::<u32>().ok()
+        id.parse::<i32>().ok()
     }
     /// Get associated Pacemaker configuration id
-    pub fn pacemaker_id(&self) -> Option<u32> {
+    pub fn pacemaker_id(&self) -> Option<i32> {
         let id = iml_api_utils::extract_id(self.pacemaker_configuration.as_ref()?)?;
 
-        id.parse::<u32>().ok()
+        id.parse::<i32>().ok()
     }
 }
 
@@ -568,13 +577,13 @@ impl Label for &Host {
 }
 
 impl db::Id for Host {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
 
 impl db::Id for &Host {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -612,28 +621,6 @@ impl EndpointName for ServerProfile {
     }
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct HostProfileWrapper {
-    pub host_profiles: Option<HostProfile>,
-    pub error: Option<String>,
-    pub traceback: Option<String>,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct HostProfile {
-    pub address: String,
-    pub host: u32,
-    pub profiles: HashMap<String, Vec<ProfileTest>>,
-    pub profiles_valid: bool,
-    pub resource_uri: String,
-}
-
-impl EndpointName for HostProfile {
-    fn endpoint_name() -> &'static str {
-        "host_profile"
-    }
-}
-
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ProfileTest {
     pub description: String,
@@ -653,7 +640,7 @@ pub struct Command {
     pub complete: bool,
     pub created_at: String,
     pub errored: bool,
-    pub id: u32,
+    pub id: i32,
     pub jobs: Vec<String>,
     pub logs: String,
     pub message: String,
@@ -668,8 +655,8 @@ impl EndpointName for Command {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct JobLock {
-    pub locked_item_content_type_id: u32,
-    pub locked_item_id: u32,
+    pub locked_item_content_type_id: i32,
+    pub locked_item_id: i32,
     pub locked_item_uri: String,
     pub resource_uri: String,
 }
@@ -689,7 +676,7 @@ pub struct Job<T> {
     pub created_at: String,
     pub description: String,
     pub errored: bool,
-    pub id: u32,
+    pub id: i32,
     pub modified_at: String,
     pub read_locks: Vec<JobLock>,
     pub resource_uri: String,
@@ -711,6 +698,7 @@ pub struct HostValididity {
     pub address: String,
     pub status: Vec<Check>,
     pub valid: bool,
+    pub profiles: HashMap<String, Vec<ProfileTest>>,
 }
 
 pub type TestHostJob = Job<HostValididity>;
@@ -718,6 +706,30 @@ pub type TestHostJob = Job<HostValididity>;
 impl<T> EndpointName for Job<T> {
     fn endpoint_name() -> &'static str {
         "job"
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Step {
+    pub args: HashMap<String, serde_json::value::Value>,
+    pub backtrace: String,
+    pub class_name: String,
+    pub console: String,
+    pub created_at: String,
+    pub description: String,
+    pub id: i32,
+    pub log: String,
+    pub modified_at: String,
+    pub resource_uri: String,
+    pub result: Option<String>,
+    pub state: String,
+    pub step_count: i32,
+    pub step_index: i32,
+}
+
+impl EndpointName for Step {
+    fn endpoint_name() -> &'static str {
+        "step"
     }
 }
 
@@ -811,7 +823,7 @@ pub struct OstConfParams {
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct Volume {
     pub filesystem_type: Option<String>,
-    pub id: u32,
+    pub id: i32,
     pub kind: String,
     pub label: String,
     pub resource_uri: String,
@@ -837,13 +849,13 @@ impl Label for &Volume {
 }
 
 impl db::Id for Volume {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
 
 impl db::Id for &Volume {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -857,15 +869,15 @@ impl EndpointName for Volume {
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct VolumeNode {
     pub host: String,
-    pub host_id: u32,
+    pub host_id: i32,
     pub host_label: String,
-    pub id: u32,
+    pub id: i32,
     pub path: String,
     pub primary: bool,
     pub resource_uri: String,
     #[serde(rename = "use")]
     pub _use: bool,
-    pub volume_id: u32,
+    pub volume_id: i32,
 }
 
 impl FlatQuery for VolumeNode {}
@@ -904,19 +916,19 @@ pub struct Target<T> {
     pub active_host: Option<String>,
     pub active_host_name: String,
     pub conf_params: Option<T>,
-    pub content_type_id: u32,
+    pub content_type_id: i32,
     pub failover_server_name: String,
     pub failover_servers: Vec<String>,
     pub filesystem: Option<String>,
-    pub filesystem_id: Option<u32>,
+    pub filesystem_id: Option<i32>,
     pub filesystem_name: Option<String>,
     pub filesystems: Option<Vec<FilesystemShort>>,
     pub ha_label: Option<String>,
-    pub id: u32,
+    pub id: i32,
     pub immutable_state: bool,
-    pub index: Option<u32>,
+    pub index: Option<i32>,
     pub inode_count: Option<u64>,
-    pub inode_size: Option<u32>,
+    pub inode_size: Option<i32>,
     pub kind: TargetKind,
     pub label: String,
     pub name: String,
@@ -967,7 +979,7 @@ impl<T> EndpointName for Target<T> {
 }
 
 impl<T> db::Id for Target<T> {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -1003,11 +1015,11 @@ pub struct Filesystem {
     pub cdt_status: Option<String>,
     pub client_count: Option<u64>,
     pub conf_params: FilesystemConfParams,
-    pub content_type_id: u32,
+    pub content_type_id: i32,
     pub files_free: Option<u64>,
     pub files_total: Option<u64>,
     pub hsm_control_params: Option<Vec<HsmControlParam>>,
-    pub id: u32,
+    pub id: i32,
     pub immutable_state: bool,
     pub label: String,
     pub mdts: Vec<Mdt>,
@@ -1052,13 +1064,13 @@ impl Label for &Filesystem {
 }
 
 impl db::Id for Filesystem {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
 
 impl db::Id for &Filesystem {
-    fn id(&self) -> u32 {
+    fn id(&self) -> i32 {
         self.id
     }
 }
@@ -1071,7 +1083,7 @@ impl EndpointName for Filesystem {
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct FilesystemShort {
-    pub id: u32,
+    pub id: i32,
     pub name: String,
 }
 
@@ -1130,6 +1142,18 @@ pub enum AlertSeverity {
     CRITICAL,
 }
 
+impl From<AlertSeverity> for i32 {
+    fn from(x: AlertSeverity) -> Self {
+        match x {
+            AlertSeverity::DEBUG => 10,
+            AlertSeverity::INFO => 20,
+            AlertSeverity::WARNING => 30,
+            AlertSeverity::ERROR => 40,
+            AlertSeverity::CRITICAL => 50,
+        }
+    }
+}
+
 /// An Alert record from /api/alert/
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct Alert {
@@ -1144,7 +1168,7 @@ pub struct Alert {
     pub begin: String,
     pub dismissed: bool,
     pub end: Option<String>,
-    pub id: u32,
+    pub id: i32,
     pub lustre_pid: Option<i32>,
     pub message: String,
     pub record_type: AlertRecordType,
@@ -1213,9 +1237,9 @@ pub enum LogSeverity {
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Log {
     pub datetime: String,
-    pub facility: u32,
+    pub facility: i32,
     pub fqdn: String,
-    pub id: u32,
+    pub id: i32,
     pub message: String,
     pub message_class: MessageClass,
     pub resource_uri: String,
@@ -1233,9 +1257,9 @@ impl EndpointName for Log {
 /// A `StratagemConfiguration` record from `api/stratagem_configuration`.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct StratagemConfiguration {
-    pub content_type_id: u32,
+    pub content_type_id: i32,
     pub filesystem: String,
-    pub id: u32,
+    pub id: i32,
     pub immutable_state: bool,
     pub interval: u64,
     pub label: String,
@@ -1271,7 +1295,7 @@ impl EndpointName for AlertType {
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct AlertSubscription {
     pub alert_type: AlertType,
-    pub id: u32,
+    pub id: i32,
     pub resource_uri: String,
     pub user: String,
 }
@@ -1293,7 +1317,7 @@ pub enum GroupType {
 /// A `Group` record from `api/group`.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct Group {
-    pub id: u32,
+    pub id: i32,
     pub name: GroupType,
     pub resource_uri: String,
 }
@@ -1312,7 +1336,7 @@ pub struct User {
     pub first_name: String,
     pub full_name: String,
     pub groups: Option<Vec<Group>>,
-    pub id: u32,
+    pub id: i32,
     pub is_superuser: bool,
     pub last_name: String,
     pub new_password1: Option<String>,
@@ -1503,7 +1527,7 @@ pub struct ComponentState<T: Default> {
 /// An OST Pool record from `/api/ostpool/`
 #[derive(Debug, Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct OstPoolApi {
-    pub id: u32,
+    pub id: i32,
     pub resource_uri: String,
     #[serde(flatten)]
     pub ost: OstPool,
@@ -1568,11 +1592,100 @@ impl PartialEq for OstPool {
     }
 }
 
+#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct JournalMessage {
+    pub datetime: std::time::Duration,
+    pub severity: JournalPriority,
+    pub facility: i16,
+    pub source: String,
+    pub message: String,
+}
+
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[repr(i16)]
+pub enum JournalPriority {
+    Emerg,
+    Alert,
+    Crit,
+    Err,
+    Warning,
+    Notice,
+    Info,
+    Debug,
+}
+
+impl TryFrom<String> for JournalPriority {
+    type Error = io::Error;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        let x = s
+            .parse::<u8>()
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+        match x {
+            0 => Ok(Self::Emerg),
+            1 => Ok(Self::Alert),
+            2 => Ok(Self::Crit),
+            3 => Ok(Self::Err),
+            4 => Ok(Self::Warning),
+            5 => Ok(Self::Notice),
+            6 => Ok(Self::Info),
+            7 => Ok(Self::Debug),
+            x => Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Priority {} not in range", x),
+            )),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub enum Branding {
+    DDN(DdnBranding),
     Whamcloud,
-    Ddn,
-    DdnAi400,
+}
+
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+pub enum DdnBranding {
+    AI200,
+    AI200X,
+    AI400,
+    AI400X,
+    AI7990X,
+    ES14K,
+    ES14KX,
+    ES18K,
+    ES18KX,
+    ES200NV,
+    ES200NVX,
+    ES400NV,
+    ES400NVX,
+    ES7990,
+    ES7990X,
+    Exascaler,
+}
+
+impl fmt::Display for DdnBranding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::AI200 => write!(f, "AI200"),
+            Self::AI200X => write!(f, "AI200X"),
+            Self::AI400 => write!(f, "AI400"),
+            Self::AI400X => write!(f, "AI400X"),
+            Self::AI7990X => write!(f, "AI7990X"),
+            Self::ES14K => write!(f, "ES14K"),
+            Self::ES14KX => write!(f, "ES14KX"),
+            Self::ES18K => write!(f, "ES18K"),
+            Self::ES18KX => write!(f, "ES18KX"),
+            Self::ES200NV => write!(f, "ES200NV"),
+            Self::ES200NVX => write!(f, "ES200NVX"),
+            Self::ES400NV => write!(f, "ES400NV"),
+            Self::ES400NVX => write!(f, "ES400NVX"),
+            Self::ES7990 => write!(f, "ES7990"),
+            Self::ES7990X => write!(f, "ES7990X"),
+            Self::Exascaler => write!(f, "EXA5"),
+        }
+    }
 }
 
 impl Default for Branding {
@@ -1584,9 +1697,22 @@ impl Default for Branding {
 impl From<String> for Branding {
     fn from(x: String) -> Self {
         match x.to_lowercase().as_str() {
-            "whamcloud" => Self::Whamcloud,
-            "ddn" => Self::Ddn,
-            "ddnai400" => Self::DdnAi400,
+            "ai200" => Self::DDN(DdnBranding::AI200),
+            "ai200x" => Self::DDN(DdnBranding::AI200X),
+            "ai400" => Self::DDN(DdnBranding::AI400),
+            "ai400x" => Self::DDN(DdnBranding::AI400X),
+            "ai7990x" => Self::DDN(DdnBranding::AI7990X),
+            "es14k" => Self::DDN(DdnBranding::ES14K),
+            "es14kx" => Self::DDN(DdnBranding::ES14KX),
+            "es18k" => Self::DDN(DdnBranding::ES18K),
+            "es18kx" => Self::DDN(DdnBranding::ES18KX),
+            "es200nv" => Self::DDN(DdnBranding::ES200NV),
+            "es200nvx" => Self::DDN(DdnBranding::ES200NVX),
+            "es400nv" => Self::DDN(DdnBranding::ES400NV),
+            "es400nvx" => Self::DDN(DdnBranding::ES400NVX),
+            "es7990" => Self::DDN(DdnBranding::ES7990),
+            "es7990x" => Self::DDN(DdnBranding::ES7990X),
+            "exascaler" => Self::DDN(DdnBranding::Exascaler),
             _ => Self::Whamcloud,
         }
     }
@@ -1595,9 +1721,8 @@ impl From<String> for Branding {
 impl fmt::Display for Branding {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Ddn => write!(f, "ddn"),
+            Self::DDN(x) => write!(f, "{}", x),
             Self::Whamcloud => write!(f, "whamcloud"),
-            Self::DdnAi400 => write!(f, "ddnai400"),
         }
     }
 }
