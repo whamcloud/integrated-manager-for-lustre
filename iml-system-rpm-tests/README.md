@@ -6,6 +6,7 @@ The system level RPM integration tests focus on the creation of various forms of
 1. adm - The manager node
 1. mds[1,2] - The MDS nodes
 1. oss[1,2] - The OSS nodes
+1. c[1-8] - The client nodes
 
 ## Installation
 
@@ -13,7 +14,6 @@ Install the following software:
 
 1. cargo
 1. rust
-1. sos
 1. Virtualbox
 1. Vagrant
 
