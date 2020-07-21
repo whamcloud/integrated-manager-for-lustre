@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use env::{MANAGER_URL, PEM};
-
 use futures::{
     future::{select, AbortHandle, Abortable},
     FutureExt, TryFutureExt,
