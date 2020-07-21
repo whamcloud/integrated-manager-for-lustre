@@ -31,7 +31,7 @@ class StateLockResource(Resource):
         if hasattr(locked_item, "content_type"):
             return locked_item.content_type.id
         else:
-            return ContentType.objects.get_for_model(locked_item)
+            return ContentType.objects.get_for_model(locked_item).id
 
     def dehydrate_locked_item_uri(self, bundle):
         from chroma_api.urls import api
