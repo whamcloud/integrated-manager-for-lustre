@@ -235,7 +235,7 @@ pub async fn create_iml_diagnostics<'a, 'b>(
     let now = SystemTime::now();
     let ts = now.duration_since(UNIX_EPOCH).unwrap().as_millis();
 
-    let report_dir = format!("sosreport_{}", ts);
+    let report_dir = format!("sosreport_{}_{}", prefix, ts);
     let mut mkdir = Command::new("mkdir");
 
     mkdir

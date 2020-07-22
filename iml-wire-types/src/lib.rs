@@ -1602,7 +1602,6 @@ pub struct JournalMessage {
 }
 
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
-#[serde(try_from = "String")]
 #[repr(i16)]
 pub enum JournalPriority {
     Emerg,
