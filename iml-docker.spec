@@ -37,8 +37,8 @@ mv iml-docker.service %{buildroot}%{_unitdir}
 
 %files
 %{_sysconfdir}/iml-docker
-%attr(750, root, root) %{_sharedstatedir}/iml-images.tgz
-%attr(754, root, root) %{_bindir}/iml
+%attr(0640, root, root) %{_sharedstatedir}/iml-images.tgz
+%attr(0755, root, root) %{_bindir}/iml
 %attr(754, root, root) %{_bindir}/update-embedded
 %attr(0644, root, root) %{_unitdir}/iml-docker.service
 
