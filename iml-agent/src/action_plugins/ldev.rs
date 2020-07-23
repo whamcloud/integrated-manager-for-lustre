@@ -18,7 +18,7 @@ async fn write_to_file(content: String) -> Result<(), ImlAgentError> {
     Ok(())
 }
 
-async fn create_ldev_conf_internal<F>(entries: Vec<LdevEntry>, write_to_file: impl Fn(String) -> F) -> Result<(), ImlAgentError> 
+async fn create_internal<F>(entries: Vec<LdevEntry>, write_to_file: impl Fn(String) -> F) -> Result<(), ImlAgentError> 
 where F: futures::Future<Output=Result<(), ImlAgentError>>
 {
     let content = entries
@@ -32,8 +32,8 @@ where F: futures::Future<Output=Result<(), ImlAgentError>>
     Ok(())
 }
 
-pub async fn create_ldev_conf(entries: Vec<LdevEntry>) -> Result<(), ImlAgentError> {
-    create_ldev_conf_internal(entries, write_to_file).await?;
+pub async fn create(entries: Vec<LdevEntry>) -> Result<(), ImlAgentError> {
+    create_internal(entries, write_to_file).await?;
     
     Ok(())
 }
@@ -42,8 +42,14 @@ pub async fn create_ldev_conf(entries: Vec<LdevEntry>) -> Result<(), ImlAgentErr
 mod tests {
     use super::*;
 
+    async fn write_to_file(content: String) -> Result<(), ImlAgentError> {
+        insta::assert_snapshot!(content);
+
+        Ok(())
+    }
+
     #[tokio::test]
-    async fn test_create_ldev_conf() -> Result<(), ImlAgentError> {
+    async fn test_create() -> Result<(), ImlAgentError> {
         // oss2 oss1 zfsmo-OST0013 zfs:ost19/ost19
         let entries = vec![
             LdevEntry {
@@ -186,14 +192,26 @@ mod tests {
             },
         ];
 
-        async fn write_to_file(content: String) -> Result<(), ImlAgentError> {
-            insta::assert_snapshot!(content);
+        create_internal(entries, write_to_file).await
+    }
 
-            Ok(())
-        }
-
-        create_ldev_conf_internal(entries, write_to_file).await?;
-
-        Ok(())
+    #[tokio::test]
+    async fn test_config_without_ha() -> Result<(), ImlAgentError> {
+        let entries = vec![
+            LdevEntry {
+                primary: "mds1".into(),
+                failover: None,
+                label: "MGS".into(),
+                device: "zfs:mdt0/mdt0".into(),
+            },
+            LdevEntry {
+                primary: "mds1".into(),
+                failover: Some("mds2".into()),
+                label: "zfsmo-MDT0000".into(),
+                device: "zfs:mdt0/mdt0".into(),
+            }
+        ];  
+        
+        create_internal(entries, write_to_file).await
     }
 }
