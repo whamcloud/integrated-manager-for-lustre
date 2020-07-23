@@ -5,9 +5,9 @@
 use crate::{
     action_plugins::{
         check_kernel, check_stonith, firewall_cmd, high_availability, kernel_module, lamigo,
-        lpurge, ltuer, lustre,
+        ldev, lpurge, ltuer, lustre,
         ntp::{action_configure, is_ntp_configured},
-        ostpool, package, postoffice, snapshot,
+        ostpool, package, postoffice,
         stratagem::{action_purge, action_warning, server},
     },
     lustre::lctl,
@@ -66,7 +66,7 @@ pub fn create_registry() -> action_plugins::Actions {
         )
         .add_plugin("is_ntp_configured", is_ntp_configured::is_ntp_configured)
         .add_plugin("create_ltuer_conf", ltuer::create_ltuer_conf)
-        .add_plugin("create_ldev_conf", snapshot::create_ldev_conf);
+        .add_plugin("create_ldev_conf", ldev::create);
 
     info!("Loaded the following ActionPlugins:");
 
