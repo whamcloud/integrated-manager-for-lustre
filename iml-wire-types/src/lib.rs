@@ -1727,5 +1727,38 @@ impl fmt::Display for Branding {
     }
 }
 
+#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct LdevEntry {
+    pub primary: String,
+    pub failover: Option<String>,
+    pub label: String,
+    pub device: String,
+}
+
+impl From<String> for LdevEntry {
+    fn from(x: String) -> Self {
+        let parts: Vec<&str> = x.split(' ').collect();
+
+        Self {
+            primary: (*parts.get(0).unwrap_or_else(|| panic!("LdevEntry must specify a primary server."))).to_string(),
+            failover: parts.get(1).map_or_else(|| panic!("LdevEntry must specify a failover server or '-'."), |x| {
+                if *x == "-" {
+                    None
+                } else {
+                    Some((*x).to_string())
+                }
+            }),
+            label: (*parts.get(2).unwrap_or_else(|| panic!("LdevEntry must specify a label."))).to_string(),
+            device: (*parts.get(3).unwrap_or_else(|| panic!("LdevEntry must specify a device."))).to_string(),
+        }
+    }
+}
+
+impl fmt::Display for LdevEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {} {} {}", self.primary, self.failover.as_ref().unwrap_or(&"-".to_string()), self.label, self.device)
+    }
+}
+
 pub mod db;
 pub mod warp_drive;
