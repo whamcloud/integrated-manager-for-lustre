@@ -4,10 +4,7 @@
 
 use crate::{agent_error::ImlAgentError, env};
 use iml_wire_types::LdevEntry;
-use tokio::{
-    fs::File,
-    io::AsyncWriteExt,
-};
+use tokio::{fs::File, io::AsyncWriteExt};
 
 async fn write_to_file(content: String) -> Result<(), ImlAgentError> {
     let ldev_path = env::get_var("LDEV_CONF_PATH");
@@ -18,15 +15,19 @@ async fn write_to_file(content: String) -> Result<(), ImlAgentError> {
     Ok(())
 }
 
-async fn create_internal<F>(entries: Vec<LdevEntry>, write_to_file: impl Fn(String) -> F) -> Result<(), ImlAgentError> 
-where F: futures::Future<Output=Result<(), ImlAgentError>>
+async fn create_internal<F>(
+    entries: Vec<LdevEntry>,
+    write_to_file: impl Fn(String) -> F,
+) -> Result<(), ImlAgentError>
+where
+    F: futures::Future<Output = Result<(), ImlAgentError>>,
 {
     let content = entries
         .iter()
         .map(|x| x.to_string())
         .collect::<Vec<String>>()
         .join("\n");
-    
+
     write_to_file(content).await?;
 
     Ok(())
@@ -34,7 +35,7 @@ where F: futures::Future<Output=Result<(), ImlAgentError>>
 
 pub async fn create(entries: Vec<LdevEntry>) -> Result<(), ImlAgentError> {
     create_internal(entries, write_to_file).await?;
-    
+
     Ok(())
 }
 
@@ -209,9 +210,9 @@ mod tests {
                 failover: Some("mds2".into()),
                 label: "zfsmo-MDT0000".into(),
                 device: "zfs:mdt0/mdt0".into(),
-            }
-        ];  
-        
+            },
+        ];
+
         create_internal(entries, write_to_file).await
     }
 }
