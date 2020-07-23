@@ -523,20 +523,20 @@ pub async fn configure_docker_network(config: &Config) -> Result<(), CmdError> {
 }
 
 async fn create_monitored_ldiskfs(config: &Config) -> Result<(), CmdError> {
-    let xs = config
-        .storage_servers()
-        .into_iter()
-        .map(|x| {
-            tracing::debug!("creating ldiskfs fs for {}", x);
-            async move {
-                vagrant::provision_node(x, "configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2")
-                    .await?
-                    .checked_status()
-                    .await?;
+    let xs = config.storage_servers().into_iter().map(|x| {
+        tracing::debug!("creating ldiskfs fs for {}", x);
+        async move {
+            vagrant::provision_node(
+                x,
+                "configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2",
+            )
+            .await?
+            .checked_status()
+            .await?;
 
-                Ok::<_, CmdError>(())
-            }
-        });
+            Ok::<_, CmdError>(())
+        }
+    });
 
     try_join_all(xs).await?;
 
@@ -614,8 +614,39 @@ pub async fn create_fs(config: Config) -> Result<Config, CmdError> {
     Ok(config)
 }
 
+async fn mount_fs(config: &Config) -> Result<(), CmdError> {
+    let provisioner = match config.fs_type {
+        FsType::LDISKFS => "mount-lustre-fs,mount-lustre-fs2",
+        FsType::ZFS => "mount-zfs-fs",
+    };
+
+    let xs = config.storage_servers().into_iter().map(|x| {
+        tracing::debug!("mount fs for {}", x);
+        async move {
+            vagrant::provision_node(x, provisioner)
+                .await?
+                .checked_status()
+                .await?;
+
+            Ok::<_, CmdError>(())
+        }
+    });
+
+    try_join_all(xs).await?;
+
+    Ok(())
+}
+
 pub async fn detect_fs(config: Config) -> Result<Config, CmdError> {
+    mount_fs(&config).await?;
     ssh::detect_fs(config.manager_ip).await?;
+
+    let num_fs = ssh::list_fs_json(config.manager_ip).await?.len();
+
+    match config.fs_type {
+        FsType::LDISKFS => assert_eq!(num_fs, 2),
+        FsType::ZFS => assert_eq!(num_fs, 1),
+    };
 
     Ok(config)
 }

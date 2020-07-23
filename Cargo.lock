@@ -1752,6 +1752,7 @@ dependencies = [
  "iml-wire-types",
  "insta",
  "petgraph",
+ "serde_json",
  "thiserror",
  "tokio",
  "tracing",

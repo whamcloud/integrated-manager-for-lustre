@@ -268,6 +268,17 @@ pub async fn detect_fs(host: &str) -> Result<(), CmdError> {
         .await
 }
 
+pub async fn list_fs_json(host: &str) -> Result<Vec<serde_json::Value>, CmdError> {
+    ssh_exec_cmd(host, "iml filesystem list -p json")
+        .await?
+        .checked_output()
+        .await
+        .map(|o| {
+            let v: Vec<serde_json::Value> = serde_json::from_slice(&o.stdout).unwrap();
+            v
+        })
+}
+
 pub async fn systemd_status(host: &str, service_name: &str) -> Result<Command, CmdError> {
     let cmd = ssh_exec_cmd(host, format!("systemctl status {}", service_name).as_str()).await?;
 
