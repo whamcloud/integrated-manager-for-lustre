@@ -38,17 +38,29 @@ struct Context<'a> {
     steps: &'a HashMap<i32, RichStep>,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+enum State {
+    Cancelled,
+    Errored,
+    Complete,
+    Progressing,
+}
+
 #[derive(Debug, Clone)]
 pub struct ProgressLine {
     the_id: TypedId,
     indent: usize,
     msg: String,
+    state: State,
     progress_bar: Option<ProgressBar>,
 }
 
 impl PartialEq for ProgressLine {
     fn eq(&self, other: &Self) -> bool {
-        self.the_id == other.the_id && self.indent == other.indent && self.msg == other.msg
+        self.the_id == other.the_id
+            && self.indent == other.indent
+            && self.msg == other.msg
+            && self.state == other.state
     }
 }
 
@@ -87,19 +99,52 @@ pub async fn create_command<T: serde::Serialize>(
     Ok(cmd)
 }
 
-fn cmd_finished(cmd: &Command) -> bool {
-    cmd.complete
+fn cmd_state(cmd: &Command) -> State {
+    if cmd.cancelled {
+        State::Cancelled
+    } else if cmd.errored {
+        State::Errored
+    } else if cmd.complete {
+        State::Complete
+    } else {
+        State::Progressing
+    }
 }
 
-fn job_finished<T>(job: &Job<T>) -> bool {
+fn job_state(job: &Job0) -> State {
     // job.state can be "pending", "tasked" or "complete"
     // if a job is errored or cancelled, it is also complete
-    job.state == "complete"
+    if job.cancelled {
+        State::Cancelled
+    } else if job.errored {
+        State::Errored
+    } else if job.state == "complete" {
+        State::Complete
+    } else {
+        State::Progressing
+    }
+}
+
+fn step_state(step: &Step) -> State {
+    // step.state can be "success", "failed" or "incomplete"
+    match &step.state[..] {
+        "cancelled" => State::Cancelled,
+        "failed" => State::Errored,
+        "success" => State::Complete,
+        _ /* "incomplete" */ => State::Progressing,
+    }
+}
+
+fn cmd_finished(cmd: &Command) -> bool {
+    cmd_state(cmd) == State::Complete
+}
+
+fn job_finished(job: &Job0) -> bool {
+    job_state(job) == State::Complete
 }
 
 fn step_finished(step: &Step) -> bool {
-    // step.state can be "success", "failed" or "incomplete"
-    step.state != "incomplete"
+    step_state(step) != State::Progressing
 }
 
 pub async fn wait_for_command(cmd: Command) -> Result<Command, ImlManagerCliError> {
@@ -163,10 +208,12 @@ pub async fn wait_for_commands(cmds: &[Command]) -> Result<Vec<Command>, ImlMana
     }
 
     for (cmd_no, c) in cmd_ids.iter().enumerate() {
+        let cmd = &commands[c];
         let x = ProgressLine {
             the_id: TypedId::Command(*c),
             indent: 0,
-            msg: commands[c].message.clone(),
+            msg: cmd.message.clone(),
+            state: cmd_state(cmd),
             progress_bar: None,
         };
         let y = build_progress_line(x, spinner_style.clone(), cmd_no + 1, commands.len(), |pb| {
@@ -255,16 +302,16 @@ pub async fn wait_for_commands(cmds: &[Command]) -> Result<Vec<Command>, ImlMana
                     let msg_opt = match x.the_id {
                         TypedId::Command(id) => commands
                             .get(&id)
-                            .filter(|c| cmd_finished(c))
-                            .map(|c| display_utils::format_cmd_state(x.indent, c)),
+                            .filter(|cmd| cmd_finished(cmd))
+                            .map(|cmd| display_utils::format_cmd_state(x.indent, cmd)),
                         TypedId::Job(id) => jobs
                             .get(&id)
-                            .filter(|j| job_finished(j))
-                            .map(|j| display_utils::format_job_state(x.indent, j)),
+                            .filter(|job| job_finished(job))
+                            .map(|job| display_utils::format_job_state(x.indent, job)),
                         TypedId::Step(id) => steps
                             .get(&id)
-                            .filter(|s| step_finished(s))
-                            .map(|s| display_utils::format_step_state(x.indent, s)),
+                            .filter(|step| step_finished(step))
+                            .map(|step| display_utils::format_step_state(x.indent, step)),
                     };
                     if let Some(msg) = msg_opt {
                         pb.finish_with_message(&msg);
@@ -329,6 +376,7 @@ fn build_fresh_lines(
             the_id: TypedId::Command(*c),
             indent: 0,
             msg: cmd.message.clone(),
+            state: cmd_state(cmd),
             progress_bar: None,
         });
         if cmd.deps().iter().all(|j| jobs.contains_key(j)) {
@@ -376,7 +424,7 @@ fn update_commands(commands: &mut HashMap<i32, RichCommand>, loaded_cmds: Vec<Co
         .map(|t| {
             let (id, deps) = extract_children_from_cmd(&t);
             let inner = Arc::new(t);
-            (id, Rich { id, deps, inner } )
+            (id, Rich { id, deps, inner })
         })
         .collect::<HashMap<i32, RichCommand>>();
     commands.extend(new_commands);
@@ -388,7 +436,7 @@ fn update_jobs(jobs: &mut HashMap<i32, RichJob>, loaded_jobs: Vec<Job0>) {
         .map(|t| {
             let (id, deps) = extract_children_from_job(&t);
             let inner = Arc::new(t);
-            (id, Rich { id, deps, inner } )
+            (id, Rich { id, deps, inner })
         })
         .collect::<HashMap<i32, RichJob>>();
     jobs.extend(new_jobs);
@@ -400,7 +448,7 @@ fn update_steps(steps: &mut HashMap<i32, RichStep>, loaded_steps: Vec<Step>) {
         .map(|t| {
             let (id, deps) = extract_children_from_step(&t);
             let inner = Arc::new(t);
-            (id, Rich { id, deps, inner } )
+            (id, Rich { id, deps, inner })
         })
         .collect::<HashMap<i32, RichStep>>();
     steps.extend(new_steps);
@@ -450,6 +498,7 @@ fn rich_job_to_line(node: Arc<RichJob>, is_new: bool, ctx: &mut Context) -> Vec<
             indent: ctx.level,
             the_id: TypedId::Job(node.id),
             msg: node.description.clone(),
+            state: job_state(&node),
             progress_bar: None,
         }];
         for step_id in &node.steps {
@@ -459,6 +508,7 @@ fn rich_job_to_line(node: Arc<RichJob>, is_new: bool, ctx: &mut Context) -> Vec<
                         the_id: TypedId::Step(step_id),
                         indent: ctx.level + 1,
                         msg: step.class_name.clone(),
+                        state: step_state(step),
                         progress_bar: None,
                     });
                 }
@@ -484,13 +534,7 @@ fn rich_job_combine_lines(
     }
     for node in nodes.into_iter() {
         for n in node {
-            let indent = n.indent + if ctx.level > 0 { 1 } else { 0 };
-            result.push(ProgressLine {
-                indent,
-                the_id: n.the_id,
-                msg: n.msg,
-                progress_bar: None,
-            })
+            result.push(n);
         }
     }
     result
