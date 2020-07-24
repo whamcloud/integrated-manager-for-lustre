@@ -269,7 +269,7 @@ pub async fn detect_fs(host: &str) -> Result<(), CmdError> {
 }
 
 pub async fn list_fs_json(host: &str) -> Result<Vec<serde_json::Value>, CmdError> {
-    ssh_exec_cmd(host, "iml filesystem list -p json")
+    ssh_exec_cmd(host, "iml filesystem list --display json")
         .await?
         .checked_output()
         .await
