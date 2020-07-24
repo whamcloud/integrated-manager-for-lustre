@@ -4,16 +4,30 @@ pub mod vagrant;
 
 use async_trait::async_trait;
 use futures::future::try_join_all;
-use iml_cmd::{CheckedCommandExt, CmdError};
+use iml_cmd::CheckedCommandExt;
 use iml_wire_types::Branding;
 use ssh::create_iml_diagnostics;
-use std::{collections::HashMap, env, io, str, time::Duration};
+use std::{collections::HashMap, env, str, time::Duration};
 use tokio::{
     fs::{canonicalize, File},
     io::AsyncWriteExt,
     process::Command,
     time::delay_for,
 };
+
+#[derive(Debug, thiserror::Error)]
+pub enum TestError {
+    #[error(transparent)]
+    CmdError(#[from] iml_cmd::CmdError),
+    #[error("ASSERT FAILED: {0}")]
+    Assert(String),
+}
+
+impl From<std::io::Error> for TestError {
+    fn from(err: std::io::Error) -> Self {
+        TestError::CmdError(iml_cmd::CmdError::Io(err))
+    }
+}
 
 #[derive(PartialEq, Clone)]
 pub enum TestType {
@@ -91,7 +105,7 @@ pub async fn try_command_n_times(
     max_tries: u32,
     delay: u64,
     cmd: &mut Command,
-) -> Result<(), CmdError> {
+) -> Result<(), TestError> {
     let mut count = 1;
     let mut r = cmd.status().await?;
 
@@ -108,14 +122,10 @@ pub async fn try_command_n_times(
     if r.success() {
         Ok(())
     } else {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!(
-                "Command {:?} failed to succeed after {} attempts.",
-                cmd, max_tries
-            ),
-        )
-        .into())
+        Err(TestError::Assert(format!(
+            "Command {:?} failed to succeed after {} attempts.",
+            cmd, max_tries
+        )))
     }
 }
 
@@ -142,12 +152,12 @@ impl ServerList for Vec<(&str, Vec<&str>)> {
 
 #[async_trait]
 pub trait WithSos {
-    async fn handle_test_result(self, hosts: Vec<&str>, prefix: &str) -> Result<Config, CmdError>;
+    async fn handle_test_result(self, hosts: Vec<&str>, prefix: &str) -> Result<Config, TestError>;
 }
 
 #[async_trait]
-impl<T: Into<CmdError> + Send> WithSos for Result<Config, T> {
-    async fn handle_test_result(self, hosts: Vec<&str>, prefix: &str) -> Result<Config, CmdError> {
+impl<T: Into<TestError> + Send> WithSos for Result<Config, T> {
+    async fn handle_test_result(self, hosts: Vec<&str>, prefix: &str) -> Result<Config, TestError> {
         create_iml_diagnostics(hosts, prefix).await?;
 
         self.map_err(|e| e.into())
@@ -296,7 +306,7 @@ NTP_SERVER_HOSTNAME=10.73.10.1
     }
 }
 
-pub async fn wait_for_ntp(config: &Config) -> Result<(), CmdError> {
+pub async fn wait_for_ntp(config: &Config) -> Result<(), TestError> {
     match config.test_type {
         TestType::Rpm => ssh::wait_for_ntp_for_adm(&config.storage_server_ips()).await?,
         TestType::Docker => {
@@ -307,7 +317,7 @@ pub async fn wait_for_ntp(config: &Config) -> Result<(), CmdError> {
     Ok(())
 }
 
-pub async fn wait_on_services_ready(config: &Config) -> Result<(), CmdError> {
+pub async fn wait_on_services_ready(config: &Config) -> Result<(), TestError> {
     match config.test_type {
         TestType::Rpm => {
             let (_, output) =
@@ -323,7 +333,7 @@ pub async fn wait_on_services_ready(config: &Config) -> Result<(), CmdError> {
                         let mut cmd = ssh::systemd_status(config.manager_ip, s).await?;
                         try_command_n_times(50, 5, &mut cmd).await?;
 
-                        Ok::<(), CmdError>(())
+                        Ok::<(), TestError>(())
                     }
                 });
 
@@ -338,7 +348,7 @@ pub async fn wait_on_services_ready(config: &Config) -> Result<(), CmdError> {
     Ok(())
 }
 
-pub async fn setup_bare(config: Config) -> Result<Config, CmdError> {
+pub async fn setup_bare(config: Config) -> Result<Config, TestError> {
     vagrant::up()
         .await?
         .arg(config.manager)
@@ -412,7 +422,7 @@ pub async fn setup_bare(config: Config) -> Result<Config, CmdError> {
     Ok(config)
 }
 
-pub async fn configure_iml(config: Config) -> Result<Config, CmdError> {
+pub async fn configure_iml(config: Config) -> Result<Config, TestError> {
     vagrant::up()
         .await?
         .args(&vec![config.manager][..])
@@ -454,7 +464,7 @@ pub async fn configure_iml(config: Config) -> Result<Config, CmdError> {
     Ok(config)
 }
 
-pub async fn deploy_servers(config: Config) -> Result<Config, CmdError> {
+pub async fn deploy_servers(config: Config) -> Result<Config, TestError> {
     for (profile, hosts) in &config.profile_map {
         let host_ips = config.hosts_to_ips(&hosts);
         for host in &host_ips {
@@ -507,7 +517,7 @@ pub async fn deploy_servers(config: Config) -> Result<Config, CmdError> {
     Ok(config)
 }
 
-pub async fn configure_docker_network(config: &Config) -> Result<(), CmdError> {
+pub async fn configure_docker_network(config: &Config) -> Result<(), TestError> {
     let host_list = config.profile_map.to_server_list();
     // The configure-docker-network provisioner must be run individually on
     // each server node.
@@ -525,7 +535,7 @@ pub async fn configure_docker_network(config: &Config) -> Result<(), CmdError> {
     Ok(())
 }
 
-async fn create_monitored_ldiskfs(config: &Config) -> Result<(), CmdError> {
+async fn create_monitored_ldiskfs(config: &Config) -> Result<(), TestError> {
     let xs = config.storage_servers().into_iter().map(|x| {
         tracing::debug!("creating ldiskfs fs for {}", x);
         async move {
@@ -537,7 +547,7 @@ async fn create_monitored_ldiskfs(config: &Config) -> Result<(), CmdError> {
             .checked_status()
             .await?;
 
-            Ok::<_, CmdError>(())
+            Ok::<_, TestError>(())
         }
     });
 
@@ -546,7 +556,7 @@ async fn create_monitored_ldiskfs(config: &Config) -> Result<(), CmdError> {
     Ok(())
 }
 
-async fn create_monitored_zfs(config: &Config) -> Result<(), CmdError> {
+async fn create_monitored_zfs(config: &Config) -> Result<(), TestError> {
     let xs = config.storage_servers().into_iter().map(|x| {
         tracing::debug!("creating zfs fs for {}", x);
         async move {
@@ -558,7 +568,7 @@ async fn create_monitored_zfs(config: &Config) -> Result<(), CmdError> {
             .checked_status()
             .await?;
 
-            Ok::<_, CmdError>(())
+            Ok::<_, TestError>(())
         }
     });
 
@@ -567,7 +577,7 @@ async fn create_monitored_zfs(config: &Config) -> Result<(), CmdError> {
     Ok(())
 }
 
-pub async fn install_fs(config: Config) -> Result<Config, CmdError> {
+pub async fn install_fs(config: Config) -> Result<Config, TestError> {
     match config.fs_type {
         FsType::LDISKFS => ssh::install_ldiskfs_no_iml(&config).await?,
         FsType::ZFS => ssh::install_zfs_no_iml(&config).await?,
@@ -603,7 +613,7 @@ pub async fn install_fs(config: Config) -> Result<Config, CmdError> {
     Ok(config)
 }
 
-pub async fn create_fs(config: Config) -> Result<Config, CmdError> {
+pub async fn create_fs(config: Config) -> Result<Config, TestError> {
     match config.fs_type {
         FsType::LDISKFS => create_monitored_ldiskfs(&config).await?,
         FsType::ZFS => create_monitored_zfs(&config).await?,
@@ -617,7 +627,7 @@ pub async fn create_fs(config: Config) -> Result<Config, CmdError> {
     Ok(config)
 }
 
-async fn mount_fs(config: &Config) -> Result<usize, CmdError> {
+async fn mount_fs(config: &Config) -> Result<usize, TestError> {
     let (count, provisioner) = match config.fs_type {
         FsType::LDISKFS => (2, "mount-lustre-fs,mount-lustre-fs2"),
         FsType::ZFS => (1, "mount-zfs-fs"),
@@ -631,7 +641,7 @@ async fn mount_fs(config: &Config) -> Result<usize, CmdError> {
                 .checked_status()
                 .await?;
 
-            Ok::<_, CmdError>(())
+            Ok::<_, TestError>(())
         }
     });
 
@@ -640,23 +650,23 @@ async fn mount_fs(config: &Config) -> Result<usize, CmdError> {
     Ok(count)
 }
 
-pub async fn detect_fs(config: Config) -> Result<Config, CmdError> {
+pub async fn detect_fs(config: Config) -> Result<Config, TestError> {
     let count = mount_fs(&config).await?;
     ssh::detect_fs(config.manager_ip).await?;
 
     let num_fs = ssh::list_fs_json(config.manager_ip).await?.len();
 
-    assert!(
-        (num_fs == count),
-        "Failed to detect the expected number of filesystems (expected: {}, actual: {})",
-        count,
-        num_fs
-    );
-
-    Ok(config)
+    if num_fs == count {
+        Ok(config)
+    } else {
+        Err(TestError::Assert(format!(
+            "Failed to detect the expected number of filesystems (expected: {}, actual: {})",
+            count, num_fs
+        )))
+    }
 }
 
-pub async fn configure_rpm_setup(config: &Config) -> Result<(), CmdError> {
+pub async fn configure_rpm_setup(config: &Config) -> Result<(), TestError> {
     let config_content: String = config.get_setup_config();
 
     let vagrant_path = canonicalize("../vagrant/").await?;
@@ -700,7 +710,7 @@ pub async fn configure_rpm_setup(config: &Config) -> Result<(), CmdError> {
     Ok(())
 }
 
-pub async fn configure_docker_setup(config: &Config) -> Result<(), CmdError> {
+pub async fn configure_docker_setup(config: &Config) -> Result<(), TestError> {
     let config_content: String = config.get_setup_config();
 
     let vagrant_path = canonicalize("../vagrant/").await?;
