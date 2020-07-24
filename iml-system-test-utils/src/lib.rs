@@ -297,39 +297,43 @@ NTP_SERVER_HOSTNAME=10.73.10.1
 }
 
 pub async fn wait_for_ntp(config: &Config) -> Result<(), CmdError> {
-    if config.test_type == TestType::Rpm {
-        ssh::wait_for_ntp_for_adm(&config.storage_server_ips()).await?;
-    } else {
-        ssh::wait_for_ntp_for_host_only_if(&config.storage_server_ips()).await?;
-    }
+    match config.test_type {
+        TestType::Rpm => ssh::wait_for_ntp_for_adm(&config.storage_server_ips()).await?,
+        TestType::Docker => {
+            ssh::wait_for_ntp_for_host_only_if(&config.storage_server_ips()).await?
+        }
+    };
 
     Ok(())
 }
 
 pub async fn wait_on_services_ready(config: &Config) -> Result<(), CmdError> {
-    if config.test_type == TestType::Rpm {
-        let (_, output) =
+    match config.test_type {
+        TestType::Rpm => {
+            let (_, output) =
             ssh::ssh_exec(config.manager_ip, "systemctl list-dependencies iml-manager.target | tail -n +2 | awk '{print$2}' | awk '{print substr($1, 3)}' | grep -v iml-settings-populator.service | grep -v iml-sfa.service").await?;
 
-        let status_commands = str::from_utf8(&output.stdout)
-            .expect("Couldn't parse service list")
-            .lines()
-            .map(|s| {
-                tracing::debug!("checking status of service {}", s);
+            let status_commands = str::from_utf8(&output.stdout)
+                .expect("Couldn't parse service list")
+                .lines()
+                .map(|s| {
+                    tracing::debug!("checking status of service {}", s);
 
-                async move {
-                    let mut cmd = ssh::systemd_status(config.manager_ip, s).await?;
-                    try_command_n_times(50, 5, &mut cmd).await?;
+                    async move {
+                        let mut cmd = ssh::systemd_status(config.manager_ip, s).await?;
+                        try_command_n_times(50, 5, &mut cmd).await?;
 
-                    Ok::<(), CmdError>(())
-                }
-            });
+                        Ok::<(), CmdError>(())
+                    }
+                });
 
-        try_join_all(status_commands).await?;
-    } else {
-        let mut cmd = ssh::systemd_status(config.manager_ip, "iml-docker.service").await?;
-        try_command_n_times(50, 5, &mut cmd).await?;
-    }
+            try_join_all(status_commands).await?;
+        }
+        TestType::Docker => {
+            let mut cmd = ssh::systemd_status(config.manager_ip, "iml-docker.service").await?;
+            try_command_n_times(50, 5, &mut cmd).await?;
+        }
+    };
 
     Ok(())
 }
@@ -341,8 +345,8 @@ pub async fn setup_bare(config: Config) -> Result<Config, CmdError> {
         .checked_status()
         .await?;
 
-    if config.test_type == TestType::Rpm {
-        match env::var("REPO_URI") {
+    match config.test_type {
+        TestType::Rpm => match env::var("REPO_URI") {
             Ok(x) => {
                 vagrant::provision_node(config.manager, "install-iml-repouri")
                     .await?
@@ -356,9 +360,8 @@ pub async fn setup_bare(config: Config) -> Result<Config, CmdError> {
                     .checked_status()
                     .await?;
             }
-        };
-    } else {
-        match env::var("REPO_URI") {
+        },
+        TestType::Docker => match env::var("REPO_URI") {
             Ok(x) => {
                 vagrant::provision_node(config.manager, "install-iml-docker-repouri")
                     .await?
@@ -372,8 +375,8 @@ pub async fn setup_bare(config: Config) -> Result<Config, CmdError> {
                     .checked_status()
                     .await?;
             }
-        };
-    }
+        },
+    };
 
     vagrant::up()
         .await?
@@ -416,11 +419,10 @@ pub async fn configure_iml(config: Config) -> Result<Config, CmdError> {
         .checked_status()
         .await?;
 
-    if config.test_type == TestType::Rpm {
-        configure_rpm_setup(&config).await?;
-    } else {
-        configure_docker_setup(&config).await?;
-    }
+    match config.test_type {
+        TestType::Rpm => configure_rpm_setup(&config).await?,
+        TestType::Docker => configure_docker_setup(&config).await?,
+    };
 
     vagrant::halt()
         .await?
@@ -463,11 +465,12 @@ pub async fn deploy_servers(config: Config) -> Result<Config, CmdError> {
                 .await?;
         }
 
-        let hosts: Vec<String> = if config.test_type == TestType::Rpm {
-            hosts.iter().map(|x| String::from(*x)).collect()
-        } else {
-            configure_docker_network(&config).await?;
-            get_local_server_names(hosts)
+        let hosts: Vec<String> = match config.test_type {
+            TestType::Rpm => hosts.iter().map(|x| String::from(*x)).collect(),
+            TestType::Docker => {
+                configure_docker_network(&config).await?;
+                get_local_server_names(hosts)
+            }
         };
 
         ssh::add_servers(&config.manager_ip, profile, hosts).await?;
@@ -643,7 +646,12 @@ pub async fn detect_fs(config: Config) -> Result<Config, CmdError> {
 
     let num_fs = ssh::list_fs_json(config.manager_ip).await?.len();
 
-    assert!((num_fs == count), "Failed to detect the expected number of filesystems (expected: {}, actual: {})", count, num_fs);
+    assert!(
+        (num_fs == count),
+        "Failed to detect the expected number of filesystems (expected: {}, actual: {})",
+        count,
+        num_fs
+    );
 
     Ok(config)
 }
