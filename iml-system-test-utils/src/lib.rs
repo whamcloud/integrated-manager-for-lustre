@@ -614,10 +614,10 @@ pub async fn create_fs(config: Config) -> Result<Config, CmdError> {
     Ok(config)
 }
 
-async fn mount_fs(config: &Config) -> Result<(), CmdError> {
-    let provisioner = match config.fs_type {
-        FsType::LDISKFS => "mount-lustre-fs,mount-lustre-fs2",
-        FsType::ZFS => "mount-zfs-fs",
+async fn mount_fs(config: &Config) -> Result<usize, CmdError> {
+    let (count, provisioner) = match config.fs_type {
+        FsType::LDISKFS => (2, "mount-lustre-fs,mount-lustre-fs2"),
+        FsType::ZFS => (1, "mount-zfs-fs"),
     };
 
     let xs = config.storage_servers().into_iter().map(|x| {
@@ -634,19 +634,16 @@ async fn mount_fs(config: &Config) -> Result<(), CmdError> {
 
     try_join_all(xs).await?;
 
-    Ok(())
+    Ok(count)
 }
 
 pub async fn detect_fs(config: Config) -> Result<Config, CmdError> {
-    mount_fs(&config).await?;
+    let count = mount_fs(&config).await?;
     ssh::detect_fs(config.manager_ip).await?;
 
     let num_fs = ssh::list_fs_json(config.manager_ip).await?.len();
 
-    match config.fs_type {
-        FsType::LDISKFS => assert_eq!(num_fs, 2),
-        FsType::ZFS => assert_eq!(num_fs, 1),
-    };
+    assert!((num_fs == count), "Failed to detect the expected number of filesystems (expected: {}, actual: {})", count, num_fs);
 
     Ok(config)
 }
