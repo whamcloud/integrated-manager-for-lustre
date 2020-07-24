@@ -84,6 +84,22 @@ The IML Team typically uses [Vagrant](https://www.vagrantup.com) and [VirtualBox
    vagrant provision --provision-with=install-lustre-client,configure-lustre-client-network
    ```
 
+1. Mount the clients:
+   - ldiskfs or lvm based
+      ```sh
+      vagrant provision --provision-with=mount-lustre-client
+      ```
+
+   - Second ldiskfs filesystem
+      ```sh
+      vagrant provision --provision-with=mount-lustre-client-fs2
+      ```
+
+   - ZFS backed filesystem
+      ```sh
+      vagrant provision --provision-with=mount-lustre-client-zfs
+      ```
+
 At this point you should be able to access the IML GUI on your host at https://localhost:8443
 
 From here you can decide what type of setup to run.
