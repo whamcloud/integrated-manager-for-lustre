@@ -2,12 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_cmd::{CheckedCommandExt, CmdError};
+use iml_cmd::CheckedCommandExt;
 use iml_system_test_utils::*;
 use tracing::Level;
 use tracing_subscriber::fmt::Subscriber;
 
-pub async fn run_fs_test(config: Config) -> Result<Config, CmdError> {
+pub async fn run_fs_test(config: Config) -> Result<Config, TestError> {
     Subscriber::builder().with_max_level(Level::DEBUG).init();
 
     let snapshot_map = snapshots::get_snapshots().await?;

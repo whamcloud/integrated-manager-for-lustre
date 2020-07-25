@@ -2,12 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_cmd::CmdError;
 use iml_system_rpm_tests::run_fs_test;
 use iml_system_test_utils::*;
 
 #[tokio::test]
-async fn test_zfs_setup() -> Result<(), CmdError> {
+async fn test_zfs_setup() -> Result<(), TestError> {
     let config = Config::default();
     let config: Config = Config {
         profile_map: vec![("base_monitored".into(), config.storage_servers())],
