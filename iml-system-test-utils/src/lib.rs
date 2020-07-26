@@ -629,7 +629,7 @@ pub async fn create_fs(config: Config) -> Result<Config, TestError> {
 
 async fn mount_fs(config: &Config) -> Result<usize, TestError> {
     let (count, provisioner) = match config.fs_type {
-        FsType::LDISKFS => (2, "mount-lustre-fs,mount-lustre-fs2"),
+        FsType::LDISKFS => (2, "mount-ldiskfs-fs,mount-ldiskfs-fs2"),
         FsType::ZFS => (1, "mount-zfs-fs"),
     };
 
