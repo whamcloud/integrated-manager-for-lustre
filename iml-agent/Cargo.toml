@@ -25,7 +25,7 @@ iml-fs = {path = "../iml-fs", version = "0.3.0"}
 iml-systemd = {path = "../iml-systemd", version = "0.3.0"}
 iml-tracing = {version = "0.2", path = "../iml-tracing"}
 iml-util = {path = "../iml-util", version = "0.3.0"}
-iml-wire-types = {path = "../iml-wire-types", version = "0.3"}
+iml-wire-types = {path = "../iml-wire-types", version = "0.3", features = ["cli"]}
 inotify = "0.8"
 lazy_static = "1.4.0"
 libc = "0.2"
