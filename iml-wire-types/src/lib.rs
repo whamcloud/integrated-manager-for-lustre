@@ -1705,7 +1705,7 @@ impl fmt::Display for Branding {
     }
 }
 
-#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Eq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct LdevEntry {
     pub primary: String,
     pub failover: Option<String>,
@@ -1713,8 +1713,8 @@ pub struct LdevEntry {
     pub device: String,
 }
 
-impl From<String> for LdevEntry {
-    fn from(x: String) -> Self {
+impl From<&str> for LdevEntry {
+    fn from(x: &str) -> Self {
         let parts: Vec<&str> = x.split(' ').collect();
 
         Self {
@@ -1750,10 +1750,28 @@ impl fmt::Display for LdevEntry {
             f,
             "{} {} {} {}",
             self.primary,
-            self.failover.as_ref().unwrap_or(&"-".to_string()),
+            self.failover.as_deref().unwrap_or("-"),
             self.label,
             self.device
         )
+    }
+}
+
+impl Ord for LdevEntry {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.label.cmp(&other.label)
+    }
+}
+
+impl PartialOrd for LdevEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for LdevEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.label == other.label
     }
 }
 
