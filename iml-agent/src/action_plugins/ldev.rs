@@ -28,7 +28,11 @@ async fn read_ldev_config() -> Result<String, ImlAgentError> {
 }
 
 fn parse_entries(ldev_config: String) -> BTreeSet<LdevEntry> {
-    ldev_config.lines().map(LdevEntry::from).collect()
+    ldev_config
+        .lines()
+        .filter(|x| !x.trim_start().starts_with("#"))
+        .map(LdevEntry::from)
+        .collect()
 }
 
 fn convert(entries: &[LdevEntry]) -> String {
@@ -44,6 +48,7 @@ pub async fn create(entries: Vec<LdevEntry>) -> Result<(), ImlAgentError> {
         let ldev_config = read_ldev_config().await?;
         let existing_entries = parse_entries(ldev_config);
         let entries_set = entries.iter().cloned().collect::<BTreeSet<LdevEntry>>();
+
         if existing_entries != entries_set {
             let data = convert(&entries);
             write_to_file(data).await?;
@@ -63,7 +68,69 @@ mod tests {
     use iml_wire_types::FsType;
 
     #[test]
-    fn test_create() -> Result<(), ImlAgentError> {
+    fn test_ldiskfs_create() -> Result<(), ImlAgentError> {
+        let entries = vec![
+            LdevEntry {
+                primary: "mds1".into(),
+                failover: Some("mds2".into()),
+                label: "MGS".into(),
+                device: "/mnt/mgt".into(),
+                fs_type: Some(FsType::Ldiskfs),
+            },
+            LdevEntry {
+                primary: "mds1".into(),
+                failover: Some("mds2".into()),
+                label: "fs-MDT0000".into(),
+                device: "/mnt/mdt0".into(),
+                fs_type: Some(FsType::Ldiskfs),
+            },
+            LdevEntry {
+                primary: "mds2".into(),
+                failover: Some("mds1".into()),
+                label: "fs-MDT0001".into(),
+                device: "/mnt/mdt1".into(),
+                fs_type: Some(FsType::Ldiskfs),
+            },
+            LdevEntry {
+                primary: "oss1".into(),
+                failover: Some("oss2".into()),
+                label: "fs-OST0000".into(),
+                device: "/mnt/ost0".into(),
+                fs_type: Some(FsType::Ldiskfs),
+            },
+            LdevEntry {
+                primary: "oss2".into(),
+                failover: Some("oss1".into()),
+                label: "fs-OST0001".into(),
+                device: "/mnt/ost1".into(),
+                fs_type: Some(FsType::Ldiskfs),
+            },
+            LdevEntry {
+                primary: "oss1".into(),
+                failover: Some("oss2".into()),
+                label: "fs-OST0002".into(),
+                device: "/mnt/ost2".into(),
+                fs_type: Some(FsType::Ldiskfs),
+            },
+            LdevEntry {
+                primary: "oss2".into(),
+                failover: Some("oss1".into()),
+                label: "fs-OST0003".into(),
+                device: "/mnt/ost3".into(),
+                fs_type: Some(FsType::Ldiskfs),
+            },
+        ]
+        .into_iter()
+        .collect::<Vec<LdevEntry>>();
+
+        let data = convert(&entries);
+        insta::assert_snapshot!(data);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_zfs_create() -> Result<(), ImlAgentError> {
         let entries = vec![
             LdevEntry {
                 primary: "mds1".into(),
@@ -208,21 +275,21 @@ mod tests {
             LdevEntry {
                 primary: "oss2".into(),
                 failover: Some("oss1".into()),
-                label: "zfsmo-OST00011".into(),
+                label: "zfsmo-OST0011".into(),
                 device: "zfs:ost17/ost17".into(),
                 fs_type: Some(FsType::Zfs),
             },
             LdevEntry {
                 primary: "oss2".into(),
                 failover: Some("oss1".into()),
-                label: "zfsmo-OST00012".into(),
+                label: "zfsmo-OST0012".into(),
                 device: "zfs:ost18/ost18".into(),
                 fs_type: Some(FsType::Zfs),
             },
             LdevEntry {
                 primary: "oss2".into(),
                 failover: Some("oss1".into()),
-                label: "zfsmo-OST00013".into(),
+                label: "zfsmo-OST0013".into(),
                 device: "zfs:ost19/ost19".into(),
                 fs_type: Some(FsType::Zfs),
             },
@@ -259,6 +326,52 @@ mod tests {
 
         let data = convert(&entries);
         insta::assert_snapshot!(data);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_parsing_commented_data() -> Result<(), ImlAgentError> {
+        let content: String = r#"# example /etc/ldev.conf
+#
+#local  foreign/-  label       [md|zfs:]device-path   [journal-path]/- [raidtab]
+#
+#zeno-mds1 - zeno-MDT0000 zfs:lustre-zeno-mds1/mdt1
+#
+#zeno1 zeno5 zeno-OST0000 zfs:lustre-zeno1/ost1
+#zeno2 zeno6 zeno-OST0001 zfs:lustre-zeno2/ost1
+#zeno3 zeno7 zeno-OST0002 zfs:lustre-zeno3/ost1
+#zeno4 zeno8 zeno-OST0003 zfs:lustre-zeno4/ost1
+#zeno5 zeno1 zeno-OST0004 zfs:lustre-zeno5/ost1
+#zeno6 zeno2 zeno-OST0005 zfs:lustre-zeno6/ost1
+#zeno7 zeno3 zeno-OST0006 zfs:lus tre-zeno7/ost1
+#zeno8 zeno4 zeno-OST0007 zfs:lustre-zeno8/ost1"#
+            .into();
+
+        let data: BTreeSet<LdevEntry> = parse_entries(content);
+
+        assert!(data.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_parsing_data() -> Result<(), ImlAgentError> {
+        let content: String = r#"#zeno-mds1 - zeno-MDT0000 zfs:lustre-zeno-mds1/mdt1
+# Random comment
+zeno1 zeno5 zeno-OST0000 zfs:lustre-zeno1/ost1
+zeno2 - zeno-OST0001 zfs:lustre-zeno2/ost1
+zeno3 zeno7 zeno-OST0002 zfs:lustre-zeno3/ost1
+zeno4 zeno8 zeno-OST0003 zfs:lustre-zeno4/ost1
+zeno5 zeno1 zeno-OST0004 zfs:lustre-zeno5/ost1
+zeno6 - zeno-OST0005 zfs:lustre-zeno6/ost1
+zeno7 zeno3 zeno-OST0006 zfs:lustre-zeno7/ost1
+zeno8 zeno4 zeno-OST0007 zfs:lustre-zeno8/ost1"#
+            .into();
+
+        let data: BTreeSet<LdevEntry> = parse_entries(content);
+
+        insta::assert_debug_snapshot!(data);
 
         Ok(())
     }

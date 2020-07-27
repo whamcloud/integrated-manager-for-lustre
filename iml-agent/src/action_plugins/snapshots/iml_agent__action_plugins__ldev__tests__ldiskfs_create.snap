@@ -1,0 +1,11 @@
+---
+source: iml-agent/src/action_plugins/ldev.rs
+expression: data
+---
+mds1 mds2 MGS ldiskfs:/mnt/mgt
+mds1 mds2 fs-MDT0000 ldiskfs:/mnt/mdt0
+mds2 mds1 fs-MDT0001 ldiskfs:/mnt/mdt1
+oss1 oss2 fs-OST0000 ldiskfs:/mnt/ost0
+oss2 oss1 fs-OST0001 ldiskfs:/mnt/ost1
+oss1 oss2 fs-OST0002 ldiskfs:/mnt/ost2
+oss2 oss1 fs-OST0003 ldiskfs:/mnt/ost3

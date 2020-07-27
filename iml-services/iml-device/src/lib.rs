@@ -26,7 +26,7 @@ use std::{
 pub type Cache = Arc<Mutex<HashMap<Fqdn, Device>>>;
 pub type TargetFsRecord = HashMap<String, Vec<(Fqdn, String)>>;
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 struct FsRecord {
     host: String,
     target: String,
@@ -381,7 +381,6 @@ pub fn find_targets<'a>(
         .filter(|(_, x)| !x.source.0.to_string_lossy().contains('@'))
         .filter_map(|(fqdn, x)| {
             let s = x.opts.0.split(',').find(|x| x.starts_with("svname="))?;
-
             let s = s.split('=').nth(1)?;
 
             let osd = x.opts.0.split(',').find(|x| x.starts_with("osd="))?;
