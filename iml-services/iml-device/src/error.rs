@@ -17,6 +17,8 @@ pub enum ImlDeviceError {
     SerdeJsonError(#[from] serde_json::Error),
     #[error(transparent)]
     SqlxCoreError(#[from] sqlx::Error),
+    #[error(transparent)]
+    SqlxMigrateError(#[from] sqlx::migrate::MigrateError),
 }
 
 impl reject::Reject for ImlDeviceError {}
