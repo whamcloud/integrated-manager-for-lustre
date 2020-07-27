@@ -307,10 +307,10 @@ dependencies = [
  "im 15.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "insta 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libzfs-types 0.1.2 (git+https://github.com/whamcloud/rust-libzfs.git)",
- "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "pretty_assertions 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.56 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tracing 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
