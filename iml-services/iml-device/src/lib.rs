@@ -165,3 +165,80 @@ pub async fn update_client_mounts(
 
     Ok(())
 }
+
+pub fn find_targets(
+    x: &HashMap<Fqdn, Device>,
+    mounts: &HashMap<Fqdn, HashSet<Mount>>,
+    host_map: &HashMap<Fqdn, i32>,
+) -> Vec<Target> {
+    let xs: Vec<_> = mounts
+        .iter()
+        .map(|(k, xs)| xs.into_iter().map(move |x| (k, x)))
+        .flatten()
+        .filter(|(_, x)| x.fs_type.0 == "lustre")
+        .filter(|(_, x)| !x.source.0.to_string_lossy().contains('@'))
+        .filter_map(|(fqdn, x)| {
+            let s = x.opts.0.split(",").find(|x| x.starts_with("svname="))?;
+
+            let s = s.split("=").nth(1)?;
+
+            Some((fqdn, &x.target, &x.source, s))
+        })
+        .collect();
+
+    let xs: Vec<_> = xs
+        .into_iter()
+        .filter_map(|(fqdn, mntpnt, dev, target)| {
+            let dev_tree = x.get(&fqdn)?;
+
+            let device = dev_tree.find_device_by_devpath(dev)?;
+
+            let dev_id = device.get_id()?;
+
+            let fs_uuid = device.get_fs_uuid()?;
+
+            Some((fqdn, mntpnt, dev_id, fs_uuid, target))
+        })
+        .collect();
+
+    let xs: Vec<_> = xs
+        .into_iter()
+        .filter_map(|(fqdn, mntpnt, dev_id, fs_uuid, target)| {
+            let ys: Vec<_> = x
+                .iter()
+                .filter(|(k, _)| k != &fqdn)
+                .filter_map(|(k, x)| {
+                    x.find_device_by_id(&dev_id)?;
+
+                    let host_id = host_map.get(&k)?;
+
+                    Some(*host_id)
+                })
+                .collect();
+
+            let host_id = host_map.get(&fqdn)?;
+
+            Some((host_id, ys, mntpnt, fs_uuid, target))
+        })
+        .collect();
+
+    xs.into_iter()
+        .map(|(fqdn, ids, mntpnt, fs_uuid, target)| Target {
+            state: "mounted".into(),
+            active_host_id: *fqdn,
+            host_ids: ids,
+            name: target.into(),
+            uuid: fs_uuid.into(),
+            mount_path: mntpnt.0.to_string_lossy().to_string(),
+        })
+        .collect()
+}
+
+pub struct Target {
+    state: String,
+    name: String,
+    active_host_id: i32,
+    host_ids: Vec<i32>,
+    uuid: String,
+    mount_path: String,
+}

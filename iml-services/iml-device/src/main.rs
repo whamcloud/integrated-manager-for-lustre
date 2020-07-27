@@ -6,14 +6,17 @@ use device_types::{devices::Device, mount::Mount};
 use futures::{TryFutureExt, TryStreamExt};
 use im::HashSet;
 use iml_device::{
-    client_mount_content_id, create_cache,
+    client_mount_content_id, create_cache, find_targets,
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
     },
     update_client_mounts, update_devices, Cache, ImlDeviceError,
 };
-use iml_postgres::get_db_pool;
+use iml_postgres::{
+    get_db_pool,
+    sqlx::{self, PgPool},
+};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
@@ -101,6 +104,17 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         let mut cache = cache2.lock().await;
         cache.insert(host, devices);
+
+        let host_ids: HashMap<Fqdn, i32> =
+            sqlx::query!("select fqdn, id from chroma_core_managedhost where not_deleted = 't'",)
+                .fetch(&pool)
+                .map_ok(|x| (Fqdn(x.fqdn), x.id))
+                .try_collect()
+                .await?;
+
+        let mounts = HashMap::new();
+
+        find_targets(&cache, &mounts, &host_ids);
     }
 
     Ok(())
