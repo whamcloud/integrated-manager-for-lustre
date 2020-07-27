@@ -307,13 +307,12 @@ pub enum App {
     /// Get latest kernel which supports listed modules
     GetKernel { modules: Vec<String> },
 
-    #[structopt(name = "try_mount")]
-    /// Try to mount `lustre_device` to the `mount_point`
-    TryMount {
-        #[structopt(long)]
+    #[structopt(name = "mount")]
+    /// Mount lustre device
+    Mount {
+        /// For example, 10.73.20.11@tcp0:10.73.20.12@tcp0:/fs2
         lustre_device: String,
-
-        #[structopt(long)]
+        /// For example, /mnt/fs2
         mount_point: String,
     },
 
@@ -647,10 +646,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 exit(exitcode::SOFTWARE);
             }
         },
-        App::TryMount {
+        App::Mount {
             lustre_device,
             mount_point,
-        } => match lustre::try_mount((lustre_device, mount_point)).await {
+        } => match lustre::mount((lustre_device, mount_point)).await {
             Ok(()) => println!("Done"),
             Err(e) => {
                 eprintln!("{:?}", e);

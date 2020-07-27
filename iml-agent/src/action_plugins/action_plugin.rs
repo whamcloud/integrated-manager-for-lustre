@@ -40,7 +40,7 @@ pub fn create_registry() -> action_plugins::Actions {
             "get_ha_resource_list",
             high_availability::get_ha_resource_list,
         )
-        .add_plugin("try_mount", lustre::try_mount)
+        .add_plugin("mount", lustre::mount)
         .add_plugin("crm_attribute", high_availability::crm_attribute)
         .add_plugin(
             "change_mcast_port",
