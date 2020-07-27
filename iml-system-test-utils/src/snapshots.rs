@@ -338,7 +338,7 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
         ldiskfs_created,
         filesystem_detected,
         Transition {
-            path: SnapshotPath::All,
+            path: SnapshotPath::Ldiskfs,
             transition: mk_transition(detect_fs),
         },
     );
@@ -347,7 +347,7 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
         zfs_created,
         filesystem_detected,
         Transition {
-            path: SnapshotPath::All,
+            path: SnapshotPath::ZFS,
             transition: mk_transition(detect_fs),
         },
     );
@@ -356,7 +356,7 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
         stratagem_created,
         filesystem_detected,
         Transition {
-            path: SnapshotPath::All,
+            path: SnapshotPath::Stratagem,
             transition: mk_transition(detect_fs),
         },
     );
