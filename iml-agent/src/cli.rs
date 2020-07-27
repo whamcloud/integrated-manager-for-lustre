@@ -235,6 +235,14 @@ pub enum NtpClientCommand {
     IsConfigured,
 }
 
+#[derive(Debug, StructOpt)]
+pub enum SnapshotCommand {
+    /// Create a snapshot
+    Create(lustre::snapshot::Create),
+    /// Destroy the snapshot
+    Destroy(lustre::snapshot::Destroy),
+}
+
 #[derive(StructOpt, Debug)]
 #[structopt(name = "iml-agent", setting = structopt::clap::AppSettings::ColoredHelp)]
 /// The Integrated Manager for Lustre Agent CLI
@@ -330,6 +338,13 @@ pub enum App {
     PostOffice {
         #[structopt(subcommand)]
         cmd: PostOfficeCommand,
+    },
+
+    #[structopt(name = "snapshot")]
+    /// Snapshot operations
+    Snapshot {
+        #[structopt(subcommand)]
+        command: SnapshotCommand,
     },
 }
 
@@ -676,6 +691,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         App::LAmigo { c } => {
             if let Err(e) = lamigo::create_lamigo_service_unit(c).await {
+                eprintln!("{}", e);
+                exit(exitcode::SOFTWARE);
+            }
+        }
+        App::Snapshot { command } => {
+            if let Err(e) = match command {
+                SnapshotCommand::Create(c) => lustre::snapshot::create(c).await,
+                SnapshotCommand::Destroy(d) => lustre::snapshot::destroy(d).await,
+            } {
                 eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
             }
