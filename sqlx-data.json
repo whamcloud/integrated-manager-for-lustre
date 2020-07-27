@@ -142,23 +142,67 @@
       "nullable": []
     }
   },
-  "131959cfcc0275c8797cb5aa12f0ad15dd6baa2f75c716815607a039defac3a6": {
-    "query": "select fqdn from chroma_core_managedhost where id = $1 and not_deleted = 't'",
+  "17326810031d675b3186552c82d301c75c79dd8a82b2258c894b016af0a70549": {
+    "query": "\n            SELECT state, name, active_host_id, host_ids, filesystems, uuid, mount_path, fs_type::text from target t\n            ORDER BY\n                CASE WHEN $3 = 'asc' THEN t.name END ASC,\n                CASE WHEN $3 = 'desc' THEN t.name END DESC\n            OFFSET $1 LIMIT $2",
     "describe": {
       "columns": [
         {
           "ordinal": 0,
-          "name": "fqdn",
-          "type_info": "Varchar"
+          "name": "state",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "host_ids",
+          "type_info": "Int4Array"
+        },
+        {
+          "ordinal": 4,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 5,
+          "name": "uuid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 6,
+          "name": "mount_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "fs_type",
+          "type_info": "Text"
         }
       ],
       "parameters": {
         "Left": [
-          "Int4"
+          "Int8",
+          "Int8",
+          "Text"
         ]
       },
       "nullable": [
-        false
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        null
       ]
     }
   },
@@ -495,6 +539,42 @@
           "Int4",
           "Int4",
           "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "26ddb2134cf266f87445dbf05bea50454ad33e84c45225283a3722da620be4dc": {
+    "query": "INSERT INTO target\n                        (state, name, active_host_id, host_ids, filesystems, uuid, mount_path, fs_type) \n                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], string_to_array(filesystems, ',')::text[], uuid, mount_path, fs_type\n                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[], $8::fs_type[])\n                        AS t(state, name, active_host_id, host_ids, filesystems, uuid, mount_path, fs_type)\n                        ON CONFLICT (uuid)\n                            DO\n                            UPDATE SET  state          = EXCLUDED.state,\n                                        name           = EXCLUDED.name,\n                                        active_host_id = EXCLUDED.active_host_id,\n                                        host_ids       = EXCLUDED.host_ids,\n                                        filesystems    = EXCLUDED.filesystems,\n                                        mount_path     = EXCLUDED.mount_path,\n                                        fs_type        = EXCLUDED.fs_type",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          {
+            "Custom": {
+              "name": "_fs_type",
+              "kind": {
+                "Array": {
+                  "Custom": {
+                    "name": "fs_type",
+                    "kind": {
+                      "Enum": [
+                        "zfs",
+                        "ldiskfs"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
         ]
       },
       "nullable": []
@@ -1783,6 +1863,66 @@
       ]
     }
   },
+  "5ff042d9067c2d286eaf6b4c16e761d181d5785dfe6056d87e56d0113b8e30ad": {
+    "query": "select state, name, active_host_id, host_ids, filesystems, uuid, mount_path, fs_type::text from target",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "state",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "host_ids",
+          "type_info": "Int4Array"
+        },
+        {
+          "ordinal": 4,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 5,
+          "name": "uuid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 6,
+          "name": "mount_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "fs_type",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        null
+      ]
+    }
+  },
   "61e498856043c03a2b0ca70544b3973f25ab9154985fd6a2078b46436a42c8f2": {
     "query": "\n                INSERT INTO chroma_core_serverprofile_repolist (serverprofile_id, repo_id)\n                SELECT $1, repo_id\n                FROM UNNEST($2::text[])\n                AS t(repo_id)\n                ON CONFLICT DO NOTHING\n            ",
     "describe": {
@@ -2269,6 +2409,30 @@
         false,
         false,
         false,
+        false,
+        false
+      ]
+    }
+  },
+  "84106161840919908a2de13f79f154cdce5d97fc689118c49f0e83de1ada7fd6": {
+    "query": "SELECT mh.fqdn, target.filesystems FROM target as target LEFT JOIN chroma_core_managedhost as mh ON mh.id = target.active_host_id WHERE target.name='MGS' AND mh.fqdn IS NOT NULL",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 1,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
         false,
         false
       ]
@@ -3258,6 +3422,30 @@
         false,
         false,
         false,
+        false,
+        false
+      ]
+    }
+  },
+  "b70a8df89e1b93a9f73332d8b635d485813a418d99cb6a744e76d5f4df866f39": {
+    "query": "SELECT id, fqdn FROM chroma_core_managedhost WHERE not_deleted=True",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
         false,
         false
       ]

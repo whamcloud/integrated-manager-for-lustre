@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use iml_wire_types::FsType;
 use iml_system_docker_tests::run_fs_test;
 use iml_system_test_utils::*;
 
@@ -15,7 +16,7 @@ async fn test_docker_zfs_setup() -> Result<(), TestError> {
         ],
         test_type: TestType::Docker,
         ntp_server: NtpServer::HostOnly,
-        fs_type: FsType::ZFS,
+        fs_type: FsType::Zfs,
         ..config
     };
 

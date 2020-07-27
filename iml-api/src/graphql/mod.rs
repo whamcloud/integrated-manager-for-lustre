@@ -18,7 +18,7 @@ use iml_wire_types::{
     graphql_duration::GraphQLDuration,
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     task::Task,
-    Command, EndpointName, Job,
+    Command, EndpointName, Job, LdevEntry,
 };
 use itertools::Itertools;
 use juniper::{
@@ -78,6 +78,8 @@ struct Target {
     uuid: String,
     /// Where this target is mounted
     mount_path: Option<String>,
+    /// The filesystem type associated with this target
+    fs_type: String,
 }
 
 #[derive(juniper::GraphQLObject)]
@@ -220,49 +222,15 @@ impl QueryRoot {
         fs_name: Option<String>,
         exclude_unmounted: Option<bool>,
     ) -> juniper::FieldResult<Vec<Target>> {
-        let dir = dir.unwrap_or_default();
-
-        let xs: Vec<Target> = sqlx::query_as!(
-            Target,
-            r#"
-                SELECT * from target t
-                ORDER BY
-                    CASE WHEN $3 = 'asc' THEN t.name END ASC,
-                    CASE WHEN $3 = 'desc' THEN t.name END DESC
-                OFFSET $1 LIMIT $2"#,
-            offset.unwrap_or(0) as i64,
-            limit.map(|x| x as i64),
-            dir.deref()
+        let xs = get_targets(
+            &context.pg_pool,
+            limit,
+            offset,
+            dir,
+            fs_name,
+            exclude_unmounted.unwrap_or_default(),
         )
-        .fetch_all(&context.pg_pool)
-        .await?
-        .into_iter()
-        .filter(|x| match &fs_name {
-            Some(fs) => x.filesystems.contains(&fs),
-            None => true,
-        })
-        .filter(|x| match exclude_unmounted {
-            Some(true) => x.state != "unmounted",
-            Some(false) | None => true,
-        })
-        .collect();
-
-        let target_resources = get_fs_target_resources(&context.pg_pool, None).await?;
-
-        let xs: Vec<Target> = xs
-            .into_iter()
-            .map(|mut x| {
-                let resource = target_resources
-                    .iter()
-                    .find(|resource| resource.name == x.name);
-
-                if let Some(resource) = resource {
-                    x.host_ids = resource.cluster_hosts.clone();
-                }
-
-                x
-            })
-            .collect();
+        .await?;
 
         Ok(xs)
     }
@@ -837,6 +805,123 @@ impl MutationRoot {
 
         Ok(true)
     }
+
+    /// Create LDev Conf
+    async fn create_ldev_conf(context: &Context) -> juniper::FieldResult<Command> {
+        tracing::debug!("creating ldev conf");
+        let hosts =
+            sqlx::query!("SELECT id, fqdn FROM chroma_core_managedhost WHERE not_deleted=True")
+                .fetch_all(&context.pg_pool)
+                .await?
+                .into_iter()
+                .map(|x| (x.id, x.fqdn))
+                .collect::<HashMap<i32, String>>();
+
+        tracing::debug!("hosts: {:?}", hosts);
+
+        let fs_to_fqdn_map = sqlx::query!(
+            "SELECT mh.fqdn, target.filesystems FROM target as target \
+            LEFT JOIN chroma_core_managedhost as mh ON mh.id = target.active_host_id \
+            WHERE target.name='MGS' AND mh.fqdn IS NOT NULL"
+        )
+        .fetch_all(&context.pg_pool)
+        .await?
+        .into_iter()
+        .map(|x| {
+            let xs = x
+                .filesystems
+                .iter()
+                .cloned()
+                .map(|fs| (fs, x.fqdn.to_string()))
+                .collect::<Vec<(String, String)>>();
+            xs
+        })
+        .flatten()
+        .collect::<HashMap<String, String>>();
+
+        tracing::debug!("fs_to_fqdn_map: {:?}", fs_to_fqdn_map);
+
+        let targets = get_targets(&context.pg_pool, None, None, None, None, true).await?;
+
+        tracing::debug!("targets: {:?}", targets);
+
+        let ldev_entries = targets
+            .into_iter()
+            .map(|x| {
+                if let Some(primary) = x.active_host_id {
+                    if let Some(mount_path) = x.mount_path {
+                        let failovers = x
+                            .host_ids
+                            .into_iter()
+                            .filter(|x| *x != primary)
+                            .filter_map(|x| hosts.get(&x))
+                            .map(|x| x.to_string())
+                            .collect::<Vec<String>>();
+
+                        let failover = if failovers.is_empty() {
+                            None
+                        } else {
+                            Some(failovers[0].to_string())
+                        };
+
+                        let ldev_entry = LdevEntry {
+                            primary: hosts.get(&primary).expect("get primary host").to_string(),
+                            failover,
+                            label: x.name,
+                            device: mount_path,
+                            fs_type: x.fs_type.as_str().into(),
+                        };
+
+                        return (
+                            fs_to_fqdn_map
+                                .get(&x.filesystems[0])
+                                .expect("get first filesystem"),
+                            ldev_entry,
+                        );
+                    } else {
+                        panic!("All targets must be mounted when configuring ldev conf.");
+                    }
+                } else {
+                    panic!(
+                        "All targets must be mounted on an active host when configuring ldev conf."
+                    );
+                }
+            })
+            .fold(
+                vec![].into_iter().collect(),
+                |mut acc: HashMap<String, Vec<LdevEntry>>, (fqdn, ldev_entry)| {
+                    let items = acc.entry(fqdn.to_string()).or_insert(vec![]);
+                    (*items).push(ldev_entry);
+
+                    acc
+                },
+            );
+
+        tracing::debug!("ldev entries: {:?}", ldev_entries);
+
+        let kwargs: HashMap<String, String> = vec![("message".into(), "Creating LDev Conf".into())]
+            .into_iter()
+            .collect();
+
+        let jobs = serde_json::json!([{
+            "class_name": "ConfigureLDevJob",
+            "args": {
+                "ldev_entries": serde_json::to_string(&ldev_entries)?
+            }
+        }]);
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_pool.get().await?,
+            "run_jobs",
+            vec![jobs],
+            Some(kwargs),
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        let command = get_command(&context.pg_pool, command_id).await?;
+
+        Ok(command)
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -1192,4 +1277,71 @@ fn create_task_job<'a>(task_id: i32) -> SendJob<'a, HashMap<String, serde_json::
             .into_iter()
             .collect(),
     }
+}
+
+async fn get_targets(
+    pool: &PgPool,
+    limit: Option<i32>,
+    offset: Option<i32>,
+    dir: Option<SortDir>,
+    fs_name: Option<String>,
+    exclude_unmounted: bool,
+) -> juniper::FieldResult<Vec<Target>> {
+    let dir = dir.unwrap_or_default();
+
+    let xs: Vec<Target> = sqlx::query!(
+        r#"
+            SELECT state, name, active_host_id, host_ids, filesystems, uuid, mount_path, fs_type::text from target t
+            ORDER BY
+                CASE WHEN $3 = 'asc' THEN t.name END ASC,
+                CASE WHEN $3 = 'desc' THEN t.name END DESC
+            OFFSET $1 LIMIT $2"#,
+        offset.unwrap_or(0) as i64,
+        limit.map(|x| x as i64),
+        dir.deref()
+    )
+    .fetch(pool)
+    .map_ok(|x| {
+        Target {
+            state: x.state,
+            name: x.name,
+            active_host_id: x.active_host_id,
+            host_ids: x.host_ids,
+            filesystems: x.filesystems,
+            uuid: x.uuid,
+            mount_path: x.mount_path,
+            fs_type: x.fs_type.unwrap_or_else(|| "ldiskfs".to_string()).into()
+        }
+    })
+    .try_collect::<Vec<Target>>()
+    .await?
+    .into_iter()
+    .filter(|x| match &fs_name {
+        Some(fs) => x.filesystems.contains(&fs),
+        None => true,
+    })
+    .filter(|x| match exclude_unmounted {
+        true => x.state != "unmounted",
+        false => true,
+    })
+    .collect();
+
+    let target_resources = get_fs_target_resources(&pool, None).await?;
+
+    let xs: Vec<Target> = xs
+        .into_iter()
+        .map(|mut x| {
+            let resource = target_resources
+                .iter()
+                .find(|resource| resource.name == x.name);
+
+            if let Some(resource) = resource {
+                x.host_ids = resource.cluster_hosts.clone();
+            }
+
+            x
+        })
+        .collect();
+
+    Ok(xs)
 }

@@ -162,6 +162,7 @@ async fn main() -> Result<(), ImlDeviceError> {
                 vec![],
                 vec![],
                 vec![],
+                vec![],
             ),
             |mut acc, x| {
                 acc.0.push(x.state);
@@ -178,6 +179,8 @@ async fn main() -> Result<(), ImlDeviceError> {
                 acc.5.push(x.uuid);
                 acc.6.push(x.mount_path);
                 acc.7.push(x.dev_path);
+                acc.8.push(x.fs_type.to_string());
+
                 acc
             },
         );
@@ -185,10 +188,10 @@ async fn main() -> Result<(), ImlDeviceError> {
         tracing::debug!("x: {:?}", x);
 
         sqlx::query!(r#"INSERT INTO target
-                        (state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path)
-                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], string_to_array(filesystems, ',')::text[], uuid, mount_path, dev_path
-                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[])
-                        AS t(state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path)
+                        (state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type)
+                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], string_to_array(filesystems, ',')::text[], uuid, mount_path, dev_path, fs_type
+                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[], $9::fs_type[])
+                        AS t(state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type)
                         ON CONFLICT (uuid)
                             DO
                             UPDATE SET  state          = EXCLUDED.state,
@@ -197,7 +200,8 @@ async fn main() -> Result<(), ImlDeviceError> {
                                         host_ids       = EXCLUDED.host_ids,
                                         filesystems    = EXCLUDED.filesystems,
                                         mount_path     = EXCLUDED.mount_path,
-                                        dev_path       = EXCLUDED.dev_path"#,
+                                        dev_path       = EXCLUDED.dev_path,
+                                        fs_type        = EXCLUDED.fs_type"#,
             &x.0,
             &x.1,
             &x.2 as &[Option<i32>],
@@ -206,6 +210,7 @@ async fn main() -> Result<(), ImlDeviceError> {
             &x.5,
             &x.6 as &[Option<String>],
             &x.7 as &[Option<String>],
+            &x.8 as &[String],
         )
         .execute(&pool)
         .await?;
