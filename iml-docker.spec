@@ -25,12 +25,12 @@ Requires: sed
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}%{_sysconfdir}/iml-docker/setup/branding
-mkdir -p %{buildroot}%{_tmppath}
+mkdir -p %{buildroot}%{_sharedstatedir}
 mkdir -p %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp docker-compose.yml %{buildroot}%{_sysconfdir}/iml-docker
 cp enable_btree_gist.sh %{buildroot}%{_sysconfdir}/iml-docker
-mv iml-images.tgz %{buildroot}%{_tmppath}
+mv iml-images.tgz %{buildroot}%{_sharedstatedir}
 mv iml-cli-proxy.sh %{buildroot}%{_bindir}/iml
 mv update-embedded.sh %{buildroot}%{_bindir}/update-embedded
 mv iml-docker.service %{buildroot}%{_unitdir}
@@ -38,10 +38,10 @@ mv iml-docker.service %{buildroot}%{_unitdir}
 
 %files
 %{_sysconfdir}/iml-docker
-%attr(750, root, root) %config(missingok) %{_tmppath}/iml-images.tgz
-%attr(754, root, root) %{_bindir}/iml
+%attr(0640, root, root) %{_sharedstatedir}/iml-images.tgz
+%attr(0755, root, root) %{_bindir}/iml
 %attr(754, root, root) %{_bindir}/update-embedded
-%attr(0644,root,root) %{_unitdir}/iml-docker.service
+%attr(0644, root, root) %{_unitdir}/iml-docker.service
 
 
 %post

@@ -44,8 +44,7 @@ async fn list_fs() -> Vec<String> {
     lctl(vec!["get_param", "-N", "mdt.*-MDT0000"])
         .await
         .map(|o| {
-            String::from_utf8_lossy(&o.stdout)
-                .lines()
+            o.lines()
                 .filter_map(|line| {
                     line.split('.')
                         .nth(1)

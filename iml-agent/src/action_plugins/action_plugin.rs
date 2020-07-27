@@ -2,12 +2,15 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::action_plugins::{
-    check_kernel, check_stonith, firewall_cmd, high_availability, kernel_module, lamigo, lpurge,
-    ltuer, lustre,
-    ntp::{action_configure, is_ntp_configured},
-    ostpool, package, postoffice,
-    stratagem::{action_purge, action_warning, server},
+use crate::{
+    action_plugins::{
+        check_kernel, check_stonith, firewall_cmd, high_availability, kernel_module, lamigo,
+        lpurge, ltuer, lustre,
+        ntp::{action_configure, is_ntp_configured},
+        ostpool, package, postoffice,
+        stratagem::{action_purge, action_warning, server},
+    },
+    lustre::lctl,
 };
 use iml_util::action_plugins;
 use iml_wire_types::ActionName;
@@ -47,7 +50,7 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("add_firewall_port", firewall_cmd::add_port)
         .add_plugin("remove_firewall_port", firewall_cmd::remove_port)
         .add_plugin("pcs", high_availability::pcs)
-        .add_plugin("lctl", lustre::lctl)
+        .add_plugin("lctl", lctl::<Vec<_>, String>)
         .add_plugin("ostpool_create", ostpool::action_pool_create)
         .add_plugin("ostpool_wait", ostpool::action_pool_wait)
         .add_plugin("ostpool_destroy", ostpool::action_pool_destroy)
