@@ -17,5 +17,6 @@ expression: xs
         mount_path: Some(
             "/mnt/mdt1",
         ),
+        fs_type: Ldiskfs,
     },
 ]

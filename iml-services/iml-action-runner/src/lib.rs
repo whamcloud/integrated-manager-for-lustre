@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 pub mod data;
-pub mod db;
 pub mod error;
 pub mod local_actions;
 pub mod receiver;

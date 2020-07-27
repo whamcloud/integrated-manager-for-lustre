@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use iml_wire_types::FsType;
 use iml_system_rpm_tests::run_fs_test;
 use iml_system_test_utils::*;
 
@@ -13,7 +14,7 @@ async fn test_zfs_setup() -> Result<(), TestError> {
             ("base_monitored".into(), config.storage_servers()),
             ("base_client".into(), config.client_servers()),
         ],
-        fs_type: FsType::ZFS,
+        fs_type: FsType::Zfs,
         ..config
     };
 

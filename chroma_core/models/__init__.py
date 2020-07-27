@@ -31,6 +31,7 @@ from power_control import *
 from repo import *
 from copytool import *
 from client_mount import *
+from ldev_configuration import *
 from lnet_configuration import *
 from sparse_model import *
 from stratagem import *
