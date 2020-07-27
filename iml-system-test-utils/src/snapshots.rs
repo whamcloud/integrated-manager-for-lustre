@@ -347,7 +347,7 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
         zfs_created,
         filesystem_detected,
         Transition {
-            path: SnapshotPath::ZFS,
+            path: SnapshotPath::Zfs,
             transition: mk_transition(detect_fs),
         },
     );
