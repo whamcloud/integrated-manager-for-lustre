@@ -5,7 +5,9 @@ name = "iml-action-runner"
 version = "0.3.0"
 
 [dependencies]
+device-types = "0.1"
 futures = "0.3"
+iml-device = {path = "../iml-device", version = "0.3"}
 iml-manager-env = {path = "../../iml-manager-env", version = "0.3"}
 iml-postgres = {path = "../../iml-postgres", version = "0.3"}
 iml-rabbit = {path = "../../iml-rabbit", version = "0.3", features = ["warp-filters"]}

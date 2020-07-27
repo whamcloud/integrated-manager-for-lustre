@@ -3,7 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::{error::ActionRunnerError, Sender, Sessions, Shared};
-use iml_wire_types::{Action, ActionId, Fqdn, Id, ManagerMessage, PluginName};
+use iml_postgres::sqlx::{self, PgPool};
+use iml_wire_types::{Action, ActionId, Fqdn, Id, LdevEntry, ManagerMessage, PluginName};
 use std::{collections::HashMap, convert::TryInto, sync::Arc, time::Duration};
 use tokio::time::{delay_until, Instant};
 
@@ -96,6 +97,63 @@ pub(crate) async fn await_next_session(
     tracing::warn!("No new session after {} seconds", wait_secs);
 
     Err(ActionRunnerError::AwaitSession(fqdn.clone()))
+}
+
+pub async fn create_ldev_conf(pool: PgPool) -> Result<Vec<LdevEntry>, ActionRunnerError> {
+    let hosts = sqlx::query!("select id, fqdn from chroma_core_managedhost")
+        .fetch_all(&pool)
+        .await?
+        .into_iter()
+        .map(|x| (x.id, x.fqdn))
+        .collect::<HashMap<i32, String>>();
+
+    // Get devices from database
+    let ldev_entries = sqlx::query!(
+        r#"
+        select * from targets
+    "#,
+    )
+    .fetch_all(&pool)
+    .await?
+    .into_iter()
+    .filter_map(|x| {
+        if let Some(primary) = x.active_host_id {
+            if let Some(mount_path) = x.mount_path {
+                let failovers = x
+                    .host_ids
+                    .into_iter()
+                    .filter(|x| *x != primary)
+                    .filter_map(|x| hosts.get(&x))
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>();
+
+                let failovers = if failovers.is_empty() {
+                    None
+                } else {
+                    Some(failovers.join(","))
+                };
+
+                let ldev_entry = LdevEntry {
+                    primary: hosts
+                        .get(&primary)
+                        .expect("Couldn't get primary host.")
+                        .to_string(),
+                    failover: failovers,
+                    label: x.name,
+                    device: mount_path,
+                };
+
+                return Some(ldev_entry);
+            } else {
+                panic!("All targets must be mounted when configuring ldev conf.");
+            }
+        } else {
+            panic!("All targets must be mounted on an active host when configuring ldev conf.");
+        }
+    })
+    .collect::<Vec<LdevEntry>>();
+
+    Ok(ldev_entries)
 }
 
 pub fn insert_action_in_flight(

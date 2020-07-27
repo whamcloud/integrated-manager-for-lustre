@@ -19,3 +19,18 @@ pub(crate) async fn get_host_fqdn_by_id(
 
     Ok(fqdn)
 }
+
+pub(crate) async fn get_mgs_host_fqdn(
+    pool: sqlx::PgPool,
+) -> Result<Option<String>, ActionRunnerError> {
+    let fqdn = sqlx::query!(
+        "SELECT mh.fqdn FROM targets as targets \
+            LEFT JOIN chroma_core_managedhost as mh ON mh.id = targets.active_host_id \
+            WHERE targets.name='MGS'"
+    )
+    .fetch_optional(&pool)
+    .await?
+    .map(|x| x.fqdn);
+
+    Ok(fqdn)
+}

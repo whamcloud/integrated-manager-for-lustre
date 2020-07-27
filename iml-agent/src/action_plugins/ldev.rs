@@ -28,7 +28,10 @@ async fn read_ldev_config() -> Result<String, ImlAgentError> {
 }
 
 fn parse_entries(ldev_config: String) -> BTreeSet<LdevEntry> {
-    ldev_config.lines().map(LdevEntry::from).collect()
+    ldev_config
+        .lines()
+        .filter(|x| x.trim().chars().take(1).next() != Some('#'))
+        .map(LdevEntry::from).collect()
 }
 
 fn convert(entries: &[LdevEntry]) -> String {
@@ -234,6 +237,50 @@ mod tests {
 
         let data = convert(&entries);
         insta::assert_snapshot!(data);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_parsing_commented_data() -> Result<(), ImlAgentError> {
+        let content: String = r#"# example /etc/ldev.conf
+#
+#local  foreign/-  label       [md|zfs:]device-path   [journal-path]/- [raidtab]
+#
+#zeno-mds1 - zeno-MDT0000 zfs:lustre-zeno-mds1/mdt1
+#
+#zeno1 zeno5 zeno-OST0000 zfs:lustre-zeno1/ost1
+#zeno2 zeno6 zeno-OST0001 zfs:lustre-zeno2/ost1
+#zeno3 zeno7 zeno-OST0002 zfs:lustre-zeno3/ost1
+#zeno4 zeno8 zeno-OST0003 zfs:lustre-zeno4/ost1
+#zeno5 zeno1 zeno-OST0004 zfs:lustre-zeno5/ost1
+#zeno6 zeno2 zeno-OST0005 zfs:lustre-zeno6/ost1
+#zeno7 zeno3 zeno-OST0006 zfs:lustre-zeno7/ost1
+#zeno8 zeno4 zeno-OST0007 zfs:lustre-zeno8/ost1"#.into();
+
+        let data: BTreeSet<LdevEntry> = parse_entries(content);
+
+        assert!(data.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_parsing_data() -> Result<(), ImlAgentError> {
+        let content: String = r#"#zeno-mds1 - zeno-MDT0000 zfs:lustre-zeno-mds1/mdt1
+# Random comment
+zeno1 zeno5 zeno-OST0000 zfs:lustre-zeno1/ost1
+zeno2 zeno6 zeno-OST0001 zfs:lustre-zeno2/ost1
+zeno3 zeno7 zeno-OST0002 zfs:lustre-zeno3/ost1
+zeno4 zeno8 zeno-OST0003 zfs:lustre-zeno4/ost1
+zeno5 zeno1 zeno-OST0004 zfs:lustre-zeno5/ost1
+zeno6 zeno2 zeno-OST0005 zfs:lustre-zeno6/ost1
+zeno7 zeno3 zeno-OST0006 zfs:lustre-zeno7/ost1
+zeno8 zeno4 zeno-OST0007 zfs:lustre-zeno8/ost1"#.into();
+
+        let data: BTreeSet<LdevEntry> = parse_entries(content);
+
+        insta::assert_debug_snapshot!(data);
 
         Ok(())
     }

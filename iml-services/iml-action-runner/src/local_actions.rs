@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    data::{await_next_session, get_session},
+    data::{await_next_session, create_ldev_conf, get_session},
     db,
     error::{self, ActionRunnerError},
     Sender, Sessions, Shared,
@@ -128,6 +128,10 @@ pub async fn handle_local_action(
                 "get_fqdn_by_id" => {
                     wrap_plugin(args, move |id: i32| db::get_host_fqdn_by_id(id, db_pool))
                 }
+                "get_mgs_host_fqdn" => {
+                    wrap_plugin(args, move |_: Value| db::get_mgs_host_fqdn(db_pool))
+                }
+                "create_ldev_conf" => wrap_plugin(args, move |_: Value| create_ldev_conf(db_pool)),
                 _ => {
                     return Err(ActionRunnerError::RequiredError(error::RequiredError(
                         format!("Could not find action {} in local registry", action),

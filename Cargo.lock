@@ -733,10 +733,22 @@ dependencies = [
 
 [[package]]
 name = "device-types"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f46ab2f1807f25fc47fc0eb206b6baec061503cc1aa891db168d14e81525a44"
+dependencies = [
+ "im 13.0.0",
+ "libzfs-types 0.1.1",
+ "log 0.4.11",
+ "serde",
+]
+
+[[package]]
+name = "device-types"
 version = "0.2.0"
 dependencies = [
- "im",
- "libzfs-types",
+ "im 15.0.0",
+ "libzfs-types 0.1.2",
  "serde",
  "tracing",
 ]
@@ -1382,6 +1394,18 @@ dependencies = [
 
 [[package]]
 name = "im"
+version = "13.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8db49f8bc08d5cc4e2bb0f7d25a6d1db2c79bc6f7d7c86c96c657eb3d214125f"
+dependencies = [
+ "rustc_version",
+ "serde",
+ "sized-chunks 0.3.1",
+ "typenum",
+]
+
+[[package]]
+name = "im"
 version = "15.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "111c1983f3c5bb72732df25cddacee9b546d08325fb584b5ebd38148be7b0246"
@@ -1390,7 +1414,7 @@ dependencies = [
  "rand_core 0.5.1",
  "rand_xoshiro",
  "serde",
- "sized-chunks",
+ "sized-chunks 0.6.2",
  "typenum",
  "version_check 0.9.2",
 ]
@@ -1417,9 +1441,11 @@ dependencies = [
 name = "iml-action-runner"
 version = "0.3.0"
 dependencies = [
+ "device-types 0.1.4",
  "dotenv",
  "futures",
  "iml-agent-comms",
+ "iml-device",
  "iml-manager-env",
  "iml-postgres",
  "iml-rabbit",
@@ -1572,10 +1598,10 @@ name = "iml-device"
 version = "0.3.0"
 dependencies = [
  "chrono",
- "device-types",
+ "device-types 0.2.0",
  "dotenv",
  "futures",
- "im",
+ "im 15.0.0",
  "iml-change",
  "iml-manager-env",
  "iml-postgres",
@@ -1970,7 +1996,7 @@ name = "iml-warp-drive"
 version = "0.3.0"
 dependencies = [
  "futures",
- "im",
+ "im 15.0.0",
  "iml-manager-client",
  "iml-manager-env",
  "iml-postgres",
@@ -1992,7 +2018,7 @@ version = "0.3.0"
 dependencies = [
  "bytes",
  "chrono",
- "im",
+ "im 15.0.0",
  "iml-api-utils",
  "iml-change",
  "postgres-types",
@@ -2243,6 +2269,16 @@ version = "0.3.0"
 dependencies = [
  "bindgen",
  "libc",
+]
+
+[[package]]
+name = "libzfs-types"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "781e3a0e71718873e3fb34ba980a2ff855079c2685d36c78c3df5586a9379bca"
+dependencies = [
+ "serde",
+ "serde_derive",
 ]
 
 [[package]]
@@ -3675,6 +3711,15 @@ name = "siphasher"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fa8f3741c7372e75519bd9346068370c9cdaabcc1f9599cbcf2a2719352286b7"
+
+[[package]]
+name = "sized-chunks"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f01db57d7ee89c8e053245deb77040a6cc8508311f381c88749c33d4b9b78785"
+dependencies = [
+ "typenum",
+]
 
 [[package]]
 name = "sized-chunks"

@@ -1,5 +1,59 @@
 {
   "db": "PostgreSQL",
+  "04f75fb41ced742d3af923abe36de7ce146b5b092426c4d50aba7207281c42dc": {
+    "query": "\n        select * from targets\n    ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "state",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "host_ids",
+          "type_info": "Int4Array"
+        },
+        {
+          "ordinal": 4,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 5,
+          "name": "uuid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 6,
+          "name": "mount_path",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true
+      ]
+    }
+  },
   "07317ab9fddc66855470ba840c4b68a340b188eabcfce0bc8fed4f410df1b7db": {
     "query": "INSERT INTO chroma_core_managedhost\n        (\n            state_modified_at,\n            state,\n            immutable_state,\n            not_deleted,\n            address,\n            fqdn,\n            nodename,\n            boot_time,\n            needs_update,\n            corosync_ring0,\n            install_method,\n            content_type_id,\n            server_profile_id)\n        VALUES\n        ('2020-07-02 15:50:34.356076-04', 'unconfigured', 'f', 't', 'foo', 'foo.bar', '', Null, 'f', '', '', Null, 'foo')\n        ON CONFLICT DO NOTHING",
     "describe": {
@@ -724,6 +778,24 @@
         false,
         false,
         false,
+        false
+      ]
+    }
+  },
+  "5aebd4481227fb427bfd60845adb357dbde364f4671af8c5cf176c6b9747f3a6": {
+    "query": "SELECT mh.fqdn FROM targets as targets LEFT JOIN chroma_core_managedhost as mh ON mh.id = targets.active_host_id WHERE targets.name='MGS'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
         false
       ]
     }
