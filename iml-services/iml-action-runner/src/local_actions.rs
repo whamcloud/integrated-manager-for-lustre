@@ -4,7 +4,6 @@
 
 use crate::{
     data::{await_next_session, get_session},
-    db,
     error::{self, ActionRunnerError},
     Sender, Sessions, Shared,
 };
@@ -107,7 +106,7 @@ pub async fn handle_local_action(
     action: Action,
     in_flight: SharedLocalActionsInFlight,
     sessions: Shared<Sessions>,
-    db_pool: sqlx::PgPool,
+    _db_pool: sqlx::PgPool,
 ) -> Result<Result<serde_json::value::Value, String>, ActionRunnerError> {
     match action {
         Action::ActionCancel { id } => {
@@ -124,9 +123,6 @@ pub async fn handle_local_action(
                     wrap_plugin(args, move |(fqdn, last_session, wait_secs)| {
                         await_next_session(fqdn, last_session, wait_secs, sessions)
                     })
-                }
-                "get_fqdn_by_id" => {
-                    wrap_plugin(args, move |id: i32| db::get_host_fqdn_by_id(id, db_pool))
                 }
                 _ => {
                     return Err(ActionRunnerError::RequiredError(error::RequiredError(

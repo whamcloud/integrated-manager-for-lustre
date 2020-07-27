@@ -118,6 +118,7 @@ help_text = {
     "local_diff": "This row has changed locally. Click to reset value to %(initial)s",
     "remote_diff": "This row has changed remotely. Click to set value to %(remote)s.",
     "configure_lnet": "Configure LNet for %s",
+    "configure_ldev": "Configure LDev",
     "change_host_profile": "Changing host %s to profile %s",
     "change_host_state": "Changing host %s to state %s",
     "configure_lnet_not_allowed": "LNet can only be configured in managed mode.",
