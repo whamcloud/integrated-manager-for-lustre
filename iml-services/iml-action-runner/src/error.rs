@@ -33,11 +33,15 @@ pub enum ActionRunnerError {
     #[error(transparent)]
     TokioTimerError(#[from] time::Error),
     #[error(transparent)]
+    ImlManagerClientError(#[from] iml_manager_client::ImlManagerClientError),
+    #[error(transparent)]
     ImlRabbitError(#[from] iml_rabbit::ImlRabbitError),
     #[error(transparent)]
     OneShotCanceledError(#[from] oneshot::Canceled),
     #[error(transparent)]
     RequiredError(#[from] RequiredError),
+    #[error(transparent)]
+    ReqwestError(#[from] reqwest::Error),
     #[error(transparent)]
     SqlxError(#[from] sqlx::Error),
 }

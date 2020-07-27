@@ -142,26 +142,6 @@
       "nullable": []
     }
   },
-  "131959cfcc0275c8797cb5aa12f0ad15dd6baa2f75c716815607a039defac3a6": {
-    "query": "select fqdn from chroma_core_managedhost where id = $1 and not_deleted = 't'",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "fqdn",
-          "type_info": "Varchar"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
   "17ed37ab2c915514b18cde4f0a1f3d2bf2eface63c4cb96e18155ab370fe39b6": {
     "query": "DELETE FROM chroma_core_serverprofile_repolist WHERE serverprofile_id = $1",
     "describe": {
@@ -1766,6 +1746,30 @@
       ]
     }
   },
+  "84106161840919908a2de13f79f154cdce5d97fc689118c49f0e83de1ada7fd6": {
+    "query": "SELECT mh.fqdn, target.filesystems FROM target as target LEFT JOIN chroma_core_managedhost as mh ON mh.id = target.active_host_id WHERE target.name='MGS' AND mh.fqdn IS NOT NULL",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 1,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
   "857ec5f2517d25f901399ddfb8efa1ab3f73ed8c8f899692c071172b61179d1a": {
     "query": "select * from chroma_core_lnetconfiguration where not_deleted = 't'",
     "describe": {
@@ -2818,6 +2822,26 @@
       "nullable": []
     }
   },
+  "ca0147326d5b4c913e80aceac3c638fe78fc9e7294f4e4f7215c2b9aa6195a75": {
+    "query": "SELECT fqdn FROM chroma_core_managedhost\n        WHERE id = $1 AND not_deleted = 't'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "cd9faf5b3fa09dd6d01b62b3957a7624d1462fb5789a7729f59215982a090ec1": {
     "query": "\n            DELETE FROM corosync_target_resource_managed_host\n            WHERE corosync_resource_id != ALL($1)\n            AND host_id = $2\n        ",
     "describe": {
@@ -3504,6 +3528,30 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "f5ae42f231abe242d0644e530d7070971e0f80ab0abfc4bcbe677d7f0cbbda67": {
+    "query": "select id, fqdn from chroma_core_managedhost",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false
+      ]
     }
   },
   "f7cb59fe7a6bc5dde5fe7f15025161aa8d6e7ba933bb963fcfe8d9afeee26945": {

@@ -107,6 +107,24 @@ pub fn create_api_url(path: impl ToString) -> Result<Url, ImlManagerClientError>
     Ok(url)
 }
 
+pub async fn graphql<T: DeserializeOwned + Debug>(
+    client: Client,
+    json: impl serde::Serialize,
+) -> Result<T, ImlManagerClientError> {
+    let uri = format!("https://{}/graphql", iml_manager_env::get_server_host());
+    let resp = client
+        .post(&uri)
+        .json(&json)
+        .send()
+        .await?
+        .json::<T>()
+        .await?;
+
+    tracing::debug!("Resp: {:?}", resp);
+
+    Ok(resp)
+}
+
 /// Performs a GET to the given API path
 pub async fn get<T: DeserializeOwned + Debug>(
     client: Client,

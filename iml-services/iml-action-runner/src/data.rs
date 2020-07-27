@@ -2,8 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{error::ActionRunnerError, Sender, Sessions, Shared};
-use iml_wire_types::{Action, ActionId, Fqdn, Id, ManagerMessage, PluginName};
+use crate::{db, error::ActionRunnerError, Sender, Sessions, Shared};
+use iml_graphql_queries::target;
+use iml_postgres::sqlx::{self, PgPool};
+use iml_wire_types::{Action, ActionId, Fqdn, Id, LdevEntry, ManagerMessage, PluginName};
 use std::{collections::HashMap, convert::TryInto, sync::Arc, time::Duration};
 use tokio::time::{delay_until, Instant};
 
@@ -96,6 +98,85 @@ pub(crate) async fn await_next_session(
     tracing::warn!("No new session after {} seconds", wait_secs);
 
     Err(ActionRunnerError::AwaitSession(fqdn.clone()))
+}
+
+pub async fn create_ldev_conf(
+    pool: PgPool,
+) -> Result<HashMap<String, Vec<LdevEntry>>, ActionRunnerError> {
+    let hosts = sqlx::query!("select id, fqdn from chroma_core_managedhost")
+        .fetch_all(&pool)
+        .await?
+        .into_iter()
+        .map(|x| (x.id, x.fqdn))
+        .collect::<HashMap<i32, String>>();
+
+    let fs_to_fqdn_map = db::get_mgs_host_fqdn(&pool).await?;
+
+    // Get devices from the `targets` endpoint
+    let client = iml_manager_client::get_client()?;
+    let targets: Vec<iml_device::Target> = iml_manager_client::graphql(
+        client,
+        target::query::build(false, None::<String>, None, None, None),
+    )
+    .await?;
+
+    tracing::debug!("targets: {:?}", targets);
+
+    let ldev_entries = targets
+        .into_iter()
+        .filter_map(|x| {
+            if let Some(primary) = x.active_host_id {
+                if let Some(mount_path) = x.mount_path {
+                    let failovers = x
+                        .host_ids
+                        .into_iter()
+                        .filter(|x| *x != primary)
+                        .filter_map(|x| hosts.get(&x))
+                        .map(|x| x.to_string())
+                        .collect::<Vec<String>>();
+
+                    let failover = if failovers.is_empty() {
+                        None
+                    } else {
+                        Some(failovers[0].to_string())
+                    };
+
+                    let ldev_entry = LdevEntry {
+                        primary: hosts
+                            .get(&primary)
+                            .expect("Couldn't get primary host.")
+                            .to_string(),
+                        failover,
+                        label: x.name,
+                        device: mount_path,
+                    };
+
+                    return Some((
+                        fs_to_fqdn_map
+                            .get(&x.filesystems[0])
+                            .expect("get first filesystem"),
+                        ldev_entry,
+                    ));
+                } else {
+                    panic!("All targets must be mounted when configuring ldev conf.");
+                }
+            } else {
+                panic!("All targets must be mounted on an active host when configuring ldev conf.");
+            }
+        })
+        .fold(
+            HashMap::<String, Vec<LdevEntry>>::new(),
+            |mut acc, (fqdn, ldev_entry)| {
+                let items = acc.entry(fqdn.to_string()).or_insert(vec![]);
+                (*items).push(ldev_entry);
+
+                acc
+            },
+        );
+
+    tracing::debug!("ldev entries: {:?}", ldev_entries);
+
+    Ok(ldev_entries)
 }
 
 pub fn insert_action_in_flight(

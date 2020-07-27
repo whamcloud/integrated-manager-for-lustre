@@ -108,7 +108,7 @@ pub(crate) struct QueryRoot;
 pub(crate) struct MutationRoot;
 
 #[derive(GraphQLEnum)]
-enum SortDir {
+pub enum SortDir {
     Asc,
     Desc,
 }

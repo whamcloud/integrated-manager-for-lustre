@@ -5,7 +5,11 @@ name = "iml-action-runner"
 version = "0.3.0"
 
 [dependencies]
+device-types = "0.1"
 futures = "0.3"
+iml-device = {path = "../iml-device", version = "0.3"}
+iml-graphql-queries = {path = "../../iml-graphql-queries", version = "0.3"}
+iml-manager-client = {path = "../../iml-manager-client", version = "0.3"}
 iml-manager-env = {path = "../../iml-manager-env", version = "0.3"}
 iml-postgres = {path = "../../iml-postgres", version = "0.3"}
 iml-rabbit = {path = "../../iml-rabbit", version = "0.3", features = ["warp-filters"]}
@@ -13,6 +17,7 @@ iml-service-queue = {path = "../iml-service-queue", version = "0.3"}
 iml-tracing = {version = "0.2", path = "../../iml-tracing"}
 iml-util = {path = "../../iml-util", version = "0.3"}
 iml-wire-types = {path = "../../iml-wire-types", version = "0.3"}
+reqwest = {version="0.10", features=["json"]}
 serde = {version = "1", features = ["derive"]}
 serde_json = "1.0"
 thiserror = "1.0"

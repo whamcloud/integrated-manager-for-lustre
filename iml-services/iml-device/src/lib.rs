@@ -449,7 +449,7 @@ pub fn find_targets<'a>(
         .collect()
 }
 
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone)]
+#[derive(serde::Deserialize, Debug, Eq, PartialEq, Ord, PartialOrd, Clone)]
 pub struct Target {
     pub state: String,
     pub name: String,
