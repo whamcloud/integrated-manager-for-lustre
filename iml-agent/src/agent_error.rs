@@ -101,6 +101,7 @@ pub enum ImlAgentError {
     UrlParseError(url::ParseError),
     Utf8Error(std::str::Utf8Error),
     XmlError(elementtree::Error),
+    LdevEntriesError(String),
 }
 
 impl std::fmt::Display for ImlAgentError {
@@ -135,6 +136,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::UrlParseError(ref err) => write!(f, "{}", err),
             ImlAgentError::Utf8Error(ref err) => write!(f, "{}", err),
             ImlAgentError::XmlError(ref err) => write!(f, "{}", err),
+            ImlAgentError::LdevEntriesError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -171,6 +173,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::UrlParseError(ref err) => Some(err),
             ImlAgentError::Utf8Error(ref err) => Some(err),
             ImlAgentError::XmlError(ref err) => Some(err),
+            ImlAgentError::LdevEntriesError(ref err) => None,
         }
     }
 }
