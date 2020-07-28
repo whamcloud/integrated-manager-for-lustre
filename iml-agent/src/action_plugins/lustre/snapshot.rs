@@ -45,3 +45,19 @@ pub async fn destroy(d: Destroy) -> Result<(), ImlAgentError> {
     }
     lctl(args).await.map(drop)
 }
+
+pub async fn mount(filesystem_name: String, snapshot_name: String) -> Result<(), ImlAgentError> {
+    let args = &[
+        "snapshot_mount",
+        "--fsname",
+        &filesystem_name,
+        "--name",
+        &snapshot_name,
+    ];
+    lctl(args).await.map(drop)
+}
+
+pub async fn unmount(snapshot_name: String) -> Result<(), ImlAgentError> {
+    let args = &["snapshot_unmount", "--name", &snapshot_name];
+    lctl(args).await.map(drop)
+}

@@ -15,7 +15,6 @@ pub mod ntp;
 pub mod ostpool;
 pub mod package;
 pub mod postoffice;
-pub mod snapshot;
 pub mod stratagem;
 pub use action_plugin::create_registry;
 pub(crate) mod firewall_cmd;
