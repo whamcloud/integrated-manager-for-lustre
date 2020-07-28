@@ -333,11 +333,15 @@ Vagrant.configure('2') do |config|
                          run: 'never',
                          inline: <<-SHELL
                            mkfs.lustre --servicenode 10.73.20.11@tcp:10.73.20.12@tcp --mgs --backfstype=zfs mgt/mgt
-                           mkdir -p /lustre/zfsmo/mgs
-                           mount -t lustre mgt/mgt /lustre/zfsmo/mgs
-
                            mkfs.lustre --reformat --failover 10.73.20.12@tcp --mdt --backfstype=zfs --fsname=zfsmo --index=0 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp mdt0/mdt0
-                           mkdir -p /lustre/zfsmo/mdt0
+                         SHELL
+
+        mds.vm.provision 'mount-zfs-fs',
+                         type: 'shell',
+                         run: 'never',
+                         inline: <<-SHELL
+                           mkdir -p /lustre/zfsmo/{mgs,mdt0}
+                           mount -t lustre mgt/mgt /lustre/zfsmo/mgs
                            mount -t lustre mdt0/mdt0 /lustre/zfsmo/mdt0
                          SHELL
 
@@ -353,8 +357,7 @@ Vagrant.configure('2') do |config|
                          type: 'shell',
                          run: 'never',
                          inline: <<-SHELL
-                           mkdir -p /mnt/mgs
-                           mkdir -p /mnt/mdt0
+                           mkdir -p /mnt/{mgs,mdt0}
                            mount -t lustre /dev/mapper/mpatha /mnt/mgs
                            mount -t lustre /dev/mapper/mpathb /mnt/mdt0
                          SHELL
@@ -406,6 +409,12 @@ Vagrant.configure('2') do |config|
                          run: 'never',
                          inline: <<-SHELL
                            mkfs.lustre --failover 10.73.20.11@tcp --mdt --backfstype=zfs --fsname=zfsmo --index=1 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp mdt1/mdt1
+                         SHELL
+
+        mds.vm.provision 'mount-zfs-fs',
+                         type: 'shell',
+                         run: 'never',
+                         inline: <<-SHELL
                            mkdir -p /lustre/zfsmo/mdt1
                            mount -t lustre mdt1/mdt1 /lustre/zfsmo/mdt1
                          SHELL
@@ -592,6 +601,12 @@ Vagrant.configure('2') do |config|
                               mkfs.lustre --failover 10.73.20.22@tcp --ost --backfstype=zfs --fsname=zfsmo --index=7 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost7/ost7
                               mkfs.lustre --failover 10.73.20.22@tcp --ost --backfstype=zfs --fsname=zfsmo --index=8 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost8/ost8
                               mkfs.lustre --failover 10.73.20.22@tcp --ost --backfstype=zfs --fsname=zfsmo --index=9 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost9/ost9
+                         SHELL
+
+         oss.vm.provision 'mount-zfs-fs',
+                         type: 'shell',
+                         run: 'never',
+                         inline: <<-SHELL
                               mkdir -p /lustre/zfsmo/ost{0..9}
                               mount -t lustre ost0/ost0 /lustre/zfsmo/ost0
                               mount -t lustre ost1/ost1 /lustre/zfsmo/ost1
@@ -718,6 +733,12 @@ Vagrant.configure('2') do |config|
                               mkfs.lustre --failover 10.73.20.21@tcp --ost --backfstype=zfs --fsname=zfsmo --index=17 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost17/ost17
                               mkfs.lustre --failover 10.73.20.21@tcp --ost --backfstype=zfs --fsname=zfsmo --index=18 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost18/ost18
                               mkfs.lustre --failover 10.73.20.21@tcp --ost --backfstype=zfs --fsname=zfsmo --index=19 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost19/ost19
+                         SHELL
+
+        oss.vm.provision 'mount-zfs-fs',
+                         type: 'shell',
+                         run: 'never',
+                         inline: <<-SHELL
                               mkdir -p /lustre/zfsmo/ost{10..19}
                               mount -t lustre ost10/ost10 /lustre/zfsmo/ost10
                               mount -t lustre ost11/ost11 /lustre/zfsmo/ost11

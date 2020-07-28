@@ -7,7 +7,5 @@ edge: LdiskfsOrZfs has nodes (Snapshot { name: Bare, available: false }, Snapsho
 edge: LdiskfsOrZfs has nodes (Snapshot { name: ImlConfigured, available: false }, Snapshot { name: ServersDeployed, available: false })
 edge: Ldiskfs has nodes (Snapshot { name: ServersDeployed, available: false }, Snapshot { name: LdiskfsInstalled, available: false })
 edge: Ldiskfs has nodes (Snapshot { name: LdiskfsInstalled, available: false }, Snapshot { name: LdiskfsCreated, available: false })
-edge: All has nodes (Snapshot { name: LdiskfsCreated, available: false }, Snapshot { name: FilesystemDetected, available: false })
-edge: All has nodes (Snapshot { name: ZfsCreated, available: false }, Snapshot { name: FilesystemDetected, available: false })
-edge: All has nodes (Snapshot { name: StratagemCreated, available: false }, Snapshot { name: FilesystemDetected, available: false })
+edge: Ldiskfs has nodes (Snapshot { name: LdiskfsCreated, available: false }, Snapshot { name: FilesystemDetected, available: false })
 
