@@ -666,7 +666,7 @@ pub async fn detect_fs(config: Config) -> Result<Config, TestError> {
     }
 }
 
-pub async fn mount_clients(config: Config) -> Result<Config, CmdError> {
+pub async fn mount_clients(config: Config) -> Result<Config, TestError> {
     let xs = config.client_servers().into_iter().map(|x| {
         tracing::debug!("provisioning client {}", x);
         async move {
@@ -678,7 +678,7 @@ pub async fn mount_clients(config: Config) -> Result<Config, CmdError> {
             .checked_status()
             .await?;
 
-            Ok::<_, CmdError>(())
+            Ok::<_, TestError>(())
         }
     });
 
@@ -687,7 +687,7 @@ pub async fn mount_clients(config: Config) -> Result<Config, CmdError> {
     Ok(config)
 }
 
-pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, CmdError> {
+pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestError> {
     let task = r#"{"filesystem": 1, "name": "testfile", "state": "created", "keep_failed": false, "actions": [ "stratagem.warning" ], "single_runner": true, "args": { "report_file": "/tmp/test-taskfile.txt" } }"#;
 
     // create file
