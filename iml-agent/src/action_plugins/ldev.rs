@@ -34,13 +34,8 @@ async fn read_ldev_config() -> Result<String, ImlAgentError> {
     Ok(buffer)
 }
 
-fn parse_entries(ldev_config: String) -> Result<BTreeSet<LdevEntry>, ImlAgentError> {
-    let existing_entries = ldev_config
-        .lines()
-        .map(LdevEntry::from)
-        .collect::<BTreeSet<LdevEntry>>();
-
-    Ok(existing_entries)
+fn parse_entries(ldev_config: String) -> BTreeSet<LdevEntry> {
+    ldev_config.lines().map(LdevEntry::from).collect()
 }
 
 fn config_needs_update_check(
@@ -65,7 +60,7 @@ fn convert(entries: &[LdevEntry]) -> String {
 
 pub async fn create(entries: Vec<LdevEntry>) -> Result<(), ImlAgentError> {
     let ldev_config = read_ldev_config().await?;
-    let existing_entries = parse_entries(ldev_config)?;
+    let existing_entries = parse_entries(ldev_config);
     let entries_set = entries.iter().cloned().collect::<BTreeSet<LdevEntry>>();
     if config_needs_update_check(&existing_entries, &entries_set) {
         let data = convert(&entries);
