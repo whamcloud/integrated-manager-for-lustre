@@ -6,7 +6,7 @@ use futures::{Stream, TryFutureExt, TryStreamExt};
 use iml_rabbit::{
     basic_consume, declare_transient_queue, BasicConsumeOptions, Channel, ImlRabbitError,
 };
-use iml_wire_types::{Fqdn, Id, Message, PluginMessage, PluginName, Seq};
+use iml_wire_types::{Fqdn, Id, Message, PluginMessage, PluginName};
 
 pub static AGENT_TX_RUST: &str = "agent_tx_rust";
 
@@ -15,7 +15,7 @@ pub struct AgentData {
     pub fqdn: Fqdn,
     pub plugin: PluginName,
     pub session_id: Id,
-    pub session_seq: Seq,
+    pub session_seq: u64,
     pub body: serde_json::Value,
 }
 
