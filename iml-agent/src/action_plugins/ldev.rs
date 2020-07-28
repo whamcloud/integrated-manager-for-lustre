@@ -48,6 +48,8 @@ pub async fn create(entries: Vec<LdevEntry>) -> Result<(), ImlAgentError> {
             let data = convert(&entries);
             write_to_file(data).await?;
         }
+    } else {
+        panic!("The ldev entries must not be empty.");
     }
 
     Ok(())
