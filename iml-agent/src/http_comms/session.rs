@@ -50,7 +50,7 @@ impl State {
             a.session.teardown().await?;
         }
 
-        std::mem::replace(self, State::Empty(Instant::now()));
+        *self = State::Empty(Instant::now());
 
         Ok(())
     }
@@ -61,21 +61,18 @@ impl State {
         }
     }
     pub fn create_active(&mut self, session: Session, in_flight: oneshot::Receiver<()>) {
-        std::mem::replace(
-            self,
-            State::Active(Active {
-                session,
-                in_flight: Some(in_flight),
-                instant: Instant::now() + Duration::from_secs(10),
-            }),
-        );
+        *self = State::Active(Active {
+            session,
+            in_flight: Some(in_flight),
+            instant: Instant::now() + Duration::from_secs(10),
+        });
     }
     pub fn reset_empty(&mut self) {
-        std::mem::replace(self, State::Empty(Instant::now() + Duration::from_secs(10)));
+        *self = State::Empty(Instant::now() + Duration::from_secs(10));
     }
     pub fn convert_to_pending(&mut self) {
         if let State::Empty(_) = self {
-            std::mem::replace(self, State::Pending);
+            *self = State::Pending;
         } else {
             warn!("Session was not in Empty state");
         }
