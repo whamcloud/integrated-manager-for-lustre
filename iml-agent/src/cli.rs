@@ -704,14 +704,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Err(e) = match command {
                 SnapshotCommand::Create(c) => lustre::snapshot::create(c).await,
                 SnapshotCommand::Destroy(d) => lustre::snapshot::destroy(d).await,
-                SnapshotCommand::Mount {
-                    fsname: fsn,
-                    name: n,
-                } => lustre::snapshot::mount((fsn, n)).await,
-                SnapshotCommand::Unmount {
-                    fsname: fsn,
-                    name: n,
-                } => lustre::snapshot::unmount((fsn, n)).await,
+                SnapshotCommand::Mount { fsname, name } => {
+                    lustre::snapshot::mount((fsname, name)).await
+                }
+                SnapshotCommand::Unmount { fsname, name } => {
+                    lustre::snapshot::unmount((fsname, name)).await
+                }
             } {
                 eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
