@@ -1,6 +1,5 @@
 use crate::*;
 use futures::{Future, FutureExt};
-use iml_cmd::CmdError;
 use petgraph::{
     graph::{DiGraph, EdgeIndex, NodeIndex},
     prelude::*,
@@ -11,7 +10,7 @@ use std::{cmp::Ordering, collections::HashMap, fmt, pin::Pin, process::Output, s
 
 type SnapshotMap = HashMap<String, Vec<SnapshotName>>;
 
-type BoxedFuture = Pin<Box<dyn Future<Output = Result<Config, CmdError>> + Send>>;
+type BoxedFuture = Pin<Box<dyn Future<Output = Result<Config, TestError>> + Send>>;
 type TransitionFn = Box<dyn Fn(Config) -> BoxedFuture + Send + Sync>;
 
 #[derive(PartialEq, Eq, Debug)]
@@ -175,7 +174,7 @@ pub fn get_snapshot_name_for_state(config: &Config, state: TestState) -> snapsho
 
 fn mk_transition<Fut>(f: fn(Config) -> Fut) -> TransitionFn
 where
-    Fut: Future<Output = Result<Config, CmdError>> + Send + 'static,
+    Fut: Future<Output = Result<Config, TestError>> + Send + 'static,
 {
     Box::new(move |config| Box::pin(f(config).boxed()))
 }
@@ -339,7 +338,7 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
         ldiskfs_created,
         filesystem_detected,
         Transition {
-            path: SnapshotPath::All,
+            path: SnapshotPath::Ldiskfs,
             transition: mk_transition(detect_fs),
         },
     );
@@ -348,7 +347,7 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
         zfs_created,
         filesystem_detected,
         Transition {
-            path: SnapshotPath::All,
+            path: SnapshotPath::Zfs,
             transition: mk_transition(detect_fs),
         },
     );
@@ -357,7 +356,7 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
         stratagem_created,
         filesystem_detected,
         Transition {
-            path: SnapshotPath::All,
+            path: SnapshotPath::Stratagem,
             transition: mk_transition(detect_fs),
         },
     );
@@ -469,7 +468,7 @@ pub fn get_active_test_path(
     }
 }
 
-pub async fn fetch_snapshot_list() -> Result<std::process::Output, CmdError> {
+pub async fn fetch_snapshot_list() -> Result<std::process::Output, TestError> {
     let mut cmd = vagrant::vagrant().await?;
 
     let x = cmd.arg("snapshot").arg("list").output().await?;
@@ -524,7 +523,7 @@ pub fn parse_snapshots(snapshots: Output) -> SnapshotMap {
     snapshot_map
 }
 
-pub async fn get_snapshots() -> Result<SnapshotMap, CmdError> {
+pub async fn get_snapshots() -> Result<SnapshotMap, TestError> {
     let snapshot_data = fetch_snapshot_list().await?;
     Ok(parse_snapshots(snapshot_data))
 }
