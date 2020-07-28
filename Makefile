@@ -41,10 +41,14 @@ local:
 	$(MAKE) RPM_DIST="0.$(shell date '+%s')" all
 
 check:
-	black chroma_core/ chroma_api/ chroma_cli/ tests/
-	cargo fmt
+	black --check ./
+	cargo fmt --all -- --check
 	PQ_LIB_DIR=/usr/pgsql-9.6/lib cargo check
 	PQ_LIB_DIR=/usr/pgsql-9.6/lib cargo clippy -- -W warnings
+
+fmt:
+	black ./
+	cargo fmt --all
 
 iml-gui-rpm:
 	$(MAKE) -f .copr/Makefile iml-gui-srpm outdir=.
