@@ -58,6 +58,8 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("ostpool_remove", ostpool::action_pool_remove)
         .add_plugin("snapshot_create", lustre::snapshot::create)
         .add_plugin("snapshot_destroy", lustre::snapshot::destroy)
+        .add_plugin("snapshot_mount", lustre::snapshot::mount)
+        .add_plugin("snapshot_unmount", lustre::snapshot::unmount)
         .add_plugin("postoffice_add", postoffice::route_add)
         .add_plugin("postoffice_remove", postoffice::route_remove)
         .add_plugin("create_lpurge_conf", lpurge::create_lpurge_conf)
