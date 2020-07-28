@@ -86,28 +86,6 @@ impl fmt::Display for Id {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(transparent)]
-pub struct Seq(pub u64);
-
-impl From<u64> for Seq {
-    fn from(name: u64) -> Self {
-        Self(name)
-    }
-}
-
-impl Default for Seq {
-    fn default() -> Self {
-        Self(0)
-    }
-}
-
-impl Seq {
-    pub fn increment(&mut self) {
-        self.0 += 1;
-    }
-}
-
 /// The payload from the agent.
 /// One or many can be packed into an `Envelope`
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -118,7 +96,7 @@ pub enum Message {
         fqdn: Fqdn,
         plugin: PluginName,
         session_id: Id,
-        session_seq: Seq,
+        session_seq: u64,
         body: serde_json::Value,
     },
     SessionCreateRequest {
@@ -197,7 +175,7 @@ pub enum PluginMessage {
         fqdn: Fqdn,
         plugin: PluginName,
         session_id: Id,
-        session_seq: Seq,
+        session_seq: u64,
         body: serde_json::Value,
     },
 }
