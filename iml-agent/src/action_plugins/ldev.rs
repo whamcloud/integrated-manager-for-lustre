@@ -6,8 +6,8 @@ use crate::{agent_error::ImlAgentError, env};
 use iml_wire_types::LdevEntry;
 use std::collections::BTreeSet;
 use tokio::{
-    fs::{File, OpenOptions},
-    io::{AsyncReadExt, AsyncWriteExt},
+    fs::{metadata, read_to_string, File},
+    io::AsyncWriteExt,
 };
 
 async fn write_to_file(content: String) -> Result<(), ImlAgentError> {
@@ -21,17 +21,10 @@ async fn write_to_file(content: String) -> Result<(), ImlAgentError> {
 async fn read_ldev_config() -> Result<String, ImlAgentError> {
     let ldev_path = env::get_ldev_conf();
 
-    let mut file = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .open(ldev_path)
-        .await?;
-
-    let mut buffer = String::new();
-    file.read_to_string(&mut buffer).await?;
-
-    Ok(buffer)
+    match metadata(&ldev_path).await {
+        Ok(_) => Ok(read_to_string(&ldev_path).await?),
+        Err(_) => Ok("".into()),
+    }
 }
 
 fn parse_entries(ldev_config: String) -> BTreeSet<LdevEntry> {
