@@ -20,8 +20,8 @@ _topdir
 **/.env
 *~
 artifacts
-base.repo
-chroma_support.repo
+/base.repo
+/chroma_support.repo
 chroma_test_env/
 chroma_unit_test_env/
 chroma-config.1.gz
@@ -43,6 +43,7 @@ set_state.prof
 settings.json
 simulator_state_*
 storage_server.repo
+/TAGS
 tags
 target
 tests/framework/chroma_support.repo
@@ -50,4 +51,4 @@ tests/framework/integration/shared_storage_configuration/full_cluster/cluster_se
 tests/framework/services/runner.sh
 tests/framework/utils/defaults.sh
 vagrant/sosreport*
-docker/*.tar
+/docker/*.tar
