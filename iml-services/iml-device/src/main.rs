@@ -98,12 +98,15 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let lustreclientmount_ct_id = client_mount_content_id(&pool).await?;
 
+    let mut mount_cache = HashMap::new();
+
     while let Some((host, (devices, mounts))) = s.try_next().await? {
         update_devices(&pool, &host, &devices).await?;
         update_client_mounts(&pool, lustreclientmount_ct_id, &host, &mounts).await?;
 
-        let mut cache = cache2.lock().await;
-        cache.insert(host, devices);
+        let mut device_cache = cache2.lock().await;
+        device_cache.insert(host.clone(), devices);
+        mount_cache.insert(host, mounts);
 
         let host_ids: HashMap<Fqdn, i32> =
             sqlx::query!("select fqdn, id from chroma_core_managedhost where not_deleted = 't'",)
@@ -112,9 +115,29 @@ async fn main() -> Result<(), ImlDeviceError> {
                 .try_collect()
                 .await?;
 
-        let mounts = HashMap::new();
+        let targets = find_targets(&device_cache, &mount_cache, &host_ids);
 
-        find_targets(&cache, &mounts, &host_ids);
+        for target in targets {
+            sqlx::query!(r#"INSERT INTO chroma_core_targets 
+                            (state, name, active_host_id, host_ids, uuid, mount_path) 
+                            VALUES($1, $2, $3, $4, $5, $6)
+                            ON CONFLICT (uuid)
+                            DO
+                                UPDATE SET state = EXCLUDED.state,
+                                           name = EXCLUDED.name,
+                                           active_host_id = EXCLUDED.active_host_id,
+                                           host_ids = EXCLUDED.host_ids,
+                                           mount_path = EXCLUDED.mount_path;"#,
+                target.state,
+                target.name,
+                target.active_host_id,
+                &target.host_ids[..],
+                target.uuid,
+                target.mount_path
+            )
+            .execute(&pool)
+            .await?;
+        }
     }
 
     Ok(())

@@ -235,10 +235,10 @@ pub fn find_targets(
 }
 
 pub struct Target {
-    state: String,
-    name: String,
-    active_host_id: i32,
-    host_ids: Vec<i32>,
-    uuid: String,
-    mount_path: String,
+    pub state: String,
+    pub name: String,
+    pub active_host_id: i32,
+    pub host_ids: Vec<i32>,
+    pub uuid: String,
+    pub mount_path: String,
 }
