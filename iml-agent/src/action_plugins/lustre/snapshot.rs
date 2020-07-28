@@ -35,7 +35,15 @@ pub async fn mount(
     lctl(args).await.map(drop)
 }
 
-pub async fn unmount(snapshot_name: String) -> Result<(), ImlAgentError> {
-    let args = &["snapshot_unmount", "--name", &snapshot_name];
+pub async fn unmount(
+    (filesystem_name, snapshot_name): (String, String),
+) -> Result<(), ImlAgentError> {
+    let args = &[
+        "snapshot_umount",
+        "--fsname",
+        &filesystem_name,
+        "--name",
+        &snapshot_name,
+    ];
     lctl(args).await.map(drop)
 }

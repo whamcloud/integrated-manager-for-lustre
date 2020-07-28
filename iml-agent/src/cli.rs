@@ -245,7 +245,7 @@ pub enum SnapshotCommand {
     /// Mount a snapshot
     Mount { fsname: String, name: String },
     /// Unmount a snapshot
-    Unmount { name: String },
+    Unmount { fsname: String, name: String },
 }
 
 #[derive(StructOpt, Debug)]
@@ -708,7 +708,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     fsname: fsn,
                     name: n,
                 } => lustre::snapshot::mount((fsn, n)).await,
-                SnapshotCommand::Unmount { name: n } => lustre::snapshot::unmount(n).await,
+                SnapshotCommand::Unmount {
+                    fsname: fsn,
+                    name: n,
+                } => lustre::snapshot::unmount((fsn, n)).await,
             } {
                 eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
