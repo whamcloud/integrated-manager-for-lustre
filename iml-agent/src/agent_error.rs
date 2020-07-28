@@ -173,7 +173,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::UrlParseError(ref err) => Some(err),
             ImlAgentError::Utf8Error(ref err) => Some(err),
             ImlAgentError::XmlError(ref err) => Some(err),
-            ImlAgentError::LdevEntriesError(ref err) => None,
+            ImlAgentError::LdevEntriesError(_) => None,
         }
     }
 }
