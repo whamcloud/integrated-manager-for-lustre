@@ -42,12 +42,7 @@ fn config_needs_update_check(
     existing_entries: &BTreeSet<LdevEntry>,
     entries: &BTreeSet<LdevEntry>,
 ) -> bool {
-    let diff: Vec<_> = existing_entries
-        .symmetric_difference(&entries)
-        .cloned()
-        .collect();
-
-    !diff.is_empty()
+    existing_entries != entries
 }
 
 fn convert(entries: &[LdevEntry]) -> String {
@@ -59,12 +54,14 @@ fn convert(entries: &[LdevEntry]) -> String {
 }
 
 pub async fn create(entries: Vec<LdevEntry>) -> Result<(), ImlAgentError> {
-    let ldev_config = read_ldev_config().await?;
-    let existing_entries = parse_entries(ldev_config);
-    let entries_set = entries.iter().cloned().collect::<BTreeSet<LdevEntry>>();
-    if config_needs_update_check(&existing_entries, &entries_set) {
-        let data = convert(&entries);
-        write_to_file(data).await?;
+    if !entries.is_empty() {
+        let ldev_config = read_ldev_config().await?;
+        let existing_entries = parse_entries(ldev_config);
+        let entries_set = entries.iter().cloned().collect::<BTreeSet<LdevEntry>>();
+        if config_needs_update_check(&existing_entries, &entries_set) {
+            let data = convert(&entries);
+            write_to_file(data).await?;
+        }
     }
 
     Ok(())
@@ -256,7 +253,7 @@ mod tests {
         let existing_entries: String = r#"mds1 mds2 MGS zfs:mdt0/mdt0
 mds1 mds2 zfsmo-MDT0000 zfs:mdt0/mdt0"#
             .into();
-        let existing_entries = parse_entries(existing_entries)?;
+        let existing_entries = parse_entries(existing_entries);
 
         let entries = vec![
             LdevEntry {
@@ -308,7 +305,7 @@ mds1 mds2 zfsmo-MDT0000 zfs:mdt0/mdt0"#
         let entries: String = r#"mds1 mds2 MGS zfs:mdt0/mdt0
 mds1 mds2 zfsmo-MDT0000 zfs:mdt0/mdt0"#
             .into();
-        let entries = parse_entries(entries)?;
+        let entries = parse_entries(entries);
 
         assert_eq!(
             config_needs_update_check(&existing_entries, &entries),
