@@ -39,11 +39,12 @@ fn handle_state(
             let (rx, fut) = a.session.poll();
 
             a.in_flight = Some(rx);
+            let id = a.session.id.clone();
 
             Either::Left(
                 fut.and_then(move |x| async move {
-                    if let Some((info, output)) = x {
-                        agent_client.send_data(info, output).await?;
+                    if let Some((seq, name, id, output)) = x {
+                        agent_client.send_data(id, name, seq, output).await?;
                     }
 
                     Ok(())
@@ -54,7 +55,7 @@ fn handle_state(
                             sessions.reset_active(&name).await;
                             Ok(())
                         }
-                        Err(_) => sessions.terminate_session(&name).await,
+                        Err(_) => sessions.terminate_session(&name, &id).await,
                     }
                 }),
             )

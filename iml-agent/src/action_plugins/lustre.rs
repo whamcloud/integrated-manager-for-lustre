@@ -15,9 +15,7 @@ use iml_cmd::{CheckedCommandExt, Command};
 ///     /lustre/<fsname>
 /// ```
 /// An example for `lustre_device` is `192.168.0.100@tcp0:/spfs` and for `mount_point` is `/mnt/lustre`
-pub async fn try_mount(
-    (lustre_device, mount_point): (String, String),
-) -> Result<(), ImlAgentError> {
+pub async fn mount((lustre_device, mount_point): (String, String)) -> Result<(), ImlAgentError> {
     let args = vec!["-t", "lustre", &lustre_device, &mount_point];
     Command::new("mount")
         .args(args)
