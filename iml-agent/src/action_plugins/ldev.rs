@@ -31,13 +31,6 @@ fn parse_entries(ldev_config: String) -> BTreeSet<LdevEntry> {
     ldev_config.lines().map(LdevEntry::from).collect()
 }
 
-fn config_needs_update_check(
-    existing_entries: &BTreeSet<LdevEntry>,
-    entries: &BTreeSet<LdevEntry>,
-) -> bool {
-    existing_entries != entries
-}
-
 fn convert(entries: &[LdevEntry]) -> String {
     entries
         .iter()
@@ -51,7 +44,7 @@ pub async fn create(entries: Vec<LdevEntry>) -> Result<(), ImlAgentError> {
         let ldev_config = read_ldev_config().await?;
         let existing_entries = parse_entries(ldev_config);
         let entries_set = entries.iter().cloned().collect::<BTreeSet<LdevEntry>>();
-        if config_needs_update_check(&existing_entries, &entries_set) {
+        if existing_entries != entries_set {
             let data = convert(&entries);
             write_to_file(data).await?;
         }
@@ -237,73 +230,6 @@ mod tests {
 
         let data = convert(&entries);
         insta::assert_snapshot!(data);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_config_needs_update() -> Result<(), ImlAgentError> {
-        let existing_entries: String = r#"mds1 mds2 MGS zfs:mdt0/mdt0
-mds1 mds2 zfsmo-MDT0000 zfs:mdt0/mdt0"#
-            .into();
-        let existing_entries = parse_entries(existing_entries);
-
-        let entries = vec![
-            LdevEntry {
-                primary: "mds1".into(),
-                failover: Some("mds2".into()),
-                label: "MGS".into(),
-                device: "zfs:mdt0/mdt0".into(),
-            },
-            LdevEntry {
-                primary: "mds1".into(),
-                failover: Some("mds2".into()),
-                label: "zfsmo-MDT0000".into(),
-                device: "zfs:mdt0/mdt0".into(),
-            },
-            LdevEntry {
-                primary: "oss1".into(),
-                failover: Some("oss2".into()),
-                label: "zfsmo-OST0005".into(),
-                device: "zfs:ost5/ost5".into(),
-            },
-        ]
-        .into_iter()
-        .collect::<BTreeSet<LdevEntry>>();
-
-        assert_eq!(config_needs_update_check(&existing_entries, &entries), true);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_config_does_not_need_updating() -> Result<(), ImlAgentError> {
-        let existing_entries = vec![
-            LdevEntry {
-                primary: "mds1".into(),
-                failover: Some("mds2".into()),
-                label: "MGS".into(),
-                device: "zfs:mdt0/mdt0".into(),
-            },
-            LdevEntry {
-                primary: "mds1".into(),
-                failover: Some("mds2".into()),
-                label: "zfsmo-MDT0000".into(),
-                device: "zfs:mdt0/mdt0".into(),
-            },
-        ]
-        .into_iter()
-        .collect::<BTreeSet<LdevEntry>>();
-
-        let entries: String = r#"mds1 mds2 MGS zfs:mdt0/mdt0
-mds1 mds2 zfsmo-MDT0000 zfs:mdt0/mdt0"#
-            .into();
-        let entries = parse_entries(entries);
-
-        assert_eq!(
-            config_needs_update_check(&existing_entries, &entries),
-            false
-        );
 
         Ok(())
     }
