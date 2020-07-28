@@ -690,7 +690,7 @@ pub async fn detect_fs(config: Config) -> Result<Config, TestError> {
 
 async fn configure_extra_profile(vagrant_path: &PathBuf) -> Result<Vec<PathBuf>, TestError> {
     let mut rc = vec![];
-    // Register Stratage Server Profile
+    // Register Stratagem Server Profile
     let mut profile_path = vagrant_path.clone();
     profile_path.push("stratagem-server.profile");
 
