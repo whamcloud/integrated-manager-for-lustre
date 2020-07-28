@@ -2,12 +2,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{
-    agent_error::ImlAgentError,
-    http_comms::{crypto_client, session},
-    server_properties,
-};
+use crate::{agent_error::ImlAgentError, http_comms::crypto_client, server_properties};
 use futures::{Future, TryFutureExt};
+use iml_wire_types::{Id, PluginName};
 use reqwest::Client;
 use std::convert::Into;
 use tracing::{debug, info};
@@ -72,13 +69,12 @@ impl AgentClient {
     /// * `output` - The data to send
     pub fn send_data(
         &self,
-        info: session::SessionInfo,
+        id: Id,
+        name: PluginName,
+        seq: u64,
         body: impl serde::Serialize + std::fmt::Debug,
     ) -> impl Future<Output = Result<(), ImlAgentError>> + '_ {
-        debug!(
-            "Sending session data for {:?}({:?}): {:?}",
-            info.name, info.id, body
-        );
+        debug!("Sending session data for {:?}({:?}): {:?}", name, id, body);
 
         let value = serde_json::to_value(body);
 
@@ -87,9 +83,9 @@ impl AgentClient {
 
             let m = iml_wire_types::Message::Data {
                 fqdn: iml_wire_types::Fqdn(server_properties::FQDN.to_string()),
-                plugin: info.name,
-                session_id: info.id,
-                session_seq: info.seq,
+                plugin: name,
+                session_id: id,
+                session_seq: seq,
                 body: value,
             };
 
