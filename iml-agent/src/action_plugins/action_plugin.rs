@@ -4,8 +4,8 @@
 
 use crate::{
     action_plugins::{
-        check_kernel, check_stonith, firewall_cmd, high_availability, kernel_module, lamigo,
-        ldev, lpurge, ltuer, lustre,
+        check_kernel, check_stonith, firewall_cmd, high_availability, kernel_module, lamigo, ldev,
+        lpurge, ltuer, lustre,
         ntp::{action_configure, is_ntp_configured},
         ostpool, package, postoffice,
         stratagem::{action_purge, action_warning, server},

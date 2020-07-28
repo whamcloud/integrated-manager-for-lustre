@@ -200,7 +200,7 @@ mod tests {
             LdevEntry {
                 primary: "oss2".into(),
                 failover: Some("oss1".into()),
-                label: "zfsmo-OST00010".into(),
+                label: "zfsmo-OST0010".into(),
                 device: "zfs:ost16/ost16".into(),
             },
             LdevEntry {
