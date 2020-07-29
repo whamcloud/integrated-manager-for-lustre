@@ -7,7 +7,7 @@ use futures::future::try_join_all;
 use iml_cmd::CheckedCommandExt;
 use iml_wire_types::Branding;
 use ssh::create_iml_diagnostics;
-use std::{collections::HashMap, env, str, time::Duration};
+use std::{collections::HashMap, env, path::PathBuf, str, time::Duration};
 use tokio::{
     fs::{canonicalize, File},
     io::AsyncWriteExt,
@@ -90,6 +90,28 @@ pub const STRATAGEM_CLIENT_PROFILE: &str = r#"{
     "corosync2": false,
     "pacemaker": false,
     "ui_description": "A client that can receive stratagem data",
+    "packages": [
+      "python2-iml-agent-management",
+      "lustre-client"
+    ],
+    "repolist": [
+      "base",
+      "lustre-client"
+    ]
+  }
+  "#;
+
+pub const BASE_CLIENT_PROFILE: &str = r#"{
+    "ui_name": "Client Node",
+    "managed": false,
+    "worker": false,
+    "name": "base_client",
+    "initial_state": "monitored",
+    "ntp": false,
+    "corosync": false,
+    "corosync2": false,
+    "pacemaker": false,
+    "ui_description": "A Lustre client",
     "packages": [
       "python2-iml-agent-management",
       "lustre-client"
@@ -666,76 +688,34 @@ pub async fn detect_fs(config: Config) -> Result<Config, TestError> {
     }
 }
 
-pub async fn mount_clients(config: Config) -> Result<Config, TestError> {
-    let xs = config.client_servers().into_iter().map(|x| {
-        tracing::debug!("provisioning client {}", x);
-        async move {
-            vagrant::provision_node(
-                x,
-                "install-lustre-client,configure-lustre-client-network,mount-lustre-client",
-            )
-            .await?
-            .checked_status()
-            .await?;
+// Returns list of server profile file names
+async fn configure_extra_profile(vagrant_path: &PathBuf) -> Result<Vec<String>, TestError> {
+    let mut rc = vec![];
+    // Register Stratagem Server Profile
+    let mut profile_path = vagrant_path.clone();
+    profile_path.push("stratagem-server.profile");
+    rc.push("stratagem-server.profile".into());
 
-            Ok::<_, TestError>(())
-        }
-    });
+    let mut file = File::create(&profile_path).await?;
+    file.write_all(STRATAGEM_SERVER_PROFILE.as_bytes()).await?;
 
-    try_join_all(xs).await?;
+    // Register Stratagem Client Profile
+    let mut profile_path = vagrant_path.clone();
+    profile_path.push("stratagem-client.profile");
+    rc.push("stratagem-client.profile".into());
 
-    Ok(config)
-}
+    let mut file = File::create(&profile_path).await?;
+    file.write_all(STRATAGEM_CLIENT_PROFILE.as_bytes()).await?;
 
-pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestError> {
-    let task = r#"{"filesystem": 1, "name": "testfile", "state": "created", "keep_failed": false, "actions": [ "stratagem.warning" ], "single_runner": true, "args": { "report_file": "/tmp/test-taskfile.txt" } }"#;
+    // Register Base Client Profile
+    let mut profile_path = vagrant_path.clone();
+    profile_path.push("base-client.profile");
+    rc.push("base-client.profile".into());
 
-    // create file
-    let (_, output) = ssh::ssh_exec(
-        config.client_server_ips()[0],
-        "touch /mnt/fs/reportfile; lfs path2fid /mnt/fs/reportfile",
-    )
-    .await?;
+    let mut file = File::create(&profile_path).await?;
+    file.write_all(BASE_CLIENT_PROFILE.as_bytes()).await?;
 
-    // Create Task
-    let cmd = format!(
-        r#". /var/lib/chroma/iml-settings.conf; curl -d '{}' -H "Content-Type: application/json" -H "Authorization: ApiKey $API_USER:$API_KEY" --cacert /var/lib/chroma/authority.crt https://adm.local/api/task/"#,
-        task
-    );
-    ssh::ssh_exec_cmd(config.manager_ip, &cmd)
-        .await?
-        .checked_status()
-        .await?;
-
-    let fid = format!(
-        "{{ \"fid\": \"{}\" }}",
-        String::from_utf8(output.stdout).unwrap().trim()
-    );
-
-    let cmd = format!(
-        "echo {} | socat - unix-connect:/run/iml/postman-testfile.sock",
-        fid
-    );
-
-    ssh::ssh_exec(config.mds_ips[0], &cmd).await?;
-
-    // @@ wait for fid to process by checking Task
-    delay_for(Duration::from_secs(20)).await;
-
-    let mut found = false;
-
-    // check output on client
-    for ip in config.client_server_ips() {
-        if let Ok((_, output)) = ssh::ssh_exec(ip, "cat /tmp/test-taskfile.txt").await {
-            assert_eq!(output.stdout, b"/mnt/fs/reportfile\n");
-            found = true;
-            break;
-        }
-    }
-
-    assert_eq!(found, true);
-
-    Ok(config)
+    Ok(rc)
 }
 
 pub async fn configure_rpm_setup(config: &Config) -> Result<(), TestError> {
@@ -748,29 +728,17 @@ pub async fn configure_rpm_setup(config: &Config) -> Result<(), TestError> {
     let mut file = File::create(config_path).await?;
     file.write_all(config_content.as_bytes()).await?;
 
-    let mut vm_cmd: String =
-        "mkdir -p /var/lib/chroma && sudo cp /vagrant/overrides.conf /var/lib/chroma".into();
-    if config.use_stratagem {
-        let mut server_profile_path = vagrant_path.clone();
-        server_profile_path.push("stratagem-server.profile");
+    let path_list = configure_extra_profile(&vagrant_path).await?;
 
-        let mut file = File::create(server_profile_path).await?;
-        file.write_all(STRATAGEM_SERVER_PROFILE.as_bytes()).await?;
-
-        let mut client_profile_path = vagrant_path.clone();
-        client_profile_path.push("stratagem-client.profile");
-
-        let mut file = File::create(client_profile_path).await?;
-        file.write_all(STRATAGEM_CLIENT_PROFILE.as_bytes()).await?;
-
-        vm_cmd = format!(
-            "{}{}",
-            vm_cmd,
-            "&& sudo chroma-config profile register /vagrant/stratagem-server.profile \
-        && sudo chroma-config profile register /vagrant/stratagem-client.profile \
-        && sudo systemctl restart iml-manager.target"
-        );
-    }
+    let vm_cmd = format!(
+        "mkdir -p /var/lib/chroma && sudo cp /vagrant/overrides.conf /var/lib/chroma {} \
+         && sudo systemctl restart iml-manager.target",
+        path_list
+            .into_iter()
+            .map(|p| format!(" && sudo chroma-config profile register /vagrant/{}", p))
+            .collect::<Vec<String>>()
+            .concat()
+    );
 
     vagrant::rsync(config.manager).await?;
 
@@ -792,29 +760,16 @@ pub async fn configure_docker_setup(config: &Config) -> Result<(), TestError> {
     let mut file = File::create(config_path).await?;
     file.write_all(config_content.as_bytes()).await?;
 
-    let mut vm_cmd: String =
-        "sudo mkdir -p /etc/iml-docker/setup && sudo cp /vagrant/config /etc/iml-docker/setup/"
-            .into();
-    if config.use_stratagem {
-        let mut server_profile_path = vagrant_path.clone();
-        server_profile_path.push("stratagem-server.profile");
+    let path_list = configure_extra_profile(&vagrant_path).await?;
 
-        let mut file = File::create(server_profile_path).await?;
-        file.write_all(STRATAGEM_SERVER_PROFILE.as_bytes()).await?;
-
-        let mut client_profile_path = vagrant_path.clone();
-        client_profile_path.push("stratagem-client.profile");
-
-        let mut file = File::create(client_profile_path).await?;
-        file.write_all(STRATAGEM_CLIENT_PROFILE.as_bytes()).await?;
-
-        vm_cmd = format!(
-            "{}{}",
-            vm_cmd,
-            "&& sudo cp /vagrant/stratagem-server.profile /etc/iml-docker/setup/ \
-             && sudo cp /vagrant/stratagem-client.profile /etc/iml-docker/setup/"
-        );
-    }
+    let vm_cmd = format!(
+        "sudo mkdir -p /etc/iml-docker/setup && sudo cp /vagrant/config /etc/iml-docker/setup/ {}",
+        path_list
+            .into_iter()
+            .map(|p| format!(" && sudo cp /vagrant/{} /etc/iml-docker/setup/", p))
+            .collect::<Vec<String>>()
+            .concat()
+    );
 
     vagrant::rsync(config.manager).await?;
 
