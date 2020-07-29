@@ -194,7 +194,7 @@ impl Default for Config {
             mds_ips: vec!["10.73.10.11", "10.73.10.12"],
             oss: vec!["oss1", "oss2"],
             oss_ips: vec!["10.73.10.21", "10.73.10.22"],
-            client: vec!["c1"],
+            client: vec!["client1"],
             client_ips: vec!["10.73.10.31"],
             iscsi: "iscsi",
             lustre_version: "2.12.4",
@@ -204,7 +204,7 @@ impl Default for Config {
                 ("mds2", "10.73.10.12"),
                 ("oss1", "10.73.10.21"),
                 ("oss2", "10.73.10.22"),
-                ("c1", "10.73.10.31"),
+                ("client1", "10.73.10.31"),
             ]
             .into_iter()
             .collect::<HashMap<&'static str, &'static str>>(),
@@ -775,6 +775,6 @@ mod tests {
 
         let servers = xs.to_server_list();
 
-        assert_eq!(servers, vec!["mds1", "mds2", "oss1", "oss2", "c1"]);
+        assert_eq!(servers, vec!["mds1", "mds2", "oss1", "oss2", "client1"]);
     }
 }
