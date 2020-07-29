@@ -3,11 +3,11 @@
 // license that can be found in the LICENSE file.
 
 use crate::*;
-use iml_cmd::CmdError;
+use futures::future::TryFutureExt;
 use std::str;
 use tokio::{fs::canonicalize, process::Command};
 
-pub async fn vagrant() -> Result<Command, CmdError> {
+pub async fn vagrant() -> Result<Command, TestError> {
     let mut x = Command::new("vagrant");
 
     let path = canonicalize("../vagrant/").await?;
@@ -17,7 +17,7 @@ pub async fn vagrant() -> Result<Command, CmdError> {
     Ok(x)
 }
 
-pub async fn up<'a>() -> Result<Command, CmdError> {
+pub async fn up<'a>() -> Result<Command, TestError> {
     let mut x = vagrant().await?;
 
     x.arg("up");
@@ -25,7 +25,7 @@ pub async fn up<'a>() -> Result<Command, CmdError> {
     Ok(x)
 }
 
-pub async fn destroy<'a>(config: &Config) -> Result<(), CmdError> {
+pub async fn destroy<'a>(config: &Config) -> Result<(), TestError> {
     let nodes = config.destroy_list();
 
     for node in &nodes {
@@ -45,28 +45,28 @@ pub async fn destroy<'a>(config: &Config) -> Result<(), CmdError> {
     Ok(())
 }
 
-pub async fn halt() -> Result<Command, CmdError> {
+pub async fn halt() -> Result<Command, TestError> {
     let mut x = vagrant().await?;
     x.arg("halt");
 
     Ok(x)
 }
 
-pub async fn suspend() -> Result<Command, CmdError> {
+pub async fn suspend() -> Result<Command, TestError> {
     let mut x = vagrant().await?;
     x.arg("suspend");
 
     Ok(x)
 }
 
-pub async fn reload() -> Result<Command, CmdError> {
+pub async fn reload() -> Result<Command, TestError> {
     let mut x = vagrant().await?;
     x.arg("reload");
 
     Ok(x)
 }
 
-async fn snapshot() -> Result<Command, CmdError> {
+async fn snapshot() -> Result<Command, TestError> {
     let mut x = vagrant().await?;
 
     x.arg("snapshot");
@@ -74,7 +74,7 @@ async fn snapshot() -> Result<Command, CmdError> {
     Ok(x)
 }
 
-pub async fn snapshot_save(host: &str, name: &str) -> Result<Command, CmdError> {
+pub async fn snapshot_save(host: &str, name: &str) -> Result<Command, TestError> {
     let mut x = snapshot().await?;
 
     x.arg("save").arg("-f").arg(host).arg(name);
@@ -82,7 +82,7 @@ pub async fn snapshot_save(host: &str, name: &str) -> Result<Command, CmdError> 
     Ok(x)
 }
 
-pub async fn snapshot_restore(host: &str, name: &str) -> Result<Command, CmdError> {
+pub async fn snapshot_restore(host: &str, name: &str) -> Result<Command, TestError> {
     let mut x = snapshot().await?;
 
     x.arg("restore").arg(host).arg(name);
@@ -90,7 +90,7 @@ pub async fn snapshot_restore(host: &str, name: &str) -> Result<Command, CmdErro
     Ok(x)
 }
 
-pub async fn snapshot_delete(host: &str, name: &str) -> Result<Command, CmdError> {
+pub async fn snapshot_delete(host: &str, name: &str) -> Result<Command, TestError> {
     let mut x = snapshot().await?;
 
     x.arg("delete").arg("-f").arg(host).arg(name);
@@ -98,7 +98,7 @@ pub async fn snapshot_delete(host: &str, name: &str) -> Result<Command, CmdError
     Ok(x)
 }
 
-pub async fn provision(name: &str) -> Result<Command, CmdError> {
+pub async fn provision(name: &str) -> Result<Command, TestError> {
     let mut x = vagrant().await?;
 
     x.arg("provision").arg("--provision-with").arg(name);
@@ -106,7 +106,7 @@ pub async fn provision(name: &str) -> Result<Command, CmdError> {
     Ok(x)
 }
 
-pub async fn provision_node(node: &str, name: &str) -> Result<Command, CmdError> {
+pub async fn provision_node(node: &str, name: &str) -> Result<Command, TestError> {
     let mut x = vagrant().await?;
 
     x.arg("provision")
@@ -117,8 +117,8 @@ pub async fn provision_node(node: &str, name: &str) -> Result<Command, CmdError>
     Ok(x)
 }
 
-pub async fn rsync(host: &str) -> Result<(), CmdError> {
+pub async fn rsync(host: &str) -> Result<(), TestError> {
     let mut x = vagrant().await?;
 
-    x.arg("rsync").arg(host).checked_status().await
+    x.arg("rsync").arg(host).checked_status().err_into().await
 }

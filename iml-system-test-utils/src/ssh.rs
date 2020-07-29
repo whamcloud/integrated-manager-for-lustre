@@ -1,9 +1,9 @@
 // Copyright (c) 2020 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
-use crate::Config;
-use futures::future::try_join_all;
-use iml_cmd::{CheckedChildExt, CheckedCommandExt, CmdError};
+use crate::{Config, TestError};
+use futures::future::{try_join_all, TryFutureExt};
+use iml_cmd::{CheckedChildExt, CheckedCommandExt};
 use std::{
     process::{Output, Stdio},
     str,
@@ -11,7 +11,7 @@ use std::{
 };
 use tokio::{fs::canonicalize, io::AsyncWriteExt, process::Command};
 
-pub async fn scp(from: String, to: String) -> Result<(), CmdError> {
+pub async fn scp(from: String, to: String) -> Result<(), TestError> {
     tracing::debug!("transferring file from {} to {}", from, to);
 
     let path = canonicalize("../vagrant/").await?;
@@ -37,7 +37,7 @@ pub async fn scp_down_parallel(
     servers: &[&str],
     remote_path: &str,
     to: &str,
-) -> Result<(), CmdError> {
+) -> Result<(), TestError> {
     let remote_calls = servers.iter().map(|host| {
         let from = format!("{}:{}", host, remote_path);
         scp(from, to.to_string())
@@ -52,7 +52,7 @@ pub async fn scp_up_parallel(
     servers: &[&str],
     from: &str,
     to_remote: &str,
-) -> Result<(), CmdError> {
+) -> Result<(), TestError> {
     let remote_calls = servers.iter().map(|host| {
         let to = format!("{}:{}", host, to_remote);
         scp(from.into(), to)
@@ -63,7 +63,7 @@ pub async fn scp_up_parallel(
     Ok(())
 }
 
-pub async fn ssh_exec_cmd<'a, 'b>(host: &'a str, cmd: &'b str) -> Result<Command, CmdError> {
+pub async fn ssh_exec_cmd<'a, 'b>(host: &'a str, cmd: &'b str) -> Result<Command, TestError> {
     tracing::debug!("Running command {} on {}", cmd, host);
     let path = canonicalize("../vagrant/").await?;
 
@@ -82,7 +82,7 @@ pub async fn ssh_exec_cmd<'a, 'b>(host: &'a str, cmd: &'b str) -> Result<Command
     Ok(x)
 }
 
-pub async fn ssh_exec<'a, 'b>(host: &'a str, cmd: &'b str) -> Result<(&'a str, Output), CmdError> {
+pub async fn ssh_exec<'a, 'b>(host: &'a str, cmd: &'b str) -> Result<(&'a str, Output), TestError> {
     let mut cmd = ssh_exec_cmd(host, cmd).await?;
 
     let out = cmd.checked_output().await?;
@@ -93,7 +93,7 @@ pub async fn ssh_exec<'a, 'b>(host: &'a str, cmd: &'b str) -> Result<(&'a str, O
 async fn ssh_exec_parallel<'a, 'b>(
     servers: &[&'a str],
     cmd: &'b str,
-) -> Result<Vec<(&'a str, Output)>, CmdError> {
+) -> Result<Vec<(&'a str, Output)>, TestError> {
     let remote_calls = servers.iter().map(|host| ssh_exec(host, cmd));
 
     let output = try_join_all(remote_calls).await?;
@@ -113,7 +113,7 @@ pub async fn ssh_script<'a, 'b>(
     host: &'a str,
     script: &'b str,
     args: &[&'b str],
-) -> Result<(&'a str, Output), CmdError> {
+) -> Result<(&'a str, Output), TestError> {
     let path = canonicalize("../vagrant/").await?;
 
     let mut script_path = path.clone();
@@ -150,7 +150,7 @@ async fn ssh_script_parallel<'a, 'b>(
     servers: &'b [&'a str],
     script: &'b str,
     args: &[&'b str],
-) -> Result<Vec<(&'a str, Output)>, CmdError> {
+) -> Result<Vec<(&'a str, Output)>, TestError> {
     let remote_calls = servers.iter().map(|host| ssh_script(host, script, args));
 
     let output = try_join_all(remote_calls).await?;
@@ -168,7 +168,7 @@ async fn ssh_script_parallel<'a, 'b>(
 
 pub async fn install_ldiskfs_no_iml<'a, 'b>(
     config: &Config,
-) -> Result<Vec<(&'a str, Output)>, CmdError> {
+) -> Result<Vec<(&'a str, Output)>, TestError> {
     ssh_script_parallel(
         &config.storage_server_ips(),
         "scripts/install_ldiskfs_no_iml.sh",
@@ -179,7 +179,7 @@ pub async fn install_ldiskfs_no_iml<'a, 'b>(
 
 pub async fn install_zfs_no_iml<'a, 'b>(
     config: &Config,
-) -> Result<Vec<(&'a str, Output)>, CmdError> {
+) -> Result<Vec<(&'a str, Output)>, TestError> {
     ssh_script_parallel(
         &config.storage_server_ips(),
         "scripts/install_zfs_no_iml.sh",
@@ -188,44 +188,44 @@ pub async fn install_zfs_no_iml<'a, 'b>(
     .await
 }
 
-pub async fn yum_update<'a, 'b>(hosts: &'b [&'a str]) -> Result<Vec<(&'a str, Output)>, CmdError> {
+pub async fn yum_update<'a, 'b>(hosts: &'b [&'a str]) -> Result<Vec<(&'a str, Output)>, TestError> {
     ssh_exec_parallel(hosts, "yum clean metadata; yum update -y").await
 }
 
 pub async fn configure_ntp_for_host_only_if<'a, 'b>(
     hosts: &'b [&'a str],
-) -> Result<Vec<(&'a str, Output)>, CmdError> {
+) -> Result<Vec<(&'a str, Output)>, TestError> {
     ssh_script_parallel(hosts, "scripts/configure_ntp.sh", &["10.73.10.1"]).await
 }
 
 pub async fn configure_ntp_for_adm<'a, 'b>(
     hosts: &'b [&'a str],
-) -> Result<Vec<(&'a str, Output)>, CmdError> {
+) -> Result<Vec<(&'a str, Output)>, TestError> {
     ssh_script_parallel(hosts, "scripts/configure_ntp.sh", &["adm.local"]).await
 }
 
 pub async fn wait_for_ntp_for_host_only_if<'a, 'b>(
     hosts: &'b [&'a str],
-) -> Result<Vec<(&'a str, Output)>, CmdError> {
+) -> Result<Vec<(&'a str, Output)>, TestError> {
     ssh_script_parallel(hosts, "scripts/wait_for_ntp.sh", &["10.73.10.1"]).await
 }
 
 pub async fn wait_for_ntp_for_adm<'a, 'b>(
     hosts: &'b [&'a str],
-) -> Result<Vec<(&'a str, Output)>, CmdError> {
+) -> Result<Vec<(&'a str, Output)>, TestError> {
     ssh_script_parallel(hosts, "scripts/wait_for_ntp.sh", &["adm.local"]).await
 }
 
 pub async fn enable_debug_on_hosts<'a, 'b>(
     hosts: &'b [&'a str],
-) -> Result<Vec<(&'a str, Output)>, CmdError> {
+) -> Result<Vec<(&'a str, Output)>, TestError> {
     ssh_script_parallel(hosts, "scripts/enable_debug.sh", &[]).await
 }
 
 pub async fn create_iml_diagnostics<'a, 'b>(
     hosts: Vec<&'a str>,
     prefix: &'a str,
-) -> Result<(), CmdError> {
+) -> Result<(), TestError> {
     let path_buf = canonicalize("../vagrant/").await?;
     let path = path_buf.as_path().to_str().expect("Couldn't get path.");
 
@@ -235,7 +235,7 @@ pub async fn create_iml_diagnostics<'a, 'b>(
     let now = SystemTime::now();
     let ts = now.duration_since(UNIX_EPOCH).unwrap().as_millis();
 
-    let report_dir = format!("sosreport_{}", ts);
+    let report_dir = format!("sosreport_{}_{}", prefix, ts);
     let mut mkdir = Command::new("mkdir");
 
     mkdir
@@ -258,23 +258,37 @@ pub async fn create_iml_diagnostics<'a, 'b>(
         .arg("-R")
         .arg(report_dir)
         .checked_status()
+        .err_into()
         .await
 }
 
-pub async fn detect_fs(host: &str) -> Result<(), CmdError> {
+pub async fn detect_fs(host: &str) -> Result<(), TestError> {
     ssh_exec_cmd(host, "iml filesystem detect")
         .await?
         .checked_status()
+        .err_into()
         .await
 }
 
-pub async fn systemd_status(host: &str, service_name: &str) -> Result<Command, CmdError> {
+pub async fn list_fs_json(host: &str) -> Result<Vec<serde_json::Value>, TestError> {
+    ssh_exec_cmd(host, "iml filesystem list --display json")
+        .await?
+        .checked_output()
+        .err_into()
+        .await
+        .map(|o| {
+            let v: Vec<serde_json::Value> = serde_json::from_slice(&o.stdout).unwrap();
+            v
+        })
+}
+
+pub async fn systemd_status(host: &str, service_name: &str) -> Result<Command, TestError> {
     let cmd = ssh_exec_cmd(host, format!("systemctl status {}", service_name).as_str()).await?;
 
     Ok(cmd)
 }
 
-pub async fn add_servers(host: &str, profile: &str, hosts: Vec<String>) -> Result<(), CmdError> {
+pub async fn add_servers(host: &str, profile: &str, hosts: Vec<String>) -> Result<(), TestError> {
     ssh_exec_cmd(
         host,
         &format!("iml server add {} -p {}", hosts.join(","), profile),

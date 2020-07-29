@@ -2,12 +2,15 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::action_plugins::{
-    check_kernel, check_stonith, firewall_cmd, high_availability, kernel_module, lamigo, lpurge,
-    ltuer, lustre,
-    ntp::{action_configure, is_ntp_configured},
-    ostpool, package, postoffice,
-    stratagem::{action_purge, action_warning, server},
+use crate::{
+    action_plugins::{
+        check_kernel, check_stonith, firewall_cmd, high_availability, kernel_module, lamigo, ldev,
+        lpurge, ltuer, lustre,
+        ntp::{action_configure, is_ntp_configured},
+        ostpool, package, postoffice,
+        stratagem::{action_purge, action_warning, server},
+    },
+    lustre::lctl,
 };
 use iml_util::action_plugins;
 use iml_wire_types::ActionName;
@@ -38,7 +41,7 @@ pub fn create_registry() -> action_plugins::Actions {
             "get_ha_resource_list",
             high_availability::get_ha_resource_list,
         )
-        .add_plugin("try_mount", lustre::try_mount)
+        .add_plugin("mount", lustre::mount)
         .add_plugin("crm_attribute", high_availability::crm_attribute)
         .add_plugin(
             "change_mcast_port",
@@ -47,12 +50,14 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("add_firewall_port", firewall_cmd::add_port)
         .add_plugin("remove_firewall_port", firewall_cmd::remove_port)
         .add_plugin("pcs", high_availability::pcs)
-        .add_plugin("lctl", lustre::lctl)
+        .add_plugin("lctl", lctl::<Vec<_>, String>)
         .add_plugin("ostpool_create", ostpool::action_pool_create)
         .add_plugin("ostpool_wait", ostpool::action_pool_wait)
         .add_plugin("ostpool_destroy", ostpool::action_pool_destroy)
         .add_plugin("ostpool_add", ostpool::action_pool_add)
         .add_plugin("ostpool_remove", ostpool::action_pool_remove)
+        .add_plugin("snapshot_create", lustre::snapshot::create)
+        .add_plugin("snapshot_destroy", lustre::snapshot::destroy)
         .add_plugin("postoffice_add", postoffice::route_add)
         .add_plugin("postoffice_remove", postoffice::route_remove)
         .add_plugin("create_lpurge_conf", lpurge::create_lpurge_conf)
@@ -62,7 +67,8 @@ pub fn create_registry() -> action_plugins::Actions {
             action_configure::update_and_write_new_config,
         )
         .add_plugin("is_ntp_configured", is_ntp_configured::is_ntp_configured)
-        .add_plugin("create_ltuer_conf", ltuer::create_ltuer_conf);
+        .add_plugin("create_ltuer_conf", ltuer::create_ltuer_conf)
+        .add_plugin("create_ldev_conf", ldev::create);
 
     info!("Loaded the following ActionPlugins:");
 

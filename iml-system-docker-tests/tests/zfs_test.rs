@@ -2,15 +2,14 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_cmd::CmdError;
 use iml_system_docker_tests::run_fs_test;
 use iml_system_test_utils::*;
 
 #[tokio::test]
-async fn test_docker_zfs_setup() -> Result<(), CmdError> {
+async fn test_docker_zfs_setup() -> Result<(), TestError> {
     let config: Config = Config::default();
     let config: Config = Config {
-        profile_map: vec![("base_monitored".into(), config.storage_servers())],
+        profile_map: vec![("base_monitored".into(), config.storage_servers()), ("base_client".into(), config.client_servers())],
         test_type: TestType::Docker,
         ntp_server: NtpServer::HostOnly,
         fs_type: FsType::ZFS,

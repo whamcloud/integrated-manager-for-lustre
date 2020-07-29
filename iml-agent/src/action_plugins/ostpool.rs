@@ -90,7 +90,7 @@ pub async fn action_pool_destroy(cmd: CmdPool) -> Result<(), ImlAgentError> {
 
 pub async fn pool_list(filesystem: &str) -> Result<Vec<String>, ImlAgentError> {
     match lctl(vec!["pool_list", &filesystem]).await {
-        Ok(o) => Ok(String::from_utf8_lossy(&o.stdout)
+        Ok(o) => Ok(o
             .lines()
             .skip(1)
             .map(|s| s.rsplit('.').next().unwrap().to_string())

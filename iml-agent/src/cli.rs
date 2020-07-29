@@ -12,6 +12,7 @@ use iml_agent::action_plugins::{
         server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
     },
 };
+use iml_wire_types::snapshot;
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
 use spinners::{Spinner, Spinners};
@@ -235,6 +236,14 @@ pub enum NtpClientCommand {
     IsConfigured,
 }
 
+#[derive(Debug, StructOpt)]
+pub enum SnapshotCommand {
+    /// Create a snapshot
+    Create(snapshot::Create),
+    /// Destroy the snapshot
+    Destroy(snapshot::Destroy),
+}
+
 #[derive(StructOpt, Debug)]
 #[structopt(name = "iml-agent", setting = structopt::clap::AppSettings::ColoredHelp)]
 /// The Integrated Manager for Lustre Agent CLI
@@ -283,13 +292,12 @@ pub enum App {
     /// Get latest kernel which supports listed modules
     GetKernel { modules: Vec<String> },
 
-    #[structopt(name = "try_mount")]
-    /// Try to mount `lustre_device` to the `mount_point`
-    TryMount {
-        #[structopt(long)]
+    #[structopt(name = "mount")]
+    /// Mount lustre device
+    Mount {
+        /// For example, 10.73.20.11@tcp0:10.73.20.12@tcp0:/fs2
         lustre_device: String,
-
-        #[structopt(long)]
+        /// For example, /mnt/fs2
         mount_point: String,
     },
 
@@ -331,6 +339,13 @@ pub enum App {
     PostOffice {
         #[structopt(subcommand)]
         cmd: PostOfficeCommand,
+    },
+
+    #[structopt(name = "snapshot")]
+    /// Snapshot operations
+    Snapshot {
+        #[structopt(subcommand)]
+        command: SnapshotCommand,
     },
 }
 
@@ -605,10 +620,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 exit(exitcode::SOFTWARE);
             }
         },
-        App::TryMount {
+        App::Mount {
             lustre_device,
             mount_point,
-        } => match lustre::try_mount((lustre_device, mount_point)).await {
+        } => match lustre::mount((lustre_device, mount_point)).await {
             Ok(()) => println!("Done"),
             Err(e) => {
                 eprintln!("{:?}", e);
@@ -677,6 +692,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         App::LAmigo { c } => {
             if let Err(e) = lamigo::create_lamigo_service_unit(c).await {
+                eprintln!("{}", e);
+                exit(exitcode::SOFTWARE);
+            }
+        }
+        App::Snapshot { command } => {
+            if let Err(e) = match command {
+                SnapshotCommand::Create(c) => lustre::snapshot::create(c).await,
+                SnapshotCommand::Destroy(d) => lustre::snapshot::destroy(d).await,
+            } {
                 eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
             }

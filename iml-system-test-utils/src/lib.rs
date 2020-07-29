@@ -4,16 +4,30 @@ pub mod vagrant;
 
 use async_trait::async_trait;
 use futures::future::try_join_all;
-use iml_cmd::{CheckedCommandExt, CmdError};
+use iml_cmd::CheckedCommandExt;
 use iml_wire_types::Branding;
 use ssh::create_iml_diagnostics;
-use std::{collections::HashMap, env, io, str, time::Duration};
+use std::{collections::HashMap, env, path::PathBuf, str, time::Duration};
 use tokio::{
     fs::{canonicalize, File},
     io::AsyncWriteExt,
     process::Command,
     time::delay_for,
 };
+
+#[derive(Debug, thiserror::Error)]
+pub enum TestError {
+    #[error(transparent)]
+    CmdError(#[from] iml_cmd::CmdError),
+    #[error("ASSERT FAILED: {0}")]
+    Assert(String),
+}
+
+impl From<std::io::Error> for TestError {
+    fn from(err: std::io::Error) -> Self {
+        TestError::CmdError(iml_cmd::CmdError::Io(err))
+    }
+}
 
 #[derive(PartialEq, Clone)]
 pub enum TestType {
@@ -87,11 +101,33 @@ pub const STRATAGEM_CLIENT_PROFILE: &str = r#"{
   }
   "#;
 
+pub const BASE_CLIENT_PROFILE: &str = r#"{
+    "ui_name": "Client Node",
+    "managed": false,
+    "worker": false,
+    "name": "base_client",
+    "initial_state": "monitored",
+    "ntp": false,
+    "corosync": false,
+    "corosync2": false,
+    "pacemaker": false,
+    "ui_description": "A Lustre client",
+    "packages": [
+      "python2-iml-agent-management",
+      "lustre-client"
+    ],
+    "repolist": [
+      "base",
+      "lustre-client"
+    ]
+  }
+  "#;
+
 pub async fn try_command_n_times(
     max_tries: u32,
     delay: u64,
     cmd: &mut Command,
-) -> Result<(), CmdError> {
+) -> Result<(), TestError> {
     let mut count = 1;
     let mut r = cmd.status().await?;
 
@@ -108,14 +144,10 @@ pub async fn try_command_n_times(
     if r.success() {
         Ok(())
     } else {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!(
-                "Command {:?} failed to succeed after {} attempts.",
-                cmd, max_tries
-            ),
-        )
-        .into())
+        Err(TestError::Assert(format!(
+            "Command {:?} failed to succeed after {} attempts.",
+            cmd, max_tries
+        )))
     }
 }
 
@@ -142,12 +174,12 @@ impl ServerList for Vec<(&str, Vec<&str>)> {
 
 #[async_trait]
 pub trait WithSos {
-    async fn handle_test_result(self, hosts: Vec<&str>, prefix: &str) -> Result<Config, CmdError>;
+    async fn handle_test_result(self, hosts: Vec<&str>, prefix: &str) -> Result<Config, TestError>;
 }
 
 #[async_trait]
-impl<T: Into<CmdError> + Send> WithSos for Result<Config, T> {
-    async fn handle_test_result(self, hosts: Vec<&str>, prefix: &str) -> Result<Config, CmdError> {
+impl<T: Into<TestError> + Send> WithSos for Result<Config, T> {
+    async fn handle_test_result(self, hosts: Vec<&str>, prefix: &str) -> Result<Config, TestError> {
         create_iml_diagnostics(hosts, prefix).await?;
 
         self.map_err(|e| e.into())
@@ -184,7 +216,7 @@ impl Default for Config {
             mds_ips: vec!["10.73.10.11", "10.73.10.12"],
             oss: vec!["oss1", "oss2"],
             oss_ips: vec!["10.73.10.21", "10.73.10.22"],
-            client: vec!["c1"],
+            client: vec!["client1"],
             client_ips: vec!["10.73.10.31"],
             iscsi: "iscsi",
             lustre_version: "2.12.4",
@@ -194,7 +226,7 @@ impl Default for Config {
                 ("mds2", "10.73.10.12"),
                 ("oss1", "10.73.10.21"),
                 ("oss2", "10.73.10.22"),
-                ("c1", "10.73.10.31"),
+                ("client1", "10.73.10.31"),
             ]
             .into_iter()
             .collect::<HashMap<&'static str, &'static str>>(),
@@ -296,53 +328,57 @@ NTP_SERVER_HOSTNAME=10.73.10.1
     }
 }
 
-pub async fn wait_for_ntp(config: &Config) -> Result<(), CmdError> {
-    if config.test_type == TestType::Rpm {
-        ssh::wait_for_ntp_for_adm(&config.storage_server_ips()).await?;
-    } else {
-        ssh::wait_for_ntp_for_host_only_if(&config.storage_server_ips()).await?;
-    }
+pub async fn wait_for_ntp(config: &Config) -> Result<(), TestError> {
+    match config.test_type {
+        TestType::Rpm => ssh::wait_for_ntp_for_adm(&config.storage_server_ips()).await?,
+        TestType::Docker => {
+            ssh::wait_for_ntp_for_host_only_if(&config.storage_server_ips()).await?
+        }
+    };
 
     Ok(())
 }
 
-pub async fn wait_on_services_ready(config: &Config) -> Result<(), CmdError> {
-    if config.test_type == TestType::Rpm {
-        let (_, output) =
+pub async fn wait_on_services_ready(config: &Config) -> Result<(), TestError> {
+    match config.test_type {
+        TestType::Rpm => {
+            let (_, output) =
             ssh::ssh_exec(config.manager_ip, "systemctl list-dependencies iml-manager.target | tail -n +2 | awk '{print$2}' | awk '{print substr($1, 3)}' | grep -v iml-settings-populator.service | grep -v iml-sfa.service").await?;
 
-        let status_commands = str::from_utf8(&output.stdout)
-            .expect("Couldn't parse service list")
-            .lines()
-            .map(|s| {
-                tracing::debug!("checking status of service {}", s);
+            let status_commands = str::from_utf8(&output.stdout)
+                .expect("Couldn't parse service list")
+                .lines()
+                .map(|s| {
+                    tracing::debug!("checking status of service {}", s);
 
-                async move {
-                    let mut cmd = ssh::systemd_status(config.manager_ip, s).await?;
-                    try_command_n_times(50, 5, &mut cmd).await?;
+                    async move {
+                        let mut cmd = ssh::systemd_status(config.manager_ip, s).await?;
+                        try_command_n_times(50, 5, &mut cmd).await?;
 
-                    Ok::<(), CmdError>(())
-                }
-            });
+                        Ok::<(), TestError>(())
+                    }
+                });
 
-        try_join_all(status_commands).await?;
-    } else {
-        let mut cmd = ssh::systemd_status(config.manager_ip, "iml-docker.service").await?;
-        try_command_n_times(50, 5, &mut cmd).await?;
-    }
+            try_join_all(status_commands).await?;
+        }
+        TestType::Docker => {
+            let mut cmd = ssh::systemd_status(config.manager_ip, "iml-docker.service").await?;
+            try_command_n_times(50, 5, &mut cmd).await?;
+        }
+    };
 
     Ok(())
 }
 
-pub async fn setup_bare(config: Config) -> Result<Config, CmdError> {
+pub async fn setup_bare(config: Config) -> Result<Config, TestError> {
     vagrant::up()
         .await?
         .arg(config.manager)
         .checked_status()
         .await?;
 
-    if config.test_type == TestType::Rpm {
-        match env::var("REPO_URI") {
+    match config.test_type {
+        TestType::Rpm => match env::var("REPO_URI") {
             Ok(x) => {
                 vagrant::provision_node(config.manager, "install-iml-repouri")
                     .await?
@@ -356,9 +392,8 @@ pub async fn setup_bare(config: Config) -> Result<Config, CmdError> {
                     .checked_status()
                     .await?;
             }
-        };
-    } else {
-        match env::var("REPO_URI") {
+        },
+        TestType::Docker => match env::var("REPO_URI") {
             Ok(x) => {
                 vagrant::provision_node(config.manager, "install-iml-docker-repouri")
                     .await?
@@ -372,8 +407,8 @@ pub async fn setup_bare(config: Config) -> Result<Config, CmdError> {
                     .checked_status()
                     .await?;
             }
-        };
-    }
+        },
+    };
 
     vagrant::up()
         .await?
@@ -409,18 +444,17 @@ pub async fn setup_bare(config: Config) -> Result<Config, CmdError> {
     Ok(config)
 }
 
-pub async fn configure_iml(config: Config) -> Result<Config, CmdError> {
+pub async fn configure_iml(config: Config) -> Result<Config, TestError> {
     vagrant::up()
         .await?
         .args(&vec![config.manager][..])
         .checked_status()
         .await?;
 
-    if config.test_type == TestType::Rpm {
-        configure_rpm_setup(&config).await?;
-    } else {
-        configure_docker_setup(&config).await?;
-    }
+    match config.test_type {
+        TestType::Rpm => configure_rpm_setup(&config).await?,
+        TestType::Docker => configure_docker_setup(&config).await?,
+    };
 
     vagrant::halt()
         .await?
@@ -452,7 +486,7 @@ pub async fn configure_iml(config: Config) -> Result<Config, CmdError> {
     Ok(config)
 }
 
-pub async fn deploy_servers(config: Config) -> Result<Config, CmdError> {
+pub async fn deploy_servers(config: Config) -> Result<Config, TestError> {
     for (profile, hosts) in &config.profile_map {
         let host_ips = config.hosts_to_ips(&hosts);
         for host in &host_ips {
@@ -463,11 +497,12 @@ pub async fn deploy_servers(config: Config) -> Result<Config, CmdError> {
                 .await?;
         }
 
-        let hosts: Vec<String> = if config.test_type == TestType::Rpm {
-            hosts.iter().map(|x| String::from(*x)).collect()
-        } else {
-            configure_docker_network(&config).await?;
-            get_local_server_names(hosts)
+        let hosts: Vec<String> = match config.test_type {
+            TestType::Rpm => hosts.iter().map(|x| String::from(*x)).collect(),
+            TestType::Docker => {
+                configure_docker_network(&config).await?;
+                get_local_server_names(hosts)
+            }
         };
 
         ssh::add_servers(&config.manager_ip, profile, hosts).await?;
@@ -504,7 +539,7 @@ pub async fn deploy_servers(config: Config) -> Result<Config, CmdError> {
     Ok(config)
 }
 
-pub async fn configure_docker_network(config: &Config) -> Result<(), CmdError> {
+pub async fn configure_docker_network(config: &Config) -> Result<(), TestError> {
     let host_list = config.profile_map.to_server_list();
     // The configure-docker-network provisioner must be run individually on
     // each server node.
@@ -522,28 +557,28 @@ pub async fn configure_docker_network(config: &Config) -> Result<(), CmdError> {
     Ok(())
 }
 
-async fn create_monitored_ldiskfs(config: &Config) -> Result<(), CmdError> {
-    let xs = config
-        .storage_servers()
-        .into_iter()
-        .map(|x| {
-            tracing::debug!("creating ldiskfs fs for {}", x);
-            async move {
-                vagrant::provision_node(x, "configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2")
-                    .await?
-                    .checked_status()
-                    .await?;
+async fn create_monitored_ldiskfs(config: &Config) -> Result<(), TestError> {
+    let xs = config.storage_servers().into_iter().map(|x| {
+        tracing::debug!("creating ldiskfs fs for {}", x);
+        async move {
+            vagrant::provision_node(
+                x,
+                "configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2",
+            )
+            .await?
+            .checked_status()
+            .await?;
 
-                Ok::<_, CmdError>(())
-            }
-        });
+            Ok::<_, TestError>(())
+        }
+    });
 
     try_join_all(xs).await?;
 
     Ok(())
 }
 
-async fn create_monitored_zfs(config: &Config) -> Result<(), CmdError> {
+async fn create_monitored_zfs(config: &Config) -> Result<(), TestError> {
     let xs = config.storage_servers().into_iter().map(|x| {
         tracing::debug!("creating zfs fs for {}", x);
         async move {
@@ -555,7 +590,7 @@ async fn create_monitored_zfs(config: &Config) -> Result<(), CmdError> {
             .checked_status()
             .await?;
 
-            Ok::<_, CmdError>(())
+            Ok::<_, TestError>(())
         }
     });
 
@@ -564,7 +599,7 @@ async fn create_monitored_zfs(config: &Config) -> Result<(), CmdError> {
     Ok(())
 }
 
-pub async fn install_fs(config: Config) -> Result<Config, CmdError> {
+pub async fn install_fs(config: Config) -> Result<Config, TestError> {
     match config.fs_type {
         FsType::LDISKFS => ssh::install_ldiskfs_no_iml(&config).await?,
         FsType::ZFS => ssh::install_zfs_no_iml(&config).await?,
@@ -600,7 +635,7 @@ pub async fn install_fs(config: Config) -> Result<Config, CmdError> {
     Ok(config)
 }
 
-pub async fn create_fs(config: Config) -> Result<Config, CmdError> {
+pub async fn create_fs(config: Config) -> Result<Config, TestError> {
     match config.fs_type {
         FsType::LDISKFS => create_monitored_ldiskfs(&config).await?,
         FsType::ZFS => create_monitored_zfs(&config).await?,
@@ -614,13 +649,76 @@ pub async fn create_fs(config: Config) -> Result<Config, CmdError> {
     Ok(config)
 }
 
-pub async fn detect_fs(config: Config) -> Result<Config, CmdError> {
-    ssh::detect_fs(config.manager_ip).await?;
+async fn mount_fs(config: &Config) -> Result<usize, TestError> {
+    let (count, provisioner) = match config.fs_type {
+        FsType::LDISKFS => (2, "mount-ldiskfs-fs,mount-ldiskfs-fs2"),
+        FsType::ZFS => (1, "mount-zfs-fs"),
+    };
 
-    Ok(config)
+    let xs = config.storage_servers().into_iter().map(|x| {
+        tracing::debug!("mount fs for {}", x);
+        async move {
+            vagrant::provision_node(x, provisioner)
+                .await?
+                .checked_status()
+                .await?;
+
+            Ok::<_, TestError>(())
+        }
+    });
+
+    try_join_all(xs).await?;
+
+    Ok(count)
 }
 
-pub async fn configure_rpm_setup(config: &Config) -> Result<(), CmdError> {
+pub async fn detect_fs(config: Config) -> Result<Config, TestError> {
+    let count = mount_fs(&config).await?;
+    ssh::detect_fs(config.manager_ip).await?;
+
+    let num_fs = ssh::list_fs_json(config.manager_ip).await?.len();
+
+    if num_fs == count {
+        Ok(config)
+    } else {
+        Err(TestError::Assert(format!(
+            "Failed to detect the expected number of filesystems (expected: {}, actual: {})",
+            count, num_fs
+        )))
+    }
+}
+
+// Returns list of server profile file names
+async fn configure_extra_profile(vagrant_path: &PathBuf) -> Result<Vec<String>, TestError> {
+    let mut rc = vec![];
+    // Register Stratagem Server Profile
+    let mut profile_path = vagrant_path.clone();
+    profile_path.push("stratagem-server.profile");
+    rc.push("stratagem-server.profile".into());
+
+    let mut file = File::create(&profile_path).await?;
+    file.write_all(STRATAGEM_SERVER_PROFILE.as_bytes()).await?;
+
+    // Register Stratagem Client Profile
+    let mut profile_path = vagrant_path.clone();
+    profile_path.push("stratagem-client.profile");
+    rc.push("stratagem-client.profile".into());
+
+    let mut file = File::create(&profile_path).await?;
+    file.write_all(STRATAGEM_CLIENT_PROFILE.as_bytes()).await?;
+
+    // Register Base Client Profile
+    let mut profile_path = vagrant_path.clone();
+    profile_path.push("base-client.profile");
+    rc.push("base-client.profile".into());
+
+    let mut file = File::create(&profile_path).await?;
+    file.write_all(BASE_CLIENT_PROFILE.as_bytes()).await?;
+
+    Ok(rc)
+}
+
+pub async fn configure_rpm_setup(config: &Config) -> Result<(), TestError> {
     let config_content: String = config.get_setup_config();
 
     let vagrant_path = canonicalize("../vagrant/").await?;
@@ -630,29 +728,17 @@ pub async fn configure_rpm_setup(config: &Config) -> Result<(), CmdError> {
     let mut file = File::create(config_path).await?;
     file.write_all(config_content.as_bytes()).await?;
 
-    let mut vm_cmd: String =
-        "mkdir -p /var/lib/chroma && sudo cp /vagrant/overrides.conf /var/lib/chroma".into();
-    if config.use_stratagem {
-        let mut server_profile_path = vagrant_path.clone();
-        server_profile_path.push("stratagem-server.profile");
+    let path_list = configure_extra_profile(&vagrant_path).await?;
 
-        let mut file = File::create(server_profile_path).await?;
-        file.write_all(STRATAGEM_SERVER_PROFILE.as_bytes()).await?;
-
-        let mut client_profile_path = vagrant_path.clone();
-        client_profile_path.push("stratagem-client.profile");
-
-        let mut file = File::create(client_profile_path).await?;
-        file.write_all(STRATAGEM_CLIENT_PROFILE.as_bytes()).await?;
-
-        vm_cmd = format!(
-            "{}{}",
-            vm_cmd,
-            "&& sudo chroma-config profile register /vagrant/stratagem-server.profile \
-        && sudo chroma-config profile register /vagrant/stratagem-client.profile \
-        && sudo systemctl restart iml-manager.target"
-        );
-    }
+    let vm_cmd = format!(
+        "mkdir -p /var/lib/chroma && sudo cp /vagrant/overrides.conf /var/lib/chroma {} \
+         && sudo systemctl restart iml-manager.target",
+        path_list
+            .into_iter()
+            .map(|p| format!(" && sudo chroma-config profile register /vagrant/{}", p))
+            .collect::<Vec<String>>()
+            .concat()
+    );
 
     vagrant::rsync(config.manager).await?;
 
@@ -664,7 +750,7 @@ pub async fn configure_rpm_setup(config: &Config) -> Result<(), CmdError> {
     Ok(())
 }
 
-pub async fn configure_docker_setup(config: &Config) -> Result<(), CmdError> {
+pub async fn configure_docker_setup(config: &Config) -> Result<(), TestError> {
     let config_content: String = config.get_setup_config();
 
     let vagrant_path = canonicalize("../vagrant/").await?;
@@ -674,29 +760,16 @@ pub async fn configure_docker_setup(config: &Config) -> Result<(), CmdError> {
     let mut file = File::create(config_path).await?;
     file.write_all(config_content.as_bytes()).await?;
 
-    let mut vm_cmd: String =
-        "sudo mkdir -p /etc/iml-docker/setup && sudo cp /vagrant/config /etc/iml-docker/setup/"
-            .into();
-    if config.use_stratagem {
-        let mut server_profile_path = vagrant_path.clone();
-        server_profile_path.push("stratagem-server.profile");
+    let path_list = configure_extra_profile(&vagrant_path).await?;
 
-        let mut file = File::create(server_profile_path).await?;
-        file.write_all(STRATAGEM_SERVER_PROFILE.as_bytes()).await?;
-
-        let mut client_profile_path = vagrant_path.clone();
-        client_profile_path.push("stratagem-client.profile");
-
-        let mut file = File::create(client_profile_path).await?;
-        file.write_all(STRATAGEM_CLIENT_PROFILE.as_bytes()).await?;
-
-        vm_cmd = format!(
-            "{}{}",
-            vm_cmd,
-            "&& sudo cp /vagrant/stratagem-server.profile /etc/iml-docker/setup/ \
-             && sudo cp /vagrant/stratagem-client.profile /etc/iml-docker/setup/"
-        );
-    }
+    let vm_cmd = format!(
+        "sudo mkdir -p /etc/iml-docker/setup && sudo cp /vagrant/config /etc/iml-docker/setup/ {}",
+        path_list
+            .into_iter()
+            .map(|p| format!(" && sudo cp /vagrant/{} /etc/iml-docker/setup/", p))
+            .collect::<Vec<String>>()
+            .concat()
+    );
 
     vagrant::rsync(config.manager).await?;
 
@@ -729,6 +802,6 @@ mod tests {
 
         let servers = xs.to_server_list();
 
-        assert_eq!(servers, vec!["mds1", "mds2", "oss1", "oss2", "c1"]);
+        assert_eq!(servers, vec!["mds1", "mds2", "oss1", "oss2", "client1"]);
     }
 }

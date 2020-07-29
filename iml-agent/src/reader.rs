@@ -34,7 +34,7 @@ async fn get_delivery(
                 plugin, session_id, ..
             } => {
                 let plugin_instance = get_plugin(&plugin, &registry)?;
-                let mut s = Session::new(plugin.clone(), session_id, plugin_instance);
+                let mut s = Session::new(plugin.clone(), session_id.clone(), plugin_instance);
                 let (rx, fut) = s.start();
 
                 sessions2.insert_session(plugin.clone(), s, rx).await?;
@@ -43,8 +43,8 @@ async fn get_delivery(
 
                 tokio::spawn(
                     async move {
-                        if let Some((info, output)) = fut.await? {
-                            agent_client3.send_data(info, output).await?;
+                        if let Some((seq, name, id, output)) = fut.await? {
+                            agent_client3.send_data(id, name, seq, output).await?;
                         }
 
                         Ok(())
@@ -56,7 +56,7 @@ async fn get_delivery(
                                 tracing::warn!("Error during session start {:?}", e);
 
                                 sessions2
-                                    .terminate_session(&plugin)
+                                    .terminate_session(&plugin, &session_id)
                                     .await
                                     .unwrap_or_else(|e| {
                                         tracing::warn!("Error terminating session, {}", e)
@@ -74,9 +74,9 @@ async fn get_delivery(
                         if let Some(x) = r.await {
                             let agent_client3 = agent_client2.clone();
 
-                            let (info, x) = x?;
+                            let (seq, name, id, x) = x?;
 
-                            agent_client3.send_data(info, x).await?;
+                            agent_client3.send_data(id, name, seq, x).await?;
                         }
 
                         Ok(())
@@ -84,9 +84,9 @@ async fn get_delivery(
                     .map_err(|e: ImlAgentError| error!("{}", e)),
                 );
             }
-            ManagerMessage::SessionTerminate { plugin, .. } => {
-                sessions.terminate_session(&plugin).await?
-            }
+            ManagerMessage::SessionTerminate {
+                plugin, session_id, ..
+            } => sessions.terminate_session(&plugin, &session_id).await?,
             ManagerMessage::SessionTerminateAll { .. } => sessions.terminate_all_sessions().await?,
         }
     }
