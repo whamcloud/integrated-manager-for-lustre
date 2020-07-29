@@ -15,7 +15,7 @@ use iml_device::{
 };
 use iml_postgres::{
     get_db_pool,
-    sqlx::{self, PgPool},
+    sqlx::self,
 };
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
@@ -116,28 +116,41 @@ async fn main() -> Result<(), ImlDeviceError> {
                 .await?;
 
         let targets = find_targets(&device_cache, &mount_cache, &host_ids);
+        let x = targets.into_iter().fold(
+            (vec![], vec![], vec![], vec![], vec![], vec![]),
+            |mut acc, x| {
+                acc.0.push(x.state);
+                acc.1.push(x.name);
+                acc.2.push(x.active_host_id);
+                acc.3.push(x.host_ids.into_iter().map(|x| x.to_string()).collect::<Vec<String>>().join(","));
+                acc.4.push(x.uuid);
+                acc.5.push(x.mount_path);
 
-        for target in targets {
-            sqlx::query!(r#"INSERT INTO chroma_core_targets 
-                            (state, name, active_host_id, host_ids, uuid, mount_path) 
-                            VALUES($1, $2, $3, $4, $5, $6)
-                            ON CONFLICT (uuid)
+                acc
+            }
+        );
+
+        sqlx::query!(r#"INSERT INTO chroma_core_targets 
+                        (state, name, active_host_id, host_ids, uuid, mount_path) 
+                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], uuid, mount_path
+                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[])
+                        AS t(state, name, active_host_id, host_ids, uuid, mount_path)
+                        ON CONFLICT (uuid)
                             DO
-                                UPDATE SET state = EXCLUDED.state,
-                                           name = EXCLUDED.name,
-                                           active_host_id = EXCLUDED.active_host_id,
-                                           host_ids = EXCLUDED.host_ids,
-                                           mount_path = EXCLUDED.mount_path;"#,
-                target.state,
-                target.name,
-                target.active_host_id,
-                &target.host_ids[..],
-                target.uuid,
-                target.mount_path
-            )
-            .execute(&pool)
-            .await?;
-        }
+                            UPDATE SET  state          = EXCLUDED.state,
+                                        name           = EXCLUDED.name,
+                                        active_host_id = EXCLUDED.active_host_id,
+                                        host_ids       = EXCLUDED.host_ids,
+                                        mount_path     = EXCLUDED.mount_path"#,
+            &x.0,
+            &x.1,
+            &x.2,
+            &x.3,
+            &x.4,
+            &x.5
+        )
+        .execute(&pool)
+        .await?;
     }
 
     Ok(())
