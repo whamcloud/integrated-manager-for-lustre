@@ -281,6 +281,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "block-cipher-trait"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c924d49bd09e7c06003acda26cd9742e796e34282ec6c1189404dee0c1f4774"
+dependencies = [
+ "generic-array 0.12.3",
+]
+
+[[package]]
+name = "block-modes"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31aa8410095e39fdb732909fb5730a48d5bd7c2e3cd76bd1b07b3dbea130c529"
+dependencies = [
+ "block-cipher-trait",
+ "block-padding",
+]
+
+[[package]]
 name = "block-padding"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -603,7 +622,7 @@ dependencies = [
 [[package]]
 name = "deadpool"
 version = "0.5.2"
-source = "git+https://github.com/bikeshedder/deadpool#6d5e60cc10c3d73babc59bd0c5cf4e15a03b9a44"
+source = "git+https://github.com/whamcloud/deadpool?branch=rustls#6f899798dd9fe6cfbb9c89e5d45a5f34a9ee546f"
 dependencies = [
  "async-trait",
  "crossbeam-queue",
@@ -614,13 +633,24 @@ dependencies = [
 [[package]]
 name = "deadpool-lapin"
 version = "0.6.0"
-source = "git+https://github.com/bikeshedder/deadpool#6d5e60cc10c3d73babc59bd0c5cf4e15a03b9a44"
+source = "git+https://github.com/whamcloud/deadpool?branch=rustls#6f899798dd9fe6cfbb9c89e5d45a5f34a9ee546f"
 dependencies = [
  "async-trait",
  "deadpool",
  "futures",
  "lapin",
  "log 0.4.11",
+]
+
+[[package]]
+name = "des"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74ba5f1b5aee9772379c2670ba81306e65a93c0ee3caade7a1d22b188d88a3af"
+dependencies = [
+ "block-cipher-trait",
+ "byteorder",
+ "opaque-debug 0.2.3",
 ]
 
 [[package]]
@@ -2009,11 +2039,11 @@ dependencies = [
 [[package]]
 name = "lapin"
 version = "1.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5863bac1b1506b36aac7d038fc9e35917d85cb978f9314b8eaacf3277a2a0f41"
+source = "git+https://github.com/whamcloud/lapin.git?branch=rustls#8e3c1c5a21f12a4162c2c4e5291423cab3870c22"
 dependencies = [
  "amq-protocol",
  "async-task",
+ "async-trait",
  "crossbeam-channel",
  "futures-core",
  "log 0.4.11",
@@ -2364,8 +2394,8 @@ dependencies = [
  "openssl-probe",
  "openssl-sys",
  "schannel",
- "security-framework",
- "security-framework-sys",
+ "security-framework 0.4.4",
+ "security-framework-sys 0.4.3",
  "tempfile",
 ]
 
@@ -2513,6 +2543,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "p12"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "14e9eb95896174110548df49573a1512e0c02f43ea2b1b2b963b946abd759e27"
+dependencies = [
+ "block-cipher-trait",
+ "block-modes",
+ "des",
+ "lazy_static",
+ "rc2",
+ "ring",
+ "yasna",
+]
+
+[[package]]
 name = "parking_lot"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2543,17 +2588,6 @@ name = "peeking_take_while"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
-
-[[package]]
-name = "pem"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59698ea79df9bf77104aefd39cc3ec990cb9693fb59c3b0a70ddf2646fdffb4b"
-dependencies = [
- "base64 0.12.3",
- "once_cell",
- "regex",
-]
 
 [[package]]
 name = "percent-encoding"
@@ -3070,6 +3104,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rc2"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "039209d71774c9b2ae967ffb66b73ed253b3c384c198ec0d620fdd5369c78e5e"
+dependencies = [
+ "block-cipher-trait",
+ "opaque-debug 0.2.3",
+]
+
+[[package]]
 name = "rdrand"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3225,6 +3269,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustls-connector"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "498854dcb920e6fde17046164487977a6177d1ccc5ea58379edb910e9e60a251"
+dependencies = [
+ "log 0.4.11",
+ "rustls",
+ "rustls-native-certs",
+ "webpki",
+]
+
+[[package]]
+name = "rustls-native-certs"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "629d439a7672da82dd955498445e496ee2096fe2117b9f796558a43fdb9e59b8"
+dependencies = [
+ "openssl-probe",
+ "rustls",
+ "schannel",
+ "security-framework 1.0.0",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3287,7 +3355,20 @@ dependencies = [
  "core-foundation",
  "core-foundation-sys",
  "libc",
- "security-framework-sys",
+ "security-framework-sys 0.4.3",
+]
+
+[[package]]
+name = "security-framework"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad502866817f0575705bd7be36e2b2535cc33262d493aa733a2ec862baa2bc2b"
+dependencies = [
+ "bitflags",
+ "core-foundation",
+ "core-foundation-sys",
+ "libc",
+ "security-framework-sys 1.0.0",
 ]
 
 [[package]]
@@ -3295,6 +3376,16 @@ name = "security-framework-sys"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "17bf11d99252f512695eb468de5516e5cf75455521e69dfe343f3b74e4748405"
+dependencies = [
+ "core-foundation-sys",
+ "libc",
+]
+
+[[package]]
+name = "security-framework-sys"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51ceb04988b17b6d1dcd555390fa822ca5637b4a14e1f5099f13d351bed4d6c7"
 dependencies = [
  "core-foundation-sys",
  "libc",
@@ -3853,8 +3944,8 @@ checksum = "2d147f992a9942eb288eb52f58ba1868eee976d4983f2013867fde3736c52d0c"
 dependencies = [
  "cfg-if",
  "mio 0.7.0",
- "native-tls",
- "pem",
+ "p12",
+ "rustls-connector",
 ]
 
 [[package]]
@@ -4050,8 +4141,7 @@ dependencies = [
 [[package]]
 name = "tokio-amqp"
 version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2938fb5b638e6d8992c304e2426db2de4502f19084b91ec4562d9b45bf896fc4"
+source = "git+https://github.com/whamcloud/lapin.git?branch=rustls#8e3c1c5a21f12a4162c2c4e5291423cab3870c22"
 dependencies = [
  "lapin",
  "tokio",
@@ -4697,3 +4787,9 @@ checksum = "39f0c922f1a334134dc2f7a8b67dc5d25f0735263feec974345ff706bcf20b0d"
 dependencies = [
  "linked-hash-map",
 ]
+
+[[package]]
+name = "yasna"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0de7bff972b4f2a06c85f6d8454b09df153af7e3a4ec2aac81db1b105b684ddb"
