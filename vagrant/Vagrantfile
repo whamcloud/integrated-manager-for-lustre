@@ -65,7 +65,7 @@ Vagrant.configure('2') do |config|
 #{MGMT_NET_PFX}.22 oss2.local oss2
     __EOF
     (1..8).each do |cidx|
-      f.puts "#{MGMT_NET_PFX}.3#{cidx} c#{cidx}.local c#{cidx}\n"
+      f.puts "#{MGMT_NET_PFX}.3#{cidx} client#{cidx}.local client#{cidx}\n"
     end
   end
 
@@ -829,9 +829,9 @@ Vagrant.configure('2') do |config|
   # By default, only 2 compute nodes are created.
   # The configuration supports a maximum of 8 compute nodes.
   (1..8).each do |i|
-    config.vm.define "c#{i}",
+    config.vm.define "client#{i}",
                      autostart: i <= 2 do |c|
-      c.vm.hostname = "c#{i}.local"
+      c.vm.hostname = "client#{i}.local"
 
       # Admin / management network
       provision_mgmt_net c, "3#{i}"

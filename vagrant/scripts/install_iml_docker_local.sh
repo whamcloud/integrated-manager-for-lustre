@@ -29,7 +29,7 @@ services:
       - "mds2.local:10.73.10.12"
       - "oss1.local:10.73.10.21"
       - "oss2.local:10.73.10.22"
-      - "c1.local:10.73.10.31"
+      - "client1.local:10.73.10.31"
     environment:
       - "NTP_SERVER_HOSTNAME=10.73.10.1"
   iml-warp-drive:
