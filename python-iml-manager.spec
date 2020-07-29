@@ -37,6 +37,7 @@ This is the Integrated Manager for Lustre Monitoring and Administration Interfac
 %package -n     python2-%{pypi_name}
 Summary:        %{summary}
 # Base / EPEL repos
+Requires:       cargo
 Requires:       createrepo
 Requires:       fence-agents
 Requires:       fence-agents-virsh
