@@ -6,6 +6,8 @@ use crate::agent_error::ImlAgentError;
 use futures::TryFutureExt;
 use iml_cmd::{CheckedCommandExt, Command};
 
+pub mod snapshot;
+
 /// According to http://wiki.lustre.org/Mounting_a_Lustre_File_System_on_Client_Nodes
 /// we need to execute mount command
 /// ```bash

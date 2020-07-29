@@ -1877,6 +1877,7 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "sqlx",
+ "structopt",
  "tokio-postgres",
 ]
 
