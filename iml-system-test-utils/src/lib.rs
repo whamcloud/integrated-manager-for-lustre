@@ -688,31 +688,32 @@ pub async fn detect_fs(config: Config) -> Result<Config, TestError> {
     }
 }
 
-async fn configure_extra_profile(vagrant_path: &PathBuf) -> Result<Vec<PathBuf>, TestError> {
+// Returns list of server profile file names
+async fn configure_extra_profile(vagrant_path: &PathBuf) -> Result<Vec<String>, TestError> {
     let mut rc = vec![];
     // Register Stratagem Server Profile
     let mut profile_path = vagrant_path.clone();
     profile_path.push("stratagem-server.profile");
+    rc.push("stratagem-server.profile".into());
 
     let mut file = File::create(&profile_path).await?;
     file.write_all(STRATAGEM_SERVER_PROFILE.as_bytes()).await?;
-    rc.push(profile_path);
 
     // Register Stratagem Client Profile
     let mut profile_path = vagrant_path.clone();
     profile_path.push("stratagem-client.profile");
+    rc.push("stratagem-client.profile".into());
 
     let mut file = File::create(&profile_path).await?;
     file.write_all(STRATAGEM_CLIENT_PROFILE.as_bytes()).await?;
-    rc.push(profile_path);
 
     // Register Base Client Profile
     let mut profile_path = vagrant_path.clone();
     profile_path.push("base-client.profile");
+    rc.push("base-client.profile".into());
 
     let mut file = File::create(&profile_path).await?;
     file.write_all(BASE_CLIENT_PROFILE.as_bytes()).await?;
-    rc.push(profile_path);
 
     Ok(rc)
 }
@@ -734,7 +735,7 @@ pub async fn configure_rpm_setup(config: &Config) -> Result<(), TestError> {
          && sudo systemctl restart iml-manager.target",
         path_list
             .into_iter()
-            .map(|p| format!(" && sudo chroma-config profile register {}", p.display()))
+            .map(|p| format!(" && sudo chroma-config profile register /vagrant/{}", p))
             .collect::<Vec<String>>()
             .concat()
     );
@@ -765,7 +766,7 @@ pub async fn configure_docker_setup(config: &Config) -> Result<(), TestError> {
         "sudo mkdir -p /etc/iml-docker/setup && sudo cp /vagrant/config /etc/iml-docker/setup/ {}",
         path_list
             .into_iter()
-            .map(|p| format!(" && sudo cp {} /etc/iml-docker/setup/", p.display()))
+            .map(|p| format!(" && sudo cp /vagrant/{} /etc/iml-docker/setup/", p))
             .collect::<Vec<String>>()
             .concat()
     );
