@@ -36,6 +36,10 @@ pub fn sock_dir() -> String {
     get_var("SOCK_DIR")
 }
 
+pub fn get_ldev_conf() -> String {
+    get_var("LDEV_CONF_PATH")
+}
+
 pub fn get_journal_port() -> u32 {
     get_var_else("JOURNAL_PORT", "19531")
         .parse::<u32>()

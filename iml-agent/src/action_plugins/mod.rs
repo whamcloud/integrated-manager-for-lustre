@@ -8,6 +8,7 @@ pub mod check_stonith;
 pub mod high_availability;
 pub mod kernel_module;
 pub mod lamigo;
+pub mod ldev;
 pub mod lpurge;
 pub mod ltuer;
 pub mod lustre;
