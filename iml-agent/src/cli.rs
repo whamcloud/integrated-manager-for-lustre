@@ -242,6 +242,10 @@ pub enum SnapshotCommand {
     Create(snapshot::Create),
     /// Destroy the snapshot
     Destroy(snapshot::Destroy),
+    /// Mount a snapshot
+    Mount(snapshot::Mount),
+    /// Unmount a snapshot
+    Unmount(snapshot::Unmount),
 }
 
 #[derive(StructOpt, Debug)]
@@ -700,6 +704,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Err(e) = match command {
                 SnapshotCommand::Create(c) => lustre::snapshot::create(c).await,
                 SnapshotCommand::Destroy(d) => lustre::snapshot::destroy(d).await,
+                SnapshotCommand::Mount(m) => lustre::snapshot::mount(m).await,
+                SnapshotCommand::Unmount(u) => lustre::snapshot::unmount(u).await,
             } {
                 eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
