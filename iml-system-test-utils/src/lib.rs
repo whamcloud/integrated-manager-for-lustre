@@ -759,7 +759,7 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestErro
 
     Ok(config)
 }
-        
+
 // Returns list of server profile file names
 async fn configure_extra_profile(vagrant_path: &PathBuf) -> Result<Vec<String>, TestError> {
     let mut rc = vec![];
