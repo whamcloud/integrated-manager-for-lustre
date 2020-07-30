@@ -22,7 +22,9 @@ pub async fn destroy(d: Destroy) -> Result<(), ImlAgentError> {
     lctl(args).await.map(drop)
 }
 
-pub async fn mount(filesystem_name: String, snapshot_name: String) -> Result<(), ImlAgentError> {
+pub async fn mount(
+    (filesystem_name, snapshot_name): (String, String),
+) -> Result<(), ImlAgentError> {
     let args = &[
         "snapshot_mount",
         "--fsname",
