@@ -688,6 +688,78 @@ pub async fn detect_fs(config: Config) -> Result<Config, TestError> {
     }
 }
 
+pub async fn mount_clients(config: Config) -> Result<Config, TestError> {
+    let xs = config.client_servers().into_iter().map(|x| {
+        tracing::debug!("provisioning client {}", x);
+        async move {
+            vagrant::provision_node(
+                x,
+                "install-lustre-client,configure-lustre-client-network,mount-lustre-client",
+            )
+            .await?
+            .checked_status()
+            .await?;
+
+            Ok::<_, TestError>(())
+        }
+    });
+
+    try_join_all(xs).await?;
+
+    Ok(config)
+}
+
+pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestError> {
+    let task = r#"{"filesystem": 1, "name": "testfile", "state": "created", "keep_failed": false, "actions": [ "stratagem.warning" ], "single_runner": true, "args": { "report_file": "/tmp/test-taskfile.txt" } }"#;
+
+    // create file
+    let (_, output) = ssh::ssh_exec(
+        config.client_server_ips()[0],
+        "touch /mnt/fs/reportfile; lfs path2fid /mnt/fs/reportfile",
+    )
+    .await?;
+
+    // Create Task
+    let cmd = format!(
+        r#". /var/lib/chroma/iml-settings.conf; curl -d '{}' -H "Content-Type: application/json" -H "Authorization: ApiKey $API_USER:$API_KEY" --cacert /var/lib/chroma/authority.crt https://adm.local/api/task/"#,
+        task
+    );
+    ssh::ssh_exec_cmd(config.manager_ip, &cmd)
+        .await?
+        .checked_status()
+        .await?;
+
+    let fid = format!(
+        "{{ \"fid\": \"{}\" }}",
+        String::from_utf8(output.stdout).unwrap().trim()
+    );
+
+    let cmd = format!(
+        "echo {} | socat - unix-connect:/run/iml/postman-testfile.sock",
+        fid
+    );
+
+    ssh::ssh_exec(config.mds_ips[0], &cmd).await?;
+
+    // @@ wait for fid to process by checking Task
+    delay_for(Duration::from_secs(20)).await;
+
+    let mut found = false;
+
+    // check output on client
+    for ip in config.client_server_ips() {
+        if let Ok((_, output)) = ssh::ssh_exec(ip, "cat /tmp/test-taskfile.txt").await {
+            assert_eq!(output.stdout, b"/mnt/fs/reportfile\n");
+            found = true;
+            break;
+        }
+    }
+
+    assert_eq!(found, true);
+
+    Ok(config)
+}
+
 // Returns list of server profile file names
 async fn configure_extra_profile(vagrant_path: &PathBuf) -> Result<Vec<String>, TestError> {
     let mut rc = vec![];
