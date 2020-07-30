@@ -34,3 +34,23 @@ pub struct Destroy {
     #[cfg_attr(feature = "cli", structopt(short = "f", long = "force"))]
     pub force: bool,
 }
+
+#[derive(serde::Deserialize, Debug)]
+#[cfg_attr(feature = "cli", derive(StructOpt))]
+/// Ask agent to mount the snapshot
+pub struct Mount {
+    /// Filesystem name
+    pub fsname: String,
+    /// Snapshot name
+    pub name: String,
+}
+
+#[derive(serde::Deserialize, Debug)]
+#[cfg_attr(feature = "cli", derive(StructOpt))]
+/// Ask agent to unmount the snapshot
+pub struct Unmount {
+    /// Filesystem name
+    pub fsname: String,
+    /// Name of the snapshot
+    pub name: String,
+}
