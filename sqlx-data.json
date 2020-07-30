@@ -295,6 +295,30 @@
       ]
     }
   },
+  "9472740d062c38f49e290c6173d7b676329a956cf9713bb55ff7ffdc0eeaae7f": {
+    "query": "select fqdn, id from chroma_core_managedhost where not_deleted = 't'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 1,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
   "9e69b2d4692f2bcd76349322b1bbdbb71ada4d3144fc543bff0417ccc576a62a": {
     "query": "\n                DELETE FROM chroma_core_logmessage\n                WHERE id in ( \n                    SELECT id FROM chroma_core_logmessage ORDER BY id LIMIT $1\n                )\n                RETURNING id",
     "describe": {
@@ -313,6 +337,23 @@
       "nullable": [
         false
       ]
+    }
+  },
+  "a7da83c078539441ad0a99936cab61cce156f37a6ffb7c6e6cbae80c11cb7b43": {
+    "query": "INSERT INTO chroma_core_targets \n                        (state, name, active_host_id, host_ids, uuid, mount_path) \n                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], uuid, mount_path\n                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[])\n                        AS t(state, name, active_host_id, host_ids, uuid, mount_path)\n                        ON CONFLICT (uuid)\n                            DO\n                            UPDATE SET  state          = EXCLUDED.state,\n                                        name           = EXCLUDED.name,\n                                        active_host_id = EXCLUDED.active_host_id,\n                                        host_ids       = EXCLUDED.host_ids,\n                                        mount_path     = EXCLUDED.mount_path",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "TextArray"
+        ]
+      },
+      "nullable": []
     }
   },
   "b0991443ae430ca73d4369f314b88f731ead796ec9ac353c3d237be9203c95bf": {
