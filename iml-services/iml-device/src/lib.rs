@@ -234,6 +234,7 @@ pub fn find_targets(
         .collect()
 }
 
+#[derive(Debug)]
 pub struct Target {
     pub state: String,
     pub name: String,

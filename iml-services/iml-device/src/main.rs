@@ -117,7 +117,11 @@ async fn main() -> Result<(), ImlDeviceError> {
                 .try_collect()
                 .await?;
 
+        tracing::warn!("host_ids: {:?}", host_ids);
+
         let targets = find_targets(&device_cache, &mount_cache, &host_ids);
+
+        tracing::warn!("target: {:?}", targets);
         let x = targets.into_iter().fold(
             (vec![], vec![], vec![], vec![], vec![], vec![]),
             |mut acc, x| {
@@ -131,6 +135,8 @@ async fn main() -> Result<(), ImlDeviceError> {
                 acc
             }
         );
+
+        tracing::warn!("x: {:?}", x);
 
         sqlx::query!(r#"INSERT INTO chroma_core_targets 
                         (state, name, active_host_id, host_ids, uuid, mount_path) 
