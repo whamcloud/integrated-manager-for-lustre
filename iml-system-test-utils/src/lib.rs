@@ -676,14 +676,21 @@ pub async fn detect_fs(config: Config) -> Result<Config, TestError> {
     let count = mount_fs(&config).await?;
     ssh::detect_fs(config.manager_ip).await?;
 
-    let num_fs = ssh::list_fs_json(config.manager_ip).await?.len();
+    let fs_info = ssh::list_fs_json(config.manager_ip).await?;
 
-    if num_fs == count {
+    if fs_info.len() == count {
         Ok(config)
     } else {
+        tracing::error!(
+            "Failed to detect correct number of FS expected: {}, actual: {}, INFO {:?}",
+            count,
+            fs_info.len(),
+            &fs_info
+        );
         Err(TestError::Assert(format!(
             "Failed to detect the expected number of filesystems (expected: {}, actual: {})",
-            count, num_fs
+            count,
+            fs_info.len(),
         )))
     }
 }
