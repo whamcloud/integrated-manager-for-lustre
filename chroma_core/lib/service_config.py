@@ -483,23 +483,6 @@ class ServiceConfig(CommandLine):
 
         return self.PathStats(total, used, free_space)
 
-    def _setup_sqlx(self):
-        rc, out, err = self.try_shell([
-            "cargo", 
-            "install", 
-            "sqlx-cli", 
-            "--no-default-features", 
-            "--features", 
-            "postgres", 
-            "--git", 
-            "https://github.com/jgrund/sqlx", 
-            "--branch", 
-            "support-offline-workspaces"
-        ])
-
-        if rc != 0:
-            log.warn("Problem installing sqlx-cli: {}".format(err))
-
     def _check_db_space(self, required_space_gigabytes):
         rc, out, err = self.try_shell(["su", "postgres", "-c", "psql -c 'SHOW data_directory;'"])
         db_storage_path = out.split()[2]
@@ -632,10 +615,6 @@ class ServiceConfig(CommandLine):
             if not self.verbose:
                 args = args + ["--verbosity", "0"]
             ManagementUtility(args).execute()
-
-            rc, out, err = self.try_shell(["sqlx", "migrate", "run"])
-            if rc != 0:
-                log.warn("sqlx migration failed: {}".format(err))
         else:
             log.info("Database tables already OK")
 
@@ -671,7 +650,6 @@ class ServiceConfig(CommandLine):
         if "grafana" not in out:
             self.try_shell(["su", "postgres", "-c", "createdb -O %s grafana;" % (databases["default"]["USER"])])
 
-        self._setup_sqlx()
         self._syncdb()
 
     def _populate_database(self, username, password):

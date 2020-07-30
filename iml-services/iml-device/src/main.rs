@@ -34,6 +34,8 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let pool = get_db_pool(5).await?;
 
+    sqlx::migrate!("../../migrations").run(&pool).await?;
+    
     let cache = create_cache(&pool).await?;
 
     let cache2 = Arc::clone(&cache);
