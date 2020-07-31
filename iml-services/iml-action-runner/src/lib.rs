@@ -6,6 +6,7 @@ pub mod data;
 pub mod error;
 pub mod local_actions;
 pub mod receiver;
+pub(crate) mod remote_action;
 pub mod sender;
 
 use futures::{channel::oneshot, lock::Mutex};
