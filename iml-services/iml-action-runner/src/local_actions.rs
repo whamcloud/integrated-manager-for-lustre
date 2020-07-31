@@ -100,8 +100,8 @@ pub async fn handle_local_action(
 
             Ok(Ok(serde_json::Value::Null))
         }
-        Action::ActionStart { id, action, args } => {
-            if action == "get_session".into() {
+        Action::ActionStart { id, action, args } => match action.as_ref() {
+            "get_session" => {
                 let rx = add_in_flight(Arc::clone(&in_flight), id.clone()).await;
 
                 let fut = wrap_plugin(args, move |fqdn| get_session(fqdn, sessions));
@@ -109,7 +109,8 @@ pub async fn handle_local_action(
                 spawn_plugin(fut, in_flight, id);
 
                 rx.err_into().await
-            } else if action == "await_next_session".into() {
+            }
+            "await_next_session" => {
                 let rx = add_in_flight(Arc::clone(&in_flight), id.clone()).await;
 
                 let fut = wrap_plugin(args, move |(fqdn, last_session, wait_secs)| {
@@ -119,11 +120,10 @@ pub async fn handle_local_action(
                 spawn_plugin(fut, in_flight, id);
 
                 rx.await.map_err(ActionRunnerError::OneShotCanceledError)
-            } else {
-                Err(ActionRunnerError::RequiredError(error::RequiredError(
-                    format!("Could not find action {} in local registry", action),
-                )))
             }
-        }
+            _ => Err(ActionRunnerError::RequiredError(error::RequiredError(
+                format!("Could not find action {} in local registry", action),
+            ))),
+        },
     }
 }
