@@ -2,13 +2,16 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use bytes::buf::BufExt as _;
 use futures::{
     channel::oneshot,
     future::{self, Either},
     Future, FutureExt, TryFutureExt,
 };
+use hyper::{client::HttpConnector, Body, Client, Request};
+use hyperlocal::{UnixClientExt as _, UnixConnector};
 use iml_action_runner::ActionType;
-use iml_manager_env::get_action_runner_connect;
+use iml_manager_env::{get_action_runner_http, get_action_runner_uds, running_in_docker};
 use iml_wire_types::{Action, ActionId, ActionName, Fqdn};
 use thiserror::Error;
 use uuid::Uuid;
@@ -16,21 +19,58 @@ use uuid::Uuid;
 #[derive(Error, Debug)]
 pub enum ImlActionClientError {
     #[error(transparent)]
-    ReqwestError(#[from] reqwest::Error),
+    HyperError(#[from] hyper::Error),
+    #[error(transparent)]
+    UriError(hyper::http::uri::InvalidUri),
     #[error("Request Cancelled")]
     CancelledRequest,
+    #[error(transparent)]
+    HttpError(#[from] hyper::http::Error),
+    #[error(transparent)]
+    SerdeJsonError(#[from] serde_json::error::Error),
 }
 
-pub fn invoke_rust_agent(
-    host: impl Into<Fqdn> + Clone,
-    command: impl Into<ActionName>,
-    args: impl serde::Serialize,
-) -> (
-    oneshot::Sender<()>,
-    impl Future<Output = Result<serde_json::Value, ImlActionClientError>>,
-) {
-    let request_id = Uuid::new_v4().to_hyphenated().to_string();
-    let conn = get_action_runner_connect();
+#[derive(Clone)]
+enum ClientWrapper {
+    Http(Client<HttpConnector>),
+    Unix(Client<UnixConnector>),
+}
+
+impl ClientWrapper {
+    fn request(&self, req: Request<Body>) -> hyper::client::ResponseFuture {
+        match self {
+            ClientWrapper::Http(c) => c.request(req),
+            ClientWrapper::Unix(c) => c.request(req),
+        }
+    }
+}
+
+fn client() -> ClientWrapper {
+    if running_in_docker() {
+        ClientWrapper::Http(Client::new())
+    } else {
+        ClientWrapper::Unix(Client::unix())
+    }
+}
+
+fn connect_uri() -> Result<hyper::Uri, ImlActionClientError> {
+    if running_in_docker() {
+        get_action_runner_http()
+            .parse::<hyper::Uri>()
+            .map_err(ImlActionClientError::UriError)
+    } else {
+        Ok(hyperlocal::Uri::new(get_action_runner_uds(), "/").into())
+    }
+}
+
+async fn build_invoke_rust_agent(
+    host: impl Into<Fqdn> + Clone + Send,
+    command: impl Into<ActionName> + Send,
+    args: impl serde::Serialize + Send,
+    client: ClientWrapper,
+    request_id: String,
+) -> Result<serde_json::Value, ImlActionClientError> {
+    let uri = connect_uri()?;
 
     let action = ActionType::Remote((
         host.clone().into(),
@@ -41,20 +81,61 @@ pub fn invoke_rust_agent(
         },
     ));
 
-    let client = reqwest::Client::new();
+    let req = Request::builder()
+        .method(hyper::Method::POST)
+        .header(hyper::header::ACCEPT, "application/json")
+        .header(hyper::header::CONTENT_TYPE, "application/json")
+        .uri(&uri)
+        .body(Body::from(serde_json::to_string(&action)?))?;
+
+    client
+        .request(req)
+        .err_into()
+        .and_then(|resp| hyper::body::aggregate(resp).err_into())
+        .map(|xs| match xs {
+            Ok(body) => {
+                serde_json::from_reader(body.reader()).map_err(ImlActionClientError::SerdeJsonError)
+            }
+            Err(e) => Err(e),
+        })
+        .await
+}
+
+pub async fn invoke_rust_agent(
+    host: impl Into<Fqdn> + Clone + Send,
+    command: impl Into<ActionName> + Send,
+    args: impl serde::Serialize + Send,
+) -> Result<serde_json::Value, ImlActionClientError> {
+    let client = client();
+    let request_id = Uuid::new_v4().to_hyphenated().to_string();
+
+    build_invoke_rust_agent(host, command, args, client, request_id).await
+}
+
+pub fn invoke_rust_agent_cancelable(
+    host: impl Into<Fqdn> + Clone + Send,
+    command: impl Into<ActionName> + Send,
+    args: impl serde::Serialize + Send,
+) -> Result<
+    (
+        oneshot::Sender<()>,
+        impl Future<Output = Result<serde_json::Value, ImlActionClientError>>,
+    ),
+    ImlActionClientError,
+> {
+    let client = client();
+    let request_id = Uuid::new_v4().to_hyphenated().to_string();
+
+    let host2 = host.clone();
+    let client2 = client.clone();
+    let request_id2 = request_id.clone();
+
+    let post = build_invoke_rust_agent(host, command, args, client, request_id);
 
     let (p, c) = oneshot::channel::<()>();
 
-    let post = client
-        .post(&conn)
-        .json(&action)
-        .send()
-        .err_into()
-        .and_then(|resp| resp.json().err_into())
-        .boxed();
-
     let fut = async move {
-        let either = future::select(c, post).await;
+        let either = future::select(c, post.boxed()).await;
 
         match either {
             Either::Left((x, f)) => {
@@ -62,17 +143,25 @@ pub fn invoke_rust_agent(
                     return f.await;
                 }
                 let cancel = ActionType::Remote((
-                    host.into(),
+                    host2.into(),
                     Action::ActionCancel {
-                        id: ActionId(request_id),
+                        id: ActionId(request_id2),
                     },
                 ));
-                let _rc = client.post(&conn).json(&cancel).send().await;
+                let uri = connect_uri()?;
+                let req = Request::builder()
+                    .method("POST")
+                    .uri(&uri)
+                    .body(Body::from(serde_json::to_string(&cancel)?));
+
+                if let Ok(req) = req {
+                    let _rc = client2.request(req).await;
+                }
                 Err(ImlActionClientError::CancelledRequest)
             }
             Either::Right((x, _)) => x,
         }
     };
 
-    (p, fut)
+    Ok((p, fut))
 }
