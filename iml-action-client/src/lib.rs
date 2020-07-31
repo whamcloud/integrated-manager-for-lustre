@@ -52,7 +52,7 @@ fn client() -> ClientWrapper {
     }
 }
 
-// Return URI or painc
+// Return URI or panic
 fn connect_uri() -> hyper::Uri {
     if running_in_docker() {
         get_action_runner_http().parse::<hyper::Uri>().unwrap()
