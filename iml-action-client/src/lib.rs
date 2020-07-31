@@ -158,7 +158,7 @@ pub fn invoke_rust_agent_cancelable(
                         id: ActionId(request_id2),
                     },
                 ));
-                let uri = connect_uri()?;
+                let uri = connect_uri();
                 let req = Request::builder()
                     .method("POST")
                     .uri(&uri)
