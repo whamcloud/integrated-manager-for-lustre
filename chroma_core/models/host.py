@@ -1783,3 +1783,13 @@ class UpdatesAvailableAlert(AlertStateBase):
 
 class NoNidsPresent(Exception):
     pass
+
+
+class MountSnapshotStep(Step):
+    def run(self, kwargs):
+        self.invoke_rust_local_action_expect_result("mount_snapshot", (kwargs["fsname"], kwargs["name"]))
+
+
+class UnmountSnapshotStep(Step):
+    def run(self, kwargs):
+        self.invoke_rust_local_action_expect_result("unmount_snapshot", (kwargs["fsname"], kwargs["name"]))
