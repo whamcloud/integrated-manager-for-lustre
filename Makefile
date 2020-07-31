@@ -35,7 +35,7 @@ NOSE_ARGS ?= --stop
 
 ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo ''; fi)
 
-all: copr-rpms rpms
+all: copr-rpms rpms device-scanner-rpms iml-gui-rpm docker-rpms
 
 local:
 	$(MAKE) RPM_DIST="0.$(shell date '+%s')" all
