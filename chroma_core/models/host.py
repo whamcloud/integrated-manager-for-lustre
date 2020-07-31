@@ -1787,7 +1787,7 @@ class NoNidsPresent(Exception):
 
 class MountSnapshotStep(Step):
     def run(self, kwargs):
-        self.invoke_rust_local_action_expect_result("mount_snapshot", (kwargs["fsname"], kwargs["name"]))
+        self.invoke_rust_local_action_expect_result("snapshot_mount", (kwargs["fsname"], kwargs["name"]))
 
 
 class UnmountSnapshotStep(Step):
