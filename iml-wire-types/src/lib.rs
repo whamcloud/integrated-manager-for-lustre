@@ -191,6 +191,12 @@ impl fmt::Display for ActionName {
     }
 }
 
+impl AsRef<str> for ActionName {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
 pub struct ActionId(pub String);
