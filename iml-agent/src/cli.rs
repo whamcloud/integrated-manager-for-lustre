@@ -246,6 +246,8 @@ pub enum SnapshotCommand {
     Mount(snapshot::Mount),
     /// Unmount a snapshot
     Unmount(snapshot::Unmount),
+    /// List snapshots.
+    List(snapshot::List),
 }
 
 #[derive(Debug, StructOpt)]
@@ -539,7 +541,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 table.add_row(row!["pcsd", pc.config, pc.service]);
                 table.printstd();
             }
-            Err(e) => println!("{:?}", e),
+            Err(e) => eprintln!("{:?}", e),
         },
         App::HAResources => match high_availability::get_ha_resource_list(()).await {
             Ok(v) => {
@@ -547,7 +549,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("{}", serde_json::to_string(&e).unwrap())
                 }
             }
-            Err(e) => println!("{:?}", e),
+            Err(e) => eprintln!("{:?}", e),
         },
         App::NtpClient { command } => match command {
             NtpClientCommand::Configure { server } => {
@@ -573,7 +575,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                     }
-                    Err(e) => println!("{:?}", e),
+                    Err(e) => eprintln!("{:?}", e),
                 }
             }
 
@@ -586,7 +588,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             println!("Ntp is not configured for IML on this server.");
                         }
                     }
-                    Err(e) => println!("{:?}", e),
+                    Err(e) => eprintln!("{:?}", e),
                 }
             }
         },
@@ -602,7 +604,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     cs.info
                 );
             }
-            Err(e) => println!("{:?}", e),
+            Err(e) => eprintln!("{:?}", e),
         },
         App::Package { command } => {
             if let Err(e) = match command {
@@ -658,7 +660,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }),
             } {
-                println!("{:?}", e);
+                eprintln!("{:?}", e);
                 exit(exitcode::SOFTWARE);
             }
         }
@@ -667,7 +669,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 PostOfficeCommand::Add { mailbox } => postoffice::route_add(mailbox).await,
                 PostOfficeCommand::Remove { mailbox } => postoffice::route_remove(mailbox).await,
             } {
-                println!("{:?}", e);
+                eprintln!("{:?}", e);
                 exit(exitcode::SOFTWARE);
             }
         }
@@ -712,6 +714,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 SnapshotCommand::Destroy(d) => lustre::snapshot::destroy(d).await,
                 SnapshotCommand::Mount(m) => lustre::snapshot::mount(m).await,
                 SnapshotCommand::Unmount(u) => lustre::snapshot::unmount(u).await,
+                SnapshotCommand::List(l) => lustre::snapshot::list(l)
+                    .await
+                    .map(|snaps| println!("{:?}", snaps)),
             } {
                 eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
