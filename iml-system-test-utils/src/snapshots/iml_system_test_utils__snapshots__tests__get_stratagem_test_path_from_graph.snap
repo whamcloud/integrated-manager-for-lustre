@@ -7,5 +7,5 @@ edge: Stratagem has nodes (Snapshot { name: Bare, available: false }, Snapshot {
 edge: Stratagem has nodes (Snapshot { name: ImlStratagemConfigured, available: false }, Snapshot { name: StratagemServersDeployed, available: false })
 edge: Stratagem has nodes (Snapshot { name: StratagemServersDeployed, available: false }, Snapshot { name: StratagemInstalled, available: false })
 edge: Stratagem has nodes (Snapshot { name: StratagemInstalled, available: false }, Snapshot { name: StratagemCreated, available: false })
-edge: Stratagem has nodes (Snapshot { name: StratagemCreated, available: false }, Snapshot { name: FilesystemDetected, available: false })
+edge: Stratagem has nodes (Snapshot { name: StratagemCreated, available: false }, Snapshot { name: StratagemDetected, available: false })
 

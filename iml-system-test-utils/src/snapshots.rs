@@ -62,7 +62,9 @@ pub enum SnapshotName {
     LdiskfsCreated,
     ZfsCreated,
     StratagemCreated,
-    FilesystemDetected,
+    LdiskfsDetected,
+    ZfsDetected,
+    StratagemDetected,
 }
 
 impl SnapshotName {
@@ -80,7 +82,9 @@ impl SnapshotName {
             Self::LdiskfsCreated => 9,
             Self::ZfsCreated => 10,
             Self::StratagemCreated => 11,
-            Self::FilesystemDetected => 12,
+            Self::LdiskfsDetected => 12,
+            Self::ZfsDetected => 13,
+            Self::StratagemDetected => 14,
         }
     }
 }
@@ -106,7 +110,9 @@ impl From<&String> for SnapshotName {
             "ldiskfs-created" => Self::LdiskfsCreated,
             "zfs-created" => Self::ZfsCreated,
             "stratagem-created" => Self::StratagemCreated,
-            "filesystem-detected" => Self::FilesystemDetected,
+            "ldiskfs-detected" => Self::LdiskfsDetected,
+            "zfs-detected" => Self::ZfsDetected,
+            "stratagem-detected" => Self::StratagemDetected,
             _ => Self::Bare,
         }
     }
@@ -127,7 +133,9 @@ impl fmt::Display for SnapshotName {
             Self::LdiskfsCreated => write!(f, "ldiskfs-created"),
             Self::ZfsCreated => write!(f, "zfs-created"),
             Self::StratagemCreated => write!(f, "stratagem-created"),
-            Self::FilesystemDetected => write!(f, "filesystem-detected"),
+            Self::LdiskfsDetected => write!(f, "ldiskfs-detected"),
+            Self::ZfsDetected => write!(f, "zfs-detected"),
+            Self::StratagemDetected => write!(f, "stratagem-detected"),
         }
     }
 }
@@ -230,9 +238,17 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
         name: SnapshotName::StratagemCreated,
         available: snapshots.contains(&SnapshotName::StratagemCreated),
     });
-    let filesystem_detected = graph.add_node(Snapshot {
-        name: SnapshotName::FilesystemDetected,
-        available: snapshots.contains(&SnapshotName::FilesystemDetected),
+    let ldiskfs_detected = graph.add_node(Snapshot {
+        name: SnapshotName::LdiskfsDetected,
+        available: snapshots.contains(&SnapshotName::LdiskfsDetected),
+    });
+    let zfs_detected = graph.add_node(Snapshot {
+        name: SnapshotName::ZfsDetected,
+        available: snapshots.contains(&SnapshotName::ZfsDetected),
+    });
+    let stratagem_detected = graph.add_node(Snapshot {
+        name: SnapshotName::StratagemDetected,
+        available: snapshots.contains(&SnapshotName::StratagemDetected),
     });
 
     graph.add_edge(
@@ -336,7 +352,7 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
 
     graph.add_edge(
         ldiskfs_created,
-        filesystem_detected,
+        ldiskfs_detected,
         Transition {
             path: SnapshotPath::Ldiskfs,
             transition: mk_transition(detect_fs),
@@ -345,7 +361,7 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
 
     graph.add_edge(
         zfs_created,
-        filesystem_detected,
+        zfs_detected,
         Transition {
             path: SnapshotPath::Zfs,
             transition: mk_transition(detect_fs),
@@ -354,7 +370,7 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
 
     graph.add_edge(
         stratagem_created,
-        filesystem_detected,
+        stratagem_detected,
         Transition {
             path: SnapshotPath::Stratagem,
             transition: mk_transition(detect_fs),
