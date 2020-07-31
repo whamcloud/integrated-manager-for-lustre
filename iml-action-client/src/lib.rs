@@ -4,8 +4,7 @@
 
 use bytes::buf::BufExt as _;
 use futures::{
-    channel::oneshot,
-    future::{self, Either},
+    future::{abortable, AbortHandle, Aborted},
     Future, FutureExt, TryFutureExt,
 };
 use hyper::{client::HttpConnector, Body, Client, Request};
@@ -63,9 +62,9 @@ fn connect_uri() -> hyper::Uri {
 }
 
 async fn build_invoke_rust_agent(
-    host: impl Into<Fqdn> + Clone + Send,
-    command: impl Into<ActionName> + Send,
-    args: impl serde::Serialize + Send,
+    host: impl Into<Fqdn> + Clone,
+    command: impl Into<ActionName>,
+    args: impl serde::Serialize,
     client: ClientWrapper,
     request_id: String,
 ) -> Result<serde_json::Value, ImlActionClientError> {
@@ -121,14 +120,13 @@ pub async fn invoke_rust_agent(
     build_invoke_rust_agent(host, command, args, client, request_id).await
 }
 
-// @@ This may want to use futures::future::Abortable instead
 pub fn invoke_rust_agent_cancelable(
-    host: impl Into<Fqdn> + Clone + Send,
-    command: impl Into<ActionName> + Send,
-    args: impl serde::Serialize + Send,
+    host: impl Into<Fqdn> + Clone,
+    command: impl Into<ActionName>,
+    args: impl serde::Serialize,
 ) -> Result<
     (
-        oneshot::Sender<()>,
+        AbortHandle,
         impl Future<Output = Result<serde_json::Value, ImlActionClientError>>,
     ),
     ImlActionClientError,
@@ -142,22 +140,21 @@ pub fn invoke_rust_agent_cancelable(
 
     let post = build_invoke_rust_agent(host, command, args, client, request_id);
 
-    let (p, c) = oneshot::channel::<()>();
+    let (fut, handle) = abortable(post);
 
     let fut = async move {
-        let either = future::select(c, post.boxed()).await;
+        let x = fut.await;
 
-        match either {
-            Either::Left((x, f)) => {
-                if x.is_err() {
-                    return f.await;
-                }
+        match x {
+            Ok(x) => x,
+            Err(Aborted) => {
                 let cancel = ActionType::Remote((
                     host2.into(),
                     Action::ActionCancel {
                         id: ActionId(request_id2),
                     },
                 ));
+
                 let uri = connect_uri();
                 let req = Request::builder()
                     .method("POST")
@@ -167,11 +164,11 @@ pub fn invoke_rust_agent_cancelable(
                 if let Ok(req) = req {
                     let _rc = client2.request(req).await;
                 }
+
                 Err(ImlActionClientError::CancelledRequest)
             }
-            Either::Right((x, _)) => x,
         }
     };
 
-    Ok((p, fut))
+    Ok((handle, fut))
 }
