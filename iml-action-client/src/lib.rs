@@ -53,13 +53,12 @@ fn client() -> ClientWrapper {
     }
 }
 
-fn connect_uri() -> Result<hyper::Uri, ImlActionClientError> {
+// Return URI or painc
+fn connect_uri() -> hyper::Uri {
     if running_in_docker() {
-        get_action_runner_http()
-            .parse::<hyper::Uri>()
-            .map_err(ImlActionClientError::UriError)
+        get_action_runner_http().parse::<hyper::Uri>().unwrap()
     } else {
-        Ok(hyperlocal::Uri::new(get_action_runner_uds(), "/").into())
+        hyperlocal::Uri::new(get_action_runner_uds(), "/").into()
     }
 }
 
@@ -70,7 +69,7 @@ async fn build_invoke_rust_agent(
     client: ClientWrapper,
     request_id: String,
 ) -> Result<serde_json::Value, ImlActionClientError> {
-    let uri = connect_uri()?;
+    let uri = connect_uri();
 
     let action = ActionType::Remote((
         host.clone().into(),
@@ -86,7 +85,11 @@ async fn build_invoke_rust_agent(
         .header(hyper::header::ACCEPT, "application/json")
         .header(hyper::header::CONTENT_TYPE, "application/json")
         .uri(&uri)
-        .body(Body::from(serde_json::to_string(&action)?))?;
+        .body(Body::from({
+            let s = serde_json::to_string(&action)?;
+            tracing::debug!("REQUEST to {} BODY: {}", &uri, &s);
+            s
+        }))?;
 
     client
         .request(req)
@@ -94,9 +97,15 @@ async fn build_invoke_rust_agent(
         .and_then(|resp| hyper::body::aggregate(resp).err_into())
         .map(|xs| match xs {
             Ok(body) => {
-                serde_json::from_reader(body.reader()).map_err(ImlActionClientError::SerdeJsonError)
+                let s = serde_json::from_reader(body.reader())
+                    .map_err(ImlActionClientError::SerdeJsonError);
+                tracing::debug!("RESULT from {} BODY: {:?}", &uri, &s);
+                s
             }
-            Err(e) => Err(e),
+            Err(e) => {
+                tracing::debug!("RESULT from {} ERROR: {}", &uri, &e);
+                Err(e)
+            }
         })
         .await
 }
@@ -112,6 +121,7 @@ pub async fn invoke_rust_agent(
     build_invoke_rust_agent(host, command, args, client, request_id).await
 }
 
+// @@ This may want to use futures::future::Abortable instead
 pub fn invoke_rust_agent_cancelable(
     host: impl Into<Fqdn> + Clone + Send,
     command: impl Into<ActionName> + Send,
