@@ -17,7 +17,7 @@ pub async fn vagrant() -> Result<Command, TestError> {
     Ok(x)
 }
 
-pub async fn up<'a>() -> Result<Command, TestError> {
+pub async fn up() -> Result<Command, TestError> {
     let mut x = vagrant().await?;
 
     x.arg("up");
@@ -25,7 +25,19 @@ pub async fn up<'a>() -> Result<Command, TestError> {
     Ok(x)
 }
 
-pub async fn destroy<'a>(config: &Config) -> Result<(), TestError> {
+pub async fn up_parallel<'a>(nodes: Vec<&'static str>) -> Result<(), TestError> {
+    let xs = nodes.into_iter().map(|x| async move {
+        vagrant::up().await?.arg(x).checked_status().await?;
+
+        Ok::<_, TestError>(())
+    });
+
+    futures::future::try_join_all(xs).await?;
+
+    Ok(())
+}
+
+pub async fn destroy(config: &Config) -> Result<(), TestError> {
     let nodes = config.destroy_list();
 
     for node in &nodes {
@@ -80,6 +92,21 @@ pub async fn snapshot_save(host: &str, name: &str) -> Result<Command, TestError>
     x.arg("save").arg("-f").arg(host).arg(name);
 
     Ok(x)
+}
+
+pub async fn snapshot_save_parallel(nodes: Vec<&'static str>, name: &str) -> Result<(), TestError> {
+    let xs = nodes.into_iter().map(|x| async move {
+        vagrant::snapshot_save(x, name)
+            .await?
+            .checked_status()
+            .await?;
+
+        Ok::<_, TestError>(())
+    });
+
+    futures::future::try_join_all(xs).await?;
+
+    Ok(())
 }
 
 pub async fn snapshot_restore(host: &str, name: &str) -> Result<Command, TestError> {

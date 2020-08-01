@@ -159,12 +159,12 @@ pub fn get_local_server_names<'a>(servers: &'a [&'a str]) -> Vec<String> {
 }
 
 pub trait ServerList {
-    fn to_server_list(&self) -> Vec<&str>;
+    fn to_server_list(&self) -> Vec<&'static str>;
 }
 
-impl ServerList for Vec<(&str, Vec<&str>)> {
-    fn to_server_list(&self) -> Vec<&str> {
-        let server_set: Vec<&str> = self.iter().flat_map(|(_, x)| x).copied().collect();
+impl ServerList for Vec<(&str, Vec<&'static str>)> {
+    fn to_server_list(&self) -> Vec<&'static str> {
+        let server_set: Vec<&str> = self.into_iter().flat_map(|(_, x)| x).copied().collect();
         let mut xs: Vec<&str> = server_set.into_iter().collect();
         xs.dedup();
 
@@ -243,7 +243,7 @@ impl Default for Config {
 }
 
 impl Config {
-    pub fn all_hosts(&self) -> Vec<&str> {
+    pub fn all_hosts(&self) -> Vec<&'static str> {
         let storage_and_client_servers = self.profile_map.to_server_list();
         let all_hosts = vec![self.iscsi, self.manager];
 
@@ -373,9 +373,18 @@ pub async fn wait_on_services_ready(config: &Config) -> Result<(), TestError> {
 pub async fn setup_bare(config: Config) -> Result<Config, TestError> {
     vagrant::up()
         .await?
-        .arg(config.manager)
+        .arg(config.iscsi)
         .checked_status()
         .await?;
+
+    vagrant::up_parallel(
+        config
+            .all_hosts()
+            .into_iter()
+            .filter(|x| *x == config.iscsi)
+            .collect(),
+    )
+    .await?;
 
     match config.test_type {
         TestType::Rpm => match env::var("REPO_URI") {
@@ -410,12 +419,6 @@ pub async fn setup_bare(config: Config) -> Result<Config, TestError> {
         },
     };
 
-    vagrant::up()
-        .await?
-        .args(config.all_hosts())
-        .checked_status()
-        .await?;
-
     match config.ntp_server {
         NtpServer::HostOnly => {
             ssh::configure_ntp_for_host_only_if(&config.storage_server_ips()).await?
@@ -429,17 +432,11 @@ pub async fn setup_bare(config: Config) -> Result<Config, TestError> {
         .checked_status()
         .await?;
 
-    for x in config.all_hosts() {
-        vagrant::snapshot_save(
-            x,
-            snapshots::get_snapshot_name_for_state(&config, TestState::Bare)
-                .to_string()
-                .as_str(),
-        )
-        .await?
-        .checked_status()
-        .await?;
-    }
+    vagrant::snapshot_save_parallel(
+        config.all_hosts(),
+        &snapshots::get_snapshot_name_for_state(&config, TestState::Bare).to_string(),
+    )
+    .await?;
 
     Ok(config)
 }
@@ -447,7 +444,7 @@ pub async fn setup_bare(config: Config) -> Result<Config, TestError> {
 pub async fn configure_iml(config: Config) -> Result<Config, TestError> {
     vagrant::up()
         .await?
-        .args(&vec![config.manager][..])
+        .arg(&config.manager)
         .checked_status()
         .await?;
 
@@ -458,21 +455,15 @@ pub async fn configure_iml(config: Config) -> Result<Config, TestError> {
 
     vagrant::halt()
         .await?
-        .args(&vec![config.manager][..])
+        .arg(&config.manager)
         .checked_status()
         .await?;
 
-    for host in config.all_hosts() {
-        vagrant::snapshot_save(
-            host,
-            snapshots::get_snapshot_name_for_state(&config, TestState::Configured)
-                .to_string()
-                .as_str(),
-        )
-        .await?
-        .checked_status()
-        .await?;
-    }
+    vagrant::snapshot_save_parallel(
+        config.all_hosts(),
+        &snapshots::get_snapshot_name_for_state(&config, TestState::Configured).to_string(),
+    )
+    .await?;
 
     vagrant::up()
         .await?
@@ -515,17 +506,11 @@ pub async fn deploy_servers(config: Config) -> Result<Config, TestError> {
         .checked_status()
         .await?;
 
-    for host in config.all_hosts() {
-        vagrant::snapshot_save(
-            host,
-            snapshots::get_snapshot_name_for_state(&config, TestState::ServersDeployed)
-                .to_string()
-                .as_str(),
-        )
-        .await?
-        .checked_status()
-        .await?;
-    }
+    vagrant::snapshot_save_parallel(
+        config.all_hosts(),
+        &snapshots::get_snapshot_name_for_state(&config, TestState::ServersDeployed).to_string(),
+    )
+    .await?;
 
     vagrant::up()
         .await?
@@ -614,26 +599,18 @@ pub async fn install_fs(config: Config) -> Result<Config, TestError> {
         .checked_status()
         .await?;
 
-    for x in config.all_hosts() {
-        vagrant::snapshot_save(
-            x,
-            snapshots::get_snapshot_name_for_state(&config, TestState::LustreRpmsInstalled)
-                .to_string()
-                .as_str(),
-        )
-        .await?
-        .checked_status()
-        .await?;
-    }
+    vagrant::snapshot_save_parallel(
+        config.all_hosts(),
+        &snapshots::get_snapshot_name_for_state(&config, TestState::LustreRpmsInstalled)
+            .to_string(),
+    )
+    .await?;
 
     vagrant::up()
         .await?
         .args(config.all_hosts())
         .checked_status()
         .await?;
-
-    wait_for_ntp(&config).await?;
-    wait_on_services_ready(&config).await?;
 
     Ok(config)
 }
@@ -643,11 +620,6 @@ pub async fn create_fs(config: Config) -> Result<Config, TestError> {
         FsType::LDISKFS => create_monitored_ldiskfs(&config).await?,
         FsType::ZFS => create_monitored_zfs(&config).await?,
     };
-
-    wait_for_ntp(&config).await?;
-    wait_on_services_ready(&config).await?;
-
-    delay_for(Duration::from_secs(10)).await;
 
     Ok(config)
 }
@@ -677,6 +649,12 @@ async fn mount_fs(config: &Config) -> Result<usize, TestError> {
 
 pub async fn detect_fs(config: Config) -> Result<Config, TestError> {
     let count = mount_fs(&config).await?;
+
+    wait_for_ntp(&config).await?;
+    wait_on_services_ready(&config).await?;
+
+    delay_for(Duration::from_secs(10)).await;
+
     ssh::detect_fs(config.manager_ip).await?;
 
     let num_fs = ssh::list_fs_json(config.manager_ip).await?.len();
