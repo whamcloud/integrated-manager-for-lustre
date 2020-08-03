@@ -2,6 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+pub mod snapshot;
+
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{
     cmp::{Ord, Ordering},
@@ -1702,6 +1704,76 @@ impl fmt::Display for Branding {
             Self::DDN(x) => write!(f, "{}", x),
             Self::Whamcloud => write!(f, "whamcloud"),
         }
+    }
+}
+
+#[derive(Debug, Eq, Clone, serde::Serialize, serde::Deserialize)]
+pub struct LdevEntry {
+    pub primary: String,
+    pub failover: Option<String>,
+    pub label: String,
+    pub device: String,
+}
+
+impl From<&str> for LdevEntry {
+    fn from(x: &str) -> Self {
+        let parts: Vec<&str> = x.split(' ').collect();
+
+        Self {
+            primary: (*parts
+                .get(0)
+                .unwrap_or_else(|| panic!("LdevEntry must specify a primary server.")))
+            .to_string(),
+            failover: parts.get(1).map_or_else(
+                || panic!("LdevEntry must specify a failover server or '-'."),
+                |x| {
+                    if *x == "-" {
+                        None
+                    } else {
+                        Some((*x).to_string())
+                    }
+                },
+            ),
+            label: (*parts
+                .get(2)
+                .unwrap_or_else(|| panic!("LdevEntry must specify a label.")))
+            .to_string(),
+            device: (*parts
+                .get(3)
+                .unwrap_or_else(|| panic!("LdevEntry must specify a device.")))
+            .to_string(),
+        }
+    }
+}
+
+impl fmt::Display for LdevEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} {} {} {}",
+            self.primary,
+            self.failover.as_deref().unwrap_or("-"),
+            self.label,
+            self.device
+        )
+    }
+}
+
+impl Ord for LdevEntry {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.label.cmp(&other.label)
+    }
+}
+
+impl PartialOrd for LdevEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for LdevEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.label == other.label
     }
 }
 
