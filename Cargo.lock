@@ -1302,6 +1302,7 @@ name = "iml-action-runner"
 version = "0.3.0"
 dependencies = [
  "futures",
+ "iml-action-client",
  "iml-agent-comms",
  "iml-manager-env",
  "iml-rabbit",
