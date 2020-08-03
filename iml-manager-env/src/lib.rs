@@ -15,6 +15,14 @@ lazy_static! {
     static ref RUNNING_IN_DOCKER: bool = std::fs::metadata("/.dockerenv").is_ok();
 }
 
+lazy_static! {
+    static ref ACTION_RUNNER_HTTP: String = format!(
+        "http://{}:{}",
+        get_server_host(),
+        get_var("ACTION_RUNNER_PORT")
+    );
+}
+
 /// Get the environment variable or panic
 fn get_var(name: &str) -> String {
     env::var(name).unwrap_or_else(|_| panic!("{} environment variable is required.", name))
@@ -247,16 +255,12 @@ pub fn get_use_stratagem() -> bool {
     string_to_bool(get_var("USE_STRATAGEM"))
 }
 
-pub fn get_action_runner_connect() -> String {
-    if running_in_docker() {
-        format!(
-            "http://{}:{}",
-            get_server_host(),
-            get_var("ACTION_RUNNER_PORT")
-        )
-    } else {
-        "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/".to_string()
-    }
+pub fn get_action_runner_http() -> String {
+    ACTION_RUNNER_HTTP.clone()
+}
+
+pub fn get_action_runner_uds() -> String {
+    "/var/run/iml-action-runner.sock".to_string()
 }
 
 pub fn get_sfa_endpoints() -> Option<Vec<Vec<Url>>> {
