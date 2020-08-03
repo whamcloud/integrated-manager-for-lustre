@@ -125,9 +125,12 @@ pub async fn handle_local_action(
             "snapshot_mount" => {
                 let rx = add_in_flight(Arc::clone(&in_flight), id.clone()).await;
 
-                // let fut = wrap_plugin(args, move |_| async { Ok(serde_json::Value::Null) });
+                let fut = wrap_plugin(args, move |fqdn| {
+                    let (tx, fut) = invoke_rust_agent(fqdn, "snapshot_mount", args);
+                    fut
+                });
 
-                // spawn_plugin(fut, in_flight, id);
+                spawn_plugin(fut, in_flight, id);
 
                 rx.err_into().await
             }
