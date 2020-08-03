@@ -17,7 +17,7 @@ use iml_postgres::sqlx::{self, PgPool};
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap},
     sync::Arc,
 };
 
@@ -169,14 +169,51 @@ pub async fn update_client_mounts(
     Ok(())
 }
 
-type DeviceIndex<'a> = HashMap<&'a Fqdn, DeviceMap>;
-type DeviceMap = HashMap<DeviceId, BTreeSet<Vec<DeviceId>>>;
+#[derive(Debug, serde::Serialize)]
+pub struct DeviceMap(BTreeMap<DeviceId, BTreeSet<Vec<DeviceId>>>);
+
+impl DeviceMap {
+    fn get_shared_parent(&self, id: &DeviceId) -> Option<(&DeviceId, &BTreeSet<Vec<DeviceId>>)> {
+        let item = self.0.get(id)?;
+
+        if id.0.starts_with("lv_") {
+            let vg = item.iter().find_map(|xs| {
+                let x = xs.last()?;
+
+                if x.0.starts_with("vg_") {
+                    Some(x)
+                } else {
+                    None
+                }
+            })?;
+
+            Some((vg, self.0.get(&vg)?))
+        } else if id.0.starts_with("dataset_") {
+            let zpool = item.iter().find_map(|xs| {
+                let x = xs.last()?;
+
+                if x.0.starts_with("zpool_") {
+                    Some(x)
+                } else {
+                    None
+                }
+            })?;
+
+            Some((zpool, self.0.get(&zpool)?))
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct DeviceIndex<'a>(HashMap<&'a Fqdn, DeviceMap>);
 
 pub fn build_device_index<'a>(x: &'a HashMap<Fqdn, Device>) -> DeviceIndex<'a> {
-    let mut device_index: DeviceIndex<'a> = x
+    let mut device_index: HashMap<&Fqdn, DeviceMap> = x
         .iter()
         .map(|(fqdn, device)| {
-            let mut map = HashMap::new();
+            let mut map = DeviceMap(BTreeMap::new());
 
             build_device_map(device, &mut map, &vec![]);
 
@@ -198,10 +235,10 @@ pub fn build_device_index<'a>(x: &'a HashMap<Fqdn, Device>) -> DeviceIndex<'a> {
             None => continue,
         };
 
-        map.insert(device_id.clone(), paths.clone());
+        map.0.insert(device_id.clone(), paths.clone());
     }
 
-    device_index
+    DeviceIndex(device_index)
 }
 
 fn add_shared_storage<'a>(
@@ -209,10 +246,11 @@ fn add_shared_storage<'a>(
     other: HashMap<&'a &Fqdn, &DeviceMap>,
 ) -> Vec<(Fqdn, DeviceId, BTreeSet<Vec<DeviceId>>)> {
     let xs: Vec<_> = map
+        .0
         .iter()
         .filter(|(device_id, _)| {
-            device_id.0.starts_with("lvm_")
-                || device_id.0.starts_with("zpool_")
+            device_id.0.starts_with("lv_")
+                || device_id.0.starts_with("dataset_")
                 || device_id.0.starts_with("mdraid_")
         })
         .collect();
@@ -220,17 +258,41 @@ fn add_shared_storage<'a>(
     let mut matches = vec![];
 
     for (existing_id, parents) in xs {
-        let parent_ids = parents
-            .into_iter()
-            .filter_map(|xs| xs.last())
-            .collect::<Vec<_>>();
+        if existing_id.0.starts_with("lv_") || existing_id.0.starts_with("dataset_") {
+            let shared = map.get_shared_parent(existing_id);
 
-        matches = other
-            .iter()
-            .filter(|(_, map)| parent_ids.iter().all(|p| map.get(p).is_some()))
-            .map(|(fqdn, _)| ((**fqdn).clone(), existing_id.clone(), parents.clone()))
-            .chain(matches)
-            .collect();
+            if let Some((shared_id, shared_parents)) = shared {
+                let parent_ids = shared_parents
+                    .into_iter()
+                    .filter_map(|xs| xs.last())
+                    .collect::<Vec<_>>();
+
+                matches = other
+                    .iter()
+                    .filter(|(_, map)| parent_ids.iter().all(|p| map.0.get(p).is_some()))
+                    .map(|(fqdn, _)| {
+                        vec![
+                            ((**fqdn).clone(), shared_id.clone(), shared_parents.clone()),
+                            ((**fqdn).clone(), existing_id.clone(), parents.clone()),
+                        ]
+                    })
+                    .flatten()
+                    .chain(matches)
+                    .collect();
+            }
+        } else {
+            let parent_ids = parents
+                .into_iter()
+                .filter_map(|xs| xs.last())
+                .collect::<Vec<_>>();
+
+            matches = other
+                .iter()
+                .filter(|(_, map)| parent_ids.iter().all(|p| map.0.get(p).is_some()))
+                .map(|(fqdn, _)| ((**fqdn).clone(), existing_id.clone(), parents.clone()))
+                .chain(matches)
+                .collect();
+        }
     }
 
     matches
@@ -242,7 +304,7 @@ fn build_device_map(device: &Device, map: &mut DeviceMap, path: &[DeviceId]) {
         None => return (),
     };
 
-    let paths = map.entry(id.clone()).or_insert_with(|| BTreeSet::new());
+    let paths = map.0.entry(id.clone()).or_insert_with(|| BTreeSet::new());
 
     paths.insert(path.to_vec());
 
@@ -298,11 +360,12 @@ pub fn find_targets<'a>(
         .into_iter()
         .filter_map(|(fqdn, mntpnt, dev_id, fs_uuid, target)| {
             let ys: Vec<_> = device_index
+                .0
                 .iter()
                 .filter(|(k, _)| *k != &fqdn)
                 .filter_map(|(k, x)| {
                     tracing::debug!("Searching for device {:?} on {}", &x, &k);
-                    let found = x.get(&dev_id);
+                    let found = x.0.get(&dev_id);
 
                     if found.is_some() {
                         tracing::debug!("found device on {}!", &k);
@@ -314,24 +377,6 @@ pub fn find_targets<'a>(
                     None
                 })
                 .collect();
-
-            // let ys: Vec<_> = x
-            //     .iter()
-            //     .filter(|(k, _)| k != &fqdn)
-            //     .filter_map(|(k, x)| {
-            //         tracing::debug!("Searching for device {:?} on {}", &x, &k);
-            //         let found = x.find_device_by_id(&dev_id);
-
-            //         if found.is_some() {
-            //             tracing::debug!("found device on {}!", &k);
-            //             let host_id = host_map.get(&k)?;
-
-            //             return Some(*host_id);
-            //         }
-
-            //         None
-            //     })
-            //     .collect();
 
             tracing::debug!("ys: {:?}", ys);
 
@@ -362,4 +407,21 @@ pub struct Target {
     pub host_ids: Vec<i32>,
     pub uuid: String,
     pub mount_path: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use device_types::devices::Device;
+    use insta::assert_json_snapshot;
+    #[test]
+    fn test_index() {
+        let cluster: HashMap<Fqdn, Device> =
+            serde_json::from_slice(include_bytes!("../fixtures/devtrees.json")).unwrap();
+        let index = build_device_index(&cluster);
+
+        insta::with_settings!({sort_maps => true}, {
+            assert_json_snapshot!(index);
+        });
+    }
 }

@@ -19,6 +19,7 @@ use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
 use std::{
     collections::{BTreeMap, HashMap},
+    fs,
     sync::Arc,
 };
 use warp::Filter;
@@ -103,6 +104,14 @@ async fn main() -> Result<(), ImlDeviceError> {
         update_devices(&pool, &host, &devices).await?;
         update_client_mounts(&pool, lustreclientmount_ct_id, &host, &mounts).await?;
 
+        let pretty_devices = serde_json::to_string_pretty(&devices);
+        fs::write(
+            format!("/tmp/{}_devices.json", &host),
+            pretty_devices.unwrap(),
+        )
+        .unwrap();
+
+        tracing::debug!("device tree for host {} is: {:?}", &host, &devices);
         let mut device_cache = cache2.lock().await;
         device_cache.insert(host.clone(), devices);
         mount_cache.insert(host, mounts);
