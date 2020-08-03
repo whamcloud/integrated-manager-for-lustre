@@ -355,7 +355,7 @@ pub async fn wait_for_commands(commands: &[Command]) -> Result<Vec<Command>, Iml
 
                 main_pb.set_length(tree.len() as u64);
                 main_pb.set_position(
-                    tree.count_node_keys(|n| n.value.state != State::Progressing) as u64,
+                    tree.count_node_keys(|n| n.payload.state != State::Progressing) as u64,
                 );
 
                 delay_for(Duration::from_millis(FETCH_DELAY_MS)).await;
@@ -371,7 +371,7 @@ pub async fn wait_for_commands(commands: &[Command]) -> Result<Vec<Command>, Iml
         async move {
             while !is_done.load(std::sync::atomic::Ordering::SeqCst) {
                 for it in current_items.lock().await.iter() {
-                    if it.value.state == State::Progressing {
+                    if it.payload.state == State::Progressing {
                         if let Some(ic) = &it.indicator {
                             ic.progress_bar.inc(1);
                         }
@@ -498,19 +498,19 @@ pub fn print_error(tree: &Tree<TypedId, Payload>, id: TypedId, print: impl Fn(&s
     let caption = path
         .iter()
         .filter_map(|id| tree.get_node(*id))
-        .map(|n| n.value.msg.clone())
+        .map(|n| n.payload.msg.clone())
         .join(ARROW);
     print(&caption);
     if let Some(node) = tree.get_node(id) {
-        if !node.value.console.is_empty() {
+        if !node.payload.console.is_empty() {
             print(&format!("{}Console:", SPACE));
-            for line in node.value.console.lines() {
+            for line in node.payload.console.lines() {
                 print(&format!("{}{}", SPACE, style(line).red()));
             }
         }
-        if !node.value.backtrace.is_empty() {
+        if !node.payload.backtrace.is_empty() {
             print(&format!("{}Backtrace:", SPACE));
-            for line in node.value.backtrace.lines() {
+            for line in node.payload.backtrace.lines() {
                 print(&format!("{}{}", SPACE, style(line).red()));
             }
         }
@@ -657,7 +657,7 @@ fn build_fresh_tree(
                 if s != State::Errored {
                     if let Some(n) = tree.get_node_mut(id) {
                         n.collapsed = true;
-                        n.value.state = s;
+                        n.payload.state = s;
                     };
                 }
             }
@@ -668,7 +668,7 @@ fn build_fresh_tree(
                 parent: None,
                 deps: Vec::with_capacity(cmd.deps.len()),
                 collapsed: false,
-                value: Payload {
+                payload: Payload {
                     state: cmd_state(cmd),
                     msg: cmd.message.clone(),
                     console: String::new(),
@@ -700,7 +700,7 @@ fn build_gen_tree(
             parent: None,
             deps: Vec::with_capacity(job.deps.len()),
             collapsed: false,
-            value: Payload {
+            payload: Payload {
                 state: job_state(&job),
                 msg: job.description.clone(),
                 console: String::new(),
@@ -727,7 +727,7 @@ fn build_gen_tree(
                         parent: None,
                         collapsed: false,
                         deps: Vec::new(),
-                        value: Payload {
+                        payload: Payload {
                             state: step_state(step),
                             msg: step.class_name.clone(),
                             console: step.console.clone(),
@@ -747,7 +747,7 @@ fn build_gen_tree(
             parent: None,
             collapsed: false,
             deps: vec![],
-            value: Payload {
+            payload: Payload {
                 state: cmd_state(cmd),
                 msg: cmd.message.clone(),
                 console: String::new(),
@@ -788,7 +788,7 @@ pub fn calculate_and_apply_diff(
                 progress_bar: multi_progress.insert(i, ProgressBar::new(1_000_000)),
                 active_style: Cell::new(None),
             };
-            if y.value.state == State::Errored {
+            if y.payload.state == State::Errored {
                 error_ids.push(y.id);
             }
             set_progress_bar_message(&indi, y);
@@ -816,7 +816,7 @@ fn set_progress_bar_message(
     let sty_aux = ProgressStyle::default_bar().template("{prefix} {spinner:.green} {msg}");
     let sty_aux_finish = ProgressStyle::default_bar().template("{prefix} {msg}");
 
-    match item.value.state {
+    match item.payload.state {
         State::Progressing => {
             if ind.active_style.get() != Some(true) {
                 ind.progress_bar.set_style(sty_aux);
@@ -824,7 +824,7 @@ fn set_progress_bar_message(
             }
             ind.progress_bar.set_prefix(&item.indent);
             ind.progress_bar
-                .set_message(&format!("{} {}", item.value, item.id));
+                .set_message(&format!("{} {}", item.payload, item.id));
         }
         _ => {
             if ind.active_style.get() != Some(false) {
@@ -832,8 +832,10 @@ fn set_progress_bar_message(
                 ind.active_style.set(Some(false));
             }
             ind.progress_bar.set_prefix(&item.indent);
-            ind.progress_bar
-                .set_message(&format!("{} {} {}", item.value.state, item.value, item.id));
+            ind.progress_bar.set_message(&format!(
+                "{} {} {}",
+                item.payload.state, item.payload, item.id
+            ));
         }
     }
 }
