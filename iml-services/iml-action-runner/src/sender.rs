@@ -9,11 +9,11 @@ use crate::{
     },
     error::ActionRunnerError,
     local_actions::{handle_local_action, SharedLocalActionsInFlight},
-    ActionType, Sessions, Shared,
+    Sessions, Shared,
 };
 use futures::{channel::oneshot, TryFutureExt};
 use iml_rabbit::{send_message, Channel, Connection};
-use iml_wire_types::{Action, ActionId, Id, ManagerMessage};
+use iml_wire_types::{Action, ActionId, ActionType, Id, ManagerMessage};
 use std::{sync::Arc, time::Duration};
 use warp::{self, Filter};
 

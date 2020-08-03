@@ -1288,7 +1288,6 @@ name = "iml-action-client"
 version = "0.1.0"
 dependencies = [
  "futures",
- "iml-action-runner",
  "iml-manager-env",
  "iml-wire-types",
  "reqwest",
