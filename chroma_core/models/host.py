@@ -1792,4 +1792,4 @@ class MountSnapshotStep(Step):
 
 class UnmountSnapshotStep(Step):
     def run(self, kwargs):
-        self.invoke_rust_local_action_expect_result("unmount_snapshot", (kwargs["fsname"], kwargs["name"]))
+        self.invoke_rust_local_action_expect_result("snapshot_unmount", (kwargs["fsname"], kwargs["name"]))
