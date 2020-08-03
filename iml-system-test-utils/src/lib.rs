@@ -759,8 +759,11 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestErro
     // check output on client
     for ip in config.client_server_ips() {
         if let Ok((_, output)) = ssh::ssh_exec(ip, "cat /tmp/test-taskfile.txt").await {
-            if output.stdout !=  b"/mnt/fs/reportfile\n" {
-                return Err(TestError::Assert(format!("Found report file.  Bad contents:```\n{:?}```", output.stdout)));
+            if output.stdout != b"/mnt/fs/reportfile\n" {
+                return Err(TestError::Assert(format!(
+                    "Found report file.  Bad contents:```\n{:?}```",
+                    output.stdout
+                )));
             }
             found = true;
             break;
@@ -770,7 +773,9 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestErro
     if found {
         Ok(config)
     } else {
-        Err(TestError::Assert("Report file not found on any client.".into()))
+        Err(TestError::Assert(
+            "Report file not found on any client.".into(),
+        ))
     }
 }
 
