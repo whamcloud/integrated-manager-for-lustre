@@ -122,7 +122,7 @@ pub async fn handle_local_action(
 
                 rx.await.map_err(ActionRunnerError::OneShotCanceledError)
             }
-            "snapshot_mount" => {
+            "snapshot_mount" | "snapshot_unmount" => {
                 let rx = add_in_flight(Arc::clone(&in_flight), id.clone()).await;
                 let args2 = args.clone();
 
