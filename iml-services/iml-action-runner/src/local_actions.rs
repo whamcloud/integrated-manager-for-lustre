@@ -8,6 +8,7 @@ use crate::{
     Sender, Sessions, Shared,
 };
 use futures::{channel::oneshot, Future, FutureExt, TryFutureExt};
+use iml_action_client::invoke_rust_agent;
 use iml_wire_types::{Action, ActionId, ToJsonValue};
 use serde_json::value::Value;
 use std::{collections::HashMap, fmt::Display, sync::Arc};
