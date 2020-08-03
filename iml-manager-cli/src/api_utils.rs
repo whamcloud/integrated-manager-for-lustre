@@ -2,10 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::diff::{calculate_diff, AlignmentOp, Keyed, Side};
 use crate::{display_utils, error::ImlManagerCliError};
 use futures::{future, FutureExt, TryFutureExt};
-use iml_api_utils::dependency_tree::{build_direct_dag, traverse_graph, Deps, Rich};
+use iml_api_utils::{
+    diff::{calculate_diff, AlignmentOp, Keyed, Side},
+    dependency_tree::{build_direct_dag, traverse_graph, Deps, Rich}
+};
 use iml_wire_types::{ApiList, AvailableAction, Command, EndpointName, FlatQuery, Host, Job, Step};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use regex::{Captures, Regex};

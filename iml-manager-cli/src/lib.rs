@@ -4,7 +4,6 @@
 
 pub mod api;
 pub mod api_utils;
-pub mod diff;
 pub mod display_utils;
 pub mod error;
 pub mod filesystem;

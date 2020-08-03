@@ -1,5 +1,5 @@
 pub trait Keyed {
-    type Key: Eq;
+    type Key: PartialEq;
     fn key(&self) -> Self::Key;
 }
 
@@ -16,7 +16,7 @@ pub enum AlignmentOp {
     Replace(Side, usize, usize),
 }
 
-pub fn calculate_diff<T: Keyed + Eq>(left_xs: &[T], right_xs: &[T]) -> Vec<AlignmentOp> {
+pub fn calculate_diff<T: Keyed + PartialEq>(left_xs: &[T], right_xs: &[T]) -> Vec<AlignmentOp> {
     // Ad-hoc version of sequence alignment, left biased.
     // More solid approach is the https://en.wikipedia.org/wiki/Hirschberg%27s_algorithm
     let nl = left_xs.len();
@@ -30,7 +30,7 @@ pub fn calculate_diff<T: Keyed + Eq>(left_xs: &[T], right_xs: &[T]) -> Vec<Align
             return result;
         } else if j >= nr {
             // right array exhausted
-            (i..nl).for_each(|i| result.push(AlignmentOp::Insert(Side::Right, i, j)));
+            (i..nl).for_each(|i| result.push(AlignmentOp::Delete(Side::Left, i)));
             return result;
         } else if i >= nl {
             // left array exhausted
@@ -53,16 +53,8 @@ pub fn calculate_diff<T: Keyed + Eq>(left_xs: &[T], right_xs: &[T]) -> Vec<Align
             {
                 (0..j1).for_each(|ix| result.push(AlignmentOp::Insert(Side::Left, i, j + ix)));
                 j += j1;
-            } else if right_xs[0..j]
-                .iter()
-                .enumerate()
-                .rfind(|(_, r)| r.key() == l.key())
-                .is_some()
-            {
-                result.push(AlignmentOp::Delete(Side::Left, i));
-                i += 1;
             } else {
-                result.push(AlignmentOp::Insert(Side::Right, i, j));
+                result.push(AlignmentOp::Delete(Side::Left, i));
                 i += 1;
             }
         }
@@ -145,11 +137,11 @@ mod tests {
         apply_diff(&mut xs, &mut ys, &diff);
         assert_eq!(xs, ys);
         let exp_diff = vec![
-            Insert(Right, 0, 0),
-            Insert(Right, 1, 0),
-            Insert(Right, 2, 0),
-            Insert(Right, 3, 0),
-            Insert(Right, 4, 0),
+            Delete(Left, 0),
+            Delete(Left, 1),
+            Delete(Left, 2),
+            Delete(Left, 3),
+            Delete(Left, 4)
         ];
         assert_eq!(diff, exp_diff);
     }
@@ -178,18 +170,18 @@ mod tests {
     fn test_grow_right() {
         let mut xs = vec![t(10), t(1), t(11), t(20), t(2), t(22), t(30), t(3), t(34)];
         let mut ys = vec![t(1), t(2), t(3)];
-        let exp = xs.clone();
+        let exp = ys.clone();
         let diff = calculate_diff(&xs, &ys);
         apply_diff(&mut xs, &mut ys, &diff);
         assert_eq!(xs, ys);
         assert_eq!(xs, exp);
         let exp_diff = vec![
-            Insert(Right, 0, 0),
-            Insert(Right, 2, 1),
-            Insert(Right, 3, 1),
-            Insert(Right, 5, 2),
-            Insert(Right, 6, 2),
-            Insert(Right, 8, 3),
+            Delete(Left, 0),
+            Delete(Left, 2),
+            Delete(Left, 3),
+            Delete(Left, 5),
+            Delete(Left, 6),
+            Delete(Left, 8),
         ];
         assert_eq!(diff, exp_diff);
     }
@@ -213,18 +205,18 @@ mod tests {
         let mut ys = vec![t(0), t(2), t(3), t(5)];
         ys[1].msg = "modified".to_string();
         ys[2].msg = "modified".to_string();
-        let exp = vec![t(1), t(0), tm(2, "modified"), tm(3, "modified"), t(4), t(5)];
+        let exp = vec![t(0), tm(2, "modified"), tm(3, "modified"), t(5)];
         let diff = calculate_diff(&xs, &ys);
         apply_diff(&mut xs, &mut ys, &diff);
         assert_eq!(xs, ys);
         assert_eq!(xs, exp);
         let exp_diff = vec![
-            Insert(Right, 0, 0),
+            Delete(Left, 0),
             Insert(Left, 1, 0),
             Replace(Left, 1, 1),
             Replace(Left, 2, 2),
-            Insert(Right, 3, 3),
-            Insert(Left, 4, 3),
+            Delete(Left, 3),
+            Insert(Left, 4, 3)
         ];
         assert_eq!(diff, exp_diff);
     }
@@ -244,30 +236,42 @@ mod tests {
     }
 
     fn apply_diff<T: Clone>(xs: &mut Vec<T>, ys: &mut Vec<T>, diff: &[AlignmentOp]) {
-        let mut di = 0;
-        let mut dj = 0;
+        let mut di = 0i32;
+        let mut dj = 0i32;
         for d in diff {
             match d {
                 AlignmentOp::Insert(Side::Left, i, j) => {
-                    xs.insert(i + di, ys[j + dj].clone());
+                    let i0 = (*i as i32 + di) as usize;
+                    let j0 = (*j as i32 + dj) as usize;
+                    xs.insert(i0, ys[j0].clone());
                     di += 1;
                 }
                 AlignmentOp::Insert(Side::Right, i, j) => {
-                    ys.insert(j + dj, xs[i + di].clone());
+                    let i0 = (*i as i32 + di) as usize;
+                    let j0 = (*j as i32 + dj) as usize;
+                    ys.insert(j0, xs[i0].clone());
                     dj += 1;
                 }
                 AlignmentOp::Replace(Side::Left, i, j) => {
-                    xs[i + di] = ys[j + dj].clone();
+                    let i0 = (*i as i32 + di) as usize;
+                    let j0 = (*j as i32 + dj) as usize;
+                    xs[i0] = ys[j0].clone();
                 }
                 AlignmentOp::Replace(Side::Right, i, j) => {
-                    ys[j + dj] = xs[i + di].clone();
+                    let i0 = (*i as i32 + di) as usize;
+                    let j0 = (*j as i32 + dj) as usize;
+                    ys[j0] = xs[i0].clone();
                 }
                 AlignmentOp::Delete(Side::Left, i) => {
-                    xs.remove(i + di);
+                    let i0 = (*i as i32 + di) as usize;
+                    // let j0 = (*j as i32 + dj) as usize;
+                    xs.remove(i0);
                     di -= 1;
                 }
                 AlignmentOp::Delete(Side::Right, j) => {
-                    ys.remove(j + dj);
+                    // let i0 = (*i as i32 + di) as usize;
+                    let j0 = (*j as i32 + dj) as usize;
+                    ys.remove(j0);
                     dj -= 1;
                 }
             }
