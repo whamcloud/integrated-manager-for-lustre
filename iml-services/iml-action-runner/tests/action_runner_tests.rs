@@ -8,11 +8,11 @@ use iml_action_runner::{
     error::ActionRunnerError,
     local_actions::SharedLocalActionsInFlight,
     sender::sender,
-    ActionType, Sessions, Shared,
+    Sessions, Shared,
 };
 use iml_agent_comms::messaging::consume_agent_tx_queue;
 use iml_rabbit::ConnectionProperties;
-use iml_wire_types::{Action, ActionId, ActionName, Fqdn, Id};
+use iml_wire_types::{Action, ActionId, ActionName, ActionType, Fqdn, Id};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::time::delay_for;
