@@ -17,7 +17,7 @@ iml-manager-client = {path = "../iml-manager-client", version = "0.3"}
 iml-orm = {path = "../iml-orm", version = "0.3", features = ["postgres-interop"]}
 iml-tracing = {version = "0.2", path = "../iml-tracing"}
 iml-wire-types = {path = "../iml-wire-types", version = "0.3"}
-indicatif = "0.14"
+indicatif = { git = "https://github.com/nlinker/indicatif", branch = "master" }
 lazy_static = "1.4"
 number-formatter = {path = "../number-formatter", version = "0.1"}
 prettytable-rs = "0.8"
