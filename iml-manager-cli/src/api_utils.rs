@@ -2,19 +2,38 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{display_utils, error::ImlManagerCliError};
+use crate::error::ImlManagerCliError;
+use console::style;
 use futures::{future, FutureExt, TryFutureExt};
 use iml_api_utils::{
-    diff::{calculate_diff, AlignmentOp, Keyed, Side},
-    dependency_tree::{build_direct_dag, traverse_graph, Deps, Rich}
+    dependency_tree::{build_direct_dag, DependencyDAG, Deps, Rich},
+    diff::calculate_diff,
+    gen_tree::{apply_diff, HasState, Item, Node, Tree},
 };
 use iml_wire_types::{ApiList, AvailableAction, Command, EndpointName, FlatQuery, Host, Job, Step};
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
+use itertools::Itertools;
 use regex::{Captures, Regex};
-use std::sync::Arc;
-use std::{collections::HashMap, fmt::Debug, iter, time::Duration};
+use serde::export::Formatter;
+use std::{
+    cell::Cell,
+    cmp::Ordering,
+    collections::HashMap,
+    collections::HashSet,
+    fmt,
+    fmt::Debug,
+    fmt::Display,
+    iter,
+    sync::{atomic::AtomicBool, Arc},
+    time::Duration,
+};
 use tokio::task::JoinError;
 use tokio::{task::spawn_blocking, time::delay_for};
+
+const ARROW: &'_ str = " ═➤ "; // variants: = ═ - ▬ > ▷ ▶ ► ➤
+const SPACE: &'_ str = "   ";
+const FETCH_DELAY_MS: u64 = 1000;
+const SHOW_DELAY_MS: u64 = 200;
 
 type Job0 = Job<Option<serde_json::Value>>;
 type RichCommand = Rich<i32, Arc<Command>>;
@@ -27,53 +46,108 @@ pub struct CmdId(i32);
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Ord, PartialOrd, Debug)]
 pub struct JobId(i32);
 
+// region declaration of types TypeId, State, Item<K>
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub enum TypedId {
-    Command(i32),
+    Cmd(i32),
     Job(i32),
     Step(i32),
 }
 
-#[derive(Debug, Clone)]
-struct Context<'a> {
-    level: usize,
-    steps: &'a HashMap<i32, RichStep>,
+impl Default for TypedId {
+    fn default() -> Self {
+        TypedId::Cmd(0)
+    }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-enum State {
-    Cancelled,
-    Errored,
-    Complete,
+impl Display for TypedId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            TypedId::Cmd(i) => write!(f, "c{}", i),
+            TypedId::Job(i) => write!(f, "j{}", i),
+            TypedId::Step(i) => write!(f, "s{}", i),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum State {
     Progressing,
+    Cancelled,
+    Completed,
+    Errored,
 }
 
-#[derive(Debug, Clone)]
-pub struct ProgressLine {
-    the_id: TypedId,
-    indent: usize,
-    msg: String,
-    state: State,
-    progress_bar: Option<ProgressBar>,
-}
-
-impl PartialEq for ProgressLine {
-    fn eq(&self, other: &Self) -> bool {
-        self.the_id == other.the_id
-            && self.indent == other.indent
-            && self.msg == other.msg
-            && self.state == other.state
+impl Display for State {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            State::Progressing => write!(f, "{}", style("⠶").cyan()),
+            State::Cancelled => write!(f, "{}", style("🚫")),
+            State::Completed => write!(f, "{}", style("✔").green()),
+            State::Errored => write!(f, "{}", style("✗").red()),
+        }
     }
 }
 
-impl Eq for ProgressLine {}
-
-impl Keyed for ProgressLine {
-    type Key = TypedId;
-    fn key(&self) -> Self::Key {
-        self.the_id
+impl Default for State {
+    fn default() -> Self {
+        // return least priority element
+        State::Progressing
     }
 }
+
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for State {
+    /// States are ordered by priority. When combining two states (e.g. when collapsing),
+    /// the states with the higher priority are propagated up so any failures are not hidden.
+    fn cmp(&self, other: &Self) -> Ordering {
+        fn order(s: &State) -> u32 {
+            match s {
+                State::Progressing => 0,
+                State::Completed => 1,
+                State::Cancelled => 2,
+                State::Errored => 3,
+            }
+        }
+        Ord::cmp(&order(self), &order(other))
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct Payload {
+    pub state: State,
+    pub msg: String,
+    pub console: String,
+    pub backtrace: String,
+}
+
+impl Display for Payload {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.msg)
+    }
+}
+
+impl HasState for Payload {
+    type State = State;
+    fn state(&self) -> Self::State {
+        self.state
+    }
+}
+
+/// It is pretty expensive to set the style on the progress bar on each iteration,
+/// so we need to keep track what the style and whether it has been set for the progress bar.
+/// See [`set_progress_bar_message`] function.
+#[derive(Clone, Debug)]
+pub struct ProgressBarIndicator {
+    pub progress_bar: ProgressBar,
+    pub active_style: Cell<Option<bool>>,
+}
+// endregion
 
 #[derive(serde::Serialize)]
 pub struct SendJob<T> {
@@ -107,7 +181,7 @@ fn cmd_state(cmd: &Command) -> State {
     } else if cmd.errored {
         State::Errored
     } else if cmd.complete {
-        State::Complete
+        State::Completed
     } else {
         State::Progressing
     }
@@ -121,7 +195,7 @@ fn job_state(job: &Job0) -> State {
     } else if job.errored {
         State::Errored
     } else if job.state == "complete" {
-        State::Complete
+        State::Completed
     } else {
         State::Progressing
     }
@@ -132,17 +206,17 @@ fn step_state(step: &Step) -> State {
     match &step.state[..] {
         "cancelled" => State::Cancelled,
         "failed" => State::Errored,
-        "success" => State::Complete,
+        "success" => State::Completed,
         _ /* "incomplete" */ => State::Progressing,
     }
 }
 
 fn cmd_finished(cmd: &Command) -> bool {
-    cmd_state(cmd) == State::Complete
+    cmd_state(cmd) == State::Completed
 }
 
 fn job_finished(job: &Job0) -> bool {
-    job_state(job) == State::Complete
+    job_state(job) == State::Completed
 }
 
 fn step_finished(step: &Step) -> bool {
@@ -187,222 +261,143 @@ where
 /// Waits for command completion and prints progress messages
 /// This *does not* error on command failure, it only tracks command
 /// completion
-pub async fn wait_for_commands(cmds: &[Command]) -> Result<Vec<Command>, ImlManagerCliError> {
-    let multi_progress_0 = Arc::new(MultiProgress::new());
-    let spinner_style = ProgressStyle::default_spinner()
-        .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ")
-        .template("{prefix:.bold.dim} {spinner} {wide_msg}");
+pub async fn wait_for_commands(commands: &[Command]) -> Result<Vec<Command>, ImlManagerCliError> {
+    let multi_progress = Arc::new(MultiProgress::new());
+    multi_progress.set_draw_target(ProgressDrawTarget::stdout());
+    let sty_main = ProgressStyle::default_bar().template("{bar:60.green/yellow} {pos:>4}/{len:4}");
+    let main_pb = multi_progress.add(ProgressBar::new(commands.len() as u64));
+    main_pb.set_style(sty_main);
+    main_pb.tick();
 
-    // current_xs mirrors the multi progress bar
-    let mut current_lines: Vec<ProgressLine> = vec![];
-
-    let mut commands: HashMap<i32, RichCommand> = HashMap::new();
-    let mut jobs: HashMap<i32, RichJob> = HashMap::new();
-    let mut steps: HashMap<i32, RichStep> = HashMap::new();
-
-    let mut cmd_ids = vec![];
-
-    for cmd in cmds.iter() {
-        let (id, deps) = extract_children_from_cmd(cmd);
-        let inner = Arc::new(cmd.clone());
-        commands.insert(id, Rich { id, deps, inner });
-        cmd_ids.push(id);
-    }
-
-    for (cmd_no, c) in cmd_ids.iter().enumerate() {
-        let cmd = &commands[c];
-        let x = ProgressLine {
-            the_id: TypedId::Command(*c),
-            indent: 0,
-            msg: cmd.message.clone(),
-            state: cmd_state(cmd),
-            progress_bar: None,
-        };
-        let y = build_progress_line(x, spinner_style.clone(), cmd_no + 1, commands.len(), |pb| {
-            multi_progress_0.add(pb)
-        });
-        current_lines.push(y);
-    }
-
-    let multi_progress_1 = Arc::clone(&multi_progress_0);
-
-    let fut1 = spawn_blocking(move || multi_progress_1.join()).map(
-        |r: Result<Result<(), std::io::Error>, JoinError>| {
-            r.map_err(|e: JoinError| e.into())
-                .and_then(std::convert::identity)
-        },
+    // `current_items` will have only commands at first
+    // and then will be extended after `fetch_and_update` succeeds
+    let (cmd_ids, cmds) = build_initial_commands(commands);
+    let tree = build_fresh_tree(&cmd_ids, &cmds, &HashMap::new(), &HashMap::new());
+    let mut fresh_items = tree.render();
+    let mut current_items_vec = Vec::new();
+    calculate_and_apply_diff(
+        &mut current_items_vec,
+        &mut fresh_items,
+        &tree,
+        &multi_progress,
+        &main_pb,
     );
 
-    let fut2 = async {
-        loop {
-            if commands.values().all(|cmd| cmd_finished(cmd)) {
-                tracing::debug!("All commands complete. Returning");
-                return Ok::<_, ImlManagerCliError>(());
-            }
-            fetch_and_update(&mut commands, &mut jobs, &mut steps).await?;
-            let mut fresh_lines = build_fresh_lines(&cmd_ids, &commands, &jobs, &steps);
-            let diff = calculate_diff(&current_lines, &fresh_lines);
-            let mut cmd_no = 0;
-            let mut di = 0;
-            let mut dj = 0;
-            for op in diff {
-                match op {
-                    AlignmentOp::Insert(Side::Left, i, j) => {
-                        let x = fresh_lines[j + dj].clone();
-                        if !current_lines.contains(&x) {
-                            if let TypedId::Command(_) = x.the_id {
-                                cmd_no += 1;
+    let is_done = Arc::new(AtomicBool::new(false));
+    let current_items = Arc::new(tokio::sync::Mutex::new(current_items_vec));
+
+    // multi-progress waiting loop
+    // fut1: ErrInto<Map<JoinHandle<Result<()>>, fn(Result<Result<(), Error>, JoinError>)
+    let fut1 = {
+        let multi_progress = Arc::clone(&multi_progress);
+        spawn_blocking(move || multi_progress.join())
+            .map(|r: Result<Result<(), std::io::Error>, JoinError>| {
+                r.map_err(|e: JoinError| e.into())
+                    .and_then(std::convert::identity)
+            })
+            .err_into()
+    };
+
+    // updating loop
+    // fut2: impl Future<Output=Result<Vec<Command>, JoinError>>
+    let fut2 = {
+        let is_done = Arc::clone(&is_done);
+        let multi_progress = Arc::clone(&multi_progress);
+        let current_items = Arc::clone(&current_items);
+        async move {
+            let mut cmds: HashMap<i32, RichCommand> = cmds;
+            let mut jobs: HashMap<i32, RichJob> = HashMap::new();
+            let mut steps: HashMap<i32, RichStep> = HashMap::new();
+
+            loop {
+                if cmds
+                    .values()
+                    .all(|cmd| cmd_state(cmd) != State::Progressing)
+                {
+                    tracing::debug!("All commands complete. Returning");
+                    for it in current_items.lock().await.iter() {
+                        if let Some(indi) = it.indicator.as_ref() {
+                            indi.progress_bar.finish();
+                        }
+                    }
+                    main_pb.finish();
+                    is_done.store(true, std::sync::atomic::Ordering::SeqCst);
+
+                    // Unfortunately, there is no easy unsafe way to move out from Arc, so `clone`
+                    // may be needed.
+                    let mut commands: Vec<Command> = Vec::with_capacity(cmds.len());
+                    for id in cmd_ids {
+                        if let Some(rich_cmd) = cmds.remove(&id) {
+                            match Arc::try_unwrap(rich_cmd.inner) {
+                                Ok(cmd) => commands.push(cmd),
+                                Err(arc_cmd) => commands.push((*arc_cmd).clone()),
                             }
-                            let y = build_progress_line(
-                                x,
-                                spinner_style.clone(),
-                                cmd_no,
-                                commands.len(),
-                                |pb| multi_progress_0.insert(i + di, pb),
-                            );
-                            current_lines.insert(i + di, y);
-                            di += 1;
                         }
                     }
-                    AlignmentOp::Insert(Side::Right, i, j) => {
-                        // update loaded to preserve the indices to be correct
-                        let x = current_lines[i + di].clone();
-                        fresh_lines.insert(j + dj, x);
-                        dj += 1;
-                    }
-                    AlignmentOp::Delete(Side::Left, i) => {
-                        current_lines.remove(i + di);
-                        di -= 1;
-                    }
-                    AlignmentOp::Delete(Side::Right, j) => {
-                        // update loaded to preserve the indices to be correct
-                        fresh_lines.remove(j + dj);
-                        dj -= 1;
-                    }
-                    AlignmentOp::Replace(Side::Left, i, j) => {
-                        current_lines[i + di].the_id = fresh_lines[j + dj].the_id;
-                        current_lines[i + di].indent = fresh_lines[j + dj].indent;
-                        current_lines[i + di].msg = fresh_lines[j + dj].msg.clone();
-                        let x = &current_lines[i + di];
-                        if let Some(progress_bar) = &x.progress_bar {
-                            progress_bar.inc(1);
-                            progress_bar.set_message(&format!(
-                                "{}{}",
-                                "  ".repeat(x.indent),
-                                x.msg
-                            ));
-                        }
-                    }
-                    AlignmentOp::Replace(Side::Right, _, _) => {
-                        // Formally we need to do fresh_lines[j + dj] = current_lines[i + di].clone();
-                        // But the changes will disappear after the next fetch anyway
-                    }
+                    return Ok::<_, ImlManagerCliError>(commands);
                 }
-            }
-            for x in current_lines.iter_mut() {
-                if let Some(pb) = &x.progress_bar {
-                    let msg_opt = match x.the_id {
-                        TypedId::Command(id) => commands
-                            .get(&id)
-                            .filter(|cmd| cmd_finished(cmd))
-                            .map(|cmd| display_utils::format_cmd_state(x.indent, cmd)),
-                        TypedId::Job(id) => jobs
-                            .get(&id)
-                            .filter(|job| job_finished(job))
-                            .map(|job| display_utils::format_job_state(x.indent, job)),
-                        TypedId::Step(id) => steps
-                            .get(&id)
-                            .filter(|step| step_finished(step))
-                            .map(|step| display_utils::format_step_state(x.indent, step)),
-                    };
-                    if let Some(msg) = msg_opt {
-                        pb.finish_with_message(&msg);
-                        x.progress_bar = None;
-                    } else {
-                        pb.inc(1);
-                    }
+
+                if let Err(e) = fetch_and_update(&mut cmds, &mut jobs, &mut steps).await {
+                    // network call goes here, in case of lost connection we don't want to abort
+                    // the cycle, but continue trying instead, the user can Ctrl+C anyway
+                    main_pb.println(format!("Connection error: {}", style(e).red()));
                 }
+
+                let tree = build_fresh_tree(&cmd_ids, &cmds, &jobs, &steps);
+                let mut fresh_items = tree.render();
+                calculate_and_apply_diff(
+                    &mut *current_items.lock().await,
+                    &mut fresh_items,
+                    &tree,
+                    &multi_progress,
+                    &main_pb,
+                );
+
+                main_pb.set_length(tree.len() as u64);
+                main_pb.set_position(
+                    tree.count_node_keys(|n| n.value.state != State::Progressing) as u64,
+                );
+
+                delay_for(Duration::from_millis(FETCH_DELAY_MS)).await;
             }
-            delay_for(Duration::from_millis(500)).await;
         }
     };
 
-    future::try_join(fut1.err_into(), fut2).await?;
-
-    // return the commands, that
-    let mut result: Vec<Command> = Vec::with_capacity(commands.len());
-    for id in cmd_ids {
-        if let Some(rich_cmd) = commands.remove(&id) {
-            if let Ok(cmd) = Arc::try_unwrap(rich_cmd.inner) {
-                result.push(cmd)
+    // showing loop
+    // fut3: impl Future<Output=Result<(), Error>>
+    let fut3 = {
+        let is_done = Arc::clone(&is_done);
+        let current_items = Arc::clone(&current_items);
+        async move {
+            while !is_done.load(std::sync::atomic::Ordering::SeqCst) {
+                for it in current_items.lock().await.iter() {
+                    if it.value.state == State::Progressing {
+                        if let Some(ic) = &it.indicator {
+                            ic.progress_bar.inc(1);
+                        }
+                    }
+                }
+                delay_for(Duration::from_millis(SHOW_DELAY_MS)).await;
             }
+            Ok(())
         }
-    }
-    Ok(result)
-}
-
-fn build_progress_line(
-    line: ProgressLine,
-    spinner_style: ProgressStyle,
-    cmd_no: usize,
-    cmd_count: usize,
-    register: impl Fn(ProgressBar) -> ProgressBar,
-) -> ProgressLine {
-    let pb = register(ProgressBar::new(100_000));
-    pb.set_style(spinner_style);
-    match line.the_id {
-        TypedId::Command(_) => {
-            pb.set_prefix(&format!("[{}/{}]", cmd_no, cmd_count));
-        }
-        TypedId::Job(_) => pb.set_prefix("     "),
-        TypedId::Step(_) => pb.set_prefix("     "),
     };
-    pb.set_message(&format!("{}  {}", "  ".repeat(line.indent), line.msg));
-    pb.tick();
-    ProgressLine {
-        progress_bar: Some(pb),
-        ..line
-    }
+
+    let (_, cmds, _) = future::try_join3(fut1, fut2, fut3).await?;
+    Ok(cmds)
 }
 
-fn build_fresh_lines(
-    cmd_ids: &[i32],
-    commands: &HashMap<i32, RichCommand>,
-    jobs: &HashMap<i32, RichJob>,
-    steps: &HashMap<i32, RichStep>,
-) -> Vec<ProgressLine> {
-    let mut rows = Vec::new();
-    for c in cmd_ids {
-        let cmd = &commands[&c];
-        rows.push(ProgressLine {
-            the_id: TypedId::Command(*c),
-            indent: 0,
-            msg: cmd.message.clone(),
-            state: cmd_state(cmd),
-            progress_bar: None,
-        });
-        if cmd.deps().iter().all(|j| jobs.contains_key(j)) {
-            let extract_fun = |job: &Arc<Job0>| extract_wait_fors_from_job(job, &jobs);
-            let jobs_graph_data = cmd
-                .deps()
-                .iter()
-                .map(|k| RichJob::new(Arc::clone(&jobs[k].inner), extract_fun))
-                .collect::<Vec<RichJob>>();
-            let dag = build_direct_dag(&jobs_graph_data);
-            let mut ctx = Context {
-                level: 0,
-                steps: &steps,
-            };
-            let xs = traverse_graph(&dag, &rich_job_to_line, &rich_job_combine_lines, &mut ctx)
-                .into_iter()
-                .flatten()
-                .collect::<Vec<_>>();
-            for x in xs.into_iter() {
-                rows.push(x);
-            }
-        }
+/// wrap each command and build `cmd_ids` to maintain the order of the commands
+fn build_initial_commands(commands: &[Command]) -> (Vec<i32>, HashMap<i32, RichCommand>) {
+    let mut cmd_ids = Vec::new();
+    let mut cmds = HashMap::new();
+    for command in commands.iter() {
+        let (id, deps) = extract_children_from_cmd(command);
+        let inner = Arc::new(command.clone());
+        cmds.insert(id, Rich { id, deps, inner });
+        cmd_ids.push(id);
     }
-    rows
+    (cmd_ids, cmds)
 }
 
 async fn fetch_and_update(
@@ -456,6 +451,12 @@ fn update_steps(steps: &mut HashMap<i32, RichStep>, loaded_steps: Vec<Step>) {
     steps.extend(new_steps);
 }
 
+fn extract_sorted_keys<T>(hm: &HashMap<i32, T>) -> Vec<i32> {
+    let mut ids = hm.keys().copied().collect::<Vec<_>>();
+    ids.sort();
+    ids
+}
+
 fn extract_ids_to_load(
     commands: &HashMap<i32, RichCommand>,
     jobs: &HashMap<i32, RichJob>,
@@ -492,60 +493,28 @@ fn extract_ids_to_load(
     (load_cmd_ids, load_job_ids, load_step_ids)
 }
 
-fn rich_job_to_line(node: Arc<RichJob>, is_new: bool, ctx: &mut Context) -> Vec<ProgressLine> {
-    ctx.level += 1;
-    if is_new {
-        let steps = ctx.steps;
-        let mut rows = vec![ProgressLine {
-            indent: ctx.level,
-            the_id: TypedId::Job(node.id),
-            msg: node.description.clone(),
-            state: job_state(&node),
-            progress_bar: None,
-        }];
-        for step_id in &node.steps {
-            if let Some(step_id) = extract_uri_id::<Step>(step_id) {
-                if let Some(step) = steps.get(&step_id) {
-                    rows.push(ProgressLine {
-                        the_id: TypedId::Step(step_id),
-                        indent: ctx.level + 1,
-                        msg: step.class_name.clone(),
-                        state: step_state(step),
-                        progress_bar: None,
-                    });
-                }
+pub fn print_error(tree: &Tree<TypedId, Payload>, id: TypedId, print: impl Fn(&str)) {
+    let path = tree.get_path_from_root(id);
+    let caption = path
+        .iter()
+        .filter_map(|id| tree.get_node(*id))
+        .map(|n| n.value.msg.clone())
+        .join(ARROW);
+    print(&caption);
+    if let Some(node) = tree.get_node(id) {
+        if !node.value.console.is_empty() {
+            print(&format!("{}Console:", SPACE));
+            for line in node.value.console.lines() {
+                print(&format!("{}{}", SPACE, style(line).red()));
             }
         }
-        rows
-    } else {
-        vec![]
-    }
-}
-
-fn rich_job_combine_lines(
-    node: Vec<ProgressLine>,
-    nodes: Vec<Vec<ProgressLine>>,
-    ctx: &mut Context,
-) -> Vec<ProgressLine> {
-    if ctx.level > 0 {
-        ctx.level -= 1;
-    }
-    let mut result = Vec::with_capacity(100);
-    for n in node {
-        result.push(n);
-    }
-    for node in nodes.into_iter() {
-        for n in node {
-            result.push(n);
+        if !node.value.backtrace.is_empty() {
+            print(&format!("{}Backtrace:", SPACE));
+            for line in node.value.backtrace.lines() {
+                print(&format!("{}{}", SPACE, style(line).red()));
+            }
         }
     }
-    result
-}
-
-fn extract_sorted_keys<T>(hm: &HashMap<i32, T>) -> Vec<i32> {
-    let mut ids = hm.keys().copied().collect::<Vec<_>>();
-    ids.sort();
-    ids
 }
 
 /// Waits for command completion and prints progress messages.
@@ -666,59 +635,221 @@ pub async fn get_influx<T: serde::de::DeserializeOwned + std::fmt::Debug>(
     influxql: &str,
 ) -> Result<T, ImlManagerCliError> {
     let client = iml_manager_client::get_client()?;
-
     iml_manager_client::get_influx(client, db, influxql)
         .await
         .map_err(|e| e.into())
 }
 
-fn extract_children_from_cmd(cmd: &Command) -> (i32, Vec<i32>) {
-    let mut deps = cmd
-        .jobs
-        .iter()
-        .filter_map(|s| extract_uri_id::<Job0>(s))
-        .collect::<Vec<i32>>();
-    deps.sort();
-    (cmd.id, deps)
+// region functions build_fresh_items / build_gen_tree
+fn build_fresh_tree(
+    cmd_ids: &[i32],
+    commands: &HashMap<i32, RichCommand>,
+    jobs: &HashMap<i32, RichJob>,
+    steps: &HashMap<i32, RichStep>,
+) -> Tree<TypedId, Payload> {
+    let mut full_tree = Tree::new();
+    for c in cmd_ids {
+        let cmd = &commands[&c];
+        if cmd.deps().iter().all(|j| jobs.contains_key(j)) {
+            let extract_fun = |job: &Arc<Job0>| extract_wait_fors_from_job(job, &jobs);
+            let jobs_graph_data = cmd
+                .deps()
+                .iter()
+                .map(|k| RichJob::new(Arc::clone(&jobs[k].inner), extract_fun))
+                .collect::<Vec<RichJob>>();
+            let dag = build_direct_dag(&jobs_graph_data);
+            let mut tree = build_gen_tree(cmd, &dag, &steps);
+            // The collapsing is needed to reduce some deep levels of the
+            // tree so that all the trees fit into terminal screens.
+            // Errored nodes are leaved non-collapsed.
+            let pairs = tree.keys_on_level(2);
+            for (id, s) in pairs {
+                if s != State::Errored {
+                    if let Some(n) = tree.get_node_mut(id) {
+                        n.collapsed = true;
+                        n.value.state = s;
+                    };
+                }
+            }
+            full_tree.merge_in(&mut tree);
+        } else {
+            let node = Node {
+                key: TypedId::Cmd(cmd.id),
+                parent: None,
+                deps: Vec::with_capacity(cmd.deps.len()),
+                collapsed: false,
+                value: Payload {
+                    state: cmd_state(cmd),
+                    msg: cmd.message.clone(),
+                    console: String::new(),
+                    backtrace: String::new(),
+                },
+            };
+            full_tree.add_child_node(None, node);
+        }
+    }
+    full_tree
 }
 
-fn extract_children_from_job(job: &Job0) -> (i32, Vec<i32>) {
-    let mut deps = job
-        .steps
-        .iter()
-        .filter_map(|s| extract_uri_id::<Step>(s))
-        .collect::<Vec<i32>>();
-    deps.sort();
-    (job.id, deps)
+fn build_gen_tree(
+    cmd: &RichCommand,
+    graph: &DependencyDAG<i32, RichJob>,
+    steps: &HashMap<i32, RichStep>,
+) -> Tree<TypedId, Payload> {
+    fn traverse(
+        graph: &DependencyDAG<i32, RichJob>,
+        job: Arc<RichJob>,
+        steps: &HashMap<i32, RichStep>,
+        parent: Option<TypedId>,
+        visited: &mut HashSet<TypedId>,
+        tree: &mut Tree<TypedId, Payload>,
+    ) {
+        let is_new = visited.insert(TypedId::Job(job.id));
+        let node = Node {
+            key: TypedId::Job(job.id),
+            parent: None,
+            deps: Vec::with_capacity(job.deps.len()),
+            collapsed: false,
+            value: Payload {
+                state: job_state(&job),
+                msg: job.description.clone(),
+                console: String::new(),
+                backtrace: String::new(),
+            },
+        };
+        let pk = tree.add_child_node(parent, node);
+        let new_parent = Some(pk);
+
+        // add child jobs to the tree
+        if let Some(deps) = graph.links.get(&job.id()) {
+            if is_new {
+                for d in deps {
+                    traverse(graph, Arc::clone(d), steps, new_parent, visited, tree);
+                }
+            }
+        }
+        // add steps if any
+        for step_id in &job.steps {
+            if let Some(step_id) = extract_uri_id::<Step>(step_id) {
+                if let Some(step) = steps.get(&step_id) {
+                    let node = Node {
+                        key: TypedId::Step(step_id),
+                        parent: None,
+                        collapsed: false,
+                        deps: Vec::new(),
+                        value: Payload {
+                            state: step_state(step),
+                            msg: step.class_name.clone(),
+                            console: step.console.clone(),
+                            backtrace: step.backtrace.clone(),
+                        },
+                    };
+                    tree.add_child_node(new_parent, node);
+                }
+            }
+        }
+    }
+    let mut tree = Tree::new();
+    let p = tree.add_child_node(
+        None,
+        Node {
+            key: TypedId::Cmd(cmd.id),
+            parent: None,
+            collapsed: false,
+            deps: vec![],
+            value: Payload {
+                state: cmd_state(cmd),
+                msg: cmd.message.clone(),
+                console: String::new(),
+                backtrace: String::new(),
+            },
+        },
+    );
+    tree.roots = vec![p];
+    let mut visited = HashSet::new();
+    for r in &graph.roots {
+        traverse(
+            graph,
+            Arc::clone(r),
+            steps,
+            Some(p),
+            &mut visited,
+            &mut tree,
+        );
+    }
+    tree
 }
 
-fn extract_children_from_step(step: &Step) -> (i32, Vec<i32>) {
-    (step.id, Vec::new()) // steps have no descendants
+pub fn calculate_and_apply_diff(
+    current_items: &mut Vec<Item<TypedId, Payload, ProgressBarIndicator>>,
+    fresh_items: &mut Vec<Item<TypedId, Payload, ProgressBarIndicator>>,
+    tree: &Tree<TypedId, Payload>,
+    multi_progress: &MultiProgress,
+    main_pb: &ProgressBar,
+) {
+    let diff = calculate_diff(current_items, fresh_items);
+    let mut error_ids = Vec::new();
+    apply_diff(
+        current_items,
+        fresh_items,
+        &diff,
+        |i, y| {
+            let indi = ProgressBarIndicator {
+                progress_bar: multi_progress.insert(i, ProgressBar::new(1_000_000)),
+                active_style: Cell::new(None),
+            };
+            if y.value.state == State::Errored {
+                error_ids.push(y.id);
+            }
+            set_progress_bar_message(&indi, y);
+            indi
+        },
+        |_, pb, y| set_progress_bar_message(pb, y),
+        |_, pb| multi_progress.remove(&pb.progress_bar),
+    );
+    if !error_ids.is_empty() {
+        // show errors, it is done with `progress_bar.println()`, just find the most upper one
+        for eid in error_ids {
+            if tree.contains_key(eid) {
+                print_error(&tree, eid, |s| main_pb.println(s));
+            }
+        }
+    }
 }
 
-fn extract_wait_fors_from_job(job: &Job0, jobs: &HashMap<i32, RichJob>) -> (i32, Vec<i32>) {
-    // Extract the interdependencies between jobs.
-    // See [command_modal::tests::test_jobs_ordering]
-    let mut deps = job
-        .wait_for
-        .iter()
-        .filter_map(|s| extract_uri_id::<Job0>(s))
-        .collect::<Vec<i32>>();
-    deps.sort_by(|i1, i2| {
-        let t1 = jobs
-            .get(i1)
-            .map(|arj| (-(arj.deps.len() as i32), &arj.description[..], arj.id))
-            .unwrap_or((0, "", *i1));
-        let t2 = jobs
-            .get(i2)
-            .map(|arj| (-(arj.deps.len() as i32), &arj.description[..], arj.id))
-            .unwrap_or((0, "", *i2));
-        t1.cmp(&t2)
-    });
-    (job.id, deps)
-}
+fn set_progress_bar_message(
+    ind: &ProgressBarIndicator,
+    item: &Item<TypedId, Payload, ProgressBarIndicator>,
+) {
+    // two styles are applied because indicatif doesn't able to set the spinner symbol
+    // after the progress bar completed.
+    let sty_aux = ProgressStyle::default_bar().template("{prefix} {spinner:.green} {msg}");
+    let sty_aux_finish = ProgressStyle::default_bar().template("{prefix} {msg}");
 
-fn extract_uri_id<T: EndpointName>(input: &str) -> Option<i32> {
+    match item.value.state {
+        State::Progressing => {
+            if ind.active_style.get() != Some(true) {
+                ind.progress_bar.set_style(sty_aux);
+                ind.active_style.set(Some(true));
+            }
+            ind.progress_bar.set_prefix(&item.indent);
+            ind.progress_bar
+                .set_message(&format!("{} {}", item.value, item.id));
+        }
+        _ => {
+            if ind.active_style.get() != Some(false) {
+                ind.progress_bar.set_style(sty_aux_finish);
+                ind.active_style.set(Some(false));
+            }
+            ind.progress_bar.set_prefix(&item.indent);
+            ind.progress_bar
+                .set_message(&format!("{} {} {}", item.value.state, item.value, item.id));
+        }
+    }
+}
+// endregion
+
+pub fn extract_uri_id<T: EndpointName>(input: &str) -> Option<i32> {
     lazy_static::lazy_static! {
         static ref RE: Regex = Regex::new(r"/api/(\w+)/(\d+)/").unwrap();
     }
@@ -731,4 +862,49 @@ fn extract_uri_id<T: EndpointName>(input: &str) -> Option<i32> {
             None
         }
     })
+}
+
+pub fn extract_children_from_cmd(cmd: &Command) -> (i32, Vec<i32>) {
+    let mut deps = cmd
+        .jobs
+        .iter()
+        .filter_map(|s| extract_uri_id::<Job0>(s))
+        .collect::<Vec<i32>>();
+    deps.sort();
+    (cmd.id, deps)
+}
+
+pub fn extract_children_from_job(job: &Job0) -> (i32, Vec<i32>) {
+    let mut deps = job
+        .steps
+        .iter()
+        .filter_map(|s| extract_uri_id::<Step>(s))
+        .collect::<Vec<i32>>();
+    deps.sort();
+    (job.id, deps)
+}
+
+pub fn extract_children_from_step(step: &Step) -> (i32, Vec<i32>) {
+    (step.id, Vec::new()) // steps have no descendants
+}
+
+pub fn extract_wait_fors_from_job(job: &Job0, jobs: &HashMap<i32, RichJob>) -> (i32, Vec<i32>) {
+    // Extract the interdependencies between jobs.
+    // See [command_modal::tests::test_jobs_ordering]
+    let mut deps = job
+        .wait_for
+        .iter()
+        .filter_map(|s| extract_uri_id::<Job0>(s))
+        .collect::<Vec<i32>>();
+    let triple = |id: &i32| {
+        jobs.get(id)
+            .map(|arj| (-(arj.deps.len() as i32), &arj.description[..], arj.id))
+            .unwrap_or((0, "", *id))
+    };
+    deps.sort_by(|i1, i2| {
+        let t1 = triple(i1);
+        let t2 = triple(i2);
+        t1.cmp(&t2)
+    });
+    (job.id, deps)
 }
