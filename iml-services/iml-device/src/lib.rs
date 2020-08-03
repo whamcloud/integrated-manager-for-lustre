@@ -208,15 +208,23 @@ pub fn find_targets(
                 .iter()
                 .filter(|(k, _)| k != &fqdn)
                 .filter_map(|(k, x)| {
-                    x.find_device_by_id(&dev_id)?;
+                    tracing::debug!("Searching for device {:?} on {}", &x, &k);
+                    let found = x.find_device_by_id(&dev_id);
 
-                    let host_id = host_map.get(&k)?;
+                    if found.is_some() {
+                        tracing::debug!("found device on {}!", &k);
+                        let host_id = host_map.get(&k)?;
 
-                    Some(*host_id)
+                        return Some(*host_id)
+                    }
+
+                    None
                 })
                 .collect();
+            tracing::debug!("ys: {:?}", ys);
 
             let host_id = host_map.get(&fqdn)?;
+            tracing::debug!("host id: {:?}", host_id);
 
             Some((host_id, ys, mntpnt, fs_uuid, target))
         })

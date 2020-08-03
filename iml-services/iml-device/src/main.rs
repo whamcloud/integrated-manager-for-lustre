@@ -119,6 +119,7 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         tracing::warn!("host_ids: {:?}", host_ids);
 
+        tracing::debug!("mounts: {:?}", &mount_cache);
         let targets = find_targets(&device_cache, &mount_cache, &host_ids);
 
         tracing::warn!("target: {:?}", targets);
