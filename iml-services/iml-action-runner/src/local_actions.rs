@@ -9,7 +9,7 @@ use crate::{
 };
 use futures::{channel::oneshot, Future, FutureExt, TryFutureExt};
 use iml_action_client::invoke_rust_agent;
-use iml_wire_types::{Action, ActionId, ToJsonValue};
+use iml_wire_types::{Action, ActionId, Fqdn, ToJsonValue};
 use serde_json::value::Value;
 use std::{collections::HashMap, fmt::Display, sync::Arc};
 
@@ -124,9 +124,10 @@ pub async fn handle_local_action(
             }
             "snapshot_mount" => {
                 let rx = add_in_flight(Arc::clone(&in_flight), id.clone()).await;
+                let args2 = args.clone();
 
-                let fut = wrap_plugin(args, move |fqdn| {
-                    let (tx, fut) = invoke_rust_agent(fqdn, "snapshot_mount", args);
+                let fut = wrap_plugin(args, move |fqdn: Fqdn| {
+                    let (_, fut) = invoke_rust_agent(fqdn, action, args2);
                     fut
                 });
 
