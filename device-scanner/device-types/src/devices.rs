@@ -256,7 +256,7 @@ impl Device {
     }
     pub fn find_device_by_id(&self, id: &DeviceId) -> Option<&Device> {
         match self {
-            Self::Root(_) => None,
+            Self::Root(x) => x.children.iter().find_map(|c| c.find_device_by_id(id)),
             Self::ScsiDevice(x) => {
                 if self.get_id().as_ref()? == id {
                     return Some(self);
