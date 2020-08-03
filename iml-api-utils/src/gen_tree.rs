@@ -29,14 +29,14 @@ pub struct Node<K, T> {
     pub parent: Option<K>,
     pub collapsed: bool,
     pub deps: Vec<K>,
-    pub value: T,
+    pub payload: T,
 }
 
 #[derive(Clone, Debug)]
 pub struct Item<K, U, B> {
     pub id: K,
     pub indent: String,
-    pub value: U,
+    pub payload: U,
     pub indicator: Option<B>,
 }
 
@@ -49,7 +49,7 @@ impl<K: Copy + PartialEq, U: PartialEq, B> Keyed for Item<K, U, B> {
 
 impl<K: Copy + PartialEq, U: PartialEq, B> PartialEq for Item<K, U, B> {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id && self.indent == other.indent && self.value == other.value
+        self.id == other.id && self.indent == other.indent && self.payload == other.payload
         // We do ignore self.indicator
     }
 }
@@ -168,7 +168,7 @@ impl<K: Copy + Eq + Hash, T: Clone + Eq + HasState> Tree<K, T> {
                     }
                 }
             }
-            state = node.value.state().max(state);
+            state = node.payload.state().max(state);
             if level == 0 {
                 pairs.push((node.key, state.clone()));
                 (Some(node.key), state)
@@ -195,7 +195,7 @@ impl<K: Copy + Eq + Hash, T: Clone + Eq + HasState> Tree<K, T> {
             items.push(Item {
                 id: node.key,
                 indent: format!("{}{}{}", indent, shift, term),
-                value: node.value.clone().into(),
+                payload: node.payload.clone().into(),
                 indicator: None,
             });
             if !node.collapsed {
@@ -263,7 +263,7 @@ pub fn apply_diff<K: Clone, U: Clone, B: Clone>(
                 }
                 xs[i0].id = y.id;
                 xs[i0].indent = y.indent;
-                xs[i0].value = y.value;
+                xs[i0].payload = y.payload;
             }
             AlignmentOp::Delete(Side::Left, i) => {
                 let i0 = (*i as i32 + di) as usize;
@@ -298,7 +298,7 @@ pub fn iterate_items<K, U: Display + HasState, B>(
     mut call: impl FnMut(usize, String),
 ) {
     for (i, e) in items.iter().enumerate() {
-        let s = format!("{} {} {}", e.indent, e.value.state(), e.value);
+        let s = format!("{} {} {}", e.indent, e.payload.state(), e.payload);
         call(i, s);
     }
 }
@@ -326,7 +326,7 @@ mod tests {
                 parent: None,
                 collapsed: false,
                 deps: vec![],
-                value: Specific {
+                payload: Specific {
                     state: Progressing,
                     name: "a0".to_string(),
                 },
@@ -339,7 +339,7 @@ mod tests {
                 parent: None,
                 collapsed: false,
                 deps: vec![],
-                value: Specific {
+                payload: Specific {
                     state: Progressing,
                     name: "a00".to_string(),
                 },
@@ -352,7 +352,7 @@ mod tests {
                 parent: None,
                 collapsed: false,
                 deps: vec![],
-                value: Specific {
+                payload: Specific {
                     state: Progressing,
                     name: "a01".to_string(),
                 },
@@ -365,7 +365,7 @@ mod tests {
                 parent: None,
                 collapsed: false,
                 deps: vec![],
-                value: Specific {
+                payload: Specific {
                     state: Progressing,
                     name: "a1".to_string(),
                 },
@@ -378,7 +378,7 @@ mod tests {
                 parent: None,
                 collapsed: false,
                 deps: vec![],
-                value: Specific {
+                payload: Specific {
                     state: Progressing,
                     name: "a10".to_string(),
                 },
@@ -391,7 +391,7 @@ mod tests {
                 parent: None,
                 collapsed: false,
                 deps: vec![],
-                value: Specific {
+                payload: Specific {
                     state: Progressing,
                     name: "a11".to_string(),
                 },
@@ -470,19 +470,29 @@ mod tests {
             .build();
         debug_assert!(is_valid(&tree), "tree should be valid");
 
-        get_node_by_name(&mut tree, "d-001").map(|n| n.value.state = Errored);
+        get_node_by_name(&mut tree, "d-001").map(|n| n.payload.state = Errored);
 
         let level0 = tree
             .keys_on_level(0)
             .into_iter()
-            .map(|(k, s)| (tree.get_node(k).map(|n| &n.value.name[..]).unwrap_or(""), s))
+            .map(|(k, s)| {
+                (
+                    tree.get_node(k).map(|n| &n.payload.name[..]).unwrap_or(""),
+                    s,
+                )
+            })
             .collect::<Vec<_>>();
         assert_eq!(level0, vec![("a", Errored)]);
 
         let level1 = tree
             .keys_on_level(1)
             .into_iter()
-            .map(|(k, s)| (tree.get_node(k).map(|n| &n.value.name[..]).unwrap_or(""), s))
+            .map(|(k, s)| {
+                (
+                    tree.get_node(k).map(|n| &n.payload.name[..]).unwrap_or(""),
+                    s,
+                )
+            })
             .collect::<Vec<_>>();
         assert_eq!(
             level1,
@@ -492,7 +502,12 @@ mod tests {
         let level2 = tree
             .keys_on_level(2)
             .into_iter()
-            .map(|(k, s)| (tree.get_node(k).map(|n| &n.value.name[..]).unwrap_or(""), s))
+            .map(|(k, s)| {
+                (
+                    tree.get_node(k).map(|n| &n.payload.name[..]).unwrap_or(""),
+                    s,
+                )
+            })
             .collect::<Vec<_>>();
         assert_eq!(
             level2,
@@ -509,7 +524,12 @@ mod tests {
         let level3 = tree
             .keys_on_level(3)
             .into_iter()
-            .map(|(k, s)| (tree.get_node(k).map(|n| &n.value.name[..]).unwrap_or(""), s))
+            .map(|(k, s)| {
+                (
+                    tree.get_node(k).map(|n| &n.payload.name[..]).unwrap_or(""),
+                    s,
+                )
+            })
             .collect::<Vec<_>>();
         assert_eq!(
             level3,
@@ -528,7 +548,12 @@ mod tests {
         let level4 = tree
             .keys_on_level(4)
             .into_iter()
-            .map(|(k, s)| (tree.get_node(k).map(|n| &n.value.name[..]).unwrap_or(""), s))
+            .map(|(k, s)| {
+                (
+                    tree.get_node(k).map(|n| &n.payload.name[..]).unwrap_or(""),
+                    s,
+                )
+            })
             .collect::<Vec<_>>();
         assert_eq!(level4, vec![]);
     }
@@ -643,7 +668,7 @@ mod tests {
         tree: &'a mut Tree<i32, Specific>,
         name: &str,
     ) -> Option<&'a mut Node<i32, Specific>> {
-        tree.pool.values_mut().find(|n| n.value.name == name)
+        tree.pool.values_mut().find(|n| n.payload.name == name)
     }
     // endregion
 
@@ -705,7 +730,7 @@ mod tests {
                     parent,
                     deps: Vec::with_capacity(nf.deps.len()),
                     collapsed: false,
-                    value: Specific {
+                    payload: Specific {
                         state: State::Progressing,
                         name: nf.name.to_string(),
                     },
