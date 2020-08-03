@@ -1583,6 +1583,7 @@ dependencies = [
  "iml-wire-types",
  "indicatif",
  "insta",
+ "itertools 0.9.0",
  "lazy_static",
  "number-formatter",
  "prettytable-rs",
@@ -1895,8 +1896,7 @@ dependencies = [
 [[package]]
 name = "indicatif"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7baab56125e25686df467fe470785512329883aab42696d661247aca2a2896e4"
+source = "git+https://github.com/nlinker/indicatif#ffd0082722eb0f90c713ccc1be0efdc6cfe768bd"
 dependencies = [
  "console 0.11.3",
  "lazy_static",
