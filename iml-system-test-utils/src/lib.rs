@@ -49,9 +49,9 @@ pub enum FsType {
 
 pub enum TestState {
     Bare,
+    LustreRpmsInstalled,
     Configured,
     ServersDeployed,
-    FsInstalled,
     FsCreated,
 }
 
@@ -600,10 +600,13 @@ async fn create_monitored_zfs(config: &Config) -> Result<(), TestError> {
 }
 
 pub async fn install_fs(config: Config) -> Result<Config, TestError> {
-    match config.fs_type {
-        FsType::LDISKFS => ssh::install_ldiskfs_no_iml(&config).await?,
-        FsType::ZFS => ssh::install_zfs_no_iml(&config).await?,
-    };
+    vagrant::up()
+        .await?
+        .args(config.all_hosts())
+        .checked_status()
+        .await?;
+
+    ssh::install_ldiskfs_zfs_no_iml(&config).await?;
 
     vagrant::halt()
         .await?
@@ -614,7 +617,7 @@ pub async fn install_fs(config: Config) -> Result<Config, TestError> {
     for x in config.all_hosts() {
         vagrant::snapshot_save(
             x,
-            snapshots::get_snapshot_name_for_state(&config, TestState::FsInstalled)
+            snapshots::get_snapshot_name_for_state(&config, TestState::LustreRpmsInstalled)
                 .to_string()
                 .as_str(),
         )

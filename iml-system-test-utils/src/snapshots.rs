@@ -6,7 +6,7 @@ use petgraph::{
     visit::EdgeFiltered,
     Direction,
 };
-use std::{cmp::Ordering, collections::HashMap, fmt, pin::Pin, process::Output, str};
+use std::{collections::HashMap, fmt, pin::Pin, process::Output, str};
 
 type SnapshotMap = HashMap<String, Vec<SnapshotName>>;
 
@@ -48,17 +48,16 @@ impl<'a> fmt::Debug for Transition {
     }
 }
 
-#[derive(Eq, PartialEq, PartialOrd, Debug)]
+#[derive(Eq, PartialEq, PartialOrd, Ord, Debug, Copy, Clone)]
+#[repr(usize)]
 pub enum SnapshotName {
     Init,
     Bare,
+    LustreRpmsInstalled,
     ImlConfigured,
     ImlStratagemConfigured,
     ServersDeployed,
     StratagemServersDeployed,
-    LdiskfsInstalled,
-    ZfsInstalled,
-    StratagemInstalled,
     LdiskfsCreated,
     ZfsCreated,
     StratagemCreated,
@@ -67,46 +66,16 @@ pub enum SnapshotName {
     StratagemDetected,
 }
 
-impl SnapshotName {
-    pub fn ordinal(&self) -> usize {
-        match &*self {
-            Self::Init => 0,
-            Self::Bare => 1,
-            Self::ImlConfigured => 2,
-            Self::ImlStratagemConfigured => 3,
-            Self::ServersDeployed => 4,
-            Self::StratagemServersDeployed => 5,
-            Self::LdiskfsInstalled => 6,
-            Self::ZfsInstalled => 7,
-            Self::StratagemInstalled => 8,
-            Self::LdiskfsCreated => 9,
-            Self::ZfsCreated => 10,
-            Self::StratagemCreated => 11,
-            Self::LdiskfsDetected => 12,
-            Self::ZfsDetected => 13,
-            Self::StratagemDetected => 14,
-        }
-    }
-}
-
-impl Ord for SnapshotName {
-    fn cmp(&self, other: &SnapshotName) -> Ordering {
-        self.ordinal().cmp(&other.ordinal())
-    }
-}
-
 impl From<&String> for SnapshotName {
     fn from(s: &String) -> Self {
         match s.to_lowercase().as_str() {
             "init" => Self::Init,
             "bare" => Self::Bare,
+            "lustre-rpms-installed" => Self::LustreRpmsInstalled,
             "iml-configured" => Self::ImlConfigured,
             "iml-stratagem-configured" => Self::ImlStratagemConfigured,
             "servers-deployed" => Self::ServersDeployed,
             "stratagem-servers-deployed" => Self::StratagemServersDeployed,
-            "ldiskfs-installed" => Self::LdiskfsInstalled,
-            "zfs-installed" => Self::ZfsInstalled,
-            "stratagem-installed" => Self::StratagemInstalled,
             "ldiskfs-created" => Self::LdiskfsCreated,
             "zfs-created" => Self::ZfsCreated,
             "stratagem-created" => Self::StratagemCreated,
@@ -123,13 +92,11 @@ impl fmt::Display for SnapshotName {
         match self {
             Self::Init => write!(f, "init"),
             Self::Bare => write!(f, "bare"),
+            Self::LustreRpmsInstalled => write!(f, "lustre-rpms-installed"),
             Self::ImlConfigured => write!(f, "iml-configured"),
             Self::ImlStratagemConfigured => write!(f, "iml-stratagem-configured"),
             Self::ServersDeployed => write!(f, "servers-deployed"),
             Self::StratagemServersDeployed => write!(f, "stratagem-servers-deployed"),
-            Self::LdiskfsInstalled => write!(f, "ldiskfs-installed"),
-            Self::ZfsInstalled => write!(f, "zfs-installed"),
-            Self::StratagemInstalled => write!(f, "stratagem-installed"),
             Self::LdiskfsCreated => write!(f, "ldiskfs-created"),
             Self::ZfsCreated => write!(f, "zfs-created"),
             Self::StratagemCreated => write!(f, "stratagem-created"),
@@ -143,6 +110,7 @@ impl fmt::Display for SnapshotName {
 pub fn get_snapshot_name_for_state(config: &Config, state: TestState) -> snapshots::SnapshotName {
     match state {
         TestState::Bare => SnapshotName::Bare,
+        TestState::LustreRpmsInstalled => SnapshotName::LustreRpmsInstalled,
         TestState::Configured => {
             if config.use_stratagem {
                 SnapshotName::ImlStratagemConfigured
@@ -155,16 +123,6 @@ pub fn get_snapshot_name_for_state(config: &Config, state: TestState) -> snapsho
                 SnapshotName::StratagemServersDeployed
             } else {
                 SnapshotName::ServersDeployed
-            }
-        }
-        TestState::FsInstalled => {
-            if config.use_stratagem {
-                SnapshotName::StratagemInstalled
-            } else {
-                match config.fs_type {
-                    FsType::LDISKFS => SnapshotName::LdiskfsInstalled,
-                    FsType::ZFS => SnapshotName::ZfsInstalled,
-                }
             }
         }
         TestState::FsCreated => {
@@ -198,6 +156,10 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
         name: SnapshotName::Bare,
         available: snapshots.contains(&SnapshotName::Bare),
     });
+    let lustre_rpms_installed = graph.add_node(Snapshot {
+        name: SnapshotName::LustreRpmsInstalled,
+        available: snapshots.contains(&SnapshotName::LustreRpmsInstalled),
+    });
     let iml_configured = graph.add_node(Snapshot {
         name: SnapshotName::ImlConfigured,
         available: snapshots.contains(&SnapshotName::ImlConfigured),
@@ -213,18 +175,6 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
     let stratagem_servers_deployed = graph.add_node(Snapshot {
         name: SnapshotName::StratagemServersDeployed,
         available: snapshots.contains(&SnapshotName::StratagemServersDeployed),
-    });
-    let ldiskfs_installed = graph.add_node(Snapshot {
-        name: SnapshotName::LdiskfsInstalled,
-        available: snapshots.contains(&SnapshotName::LdiskfsInstalled),
-    });
-    let zfs_installed = graph.add_node(Snapshot {
-        name: SnapshotName::ZfsInstalled,
-        available: snapshots.contains(&SnapshotName::ZfsInstalled),
-    });
-    let stratagem_installed = graph.add_node(Snapshot {
-        name: SnapshotName::StratagemInstalled,
-        available: snapshots.contains(&SnapshotName::StratagemInstalled),
     });
     let ldiskfs_created = graph.add_node(Snapshot {
         name: SnapshotName::LdiskfsCreated,
@@ -262,6 +212,15 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
 
     graph.add_edge(
         bare,
+        lustre_rpms_installed,
+        Transition {
+            path: SnapshotPath::All,
+            transition: mk_transition(install_fs),
+        },
+    );
+
+    graph.add_edge(
+        lustre_rpms_installed,
         iml_configured,
         Transition {
             path: SnapshotPath::LdiskfsOrZfs,
@@ -270,7 +229,7 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
     );
 
     graph.add_edge(
-        bare,
+        lustre_rpms_installed,
         iml_stratagem_configured,
         Transition {
             path: SnapshotPath::Stratagem,
@@ -298,33 +257,6 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
 
     graph.add_edge(
         servers_deployed,
-        ldiskfs_installed,
-        Transition {
-            path: SnapshotPath::Ldiskfs,
-            transition: mk_transition(install_fs),
-        },
-    );
-
-    graph.add_edge(
-        servers_deployed,
-        zfs_installed,
-        Transition {
-            path: SnapshotPath::Zfs,
-            transition: mk_transition(install_fs),
-        },
-    );
-
-    graph.add_edge(
-        stratagem_servers_deployed,
-        stratagem_installed,
-        Transition {
-            path: SnapshotPath::Stratagem,
-            transition: mk_transition(install_fs),
-        },
-    );
-
-    graph.add_edge(
-        ldiskfs_installed,
         ldiskfs_created,
         Transition {
             path: SnapshotPath::Ldiskfs,
@@ -333,7 +265,7 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
     );
 
     graph.add_edge(
-        zfs_installed,
+        servers_deployed,
         zfs_created,
         Transition {
             path: SnapshotPath::Zfs,
@@ -342,7 +274,7 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
     );
 
     graph.add_edge(
-        stratagem_installed,
+        stratagem_servers_deployed,
         stratagem_created,
         Transition {
             path: SnapshotPath::Stratagem,
@@ -558,35 +490,29 @@ mod tests {
             stderr: vec![],
             stdout: r#"==> iscsi: 
 bare
+lustre-rpms-installed
 servers-deployed
 iml-configured
 stratagem-created
 iml-stratagem-configured
-ldiskfs-installed
-stratagem-installed
 ldiskfs-created
 stratagem-servers-deployed
-zfs-installed
 zfs-created
 ==> adm: VM not created. Moving on...
 ==> mds1: 
 bare
+lustre-rpms-installed
 zfs-created
-stratagem-installed
 stratagem-created
-ldiskfs-installed
 stratagem-servers-deployed
-zfs-installed
 servers-deployed
 ldiskfs-created
 iml-stratagem-configured
 iml-configured
 ==> mds2: 
 stratagem-created
-ldiskfs-installed
-zfs-installed
 ldiskfs-created
-stratagem-installed
+lustre-rpms-installed
 stratagem-servers-deployed
 iml-stratagem-configured
 bare
@@ -595,27 +521,23 @@ iml-configured
 servers-deployed
 ==> oss1: 
 bare
+lustre-rpms-installed
 stratagem-created
 iml-stratagem-configured
-zfs-installed
 ldiskfs-created
 servers-deployed
-ldiskfs-installed
 iml-configured
 zfs-created
-stratagem-installed
 stratagem-servers-deployed
 ==> oss2: 
 iml-configured
 bare
+lustre-rpms-installed
 ldiskfs-created
 stratagem-servers-deployed
-zfs-installed
 stratagem-created
-ldiskfs-installed
 zfs-created
 servers-deployed
-stratagem-installed
 iml-stratagem-configured
 ==> c2: VM not created. Moving on...
 ==> c3: VM not created. Moving on...
@@ -648,13 +570,11 @@ iml-stratagem-configured
     fn get_full_graph() -> DiGraph<Snapshot, Transition> {
         create_graph(&vec![
             SnapshotName::Bare,
+            SnapshotName::LustreRpmsInstalled,
             SnapshotName::ImlConfigured,
             SnapshotName::ImlStratagemConfigured,
             SnapshotName::ServersDeployed,
             SnapshotName::StratagemServersDeployed,
-            SnapshotName::LdiskfsInstalled,
-            SnapshotName::ZfsInstalled,
-            SnapshotName::StratagemInstalled,
             SnapshotName::LdiskfsCreated,
             SnapshotName::ZfsCreated,
             SnapshotName::StratagemCreated,
@@ -671,13 +591,11 @@ iml-stratagem-configured
                     "iscsi".into(),
                     vec![
                         SnapshotName::Bare,
+                        SnapshotName::LustreRpmsInstalled,
                         SnapshotName::ImlConfigured,
                         SnapshotName::ImlStratagemConfigured,
                         SnapshotName::ServersDeployed,
                         SnapshotName::StratagemServersDeployed,
-                        SnapshotName::LdiskfsInstalled,
-                        SnapshotName::ZfsInstalled,
-                        SnapshotName::StratagemInstalled,
                         SnapshotName::LdiskfsCreated,
                         SnapshotName::ZfsCreated,
                         SnapshotName::StratagemCreated,
@@ -687,13 +605,11 @@ iml-stratagem-configured
                     "mds1".into(),
                     vec![
                         SnapshotName::Bare,
+                        SnapshotName::LustreRpmsInstalled,
                         SnapshotName::ImlConfigured,
                         SnapshotName::ImlStratagemConfigured,
                         SnapshotName::ServersDeployed,
                         SnapshotName::StratagemServersDeployed,
-                        SnapshotName::LdiskfsInstalled,
-                        SnapshotName::ZfsInstalled,
-                        SnapshotName::StratagemInstalled,
                         SnapshotName::LdiskfsCreated,
                         SnapshotName::ZfsCreated,
                         SnapshotName::StratagemCreated,
@@ -703,13 +619,11 @@ iml-stratagem-configured
                     "mds2".into(),
                     vec![
                         SnapshotName::Bare,
+                        SnapshotName::LustreRpmsInstalled,
                         SnapshotName::ImlConfigured,
                         SnapshotName::ImlStratagemConfigured,
                         SnapshotName::ServersDeployed,
                         SnapshotName::StratagemServersDeployed,
-                        SnapshotName::LdiskfsInstalled,
-                        SnapshotName::ZfsInstalled,
-                        SnapshotName::StratagemInstalled,
                         SnapshotName::LdiskfsCreated,
                         SnapshotName::ZfsCreated,
                         SnapshotName::StratagemCreated,
@@ -719,13 +633,11 @@ iml-stratagem-configured
                     "oss1".into(),
                     vec![
                         SnapshotName::Bare,
+                        SnapshotName::LustreRpmsInstalled,
                         SnapshotName::ImlConfigured,
                         SnapshotName::ImlStratagemConfigured,
                         SnapshotName::ServersDeployed,
                         SnapshotName::StratagemServersDeployed,
-                        SnapshotName::LdiskfsInstalled,
-                        SnapshotName::ZfsInstalled,
-                        SnapshotName::StratagemInstalled,
                         SnapshotName::LdiskfsCreated,
                         SnapshotName::ZfsCreated,
                         SnapshotName::StratagemCreated,
@@ -735,13 +647,11 @@ iml-stratagem-configured
                     "oss2".into(),
                     vec![
                         SnapshotName::Bare,
+                        SnapshotName::LustreRpmsInstalled,
                         SnapshotName::ImlConfigured,
                         SnapshotName::ImlStratagemConfigured,
                         SnapshotName::ServersDeployed,
                         SnapshotName::StratagemServersDeployed,
-                        SnapshotName::LdiskfsInstalled,
-                        SnapshotName::ZfsInstalled,
-                        SnapshotName::StratagemInstalled,
                         SnapshotName::LdiskfsCreated,
                         SnapshotName::ZfsCreated,
                         SnapshotName::StratagemCreated,
@@ -767,9 +677,9 @@ iml-stratagem-configured
             vec![
                 &SnapshotName::Init,
                 &SnapshotName::Bare,
+                &SnapshotName::LustreRpmsInstalled,
                 &SnapshotName::ImlConfigured,
                 &SnapshotName::ServersDeployed,
-                &SnapshotName::LdiskfsInstalled,
                 &SnapshotName::LdiskfsCreated,
             ],
             snapshots
@@ -789,9 +699,9 @@ iml-stratagem-configured
             vec![
                 &SnapshotName::Init,
                 &SnapshotName::Bare,
+                &SnapshotName::LustreRpmsInstalled,
                 &SnapshotName::ImlConfigured,
                 &SnapshotName::ServersDeployed,
-                &SnapshotName::ZfsInstalled,
                 &SnapshotName::ZfsCreated,
             ],
             snapshots
@@ -811,9 +721,9 @@ iml-stratagem-configured
             vec![
                 &SnapshotName::Init,
                 &SnapshotName::Bare,
+                &SnapshotName::LustreRpmsInstalled,
                 &SnapshotName::ImlStratagemConfigured,
                 &SnapshotName::StratagemServersDeployed,
-                &SnapshotName::StratagemInstalled,
                 &SnapshotName::StratagemCreated,
             ],
             snapshots
