@@ -8,7 +8,7 @@ use futures::{
     Future, FutureExt, TryFutureExt,
 };
 use iml_manager_env::get_action_runner_connect;
-use iml_wire_types::{Action, ActionType, ActionId, ActionName, Fqdn};
+use iml_wire_types::{Action, ActionId, ActionName, ActionType, Fqdn};
 use thiserror::Error;
 use uuid::Uuid;
 
