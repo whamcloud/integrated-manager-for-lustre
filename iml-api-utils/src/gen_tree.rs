@@ -312,9 +312,9 @@ mod tests {
     use super::*;
     use crate::gen_tree::tests::State::*;
     use std::cmp::Ordering;
+    use std::collections::HashSet;
     use std::fmt;
     use std::sync::atomic::AtomicI32;
-    use std::collections::HashSet;
 
     #[test]
     fn test_insert_nodes() {
@@ -550,7 +550,10 @@ mod tests {
                 None
             }
         }
-        fn in_pool<K: Copy + Eq + Hash, T: Clone + Eq + HasState>(tree: &Tree<K, T>, r: K) -> Option<()> {
+        fn in_pool<K: Copy + Eq + Hash, T: Clone + Eq + HasState>(
+            tree: &Tree<K, T>,
+            r: K,
+        ) -> Option<()> {
             if let Some(n) = tree.pool.get(&r) {
                 if n.key == r {
                     return Some(());
@@ -578,9 +581,9 @@ mod tests {
             Some(())
         }
         let mut seen = HashSet::new();
-        tree.get_roots().into_iter().all(|root| {
-            calc_inner(tree, root, &mut seen) == Some(())
-        })
+        tree.get_roots()
+            .into_iter()
+            .all(|root| calc_inner(tree, root, &mut seen) == Some(()))
     }
 
     // region Specific struct and State enum
