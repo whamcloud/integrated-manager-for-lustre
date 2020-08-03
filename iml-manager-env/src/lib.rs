@@ -15,6 +15,14 @@ lazy_static! {
     static ref RUNNING_IN_DOCKER: bool = std::fs::metadata("/.dockerenv").is_ok();
 }
 
+lazy_static! {
+    static ref ACTION_RUNNER_HTTP: String = format!(
+        "http://{}:{}",
+        get_server_host(),
+        get_var("ACTION_RUNNER_PORT")
+    );
+}
+
 /// Get the environment variable or panic
 fn get_var(name: &str) -> String {
     env::var(name).unwrap_or_else(|_| panic!("{} environment variable is required.", name))
@@ -195,6 +203,11 @@ pub fn get_influxdb_metrics_db() -> String {
     get_var("INFLUXDB_IML_STATS_DB")
 }
 
+/// Get the path to the mailbox from the env or panic
+pub fn get_mailbox_path() -> PathBuf {
+    get_var("MAILBOX_PATH").into()
+}
+
 /// Get the devices port or panic
 pub fn get_device_aggregator_port() -> String {
     get_var("DEVICE_AGGREGATOR_PORT")
@@ -243,11 +256,7 @@ pub fn get_use_stratagem() -> bool {
 }
 
 pub fn get_action_runner_http() -> String {
-    format!(
-        "http://{}:{}",
-        get_server_host(),
-        get_var("ACTION_RUNNER_PORT")
-    )
+    ACTION_RUNNER_HTTP.clone()
 }
 
 pub fn get_action_runner_uds() -> String {

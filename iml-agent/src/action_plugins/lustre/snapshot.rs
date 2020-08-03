@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{agent_error::ImlAgentError, lustre::lctl};
-use iml_wire_types::snapshot::{Create, Destroy};
+use iml_wire_types::snapshot::{Create, Destroy, Mount, Unmount};
 
 pub async fn create(c: Create) -> Result<(), ImlAgentError> {
     let mut args = vec!["snapshot_create", "--fsname", &c.fsname, "--name", &c.name];
@@ -19,5 +19,15 @@ pub async fn destroy(d: Destroy) -> Result<(), ImlAgentError> {
     if d.force {
         args.push("--force");
     }
+    lctl(args).await.map(drop)
+}
+
+pub async fn mount(m: Mount) -> Result<(), ImlAgentError> {
+    let args = &["snapshot_mount", "--fsname", &m.fsname, "--name", &m.name];
+    lctl(args).await.map(drop)
+}
+
+pub async fn unmount(u: Unmount) -> Result<(), ImlAgentError> {
+    let args = &["snapshot_umount", "--fsname", &u.fsname, "--name", &u.name];
     lctl(args).await.map(drop)
 }

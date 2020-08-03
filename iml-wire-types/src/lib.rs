@@ -256,6 +256,18 @@ impl TryFrom<Action> for serde_json::Value {
     }
 }
 
+/// Actions can be run either locally or remotely.
+/// Besides the node these are run on, the interface should
+/// be the same.
+///
+/// This should probably be collapsed into a single struct over an enum at some point.
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ActionType {
+    Remote((Fqdn, Action)),
+    Local(Action),
+}
+
 /// The result of running the action on an agent.
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub struct ActionResult {

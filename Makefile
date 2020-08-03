@@ -35,10 +35,26 @@ NOSE_ARGS ?= --stop
 
 ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo ''; fi)
 
-all: copr-rpms rpms
+all: copr-rpms rpms device-scanner-rpms iml-gui-rpm docker-rpms
 
 local:
 	$(MAKE) RPM_DIST="0.$(shell date '+%s')" all
+
+check:
+	black --check ./
+	cargo fmt --all -- --check
+	PQ_LIB_DIR=/usr/pgsql-9.6/lib cargo check --locked --all-targets
+	PQ_LIB_DIR=/usr/pgsql-9.6/lib cargo clippy -- -W warnings
+	cargo check --locked --manifest-path iml-system-rpm-tests/Cargo.toml --tests
+	cargo clippy --manifest-path iml-system-rpm-tests/Cargo.toml --tests -- -W warnings
+	cargo check --locked --manifest-path iml-system-docker-tests/Cargo.toml --tests
+	cargo clippy --manifest-path iml-system-docker-tests/Cargo.toml --tests -- -W warnings
+
+fmt:
+	black ./
+	cargo fmt --all
+	cargo fmt --all --manifest-path iml-system-rpm-tests/Cargo.toml
+	cargo fmt --all --manifest-path iml-system-docker-tests/Cargo.toml
 
 iml-gui-rpm:
 	$(MAKE) -f .copr/Makefile iml-gui-srpm outdir=.

@@ -4,15 +4,13 @@
 
 use bytes::buf::BufExt as _;
 use futures::{
-    channel::oneshot,
-    future::{self, Either},
+    future::{abortable, AbortHandle, Aborted},
     Future, FutureExt, TryFutureExt,
 };
 use hyper::{client::HttpConnector, Body, Client, Request};
 use hyperlocal::{UnixClientExt as _, UnixConnector};
-use iml_action_runner::ActionType;
 use iml_manager_env::{get_action_runner_http, get_action_runner_uds, running_in_docker};
-use iml_wire_types::{Action, ActionId, ActionName, Fqdn};
+use iml_wire_types::{Action, ActionId, ActionName, ActionType, Fqdn};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -53,24 +51,23 @@ fn client() -> ClientWrapper {
     }
 }
 
-fn connect_uri() -> Result<hyper::Uri, ImlActionClientError> {
+// Return URI or panic
+fn connect_uri() -> hyper::Uri {
     if running_in_docker() {
-        get_action_runner_http()
-            .parse::<hyper::Uri>()
-            .map_err(ImlActionClientError::UriError)
+        get_action_runner_http().parse::<hyper::Uri>().unwrap()
     } else {
-        Ok(hyperlocal::Uri::new(get_action_runner_uds(), "/").into())
+        hyperlocal::Uri::new(get_action_runner_uds(), "/").into()
     }
 }
 
 async fn build_invoke_rust_agent(
-    host: impl Into<Fqdn> + Clone + Send,
-    command: impl Into<ActionName> + Send,
-    args: impl serde::Serialize + Send,
+    host: impl Into<Fqdn> + Clone,
+    command: impl Into<ActionName>,
+    args: impl serde::Serialize,
     client: ClientWrapper,
     request_id: String,
 ) -> Result<serde_json::Value, ImlActionClientError> {
-    let uri = connect_uri()?;
+    let uri = connect_uri();
 
     let action = ActionType::Remote((
         host.clone().into(),
@@ -86,7 +83,11 @@ async fn build_invoke_rust_agent(
         .header(hyper::header::ACCEPT, "application/json")
         .header(hyper::header::CONTENT_TYPE, "application/json")
         .uri(&uri)
-        .body(Body::from(serde_json::to_string(&action)?))?;
+        .body(Body::from({
+            let s = serde_json::to_string(&action)?;
+            tracing::debug!("REQUEST to {} BODY: {}", &uri, &s);
+            s
+        }))?;
 
     client
         .request(req)
@@ -94,9 +95,15 @@ async fn build_invoke_rust_agent(
         .and_then(|resp| hyper::body::aggregate(resp).err_into())
         .map(|xs| match xs {
             Ok(body) => {
-                serde_json::from_reader(body.reader()).map_err(ImlActionClientError::SerdeJsonError)
+                let s = serde_json::from_reader(body.reader())
+                    .map_err(ImlActionClientError::SerdeJsonError);
+                tracing::debug!("RESULT from {} BODY: {:?}", &uri, &s);
+                s
             }
-            Err(e) => Err(e),
+            Err(e) => {
+                tracing::debug!("RESULT from {} ERROR: {}", &uri, &e);
+                Err(e)
+            }
         })
         .await
 }
@@ -113,12 +120,12 @@ pub async fn invoke_rust_agent(
 }
 
 pub fn invoke_rust_agent_cancelable(
-    host: impl Into<Fqdn> + Clone + Send,
-    command: impl Into<ActionName> + Send,
-    args: impl serde::Serialize + Send,
+    host: impl Into<Fqdn> + Clone,
+    command: impl Into<ActionName>,
+    args: impl serde::Serialize,
 ) -> Result<
     (
-        oneshot::Sender<()>,
+        AbortHandle,
         impl Future<Output = Result<serde_json::Value, ImlActionClientError>>,
     ),
     ImlActionClientError,
@@ -132,23 +139,22 @@ pub fn invoke_rust_agent_cancelable(
 
     let post = build_invoke_rust_agent(host, command, args, client, request_id);
 
-    let (p, c) = oneshot::channel::<()>();
+    let (fut, handle) = abortable(post);
 
     let fut = async move {
-        let either = future::select(c, post.boxed()).await;
+        let x = fut.await;
 
-        match either {
-            Either::Left((x, f)) => {
-                if x.is_err() {
-                    return f.await;
-                }
+        match x {
+            Ok(x) => x,
+            Err(Aborted) => {
                 let cancel = ActionType::Remote((
                     host2.into(),
                     Action::ActionCancel {
                         id: ActionId(request_id2),
                     },
                 ));
-                let uri = connect_uri()?;
+
+                let uri = connect_uri();
                 let req = Request::builder()
                     .method("POST")
                     .uri(&uri)
@@ -157,11 +163,11 @@ pub fn invoke_rust_agent_cancelable(
                 if let Ok(req) = req {
                     let _rc = client2.request(req).await;
                 }
+
                 Err(ImlActionClientError::CancelledRequest)
             }
-            Either::Right((x, _)) => x,
         }
     };
 
-    Ok((p, fut))
+    Ok((handle, fut))
 }
