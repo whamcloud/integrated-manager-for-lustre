@@ -18,6 +18,7 @@ iml-orm = {path = "../iml-orm", version = "0.3", features = ["postgres-interop"]
 iml-tracing = {version = "0.2", path = "../iml-tracing"}
 iml-wire-types = {path = "../iml-wire-types", version = "0.3"}
 indicatif = { git = "https://github.com/nlinker/indicatif", branch = "master" }
+itertools = "0.9.0"
 lazy_static = "1.4"
 number-formatter = {path = "../number-formatter", version = "0.1"}
 prettytable-rs = "0.8"
