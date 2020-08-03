@@ -2,6 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 pub mod dependency_tree;
+pub mod diff;
+pub mod gen_tree;
 
 use lazy_static::lazy_static;
 use regex::Regex;
