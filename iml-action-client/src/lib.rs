@@ -9,9 +9,8 @@ use futures::{
 };
 use hyper::{client::HttpConnector, Body, Client, Request};
 use hyperlocal::{UnixClientExt as _, UnixConnector};
-use iml_action_runner::ActionType;
 use iml_manager_env::{get_action_runner_http, get_action_runner_uds, running_in_docker};
-use iml_wire_types::{Action, ActionId, ActionName, Fqdn};
+use iml_wire_types::{Action, ActionId, ActionName, ActionType, Fqdn};
 use thiserror::Error;
 use uuid::Uuid;
 

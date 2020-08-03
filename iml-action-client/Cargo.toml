@@ -7,7 +7,6 @@ edition = "2018"
 [dependencies]
 bytes = "0.5"
 futures = "0.3"
-iml-action-runner = { path = "../iml-services/iml-action-runner", version = "0.3" }
 iml-manager-env = { path = "../iml-manager-env", version = "0.3" }
 iml-wire-types = { path = "../iml-wire-types", version = "0.3" }
 hyper = { version = "0.13", default-features = false, features = ["tcp"] }

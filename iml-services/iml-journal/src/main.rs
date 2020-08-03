@@ -78,7 +78,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         struct Row {
             id: i32,
-            content_type_id: i32,
+            content_type_id: Option<i32>,
         }
 
         let row = sqlx::query_as!(Row,
@@ -97,8 +97,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         };
 
+        let content_type_id = match row.content_type_id.as_ref() {
+            Some(x) => *x,
+            None => {
+                tracing::warn!("Host '{}' content_type_id  is unknown", host);
+                continue;
+            }
+        };
+
         for x in xs.iter() {
-            execute_handlers(&x.message, row.id, row.content_type_id, &pool).await?;
+            execute_handlers(&x.message, row.id, content_type_id, &pool).await?;
         }
 
         num_rows += xs.len() as i64;
