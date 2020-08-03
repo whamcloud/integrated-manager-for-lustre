@@ -141,7 +141,7 @@ mod tests {
             Delete(Left, 1),
             Delete(Left, 2),
             Delete(Left, 3),
-            Delete(Left, 4)
+            Delete(Left, 4),
         ];
         assert_eq!(diff, exp_diff);
     }
@@ -216,7 +216,7 @@ mod tests {
             Replace(Left, 1, 1),
             Replace(Left, 2, 2),
             Delete(Left, 3),
-            Insert(Left, 4, 3)
+            Insert(Left, 4, 3),
         ];
         assert_eq!(diff, exp_diff);
     }
