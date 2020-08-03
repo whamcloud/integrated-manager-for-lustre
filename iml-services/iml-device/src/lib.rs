@@ -7,7 +7,10 @@ pub mod linux_plugin_transforms;
 
 pub use error::ImlDeviceError;
 
-use device_types::{devices::Device, mount::Mount};
+use device_types::{
+    devices::{Device, DeviceId},
+    mount::Mount,
+};
 use futures::{future::try_join_all, lock::Mutex};
 use im::HashSet;
 use iml_postgres::sqlx::{self, PgPool};
@@ -166,10 +169,100 @@ pub async fn update_client_mounts(
     Ok(())
 }
 
-pub fn find_targets(
-    x: &HashMap<Fqdn, Device>,
+type DeviceIndex<'a> = HashMap<&'a Fqdn, DeviceMap>;
+type DeviceMap = HashMap<DeviceId, BTreeSet<Vec<DeviceId>>>;
+
+pub fn build_device_index<'a>(x: &'a HashMap<Fqdn, Device>) -> DeviceIndex<'a> {
+    let mut device_index: DeviceIndex<'a> = x
+        .iter()
+        .map(|(fqdn, device)| {
+            let mut map = HashMap::new();
+
+            build_device_map(device, &mut map, &vec![]);
+
+            (fqdn, map)
+        })
+        .collect();
+
+    let xs = device_index.iter().fold(vec![], |mut acc, (fqdn, map)| {
+        let others = device_index.iter().filter(|(x, _)| &fqdn != x).collect();
+
+        acc.extend(add_shared_storage(map, others));
+
+        acc
+    });
+
+    for (fqdn, device_id, paths) in xs {
+        let map = match device_index.get_mut(&fqdn) {
+            Some(x) => x,
+            None => continue,
+        };
+
+        map.insert(device_id.clone(), paths.clone());
+    }
+
+    device_index
+}
+
+fn add_shared_storage<'a>(
+    map: &'a DeviceMap,
+    other: HashMap<&'a &Fqdn, &DeviceMap>,
+) -> Vec<(Fqdn, DeviceId, BTreeSet<Vec<DeviceId>>)> {
+    let xs: Vec<_> = map
+        .iter()
+        .filter(|(device_id, _)| {
+            device_id.0.starts_with("lvm_")
+                || device_id.0.starts_with("zpool_")
+                || device_id.0.starts_with("mdraid_")
+        })
+        .collect();
+
+    let mut matches = vec![];
+
+    for (existing_id, parents) in xs {
+        let parent_ids = parents
+            .into_iter()
+            .filter_map(|xs| xs.last())
+            .collect::<Vec<_>>();
+
+        matches = other
+            .iter()
+            .filter(|(_, map)| parent_ids.iter().all(|p| map.get(p).is_some()))
+            .map(|(fqdn, _)| ((**fqdn).clone(), existing_id.clone(), parents.clone()))
+            .chain(matches)
+            .collect();
+    }
+
+    matches
+}
+
+fn build_device_map(device: &Device, map: &mut DeviceMap, path: &[DeviceId]) {
+    let id = match device.get_id() {
+        Some(x) => x,
+        None => return (),
+    };
+
+    let paths = map.entry(id.clone()).or_insert_with(|| BTreeSet::new());
+
+    paths.insert(path.to_vec());
+
+    let parent_path = [path.to_vec(), vec![id]].concat();
+
+    let children = match device.children() {
+        Some(x) => x,
+        None => return (),
+    };
+
+    children
+        .iter()
+        .for_each(|d| build_device_map(d, map, &parent_path));
+}
+
+pub fn find_targets<'a>(
+    x: &'a HashMap<Fqdn, Device>,
     mounts: &HashMap<Fqdn, HashSet<Mount>>,
     host_map: &HashMap<Fqdn, i32>,
+    device_index: &DeviceIndex<'a>,
 ) -> Vec<Target> {
     let xs: Vec<_> = mounts
         .iter()
@@ -204,23 +297,42 @@ pub fn find_targets(
     let xs: Vec<_> = xs
         .into_iter()
         .filter_map(|(fqdn, mntpnt, dev_id, fs_uuid, target)| {
-            let ys: Vec<_> = x
+            let ys: Vec<_> = device_index
                 .iter()
-                .filter(|(k, _)| k != &fqdn)
+                .filter(|(k, _)| *k != &fqdn)
                 .filter_map(|(k, x)| {
                     tracing::debug!("Searching for device {:?} on {}", &x, &k);
-                    let found = x.find_device_by_id(&dev_id);
+                    let found = x.get(&dev_id);
 
                     if found.is_some() {
                         tracing::debug!("found device on {}!", &k);
                         let host_id = host_map.get(&k)?;
 
-                        return Some(*host_id)
+                        return Some(*host_id);
                     }
 
                     None
                 })
                 .collect();
+
+            // let ys: Vec<_> = x
+            //     .iter()
+            //     .filter(|(k, _)| k != &fqdn)
+            //     .filter_map(|(k, x)| {
+            //         tracing::debug!("Searching for device {:?} on {}", &x, &k);
+            //         let found = x.find_device_by_id(&dev_id);
+
+            //         if found.is_some() {
+            //             tracing::debug!("found device on {}!", &k);
+            //             let host_id = host_map.get(&k)?;
+
+            //             return Some(*host_id);
+            //         }
+
+            //         None
+            //     })
+            //     .collect();
+
             tracing::debug!("ys: {:?}", ys);
 
             let host_id = host_map.get(&fqdn)?;

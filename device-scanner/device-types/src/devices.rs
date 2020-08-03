@@ -165,8 +165,8 @@ pub enum Device {
     Dataset(Dataset),
 }
 
-#[derive(Debug, serde::Serialize, Eq, PartialEq, Ord, PartialOrd, Clone)]
-pub struct DeviceId(String);
+#[derive(Debug, serde::Serialize, Eq, PartialEq, Ord, PartialOrd, Clone, Hash)]
+pub struct DeviceId(pub String);
 
 impl Device {
     pub fn find_device_by_devpath(&self, dev_path: &DevicePath) -> Option<&Device> {
@@ -317,7 +317,7 @@ impl Device {
     }
     pub fn get_id(&self) -> Option<DeviceId> {
         match self {
-            Self::Root(_) => None,
+            Self::Root(_) => Some(DeviceId("root".into())),
             Self::ScsiDevice(x) => Some(DeviceId(format!("scsi_{}", x.serial.as_ref()?))),
             Self::Partition(x) => Some(DeviceId(format!(
                 "partition{}_{}",
@@ -330,6 +330,19 @@ impl Device {
             Self::LogicalVolume(x) => Some(DeviceId(format!("lv_{}", x.uuid))),
             Self::Zpool(x) => Some(DeviceId(format!("zpool_{}", x.guid))),
             Self::Dataset(x) => Some(DeviceId(format!("dataset_{}", x.guid))),
+        }
+    }
+    pub fn children(&self) -> Option<&OrdSet<Device>> {
+        match self {
+            Self::Root(x) => Some(&x.children),
+            Self::ScsiDevice(x) => Some(&x.children),
+            Self::Partition(x) => Some(&x.children),
+            Self::MdRaid(x) => Some(&x.children),
+            Self::Mpath(x) => Some(&x.children),
+            Self::VolumeGroup(x) => Some(&x.children),
+            Self::LogicalVolume(x) => Some(&x.children),
+            Self::Zpool(x) => Some(&x.children),
+            Self::Dataset(_) => None,
         }
     }
 }

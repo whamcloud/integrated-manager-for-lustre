@@ -6,17 +6,14 @@ use device_types::{devices::Device, mount::Mount};
 use futures::{TryFutureExt, TryStreamExt};
 use im::HashSet;
 use iml_device::{
-    client_mount_content_id, create_cache, find_targets,
+    build_device_index, client_mount_content_id, create_cache, find_targets,
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
     },
     update_client_mounts, update_devices, Cache, ImlDeviceError,
 };
-use iml_postgres::{
-    get_db_pool,
-    sqlx::self,
-};
+use iml_postgres::{get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
@@ -35,7 +32,7 @@ async fn main() -> Result<(), ImlDeviceError> {
     let pool = get_db_pool(5).await?;
 
     sqlx::migrate!("../../migrations").run(&pool).await?;
-    
+
     let cache = create_cache(&pool).await?;
 
     let cache2 = Arc::clone(&cache);
@@ -110,6 +107,10 @@ async fn main() -> Result<(), ImlDeviceError> {
         device_cache.insert(host.clone(), devices);
         mount_cache.insert(host, mounts);
 
+        let index = build_device_index(&device_cache);
+
+        tracing::debug!("index: {:?}", index);
+
         let host_ids: HashMap<Fqdn, i32> =
             sqlx::query!("select fqdn, id from chroma_core_managedhost where not_deleted = 't'",)
                 .fetch(&pool)
@@ -119,8 +120,9 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         tracing::warn!("host_ids: {:?}", host_ids);
 
-        tracing::debug!("mounts: {:?}", &mount_cache);
-        let targets = find_targets(&device_cache, &mount_cache, &host_ids);
+        tracing::debug!("mounts: {:?}", mount_cache);
+
+        let targets = find_targets(&device_cache, &mount_cache, &host_ids, &index);
 
         tracing::warn!("target: {:?}", targets);
         let x = targets.into_iter().fold(
@@ -129,12 +131,18 @@ async fn main() -> Result<(), ImlDeviceError> {
                 acc.0.push(x.state);
                 acc.1.push(x.name);
                 acc.2.push(x.active_host_id);
-                acc.3.push(x.host_ids.into_iter().map(|x| x.to_string()).collect::<Vec<String>>().join(","));
+                acc.3.push(
+                    x.host_ids
+                        .into_iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<String>>()
+                        .join(","),
+                );
                 acc.4.push(x.uuid);
                 acc.5.push(x.mount_path);
 
                 acc
-            }
+            },
         );
 
         tracing::warn!("x: {:?}", x);
