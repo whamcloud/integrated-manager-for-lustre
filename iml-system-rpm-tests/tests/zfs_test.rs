@@ -9,7 +9,10 @@ use iml_system_test_utils::*;
 async fn test_zfs_setup() -> Result<(), TestError> {
     let config = Config::default();
     let config: Config = Config {
-        profile_map: vec![("base_monitored".into(), config.storage_servers()), ("base_client".into(), config.client_servers())],
+        profile_map: vec![
+            ("base_monitored".into(), config.storage_servers()),
+            ("base_client".into(), config.client_servers()),
+        ],
         fs_type: FsType::ZFS,
         ..config
     };
