@@ -472,7 +472,6 @@ lustre-rpms-installed
 servers-deployed
 iml-configured
 stratagem-created
-iml-stratagem-configured
 ldiskfs-created
 stratagem-servers-deployed
 zfs-created
@@ -485,14 +484,12 @@ stratagem-created
 stratagem-servers-deployed
 servers-deployed
 ldiskfs-created
-iml-stratagem-configured
 iml-configured
 ==> mds2: 
 stratagem-created
 ldiskfs-created
 lustre-rpms-installed
 stratagem-servers-deployed
-iml-stratagem-configured
 bare
 zfs-created
 iml-configured
@@ -501,7 +498,6 @@ servers-deployed
 bare
 lustre-rpms-installed
 stratagem-created
-iml-stratagem-configured
 ldiskfs-created
 servers-deployed
 iml-configured
@@ -516,7 +512,6 @@ stratagem-servers-deployed
 stratagem-created
 zfs-created
 servers-deployed
-iml-stratagem-configured
 ==> c2: VM not created. Moving on...
 ==> c3: VM not created. Moving on...
 ==> c4: VM not created. Moving on...
@@ -694,6 +689,7 @@ iml-stratagem-configured
                 &SnapshotName::Init,
                 &SnapshotName::Bare,
                 &SnapshotName::LustreRpmsInstalled,
+                &SnapshotName::ImlConfigured,
                 &SnapshotName::StratagemServersDeployed,
                 &SnapshotName::StratagemCreated,
             ],
