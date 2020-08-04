@@ -36,10 +36,7 @@ async fn add_in_flight(
 /// Removes an action id from the in-flight list.
 ///
 /// Returns the tx handle which can then be used to cancel the action if needed.
-async fn remove_in_flight(
-    in_flight: SharedLocalActionsInFlight,
-    id: &ActionId,
-) -> Option<oneshot::Sender<Result<Value, String>>> {
+async fn remove_in_flight(in_flight: SharedLocalActionsInFlight, id: &ActionId) -> Option<Sender> {
     let mut in_flight = in_flight.lock().await;
 
     in_flight.remove(id).or_else(|| {
