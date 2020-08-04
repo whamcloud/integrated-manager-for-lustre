@@ -1,4 +1,4 @@
-## Integration Testing Overview
+# Integration Testing Overview
 
 The system level tests are broken up into two types:
 
@@ -73,7 +73,6 @@ The edges of the graph hold the functionality to transition from one state to an
 
 A unit test is provided in *snapshots.rs* that will generate *dot* output of the graph. This dot output can then be piped into graphviz where an image of the graph will be generated. Use the following command to run the test and get the dot output:
 
-```bash
+```sh
 cargo test test_generate_graph_dot_file -- --nocapture
 ```
-

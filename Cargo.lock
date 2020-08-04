@@ -1246,6 +1246,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyperlocal"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f192a5a791c0781b93e69f60a652eb6ae9331f77b9efe90c9827a75df5141a9b"
+dependencies = [
+ "futures-util",
+ "hex",
+ "hyper",
+ "pin-project",
+ "tokio",
+]
+
+[[package]]
 name = "idna"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1287,14 +1300,17 @@ dependencies = [
 name = "iml-action-client"
 version = "0.1.0"
 dependencies = [
+ "bytes",
  "futures",
- "iml-action-runner",
+ "hyper",
+ "hyperlocal",
  "iml-manager-env",
  "iml-wire-types",
  "reqwest",
  "serde",
  "serde_json",
  "thiserror",
+ "tracing",
  "uuid",
 ]
 
