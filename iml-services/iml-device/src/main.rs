@@ -6,7 +6,7 @@ use device_types::{devices::Device, mount::Mount};
 use futures::{TryFutureExt, TryStreamExt};
 use im::HashSet;
 use iml_device::{
-    build_device_index, client_mount_content_id, create_cache, find_targets,
+    build_device_index, client_mount_content_id, create_cache, create_target_cache, find_targets,
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
@@ -99,26 +99,17 @@ async fn main() -> Result<(), ImlDeviceError> {
     let lustreclientmount_ct_id = client_mount_content_id(&pool).await?;
 
     let mut mount_cache = HashMap::new();
+    let mut target_cache = create_target_cache(&pool).await?;
 
     while let Some((host, (devices, mounts))) = s.try_next().await? {
         update_devices(&pool, &host, &devices).await?;
         update_client_mounts(&pool, lustreclientmount_ct_id, &host, &mounts).await?;
 
-        let pretty_devices = serde_json::to_string_pretty(&devices);
-        fs::write(
-            format!("/tmp/{}_devices.json", &host),
-            pretty_devices.unwrap(),
-        )
-        .unwrap();
-
-        tracing::debug!("device tree for host {} is: {:?}", &host, &devices);
         let mut device_cache = cache2.lock().await;
         device_cache.insert(host.clone(), devices);
         mount_cache.insert(host, mounts);
 
         let index = build_device_index(&device_cache);
-
-        tracing::debug!("index: {:?}", index);
 
         let host_ids: HashMap<Fqdn, i32> =
             sqlx::query!("select fqdn, id from chroma_core_managedhost where not_deleted = 't'",)
@@ -127,13 +118,10 @@ async fn main() -> Result<(), ImlDeviceError> {
                 .try_collect()
                 .await?;
 
-        tracing::warn!("host_ids: {:?}", host_ids);
-
-        tracing::debug!("mounts: {:?}", mount_cache);
-
         let targets = find_targets(&device_cache, &mount_cache, &host_ids, &index);
+        targets.update_cache(&mut target_cache);
+        let targets = targets.merge_cache(&target_cache);
 
-        tracing::warn!("target: {:?}", targets);
         let x = targets.into_iter().fold(
             (vec![], vec![], vec![], vec![], vec![], vec![]),
             |mut acc, x| {
@@ -142,6 +130,7 @@ async fn main() -> Result<(), ImlDeviceError> {
                 acc.2.push(x.active_host_id);
                 acc.3.push(
                     x.host_ids
+                        .unwrap_or(vec![])
                         .into_iter()
                         .map(|x| x.to_string())
                         .collect::<Vec<String>>()

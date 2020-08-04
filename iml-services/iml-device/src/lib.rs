@@ -40,6 +40,27 @@ pub async fn create_cache(pool: &PgPool) -> Result<Cache, ImlDeviceError> {
     Ok(Arc::new(Mutex::new(data)))
 }
 
+pub async fn create_target_cache(pool: &PgPool) -> Result<HashMap<String, Target>, ImlDeviceError> {
+    Ok(sqlx::query!("select * from chroma_core_targets")
+        .fetch_all(pool)
+        .await?
+        .into_iter()
+        .map(|x| {
+            (
+                x.uuid.clone(),
+                Target {
+                    state: x.state,
+                    name: x.name,
+                    active_host_id: x.active_host_id,
+                    host_ids: x.host_ids,
+                    uuid: x.uuid,
+                    mount_path: x.mount_path,
+                },
+            )
+        })
+        .collect())
+}
+
 pub async fn update_devices(
     pool: &PgPool,
     host: &Fqdn,
@@ -325,7 +346,7 @@ pub fn find_targets<'a>(
     mounts: &HashMap<Fqdn, HashSet<Mount>>,
     host_map: &HashMap<Fqdn, i32>,
     device_index: &DeviceIndex<'a>,
-) -> Vec<Target> {
+) -> Targets {
     let xs: Vec<_> = mounts
         .iter()
         .map(|(k, xs)| xs.into_iter().map(move |x| (k, x)))
@@ -365,16 +386,12 @@ pub fn find_targets<'a>(
                 .filter(|(k, _)| *k != &fqdn)
                 .filter_map(|(k, x)| {
                     tracing::debug!("Searching for device {:?} on {}", &x, &k);
-                    let found = x.0.get(&dev_id);
+                    x.0.get(&dev_id)?;
 
-                    if found.is_some() {
-                        tracing::debug!("found device on {}!", &k);
-                        let host_id = host_map.get(&k)?;
+                    tracing::debug!("found device on {}!", &k);
+                    let host_id = host_map.get(&k)?;
 
-                        return Some(*host_id);
-                    }
-
-                    None
+                    return Some(*host_id);
                 })
                 .collect();
 
@@ -387,26 +404,60 @@ pub fn find_targets<'a>(
         })
         .collect();
 
-    xs.into_iter()
+    let xs = xs
+        .into_iter()
         .map(|(fqdn, ids, mntpnt, fs_uuid, target)| Target {
             state: "mounted".into(),
-            active_host_id: *fqdn,
-            host_ids: ids,
+            active_host_id: Some(*fqdn),
+            host_ids: Some(ids),
             name: target.into(),
             uuid: fs_uuid.into(),
-            mount_path: mntpnt.0.to_string_lossy().to_string(),
+            mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
         })
-        .collect()
+        .collect();
+
+    Targets(xs)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, Ord, PartialOrd, Clone)]
 pub struct Target {
     pub state: String,
     pub name: String,
-    pub active_host_id: i32,
-    pub host_ids: Vec<i32>,
+    pub active_host_id: Option<i32>,
+    pub host_ids: Option<Vec<i32>>,
     pub uuid: String,
-    pub mount_path: String,
+    pub mount_path: Option<String>,
+}
+
+pub struct Targets(Vec<Target>);
+
+impl PartialEq for Target {
+    fn eq(&self, other: &Self) -> bool {
+        self.uuid == other.uuid
+    }
+}
+
+impl Targets {
+    pub fn update_cache(&self, cache: &mut HashMap<String, Target>) -> () {
+        for target in &self.0 {
+            cache.insert(target.uuid.clone(), target.clone());
+        }
+    }
+
+    pub fn merge_cache(&self, cache: &HashMap<String, Target>) -> Vec<Target> {
+        let xs: BTreeSet<Target> = cache.values().cloned().collect();
+        let xs2: BTreeSet<Target> = self.0.iter().cloned().collect();
+        let diff: Vec<Target> = xs
+            .difference(&xs2)
+            .cloned()
+            .map(|mut x| {
+                x.state = "unmounted".to_string();
+                x
+            })
+            .collect();
+
+        [self.0.clone(), diff].concat()
+    }
 }
 
 #[cfg(test)]
