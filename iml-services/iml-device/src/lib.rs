@@ -40,12 +40,12 @@ pub async fn create_cache(pool: &PgPool) -> Result<Cache, ImlDeviceError> {
     Ok(Arc::new(Mutex::new(data)))
 }
 
-pub async fn create_target_cache(pool: &PgPool) -> Result<Vec<Target>, ImlDeviceError> {
+pub async fn create_target_cache(pool: &PgPool) -> Result<Targets, ImlDeviceError> {
     let xs: Vec<Target> = sqlx::query_as!(Target, "select * from chroma_core_targets")
         .fetch_all(pool)
         .await?;
 
-    Ok(xs)
+    Ok(Targets(xs))
 }
 
 pub async fn update_devices(
@@ -387,7 +387,13 @@ pub fn find_targets<'a>(
             let host_id = host_map.get(&fqdn)?;
             tracing::debug!("host id: {:?}", host_id);
 
-            Some((host_id, ys, mntpnt, fs_uuid, target))
+            Some((
+                host_id,
+                [vec![*host_id], ys].concat(),
+                mntpnt,
+                fs_uuid,
+                target,
+            ))
         })
         .collect();
 
@@ -416,7 +422,19 @@ pub struct Target {
     pub mount_path: Option<String>,
 }
 
-pub struct Targets(Vec<Target>);
+impl Target {
+    pub fn update(&mut self, other: &Target) {
+        self.state = other.state.clone();
+        self.name = other.name.clone();
+        self.active_host_id = other.active_host_id;
+        self.host_ids = other.host_ids.clone();
+        self.uuid = other.uuid.clone();
+        self.mount_path = other.mount_path.clone();
+    }
+}
+
+#[derive(Debug)]
+pub struct Targets(pub Vec<Target>);
 
 impl PartialEq for Target {
     fn eq(&self, other: &Self) -> bool {
@@ -425,18 +443,18 @@ impl PartialEq for Target {
 }
 
 impl Targets {
-    pub fn update_cache(&self, cache: &mut Vec<Target>) -> () {
+    pub fn update_cache(&self, cache: &mut Targets) -> () {
         for target in &self.0 {
-            if let Some(t) = cache.into_iter().find(|x| x.uuid == target.uuid) {
-                *t = target.clone();
+            if let Some(t) = cache.0.iter_mut().find(|x| *x == target) {
+                t.update(target);
             } else {
-                cache.push(target.clone());
+                cache.0.push(target.clone());
             }
         }
     }
 
-    pub fn update_mounts_in_cache(&self, cache: &mut Vec<Target>) -> () {
-        let xs: BTreeSet<Target> = cache.iter().cloned().collect();
+    pub fn update_mounts_in_cache(&self, cache: &mut Targets) -> () {
+        let xs: BTreeSet<Target> = cache.0.iter().cloned().collect();
         let xs2: BTreeSet<Target> = self.0.iter().cloned().collect();
         let diff: Vec<Target> = xs
             .difference(&xs2)
@@ -451,8 +469,8 @@ impl Targets {
             .collect();
 
         for target in diff {
-            if let Some(t) = cache.into_iter().find(|x| x.uuid == target.uuid) {
-                *t = target.clone();
+            if let Some(t) = cache.0.iter_mut().find(|x| **x == target) {
+                t.update(&target);
             }
         }
     }
@@ -477,7 +495,7 @@ mod tests {
 
     #[test]
     fn test_updating_target_cache() {
-        let mut cache: Vec<Target> = vec![
+        let mut cache: Targets = Targets(vec![
             Target {
                 state: "mounted".into(),
                 name: "mdt1".into(),
@@ -494,7 +512,7 @@ mod tests {
                 uuid: "654321".into(),
                 mount_path: None,
             },
-        ];
+        ]);
 
         let targets = Targets(vec![
             Target {
@@ -524,14 +542,13 @@ mod tests {
         ]);
 
         targets.update_cache(&mut cache);
-        let Targets(expected) = targets;
 
-        assert_eq!(expected, cache);
+        assert_eq!(targets.0, cache.0);
     }
 
     #[test]
     fn test_update_mounts() {
-        let mut cache = vec![
+        let mut cache = Targets(vec![
             Target {
                 state: "mounted".into(),
                 name: "mdt1".into(),
@@ -556,7 +573,7 @@ mod tests {
                 uuid: "567890".into(),
                 mount_path: Some("/mnt/ost1".into()),
             },
-        ];
+        ]);
 
         let targets = Targets(vec![
             Target {
@@ -578,7 +595,7 @@ mod tests {
         ]);
 
         targets.update_mounts_in_cache(&mut cache);
-        let expected = vec![
+        let expected = Targets(vec![
             Target {
                 state: "unmounted".into(),
                 name: "mdt1".into(),
@@ -603,8 +620,8 @@ mod tests {
                 uuid: "567890".into(),
                 mount_path: Some("/mnt/ost1".into()),
             },
-        ];
+        ]);
 
-        assert_eq!(expected, cache);
+        assert_eq!(expected.0, cache.0);
     }
 }

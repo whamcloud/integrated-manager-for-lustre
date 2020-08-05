@@ -121,7 +121,7 @@ async fn main() -> Result<(), ImlDeviceError> {
         targets.update_cache(&mut target_cache);
         targets.update_mounts_in_cache(&mut target_cache);
 
-        let x = target_cache.clone().into_iter().fold(
+        let x = target_cache.0.clone().into_iter().fold(
             (vec![], vec![], vec![], vec![], vec![], vec![]),
             |mut acc, x| {
                 acc.0.push(x.state);
