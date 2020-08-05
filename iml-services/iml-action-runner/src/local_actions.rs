@@ -7,13 +7,15 @@ use crate::{
     error::{self, ActionRunnerError},
     Sender, Sessions, Shared,
 };
-use futures::{channel::oneshot, Future, FutureExt, TryFutureExt};
-use iml_action_client::invoke_rust_agent;
+use futures::{channel::oneshot, future::AbortHandle, Future, FutureExt, TryFutureExt};
+use iml_action_client::invoke_rust_agent_cancelable;
 use iml_wire_types::{Action, ActionId, Fqdn, ToJsonValue};
 use serde_json::value::Value;
 use std::{collections::HashMap, fmt::Display, sync::Arc};
 
-pub type LocalActionsInFlight = HashMap<ActionId, Sender>;
+pub struct ActionHandle(Sender, Option<AbortHandle>);
+
+pub type LocalActionsInFlight = HashMap<ActionId, ActionHandle>;
 pub type SharedLocalActionsInFlight = Shared<LocalActionsInFlight>;
 
 /// Adds an action id to the in-flight list.
@@ -28,7 +30,7 @@ async fn add_in_flight(
 
     let mut in_flight = in_flight.lock().await;
 
-    in_flight.insert(id.clone(), tx);
+    in_flight.insert(id.clone(), ActionHandle(tx, None));
 
     rx
 }
@@ -36,7 +38,10 @@ async fn add_in_flight(
 /// Removes an action id from the in-flight list.
 ///
 /// Returns the tx handle which can then be used to cancel the action if needed.
-async fn remove_in_flight(in_flight: SharedLocalActionsInFlight, id: &ActionId) -> Option<Sender> {
+async fn remove_in_flight(
+    in_flight: SharedLocalActionsInFlight,
+    id: &ActionId,
+) -> Option<ActionHandle> {
     let mut in_flight = in_flight.lock().await;
 
     in_flight.remove(id).or_else(|| {
@@ -61,7 +66,7 @@ pub fn spawn_plugin(
     tokio::spawn(fut.then(move |result| async move {
         let _ = remove_in_flight(in_flight, &id)
             .await
-            .map(|tx| tx.send(result));
+            .map(|ActionHandle(tx, _)| tx.send(result));
     }));
 }
 
@@ -94,7 +99,12 @@ pub async fn handle_local_action(
         Action::ActionCancel { id } => {
             let _ = remove_in_flight(in_flight, &id)
                 .await
-                .map(|tx| tx.send(Ok(serde_json::Value::Null)));
+                .map(|ActionHandle(tx, ah)| {
+                    if let Some(ah) = ah {
+                        ah.abort();
+                    }
+                    tx.send(Ok(serde_json::Value::Null))
+                });
 
             Ok(Ok(serde_json::Value::Null))
         }
@@ -123,9 +133,18 @@ pub async fn handle_local_action(
                 let rx = add_in_flight(Arc::clone(&in_flight), id.clone()).await;
                 let args2 = args.clone();
 
+                let in_flight_2 = in_flight.clone();
+                let id_2 = id.clone();
+
                 let fut = wrap_plugin(args, move |fqdn: Fqdn| {
-                    let (_, fut) = invoke_rust_agent(fqdn, action, args2);
-                    fut
+                    let (new_ah, fut) = invoke_rust_agent_cancelable(fqdn, action, args2).unwrap();
+                    async move {
+                        let mut in_flight = in_flight_2.lock().await;
+                        in_flight
+                            .entry(id_2)
+                            .and_modify(|ActionHandle(_, ah)| *ah = Some(new_ah));
+                    }
+                    .then(|_| fut)
                 });
 
                 spawn_plugin(fut, in_flight, id);
