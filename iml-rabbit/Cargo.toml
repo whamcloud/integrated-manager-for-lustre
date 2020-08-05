@@ -12,7 +12,7 @@ iml-wire-types = {path = "../iml-wire-types", version = "0.3"}
 lapin = {git = "https://github.com/whamcloud/lapin.git", branch = "rustls", version = "1.2", default-features = false, features = ["rustls"]}
 serde_json = "1"
 thiserror = "1.0"
-tokio-amqp = {git = "https://github.com/whamcloud/lapin.git", branch = "rustls", version = "0.1", default-features = false, features = ["rustls"]}
+tokio-amqp = {git = "https://github.com/whamcloud/lapin.git", branch = "rustls", version = "0.1", default-features = false}
 tracing = "0.1"
 warp = {version = "0.2", optional = true}
 
