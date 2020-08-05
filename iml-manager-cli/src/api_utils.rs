@@ -661,7 +661,7 @@ fn build_fresh_tree(
             // Errored nodes are leaved non-collapsed.
             let pairs = tree.keys_on_level(2);
             for (id, s) in pairs {
-                if s != State::Errored {
+                if s != State::Errored || s != State::Cancelled {
                     if let Some(n) = tree.get_node_mut(id) {
                         n.collapsed = true;
                         n.payload.state = s;
