@@ -453,7 +453,7 @@ impl Targets {
         }
     }
 
-    pub fn update_mounts_in_cache(&self, cache: &mut Targets) -> () {
+    pub fn update_target_mounts_in_cache(&self, cache: &mut Targets) -> () {
         let xs: BTreeSet<Target> = cache.0.iter().cloned().collect();
         let xs2: BTreeSet<Target> = self.0.iter().cloned().collect();
         let diff: Vec<Target> = xs
@@ -543,7 +543,8 @@ mod tests {
 
         targets.update_cache(&mut cache);
 
-        assert_eq!(targets.0, cache.0);
+        let data: String = cache.0.iter().map(|x| format!("{:?}\n", x)).collect();
+        insta::assert_snapshot!(data);
     }
 
     #[test]
@@ -594,34 +595,9 @@ mod tests {
             },
         ]);
 
-        targets.update_mounts_in_cache(&mut cache);
-        let expected = Targets(vec![
-            Target {
-                state: "unmounted".into(),
-                name: "mdt1".into(),
-                active_host_id: None,
-                host_ids: vec![2],
-                uuid: "123456".into(),
-                mount_path: None,
-            },
-            Target {
-                state: "mounted".into(),
-                name: "mdt2".into(),
-                active_host_id: Some(2),
-                host_ids: vec![1],
-                uuid: "654321".into(),
-                mount_path: Some("/mnt/mdt2".into()),
-            },
-            Target {
-                state: "mounted".into(),
-                name: "ost1".into(),
-                active_host_id: Some(3),
-                host_ids: vec![4],
-                uuid: "567890".into(),
-                mount_path: Some("/mnt/ost1".into()),
-            },
-        ]);
+        targets.update_target_mounts_in_cache(&mut cache);
 
-        assert_eq!(expected.0, cache.0);
+        let data: String = cache.0.iter().map(|x| format!("{:?}\n", x)).collect();
+        insta::assert_snapshot!(data);
     }
 }

@@ -119,7 +119,7 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         let targets = find_targets(&device_cache, &mount_cache, &host_ids, &index);
         targets.update_cache(&mut target_cache);
-        targets.update_mounts_in_cache(&mut target_cache);
+        targets.update_target_mounts_in_cache(&mut target_cache);
 
         let x = target_cache.0.clone().into_iter().fold(
             (vec![], vec![], vec![], vec![], vec![], vec![]),
