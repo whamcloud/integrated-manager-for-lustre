@@ -103,7 +103,7 @@ impl PartialOrd for State {
 }
 
 impl Ord for State {
-    /// States are ordered by priority. When combining two states (e.g. when collapsing),
+    /// States are ordered by priority. When combining two states (e.g. when collapsing the tree),
     /// the states with the higher priority are propagated up so any failures are not hidden.
     fn cmp(&self, other: &Self) -> Ordering {
         fn order(s: &State) -> u32 {
@@ -323,7 +323,7 @@ pub async fn wait_for_commands(commands: &[Command]) -> Result<Vec<Command>, Iml
                     main_pb.finish();
                     is_done.store(true, std::sync::atomic::Ordering::SeqCst);
 
-                    // Unfortunately, there is no easy unsafe way to move out from Arc, so `clone`
+                    // Unfortunately, there is no easy safe way to move out from Arc, so `clone`
                     // may be needed.
                     let mut commands: Vec<Command> = Vec::with_capacity(cmds.len());
                     for id in cmd_ids {
@@ -671,7 +671,7 @@ fn build_fresh_tree(
                     };
                 }
             }
-            full_tree.merge_in(&mut tree);
+            full_tree.merge_in(tree);
         } else {
             let node = Node {
                 key: TypedId::Cmd(cmd.id),
@@ -799,7 +799,7 @@ pub fn calculate_and_apply_diff(
                 active_style: Cell::new(None),
             };
             if y.payload.state == State::Errored {
-                error_ids.push(y.id);
+                error_ids.push(y.key);
             }
             set_progress_bar_message(&indi, y);
             indi
@@ -833,8 +833,7 @@ fn set_progress_bar_message(
                 ind.active_style.set(Some(true));
             }
             ind.progress_bar.set_prefix(&item.indent);
-            ind.progress_bar
-                .set_message(&format!("{} {}", item.payload, item.id));
+            ind.progress_bar.set_message(&format!("{}", item.payload));
         }
         _ => {
             if ind.active_style.get() != Some(false) {
@@ -842,10 +841,8 @@ fn set_progress_bar_message(
                 ind.active_style.set(Some(false));
             }
             ind.progress_bar.set_prefix(&item.indent);
-            ind.progress_bar.set_message(&format!(
-                "{} {} {}",
-                item.payload.state, item.payload, item.id
-            ));
+            ind.progress_bar
+                .set_message(&format!("{} {}", item.payload.state, item.payload));
         }
     }
 }
