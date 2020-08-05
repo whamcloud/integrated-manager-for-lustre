@@ -31,7 +31,7 @@ pub async fn api_cli(command: ApiCommand) -> Result<(), ImlManagerCliError> {
     let term = Term::stdout();
     let client = iml_manager_client::get_client()?;
     let uri = iml_manager_client::create_api_url(command.path)?;
-    let body = command.body.unwrap_or("{}".to_string());
+    let body: serde_json::Value = serde_json::from_str(&command.body.unwrap_or("{}".to_string()))?;
 
     if let Some(resp) = match command.call {
         ApiType::Delete => Some(client.delete(uri).send().await?),
@@ -41,8 +41,8 @@ pub async fn api_cli(command: ApiCommand) -> Result<(), ImlManagerCliError> {
             term.write_line(&format!("{}", data))?;
             None
         }
-        ApiType::Post => Some(client.put(uri).body(body).send().await?),
-        ApiType::Put => Some(client.post(uri).body(body).send().await?),
+        ApiType::Post => Some(client.put(uri).json(body).send().await?),
+        ApiType::Put => Some(client.post(uri).json(body).send().await?),
     } {
         term.write_line(&format!("{:?}", resp))?;
     }
