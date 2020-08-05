@@ -96,6 +96,60 @@
       ]
     }
   },
+  "9472740d062c38f49e290c6173d7b676329a956cf9713bb55ff7ffdc0eeaae7f": {
+    "query": "select fqdn, id from chroma_core_managedhost where not_deleted = 't'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 1,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
+  "a7da83c078539441ad0a99936cab61cce156f37a6ffb7c6e6cbae80c11cb7b43": {
+    "query": "INSERT INTO chroma_core_targets \n                        (state, name, active_host_id, host_ids, uuid, mount_path) \n                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], uuid, mount_path\n                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[])\n                        AS t(state, name, active_host_id, host_ids, uuid, mount_path)\n                        ON CONFLICT (uuid)\n                            DO\n                            UPDATE SET  state          = EXCLUDED.state,\n                                        name           = EXCLUDED.name,\n                                        active_host_id = EXCLUDED.active_host_id,\n                                        host_ids       = EXCLUDED.host_ids,\n                                        mount_path     = EXCLUDED.mount_path",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "b0991443ae430ca73d4369f314b88f731ead796ec9ac353c3d237be9203c95bf": {
+    "query": "UPDATE chroma_core_alertstate\n            SET active = Null, \"end\" = now()\n            WHERE\n                active = true\n                AND alert_item_id = $1\n                AND record_type = ANY($2)\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "b8e774ab32b79eb3f2d87b7f373b609831f72f63f716dcbb7917871531466b1a": {
     "query": "\n        INSERT INTO chroma_core_serverprofile\n        (name, ui_name, ui_description, managed, worker, user_selectable, initial_state, ntp, corosync, corosync2, pacemaker, \"default\")\n        VALUES\n        ('foo', 'foo', 'foo', 'f', 'f', 't', 'bar', 'f', 'f', 'f', 'f', 't')\n        ON CONFLICT DO NOTHING\n    ",
     "describe": {
@@ -150,6 +204,23 @@
       ]
     }
   },
+  "d39baa07d0445a4eba48fc86c3b328706606d65b2f36f29fca00bbb771c9aa90": {
+    "query": "INSERT INTO chroma_core_alertstate\n        (\n            record_type,\n            variant,\n            alert_item_id,\n            alert_type,\n            begin,\n            message,\n            active,\n            dismissed,\n            severity,\n            lustre_pid,\n            alert_item_type_id\n        )\n        VALUES ($1, '{}', $2, $1, now(), $3, true, false, $4, $5, $6)\n        ON CONFLICT DO NOTHING\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Int4",
+          "Text",
+          "Int4",
+          "Int4",
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "d7d2f630597f24da27fd997508e60805e8e626e78775dd524b8de3bbf517e624": {
     "query": "\n        INSERT INTO chroma_core_lustreclientmount\n        (host_id, filesystem, mountpoints, state, state_modified_at, immutable_state, not_deleted, content_type_id)\n        VALUES ($1, $2, $3, 'mounted', now(), 'f', 't', $4)\n        ON CONFLICT (host_id, filesystem, not_deleted) DO UPDATE\n        SET \n            mountpoints = excluded.mountpoints,\n            state = excluded.state,\n            state_modified_at = excluded.state_modified_at\n        RETURNING id\n    ",
     "describe": {
@@ -200,6 +271,54 @@
         false,
         false,
         false
+      ]
+    }
+  },
+  "eb8818ca7dfc210c2932e315ebc73f8623e3cb3464f4cc35520bebea4567ce77": {
+    "query": "select * from chroma_core_targets",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "state",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "host_ids",
+          "type_info": "Int4Array"
+        },
+        {
+          "ordinal": 4,
+          "name": "uuid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 5,
+          "name": "mount_path",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        true
       ]
     }
   }

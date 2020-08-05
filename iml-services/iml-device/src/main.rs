@@ -143,19 +143,6 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         tracing::warn!("x: {:?}", x);
 
-        // This is a test to show that the option can be inserted into the table.
-        sqlx::query!(
-            r#"Insert into chroma_core_targets
-                        (state, name, active_host_id, host_ids, uuid, mount_path)
-                        VALUES($1, $2, $3, $4, $5, $6)"#,
-            "mounted".to_string(),
-            "name".to_string(),
-            Some(1),
-            &vec![2],
-            "1235".to_string(),
-            Some("/mnt/mdt1".to_string())
-        );
-
         sqlx::query!(r#"INSERT INTO chroma_core_targets 
                         (state, name, active_host_id, host_ids, uuid, mount_path) 
                         SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], uuid, mount_path
@@ -170,10 +157,10 @@ async fn main() -> Result<(), ImlDeviceError> {
                                         mount_path     = EXCLUDED.mount_path"#,
             &x.0,
             &x.1,
-            &x.2,
+            &x.2 as &[Option<i32>],
             &x.3,
             &x.4,
-            &x.5
+            &x.5 as &[Option<String>],
         )
         .execute(&pool)
         .await?;
