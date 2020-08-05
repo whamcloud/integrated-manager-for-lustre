@@ -23,15 +23,15 @@ pub struct ApiCommand {
 
     path: String,
 
-    /// Object to PUT
-    object: Option<String>,
+    /// Object to PUT or POST
+    body: Option<String>,
 }
 
 pub async fn api_cli(command: ApiCommand) -> Result<(), ImlManagerCliError> {
     let term = Term::stdout();
     let client = iml_manager_client::get_client()?;
     let uri = iml_manager_client::create_api_url(command.path)?;
-    let body = command.object.unwrap_or("{}".to_string());
+    let body = command.body.unwrap_or("{}".to_string());
 
     if let Some(resp) = match command.call {
         ApiType::Delete => Some(client.delete(uri).send().await?),
