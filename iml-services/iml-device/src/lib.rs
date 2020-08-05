@@ -40,25 +40,12 @@ pub async fn create_cache(pool: &PgPool) -> Result<Cache, ImlDeviceError> {
     Ok(Arc::new(Mutex::new(data)))
 }
 
-pub async fn create_target_cache(pool: &PgPool) -> Result<HashMap<String, Target>, ImlDeviceError> {
-    Ok(sqlx::query!("select * from chroma_core_targets")
+pub async fn create_target_cache(pool: &PgPool) -> Result<Vec<Target>, ImlDeviceError> {
+    let xs: Vec<Target> = sqlx::query_as!(Target, "select * from chroma_core_targets")
         .fetch_all(pool)
-        .await?
-        .into_iter()
-        .map(|x| {
-            (
-                x.uuid.clone(),
-                Target {
-                    state: x.state,
-                    name: x.name,
-                    active_host_id: x.active_host_id,
-                    host_ids: x.host_ids,
-                    uuid: x.uuid,
-                    mount_path: x.mount_path,
-                },
-            )
-        })
-        .collect())
+        .await?;
+
+    Ok(xs)
 }
 
 pub async fn update_devices(
@@ -438,14 +425,18 @@ impl PartialEq for Target {
 }
 
 impl Targets {
-    pub fn update_cache(&self, cache: &mut HashMap<String, Target>) -> () {
+    pub fn update_cache(&self, cache: &mut Vec<Target>) -> () {
         for target in &self.0 {
-            cache.insert(target.uuid.clone(), target.clone());
+            if let Some(t) = cache.into_iter().find(|x| x.uuid == target.uuid) {
+                *t = target.clone();
+            } else {
+                cache.push(target.clone());
+            }
         }
     }
 
-    pub fn merge_cache(&self, cache: &HashMap<String, Target>) -> Vec<Target> {
-        let xs: BTreeSet<Target> = cache.values().cloned().collect();
+    pub fn update_mounts_in_cache(&self, cache: &mut Vec<Target>) -> () {
+        let xs: BTreeSet<Target> = cache.iter().cloned().collect();
         let xs2: BTreeSet<Target> = self.0.iter().cloned().collect();
         let diff: Vec<Target> = xs
             .difference(&xs2)
@@ -459,7 +450,11 @@ impl Targets {
             })
             .collect();
 
-        [self.0.clone(), diff].concat()
+        for target in diff {
+            if let Some(t) = cache.into_iter().find(|x| x.uuid == target.uuid) {
+                *t = target.clone();
+            }
+        }
     }
 }
 
@@ -468,6 +463,7 @@ mod tests {
     use super::*;
     use device_types::devices::Device;
     use insta::assert_json_snapshot;
+
     #[test]
     fn test_index() {
         let cluster: HashMap<Fqdn, Device> =
@@ -477,5 +473,138 @@ mod tests {
         insta::with_settings!({sort_maps => true}, {
             assert_json_snapshot!(index);
         });
+    }
+
+    #[test]
+    fn test_updating_target_cache() {
+        let mut cache: Vec<Target> = vec![
+            Target {
+                state: "mounted".into(),
+                name: "mdt1".into(),
+                active_host_id: 1,
+                host_ids: vec![2],
+                uuid: "123456".into(),
+                mount_path: "/mnt/mdt1".into(),
+            },
+            Target {
+                state: "unmounted".into(),
+                name: "mdt2".into(),
+                active_host_id: 0,
+                host_ids: vec![1],
+                uuid: "654321".into(),
+                mount_path: "".into(),
+            },
+        ];
+
+        let targets = Targets(vec![
+            Target {
+                state: "mounted".into(),
+                name: "mdt1".into(),
+                active_host_id: 1,
+                host_ids: vec![2],
+                uuid: "123456".into(),
+                mount_path: "/mnt/mdt1".into(),
+            },
+            Target {
+                state: "mounted".into(),
+                name: "mdt2".into(),
+                active_host_id: 2,
+                host_ids: vec![1],
+                uuid: "654321".into(),
+                mount_path: "/mnt/mdt2".into(),
+            },
+            Target {
+                state: "mounted".into(),
+                name: "ost1".into(),
+                active_host_id: 3,
+                host_ids: vec![4],
+                uuid: "567890".into(),
+                mount_path: "/mnt/ost1".into(),
+            },
+        ]);
+
+        targets.update_cache(&mut cache);
+        let Targets(expected) = targets;
+
+        assert_eq!(expected, cache);
+    }
+
+    #[test]
+    fn test_update_mounts() {
+        let mut cache = vec![
+            Target {
+                state: "mounted".into(),
+                name: "mdt1".into(),
+                active_host_id: 1,
+                host_ids: vec![2],
+                uuid: "123456".into(),
+                mount_path: "/mnt/mdt1".into(),
+            },
+            Target {
+                state: "mounted".into(),
+                name: "mdt2".into(),
+                active_host_id: 2,
+                host_ids: vec![1],
+                uuid: "654321".into(),
+                mount_path: "/mnt/mdt2".into(),
+            },
+            Target {
+                state: "mounted".into(),
+                name: "ost1".into(),
+                active_host_id: 3,
+                host_ids: vec![4],
+                uuid: "567890".into(),
+                mount_path: "/mnt/ost1".into(),
+            },
+        ];
+
+        let targets = Targets(vec![
+            Target {
+                state: "mounted".into(),
+                name: "mdt2".into(),
+                active_host_id: 2,
+                host_ids: vec![1],
+                uuid: "654321".into(),
+                mount_path: "/mnt/mdt2".into(),
+            },
+            Target {
+                state: "mounted".into(),
+                name: "ost1".into(),
+                active_host_id: 3,
+                host_ids: vec![4],
+                uuid: "567890".into(),
+                mount_path: "/mnt/ost1".into(),
+            },
+        ]);
+
+        targets.update_mounts_in_cache(&mut cache);
+        let expected = vec![
+            Target {
+                state: "unmounted".into(),
+                name: "mdt1".into(),
+                active_host_id: 0,
+                host_ids: vec![2],
+                uuid: "123456".into(),
+                mount_path: "".into(),
+            },
+            Target {
+                state: "mounted".into(),
+                name: "mdt2".into(),
+                active_host_id: 2,
+                host_ids: vec![1],
+                uuid: "654321".into(),
+                mount_path: "/mnt/mdt2".into(),
+            },
+            Target {
+                state: "mounted".into(),
+                name: "ost1".into(),
+                active_host_id: 3,
+                host_ids: vec![4],
+                uuid: "567890".into(),
+                mount_path: "/mnt/ost1".into(),
+            },
+        ];
+
+        assert_eq!(expected, cache);
     }
 }

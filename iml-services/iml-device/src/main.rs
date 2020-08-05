@@ -19,7 +19,6 @@ use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
 use std::{
     collections::{BTreeMap, HashMap},
-    fs,
     sync::Arc,
 };
 use warp::Filter;
@@ -120,9 +119,9 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         let targets = find_targets(&device_cache, &mount_cache, &host_ids, &index);
         targets.update_cache(&mut target_cache);
-        let targets = targets.merge_cache(&target_cache);
+        targets.update_mounts_in_cache(&mut target_cache);
 
-        let x = targets.into_iter().fold(
+        let x = target_cache.clone().into_iter().fold(
             (vec![], vec![], vec![], vec![], vec![], vec![]),
             |mut acc, x| {
                 acc.0.push(x.state);
