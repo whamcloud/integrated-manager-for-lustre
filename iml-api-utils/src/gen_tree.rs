@@ -1,5 +1,5 @@
 use crate::diff::{AlignmentOp, Keyed, Side};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use std::hash::Hash;
 
@@ -34,7 +34,7 @@ pub struct Node<K, T> {
 
 #[derive(Clone, Debug)]
 pub struct Item<K, U, B> {
-    pub id: K,
+    pub key: K,
     pub indent: String,
     pub payload: U,
     pub indicator: Option<B>,
@@ -43,13 +43,13 @@ pub struct Item<K, U, B> {
 impl<K: Copy + PartialEq, U: PartialEq, B> Keyed for Item<K, U, B> {
     type Key = K;
     fn key(&self) -> Self::Key {
-        self.id
+        self.key
     }
 }
 
 impl<K: Copy + PartialEq, U: PartialEq, B> PartialEq for Item<K, U, B> {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id && self.indent == other.indent && self.payload == other.payload
+        self.key == other.key && self.indent == other.indent && self.payload == other.payload
         // We do ignore self.indicator
     }
 }
@@ -95,11 +95,18 @@ impl<K: Copy + Eq + Hash, T: Clone + Eq + HasState> Tree<K, T> {
         k
     }
 
-    pub fn merge_in(&mut self, other: &mut Self) {
-        self.roots.append(&mut other.roots);
-        // TODO make it without the clone()
-        let pool = other.pool.clone();
-        self.pool.extend(pool);
+    pub fn merge_in(&mut self, mut other: Self) -> bool {
+        let pool_keys = self.pool.keys().copied().collect::<HashSet<_>>();
+        // let Self { roots: other_roots, pool: other_pool } = other;
+        // if there is any intersection, then ignore other
+        if other.pool.keys().all(|k| !pool_keys.contains(k)) {
+            // roots are guaranteed to not intersect too
+            self.roots.append(&mut other.roots);
+            self.pool.extend(other.pool);
+            true
+        } else {
+            false
+        }
     }
 
     pub fn contains_key(&self, k: K) -> bool {
@@ -193,7 +200,7 @@ impl<K: Copy + Eq + Hash, T: Clone + Eq + HasState> Tree<K, T> {
             items: &mut Vec<Item<K, U, B>>,
         ) {
             items.push(Item {
-                id: node.key,
+                key: node.key,
                 indent: format!("{}{}{}", indent, shift, term),
                 payload: node.payload.clone().into(),
                 indicator: None,
@@ -261,7 +268,7 @@ pub fn apply_diff<K: Clone, U: Clone, B: Clone>(
                 if let Some(indi) = &xs[i0].indicator {
                     update_indi(i0, &indi, &y)
                 }
-                xs[i0].id = y.id;
+                xs[i0].key = y.key;
                 xs[i0].indent = y.indent;
                 xs[i0].payload = y.payload;
             }
@@ -400,7 +407,7 @@ mod tests {
         let f = NodeFactory::new(1);
         assert_eq!(
             tree,
-            f.trees(&[
+            f.trees(vec![
                 f.tree("a0", &[f.leaf("a00"), f.leaf("a01"),]).build(),
                 f.tree("a1", &[f.leaf("a10"), f.leaf("a11"),]).build(),
             ])
@@ -408,19 +415,87 @@ mod tests {
     }
 
     #[test]
-    fn test_merge_trees() {
+    fn test_merge_in() {
         let f = NodeFactory::new(1);
-        let mut base_tree = f.tree("a", &[f.leaf("a-0"), f.leaf("a-1")]).build();
-        let mut piece = f.tree("b", &[f.leaf("b-0"), f.leaf("b-1")]).build();
+        let tree0 = f.tree("a", &[f.leaf("a0"), f.leaf("a1")]).build();
+        let tree1 = {
+            let mut tree = f.tree("b", &[f.leaf("b0"), f.leaf("b1")]).build();
+            tree.roots = vec![10];
+            tree.replace_node_by_name("b", |n| {
+                n.key = 10;
+                n.parent = None;
+                n.deps = vec![2, 3];
+            });
+            tree.replace_node_by_name("b0", |n| {
+                n.key = 2;
+                n.parent = Some(10);
+                n.deps = vec![];
+            });
+            tree.replace_node_by_name("b1", |n| {
+                n.key = 3;
+                n.parent = Some(10);
+                n.deps = vec![];
+            });
+            tree
+        };
+        let tree2 = {
+            let mut tree = f.tree("c", &[f.leaf("c0"), f.leaf("c1")]).build();
+            tree.roots = vec![1];
+            tree.replace_node_by_name("c", |n| {
+                n.key = 1;
+                n.parent = None;
+                n.deps = vec![2, 13];
+            });
+            tree.replace_node_by_name("c0", |n| {
+                n.key = 2;
+                n.parent = Some(1);
+                n.deps = vec![];
+            });
+            tree.replace_node_by_name("c1", |n| {
+                n.key = 13;
+                n.parent = Some(1);
+                n.deps = vec![];
+            });
+            tree
+        };
+        let tree3 = {
+            let mut tree = f.tree("d", &[f.leaf("d0"), f.leaf("d1")]).build();
+            tree.roots = vec![4];
+            tree.replace_node_by_name("d", |n| {
+                n.key = 4;
+                n.parent = None;
+                n.deps = vec![5, 6];
+            });
+            tree.replace_node_by_name("d0", |n| {
+                n.key = 5;
+                n.parent = Some(4);
+                n.deps = vec![];
+            });
+            tree.replace_node_by_name("d1", |n| {
+                n.key = 6;
+                n.parent = Some(4);
+                n.deps = vec![];
+            });
+            tree
+        };
+        assert!(tree0.is_valid());
+        assert!(tree1.is_valid());
+        assert!(tree2.is_valid());
+        assert!(tree3.is_valid());
 
-        base_tree.merge_in(&mut piece);
-
+        let mut full_tree = Tree::new();
+        full_tree.merge_in(tree0);
+        full_tree.merge_in(tree1);
+        full_tree.merge_in(tree2);
+        full_tree.merge_in(tree3);
+        assert!(full_tree.is_valid());
+        // other trees have intersections with the current, so ignored
         let f = NodeFactory::new(1);
         assert_eq!(
-            base_tree,
-            f.trees(&[
-                f.tree("a", &[f.leaf("a-0"), f.leaf("a-1"),]).build(),
-                f.tree("b", &[f.leaf("b-0"), f.leaf("b-1"),]).build(),
+            full_tree,
+            f.trees(vec![
+                f.tree("a", &[f.leaf("a0"), f.leaf("a1"),]).build(),
+                f.tree("d", &[f.leaf("d0"), f.leaf("d1"),]).build(),
             ])
         );
     }
@@ -433,44 +508,45 @@ mod tests {
                 "a",
                 &[
                     nf.tree(
-                        "b-0",
+                        "b0",
                         &[
                             nf.tree(
-                                "c-00",
+                                "c00",
                                 &[
-                                    nf.leaf("d-000"),
-                                    nf.leaf("d-001"),
-                                    nf.leaf("d-002"),
-                                    nf.leaf("d-003"),
+                                    nf.leaf("d000"),
+                                    nf.leaf("d001"),
+                                    nf.leaf("d002"),
+                                    nf.leaf("d003"),
                                 ],
                             ),
-                            nf.leaf("c-01"),
-                            nf.leaf("c-02"),
+                            nf.leaf("c01"),
+                            nf.leaf("c02"),
                         ],
                     ),
                     nf.tree(
-                        "b-1",
+                        "b1",
                         &[
-                            nf.leaf("c-10"),
-                            nf.leaf("c-11"),
+                            nf.leaf("c10"),
+                            nf.leaf("c11"),
                             nf.tree(
-                                "c-12",
+                                "c12",
                                 &[
-                                    nf.leaf("d-120"),
-                                    nf.leaf("d-121"),
-                                    nf.leaf("d-122"),
-                                    nf.leaf("d-123"),
+                                    nf.leaf("d120"),
+                                    nf.leaf("d121"),
+                                    nf.leaf("d122"),
+                                    nf.leaf("d123"),
                                 ],
                             ),
                         ],
                     ),
-                    nf.leaf("b-3"),
+                    nf.leaf("b3"),
                 ],
             )
             .build();
-        debug_assert!(is_valid(&tree), "tree should be valid");
+        debug_assert!(tree.is_valid(), "tree should be valid");
 
-        get_node_by_name(&mut tree, "d-001").map(|n| n.payload.state = Errored);
+        tree.get_node_mut_by_name("d001")
+            .map(|n| n.payload.state = Errored);
 
         let level0 = tree
             .keys_on_level(0)
@@ -496,7 +572,7 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(
             level1,
-            vec![("b-0", Errored), ("b-1", Progressing), ("b-3", Progressing)]
+            vec![("b0", Errored), ("b1", Progressing), ("b3", Progressing)]
         );
 
         let level2 = tree
@@ -512,12 +588,12 @@ mod tests {
         assert_eq!(
             level2,
             vec![
-                ("c-00", Errored),
-                ("c-01", Progressing),
-                ("c-02", Progressing),
-                ("c-10", Progressing),
-                ("c-11", Progressing),
-                ("c-12", Progressing)
+                ("c00", Errored),
+                ("c01", Progressing),
+                ("c02", Progressing),
+                ("c10", Progressing),
+                ("c11", Progressing),
+                ("c12", Progressing)
             ]
         );
 
@@ -534,14 +610,14 @@ mod tests {
         assert_eq!(
             level3,
             vec![
-                ("d-000", Progressing),
-                ("d-001", Errored),
-                ("d-002", Progressing),
-                ("d-003", Progressing),
-                ("d-120", Progressing),
-                ("d-121", Progressing),
-                ("d-122", Progressing),
-                ("d-123", Progressing)
+                ("d000", Progressing),
+                ("d001", Errored),
+                ("d002", Progressing),
+                ("d003", Progressing),
+                ("d120", Progressing),
+                ("d121", Progressing),
+                ("d122", Progressing),
+                ("d123", Progressing)
             ]
         );
 
@@ -558,57 +634,81 @@ mod tests {
         assert_eq!(level4, vec![]);
     }
 
-    /// check if the tree is properly formed
-    pub fn is_valid<K: Copy + Eq + Hash, T: Clone + Eq + HasState>(tree: &Tree<K, T>) -> bool {
-        fn unseen_ref<K: Copy + Eq + Hash>(seen: &mut HashSet<K>, r: K) -> Option<()> {
-            if !seen.contains(&r) {
-                seen.insert(r);
-                Some(())
-            } else {
-                None
-            }
+    impl Tree<i32, Specific> {
+        fn get_node_mut_by_name(&mut self, name: &str) -> Option<&mut Node<i32, Specific>> {
+            self.pool.values_mut().find(|n| n.payload.name == name)
         }
-        fn seen_ref<K: Copy + Eq + Hash>(seen: &mut HashSet<K>, r: K) -> Option<()> {
-            if seen.contains(&r) {
-                Some(())
-            } else {
-                None
-            }
-        }
-        fn in_pool<K: Copy + Eq + Hash, T: Clone + Eq + HasState>(
-            tree: &Tree<K, T>,
-            r: K,
-        ) -> Option<()> {
-            if let Some(n) = tree.pool.get(&r) {
-                if n.key == r {
-                    return Some(());
+
+        fn replace_node_by_name(
+            &mut self,
+            name: &str,
+            mut f: impl FnMut(&mut Node<i32, Specific>),
+        ) {
+            if let Some(k) = self
+                .pool
+                .values()
+                .find(|n| n.payload.name == name)
+                .map(|n| n.key)
+            {
+                if let Some(mut n) = self.pool.remove(&k) {
+                    f(&mut n);
+                    self.pool.insert(n.key, n);
                 }
             }
-            None
         }
-        fn calc_inner<K: Copy + Eq + Hash, T: Clone + Eq + HasState>(
-            tree: &Tree<K, T>,
-            node: &Node<K, T>,
-            seen: &mut HashSet<K>,
-        ) -> Option<()> {
-            unseen_ref(seen, node.key)?;
-            in_pool(tree, node.key)?;
-            if let Some(p) = node.parent {
-                seen_ref(seen, p)?;
-            }
-            for d in &node.deps {
-                if let Some(n) = tree.get_node(*d) {
-                    calc_inner(tree, n, seen)?;
+
+        /// check if the tree is properly formed
+        fn is_valid(&self) -> bool {
+            fn unseen_ref<K: Copy + Eq + Hash>(seen: &mut HashSet<K>, r: K) -> Option<()> {
+                if !seen.contains(&r) {
+                    seen.insert(r);
+                    Some(())
                 } else {
-                    return None;
+                    None
                 }
             }
-            Some(())
+            fn seen_ref<K: Copy + Eq + Hash>(seen: &mut HashSet<K>, r: K) -> Option<()> {
+                if seen.contains(&r) {
+                    Some(())
+                } else {
+                    None
+                }
+            }
+            fn in_pool<K: Copy + Eq + Hash, T: Clone + Eq + HasState>(
+                tree: &Tree<K, T>,
+                r: K,
+            ) -> Option<()> {
+                if let Some(n) = tree.pool.get(&r) {
+                    if n.key == r {
+                        return Some(());
+                    }
+                }
+                None
+            }
+            fn calc_inner<K: Copy + Eq + Hash, T: Clone + Eq + HasState>(
+                tree: &Tree<K, T>,
+                node: &Node<K, T>,
+                seen: &mut HashSet<K>,
+            ) -> Option<()> {
+                unseen_ref(seen, node.key)?;
+                in_pool(tree, node.key)?;
+                if let Some(p) = node.parent {
+                    seen_ref(seen, p)?;
+                }
+                for d in &node.deps {
+                    if let Some(n) = tree.get_node(*d) {
+                        calc_inner(tree, n, seen)?;
+                    } else {
+                        return None;
+                    }
+                }
+                Some(())
+            }
+            let mut seen = HashSet::new();
+            self.get_roots()
+                .into_iter()
+                .all(|root| calc_inner(self, root, &mut seen) == Some(()))
         }
-        let mut seen = HashSet::new();
-        tree.get_roots()
-            .into_iter()
-            .all(|root| calc_inner(tree, root, &mut seen) == Some(()))
     }
 
     // region Specific struct and State enum
@@ -663,13 +763,6 @@ mod tests {
             self.state
         }
     }
-
-    fn get_node_by_name<'a>(
-        tree: &'a mut Tree<i32, Specific>,
-        name: &str,
-    ) -> Option<&'a mut Node<i32, Specific>> {
-        tree.pool.values_mut().find(|n| n.payload.name == name)
-    }
     // endregion
 
     // region structs NodeFactory and NodeF
@@ -706,10 +799,10 @@ mod tests {
                 deps: deps.to_vec(),
             }
         }
-        fn trees(&self, trees: &[Tree<i32, Specific>]) -> Tree<i32, Specific> {
+        fn trees(&self, trees: Vec<Tree<i32, Specific>>) -> Tree<i32, Specific> {
             let mut full_tree = Tree::new();
-            for tree in trees {
-                full_tree.merge_in(&mut tree.clone());
+            for tree in trees.into_iter() {
+                full_tree.merge_in(tree);
             }
             full_tree
         }
