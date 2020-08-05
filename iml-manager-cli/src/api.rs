@@ -23,7 +23,7 @@ pub struct ApiCommand {
 
     path: String,
 
-    /// Object to PUT or POST
+    /// JSON formatted body to send
     body: Option<String>,
 }
 
@@ -34,7 +34,7 @@ pub async fn api_cli(command: ApiCommand) -> Result<(), ImlManagerCliError> {
     let body: serde_json::Value = serde_json::from_str(&command.body.unwrap_or("{}".to_string()))?;
 
     if let Some(resp) = match command.call {
-        ApiType::Delete => Some(client.delete(uri).send().await?),
+        ApiType::Delete => Some(client.delete(uri).json(&body).send().await?),
         ApiType::Get => {
             let resp = client.get(uri).send().await?;
             let data: serde_json::Value = resp.json().await?;
@@ -45,6 +45,7 @@ pub async fn api_cli(command: ApiCommand) -> Result<(), ImlManagerCliError> {
         ApiType::Put => Some(client.put(uri).json(&body).send().await?),
     } {
         term.write_line(&format!("{:?}", resp))?;
+        term.write_line(&format!("{}", resp.text().await?))?;
     }
 
     Ok(())
