@@ -41,8 +41,8 @@ pub async fn api_cli(command: ApiCommand) -> Result<(), ImlManagerCliError> {
             term.write_line(&format!("{}", data))?;
             None
         }
-        ApiType::Post => Some(client.put(uri).json(body).send().await?),
-        ApiType::Put => Some(client.post(uri).json(body).send().await?),
+        ApiType::Post => Some(client.put(uri).json(&body).send().await?),
+        ApiType::Put => Some(client.post(uri).json(&body).send().await?),
     } {
         term.write_line(&format!("{:?}", resp))?;
     }
