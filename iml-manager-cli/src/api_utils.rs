@@ -122,8 +122,9 @@ impl Ord for State {
 pub struct Payload {
     pub state: State,
     pub msg: String,
-    pub console: String,
     pub backtrace: String,
+    pub console: String,
+    pub log: String,
 }
 
 impl Display for Payload {
@@ -514,6 +515,12 @@ pub fn print_error(tree: &Tree<TypedId, Payload>, id: TypedId, print: impl Fn(&s
                 print(&format!("{}{}", SPACE, style(line).red()));
             }
         }
+        if !node.payload.log.is_empty() {
+            print(&format!("{}Log:", SPACE));
+            for line in node.payload.log.lines() {
+                print(&format!("{}{}", SPACE, style(line).red()));
+            }
+        }
     }
 }
 
@@ -671,8 +678,9 @@ fn build_fresh_tree(
                 payload: Payload {
                     state: cmd_state(cmd),
                     msg: cmd.message.clone(),
-                    console: String::new(),
                     backtrace: String::new(),
+                    console: String::new(),
+                    log: String::new(),
                 },
             };
             full_tree.add_child_node(None, node);
@@ -703,8 +711,9 @@ fn build_gen_tree(
             payload: Payload {
                 state: job_state(&job),
                 msg: job.description.clone(),
-                console: String::new(),
                 backtrace: String::new(),
+                console: String::new(),
+                log: String::new(),
             },
         };
         let pk = tree.add_child_node(parent, node);
@@ -732,6 +741,7 @@ fn build_gen_tree(
                             msg: step.class_name.clone(),
                             console: step.console.clone(),
                             backtrace: step.backtrace.clone(),
+                            log: step.log.clone(),
                         },
                     };
                     tree.add_child_node(new_parent, node);
@@ -750,8 +760,9 @@ fn build_gen_tree(
             payload: Payload {
                 state: cmd_state(cmd),
                 msg: cmd.message.clone(),
-                console: String::new(),
                 backtrace: String::new(),
+                console: String::new(),
+                log: String::new(),
             },
         },
     );
@@ -788,7 +799,7 @@ pub fn calculate_and_apply_diff(
                 progress_bar: multi_progress.insert(i, ProgressBar::new(1_000_000)),
                 active_style: Cell::new(None),
             };
-            if y.payload.state == State::Errored {
+            if y.payload.state == State::Errored || y.payload.state == State::Cancelled {
                 error_ids.push(y.key);
             }
             set_progress_bar_message(&indi, y);
