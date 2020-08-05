@@ -4,9 +4,9 @@
 
 use crate::error::ImlManagerCliError;
 use console::Term;
-use structopt::{StructOpt, clap::arg_enum};
+use structopt::{clap::arg_enum, StructOpt};
 
-arg_enum!{
+arg_enum! {
     #[derive(PartialEq, Debug)]
     pub enum ApiType {
         Delete,
@@ -14,10 +14,6 @@ arg_enum!{
         Post,
         Put,
     }
-}
-
-#[derive(Debug, StructOpt)]
-pub struct ApiOpts {
 }
 
 #[derive(Debug, StructOpt)]
