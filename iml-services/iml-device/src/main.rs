@@ -130,7 +130,6 @@ async fn main() -> Result<(), ImlDeviceError> {
                 acc.2.push(x.active_host_id);
                 acc.3.push(
                     x.host_ids
-                        .unwrap_or(vec![])
                         .into_iter()
                         .map(|x| x.to_string())
                         .collect::<Vec<String>>()

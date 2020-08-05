@@ -408,11 +408,11 @@ pub fn find_targets<'a>(
         .into_iter()
         .map(|(fqdn, ids, mntpnt, fs_uuid, target)| Target {
             state: "mounted".into(),
-            active_host_id: Some(*fqdn),
-            host_ids: Some(ids),
+            active_host_id: *fqdn,
+            host_ids: ids,
             name: target.into(),
             uuid: fs_uuid.into(),
-            mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
+            mount_path: mntpnt.0.to_string_lossy().to_string(),
         })
         .collect();
 
@@ -423,10 +423,10 @@ pub fn find_targets<'a>(
 pub struct Target {
     pub state: String,
     pub name: String,
-    pub active_host_id: Option<i32>,
-    pub host_ids: Option<Vec<i32>>,
+    pub active_host_id: i32,
+    pub host_ids: Vec<i32>,
     pub uuid: String,
-    pub mount_path: Option<String>,
+    pub mount_path: String,
 }
 
 pub struct Targets(Vec<Target>);
@@ -452,6 +452,9 @@ impl Targets {
             .cloned()
             .map(|mut x| {
                 x.state = "unmounted".to_string();
+                x.active_host_id = 0;
+                x.mount_path = "".into();
+
                 x
             })
             .collect();

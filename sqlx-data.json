@@ -492,5 +492,53 @@
         false
       ]
     }
+  },
+  "eb8818ca7dfc210c2932e315ebc73f8623e3cb3464f4cc35520bebea4567ce77": {
+    "query": "select * from chroma_core_targets",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "state",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "host_ids",
+          "type_info": "Int4Array"
+        },
+        {
+          "ordinal": 4,
+          "name": "uuid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 5,
+          "name": "mount_path",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
   }
 }

@@ -1,9 +1,8 @@
--- Create the chroma_core_targets table to store device related information
 CREATE TABLE chroma_core_targets (
     state          text NOT NULL,
     name           text NOT NULL,
-    active_host_id int,
+    active_host_id int NOT NULL,
     host_ids       int[] NOT NULL,
     uuid           text PRIMARY KEY,
-    mount_path     text
+    mount_path     text NOT NULL
 )
