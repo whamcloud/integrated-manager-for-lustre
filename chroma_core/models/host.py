@@ -1792,4 +1792,4 @@ class MountSnapshotStep(Step):
 
 class UnmountSnapshotStep(Step):
     def run(self, kwargs):
-        self.invoke_rust_agent_expect_result(kwargs["host"], "snapshot_mount", [kwargs["fsname"], kwargs["name"]])
+        self.invoke_rust_agent_expect_result(kwargs["host"], "snapshot_unmount", [kwargs["fsname"], kwargs["name"]])
