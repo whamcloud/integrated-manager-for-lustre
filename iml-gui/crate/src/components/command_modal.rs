@@ -21,7 +21,8 @@ use std::{
     time::Duration,
 };
 
-/// The component polls `/api/(command|job|step)/` endpoint and this constant defines how often it does.
+/// The component polls `/api/(command|job|step)/` endpoint and this constant defines how often it
+/// does.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
 type Job0 = Job<Option<serde_json::Value>>;
