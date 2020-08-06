@@ -34,32 +34,38 @@ pub async fn api_cli(command: ApiCommand) -> Result<(), ImlManagerCliError> {
     let term = Term::stdout();
     let client = iml_manager_client::get_client()?;
     let uri = iml_manager_client::create_api_url(command.path)?;
-    let body: Option<serde_json::Value> = command.body.map(|s| serde_json::from_str(&s).unwrap());
 
-    if let Some(resp) = match command.method {
-        ApiMethod::Delete => {
-            let req = client.delete(uri);
-            let req = if let Some(data) = body {
-                req.json(&data)
-            } else {
-                req
-            };
-            Some(req.send().await?)
+    let req = match command.method {
+        ApiMethod::Delete => client.delete(uri),
+        ApiMethod::Get => client.get(uri),
+        ApiMethod::Head => client.head(uri),
+        ApiMethod::Patch => client.patch(uri),
+        ApiMethod::Post => client.post(uri),
+        ApiMethod::Put => client.put(uri),
+    };
+
+    let body: Option<serde_json::Value> =
+        command.body.map(|s| serde_json::from_str(&s)).transpose()?;
+
+    let req = if let Some(data) = body {
+        req.json(&data)
+    } else {
+        req
+    };
+
+    let resp = req.send().await?;
+    let resp_txt = format!("{:?}", resp);
+    let body = resp.text().await?;
+
+    match serde_json::from_str::<serde_json::Value>(&body) {
+        Ok(json) => term.write_line(&format!("{}", json)),
+        Err(_) => {
+            term.write_line(&resp_txt)?;
+            term.write_line(&format!("{}", body))?;
+
+            Ok(())
         }
-        ApiMethod::Get => {
-            let resp = client.get(uri).send().await?;
-            let data: serde_json::Value = resp.json().await?;
-            term.write_line(&format!("{}", data))?;
-            None
-        }
-        ApiMethod::Head => Some(client.head(uri).send().await?),
-        ApiMethod::Patch => Some(client.patch(uri).json(&body.unwrap()).send().await?),
-        ApiMethod::Post => Some(client.post(uri).json(&body.unwrap()).send().await?),
-        ApiMethod::Put => Some(client.put(uri).json(&body.unwrap()).send().await?),
-    } {
-        term.write_line(&format!("{:?}", resp))?;
-        term.write_line(&format!("{}", resp.text().await?))?;
-    }
+    }?;
 
     Ok(())
 }
