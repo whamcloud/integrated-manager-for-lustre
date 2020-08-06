@@ -87,6 +87,13 @@ jobs:
           override: true
 
       - run: cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/jgrund/sqlx --branch support-offline-workspaces
+      
+      - uses: actions-rs/cargo@v1
+        env:
+          DATABASE_URL: postgres://chroma:chroma@localhost:5432/chroma
+        with:
+          command: sqlx
+          args: migrate run
 
       - uses: actions-rs/cargo@v1
         env:
