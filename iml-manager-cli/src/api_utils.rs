@@ -799,7 +799,8 @@ pub fn calculate_and_apply_diff(
     main_pb: &ProgressBar,
 ) {
     let diff = calculate_diff(current_items, fresh_items);
-    let mut error_ids = Vec::new();
+    let mut error_ids_1 = Vec::new();
+    let mut error_ids_2 = Vec::new();
     apply_diff(
         current_items,
         fresh_items,
@@ -810,20 +811,27 @@ pub fn calculate_and_apply_diff(
                 active_style: Cell::new(None),
             };
             if y.payload.state == State::Errored || y.payload.state == State::Cancelled {
-                error_ids.push(y.key);
+                error_ids_1.push(y.key);
             }
             set_progress_bar_message(&indi, y);
             indi
         },
-        |_, pb, y| set_progress_bar_message(pb, y),
+        |_, pb, y| {
+            if y.payload.state == State::Errored || y.payload.state == State::Cancelled {
+                error_ids_2.push(y.key);
+            }
+            set_progress_bar_message(pb, y);
+        },
         |_, pb| multi_progress.remove(&pb.progress_bar),
     );
-    if !error_ids.is_empty() {
-        // show errors, it is done with `progress_bar.println()`, just find the most upper one
-        for eid in error_ids {
-            if tree.contains_key(eid) {
-                print_error(&tree, eid, |s| main_pb.println(s));
-            }
+    for eid in error_ids_1 {
+        if tree.contains_key(eid) {
+            print_error(&tree, eid, |s| main_pb.println(s));
+        }
+    }
+    for eid in error_ids_2 {
+        if tree.contains_key(eid) {
+            print_error(&tree, eid, |s| main_pb.println(s));
         }
     }
 }
