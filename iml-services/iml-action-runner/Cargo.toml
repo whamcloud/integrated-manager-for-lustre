@@ -6,7 +6,6 @@ version = "0.3.0"
 
 [dependencies]
 futures = "0.3"
-iml-action-client = {path = "../../iml-action-client", version = "0.1"}
 iml-manager-env = {path = "../../iml-manager-env", version = "0.3"}
 iml-rabbit = {path = "../../iml-rabbit", version = "0.3", features = ["warp-filters"]}
 iml-service-queue = {path = "../iml-service-queue", version = "0.3"}

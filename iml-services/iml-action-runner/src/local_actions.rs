@@ -7,15 +7,12 @@ use crate::{
     error::{self, ActionRunnerError},
     Sender, Sessions, Shared,
 };
-use futures::{channel::oneshot, future::AbortHandle, Future, FutureExt, TryFutureExt};
-use iml_action_client::invoke_rust_agent_cancelable;
-use iml_wire_types::{Action, ActionId, Fqdn, ToJsonValue};
+use futures::{channel::oneshot, Future, FutureExt, TryFutureExt};
+use iml_wire_types::{Action, ActionId, ToJsonValue};
 use serde_json::value::Value;
 use std::{collections::HashMap, fmt::Display, sync::Arc};
 
-pub struct ActionHandle(Sender, Option<AbortHandle>);
-
-pub type LocalActionsInFlight = HashMap<ActionId, ActionHandle>;
+pub type LocalActionsInFlight = HashMap<ActionId, Sender>;
 pub type SharedLocalActionsInFlight = Shared<LocalActionsInFlight>;
 
 /// Adds an action id to the in-flight list.
@@ -30,7 +27,7 @@ async fn add_in_flight(
 
     let mut in_flight = in_flight.lock().await;
 
-    in_flight.insert(id.clone(), ActionHandle(tx, None));
+    in_flight.insert(id.clone(), tx);
 
     rx
 }
@@ -41,7 +38,7 @@ async fn add_in_flight(
 async fn remove_in_flight(
     in_flight: SharedLocalActionsInFlight,
     id: &ActionId,
-) -> Option<ActionHandle> {
+) -> Option<oneshot::Sender<Result<Value, String>>> {
     let mut in_flight = in_flight.lock().await;
 
     in_flight.remove(id).or_else(|| {
@@ -66,7 +63,7 @@ pub fn spawn_plugin(
     tokio::spawn(fut.then(move |result| async move {
         let _ = remove_in_flight(in_flight, &id)
             .await
-            .map(|ActionHandle(tx, _)| tx.send(result));
+            .map(|tx| tx.send(result));
     }));
 }
 
@@ -99,17 +96,12 @@ pub async fn handle_local_action(
         Action::ActionCancel { id } => {
             let _ = remove_in_flight(in_flight, &id)
                 .await
-                .map(|ActionHandle(tx, ah)| {
-                    if let Some(ah) = ah {
-                        ah.abort();
-                    }
-                    tx.send(Ok(serde_json::Value::Null))
-                });
+                .map(|tx| tx.send(Ok(serde_json::Value::Null)));
 
             Ok(Ok(serde_json::Value::Null))
         }
-        Action::ActionStart { id, action, args } => match action.as_ref() {
-            "get_session" => {
+        Action::ActionStart { id, action, args } => {
+            if action == "get_session".into() {
                 let rx = add_in_flight(Arc::clone(&in_flight), id.clone()).await;
 
                 let fut = wrap_plugin(args, move |fqdn| get_session(fqdn, sessions));
@@ -117,8 +109,7 @@ pub async fn handle_local_action(
                 spawn_plugin(fut, in_flight, id);
 
                 rx.err_into().await
-            }
-            "await_next_session" => {
+            } else if action == "await_next_session".into() {
                 let rx = add_in_flight(Arc::clone(&in_flight), id.clone()).await;
 
                 let fut = wrap_plugin(args, move |(fqdn, last_session, wait_secs)| {
@@ -128,32 +119,11 @@ pub async fn handle_local_action(
                 spawn_plugin(fut, in_flight, id);
 
                 rx.await.map_err(ActionRunnerError::OneShotCanceledError)
+            } else {
+                Err(ActionRunnerError::RequiredError(error::RequiredError(
+                    format!("Could not find action {} in local registry", action),
+                )))
             }
-            "snapshot_mount" | "snapshot_unmount" => {
-                let rx = add_in_flight(Arc::clone(&in_flight), id.clone()).await;
-                let args2 = args.clone();
-
-                let in_flight_2 = in_flight.clone();
-                let id_2 = id.clone();
-
-                let fut = wrap_plugin(args, move |fqdn: Fqdn| {
-                    let (new_ah, fut) = invoke_rust_agent_cancelable(fqdn, action, args2).unwrap();
-                    async move {
-                        let mut in_flight = in_flight_2.lock().await;
-                        in_flight
-                            .entry(id_2)
-                            .and_modify(|ActionHandle(_, ah)| *ah = Some(new_ah));
-                    }
-                    .then(|_| fut)
-                });
-
-                spawn_plugin(fut, in_flight, id);
-
-                rx.err_into().await
-            }
-            _ => Err(ActionRunnerError::RequiredError(error::RequiredError(
-                format!("Could not find action {} in local registry", action),
-            ))),
-        },
+        }
     }
 }
