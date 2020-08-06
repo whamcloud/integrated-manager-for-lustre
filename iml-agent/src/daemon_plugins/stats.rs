@@ -17,6 +17,13 @@ pub fn create() -> impl DaemonPlugin {
     Stats
 }
 
+fn params() -> Vec<String> {
+    parser::params()
+        .into_iter()
+        .filter(|x| x != "obdfilter.*OST*.job_stats")
+        .collect()
+}
+
 #[derive(Debug)]
 struct Stats;
 
@@ -31,11 +38,7 @@ impl DaemonPlugin for Stats {
     ) -> Pin<Box<dyn Future<Output = Result<Output, ImlAgentError>> + Send>> {
         async {
             let mut cmd1 = Command::new("lctl");
-            let cmd1 = cmd1
-                .arg("get_param")
-                .args(parser::params())
-                .output()
-                .err_into();
+            let cmd1 = cmd1.arg("get_param").args(params()).output().err_into();
 
             let mut cmd2 = Command::new("lnetctl");
             let cmd2 = cmd2.arg("export").output().err_into();
@@ -80,5 +83,16 @@ impl DaemonPlugin for Stats {
             }
         }
         .boxed()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn test_no_job_stats() {
+        let xs = super::params();
+
+        insta::assert_debug_snapshot!(xs);
     }
 }
