@@ -1712,6 +1712,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-report"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "futures",
+ "iml-fs",
+ "iml-manager-env",
+ "iml-tracing",
+ "tempdir",
+ "tokio",
+ "tracing",
+ "warp",
+]
+
+[[package]]
 name = "iml-request-retry"
 version = "0.3.0"
 dependencies = [
