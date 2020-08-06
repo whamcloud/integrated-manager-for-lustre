@@ -6,7 +6,10 @@ x-deploy: &default-deploy
     window: 5s
 services:
   postgres:
-    image: "postgres:9.6.17-alpine"
+    image: "imlteam/postgres:6.2.0-dev"
+    build:
+      context: ../
+      dockerfile: ./docker/postgres.dockerfile
     hostname: "postgres"
     deploy:
       <<: *default-deploy

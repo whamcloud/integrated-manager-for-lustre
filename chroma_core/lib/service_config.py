@@ -635,6 +635,17 @@ class ServiceConfig(CommandLine):
         if error:
             return error
 
+        log.info("Enabling database extensions...")
+        self.try_shell(
+            [
+                "su",
+                "postgres",
+                "-c",
+                'psql -c "CREATE EXTENSION IF NOT EXISTS btree_gist;" -d %s -U postgres'
+                % (settings.DATABASES["default"]["NAME"]),
+            ]
+        )
+
         _, out, _ = self._try_psql_sql("SELECT datname FROM pg_catalog.pg_database WHERE datname = 'grafana'")
         if "grafana" not in out:
             self.try_shell(["su", "postgres", "-c", "createdb -O %s grafana;" % (databases["default"]["USER"])])

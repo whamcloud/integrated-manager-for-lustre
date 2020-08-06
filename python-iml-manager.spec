@@ -43,6 +43,7 @@ Requires:       fence-agents-virsh
 Requires:       ntp
 Requires:       pygobject2
 Requires:       postgresql96-server >= 9.6.17
+Requires:       postgresql96-contrib >= 9.6.17
 Requires:       python-daemon
 Requires:       python-gunicorn
 Requires:       python-networkx
