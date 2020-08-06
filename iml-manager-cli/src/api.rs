@@ -32,11 +32,7 @@ pub async fn api_cli(command: ApiCommand) -> Result<(), ImlManagerCliError> {
     let term = Term::stdout();
     let client = iml_manager_client::get_client()?;
     let uri = iml_manager_client::create_api_url(command.path)?;
-    let body: Option<serde_json::Value> = if let Some(data) = command.body {
-        Some(serde_json::from_str(&data)?)
-    } else {
-        None
-    };
+    let body: Option<serde_json::Value> = command.body.map(|s| serde_json::from_str(&s).unwrap());
 
     if let Some(resp) = match command.call {
         ApiType::Delete => {
