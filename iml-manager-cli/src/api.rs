@@ -8,9 +8,11 @@ use structopt::{clap::arg_enum, StructOpt};
 
 arg_enum! {
     #[derive(PartialEq, Debug)]
-    pub enum ApiType {
+    pub enum ApiMethod {
         Delete,
         Get,
+        Head,
+        Patch,
         Post,
         Put,
     }
@@ -18,13 +20,13 @@ arg_enum! {
 
 #[derive(Debug, StructOpt)]
 pub struct ApiCommand {
-    #[structopt(possible_values = &ApiType::variants(), case_insensitive = true)]
-    call: ApiType,
+    #[structopt(possible_values = &ApiMethod::variants(), case_insensitive = true)]
+    method: ApiMethod,
 
     path: String,
 
     /// JSON formatted body to send
-    #[structopt(required_ifs(&[("call", "post"),("call", "put")]))]
+    #[structopt(required_ifs(&[("method", "patch"),("method", "post"),("method", "put")]))]
     body: Option<String>,
 }
 
@@ -34,8 +36,8 @@ pub async fn api_cli(command: ApiCommand) -> Result<(), ImlManagerCliError> {
     let uri = iml_manager_client::create_api_url(command.path)?;
     let body: Option<serde_json::Value> = command.body.map(|s| serde_json::from_str(&s).unwrap());
 
-    if let Some(resp) = match command.call {
-        ApiType::Delete => {
+    if let Some(resp) = match command.method {
+        ApiMethod::Delete => {
             let req = client.delete(uri);
             let req = if let Some(data) = body {
                 req.json(&data)
@@ -44,14 +46,16 @@ pub async fn api_cli(command: ApiCommand) -> Result<(), ImlManagerCliError> {
             };
             Some(req.send().await?)
         }
-        ApiType::Get => {
+        ApiMethod::Get => {
             let resp = client.get(uri).send().await?;
             let data: serde_json::Value = resp.json().await?;
             term.write_line(&format!("{}", data))?;
             None
         }
-        ApiType::Post => Some(client.post(uri).json(&body.unwrap()).send().await?),
-        ApiType::Put => Some(client.put(uri).json(&body.unwrap()).send().await?),
+        ApiMethod::Head => Some(client.head(uri).send().await?),
+        ApiMethod::Patch => Some(client.patch(uri).json(&body.unwrap()).send().await?),
+        ApiMethod::Post => Some(client.post(uri).json(&body.unwrap()).send().await?),
+        ApiMethod::Put => Some(client.put(uri).json(&body.unwrap()).send().await?),
     } {
         term.write_line(&format!("{:?}", resp))?;
         term.write_line(&format!("{}", resp.text().await?))?;
