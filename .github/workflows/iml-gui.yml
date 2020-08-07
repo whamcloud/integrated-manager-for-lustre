@@ -89,8 +89,9 @@ jobs:
         with:
           toolchain: stable
           override: true
+      - run: curl -L "https://github.com/mozilla/geckodriver/releases/download/v0.26.0/geckodriver-v0.26.0-linux64.tar.gz" | tar xz
       - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      - run: wasm-pack test iml-gui/crate --headless --firefox
+      - run: wasm-pack test iml-gui/crate --headless --firefox --geckodriver ../../geckodriver
 
   check_rpm_build:
     name: Check RPM build
