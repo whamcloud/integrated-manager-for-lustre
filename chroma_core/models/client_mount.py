@@ -288,7 +288,7 @@ class MountLustreFilesystemsJob(AdvertisedJob):
 
     @classmethod
     def can_run(cls, host):
-        if not host.is_worker:
+        if host.immutable_state:
             return False
 
         cnt = LustreClientMount.objects.filter(state="unmounted", host=host).count()
@@ -359,7 +359,7 @@ class UnmountLustreFilesystemsJob(AdvertisedJob):
 
     @classmethod
     def can_run(cls, host):
-        if not host.is_worker:
+        if host.immutable_state:
             return False
 
         cnt = LustreClientMount.objects.filter(state="mounted", host=host).count()
