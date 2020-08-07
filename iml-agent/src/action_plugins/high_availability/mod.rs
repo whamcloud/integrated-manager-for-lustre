@@ -4,7 +4,7 @@
 
 pub(crate) mod corosync_conf;
 
-use crate::agent_error::ImlAgentError;
+use crate::agent_error::{ImlAgentError, RequiredError};
 use elementtree::Element;
 use futures::{future::try_join_all, try_join};
 use iml_cmd::{CheckedCommandExt, Command};
@@ -12,7 +12,8 @@ use iml_fs::file_exists;
 use iml_wire_types::{
     ComponentState, ConfigState, ResourceAgentInfo, ResourceAgentType, ServiceState,
 };
-use std::ffi::OsStr;
+use std::{cmp::Ordering, collections::HashMap, ffi::OsStr, time::Duration};
+use tokio::time::delay_for;
 
 fn create(elem: &Element) -> ResourceAgentInfo {
     ResourceAgentInfo {
@@ -59,6 +60,125 @@ where
         .await?;
 
     Ok(String::from_utf8_lossy(&o.stdout).to_string())
+}
+
+pub(crate) async fn pcs(args: Vec<String>) -> Result<String, ImlAgentError> {
+    let o = Command::new("pcs").args(args).checked_output().await?;
+
+    Ok(String::from_utf8_lossy(&o.stdout).to_string())
+}
+
+async fn crm_mon_status() -> Result<Element, ImlAgentError> {
+    let o = Command::new("crm_mon")
+        .args(&["--as-xml", "--inactive"])
+        .checked_output()
+        .await?;
+
+    Ok(Element::from_reader(o.stdout.as_slice())?)
+}
+
+fn resource_status(tree: Element) -> Result<HashMap<String, String>, ImlAgentError> {
+    let resources = tree.find("resources").unwrap();
+    Ok(resources
+        .children()
+        .filter_map(|e| {
+            e.get_attr("id")
+                .map(|id| {
+                    match e.tag().name() {
+                        "resource" => e.get_attr("role").map(|r| vec![(id, r)]),
+                        "clone" => {
+                            // "Started" -> "Starting" -> "Stopping" -> "Stopped"
+                            e.children()
+                                .filter_map(|res| res.get_attr("role"))
+                                .max_by(|x, y| {
+                                    if x == y {
+                                        return Ordering::Equal;
+                                    }
+                                    match (*x, *y) {
+                                        (_, "Stopped") => Ordering::Greater,
+                                        ("Stopped", _) => Ordering::Less,
+                                        (_, "Stopping") => Ordering::Greater,
+                                        ("Stopping", _) => Ordering::Less,
+                                        (_, "Starting") => Ordering::Greater,
+                                        ("Starting", _) => Ordering::Less,
+                                        _ => {
+                                            tracing::error!("Recieved unknown roles: {} {}", x, y);
+                                            Ordering::Equal
+                                        }
+                                    }
+                                })
+                                .map(|r| vec![(id, r)])
+                        }
+                        "group" => Some(
+                            e.children()
+                                .filter_map(|e| {
+                                    e.get_attr("id").map(|id| match e.tag().name() {
+                                        "resource" => e.get_attr("role").map(|r| vec![(id, r)]),
+                                        other => {
+                                            tracing::warn!("Unknown sub-Resource tag: {}", other);
+                                            None
+                                        }
+                                    })
+                                })
+                                .flatten()
+                                .flatten()
+                                .collect::<Vec<(&str, &str)>>(),
+                        ),
+                        other => {
+                            tracing::warn!("Unknown Resource tag: {}", other);
+                            None
+                        }
+                    }
+                })
+                .flatten()
+        })
+        .flatten()
+        .map(|(x, y)| (x.to_string(), y.to_string()))
+        .collect())
+}
+
+async fn set_resource_role(resource: &str, running: bool) -> Result<(), ImlAgentError> {
+    let args = &[
+        "--resource",
+        resource,
+        "--set-parameter",
+        "target-role",
+        "--meta",
+        "--parameter-value",
+        if running { "Started" } else { "Stopped" },
+    ];
+    crm_resource(args).await?;
+    Ok(())
+}
+
+async fn wait_resource(resource: &str, running: bool) -> Result<(), ImlAgentError> {
+    let sec_to_wait = 300;
+    let sec_delay = 2;
+    let delay_duration = Duration::new(sec_delay, 0);
+    for _ in 0..(sec_to_wait / sec_delay) {
+        let resources = resource_status(crm_mon_status().await?)?;
+        tracing::debug!(
+            "crm mon status (waiting for {}): {:?}",
+            resource,
+            &resources
+        );
+        if let Some(status) = resources.get(resource) {
+            if running {
+                if status == "Started" {
+                    return Ok(());
+                }
+            } else if status == "Stopped" {
+                return Ok(());
+            }
+        }
+        delay_for(delay_duration).await;
+    }
+    Err(ImlAgentError::from(RequiredError(format!(
+        "Waiting for resource {} of {} failed after {} sec",
+        if running { "start" } else { "stop" },
+        resource,
+        sec_to_wait,
+    ))))
 }
 
 fn process_resource(output: &[u8]) -> Result<ResourceAgentInfo, ImlAgentError> {
@@ -193,10 +313,18 @@ pub async fn check_ha(
     try_join!(corosync, pacemaker, pcs)
 }
 
-pub(crate) async fn pcs(args: Vec<String>) -> Result<String, ImlAgentError> {
-    let o = Command::new("pcs").args(args).checked_output().await?;
+pub async fn start_resource(resource: String) -> Result<(), ImlAgentError> {
+    set_resource_role(&resource, true).await?;
 
-    Ok(String::from_utf8_lossy(&o.stdout).to_string())
+    wait_resource(&resource, true).await?;
+    Ok(())
+}
+
+pub async fn stop_resource(resource: String) -> Result<(), ImlAgentError> {
+    set_resource_role(&resource, false).await?;
+
+    wait_resource(&resource, false).await?;
+    Ok(())
 }
 
 #[cfg(test)]
