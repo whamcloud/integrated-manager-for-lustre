@@ -730,10 +730,7 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestErro
     .await?;
 
     // Create Task
-    let cmd = format!(
-        r#"iml debugapi post task '{}'"#,
-        task
-    );
+    let cmd = format!(r#"iml debugapi post task '{}'"#, task);
     ssh::ssh_exec_cmd(config.manager_ip, &cmd)
         .await?
         .checked_status()
@@ -745,7 +742,7 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestErro
     );
 
     let cmd = format!(
-        "echo {} | socat - unix-connect:/run/iml/postman-testfile.sock",
+        "echo '{}' | socat - unix-connect:/run/iml/postman-testfile.sock",
         fid
     );
 

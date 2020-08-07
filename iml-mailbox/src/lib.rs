@@ -3,12 +3,13 @@
 // license that can be found in the LICENSE file.
 
 use bytes::Buf;
-use futures::{future::join_all, stream::BoxStream, Stream, StreamExt, TryStreamExt};
+use futures::{future::join_all, stream::BoxStream, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use iml_orm::{
     fidtaskqueue::insert_fidtask,
     lustrefid::LustreFid,
     task::{self, ChromaCoreTask as Task},
     tokio_diesel::{AsyncRunQueryDsl as _, OptionalExtension as _},
+    DbPool,
 };
 use iml_tracing::tracing;
 use serde_json::json;
@@ -60,11 +61,37 @@ async fn get_task_by_name(
     Task::by_name(x).first_async(pool).await.optional()
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+struct Incoming {
+    fid: String,
+    #[serde(flatten)]
+    data: HashMap<String, serde_json::Value>,
+}
+
+async fn insert_line(line: &str, task: &Task, pool: &DbPool) -> Result<(), MailboxError> {
+    let incoming: Incoming = serde_json::from_str(&line)?;
+
+    let data = match incoming.data.into_iter().next() {
+        Some((_, v)) => v,
+        None => json!({}),
+    };
+
+    let fid = LustreFid::from_str(&incoming.fid)?;
+
+    tracing::trace!("Inserting fid:{:?} data:{:?} task:{:?}", fid, data, task);
+
+    insert_fidtask(fid, data, &task)
+        .execute_async(&pool)
+        .await?;
+
+    Ok(())
+}
+
 /// Given an task name and `mpsc::UnboundedReceiver` handle, this fn
 /// will process incoming lines and write them into FidTaskQueue
 /// associating the new item with the existing named task.
 pub async fn ingest_data(task: String, lines: Vec<String>) -> Result<(), MailboxError> {
-    tracing::debug!("Starting ingest for {}", &task);
+    tracing::debug!("Starting ingest for {} ({} lines)", &task, lines.len());
 
     let pool = iml_orm::pool()?;
 
@@ -77,34 +104,12 @@ pub async fn ingest_data(task: String, lines: Vec<String>) -> Result<(), Mailbox
         }
     };
 
-    let xs = lines.iter().filter_map(|line| {
-        tracing::trace!("handling line {:?}", &line);
+    let xs = lines.iter().map(|line| {
+        tracing::trace!("handling line {:?}", line);
 
-        let mut map: HashMap<String, serde_json::Value> = serde_json::from_str(&line).ok()?;
-
-        if let Some(fid) = map.remove("fid") {
-            let fid = LustreFid::from_str(
-                fid.as_str()
-                    .ok_or_else(|| {
-                        MailboxError::NotFound(format!("Failed to find fid in {}", line))
-                    })
-                    .ok()?,
-            )
-            .ok()?;
-
-            // Get "other" data if it exists
-            let data = match map.into_iter().next() {
-                Some((_, v)) => v,
-                None => json!({}),
-            };
-
-            tracing::trace!("Inserting fid:{:?} data:{:?} task:{:?}", fid, data, task);
-
-            Some(insert_fidtask(fid, data, &task).execute_async(&pool))
-        } else {
-            tracing::error!("Failed to process {:?}", &line);
-            None
-        }
+        insert_line(line, &task, &pool).inspect_err(move |e| {
+            tracing::info!("Unable to process line {}: Error: {:?}", line, e);
+        })
     });
 
     let count = join_all(xs).await.into_iter().filter(|x| x.is_ok()).count();
