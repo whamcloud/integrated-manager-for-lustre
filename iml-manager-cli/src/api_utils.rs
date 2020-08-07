@@ -80,6 +80,7 @@ pub enum State {
 
 impl Display for State {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        // consider for Cancelled this: `style("⟲").yellow()`
         match self {
             State::Progressing => write!(f, "{}", style("⠶").cyan()),
             State::Cancelled => write!(f, "{}", style("🚫")),
@@ -176,7 +177,7 @@ pub async fn create_command<T: serde::Serialize>(
     Ok(cmd)
 }
 
-fn cmd_state(cmd: &Command) -> State {
+pub fn cmd_state(cmd: &Command) -> State {
     if cmd.cancelled {
         State::Cancelled
     } else if cmd.errored {
@@ -188,7 +189,7 @@ fn cmd_state(cmd: &Command) -> State {
     }
 }
 
-fn job_state(job: &Job0) -> State {
+pub fn job_state(job: &Job0) -> State {
     // job.state can be "pending", "tasked" or "complete"
     // if a job is errored or cancelled, it is also complete
     if job.cancelled {
@@ -202,7 +203,7 @@ fn job_state(job: &Job0) -> State {
     }
 }
 
-fn step_state(step: &Step) -> State {
+pub fn step_state(step: &Step) -> State {
     // step.state can be "success", "failed" or "incomplete"
     match &step.state[..] {
         "cancelled" => State::Cancelled,
