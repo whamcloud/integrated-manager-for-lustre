@@ -83,7 +83,7 @@ pub fn get_client() -> Result<Client, ImlManagerClientError> {
 }
 
 /// Given a path, constructs a full API url
-fn create_api_url(path: impl ToString) -> Result<Url, ImlManagerClientError> {
+pub fn create_api_url(path: impl ToString) -> Result<Url, ImlManagerClientError> {
     let mut path = path.to_string();
 
     if !path.ends_with('/') {

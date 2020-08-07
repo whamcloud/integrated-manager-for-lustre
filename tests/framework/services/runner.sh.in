@@ -3,7 +3,7 @@
 yum install -y epel-release
 yum clean all
 yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql96-server postgresql96-devel rabbitmq-server telnet python-ethtool erlang-inets patch gcc-c++ systemd-devel python-pip curl libcurl-devel nss openssl-devel cargo
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql96-server postgresql96-devel postgresql96-contrib rabbitmq-server telnet python-ethtool erlang-inets patch gcc-c++ systemd-devel python-pip curl libcurl-devel nss openssl-devel cargo
 systemctl enable rabbitmq-server
 
 export PATH=$PATH:/usr/lib/rabbitmq/bin/
@@ -53,6 +53,8 @@ systemctl start postgresql-9.6
 sleep 5  # Unfortunately postgresql start seems to return before its truly up and ready for business
 su postgres -c 'createuser -R -S -d chroma'
 su postgres -c 'createdb -O chroma chroma'
+su postgres -c "psql -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -d chroma"
+
 sed -i -e '/local[[:space:]]\+all/i\
 local   all         chroma                            trust' /var/lib/pgsql/9.6/data/pg_hba.conf
 systemctl restart postgresql-9.6

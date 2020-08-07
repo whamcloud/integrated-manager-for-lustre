@@ -6,13 +6,13 @@
 from django.db import models
 from django.db.models import CASCADE
 from django.contrib.postgres.fields import ArrayField
-from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.utils import CHARFIELD_MAX_LENGTH
 from chroma_core.models.host import ManagedHost, HostOfflineAlert, HostContactAlert
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.jobs import DeletableStatefulObject
 from chroma_core.models.jobs import StateChangeJob
 from chroma_core.models.alert import AlertState
+from chroma_core.models.lnet_configuration import LNetConfiguration
 from chroma_core.models.jobs import Job, AdvertisedJob
 from chroma_core.lib.job import DependOn, DependAll, Step
 from chroma_help.help import help_text
@@ -48,7 +48,7 @@ class LustreClientMount(DeletableStatefulObject):
 
         if state != "removed":
             try:
-                fs = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.name == self.filesystem)
+                fs = ManagedFilesystem.objects.get(name=self.filesystem)
 
                 # Depend on the fs being available.
                 deps.append(DependOn(fs, "available", fix_state="unmounted"))
@@ -80,9 +80,9 @@ class LustreClientMount(DeletableStatefulObject):
         return DependAll(deps)
 
     reverse_deps = {
-        "ManagedHost": lambda mh: ObjectCache.host_client_mounts(mh.id),
-        "LNetConfiguration": lambda lc: ObjectCache.host_client_mounts(lc.host.id),
-        "ManagedFilesystem": lambda mf: ObjectCache.filesystem_client_mounts(mf.name),
+        "ManagedHost": lambda mh: list(LustreClientMount.objects.filter(host_id=mh.id)),
+        "LNetConfiguration": lambda lc: list(LustreClientMount.objects.filter(host_id=lc.host.id)),
+        "ManagedFilesystem": lambda mf: list(LustreClientMount.objects.filter(filesystem=mf.name)),
     }
 
     class Meta:
@@ -157,22 +157,20 @@ class MountLustreClientJob(StateChangeJob):
         return "Mount %s" % self.lustre_client_mount
 
     def get_steps(self):
-        host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == self.lustre_client_mount.host_id)
+        host = ManagedHost.objects.filter(id=self.lustre_client_mount.host_id).values("fqdn").first()
+        filesystem = ManagedFilesystem.objects.get(name=self.lustre_client_mount.filesystem)
 
         mountpoint = (
             self.lustre_client_mount.mountpoints[0]
             if self.lustre_client_mount.mountpoints
             else "/mnt/{}".format(self.lustre_client_mount.filesystem)
         )
-        filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.name == self.lustre_client_mount.filesystem)
-        args = {"host": host, "filesystems": [(filesystem.mount_path(), mountpoint)]}
+
+        args = {"host": host.get("fqdn"), "filesystems": [(filesystem.mount_path(), mountpoint)]}
         return [(MountLustreFilesystemsStep, args)]
 
     def get_deps(self):
-        return DependOn(
-            ObjectCache.get_one(ManagedHost, lambda mh: mh.id == self.lustre_client_mount.host_id).lnet_configuration,
-            "lnet_up",
-        )
+        return DependOn(LNetConfiguration.objects.get(host_id=self.lustre_client_mount.host_id), "lnet_up",)
 
     class Meta:
         app_label = "chroma_core"
@@ -204,10 +202,12 @@ class UnmountLustreClientMountJob(StateChangeJob):
         return "Unmount %s" % self.lustre_client_mount
 
     def get_steps(self):
-        host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == self.lustre_client_mount.host_id)
+        client_mount = self.lustre_client_mount
+        host = ManagedHost.objects.filter(id=client_mount.host_id).values("fqdn").first()
+        filesystem = ManagedFilesystem.objects.get(name=client_mount.filesystem)
+        mount_path = filesystem.mount_path()
 
-        filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.name == self.lustre_client_mount.filesystem)
-        args = dict(host=host, filesystems=[(filesystem.mount_path(), self.lustre_client_mount.mountpoints)])
+        args = {"host": host.get("fqdn"), "filesystems": [(mount_path, x) for x in client_mount.mountpoints]}
         return [(UnmountLustreFilesystemsStep, args)]
 
     class Meta:
@@ -287,11 +287,11 @@ class MountLustreFilesystemsJob(AdvertisedJob):
         if not host.is_worker:
             return False
 
-        search = lambda cm: (cm.host == host and cm.state == "unmounted")
-        unmounted = ObjectCache.get(LustreClientMount, search)
+        cnt = LustreClientMount.objects.filter(state="unmounted", host=host).count()
+
         return (
             host.state not in ["removed", "undeployed", "unconfigured"]
-            and len(unmounted) > 0
+            and cnt > 0
             and not AlertState.filter_by_item(host)
             .filter(active=True, alert_type__in=[HostOfflineAlert.__name__, HostContactAlert.__name__])
             .exists()
@@ -301,14 +301,13 @@ class MountLustreFilesystemsJob(AdvertisedJob):
         return "Mount associated Lustre filesystem(s) on host %s" % self.host
 
     def get_steps(self):
-        search = lambda cm: (cm.host == self.host and cm.state == "unmounted")
-        unmounted = ObjectCache.get(LustreClientMount, search)
+        unmounted = LustreClientMount.objects.filter(state="unmounted", host=self.host)
 
         args = {
             "host": self.host,
             "filesystems": [
                 (
-                    ObjectCache.get_one(ManagedFilesystem, lambda mf, mtd=m: mf.name == mtd.filesystem).mount_path(),
+                    ManagedFilesystem.objects.get(name=m.filesystem).mount_path(),
                     m.mountpoints[0] if m.mountpoints else "/mnt/{}".format(m.filesystem),
                 )
                 for m in unmounted
@@ -358,11 +357,11 @@ class UnmountLustreFilesystemsJob(AdvertisedJob):
         if not host.is_worker:
             return False
 
-        search = lambda cm: (cm.host == host and cm.state == "mounted")
-        mounted = ObjectCache.get(LustreClientMount, search)
+        cnt = LustreClientMount.objects.filter(state="mounted", host=host).count()
+
         return (
             host.state not in ["removed", "undeployed", "unconfigured"]
-            and len(mounted) > 0
+            and cnt > 0
             and not AlertState.filter_by_item(host)
             .filter(active=True, alert_type__in=[HostOfflineAlert.__name__, HostContactAlert.__name__])
             .exists()
@@ -372,17 +371,18 @@ class UnmountLustreFilesystemsJob(AdvertisedJob):
         return "Unmount associated Lustre filesystem(s) on host %s" % self.host
 
     def get_steps(self):
-        search = lambda cm: (cm.host == self.host and cm.state == "mounted")
-        mounted = ObjectCache.get(LustreClientMount, search)
+        mounted = LustreClientMount.objects.filter(state="mounted", host=self.host)
+
+        filesystems = []
+
+        for m in mounted:
+            mount_path = ManagedFilesystem.objects.get(name=m.filesystem).mount_path()
+
+            filesystems.extend([(mount_path, x) for x in m.mountpoints])
+
         args = {
             "host": self.host,
-            "filesystems": [
-                (
-                    ObjectCache.get_one(ManagedFilesystem, lambda mf, mtd=m: mf.name == mtd.filesystem).mount_path(),
-                    m.mountpoints,
-                )
-                for m in mounted
-            ],
+            "filesystems": filesystems,
         }
 
         return [(UnmountLustreFilesystemsStep, args)]

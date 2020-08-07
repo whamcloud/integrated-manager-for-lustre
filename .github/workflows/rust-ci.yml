@@ -73,6 +73,7 @@ jobs:
 
       - uses: actions/setup-python@v1
       - uses: dschep/install-pipenv-action@v1
+      - run: sudo PGPASSWORD=chroma psql -h localhost -p 5432 -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -d chroma -U chroma
       - run: pipenv install
       - run: pipenv run ./manage.py migrate
         env:
@@ -133,6 +134,7 @@ jobs:
 
       - uses: actions/setup-python@v1
       - uses: dschep/install-pipenv-action@v1
+      - run: sudo PGPASSWORD=chroma psql -h localhost -p 5432 -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -d chroma -U chroma
       - run: pipenv install
       - run: pipenv run ./manage.py migrate
         env:
