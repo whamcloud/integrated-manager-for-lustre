@@ -8,21 +8,24 @@ use im::HashSet;
 use iml_change::GetChanges as _;
 use iml_device::{
     build_device_index, client_mount_content_id, create_cache, create_target_cache, find_targets,
+    get_mgs_filesystem_map, get_target_filesystem_map,
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
     },
-    update_client_mounts, update_devices, Cache, ImlDeviceError,
+    update_client_mounts, update_devices, Cache, ImlDeviceError, TargetFsRecord,
 };
-use iml_manager_env::get_pool_limit;
+use iml_manager_env::{get_influxdb_addr, get_influxdb_metrics_db, get_pool_limit};
 use iml_postgres::{get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
+use influx_db_client::Client;
 use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
 };
+use url::Url;
 use warp::Filter;
 
 // Default pool limit if not overridden by POOL_LIMIT
@@ -102,7 +105,14 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let lustreclientmount_ct_id = client_mount_content_id(&pool).await?;
 
+    let influx_url: String = format!("http://{}", get_influxdb_addr());
+
     let mut mount_cache = HashMap::new();
+
+    let influx_client = Client::new(
+        Url::parse(&influx_url).expect("Influx URL is invalid."),
+        get_influxdb_metrics_db(),
+    );
 
     while let Some((host, (devices, mounts))) = s.try_next().await? {
         update_devices(&pool, &host, &devices).await?;
@@ -123,17 +133,30 @@ async fn main() -> Result<(), ImlDeviceError> {
                 .try_collect()
                 .await?;
 
-        let targets = find_targets(&device_cache, &mount_cache, &host_ids, &index);
+        let target_to_fs_map = get_target_filesystem_map(&influx_client).await?;
+        let mgs_targets_to_fs_map = get_mgs_filesystem_map(&influx_client).await?;
+        let target_to_fs_map: TargetFsRecord = target_to_fs_map
+            .into_iter()
+            .chain(mgs_targets_to_fs_map)
+            .collect();
+
+        let targets = find_targets(
+            &device_cache,
+            &mount_cache,
+            &host_ids,
+            &index,
+            &target_to_fs_map,
+        );
 
         let x = targets.get_changes(&target_cache);
 
         let xs = iml_device::build_updates(x);
 
         let x = xs.into_iter().fold(
-            (vec![], vec![], vec![], vec![], vec![], vec![]),
+            (vec![], vec![], vec![], vec![], vec![], vec![], vec![]),
             |mut acc, x| {
                 acc.0.push(x.state);
-                acc.1.push(x.name);
+                acc.1.push(x.name.clone());
                 acc.2.push(x.active_host_id);
                 acc.3.push(
                     x.host_ids
@@ -142,8 +165,9 @@ async fn main() -> Result<(), ImlDeviceError> {
                         .collect::<Vec<String>>()
                         .join(","),
                 );
-                acc.4.push(x.uuid);
-                acc.5.push(x.mount_path);
+                acc.4.push(x.filesystems.join(","));
+                acc.5.push(x.uuid);
+                acc.6.push(x.mount_path);
 
                 acc
             },
@@ -152,23 +176,25 @@ async fn main() -> Result<(), ImlDeviceError> {
         tracing::debug!("x: {:?}", x);
 
         sqlx::query!(r#"INSERT INTO targets 
-                        (state, name, active_host_id, host_ids, uuid, mount_path) 
-                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], uuid, mount_path
-                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[])
-                        AS t(state, name, active_host_id, host_ids, uuid, mount_path)
+                        (state, name, active_host_id, host_ids, filesystems, uuid, mount_path) 
+                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], string_to_array(filesystems, ',')::text[], uuid, mount_path
+                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[])
+                        AS t(state, name, active_host_id, host_ids, filesystems, uuid, mount_path)
                         ON CONFLICT (uuid)
                             DO
                             UPDATE SET  state          = EXCLUDED.state,
                                         name           = EXCLUDED.name,
                                         active_host_id = EXCLUDED.active_host_id,
                                         host_ids       = EXCLUDED.host_ids,
+                                        filesystems    = EXCLUDED.filesystems,
                                         mount_path     = EXCLUDED.mount_path"#,
             &x.0,
             &x.1,
             &x.2 as &[Option<i32>],
             &x.3,
             &x.4,
-            &x.5 as &[Option<String>],
+            &x.5,
+            &x.6 as &[Option<String>],
         )
         .execute(&pool)
         .await?;

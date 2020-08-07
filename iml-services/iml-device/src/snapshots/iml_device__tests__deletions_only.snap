@@ -10,6 +10,9 @@ expression: xs
         host_ids: [
             2,
         ],
+        filesystems: [
+            "fs1",
+        ],
         uuid: "123456",
         mount_path: None,
     },
