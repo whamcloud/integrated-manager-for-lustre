@@ -12,6 +12,9 @@ expression: xs
         host_ids: [
             2,
         ],
+        filesystems: [
+            "fs1",
+        ],
         uuid: "123456",
         mount_path: Some(
             "/mnt/mdt1",
@@ -25,6 +28,9 @@ expression: xs
         ),
         host_ids: [
             4,
+        ],
+        filesystems: [
+            "fs1",
         ],
         uuid: "567890",
         mount_path: Some(
