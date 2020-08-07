@@ -731,7 +731,7 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestErro
 
     // Create Task
     let cmd = format!(
-        r#". /var/lib/chroma/iml-settings.conf; curl -d '{}' -H "Content-Type: application/json" -H "Authorization: ApiKey $API_USER:$API_KEY" --cacert /var/lib/chroma/authority.crt https://adm.local/api/task/"#,
+        r#"iml debugapi post task '{}'"#,
         task
     );
     ssh::ssh_exec_cmd(config.manager_ip, &cmd)
