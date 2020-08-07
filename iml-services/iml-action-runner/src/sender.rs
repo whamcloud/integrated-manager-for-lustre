@@ -8,6 +8,7 @@ use crate::{
     remote_action, Sessions, Shared,
 };
 use futures::TryFutureExt;
+use iml_postgres::sqlx::PgPool;
 use iml_rabbit::Connection;
 use iml_wire_types::ActionType;
 use std::sync::Arc;
@@ -19,6 +20,7 @@ pub fn sender(
     session_to_rpcs: Shared<SessionToRpcs>,
     local_actions: SharedLocalActionsInFlight,
     client_filter: impl Filter<Extract = (Connection,), Error = warp::Rejection> + Clone + Send,
+    db_pool: PgPool,
 ) -> impl Filter<Extract = (Result<serde_json::Value, String>,), Error = warp::Rejection> + Clone {
     let queue_name = queue_name.into();
 
@@ -26,12 +28,14 @@ pub fn sender(
     let session_to_rpcs_filter = warp::any().map(move || Arc::clone(&session_to_rpcs));
     let local_actions_filter = warp::any().map(move || Arc::clone(&local_actions));
     let queue_name_filter = warp::any().map(move || queue_name.clone());
+    let db_pool_filter = warp::any().map(move || db_pool.clone());
 
     let deps = sessions_filter
         .and(session_to_rpcs_filter)
         .and(local_actions_filter)
         .and(client_filter)
-        .and(queue_name_filter);
+        .and(queue_name_filter)
+        .and(db_pool_filter);
 
     warp::post().and(deps).and(warp::body::json()).and_then(
         move |shared_sessions: Shared<Sessions>,
@@ -39,13 +43,14 @@ pub fn sender(
               local_actions: SharedLocalActionsInFlight,
               conn: Connection,
               queue_name: String,
+              db_pool: PgPool,
               action_type: ActionType| {
             async move {
                 match action_type {
                     ActionType::Local(action) => {
                         tracing::debug!("Sending {:?}", action);
 
-                        handle_local_action(action, local_actions, shared_sessions).await
+                        handle_local_action(action, local_actions, shared_sessions, db_pool).await
                     }
                     ActionType::Remote((fqdn, action)) => {
                         remote_action::run(

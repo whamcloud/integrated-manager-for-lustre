@@ -36,6 +36,26 @@
       ]
     }
   },
+  "131959cfcc0275c8797cb5aa12f0ad15dd6baa2f75c716815607a039defac3a6": {
+    "query": "select fqdn from chroma_core_managedhost where id = $1 and not_deleted = 't'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "1bcbed2e431ad27c5f4969dab2089990e14611629b0760f4a7a499f0126347be": {
     "query": "\n             INSERT INTO chroma_core_logmessage\n             (datetime, fqdn, severity, facility, tag, message, message_class)\n             SELECT datetime, $2, severity, facility, source, message, message_class\n             FROM UNNEST($1::timestamptz[], $3::smallint[], $4::smallint[], $5::text[], $6::text[], $7::smallint[])\n             AS t(datetime, severity, facility, source, message, message_class)\n         ",
     "describe": {
