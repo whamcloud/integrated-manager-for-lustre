@@ -371,7 +371,7 @@ fn handle_target_records(target_stats: TargetStats, host: &Fqdn) -> Option<Vec<P
                 .add_tag("host", Value::String(host.0.to_string()))
                 .add_tag("kind", Value::String(x.kind.to_string()))
                 .add_tag("target", Value::String(x.target.to_string()))
-                .add_tag("fs", Value::String(fs_names))
+                .add_field("mgs_fs", Value::String(fs_names))
             ])
         }
         TargetStats::JobStatsOst(_) => {
