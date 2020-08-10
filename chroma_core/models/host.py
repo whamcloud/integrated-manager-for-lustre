@@ -1815,4 +1815,3 @@ class UnmountSnapshotStep(Step):
         self.invoke_rust_agent_expect_result(
             kwargs["host"], "snapshot_unmount", {"fsname": kwargs["fsname"], "name": kwargs["name"]}
         )
-
