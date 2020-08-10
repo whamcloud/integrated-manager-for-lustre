@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use dotenv::dotenv;
 use futures::{channel::oneshot, lock::Mutex, StreamExt, TryFutureExt, TryStreamExt};
 use iml_action_runner::{
     data::{has_action_in_flight, remove_action_in_flight, ActionInFlight, SessionToRpcs},
@@ -11,6 +12,7 @@ use iml_action_runner::{
     Sessions, Shared,
 };
 use iml_agent_comms::messaging::consume_agent_tx_queue;
+use iml_postgres::get_db_pool;
 use iml_rabbit::ConnectionProperties;
 use iml_wire_types::{Action, ActionId, ActionName, ActionType, Fqdn, Id};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
@@ -50,9 +52,14 @@ fn create_client_filter(
 }
 
 #[tokio::test]
+#[ignore = "Requires an active DB"]
 async fn test_sender_only_accepts_post() -> Result<(), Box<dyn std::error::Error>> {
+    dotenv().ok();
+
     let (sessions, session_to_rpcs, local_actions) = create_shared_state();
     let client_filter = create_client_filter();
+
+    let pool = get_db_pool(5).await?;
 
     let filter = sender(
         "foo",
@@ -60,6 +67,7 @@ async fn test_sender_only_accepts_post() -> Result<(), Box<dyn std::error::Error
         Arc::clone(&session_to_rpcs),
         Arc::clone(&local_actions),
         client_filter,
+        pool,
     )
     .map(|x| warp::reply::json(&x));
 
@@ -70,12 +78,17 @@ async fn test_sender_only_accepts_post() -> Result<(), Box<dyn std::error::Error
 }
 
 #[tokio::test]
+#[ignore = "Requires an active DB"]
 async fn test_data_sent_to_active_session() -> Result<(), Box<dyn std::error::Error>> {
+    dotenv().ok();
+
     let queue_name = create_random_string();
     let queue_name2 = queue_name.clone();
 
     let (sessions, session_to_rpcs, local_actions) = create_shared_state();
     let client_filter = create_client_filter();
+
+    let pool = get_db_pool(5).await?;
 
     let filter = sender(
         queue_name,
@@ -83,6 +96,7 @@ async fn test_data_sent_to_active_session() -> Result<(), Box<dyn std::error::Er
         Arc::clone(&session_to_rpcs),
         Arc::clone(&local_actions),
         client_filter,
+        pool,
     )
     .map(|x| warp::reply::json(&x));
 
@@ -151,12 +165,17 @@ async fn test_data_sent_to_active_session() -> Result<(), Box<dyn std::error::Er
 }
 
 #[tokio::test]
+#[ignore = "Requires an active DB"]
 async fn test_cancel_sent_to_active_session() -> Result<(), Box<dyn std::error::Error>> {
+    dotenv().ok();
+
     let queue_name = create_random_string();
     let queue_name2 = queue_name.clone();
 
     let (sessions, session_to_rpcs, local_actions) = create_shared_state();
     let client_filter = create_client_filter();
+
+    let pool = get_db_pool(5).await?;
 
     let filter = sender(
         queue_name,
@@ -164,6 +183,7 @@ async fn test_cancel_sent_to_active_session() -> Result<(), Box<dyn std::error::
         Arc::clone(&session_to_rpcs),
         Arc::clone(&local_actions),
         client_filter,
+        pool,
     )
     .map(|x| warp::reply::json(&x));
 

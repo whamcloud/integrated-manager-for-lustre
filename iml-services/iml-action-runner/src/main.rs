@@ -2,13 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-#![type_length_limit = "4372113"]
-
 use futures::{lock::Mutex, prelude::*};
 use iml_action_runner::{
     data::SessionToRpcs, local_actions::SharedLocalActionsInFlight, receiver::handle_agent_data,
     sender::sender, Sessions, Shared,
 };
+use iml_postgres::get_db_pool;
 use iml_rabbit::create_connection_filter;
 use iml_service_queue::service_queue::{consume_service_queue, ImlServiceQueueError};
 use iml_util::tokio_utils::get_tcp_or_unix_listener;
@@ -31,12 +30,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let pool = iml_rabbit::connect_to_rabbit(3);
 
+    let db_pool = get_db_pool(5).await?;
+
     let routes = sender(
         AGENT_TX_RUST,
         Arc::clone(&sessions),
         Arc::clone(&rpcs),
         Arc::clone(&local_actions),
         create_connection_filter(pool.clone()),
+        db_pool,
     )
     .map(|x| warp::reply::json(&x))
     .with(log);

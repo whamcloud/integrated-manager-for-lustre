@@ -1348,9 +1348,11 @@ dependencies = [
 name = "iml-action-runner"
 version = "0.3.0"
 dependencies = [
+ "dotenv",
  "futures",
  "iml-agent-comms",
  "iml-manager-env",
+ "iml-postgres",
  "iml-rabbit",
  "iml-service-queue",
  "iml-tracing",
@@ -1359,6 +1361,7 @@ dependencies = [
  "rand 0.7.3",
  "serde",
  "serde_json",
+ "thiserror",
  "tokio",
  "tokio-runtime-shutdown",
  "tokio-test",
