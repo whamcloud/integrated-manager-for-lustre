@@ -548,7 +548,7 @@ async fn prepare_records(xs: &[Record], client: &Client) -> Result<(), ImlStatsE
             .await?;
 
         if let Some(nodes) = r {
-            let items = nodes
+            let timestamps = nodes
                 .into_iter()
                 .filter_map(|x| x.series)
                 .map(|xs| {
@@ -569,7 +569,14 @@ async fn prepare_records(xs: &[Record], client: &Client) -> Result<(), ImlStatsE
                 .filter_map(|xs| xs.first().map(|x| x.clone()))
                 .collect::<Vec<serde_json::Value>>();
 
-            tracing::debug!("preparing records. items: {:?}", items);
+            let delete_futures = timestamps
+                .iter()
+                .map(|timestamp| async move {
+                    client.query(format!("DELETE FROM target WHERE time = {}", timestamp).as_str(), Some(Precision::Nanoseconds))
+                        .await
+                });
+
+            futures::future::try_join_all(delete_futures).await?;
         }
     }
 
