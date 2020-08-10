@@ -4,14 +4,14 @@
 
 use crate::{command::get_command, error::ImlApiError};
 use futures::TryFutureExt;
-use iml_orm::{task::ChromaCoreTask, tokio_diesel::AsyncRunQueryDsl as _, DbPool};
+use iml_postgres::{sqlx, PgPool};
 use iml_rabbit::Connection;
-use iml_wire_types::{ApiList, CmdWrapper};
+use iml_wire_types::{ApiList, CmdWrapper, Task};
 use warp::Filter;
 
 async fn create_task(
     client: Connection,
-    pool: DbPool,
+    pool: PgPool,
     task: serde_json::Value,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     // Return value: [ task_id, command_id ]
@@ -26,7 +26,7 @@ async fn create_task(
 
 async fn remove_task(
     client: Connection,
-    pool: DbPool,
+    pool: PgPool,
     ids: Vec<i32>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     // Return value: [ task_id, command_id ]
@@ -39,10 +39,10 @@ async fn remove_task(
     Ok(warp::reply::json(&CmdWrapper { command }))
 }
 
-async fn get_tasks(pool: DbPool) -> Result<impl warp::Reply, warp::Rejection> {
-    let xs: Vec<ChromaCoreTask> = ChromaCoreTask::all()
-        .get_results_async(&pool)
-        .map_err(ImlApiError::ImlDieselAsyncError)
+async fn get_tasks(pool: PgPool) -> Result<impl warp::Reply, warp::Rejection> {
+    let xs = sqlx::query_as!(Task, "SELECT * FROM chroma_core_task")
+        .fetch_all(&pool)
+        .map_err(ImlApiError::SqlxError)
         .await?;
 
     Ok(warp::reply::json(&ApiList::new(xs)))
@@ -50,7 +50,7 @@ async fn get_tasks(pool: DbPool) -> Result<impl warp::Reply, warp::Rejection> {
 
 pub(crate) fn endpoint(
     client_filter: impl Filter<Extract = (Connection,), Error = warp::Rejection> + Clone + Send,
-    pool_filter: impl Filter<Extract = (DbPool,), Error = warp::Rejection> + Clone + Send,
+    pool_filter: impl Filter<Extract = (PgPool,), Error = std::convert::Infallible> + Clone + Send,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     warp::path("task")
         .and(warp::get().and(pool_filter.clone()).and_then(get_tasks))

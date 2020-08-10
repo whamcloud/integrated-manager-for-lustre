@@ -4,14 +4,9 @@
 
 use bytes::Buf;
 use futures::{future::join_all, stream::BoxStream, Stream, StreamExt, TryFutureExt, TryStreamExt};
-use iml_orm::{
-    fidtaskqueue::insert_fidtask,
-    lustrefid::LustreFid,
-    task::{self, ChromaCoreTask as Task},
-    tokio_diesel::{AsyncRunQueryDsl as _, OptionalExtension as _},
-    DbPool,
-};
+use iml_postgres::sqlx::{self, PgPool};
 use iml_tracing::tracing;
+use iml_wire_types::{db::LustreFid, Task};
 use serde_json::json;
 use std::{collections::HashMap, str::FromStr};
 use thiserror::Error;
@@ -28,9 +23,7 @@ pub enum MailboxError {
     #[error(transparent)]
     ParseIntError(#[from] std::num::ParseIntError),
     #[error(transparent)]
-    ImlOrmError(#[from] iml_orm::ImlOrmError),
-    #[error(transparent)]
-    TokioAsyncError(#[from] iml_orm::tokio_diesel::AsyncError),
+    SqlxError(#[from] sqlx::Error),
 }
 
 impl reject::Reject for MailboxError {}
@@ -54,11 +47,16 @@ pub fn line_stream<'a>() -> BoxedFilter<(BoxStream<'a, Result<String, warp::Reje
     warp::body::stream().map(streamer).boxed()
 }
 
-async fn get_task_by_name(
-    x: impl ToString,
-    pool: &iml_orm::DbPool,
-) -> Result<Option<Task>, iml_orm::tokio_diesel::AsyncError> {
-    Task::by_name(x).first_async(pool).await.optional()
+async fn get_task_by_name(x: impl ToString, pool: &PgPool) -> Result<Option<Task>, MailboxError> {
+    let x = sqlx::query_as!(
+        Task,
+        "SELECT * FROM chroma_core_task WHERE name = $1",
+        &x.to_string()
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(x)
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -68,7 +66,7 @@ struct Incoming {
     data: HashMap<String, serde_json::Value>,
 }
 
-async fn insert_line(line: &str, task: &Task, pool: &DbPool) -> Result<(), MailboxError> {
+async fn insert_line(line: &str, task: &Task, pool: &PgPool) -> Result<(), MailboxError> {
     let incoming: Incoming = serde_json::from_str(&line)?;
 
     let data = match incoming.data.into_iter().next() {
@@ -80,9 +78,16 @@ async fn insert_line(line: &str, task: &Task, pool: &DbPool) -> Result<(), Mailb
 
     tracing::trace!("Inserting fid:{:?} data:{:?} task:{:?}", fid, data, task);
 
-    insert_fidtask(fid, data, &task)
-        .execute_async(&pool)
-        .await?;
+    sqlx::query!(
+        r#"
+            INSERT INTO chroma_core_fidtaskqueue (fid, data, task_id)
+            VALUES ($1, $2, $3)"#,
+        fid as LustreFid,
+        data,
+        task.id
+    )
+    .execute(pool)
+    .await?;
 
     Ok(())
 }
@@ -90,10 +95,12 @@ async fn insert_line(line: &str, task: &Task, pool: &DbPool) -> Result<(), Mailb
 /// Given an task name and `mpsc::UnboundedReceiver` handle, this fn
 /// will process incoming lines and write them into FidTaskQueue
 /// associating the new item with the existing named task.
-pub async fn ingest_data(task: String, lines: Vec<String>) -> Result<(), MailboxError> {
+pub async fn ingest_data(
+    pool: PgPool,
+    task: String,
+    lines: Vec<String>,
+) -> Result<(), MailboxError> {
     tracing::debug!("Starting ingest for {} ({} lines)", &task, lines.len());
-
-    let pool = iml_orm::pool()?;
 
     let task = match get_task_by_name(&task, &pool).await? {
         Some(t) => t,
@@ -116,9 +123,17 @@ pub async fn ingest_data(task: String, lines: Vec<String>) -> Result<(), Mailbox
 
     tracing::debug!("Increasing task {} ({}) by {}", task.name, task.id, count);
 
-    task::increase_total(task.id, count as i64)
-        .execute_async(&pool)
-        .await?;
+    sqlx::query!(
+        r#"
+        UPDATE chroma_core_task
+        SET fids_total = fids_total + $1
+        WHERE id = $2
+    "#,
+        count as i64,
+        task.id
+    )
+    .execute(&pool)
+    .await?;
 
     Ok(())
 }

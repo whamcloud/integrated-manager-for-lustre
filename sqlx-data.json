@@ -10,6 +10,26 @@
       "nullable": []
     }
   },
+  "07d03b70c5d9813b0432b582ad8239edd1a3ce7ef7ce9be7c22dbb8189db8861": {
+    "query": "select id from chroma_core_managedfilesystem where name = $1 and not_deleted = 't'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "084655890401e11e6b6530ec7ae7ca8b62c7851d803414d3177855c9e7150db5": {
     "query": "select id, content_type_id from chroma_core_managedhost where fqdn = $1 and not_deleted = 't'",
     "describe": {
@@ -33,6 +53,74 @@
       "nullable": [
         false,
         true
+      ]
+    }
+  },
+  "0d6801b58fa65df21dcef7faa830d96938ffd9e7c6ae2e50cbeeaae538510389": {
+    "query": "\n        SELECT * FROM chroma_core_lustreclientmount\n        WHERE\n            state = 'mounted'\n            AND not_deleted = 't'\n            AND id != ALL($1)\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "state_modified_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 2,
+          "name": "state",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "immutable_state",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 4,
+          "name": "not_deleted",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 5,
+          "name": "content_type_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 6,
+          "name": "filesystem",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 7,
+          "name": "host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 8,
+          "name": "mountpoints",
+          "type_info": "TextArray"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4Array"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false
       ]
     }
   },
@@ -256,6 +344,74 @@
       ]
     }
   },
+  "39fc1211724cef9afd733459348bcd3eb6f3af9a89dc1ca470593ea8beb3678c": {
+    "query": "\n        SELECT * FROM chroma_core_job\n        WHERE id IN (SELECT job_id from chroma_core_command_jobs\n            WHERE command_id = $1)\n    ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "state",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 2,
+          "name": "errored",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 3,
+          "name": "cancelled",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 4,
+          "name": "modified_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 5,
+          "name": "created_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 6,
+          "name": "wait_for_json",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "locks_json",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "content_type_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ]
+    }
+  },
   "5755ec79ff7be6cdfe0ba5fa9c2cd9c280a99db0c802ce3b795a4f5ebd5a9e35": {
     "query": "\n        DELETE FROM chroma_core_fidtaskqueue \n        WHERE id in ( \n            SELECT id FROM chroma_core_fidtaskqueue WHERE task_id = $1 LIMIT $2 FOR UPDATE SKIP LOCKED \n        ) RETURNING id, fid as \"fid: _\", data, task_id",
     "describe": {
@@ -315,6 +471,40 @@
       ]
     }
   },
+  "5bd6075cf08628eea403a715a04388efd8c795cf2509bcb1ea567ae94dd2b555": {
+    "query": "\n            INSERT INTO chroma_core_fidtaskqueue (fid, data, task_id)\n            VALUES ($1, $2, $3)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          {
+            "Custom": {
+              "name": "lustre_fid",
+              "kind": {
+                "Composite": [
+                  [
+                    "seq",
+                    "Int8"
+                  ],
+                  [
+                    "oid",
+                    "Int4"
+                  ],
+                  [
+                    "ver",
+                    "Int4"
+                  ]
+                ]
+              }
+            }
+          },
+          "Jsonb",
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "7c2641e656178536cc5c92aba41d7fd20ae6bc350296758d3a96cf1cb97fb7f5": {
     "query": "select id from chroma_core_managedhost where fqdn = $1 and not_deleted = 't'",
     "describe": {
@@ -346,6 +536,160 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "82099090aa05b7da19e94f69e680755c22ef1812f11407eaafaf4db520fb9c69": {
+    "query": "SELECT * FROM chroma_core_command WHERE id = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "complete",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 2,
+          "name": "errored",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 3,
+          "name": "cancelled",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 4,
+          "name": "message",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 5,
+          "name": "created_at",
+          "type_info": "Timestamptz"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "89a7a37f26d89b7def2d6f7273fee79cd4c7fc7070343e4a4197c4080ded5003": {
+    "query": "SELECT * FROM chroma_core_task WHERE name = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 2,
+          "name": "start",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 3,
+          "name": "finish",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 4,
+          "name": "state",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 5,
+          "name": "fids_total",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 6,
+          "name": "fids_completed",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 7,
+          "name": "fids_failed",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 8,
+          "name": "data_transfered",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 9,
+          "name": "single_runner",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 10,
+          "name": "keep_failed",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 11,
+          "name": "actions",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 12,
+          "name": "args",
+          "type_info": "Jsonb"
+        },
+        {
+          "ordinal": 13,
+          "name": "filesystem_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 14,
+          "name": "running_on_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ]
     }
   },
   "8b11d7745ec336638b333bc511166314f63619293bf8b3df15fd1df807e1ee9a": {
@@ -394,6 +738,98 @@
       ]
     }
   },
+  "9edb0846023aa1a9250204fb686d5b95a95962ce20aab75cec2e906edad8eec7": {
+    "query": "\n            SELECT * from chroma_core_stepresult\n            WHERE job_id = ANY($1)\n            ORDER BY modified_at DESC\n    ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "step_klass",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "args",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "step_index",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 4,
+          "name": "step_count",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 5,
+          "name": "log",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 6,
+          "name": "console",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "backtrace",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "state",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 9,
+          "name": "modified_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 10,
+          "name": "created_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 11,
+          "name": "result",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 12,
+          "name": "job_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4Array"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false
+      ]
+    }
+  },
   "b0991443ae430ca73d4369f314b88f731ead796ec9ac353c3d237be9203c95bf": {
     "query": "UPDATE chroma_core_alertstate\n            SET active = Null, \"end\" = now()\n            WHERE\n                active = true\n                AND alert_item_id = $1\n                AND record_type = ANY($2)\n        ",
     "describe": {
@@ -438,6 +874,40 @@
         "Left": [
           "Int4",
           "Int4Array"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "c0976422207fb3d2a45cc9f4cc6182133c51442f462c867708d93260ae6a6e9c": {
+    "query": "SELECT fqdn FROM chroma_core_managedhost WHERE id = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "c1f4bafd0cac4a502df6be1e6546debc7b4afcaa98e0daa343912e4107600af0": {
+    "query": "\n            UPDATE chroma_core_task\n            SET \n                fids_completed = fids_completed + $1,\n                fids_failed = fids_failed + $2\n            WHERE id = $3",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Int4"
         ]
       },
       "nullable": []
@@ -564,6 +1034,239 @@
         false,
         false
       ]
+    }
+  },
+  "e8f95e79d22bae021629cbfef5291601d0001933bb4628538fde58fdc0a297b9": {
+    "query": "\n        select * from chroma_core_task \n        where \n            filesystem_id = $1\n            and state <> 'closed'\n            and fids_total > fids_completed \n            and (running_on_id is Null or running_on_id = $2)",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 2,
+          "name": "start",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 3,
+          "name": "finish",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 4,
+          "name": "state",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 5,
+          "name": "fids_total",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 6,
+          "name": "fids_completed",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 7,
+          "name": "fids_failed",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 8,
+          "name": "data_transfered",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 9,
+          "name": "single_runner",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 10,
+          "name": "keep_failed",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 11,
+          "name": "actions",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 12,
+          "name": "args",
+          "type_info": "Jsonb"
+        },
+        {
+          "ordinal": 13,
+          "name": "filesystem_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 14,
+          "name": "running_on_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ]
+    }
+  },
+  "ec70b9a5caeadc31f5d1359737cc1c6da64e41db8315a81d81420d3b37b182c5": {
+    "query": "\n            UPDATE chroma_core_task\n            SET running_on_id = $1\n                WHERE id = $2\n                AND running_on_id is Null",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "f41f8df43f7062267e95bb90cabcb67d07d4978f9f27e834c7ca21ab91ce99c6": {
+    "query": "SELECT * FROM chroma_core_task",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 2,
+          "name": "start",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 3,
+          "name": "finish",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 4,
+          "name": "state",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 5,
+          "name": "fids_total",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 6,
+          "name": "fids_completed",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 7,
+          "name": "fids_failed",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 8,
+          "name": "data_transfered",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 9,
+          "name": "single_runner",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 10,
+          "name": "keep_failed",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 11,
+          "name": "actions",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 12,
+          "name": "args",
+          "type_info": "Jsonb"
+        },
+        {
+          "ordinal": 13,
+          "name": "filesystem_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 14,
+          "name": "running_on_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ]
+    }
+  },
+  "f54d394219c5dfe5a5a55ea217b5b37a5768ca75f8669487b7ce0a225b8eaec4": {
+    "query": "\n        UPDATE chroma_core_task\n        SET fids_total = fids_total + $1\n        WHERE id = $2\n    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int4"
+        ]
+      },
+      "nullable": []
     }
   }
 }

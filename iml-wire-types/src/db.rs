@@ -975,6 +975,16 @@ impl From<Row> for Device {
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct Command {
+    pub id: i32,
+    pub complete: bool,
+    pub errored: bool,
+    pub cancelled: bool,
+    pub message: String,
+    pub created_at: DateTime<Utc>,
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Paths(pub BTreeSet<PathBuf>);
 

@@ -4,7 +4,7 @@
 
 use futures::channel::oneshot;
 use iml_job_scheduler_rpc::ImlJobSchedulerRpcError;
-use iml_orm::ImlOrmError;
+use iml_postgres::sqlx;
 use iml_rabbit::{self, ImlRabbitError};
 use thiserror::Error;
 use warp::reject;
@@ -12,11 +12,7 @@ use warp::reject;
 #[derive(Debug, Error)]
 pub enum ImlApiError {
     #[error(transparent)]
-    ImlDieselAsyncError(#[from] iml_orm::tokio_diesel::AsyncError),
-    #[error(transparent)]
     ImlJobSchedulerRpcError(#[from] ImlJobSchedulerRpcError),
-    #[error(transparent)]
-    ImlOrmError(#[from] ImlOrmError),
     #[error(transparent)]
     ImlRabbitError(#[from] ImlRabbitError),
     #[error("Not Found")]
@@ -25,6 +21,8 @@ pub enum ImlApiError {
     OneshotCanceled(#[from] oneshot::Canceled),
     #[error(transparent)]
     SerdeJsonError(#[from] serde_json::error::Error),
+    #[error(transparent)]
+    SqlxError(#[from] sqlx::Error),
 }
 
 impl reject::Reject for ImlApiError {}

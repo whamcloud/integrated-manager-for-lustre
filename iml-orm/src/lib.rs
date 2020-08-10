@@ -10,29 +10,9 @@ pub extern crate diesel;
 
 #[cfg(feature = "postgres-interop")]
 pub mod models;
+
 #[cfg(feature = "postgres-interop")]
 pub mod schema;
-
-#[cfg(feature = "postgres-interop")]
-pub mod clientmount;
-
-#[cfg(feature = "postgres-interop")]
-pub mod command;
-
-#[cfg(feature = "postgres-interop")]
-pub mod fidtaskqueue;
-
-#[cfg(feature = "postgres-interop")]
-pub mod filesystem;
-
-#[cfg(feature = "postgres-interop")]
-pub mod hosts;
-
-#[cfg(feature = "postgres-interop")]
-pub mod job;
-
-#[cfg(feature = "postgres-interop")]
-pub mod lustrefid;
 
 #[cfg(feature = "postgres-interop")]
 pub mod profile;
@@ -40,23 +20,12 @@ pub mod profile;
 #[cfg(feature = "postgres-interop")]
 pub mod repo;
 
-#[cfg(feature = "postgres-interop")]
-pub mod step;
-
-#[cfg(feature = "postgres-interop")]
-pub mod task;
-
 pub mod sfa;
 
 #[cfg(feature = "postgres-interop")]
 use futures::channel::oneshot;
 #[cfg(feature = "postgres-interop")]
 use thiserror::Error;
-
-#[cfg(feature = "warp-filters")]
-use futures::{channel::mpsc, future, Future, StreamExt, TryFutureExt};
-#[cfg(feature = "warp-filters")]
-use warp::Filter;
 
 #[cfg(feature = "postgres-interop")]
 use diesel::{
@@ -119,9 +88,6 @@ pub enum ImlOrmError {
     AsyncError(#[from] tokio_diesel::AsyncError),
 }
 
-#[cfg(feature = "warp-filters")]
-impl warp::reject::Reject for ImlOrmError {}
-
 #[cfg(feature = "postgres-interop")]
 /// Get a new connection pool based on the envs connection string.
 pub fn pool() -> Result<DbPool, ImlOrmError> {
@@ -130,52 +96,6 @@ pub fn pool() -> Result<DbPool, ImlOrmError> {
     Pool::builder()
         .build(manager)
         .map_err(ImlOrmError::R2D2Error)
-}
-
-#[cfg(feature = "warp-filters")]
-type PoolSender = oneshot::Sender<DbPool>;
-
-#[cfg(feature = "warp-filters")]
-pub fn get_cloned_pool(
-    pool: DbPool,
-) -> (mpsc::UnboundedSender<PoolSender>, impl Future<Output = ()>) {
-    let (tx, rx) = mpsc::unbounded();
-
-    let fut = rx.for_each(move |sender: PoolSender| {
-        let _ = sender
-            .send(pool.clone())
-            .map_err(|_| tracing::info!("channel recv dropped before we could hand out a pool"));
-
-        future::ready(())
-    });
-
-    (tx, fut)
-}
-
-/// Creates a warp `Filter` that will hand out
-/// a cloned `DbPool` handle for each request.
-#[cfg(feature = "warp-filters")]
-pub async fn create_pool_filter() -> Result<
-    (
-        impl Future<Output = ()>,
-        impl Filter<Extract = (DbPool,), Error = warp::Rejection> + Clone,
-    ),
-    ImlOrmError,
-> {
-    let conn = pool()?;
-
-    let (tx, fut) = get_cloned_pool(conn);
-
-    let filter = warp::any().and_then(move || {
-        let (tx2, rx2) = oneshot::channel();
-
-        tx.unbounded_send(tx2).unwrap();
-
-        rx2.map_err(ImlOrmError::OneshotCanceled)
-            .map_err(warp::reject::custom)
-    });
-
-    Ok((fut, filter))
 }
 
 mod change {
