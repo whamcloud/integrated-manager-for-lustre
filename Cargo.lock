@@ -1394,7 +1394,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "liblustreapi",
- "lustre_collector 0.2.13 (git+https://github.com/whamcloud/lustre-collector?branch=EX-1552)",
+ "lustre_collector",
  "mockito",
  "prettytable-rs",
  "regex",
@@ -1767,7 +1767,7 @@ dependencies = [
  "iml-tracing",
  "iml-wire-types",
  "influx_db_client",
- "lustre_collector 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lustre_collector",
  "thiserror",
  "tokio",
  "tracing",
@@ -2162,19 +2162,6 @@ dependencies = [
 name = "lustre_collector"
 version = "0.2.13"
 source = "git+https://github.com/whamcloud/lustre-collector?branch=EX-1552#b1ed914c4d6b17a6209d547f05ecce28c36fe522"
-dependencies = [
- "clap",
- "combine",
- "serde",
- "serde_json",
- "serde_yaml",
-]
-
-[[package]]
-name = "lustre_collector"
-version = "0.2.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "974ed9dd73f01640602f0e32be38ab86db2f1f37062e75a67516f51728f06489"
 dependencies = [
  "clap",
  "combine",

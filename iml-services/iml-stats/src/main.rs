@@ -363,6 +363,17 @@ fn handle_target_records(target_stats: TargetStats, host: &Fqdn) -> Option<Vec<P
                     Value::Integer(x.value as i64),
                 )])
         }
+        TargetStats::FsNames(x) => {
+            tracing::debug!("Fs names: {:?}", x);
+
+            let fs_names = x.value.into_iter().map(|x| x.0).collect::<Vec<String>>().join(",");
+            Some(vec![Point::new("target")
+                .add_tag("host", Value::String(host.0.to_string()))
+                .add_tag("kind", Value::String(x.kind.to_string()))
+                .add_tag("target", Value::String(x.target.to_string()))
+                .add_tag("fs", Value::String(fs_names))
+            ])
+        }
         TargetStats::JobStatsOst(_) => {
             // Not storing jobstats... yet.
             None
