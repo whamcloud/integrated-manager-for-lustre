@@ -4,22 +4,14 @@
 
 use futures::{future::try_join_all, lock::Mutex, TryFutureExt};
 use iml_action_client::invoke_rust_agent;
-use iml_orm::{
-    clientmount::ChromaCoreLustreclientmount as Client,
-    filesystem::ChromaCoreManagedfilesystem as Filesystem,
-    hosts::ChromaCoreManagedhost as Host,
-    task::{self, ChromaCoreTask as Task},
-    tokio_diesel::{AsyncRunQueryDsl as _, OptionalExtension as _},
-    DbPool,
-};
 use iml_postgres::{
     get_db_pool,
-    sqlx::{self, prelude::Executor, PgPool},
+    sqlx::{self, Done, Executor, PgPool},
 };
 use iml_tracing::tracing;
 use iml_wire_types::{
     db::{FidTaskQueue, LustreFid},
-    AgentResult, FidError, FidItem, TaskAction,
+    AgentResult, FidError, FidItem, LustreClient, Task, TaskAction,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -34,47 +26,83 @@ pub mod error;
 // Number of fids to chunk together
 const FID_LIMIT: i64 = 2000;
 // Number of seconds between cycles
-const DELAY: u64 = 5;
+const DELAY: Duration = Duration::from_secs(5);
 
 async fn available_workers(
-    pool: &DbPool,
+    pool: &PgPool,
     active: Arc<Mutex<HashSet<i32>>>,
-) -> Result<Vec<Client>, error::ImlTaskRunnerError> {
-    let list = active.lock().await;
-    let clients: Vec<Client> = Client::available(list.iter().copied())
-        .get_results_async(pool)
-        .await?;
+) -> Result<Vec<LustreClient>, error::ImlTaskRunnerError> {
+    let ids = active.lock().await;
+    let ids: Vec<i32> = ids.iter().copied().collect();
+
+    let clients = sqlx::query_as!(
+        LustreClient,
+        r#"
+        SELECT * FROM chroma_core_lustreclientmount
+        WHERE
+            state = 'mounted'
+            AND not_deleted = 't'
+            AND id != ALL($1)
+        "#,
+        &ids
+    )
+    .fetch_all(pool)
+    .await?;
+
     Ok(clients)
 }
 
 async fn tasks_per_worker(
-    pool: &DbPool,
-    worker: &Client,
+    pool: &PgPool,
+    worker: &LustreClient,
 ) -> Result<Vec<Task>, error::ImlTaskRunnerError> {
-    let fs_id = {
-        let fsmap: Option<Filesystem> = Filesystem::by_name(&worker.filesystem)
-            .first_async(pool)
-            .await
-            .optional()?;
-        match fsmap {
-            Some(f) => f.id,
-            None => return Ok(vec![]),
-        }
+    let fs_id = sqlx::query!(
+        "select id from chroma_core_managedfilesystem where name = $1 and not_deleted = 't'",
+        &worker.filesystem
+    )
+    .fetch_optional(pool)
+    .await?
+    .map(|x| x.id);
+
+    let fs_id = match fs_id {
+        Some(x) => x,
+        None => return Ok(vec![]),
     };
 
-    let tasks: Vec<Task> = Task::outgestable(fs_id, worker.host_id)
-        .get_results_async(pool)
-        .await?;
+    let tasks = sqlx::query_as!(
+        Task,
+        r#"
+        select * from chroma_core_task 
+        where 
+            filesystem_id = $1
+            and state <> 'closed'
+            and fids_total > fids_completed 
+            and (running_on_id is Null or running_on_id = $2)"#,
+        fs_id,
+        worker.host_id
+    )
+    .fetch_all(pool)
+    .await?;
+
     Ok(tasks)
 }
 
-async fn worker_fqdn(pool: &DbPool, worker: &Client) -> Result<String, error::ImlTaskRunnerError> {
-    let host: Host = Host::by_id(worker.host_id).first_async(pool).await?;
-    Ok(host.fqdn)
+async fn worker_fqdn(
+    pool: &PgPool,
+    worker: &LustreClient,
+) -> Result<String, error::ImlTaskRunnerError> {
+    let fqdn = sqlx::query!(
+        "SELECT fqdn FROM chroma_core_managedhost WHERE id = $1",
+        worker.host_id
+    )
+    .fetch_one(pool)
+    .await
+    .map(|x| x.fqdn)?;
+
+    Ok(fqdn)
 }
 
 async fn send_work(
-    orm_pool: &DbPool,
     pg_pool: &PgPool,
     fqdn: &str,
     fsname: &str,
@@ -92,10 +120,21 @@ async fn send_work(
             fqdn,
             host_id
         );
-        let rc = task::set_running_on(task.id, host_id)
-            .execute_async(orm_pool)
-            .await?;
-        if rc == 1 {
+
+        let cnt = sqlx::query!(
+            r#"
+            UPDATE chroma_core_task
+            SET running_on_id = $1
+                WHERE id = $2
+                AND running_on_id is Null"#,
+            host_id,
+            task.id
+        )
+        .execute(pg_pool)
+        .await?
+        .rows_affected();
+
+        if cnt == 1 {
             tracing::info!(
                 "Set Task {} ({}) running on host {} ({})",
                 task.name,
@@ -108,8 +147,9 @@ async fn send_work(
                 "Failed to Set Task {} running_on to host {}: {}",
                 task.name,
                 fqdn,
-                rc
+                cnt
             );
+
             return Ok(0);
         }
     }
@@ -213,9 +253,19 @@ async fn send_work(
     trans.commit().await?;
 
     if completed > 0 || failed > 0 {
-        task::increase_finished(task.id, completed as i64, failed as i64)
-            .execute_async(orm_pool)
-            .await?;
+        sqlx::query!(
+            r#"
+            UPDATE chroma_core_task
+            SET 
+                fids_completed = fids_completed + $1,
+                fids_failed = fids_failed + $2
+            WHERE id = $3"#,
+            completed as i64,
+            failed as i64,
+            task.id
+        )
+        .execute(pg_pool)
+        .await?;
     }
 
     Ok(completed as i64)
@@ -225,65 +275,63 @@ async fn send_work(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    let orm_pool = iml_orm::pool()?;
     let pg_pool = get_db_pool(5).await?;
-    let activeclients = Arc::new(Mutex::new(HashSet::new()));
+    let active_clients = Arc::new(Mutex::new(HashSet::new()));
+    let mut interval = time::interval(DELAY);
 
     // Task Runner Loop
-    let mut interval = time::interval(Duration::from_secs(DELAY));
     loop {
         interval.tick().await;
 
-        let workers = available_workers(&orm_pool, activeclients.clone())
+        let workers = available_workers(&pg_pool, Arc::clone(&active_clients))
             .await
             .unwrap_or_default();
 
-        activeclients
+        active_clients
             .lock()
             .await
             .extend(workers.iter().map(|w| w.id));
 
         tokio::spawn({
-            let pg_pool = pg_pool.clone();
             try_join_all(workers.into_iter().map(|worker| {
                 let pg_pool = pg_pool.clone();
-                let fsname = worker.filesystem.clone();
-                let orm_pool = orm_pool.clone();
-                let activeclients = activeclients.clone();
+                let active_clients = Arc::clone(&active_clients);
 
                 async move {
-                    let tasks = tasks_per_worker(&orm_pool, &worker).await?;
-                    let fqdn = worker_fqdn(&orm_pool, &worker).await?;
+                    let tasks = tasks_per_worker(&pg_pool, &worker).await?;
+                    let fqdn = worker_fqdn(&pg_pool, &worker).await?;
                     let host_id = worker.host_id;
 
-                    let rc =
-                        try_join_all(tasks.into_iter().map(|task| {
-                            let pg_pool = pg_pool.clone();
-                            let orm_pool = orm_pool.clone();
-                            let fsname = fsname.clone();
-                            let fqdn = fqdn.clone();
-                            async move {
-                                let mut count = 0;
-                                loop {
-                                    let rc = send_work(
-                                        &orm_pool, &pg_pool, &fqdn, &fsname, &task, host_id,
-                                    )
+                    let rc = try_join_all(tasks.into_iter().map(|task| {
+                        let pg_pool = pg_pool.clone();
+                        let fsname = &worker.filesystem;
+                        let fqdn = &fqdn;
+
+                        async move {
+                            let mut count = 0;
+
+                            loop {
+                                let rc = send_work(&pg_pool, &fqdn, &fsname, &task, host_id)
                                     .await
                                     .map_err(|e| {
                                         tracing::warn!("send_work({}) failed {:?}", task.name, e);
                                         e
                                     })?;
-                                    count += 1;
-                                    if rc < FID_LIMIT || count > 10 {
-                                        break;
-                                    }
-                                }
-                                Ok::<_, error::ImlTaskRunnerError>(())
-                            }
-                        }))
-                        .await;
 
-                    activeclients.lock().await.remove(&worker.id);
+                                count += 1;
+
+                                if rc < FID_LIMIT || count > 10 {
+                                    break;
+                                }
+                            }
+
+                            Ok::<_, error::ImlTaskRunnerError>(())
+                        }
+                    }))
+                    .await;
+
+                    active_clients.lock().await.remove(&worker.id);
+
                     rc
                 }
             }))

@@ -7,6 +7,7 @@ pub mod db;
 pub mod snapshot;
 pub mod warp_drive;
 
+use chrono::{DateTime, Utc};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{
     cmp::{Ord, Ordering},
@@ -1769,6 +1770,38 @@ pub struct FidError {
 pub struct FidItem {
     pub fid: String,
     pub data: serde_json::Value,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct Task {
+    pub id: i32,
+    pub name: String,
+    pub start: DateTime<Utc>,
+    pub finish: Option<DateTime<Utc>>,
+    pub state: String,
+    pub fids_total: i64,
+    pub fids_completed: i64,
+    pub fids_failed: i64,
+    pub data_transfered: i64,
+    pub single_runner: bool,
+    pub keep_failed: bool,
+    pub actions: Vec<String>,
+    pub args: serde_json::Value,
+    pub filesystem_id: i32,
+    pub running_on_id: Option<i32>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct LustreClient {
+    pub id: i32,
+    pub state_modified_at: DateTime<Utc>,
+    pub state: String,
+    pub immutable_state: bool,
+    pub not_deleted: Option<bool>,
+    pub content_type_id: Option<i32>,
+    pub filesystem: String,
+    pub host_id: i32,
+    pub mountpoints: Vec<String>,
 }
 
 #[derive(Debug, Eq, Clone, serde::Serialize, serde::Deserialize)]
