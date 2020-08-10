@@ -270,7 +270,6 @@
           "name": "fid: _",
           "type_info": {
             "Custom": {
-              "oid": 29102,
               "name": "lustre_fid",
               "kind": {
                 "Composite": [
@@ -510,7 +509,6 @@
         "Left": [
           {
             "Custom": {
-              "oid": 29102,
               "name": "lustre_fid",
               "kind": {
                 "Composite": [
