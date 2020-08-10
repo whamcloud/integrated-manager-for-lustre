@@ -179,6 +179,14 @@ impl From<&str> for ActionName {
     }
 }
 
+impl Deref for ActionName {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.0.as_str()
+    }
+}
+
 impl From<String> for ActionName {
     fn from(name: String) -> Self {
         Self(name)
