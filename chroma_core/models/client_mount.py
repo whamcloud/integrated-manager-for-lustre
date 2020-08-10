@@ -102,7 +102,7 @@ class MountLustreFilesystemsStep(Step):
     def run(self, kwargs):
         host = kwargs["host"]
         filesystems = kwargs["filesystems"]
-        self.invoke_agent(host, "mount_lustre_filesystems", {"filesystems": filesystems})
+        self.invoke_rust_agent(host, "mount_many", filesystems)
 
 
 class UnmountLustreFilesystemsStep(Step):
@@ -117,7 +117,7 @@ class UnmountLustreFilesystemsStep(Step):
     def run(self, kwargs):
         host = kwargs["host"]
         filesystems = kwargs["filesystems"]
-        self.invoke_agent(host, "unmount_lustre_filesystems", {"filesystems": filesystems})
+        self.invoke_rust_agent(host, "unmount_many", filesystems)
 
 
 class DeleteLustreClientMountStep(Step):
@@ -166,11 +166,14 @@ class MountLustreClientJob(StateChangeJob):
             else "/mnt/{}".format(self.lustre_client_mount.filesystem)
         )
 
-        args = {"host": host.get("fqdn"), "filesystems": [(filesystem.mount_path(), mountpoint)]}
+        args = {
+            "host": host.get("fqdn"),
+            "filesystems": [{"mountspec": filesystem.mount_path(), "mountpoint": mountpoint, "persist": False}],
+        }
         return [(MountLustreFilesystemsStep, args)]
 
     def get_deps(self):
-        return DependOn(LNetConfiguration.objects.get(host_id=self.lustre_client_mount.host_id), "lnet_up",)
+        return DependOn(LNetConfiguration.objects.get(host_id=self.lustre_client_mount.host_id), "lnet_up")
 
     class Meta:
         app_label = "chroma_core"
@@ -206,8 +209,9 @@ class UnmountLustreClientMountJob(StateChangeJob):
         host = ManagedHost.objects.filter(id=client_mount.host_id).values("fqdn").first()
         filesystem = ManagedFilesystem.objects.get(name=client_mount.filesystem)
         mount_path = filesystem.mount_path()
+        filesystems = [{"mountspec": mount_path, "mountpoint": x} for x in client_mount.mountpoints]
 
-        args = {"host": host.get("fqdn"), "filesystems": [(mount_path, x) for x in client_mount.mountpoints]}
+        args = {"host": host.get("fqdn"), "filesystems": filesystems}
         return [(UnmountLustreFilesystemsStep, args)]
 
     class Meta:
@@ -284,7 +288,7 @@ class MountLustreFilesystemsJob(AdvertisedJob):
 
     @classmethod
     def can_run(cls, host):
-        if not host.is_worker:
+        if host.immutable_state:
             return False
 
         cnt = LustreClientMount.objects.filter(state="unmounted", host=host).count()
@@ -306,10 +310,11 @@ class MountLustreFilesystemsJob(AdvertisedJob):
         args = {
             "host": self.host,
             "filesystems": [
-                (
-                    ManagedFilesystem.objects.get(name=m.filesystem).mount_path(),
-                    m.mountpoints[0] if m.mountpoints else "/mnt/{}".format(m.filesystem),
-                )
+                {
+                    "mountspec": ManagedFilesystem.objects.get(name=m.filesystem).mount_path(),
+                    "mountpoint": m.mountpoints[0] if m.mountpoints else "/mnt/{}".format(m.filesystem),
+                    "persist": False,
+                }
                 for m in unmounted
             ],
         }
@@ -354,7 +359,7 @@ class UnmountLustreFilesystemsJob(AdvertisedJob):
 
     @classmethod
     def can_run(cls, host):
-        if not host.is_worker:
+        if host.immutable_state:
             return False
 
         cnt = LustreClientMount.objects.filter(state="mounted", host=host).count()
@@ -378,7 +383,7 @@ class UnmountLustreFilesystemsJob(AdvertisedJob):
         for m in mounted:
             mount_path = ManagedFilesystem.objects.get(name=m.filesystem).mount_path()
 
-            filesystems.extend([(mount_path, x) for x in m.mountpoints])
+            filesystems.extend([{"mountspec": mount_path, "mountpoint": x} for x in m.mountpoints])
 
         args = {
             "host": self.host,
