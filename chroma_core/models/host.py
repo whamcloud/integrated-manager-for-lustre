@@ -1788,22 +1788,31 @@ class NoNidsPresent(Exception):
 class CreateSnapshotStep(Step):
     def run(self, kwargs):
         self.invoke_rust_agent_expect_result(
-            kwargs["host"], "snapshot_create", [kwargs["fsname"], kwargs["name"], kwargs["comment"]]
+            kwargs["host"],
+            "snapshot_create",
+            {"fsname": kwargs["fsname"], "name": kwargs["name"], "comment": kwargs["comment"]},
         )
 
 
 class DestroySnapshotStep(Step):
     def run(self, kwargs):
         self.invoke_rust_agent_expect_result(
-            kwargs["host"], "snapshot_destroy", [kwargs["fsname"], kwargs["name"], kwargs["force"]]
+            kwargs["host"],
+            "snapshot_destroy",
+            {"fsname": kwargs["fsname"], "name": kwargs["name"], "force": kwargs["force"]},
         )
 
 
 class MountSnapshotStep(Step):
     def run(self, kwargs):
-        self.invoke_rust_agent_expect_result(kwargs["host"], "snapshot_mount", [kwargs["fsname"], kwargs["name"]])
+        self.invoke_rust_agent_expect_result(
+            kwargs["host"], "snapshot_mount", {"fsname": kwargs["fsname"], "name": kwargs["name"]}
+        )
 
 
 class UnmountSnapshotStep(Step):
     def run(self, kwargs):
-        self.invoke_rust_agent_expect_result(kwargs["host"], "snapshot_unmount", [kwargs["fsname"], kwargs["name"]])
+        self.invoke_rust_agent_expect_result(
+            kwargs["host"], "snapshot_unmount", {"fsname": kwargs["fsname"], "name": kwargs["name"]}
+        )
+
