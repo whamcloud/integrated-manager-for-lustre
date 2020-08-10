@@ -7,10 +7,6 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum ImlTaskRunnerError {
     #[error(transparent)]
-    AsyncError(#[from] iml_orm::tokio_diesel::AsyncError),
-    #[error(transparent)]
-    R2D2Error(#[from] iml_orm::r2d2::Error),
-    #[error(transparent)]
     ImlPgError(#[from] iml_postgres::Error),
     #[error(transparent)]
     JsonError(#[from] serde_json::Error),

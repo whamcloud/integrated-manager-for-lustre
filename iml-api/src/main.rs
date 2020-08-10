@@ -7,7 +7,7 @@ mod command;
 mod error;
 mod task;
 
-use iml_orm::create_pool_filter;
+use iml_postgres::get_db_pool;
 use iml_rabbit::{self, create_connection_filter};
 use iml_wire_types::Conf;
 use warp::Filter;
@@ -32,14 +32,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = iml_rabbit::connect_to_rabbit(2);
 
     let conn_filter = create_connection_filter(pool);
-    let (pool_fut, pool_filter) = create_pool_filter().await?;
 
-    tokio::spawn(pool_fut);
+    let pool = get_db_pool(5).await?;
+    let db_pool_filter = warp::any().map(move || pool.clone());
 
     let routes = warp::path("conf")
         .map(move || warp::reply::json(&conf))
         .or(action::endpoint(conn_filter.clone()))
-        .or(task::endpoint(conn_filter, pool_filter));
+        .or(task::endpoint(conn_filter, db_pool_filter));
 
     tracing::info!("Starting on {:?}", addr);
 

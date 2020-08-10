@@ -3,35 +3,47 @@
 // license that can be found in the LICENSE file.
 
 use crate::error::ImlApiError;
-use iml_orm::{
-    command::ChromaCoreCommand,
-    job::ChromaCoreJob,
-    step::ChromaCoreStepresult,
-    tokio_diesel::{AsyncRunQueryDsl as _, OptionalExtension as _},
-    DbPool,
-};
-use iml_wire_types::{Command, EndpointName as _, TestHostJob};
+use iml_postgres::{sqlx, PgPool};
+use iml_wire_types::{db::Command as DbCommand, Command, EndpointName as _, TestHostJob};
 use itertools::Itertools;
 
-pub(crate) async fn get_command(pool: &DbPool, id: i32) -> Result<Command, ImlApiError> {
-    let cmd: ChromaCoreCommand = ChromaCoreCommand::by_id(id)
-        .first_async(&pool)
-        .await
-        .optional()?
-        .ok_or_else(|| ImlApiError::NoneError)?;
+pub(crate) async fn get_command(pool: &PgPool, id: i32) -> Result<Command, ImlApiError> {
+    let cmd = sqlx::query_as!(
+        DbCommand,
+        "SELECT * FROM chroma_core_command WHERE id = $1",
+        id
+    )
+    .fetch_one(pool)
+    .await?;
 
-    let jobs: Vec<ChromaCoreJob> = ChromaCoreJob::by_cmdjob(id)
-        .get_results_async(&pool)
-        .await?;
+    let jobs = sqlx::query!(
+        r#"
+        SELECT * FROM chroma_core_job
+        WHERE id IN (SELECT job_id from chroma_core_command_jobs
+            WHERE command_id = $1)
+    "#,
+        id
+    )
+    .fetch_all(pool)
+    .await?;
 
-    let steps: Vec<ChromaCoreStepresult> = ChromaCoreStepresult::by_jobs(jobs.iter().map(|j| j.id))
-        .get_results_async(&pool)
-        .await?;
+    let job_ids: Vec<i32> = jobs.iter().map(|x| x.id).collect();
+
+    let steps = sqlx::query!(
+        r#"
+            SELECT * from chroma_core_stepresult
+            WHERE job_id = ANY($1)
+            ORDER BY modified_at DESC
+    "#,
+        &job_ids
+    )
+    .fetch_all(pool)
+    .await?;
 
     Ok(Command {
         cancelled: cmd.cancelled,
         complete: cmd.complete,
-        created_at: format!("{}", cmd.created_at),
+        created_at: cmd.created_at.format("%Y-%m-%dT%T%.6f%:").to_string(),
         errored: cmd.errored,
         id: cmd.id,
         message: cmd.message,
