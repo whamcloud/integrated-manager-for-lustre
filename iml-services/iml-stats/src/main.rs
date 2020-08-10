@@ -12,7 +12,7 @@ use lustre_collector::{
     HostStats, LNetStats, NodeStats, Record, Target, TargetStats,
     {
         types::{BrwStats, TargetVariant},
-        Stat, TargetStat,
+        FsName, Stat, TargetStat,
     },
 };
 use url::Url;
@@ -366,13 +366,17 @@ fn handle_target_records(target_stats: TargetStats, host: &Fqdn) -> Option<Vec<P
         TargetStats::FsNames(x) => {
             tracing::debug!("Fs names: {:?}", x);
 
-            let fs_names = x.value.into_iter().map(|x| x.0).collect::<Vec<String>>().join(",");
+            let fs_names = x
+                .value
+                .into_iter()
+                .map(|x| x.0)
+                .collect::<Vec<String>>()
+                .join(",");
             Some(vec![Point::new("target")
                 .add_tag("host", Value::String(host.0.to_string()))
                 .add_tag("kind", Value::String(x.kind.to_string()))
                 .add_tag("target", Value::String(x.target.to_string()))
-                .add_field("mgs_fs", Value::String(fs_names))
-            ])
+                .add_field("mgs_fs", Value::String(fs_names))])
         }
         TargetStats::JobStatsOst(_) => {
             // Not storing jobstats... yet.
@@ -488,6 +492,8 @@ async fn main() -> Result<(), ImlStatsError> {
             get_influxdb_metrics_db(),
         );
 
+        prepare_records(&xs, &client).await?;
+
         let entries: Vec<_> = xs
             .into_iter()
             .filter_map(|record| match record {
@@ -511,6 +517,59 @@ async fn main() -> Result<(), ImlStatsError> {
             if let Err(e) = r {
                 tracing::error!("Error writing series to influxdb: {}", e);
             }
+        }
+    }
+
+    Ok(())
+}
+
+async fn prepare_records(xs: &[Record], client: &Client) -> Result<(), ImlStatsError> {
+    let filtered_records = xs
+        .iter()
+        .filter_map(|record| match record {
+            Record::Target(x) => match x {
+                TargetStats::FsNames(x) => Some(x),
+                _ => None,
+            },
+            _ => None,
+        })
+        .collect::<Vec<&TargetStat<Vec<FsName>>>>();
+
+    for x in filtered_records {
+        let r = client
+            .query(
+                format!(
+                    "SELECT target,mgs_fs FROM target WHERE target='{}'",
+                    x.target.to_string()
+                )
+                .as_str(),
+                Some(Precision::Nanoseconds),
+            )
+            .await?;
+
+        if let Some(nodes) = r {
+            let items = nodes
+                .into_iter()
+                .filter_map(|x| x.series)
+                .map(|xs| {
+                    let s = xs
+                        .into_iter()
+                        .map(|x| {
+                            x.values
+                                .into_iter()
+                                .map(|x| x)
+                                .collect::<Vec<Vec<serde_json::value::Value>>>()
+                        })
+                        .flatten()
+                        .collect::<Vec<Vec<serde_json::Value>>>();
+
+                    s
+                })
+                .flatten()
+                .filter_map(|xs| xs.first().map(|x| x.clone()))
+                .collect::<Vec<serde_json::Value>>();
+
+            tracing::debug!("preparing records. items: {:?}", items);
         }
     }
 

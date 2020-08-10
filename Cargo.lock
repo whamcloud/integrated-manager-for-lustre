@@ -1768,6 +1768,7 @@ dependencies = [
  "iml-wire-types",
  "influx_db_client",
  "lustre_collector",
+ "serde_json",
  "thiserror",
  "tokio",
  "tracing",
