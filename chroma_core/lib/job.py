@@ -238,17 +238,21 @@ class Step(object):
         Talks to the iml-action-runner service
         """
 
-        return invoke_rust_agent(host, command, args, self._cancel_event)
+        from chroma_core.services.job_scheduler.agent_rpc import AgentException
+
+        try:
+            return invoke_rust_agent(host, command, args, self._cancel_event)
+        except RustAgentCancellation as e:
+            raise AgentException(host, command, args, "Cancelled: {}; command: {}; args: {}".format(e, command, args))
+        except Exception as e:
+            raise AgentException(
+                host, command, args, "Unexpected error: {}; command: {}; args: {}".format(e, command, args)
+            )
 
     def invoke_rust_agent_expect_result(self, host, command, args={}):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
 
-        try:
-            result = self.invoke_rust_agent(host, command, args)
-        except RustAgentCancellation as e:
-            raise AgentException(host, command, args, "Cancelled: {}".format(e))
-        except Exception as e:
-            raise AgentException(host, command, args, "Unexpected error: {}".format(e))
+        result = self.invoke_rust_agent(host, command, args)
 
         try:
             result = json.loads(result)

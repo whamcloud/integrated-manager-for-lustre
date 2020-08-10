@@ -14,7 +14,7 @@ use iml_agent::action_plugins::{
         },
     },
 };
-use iml_wire_types::snapshot;
+use iml_wire_types::{client, snapshot};
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
 use spinners::{Spinner, Spinners};
@@ -261,6 +261,14 @@ pub enum SnapshotCommand {
     Unmount(snapshot::Unmount),
 }
 
+#[derive(Debug, StructOpt)]
+pub enum MountCommand {
+    /// Mount a client
+    Mount(client::Mount),
+    /// Unmount a client
+    Unmount(client::Unmount),
+}
+
 #[derive(StructOpt, Debug)]
 #[structopt(name = "iml-agent", setting = structopt::clap::AppSettings::ColoredHelp)]
 /// The Integrated Manager for Lustre Agent CLI
@@ -312,10 +320,8 @@ pub enum App {
     #[structopt(name = "mount")]
     /// Mount lustre device
     Mount {
-        /// For example, 10.73.20.11@tcp0:10.73.20.12@tcp0:/fs2
-        lustre_device: String,
-        /// For example, /mnt/fs2
-        mount_point: String,
+        #[structopt(subcommand)]
+        command: MountCommand,
     },
 
     #[structopt(name = "create_ltuer_conf")]
@@ -644,16 +650,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 exit(exitcode::SOFTWARE);
             }
         },
-        App::Mount {
-            lustre_device,
-            mount_point,
-        } => match lustre::mount((lustre_device, mount_point)).await {
-            Ok(()) => println!("Done"),
-            Err(e) => {
-                eprintln!("{:?}", e);
+        App::Mount { command } => {
+            if let Err(e) = match command {
+                MountCommand::Mount(m) => lustre::client::mount(m).await,
+                MountCommand::Unmount(u) => lustre::client::unmount(u).await,
+            } {
+                eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
             }
-        },
+        }
+
         App::Pool { command } => {
             if let Err(e) = match command {
                 PoolCommand::Create { cmd } => ostpool::pool_create(cmd.filesystem, cmd.pool).await,
