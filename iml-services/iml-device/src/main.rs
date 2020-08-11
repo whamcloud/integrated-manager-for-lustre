@@ -13,14 +13,17 @@ use iml_device::{
     },
     update_client_mounts, update_devices, Cache, ImlDeviceError,
 };
+use iml_manager_env::{get_influxdb_addr, get_influxdb_metrics_db};
 use iml_postgres::{get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
+use influx_db_client::{Client, Precision};
 use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
 };
+use url::Url;
 use warp::Filter;
 
 #[tokio::main]
@@ -97,6 +100,8 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let lustreclientmount_ct_id = client_mount_content_id(&pool).await?;
 
+    let influx_url: String = format!("http://{}", get_influxdb_addr());
+
     let mut mount_cache = HashMap::new();
     let mut target_cache = create_target_cache(&pool).await?;
 
@@ -116,6 +121,41 @@ async fn main() -> Result<(), ImlDeviceError> {
                 .map_ok(|x| (Fqdn(x.fqdn), x.id))
                 .try_collect()
                 .await?;
+
+        // Get target to fs mapping
+        let influx_client = Client::new(
+            Url::parse(&influx_url).expect("Influx URL is invalid."),
+            get_influxdb_metrics_db(),
+        );
+
+        let target_to_fs_query = influx_client.query("select target,fs,bytes_free from target group by target order by time desc limit 1;", Some(Precision::Nanoseconds))
+            .await?;
+
+        let target_to_fs = if let Some(nodes) = target_to_fs_query {
+            tracing::debug!("nodes: {:?}", nodes);
+            nodes
+                .into_iter()
+                .filter_map(|x| x.series)
+                .map(|xs| {
+                    xs.into_iter()
+                        .filter_map(|x| x.tags)
+                        .filter_map(|x| {
+                            x.get("target").map(|target| {
+                                x.get("fs")
+                                    .map(|fs| return Some((target.to_string(), fs.to_string())))
+                            });
+
+                            None
+                        })
+                        .collect::<Vec<(String, String)>>()
+                })
+                .flatten()
+                .collect::<HashMap<String, String>>()
+        } else {
+            HashMap::new()
+        };
+
+        tracing::debug!("target_to_fs: {:?}", target_to_fs);
 
         let targets = find_targets(&device_cache, &mount_cache, &host_ids, &index);
         targets.update_cache(&mut target_cache);

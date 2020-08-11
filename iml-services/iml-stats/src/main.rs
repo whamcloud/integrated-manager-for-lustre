@@ -492,7 +492,7 @@ async fn main() -> Result<(), ImlStatsError> {
             get_influxdb_metrics_db(),
         );
 
-        prepare_records(&xs, &client).await?;
+        delete_existing_mgs_fs_records(&xs, &client).await?;
 
         let entries: Vec<_> = xs
             .into_iter()
@@ -523,7 +523,10 @@ async fn main() -> Result<(), ImlStatsError> {
     Ok(())
 }
 
-async fn prepare_records(xs: &[Record], client: &Client) -> Result<(), ImlStatsError> {
+async fn delete_existing_mgs_fs_records(
+    xs: &[Record],
+    client: &Client,
+) -> Result<(), ImlStatsError> {
     let filtered_records = xs
         .iter()
         .filter_map(|record| match record {
@@ -552,8 +555,7 @@ async fn prepare_records(xs: &[Record], client: &Client) -> Result<(), ImlStatsE
                 .into_iter()
                 .filter_map(|x| x.series)
                 .map(|xs| {
-                    let s = xs
-                        .into_iter()
+                    xs.into_iter()
                         .map(|x| {
                             x.values
                                 .into_iter()
@@ -561,16 +563,18 @@ async fn prepare_records(xs: &[Record], client: &Client) -> Result<(), ImlStatsE
                                 .collect::<Vec<Vec<serde_json::value::Value>>>()
                         })
                         .flatten()
-                        .collect::<Vec<Vec<serde_json::Value>>>();
-
-                    s
+                        .collect::<Vec<Vec<serde_json::Value>>>()
                 })
                 .flatten()
                 .filter_map(|xs| xs.first().map(|x| x.clone()))
                 .collect::<Vec<serde_json::Value>>();
 
             for timestamp in timestamps {
-                client.query(format!("DELETE FROM target WHERE time = {}", timestamp).as_str(), Some(Precision::Nanoseconds))
+                client
+                    .query(
+                        format!("DELETE FROM target WHERE time = {}", timestamp).as_str(),
+                        Some(Precision::Nanoseconds),
+                    )
                     .await?;
             }
         }
