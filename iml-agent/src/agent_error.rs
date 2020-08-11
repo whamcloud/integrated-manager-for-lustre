@@ -102,6 +102,7 @@ pub enum ImlAgentError {
     Utf8Error(std::str::Utf8Error),
     XmlError(elementtree::Error),
     LdevEntriesError(String),
+    CombineEasyError(combine::stream::easy::Errors<char, String, usize>),
 }
 
 impl std::fmt::Display for ImlAgentError {
@@ -137,6 +138,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::Utf8Error(ref err) => write!(f, "{}", err),
             ImlAgentError::XmlError(ref err) => write!(f, "{}", err),
             ImlAgentError::LdevEntriesError(ref err) => write!(f, "{}", err),
+            ImlAgentError::CombineEasyError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -174,6 +176,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::Utf8Error(ref err) => Some(err),
             ImlAgentError::XmlError(ref err) => Some(err),
             ImlAgentError::LdevEntriesError(_) => None,
+            ImlAgentError::CombineEasyError(ref err) => Some(err),
         }
     }
 }

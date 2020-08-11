@@ -3,7 +3,31 @@
 // license that can be found in the LICENSE file.
 
 use crate::{agent_error::ImlAgentError, lustre::lctl};
-use iml_wire_types::snapshot::{Create, Destroy, Mount, Unmount};
+use combine::{stream::easy, EasyParser};
+use iml_wire_types::snapshot::{Create, Destroy, List, Mount, Snapshot, Unmount};
+
+mod parse;
+
+pub async fn list(l: List) -> Result<Vec<Snapshot>, ImlAgentError> {
+    let mut args = vec!["snapshot_list", "--fsname", &l.fsname];
+    if let Some(name) = &l.name {
+        args.push("--name");
+        args.push(name);
+    }
+    if l.detail {
+        args.push("--detail");
+    }
+    let stdout = lctl(args).await?;
+    parse_snapshot_list(&stdout).map_err(ImlAgentError::CombineEasyError)
+}
+
+fn parse_snapshot_list(input: &str) -> Result<Vec<Snapshot>, easy::Errors<char, String, usize>> {
+    let (snapshots, _) = parse::parse().easy_parse(input).map_err(|err| {
+        err.map_position(|p| p.translate_position(input))
+            .map_range(String::from)
+    })?;
+    Ok(snapshots)
+}
 
 pub async fn create(c: Create) -> Result<(), ImlAgentError> {
     let mut args = vec!["snapshot_create", "--fsname", &c.fsname, "--name", &c.name];
