@@ -255,9 +255,7 @@ server {
     }
 
     location ~ /report/(.+)$ {
-        if ($ssl_client_verify != SUCCESS) {
-            return 401;
-        }
+        auth_request /auth;
 
         sendfile on;
         tcp_nopush on;

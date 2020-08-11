@@ -28,6 +28,7 @@ class Command(BaseCommand):
         config = {
             "WARP_DRIVE_PORT": settings.WARP_DRIVE_PORT,
             "MAILBOX_PORT": settings.MAILBOX_PORT,
+            "REPORT_PORT": settings.REPORT_PORT,
             "DEVICE_AGGREGATOR_PORT": settings.DEVICE_AGGREGATOR_PORT,
             "HTTP_FRONTEND_PORT": settings.HTTP_FRONTEND_PORT,
             "HTTPS_FRONTEND_PORT": settings.HTTPS_FRONTEND_PORT,
@@ -39,6 +40,7 @@ class Command(BaseCommand):
             "IML_API_PROXY_PASS": settings.IML_API_PROXY_PASS,
             "WARP_DRIVE_PROXY_PASS": settings.WARP_DRIVE_PROXY_PASS,
             "MAILBOX_PROXY_PASS": settings.MAILBOX_PROXY_PASS,
+            "REPORT_PROXY_PASS": settings.REPORT_PROXY_PASS,
             "SSL_PATH": settings.SSL_PATH,
             "DEVICE_AGGREGATOR_PROXY_PASS": settings.DEVICE_AGGREGATOR_PROXY_PASS,
             "UPDATE_HANDLER_PROXY_PASS": settings.UPDATE_HANDLER_PROXY_PASS,
@@ -56,6 +58,7 @@ class Command(BaseCommand):
             "API_USER": API_USER,
             "API_KEY": API_KEY,
             "MAILBOX_PATH": settings.MAILBOX_PATH,
+            "REPORT_PATH": settings.REPORT_PATH,
             "PROXY_HOST": settings.PROXY_HOST,
             "INFLUXDB_IML_DB": settings.INFLUXDB_IML_DB,
             "INFLUXDB_STRATAGEM_SCAN_DB": settings.INFLUXDB_STRATAGEM_SCAN_DB,
