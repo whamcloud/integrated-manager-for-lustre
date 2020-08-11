@@ -96,7 +96,7 @@ class HostTestValidation(HostValidation):
                     if not len(private_key.strip()):
                         errors["private_key"].append(self.mandatory_message)
         except KeyError:
-            #  What?  Now auth_type? assume existing key default case.
+            #  What?  Now auth_type? Assume existing key default case.
             pass
 
         return errors
@@ -135,10 +135,8 @@ class ServerProfileResource(ChromaModelResource):
 
 
 class ClientMountResource(ChromaModelResource):
-    # This resource is only used for integration testing.
-
     host = fields.ToOneField("chroma_api.host.HostResource", "host")
-    filesystem = fields.ToOneField("chroma_api.filesystem.FilesystemResource", "filesystem")
+    filesystem = fields.CharField()
     mountpoint = fields.CharField()
 
     class Meta:
@@ -157,7 +155,7 @@ class ClientMountResource(ChromaModelResource):
     def obj_create(self, bundle, **kwargs):
         request = bundle.request
         host = self.fields["host"].hydrate(bundle).obj
-        filesystem = self.fields["filesystem"].hydrate(bundle).obj
+        filesystem = ManagedFilesystem.objects.get(name=bundle.data["filesystem"])
         mountpoint = bundle.data["mountpoint"]
 
         client_mount = JobSchedulerClient.create_client_mount(host, filesystem, mountpoint)
@@ -209,7 +207,7 @@ class HostResource(StatefulModelResource, BulkResourceOperation):
         search = lambda cm: cm.host == bundle.obj
         mounts = ObjectCache.get(LustreClientMount, search)
         return [
-            {"filesystem_name": mount.filesystem.name, "mountpoint": mount.mountpoint, "state": mount.state}
+            {"filesystem_name": mount.filesystem, "mountpoints": mount.mountpoints, "state": mount.state}
             for mount in mounts
         ]
 
@@ -418,136 +416,3 @@ class HostTestResource(Resource, BulkResourceOperation):
             )
 
         self._bulk_operation(_test_host_contact, "command", bundle, bundle.request, **kwargs)
-
-
-class HostProfileResource(Resource, BulkResourceOperation):
-    """
-    Get and set profiles associated with hosts.
-    """
-
-    class Meta:
-        list_allowed_methods = ["get", "post"]
-        detail_allowed_methods = ["get", "put"]
-        resource_name = "host_profile"
-        authentication = AnonymousAuthentication()
-        authorization = PatchedDjangoAuthorization()
-        object_class = dict
-
-    def get_resource_uri(self, bundle_or_obj=None):
-        url_name = "api_dispatch_list"
-
-        if bundle_or_obj is not None:
-            url_name = "api_dispatch_detail"
-
-        kwargs = {"resource_name": self._meta.resource_name, "api_name": self._meta.api_name}
-
-        if isinstance(bundle_or_obj, Bundle):
-            kwargs["pk"] = bundle_or_obj.obj.id
-        elif bundle_or_obj is not None:
-            kwargs["pk"] = bundle_or_obj.id
-
-        return self._build_reverse_url(url_name, kwargs=kwargs)
-
-    def full_dehydrate(self, bundle, for_list=False):
-        return bundle.obj
-
-    HostProfiles = namedtuple("HostProfiles", ["profiles", "valid"])
-
-    def get_profiles(self, host, request):
-        properties = json.loads(host.properties)
-
-        filters = {}
-        for filter in request.GET:
-            match = re.search("^server_profile__(.*)", filter)
-            if match:
-                filters[match.group(1)] = request.GET[filter]
-
-        result = {}
-        for profile in ServerProfile.objects.filter(**filter_fields_to_type(ServerProfile, filters)):
-            tests = result[profile.name] = []
-            for validation in profile.serverprofilevalidation_set.all():
-                error = ""
-
-                if properties == {}:
-                    test = False
-                    error = "Result unavailable while host agent starts"
-                else:
-                    try:
-                        test = safe_eval(validation.test, properties)
-                    except Exception as error:
-                        test = False
-
-                tests.append(
-                    {
-                        "pass": bool(test),
-                        "test": validation.test,
-                        "description": validation.description,
-                        "error": str(error),
-                    }
-                )
-        return self.HostProfiles(result, properties != {})
-
-    def _set_profile(self, host_id, profile):
-        server_profile = get_object_or_404(ServerProfile, pk=profile)
-
-        commands = []
-
-        host = ManagedHost.objects.get(pk=host_id)
-
-        if host.server_profile.name != profile:
-            command = JobSchedulerClient.set_host_profile(host.id, server_profile.id)
-
-            if command:
-                commands.append(command)
-
-            if server_profile.initial_state in host.get_available_states(host.state):
-                commands.append(Command.set_state([(host, server_profile.initial_state)]))
-
-        return map(dehydrate_command, commands)
-
-    def _host_profiles_object(self, host, request):
-        host_profiles = self.get_profiles(host, request)
-
-        return {
-            "host": host.id,
-            "address": host.address,
-            "profiles_valid": host_profiles.valid,
-            "profiles": host_profiles.profiles,
-            "resource_uri": self.get_resource_uri(host),
-        }
-
-    def obj_get(self, bundle, pk=None):
-        host = get_object_or_404(ManagedHost, pk=pk)
-
-        return self._host_profiles_object(host, bundle.request)
-
-    def obj_get_list(self, bundle):
-        ids = bundle.request.GET.getlist("id__in")
-
-        if isinstance(ids, str):
-            ids = ids.split(",")
-
-        filters = {"id__in": ids} if ids else {}
-
-        result = []
-
-        for host in ManagedHost.objects.filter(**filters):
-            result.append(
-                {"host_profiles": self._host_profiles_object(host, bundle.request), "error": None, "traceback": None}
-            )
-
-        return result
-
-    @validate
-    def obj_create(self, bundle, **kwargs):
-        def _create_action(self, data, request, **kwargs):
-            return self.BulkActionResult(self._set_profile(data["host"], data["profile"]), None, None)
-
-        self._bulk_operation(_create_action, "commands", bundle, bundle.request, **kwargs)
-
-    @validate
-    def obj_update(self, bundle, **kwargs):
-        def _update_action(self, data, request, **kwargs):
-            return self.BulkActionResult(self._set_profile(kwargs["pk"], data["profile"]), None, None)
-
-        self._bulk_operation(_update_action, "commands", bundle, bundle.request, **kwargs)

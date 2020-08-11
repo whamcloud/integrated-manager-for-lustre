@@ -2,45 +2,43 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-#[cfg(feature = "tokio-postgres-interop")]
-mod tokio_postgres_interop;
+mod controller;
+mod disk_drive;
+mod enclosure;
+mod job;
+mod power_supply;
+mod storage_system;
+
 #[cfg(feature = "wbem-interop")]
 mod wbem_interop;
 
 #[cfg(feature = "postgres-interop")]
-use crate::{
-    schema::{
-        chroma_core_sfadiskdrive as sd, chroma_core_sfadiskdrive, chroma_core_sfadiskslot,
-        chroma_core_sfaenclosure as se, chroma_core_sfaenclosure, chroma_core_sfajob,
-        chroma_core_sfapowersupply, chroma_core_sfastoragesystem as ss,
-        chroma_core_sfastoragesystem,
-    },
-    Additions, Executable, Updates,
+use crate::schema::chroma_core_sfadiskslot;
+pub use crate::sfa::{
+    controller::*, disk_drive::*, enclosure::*, job::*, power_supply::*, storage_system::*,
 };
 #[cfg(feature = "postgres-interop")]
 use diesel::{
-    self,
     backend::Backend,
+    deserialize,
     serialize::{self, Output, ToSql},
     sql_types::SmallInt,
-    Queryable,
 };
-#[cfg(feature = "postgres-interop")]
-use diesel::{pg::upsert::excluded, prelude::*};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{convert::TryFrom, io};
 #[cfg(feature = "postgres-interop")]
 use std::{convert::TryInto, io::Write};
-#[cfg(feature = "tokio-postgres-interop")]
-pub use tokio_postgres_interop::*;
 #[cfg(feature = "wbem-interop")]
 pub use wbem_interop::*;
 
-#[derive(
-    serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd,
+#[derive(Serialize_repr, Deserialize_repr, Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
+#[cfg_attr(
+    feature = "postgres-interop",
+    derive(AsExpression, SqlType, FromSqlRow)
 )]
-#[cfg_attr(feature = "postgres-interop", derive(AsExpression, SqlType))]
 #[cfg_attr(feature = "postgres-interop", sql_type = "SmallInt")]
 #[cfg_attr(feature = "postgres-interop", postgres(type_name = "SmallInt"))]
+#[repr(i16)]
 pub enum EnclosureType {
     None = 0,
     Disk = 1,
@@ -85,23 +83,22 @@ impl TryFrom<i16> for EnclosureType {
 }
 
 #[cfg(feature = "postgres-interop")]
-impl<DB, ST> Queryable<ST, DB> for EnclosureType
+impl<DB, ST> deserialize::FromSql<ST, DB> for EnclosureType
 where
     DB: Backend,
-    i16: Queryable<ST, DB>,
+    i16: deserialize::FromSql<ST, DB>,
 {
-    type Row = <i16 as Queryable<ST, DB>>::Row;
-
-    fn build(row: Self::Row) -> Self {
-        i16::build(row).try_into().unwrap_or_default()
+    fn from_sql(bytes: Option<&DB::RawValue>) -> deserialize::Result<Self> {
+        i16::from_sql(bytes)?
+            .try_into()
+            .map_err(|e: io::Error| e.into())
     }
 }
 
-#[derive(
-    serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd,
-)]
-#[cfg_attr(feature = "postgres-interop", derive(AsExpression))]
+#[derive(Serialize_repr, Deserialize_repr, Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
+#[cfg_attr(feature = "postgres-interop", derive(AsExpression, FromSqlRow))]
 #[cfg_attr(feature = "postgres-interop", sql_type = "SmallInt")]
+#[repr(i16)]
 pub enum HealthState {
     None = 0,
     Ok = 1,
@@ -146,23 +143,22 @@ impl TryFrom<i16> for HealthState {
 }
 
 #[cfg(feature = "postgres-interop")]
-impl<DB, ST> Queryable<ST, DB> for HealthState
+impl<DB, ST> deserialize::FromSql<ST, DB> for HealthState
 where
     DB: Backend,
-    i16: Queryable<ST, DB>,
+    i16: deserialize::FromSql<ST, DB>,
 {
-    type Row = <i16 as Queryable<ST, DB>>::Row;
-
-    fn build(row: Self::Row) -> Self {
-        i16::build(row).try_into().unwrap_or_default()
+    fn from_sql(bytes: Option<&DB::RawValue>) -> deserialize::Result<Self> {
+        i16::from_sql(bytes)?
+            .try_into()
+            .map_err(|e: io::Error| e.into())
     }
 }
 
-#[derive(
-    serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd,
-)]
-#[cfg_attr(feature = "postgres-interop", derive(AsExpression))]
+#[derive(Serialize_repr, Deserialize_repr, Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
+#[cfg_attr(feature = "postgres-interop", derive(AsExpression, FromSqlRow))]
 #[cfg_attr(feature = "postgres-interop", sql_type = "SmallInt")]
+#[repr(i16)]
 pub enum JobType {
     Initialize = 0,
     Rebuild = 1,
@@ -235,22 +231,22 @@ impl TryFrom<i16> for JobType {
 }
 
 #[cfg(feature = "postgres-interop")]
-impl<DB, ST> Queryable<ST, DB> for JobType
+impl<DB, ST> deserialize::FromSql<ST, DB> for JobType
 where
     DB: Backend,
-    i16: Queryable<ST, DB>,
+    i16: deserialize::FromSql<ST, DB>,
 {
-    type Row = <i16 as Queryable<ST, DB>>::Row;
-
-    fn build(row: Self::Row) -> Self {
-        i16::build(row).try_into().unwrap_or_default()
+    fn from_sql(bytes: Option<&DB::RawValue>) -> deserialize::Result<Self> {
+        i16::from_sql(bytes)?
+            .try_into()
+            .map_err(|e: io::Error| e.into())
     }
 }
-#[derive(
-    serde::Serialize, serde::Deserialize, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd,
-)]
-#[cfg_attr(feature = "postgres-interop", derive(AsExpression))]
+
+#[derive(Serialize_repr, Deserialize_repr, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[cfg_attr(feature = "postgres-interop", derive(AsExpression, FromSqlRow))]
 #[cfg_attr(feature = "postgres-interop", sql_type = "SmallInt")]
+#[repr(i16)]
 pub enum JobState {
     Queued = 0,
     Running = 1,
@@ -299,23 +295,22 @@ impl TryFrom<i16> for JobState {
 }
 
 #[cfg(feature = "postgres-interop")]
-impl<DB, ST> Queryable<ST, DB> for JobState
+impl<DB, ST> deserialize::FromSql<ST, DB> for JobState
 where
     DB: Backend,
-    i16: Queryable<ST, DB>,
+    i16: deserialize::FromSql<ST, DB>,
 {
-    type Row = <i16 as Queryable<ST, DB>>::Row;
-
-    fn build(row: Self::Row) -> Self {
-        i16::build(row).try_into().unwrap_or_default()
+    fn from_sql(bytes: Option<&DB::RawValue>) -> deserialize::Result<Self> {
+        i16::from_sql(bytes)?
+            .try_into()
+            .map_err(|e: io::Error| e.into())
     }
 }
 
-#[derive(
-    serde::Serialize, serde::Deserialize, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd,
-)]
-#[cfg_attr(feature = "postgres-interop", derive(AsExpression))]
+#[derive(Serialize_repr, Deserialize_repr, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[cfg_attr(feature = "postgres-interop", derive(AsExpression, FromSqlRow))]
 #[cfg_attr(feature = "postgres-interop", sql_type = "SmallInt")]
+#[repr(i16)]
 pub enum SubTargetType {
     Pool = 0,
     Vd = 1,
@@ -347,23 +342,33 @@ impl TryFrom<i16> for SubTargetType {
 }
 
 #[cfg(feature = "postgres-interop")]
-impl<DB, ST> Queryable<ST, DB> for SubTargetType
+impl<DB> ToSql<SmallInt, DB> for SubTargetType
 where
     DB: Backend,
-    i16: Queryable<ST, DB>,
+    i16: ToSql<SmallInt, DB>,
 {
-    type Row = <i16 as Queryable<ST, DB>>::Row;
-
-    fn build(row: Self::Row) -> Self {
-        i16::build(row).try_into().unwrap_or_default()
+    fn to_sql<W: Write>(&self, out: &mut Output<W, DB>) -> serialize::Result {
+        (*self as i16).to_sql(out)
     }
 }
 
-#[derive(
-    serde::Serialize, serde::Deserialize, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd,
-)]
-#[cfg_attr(feature = "postgres-interop", derive(AsExpression))]
+#[cfg(feature = "postgres-interop")]
+impl<DB, ST> deserialize::FromSql<ST, DB> for SubTargetType
+where
+    DB: Backend,
+    i16: deserialize::FromSql<ST, DB>,
+{
+    fn from_sql(bytes: Option<&DB::RawValue>) -> deserialize::Result<Self> {
+        i16::from_sql(bytes)?
+            .try_into()
+            .map_err(|e: io::Error| e.into())
+    }
+}
+
+#[derive(Serialize_repr, Deserialize_repr, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[cfg_attr(feature = "postgres-interop", derive(AsExpression, FromSqlRow))]
 #[cfg_attr(feature = "postgres-interop", sql_type = "SmallInt")]
+#[repr(i16)]
 pub enum MemberState {
     Normal = 0,
     Missing = 1,
@@ -432,189 +437,24 @@ impl TryFrom<i16> for MemberState {
 }
 
 #[cfg(feature = "postgres-interop")]
-impl<DB, ST> Queryable<ST, DB> for MemberState
+impl<DB, ST> deserialize::FromSql<ST, DB> for MemberState
 where
     DB: Backend,
-    i16: Queryable<ST, DB>,
+    i16: deserialize::FromSql<ST, DB>,
 {
-    type Row = <i16 as Queryable<ST, DB>>::Row;
-
-    fn build(row: Self::Row) -> Self {
-        i16::build(row).try_into().unwrap_or_default()
+    fn from_sql(bytes: Option<&DB::RawValue>) -> deserialize::Result<Self> {
+        i16::from_sql(bytes)?
+            .try_into()
+            .map_err(|e: io::Error| e.into())
     }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[cfg_attr(
-    feature = "postgres-interop",
-    derive(Queryable, Insertable, AsChangeset, Identifiable)
-)]
-#[cfg_attr(feature = "postgres-interop", primary_key(index))]
-#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_sfaenclosure")]
-pub struct SfaEnclosure {
-    /// Specifies the index, part of the OID, of the enclosure.
-    pub index: i32,
-    pub element_name: String,
-    pub health_state: HealthState,
-    pub health_state_reason: String,
-    pub position: i16,
-    pub enclosure_type: EnclosureType,
-    pub canister_location: String,
-    pub storage_system: String,
-}
-
-#[cfg(feature = "postgres-interop")]
-pub type Table = se::table;
-
-#[cfg(feature = "postgres-interop")]
-impl SfaEnclosure {
-    pub fn all() -> Table {
-        se::table
-    }
-    pub fn batch_insert(x: Additions<&Self>) -> impl Executable + '_ {
-        diesel::insert_into(Self::all()).values(x.0)
-    }
-    pub fn batch_upsert(x: Updates<&Self>) -> impl Executable + '_ {
-        diesel::insert_into(Self::all())
-            .values(x.0)
-            .on_conflict(se::index)
-            .do_update()
-            .set((
-                se::element_name.eq(excluded(se::element_name)),
-                se::health_state.eq(excluded(se::health_state)),
-                se::position.eq(excluded(se::position)),
-                se::enclosure_type.eq(excluded(se::enclosure_type)),
-                se::storage_system.eq(excluded(se::storage_system)),
-            ))
-    }
-    pub fn batch_remove(xs: Vec<i32>) -> impl Executable {
-        diesel::delete(Self::all()).filter(se::index.eq_any(xs))
-    }
-}
-
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "postgres-interop",
-    derive(Queryable, Insertable, AsChangeset)
-)]
-#[cfg_attr(
-    feature = "postgres-interop",
-    table_name = "chroma_core_sfastoragesystem"
-)]
-pub struct SfaStorageSystem {
-    pub child_health_state: HealthState,
-    pub health_state_reason: String,
-    pub health_state: HealthState,
-    pub uuid: String,
-}
-
-#[cfg(feature = "postgres-interop")]
-impl SfaStorageSystem {
-    pub fn upsert(x: Self) -> impl Executable {
-        diesel::insert_into(ss::table)
-            .values(x.clone())
-            .on_conflict(ss::uuid)
-            .do_update()
-            .set(x)
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[cfg_attr(
-    feature = "postgres-interop",
-    derive(Queryable, Insertable, AsChangeset)
-)]
-#[cfg_attr(feature = "postgres-interop", primary_key(index))]
-#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_sfadiskdrive")]
-pub struct SfaDiskDrive {
-    pub index: i32,
-    pub child_health_state: HealthState,
-    pub failed: bool,
-    pub slot_number: i32,
-    pub health_state: HealthState,
-    pub health_state_reason: String,
-    /// Specifies the member index of the disk drive.
-    /// If the disk drive is not a member of a pool, this value will be not be set.
-    pub member_index: Option<i16>,
-    /// Specifies the state of the disk drive relative to a containing pool.
-    pub member_state: MemberState,
-    pub enclosure_index: i32,
-    pub storage_system: String,
-}
-
-#[cfg(feature = "postgres-interop")]
-impl SfaDiskDrive {
-    pub fn all() -> sd::table {
-        sd::table
-    }
-    pub fn batch_insert(x: Additions<&Self>) -> impl Executable + '_ {
-        diesel::insert_into(Self::all()).values(x.0)
-    }
-    pub fn batch_upsert(x: Updates<&Self>) -> impl Executable + '_ {
-        diesel::insert_into(Self::all())
-            .values(x.0)
-            .on_conflict(sd::index)
-            .do_update()
-            .set((
-                sd::child_health_state.eq(excluded(sd::child_health_state)),
-                sd::failed.eq(excluded(sd::failed)),
-                sd::health_state_reason.eq(excluded(sd::health_state_reason)),
-                sd::health_state.eq(excluded(sd::health_state)),
-                sd::member_index.eq(excluded(sd::member_index)),
-                sd::member_state.eq(excluded(sd::member_state)),
-                sd::enclosure_index.eq(excluded(sd::enclosure_index)),
-            ))
-    }
-    pub fn batch_remove(xs: Vec<i32>) -> impl Executable {
-        diesel::delete(Self::all()).filter(sd::index.eq_any(xs))
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[cfg_attr(
-    feature = "postgres-interop",
-    derive(Queryable, Insertable, AsChangeset)
-)]
-#[cfg_attr(feature = "postgres-interop", primary_key(index))]
+#[cfg_attr(feature = "postgres-interop", derive(Insertable, AsChangeset))]
 #[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_sfadiskslot")]
 pub struct SfaDiskSlot {
     pub index: i32,
     pub enclosure_index: i32,
     pub disk_drive_index: i32,
-    pub storage_system: String,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[cfg_attr(
-    feature = "postgres-interop",
-    derive(Queryable, Insertable, AsChangeset)
-)]
-#[cfg_attr(feature = "postgres-interop", primary_key(index))]
-#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_sfajob")]
-pub struct SfaJob {
-    pub index: i32,
-    pub sub_target_index: Option<i32>,
-    pub sub_target_type: Option<SubTargetType>,
-    pub job_type: JobType,
-    pub state: JobState,
-    pub storage_system: String,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[cfg_attr(
-    feature = "postgres-interop",
-    derive(Queryable, Insertable, AsChangeset)
-)]
-#[cfg_attr(feature = "postgres-interop", primary_key(index))]
-#[cfg_attr(
-    feature = "postgres-interop",
-    table_name = "chroma_core_sfapowersupply"
-)]
-pub struct SfaPowerSupply {
-    pub index: i32,
-    pub health_state: HealthState,
-    pub health_state_reason: String,
-    pub position: i16,
-    pub enclosure_index: i32,
     pub storage_system: String,
 }

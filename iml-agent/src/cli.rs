@@ -12,6 +12,7 @@ use iml_agent::action_plugins::{
         server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
     },
 };
+use iml_wire_types::{client, snapshot};
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
 use spinners::{Spinner, Spinners};
@@ -235,6 +236,26 @@ pub enum NtpClientCommand {
     IsConfigured,
 }
 
+#[derive(Debug, StructOpt)]
+pub enum SnapshotCommand {
+    /// Create a snapshot
+    Create(snapshot::Create),
+    /// Destroy the snapshot
+    Destroy(snapshot::Destroy),
+    /// Mount a snapshot
+    Mount(snapshot::Mount),
+    /// Unmount a snapshot
+    Unmount(snapshot::Unmount),
+}
+
+#[derive(Debug, StructOpt)]
+pub enum MountCommand {
+    /// Mount a client
+    Mount(client::Mount),
+    /// Unmount a client
+    Unmount(client::Unmount),
+}
+
 #[derive(StructOpt, Debug)]
 #[structopt(name = "iml-agent", setting = structopt::clap::AppSettings::ColoredHelp)]
 /// The Integrated Manager for Lustre Agent CLI
@@ -283,14 +304,11 @@ pub enum App {
     /// Get latest kernel which supports listed modules
     GetKernel { modules: Vec<String> },
 
-    #[structopt(name = "try_mount")]
-    /// Try to mount `lustre_device` to the `mount_point`
-    TryMount {
-        #[structopt(long)]
-        lustre_device: String,
-
-        #[structopt(long)]
-        mount_point: String,
+    #[structopt(name = "mount")]
+    /// Mount lustre device
+    Mount {
+        #[structopt(subcommand)]
+        command: MountCommand,
     },
 
     #[structopt(name = "create_ltuer_conf")]
@@ -331,6 +349,13 @@ pub enum App {
     PostOffice {
         #[structopt(subcommand)]
         cmd: PostOfficeCommand,
+    },
+
+    #[structopt(name = "snapshot")]
+    /// Snapshot operations
+    Snapshot {
+        #[structopt(subcommand)]
+        command: SnapshotCommand,
     },
 }
 
@@ -417,7 +442,7 @@ fn add_counter_entry(x: impl Counter, t: &mut Table, h: &mut v_hist::Histogram) 
 
     let b = byte_unit::Byte::from_bytes(x.size().into()).get_appropriate_unit(true);
 
-    t.add_row(row![name.clone(), x.count(), b.to_string()]);
+    t.add_row(row![name, x.count(), b.to_string()]);
 
     h.add_entry(name, x.count().try_into().unwrap());
 }
@@ -555,7 +580,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             NtpClientCommand::IsConfigured => {
                 match is_ntp_configured::is_ntp_configured(()).await {
                     Ok(configured) => {
-                        if configured == true {
+                        if configured {
                             println!("Ntp is configured for IML on this server.");
                         } else {
                             println!("Ntp is not configured for IML on this server.");
@@ -605,16 +630,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 exit(exitcode::SOFTWARE);
             }
         },
-        App::TryMount {
-            lustre_device,
-            mount_point,
-        } => match lustre::try_mount((lustre_device, mount_point)).await {
-            Ok(()) => println!("Done"),
-            Err(e) => {
-                eprintln!("{:?}", e);
+        App::Mount { command } => {
+            if let Err(e) = match command {
+                MountCommand::Mount(m) => lustre::client::mount(m).await,
+                MountCommand::Unmount(u) => lustre::client::unmount(u).await,
+            } {
+                eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
             }
-        },
+        }
+
         App::Pool { command } => {
             if let Err(e) = match command {
                 PoolCommand::Create { cmd } => ostpool::pool_create(cmd.filesystem, cmd.pool).await,
@@ -677,6 +702,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         App::LAmigo { c } => {
             if let Err(e) = lamigo::create_lamigo_service_unit(c).await {
+                eprintln!("{}", e);
+                exit(exitcode::SOFTWARE);
+            }
+        }
+        App::Snapshot { command } => {
+            if let Err(e) = match command {
+                SnapshotCommand::Create(c) => lustre::snapshot::create(c).await,
+                SnapshotCommand::Destroy(d) => lustre::snapshot::destroy(d).await,
+                SnapshotCommand::Mount(m) => lustre::snapshot::mount(m).await,
+                SnapshotCommand::Unmount(u) => lustre::snapshot::unmount(u).await,
+            } {
                 eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
             }

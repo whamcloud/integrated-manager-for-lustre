@@ -387,7 +387,7 @@ class ConfigureCopytoolStep(Step):
             bin_path=copytool.bin_path,
             archive_number=copytool.archive,
             filesystem=filesystem.name,
-            mountpoint=client_mount.mountpoint,
+            mountpoint=client_mount.mountpoints[0],
             hsm_arguments=copytool.hsm_arguments,
         )
         self.invoke_agent(host, "configure_copytool", payload)

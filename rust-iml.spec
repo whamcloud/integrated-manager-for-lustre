@@ -4,7 +4,7 @@ BuildRequires: systemd
 %global crate iml
 
 Name: rust-%{crate}
-Version: 0.2.0
+Version: 0.3.0
 # Release Start
 Release: 1%{?dist}
 # Release End
@@ -28,11 +28,13 @@ ExclusiveArch: x86_64
 %install
 mkdir -p %{buildroot}%{_bindir}
 cp iml %{buildroot}%{_bindir}
+cp iml-config %{buildroot}%{_bindir}
 cp iml-agent %{buildroot}%{_bindir}
 cp iml-agent-daemon %{buildroot}%{_bindir}
 cp iml-api %{buildroot}%{_bindir}
 cp iml-ostpool %{buildroot}%{_bindir}
 cp iml-device %{buildroot}%{_bindir}
+cp iml-journal %{buildroot}%{_bindir}
 cp iml-stats %{buildroot}%{_bindir}
 cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-action-runner %{buildroot}%{_bindir}
@@ -44,6 +46,7 @@ cp iml-sfa %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp iml-api.service %{buildroot}%{_unitdir}
 cp iml-device.service %{buildroot}%{_unitdir}
+cp iml-journal.service %{buildroot}%{_unitdir}
 cp iml-ostpool.service %{buildroot}%{_unitdir}
 cp iml-rust-stats.service %{buildroot}%{_unitdir}
 cp iml-agent-comms.service %{buildroot}%{_unitdir}
@@ -73,10 +76,22 @@ Group: System Environment/Libraries
 %files cli
 %{_bindir}/iml
 
+%package config-cli
+Summary: IML manager Config CLI
+License: MIT
+Group: System Environment/Libraries
+
+%description config-cli
+%{summary}
+
+%files config-cli
+%{_bindir}/iml-config
+
 %package agent
 Summary: IML Agent Daemon and CLI
 License: MIT
 Group: System Environment/Libraries
+Requires: systemd-journal-gateway
 Requires: iml-device-scanner >= 4.0
 Obsoletes: iml-device-scanner-proxy
 
@@ -94,7 +109,8 @@ Obsoletes: iml-device-scanner-proxy
 %{_tmpfilesdir}/iml-agent.conf
 
 %post agent
-systemctl preset rust-iml-agent.path
+%systemd_post rust-iml-agent.path
+%systemd_post systemd-journal-gatewayd.socket
 %tmpfiles_create %{_tmpfilesdir}/iml-agent.conf
 
 %preun agent
@@ -103,6 +119,7 @@ systemctl preset rust-iml-agent.path
 
 %postun agent
 %systemd_postun_with_restart rust-iml-agent.path
+%systemd_postun_with_restart systemd-journal-gatewayd.socket
 
 %package agent-comms
 Summary: Communicates with iml-agents
@@ -113,7 +130,7 @@ Group: System Environment/Libraries
 %{summary}
 
 %post agent-comms
-systemctl preset iml-agent-comms.service
+%systemd_post iml-agent-comms.service
 
 %preun agent-comms
 %systemd_preun iml-agent-comms.service
@@ -134,7 +151,7 @@ Group: System Environment/Libraries
 %{summary}
 
 %post api
-systemctl preset iml-api.service
+%systemd_post iml-api.service
 
 %preun api
 %systemd_preun iml-api.service
@@ -155,8 +172,8 @@ Group: System Environment/Libraries
 %{summary}
 
 %post action-runner
-systemctl preset iml-action-runner.socket
-systemctl preset iml-action-runner.service
+%systemd_post iml-action-runner.socket
+%systemd_post iml-action-runner.service
 
 %preun action-runner
 %systemd_preun iml-action-runner.socket
@@ -181,7 +198,7 @@ Requires: rust-iml-agent-comms
 %{summary}
 
 %post ostpool
-systemctl preset iml-ostpool.service
+%systemd_post iml-ostpool.service
 
 %preun ostpool
 %systemd_preun iml-ostpool.service
@@ -203,7 +220,7 @@ Requires: rust-iml-agent-comms
 %{summary}
 
 %post stats
-systemctl preset iml-rust-stats.service
+%systemd_post iml-rust-stats.service
 
 %preun stats
 %systemd_preun iml-rust-stats.service
@@ -224,7 +241,7 @@ Group: System Environment/Libraries
 %{summary}
 
 %post warp-drive
-systemctl preset iml-warp-drive.service
+%systemd_post iml-warp-drive.service
 
 %preun warp-drive
 %systemd_preun iml-warp-drive.service
@@ -245,7 +262,7 @@ Group: System Environment/Libraries
 %{summary}
 
 %post mailbox
-systemctl preset iml-mailbox.service
+%systemd_post iml-mailbox.service
 
 %preun mailbox
 %systemd_preun mailbox.service
@@ -267,7 +284,7 @@ Group: System Environment/Libraries
 %{summary}
 
 %post ntp
-systemctl preset iml-ntp.service
+%systemd_post iml-ntp.service
 
 %preun ntp
 %systemd_preun iml-ntp.service
@@ -289,7 +306,7 @@ Requires: rust-iml-agent-comms
 %{summary}
 
 %post postoffice
-systemctl preset iml-postoffice.service
+%systemd_post iml-postoffice.service
 
 %preun postoffice
 %systemd_preun iml-postoffice.service
@@ -310,7 +327,7 @@ Group: System Environment/Libraries
 %{summary}
 
 %post sfa
-systemctl preset iml-sfa.service
+%systemd_post iml-sfa.service
 
 %preun sfa
 %systemd_preun iml-sfa.service
@@ -332,7 +349,7 @@ Requires: rust-iml-agent-comms
 %{summary}
 
 %post device
-systemctl preset iml-device.service
+%systemd_post iml-device.service
 
 %preun device
 %systemd_preun iml-device.service
@@ -343,6 +360,28 @@ systemctl preset iml-device.service
 %files device
 %{_bindir}/iml-device
 %attr(0644,root,root)%{_unitdir}/iml-device.service
+
+%package journal
+Summary: Consumer of cluster journal messages
+License: MIT
+Group: System Environment/Libraries
+Requires: rust-iml-agent-comms
+
+%description journal
+%{summary}
+
+%post journal
+%systemd_post iml-journal.service
+
+%preun journal
+%systemd_preun iml-journal.service
+
+%postun journal
+%systemd_postun_with_restart iml-journal.service
+
+%files journal
+%{_bindir}/iml-journal
+%attr(0644,root,root)%{_unitdir}/iml-journal.service
 
 %changelog
 * Wed Sep 18 2019 Will Johnson <wjohnson@whamcloud.com> - 0.2.0-1 

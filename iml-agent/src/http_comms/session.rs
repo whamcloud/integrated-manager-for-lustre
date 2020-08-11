@@ -6,15 +6,16 @@ use crate::{
     agent_error::{NoSessionError, Result},
     daemon_plugins::{DaemonBox, OutputValue},
 };
-use futures::{future, Future, TryFutureExt};
-use iml_wire_types::{AgentResult, Id, PluginName, Seq};
+use futures::{channel::oneshot, future, future::Either, Future};
+use iml_wire_types::{AgentResult, Id, PluginName};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::{
     collections::HashMap,
     ops::Deref,
     sync::Arc,
     time::{Duration, Instant},
 };
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::RwLock;
 use tracing::{info, warn};
 
 /// Takes a `Duration` and figures out the next duration
@@ -33,6 +34,7 @@ pub fn backoff_schedule(d: Duration) -> Duration {
 #[derive(Debug)]
 pub struct Active {
     pub session: Session,
+    pub in_flight: Option<oneshot::Receiver<()>>,
     pub instant: Instant,
 }
 
@@ -44,35 +46,43 @@ pub enum State {
 }
 
 impl State {
+    pub fn is_active(&self, id: &Id) -> bool {
+        match self {
+            State::Active(ref a) => &a.session.id == id,
+            _ => false,
+        }
+    }
     pub async fn teardown(&mut self) -> Result<()> {
         if let State::Active(a) = self {
             a.session.teardown().await?;
         }
 
-        std::mem::replace(self, State::Empty(Instant::now()));
+        let _ = std::mem::replace(self, State::Empty(Instant::now()));
 
         Ok(())
     }
     pub fn reset_active(&mut self) {
         if let State::Active(a) = self {
             a.instant = Instant::now() + Duration::from_secs(10);
+            a.in_flight = None;
         }
     }
-    pub fn create_active(&mut self, session: Session) {
-        std::mem::replace(
+    pub fn create_active(&mut self, session: Session, in_flight: oneshot::Receiver<()>) {
+        let _ = std::mem::replace(
             self,
             State::Active(Active {
                 session,
+                in_flight: Some(in_flight),
                 instant: Instant::now() + Duration::from_secs(10),
             }),
         );
     }
     pub fn reset_empty(&mut self) {
-        std::mem::replace(self, State::Empty(Instant::now() + Duration::from_secs(10)));
+        let _ = std::mem::replace(self, State::Empty(Instant::now() + Duration::from_secs(10)));
     }
     pub fn convert_to_pending(&mut self) {
         if let State::Empty(_) = self {
-            std::mem::replace(self, State::Pending);
+            let _ = std::mem::replace(self, State::Pending);
         } else {
             warn!("Session was not in Empty state");
         }
@@ -111,14 +121,19 @@ impl Sessions {
             x.write().await.convert_to_pending()
         }
     }
-    pub async fn insert_session(&self, name: PluginName, s: Session) -> Result<()> {
+    pub async fn insert_session(
+        &self,
+        name: PluginName,
+        s: Session,
+        in_flight: oneshot::Receiver<()>,
+    ) -> Result<()> {
         let state = self
             .0
             .get(&name)
             .ok_or_else(|| NoSessionError(name))?
             .clone();
 
-        state.write().await.create_active(s);
+        state.write().await.create_active(s, in_flight);
 
         Ok(())
     }
@@ -126,7 +141,7 @@ impl Sessions {
         &self,
         name: &PluginName,
         body: serde_json::Value,
-    ) -> Option<Result<(SessionInfo, AgentResult)>> {
+    ) -> Option<Result<(u64, PluginName, Id, AgentResult)>> {
         let state = self.0.get(name).or_else(|| {
             warn!("Received a message for unknown session {}", name);
             None
@@ -144,9 +159,16 @@ impl Sessions {
         }
     }
 
-    pub async fn terminate_session(&self, name: &PluginName) -> Result<()> {
+    pub async fn terminate_session(&self, name: &PluginName, id: &Id) -> Result<()> {
         match self.0.get(name) {
             Some(s) => {
+                let is_active = { s.read().await.is_active(id) };
+
+                if !is_active {
+                    tracing::warn!("Did not find active session for {}/{}", name, id);
+                    return Ok(());
+                }
+
                 s.write().await.teardown().await?;
             }
             None => {
@@ -170,22 +192,11 @@ impl Sessions {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SessionInfo {
-    pub name: PluginName,
-    pub id: Id,
-    pub seq: Seq,
-}
-
-fn addon_info<T>(info: &mut SessionInfo, output: T) -> (SessionInfo, T) {
-    info.seq.increment();
-
-    (info.clone(), output)
-}
-
 #[derive(Debug)]
 pub struct Session {
-    pub info: Arc<Mutex<SessionInfo>>,
+    pub info: Arc<AtomicU64>,
+    pub name: PluginName,
+    pub id: Id,
     plugin: DaemonBox,
 }
 
@@ -194,55 +205,112 @@ impl Session {
         info!("Created new session {:?}/{:?}", name, id);
 
         Self {
-            info: Arc::new(Mutex::new(SessionInfo {
-                name,
-                id,
-                seq: Seq::default(),
-            })),
+            name,
+            id,
+            info: Arc::new(AtomicU64::new(0)),
             plugin,
         }
     }
-    pub fn start(&mut self) -> impl Future<Output = Result<Option<(SessionInfo, OutputValue)>>> {
+    pub fn start(
+        &mut self,
+    ) -> (
+        oneshot::Receiver<()>,
+        impl Future<Output = Result<Option<(u64, PluginName, Id, OutputValue)>>>,
+    ) {
         let info = Arc::clone(&self.info);
 
-        self.plugin.start_session().and_then(|x| async move {
-            match x {
-                Some(x) => {
-                    let mut info = info.lock().await;
+        let (mut tx, rx) = oneshot::channel();
 
-                    Ok(Some(addon_info(&mut info, x)))
+        let fut = self.plugin.start_session();
+
+        let name = self.name.clone();
+        let id = self.id.clone();
+
+        let fut = async move {
+            let either = future::select(tx.cancellation(), fut).await;
+
+            match either {
+                Either::Left(_) => {
+                    tracing::warn!(
+                        "Session start for {}/{} has been cancelled. Will try again",
+                        name,
+                        id
+                    );
+
+                    Ok(None)
                 }
-                None => Ok(None),
-            }
-        })
-    }
-    pub fn poll(&self) -> impl Future<Output = Result<Option<(SessionInfo, OutputValue)>>> {
-        let info = Arc::clone(&self.info);
+                Either::Right((Ok(Some(x)), _)) => {
+                    info.fetch_add(1, Ordering::SeqCst);
+                    let seq = info.load(Ordering::SeqCst);
 
-        self.plugin.update_session().and_then(|x| async move {
-            match x {
-                Some(x) => {
-                    let mut info = info.lock().await;
-
-                    Ok(Some(addon_info(&mut info, x)))
+                    Ok(Some((seq, name, id, x)))
                 }
-                None => Ok(None),
+                Either::Right((Ok(None), _)) => Ok(None),
+                Either::Right((Err(e), _)) => Err(e),
             }
-        })
+        };
+
+        (rx, fut)
     }
-    pub async fn message(&self, body: serde_json::Value) -> Result<(SessionInfo, AgentResult)> {
+    pub fn poll(
+        &self,
+    ) -> (
+        oneshot::Receiver<()>,
+        impl Future<Output = Result<Option<(u64, PluginName, Id, OutputValue)>>>,
+    ) {
         let info = Arc::clone(&self.info);
+
+        let (mut tx, rx) = oneshot::channel();
+
+        let fut = self.plugin.update_session();
+
+        let name = self.name.clone();
+        let id = self.id.clone();
+
+        let fut = async move {
+            let either = future::select(tx.cancellation(), fut).await;
+
+            match either {
+                Either::Left(_) => {
+                    tracing::warn!(
+                        "Session poll for {}/{} has been cancelled. Will try again",
+                        name,
+                        id
+                    );
+
+                    Ok(None)
+                }
+                Either::Right((Ok(Some(x)), _)) => {
+                    info.fetch_add(1, Ordering::SeqCst);
+                    let seq = info.load(Ordering::SeqCst);
+
+                    Ok(Some((seq, name, id, x)))
+                }
+                Either::Right((Ok(None), _)) => Ok(None),
+                Either::Right((Err(e), _)) => Err(e),
+            }
+        };
+
+        (rx, fut)
+    }
+    pub async fn message(
+        &self,
+        body: serde_json::Value,
+    ) -> Result<(u64, PluginName, Id, AgentResult)> {
+        let info = Arc::clone(&self.info);
+
+        let name = self.name.clone();
+        let id = self.id.clone();
 
         let x = self.plugin.on_message(body).await?;
 
-        let mut info = info.lock().await;
+        info.fetch_add(1, Ordering::SeqCst);
+        let seq = info.load(Ordering::SeqCst);
 
-        Ok(addon_info(&mut info, x))
+        Ok((seq, name, id, x))
     }
     pub async fn teardown(&mut self) -> Result<()> {
-        let info = self.info.lock().await;
-
-        info!("Terminating session {:?}/{:?}", info.name, info.id);
+        info!("Terminating session {:?}/{:?}", self.name, self.id);
 
         self.plugin.teardown().await
     }
@@ -250,10 +318,11 @@ impl Session {
 
 #[cfg(test)]
 mod tests {
-    use super::{Session, SessionInfo, Sessions, State};
+    use super::{Session, Sessions, State};
     use crate::{
         agent_error::Result, daemon_plugins::daemon_plugin::test_plugin::TestDaemonPlugin,
     };
+    use futures::channel::oneshot;
     use serde_json::json;
     use std::{ops::Deref, time::Instant};
 
@@ -269,15 +338,29 @@ mod tests {
     async fn test_session_start() -> Result<()> {
         let mut session = create_session();
 
-        let session_info = SessionInfo {
-            name: "test_plugin".into(),
-            id: "1234".into(),
-            seq: 1.into(),
-        };
+        let (_rx, fut) = session.start();
 
-        let actual = session.start().await?;
+        let actual = fut.await?;
 
-        assert_eq!(actual, Some((session_info, json!(0))));
+        assert_eq!(
+            actual,
+            Some((1, "test_plugin".into(), "1234".into(), json!(0)))
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test(core_threads = 2)]
+    async fn test_session_start_cancel() -> Result<()> {
+        let mut session = create_session();
+
+        let (rx, fut) = session.start();
+
+        drop(rx);
+
+        let actual = fut.await?;
+
+        assert_eq!(actual, None);
 
         Ok(())
     }
@@ -286,17 +369,37 @@ mod tests {
     async fn test_session_update() -> Result<()> {
         let mut session = create_session();
 
-        session.start().await?;
+        let (_rx, fut) = session.start();
 
-        let actual = session.poll().await?;
+        fut.await?;
 
-        let session_info = SessionInfo {
-            name: "test_plugin".into(),
-            id: "1234".into(),
-            seq: 2.into(),
-        };
+        let (_rx, fut) = session.poll();
 
-        assert_eq!(actual, Some((session_info, json!(1))));
+        let actual = fut.await?;
+
+        assert_eq!(
+            actual,
+            Some((2, "test_plugin".into(), "1234".into(), json!(1)))
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_session_update_cancel() -> Result<()> {
+        let mut session = create_session();
+
+        let (_rx, fut) = session.start();
+
+        fut.await?;
+
+        let (rx, fut) = session.poll();
+
+        drop(rx);
+
+        let actual = fut.await?;
+
+        assert_eq!(actual, None);
 
         Ok(())
     }
@@ -305,17 +408,16 @@ mod tests {
     async fn test_session_message() -> Result<()> {
         let mut session = create_session();
 
-        session.start().await?;
+        let (_rx, fut) = session.start();
+
+        fut.await?;
 
         let actual = session.message(json!("hi!")).await?;
 
-        let session_info = SessionInfo {
-            name: "test_plugin".into(),
-            id: "1234".into(),
-            seq: 2.into(),
-        };
-
-        assert_eq!(actual, (session_info, Ok(json!("hi!"))));
+        assert_eq!(
+            actual,
+            (2, "test_plugin".into(), "1234".into(), Ok(json!("hi!")))
+        );
 
         Ok(())
     }
@@ -353,8 +455,10 @@ mod tests {
 
         let session = create_session();
 
+        let (_tx, rx) = oneshot::channel();
+
         sessions
-            .insert_session("test_plugin".into(), session)
+            .insert_session("test_plugin".into(), session, rx)
             .await?;
 
         let state = sessions.0.get(&"test_plugin".into()).cloned().unwrap();
@@ -372,8 +476,10 @@ mod tests {
 
         let session = create_session();
 
+        let (_tx, rx) = oneshot::channel();
+
         sessions
-            .insert_session("test_plugin".into(), session)
+            .insert_session("test_plugin".into(), session, rx)
             .await?;
 
         let plugin_name = "test_plugin".into();
@@ -385,13 +491,10 @@ mod tests {
 
         let actual = fut.await.unwrap()?;
 
-        let session_info = SessionInfo {
-            name: "test_plugin".into(),
-            id: "1234".into(),
-            seq: 1.into(),
-        };
-
-        assert_eq!(actual, (session_info, Ok(json!("hi!"))));
+        assert_eq!(
+            actual,
+            (1, "test_plugin".into(), "1234".into(), Ok(json!("hi!")))
+        );
 
         match state.deref() {
             State::Active(_) => Ok(()),

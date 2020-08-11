@@ -2,23 +2,20 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use device_types::devices::Device;
-use diesel::{self, pg::upsert::excluded, prelude::*};
-use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
+use device_types::{devices::Device, mount::Mount};
+use futures::{TryFutureExt, TryStreamExt};
+use im::HashSet;
 use iml_device::{
+    client_mount_content_id, create_cache,
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
     },
-    ImlDeviceError,
+    update_client_mounts, update_devices, Cache, ImlDeviceError,
 };
-use iml_orm::{
-    models::{ChromaCoreDevice, NewChromaCoreDevice},
-    schema::chroma_core_device::{devices, fqdn, table},
-    tokio_diesel::*,
-    DbPool,
-};
+use iml_postgres::get_db_pool;
 use iml_service_queue::service_queue::consume_data;
+use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -26,34 +23,16 @@ use std::{
 };
 use warp::Filter;
 
-type Cache = Arc<Mutex<HashMap<Fqdn, Device>>>;
-
-async fn create_cache(pool: &DbPool) -> Result<Cache, ImlDeviceError> {
-    let data: HashMap<Fqdn, Device> = table
-        .load_async(&pool)
-        .await?
-        .into_iter()
-        .map(
-            |x: ChromaCoreDevice| -> Result<(Fqdn, Device), ImlDeviceError> {
-                let d = serde_json::from_value(x.devices)?;
-
-                Ok((Fqdn(x.fqdn), d))
-            },
-        )
-        .collect::<Result<_, _>>()?;
-
-    Ok(Arc::new(Mutex::new(data)))
-}
-
 #[tokio::main]
 async fn main() -> Result<(), ImlDeviceError> {
     iml_tracing::init();
 
     let addr = iml_manager_env::get_device_aggregator_addr();
 
-    let pool = iml_orm::pool()?;
+    let pool = get_db_pool(5).await?;
 
     let cache = create_cache(&pool).await?;
+
     let cache2 = Arc::clone(&cache);
     let cache = warp::any().map(move || Arc::clone(&cache));
 
@@ -106,29 +85,22 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     tokio::spawn(server);
 
-    let mut s = consume_data::<Device>("rust_agent_device_rx");
+    let rabbit_pool = iml_rabbit::connect_to_rabbit(1);
 
-    while let Some((f, d)) = s.try_next().await? {
+    let conn = iml_rabbit::get_conn(rabbit_pool).await?;
+
+    let ch = iml_rabbit::create_channel(&conn).await?;
+
+    let mut s = consume_data::<(Device, HashSet<Mount>)>(&ch, "rust_agent_device_rx");
+
+    let lustreclientmount_ct_id = client_mount_content_id(&pool).await?;
+
+    while let Some((host, (devices, mounts))) = s.try_next().await? {
+        update_devices(&pool, &host, &devices).await?;
+        update_client_mounts(&pool, lustreclientmount_ct_id, &host, &mounts).await?;
+
         let mut cache = cache2.lock().await;
-
-        cache.insert(f.clone(), d.clone());
-
-        let device_to_insert = NewChromaCoreDevice {
-            fqdn: f.to_string(),
-            devices: serde_json::to_value(d).expect("Could not convert incoming Devices to JSON."),
-        };
-
-        let new_device = diesel::insert_into(table)
-            .values(device_to_insert)
-            .on_conflict(fqdn)
-            .do_update()
-            .set(devices.eq(excluded(devices)))
-            .get_result_async::<ChromaCoreDevice>(&pool)
-            .await
-            .expect("Error saving new device");
-
-        tracing::info!("Inserted device from host {}", new_device.fqdn);
-        tracing::trace!("Inserted device {:?}", new_device);
+        cache.insert(host, devices);
     }
 
     Ok(())

@@ -4,13 +4,15 @@
 
 use crate::{
     data::{await_next_session, get_session},
+    db,
     error::{self, ActionRunnerError},
     Sender, Sessions, Shared,
 };
-use futures::{channel::oneshot, Future, FutureExt, TryFutureExt};
+use futures::{channel::oneshot, future::BoxFuture, Future, FutureExt, TryFutureExt};
+use iml_postgres::sqlx;
 use iml_wire_types::{Action, ActionId, ToJsonValue};
 use serde_json::value::Value;
-use std::{collections::HashMap, fmt::Display, sync::Arc};
+use std::{collections::HashMap, fmt::Display, ops::Deref, sync::Arc};
 
 pub type LocalActionsInFlight = HashMap<ActionId, Sender>;
 pub type SharedLocalActionsInFlight = Shared<LocalActionsInFlight>;
@@ -70,20 +72,34 @@ pub fn spawn_plugin(
 /// Wraps a `FnOnce` so it will be called with a deserialized value and return a serialized value.
 ///
 /// This is subetly different from a usual action plugin in that it's meant to be used with closures.
-async fn wrap_plugin<T, R, E: Display, Fut>(
+fn wrap_plugin<T, R, E: Display, Fut>(
     v: Value,
-    f: impl FnOnce(T) -> Fut,
-) -> Result<Value, String>
+    f: impl FnOnce(T) -> Fut + Send + 'static,
+) -> BoxFuture<'static, Result<Value, String>>
 where
     T: serde::de::DeserializeOwned + Send,
     R: serde::Serialize + Send,
     Fut: Future<Output = Result<R, E>> + Send,
 {
-    let x = serde_json::from_value(v).map_err(|e| format!("{}", e))?;
+    Box::pin(async {
+        let x = serde_json::from_value(v).map_err(|e| format!("{}", e))?;
 
-    let x = f(x).await.map_err(|e| format!("{}", e))?;
+        let x = f(x).await.map_err(|e| format!("{}", e))?;
 
-    x.to_json_value()
+        x.to_json_value()
+    })
+}
+
+async fn run_plugin(
+    id: ActionId,
+    in_flight: SharedLocalActionsInFlight,
+    fut: impl Future<Output = Result<Value, String>> + Send + 'static,
+) -> Result<Result<serde_json::value::Value, String>, ActionRunnerError> {
+    let rx = add_in_flight(Arc::clone(&in_flight), id.clone()).await;
+
+    spawn_plugin(fut, in_flight, id);
+
+    rx.err_into().await
 }
 
 /// Try to locate and start or cancel a local action.
@@ -91,6 +107,7 @@ pub async fn handle_local_action(
     action: Action,
     in_flight: SharedLocalActionsInFlight,
     sessions: Shared<Sessions>,
+    db_pool: sqlx::PgPool,
 ) -> Result<Result<serde_json::value::Value, String>, ActionRunnerError> {
     match action {
         Action::ActionCancel { id } => {
@@ -101,29 +118,24 @@ pub async fn handle_local_action(
             Ok(Ok(serde_json::Value::Null))
         }
         Action::ActionStart { id, action, args } => {
-            if action == "get_session".into() {
-                let rx = add_in_flight(Arc::clone(&in_flight), id.clone()).await;
+            let plugin = match action.deref() {
+                "get_session" => wrap_plugin(args, move |fqdn| get_session(fqdn, sessions)),
+                "await_next_session" => {
+                    wrap_plugin(args, move |(fqdn, last_session, wait_secs)| {
+                        await_next_session(fqdn, last_session, wait_secs, sessions)
+                    })
+                }
+                "get_fqdn_by_id" => {
+                    wrap_plugin(args, move |id: i32| db::get_host_fqdn_by_id(id, db_pool))
+                }
+                _ => {
+                    return Err(ActionRunnerError::RequiredError(error::RequiredError(
+                        format!("Could not find action {} in local registry", action),
+                    )))
+                }
+            };
 
-                let fut = wrap_plugin(args, move |fqdn| get_session(fqdn, sessions));
-
-                spawn_plugin(fut, in_flight, id);
-
-                rx.err_into().await
-            } else if action == "await_next_session".into() {
-                let rx = add_in_flight(Arc::clone(&in_flight), id.clone()).await;
-
-                let fut = wrap_plugin(args, move |(fqdn, last_session, wait_secs)| {
-                    await_next_session(fqdn, last_session, wait_secs, sessions)
-                });
-
-                spawn_plugin(fut, in_flight, id);
-
-                rx.await.map_err(ActionRunnerError::OneShotCanceledError)
-            } else {
-                Err(ActionRunnerError::RequiredError(error::RequiredError(
-                    format!("Could not find action {} in local registry", action),
-                )))
-            }
+            run_plugin(id, in_flight, plugin).await
         }
     }
 }

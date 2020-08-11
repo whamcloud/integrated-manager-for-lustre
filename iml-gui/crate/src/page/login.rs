@@ -4,12 +4,12 @@
 
 use crate::{
     auth,
-    components::{ddn_logo, whamcloud_logo},
+    components::{ddn_logo, ddn_logo_lettering, whamcloud_logo},
     generated::css_classes::C,
-    FailReasonExt, GMsg, MergeAttrs, Route,
+    GMsg, MergeAttrs,
 };
 use core::fmt;
-use iml_wire_types::{Branding, Session};
+use iml_wire_types::Branding;
 use seed::{browser::service::fetch, prelude::*, *};
 
 #[derive(Clone, Default, serde::Serialize)]
@@ -45,8 +45,6 @@ pub enum Msg {
     PasswordChange(String),
     SubmitResp(fetch::FetchObject<Errors>),
     Submit,
-    GetSession,
-    GotSession(fetch::ResponseDataResult<Session>),
 }
 
 impl fmt::Debug for Msg {
@@ -80,7 +78,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 Err(e) => error!("Response error {:?}", e),
                 Ok(x) => {
                     if x.status.code < 400 {
-                        orders.skip().send_msg(Msg::GetSession);
+                        orders.skip().send_g_msg(GMsg::AuthProxy(Box::new(auth::Msg::LoggedIn)));
                     } else {
                         model.logging_in = false;
 
@@ -92,27 +90,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 }
             };
         }
-        Msg::GetSession => {
-            orders
-                .skip()
-                .perform_cmd(auth::fetch_session().fetch_json_data(Msg::GotSession));
-        }
-        Msg::GotSession(data_result) => {
-            match data_result {
-                Ok(resp) => {
-                    orders
-                        .send_g_msg(GMsg::AuthProxy(Box::new(auth::Msg::SetSession(resp))))
-                        .send_g_msg(GMsg::RouteChange(Route::Dashboard.into()));
-
-                    model.logging_in = false;
-                }
-                Err(fail_reason) => {
-                    error!("Error fetching login session {:?}", fail_reason.message());
-
-                    orders.skip();
-                }
-            };
-        }
     }
 }
 
@@ -120,7 +97,7 @@ fn err_item<T>(x: &str) -> Node<T> {
     p![class![C.text_red_500, C.text_xs, C.italic,], x]
 }
 
-pub fn view(model: &Model, branding: Branding) -> impl View<Msg> {
+pub fn view(model: &Model, branding: Branding, exa_version: &Option<String>) -> impl View<Msg> {
     let input_cls = class![
         C.appearance_none,
         C.focus__outline_none,
@@ -141,11 +118,20 @@ pub fn view(model: &Model, branding: Branding) -> impl View<Msg> {
             C.text_teal_500,
             whamcloud_logo().merge_attrs(class![C.h_16, C.w_16]),
         ),
-        Branding::Ddn | Branding::DdnAi400 => (
+        Branding::DDN(_) => (
             C.border_red_700,
-            C.text_red_700,
-            ddn_logo().merge_attrs(class![C.h_16, C.w_32]),
+            C.text_black,
+            div![
+                class![C.w_32, C.flex, C.flex_col, C.items_center],
+                ddn_logo().merge_attrs(class![C.w_24, C.mb_4]),
+                ddn_logo_lettering().merge_attrs(class![C.w_24]),
+            ],
         ),
+    };
+    let exa_version = if let Some(version) = exa_version {
+        p![class![C.mt_3], "Version ", version]
+    } else {
+        empty![]
     };
 
     div![
@@ -163,7 +149,18 @@ pub fn view(model: &Model, branding: Branding) -> impl View<Msg> {
                 event.prevent_default();
                 Msg::Submit
             }),
-            div![class![text_color, C.flex, C.justify_center, C.mb_6], logo],
+            div![
+                class![
+                    C.flex_col,
+                    C.flex,
+                    C.items_center,
+                    C.justify_center,
+                    C.mb_6
+                    text_color,
+                ],
+                logo,
+                exa_version
+            ],
             match errs.__all__.as_ref() {
                 Some(x) => err_item(x),
                 None => empty![],

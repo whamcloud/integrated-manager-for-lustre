@@ -3,6 +3,7 @@ WORKDIR /build
 ARG toolchain=stable
 RUN yum update -y \
   && yum install -y gcc openssl openssl-devel epel-release https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm \
+  && yum clean all \
   && yum install -y postgresql96-devel \
   && yum clean all \
   && cd /root \

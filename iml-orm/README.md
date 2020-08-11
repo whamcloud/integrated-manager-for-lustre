@@ -1,5 +1,7 @@
 # IML ORM
 
+## Note: This crate is deprecated; use `iml_postgres` with `sqlx` instead
+
 An orm using [diesel](http://diesel.rs/).
 
 This crate makes use of a few different feature flags for portability:

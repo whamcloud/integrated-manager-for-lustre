@@ -109,9 +109,7 @@ class TestAvailableJobs(IMLUnitTestCase):
         it regressed.
         """
 
-        # 20131217 - mjmac: bumped to 7 for new Client management jobs
-        # 20141007 - chris: change to 5 because some objects are now in the ObjectCache
-        EXPECTED_QUERIES = 5  # but 3 are for setup
+        EXPECTED_QUERIES = 7
 
         host_ct_key = ContentType.objects.get_for_model(self.host.downcast()).natural_key()
         host_id = self.host.id
@@ -125,12 +123,7 @@ class TestAvailableJobs(IMLUnitTestCase):
     def test_locks_query_count(self):
         """Check that query count to pull in available jobs hasn't changed"""
 
-        EXPECTED_QUERIES = 8
-        # 2 x AlertState
-        # 3 x count powercontroldeviceoutlet
-        # django type of ostpool
-        # django type of copytool
-        # django type of task
+        EXPECTED_QUERIES = 10
 
         host_ct_key = ContentType.objects.get_for_model(self.host.downcast()).natural_key()
         host_id = self.host.id

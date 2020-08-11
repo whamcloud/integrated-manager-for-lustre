@@ -22,13 +22,15 @@ fn composite_ids() -> impl Filter<Extract = (CompositeIds,), Error = warp::Rejec
 
 async fn get_actions(
     ids: CompositeIds,
-    client: Connection,
+    conn: Connection,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let fut1 = available_transitions(&client, &ids).map_err(ImlApiError::ImlJobSchedulerRpcError);
+    let fut1 = available_transitions(&conn, &ids).map_err(ImlApiError::ImlJobSchedulerRpcError);
 
-    let fut2 = available_jobs(&client, &ids).map_err(ImlApiError::ImlJobSchedulerRpcError);
+    let fut2 = available_jobs(&conn, &ids).map_err(ImlApiError::ImlJobSchedulerRpcError);
 
     let (computed_transitions, computed_jobs) = try_join(fut1, fut2).await?;
+
+    drop(conn);
 
     let computed_transitions = computed_transitions.into_iter().flat_map(|(x, xs)| {
         xs.into_iter()

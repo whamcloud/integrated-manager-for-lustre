@@ -111,13 +111,6 @@ class ManagedHost(DeletableStatefulObject):
         default=False, help_text="True if there are package updates available for this server"
     )
 
-    client_filesystems = models.ManyToManyField(
-        "ManagedFilesystem",
-        related_name="workers",
-        through="LustreClientMount",
-        help_text="Filesystems for which this node is a non-server worker",
-    )
-
     corosync_ring0 = models.CharField(
         max_length=255, help_text="Unicode string, hostname used to configure corosync ring0"
     )
@@ -134,9 +127,6 @@ class ManagedHost(DeletableStatefulObject):
 
     # The method used to install the host
     install_method = models.CharField(max_length=32, help_text="The method used to install the agent on the server")
-
-    # JSON object of properties suitable for validation
-    properties = models.TextField(default="{}")
 
     states = ["undeployed", "unconfigured", "packages_installed", "managed", "monitored", "working", "removed"]
     initial_state = "unconfigured"
@@ -263,29 +253,6 @@ class ManagedHost(DeletableStatefulObject):
                 else:
                     # If the hosts with this NID had different FQDNs, refuse to pick one
                     raise ManagedHost.MultipleObjectsReturned()
-
-    def set_profile(self, server_profile_id):
-        """
-        Set the profile for the given host to the given profile. If the host is configured
-        this includes updating the manager view and making the appropriate changes to the host.
-
-        Otherwise it is just a case of recording the new host.
-
-        :param server_profile_id:
-        :return: List of commands required to do the job.
-        """
-
-        server_profile = ServerProfile.objects.get(pk=server_profile_id)
-
-        # We need fully working host to change the profile, the initial profile will be set when the host is
-        # configured, once until that occurs just remember what it wants.
-        if self.state in ["unconfigured", "undeployed"]:
-            self.server_profile = server_profile
-            self.save(update_fields=["server_profile"])
-
-            return []
-        else:
-            return [{"class_name": "SetHostProfileJob", "args": {"host": self, "server_profile": server_profile}}]
 
     def _get_configuration(self, configuration_name):
         """
@@ -1058,28 +1025,6 @@ class SetHostProfileStep(Step):
         return help_text["set_host_profile_on"] % kwargs["host"]
 
 
-class SetHostProfileJob(Job):
-    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
-    server_profile = models.ForeignKey(ServerProfile, on_delete=CASCADE)
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text["set_host_profile_on"] % stateful_object
-
-    def description(self):
-        return "Set profile and update host %s" % self.host.nodename
-
-    def get_steps(self):
-        return [(SetHostProfileStep, {"host": self.host, "server_profile": self.server_profile})]
-
-    def create_locks(self):
-        return [StateLock(job=self, locked_item=self.host, write=True)]
-
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-
-
 class UpdateDevicesJob(HostListMixin):
     @classmethod
     def long_description(cls, stateful_object):
@@ -1838,3 +1783,36 @@ class UpdatesAvailableAlert(AlertStateBase):
 
 class NoNidsPresent(Exception):
     pass
+
+
+class CreateSnapshotStep(Step):
+    def run(self, kwargs):
+        args = {"fsname": kwargs["fsname"], "name": kwargs["name"]}
+        if "comment" in kwargs:
+            args["comment"] = kwargs["comment"]
+        self.invoke_rust_agent_expect_result(
+            kwargs["host"], "snapshot_create", args,
+        )
+
+
+class DestroySnapshotStep(Step):
+    def run(self, kwargs):
+        self.invoke_rust_agent_expect_result(
+            kwargs["host"],
+            "snapshot_destroy",
+            {"fsname": kwargs["fsname"], "name": kwargs["name"], "force": kwargs["force"]},
+        )
+
+
+class MountSnapshotStep(Step):
+    def run(self, kwargs):
+        self.invoke_rust_agent_expect_result(
+            kwargs["host"], "snapshot_mount", {"fsname": kwargs["fsname"], "name": kwargs["name"]}
+        )
+
+
+class UnmountSnapshotStep(Step):
+    def run(self, kwargs):
+        self.invoke_rust_agent_expect_result(
+            kwargs["host"], "snapshot_unmount", {"fsname": kwargs["fsname"], "name": kwargs["name"]}
+        )

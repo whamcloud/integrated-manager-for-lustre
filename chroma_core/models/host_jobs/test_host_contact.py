@@ -17,6 +17,8 @@ from chroma_core.models.jobs import Job
 from chroma_core.lib.job import Step
 from chroma_help.help import help_text
 from chroma_core.lib.job import job_log
+from chroma_core.lib.cache import ObjectCache
+from iml_common.lib.evaluator import safe_eval
 from iml_common.lib.name_value_list import NameValueList
 
 import settings
@@ -27,6 +29,88 @@ import settings
 credentials_table = {}
 
 
+def try_ssh_cmd(agent_ssh, auth_args, cmd):
+    from chroma_core.services.job_scheduler.agent_rpc import AgentException
+
+    try:
+        return agent_ssh.ssh(cmd, auth_args=auth_args)
+    except (AuthenticationException, SSHException):
+        raise
+    except Exception as e:
+        # Re-raise wrapped in an AgentException
+        raise AgentException(
+            agent_ssh.address,
+            "Unhandled exception: %s" % e,
+            ", ".join(auth_args),
+            "\n".join(traceback.format_exception(*(sys.exc_info()))),
+        )
+
+
+def platform_stmt(x):
+    return "python -c 'import platform; print {}'".format(x)
+
+
+def execute_platform_cmd(agent_ssh, auth_args, x):
+    stmt = platform_stmt(x)
+
+    (rc, x, err) = try_ssh_cmd(agent_ssh, auth_args, stmt)
+
+    assert rc == 0, "failed to execute {} on {}: {}".format(stmt, agent_ssh.address, err)
+
+    return x.strip()
+
+
+def get_host_props(agent_ssh, auth_args):
+    (code, _, _) = try_ssh_cmd(agent_ssh, auth_args, "which zfs")
+    distro = execute_platform_cmd(agent_ssh, auth_args, "platform.linux_distribution()[0]")
+    distro_version = execute_platform_cmd(
+        agent_ssh, auth_args, '".".join(platform.linux_distribution()[1].split(".")[:2])'
+    )
+    python_version_major_minor = execute_platform_cmd(
+        agent_ssh, auth_args, '"%s.%s" % (platform.python_version_tuple()[0], platform.python_version_tuple()[1],)'
+    )
+    python_patchlevel = execute_platform_cmd(agent_ssh, auth_args, "platform.python_version_tuple()[2]")
+    kernel_version = execute_platform_cmd(agent_ssh, auth_args, "platform.release()")
+
+    return {
+        "zfs_installed": not code,
+        "distro": distro,
+        "distro_version": float(distro_version),
+        "python_version_major_minor": float(python_version_major_minor),
+        "python_patchlevel": int(python_patchlevel),
+        "kernel_version": kernel_version,
+    }
+
+
+def get_profile_checks(properties, profiles):
+    result = {}
+    for (name, validations) in profiles:
+        tests = result[name] = []
+
+        for validation in validations:
+            error = ""
+
+            if properties == {}:
+                test = False
+                error = "Result unavailable while host agent starts"
+            else:
+                try:
+                    test = safe_eval(validation["test"], properties)
+                except Exception as error:
+                    test = False
+
+            tests.append(
+                {
+                    "pass": bool(test),
+                    "test": validation["test"],
+                    "description": validation["description"],
+                    "error": str(error),
+                }
+            )
+
+    return result
+
+
 class TestHostConnectionStep(Step):
     def _test_hostname(self, agent_ssh, auth_args, address, resolved_address):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
@@ -35,7 +119,7 @@ class TestHostConnectionStep(Step):
             # Check that the system hostname:
             # a) resolves
             # b) does not resolve to a loopback address
-            rc, out, err = self._try_ssh_cmd(
+            rc, out, err = try_ssh_cmd(
                 agent_ssh, auth_args, "python -c 'import socket; print socket.gethostbyname(socket.gethostname())'"
             )
             hostname_resolution = out.rstrip()
@@ -53,7 +137,7 @@ class TestHostConnectionStep(Step):
                 return False, False, False
 
         try:
-            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args, "python -c 'import socket; print socket.getfqdn()'")
+            rc, out, err = try_ssh_cmd(agent_ssh, auth_args, "python -c 'import socket; print socket.getfqdn()'")
             assert rc == 0, "failed to get fqdn on %s: %s" % (address, err)
             fqdn = out.rstrip()
         except (AssertionError, AgentException):
@@ -73,7 +157,6 @@ class TestHostConnectionStep(Step):
             )
             return True, True, False
 
-        # Everything's OK (we hope!)
         return True, True, True
 
     def _test_reverse_ping(self, agent_ssh, auth_args, address, manager_hostname):
@@ -81,7 +164,7 @@ class TestHostConnectionStep(Step):
 
         try:
             # Test resolution/ping from server back to manager
-            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args, "ping -c 1 %s" % manager_hostname)
+            rc, out, err = try_ssh_cmd(agent_ssh, auth_args, "ping -c 1 %s" % manager_hostname)
         except AgentException:
             job_log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
             return False, False
@@ -118,14 +201,14 @@ exit(missing_electric_fence)"
 """ % [
                 x for x in ServerProfile().base_packages
             ]
-            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args, check_yum)
+            rc, _, _ = try_ssh_cmd(agent_ssh, auth_args, check_yum)
             if rc == 0:
                 can_update = True
             else:
                 job_log.error("Failed configuration check on '%s': Unable to access any yum mirrors" % address)
         except AgentException:
             job_log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
-            return False, False
+            return False
 
         return can_update
 
@@ -133,27 +216,11 @@ exit(missing_electric_fence)"
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
 
         try:
-            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args, "openssl version -a")
+            rc, out, err = try_ssh_cmd(agent_ssh, auth_args, "openssl version -a")
         except AgentException:
             job_log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
             return False
         return not rc
-
-    def _try_ssh_cmd(self, agent_ssh, auth_args, cmd):
-        from chroma_core.services.job_scheduler.agent_rpc import AgentException
-
-        try:
-            return agent_ssh.ssh(cmd, auth_args=auth_args)
-        except (AuthenticationException, SSHException):
-            raise
-        except Exception as e:
-            # Re-raise wrapped in an AgentException
-            raise AgentException(
-                agent_ssh.address,
-                "Unhandled exception: %s" % e,
-                ", ".join(auth_args),
-                "\n".join(traceback.format_exception(*(sys.exc_info()))),
-            )
 
     def is_dempotent(self):
         return True
@@ -176,6 +243,7 @@ exit(missing_electric_fence)"
         del credentials_table[kwargs["credentials_key"]]
 
         address = kwargs["address"]
+        profiles = kwargs["profiles"]
         root_pw = credentials["root_pw"]
         pkey = credentials["pkey"]
         pkey_pw = credentials["pkey_pw"]
@@ -227,10 +295,19 @@ exit(missing_electric_fence)"
             else:
                 status["auth"] = True
 
+        all_valid = all(entry.value is True for entry in status)
+
+        profile_checks = {}
+
+        if all_valid:
+            properties = get_host_props(agent_ssh, auth_args)
+            profile_checks = get_profile_checks(properties, profiles)
+
         return {
             "address": address,
-            "valid": all(entry.value is True for entry in status),
+            "valid": all_valid,
             "status": status.collection(),
+            "profiles": profile_checks,
         }
 
 
@@ -269,4 +346,13 @@ class TestHostConnectionJob(Job):
         return "Test for host connectivity"
 
     def get_steps(self):
-        return [(TestHostConnectionStep, {"address": self.address, "credentials_key": self.credentials_key})]
+        from chroma_core.models import ServerProfile
+
+        profiles = [(p.name, list(p.serverprofilevalidation_set.values())) for p in ObjectCache.get(ServerProfile)]
+
+        return [
+            (
+                TestHostConnectionStep,
+                {"address": self.address, "credentials_key": self.credentials_key, "profiles": profiles},
+            )
+        ]

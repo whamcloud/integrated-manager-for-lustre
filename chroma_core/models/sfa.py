@@ -11,6 +11,7 @@ class SfaStorageSystem(models.Model):
         app_label = "chroma_core"
 
     uuid = models.TextField(unique=True,)
+    platform = models.TextField()
     health_state_reason = models.TextField()
     health_state = models.PositiveSmallIntegerField()
     child_health_state = models.PositiveSmallIntegerField()
@@ -19,11 +20,14 @@ class SfaStorageSystem(models.Model):
 class SfaEnclosure(models.Model):
     class Meta:
         app_label = "chroma_core"
+        unique_together = (("index", "storage_system"),)
 
-    index = models.PositiveIntegerField(unique=True, primary_key=True)
+    index = models.PositiveIntegerField()
     element_name = models.TextField()
     health_state = models.PositiveSmallIntegerField()
     health_state_reason = models.TextField()
+    child_health_state = models.PositiveSmallIntegerField()
+    model = models.TextField()
     position = models.PositiveSmallIntegerField()
     enclosure_type = models.PositiveSmallIntegerField()
     storage_system = models.ForeignKey(
@@ -35,15 +39,11 @@ class SfaEnclosure(models.Model):
 class SFADiskSlot(models.Model):
     class Meta:
         app_label = "chroma_core"
-        unique_together = (("enclosure_index", "disk_drive_index"),)
+        unique_together = (("enclosure_index", "disk_drive_index", "storage_system"),)
 
-    index = models.PositiveIntegerField(unique=True, primary_key=True)
-    enclosure_index = models.ForeignKey(
-        "SfaEnclosure", to_field="index", db_column="enclosure_index", on_delete=CASCADE
-    )
-    disk_drive_index = models.ForeignKey(
-        "SfaDiskDrive", to_field="index", db_column="disk_drive_index", on_delete=CASCADE
-    )
+    index = models.PositiveIntegerField()
+    enclosure_index = models.PositiveIntegerField()
+    disk_drive_index = models.PositiveIntegerField()
     storage_system = models.ForeignKey(
         "SfaStorageSystem", to_field="uuid", db_column="storage_system", on_delete=CASCADE
     )
@@ -52,14 +52,11 @@ class SFADiskSlot(models.Model):
 class SfaDiskDrive(models.Model):
     class Meta:
         app_label = "chroma_core"
+        unique_together = (("index", "storage_system"),)
 
-    index = models.PositiveIntegerField(unique=True, primary_key=True)
-    child_health_state = models.PositiveSmallIntegerField()
-    enclosure_index = models.ForeignKey(
-        "SfaEnclosure", to_field="index", db_column="enclosure_index", on_delete=CASCADE
-    )
+    index = models.PositiveIntegerField()
+    enclosure_index = models.PositiveIntegerField()
     failed = models.BooleanField(null=False)
-    health_state_reason = models.TextField()
     slot_number = models.PositiveIntegerField()
     health_state = models.PositiveSmallIntegerField()
     health_state_reason = models.TextField()
@@ -73,8 +70,9 @@ class SfaDiskDrive(models.Model):
 class SfaJob(models.Model):
     class Meta:
         app_label = "chroma_core"
+        unique_together = (("index", "storage_system"),)
 
-    index = models.PositiveIntegerField(unique=True, primary_key=True)
+    index = models.PositiveIntegerField()
     sub_target_index = models.PositiveIntegerField(null=True)
     sub_target_type = models.PositiveSmallIntegerField(null=True)
     job_type = models.PositiveSmallIntegerField()
@@ -87,14 +85,28 @@ class SfaJob(models.Model):
 class SfaPowerSupply(models.Model):
     class Meta:
         app_label = "chroma_core"
+        unique_together = (("index", "storage_system", "enclosure_index"),)
 
-    index = models.PositiveIntegerField(unique=True, primary_key=True)
-    enclosure_index = models.ForeignKey(
-        "SfaEnclosure", to_field="index", db_column="enclosure_index", on_delete=CASCADE
-    )
+    index = models.PositiveIntegerField()
+    enclosure_index = models.PositiveIntegerField()
     health_state = models.PositiveSmallIntegerField()
     health_state_reason = models.TextField()
     position = models.PositiveSmallIntegerField()
+    storage_system = models.ForeignKey(
+        "SfaStorageSystem", to_field="uuid", db_column="storage_system", on_delete=CASCADE
+    )
+
+
+class SfaController(models.Model):
+    class Meta:
+        app_label = "chroma_core"
+        unique_together = (("index", "storage_system"),)
+
+    index = models.PositiveIntegerField()
+    enclosure_index = models.PositiveIntegerField()
+    health_state = models.PositiveSmallIntegerField()
+    health_state_reason = models.TextField()
+    child_health_state = models.PositiveSmallIntegerField()
     storage_system = models.ForeignKey(
         "SfaStorageSystem", to_field="uuid", db_column="storage_system", on_delete=CASCADE
     )

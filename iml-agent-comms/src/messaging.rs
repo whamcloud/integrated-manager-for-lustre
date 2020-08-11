@@ -2,12 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{Future, Stream};
+use futures::{Stream, TryFutureExt, TryStreamExt};
 use iml_rabbit::{
-    basic_consume, declare_transient_queue, BasicConsumeOptions, Channel, Connection,
-    ImlRabbitError,
+    basic_consume, declare_transient_queue, BasicConsumeOptions, Channel, ImlRabbitError,
 };
-use iml_wire_types::{Fqdn, Id, ManagerMessage, Message, PluginMessage, PluginName, Seq};
+use iml_wire_types::{Fqdn, Id, Message, PluginMessage, PluginName};
 
 pub static AGENT_TX_RUST: &str = "agent_tx_rust";
 
@@ -16,7 +15,7 @@ pub struct AgentData {
     pub fqdn: Fqdn,
     pub plugin: PluginName,
     pub session_id: Id,
-    pub session_seq: Seq,
+    pub session_seq: u64,
     pub body: serde_json::Value,
 }
 
@@ -74,33 +73,15 @@ impl From<AgentData> for PluginMessage {
     }
 }
 
-pub fn terminate_agent_session(
-    plugin: PluginName,
-    fqdn: Fqdn,
-    session_id: Id,
-    client: Connection,
-) -> impl Future<Output = Result<(), ImlRabbitError>> {
-    iml_rabbit::send_message(
-        client,
-        "",
-        AGENT_TX_RUST,
-        ManagerMessage::SessionTerminate {
-            fqdn,
-            plugin,
-            session_id,
-        },
-    )
-}
-
 pub async fn consume_agent_tx_queue(
-    channel: Channel,
+    channel: &Channel,
     queue_name: impl Into<String>,
 ) -> Result<impl Stream<Item = Result<iml_rabbit::message::Delivery, ImlRabbitError>>, ImlRabbitError>
 {
-    let (ch, q) = declare_transient_queue(channel, queue_name).await?;
+    let q = declare_transient_queue(&channel, queue_name).await?;
 
     basic_consume(
-        ch,
+        &channel,
         q,
         "",
         Some(BasicConsumeOptions {
@@ -108,5 +89,6 @@ pub async fn consume_agent_tx_queue(
             ..BasicConsumeOptions::default()
         }),
     )
+    .map_ok(|s| s.map_ok(|(_, y)| y))
     .await
 }

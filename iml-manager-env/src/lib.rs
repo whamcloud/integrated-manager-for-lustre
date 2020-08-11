@@ -2,13 +2,26 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use lazy_static::lazy_static;
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     env,
     net::{SocketAddr, ToSocketAddrs},
     path::PathBuf,
 };
 use url::Url;
+
+lazy_static! {
+    static ref RUNNING_IN_DOCKER: bool = std::fs::metadata("/.dockerenv").is_ok();
+}
+
+lazy_static! {
+    static ref ACTION_RUNNER_HTTP: String = format!(
+        "http://{}:{}",
+        get_server_host(),
+        get_var("ACTION_RUNNER_PORT")
+    );
+}
 
 /// Get the environment variable or panic
 fn get_var(name: &str) -> String {
@@ -45,6 +58,23 @@ fn string_to_bool(x: String) -> bool {
     }
 }
 
+pub fn get_log_path() -> PathBuf {
+    get_var("LOG_PATH").into()
+}
+
+pub fn get_dblog_hw() -> u32 {
+    get_var("DBLOG_HW").parse().unwrap()
+}
+
+pub fn get_dblog_lw() -> u32 {
+    get_var("DBLOG_LW").parse().unwrap()
+}
+
+/// Determine if local node is a docker volume
+pub fn running_in_docker() -> bool {
+    *RUNNING_IN_DOCKER
+}
+
 /// Get anonymous read permission from the env or panic
 pub fn get_allow_anonymous_read() -> bool {
     string_to_bool(get_var("ALLOW_ANONYMOUS_READ"))
@@ -63,6 +93,11 @@ pub fn get_is_release() -> bool {
 /// Get version from the env or panic
 pub fn get_version() -> String {
     get_var("VERSION")
+}
+
+/// Get exascaler version
+pub fn get_exa_version() -> Option<String> {
+    env::var("EXA_VERSION").ok()
 }
 
 /// Get the broker URL from the env or panic
@@ -220,6 +255,14 @@ pub fn get_use_stratagem() -> bool {
     string_to_bool(get_var("USE_STRATAGEM"))
 }
 
+pub fn get_action_runner_http() -> String {
+    ACTION_RUNNER_HTTP.clone()
+}
+
+pub fn get_action_runner_uds() -> String {
+    "/var/run/iml-action-runner.sock".to_string()
+}
+
 pub fn get_sfa_endpoints() -> Option<Vec<Vec<Url>>> {
     let xs: BTreeMap<_, _> = env::vars()
         .filter(|(k, _)| k.starts_with("SFA_ENDPOINTS_"))
@@ -246,24 +289,46 @@ pub fn get_sfa_endpoints() -> Option<Vec<Vec<Url>>> {
     }
 }
 
-/// Gets a connection string from the IML env
-pub fn get_db_conn_string() -> String {
-    let mut xs = vec![format!("user={}", get_db_user())];
+/// Gets a hash of db connection values
+pub fn get_db_conn_hash() -> HashMap<String, String> {
+    let mut xs = HashMap::new();
+
+    xs.insert("user".to_string(), get_db_user());
 
     let host = match get_db_host() {
         Some(x) => x,
         None => "/var/run/postgresql".into(),
     };
 
-    xs.push(format!("host={}", host));
+    xs.insert("host".to_string(), host);
 
     if let Some(x) = get_db_name() {
-        xs.push(format!("dbname={}", x));
+        xs.insert("dbname".to_string(), x);
     }
 
     if let Some(x) = get_db_password() {
-        xs.push(format!("password={}", x));
+        xs.insert("password".to_string(), x);
     }
 
-    xs.join(" ")
+    // Convert executable name to application_name for Postgres
+    if let Some(x) = std::env::current_exe()
+        .unwrap_or_else(|_| "".into())
+        .file_name()
+    {
+        xs.insert(
+            "application_name".to_string(),
+            x.to_string_lossy().to_string(),
+        );
+    }
+
+    xs
+}
+
+/// Gets a connection string from the IML env
+pub fn get_db_conn_string() -> String {
+    let xs = get_db_conn_hash();
+    xs.iter()
+        .map(|(k, v)| format!("{}={}", k, v))
+        .collect::<Vec<String>>()
+        .join(" ")
 }

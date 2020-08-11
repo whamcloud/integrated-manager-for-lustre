@@ -35,14 +35,10 @@ substs: $(SUBSTS)
 	chmod +x $(SUBSTS_SHELL)
 
 srpm:
-	if ! rpm -q postgresql96-devel 2> /dev/null; then \
-		yum install -y postgresql96-devel; \
-	fi
-
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/release/rust-iml
 	PQ_LIB_DIR=/usr/pgsql-9.6/lib cargo build --release
-	cp ${TARGET}/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,mailbox,ntp,ostpool,postoffice,sfa,stats,device,warp-drive} \
+	cp ${TARGET}/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,journal,mailbox,ntp,ostpool,postoffice,sfa,stats,device,warp-drive} \
 		iml-agent-comms.service \
 		iml-mailbox.service \
 		iml-postoffice.service \
@@ -50,6 +46,7 @@ srpm:
 		iml-api.service \
 		iml-rust-stats.service \
 		iml-device.service \
+		iml-journal.service \
 		iml-action-runner.service \
 		iml-action-runner.socket \
 		iml-agent/systemd-units/* \
@@ -59,6 +56,7 @@ srpm:
 		iml-sfa.service \
 		${TMPDIR}/release/rust-iml
 	cp ${TARGET}/release/iml ${TMPDIR}/release/rust-iml
+	cp ${TARGET}/release/iml-config ${TMPDIR}/release/rust-iml
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/rust-iml.tar.gz -C ${TMPDIR}/release/rust-iml .
 	cp rust-iml.spec ${TMPDIR}/_topdir/SPECS/
 	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-iml.spec
@@ -69,7 +67,7 @@ iml-docker-srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/scratch/iml-docker
 
-	cp -r docker/{docker-compose.yml,iml-images.tgz,iml-cli-proxy.sh} ${TMPDIR}/scratch/iml-docker/
+	cp -r docker/{docker-compose.yml,iml-images.tgz,iml-cli-proxy.sh,update-embedded.sh} ${TMPDIR}/scratch/iml-docker/
 	cp iml-docker.service ${TMPDIR}/scratch/iml-docker/
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/iml-docker.tar.gz -C ${TMPDIR}/scratch/iml-docker .
 
@@ -96,6 +94,7 @@ iml-srpm: iml-deps substs
 	cp ${BUILDROOT}/python-iml-manager.spec ${TMPDIR}/_topdir/SPECS
 
 	cp -r ${BUILDROOT}/grafana ${TMPDIR}/configuration
+	cp -r ${BUILDROOT}/nginx ${TMPDIR}/configuration
 	cp ${BUILDROOT}/iml-*.service \
 		${BUILDROOT}/rabbitmq-env.conf \
 		${BUILDROOT}/rabbitmq-server-dropin.conf \
@@ -130,6 +129,30 @@ iml-gui-srpm:
 	
 	cp iml-gui/rust-iml-gui.spec ${TMPDIR}/_topdir/SPECS/
 	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-iml-gui.spec
+
+	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
+	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)
+
+device-scanner-srpm: 
+	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
+	mkdir -p ${TMPDIR}/release/iml-device-scanner
+
+	cd device-scanner; \
+	cargo build --release; \
+	cp {device-scanner-daemon,mount-emitter,zed-enhancer}/systemd-units/* \
+		{zed-enhancer,uevent-listener}/udev-rules/* \
+		${TARGET}/release/device-scanner-daemon \
+		${TARGET}/release/{history_event,pool_create,pool_destroy,pool_export,pool_import,vdev_add}-scanner \
+		${TARGET}/release/mount-emitter \
+		${TARGET}/release/uevent-listener \
+		${TARGET}/release/zed-enhancer \
+		${TMPDIR}/release/iml-device-scanner
+
+
+	tar -czvf ${TMPDIR}/_topdir/SOURCES/iml-device-scanner.tar.gz -C ${TMPDIR}/release/iml-device-scanner .
+	cp device-scanner/iml-device-scanner.spec ${TMPDIR}/_topdir/SPECS/
+
+	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/iml-device-scanner.spec
 
 	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
 	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)

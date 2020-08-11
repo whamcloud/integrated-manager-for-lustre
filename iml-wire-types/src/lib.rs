@@ -2,13 +2,17 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-pub use iml_orm::alerts::AlertRecordType;
+pub mod client;
+pub mod db;
+pub mod snapshot;
+pub mod warp_drive;
+
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{
     cmp::{Ord, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap},
     convert::TryFrom,
-    fmt,
+    fmt, io,
     ops::Deref,
     sync::Arc,
 };
@@ -69,28 +73,6 @@ impl fmt::Display for Id {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(transparent)]
-pub struct Seq(pub u64);
-
-impl From<u64> for Seq {
-    fn from(name: u64) -> Self {
-        Self(name)
-    }
-}
-
-impl Default for Seq {
-    fn default() -> Self {
-        Self(0)
-    }
-}
-
-impl Seq {
-    pub fn increment(&mut self) {
-        self.0 += 1;
-    }
-}
-
 /// The payload from the agent.
 /// One or many can be packed into an `Envelope`
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -101,7 +83,7 @@ pub enum Message {
         fqdn: Fqdn,
         plugin: PluginName,
         session_id: Id,
-        session_seq: Seq,
+        session_seq: u64,
         body: serde_json::Value,
     },
     SessionCreateRequest {
@@ -180,7 +162,7 @@ pub enum PluginMessage {
         fqdn: Fqdn,
         plugin: PluginName,
         session_id: Id,
-        session_seq: Seq,
+        session_seq: u64,
         body: serde_json::Value,
     },
 }
@@ -197,6 +179,20 @@ pub struct ActionName(pub String);
 impl From<&str> for ActionName {
     fn from(name: &str) -> Self {
         Self(name.into())
+    }
+}
+
+impl Deref for ActionName {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.0.as_str()
+    }
+}
+
+impl From<String> for ActionName {
+    fn from(name: String) -> Self {
+        Self(name)
     }
 }
 
@@ -245,6 +241,18 @@ impl TryFrom<Action> for serde_json::Value {
     fn try_from(action: Action) -> Result<Self, Self::Error> {
         serde_json::to_value(action)
     }
+}
+
+/// Actions can be run either locally or remotely.
+/// Besides the node these are run on, the interface should
+/// be the same.
+///
+/// This should probably be collapsed into a single struct over an enum at some point.
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ActionType {
+    Remote((Fqdn, Action)),
+    Local(Action),
 }
 
 /// The result of running the action on an agent.
@@ -421,6 +429,7 @@ pub struct Conf {
     pub allow_anonymous_read: bool,
     pub build: String,
     pub version: String,
+    pub exa_version: Option<String>,
     pub is_release: bool,
     pub branding: Branding,
     pub use_stratagem: bool,
@@ -433,6 +442,7 @@ impl Default for Conf {
             allow_anonymous_read: true,
             build: "Not Loaded".into(),
             version: "0".into(),
+            exa_version: None,
             is_release: false,
             branding: Branding::default(),
             use_stratagem: false,
@@ -489,7 +499,7 @@ impl EndpointName for NtpConfiguration {
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct ClientMount {
     pub filesystem_name: String,
-    pub mountpoint: Option<String>,
+    pub mountpoints: Vec<String>,
     pub state: String,
 }
 
@@ -515,7 +525,6 @@ pub struct Host {
     pub pacemaker_configuration: Option<String>,
     pub private_key: Option<String>,
     pub private_key_passphrase: Option<String>,
-    pub properties: String,
     pub resource_uri: String,
     pub root_pw: Option<String>,
     pub server_profile: ServerProfile,
@@ -615,28 +624,6 @@ impl EndpointName for ServerProfile {
     }
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct HostProfileWrapper {
-    pub host_profiles: Option<HostProfile>,
-    pub error: Option<String>,
-    pub traceback: Option<String>,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct HostProfile {
-    pub address: String,
-    pub host: i32,
-    pub profiles: HashMap<String, Vec<ProfileTest>>,
-    pub profiles_valid: bool,
-    pub resource_uri: String,
-}
-
-impl EndpointName for HostProfile {
-    fn endpoint_name() -> &'static str {
-        "host_profile"
-    }
-}
-
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ProfileTest {
     pub description: String,
@@ -714,6 +701,7 @@ pub struct HostValididity {
     pub address: String,
     pub status: Vec<Check>,
     pub valid: bool,
+    pub profiles: HashMap<String, Vec<ProfileTest>>,
 }
 
 pub type TestHostJob = Job<HostValididity>;
@@ -1102,6 +1090,50 @@ pub struct FilesystemShort {
     pub name: String,
 }
 
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Debug)]
+pub enum AlertRecordType {
+    AlertState,
+    LearnEvent,
+    AlertEvent,
+    SyslogEvent,
+    ClientConnectEvent,
+    CommandRunningAlert,
+    CommandSuccessfulAlert,
+    CommandCancelledAlert,
+    CommandErroredAlert,
+    CorosyncUnknownPeersAlert,
+    CorosyncToManyPeersAlert,
+    CorosyncNoPeersAlert,
+    CorosyncStoppedAlert,
+    StonithNotEnabledAlert,
+    PacemakerStoppedAlert,
+    HostContactAlert,
+    HostOfflineAlert,
+    HostRebootEvent,
+    UpdatesAvailableAlert,
+    TargetOfflineAlert,
+    TargetFailoverAlert,
+    TargetRecoveryAlert,
+    StorageResourceOffline,
+    StorageResourceAlert,
+    StorageResourceLearnEvent,
+    PowerControlDeviceUnavailableAlert,
+    IpmiBmcUnavailableAlert,
+    LNetOfflineAlert,
+    LNetNidsChangedAlert,
+    StratagemUnconfiguredAlert,
+    TimeOutOfSyncAlert,
+    NoTimeSyncAlert,
+    MultipleTimeSyncAlert,
+    UnknownTimeSyncAlert,
+}
+
+impl ToString for AlertRecordType {
+    fn to_string(&self) -> String {
+        serde_json::to_string(self).unwrap().replace("\"", "")
+    }
+}
+
 #[derive(
     serde::Serialize, serde::Deserialize, Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq,
 )]
@@ -1111,6 +1143,18 @@ pub enum AlertSeverity {
     WARNING,
     ERROR,
     CRITICAL,
+}
+
+impl From<AlertSeverity> for i32 {
+    fn from(x: AlertSeverity) -> Self {
+        match x {
+            AlertSeverity::DEBUG => 10,
+            AlertSeverity::INFO => 20,
+            AlertSeverity::WARNING => 30,
+            AlertSeverity::ERROR => 40,
+            AlertSeverity::CRITICAL => 50,
+        }
+    }
 }
 
 /// An Alert record from /api/alert/
@@ -1551,11 +1595,100 @@ impl PartialEq for OstPool {
     }
 }
 
+#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct JournalMessage {
+    pub datetime: std::time::Duration,
+    pub severity: JournalPriority,
+    pub facility: i16,
+    pub source: String,
+    pub message: String,
+}
+
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[repr(i16)]
+pub enum JournalPriority {
+    Emerg,
+    Alert,
+    Crit,
+    Err,
+    Warning,
+    Notice,
+    Info,
+    Debug,
+}
+
+impl TryFrom<String> for JournalPriority {
+    type Error = io::Error;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        let x = s
+            .parse::<u8>()
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+        match x {
+            0 => Ok(Self::Emerg),
+            1 => Ok(Self::Alert),
+            2 => Ok(Self::Crit),
+            3 => Ok(Self::Err),
+            4 => Ok(Self::Warning),
+            5 => Ok(Self::Notice),
+            6 => Ok(Self::Info),
+            7 => Ok(Self::Debug),
+            x => Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Priority {} not in range", x),
+            )),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub enum Branding {
+    DDN(DdnBranding),
     Whamcloud,
-    Ddn,
-    DdnAi400,
+}
+
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+pub enum DdnBranding {
+    AI200,
+    AI200X,
+    AI400,
+    AI400X,
+    AI7990X,
+    ES14K,
+    ES14KX,
+    ES18K,
+    ES18KX,
+    ES200NV,
+    ES200NVX,
+    ES400NV,
+    ES400NVX,
+    ES7990,
+    ES7990X,
+    Exascaler,
+}
+
+impl fmt::Display for DdnBranding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::AI200 => write!(f, "AI200"),
+            Self::AI200X => write!(f, "AI200X"),
+            Self::AI400 => write!(f, "AI400"),
+            Self::AI400X => write!(f, "AI400X"),
+            Self::AI7990X => write!(f, "AI7990X"),
+            Self::ES14K => write!(f, "ES14K"),
+            Self::ES14KX => write!(f, "ES14KX"),
+            Self::ES18K => write!(f, "ES18K"),
+            Self::ES18KX => write!(f, "ES18KX"),
+            Self::ES200NV => write!(f, "ES200NV"),
+            Self::ES200NVX => write!(f, "ES200NVX"),
+            Self::ES400NV => write!(f, "ES400NV"),
+            Self::ES400NVX => write!(f, "ES400NVX"),
+            Self::ES7990 => write!(f, "ES7990"),
+            Self::ES7990X => write!(f, "ES7990X"),
+            Self::Exascaler => write!(f, "EXA5"),
+        }
+    }
 }
 
 impl Default for Branding {
@@ -1567,9 +1700,22 @@ impl Default for Branding {
 impl From<String> for Branding {
     fn from(x: String) -> Self {
         match x.to_lowercase().as_str() {
-            "whamcloud" => Self::Whamcloud,
-            "ddn" => Self::Ddn,
-            "ddnai400" => Self::DdnAi400,
+            "ai200" => Self::DDN(DdnBranding::AI200),
+            "ai200x" => Self::DDN(DdnBranding::AI200X),
+            "ai400" => Self::DDN(DdnBranding::AI400),
+            "ai400x" => Self::DDN(DdnBranding::AI400X),
+            "ai7990x" => Self::DDN(DdnBranding::AI7990X),
+            "es14k" => Self::DDN(DdnBranding::ES14K),
+            "es14kx" => Self::DDN(DdnBranding::ES14KX),
+            "es18k" => Self::DDN(DdnBranding::ES18K),
+            "es18kx" => Self::DDN(DdnBranding::ES18KX),
+            "es200nv" => Self::DDN(DdnBranding::ES200NV),
+            "es200nvx" => Self::DDN(DdnBranding::ES200NVX),
+            "es400nv" => Self::DDN(DdnBranding::ES400NV),
+            "es400nvx" => Self::DDN(DdnBranding::ES400NVX),
+            "es7990" => Self::DDN(DdnBranding::ES7990),
+            "es7990x" => Self::DDN(DdnBranding::ES7990X),
+            "exascaler" => Self::DDN(DdnBranding::Exascaler),
             _ => Self::Whamcloud,
         }
     }
@@ -1578,12 +1724,78 @@ impl From<String> for Branding {
 impl fmt::Display for Branding {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Ddn => write!(f, "ddn"),
+            Self::DDN(x) => write!(f, "{}", x),
             Self::Whamcloud => write!(f, "whamcloud"),
-            Self::DdnAi400 => write!(f, "ddnai400"),
         }
     }
 }
 
-pub mod db;
-pub mod warp_drive;
+#[derive(Debug, Eq, Clone, serde::Serialize, serde::Deserialize)]
+pub struct LdevEntry {
+    pub primary: String,
+    pub failover: Option<String>,
+    pub label: String,
+    pub device: String,
+}
+
+impl From<&str> for LdevEntry {
+    fn from(x: &str) -> Self {
+        let parts: Vec<&str> = x.split(' ').collect();
+
+        Self {
+            primary: (*parts
+                .get(0)
+                .unwrap_or_else(|| panic!("LdevEntry must specify a primary server.")))
+            .to_string(),
+            failover: parts.get(1).map_or_else(
+                || panic!("LdevEntry must specify a failover server or '-'."),
+                |x| {
+                    if *x == "-" {
+                        None
+                    } else {
+                        Some((*x).to_string())
+                    }
+                },
+            ),
+            label: (*parts
+                .get(2)
+                .unwrap_or_else(|| panic!("LdevEntry must specify a label.")))
+            .to_string(),
+            device: (*parts
+                .get(3)
+                .unwrap_or_else(|| panic!("LdevEntry must specify a device.")))
+            .to_string(),
+        }
+    }
+}
+
+impl fmt::Display for LdevEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} {} {} {}",
+            self.primary,
+            self.failover.as_deref().unwrap_or("-"),
+            self.label,
+            self.device
+        )
+    }
+}
+
+impl Ord for LdevEntry {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.label.cmp(&other.label)
+    }
+}
+
+impl PartialOrd for LdevEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for LdevEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.label == other.label
+    }
+}

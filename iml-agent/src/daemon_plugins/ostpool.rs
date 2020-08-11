@@ -10,13 +10,18 @@ use crate::{
 };
 use futures::{future::join_all, lock::Mutex, Future, FutureExt};
 use iml_wire_types::{FsPoolMap, OstPool};
-use std::{collections::BTreeSet, pin::Pin, sync::Arc};
+use std::{
+    collections::BTreeSet,
+    pin::Pin,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 /// Resend full tree every 5 min
-const DEFAULT_RESEND: u32 = 300;
+const DEFAULT_RESEND: Duration = Duration::from_secs(300);
 
 struct PoolStateSub {
-    count: u32,
+    last: Instant,
     output: Output,
 }
 
@@ -28,7 +33,7 @@ pub struct PoolState {
 pub fn create() -> impl DaemonPlugin {
     PoolState {
         state: Arc::new(Mutex::new(PoolStateSub {
-            count: DEFAULT_RESEND,
+            last: Instant::now(),
             output: None,
         })),
     }
@@ -39,8 +44,7 @@ async fn list_fs() -> Vec<String> {
     lctl(vec!["get_param", "-N", "mdt.*-MDT0000"])
         .await
         .map(|o| {
-            String::from_utf8_lossy(&o.stdout)
-                .lines()
+            o.lines()
                 .filter_map(|line| {
                     line.split('.')
                         .nth(1)
@@ -81,6 +85,7 @@ impl DaemonPlugin for PoolState {
 
             let tree = build_tree().await;
 
+            state.last = Instant::now();
             state.output = serde_json::to_value(tree).map(Some)?;
 
             Ok(state.output.clone())
@@ -97,9 +102,11 @@ impl DaemonPlugin for PoolState {
             let tree = build_tree().await;
             let newout = serde_json::to_value(tree).map(Some)?;
             let mut state = state.lock().await;
-            state.count -= 1;
-            if state.count == 0 || state.output != newout {
-                state.count = DEFAULT_RESEND;
+
+            let now = Instant::now();
+
+            if state.output != newout || state.last + DEFAULT_RESEND > now {
+                state.last = now;
                 state.output = newout;
 
                 Ok(state.output.clone())

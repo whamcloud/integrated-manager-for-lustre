@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    components::{duration_picker, grafana_chart},
+    components::{command_modal, duration_picker, grafana_chart},
     extensions::MergeAttrs,
     generated::css_classes::C,
     GMsg,
@@ -283,8 +283,10 @@ pub(crate) fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut
                 }
             }
             Msg::CmdSent(fetch_object) => match fetch_object.response() {
-                Ok(_) => {
-                    orders.skip();
+                Ok(x) => {
+                    let x = command_modal::Input::Commands(vec![Arc::new(x.data.command)]);
+
+                    orders.send_g_msg(GMsg::OpenCommandModal(x));
                 }
                 Err(fail_reason) => {
                     config.disabled = false;
@@ -386,6 +388,7 @@ pub(crate) fn view(model: &Model, all_locks: &Locks) -> Node<Msg> {
             );
 
             div![
+                stratagem_config(config, locked),
                 scan_stratagem_button::view(&config.scan_stratagem_button).map_msg(Msg::ScanStratagemButton),
                 inode_table::view(&config.inode_table).map_msg(Msg::InodeTable),
                 caption_wrapper(
@@ -398,7 +401,6 @@ pub(crate) fn view(model: &Model, all_locks: &Locks) -> Node<Msg> {
                     Some(&last_scan),
                     stratagem_chart(grafana_chart::create_chart_params(3, "1m", config.grafana_vars.clone()))
                 ),
-                stratagem_config(config, locked)
             ]
         }
     }

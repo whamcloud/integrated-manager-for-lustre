@@ -14,7 +14,7 @@ pub fn view<T>(model: &fs_usage::Model) -> Node<T> {
         let color = progress_circle::used_to_color(model.percent_used);
 
         let dashboard_chart = div![
-            class![C.grid, C.grid_cols_3, C.gap_2, C.items_center, C.h_full],
+            class![C.grid, C.grid_cols_3, C.gap_2, C.items_center, C.h_full, C.min_h_80],
             div![
                 class![C.justify_self_end, C.p_2],
                 p![class![color], number_formatter::format_bytes(metrics.bytes_used, 1)],

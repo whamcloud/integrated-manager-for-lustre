@@ -16,6 +16,7 @@ class ObjectCache(object):
     def __init__(self):
         from chroma_core.models import ManagedFilesystem, ManagedHost, LNetConfiguration, LustreClientMount
         from chroma_core.models import PacemakerConfiguration, CorosyncConfiguration, Corosync2Configuration
+        from chroma_core.models import ServerProfile
         from chroma_core.models import NTPConfiguration, StratagemConfiguration, Ticket
         from chroma_core.models.target import ManagedTarget, ManagedTargetMount
         from chroma_core.models.copytool import Copytool
@@ -40,6 +41,7 @@ class ObjectCache(object):
             NTPConfiguration,
             StratagemConfiguration,
             Ticket,
+            ServerProfile,
         ]
 
         for klass in self._cached_models:
@@ -137,18 +139,6 @@ class ObjectCache(object):
         cls.instance = None
 
     @classmethod
-    def host_client_mounts(cls, host_id):
-        from chroma_core.models.client_mount import LustreClientMount
-
-        return cls.get(LustreClientMount, lambda hcm: hcm.host_id == host_id)
-
-    @classmethod
-    def filesystem_client_mounts(cls, fs_id):
-        from chroma_core.models.client_mount import LustreClientMount
-
-        return cls.get(LustreClientMount, lambda fcm: fcm.filesystem_id == fs_id)
-
-    @classmethod
     def client_mount_copytools(cls, cm_id):
         from chroma_core.models.client_mount import LustreClientMount
         from chroma_core.models.copytool import Copytool
@@ -156,7 +146,7 @@ class ObjectCache(object):
         try:
             client_mount = cls.get_one(LustreClientMount, lambda ccm: ccm.id == cm_id)
             return cls.get(
-                Copytool, lambda ct: (client_mount.host_id == ct.host_id and client_mount.mountpoint == ct.mountpoint)
+                Copytool, lambda ct: (client_mount.host_id == ct.host_id and ct.mountpoint in client_mount.mountpoints)
             )
         except LustreClientMount.DoesNotExist:
             return []

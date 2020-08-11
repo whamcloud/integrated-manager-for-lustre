@@ -15,7 +15,7 @@ use futures::{
 };
 use iml_wire_types::PluginName;
 use std::{
-    ops::{Deref, DerefMut},
+    ops::DerefMut,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -26,7 +26,7 @@ use tracing::error;
 /// this function will handle the state and move it to it's next state.
 ///
 fn handle_state(
-    state: &State,
+    state: &mut State,
     agent_client: AgentClient,
     sessions: Sessions,
     name: PluginName,
@@ -35,12 +35,16 @@ fn handle_state(
     tracing::trace!("handling state for {:?}: {:?}, ", name, state);
 
     match state {
-        State::Active(a) if a.instant <= now => Either::Left(
-            a.session
-                .poll()
-                .and_then(move |x| async move {
-                    if let Some((info, output)) = x {
-                        agent_client.send_data(info, output).await?;
+        State::Active(a) if a.instant <= now => {
+            let (rx, fut) = a.session.poll();
+
+            a.in_flight = Some(rx);
+            let id = a.session.id.clone();
+
+            Either::Left(
+                fut.and_then(move |x| async move {
+                    if let Some((seq, name, id, output)) = x {
+                        agent_client.send_data(id, name, seq, output).await?;
                     }
 
                     Ok(())
@@ -51,10 +55,11 @@ fn handle_state(
                             sessions.reset_active(&name).await;
                             Ok(())
                         }
-                        Err(_) => sessions.terminate_session(&name).await,
+                        Err(_) => sessions.terminate_session(&name, &id).await,
                     }
                 }),
-        ),
+            )
+        }
         _ => Either::Right(future::ok(())),
     }
 }
@@ -103,7 +108,7 @@ pub async fn create_poller(agent_client: AgentClient, sessions: Sessions) {
 
         for (name, state) in sessions.0.iter() {
             let fut = handle_state(
-                Arc::clone(&state).read().await.deref(),
+                Arc::clone(&state).write().await.deref_mut(),
                 agent_client.clone(),
                 sessions.clone(),
                 name.clone(),

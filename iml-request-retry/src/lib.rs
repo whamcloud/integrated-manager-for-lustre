@@ -3,10 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use futures::Future;
-use std::fmt::Debug;
-use std::time::Duration;
+use std::{fmt::Debug, time::Duration};
 use tokio::time::delay_for;
-use tracing;
 
 pub mod policy;
 
@@ -21,17 +19,17 @@ pub trait FutureFactory<T, E, F>
 where
     F: Future<Output = Result<T, E>>,
 {
-    fn build_future(&self) -> F;
+    fn build_future(&self, _: u32) -> F;
 }
 
 /// Render a function Fn() -> Future<Output=...> to have FutureFactory
 impl<T, E, F, FF> FutureFactory<T, E, F> for FF
 where
     F: Future<Output = Result<T, E>>,
-    FF: Fn() -> F,
+    FF: Fn(u32) -> F,
 {
-    fn build_future(&self) -> F {
-        (*self)()
+    fn build_future(&self, c: u32) -> F {
+        (*self)(c)
     }
 }
 
@@ -64,14 +62,7 @@ where
     }
 }
 
-/// *NOTE*: the constraint `(dyn RetryPolicy<E> + Send)` (not just `dyn RetryPolicy<E>`) is needed,
-/// otherwise we might have e.g. error
-/// [E0277]: `dyn iml_request_retry::RetryPolicy<reqwest::error::Error>` cannot be sent between threads safely
-/// on the caller side. See `examples/demo-server-client.rs`.
-pub async fn retry_future<T, E, F, FF>(
-    factory: FF,
-    policy: &mut (dyn RetryPolicy<E> + Send),
-) -> Result<T, E>
+pub async fn retry_future<T, E, F, FF>(factory: FF, mut policy: impl RetryPolicy<E>) -> Result<T, E>
 where
     E: Debug,
     F: Future<Output = Result<T, E>>,
@@ -79,7 +70,7 @@ where
 {
     let mut request_no = 0u32;
     loop {
-        let future = factory.build_future();
+        let future = factory.build_future(request_no);
         tracing::debug!("about to call the future built");
         match future.await {
             Ok(x) => {
@@ -109,7 +100,7 @@ where
 {
     let mut request_no = 0u32;
     loop {
-        let future = factory.build_future();
+        let future = factory.build_future(request_no);
         tracing::debug!("about to call the future built");
         match future.await {
             Ok(x) => {
@@ -153,7 +144,7 @@ mod tests {
     where
         F: Future<Output = Result<T, E>> + Clone,
     {
-        fn build_future(&self) -> F {
+        fn build_future(&self, _: u32) -> F {
             let i = self.index.get();
             self.index.set(i + 1);
             self.futures[i].clone()
@@ -184,5 +175,21 @@ mod tests {
             Err(Error::Fatal),
             block_on(retry_future_gen(factory, &policy))
         );
+    }
+
+    #[test]
+    fn dynamic_future_generation() {
+        let mut policy = |_, _| RetryAction::RetryNow;
+
+        let fut = retry_future(
+            |c| match c {
+                0 => futures::future::err(100),
+                1 => futures::future::ok(c),
+                _ => futures::future::err(200),
+            },
+            &mut policy,
+        );
+
+        assert_eq!(Ok(1), block_on(fut));
     }
 }

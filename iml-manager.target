@@ -28,8 +28,8 @@ After=iml-power-control.service
 Requires=iml-rust-stats.service
 After=iml-rust-stats.service
 
-Requires=iml-syslog.service
-After=iml-syslog.service
+Requires=iml-journal.service
+After=iml-journal.service
 
 Requires=iml-agent-comms.service
 After=iml-agent-comms.service
@@ -98,7 +98,7 @@ Also=iml-plugin-runner.service
 Also=iml-power-control.service
 Also=iml-rust-stats.service
 Also=iml-sfa.service
-Also=iml-syslog.service
+Also=iml-journal.service
 Also=iml-ntp.service
 Also=iml-update-handler.socket
 Also=iml-warp-drive.service

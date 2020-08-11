@@ -65,7 +65,7 @@ Vagrant.configure('2') do |config|
 #{MGMT_NET_PFX}.22 oss2.local oss2
     __EOF
     (1..8).each do |cidx|
-      f.puts "#{MGMT_NET_PFX}.3#{cidx} c#{cidx}.local c#{cidx}\n"
+      f.puts "#{MGMT_NET_PFX}.3#{cidx} client#{cidx}.local client#{cidx}\n"
     end
   end
 
@@ -82,7 +82,15 @@ Vagrant.configure('2') do |config|
   config.vm.provision 'ssh', type: 'shell', path: './scripts/key_config.sh'
 
   config.vm.provision 'deps', type: 'shell', inline: <<-SHELL
+    # If there is a newer EPEL available, we first need to install EPEL
     yum install -y epel-release
+    # Then clean metadata (due to non-matching metalinks)
+    yum clean all
+    # Then recognize the new version
+    yum check-update epel-release
+    # Then install the new version
+    yum install -y epel-release
+    yum clean all
     yum install -y jq htop vim
   SHELL
 
@@ -123,6 +131,7 @@ Vagrant.configure('2') do |config|
     adm.vm.hostname = 'adm.local'
 
     adm.vm.network 'forwarded_port', guest: 443, host: 8443
+    adm.vm.network 'forwarded_port', guest: 7443, host: 7443
 
     # Admin / management network
     provision_mgmt_net adm, '10'
@@ -186,6 +195,14 @@ Vagrant.configure('2') do |config|
                      path: 'scripts/install_iml.sh',
                      args: 'https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/v6.0.0/chroma_support.repo'
 
+    # Install IML 6.1 onto the admin node
+    # Using the mfl 6.1 repo
+    adm.vm.provision 'install-iml-6.1',
+                     type: 'shell',
+                     run: 'never',
+                     path: 'scripts/install_iml.sh',
+                     args: 'https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/v6.1.0/chroma_support.repo'
+
     # Install IML 4.0.10.x onto the admin node
     # Using the mfl 4.0.10 copr repo
     adm.vm.provision 'install-iml-4.0.10',
@@ -201,6 +218,19 @@ Vagrant.configure('2') do |config|
                      type: 'shell',
                      run: 'never',
                      path: 'scripts/install_iml_local.sh'
+
+    # Install iml-docker onto the admin node
+    adm.vm.provision 'install-iml-docker-local',
+                     type: 'shell',
+                     run: 'never',
+                     path: 'scripts/install_iml_docker_local.sh'
+
+    # Install iml-docker onto the admin node
+    adm.vm.provision 'install-iml-docker-repouri',
+                     type: 'shell',
+                     run: 'never',
+                     path: 'scripts/install_iml_docker_repouri.sh',
+                     env: {"REPO_URI" => REPO_URI}
 
     adm.vm.provision 'deploy-managed-hosts',
                      type: 'shell',
@@ -303,11 +333,15 @@ Vagrant.configure('2') do |config|
                          run: 'never',
                          inline: <<-SHELL
                            mkfs.lustre --servicenode 10.73.20.11@tcp:10.73.20.12@tcp --mgs --backfstype=zfs mgt/mgt
-                           mkdir -p /lustre/zfsmo/mgs
-                           mount -t lustre mgt/mgt /lustre/zfsmo/mgs
-
                            mkfs.lustre --reformat --failover 10.73.20.12@tcp --mdt --backfstype=zfs --fsname=zfsmo --index=0 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp mdt0/mdt0
-                           mkdir -p /lustre/zfsmo/mdt0
+                         SHELL
+
+        mds.vm.provision 'mount-zfs-fs',
+                         type: 'shell',
+                         run: 'never',
+                         inline: <<-SHELL
+                           mkdir -p /lustre/zfsmo/{mgs,mdt0}
+                           mount -t lustre mgt/mgt /lustre/zfsmo/mgs
                            mount -t lustre mdt0/mdt0 /lustre/zfsmo/mdt0
                          SHELL
 
@@ -323,8 +357,7 @@ Vagrant.configure('2') do |config|
                          type: 'shell',
                          run: 'never',
                          inline: <<-SHELL
-                           mkdir -p /mnt/mgs
-                           mkdir -p /mnt/mdt0
+                           mkdir -p /mnt/{mgs,mdt0}
                            mount -t lustre /dev/mapper/mpatha /mnt/mgs
                            mount -t lustre /dev/mapper/mpathb /mnt/mdt0
                          SHELL
@@ -376,6 +409,12 @@ Vagrant.configure('2') do |config|
                          run: 'never',
                          inline: <<-SHELL
                            mkfs.lustre --failover 10.73.20.11@tcp --mdt --backfstype=zfs --fsname=zfsmo --index=1 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp mdt1/mdt1
+                         SHELL
+
+        mds.vm.provision 'mount-zfs-fs',
+                         type: 'shell',
+                         run: 'never',
+                         inline: <<-SHELL
                            mkdir -p /lustre/zfsmo/mdt1
                            mount -t lustre mdt1/mdt1 /lustre/zfsmo/mdt1
                          SHELL
@@ -437,6 +476,10 @@ Vagrant.configure('2') do |config|
                          mkdir -p /mnt/mdt{0,1}
                        SHELL
 
+      mds.vm.provision 'enable-debug',
+                       type: 'shell',
+                       run: 'never',
+                       path: 'scripts/enable_debug.sh'
     end
   end
 
@@ -558,6 +601,12 @@ Vagrant.configure('2') do |config|
                               mkfs.lustre --failover 10.73.20.22@tcp --ost --backfstype=zfs --fsname=zfsmo --index=7 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost7/ost7
                               mkfs.lustre --failover 10.73.20.22@tcp --ost --backfstype=zfs --fsname=zfsmo --index=8 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost8/ost8
                               mkfs.lustre --failover 10.73.20.22@tcp --ost --backfstype=zfs --fsname=zfsmo --index=9 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost9/ost9
+                         SHELL
+
+         oss.vm.provision 'mount-zfs-fs',
+                         type: 'shell',
+                         run: 'never',
+                         inline: <<-SHELL
                               mkdir -p /lustre/zfsmo/ost{0..9}
                               mount -t lustre ost0/ost0 /lustre/zfsmo/ost0
                               mount -t lustre ost1/ost1 /lustre/zfsmo/ost1
@@ -684,6 +733,12 @@ Vagrant.configure('2') do |config|
                               mkfs.lustre --failover 10.73.20.21@tcp --ost --backfstype=zfs --fsname=zfsmo --index=17 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost17/ost17
                               mkfs.lustre --failover 10.73.20.21@tcp --ost --backfstype=zfs --fsname=zfsmo --index=18 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost18/ost18
                               mkfs.lustre --failover 10.73.20.21@tcp --ost --backfstype=zfs --fsname=zfsmo --index=19 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost19/ost19
+                         SHELL
+
+        oss.vm.provision 'mount-zfs-fs',
+                         type: 'shell',
+                         run: 'never',
+                         inline: <<-SHELL
                               mkdir -p /lustre/zfsmo/ost{10..19}
                               mount -t lustre ost10/ost10 /lustre/zfsmo/ost10
                               mount -t lustre ost11/ost11 /lustre/zfsmo/ost11
@@ -763,6 +818,10 @@ Vagrant.configure('2') do |config|
                          mkdir -p /mnt/ost{0..9}
                        SHELL
 
+      oss.vm.provision 'enable-debug',
+                       type: 'shell',
+                       run: 'never',
+                       path: 'scripts/enable_debug.sh'
     end
   end
 
@@ -770,9 +829,9 @@ Vagrant.configure('2') do |config|
   # By default, only 2 compute nodes are created.
   # The configuration supports a maximum of 8 compute nodes.
   (1..8).each do |i|
-    config.vm.define "c#{i}",
+    config.vm.define "client#{i}",
                      autostart: i <= 2 do |c|
-      c.vm.hostname = "c#{i}.local"
+      c.vm.hostname = "client#{i}.local"
 
       # Admin / management network
       provision_mgmt_net c, "3#{i}"
@@ -781,6 +840,10 @@ Vagrant.configure('2') do |config|
       provision_lnet_net c, "3#{i}"
 
       configure_docker_network c
+
+      configure_ntp c
+
+      configure_ntp_docker c
 
       c.vm.provision 'install-iml-local',
             type: 'shell',
@@ -794,6 +857,33 @@ Vagrant.configure('2') do |config|
                             yum-config-manager --add-repo https://downloads.whamcloud.com/public/lustre/lustre-#{LUSTRE}/el7/client/
                             yum install -y --nogpgcheck lustre-client
                      SHELL
+
+      c.vm.provision 'configure-lustre-client-network',
+                      type: 'shell',
+                      run: 'never',
+                      path: './scripts/configure_lustre_network.sh'
+      c.vm.provision 'enable-debug',
+                       type: 'shell',
+                       run: 'never',
+                       path: 'scripts/enable_debug.sh'
+
+      c.vm.provision 'mount-lustre-client',
+                      type: 'shell',
+                      run: 'never',
+                      path: './scripts/mount_lustre_client.sh'
+
+      c.vm.provision 'mount-lustre-client-fs2',
+                      type: 'shell',
+                      run: 'never',
+                      path: './scripts/mount_lustre_client.sh',
+                      args: 'fs2'
+
+      c.vm.provision 'mount-lustre-client-zfs',
+                      type: 'shell',
+                      run: 'never',
+                      path: './scripts/mount_lustre_client.sh',
+                      args: 'zfsmo'
+
     end
   end
 end
@@ -841,7 +931,9 @@ def provision_mgmt_net(config, num)
   config.vm.network 'private_network',
                     ip: "#{MGMT_NET_PFX}.#{num}",
                     netmask: '255.255.255.0',
-                    name: interface_name
+                    name: interface_name,
+                    nm_controlled: false
+
 end
 
 def provision_mpath(config)
@@ -856,6 +948,7 @@ end
 def provision_fence_agents(config)
   config.vm.provision 'fence-agents', type: 'shell', inline: <<-SHELL
     yum install -y epel-release
+    yum clean all
     yum install -y yum-plugin-copr
     yum -y copr enable managerforlustre/manager-for-lustre-devel
     yum install -y fence-agents-vbox

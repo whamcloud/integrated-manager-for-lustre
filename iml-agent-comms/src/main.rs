@@ -10,7 +10,7 @@ use iml_agent_comms::{
     messaging::{consume_agent_tx_queue, AgentData, AGENT_TX_RUST},
     session::{self, Session, Sessions},
 };
-use iml_rabbit::{self, create_connection_filter, send_message, Connection};
+use iml_rabbit::{self, create_connection_filter, send_message, Channel, Connection};
 use iml_wire_types::{
     Envelope, Fqdn, ManagerMessage, ManagerMessages, Message, PluginMessage, PluginName,
 };
@@ -19,7 +19,7 @@ use warp::Filter;
 
 async fn data_handler(
     has_session: bool,
-    client: Connection,
+    ch: Channel,
     data: AgentData,
 ) -> Result<(), ImlAgentCommsError> {
     if has_session {
@@ -27,12 +27,12 @@ async fn data_handler(
 
         let s = format!("rust_agent_{}_rx", data.plugin);
 
-        send_message(client, "", s, PluginMessage::from(data)).await?;
+        send_message(&ch, "", s, PluginMessage::from(data)).await?;
     } else {
         tracing::warn!("Terminating session because unknown {}", data);
 
         send_message(
-            client.clone(),
+            &ch,
             "",
             AGENT_TX_RUST,
             ManagerMessage::SessionTerminate {
@@ -49,7 +49,7 @@ async fn data_handler(
 
 async fn session_create_req_handler(
     sessions: &mut Sessions,
-    client: Connection,
+    ch: Channel,
     fqdn: Fqdn,
     plugin: PluginName,
 ) -> Result<(), ImlAgentCommsError> {
@@ -65,7 +65,7 @@ async fn session_create_req_handler(
         let s = format!("rust_agent_{}_rx", plugin);
 
         send_message(
-            client.clone(),
+            &ch,
             "",
             s,
             PluginMessage::SessionTerminate {
@@ -80,7 +80,7 @@ async fn session_create_req_handler(
     let s = format!("rust_agent_{}_rx", plugin.clone());
 
     send_message(
-        client.clone(),
+        &ch,
         "",
         s,
         PluginMessage::SessionCreate {
@@ -92,7 +92,7 @@ async fn session_create_req_handler(
     .await?;
 
     send_message(
-        client.clone(),
+        &ch,
         "",
         AGENT_TX_RUST,
         ManagerMessage::SessionCreateResponse {
@@ -128,13 +128,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let shared_hosts2 = Arc::clone(&shared_hosts);
     let shared_hosts3 = Arc::clone(&shared_hosts);
 
+    let pool = iml_rabbit::connect_to_rabbit(2);
+
+    let conn = iml_rabbit::get_conn(pool.clone()).await?;
+
     tokio::spawn(
         async move {
-            let conn = iml_rabbit::connect_to_rabbit().await?;
-
             let ch = iml_rabbit::create_channel(&conn).await?;
 
-            let mut s = consume_agent_tx_queue(ch, AGENT_TX_RUST).await?;
+            drop(conn);
+
+            let mut s = consume_agent_tx_queue(&ch, AGENT_TX_RUST).await?;
 
             while let Some(msg) = s.try_next().await? {
                 let MessageFqdn { fqdn } = serde_json::from_slice(&msg.data)?;
@@ -169,19 +173,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let hosts_filter = warp::any().map(move || Arc::clone(&shared_hosts2));
 
-    let (fut, client_filter) = create_connection_filter().await?;
-
-    tokio::spawn(fut);
-
     let receiver = warp::post()
         .and(warp::header::<String>("x-ssl-client-name").map(Fqdn))
         .and(hosts_filter)
-        .and(client_filter)
+        .and(create_connection_filter(pool))
         .and(warp::body::json())
         .and_then(
             |fqdn: Fqdn,
              hosts: SharedHosts,
-             client: Connection,
+             conn: Connection,
              Envelope {
                  messages,
                  client_start_time,
@@ -197,6 +197,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                         Arc::clone(&host.sessions)
                     };
+
+                    let ch = iml_rabbit::create_channel(&conn).await?;
+
+                    drop(conn);
 
                     for msg in messages {
                         let s2 = Arc::clone(&sessions);
@@ -218,7 +222,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                 data_handler(
                                     has_session,
-                                    client.clone(),
+                                    ch.clone(),
                                     AgentData {
                                         fqdn,
                                         plugin,
@@ -231,11 +235,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                             Message::SessionCreateRequest { plugin, fqdn } => {
                                 let mut lock = s2.lock().await;
-                                session_create_req_handler(&mut lock, client.clone(), fqdn, plugin)
+                                session_create_req_handler(&mut lock, ch.clone(), fqdn, plugin)
                                     .await?;
                             }
                         }
                     }
+
+                    iml_rabbit::close_channel(&ch).await?;
 
                     Ok::<(), ImlAgentCommsError>(())
                 }

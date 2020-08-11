@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use iml_manager_cli::{
+    api::{self, api_cli},
     display_utils::display_error,
     filesystem::{self, filesystem_cli},
     server::{self, server_cli},
@@ -26,7 +27,7 @@ pub enum App {
     /// Work with Storage Servers
     Server {
         #[structopt(subcommand)]
-        command: server::ServerCommand,
+        command: Option<server::ServerCommand>,
     },
     #[structopt(name = "filesystem")]
     /// Filesystem command
@@ -35,8 +36,12 @@ pub enum App {
         command: filesystem::FilesystemCommand,
     },
     #[structopt(name = "update_repo")]
-    ///  Update Agent repo files
+    /// Update Agent repo files
     UpdateRepoFile(update_repo_file::UpdateRepoFileHosts),
+
+    #[structopt(name = "debugapi", setting = structopt::clap::AppSettings::Hidden)]
+    /// Direct API Access (for testing and debug)
+    DebugApi(api::ApiCommand),
 }
 
 #[tokio::main]
@@ -54,6 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         App::Server { command } => server_cli(command).await,
         App::UpdateRepoFile(config) => update_repo_file_cli(config).await,
         App::Filesystem { command } => filesystem_cli(command).await,
+        App::DebugApi(command) => api_cli(command).await,
     };
 
     if let Err(e) = r {

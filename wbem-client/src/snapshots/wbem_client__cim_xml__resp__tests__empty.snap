@@ -1,0 +1,15 @@
+---
+source: wbem-client/src/cim_xml.rs
+expression: r
+---
+Cim {
+    message: Message {
+        simplersp: SimpleRsp {
+            imethodresponse: IMethodResponse {
+                i_return_value: IReturnValueNamedInstance {
+                    named_instance: [],
+                },
+            },
+        },
+    },
+}

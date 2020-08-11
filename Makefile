@@ -35,10 +35,26 @@ NOSE_ARGS ?= --stop
 
 ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo ''; fi)
 
-all: copr-rpms rpms
+all: copr-rpms rpms device-scanner-rpms iml-gui-rpm docker-rpms
 
 local:
 	$(MAKE) RPM_DIST="0.$(shell date '+%s')" all
+
+check:
+	black --check ./
+	cargo fmt --all -- --check
+	PQ_LIB_DIR=/usr/pgsql-9.6/lib cargo check --locked --all-targets
+	PQ_LIB_DIR=/usr/pgsql-9.6/lib cargo clippy -- -W warnings
+	cargo check --locked --manifest-path iml-system-rpm-tests/Cargo.toml --tests
+	cargo clippy --manifest-path iml-system-rpm-tests/Cargo.toml --tests -- -W warnings
+	cargo check --locked --manifest-path iml-system-docker-tests/Cargo.toml --tests
+	cargo clippy --manifest-path iml-system-docker-tests/Cargo.toml --tests -- -W warnings
+
+fmt:
+	black ./
+	cargo fmt --all
+	cargo fmt --all --manifest-path iml-system-rpm-tests/Cargo.toml
+	cargo fmt --all --manifest-path iml-system-docker-tests/Cargo.toml
 
 iml-gui-rpm:
 	$(MAKE) -f .copr/Makefile iml-gui-srpm outdir=.
@@ -57,16 +73,22 @@ docker-rpms:
 	$(MAKE) -f .copr/Makefile iml-docker-srpm outdir=.
 	rpmbuild --rebuild ${RPM_OPTS} _topdir/SRPMS/iml-docker-*.src.rpm
 
+device-scanner-rpms:
+	$(MAKE) -f .copr/Makefile device-scanner-srpm outdir=.
+	rpmbuild --rebuild ${RPM_OPTS} _topdir/SRPMS/iml-device-scanner-*.src.rpm
+
 cleandist:
 	rm -rf dist
 	mkdir dist
 
 nuke_db:
-	@$(ALWAYS_NUKE_DB) && { \
-		echo "Wiping $(DB_NAME) DB..."; \
-		dropdb $(DB_NAME); \
-		createdb -O $(DB_USER) $(DB_NAME); \
-	} || true
+	echo "Wiping $(DB_NAME) DB..."; \
+	dropdb $(DB_NAME); \
+	createdb -O $(DB_USER) $(DB_NAME)
+
+migrate_db:
+	@./manage.py migrate
+
 
 nuke_logs:
 	@$(ALWAYS_NUKE_LOGS) && { \

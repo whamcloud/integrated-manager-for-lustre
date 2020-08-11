@@ -3,12 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::locks::Locks;
-use futures::{
-    channel::{mpsc, oneshot},
-    future::poll_fn,
-    lock::Mutex,
-    Stream, StreamExt,
-};
+use futures::{channel::mpsc, lock::Mutex, Stream, StreamExt};
 use im::HashMap;
 use iml_wire_types::warp_drive::{Cache, Message};
 use std::sync::{
@@ -42,51 +37,30 @@ pub async fn user_connected(
     // Save the sender in our list of connected users.
     state.lock().await.insert(id, tx);
 
-    // Make an extra clone of users list to give to our disconnection handler...
-    let state2 = Arc::clone(&state);
-
-    // Create channel to track disconnecting the receiver side of events.
-    // This is little bit tricky.
-    let (mut dtx, mut drx) = oneshot::channel::<()>();
-
-    // When `drx` is dropped then `dtx` will be canceled.
-    // We can track it to make sure when the user disconnects.
-    tokio::spawn(async move {
-        poll_fn(move |cx| dtx.poll_canceled(cx)).await;
-        drx.close();
-        user_disconnected(id, &state2).await;
-    });
-
     // Convert messages into Server-Sent Events and return resulting stream.
     rx.map(|msg| Ok(warp::sse::data(serde_json::to_string(&msg).unwrap())))
 }
 
+/// Sends a message to each connected user
+/// Any users for whom `unbounded_send` returns an error
+/// will be dropped.
 pub async fn send_message(msg: Message, state: SharedUsers) {
     tracing::debug!("Sending message {:?} to users {:?}", msg, state);
 
-    let lock = state.lock().await;
+    let mut lock = state.lock().await;
 
-    for (_, tx) in lock.iter() {
-        match tx.unbounded_send(msg.clone()) {
-            Ok(()) => (),
-            Err(_disconnected) => {
-                // The tx is disconnected, our `user_disconnected` code
-                // should be happening in another task, nothing more to
-                // do here.
-            }
+    lock.retain(|id, tx| match tx.unbounded_send(msg.clone()) {
+        Ok(()) => true,
+        Err(_disconnected) => {
+            tracing::debug!("user {} disconnected", id);
+
+            false
         }
-    }
+    });
 }
 
 pub async fn disconnect_all_users(state: SharedUsers) {
     tracing::info!("Flushing all users");
 
     state.lock().await.clear();
-}
-
-pub async fn user_disconnected(id: usize, state: &SharedUsers) {
-    tracing::debug!("user {} disconnected", id);
-
-    // Stream ended, so remove from the user list
-    state.lock().await.remove(&id);
 }

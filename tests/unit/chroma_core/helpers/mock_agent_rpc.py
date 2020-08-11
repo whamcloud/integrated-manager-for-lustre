@@ -194,6 +194,10 @@ class MockAgentRpc(object):
             now = IMLDateTime.utcnow()
             log.info("rebooting %s; updating boot_time to %s" % (host, now))
             job_scheduler_notify.notify(host, now, {"boot_time": now})
+        elif cmd == "which zfs":
+            return 1
+        elif "import platform;" in cmd:
+            return "0"
         elif "socket.gethostbyname(socket.gethostname())" in cmd:
             if not mock_server["tests"]["hostname_valid"]:
                 return "127.0.0.1"

@@ -3,7 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::sfa::{
-    SfaDiskDrive, SfaDiskSlot, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem,
+    SfaController, SfaDiskDrive, SfaDiskSlot, SfaEnclosure, SfaJob, SfaPowerSupply,
+    SfaStorageSystem,
 };
 use std::{
     convert::{TryFrom, TryInto},
@@ -48,6 +49,11 @@ impl TryFrom<(String, Instance)> for SfaEnclosure {
                 .parse::<i16>()?
                 .try_into()?,
             health_state_reason: x.try_get_property("HealthStateReason")?.into(),
+            child_health_state: x
+                .try_get_property("ChildHealthState")?
+                .parse::<i16>()?
+                .try_into()?,
+            model: x.try_get_property("Model")?.into(),
             position: x.try_get_property("Position")?.parse::<i16>()?,
             enclosure_type: x.try_get_property("Type")?.parse::<i16>()?.try_into()?,
             canister_location: x.try_get_property("CanisterLocation")?.into(),
@@ -78,6 +84,7 @@ impl TryFrom<Instance> for SfaStorageSystem {
                 .parse::<i16>()?
                 .try_into()?,
             uuid: x.try_get_property("UUID")?.into(),
+            platform: x.try_get_property("Platform")?.into(),
         })
     }
 }
@@ -105,10 +112,6 @@ impl TryFrom<(String, Instance)> for SfaDiskDrive {
 
         Ok(SfaDiskDrive {
             index: x.try_get_property("Index")?.parse::<i32>()?,
-            child_health_state: x
-                .try_get_property("ChildHealthState")?
-                .parse::<i16>()?
-                .try_into()?,
             enclosure_index: x.try_get_property("EnclosureIndex")?.parse::<i32>()?,
             failed: x
                 .try_get_property("Failed")?
@@ -156,8 +159,8 @@ impl TryFrom<(String, Instance)> for SfaJob {
                 .transpose()?
                 .map(|x| x.try_into())
                 .transpose()?,
-            job_type: x.try_get_property("JobType")?.parse::<i16>()?.try_into()?,
-            state: x.try_get_property("JobState")?.parse::<i16>()?.try_into()?,
+            job_type: x.try_get_property("Type")?.parse::<i16>()?.try_into()?,
+            state: x.try_get_property("State")?.parse::<i16>()?.try_into()?,
             storage_system,
         })
     }
@@ -203,6 +206,34 @@ impl TryFrom<(String, Instance)> for SfaPowerSupply {
                 .try_into()?,
             position: x.try_get_property("Position")?.parse::<i16>()?,
             enclosure_index: x.try_get_property("EnclosureIndex")?.parse::<i32>()?,
+            storage_system,
+        })
+    }
+}
+
+impl TryFrom<(String, Instance)> for SfaController {
+    type Error = SfaClassError;
+
+    fn try_from((storage_system, x): (String, Instance)) -> Result<Self, Self::Error> {
+        if x.class_name != "DDN_SFAController" {
+            return Err(SfaClassError::UnexpectedInstance(
+                "DDN_SFAController",
+                x.class_name,
+            ));
+        }
+
+        Ok(SfaController {
+            index: x.try_get_property("Index")?.parse::<i32>()?,
+            enclosure_index: x.try_get_property("EnclosureIndex")?.parse::<i32>()?,
+            health_state_reason: x.try_get_property("HealthStateReason")?.into(),
+            health_state: x
+                .try_get_property("HealthState")?
+                .parse::<i16>()?
+                .try_into()?,
+            child_health_state: x
+                .try_get_property("ChildHealthState")?
+                .parse::<i16>()?
+                .try_into()?,
             storage_system,
         })
     }

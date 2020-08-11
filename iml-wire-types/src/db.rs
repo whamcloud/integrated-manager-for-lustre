@@ -5,7 +5,8 @@
 use crate::CompositeId;
 use crate::ToCompositeId;
 use crate::{EndpointName, Fqdn, Label};
-pub use iml_orm::sfa::{HealthState, SfaDiskDrive, SfaEnclosure};
+use chrono::{offset::Utc, DateTime};
+pub use iml_orm::sfa::{EnclosureType, HealthState, JobState, JobType, MemberState, SubTargetType};
 use std::{collections::BTreeSet, fmt, ops::Deref, path::PathBuf};
 
 #[cfg(feature = "postgres-interop")]
@@ -474,21 +475,20 @@ impl Name for ManagedMdtRecord {
 /// Record from the `chroma_core_managedhost` table
 #[derive(serde::Deserialize, Debug)]
 pub struct ManagedHostRecord {
-    id: i32,
-    state_modified_at: String,
-    state: String,
-    immutable_state: bool,
-    not_deleted: Option<bool>,
-    content_type_id: Option<i32>,
-    address: String,
-    fqdn: String,
-    nodename: String,
-    boot_time: Option<String>,
-    server_profile_id: Option<String>,
-    needs_update: bool,
-    install_method: String,
-    properties: String,
-    corosync_ring0: String,
+    pub id: i32,
+    pub state_modified_at: DateTime<Utc>,
+    pub state: String,
+    pub immutable_state: bool,
+    pub not_deleted: Option<bool>,
+    pub content_type_id: Option<i32>,
+    pub address: String,
+    pub fqdn: String,
+    pub nodename: String,
+    pub boot_time: Option<DateTime<Utc>>,
+    pub server_profile_id: Option<String>,
+    pub needs_update: bool,
+    pub install_method: String,
+    pub corosync_ring0: String,
 }
 
 impl Id for ManagedHostRecord {
@@ -508,6 +508,14 @@ pub const MANAGED_HOST_TABLE_NAME: TableName = TableName("chroma_core_managedhos
 impl Name for ManagedHostRecord {
     fn table_name() -> TableName<'static> {
         MANAGED_HOST_TABLE_NAME
+    }
+}
+
+impl ManagedHostRecord {
+    pub fn is_setup(&self) -> bool {
+        ["monitored", "managed", "working"]
+            .iter()
+            .any(|&x| x == self.state)
     }
 }
 
@@ -1296,6 +1304,7 @@ pub struct SfaStorageSystem {
     pub health_state_reason: String,
     pub health_state: HealthState,
     pub uuid: String,
+    pub platform: String,
 }
 
 pub const SFA_STORAGE_SYSTEM_TABLE_NAME: TableName = TableName("chroma_core_sfastoragesystem");
@@ -1333,11 +1342,27 @@ impl From<Row> for SfaStorageSystem {
                 .try_into()
                 .unwrap_or_default(),
             uuid: row.get("uuid"),
+            platform: row.get("platform"),
         }
     }
 }
 
 pub const SFA_ENCLOSURE_TABLE_NAME: TableName = TableName("chroma_core_sfaenclosure");
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct SfaEnclosure {
+    pub id: i32,
+    pub index: i32,
+    pub element_name: String,
+    pub health_state: HealthState,
+    pub health_state_reason: String,
+    pub child_health_state: HealthState,
+    pub model: String,
+    pub position: i16,
+    pub enclosure_type: EnclosureType,
+    pub canister_location: String,
+    pub storage_system: String,
+}
 
 impl Name for SfaEnclosure {
     fn table_name() -> TableName<'static> {
@@ -1347,7 +1372,7 @@ impl Name for SfaEnclosure {
 
 impl Id for SfaEnclosure {
     fn id(&self) -> i32 {
-        self.index
+        self.id
     }
 }
 
@@ -1357,7 +1382,52 @@ impl Label for SfaEnclosure {
     }
 }
 
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for SfaEnclosure {
+    fn from(row: Row) -> Self {
+        Self {
+            id: row.get::<_, i32>("id"),
+            index: row.get::<_, i32>("index"),
+            element_name: row.get("element_name"),
+            health_state: row
+                .get::<_, i16>("health_state")
+                .try_into()
+                .unwrap_or_default(),
+            health_state_reason: row.get("health_state_reason"),
+            child_health_state: row
+                .get::<_, i16>("child_health_state")
+                .try_into()
+                .unwrap_or_default(),
+            model: row.get("model"),
+            position: row.get::<_, i16>("position"),
+            enclosure_type: row
+                .get::<_, i16>("enclosure_type")
+                .try_into()
+                .unwrap_or_default(),
+            storage_system: row.get("storage_system"),
+            canister_location: row.get("canister_location"),
+        }
+    }
+}
+
 pub const SFA_DISK_DRIVE_TABLE_NAME: TableName = TableName("chroma_core_sfadiskdrive");
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct SfaDiskDrive {
+    pub id: i32,
+    pub index: i32,
+    pub enclosure_index: i32,
+    pub failed: bool,
+    pub slot_number: i32,
+    pub health_state: HealthState,
+    pub health_state_reason: String,
+    /// Specifies the member index of the disk drive.
+    /// If the disk drive is not a member of a pool, this value will be not be set.
+    pub member_index: Option<i16>,
+    /// Specifies the state of the disk drive relative to a containing pool.
+    pub member_state: MemberState,
+    pub storage_system: String,
+}
 
 impl Name for SfaDiskDrive {
     fn table_name() -> TableName<'static> {
@@ -1367,12 +1437,185 @@ impl Name for SfaDiskDrive {
 
 impl Id for SfaDiskDrive {
     fn id(&self) -> i32 {
-        self.index
+        self.id
     }
 }
 
 impl Label for SfaDiskDrive {
     fn label(&self) -> &str {
         "SFA Disk Drive"
+    }
+}
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for SfaDiskDrive {
+    fn from(row: Row) -> Self {
+        Self {
+            id: row.get::<_, i32>("id"),
+            index: row.get::<_, i32>("index"),
+            failed: row.get("failed"),
+            health_state_reason: row.get("health_state_reason"),
+            health_state: row
+                .get::<_, i16>("health_state")
+                .try_into()
+                .unwrap_or_default(),
+            member_index: row.get::<_, Option<i16>>("member_index"),
+            member_state: row
+                .get::<_, i16>("member_state")
+                .try_into()
+                .unwrap_or_default(),
+            enclosure_index: row.get::<_, i32>("enclosure_index"),
+            slot_number: row.get::<_, i32>("slot_number"),
+            storage_system: row.get("storage_system"),
+        }
+    }
+}
+
+pub const SFA_JOB_TABLE_NAME: TableName = TableName("chroma_core_sfajob");
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct SfaJob {
+    pub id: i32,
+    pub index: i32,
+    pub sub_target_index: Option<i32>,
+    pub sub_target_type: Option<SubTargetType>,
+    pub job_type: JobType,
+    pub state: JobState,
+    pub storage_system: String,
+}
+
+impl Name for SfaJob {
+    fn table_name() -> TableName<'static> {
+        SFA_JOB_TABLE_NAME
+    }
+}
+
+impl Id for SfaJob {
+    fn id(&self) -> i32 {
+        self.id
+    }
+}
+
+impl Label for SfaJob {
+    fn label(&self) -> &str {
+        "SFA Job"
+    }
+}
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for SfaJob {
+    fn from(row: Row) -> Self {
+        Self {
+            id: row.get::<_, i32>("id"),
+            index: row.get::<_, i32>("index"),
+            sub_target_index: row.get::<_, Option<i32>>("sub_target_index"),
+            sub_target_type: row
+                .get::<_, Option<i16>>("sub_target_type")
+                .map(|x| x.try_into().unwrap_or_default()),
+            job_type: row.get::<_, i16>("job_type").try_into().unwrap_or_default(),
+            state: row.get::<_, i16>("state").try_into().unwrap_or_default(),
+            storage_system: row.get("storage_system"),
+        }
+    }
+}
+
+pub const SFA_POWER_SUPPLY_TABLE_NAME: TableName = TableName("chroma_core_sfapowersupply");
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct SfaPowerSupply {
+    pub id: i32,
+    pub index: i32,
+    pub enclosure_index: i32,
+    pub health_state: HealthState,
+    pub health_state_reason: String,
+    pub position: i16,
+    pub storage_system: String,
+}
+
+impl Name for SfaPowerSupply {
+    fn table_name() -> TableName<'static> {
+        SFA_POWER_SUPPLY_TABLE_NAME
+    }
+}
+
+impl Id for SfaPowerSupply {
+    fn id(&self) -> i32 {
+        self.id
+    }
+}
+
+impl Label for SfaPowerSupply {
+    fn label(&self) -> &str {
+        "SFA Power Supply"
+    }
+}
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for SfaPowerSupply {
+    fn from(row: Row) -> Self {
+        Self {
+            id: row.get::<_, i32>("id"),
+            index: row.get::<_, i32>("index"),
+            health_state: row
+                .get::<_, i16>("health_state")
+                .try_into()
+                .unwrap_or_default(),
+            health_state_reason: row.get("health_state_reason"),
+            enclosure_index: row.get::<_, i32>("enclosure_index"),
+            position: row.get::<_, i16>("position"),
+            storage_system: row.get("storage_system"),
+        }
+    }
+}
+
+pub const SFA_CONTROLLER_TABLE_NAME: TableName = TableName("chroma_core_sfacontroller");
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct SfaController {
+    pub id: i32,
+    pub index: i32,
+    pub enclosure_index: i32,
+    pub health_state: HealthState,
+    pub health_state_reason: String,
+    pub child_health_state: HealthState,
+    pub storage_system: String,
+}
+
+impl Name for SfaController {
+    fn table_name() -> TableName<'static> {
+        SFA_CONTROLLER_TABLE_NAME
+    }
+}
+
+impl Id for SfaController {
+    fn id(&self) -> i32 {
+        self.id
+    }
+}
+
+impl Label for SfaController {
+    fn label(&self) -> &str {
+        "SFA Controller"
+    }
+}
+
+#[cfg(feature = "postgres-interop")]
+impl From<Row> for SfaController {
+    fn from(row: Row) -> Self {
+        Self {
+            id: row.get::<_, i32>("id"),
+            index: row.get::<_, i32>("index"),
+            enclosure_index: row.get::<_, i32>("enclosure_index"),
+            health_state: row
+                .get::<_, i16>("health_state")
+                .try_into()
+                .unwrap_or_default(),
+            health_state_reason: row.get("health_state_reason"),
+            child_health_state: row
+                .get::<_, i16>("child_health_state")
+                .try_into()
+                .unwrap_or_default(),
+            storage_system: row.get("storage_system"),
+        }
     }
 }

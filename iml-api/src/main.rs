@@ -22,22 +22,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         allow_anonymous_read: iml_manager_env::get_allow_anonymous_read(),
         build: iml_manager_env::get_build(),
         version: iml_manager_env::get_version(),
+        exa_version: iml_manager_env::get_exa_version(),
         is_release: iml_manager_env::get_is_release(),
         branding: iml_manager_env::get_branding().into(),
         use_stratagem: iml_manager_env::get_use_stratagem(),
         monitor_sfa: iml_manager_env::get_sfa_endpoints().is_some(),
     };
 
-    let (cli_fut, client_filter) = create_connection_filter().await?;
+    let pool = iml_rabbit::connect_to_rabbit(2);
+
+    let conn_filter = create_connection_filter(pool);
     let (pool_fut, pool_filter) = create_pool_filter().await?;
 
-    tokio::spawn(cli_fut);
     tokio::spawn(pool_fut);
 
     let routes = warp::path("conf")
         .map(move || warp::reply::json(&conf))
-        .or(action::endpoint(client_filter.clone()))
-        .or(task::endpoint(client_filter, pool_filter));
+        .or(action::endpoint(conn_filter.clone()))
+        .or(task::endpoint(conn_filter, pool_filter));
 
     tracing::info!("Starting on {:?}", addr);
 

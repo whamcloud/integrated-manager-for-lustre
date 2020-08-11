@@ -14,7 +14,7 @@ use serde_json;
     feature = "postgres-interop",
     derive(Debug, PartialEq, FromSqlRow, AsExpression)
 )]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 #[cfg_attr(feature = "postgres-interop", sql_type = "SqlLustreFid")]
 pub struct LustreFid {
     pub seq: u64,
@@ -506,14 +506,6 @@ pub struct ChromaCoreDevice {
     pub devices: serde_json::Value,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "postgres-interop", derive(Insertable))]
-#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_device")]
-pub struct NewChromaCoreDevice {
-    pub fqdn: String,
-    pub devices: serde_json::Value,
-}
-
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "postgres-interop", primary_key(job_ptr_id))]
@@ -541,12 +533,25 @@ pub struct ChromaCoreFailbacktargetjob {
     derive(Queryable, Debug, Insertable, Identifiable)
 )]
 #[derive(serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_fidtaskerror")]
+pub struct ChromaCoreFidtaskerror {
+    pub id: i32,
+    pub fid: LustreFid,
+    pub data: serde_json::Value,
+    pub errno: i16,
+    pub task_id: i32,
+}
+
+#[cfg_attr(
+    feature = "postgres-interop",
+    derive(Queryable, Debug, Insertable, Identifiable)
+)]
+#[derive(serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "postgres-interop", table_name = "chroma_core_fidtaskqueue")]
 pub struct ChromaCoreFidtaskqueue {
     pub id: i32,
     pub fid: LustreFid,
     pub data: serde_json::Value,
-    pub errno: i16,
     pub task_id: i32,
 }
 
@@ -790,10 +795,10 @@ pub struct ChromaCoreLustreclientmount {
     pub state: String,
     pub immutable_state: bool,
     pub not_deleted: Option<bool>,
-    pub mountpoint: Option<String>,
     pub content_type_id: Option<i32>,
-    pub filesystem_id: i32,
+    pub filesystem: String,
     pub host_id: i32,
+    pub mountpoints: Vec<String>,
 }
 
 #[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
@@ -844,7 +849,6 @@ pub struct ChromaCoreManagedhost {
     pub needs_update: bool,
     pub corosync_ring0: String,
     pub install_method: String,
-    pub properties: String,
     pub content_type_id: Option<i32>,
     pub server_profile_id: Option<String>,
 }
@@ -1432,19 +1436,6 @@ pub struct ChromaCoreServerprofilevalidation {
     pub id: i32,
     pub test: String,
     pub description: String,
-    pub server_profile_id: String,
-}
-
-#[cfg_attr(feature = "postgres-interop", derive(Queryable, Debug, Identifiable))]
-#[derive(serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "postgres-interop", primary_key(job_ptr_id))]
-#[cfg_attr(
-    feature = "postgres-interop",
-    table_name = "chroma_core_sethostprofilejob"
-)]
-pub struct ChromaCoreSethostprofilejob {
-    pub job_ptr_id: i32,
-    pub host_id: i32,
     pub server_profile_id: String,
 }
 

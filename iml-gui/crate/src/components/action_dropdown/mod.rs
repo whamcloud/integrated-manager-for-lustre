@@ -246,7 +246,7 @@ fn group_actions_by_label(xs: Vec<Arc<AvailableAction>>, cache: &ArcCache) -> Ac
     let mut x = xs.into_iter().fold(BTreeMap::new(), |mut x, action| {
         match cache.get_erased_record(&action.composite_id) {
             Some(r) => {
-                let xs = x.entry(r.label().to_string()).or_insert_with(|| vec![]);
+                let xs = x.entry(r.label().to_string()).or_insert_with(Vec::new);
 
                 xs.push((action, r));
             }

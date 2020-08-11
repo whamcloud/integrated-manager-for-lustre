@@ -3,8 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use futures::channel::oneshot;
+use iml_postgres::sqlx;
 use iml_wire_types::Fqdn;
 use std::fmt;
+use thiserror::Error;
 use tokio::time;
 use warp::reject;
 
@@ -24,63 +26,20 @@ impl std::error::Error for RequiredError {
 }
 
 /// Encapsulates any errors that may happen while working with the `ActionRunner` service
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ActionRunnerError {
+    #[error("Fqdn not found in sessions: {0}")]
     AwaitSession(Fqdn),
-    TokioTimerError(time::Error),
-    ImlRabbitError(iml_rabbit::ImlRabbitError),
-    OneShotCanceledError(oneshot::Canceled),
-    RequiredError(RequiredError),
+    #[error(transparent)]
+    TokioTimerError(#[from] time::Error),
+    #[error(transparent)]
+    ImlRabbitError(#[from] iml_rabbit::ImlRabbitError),
+    #[error(transparent)]
+    OneShotCanceledError(#[from] oneshot::Canceled),
+    #[error(transparent)]
+    RequiredError(#[from] RequiredError),
+    #[error(transparent)]
+    SqlxError(#[from] sqlx::Error),
 }
 
 impl reject::Reject for ActionRunnerError {}
-
-impl std::fmt::Display for ActionRunnerError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match *self {
-            ActionRunnerError::AwaitSession(ref err) => {
-                write!(f, "Fqdn not found in sessions: {}", err)
-            }
-            ActionRunnerError::TokioTimerError(ref err) => write!(f, "{}", err),
-            ActionRunnerError::ImlRabbitError(ref err) => write!(f, "{}", err),
-            ActionRunnerError::OneShotCanceledError(ref err) => write!(f, "{}", err),
-            ActionRunnerError::RequiredError(ref err) => write!(f, "{}", err),
-        }
-    }
-}
-
-impl std::error::Error for ActionRunnerError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match *self {
-            ActionRunnerError::AwaitSession(_) => None,
-            ActionRunnerError::TokioTimerError(ref err) => Some(err),
-            ActionRunnerError::ImlRabbitError(ref err) => Some(err),
-            ActionRunnerError::OneShotCanceledError(ref err) => Some(err),
-            ActionRunnerError::RequiredError(ref err) => Some(err),
-        }
-    }
-}
-
-impl From<time::Error> for ActionRunnerError {
-    fn from(err: time::Error) -> Self {
-        ActionRunnerError::TokioTimerError(err)
-    }
-}
-
-impl From<iml_rabbit::ImlRabbitError> for ActionRunnerError {
-    fn from(err: iml_rabbit::ImlRabbitError) -> Self {
-        ActionRunnerError::ImlRabbitError(err)
-    }
-}
-
-impl From<oneshot::Canceled> for ActionRunnerError {
-    fn from(err: oneshot::Canceled) -> Self {
-        ActionRunnerError::OneShotCanceledError(err)
-    }
-}
-
-impl From<RequiredError> for ActionRunnerError {
-    fn from(err: RequiredError) -> Self {
-        ActionRunnerError::RequiredError(err)
-    }
-}
