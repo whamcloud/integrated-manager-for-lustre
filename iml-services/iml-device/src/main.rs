@@ -7,6 +7,7 @@ use futures::{TryFutureExt, TryStreamExt};
 use im::HashSet;
 use iml_device::{
     build_device_index, client_mount_content_id, create_cache, create_target_cache, find_targets,
+    get_target_filesystem_map,
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
@@ -18,7 +19,7 @@ use iml_postgres::{get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
-use influx_db_client::{Client, Precision};
+use influx_db_client::Client;
 use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
@@ -105,6 +106,11 @@ async fn main() -> Result<(), ImlDeviceError> {
     let mut mount_cache = HashMap::new();
     let mut target_cache = create_target_cache(&pool).await?;
 
+    let influx_client = Client::new(
+        Url::parse(&influx_url).expect("Influx URL is invalid."),
+        get_influxdb_metrics_db(),
+    );
+
     while let Some((host, (devices, mounts))) = s.try_next().await? {
         update_devices(&pool, &host, &devices).await?;
         update_client_mounts(&pool, lustreclientmount_ct_id, &host, &mounts).await?;
@@ -122,40 +128,7 @@ async fn main() -> Result<(), ImlDeviceError> {
                 .try_collect()
                 .await?;
 
-        // Get target to fs mapping
-        let influx_client = Client::new(
-            Url::parse(&influx_url).expect("Influx URL is invalid."),
-            get_influxdb_metrics_db(),
-        );
-
-        let target_to_fs_query = influx_client.query("select target,fs,bytes_free from target group by target order by time desc limit 1;", Some(Precision::Nanoseconds))
-            .await?;
-
-        let target_to_fs = if let Some(nodes) = target_to_fs_query {
-            tracing::debug!("nodes: {:?}", nodes);
-            nodes
-                .into_iter()
-                .filter_map(|x| x.series)
-                .map(|xs| {
-                    xs.into_iter()
-                        .filter_map(|x| x.tags)
-                        .filter_map(|x| {
-                            x.get("target").map(|target| {
-                                x.get("fs")
-                                    .map(|fs| return Some((target.to_string(), fs.to_string())))
-                            });
-
-                            None
-                        })
-                        .collect::<Vec<(String, String)>>()
-                })
-                .flatten()
-                .collect::<HashMap<String, String>>()
-        } else {
-            HashMap::new()
-        };
-
-        tracing::debug!("target_to_fs: {:?}", target_to_fs);
+        let target_to_fs_map = get_target_filesystem_map(&influx_client).await?;
 
         let targets = find_targets(&device_cache, &mount_cache, &host_ids, &index);
         targets.update_cache(&mut target_cache);

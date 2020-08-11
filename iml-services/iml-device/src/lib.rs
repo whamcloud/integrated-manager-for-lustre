@@ -16,6 +16,7 @@ use im::HashSet;
 use iml_postgres::sqlx::{self, PgPool};
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
+use influx_db_client::{keys::Node, Client, Precision};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     sync::Arc,
@@ -476,11 +477,66 @@ impl Targets {
     }
 }
 
+fn parse_target_filesystem_data(query_result: Option<Vec<Node>>) -> Vec<HashMap<String, String>> {
+    let target_to_fs = if let Some(nodes) = query_result {
+        tracing::debug!("nodes: {:?}", nodes);
+        nodes
+            .into_iter()
+            .filter_map(|x| x.series)
+            .map(|xs| {
+                xs.into_iter()
+                    .map(|x| {
+                        x.columns
+                            .into_iter()
+                            .zip(x.values.into_iter().flatten())
+                            .collect::<Vec<(String, serde_json::Value)>>()
+                    })
+                    .map(|xs| {
+                        tracing::info!("xs: {:?}", xs);
+                        xs.into_iter()
+                            .filter(|(key, _)| key == "target" || key == "fs")
+                            .map(|(key, val)| {
+                                (
+                                    key.to_string(),
+                                    serde_json::from_value(val)
+                                        .expect(format!("Couldn't unwrap {}", &key).as_str()),
+                                )
+                            })
+                            .collect::<HashMap<String, String>>()
+                    })
+                    .collect::<Vec<HashMap<String, String>>>()
+            })
+            .flatten()
+            .collect::<Vec<HashMap<String, String>>>()
+    } else {
+        vec![HashMap::new()]
+    };
+
+    tracing::debug!("target_to_fs: {:?}", target_to_fs);
+
+    target_to_fs
+}
+
+pub async fn get_target_filesystem_map(
+    influx_client: &Client,
+) -> Result<Vec<HashMap<String, String>>, ImlDeviceError> {
+    let query_result: Option<Vec<Node>> = influx_client
+        .query(
+            "select target,fs,bytes_free from target group by target order by time desc limit 1;",
+            Some(Precision::Nanoseconds),
+        )
+        .await?;
+
+    Ok(parse_target_filesystem_data(query_result))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use device_types::devices::Device;
+    use influx_db_client::keys::Series;
     use insta::assert_json_snapshot;
+    use serde_json::{json, Map, Value};
 
     #[test]
     fn test_index() {
@@ -599,5 +655,73 @@ mod tests {
 
         let data: String = cache.0.iter().map(|x| format!("{:?}\n", x)).collect();
         insta::assert_snapshot!(data);
+    }
+
+    #[test]
+    fn test_parse_target_filesystem_data() {
+        let query_result = Some(vec![Node {
+            statement_id: Some(0),
+            series: Some(vec![
+                Series {
+                    name: "target".to_string(),
+                    tags: Some(
+                        vec![("target".to_string(), json!("fs-OST0000".to_string()))]
+                            .into_iter()
+                            .collect::<Map<String, Value>>(),
+                    ),
+                    columns: vec![
+                        "time".into(),
+                        "target".into(),
+                        "fs".into(),
+                        "bytes_free".into(),
+                    ],
+                    values: vec![vec![
+                        json!(1597166951257510515 as i64),
+                        json!("fs-OST0009"),
+                        json!("fs"),
+                        json!(4913020928 as i64),
+                    ]],
+                },
+                Series {
+                    name: "target".to_string(),
+                    tags: Some(
+                        vec![("target".to_string(), json!("fs-OST0001".to_string()))]
+                            .into_iter()
+                            .collect::<Map<String, Value>>(),
+                    ),
+                    columns: vec![
+                        "time".into(),
+                        "target".into(),
+                        "fs".into(),
+                        "bytes_free".into(),
+                    ],
+                    values: vec![vec![
+                        json!(1597166951257510515 as i64),
+                        json!("fs-OST0008"),
+                        json!("fs"),
+                        json!(4913020928 as i64),
+                    ]],
+                },
+            ]),
+        }]);
+
+        let result = parse_target_filesystem_data(query_result);
+        assert_eq!(
+            result,
+            vec![
+                vec![
+                    ("target".to_string(), "fs-OST0009".to_string()),
+                    ("fs".to_string(), "fs".to_string())
+                ]
+                .into_iter()
+                .collect::<HashMap<String, String>>(),
+                vec![
+                    ("target".to_string(), "fs-OST0008".to_string()),
+                    ("fs".to_string(), "fs".to_string())
+                ]
+                .into_iter()
+                .collect::<HashMap<String, String>>(),
+            ]
+        );
     }
 }
