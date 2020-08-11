@@ -203,11 +203,6 @@ pub fn get_influxdb_metrics_db() -> String {
     get_var("INFLUXDB_IML_STATS_DB")
 }
 
-/// Get the path to the mailbox from the env or panic
-pub fn get_mailbox_path() -> PathBuf {
-    get_var("MAILBOX_PATH").into()
-}
-
 /// Get the devices port or panic
 pub fn get_device_aggregator_port() -> String {
     get_var("DEVICE_AGGREGATOR_PORT")
