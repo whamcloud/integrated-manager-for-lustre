@@ -1787,10 +1787,13 @@ class NoNidsPresent(Exception):
 
 class CreateSnapshotStep(Step):
     def run(self, kwargs):
+        args = {"fsname": kwargs["fsname"], "name": kwargs["name"]}
+        if "comment" in kwargs:
+            args["comment"] = kwargs["comment"]
         self.invoke_rust_agent_expect_result(
             kwargs["host"],
             "snapshot_create",
-            {"fsname": kwargs["fsname"], "name": kwargs["name"], "comment": kwargs["comment"]},
+            args,
         )
 
 
