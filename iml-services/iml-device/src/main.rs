@@ -135,7 +135,13 @@ async fn main() -> Result<(), ImlDeviceError> {
             .chain(mgs_targets_to_fs_map)
             .collect();
 
-        let targets = find_targets(&device_cache, &mount_cache, &host_ids, &index);
+        let targets = find_targets(
+            &device_cache,
+            &mount_cache,
+            &host_ids,
+            &index,
+            &target_to_fs_map,
+        );
         targets.update_cache(&mut target_cache);
         targets.update_target_mounts_in_cache(&mut target_cache);
 
@@ -152,12 +158,7 @@ async fn main() -> Result<(), ImlDeviceError> {
                         .collect::<Vec<String>>()
                         .join(","),
                 );
-                acc.4.push(
-                    target_to_fs_map
-                        .get(&(x.name))
-                        .unwrap_or(&"".to_string())
-                        .to_string(),
-                );
+                acc.4.push(x.filesystems.join(","));
                 acc.5.push(x.uuid);
                 acc.6.push(x.mount_path);
 

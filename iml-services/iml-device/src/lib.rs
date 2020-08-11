@@ -23,7 +23,7 @@ use std::{
 };
 
 pub type Cache = Arc<Mutex<HashMap<Fqdn, Device>>>;
-pub type TargetFsRecord = HashMap<String, String>;
+pub type TargetFsRecord = HashMap<String, Vec<String>>;
 
 /// Given a db pool, create a new cache and fill it with initial data.
 /// This will start the device tree with the previous items it left off with.
@@ -335,6 +335,7 @@ pub fn find_targets<'a>(
     mounts: &HashMap<Fqdn, HashSet<Mount>>,
     host_map: &HashMap<Fqdn, i32>,
     device_index: &DeviceIndex<'a>,
+    target_to_fs_map: &TargetFsRecord,
 ) -> Targets {
     let xs: Vec<_> = mounts
         .iter()
@@ -405,6 +406,10 @@ pub fn find_targets<'a>(
             state: "mounted".into(),
             active_host_id: Some(*fqdn),
             host_ids: ids,
+            filesystems: target_to_fs_map
+                .get(&(target.to_string()))
+                .unwrap_or(&vec![])
+                .clone(),
             name: target.into(),
             uuid: fs_uuid.into(),
             mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
@@ -420,6 +425,7 @@ pub struct Target {
     pub name: String,
     pub active_host_id: Option<i32>,
     pub host_ids: Vec<i32>,
+    pub filesystems: Vec<String>,
     pub uuid: String,
     pub mount_path: Option<String>,
 }
@@ -430,6 +436,7 @@ impl Target {
         self.name = other.name.clone();
         self.active_host_id = other.active_host_id;
         self.host_ids = other.host_ids.clone();
+        self.filesystems = other.filesystems.clone();
         self.uuid = other.uuid.clone();
         self.mount_path = other.mount_path.clone();
     }
@@ -504,15 +511,17 @@ fn parse_target_filesystem_data(query_result: Option<Vec<Node>>) -> TargetFsReco
                             .find(|(key, _)| key == "fs")
                             .expect("Couldn't find filesystem in stats data.");
 
+                        let filesystems: String =
+                            serde_json::from_value(fs).expect("Couldn't parse filesystem name.");
                         (
                             serde_json::from_value(target).expect("Couldn't parse target."),
-                            serde_json::from_value(fs).expect("Couldn't parse filesystem name."),
+                            filesystems.split(",").map(|x| x.to_string()).collect(),
                         )
                     })
-                    .collect::<Vec<(String, String)>>()
+                    .collect::<Vec<(String, Vec<String>)>>()
             })
             .flatten()
-            .collect::<HashMap<String, String>>()
+            .collect::<TargetFsRecord>()
     } else {
         HashMap::new()
     };
@@ -560,15 +569,17 @@ fn parse_mgs_filesystem_data(query_result: Option<Vec<Node>>) -> TargetFsRecord 
                             .find(|(key, _)| key == "mgs_fs")
                             .expect("Couldn't find mgs filesystems in stats data.");
 
+                        let filesystems: String =
+                            serde_json::from_value(fs).expect("Couldn't parse filesystem name.");
                         (
                             serde_json::from_value(target).expect("Couldn't parse target."),
-                            serde_json::from_value(fs).expect("Couldn't parse filesystem name."),
+                            filesystems.split(",").map(|x| x.to_string()).collect(),
                         )
                     })
-                    .collect::<Vec<(String, String)>>()
+                    .collect::<Vec<(String, Vec<String>)>>()
             })
             .flatten()
-            .collect::<HashMap<String, String>>()
+            .collect::<TargetFsRecord>()
     } else {
         HashMap::new()
     }
@@ -614,6 +625,7 @@ mod tests {
                 name: "mdt1".into(),
                 active_host_id: Some(1),
                 host_ids: vec![2],
+                filesystems: vec!["fs1".to_string()],
                 uuid: "123456".into(),
                 mount_path: Some("/mnt/mdt1".into()),
             },
@@ -622,6 +634,7 @@ mod tests {
                 name: "mdt2".into(),
                 active_host_id: None,
                 host_ids: vec![1],
+                filesystems: vec!["fs1".to_string()],
                 uuid: "654321".into(),
                 mount_path: None,
             },
@@ -633,6 +646,7 @@ mod tests {
                 name: "mdt1".into(),
                 active_host_id: Some(1),
                 host_ids: vec![2],
+                filesystems: vec!["fs1".to_string()],
                 uuid: "123456".into(),
                 mount_path: Some("/mnt/mdt1".into()),
             },
@@ -641,6 +655,7 @@ mod tests {
                 name: "mdt2".into(),
                 active_host_id: Some(2),
                 host_ids: vec![1],
+                filesystems: vec!["fs1".to_string()],
                 uuid: "654321".into(),
                 mount_path: Some("/mnt/mdt2".into()),
             },
@@ -649,6 +664,7 @@ mod tests {
                 name: "ost1".into(),
                 active_host_id: Some(3),
                 host_ids: vec![4],
+                filesystems: vec!["fs1".to_string()],
                 uuid: "567890".into(),
                 mount_path: Some("/mnt/ost1".into()),
             },
@@ -668,6 +684,7 @@ mod tests {
                 name: "mdt1".into(),
                 active_host_id: Some(1),
                 host_ids: vec![2],
+                filesystems: vec!["fs1".to_string()],
                 uuid: "123456".into(),
                 mount_path: Some("/mnt/mdt1".into()),
             },
@@ -676,6 +693,7 @@ mod tests {
                 name: "mdt2".into(),
                 active_host_id: Some(2),
                 host_ids: vec![1],
+                filesystems: vec!["fs1".to_string()],
                 uuid: "654321".into(),
                 mount_path: Some("/mnt/mdt2".into()),
             },
@@ -684,6 +702,7 @@ mod tests {
                 name: "ost1".into(),
                 active_host_id: Some(3),
                 host_ids: vec![4],
+                filesystems: vec!["fs1".to_string()],
                 uuid: "567890".into(),
                 mount_path: Some("/mnt/ost1".into()),
             },
@@ -695,6 +714,7 @@ mod tests {
                 name: "mdt2".into(),
                 active_host_id: Some(2),
                 host_ids: vec![1],
+                filesystems: vec!["fs1".to_string()],
                 uuid: "654321".into(),
                 mount_path: Some("/mnt/mdt2".into()),
             },
@@ -703,6 +723,7 @@ mod tests {
                 name: "ost1".into(),
                 active_host_id: Some(3),
                 host_ids: vec![4],
+                filesystems: vec!["fs1".to_string()],
                 uuid: "567890".into(),
                 mount_path: Some("/mnt/ost1".into()),
             },
@@ -766,11 +787,11 @@ mod tests {
         assert_eq!(
             result,
             vec![
-                ("fs-OST0009".to_string(), "fs".to_string()),
-                ("fs-OST0008".to_string(), "fs2".to_string()),
+                ("fs-OST0009".to_string(), vec!["fs".to_string()]),
+                ("fs-OST0008".to_string(), vec!["fs2".to_string()]),
             ]
             .into_iter()
-            .collect::<HashMap<String, String>>(),
+            .collect::<TargetFsRecord>(),
         );
     }
 
@@ -814,11 +835,17 @@ mod tests {
         assert_eq!(
             result,
             vec![
-                ("MGS".to_string(), "mgs1fs1,mgs1fs2".to_string()),
-                ("MGS2".to_string(), "mgs2fs1,mgs2fs2".to_string()),
+                (
+                    "MGS".to_string(),
+                    vec!["mgs1fs1".to_string(), "mgs1fs2".to_string()]
+                ),
+                (
+                    "MGS2".to_string(),
+                    vec!["mgs2fs1".to_string(), "mgs2fs2".to_string()]
+                ),
             ]
             .into_iter()
-            .collect::<HashMap<String, String>>(),
+            .collect::<TargetFsRecord>(),
         );
     }
 }

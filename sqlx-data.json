@@ -236,6 +236,24 @@
       ]
     }
   },
+  "40297005dfe58260393abcb18f3c6268d69f02a6a519c3ba69f093ccff977114": {
+    "query": "INSERT INTO chroma_core_targets \n                        (state, name, active_host_id, host_ids, filesystems, uuid, mount_path) \n                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], string_to_array(filesystems, ',')::text[], uuid, mount_path\n                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[])\n                        AS t(state, name, active_host_id, host_ids, filesystems, uuid, mount_path)\n                        ON CONFLICT (uuid)\n                            DO\n                            UPDATE SET  state          = EXCLUDED.state,\n                                        name           = EXCLUDED.name,\n                                        active_host_id = EXCLUDED.active_host_id,\n                                        host_ids       = EXCLUDED.host_ids,\n                                        filesystems    = EXCLUDED.filesystems,\n                                        mount_path     = EXCLUDED.mount_path",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "7c2641e656178536cc5c92aba41d7fd20ae6bc350296758d3a96cf1cb97fb7f5": {
     "query": "select id from chroma_core_managedhost where fqdn = $1 and not_deleted = 't'",
     "describe": {
@@ -337,23 +355,6 @@
       "nullable": [
         false
       ]
-    }
-  },
-  "a7da83c078539441ad0a99936cab61cce156f37a6ffb7c6e6cbae80c11cb7b43": {
-    "query": "INSERT INTO chroma_core_targets \n                        (state, name, active_host_id, host_ids, uuid, mount_path) \n                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], uuid, mount_path\n                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[])\n                        AS t(state, name, active_host_id, host_ids, uuid, mount_path)\n                        ON CONFLICT (uuid)\n                            DO\n                            UPDATE SET  state          = EXCLUDED.state,\n                                        name           = EXCLUDED.name,\n                                        active_host_id = EXCLUDED.active_host_id,\n                                        host_ids       = EXCLUDED.host_ids,\n                                        mount_path     = EXCLUDED.mount_path",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "TextArray",
-          "Int4Array",
-          "TextArray",
-          "TextArray",
-          "TextArray"
-        ]
-      },
-      "nullable": []
     }
   },
   "b0991443ae430ca73d4369f314b88f731ead796ec9ac353c3d237be9203c95bf": {
@@ -519,11 +520,16 @@
         },
         {
           "ordinal": 4,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 5,
           "name": "uuid",
           "type_info": "Text"
         },
         {
-          "ordinal": 5,
+          "ordinal": 6,
           "name": "mount_path",
           "type_info": "Text"
         }
@@ -535,6 +541,7 @@
         false,
         false,
         true,
+        false,
         false,
         false,
         true
