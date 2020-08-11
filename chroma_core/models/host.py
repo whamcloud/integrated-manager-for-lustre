@@ -1791,9 +1791,7 @@ class CreateSnapshotStep(Step):
         if "comment" in kwargs:
             args["comment"] = kwargs["comment"]
         self.invoke_rust_agent_expect_result(
-            kwargs["host"],
-            "snapshot_create",
-            args,
+            kwargs["host"], "snapshot_create", args,
         )
 
 
