@@ -23,6 +23,7 @@ use std::{
 };
 
 pub type Cache = Arc<Mutex<HashMap<Fqdn, Device>>>;
+pub type TargetFsRecord = HashMap<String, String>;
 
 /// Given a db pool, create a new cache and fill it with initial data.
 /// This will start the device tree with the previous items it left off with.
@@ -477,7 +478,7 @@ impl Targets {
     }
 }
 
-fn parse_target_filesystem_data(query_result: Option<Vec<Node>>) -> Vec<HashMap<String, String>> {
+fn parse_target_filesystem_data(query_result: Option<Vec<Node>>) -> TargetFsRecord {
     let target_to_fs = if let Some(nodes) = query_result {
         tracing::debug!("nodes: {:?}", nodes);
         nodes
@@ -492,24 +493,28 @@ fn parse_target_filesystem_data(query_result: Option<Vec<Node>>) -> Vec<HashMap<
                             .collect::<Vec<(String, serde_json::Value)>>()
                     })
                     .map(|xs| {
-                        tracing::info!("xs: {:?}", xs);
-                        xs.into_iter()
-                            .filter(|(key, _)| key == "target" || key == "fs")
-                            .map(|(key, val)| {
-                                (
-                                    key.to_string(),
-                                    serde_json::from_value(val)
-                                        .expect(format!("Couldn't unwrap {}", &key).as_str()),
-                                )
-                            })
-                            .collect::<HashMap<String, String>>()
+                        let (_, target) = xs
+                            .clone()
+                            .into_iter()
+                            .find(|(key, _)| key == "target")
+                            .expect("Couldn't find target in stats data.");
+
+                        let (_, fs) = xs
+                            .into_iter()
+                            .find(|(key, _)| key == "fs")
+                            .expect("Couldn't find filesystem in stats data.");
+
+                        (
+                            serde_json::from_value(target).expect("Couldn't parse target."),
+                            serde_json::from_value(fs).expect("Couldn't parse filesystem name."),
+                        )
                     })
-                    .collect::<Vec<HashMap<String, String>>>()
+                    .collect::<Vec<(String, String)>>()
             })
             .flatten()
-            .collect::<Vec<HashMap<String, String>>>()
+            .collect::<HashMap<String, String>>()
     } else {
-        vec![HashMap::new()]
+        HashMap::new()
     };
 
     tracing::debug!("target_to_fs: {:?}", target_to_fs);
@@ -519,7 +524,7 @@ fn parse_target_filesystem_data(query_result: Option<Vec<Node>>) -> Vec<HashMap<
 
 pub async fn get_target_filesystem_map(
     influx_client: &Client,
-) -> Result<Vec<HashMap<String, String>>, ImlDeviceError> {
+) -> Result<TargetFsRecord, ImlDeviceError> {
     let query_result: Option<Vec<Node>> = influx_client
         .query(
             "select target,fs,bytes_free from target group by target order by time desc limit 1;",
@@ -528,6 +533,58 @@ pub async fn get_target_filesystem_map(
         .await?;
 
     Ok(parse_target_filesystem_data(query_result))
+}
+
+fn parse_mgs_filesystem_data(query_result: Option<Vec<Node>>) -> TargetFsRecord {
+    if let Some(nodes) = query_result {
+        nodes
+            .into_iter()
+            .filter_map(|x| x.series)
+            .map(|xs| {
+                xs.into_iter()
+                    .map(|x| {
+                        x.columns
+                            .into_iter()
+                            .zip(x.values.into_iter().flatten())
+                            .collect::<Vec<(String, serde_json::Value)>>()
+                    })
+                    .map(|xs| {
+                        let (_, target) = xs
+                            .clone()
+                            .into_iter()
+                            .find(|(key, _)| key == "target")
+                            .expect("Couldn't find target in stats data.");
+
+                        let (_, fs) = xs
+                            .into_iter()
+                            .find(|(key, _)| key == "mgs_fs")
+                            .expect("Couldn't find mgs filesystems in stats data.");
+
+                        (
+                            serde_json::from_value(target).expect("Couldn't parse target."),
+                            serde_json::from_value(fs).expect("Couldn't parse filesystem name."),
+                        )
+                    })
+                    .collect::<Vec<(String, String)>>()
+            })
+            .flatten()
+            .collect::<HashMap<String, String>>()
+    } else {
+        HashMap::new()
+    }
+}
+
+pub async fn get_mgs_filesystem_map(
+    influx_client: &Client,
+) -> Result<TargetFsRecord, ImlDeviceError> {
+    let query_result: Option<Vec<Node>> = influx_client
+        .query(
+            "select target,mgs_fs from target;",
+            Some(Precision::Nanoseconds),
+        )
+        .await?;
+
+    Ok(parse_mgs_filesystem_data(query_result))
 }
 
 #[cfg(test)]
@@ -698,7 +755,7 @@ mod tests {
                     values: vec![vec![
                         json!(1597166951257510515 as i64),
                         json!("fs-OST0008"),
-                        json!("fs"),
+                        json!("fs2"),
                         json!(4913020928 as i64),
                     ]],
                 },
@@ -709,19 +766,59 @@ mod tests {
         assert_eq!(
             result,
             vec![
-                vec![
-                    ("target".to_string(), "fs-OST0009".to_string()),
-                    ("fs".to_string(), "fs".to_string())
-                ]
-                .into_iter()
-                .collect::<HashMap<String, String>>(),
-                vec![
-                    ("target".to_string(), "fs-OST0008".to_string()),
-                    ("fs".to_string(), "fs".to_string())
-                ]
-                .into_iter()
-                .collect::<HashMap<String, String>>(),
+                ("fs-OST0009".to_string(), "fs".to_string()),
+                ("fs-OST0008".to_string(), "fs2".to_string()),
             ]
+            .into_iter()
+            .collect::<HashMap<String, String>>(),
+        );
+    }
+
+    #[test]
+    fn test_parse_mgs_filesystem_data() {
+        let query_result = Some(vec![Node {
+            statement_id: Some(0),
+            series: Some(vec![
+                Series {
+                    name: "target".to_string(),
+                    tags: Some(
+                        vec![("target".to_string(), json!("MGS".to_string()))]
+                            .into_iter()
+                            .collect::<Map<String, Value>>(),
+                    ),
+                    columns: vec!["time".into(), "target".into(), "mgs_fs".into()],
+                    values: vec![vec![
+                        json!(1597166951257510515 as i64),
+                        json!("MGS"),
+                        json!("mgs1fs1,mgs1fs2"),
+                    ]],
+                },
+                Series {
+                    name: "target".to_string(),
+                    tags: Some(
+                        vec![("target".to_string(), json!("MGS2".to_string()))]
+                            .into_iter()
+                            .collect::<Map<String, Value>>(),
+                    ),
+                    columns: vec!["time".into(), "target".into(), "mgs_fs".into()],
+                    values: vec![vec![
+                        json!(1597166951257510515 as i64),
+                        json!("MGS2"),
+                        json!("mgs2fs1,mgs2fs2"),
+                    ]],
+                },
+            ]),
+        }]);
+
+        let result = parse_mgs_filesystem_data(query_result);
+        assert_eq!(
+            result,
+            vec![
+                ("MGS".to_string(), "mgs1fs1,mgs1fs2".to_string()),
+                ("MGS2".to_string(), "mgs2fs1,mgs2fs2".to_string()),
+            ]
+            .into_iter()
+            .collect::<HashMap<String, String>>(),
         );
     }
 }

@@ -7,12 +7,12 @@ use futures::{TryFutureExt, TryStreamExt};
 use im::HashSet;
 use iml_device::{
     build_device_index, client_mount_content_id, create_cache, create_target_cache, find_targets,
-    get_target_filesystem_map,
+    get_mgs_filesystem_map, get_target_filesystem_map,
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
     },
-    update_client_mounts, update_devices, Cache, ImlDeviceError,
+    update_client_mounts, update_devices, Cache, ImlDeviceError, TargetFsRecord,
 };
 use iml_manager_env::{get_influxdb_addr, get_influxdb_metrics_db};
 use iml_postgres::{get_db_pool, sqlx};
@@ -129,16 +129,21 @@ async fn main() -> Result<(), ImlDeviceError> {
                 .await?;
 
         let target_to_fs_map = get_target_filesystem_map(&influx_client).await?;
+        let mgs_targets_to_fs_map = get_mgs_filesystem_map(&influx_client).await?;
+        let target_to_fs_map: TargetFsRecord = target_to_fs_map
+            .into_iter()
+            .chain(mgs_targets_to_fs_map)
+            .collect();
 
         let targets = find_targets(&device_cache, &mount_cache, &host_ids, &index);
         targets.update_cache(&mut target_cache);
         targets.update_target_mounts_in_cache(&mut target_cache);
 
         let x = target_cache.0.clone().into_iter().fold(
-            (vec![], vec![], vec![], vec![], vec![], vec![]),
+            (vec![], vec![], vec![], vec![], vec![], vec![], vec![]),
             |mut acc, x| {
                 acc.0.push(x.state);
-                acc.1.push(x.name);
+                acc.1.push(x.name.clone());
                 acc.2.push(x.active_host_id);
                 acc.3.push(
                     x.host_ids
@@ -147,8 +152,14 @@ async fn main() -> Result<(), ImlDeviceError> {
                         .collect::<Vec<String>>()
                         .join(","),
                 );
-                acc.4.push(x.uuid);
-                acc.5.push(x.mount_path);
+                acc.4.push(
+                    target_to_fs_map
+                        .get(&(x.name))
+                        .unwrap_or(&"".to_string())
+                        .to_string(),
+                );
+                acc.5.push(x.uuid);
+                acc.6.push(x.mount_path);
 
                 acc
             },
@@ -157,23 +168,25 @@ async fn main() -> Result<(), ImlDeviceError> {
         tracing::warn!("x: {:?}", x);
 
         sqlx::query!(r#"INSERT INTO chroma_core_targets 
-                        (state, name, active_host_id, host_ids, uuid, mount_path) 
-                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], uuid, mount_path
-                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[])
-                        AS t(state, name, active_host_id, host_ids, uuid, mount_path)
+                        (state, name, active_host_id, host_ids, filesystems, uuid, mount_path) 
+                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], string_to_array(filesystems, ',')::text[], uuid, mount_path
+                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[])
+                        AS t(state, name, active_host_id, host_ids, filesystems, uuid, mount_path)
                         ON CONFLICT (uuid)
                             DO
                             UPDATE SET  state          = EXCLUDED.state,
                                         name           = EXCLUDED.name,
                                         active_host_id = EXCLUDED.active_host_id,
                                         host_ids       = EXCLUDED.host_ids,
+                                        filesystems    = EXCLUDED.filesystems,
                                         mount_path     = EXCLUDED.mount_path"#,
             &x.0,
             &x.1,
             &x.2 as &[Option<i32>],
             &x.3,
             &x.4,
-            &x.5 as &[Option<String>],
+            &x.5,
+            &x.6 as &[Option<String>],
         )
         .execute(&pool)
         .await?;
