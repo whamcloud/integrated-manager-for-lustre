@@ -8,19 +8,11 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('chroma_core', '0022_fs_name_uniqueness'),
+        ("chroma_core", "0022_fs_name_uniqueness"),
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='sendstratagemresultstoclientjob',
-            name='filesystem',
-        ),
-        migrations.RemoveField(
-            model_name='sendstratagemresultstoclientjob',
-            name='job_ptr',
-        ),
-        migrations.DeleteModel(
-            name='SendStratagemResultsToClientJob',
-        ),
+        migrations.RemoveField(model_name="sendstratagemresultstoclientjob", name="filesystem",),
+        migrations.RemoveField(model_name="sendstratagemresultstoclientjob", name="job_ptr",),
+        migrations.DeleteModel(name="SendStratagemResultsToClientJob",),
     ]
