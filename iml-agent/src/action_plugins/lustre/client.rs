@@ -25,14 +25,23 @@ async fn is_mounted(mountpoint: &str, check_fstab: bool) -> Result<bool, ImlAgen
         cmd.arg("--fstab");
     }
 
-    let x = cmd
-        .args(vec!["--target", &mountpoint])
-        .status()
-        .await?
-        .code();
+    let output = cmd
+        .args(vec![
+            "--target",
+            &mountpoint,
+            "--output",
+            "TARGET",
+            "--noheadings",
+        ])
+        .output()
+        .await?;
 
-    match x {
-        Some(0) => Ok(true),
+    match output.status.code() {
+        Some(0) => {
+            let output = std::str::from_utf8(&output.stdout)?;
+
+            Ok(output.lines().any(|x| x.trim() == mountpoint))
+        }
         Some(1) => Ok(false),
         Some(code) => Err(ImlAgentError::Io(io::Error::new(
             io::ErrorKind::Other,
