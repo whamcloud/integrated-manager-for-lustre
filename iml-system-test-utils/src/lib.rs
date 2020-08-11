@@ -4,10 +4,10 @@ pub mod vagrant;
 
 use async_trait::async_trait;
 use futures::future::try_join_all;
-use iml_cmd::CheckedCommandExt;
+use iml_cmd::{CheckedChildExt, CheckedCommandExt};
 use iml_wire_types::Branding;
 use ssh::create_iml_diagnostics;
-use std::{collections::HashMap, env, path::PathBuf, str, time::Duration};
+use std::{collections::HashMap, env, path::PathBuf, process::Stdio, str, time::Duration};
 use tokio::{
     fs::{canonicalize, File},
     io::AsyncWriteExt,
@@ -720,8 +720,6 @@ pub async fn mount_clients(config: Config) -> Result<Config, TestError> {
 }
 
 pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestError> {
-    let task = r#"{"filesystem": 1, "name": "testfile", "state": "created", "keep_failed": false, "actions": [ "stratagem.warning" ], "single_runner": true, "args": { "report_file": "/tmp/test-taskfile.txt" } }"#;
-
     // create file
     let (_, output) = ssh::ssh_exec(
         config.client_server_ips()[0],
@@ -730,23 +728,35 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestErro
     .await?;
 
     // Create Task
-    let cmd = format!(r#"iml debugapi post task '{}'"#, task);
-    ssh::ssh_exec_cmd(config.manager_ip, &cmd)
+    let cmd = r#"iml debugapi post task -"#;
+    let task = br#"{"filesystem": 1, "name": "testfile", "state": "created", "keep_failed": false, "actions": [ "stratagem.warning" ], "single_runner": true, "args": { "report_file": "/tmp/test-taskfile.txt" } }"#;
+    let mut ssh_child = ssh::ssh_exec_cmd(config.manager_ip, &cmd)
         .await?
-        .checked_status()
-        .await?;
+        .stdin(Stdio::piped())
+        .stdout(Stdio::inherit())
+        .spawn()?;
 
+    let ssh_stdin = ssh_child.stdin.as_mut().unwrap();
+    ssh_stdin.write_all(task).await?;
+    ssh_child.wait_with_checked_output().await?;
+
+    // send fid
+
+    let cmd = r#"socat - unix-connect:/run/iml/postman-testfile.sock"#;
     let fid = format!(
         "{{ \"fid\": \"{}\" }}",
         String::from_utf8(output.stdout).unwrap().trim()
     );
 
-    let cmd = format!(
-        "echo '{}' | socat - unix-connect:/run/iml/postman-testfile.sock",
-        fid
-    );
+    let mut ssh_child = ssh::ssh_exec_cmd(config.mds_ips[0], &cmd)
+        .await?
+        .stdin(Stdio::piped())
+        .stdout(Stdio::inherit())
+        .spawn()?;
 
-    ssh::ssh_exec(config.mds_ips[0], &cmd).await?;
+    let ssh_stdin = ssh_child.stdin.as_mut().unwrap();
+    ssh_stdin.write_all(fid.as_bytes()).await?;
+    ssh_child.wait_with_checked_output().await?;
 
     // @@ wait for fid to process by checking Task
     delay_for(Duration::from_secs(20)).await;
