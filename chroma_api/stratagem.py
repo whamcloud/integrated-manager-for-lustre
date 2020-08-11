@@ -154,14 +154,6 @@ def validate_mdt_profile(bundle):
         }
 
 
-def validate_client_profile(bundle):
-    if not ManagedHost.objects.filter(server_profile_id__in=["stratagem_client", "stratagem_existing_client"]).exists():
-        return {
-            "code": "stratagem_client_profile_not_installed",
-            "message": "A client must be added with the 'Stratagem Client' profile to run this command.",
-        }
-
-
 class RunStratagemValidation(Validation):
     def is_valid(self, bundle, request=None):
         return (
@@ -169,7 +161,6 @@ class RunStratagemValidation(Validation):
             or validate_filesystem(bundle)
             or validate_target_mount(bundle)
             or validate_mdt_profile(bundle)
-            or validate_client_profile(bundle)
             or {}
         )
 

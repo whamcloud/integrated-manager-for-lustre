@@ -308,7 +308,7 @@ class MountLustreFilesystemsJob(AdvertisedJob):
         unmounted = LustreClientMount.objects.filter(state="unmounted", host=self.host)
 
         args = {
-            "host": self.host,
+            "host": self.host.fqdn,
             "filesystems": [
                 {
                     "mountspec": ManagedFilesystem.objects.get(name=m.filesystem).mount_path(),
@@ -386,7 +386,7 @@ class UnmountLustreFilesystemsJob(AdvertisedJob):
             filesystems.extend([{"mountspec": mount_path, "mountpoint": x} for x in m.mountpoints])
 
         args = {
-            "host": self.host,
+            "host": self.host.fqdn,
             "filesystems": filesystems,
         }
 
