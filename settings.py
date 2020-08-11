@@ -22,6 +22,8 @@ APP_PATH = "/usr/share/chroma-manager"
 
 REPO_PATH = "/var/lib/chroma/repo"
 
+REPORT_PATH = "/var/spool/iml/report"
+
 HTTP_FRONTEND_PORT = 80
 
 HTTPS_FRONTEND_PORT = os.getenv("HTTPS_FRONTEND_PORT", 443)
@@ -50,6 +52,8 @@ WARP_DRIVE_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, WARP_DRIVE_PORT)
 
 MAILBOX_PORT = 8891
 
+MAILBOX_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, MAILBOX_PORT)
+
 INFLUXDB_IML_DB = "iml"
 
 INFLUXDB_STRATAGEM_SCAN_DB = "iml_stratagem_scans"
@@ -58,13 +62,15 @@ INFLUXDB_IML_STATS_DB = "iml_stats"
 
 INFLUXDB_IML_STATS_LONG_DURATION = os.getenv("INFLUXDB_IML_STATS_LONG_DURATION", "52w")
 
-MAILBOX_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, MAILBOX_PORT)
-
 INFLUXDB_SERVER_FQDN = os.getenv("INFLUXDB_SERVER_FQDN", PROXY_HOST)
 
 INFLUXDB_PORT = 8086
 
 INFLUXDB_PROXY_PASS = "http://{}:{}".format(INFLUXDB_SERVER_FQDN, INFLUXDB_PORT)
+
+REPORT_PORT = 8893
+
+REPORT_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, REPORT_PORT)
 
 SSL_PATH = "/var/lib/chroma"
 

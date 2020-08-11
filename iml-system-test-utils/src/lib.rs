@@ -729,7 +729,7 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestErro
 
     // Create Task
     let cmd = r#"iml debugapi post task -"#;
-    let task = br#"{"filesystem": 1, "name": "testfile", "state": "created", "keep_failed": false, "actions": [ "stratagem.warning" ], "single_runner": true, "args": { "report_file": "/tmp/test-taskfile.txt" } }"#;
+    let task = br#"{"filesystem": 1, "name": "testfile", "state": "created", "keep_failed": false, "actions": [ "stratagem.warning" ], "single_runner": true, "args": { "report_name": "test-taskfile.txt" } }"#;
     let mut ssh_child = ssh::ssh_exec_cmd(config.manager_ip, &cmd)
         .await?
         .stdin(Stdio::piped())
@@ -761,28 +761,22 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestErro
     // @@ wait for fid to process by checking Task
     delay_for(Duration::from_secs(20)).await;
 
-    let mut found = false;
+    // check output on manager
 
-    // check output on client
-    for ip in config.client_server_ips() {
-        if let Ok((_, output)) = ssh::ssh_exec(ip, "cat /tmp/test-taskfile.txt").await {
-            if output.stdout != b"/mnt/fs/reportfile\n" {
-                return Err(TestError::Assert(format!(
-                    "Found report file.  Bad contents:```\n{:?}```",
-                    output.stdout
-                )));
-            }
-            found = true;
-            break;
-        }
-    }
+    if let Ok((_, output)) = ssh::ssh_exec(
+        config.manager_ip,
+        "iml debugapi get report/test-taskfile.txt",
+    )
+    .await
+    {
+        let x = String::from_utf8_lossy(&output.stdout);
+        let x = x.lines().nth(1).unwrap().trim();
 
-    if found {
+        assert_eq!(x, "/mnt/fs/reportfile");
+
         Ok(config)
     } else {
-        Err(TestError::Assert(
-            "Report file not found on any client.".into(),
-        ))
+        Err(TestError::Assert("Report file not found in API.".into()))
     }
 }
 

@@ -43,6 +43,7 @@ cp iml-warp-drive %{buildroot}%{_bindir}
 cp iml-mailbox %{buildroot}%{_bindir}
 cp iml-ntp %{buildroot}%{_bindir}
 cp iml-postoffice %{buildroot}%{_bindir}
+cp iml-report %{buildroot}%{_bindir}
 cp iml-sfa %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp iml-api.service %{buildroot}%{_unitdir}
@@ -58,8 +59,10 @@ cp iml-warp-drive.service %{buildroot}%{_unitdir}
 cp iml-mailbox.service %{buildroot}%{_unitdir}
 cp iml-ntp.service %{buildroot}%{_unitdir}
 cp iml-postoffice.service %{buildroot}%{_unitdir}
+cp iml-report.service %{buildroot}%{_unitdir}
 cp iml-sfa.service %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_tmpfilesdir}
+cp iml-report.conf %{buildroot}%{_tmpfilesdir}
 cp tmpfiles.conf %{buildroot}%{_tmpfilesdir}/iml-agent.conf
 mkdir -p %{buildroot}%{_presetdir}
 cp 00-rust-iml-agent.preset %{buildroot}%{_presetdir}
@@ -338,6 +341,28 @@ Requires: rust-iml-agent-comms
 %files postoffice
 %{_bindir}/iml-postoffice
 %attr(0644,root,root)%{_unitdir}/iml-postoffice.service
+
+%package report
+Summary: Performs bidirectional streaming of large datasets
+License: MIT
+Group: System Environment/Libraries
+
+%description report
+%{summary}
+
+%post report
+%systemd_post iml-report.service
+
+%preun report
+%systemd_preun report.service
+
+%postun report
+%systemd_postun_with_restart report.service
+
+%files report
+%{_bindir}/iml-report
+%attr(0644,root,root)%{_unitdir}/iml-report.service
+%attr(0644,root,root)%{_tmpfilesdir}/iml-report.conf
 
 %package sfa
 Summary: Consumer of SFA API calls

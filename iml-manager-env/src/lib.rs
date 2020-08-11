@@ -242,6 +242,20 @@ pub fn get_db_password() -> Option<String> {
     empty_str_to_none(get_var("DB_PASSWORD"))
 }
 
+/// Get the report port from the env or panic
+pub fn get_report_port() -> String {
+    get_var("REPORT_PORT")
+}
+/// Get the report address from the env or panic
+pub fn get_report_addr() -> SocketAddr {
+    to_socket_addr(&get_server_host(), &get_report_port())
+}
+
+/// Get the path to the report from the env or panic
+pub fn get_report_path() -> PathBuf {
+    get_var("REPORT_PATH").into()
+}
+
 pub fn get_branding() -> String {
     get_var("BRANDING")
 }

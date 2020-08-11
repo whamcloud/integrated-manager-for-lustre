@@ -43,7 +43,7 @@ pub(crate) async fn get_command(pool: &PgPool, id: i32) -> Result<Command, ImlAp
     Ok(Command {
         cancelled: cmd.cancelled,
         complete: cmd.complete,
-        created_at: cmd.created_at.format("%Y-%m-%dT%T%.6f%:").to_string(),
+        created_at: cmd.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
         errored: cmd.errored,
         id: cmd.id,
         message: cmd.message,

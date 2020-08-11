@@ -5,7 +5,7 @@
 use iml_request_retry::{retry_future, RetryAction, RetryPolicy};
 pub use reqwest::{header, Client, Response, StatusCode, Url};
 use serde::de::DeserializeOwned;
-use std::{fmt::Debug, time::Duration};
+use std::{fmt::Debug, path::Path, time::Duration};
 
 #[derive(Debug)]
 pub enum ImlManagerClientError {
@@ -86,7 +86,9 @@ pub fn get_client() -> Result<Client, ImlManagerClientError> {
 pub fn create_api_url(path: impl ToString) -> Result<Url, ImlManagerClientError> {
     let mut path = path.to_string();
 
-    if !path.ends_with('/') {
+    let has_extension = Path::new(&path).extension().is_some();
+
+    if !has_extension && !path.ends_with('/') {
         path.push('/');
     }
 

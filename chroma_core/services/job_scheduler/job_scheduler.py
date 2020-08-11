@@ -1866,9 +1866,9 @@ class JobScheduler(object):
                 "name": "{}-warn_fids-fids_expiring_soon".format(unique_id),
                 "start": django.utils.timezone.now(),
                 "state": "created",
-                "single_runner": True,
+                "single_runner": False,
                 "keep_failed": False,
-                "args": {"report_file": "/tmp/expiring_fids-{}-{}.txt".format(filesystem.name, unique_id)},
+                "args": {"report_name": "expiring_fids-{}-{}.txt".format(filesystem.name, unique_id)},
                 "actions": ["stratagem.warning"],
             }
             task = Task.objects.create(**task_data)

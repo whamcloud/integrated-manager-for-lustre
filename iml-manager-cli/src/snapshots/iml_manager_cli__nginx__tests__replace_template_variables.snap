@@ -232,7 +232,7 @@ server {
         if ($ssl_client_verify != SUCCESS) {
             return 401;
         }
-        
+
         client_max_body_size 0m;
 
         proxy_set_header X-SSL-Client-On $ssl_client_verify;
@@ -243,6 +243,38 @@ server {
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_pass http://127.0.0.1:8891/mailbox;
+    }
+
+    location ~ /report/(.+)$ {
+        auth_request /auth;
+
+        types { } default_type application/octet-stream;
+        gzip on;
+        gzip_types application/octet-stream;
+
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        sendfile_max_chunk 1m;
+
+        alias /var/spool/iml/report/$1;
+    }
+
+    location /report {
+        if ($ssl_client_verify != SUCCESS) {
+            return 401;
+        }
+
+        client_max_body_size 0m;
+
+        proxy_set_header X-SSL-Client-On $ssl_client_verify;
+        proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
+        proxy_set_header X-SSL-Client-Serial $ssl_client_serial;
+
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:8893/report;
     }
 
     location /agent/register {
