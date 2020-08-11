@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, http_comms::mailbox_client};
+use crate::{agent_error::ImlAgentError, http_comms::streaming_client};
 use futures::{future, stream, StreamExt, TryStreamExt};
 use iml_cmd::{CheckedCommandExt, Command};
 use iml_fs::{read_file_to_end, stream_dir_lines, write_tempfile};
@@ -374,7 +374,7 @@ pub async fn stream_fidlists(mailbox_files: MailboxFiles) -> Result<(), ImlAgent
                     Ok(format!("{{ \"fid\": \"{}\" }}\n", x).into())
                 });
 
-                mailbox_client::send(address.clone(), stream::iter(xs))
+                streaming_client::send("mailbox", address.clone(), stream::iter(xs))
             })
     });
 

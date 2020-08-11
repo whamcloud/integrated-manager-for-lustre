@@ -16,6 +16,7 @@ members = [
   'iml-orm',
   'iml-postgres',
   'iml-rabbit',
+  'iml-report',
   'iml-request-retry',
   'iml-services/iml-action-runner',
   'iml-services/iml-device',

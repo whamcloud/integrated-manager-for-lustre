@@ -84,6 +84,7 @@ Requires:       rust-iml-api >= 0.3.0
 Requires:       rust-iml-cli >= 0.3.0
 Requires:       rust-iml-gui >= 0.2.0
 Requires:       rust-iml-mailbox >= 0.3.0
+Requires:       rust-iml-report >= 0.3.0
 Requires:       rust-iml-ostpool >= 0.3.0
 Requires:       rust-iml-postoffice >= 0.3.0
 Requires:       rust-iml-task-runner >= 0.3.0

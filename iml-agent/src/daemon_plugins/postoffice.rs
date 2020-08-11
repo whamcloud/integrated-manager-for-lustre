@@ -6,7 +6,7 @@ use crate::{
     agent_error::ImlAgentError,
     daemon_plugins::{DaemonPlugin, Output},
     env,
-    http_comms::mailbox_client::send,
+    http_comms::streaming_client::send,
 };
 use async_trait::async_trait;
 use futures::{
@@ -65,7 +65,7 @@ fn start_route(mailbox: String) -> Trigger {
                     let stream = FramedRead::new(inbound, BytesCodec::new())
                         .map_ok(bytes::BytesMut::freeze)
                         .err_into();
-                    let transfer = send(mailbox.clone(), stream).map(|r| {
+                    let transfer = send("mailbox", mailbox.clone(), stream).map(|r| {
                         if let Err(e) = r {
                             tracing::error!("Failed to transfer: {}", e);
                         }

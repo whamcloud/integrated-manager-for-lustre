@@ -113,6 +113,7 @@ services:
     volumes:
       - "/etc/iml-docker/setup/branding:/var/lib/chroma/branding"
       - "manager-config:/var/lib/chroma"
+      - "report:/var/spool/iml/report"
       - "static-config1:/usr/lib/iml-manager"
       - "static-config2:/usr/lib/node_modules/@iml"
     ports:
@@ -223,6 +224,7 @@ services:
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
+      - "report:/var/spool/iml/report"
       - "/root/.ssh:/root/.ssh"
     environment:
       - DEVICE_AGGREGATOR_URL=http://device:8008
@@ -362,13 +364,25 @@ services:
       context: ../
       dockerfile: ./docker/iml-mailbox.dockerfile
     deploy: *default-deploy
-    environment:
-      - RUST_LOG=info
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
       - PROXY_HOST=iml-mailbox
       - RUST_LOG=info
+  iml-report:
+    image: "imlteam/iml-report:6.2.0-dev"
+    hostname: "iml-report"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-report.dockerfile
+    deploy: *default-deploy
+    environment:
+      - RUST_LOG=info
+    volumes:
+      - "report:/var/spool/iml/report"
+      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+      - "report_run:/run"
+      - "manager-config:/var/lib/chroma"
   iml-stats:
     image: "imlteam/iml-stats:6.2.0-dev"
     hostname: "iml-stats"
@@ -438,6 +452,11 @@ volumes:
   static-config1:
   static-config2:
   mailbox_run:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+  report:
+  report_run:
     driver_opts:
       type: tmpfs
       device: tmpfs

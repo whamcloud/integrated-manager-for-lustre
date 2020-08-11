@@ -5,6 +5,7 @@
 use crate::{
     agent_error::{ImlAgentError, RequiredError},
     fidlist,
+    http_comms::streaming_client::send,
 };
 use futures::{
     channel::mpsc, future::join_all, sink::SinkExt, stream, StreamExt, TryFutureExt, TryStreamExt,
@@ -88,13 +89,11 @@ pub fn write_records(
 }
 
 pub async fn process_fids(
-    (fsname_or_mntpath, task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
+    (fsname_or_mntpath, mut task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
 ) -> Result<Vec<FidError>, ImlAgentError> {
-    let txt_path = task_args.get("report_file".into()).ok_or(RequiredError(
-        "Task missing 'report_file' argument".to_string(),
+    let report_name = task_args.remove("report_name".into()).ok_or(RequiredError(
+        "Task missing 'report_name' argument".to_string(),
     ))?;
-
-    let f = iml_fs::file_append_bytes(txt_path.into()).await?;
 
     let llapi = search_rootpath(fsname_or_mntpath).await?;
 
@@ -102,39 +101,38 @@ pub async fn process_fids(
 
     let (tx, rx) = mpsc::unbounded::<FidError>();
 
-    tokio::spawn(
-        stream::iter(fid_list)
-            .chunks(1000)
-            .map(|xs| Ok::<_, ImlAgentError>(xs.into_iter().collect()))
-            .and_then(move |xs: Vec<_>| {
-                let llapi = llapi.clone();
-                let tx = tx.clone();
-                async move {
-                    let xs = join_all(
-                        xs.into_iter()
-                            .map(move |x| item2path(llapi.clone(), x, tx.clone())),
-                    )
-                    .await;
+    let s = stream::iter(fid_list)
+        .chunks(1000)
+        .map(|xs| Ok::<_, ImlAgentError>(xs.into_iter().collect()))
+        .and_then(move |xs: Vec<_>| {
+            let llapi = llapi.clone();
+            let tx = tx.clone();
+            async move {
+                let xs = join_all(
+                    xs.into_iter()
+                        .map(move |x| item2path(llapi.clone(), x, tx.clone())),
+                )
+                .await;
 
-                    Ok(xs)
-                }
-            })
-            .inspect(|_| debug!("Resolved 1000 Fids"))
-            .map_ok(move |xs| {
-                xs.into_iter()
-                    .filter_map(std::convert::identity)
-                    .map(|x| format!("{}/{}", mntpt, x))
-                    .collect()
-            })
-            .map_ok(|xs: Vec<String>| bytes::BytesMut::from(xs.join("\n").as_str()))
-            .map_ok(|mut x: bytes::BytesMut| {
-                if !x.is_empty() {
-                    x.extend_from_slice(b"\n");
-                }
-                x.freeze()
-            })
-            .forward(f.sink_err_into()),
-    );
+                Ok(xs)
+            }
+        })
+        .inspect(|_| debug!("Resolved 1000 Fids"))
+        .map_ok(move |xs| {
+            xs.into_iter()
+                .filter_map(std::convert::identity)
+                .map(|x| format!("{}/{}", mntpt, x))
+                .collect()
+        })
+        .map_ok(|xs: Vec<String>| bytes::BytesMut::from(xs.join("\n").as_str()))
+        .map_ok(|mut x: bytes::BytesMut| {
+            if !x.is_empty() {
+                x.extend_from_slice(b"\n");
+            }
+            x.freeze()
+        });
+
+    tokio::spawn(send("report", report_name, s));
 
     Ok(rx.collect().await)
 }

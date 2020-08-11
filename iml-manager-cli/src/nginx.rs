@@ -107,6 +107,8 @@ mod tests {
             ("GRAFANA_PROXY_PASS", "http://127.0.0.1:3000"),
             ("INFLUXDB_PROXY_PASS", "http://127.0.0.1:8086"),
             ("TIMER_PROXY_PASS", "http://127.0.0.1:8892"),
+            ("REPORT_PATH", "/var/spool/iml/report"),
+            ("REPORT_PROXY_PASS", "http://127.0.0.1:8893"),
             ("INCLUDES", ""),
         ]
         .iter()

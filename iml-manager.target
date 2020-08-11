@@ -43,6 +43,9 @@ After=iml-ntp.service
 Requires=iml-mailbox.service
 After=iml-mailbox.service
 
+Requires=iml-report.service
+After=iml-report.service
+
 Requires=iml-postoffice.service
 After=iml-postoffice.service
 

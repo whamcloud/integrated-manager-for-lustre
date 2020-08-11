@@ -9,6 +9,7 @@ use reqwest::{Body, StatusCode};
 
 /// Streams the given data to the manager mailbox.
 pub async fn send(
+    path: &'static str,
     message_name: String,
     stream: impl Stream<Item = Result<bytes::Bytes, ImlAgentError>> + Send + Sync + 'static,
 ) -> Result<(), ImlAgentError> {
@@ -20,8 +21,8 @@ pub async fn send(
     let body = Body::wrap_stream(stream);
 
     let resp = client
-        .post(env::MANAGER_URL.join("/mailbox/")?)
-        .header("mailbox-message-name", &message_name)
+        .post(env::MANAGER_URL.join(&format!("/{}/", path))?)
+        .header(&format!("{}-message-name", path), &message_name)
         .body(body)
         .send()
         .await?;

@@ -4,5 +4,5 @@
 
 pub mod agent_client;
 pub mod crypto_client;
-pub mod mailbox_client;
 pub mod session;
+pub mod streaming_client;
