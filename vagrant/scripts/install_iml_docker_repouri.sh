@@ -33,6 +33,26 @@ docker swarm init --advertise-addr=127.0.0.1 --listen-addr=127.0.0.1
 echo "lustre" > /etc/iml-docker/setup/password
 docker secret create iml_pw /etc/iml-docker/setup/password
 
+if [[ -n $REPO_URI ]]; then
+    cat <<EOF > /etc/iml-docker/setup/base.repo
+[manager-for-lustre]
+name=manager-for-lustre
+baseurl=$REPO_URI
+enabled=1
+gpgcheck=0
+
+[managerforlustre-manager-for-lustre-devel]
+name=Copr repo for manager-for-lustre-devel owned by managerforlustre
+baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre-devel/epel-7-\$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre-devel/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+EOF
+fi
+
 cat <<EOF > /etc/iml-docker/docker-compose.overrides.yml
 version: "3.7"
 
