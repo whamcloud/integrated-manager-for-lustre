@@ -15,6 +15,7 @@ EOF
 if [[ -n $REPO_URI ]];
 then
     cat <<EOF >> /etc/yum.repos.d/manager-for-lustre.repo
+
 [manager-for-lustre]
 name=manager-for-lustre
 baseurl=$REPO_URI
@@ -43,16 +44,6 @@ gpgcheck=1
 gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre-devel/pubkey.gpg
 repo_gpgcheck=0
 enabled=1
-
-[epel]
-name=Extra Packages for Enterprise Linux 7 - $basearch
-#baseurl=http://download.fedoraproject.org/pub/epel/7/$basearch
-mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=epel-7&arch=$basearch
-failovermethod=priority
-enabled=1
-gpgcheck=1
-#gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
-gpgkey=https://download.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
 EOF
 
 if [[ -n $REPO_URI ]];
