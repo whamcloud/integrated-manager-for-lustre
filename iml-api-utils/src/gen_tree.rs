@@ -1,4 +1,4 @@
-use crate::diff::{AlignmentOp, Keyed, Side};
+use crate::diff::Keyed;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use std::hash::Hash;
@@ -27,8 +27,16 @@ pub trait HasState {
 pub struct Node<K, T> {
     pub key: K,
     pub parent: Option<K>,
-    pub collapsed: bool,
     pub deps: Vec<K>,
+    // pub core: NodeCore<T>,
+    pub collapsed: bool,
+    pub payload: T,
+}
+
+/// NodeSrc is the way to construct nodes
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct NodeBase<T> {
+    pub collapsed: bool,
     pub payload: T,
 }
 
@@ -237,66 +245,6 @@ impl<K: Copy + Eq + Hash, T: Clone + Eq + HasState> Tree<K, T> {
             calc_inner(self, root, "", "", term, &mut result);
         }
         result
-    }
-}
-
-pub fn apply_diff<K: Clone, U: Clone, B: Clone>(
-    xs: &mut Vec<Item<K, U, B>>,
-    ys: &mut Vec<Item<K, U, B>>,
-    diff: &[AlignmentOp],
-    mut create_indi: impl FnMut(usize, &Item<K, U, B>) -> B,
-    mut update_indi: impl FnMut(usize, &B, &Item<K, U, B>),
-    mut remove_indi: impl FnMut(usize, &B),
-) {
-    let mut di = 0i32;
-    let mut dj = 0i32;
-    for d in diff {
-        match d {
-            AlignmentOp::Insert(Side::Left, i, j) => {
-                let i0 = (*i as i32 + di) as usize;
-                let j0 = (*j as i32 + dj) as usize;
-                let mut y = ys[j0].clone();
-                let indi = create_indi(i0, &y);
-                y.indicator = Some(indi);
-                xs.insert(i0, y);
-                di += 1;
-            }
-            AlignmentOp::Replace(Side::Left, i, j) => {
-                let i0 = (*i as i32 + di) as usize;
-                let j0 = (*j as i32 + dj) as usize;
-                let y = ys[j0].clone();
-                if let Some(indi) = &xs[i0].indicator {
-                    update_indi(i0, &indi, &y)
-                }
-                xs[i0].key = y.key;
-                xs[i0].indent = y.indent;
-                xs[i0].payload = y.payload;
-            }
-            AlignmentOp::Delete(Side::Left, i) => {
-                let i0 = (*i as i32 + di) as usize;
-                if let Some(indi) = &xs[i0].indicator {
-                    remove_indi(i0, indi)
-                }
-                xs.remove(i0);
-                di -= 1;
-            }
-            AlignmentOp::Insert(Side::Right, i, j) => {
-                let i0 = (*i as i32 + di) as usize;
-                let j0 = (*j as i32 + dj) as usize;
-                ys.insert(j0, xs[i0].clone());
-                dj += 1;
-            }
-            AlignmentOp::Replace(Side::Right, i, j) => {
-                let i0 = (*i as i32 + di) as usize;
-                let j0 = (*j as i32 + dj) as usize;
-                ys[j0] = xs[i0].clone();
-            }
-            AlignmentOp::Delete(Side::Right, j) => {
-                let j0 = (*j as i32 + dj) as usize;
-                ys.remove(j0);
-                dj -= 1;
-            }
-        }
     }
 }
 
