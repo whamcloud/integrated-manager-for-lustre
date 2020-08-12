@@ -2,13 +2,14 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, http_comms::mailbox_client};
+use crate::agent_error::ImlAgentError;
 use futures::{
     future::{self, TryFutureExt},
-    stream::{StreamExt, TryStreamExt},
+    stream::{self, StreamExt, TryStreamExt},
 };
+use iml_wire_types::{FidError, FidItem};
 use liblustreapi::LlapiFid;
-use std::convert::Into;
+use std::{collections::HashMap, convert::Into};
 use tokio::task::spawn_blocking;
 use tracing::{debug, error, warn};
 
@@ -35,24 +36,17 @@ async fn rm_fids(llapi: LlapiFid, fids: Vec<String>) -> Result<(), ImlAgentError
         .and_then(std::convert::identity)
 }
 
-pub async fn read_mailbox(
-    (fsname_or_mntpath, mailbox): (String, String),
-) -> Result<(), ImlAgentError> {
+pub async fn process_fids(
+    (fsname_or_mntpath, _task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
+) -> Result<Vec<FidError>, ImlAgentError> {
     let llapi = search_rootpath(fsname_or_mntpath).await?;
 
     let rmfids_size = llapi.rmfids_size();
 
-    mailbox_client::get(mailbox)
-        .map_ok(|x| {
-            x.trim()
-                .split(' ')
-                .filter(|x| !x.is_empty())
-                .last()
-                .map(String::from)
-        })
-        .try_filter_map(future::ok)
+    let fids = fid_list.into_iter().map(|fi| fi.fid);
+    stream::iter(fids)
         .chunks(rmfids_size)
-        .map(|xs| xs.into_iter().collect())
+        .map(|xs| Ok::<_, ImlAgentError>(xs.into_iter().collect()))
         .try_for_each_concurrent(10, |fids| {
             rm_fids(llapi.clone(), fids)
                 .or_else(|e| {
@@ -61,5 +55,6 @@ pub async fn read_mailbox(
                 })
                 .map_ok(|_| debug!("removed {} fids", rmfids_size))
         })
-        .await
+        .await?;
+    Ok(vec![])
 }

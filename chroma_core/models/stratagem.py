@@ -7,7 +7,7 @@ import os
 
 from os import path
 from toolz.functoolz import pipe, partial, flip
-from settings import MAILBOX_PATH, SERVER_HTTP_URL
+from settings import SERVER_HTTP_URL
 from django.db import models
 from django.db.models import CASCADE, Q
 from chroma_core.lib.cache import ObjectCache
@@ -487,6 +487,8 @@ class StreamFidlistStep(Step):
         mailbox_files = map(lambda xs: (xs[0], "{}-{}".format(unique_id, xs[1])), mailbox_files)
         result = self.invoke_rust_agent_expect_result(host, "stream_fidlists_stratagem", mailbox_files)
 
+        self.log(u"\u2713 Scan results sent to client under:\n{}".format("\n".join(xs[1] for xs in mailbox_files)))
+
         return result
 
 
@@ -613,85 +615,6 @@ class AggregateStratagemResultsJob(Job):
                     "clear_temp_measurement_query": "DROP MEASUREMENT temp_stratagem_scan",
                     "measurement": "stratagem_scan",
                     "fs_name": self.fs_name,
-                },
-            )
-        ]
-
-
-class SendResultsToClientStep(Step):
-    def run(self, args):
-        host, mount_point, uuid, report_duration, purge_duration = args["client_args"]
-
-        if report_duration is None and purge_duration is None:
-            return
-
-        action_list = [
-            (label, args)
-            for (duration, label, args) in [
-                (
-                    purge_duration,
-                    "action_purge_stratagem",
-                    (mount_point, "{}-{}".format(uuid, "purge_fids-fids_expired")),
-                ),
-                (
-                    report_duration,
-                    "action_warning_stratagem",
-                    (mount_point, "{}-{}".format(uuid, "warn_fids-fids_expiring_soon")),
-                ),
-            ]
-            if duration is not None
-        ]
-
-        action_list = filter(lambda xs: path.exists("{}/{}".format(MAILBOX_PATH, xs[1][1])), action_list)
-
-        file_location = pipe(
-            action_list,
-            partial(map, lambda xs, host=host: self.invoke_rust_agent_expect_result(host, xs[0], xs[1])),
-            partial(filter, bool),
-            iter,
-            partial(flip, next, None),
-        )
-
-        if file_location:
-            self.log(u"\u2713 Scan results sent to client under:\n{}".format(file_location))
-
-        return file_location
-
-
-class SendStratagemResultsToClientJob(Job):
-    filesystem = models.ForeignKey("ManagedFilesystem", null=False, on_delete=CASCADE)
-    uuid = models.CharField(max_length=64, null=False, default="")
-    report_duration = models.BigIntegerField(null=True)
-    purge_duration = models.BigIntegerField(null=True)
-
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-
-    @classmethod
-    def long_description(self):
-        return "Sending stratagem results to client"
-
-    def description(self):
-        return "Sending stratagem results to client"
-
-    def get_steps(self):
-        client_host = ManagedHost.objects.get(
-            Q(server_profile_id="stratagem_client") | Q(server_profile_id="stratagem_existing_client")
-        )
-        client_mount = LustreClientMount.objects.get(host_id=client_host.id, filesystem=self.filesystem.name)
-
-        return [
-            (
-                SendResultsToClientStep,
-                {
-                    "client_args": (
-                        client_host.fqdn,
-                        client_mount.mountpoints[0],
-                        self.uuid,
-                        self.report_duration,
-                        self.purge_duration,
-                    )
                 },
             )
         ]

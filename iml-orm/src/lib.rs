@@ -14,10 +14,19 @@ pub mod models;
 pub mod schema;
 
 #[cfg(feature = "postgres-interop")]
+pub mod clientmount;
+
+#[cfg(feature = "postgres-interop")]
 pub mod command;
 
 #[cfg(feature = "postgres-interop")]
 pub mod fidtaskqueue;
+
+#[cfg(feature = "postgres-interop")]
+pub mod filesystem;
+
+#[cfg(feature = "postgres-interop")]
+pub mod hosts;
 
 #[cfg(feature = "postgres-interop")]
 pub mod job;

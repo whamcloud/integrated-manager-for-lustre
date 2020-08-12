@@ -8,4 +8,5 @@ edge: All has nodes (Snapshot { name: LustreRpmsInstalled, available: false }, S
 edge: Stratagem has nodes (Snapshot { name: ImlConfigured, available: false }, Snapshot { name: StratagemServersDeployed, available: false })
 edge: Stratagem has nodes (Snapshot { name: StratagemServersDeployed, available: false }, Snapshot { name: StratagemCreated, available: false })
 edge: Stratagem has nodes (Snapshot { name: StratagemCreated, available: false }, Snapshot { name: StratagemDetected, available: false })
-
+edge: Stratagem has nodes (Snapshot { name: StratagemDetected, available: false }, Snapshot { name: StratagemMountedClient, available: false })
+edge: Stratagem has nodes (Snapshot { name: StratagemMountedClient, available: false }, Snapshot { name: StratagemTestTaskQueue, available: false })

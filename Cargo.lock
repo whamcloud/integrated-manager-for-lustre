@@ -1560,10 +1560,13 @@ dependencies = [
  "futures",
  "iml-fs",
  "iml-manager-env",
+ "iml-orm",
  "iml-tracing",
+ "serde",
+ "serde_json",
  "tempdir",
+ "thiserror",
  "tokio",
- "tracing",
  "warp",
 ]
 
@@ -1809,6 +1812,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-task-runner"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "iml-action-client",
+ "iml-orm",
+ "iml-postgres",
+ "iml-tracing",
+ "iml-wire-types",
+ "serde_json",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "iml-timer"
 version = "0.3.0"
 dependencies = [
@@ -1880,6 +1898,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_repr",
+ "sqlx",
  "structopt",
  "tokio-postgres",
 ]
@@ -2759,6 +2778,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d36492546b6af1463394d46f0c834346f31548646f6ba10849802c9c9a27ac33"
 
 [[package]]
+name = "postgres-derive"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c857dd221cb0e7d8414b894a0ce29eae44d453dda0baa132447878e75e701477"
+dependencies = [
+ "proc-macro2 1.0.19",
+ "quote 1.0.7",
+ "syn 1.0.38",
+]
+
+[[package]]
 name = "postgres-protocol"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2784,7 +2814,10 @@ checksum = "3d14b0a4f433b0e0b565bb0fbc0ac9fc3d79ca338ba265ad0e7eef0f3bcc5e94"
 dependencies = [
  "bytes",
  "fallible-iterator",
+ "postgres-derive",
  "postgres-protocol",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

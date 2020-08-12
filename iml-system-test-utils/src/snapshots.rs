@@ -63,6 +63,8 @@ pub enum SnapshotName {
     LdiskfsDetected,
     ZfsDetected,
     StratagemDetected,
+    StratagemMountedClient,
+    StratagemTestTaskQueue,
 }
 
 impl From<&String> for SnapshotName {
@@ -80,6 +82,8 @@ impl From<&String> for SnapshotName {
             "ldiskfs-detected" => Self::LdiskfsDetected,
             "zfs-detected" => Self::ZfsDetected,
             "stratagem-detected" => Self::StratagemDetected,
+            "stratagem-mounted-client" => Self::StratagemMountedClient,
+            "stratagem-test-taskqueue" => Self::StratagemTestTaskQueue,
             _ => Self::Bare,
         }
     }
@@ -100,6 +104,8 @@ impl fmt::Display for SnapshotName {
             Self::LdiskfsDetected => write!(f, "ldiskfs-detected"),
             Self::ZfsDetected => write!(f, "zfs-detected"),
             Self::StratagemDetected => write!(f, "stratagem-detected"),
+            Self::StratagemMountedClient => write!(f, "stratagem-mounted-client"),
+            Self::StratagemTestTaskQueue => write!(f, "stratagem-test-taskqueue"),
         }
     }
 }
@@ -186,6 +192,14 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
     let stratagem_detected = graph.add_node(Snapshot {
         name: SnapshotName::StratagemDetected,
         available: snapshots.contains(&SnapshotName::StratagemDetected),
+    });
+    let stratagem_mounted_client = graph.add_node(Snapshot {
+        name: SnapshotName::StratagemMountedClient,
+        available: snapshots.contains(&SnapshotName::StratagemMountedClient),
+    });
+    let stratagem_test_taskqueue = graph.add_node(Snapshot {
+        name: SnapshotName::StratagemTestTaskQueue,
+        available: snapshots.contains(&SnapshotName::StratagemTestTaskQueue),
     });
 
     graph.add_edge(
@@ -284,6 +298,24 @@ pub fn create_graph(snapshots: &[SnapshotName]) -> DiGraph<Snapshot, Transition>
         Transition {
             path: SnapshotPath::Stratagem,
             transition: mk_transition(detect_fs),
+        },
+    );
+
+    graph.add_edge(
+        stratagem_detected,
+        stratagem_mounted_client,
+        Transition {
+            path: SnapshotPath::Stratagem,
+            transition: mk_transition(mount_clients),
+        },
+    );
+
+    graph.add_edge(
+        stratagem_mounted_client,
+        stratagem_test_taskqueue,
+        Transition {
+            path: SnapshotPath::Stratagem,
+            transition: mk_transition(test_stratagem_taskqueue),
         },
     );
 

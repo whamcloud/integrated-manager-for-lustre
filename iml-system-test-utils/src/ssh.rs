@@ -281,10 +281,7 @@ pub async fn list_fs_json(host: &str) -> Result<Vec<serde_json::Value>, TestErro
         .checked_output()
         .err_into()
         .await
-        .map(|o| {
-            let v: Vec<serde_json::Value> = serde_json::from_slice(&o.stdout).unwrap();
-            v
-        })
+        .map(|o| serde_json::from_slice::<Vec<serde_json::Value>>(&o.stdout).unwrap())
 }
 
 pub async fn systemd_status(host: &str, service_name: &str) -> Result<Command, TestError> {

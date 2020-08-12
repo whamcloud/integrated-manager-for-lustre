@@ -14,7 +14,7 @@ use bytes::BytesMut;
 #[cfg(feature = "postgres-interop")]
 use postgres_types::{to_sql_checked, FromSql, IsNull, ToSql, Type};
 #[cfg(feature = "postgres-interop")]
-use std::{convert::TryInto, io};
+use std::{convert::TryInto, io, str::FromStr};
 #[cfg(feature = "postgres-interop")]
 use tokio_postgres::Row;
 
@@ -83,6 +83,54 @@ impl From<Row> for ContentTypeRecord {
             model: row.get("model"),
         }
     }
+}
+
+/// Record from the `lustre_fid` type
+#[cfg(feature = "postgres-interop")]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug, sqlx::Type)]
+#[sqlx(rename = "lustre_fid")]
+pub struct LustreFid {
+    pub seq: i64,
+    pub oid: i32,
+    pub ver: i32,
+}
+
+#[cfg(feature = "postgres-interop")]
+impl fmt::Display for LustreFid {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "[0x{:x}:0x{:x}:0x{:x}]",
+            self.seq as u64, self.oid as u32, self.ver as u32
+        )
+    }
+}
+
+#[cfg(feature = "postgres-interop")]
+impl FromStr for LustreFid {
+    type Err = std::num::ParseIntError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let fidstr = s.trim_matches(|c| c == '[' || c == ']');
+        let arr: Vec<&str> = fidstr
+            .split(':')
+            .map(|num| num.trim_start_matches("0x"))
+            .collect();
+        Ok(Self {
+            seq: i64::from_str_radix(arr[0], 16)?,
+            oid: i32::from_str_radix(arr[1], 16)?,
+            ver: i32::from_str_radix(arr[2], 16)?,
+        })
+    }
+}
+
+/// Record from the `chroma_core_fidtaskqueue` table
+#[cfg(feature = "postgres-interop")]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
+pub struct FidTaskQueue {
+    pub id: i32,
+    pub fid: LustreFid,
+    pub data: serde_json::Value,
+    pub task_id: i32,
 }
 
 /// Record from the `chroma_core_managedfilesystem` table

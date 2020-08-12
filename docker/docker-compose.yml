@@ -113,7 +113,6 @@ services:
     volumes:
       - "/etc/iml-docker/setup/branding:/var/lib/chroma/branding"
       - "manager-config:/var/lib/chroma"
-      - "mailbox:/var/spool/iml/mailbox"
       - "static-config1:/usr/lib/iml-manager"
       - "static-config2:/usr/lib/node_modules/@iml"
     ports:
@@ -224,7 +223,6 @@ services:
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
-      - "mailbox:/var/spool/iml/mailbox"
       - "/root/.ssh:/root/.ssh"
     environment:
       - DEVICE_AGGREGATOR_URL=http://device:8008
@@ -304,6 +302,19 @@ services:
       - PROXY_HOST=iml-action-runner
       - ACTION_RUNNER_PORT=8009
       - RUST_LOG=info
+  iml-task-runner:
+    image: "imlteam/iml-task-runner:6.2.0-dev"
+    hostname: "iml-task-runner"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-task-runner.dockerfile
+    deploy: *default-deploy
+    volumes:
+      - "manager-config:/var/lib/chroma"
+    environment:
+      - RUST_LOG=info
+      - PROXY_HOST=iml-action-runner
+      - ACTION_RUNNER_PORT=8009
   iml-api:
     image: "imlteam/iml-api:6.2.0-dev"
     hostname: "iml-api"
@@ -354,10 +365,10 @@ services:
     environment:
       - RUST_LOG=info
     volumes:
-      - "mailbox:/var/spool/iml/mailbox"
-      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
-      - "mailbox_run:/run"
       - "manager-config:/var/lib/chroma"
+    environment:
+      - PROXY_HOST=iml-mailbox
+      - RUST_LOG=info
   iml-stats:
     image: "imlteam/iml-stats:6.2.0-dev"
     hostname: "iml-stats"
@@ -426,7 +437,6 @@ volumes:
   grafana-storage:
   static-config1:
   static-config2:
-  mailbox:
   mailbox_run:
     driver_opts:
       type: tmpfs

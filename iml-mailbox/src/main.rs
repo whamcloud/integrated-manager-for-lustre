@@ -4,15 +4,15 @@
 
 //! # Mailbox processor
 //!
-//! This crate allows N incoming writers to stream data to a known
-//! file-backed address concurrently.
+//! This crate allows N incoming writers to stream data to a single database table concurrently.
 //!
-//! Data has the requirement that is line-delimited so writes can be processed
+//! Data has the requirement that it is line-delimited json so writes can be processed
 //! concurrently
 
-use futures::{lock::Mutex, Stream, TryFutureExt, TryStreamExt};
-use iml_mailbox::{Errors, Incoming, MailboxSenders};
-use std::{fs, path::PathBuf, pin::Pin, sync::Arc};
+use futures::{Stream, StreamExt};
+use iml_mailbox::ingest_data;
+use iml_tracing::tracing;
+use std::pin::Pin;
 use warp::Filter as _;
 
 #[tokio::main]
@@ -20,78 +20,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
     let addr = iml_manager_env::get_mailbox_addr();
-    let mailbox_path = iml_manager_env::get_mailbox_path();
-
-    type SharedMailboxSenders = Arc<Mutex<MailboxSenders>>;
-
-    let shared_senders = Arc::new(Mutex::new(MailboxSenders::default()));
-    let shared_senders_filter = warp::any().map(move || Arc::clone(&shared_senders));
-
-    fs::create_dir_all(&mailbox_path).expect("could not create mailbox path");
 
     let mailbox = warp::path("mailbox");
 
     let post = warp::post()
         .and(mailbox)
-        .and(shared_senders_filter)
-        .and(
-            warp::header::<PathBuf>("mailbox-message-name")
-                .map(move |x| [&mailbox_path.clone(), &x].iter().collect()),
-        )
+        .and(warp::header::<String>("mailbox-message-name"))
         .and(iml_mailbox::line_stream())
         .and_then(
-            |mailbox_senders: SharedMailboxSenders,
-             address: PathBuf,
-             mut s: Pin<Box<dyn Stream<Item = Result<String, warp::Rejection>> + Send>>| {
+            |task_name: String,
+             s: Pin<Box<dyn Stream<Item = Result<String, warp::Rejection>> + Send>>| {
                 async move {
-                    let tx = {
-                        let mut lock = mailbox_senders.lock().await;
-
-                        lock.get(&address)
-                    };
-
-                    let tx = match tx {
-                        Some(tx) => tx,
-                        None => {
-                            let (tx, fut) = {
-                                let mut lock = mailbox_senders.lock().await;
-                                lock.create(address.clone())
-                            };
-
-                            let address2 = address.clone();
-
-                            tokio::spawn(
-                                async move {
-                                    fut.await.unwrap_or_else(|e| {
-                                        tracing::error!(
-                                            "Got an error writing to mailbox address {:?}: {:?}",
-                                            &address2,
-                                            e
-                                        )
-                                    });
-
-                                    let mut lock = mailbox_senders.lock().await;
-                                    lock.remove(&address);
+                    tracing::debug!("Listening for task {}", &task_name);
+                    s.filter_map(|l| async move { l.ok() })
+                        .chunks(100)
+                        .for_each_concurrent(10, |lines| {
+                            let task_name = task_name.clone();
+                            async move {
+                                if let Err(e) = ingest_data(task_name, lines).await {
+                                    tracing::warn!("Failed to process lines: {:?}", e);
                                 }
-                            );
-
-                            tx
-                        }
-                    };
-
-
-                    while let Some(l) = s.try_next().await? {
-                        tracing::debug!("Sending line {:?}", l);
-
-                        tx.unbounded_send(Incoming::Line(l)).map_err(Errors::TrySendError).map_err(warp::reject::custom)?
-                    }
-
-
-                    let (eof, rx) = Incoming::create_eof();
-
-                    tx.unbounded_send(eof).map_err(Errors::TrySendError).map_err(warp::reject::custom)?;
-
-                    let _ = rx.map_err(|e| tracing::warn!("Error waiting for flush {:?}", e)).await;
+                            }
+                        })
+                        .await;
 
                     Ok::<_, warp::reject::Rejection>(())
                 }

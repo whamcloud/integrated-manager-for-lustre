@@ -5,6 +5,7 @@
 from django.db import models
 from django.db.models import CASCADE, SET_NULL
 from django.contrib.postgres.fields import ArrayField, JSONField
+import django.utils.timezone
 
 from chroma_core.lib.job import DependOn, DependAll, Step
 from chroma_core.models import ManagedFilesystem, ManagedHost
@@ -125,6 +126,11 @@ class RemoveTaskJob(AdvertisedJob):
             steps.append((RemoveTaskStep, {"task": self.task.name, "host": host.fqdn}))
 
         return steps
+
+    def on_success(self):
+        self.task.finish = django.utils.timezone.now()
+        self.task.state = "removed"
+        self.task.save(update_fields=["state", "finish"])
 
 
 class RemoveTaskStep(Step):

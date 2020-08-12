@@ -55,6 +55,9 @@ After=iml-ostpool.service
 Requires=iml-action-runner.service
 After=iml-action-runner.service
 
+Requires=iml-task-runner.service
+After=iml-task-runner.service
+
 Requires=iml-update-handler.socket
 After=iml-update-handler.socket
 

@@ -38,6 +38,7 @@ cp iml-journal %{buildroot}%{_bindir}
 cp iml-stats %{buildroot}%{_bindir}
 cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-action-runner %{buildroot}%{_bindir}
+cp iml-task-runner %{buildroot}%{_bindir}
 cp iml-warp-drive %{buildroot}%{_bindir}
 cp iml-mailbox %{buildroot}%{_bindir}
 cp iml-ntp %{buildroot}%{_bindir}
@@ -50,6 +51,7 @@ cp iml-journal.service %{buildroot}%{_unitdir}
 cp iml-ostpool.service %{buildroot}%{_unitdir}
 cp iml-rust-stats.service %{buildroot}%{_unitdir}
 cp iml-agent-comms.service %{buildroot}%{_unitdir}
+cp iml-task-runner.service %{buildroot}%{_unitdir}
 cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
 cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
 cp iml-warp-drive.service %{buildroot}%{_unitdir}
@@ -58,7 +60,6 @@ cp iml-ntp.service %{buildroot}%{_unitdir}
 cp iml-postoffice.service %{buildroot}%{_unitdir}
 cp iml-sfa.service %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_tmpfilesdir}
-cp iml-mailbox.conf %{buildroot}%{_tmpfilesdir}
 cp tmpfiles.conf %{buildroot}%{_tmpfilesdir}/iml-agent.conf
 mkdir -p %{buildroot}%{_presetdir}
 cp 00-rust-iml-agent.preset %{buildroot}%{_presetdir}
@@ -210,6 +211,27 @@ Requires: rust-iml-agent-comms
 %{_bindir}/iml-ostpool
 %attr(0644,root,root)%{_unitdir}/iml-ostpool.service
 
+%package task-runner
+Summary: Dispatches and tracks Tasks to Client Workers
+License: MIT
+Group: System Environment/Libraries
+
+%description task-runner
+%{summary}
+
+%post task-runner
+systemctl preset iml-task-runner.service
+
+%preun task-runner
+%systemd_preun iml-task-runner.service
+
+%postun task-runner
+%systemd_postun_with_restart iml-task-runner.service
+
+%files task-runner
+%{_bindir}/iml-task-runner
+%attr(0644,root,root)%{_unitdir}/iml-task-runner.service
+
 %package stats
 Summary: Consumer of IML stats
 License: MIT
@@ -273,7 +295,6 @@ Group: System Environment/Libraries
 %files mailbox
 %{_bindir}/iml-mailbox
 %attr(0644,root,root)%{_unitdir}/iml-mailbox.service
-%attr(0644,root,root)%{_tmpfilesdir}/iml-mailbox.conf
 
 %package ntp
 Summary: Consumer of IML Agent Ntp push queue

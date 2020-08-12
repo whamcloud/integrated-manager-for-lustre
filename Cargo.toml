@@ -28,6 +28,7 @@ members = [
   'iml-sfa',
   'iml-system-test-utils',
   'iml-systemd',
+  'iml-task-runner',
   'iml-timer',
   'iml-tracing',
   'iml-util',

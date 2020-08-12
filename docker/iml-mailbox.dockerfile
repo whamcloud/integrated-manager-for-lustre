@@ -1,14 +1,8 @@
 FROM rust-iml-base as builder
+FROM imlteam/rust-service-base:6.2.0-dev
 
-FROM imlteam/systemd-base:6.2.0-dev
-COPY --from=builder /build/target/release/iml-mailbox /bin/
-COPY docker/iml-mailbox/iml-mailbox.service /etc/systemd/system/
-COPY docker/iml-mailbox/iml-mailbox.conf /etc/systemd/system/
-COPY iml-mailbox.conf /usr/lib/tmpfiles.d/
-COPY docker/wait-for-dependencies.sh /usr/local/bin/
+COPY --from=builder /build/target/release/iml-mailbox /usr/local/bin
+COPY docker/wait-for-dependencies-postgres.sh /usr/local/bin
 
-RUN systemctl enable iml-mailbox
-
-ENTRYPOINT ["wait-for-dependencies.sh"]
-
-CMD ["/usr/sbin/init"]
+ENTRYPOINT [ "wait-for-dependencies-postgres.sh" ]
+CMD ["iml-mailbox"]

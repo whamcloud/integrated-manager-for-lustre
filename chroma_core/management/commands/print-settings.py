@@ -55,7 +55,6 @@ class Command(BaseCommand):
             "VERSION": settings.VERSION,
             "API_USER": API_USER,
             "API_KEY": API_KEY,
-            "MAILBOX_PATH": settings.MAILBOX_PATH,
             "PROXY_HOST": settings.PROXY_HOST,
             "INFLUXDB_IML_DB": settings.INFLUXDB_IML_DB,
             "INFLUXDB_STRATAGEM_SCAN_DB": settings.INFLUXDB_STRATAGEM_SCAN_DB,

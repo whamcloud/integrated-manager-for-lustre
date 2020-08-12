@@ -51,6 +51,24 @@ impl From<Fqdn> for String {
     }
 }
 
+impl From<&str> for Fqdn {
+    fn from(s: &str) -> Self {
+        Fqdn(s.into())
+    }
+}
+
+impl From<&String> for Fqdn {
+    fn from(s: &String) -> Self {
+        Fqdn(s.as_str().into())
+    }
+}
+
+impl From<String> for Fqdn {
+    fn from(s: String) -> Self {
+        Fqdn(s)
+    }
+}
+
 impl fmt::Display for Fqdn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
@@ -182,6 +200,12 @@ impl From<&str> for ActionName {
     }
 }
 
+impl From<&String> for ActionName {
+    fn from(name: &String) -> Self {
+        Self(name.as_str().into())
+    }
+}
+
 impl Deref for ActionName {
     type Target = str;
 
@@ -283,6 +307,10 @@ impl<T: serde::Serialize> ToBytes for T {
         serde_json::to_vec(&self)
     }
 }
+
+/// Arguments to all Task Actions on agents: FSNAME, Task Args, FID LIST
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+pub struct TaskAction(pub String, pub HashMap<String, String>, pub Vec<FidItem>);
 
 #[derive(
     serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash,
@@ -1728,6 +1756,19 @@ impl fmt::Display for Branding {
             Self::Whamcloud => write!(f, "whamcloud"),
         }
     }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FidError {
+    pub fid: String,
+    pub data: serde_json::Value,
+    pub errno: i16,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FidItem {
+    pub fid: String,
+    pub data: serde_json::Value,
 }
 
 #[derive(Debug, Eq, Clone, serde::Serialize, serde::Deserialize)]

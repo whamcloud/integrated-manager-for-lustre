@@ -32,8 +32,6 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("package_version", package::version)
         .add_plugin("start_scan_stratagem", server::trigger_scan)
         .add_plugin("stream_fidlists_stratagem", server::stream_fidlists)
-        .add_plugin("action_warning_stratagem", action_warning::read_mailbox)
-        .add_plugin("action_purge_stratagem", action_purge::read_mailbox)
         .add_plugin("action_check_ha", high_availability::check_ha)
         .add_plugin("action_check_stonith", check_stonith::check_stonith)
         .add_plugin("get_kernel", check_kernel::get_kernel)
@@ -73,7 +71,10 @@ pub fn create_registry() -> action_plugins::Actions {
         )
         .add_plugin("is_ntp_configured", is_ntp_configured::is_ntp_configured)
         .add_plugin("create_ltuer_conf", ltuer::create_ltuer_conf)
-        .add_plugin("create_ldev_conf", ldev::create);
+        .add_plugin("create_ldev_conf", ldev::create)
+        // Task Actions
+        .add_plugin("action.stratagem.warning", action_warning::process_fids)
+        .add_plugin("action.stratagem.purge", action_purge::process_fids);
 
     info!("Loaded the following ActionPlugins:");
 

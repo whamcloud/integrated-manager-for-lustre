@@ -95,7 +95,6 @@ mod tests {
             ("HTTP_API_PROXY_PASS", "http://127.0.0.1:8001"),
             ("IML_API_PROXY_PASS", "http://127.0.0.1:8004"),
             ("WARP_DRIVE_PROXY_PASS", "http://127.0.0.1:8890"),
-            ("MAILBOX_PATH", "/var/spool/iml/mailbox"),
             ("MAILBOX_PROXY_PASS", "http://127.0.0.1:8891"),
             ("SSL_PATH", "/var/lib/chroma"),
             ("DEVICE_AGGREGATOR_PORT", "8008"),
