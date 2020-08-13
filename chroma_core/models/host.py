@@ -1829,7 +1829,6 @@ class MountSnapshotJob(HostListMixin):
     def description(self):
         if len(self.hosts) > 1:
             return "Mount snapshot on %d hosts" % len(self.hosts)
-        else:
             return "Mount snapshot on host %s" % self.hosts[0]
 
     def get_steps(self):
