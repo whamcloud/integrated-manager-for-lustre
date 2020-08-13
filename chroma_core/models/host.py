@@ -1829,12 +1829,12 @@ class MountSnapshotJob(HostListMixin):
     def description(self):
         if len(self.hosts) > 1:
             return "Mount snapshot on %d hosts" % len(self.hosts)
-            return "Mount snapshot on host %s" % self.hosts[0]
+        return "Mount snapshot on host %s" % self.hosts[0]
 
     def get_steps(self):
         steps = []
         for host in self.hosts:
-            steps.append((MountSnapshotStep, {"host": "%s" % host, "fsname": self.fsname, "name": self.name}))
+            steps.append((MountSnapshotStep, {"host": host.fqdn, "fsname": self.fsname, "name": self.name}))
 
         return steps
 
