@@ -9,7 +9,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('chroma_core', '0022_fs_name_uniqueness'),
+        ('chroma_core', '0023_remove_stratagem_client_job'),
     ]
 
     operations = [
