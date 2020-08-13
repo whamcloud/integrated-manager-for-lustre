@@ -13,7 +13,7 @@ use iml_rabbit::{self, create_connection_filter};
 use iml_wire_types::Conf;
 use warp::Filter;
 
-// Default pool limit if not overwridden by POOL_LIMIT
+// Default pool limit if not overridden by POOL_LIMIT
 const POOL_LIMIT: u32 = 5;
 
 #[tokio::main]

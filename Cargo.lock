@@ -1854,6 +1854,7 @@ dependencies = [
  "iml-postgres",
  "iml-tracing",
  "iml-wire-types",
+ "lazy_static",
  "serde_json",
  "thiserror",
  "tokio",

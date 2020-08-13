@@ -18,7 +18,7 @@ use lazy_static::lazy_static;
 use std::pin::Pin;
 use warp::Filter as _;
 
-// Default pool limit if not overwridden by POOL_LIMIT
+// Default pool limit if not overridden by POOL_LIMIT
 lazy_static! {
     static ref POOL_LIMIT: u32 = get_pool_limit().unwrap_or(8);
 }
@@ -27,7 +27,7 @@ lazy_static! {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    let pool = get_db_pool(POOL_LIMIT).await?;
+    let pool = get_db_pool(*POOL_LIMIT).await?;
     let db_pool_filter = warp::any().map(move || pool.clone());
 
     let addr = iml_manager_env::get_mailbox_addr();
@@ -48,7 +48,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     s.filter_map(|l| async move { l.ok() })
                         .chunks(1000)
-                        .for_each_concurrent(POOL_LIMIT as usize, |lines| {
+                        .for_each_concurrent(*POOL_LIMIT as usize, |lines| {
                             let pool = db_pool.clone();
                             let task_name = task_name.clone();
 

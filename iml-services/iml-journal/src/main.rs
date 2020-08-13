@@ -20,7 +20,7 @@ lazy_static! {
     static ref DBLOG_LW: i64 = iml_manager_env::get_dblog_lw() as i64;
 }
 
-// Default pool limit if not overwridden by POOL_LIMIT
+// Default pool limit if not overridden by POOL_LIMIT
 const POOL_LIMIT: u32 = 2;
 
 async fn purge_excess(pool: &PgPool, num_rows: i64) -> Result<i64, ImlJournalError> {

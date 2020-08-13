@@ -14,7 +14,9 @@ use iml_wire_types::{
     db::{FidTaskQueue, LustreFid},
     AgentResult, FidError, FidItem, LustreClient, Task, TaskAction,
 };
+use lazy_static::lazy_static;
 use std::{
+    cmp::max,
     collections::{HashMap, HashSet},
     str::FromStr,
     sync::Arc,
@@ -28,8 +30,11 @@ pub mod error;
 const FID_LIMIT: i64 = 2000;
 // Number of seconds between cycles
 const DELAY: Duration = Duration::from_secs(5);
-// Default pool limit if not overwridden by POOL_LIMIT
-const POOL_LIMIT: u32 = 10;
+
+// Default pool limit if not overridden by POOL_LIMIT
+lazy_static! {
+    static ref POOL_LIMIT: u32 = get_pool_limit().unwrap_or(8);
+}
 
 async fn available_workers(
     conn: &mut PoolConnection<Postgres>,
@@ -46,8 +51,10 @@ async fn available_workers(
             state = 'mounted'
             AND not_deleted = 't'
             AND id != ALL($1)
+        LIMIT $2
         "#,
-        &ids
+        &ids,
+        max(*POOL_LIMIT as i64 - ids.len() as i64, 0),
     )
     .fetch_all(conn)
     .await?;
@@ -309,7 +316,7 @@ async fn run_tasks(fqdn: &str, worker: &LustreClient, xs: Vec<Task>, pool: &PgPo
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    let pg_pool = get_db_pool(get_pool_limit().unwrap_or(POOL_LIMIT)).await?;
+    let pg_pool = get_db_pool(*POOL_LIMIT).await?;
     let active_clients = Arc::new(Mutex::new(HashSet::new()));
     let mut interval = time::interval(DELAY);
 

@@ -8,7 +8,7 @@ use iml_postgres::{alert, get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::{db::ManagedHostRecord, time::State, AlertRecordType, AlertSeverity};
 
-// Default pool limit if not overwridden by POOL_LIMIT
+// Default pool limit if not overridden by POOL_LIMIT
 const POOL_LIMIT: u32 = 2;
 
 #[tokio::main]

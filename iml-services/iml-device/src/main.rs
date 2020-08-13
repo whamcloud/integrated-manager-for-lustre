@@ -24,7 +24,7 @@ use std::{
 };
 use warp::Filter;
 
-// Default pool limit if not overwridden by POOL_LIMIT
+// Default pool limit if not overridden by POOL_LIMIT
 const POOL_LIMIT: u32 = 2;
 
 #[tokio::main]
