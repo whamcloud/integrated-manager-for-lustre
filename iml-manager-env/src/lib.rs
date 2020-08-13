@@ -242,6 +242,10 @@ pub fn get_db_password() -> Option<String> {
     empty_str_to_none(get_var("DB_PASSWORD"))
 }
 
+pub fn get_pool_limit() -> Option<u32> {
+    get_var("POOL_LIMIT").parse().ok()
+}
+
 /// Get the report port from the env or panic
 pub fn get_report_port() -> String {
     get_var("REPORT_PORT")

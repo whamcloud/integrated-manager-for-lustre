@@ -1580,6 +1580,7 @@ dependencies = [
  "iml-postgres",
  "iml-tracing",
  "iml-wire-types",
+ "lazy_static",
  "serde",
  "serde_json",
  "tempdir",
@@ -1647,6 +1648,7 @@ name = "iml-ntp"
 version = "0.3.0"
 dependencies = [
  "futures",
+ "iml-manager-env",
  "iml-postgres",
  "iml-rabbit",
  "iml-service-queue",
@@ -1848,6 +1850,7 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "iml-action-client",
+ "iml-manager-env",
  "iml-postgres",
  "iml-tracing",
  "iml-wire-types",

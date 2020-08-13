@@ -7,6 +7,7 @@ version = "0.1.0"
 [dependencies]
 futures = "0.3"
 iml-action-client = {path = "../iml-action-client", version = "0.1"}
+iml-manager-env = {path = "../iml-manager-env", version = "0.3"}
 iml-postgres = {path = "../iml-postgres", version = "0.3"}
 iml-tracing = {path = "../iml-tracing", version = "0.2"}
 iml-wire-types = {path = "../iml-wire-types", version = "0.3", features = ["postgres-interop"]}

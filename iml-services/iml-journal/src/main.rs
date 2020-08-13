@@ -4,6 +4,7 @@
 
 use futures::TryStreamExt;
 use iml_journal::{execute_handlers, get_message_class, ImlJournalError};
+use iml_manager_env::get_pool_limit;
 use iml_postgres::{
     get_db_pool,
     sqlx::{self, PgPool},
@@ -18,6 +19,9 @@ lazy_static! {
     static ref DBLOG_HW: i64 = iml_manager_env::get_dblog_hw() as i64;
     static ref DBLOG_LW: i64 = iml_manager_env::get_dblog_lw() as i64;
 }
+
+// Default pool limit if not overwridden by POOL_LIMIT
+const POOL_LIMIT: u32 = 2;
 
 async fn purge_excess(pool: &PgPool, num_rows: i64) -> Result<i64, ImlJournalError> {
     if num_rows <= *DBLOG_HW {
@@ -57,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Starting");
 
-    let pool = get_db_pool(5).await?;
+    let pool = get_db_pool(get_pool_limit().unwrap_or(POOL_LIMIT)).await?;
 
     let rabbit_pool = iml_rabbit::connect_to_rabbit(1);
 

@@ -7,6 +7,7 @@ use iml_action_runner::{
     data::SessionToRpcs, local_actions::SharedLocalActionsInFlight, receiver::handle_agent_data,
     sender::sender, Sessions, Shared,
 };
+use iml_manager_env::get_pool_limit;
 use iml_postgres::get_db_pool;
 use iml_rabbit::create_connection_filter;
 use iml_service_queue::service_queue::{consume_service_queue, ImlServiceQueueError};
@@ -15,6 +16,9 @@ use std::{collections::HashMap, sync::Arc};
 use warp::{self, Filter as _};
 
 pub static AGENT_TX_RUST: &str = "agent_tx_rust";
+
+// Default pool limit if not overwridden by POOL_LIMIT
+const POOL_LIMIT: u32 = 2;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -30,7 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let pool = iml_rabbit::connect_to_rabbit(3);
 
-    let db_pool = get_db_pool(5).await?;
+    let db_pool = get_db_pool(get_pool_limit().unwrap_or(POOL_LIMIT)).await?;
 
     let routes = sender(
         AGENT_TX_RUST,

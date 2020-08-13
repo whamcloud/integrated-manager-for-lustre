@@ -4,6 +4,7 @@
 
 use futures::{future::join_all, lock::Mutex, FutureExt, TryFutureExt};
 use iml_action_client::invoke_rust_agent;
+use iml_manager_env::get_pool_limit;
 use iml_postgres::{
     get_db_pool,
     sqlx::{self, pool::PoolConnection, Done, Executor, PgPool, Postgres},
@@ -27,6 +28,8 @@ pub mod error;
 const FID_LIMIT: i64 = 2000;
 // Number of seconds between cycles
 const DELAY: Duration = Duration::from_secs(5);
+// Default pool limit if not overwridden by POOL_LIMIT
+const POOL_LIMIT: u32 = 10;
 
 async fn available_workers(
     conn: &mut PoolConnection<Postgres>,
@@ -306,7 +309,7 @@ async fn run_tasks(fqdn: &str, worker: &LustreClient, xs: Vec<Task>, pool: &PgPo
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    let pg_pool = get_db_pool(5).await?;
+    let pg_pool = get_db_pool(get_pool_limit().unwrap_or(POOL_LIMIT)).await?;
     let active_clients = Arc::new(Mutex::new(HashSet::new()));
     let mut interval = time::interval(DELAY);
 

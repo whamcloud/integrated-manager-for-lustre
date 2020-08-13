@@ -3,15 +3,19 @@
 // license that can be found in the LICENSE file.
 
 use futures::TryStreamExt;
+use iml_manager_env::get_pool_limit;
 use iml_postgres::{alert, get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::{db::ManagedHostRecord, time::State, AlertRecordType, AlertSeverity};
+
+// Default pool limit if not overwridden by POOL_LIMIT
+const POOL_LIMIT: u32 = 2;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    let pool = get_db_pool(5).await?;
+    let pool = get_db_pool(get_pool_limit().unwrap_or(POOL_LIMIT)).await?;
 
     let rabbit_pool = iml_rabbit::connect_to_rabbit(1);
 
