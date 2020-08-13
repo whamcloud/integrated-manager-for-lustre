@@ -1816,3 +1816,29 @@ class UnmountSnapshotStep(Step):
         self.invoke_rust_agent_expect_result(
             kwargs["host"], "snapshot_unmount", {"fsname": kwargs["fsname"], "name": kwargs["name"]}
         )
+
+
+class MountSnapshotJob(HostListMixin):
+    fsname = models.CharField(max_length=512)
+    name = models.CharField(max_length=512)
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["mount_snapshot"]
+
+    def description(self):
+        if len(self.hosts) > 1:
+            return "Mount snapshot on %d hosts" % len(self.hosts)
+        else:
+            return "Mount snapshot on host %s" % self.hosts[0]
+
+    def get_steps(self):
+        steps = []
+        for host in self.hosts:
+            steps.append((MountSnapshotStep, {"host": "%s" % host, "fsname": self.fsname, "name": self.name}))
+
+        return steps
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
