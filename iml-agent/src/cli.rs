@@ -577,7 +577,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     table.add_row(row!["pcsd", pc.config, pc.service]);
                     table.printstd();
                 }
-                Err(e) => eprintln!("{}", e),
+                Err(e) => {
+                    eprintln!("{:?}", e);
+                    exit(exitcode::SOFTWARE);
+                }
             },
             HighAvailability::List => match high_availability::get_ha_resource_list(()).await {
                 Ok(v) => {
@@ -585,7 +588,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("{}", serde_json::to_string(&e).unwrap())
                     }
                 }
-                Err(e) => eprintln!("{:?}", e),
+                Err(e) => {
+                    eprintln!("Failed to list resources: {:?}", e);
+                    exit(exitcode::SOFTWARE);
+                }
             },
             HighAvailability::Start { resource } => {
                 if let Err(e) = high_availability::start_resource(resource).await {
