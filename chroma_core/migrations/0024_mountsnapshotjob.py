@@ -9,21 +9,29 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('chroma_core', '0023_remove_stratagem_client_job'),
+        ("chroma_core", "0023_remove_stratagem_client_job"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='MountSnapshotJob',
+            name="MountSnapshotJob",
             fields=[
-                ('job_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='chroma_core.Job')),
-                ('host_ids', models.CharField(max_length=512)),
-                ('fsname', models.CharField(max_length=512)),
-                ('name', models.CharField(max_length=512)),
+                (
+                    "job_ptr",
+                    models.OneToOneField(
+                        auto_created=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        parent_link=True,
+                        primary_key=True,
+                        serialize=False,
+                        to="chroma_core.Job",
+                    ),
+                ),
+                ("host_ids", models.CharField(max_length=512)),
+                ("fsname", models.CharField(max_length=512)),
+                ("name", models.CharField(max_length=512)),
             ],
-            options={
-                'ordering': ['id'],
-            },
-            bases=('chroma_core.job',),
+            options={"ordering": ["id"],},
+            bases=("chroma_core.job",),
         ),
     ]
