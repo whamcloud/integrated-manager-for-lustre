@@ -25,7 +25,7 @@ use std::{
 use warp::Filter;
 
 // Default pool limit if not overridden by POOL_LIMIT
-const POOL_LIMIT: u32 = 2;
+const DEFAULT_POOL_LIMIT: u32 = 2;
 
 #[tokio::main]
 async fn main() -> Result<(), ImlDeviceError> {
@@ -33,7 +33,7 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let addr = iml_manager_env::get_device_aggregator_addr();
 
-    let pool = get_db_pool(get_pool_limit().unwrap_or(POOL_LIMIT)).await?;
+    let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
 
     let cache = create_cache(&pool).await?;
 

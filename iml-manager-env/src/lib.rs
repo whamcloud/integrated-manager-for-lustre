@@ -243,7 +243,10 @@ pub fn get_db_password() -> Option<String> {
 }
 
 pub fn get_pool_limit() -> Option<u32> {
-    get_var("POOL_LIMIT").parse().ok()
+    env::var("POOL_LIMIT")
+        .ok()
+        .map(|l| l.parse().ok())
+        .flatten()
 }
 
 /// Get the report port from the env or panic

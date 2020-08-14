@@ -21,7 +21,7 @@ lazy_static! {
 }
 
 // Default pool limit if not overridden by POOL_LIMIT
-const POOL_LIMIT: u32 = 2;
+const DEFAULT_POOL_LIMIT: u32 = 2;
 
 async fn purge_excess(pool: &PgPool, num_rows: i64) -> Result<i64, ImlJournalError> {
     if num_rows <= *DBLOG_HW {
@@ -61,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Starting");
 
-    let pool = get_db_pool(get_pool_limit().unwrap_or(POOL_LIMIT)).await?;
+    let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
 
     let rabbit_pool = iml_rabbit::connect_to_rabbit(1);
 

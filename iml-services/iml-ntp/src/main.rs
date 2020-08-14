@@ -9,13 +9,13 @@ use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::{db::ManagedHostRecord, time::State, AlertRecordType, AlertSeverity};
 
 // Default pool limit if not overridden by POOL_LIMIT
-const POOL_LIMIT: u32 = 2;
+const DEFAULT_POOL_LIMIT: u32 = 2;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    let pool = get_db_pool(get_pool_limit().unwrap_or(POOL_LIMIT)).await?;
+    let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
 
     let rabbit_pool = iml_rabbit::connect_to_rabbit(1);
 
