@@ -1818,8 +1818,9 @@ class UnmountSnapshotStep(Step):
         )
 
 
-class MountSnapshotJob(HostListMixin):
-    fsname = models.CharField(max_length=512)
+class MountSnapshotJob(Job):
+    fqdn = models.CharField(max_length=256)
+    fsname = models.CharField(max_length=8)
     name = models.CharField(max_length=512)
 
     @classmethod
@@ -1827,14 +1828,10 @@ class MountSnapshotJob(HostListMixin):
         return help_text["mount_snapshot"]
 
     def description(self):
-        if len(self.hosts) > 1:
-            return "Mount snapshot on %d hosts" % len(self.hosts)
-        return "Mount snapshot on host %s" % self.hosts[0]
+        return "Mount snapshot on host %s" % self.fqdn
 
     def get_steps(self):
-        steps = []
-        for host in self.hosts:
-            steps.append((MountSnapshotStep, {"host": host.fqdn, "fsname": self.fsname, "name": self.name}))
+        steps = [(MountSnapshotStep, {"host": self.fqdn, "fsname": self.fsname, "name": self.name})]
 
         return steps
 
