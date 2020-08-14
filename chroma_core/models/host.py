@@ -1838,3 +1838,25 @@ class MountSnapshotJob(Job):
     class Meta:
         app_label = "chroma_core"
         ordering = ["id"]
+
+
+class UnmountSnapshotJob(Job):
+    fqdn = models.CharField(max_length=256)
+    fsname = models.CharField(max_length=8)
+    name = models.CharField(max_length=512)
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["unmount_snapshot"]
+
+    def description(self):
+        return "Unmount snapshot on host %s" % self.fqdn
+
+    def get_steps(self):
+        steps = [(UnmountSnapshotStep, {"host": self.fqdn, "fsname": self.fsname, "name": self.name})]
+
+        return steps
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
