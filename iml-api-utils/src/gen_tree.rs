@@ -1,5 +1,5 @@
 use crate::diff::Keyed;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::hash::Hash;
 
@@ -97,10 +97,8 @@ impl<K: Copy + Eq + Hash, T: Clone + Eq + HasState> Tree<K, T> {
     }
 
     pub fn merge_in(&mut self, mut other: Self) -> bool {
-        let pool_keys = self.pool.keys().copied().collect::<HashSet<_>>();
-        // let Self { roots: other_roots, pool: other_pool } = other;
         // if there is any intersection, then ignore other
-        if other.pool.keys().all(|k| !pool_keys.contains(k)) {
+        if other.pool.keys().all(|k| !self.pool.contains_key(k)) {
             // roots are guaranteed to not intersect too
             self.roots.append(&mut other.roots);
             self.pool.extend(other.pool);
