@@ -7,8 +7,8 @@ use console::style;
 use futures::{future, FutureExt, TryFutureExt};
 use iml_api_utils::{
     dependency_tree::{build_direct_dag, DependencyDAG, Deps, Rich},
-    diff::calculate_diff,
-    gen_tree::{apply_diff, HasState, Item, Node, Tree},
+    diff::{apply_diff, calculate_diff},
+    gen_tree::{Custom, HasState, Item, Tree},
 };
 use iml_wire_types::{ApiList, AvailableAction, Command, EndpointName, FlatQuery, Host, Job, Step};
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
@@ -35,10 +35,10 @@ const SPACE: &'_ str = "   ";
 const FETCH_DELAY_MS: u64 = 1000;
 const SHOW_DELAY_MS: u64 = 200;
 
-type Job0 = Job<Option<serde_json::Value>>;
-type RichCommand = Rich<i32, Arc<Command>>;
-type RichJob = Rich<i32, Arc<Job0>>;
-type RichStep = Rich<i32, Arc<Step>>;
+pub type Job0 = Job<Option<serde_json::Value>>;
+pub type RichCommand = Rich<i32, Arc<Command>>;
+pub type RichJob = Rich<i32, Arc<Job0>>;
+pub type RichStep = Rich<i32, Arc<Step>>;
 
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Ord, PartialOrd, Debug)]
 pub struct CmdId(i32);
@@ -357,7 +357,7 @@ pub async fn wait_for_commands(commands: &[Command]) -> Result<Vec<Command>, Iml
 
                 main_pb.set_length(tree.len() as u64);
                 main_pb.set_position(
-                    tree.count_node_keys(|n| n.payload.state != State::Progressing) as u64,
+                    tree.count_node_keys(|n| n.custom.payload.state != State::Progressing) as u64,
                 );
 
                 delay_for(Duration::from_millis(FETCH_DELAY_MS)).await;
@@ -417,7 +417,7 @@ async fn fetch_and_update(
     Ok(())
 }
 
-fn update_commands(commands: &mut HashMap<i32, RichCommand>, loaded_cmds: Vec<Command>) {
+pub fn update_commands(commands: &mut HashMap<i32, RichCommand>, loaded_cmds: Vec<Command>) {
     let new_commands = loaded_cmds
         .into_iter()
         .map(|t| {
@@ -429,7 +429,7 @@ fn update_commands(commands: &mut HashMap<i32, RichCommand>, loaded_cmds: Vec<Co
     commands.extend(new_commands);
 }
 
-fn update_jobs(jobs: &mut HashMap<i32, RichJob>, loaded_jobs: Vec<Job0>) {
+pub fn update_jobs(jobs: &mut HashMap<i32, RichJob>, loaded_jobs: Vec<Job0>) {
     let new_jobs = loaded_jobs
         .into_iter()
         .map(|t| {
@@ -441,7 +441,7 @@ fn update_jobs(jobs: &mut HashMap<i32, RichJob>, loaded_jobs: Vec<Job0>) {
     jobs.extend(new_jobs);
 }
 
-fn update_steps(steps: &mut HashMap<i32, RichStep>, loaded_steps: Vec<Step>) {
+pub fn update_steps(steps: &mut HashMap<i32, RichStep>, loaded_steps: Vec<Step>) {
     let new_steps = loaded_steps
         .into_iter()
         .map(|t| {
@@ -500,25 +500,25 @@ pub fn print_error(tree: &Tree<TypedId, Payload>, id: TypedId, print: impl Fn(&s
     let caption = path
         .iter()
         .filter_map(|id| tree.get_node(*id))
-        .map(|n| n.payload.msg.clone())
+        .map(|n| n.custom.payload.msg.clone())
         .join(ARROW);
     print(&caption);
     if let Some(node) = tree.get_node(id) {
-        if !node.payload.console.is_empty() {
+        if !node.custom.payload.console.is_empty() {
             print(&format!("{}Console:", SPACE));
-            for line in node.payload.console.lines() {
+            for line in node.custom.payload.console.lines() {
                 print(&format!("{}{}", SPACE, style(line).red()));
             }
         }
-        if !node.payload.backtrace.is_empty() {
+        if !node.custom.payload.backtrace.is_empty() {
             print(&format!("{}Backtrace:", SPACE));
-            for line in node.payload.backtrace.lines() {
+            for line in node.custom.payload.backtrace.lines() {
                 print(&format!("{}{}", SPACE, style(line).red()));
             }
         }
-        if !node.payload.log.is_empty() {
+        if !node.custom.payload.log.is_empty() {
             print(&format!("{}Log:", SPACE));
-            for line in node.payload.log.lines() {
+            for line in node.custom.payload.log.lines() {
                 print(&format!("{}{}", SPACE, style(line).red()));
             }
         }
@@ -673,18 +673,15 @@ fn build_fresh_tree(
             let pairs = tree.keys_on_level(2);
             for (id, s) in pairs {
                 if s != State::Errored || s != State::Cancelled {
-                    if let Some(n) = tree.get_node_mut(id) {
-                        n.collapsed = true;
-                        n.payload.state = s;
+                    if let Some(c) = tree.get_custom_data_mut(id) {
+                        c.collapsed = true;
+                        c.payload.state = s;
                     };
                 }
             }
             full_tree.merge_in(tree);
         } else {
-            let node = Node {
-                key: TypedId::Cmd(cmd.id),
-                parent: None,
-                deps: Vec::with_capacity(cmd.deps.len()),
+            let custom = Custom {
                 collapsed: false,
                 payload: Payload {
                     state: cmd_state(cmd),
@@ -694,13 +691,13 @@ fn build_fresh_tree(
                     log: String::new(),
                 },
             };
-            full_tree.add_child_node(None, node);
+            full_tree.add_child_node(TypedId::Cmd(cmd.id), None, custom);
         }
     }
     full_tree
 }
 
-fn build_gen_tree(
+pub fn build_gen_tree(
     cmd: &RichCommand,
     graph: &DependencyDAG<i32, RichJob>,
     steps: &HashMap<i32, RichStep>,
@@ -714,10 +711,7 @@ fn build_gen_tree(
         tree: &mut Tree<TypedId, Payload>,
     ) {
         let is_new = visited.insert(TypedId::Job(job.id));
-        let node = Node {
-            key: TypedId::Job(job.id),
-            parent: None,
-            deps: Vec::with_capacity(job.deps.len()),
+        let custom = Custom {
             collapsed: false,
             payload: Payload {
                 state: job_state(&job),
@@ -727,7 +721,7 @@ fn build_gen_tree(
                 log: String::new(),
             },
         };
-        let pk = tree.add_child_node(parent, node);
+        let pk = tree.add_child_node(TypedId::Job(job.id), parent, custom);
         let new_parent = Some(pk);
 
         // add child jobs to the tree
@@ -742,11 +736,8 @@ fn build_gen_tree(
         for step_id in &job.steps {
             if let Some(step_id) = extract_uri_id::<Step>(step_id) {
                 if let Some(step) = steps.get(&step_id) {
-                    let node = Node {
-                        key: TypedId::Step(step_id),
-                        parent: None,
+                    let custom = Custom {
                         collapsed: false,
-                        deps: Vec::new(),
                         payload: Payload {
                             state: step_state(step),
                             msg: step.class_name.clone(),
@@ -755,19 +746,17 @@ fn build_gen_tree(
                             log: step.log.clone(),
                         },
                     };
-                    tree.add_child_node(new_parent, node);
+                    tree.add_child_node(TypedId::Step(step_id), new_parent, custom);
                 }
             }
         }
     }
     let mut tree = Tree::new();
     let p = tree.add_child_node(
+        TypedId::Cmd(cmd.id),
         None,
-        Node {
-            key: TypedId::Cmd(cmd.id),
-            parent: None,
+        Custom {
             collapsed: false,
-            deps: vec![],
             payload: Payload {
                 state: cmd_state(cmd),
                 msg: cmd.message.clone(),
@@ -806,7 +795,8 @@ pub fn calculate_and_apply_diff(
         current_items,
         fresh_items,
         &diff,
-        |i, y| {
+        |i, _j, y| {
+            let mut y = y.clone();
             let indi = ProgressBarIndicator {
                 progress_bar: multi_progress.insert(i, ProgressBar::new(1_000_000)),
                 active_style: Cell::new(None),
@@ -814,16 +804,27 @@ pub fn calculate_and_apply_diff(
             if y.payload.state == State::Errored || y.payload.state == State::Cancelled {
                 error_ids_1.push(y.key);
             }
-            set_progress_bar_message(&indi, y);
-            indi
+            set_progress_bar_message(&indi, &y);
+            y.indicator = Some(indi);
+            (i, y)
         },
-        |_, pb, y| {
-            if y.payload.state == State::Errored || y.payload.state == State::Cancelled {
-                error_ids_2.push(y.key);
+        |i, _j, x, y| {
+            let mut y = y.clone();
+            if let Some(indi) = &x.indicator {
+                set_progress_bar_message(indi, &y);
+                if y.payload.state == State::Errored || y.payload.state == State::Cancelled {
+                    error_ids_2.push(y.key);
+                }
             }
-            set_progress_bar_message(pb, y);
+            y.indicator = x.indicator.clone();
+            (i, y)
         },
-        |_, pb| multi_progress.remove(&pb.progress_bar),
+        |i, y| {
+            if let Some(indi) = &y.indicator {
+                multi_progress.remove(&indi.progress_bar);
+            }
+            i
+        },
     );
     for eid in error_ids_1 {
         if tree.contains_key(eid) {

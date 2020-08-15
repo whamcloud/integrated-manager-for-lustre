@@ -14,10 +14,6 @@ const END_COLLAPSED: &'_ str = "─●"; // ⊕
 const END_EXPANDED: &'_ str = "─○"; // ⊙
 const END_LEAF: &'_ str = "──";
 
-// Used to set upper limit in calculating path to the root
-// to avoid infinite walk when going from parent to parent in the tree.
-const MAX_LEVEL: usize = 256;
-
 pub trait HasState {
     type State: Clone + Default + Display + Ord;
     fn state(&self) -> Self::State;
@@ -28,14 +24,11 @@ pub struct Node<K, T> {
     pub key: K,
     pub parent: Option<K>,
     pub deps: Vec<K>,
-    // pub core: NodeCore<T>,
-    pub collapsed: bool,
-    pub payload: T,
+    pub custom: Custom<T>,
 }
 
-/// NodeSrc is the way to construct nodes
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct NodeBase<T> {
+pub struct Custom<T> {
     pub collapsed: bool,
     pub payload: T,
 }
@@ -82,25 +75,25 @@ impl<K: Copy + Eq + Hash, T: Clone + Eq + HasState> Tree<K, T> {
         }
     }
 
-    pub fn with_nodes(roots: Vec<K>, pool: HashMap<K, Node<K, T>>) -> Tree<K, T> {
-        Tree { roots, pool }
-    }
-
-    pub fn add_child_node(&mut self, parent: Option<K>, mut node: Node<K, T>) -> K {
+    pub fn add_child_node(&mut self, key: K, parent: Option<K>, custom: Custom<T>) -> K {
         // we must use the externally setup key
-        let k = node.key;
-        node.parent = parent;
+        let node = Node {
+            key,
+            parent,
+            deps: Vec::new(),
+            custom,
+        };
         if let Some(p) = parent {
             if let Some(nr) = self.get_node_mut(p) {
-                if !nr.deps.contains(&k) {
-                    nr.deps.push(k);
+                if !nr.deps.contains(&key) {
+                    nr.deps.push(key);
                 }
             }
         } else {
-            self.roots.push(k);
+            self.roots.push(key);
         }
-        self.pool.insert(k, node);
-        k
+        self.pool.insert(key, node);
+        key
     }
 
     pub fn merge_in(&mut self, mut other: Self) -> bool {
@@ -121,12 +114,16 @@ impl<K: Copy + Eq + Hash, T: Clone + Eq + HasState> Tree<K, T> {
         self.pool.contains_key(&k)
     }
 
-    pub fn get_node_mut(&mut self, k: K) -> Option<&mut Node<K, T>> {
+    fn get_node_mut(&mut self, k: K) -> Option<&mut Node<K, T>> {
         self.pool.get_mut(&k)
     }
 
     pub fn get_node(&self, k: K) -> Option<&Node<K, T>> {
         self.pool.get(&k)
+    }
+
+    pub fn get_custom_data_mut(&mut self, k: K) -> Option<&mut Custom<T>> {
+        self.pool.get_mut(&k).map(|n| &mut n.custom)
     }
 
     pub fn len(&self) -> usize {
@@ -145,9 +142,9 @@ impl<K: Copy + Eq + Hash, T: Clone + Eq + HasState> Tree<K, T> {
     }
 
     pub fn get_path_from_root(&self, r: K) -> Vec<K> {
-        let mut path = Vec::with_capacity(MAX_LEVEL);
+        let mut path = Vec::with_capacity(8);
         let mut cur = r;
-        for _ in 0..MAX_LEVEL {
+        loop {
             if let Some(node) = self.get_node(cur) {
                 path.push(cur);
                 if let Some(pid) = node.parent {
@@ -183,7 +180,7 @@ impl<K: Copy + Eq + Hash, T: Clone + Eq + HasState> Tree<K, T> {
                     }
                 }
             }
-            state = node.payload.state().max(state);
+            state = node.custom.payload.state().max(state);
             if level == 0 {
                 pairs.push((node.key, state.clone()));
                 (Some(node.key), state)
@@ -210,10 +207,10 @@ impl<K: Copy + Eq + Hash, T: Clone + Eq + HasState> Tree<K, T> {
             items.push(Item {
                 key: node.key,
                 indent: format!("{}{}{}", indent, shift, term),
-                payload: node.payload.clone().into(),
+                payload: node.custom.payload.clone().into(),
                 indicator: None,
             });
-            if !node.collapsed {
+            if !node.custom.collapsed {
                 for i in 0..node.deps.len() {
                     if let Some(child) = tree.get_node(node.deps[i]) {
                         let new_indent = match shift {
@@ -225,7 +222,7 @@ impl<K: Copy + Eq + Hash, T: Clone + Eq + HasState> Tree<K, T> {
                         let new_shift = if is_last { CORNER } else { CROSS };
                         let new_term = if child.deps.is_empty() {
                             END_LEAF
-                        } else if child.collapsed {
+                        } else if child.custom.collapsed {
                             END_COLLAPSED
                         } else {
                             END_EXPANDED
@@ -237,7 +234,7 @@ impl<K: Copy + Eq + Hash, T: Clone + Eq + HasState> Tree<K, T> {
         }
         let mut result = Vec::with_capacity(self.len());
         for root in self.get_roots() {
-            let term = if root.deps.is_empty() || !root.collapsed {
+            let term = if root.deps.is_empty() || !root.custom.collapsed {
                 INIT_EXPANDED
             } else {
                 INIT_COLLAPSED
@@ -275,12 +272,10 @@ mod tests {
     fn test_insert_nodes() {
         let mut tree = Tree::new();
         tree.add_child_node(
+            1,
             None,
-            Node {
-                key: 1,
-                parent: None,
+            Custom {
                 collapsed: false,
-                deps: vec![],
                 payload: Specific {
                     state: Progressing,
                     name: "a0".to_string(),
@@ -288,12 +283,10 @@ mod tests {
             },
         );
         tree.add_child_node(
+            2,
             Some(1),
-            Node {
-                key: 2,
-                parent: None,
+            Custom {
                 collapsed: false,
-                deps: vec![],
                 payload: Specific {
                     state: Progressing,
                     name: "a00".to_string(),
@@ -301,12 +294,10 @@ mod tests {
             },
         );
         tree.add_child_node(
+            3,
             Some(1),
-            Node {
-                key: 3,
-                parent: None,
+            Custom {
                 collapsed: false,
-                deps: vec![],
                 payload: Specific {
                     state: Progressing,
                     name: "a01".to_string(),
@@ -314,12 +305,10 @@ mod tests {
             },
         );
         tree.add_child_node(
+            4,
             None,
-            Node {
-                key: 4,
-                parent: None,
+            Custom {
                 collapsed: false,
-                deps: vec![],
                 payload: Specific {
                     state: Progressing,
                     name: "a1".to_string(),
@@ -327,12 +316,10 @@ mod tests {
             },
         );
         tree.add_child_node(
+            5,
             Some(4),
-            Node {
-                key: 5,
-                parent: None,
+            Custom {
                 collapsed: false,
-                deps: vec![],
                 payload: Specific {
                     state: Progressing,
                     name: "a10".to_string(),
@@ -340,12 +327,10 @@ mod tests {
             },
         );
         tree.add_child_node(
+            6,
             Some(4),
-            Node {
-                key: 6,
-                parent: None,
+            Custom {
                 collapsed: false,
-                deps: vec![],
                 payload: Specific {
                     state: Progressing,
                     name: "a11".to_string(),
@@ -494,14 +479,16 @@ mod tests {
         debug_assert!(tree.is_valid(), "tree should be valid");
 
         tree.get_node_mut_by_name("d001")
-            .map(|n| n.payload.state = Errored);
+            .map(|n| n.custom.payload.state = Errored);
 
         let level0 = tree
             .keys_on_level(0)
             .into_iter()
             .map(|(k, s)| {
                 (
-                    tree.get_node(k).map(|n| &n.payload.name[..]).unwrap_or(""),
+                    tree.get_node(k)
+                        .map(|n| &n.custom.payload.name[..])
+                        .unwrap_or(""),
                     s,
                 )
             })
@@ -513,7 +500,9 @@ mod tests {
             .into_iter()
             .map(|(k, s)| {
                 (
-                    tree.get_node(k).map(|n| &n.payload.name[..]).unwrap_or(""),
+                    tree.get_node(k)
+                        .map(|n| &n.custom.payload.name[..])
+                        .unwrap_or(""),
                     s,
                 )
             })
@@ -528,7 +517,9 @@ mod tests {
             .into_iter()
             .map(|(k, s)| {
                 (
-                    tree.get_node(k).map(|n| &n.payload.name[..]).unwrap_or(""),
+                    tree.get_node(k)
+                        .map(|n| &n.custom.payload.name[..])
+                        .unwrap_or(""),
                     s,
                 )
             })
@@ -550,7 +541,9 @@ mod tests {
             .into_iter()
             .map(|(k, s)| {
                 (
-                    tree.get_node(k).map(|n| &n.payload.name[..]).unwrap_or(""),
+                    tree.get_node(k)
+                        .map(|n| &n.custom.payload.name[..])
+                        .unwrap_or(""),
                     s,
                 )
             })
@@ -574,7 +567,9 @@ mod tests {
             .into_iter()
             .map(|(k, s)| {
                 (
-                    tree.get_node(k).map(|n| &n.payload.name[..]).unwrap_or(""),
+                    tree.get_node(k)
+                        .map(|n| &n.custom.payload.name[..])
+                        .unwrap_or(""),
                     s,
                 )
             })
@@ -584,7 +579,9 @@ mod tests {
 
     impl Tree<i32, Specific> {
         fn get_node_mut_by_name(&mut self, name: &str) -> Option<&mut Node<i32, Specific>> {
-            self.pool.values_mut().find(|n| n.payload.name == name)
+            self.pool
+                .values_mut()
+                .find(|n| n.custom.payload.name == name)
         }
 
         fn replace_node_by_name(
@@ -595,7 +592,7 @@ mod tests {
             if let Some(k) = self
                 .pool
                 .values()
-                .find(|n| n.payload.name == name)
+                .find(|n| n.custom.payload.name == name)
                 .map(|n| n.key)
             {
                 if let Some(mut n) = self.pool.remove(&k) {
@@ -766,18 +763,16 @@ mod tests {
     impl<'a> NodeF<'a> {
         fn build(&self) -> Tree<i32, Specific> {
             fn build_node(nf: &NodeF, parent: Option<i32>, tree: &mut Tree<i32, Specific>) {
-                let node = Node {
-                    key: nf.counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
-                    parent,
-                    deps: Vec::with_capacity(nf.deps.len()),
+                let custom = Custom {
                     collapsed: false,
                     payload: Specific {
                         state: State::Progressing,
                         name: nf.name.to_string(),
                     },
                 };
-                let new_parent = Some(node.key);
-                tree.add_child_node(parent, node);
+                let key = nf.counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                let new_parent = Some(key);
+                tree.add_child_node(key, parent, custom);
                 for child_node_f in nf.deps.iter() {
                     build_node(child_node_f, new_parent, tree);
                 }
