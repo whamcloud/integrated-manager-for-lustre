@@ -13,6 +13,7 @@ use iml_device::{
     },
     update_client_mounts, update_devices, Cache, ImlDeviceError,
 };
+use iml_manager_env::get_pool_limit;
 use iml_postgres::get_db_pool;
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
@@ -23,13 +24,16 @@ use std::{
 };
 use warp::Filter;
 
+// Default pool limit if not overridden by POOL_LIMIT
+const DEFAULT_POOL_LIMIT: u32 = 2;
+
 #[tokio::main]
 async fn main() -> Result<(), ImlDeviceError> {
     iml_tracing::init();
 
     let addr = iml_manager_env::get_device_aggregator_addr();
 
-    let pool = get_db_pool(5).await?;
+    let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
 
     let cache = create_cache(&pool).await?;
 
