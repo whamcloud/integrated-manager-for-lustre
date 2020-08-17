@@ -70,17 +70,6 @@ class HotpoolConfiguration(StatefulObject):
 
         return components
 
-    def get_deps(self, state=None):
-        if not state:
-            state = self.state
-
-        deps = []
-        if state != "unconfigured":
-            # Depend on the filesystem being available.
-            deps.append(DependOn(self.filesystem, "available"))
-
-        return DependAll(deps)
-
 
 class ConfigureHotpoolJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(HotpoolConfiguration, "unconfigured", "stopped")
@@ -128,7 +117,7 @@ class ConfigureHotpoolJob(StateChangeJob):
         deps = []
 
         for comp in self.hotpool_configuration.get_components():
-            deps.append(DependOn(comp, "configured", fix_state="unconfigured"))
+            deps.append(DependOn(comp, "stopped", fix_state="unconfigured"))
 
         return DependAll(deps)
 
@@ -250,7 +239,7 @@ class RemoveHotpoolJob(StateChangeJob):
         for comp in self.hotpool_configuration.get_components():
             deps.append(DependOn(comp, "removed", fix_state="stopped"))
 
-        return deps
+        return DependAll(deps)
 
     def get_steps(self):
         steps = []
@@ -299,8 +288,8 @@ class LamigoConfiguration(models.Model):
             "fs": self.hotpool.filesystem.name,
             "user": user,
             "min_age": self.minage,
-            "mailbox_extend": self.extend_task.name,
-            "mailbox_resync": self.resync_task.name,
+            "mailbox_extend": self.extend.name,
+            "mailbox_resync": self.resync.name,
             "hot_pool": self.hot.name,
             "cold_pool": self.cold.name,
         }
@@ -337,26 +326,6 @@ class Lamigo(StatefulObject):
     def ha_label(self):
         return "systemd:" + self.unit_name
 
-    def get_deps(self, state=None):
-        if not state:
-            state = self.state
-
-        deps = []
-        if state == "started":
-
-            # Depend on the filesystem being available.
-            deps.append(DependOn(self.filesystem, "available", fix_state="stopped"))
-
-            # move to the removed state if the filesystem is removed.
-            deps.append(
-                DependOn(
-                    self.filesystem,
-                    "available",
-                    acceptable_states=list(set(self.filesystem.states) - set(["removed", "forgotten"])),
-                    fix_state="removed",
-                )
-            )
-
 
 class ConfigureLamigoJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(Lamigo, "unconfigured", "stopped")
@@ -383,25 +352,17 @@ class ConfigureLamigoJob(StateChangeJob):
     def get_steps(self):
         steps = []
 
-        fs = self.lamigo.configuration.filesystem
+        fs = self.lamigo.configuration.hotpool.filesystem
 
-        if not self.lamigo.configuration.changelog_user:
+        if not self.lamigo.changelog_user:
             steps.append(
-                (
-                    CreateChangelogUserStep,
-                    {
-                        "host": self.lamgo.mdt.active_host().fqdn,
-                        "ha_label": self.lamigo.ha_label,
-                        "unit": self.lamigo.unit_name,
-                        "monitor": 30,
-                    },
-                )
+                (CreateChangelogUserStep, {"host": self.lamigo.mdt.active_host.fqdn, "lamigo_id": self.lamigo.id})
             )
 
-        for host in self.lamgo.mdt.managedtargetmount_set.all():
-            steps.append((ConfigureLamigoStep, {"host": host.fqdn, "lamigo_id": self.lamigo.id}))
+        for mtm in self.lamigo.mdt.managedtargetmount_set.all():
+            steps.append((ConfigureLamigoStep, {"host": mtm.host.fqdn, "lamigo_id": self.lamigo.id}))
 
-        host = self.lamigo.mdt.active_host()
+        host = self.lamigo.mdt.active_host
         after = [self.lamigo.mdt.ha_label]
         if self.lamigo.configuration.hotpool.is_single_resource():
             after.append(self.lamigo.configuration.hotpool.ha_label)
@@ -410,7 +371,7 @@ class ConfigureLamigoJob(StateChangeJob):
                 CreateSystemdResourceStep,
                 {
                     "host": host.fqdn,
-                    "unit": self.lamigo.unit,
+                    "unit": self.lamigo.unit_name,
                     "monitor": "30s",
                     "start": "15m",
                     "after": after,
@@ -424,6 +385,7 @@ class ConfigureLamigoJob(StateChangeJob):
 
 class CreateChangelogUserStep(Step):
     idempotent = True
+    database = True
 
     def run(self, kwargs):
         lamigo = Lamigo.objects.get(id=kwargs["lamigo_id"])
@@ -439,6 +401,7 @@ class CreateChangelogUserStep(Step):
 
 class ConfigureLamigoStep(Step):
     idempotent = True
+    database = True
 
     def run(self, kwargs):
         host = kwargs["host"]
@@ -473,7 +436,7 @@ class StartLamigoJob(StateChangeJob):
         steps = []
 
         if not lamigo.configuration.hotpool.is_single_resource():
-            host = self.lamigo.mdt.active_host()
+            host = self.lamigo.mdt.active_host
             steps.append((StartResourceStep, {"host": host.fqdn, "ha_label": self.lamigo.ha_label}))
 
         return steps
@@ -504,7 +467,7 @@ class StopLamigoJob(StateChangeJob):
     def get_steps(self):
         steps = []
 
-        host = self.lamigo.mdt.active_host()
+        host = self.lamigo.mdt.active_host
         steps.append((StopResourceStep, {"host": host.fqdn, "ha_label": self.lamigo.ha_label}))
 
         return steps
@@ -535,7 +498,7 @@ class RemoveLamigoJob(StateChangeJob):
     def get_steps(self):
         steps = []
 
-        host = self.lamigo.mdt.active_host()
+        host = self.lamigo.mdt.active_host
         steps.append((UnconfigureResourceStep, {"host": host.fqdn, "ha_label": self.lamigo.ha_label}))
 
         return steps
@@ -610,25 +573,6 @@ class Lpurge(StatefulObject):
     def ha_label(self):
         return "systemd:" + self.unit_name
 
-    def get_deps(self, state=None):
-        if not state:
-            state = self.state
-
-        deps = []
-        if state == "started":
-            # Depend on the filesystem being available.
-            deps.append(DependOn(self.filesystem, "available", fix_state="stopped"))
-
-            # move to the removed state if the filesystem is removed.
-            deps.append(
-                DependOn(
-                    self.filesystem,
-                    "available",
-                    acceptable_states=list(set(self.filesystem.states) - set(["removed", "forgotten"])),
-                    fix_state="removed",
-                )
-            )
-
 
 class ConfigureLpurgeJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(Lpurge, "unconfigured", "stopped")
@@ -655,12 +599,12 @@ class ConfigureLpurgeJob(StateChangeJob):
     def get_steps(self):
         steps = []
 
-        fs = self.lpurge.configuration.filesystem
+        fs = self.lpurge.configuration.hotpool.filesystem
 
         for host in self.lpurge.ost.managedtargetmount_set.all():
             steps.append((ConfigureLpurgeStep, {"host": host.fqdn, "lpurge_id": self.lpurge.id}))
 
-        host = self.lpurge.ost.active_host()
+        host = self.lpurge.ost.active_host
         after = [self.lpurge.ost.ha_label]
         if self.lpurge.configuration.hotpool.is_single_resource():
             after.append(self.lpurge.configuration.hotpool.ha_label)
@@ -669,7 +613,7 @@ class ConfigureLpurgeJob(StateChangeJob):
                 CreateSystemdResourceStep,
                 {
                     "host": host.fqdn,
-                    "unit": self.lpurge.unit,
+                    "unit": self.lpurge.unit_name,
                     "monitor": "30s",
                     "after": after,
                     "with": [self.lpurge.ost.ha_label],
@@ -715,7 +659,7 @@ class StartLpurgeJob(StateChangeJob):
         steps = []
 
         if not lpurge.configuration.hotpool.is_single_resource():
-            host = self.lpurge.ost.active_host()
+            host = self.lpurge.ost.active_host
             steps.append((StartResourceStep, {"host": host.fqdn, "ha_label": self.lpurge.ha_label}))
 
         return steps
@@ -746,7 +690,7 @@ class StopLpurgeJob(StateChangeJob):
     def get_steps(self):
         steps = []
 
-        host = self.lpurge.ost.active_host()
+        host = self.lpurge.ost.active_host
         steps.append((StopResourceStep, {"host": host.fqdn, "ha_label": self.lpurge.ha_label}))
 
         return steps
@@ -777,7 +721,7 @@ class RemoveLpurgeJob(StateChangeJob):
     def get_steps(self):
         steps = []
 
-        host = self.lpurge.ost.active_host()
+        host = self.lpurge.ost.active_host
         steps.append((UnconfigureResourceStep, {"host": host.fqdn, "ha_label": self.lpurge.ha_label}))
 
         return steps

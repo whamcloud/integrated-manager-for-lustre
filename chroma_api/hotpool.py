@@ -54,8 +54,8 @@ class HotpoolValidation(Validation):
 
 class HotpoolResource(StatefulModelResource):
     filesystem = fields.ToOneField("chroma_api.filesystem.FilesystemResource", "filesystem")
-    hotpool = fields.ToOneField("chroma_api.filesystem.OstPoolResource", "hotpool")
-    coldpool = fields.ToOneField("chroma_api.filesystem.OstPoolResource", "coldpool")
+    #hotpool = fields.ToOneField("chroma_api.filesystem.OstPoolResource", "hotpool")
+    #coldpool = fields.ToOneField("chroma_api.filesystem.OstPoolResource", "coldpool")
 
     # @@ lamigo/lpurge
 

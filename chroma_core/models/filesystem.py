@@ -109,6 +109,20 @@ class ManagedFilesystem(StatefulObject):
         # (http://stackoverflow.com/questions/4764110/django-template-cant-loop-defaultdict)
         return dict(servers)
 
+    def get_server_groups(self):
+        """Return: Array(Array(ManagedHost)) """
+        targets = self.get_targets()
+
+        groups = {}
+
+        for t in targets:
+            hosts = [x.host for x in t.managedtargetmount_set.all()]
+            name = ",".join(sorted([x.fqdn for x in hosts]))
+            if name not in groups:
+                groups[name] = hosts
+
+        return groups.values()
+
     def get_pools(self):
         return OstPool.objects.filter(filesystem=self)
 

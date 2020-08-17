@@ -219,7 +219,7 @@ class CreateSystemdResourceStep(Step):
                 for r in coloc
             ]
         )
-        self.invoke_rust_agent_expect_result(host, "ha_resource_create", agent, constraint)
+        self.invoke_rust_agent_expect_result(host, "ha_resource_create", [agent, constraint])
 
 
 class RemoveResourceStep(Step):

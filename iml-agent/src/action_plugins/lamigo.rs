@@ -34,10 +34,6 @@ pub struct Config {
     min_age: u32,
 
     #[structopt(long)]
-    /// Lustre device to be mounted, e.g. `192.168.0.100@tcp0:/spfs`
-    mountpoint: String,
-
-    #[structopt(long)]
     /// IML mailbox name, e.g. `mailbox1`, where `lamigo` will write FIDs for mirror extend
     mailbox_extend: String,
 
@@ -50,7 +46,6 @@ impl Config {
     fn generate_unit(&self, mailbox_extend: String, mailbox_resync: String) -> String {
         format!(
             "mdt={fs}-MDT{mdt:04x}\n\
-             mountpoint={mountpoint}\n\
              user={user}\n\
              min-age={age}\n\
              src={fast}\n\
@@ -60,7 +55,6 @@ impl Config {
              ",
             fs = self.fs,
             mdt = self.mdt,
-            mountpoint = self.mountpoint,
             user = self.user,
             age = self.min_age,
             fast = self.hot_pool,
@@ -119,7 +113,6 @@ mod lamigo_tests {
             hot_pool: "FAST_POOL".into(),
             cold_pool: "SLOW_POOL".into(),
             min_age: 35353,
-            mountpoint: "/mnt/spfs".into(),
             mailbox_extend: "mailbox-extend".into(),
             mailbox_resync: "mailbox-resync".into(),
         };
@@ -148,7 +141,6 @@ mod lamigo_tests {
             hot_pool: "FAST_POOL".into(),
             cold_pool: "SLOW_POOL".into(),
             min_age: 35353,
-            mountpoint: "/mnt/spfs".into(),
             mailbox_extend: "mailbox-extend".into(),
             mailbox_resync: "mailbox-resync".into(),
         };
