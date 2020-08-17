@@ -2059,14 +2059,15 @@ class JobScheduler(object):
             hotpool = OstPool.objects.get(pk=hotpool_data["hotpool"])
             coldpool = OstPool.objects.get(pk=hotpool_data["coldpool"])
 
-            # Create HotpoolConfig object
-            data = {
-                "filesystem": filesystem,
-                "ha_label": "cl-{}-client".format(filesystem.name),
-                "version": 2,
-            }
-
             with transaction.atomic():
+
+                # Create HotpoolConfig object
+
+                data = {
+                    "filesystem": filesystem,
+                    "ha_label": "cl-{}-client".format(filesystem.name),
+                    "version": 2,
+                }
                 hpconf = HotpoolConfiguration.objects.create(**data)
 
                 # Create Lamigo
@@ -2114,9 +2115,7 @@ class JobScheduler(object):
                         "configuration": lamigoconf,
                         "mdt": mdt.downcast(),
                     }
-
                     lamigo = Lamigo.objects.create(**data)
-                    lamigo.save()
 
                 # Create LPurge
                 task_data = {
