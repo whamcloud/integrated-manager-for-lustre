@@ -7,10 +7,14 @@ mod command;
 mod error;
 mod task;
 
+use iml_manager_env::get_pool_limit;
 use iml_postgres::get_db_pool;
 use iml_rabbit::{self, create_connection_filter};
 use iml_wire_types::Conf;
 use warp::Filter;
+
+// Default pool limit if not overridden by POOL_LIMIT
+const DEFAULT_POOL_LIMIT: u32 = 5;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -33,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let conn_filter = create_connection_filter(pool);
 
-    let pool = get_db_pool(5).await?;
+    let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
     let db_pool_filter = warp::any().map(move || pool.clone());
 
     let routes = warp::path("conf")

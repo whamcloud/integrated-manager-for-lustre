@@ -2,18 +2,21 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{future::try_join_all, lock::Mutex, TryFutureExt};
+use futures::{future::join_all, lock::Mutex, FutureExt, TryFutureExt};
 use iml_action_client::invoke_rust_agent;
+use iml_manager_env::get_pool_limit;
 use iml_postgres::{
     get_db_pool,
-    sqlx::{self, Done, Executor, PgPool},
+    sqlx::{self, pool::PoolConnection, Done, Executor, PgPool, Postgres},
 };
 use iml_tracing::tracing;
 use iml_wire_types::{
     db::{FidTaskQueue, LustreFid},
     AgentResult, FidError, FidItem, LustreClient, Task, TaskAction,
 };
+use lazy_static::lazy_static;
 use std::{
+    cmp::max,
     collections::{HashMap, HashSet},
     str::FromStr,
     sync::Arc,
@@ -28,8 +31,13 @@ const FID_LIMIT: i64 = 2000;
 // Number of seconds between cycles
 const DELAY: Duration = Duration::from_secs(5);
 
+// Default pool limit if not overridden by POOL_LIMIT
+lazy_static! {
+    static ref POOL_LIMIT: u32 = get_pool_limit().unwrap_or(8);
+}
+
 async fn available_workers(
-    pool: &PgPool,
+    conn: &mut PoolConnection<Postgres>,
     active: Arc<Mutex<HashSet<i32>>>,
 ) -> Result<Vec<LustreClient>, error::ImlTaskRunnerError> {
     let ids = active.lock().await;
@@ -43,10 +51,12 @@ async fn available_workers(
             state = 'mounted'
             AND not_deleted = 't'
             AND id != ALL($1)
+        LIMIT $2
         "#,
-        &ids
+        &ids,
+        max(*POOL_LIMIT as i64 - ids.len() as i64, 0),
     )
-    .fetch_all(pool)
+    .fetch_all(conn)
     .await?;
 
     Ok(clients)
@@ -200,21 +210,30 @@ async fn send_work(
         match invoke_rust_agent(fqdn, &action, &args).await {
             Err(e) => {
                 tracing::info!("Failed to send {} to {}: {:?}", &action, fqdn, e);
+
                 return trans.rollback().map_ok(|_| 0).err_into().await;
             }
             Ok(res) => {
                 let agent_result: AgentResult = serde_json::from_value(res)?;
+
                 match agent_result {
                     Ok(data) => {
-                        tracing::debug!("Success {} on {}: {:?}", &action, fqdn, data);
+                        tracing::debug!("Success {} on {}: {:?}", action, fqdn, data);
+
                         let errors: Vec<FidError> = serde_json::from_value(data)?;
                         failed += errors.len();
 
                         if task.keep_failed {
                             let task_id = task.id;
+
                             for err in errors.iter() {
-                                let fid = LustreFid::from_str(&err.fid)
-                                    .expect("FIXME: This needs proper error handling");
+                                let fid = match LustreFid::from_str(&err.fid) {
+                                    Ok(x) => x,
+                                    Err(e) => {
+                                        tracing::info!("Could not convert FidError {:?} to LustreFid. Error: {:?}", err, e);
+                                        continue;
+                                    }
+                                };
 
                                 // #FIXME: This would be better as a bulk insert
                                 if let Err(e) = trans
@@ -243,6 +262,7 @@ async fn send_work(
                     }
                     Err(err) => {
                         tracing::info!("Failed {} on {}: {}", &action, fqdn, err);
+
                         return trans.rollback().map_ok(|_| 0).err_into().await;
                     }
                 }
@@ -271,11 +291,32 @@ async fn send_work(
     Ok(completed as i64)
 }
 
+async fn run_tasks(fqdn: &str, worker: &LustreClient, xs: Vec<Task>, pool: &PgPool) {
+    let fsname = &worker.filesystem;
+    let host_id = worker.host_id;
+
+    let xs = xs.into_iter().map(|task| async move {
+        for _ in 0..10_u8 {
+            let rc = send_work(&pool, &fqdn, &fsname, &task, host_id)
+                .inspect_err(|e| tracing::warn!("send_work({}) failed {:?}", task.name, e))
+                .await?;
+
+            if rc < FID_LIMIT {
+                break;
+            }
+        }
+
+        Ok::<_, error::ImlTaskRunnerError>(())
+    });
+
+    join_all(xs).await;
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    let pg_pool = get_db_pool(5).await?;
+    let pg_pool = get_db_pool(*POOL_LIMIT).await?;
     let active_clients = Arc::new(Mutex::new(HashSet::new()));
     let mut interval = time::interval(DELAY);
 
@@ -283,58 +324,52 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         interval.tick().await;
 
-        let workers = available_workers(&pg_pool, Arc::clone(&active_clients))
-            .await
-            .unwrap_or_default();
+        let mut conn = match pg_pool.try_acquire() {
+            Some(x) => x,
+            None => {
+                tracing::info!(
+                    "Could not acquire connection (pool full), will try again next tick"
+                );
+                continue;
+            }
+        };
 
-        active_clients
-            .lock()
-            .await
-            .extend(workers.iter().map(|w| w.id));
+        let workers = available_workers(&mut conn, Arc::clone(&active_clients)).await?;
+        drop(conn);
 
-        tokio::spawn({
-            try_join_all(workers.into_iter().map(|worker| {
-                let pg_pool = pg_pool.clone();
-                let active_clients = Arc::clone(&active_clients);
+        {
+            let mut x = active_clients.lock().await;
 
-                async move {
-                    let tasks = tasks_per_worker(&pg_pool, &worker).await?;
-                    let fqdn = worker_fqdn(&pg_pool, &worker).await?;
-                    let host_id = worker.host_id;
+            x.extend(workers.iter().map(|w| w.id));
 
-                    let rc = try_join_all(tasks.into_iter().map(|task| {
-                        let pg_pool = pg_pool.clone();
-                        let fsname = &worker.filesystem;
-                        let fqdn = &fqdn;
+            tracing::debug!("Active Clients {:?}", x);
+        }
 
-                        async move {
-                            let mut count = 0;
+        let xs = workers.into_iter().map(|worker| {
+            let pg_pool = pg_pool.clone();
+            let active_clients = Arc::clone(&active_clients);
+            let active_clients2 = Arc::clone(&active_clients);
+            let worker_id = worker.id;
 
-                            loop {
-                                let rc = send_work(&pg_pool, &fqdn, &fsname, &task, host_id)
-                                    .await
-                                    .map_err(|e| {
-                                        tracing::warn!("send_work({}) failed {:?}", task.name, e);
-                                        e
-                                    })?;
+            async move {
+                let tasks = tasks_per_worker(&pg_pool, &worker).await?;
+                let fqdn = worker_fqdn(&pg_pool, &worker).await?;
 
-                                count += 1;
+                run_tasks(&fqdn, &worker, tasks, &pg_pool).await;
 
-                                if rc < FID_LIMIT || count > 10 {
-                                    break;
-                                }
-                            }
+                Ok::<_, error::ImlTaskRunnerError>(())
+            }
+            .then(move |x| async move {
+                let mut c = active_clients2.lock().await;
 
-                            Ok::<_, error::ImlTaskRunnerError>(())
-                        }
-                    }))
-                    .await;
+                c.remove(&worker_id);
 
-                    active_clients.lock().await.remove(&worker.id);
+                tracing::debug!("Releasing Client {:?}. Active Clients {:?}", worker_id, c);
 
-                    rc
-                }
-            }))
+                x
+            })
         });
+
+        tokio::spawn(join_all(xs));
     }
 }

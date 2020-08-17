@@ -56,74 +56,6 @@
       ]
     }
   },
-  "0d6801b58fa65df21dcef7faa830d96938ffd9e7c6ae2e50cbeeaae538510389": {
-    "query": "\n        SELECT * FROM chroma_core_lustreclientmount\n        WHERE\n            state = 'mounted'\n            AND not_deleted = 't'\n            AND id != ALL($1)\n        ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "state_modified_at",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 2,
-          "name": "state",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 3,
-          "name": "immutable_state",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 4,
-          "name": "not_deleted",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 5,
-          "name": "content_type_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 6,
-          "name": "filesystem",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 7,
-          "name": "host_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 8,
-          "name": "mountpoints",
-          "type_info": "TextArray"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int4Array"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        true,
-        true,
-        false,
-        false,
-        false
-      ]
-    }
-  },
   "131959cfcc0275c8797cb5aa12f0ad15dd6baa2f75c716815607a039defac3a6": {
     "query": "select fqdn from chroma_core_managedhost where id = $1 and not_deleted = 't'",
     "describe": {
@@ -465,6 +397,75 @@
       },
       "nullable": [
         false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "7bee1c38d05ac3f8bcf4d48b375c740341121c04d2f5b04ceb1d58ef0a006c08": {
+    "query": "\n        SELECT * FROM chroma_core_lustreclientmount\n        WHERE\n            state = 'mounted'\n            AND not_deleted = 't'\n            AND id != ALL($1)\n        LIMIT $2\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "state_modified_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 2,
+          "name": "state",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "immutable_state",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 4,
+          "name": "not_deleted",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 5,
+          "name": "content_type_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 6,
+          "name": "filesystem",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 7,
+          "name": "host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 8,
+          "name": "mountpoints",
+          "type_info": "TextArray"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "Int8"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
         false,
         false,
         false
