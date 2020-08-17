@@ -1602,7 +1602,7 @@ dependencies = [
  "iml-api-utils",
  "iml-influx",
  "iml-manager-client",
- "iml-orm",
+ "iml-postgres",
  "iml-tracing",
  "iml-wire-types",
  "indicatif",
