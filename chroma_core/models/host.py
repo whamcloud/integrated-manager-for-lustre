@@ -1830,6 +1830,12 @@ class MountSnapshotJob(Job):
     def description(self):
         return "Mount snapshot on host %s" % self.fqdn
 
+    def get_deps(self):
+        # To prevent circular imports
+        from chroma_core.models.filesystem import ManagedFilesystem
+
+        return DependOn(ManagedFilesystem.objects.get(name=self.fsname), "available")
+
     def get_steps(self):
         steps = [(MountSnapshotStep, {"host": self.fqdn, "fsname": self.fsname, "name": self.name})]
 
@@ -1851,6 +1857,12 @@ class UnmountSnapshotJob(Job):
 
     def description(self):
         return "Unmount snapshot on host %s" % self.fqdn
+
+    def get_deps(self):
+        # To prevent circular imports
+        from chroma_core.models.filesystem import ManagedFilesystem
+
+        return DependOn(ManagedFilesystem.objects.get(name=self.fsname), "available")
 
     def get_steps(self):
         steps = [(UnmountSnapshotStep, {"host": self.fqdn, "fsname": self.fsname, "name": self.name})]
