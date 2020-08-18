@@ -5,7 +5,7 @@
 use crate::{
     action_plugins::{
         check_kernel, check_stonith, firewall_cmd, high_availability, kernel_module, lamigo, ldev,
-        lpurge, ltuer, lustre,
+        lpurge, lustre,
         ntp::{action_configure, is_ntp_configured},
         ostpool, package, postoffice,
         stratagem::{
@@ -67,15 +67,15 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("snapshot_unmount", lustre::snapshot::unmount)
         .add_plugin("postoffice_add", postoffice::route_add)
         .add_plugin("postoffice_remove", postoffice::route_remove)
-        .add_plugin("create_lpurge_conf", lpurge::create_lpurge_conf)
-        .add_plugin("create_lamigo_service", lamigo::create_lamigo_service_unit)
         .add_plugin(
             "configure_ntp",
             action_configure::update_and_write_new_config,
         )
         .add_plugin("is_ntp_configured", is_ntp_configured::is_ntp_configured)
-        .add_plugin("create_ltuer_conf", ltuer::create_ltuer_conf)
         .add_plugin("create_ldev_conf", ldev::create)
+        // HotPools
+        .add_plugin("config_lpurge", lpurge::create_lpurge_conf)
+        .add_plugin("config_lamigo", lamigo::create_lamigo_conf)
         // Task Actions
         .add_plugin("action.mirror.extend", action_mirror::process_extend_fids)
         .add_plugin("action.mirror.resync", action_mirror::process_resync_fids)
