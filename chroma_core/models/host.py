@@ -1785,6 +1785,37 @@ class NoNidsPresent(Exception):
     pass
 
 
+class CreateSnapshotJob(Job):
+    fqdn = models.CharField(max_length=256, help_text="MGS host to create the snapshot on")
+    fsname = models.CharField(max_length=8, help_text="Lustre filesystem name")
+    name = models.CharField(max_length=64, help_text="Snapshot to create")
+    comment = models.CharField(max_length=1024, null=True, help_text="Optional comment for the snapshot")
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["create_snapshot"]
+
+    def description(self):
+        return "Create snapshot '{}' of '{}'".format(self.name, self.fsname)
+
+    def get_steps(self):
+        args = {"host": self.fqdn, "fsname": self.fsname, "name": self.name}
+        if self.comment:
+            args["comment"] = self.comment
+
+        return [(CreateSnapshotStep, args)]
+
+    def get_deps(self):
+        # To prevent circular imports
+        from chroma_core.models.filesystem import ManagedFilesystem
+
+        return DependOn(ManagedFilesystem.objects.get(name=self.fsname), "available")
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+
 class CreateSnapshotStep(Step):
     def run(self, kwargs):
         args = {"fsname": kwargs["fsname"], "name": kwargs["name"]}
@@ -1793,6 +1824,34 @@ class CreateSnapshotStep(Step):
         self.invoke_rust_agent_expect_result(
             kwargs["host"], "snapshot_create", args,
         )
+
+
+class DestroySnapshotJob(Job):
+    fqdn = models.CharField(max_length=256, help_text="MGS host to destroy the snapshot on")
+    fsname = models.CharField(max_length=8, help_text="Lustre filesystem name")
+    name = models.CharField(max_length=64, help_text="Snapshot to destroy")
+    force = models.BooleanField(default=False, help_text="Destroy the snapshot with force")
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["destroy_snapshot"]
+
+    def description(self):
+        return "Destroy snapshot '{}' of '{}'".format(self.name, self.fsname)
+
+    def get_steps(self):
+        args = {"host": self.fqdn, "fsname": self.fsname, "name": self.name, "force": self.force}
+        return [(DestroySnapshotStep, args)]
+
+    def get_deps(self):
+        # To prevent circular imports
+        from chroma_core.models.filesystem import ManagedFilesystem
+
+        return DependOn(ManagedFilesystem.objects.get(name=self.fsname), "available")
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
 
 
 class DestroySnapshotStep(Step):
@@ -1816,3 +1875,59 @@ class UnmountSnapshotStep(Step):
         self.invoke_rust_agent_expect_result(
             kwargs["host"], "snapshot_unmount", {"fsname": kwargs["fsname"], "name": kwargs["name"]}
         )
+
+
+class MountSnapshotJob(Job):
+    fqdn = models.CharField(max_length=256)
+    fsname = models.CharField(max_length=8)
+    name = models.CharField(max_length=512)
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["mount_snapshot"]
+
+    def description(self):
+        return "Mount snapshot on host %s" % self.fqdn
+
+    def get_deps(self):
+        # To prevent circular imports
+        from chroma_core.models.filesystem import ManagedFilesystem
+
+        return DependOn(ManagedFilesystem.objects.get(name=self.fsname), "available")
+
+    def get_steps(self):
+        steps = [(MountSnapshotStep, {"host": self.fqdn, "fsname": self.fsname, "name": self.name})]
+
+        return steps
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+
+class UnmountSnapshotJob(Job):
+    fqdn = models.CharField(max_length=256)
+    fsname = models.CharField(max_length=8)
+    name = models.CharField(max_length=512)
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["unmount_snapshot"]
+
+    def description(self):
+        return "Unmount snapshot on host %s" % self.fqdn
+
+    def get_deps(self):
+        # To prevent circular imports
+        from chroma_core.models.filesystem import ManagedFilesystem
+
+        return DependOn(ManagedFilesystem.objects.get(name=self.fsname), "available")
+
+    def get_steps(self):
+        steps = [(UnmountSnapshotStep, {"host": self.fqdn, "fsname": self.fsname, "name": self.name})]
+
+        return steps
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
