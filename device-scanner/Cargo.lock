@@ -279,7 +279,7 @@ name = "device-scanner-daemon"
 version = "2.0.0"
 dependencies = [
  "bytes 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "device-types 0.1.4",
+ "device-types 0.2.0",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "im 15.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "insta 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -296,13 +296,13 @@ dependencies = [
 name = "device-scanner-zedlets"
 version = "0.1.0"
 dependencies = [
- "device-types 0.1.4",
+ "device-types 0.2.0",
  "serde_json 1.0.56 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "device-types"
-version = "0.1.4"
+version = "0.2.0"
 dependencies = [
  "im 15.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "insta 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -739,7 +739,7 @@ dependencies = [
 name = "mount-emitter"
 version = "0.1.0"
 dependencies = [
- "device-types 0.1.4",
+ "device-types 0.2.0",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "insta 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pretty_assertions 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1627,7 +1627,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "uevent-listener"
 version = "0.1.0"
 dependencies = [
- "device-types 0.1.4",
+ "device-types 0.2.0",
  "im 15.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pretty_assertions 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.56 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1747,7 +1747,7 @@ dependencies = [
 name = "zed-enhancer"
 version = "0.1.0"
 dependencies = [
- "device-types 0.1.4",
+ "device-types 0.2.0",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libzfs 0.6.16 (git+https://github.com/whamcloud/rust-libzfs.git)",
  "libzfs-types 0.1.2 (git+https://github.com/whamcloud/rust-libzfs.git)",
