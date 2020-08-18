@@ -1791,7 +1791,7 @@ pub struct Task {
     pub running_on_id: Option<i32>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct LustreClient {
     pub id: i32,
     pub state_modified_at: DateTime<Utc>,

@@ -38,11 +38,8 @@ lazy_static! {
 
 async fn available_workers(
     conn: &mut PoolConnection<Postgres>,
-    active: Arc<Mutex<HashSet<i32>>>,
+    ids: Vec<i32>,
 ) -> Result<Vec<LustreClient>, error::ImlTaskRunnerError> {
-    let ids = active.lock().await;
-    let ids: Vec<i32> = ids.iter().copied().collect();
-
     let clients = sqlx::query_as!(
         LustreClient,
         r#"
@@ -167,6 +164,13 @@ async fn send_work(
     tracing::debug!("send_work({}, {}, {})", fqdn, fsname, task.name);
 
     let mut trans = pg_pool.begin().await?;
+
+    tracing::debug!(
+        "Started transaction for {}, {}, {}",
+        fqdn,
+        fsname,
+        task.name
+    );
 
     let rowlist = sqlx::query_as!(
         FidTaskQueue,
@@ -301,6 +305,8 @@ async fn run_tasks(fqdn: &str, worker: &LustreClient, xs: Vec<Task>, pool: &PgPo
                 .inspect_err(|e| tracing::warn!("send_work({}) failed {:?}", task.name, e))
                 .await?;
 
+            tracing::debug!("send_work({}) completed, rc: {}", task.name, rc);
+
             if rc < FID_LIMIT {
                 break;
             }
@@ -324,6 +330,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         interval.tick().await;
 
+        tracing::debug!("Pool State: {:?}", pg_pool);
+
         let mut conn = match pg_pool.try_acquire() {
             Some(x) => x,
             None => {
@@ -334,8 +342,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         };
 
-        let workers = available_workers(&mut conn, Arc::clone(&active_clients)).await?;
-        drop(conn);
+        let workers = {
+            let xs = active_clients.lock().await;
+            let ids: Vec<i32> = xs.iter().copied().collect();
+
+            tracing::debug!("checking workers for ids: {:?}", ids);
+
+            let workers = available_workers(&mut conn, ids).await?;
+
+            tracing::debug!("got workers: {:?}", workers);
+
+            drop(conn);
+            workers
+        };
 
         {
             let mut x = active_clients.lock().await;
@@ -348,23 +367,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let xs = workers.into_iter().map(|worker| {
             let pg_pool = pg_pool.clone();
             let active_clients = Arc::clone(&active_clients);
-            let active_clients2 = Arc::clone(&active_clients);
             let worker_id = worker.id;
 
             async move {
                 let tasks = tasks_per_worker(&pg_pool, &worker).await?;
                 let fqdn = worker_fqdn(&pg_pool, &worker).await?;
 
+                tracing::debug!("Starting run tasks for {}", &fqdn);
+
                 run_tasks(&fqdn, &worker, tasks, &pg_pool).await;
+
+                tracing::debug!("Completed run tasks for {}", &fqdn);
 
                 Ok::<_, error::ImlTaskRunnerError>(())
             }
             .then(move |x| async move {
-                let mut c = active_clients2.lock().await;
+                tracing::debug!("Attempting to take lock for release");
 
-                c.remove(&worker_id);
+                {
+                    let mut c = active_clients.lock().await;
+                    tracing::debug!("Took lock for release");
 
-                tracing::debug!("Releasing Client {:?}. Active Clients {:?}", worker_id, c);
+                    c.remove(&worker_id);
+
+                    tracing::debug!("Released Client {:?}. Active Clients {:?}", worker_id, c);
+                }
 
                 x
             })
