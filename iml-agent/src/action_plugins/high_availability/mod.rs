@@ -10,9 +10,10 @@ use futures::{future::try_join_all, try_join};
 use iml_cmd::{CheckedCommandExt, Command};
 use iml_fs::file_exists;
 use iml_wire_types::{
-    ComponentState, ConfigState, ResourceAgentInfo, ResourceAgentType, ServiceState,
+    ComponentState, ConfigState, PacemakerOperations, ResourceAgentInfo, ResourceAgentType,
+    ServiceState,
 };
-use std::ffi::OsStr;
+use std::{collections::HashMap, ffi::OsStr};
 
 fn create(elem: &Element) -> ResourceAgentInfo {
     ResourceAgentInfo {
@@ -36,6 +37,35 @@ fn create(elem: &Element) -> ResourceAgentInfo {
             })
             .flatten()
             .collect(),
+        ops: {
+            // "stop"|"start"|"monitor" => (interval, timeout)
+            let mut ops: HashMap<&str, (u32, u32)> = elem
+                .find_all("operations")
+                .map(|e| {
+                    e.find_all("op").map(|nv| {
+                        (
+                            nv.get_attr("name").unwrap_or_default(),
+                            (
+                                nv.get_attr("interval")
+                                    .map(|s| s.trim_end_matches('s').parse().ok())
+                                    .flatten()
+                                    .unwrap_or_default(),
+                                nv.get_attr("timeout")
+                                    .map(|s| s.trim_end_matches('s').parse().ok())
+                                    .flatten()
+                                    .unwrap_or_default(),
+                            ),
+                        )
+                    })
+                })
+                .flatten()
+                .collect();
+            PacemakerOperations::new(
+                ops.remove("start").map(|e| e.1),
+                ops.remove("monitor").map(|e| e.0),
+                ops.remove("stop").map(|e| e.1),
+            )
+        },
     }
 }
 
@@ -201,7 +231,7 @@ pub(crate) async fn pcs(args: Vec<String>) -> Result<String, ImlAgentError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{process_resource, ResourceAgentInfo, ResourceAgentType};
+    use super::{process_resource, PacemakerOperations, ResourceAgentInfo, ResourceAgentType};
     use std::collections::HashMap;
 
     #[test]
@@ -213,7 +243,8 @@ mod tests {
             ResourceAgentInfo {
                 agent: ResourceAgentType::new("stonith", None, "fence_chroma"),
                 id: "st-fencing".to_string(),
-                args: HashMap::new()
+                args: HashMap::new(),
+                ops: PacemakerOperations::new(None, None, None),
             }
         );
     }
@@ -235,6 +266,7 @@ mod tests {
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect(),
+            ops: PacemakerOperations::new(Some(300), Some(20), Some(300)),
         };
 
         assert_eq!(process_resource(testxml).unwrap(), r1);
@@ -256,6 +288,7 @@ mod tests {
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect(),
+            ops: PacemakerOperations::new(Some(450), Some(30), Some(300)),
         };
 
         assert_eq!(process_resource(testxml).unwrap(), r1);

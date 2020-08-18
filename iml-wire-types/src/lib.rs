@@ -1523,6 +1523,71 @@ pub struct ResourceAgentInfo {
     pub agent: ResourceAgentType,
     pub id: String,
     pub args: HashMap<String, String>,
+    pub ops: PacemakerOperations,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum OrderingKind {
+    Mandatory,
+    Optional,
+    Serialize,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PacemakerScore {
+    Infinity,
+    Value(i32),
+    NegInfinity,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct PacemakerOperations {
+    // Seconds to wait for Resource to start
+    pub start: Option<u32>,
+    // Seconds of monitor interval
+    pub monitor: Option<u32>,
+    // Seconds to wait for Resource to stop
+    pub stop: Option<u32>,
+}
+
+impl PacemakerOperations {
+    pub fn new<'a>(
+        start: impl Into<Option<u32>>,
+        monitor: impl Into<Option<u32>>,
+        stop: impl Into<Option<u32>>,
+    ) -> Self {
+        Self {
+            start: start.into(),
+            monitor: monitor.into(),
+            stop: stop.into(),
+        }
+    }
+}
+
+/// Information about pacemaker resource agents
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ResourceConstraint {
+    Ordering {
+        id: String,
+        first: String,
+        then: String,
+        kind: Option<OrderingKind>,
+    },
+    Location {
+        id: String,
+        rsc: String,
+        node: String,
+        score: PacemakerScore,
+    },
+    Colocation {
+        id: String,
+        rsc: String,
+        with_rsc: String,
+        score: PacemakerScore,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
