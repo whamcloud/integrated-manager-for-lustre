@@ -10,7 +10,7 @@ path = "src/bin/mount_emitter.rs"
 name = "mount-emitter"
 
 [dependencies]
-device-types = { path = "../device-types", version = "0.1.0" }
+device-types = { path = "../device-types", version = "0.2.0" }
 serde_json = "1.0"
 tokio = "0.1"
 tokio-file-unix = "0.5.1"

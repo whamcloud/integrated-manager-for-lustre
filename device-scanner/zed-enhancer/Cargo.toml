@@ -6,7 +6,7 @@ name = "zed-enhancer"
 version = "0.1.0"
 
 [dependencies]
-device-types = {path = "../device-types", version = "0.1.0"}
+device-types = {path = "../device-types", version = "0.2.0"}
 futures = "0.3"
 libzfs = {git = "https://github.com/whamcloud/rust-libzfs.git", version = "0.6.16"}
 libzfs-types = {git = "https://github.com/whamcloud/rust-libzfs.git", version = "0.1.2"}
