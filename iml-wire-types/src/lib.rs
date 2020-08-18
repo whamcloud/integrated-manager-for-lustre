@@ -1544,19 +1544,19 @@ pub enum PacemakerScore {
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct PacemakerOperations {
-    // Seconds to wait for Resource to start
-    pub start: Option<u32>,
-    // Seconds of monitor interval
-    pub monitor: Option<u32>,
-    // Seconds to wait for Resource to stop
-    pub stop: Option<u32>,
+    // Time to wait for Resource to start
+    pub start: Option<String>,
+    // Time of monitor interval
+    pub monitor: Option<String>,
+    // Time to wait for Resource to stop
+    pub stop: Option<String>,
 }
 
 impl PacemakerOperations {
     pub fn new<'a>(
-        start: impl Into<Option<u32>>,
-        monitor: impl Into<Option<u32>>,
-        stop: impl Into<Option<u32>>,
+        start: impl Into<Option<String>>,
+        monitor: impl Into<Option<String>>,
+        stop: impl Into<Option<String>>,
     ) -> Self {
         Self {
             start: start.into(),

@@ -39,21 +39,15 @@ fn create(elem: &Element) -> ResourceAgentInfo {
             .collect(),
         ops: {
             // "stop"|"start"|"monitor" => (interval, timeout)
-            let mut ops: HashMap<&str, (u32, u32)> = elem
+            let mut ops: HashMap<&str, (Option<String>, Option<String>)> = elem
                 .find_all("operations")
                 .map(|e| {
                     e.find_all("op").map(|nv| {
                         (
                             nv.get_attr("name").unwrap_or_default(),
                             (
-                                nv.get_attr("interval")
-                                    .map(|s| s.trim_end_matches('s').parse().ok())
-                                    .flatten()
-                                    .unwrap_or_default(),
-                                nv.get_attr("timeout")
-                                    .map(|s| s.trim_end_matches('s').parse().ok())
-                                    .flatten()
-                                    .unwrap_or_default(),
+                                nv.get_attr("interval").map(str::to_string),
+                                nv.get_attr("timeout").map(str::to_string)
                             ),
                         )
                     })
@@ -61,9 +55,9 @@ fn create(elem: &Element) -> ResourceAgentInfo {
                 .flatten()
                 .collect();
             PacemakerOperations::new(
-                ops.remove("start").map(|e| e.1),
-                ops.remove("monitor").map(|e| e.0),
-                ops.remove("stop").map(|e| e.1),
+                ops.remove("start").map(|e| e.1).flatten(),
+                ops.remove("monitor").map(|e| e.0).flatten(),
+                ops.remove("stop").map(|e| e.1).flatten(),
             )
         },
     }
@@ -266,7 +260,7 @@ mod tests {
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect(),
-            ops: PacemakerOperations::new(Some(300), Some(20), Some(300)),
+            ops: PacemakerOperations::new(Some("300s".to_string()), Some("20s".to_string()), Some("300s".to_string())),
         };
 
         assert_eq!(process_resource(testxml).unwrap(), r1);
@@ -288,7 +282,7 @@ mod tests {
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect(),
-            ops: PacemakerOperations::new(Some(450), Some(30), Some(300)),
+            ops: PacemakerOperations::new(Some("450".to_string()), Some("30".to_string()), Some("300".to_string())),
         };
 
         assert_eq!(process_resource(testxml).unwrap(), r1);
