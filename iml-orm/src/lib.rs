@@ -14,12 +14,6 @@ pub mod models;
 #[cfg(feature = "postgres-interop")]
 pub mod schema;
 
-#[cfg(feature = "postgres-interop")]
-pub mod profile;
-
-#[cfg(feature = "postgres-interop")]
-pub mod repo;
-
 pub mod sfa;
 
 #[cfg(feature = "postgres-interop")]
