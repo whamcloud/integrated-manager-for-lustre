@@ -78,9 +78,9 @@ async fn crm_mon_status() -> Result<Element, ImlAgentError> {
     Ok(Element::from_reader(o.stdout.as_slice())?)
 }
 
-fn resource_status(tree: Element) -> Result<HashMap<String, String>, ImlAgentError> {
+fn resource_status(tree: Element) -> HashMap<String, String> {
     let resources = tree.find("resources").unwrap();
-    Ok(resources
+    resources
         .children()
         .filter_map(|e| {
             e.get_attr("id")
@@ -115,7 +115,7 @@ fn resource_status(tree: Element) -> Result<HashMap<String, String>, ImlAgentErr
         })
         .flatten()
         .map(|(x, y)| (x.to_string(), y.to_string()))
-        .collect())
+        .collect()
 }
 
 async fn set_resource_role(resource: &str, running: bool) -> Result<(), ImlAgentError> {
@@ -137,7 +137,7 @@ async fn wait_resource(resource: &str, running: bool) -> Result<(), ImlAgentErro
     let sec_delay = 2;
     let delay_duration = Duration::new(sec_delay, 0);
     for _ in 0..(sec_to_wait / sec_delay) {
-        let resources = resource_status(crm_mon_status().await?)?;
+        let resources = resource_status(crm_mon_status().await?);
         tracing::debug!(
             "crm mon status (waiting for {}): {:?}",
             resource,
@@ -394,6 +394,6 @@ mod tests {
         .map(|(x, y)| (x.to_string(), y.to_string()))
         .collect();
 
-        assert_eq!(resource_status(tree).unwrap(), r1);
+        assert_eq!(resource_status(tree), r1);
     }
 }
