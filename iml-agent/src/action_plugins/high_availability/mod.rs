@@ -47,7 +47,7 @@ fn create(elem: &Element) -> ResourceAgentInfo {
                             nv.get_attr("name").unwrap_or_default(),
                             (
                                 nv.get_attr("interval").map(str::to_string),
-                                nv.get_attr("timeout").map(str::to_string)
+                                nv.get_attr("timeout").map(str::to_string),
                             ),
                         )
                     })
@@ -260,7 +260,11 @@ mod tests {
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect(),
-            ops: PacemakerOperations::new(Some("300s".to_string()), Some("20s".to_string()), Some("300s".to_string())),
+            ops: PacemakerOperations::new(
+                Some("300s".to_string()),
+                Some("20s".to_string()),
+                Some("300s".to_string()),
+            ),
         };
 
         assert_eq!(process_resource(testxml).unwrap(), r1);
@@ -282,7 +286,11 @@ mod tests {
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect(),
-            ops: PacemakerOperations::new(Some("450".to_string()), Some("30".to_string()), Some("300".to_string())),
+            ops: PacemakerOperations::new(
+                Some("450".to_string()),
+                Some("30".to_string()),
+                Some("300".to_string()),
+            ),
         };
 
         assert_eq!(process_resource(testxml).unwrap(), r1);

@@ -1553,7 +1553,7 @@ pub struct PacemakerOperations {
 }
 
 impl PacemakerOperations {
-    pub fn new<'a>(
+    pub fn new(
         start: impl Into<Option<String>>,
         monitor: impl Into<Option<String>>,
         stop: impl Into<Option<String>>,
