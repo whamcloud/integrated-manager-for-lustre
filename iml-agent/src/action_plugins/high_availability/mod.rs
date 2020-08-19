@@ -11,7 +11,8 @@ use futures::{future::try_join_all, try_join};
 use iml_cmd::{CheckedCommandExt, Command};
 use iml_fs::file_exists;
 use iml_wire_types::{
-    ComponentState, ConfigState, ResourceAgentInfo, ResourceAgentType, ServiceState,
+    ComponentState, ConfigState, PacemakerOperations, ResourceAgentInfo, ResourceAgentType,
+    ServiceState,
 };
 use std::{collections::HashMap, ffi::OsStr, time::Duration};
 use tokio::time::delay_for;
@@ -38,6 +39,29 @@ fn create(elem: &Element) -> ResourceAgentInfo {
             })
             .flatten()
             .collect(),
+        ops: {
+            // "stop"|"start"|"monitor" => (interval, timeout)
+            let mut ops: HashMap<&str, (Option<String>, Option<String>)> = elem
+                .find_all("operations")
+                .map(|e| {
+                    e.find_all("op").map(|nv| {
+                        (
+                            nv.get_attr("name").unwrap_or_default(),
+                            (
+                                nv.get_attr("interval").map(str::to_string),
+                                nv.get_attr("timeout").map(str::to_string),
+                            ),
+                        )
+                    })
+                })
+                .flatten()
+                .collect();
+            PacemakerOperations::new(
+                ops.remove("start").map(|e| e.1).flatten(),
+                ops.remove("monitor").map(|e| e.0).flatten(),
+                ops.remove("stop").map(|e| e.1).flatten(),
+            )
+        },
     }
 }
 
@@ -323,7 +347,8 @@ mod tests {
             ResourceAgentInfo {
                 agent: ResourceAgentType::new("stonith", None, "fence_chroma"),
                 id: "st-fencing".to_string(),
-                args: HashMap::new()
+                args: HashMap::new(),
+                ops: PacemakerOperations::new(None, None, None),
             }
         );
     }
@@ -345,6 +370,11 @@ mod tests {
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect(),
+            ops: PacemakerOperations::new(
+                Some("300s".to_string()),
+                Some("20s".to_string()),
+                Some("300s".to_string()),
+            ),
         };
 
         assert_eq!(process_resource(testxml).unwrap(), r1);
@@ -366,6 +396,11 @@ mod tests {
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect(),
+            ops: PacemakerOperations::new(
+                Some("450".to_string()),
+                Some("30".to_string()),
+                Some("300".to_string()),
+            ),
         };
 
         assert_eq!(process_resource(testxml).unwrap(), r1);

@@ -87,6 +87,7 @@ nuke_db:
 	createdb -O $(DB_USER) $(DB_NAME)
 
 migrate_db:
+	psql chroma -c "CREATE EXTENSION IF NOT EXISTS btree_gist;"
 	@./manage.py migrate
 
 
