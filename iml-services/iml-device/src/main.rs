@@ -145,7 +145,7 @@ async fn main() -> Result<(), ImlDeviceError> {
             },
         );
 
-        tracing::warn!("x: {:?}", x);
+        tracing::debug!("x: {:?}", x);
 
         sqlx::query!(r#"INSERT INTO targets 
                         (state, name, active_host_id, host_ids, uuid, mount_path) 

@@ -423,13 +423,13 @@ pub struct Target {
 }
 
 impl Target {
-    pub fn update(&mut self, other: &Target) {
-        self.state = other.state.clone();
-        self.name = other.name.clone();
+    pub fn update(&mut self, other: Target) {
+        self.state = other.state;
+        self.name = other.name;
         self.active_host_id = other.active_host_id;
-        self.host_ids = other.host_ids.clone();
-        self.uuid = other.uuid.clone();
-        self.mount_path = other.mount_path.clone();
+        self.host_ids = other.host_ids;
+        self.uuid = other.uuid;
+        self.mount_path = other.mount_path;
     }
 }
 
@@ -444,11 +444,11 @@ impl PartialEq for Target {
 
 impl Targets {
     pub fn update_cache(&self, cache: &mut Targets) -> () {
-        for target in &self.0 {
-            if let Some(t) = cache.0.iter_mut().find(|x| *x == target) {
+        for target in self.0.clone() {
+            if let Some(t) = cache.0.iter_mut().find(|x| *x == &target) {
                 t.update(target);
             } else {
-                cache.0.push(target.clone());
+                cache.0.push(target);
             }
         }
     }
@@ -470,7 +470,7 @@ impl Targets {
 
         for target in diff {
             if let Some(t) = cache.0.iter_mut().find(|x| **x == target) {
-                t.update(&target);
+                t.update(target);
             }
         }
     }
