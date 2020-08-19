@@ -111,67 +111,85 @@ mod tests {
                 col1: "mickey".into(),
                 col2: "mouse".into(),
                 age: 16,
-                amount: 27
-            },
-            Item {
-                col1: "minnie".into(),
-                col2: "mouse".into(),
-                age: 17,
-                amount: 32
-            },
-            Item {
-                col1: "All your base".into(),
-                col2: "Are belong to us".into(),
-                age: 54,
-                amount: 0
-            }
-        ].into_iter().collect::<Vec<Item>>();
-
-        let items2 = vec![
-            Item {
-                col1: "mickey".into(),
-                col2: "mouse".into(),
-                age: 16,
-                amount: 27
-            },
-            Item {
-                col1: "minnie".into(),
-                col2: "mouse".into(),
-                age: 23,
-                amount: 32
-            },
-            Item {
-                col1: "donald".into(),
-                col2: "duck".into(),
-                age: 7,
-                amount: 18
-            },
-        ].into_iter().collect::<Vec<Item>>();
-
-        let (upserts, deletions) = items1.get_changes(&items2);
-
-        assert_eq!(upserts.unwrap().0.into_iter().cloned().collect::<Vec<Item>>(), vec![
-            Item {
-                col1: "All your base".into(),
-                col2: "Are belong to us".into(),
-                age: 54,
-                amount: 0,
+                amount: 27,
             },
             Item {
                 col1: "minnie".into(),
                 col2: "mouse".into(),
                 age: 17,
                 amount: 32,
-            }
-        ]);
+            },
+            Item {
+                col1: "All your base".into(),
+                col2: "Are belong to us".into(),
+                age: 54,
+                amount: 0,
+            },
+        ]
+        .into_iter()
+        .collect::<Vec<Item>>();
 
-        assert_eq!(deletions.unwrap().0.into_iter().cloned().collect::<Vec<Item>>(), vec![
+        let items2 = vec![
+            Item {
+                col1: "mickey".into(),
+                col2: "mouse".into(),
+                age: 16,
+                amount: 27,
+            },
+            Item {
+                col1: "minnie".into(),
+                col2: "mouse".into(),
+                age: 23,
+                amount: 32,
+            },
             Item {
                 col1: "donald".into(),
                 col2: "duck".into(),
                 age: 7,
                 amount: 18,
-            }
-        ]);
+            },
+        ]
+        .into_iter()
+        .collect::<Vec<Item>>();
+
+        let (upserts, deletions) = items1.get_changes(&items2);
+
+        assert_eq!(
+            upserts
+                .unwrap()
+                .0
+                .into_iter()
+                .cloned()
+                .collect::<Vec<Item>>(),
+            vec![
+                Item {
+                    col1: "All your base".into(),
+                    col2: "Are belong to us".into(),
+                    age: 54,
+                    amount: 0,
+                },
+                Item {
+                    col1: "minnie".into(),
+                    col2: "mouse".into(),
+                    age: 17,
+                    amount: 32,
+                }
+            ]
+        );
+
+        assert_eq!(
+            deletions
+                .unwrap()
+                .0
+                .into_iter()
+                .cloned()
+                .collect::<Vec<Item>>(),
+            vec![Item {
+                col1: "donald".into(),
+                col2: "duck".into(),
+                age: 7,
+                amount: 18,
+            }]
+        );
     }
 }
