@@ -51,6 +51,7 @@ class JobSchedulerRpc(ServiceRpcInterface):
         "configure_stratagem",
         "update_stratagem",
         "run_stratagem",
+        "create_hotpool",
     ]
 
 
@@ -278,3 +279,7 @@ class JobSchedulerClient(object):
     @classmethod
     def run_stratagem(cls, mdts, fs_id, stratagem_data):
         return JobSchedulerRpc().run_stratagem(mdts, fs_id, stratagem_data)
+
+    @classmethod
+    def create_hotpool(cls, data):
+        return JobSchedulerRpc().create_hotpool(data)

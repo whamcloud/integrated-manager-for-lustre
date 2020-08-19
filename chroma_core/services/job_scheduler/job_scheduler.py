@@ -58,6 +58,12 @@ from chroma_core.models import (
     UnconfigureStratagemJob,
     RemoveStratagemJob,
     StratagemConfiguration,
+    LamigoConfiguration,
+    LpurgeConfiguration,
+    Lamigo,
+    Lpurge,
+    HotpoolV2Configuration,
+    ConfigureHotpoolJob,
 )
 from chroma_core.models import Task, CreateTaskJob
 from chroma_core.services.job_scheduler.dep_cache import DepCache
@@ -2035,3 +2041,107 @@ class JobScheduler(object):
 
         self.progress.advance()
         return task.id, command_id
+
+    def create_hotpool(self, hotpool_data):
+        # filesystem - filesystem.id
+        # hotpool - ostpool.id
+        # coldpool - ostpool.id
+        # extendlayout - lamigo.extend_task.args.striping
+        # minage - lamigo.minage
+        # freehi - lpurge.freehi
+        # freelo - lpurge.freelo
+        job_list = []
+
+        log.debug("Creating hotpool v2 from: %s" % hotpool_data)
+        filesystem = ObjectCache.get_by_id(ManagedFilesystem, int(hotpool_data["filesystem"]))
+        hotpool = OstPool.objects.get(pk=hotpool_data["hotpool"])
+        coldpool = OstPool.objects.get(pk=hotpool_data["coldpool"])
+
+        # Create HotpoolConfig object
+
+        data = {
+            "filesystem": filesystem,
+            "ha_label": "cl-{}-client".format(filesystem.name),
+            "version": 2,
+        }
+        hpconf = HotpoolConfiguration.objects.create(**data)
+
+        # Create Lamigo
+
+        task_data = {
+            "filesystem": filesystem,
+            "name": "{}-{}-extend".format(filesystem.name, hotpool.name),
+            "start": django.utils.timezone.now(),
+            "state": "created",
+            "single_runner": False,
+            "keep_failed": False,
+            "args": {"striping": hotpool_data["extendlayout"]},
+            "actions": ["mirror.extend"],
+        }
+        extend_task = Task.objects.create(**task_data)
+        job_list.append({"class_name": "CreateTaskJob", "args": {"task": extend_task}})
+
+        task_data = {
+            "filesystem": filesystem,
+            "name": "{}-{}-resync".format(filesystem.name, hotpool.name),
+            "start": django.utils.timezone.now(),
+            "state": "created",
+            "single_runner": False,
+            "keep_failed": False,
+            "args": {},
+            "actions": ["mirror.resync"],
+        }
+        resync_task = Task.objects.create(**task_data)
+        job_list.append({"class_name": "CreateTaskJob", "args": {"task": resync_task}})
+
+        data = {
+            "hotpool": hpconf,
+            "hot": hotpool,
+            "cold": coldpool,
+            "extend": extend_task,
+            "resync": resync_task,
+            "minage": hotpool_data["minage"],
+        }
+        lamigoconf = LamigoConfiguration.objects.create(**data)
+
+        for mdt in ManagedTarget.objects.filter(managedmdt__filesystem=self):
+            data = {
+                "configuration": lamigoconf,
+                "mdt": mdt,
+            }
+
+            lamigo = Lamigo.objects.create(**data)
+            lamigo.save()
+
+        # Create LPurge
+
+        task_data = {
+            "filesystem": filesystem,
+            "name": "{}-{}-purge".format(filesystem.name, hotpool.name),
+            "start": django.utils.timezone.now(),
+            "state": "created",
+            "single_runner": False,
+            "keep_failed": False,
+            "args": {"striping": hotpool_data["extendlayout"]},
+            "actions": ["mirror.purge"],
+        }
+        task = Task.objects.create(**task_data)
+        job_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
+
+        data = {
+            "hotpool": hpconf,
+            "cold": coldpool,
+            "purge": task,
+            "freehi": hotpool_data["freehi"],
+            "freelo": hotpool_data["freelo"],
+        }
+        lpurgeconf = LpurgeConfiguration.objects.create(**data)
+
+        for ost in colpool.osts:
+            data = {
+                "configuration": lpurgeconf,
+                "ost": ost,
+            }
+            Lpurge.objects.create(**data)
+
+        return DependAll(jobs_list)
