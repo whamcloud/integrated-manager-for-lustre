@@ -743,24 +743,16 @@
       ]
     }
   },
-  "9e69b2d4692f2bcd76349322b1bbdbb71ada4d3144fc543bff0417ccc576a62a": {
-    "query": "\n                DELETE FROM chroma_core_logmessage\n                WHERE id in ( \n                    SELECT id FROM chroma_core_logmessage ORDER BY id LIMIT $1\n                )\n                RETURNING id",
+  "922e7457db1e165807273def66a5ecc6b22be1a849f5e4b06d5149ec00b5e8aa": {
+    "query": "\n                DELETE FROM chroma_core_logmessage\n                WHERE id in ( \n                    SELECT id FROM chroma_core_logmessage ORDER BY id LIMIT $1\n                )\n            ",
     "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
+      "columns": [],
       "parameters": {
         "Left": [
           "Int8"
         ]
       },
-      "nullable": [
-        false
-      ]
+      "nullable": []
     }
   },
   "9edb0846023aa1a9250204fb686d5b95a95962ce20aab75cec2e906edad8eec7": {
