@@ -153,7 +153,7 @@ async fn update_fstab_entry(
         .split("\n")
         .chain(std::iter::once(
             format!(
-                "{}\t{}lustre\t\tx-systemd.mount-timeout=20m,{}_netdev",
+                "{}\t{}\t\tlustre\tx-systemd.mount-timeout=20m,{}_netdev",
                 mountspec, mountpoint, persist,
             )
             .as_str(),
