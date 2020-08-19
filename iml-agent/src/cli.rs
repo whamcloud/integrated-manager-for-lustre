@@ -14,7 +14,7 @@ use iml_agent::action_plugins::{
         },
     },
 };
-use iml_wire_types::{client, snapshot};
+use iml_wire_types::{client, snapshot, FidItem};
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
 use spinners::{Spinner, Spinners};
@@ -210,7 +210,7 @@ pub struct FidInput {
     fsname: String,
 
     #[structopt(name = "FIDS")]
-    /// List of FIDs to purge
+    /// List of FIDs to operate on
     fidlist: Vec<String>,
 }
 
@@ -509,12 +509,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 		target_fs,
 		fidopts,
 	    } => {
-		let device = fidopts.fsname;
-		let dest_str = target_fs;
+/*		let device = fidopts.fsname;
+		let mut task_args = std::collections::HashMap::new();
 
-		if action_filesync::filesync_files(&device, fidopts.fidlist, dest_str).is_err() {
-		    exit(exitcode::IOERR);
-		}
+Need to turn fid into a FidItem
+		let fidlist: Vec<FidItem> = fidopts.fidlist
+		    .into_iter()
+		    .map(|ft| FidItem {
+			fid: ft,
+			data: serde_json::from_str(&ft)?.data,
+		    })
+		    .collect();
+
+		task_args.insert("remote".to_string(), target_fs);
+		action_filesync::process_fids((device, task_args, fidlist))
+		    .await
+		    .or_else(|e| {
+			tracing::error!("Filesync failed with: {}", e);
+			exit(exitcode::IOERR);
+		    });*/
 	    }
         },
         App::StratagemServer { command } => match command {
