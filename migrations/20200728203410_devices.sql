@@ -1,4 +1,4 @@
-CREATE TABLE chroma_core_targets (
+CREATE TABLE targets (
     state          text NOT NULL,
     name           text NOT NULL,
     active_host_id int NULL,
