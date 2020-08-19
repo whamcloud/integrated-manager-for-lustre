@@ -17,8 +17,13 @@ pub async fn list(l: List) -> Result<Vec<Snapshot>, ImlAgentError> {
     if l.detail {
         args.push("--detail");
     }
-    let stdout = lctl(args).await?;
-    parse_snapshot_list(&stdout).map_err(ImlAgentError::CombineEasyError)
+    let stdout = lctl(args).await?.trim();
+
+    if stdout.is_empty() {
+        Ok(vec![])
+    } else {
+        parse_snapshot_list(&stdout).map_err(ImlAgentError::CombineEasyError)
+    }
 }
 
 fn parse_snapshot_list(input: &str) -> Result<Vec<Snapshot>, easy::Errors<char, String, usize>> {
