@@ -70,3 +70,108 @@ impl<T: Changeable + Identifiable> GetChanges<T> for Vec<T> {
         (to_upsert, to_remove)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cmp::Ordering;
+
+    #[derive(Clone, Eq, Ord, Debug)]
+    struct Item {
+        col1: String,
+        col2: String,
+        age: i32,
+        amount: i32,
+    }
+
+    impl PartialEq for Item {
+        fn eq(&self, other: &Self) -> bool {
+            self.col1 == other.col1 && self.col2 == other.col2
+        }
+    }
+
+    impl PartialOrd for Item {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.age.cmp(&other.age))
+        }
+    }
+
+    impl Identifiable for Item {
+        type Id = String;
+
+        fn id(&self) -> Self::Id {
+            format!("{}.{}", self.col1, self.col2)
+        }
+    }
+
+    #[test]
+    fn test_get_changes() {
+        let items1 = vec![
+            Item {
+                col1: "mickey".into(),
+                col2: "mouse".into(),
+                age: 16,
+                amount: 27
+            },
+            Item {
+                col1: "minnie".into(),
+                col2: "mouse".into(),
+                age: 17,
+                amount: 32
+            },
+            Item {
+                col1: "All your base".into(),
+                col2: "Are belong to us".into(),
+                age: 54,
+                amount: 0
+            }
+        ].into_iter().collect::<Vec<Item>>();
+
+        let items2 = vec![
+            Item {
+                col1: "mickey".into(),
+                col2: "mouse".into(),
+                age: 16,
+                amount: 27
+            },
+            Item {
+                col1: "minnie".into(),
+                col2: "mouse".into(),
+                age: 23,
+                amount: 32
+            },
+            Item {
+                col1: "donald".into(),
+                col2: "duck".into(),
+                age: 7,
+                amount: 18
+            },
+        ].into_iter().collect::<Vec<Item>>();
+
+        let (upserts, deletions) = items1.get_changes(&items2);
+
+        assert_eq!(upserts.unwrap().0.into_iter().cloned().collect::<Vec<Item>>(), vec![
+            Item {
+                col1: "All your base".into(),
+                col2: "Are belong to us".into(),
+                age: 54,
+                amount: 0,
+            },
+            Item {
+                col1: "minnie".into(),
+                col2: "mouse".into(),
+                age: 17,
+                amount: 32,
+            }
+        ]);
+
+        assert_eq!(deletions.unwrap().0.into_iter().cloned().collect::<Vec<Item>>(), vec![
+            Item {
+                col1: "donald".into(),
+                col2: "duck".into(),
+                age: 7,
+                amount: 18,
+            }
+        ]);
+    }
+}
