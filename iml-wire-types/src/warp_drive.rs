@@ -6,10 +6,10 @@ use crate::{
     db::{
         AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
         CorosyncConfigurationRecord, Id, LnetConfigurationRecord, ManagedTargetMountRecord,
-        OstPoolOstsRecord, OstPoolRecord, PacemakerConfigurationRecord, SfaController,
-        SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem,
-        StratagemConfiguration, VolumeNodeRecord, VolumeRecord,
+        OstPoolOstsRecord, OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration,
+        VolumeNodeRecord, VolumeRecord,
     },
+    sfa::{SfaController, SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem},
     Alert, CompositeId, EndpointNameSelf, Filesystem, Host, Label, LockChange, Target,
     TargetConfParam, ToCompositeId,
 };

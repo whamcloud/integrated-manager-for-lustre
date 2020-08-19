@@ -37,7 +37,7 @@ substs: $(SUBSTS)
 srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/release/rust-iml
-	PQ_LIB_DIR=/usr/pgsql-9.6/lib cargo build --release
+	cargo build --release
 	cp ${TARGET}/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,device,journal,mailbox,ntp,ostpool,postoffice,report,sfa,stats,task-runner,warp-drive} \
 		iml-agent-comms.service \
 		iml-mailbox.service \
