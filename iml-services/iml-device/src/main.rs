@@ -147,7 +147,7 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         tracing::warn!("x: {:?}", x);
 
-        sqlx::query!(r#"INSERT INTO chroma_core_targets 
+        sqlx::query!(r#"INSERT INTO targets 
                         (state, name, active_host_id, host_ids, uuid, mount_path) 
                         SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], uuid, mount_path
                         FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[])
