@@ -8,7 +8,7 @@ import os
 from django.db import models
 from django.db.models import CASCADE, Q
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models.jobs import StatefulObject
+from chroma_core.models.jobs import StatefulObject, Job
 from chroma_core.models.utils import (
     DeletableDowncastableMetaclass,
     DeletableMetaclass,
@@ -52,6 +52,7 @@ class HotpoolConfiguration(StatefulObject):
         blank=False,
         help_text="Set if there is a single resource that will controll entire hotpools configuration",
     )
+    version = models.PositiveSmallIntegerField(default=2, null=False)
 
     def get_label(self):
         return "Hotpool Configuration"
@@ -59,25 +60,14 @@ class HotpoolConfiguration(StatefulObject):
     def is_single_resource(self):
         return self.ha_label is not None
 
-    # SUBCLASS needs to implement
     def get_components(self):
-        return self.downcast().get_components()
 
-
-class HotpoolV2Configuration(HotpoolConfiguration):
-    """
-    Configuration for Version 2 hotpools (lamigo, and lpurge)
-    """
-
-    lamigo = models.ForeignKey("LamigoConfiguration", null=False, on_delete=CASCADE)
-    lpurge = models.ForeignKey("LpurgeConfiguration", null=False, on_delete=CASCADE)
-
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-
-    def get_components(self):
-        components = Lamigo.objects.filter(configuration=self.lamigo) + Lpurge.objects.filter(configuration=self.lpurge)
+        if self.version == 2:
+            components = Lamigo.objects.filter(configuration__hotpool=self) + Lpurge.objects.filter(
+                configuration__hotpool=self
+            )
+        else:
+            components = []
 
         return components
 
@@ -145,11 +135,15 @@ class ConfigureHotpoolJob(StateChangeJob):
 
 
 class CreateClonedClientStep(Step):
-    # @@
+    """
+    Create a cloned Client mount on server
+    """
 
     def run(self, kwargs):
-        # @@
         host = kwargs["host"]
+        mp = kwargs["mountpoint"]
+
+        self.invoke_rust_agent_expect_result(host, "create_cloned_mount", mp)
 
 
 class StartHotpoolJob(StateChangeJob):
@@ -291,11 +285,11 @@ class LamigoConfiguration(models.Model):
         ordering = ["id"]
 
     hotpool = models.ForeignKey("HotpoolConfiguration", null=False, on_delete=CASCADE)
-    hot_pool = models.ForeignKey("OstPool", null=False, on_delete=CASCADE)
-    cold_pool = models.ForeignKey("OstPool", null=False, on_delete=CASCADE)
+    hot = models.ForeignKey("OstPool", related_name="hot", null=False, on_delete=CASCADE)
+    cold = models.ForeignKey("OstPool", related_name="cold", null=False, on_delete=CASCADE)
 
-    extend_task = models.ForeignKey("Task", null=True, on_delete=CASCADE)
-    resync_task = models.ForeignKey("Task", null=True, on_delete=CASCADE)
+    extend = models.ForeignKey("Task", related_name="extend", null=True, on_delete=CASCADE)
+    resync = models.ForeignKey("Task", related_name="resync", null=True, on_delete=CASCADE)
 
     minage = models.IntegerField(help_text="Seconds to wait after close to sync to cold pool", null=False)
 
@@ -308,8 +302,8 @@ class LamigoConfiguration(models.Model):
             "min_age": self.minage,
             "mailbox_extend": self.extend_task.name,
             "mailbox_resync": self.resync_task.name,
-            "hot_pool": self.hot_pool.name,
-            "cold_pool": self.cold_pool.name,
+            "hot_pool": self.hot.name,
+            "cold_pool": self.cold.name,
         }
         return config
 
@@ -569,24 +563,20 @@ class LpurgeConfiguration(models.Model):
         ordering = ["id"]
 
     hotpool = models.ForeignKey("HotpoolConfiguration", null=False, on_delete=CASCADE)
-    cold_pool = models.ForeignKey("OstPool", null=False, on_delete=CASCADE)
+    cold = models.ForeignKey("OstPool", null=False, on_delete=CASCADE)
 
-    purge_task = models.ForeignKey("Task", null=True, on_delete=CASCADE)
+    purge = models.ForeignKey("Task", null=True, on_delete=CASCADE)
 
-    freehi = models.PositiveSmallIntegerField(
-        help_text="Percent of free space which causes purge to stop", min_value=2, max_value=99, null=False
-    )
-    freelo = models.PositiveSmallIntegerField(
-        help_text="Percent of free space which causes purge to start", min_value=1, max_value=98, null=False
-    )
+    freehi = models.PositiveSmallIntegerField(help_text="Percent of free space which causes purge to stop", null=False)
+    freelo = models.PositiveSmallIntegerField(help_text="Percent of free space which causes purge to start", null=False)
 
     def lpurge_config(self, ost):
         # C.F. iml-agent::action_plugins::lpurge::Config
         config = {
             "ost": ost.index,
             "fs": self.filesystem.name,
-            "mailbox": self.purge_task.name,
-            "pool": self.hot_pool.name,
+            "mailbox": self.purge.name,
+            "pool": self.cold.name,
             "freehi": self.freehi,
             "freelo": self.freelo,
         }
@@ -640,6 +630,7 @@ class Lpurge(StatefulObject):
                 )
             )
 
+
 class ConfigureLpurgeJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(Lpurge, "unconfigured", "stopped")
     stateful_object = "lpurge"
@@ -689,6 +680,7 @@ class ConfigureLpurgeJob(StateChangeJob):
 
         return steps
 
+
 class ConfigureLpurgeStep(Step):
     idempotent = True
 
@@ -699,7 +691,7 @@ class ConfigureLpurgeStep(Step):
         self.invoke_rust_agent_expect_result(host, "config_lpurge", lpurge.lpurge_config())
 
 
-lass StartLpurgeJob(StateChangeJob):
+class StartLpurgeJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(Lpurge, "stopped", "started")
     stateful_object = "lpurge"
     lpurge = models.ForeignKey("Lpurge", on_delete=CASCADE)
@@ -795,5 +787,3 @@ class RemoveLpurgeJob(StateChangeJob):
     def on_success(self):
         self.lpurge.mark_deleted()
         self.lpurge.save()
-
-    

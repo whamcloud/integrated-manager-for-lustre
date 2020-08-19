@@ -10,6 +10,8 @@ from django.db import models, transaction
 from polymorphic.models import DowncastManager
 from polymorphic.models import PolymorphicMetaclass
 
+from chroma_core.lib.job import Step
+
 #  Convert dict used by models and apis
 STR_TO_SEVERITY = dict(
     [
