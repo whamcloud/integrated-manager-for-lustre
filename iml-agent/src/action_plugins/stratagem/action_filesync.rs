@@ -8,20 +8,15 @@ extern crate tokio;
 use crate::{
     agent_error::{ImlAgentError, RequiredError},
 };
-use futures::{
-    future::self,
-    stream, StreamExt, TryFutureExt, TryStreamExt,
-};
+use futures::TryFutureExt;
 use iml_wire_types::{FidError, FidItem};
 use liblustreapi::LlapiFid;
-use std::{collections::HashMap, io, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf};
 use tokio::task::spawn_blocking;
 use tokio::fs;
 use tokio::process::Command;
-use futures::Future;
-use tracing::{error, warn};
-use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::{Write};
+use tracing::{error, debug};
 
 async fn search_rootpath(device: String) -> Result<LlapiFid, ImlAgentError> {
     spawn_blocking(move || LlapiFid::create(&device).map_err(ImlAgentError::from))
@@ -32,14 +27,21 @@ async fn search_rootpath(device: String) -> Result<LlapiFid, ImlAgentError> {
 
 /// Process FIDs
 pub async fn process_fids(
-    (fsname_or_mntpath, task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
+    (fsname_or_mntpath,
+     task_args,
+     fid_list): (String, HashMap<String, String>, Vec<FidItem>),
 ) -> Result<Vec<FidError>, ImlAgentError> {
     let llapi = search_rootpath(fsname_or_mntpath).await?;
     let dest_src = task_args.get("remote".into()).ok_or(RequiredError(
         "Task missing 'remote' argument".to_string(),))?;
 
-    let tmp_workfile = PathBuf::from(dest_src);
-    let result = fs::create_dir_all(&tmp_workfile).await;
+    let mut tmp_workfile = PathBuf::from(dest_src);
+    fs::create_dir_all(&tmp_workfile)
+	.await
+	.or_else(|e| {
+	    error!("failed to create temp file: {}", e);
+	    return Err(e)
+	})?;
 
     tmp_workfile.push("workfile");
 
@@ -60,11 +62,11 @@ pub async fn process_fids(
 	let mut dest_dir = PathBuf::from(&dest_file);
 	dest_dir.pop();
 
-	let result = fs::create_dir_all(&dest_dir).await;
+	fs::create_dir_all(&dest_dir).await?;
 	workfile.write_all(src_file.as_bytes())?;
     }
 
-    workfile.flush();
+    workfile.flush()?;
 
     let tmpstr: String = tmp_workfile.as_path().display().to_string();
 
@@ -84,7 +86,7 @@ pub async fn process_fids(
 	.output();
     let output = output.await?;
 
-/*    warn!("exited with {} {} {}", output.status, std::str::from_utf8(&output.stdout)?, std::str::from_utf8(&output.stderr)?);
-*/
+    debug!("exited with {} {} {}", output.status, std::str::from_utf8(&output.stdout)?, std::str::from_utf8(&output.stderr)?);
+
     Ok(vec![])
 }
