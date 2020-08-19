@@ -509,25 +509,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 		target_fs,
 		fidopts,
 	    } => {
-/*		let device = fidopts.fsname;
+		let device = fidopts.fsname;
 		let mut task_args = std::collections::HashMap::new();
 
-Need to turn fid into a FidItem
 		let fidlist: Vec<FidItem> = fidopts.fidlist
 		    .into_iter()
 		    .map(|ft| FidItem {
-			fid: ft,
-			data: serde_json::from_str(&ft)?.data,
+			fid: ft.clone(),
+			data: ft.into()
 		    })
 		    .collect();
 
 		task_args.insert("remote".to_string(), target_fs);
-		action_filesync::process_fids((device, task_args, fidlist))
+		if action_filesync::process_fids((device, task_args, fidlist))
 		    .await
-		    .or_else(|e| {
-			tracing::error!("Filesync failed with: {}", e);
+		    .is_err() {
+			tracing::error!("Filesync failed");
 			exit(exitcode::IOERR);
-		    });*/
+		    }
 	    }
         },
         App::StratagemServer { command } => match command {
