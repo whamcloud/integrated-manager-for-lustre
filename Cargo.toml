@@ -5,6 +5,7 @@ members = [
   'iml-agent',
   'iml-api-utils',
   'iml-api',
+  'iml-change',
   'iml-cmd',
   'iml-fs',
   'iml-influx',
