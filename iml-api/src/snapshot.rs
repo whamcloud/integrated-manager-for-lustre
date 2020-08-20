@@ -4,9 +4,10 @@
 
 use crate::error::ImlApiError;
 use futures::{future::try_join, TryFutureExt};
+use iml_action_client::invoke_rust_agent;
 use iml_job_scheduler_rpc::{available_jobs, available_transitions, Job, Transition};
 use iml_rabbit::Connection;
-use iml_wire_types::{ApiList, AvailableAction, CompositeId};
+use iml_wire_types::{snapshot, ApiList, AvailableAction, CompositeId};
 use std::convert::TryFrom;
 use warp::{reply::Json, Filter};
 
@@ -23,7 +24,7 @@ fn composite_ids() -> impl Filter<Extract = (CompositeIds,), Error = warp::Rejec
 }
 
 async fn get_snapshots(
-    ids: CompositeIds,
+    args: snapshot::List,
     conn: Connection,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     drop(conn);
@@ -34,9 +35,9 @@ async fn get_snapshots(
 pub(crate) fn endpoint(
     client_filter: impl Filter<Extract = (Connection,), Error = warp::Rejection> + Clone + Send,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    warp::path("snapshot")
+    warp::path!("snapshot" / "list")
+        .and(warp::query())
         .and(warp::get())
-        .and(composite_ids())
         .and(client_filter)
         .and_then(get_snapshots)
 }
