@@ -1,15 +1,5 @@
 {
   "db": "PostgreSQL",
-  "07317ab9fddc66855470ba840c4b68a340b188eabcfce0bc8fed4f410df1b7db": {
-    "query": "INSERT INTO chroma_core_managedhost\n        (\n            state_modified_at,\n            state,\n            immutable_state,\n            not_deleted,\n            address,\n            fqdn,\n            nodename,\n            boot_time,\n            needs_update,\n            corosync_ring0,\n            install_method,\n            content_type_id,\n            server_profile_id)\n        VALUES\n        ('2020-07-02 15:50:34.356076-04', 'unconfigured', 'f', 't', 'foo', 'foo.bar', '', Null, 'f', '', '', Null, 'foo')\n        ON CONFLICT DO NOTHING",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": []
-    }
-  },
   "07d03b70c5d9813b0432b582ad8239edd1a3ce7ef7ce9be7c22dbb8189db8861": {
     "query": "select id from chroma_core_managedfilesystem where name = $1 and not_deleted = 't'",
     "describe": {
@@ -243,72 +233,6 @@
       ]
     }
   },
-  "2eedae727c7336f9edd217051685ebfd1e7a8e28597a0803aad92147c49f6805": {
-    "query": "SELECT * FROM chroma_core_lustreclientmount",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "state_modified_at",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 2,
-          "name": "state",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 3,
-          "name": "immutable_state",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 4,
-          "name": "not_deleted",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 5,
-          "name": "content_type_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 6,
-          "name": "filesystem",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 7,
-          "name": "host_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 8,
-          "name": "mountpoints",
-          "type_info": "TextArray"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        true,
-        true,
-        false,
-        false,
-        false
-      ]
-    }
-  },
   "39fc1211724cef9afd733459348bcd3eb6f3af9a89dc1ca470593ea8beb3678c": {
     "query": "\n        SELECT * FROM chroma_core_job\n        WHERE id IN (SELECT job_id from chroma_core_command_jobs\n            WHERE command_id = $1)\n    ",
     "describe": {
@@ -463,6 +387,26 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "5d8fde2b24cb6d9bf2f0287d391c16d09dbcb3fede16e5d3f26ff7b0eeb8ef25": {
+    "query": "\n        select mgs_id from chroma_core_managedfilesystem where name=$1\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "mgs_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
     }
   },
   "61e498856043c03a2b0ca70544b3973f25ab9154985fd6a2078b46436a42c8f2": {
@@ -626,6 +570,110 @@
         false,
         false,
         false,
+        false
+      ]
+    }
+  },
+  "85bb233781ed127b3e9347d357f006dcf9f0ccf5c89475172d1e40fc5f0dfe68": {
+    "query": "\n        select * from chroma_core_managedtarget where id=$1\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "state_modified_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 2,
+          "name": "state",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "immutable_state",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 4,
+          "name": "name",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 5,
+          "name": "uuid",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 6,
+          "name": "ha_label",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 7,
+          "name": "inode_size",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 8,
+          "name": "bytes_per_inode",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 9,
+          "name": "inode_count",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 10,
+          "name": "reformat",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 11,
+          "name": "not_deleted",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 12,
+          "name": "active_mount_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 13,
+          "name": "content_type_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 14,
+          "name": "volume_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
         false
       ]
     }
@@ -965,16 +1013,6 @@
           "Int4",
           "TextArray"
         ]
-      },
-      "nullable": []
-    }
-  },
-  "b8e774ab32b79eb3f2d87b7f373b609831f72f63f716dcbb7917871531466b1a": {
-    "query": "\n        INSERT INTO chroma_core_serverprofile\n        (name, ui_name, ui_description, managed, worker, user_selectable, initial_state, ntp, corosync, corosync2, pacemaker, \"default\")\n        VALUES\n        ('foo', 'foo', 'foo', 'f', 'f', 't', 'bar', 'f', 'f', 'f', 'f', 't')\n        ON CONFLICT DO NOTHING\n    ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": []
       },
       "nullable": []
     }
