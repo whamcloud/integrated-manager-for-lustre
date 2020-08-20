@@ -410,7 +410,7 @@ pub fn find_targets<'a>(
         .collect()
 }
 
-#[derive(Debug, Eq, Ord, PartialOrd, Clone)]
+#[derive(Debug, Eq, Ord, Clone)]
 pub struct Target {
     pub state: String,
     pub name: String,
@@ -418,6 +418,18 @@ pub struct Target {
     pub host_ids: Vec<i32>,
     pub uuid: String,
     pub mount_path: Option<String>,
+}
+
+impl PartialEq for Target {
+    fn eq(&self, other: &Self) -> bool {
+        self.uuid == other.uuid
+    }
+}
+
+impl PartialOrd for Target {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.uuid.cmp(&other.uuid))
+    }
 }
 
 impl Identifiable for Target {
@@ -544,5 +556,30 @@ mod tests {
         let xs = build_updates((Some(upserts), Some(deletions)));
 
         insta::assert_debug_snapshot!(xs);
+    }
+
+    #[test]
+    fn test_deletions_only() {
+        let t = Target {
+            state: "mounted".into(),
+            name: "mdt1".into(),
+            active_host_id: Some(1),
+            host_ids: vec![2],
+            uuid: "123456".into(),
+            mount_path: Some("/mnt/mdt1".into()),
+        };
+
+        let deletions = Deletions(vec![&t]);
+
+        let xs = build_updates((None, Some(deletions)));
+
+        insta::assert_debug_snapshot!(xs);
+    }
+
+    #[test]
+    fn test_no_upserts_or_deletions() {
+        let xs = build_updates((None, None));
+
+        assert_eq!(xs, vec![]);
     }
 }
