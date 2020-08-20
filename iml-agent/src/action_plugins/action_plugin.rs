@@ -45,6 +45,8 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("unmount_many", lustre::client::unmount_many)
         .add_plugin("ha_resource_start", high_availability::start_resource)
         .add_plugin("ha_resource_stop", high_availability::stop_resource)
+        .add_plugin("ha_resource_create", high_availability::create_resource)
+        .add_plugin("ha_resource_destroy", high_availability::destroy_resource)
         .add_plugin("crm_attribute", high_availability::crm_attribute)
         .add_plugin(
             "change_mcast_port",

@@ -1589,6 +1589,10 @@ impl PacemakerOperations {
             stop: stop.into(),
         }
     }
+
+    pub fn is_some(&self) -> bool {
+        self.start.is_some() || self.stop.is_some() || self.monitor.is_some()
+    }
 }
 
 /// Information about pacemaker resource agents

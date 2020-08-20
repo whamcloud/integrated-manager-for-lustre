@@ -11,8 +11,8 @@ use futures::{future::try_join_all, try_join};
 use iml_cmd::{CheckedCommandExt, Command};
 use iml_fs::file_exists;
 use iml_wire_types::{
-    ComponentState, ConfigState, PacemakerOperations, ResourceAgentInfo, ResourceAgentType,
-    ServiceState,
+    ComponentState, ConfigState, PacemakerKindOrScore, PacemakerOperations, ResourceAgentInfo,
+    ResourceAgentType, ResourceConstraint, ServiceState,
 };
 use std::{collections::HashMap, ffi::OsStr, time::Duration};
 use tokio::time::delay_for;
@@ -192,16 +192,16 @@ fn process_resource(output: &[u8]) -> Result<ResourceAgentInfo, ImlAgentError> {
     Ok(create(&element))
 }
 
-pub async fn get_ha_resource_list(_: ()) -> Result<Vec<ResourceAgentInfo>, ImlAgentError> {
+async fn resource_list() -> Result<Vec<String>, ImlAgentError> {
     let resources = match crm_resource(&["--list-raw"]).await {
-        Ok(res) => res,
+        Ok(res) => res.to_string(),
         Err(e) => {
             tracing::info!("Failed to get resource list: {:?}", e);
             return Ok(vec![]);
         }
     };
 
-    let xs = resources
+    Ok(resources
         .trim()
         .lines()
         .filter(|res| {
@@ -216,15 +216,173 @@ pub async fn get_ha_resource_list(_: ()) -> Result<Vec<ResourceAgentInfo>, ImlAg
                 true
             }
         })
-        .map(|res| async move {
-            let output = crm_resource(&["--query-xml", "--resource", res]).await?;
-            if let Some(xml) = output.split("xml:").last() {
-                process_resource(xml.as_bytes())
-            } else {
-                Err(ImlAgentError::MarkerNotFound)
-            }
-        });
+        .map(str::to_string)
+        .collect())
+}
+
+pub async fn get_ha_resource_list(_: ()) -> Result<Vec<ResourceAgentInfo>, ImlAgentError> {
+    let xs = resource_list().await?.into_iter().map(|res| async move {
+        let output = crm_resource(&["--query-xml", "--resource", &res]).await?;
+        if let Some(xml) = output.split("xml:").last() {
+            process_resource(xml.as_bytes())
+        } else {
+            Err(ImlAgentError::MarkerNotFound)
+        }
+    });
     try_join_all(xs).await
+}
+
+fn xml_add_op<'a>(
+    res: &mut Element,
+    id: &'a str,
+    name: &'a str,
+    timeout: Option<String>,
+    interval: Option<String>,
+) {
+    if timeout.is_none() && interval.is_none() {
+        return;
+    }
+
+    let op = res.append_new_child("op");
+    op.set_attr("name", name);
+    if let Some(value) = interval {
+        op.set_attr("id", format!("{}-{}-timeout-{}", id, name, value))
+            .set_attr("interval", value);
+    }
+    if let Some(value) = timeout {
+        op.set_attr("id", format!("{}-{}-timeout-{}", id, name, value))
+            .set_attr("timeout", value);
+    }
+}
+
+fn xml_add_nvpair<'a>(elem: &mut Element, id: &'a str, name: &'a str, value: &'a str) {
+    let nvpair = elem.append_new_child("nvpair");
+    nvpair
+        .set_attr("id", format!("{}-{}", &id, name))
+        .set_attr("name", name)
+        .set_attr("value", value);
+}
+
+async fn cibcreate<'a>(scope: &'a str, xml: &'a str) -> Result<(), ImlAgentError> {
+    Command::new("cibadmin")
+        .args(&["--create", "--scope", scope, "--xml-text", xml])
+        .checked_output()
+        .await?;
+    Ok(())
+}
+
+pub async fn create_resource(
+    (agent, constraints): (ResourceAgentInfo, Vec<ResourceConstraint>),
+) -> Result<(), ImlAgentError> {
+    let ids = resource_list().await?;
+
+    if ids.contains(&agent.id) {
+        return Ok(());
+    }
+
+    let xml = {
+        let mut res = Element::new("primitive");
+        res.set_attr("id", &agent.id)
+            .set_attr("class", &agent.agent.standard)
+            .set_attr("type", &agent.agent.ocftype);
+
+        if let Some(provider) = &agent.agent.provider {
+            res.set_attr("provider", provider);
+        }
+
+        if !agent.args.is_empty() {
+            let ia = res.append_new_child("instance_attributes");
+            let iaid = format!("{}-instance_attributes", &agent.id);
+            ia.set_attr("id", &iaid);
+            for (k, v) in agent.args.iter() {
+                xml_add_nvpair(ia, &iaid, k, v);
+            }
+        }
+
+        if agent.ops.is_some() {
+            let ops = res.append_new_child("operations");
+            xml_add_op(ops, &agent.id, "start", agent.ops.start, None);
+            xml_add_op(ops, &agent.id, "stop", agent.ops.stop, None);
+            xml_add_op(ops, &agent.id, "monitor", None, agent.ops.monitor);
+        }
+
+        // add meta_attributes so resource is created in stopped state
+        let ma = res.append_new_child("meta_attributes");
+        let maid = format!("{}-meta_attributes", &agent.id);
+        ma.set_attr("id", &maid);
+        xml_add_nvpair(ma, &maid, "target-role", "Stopped");
+
+        res.to_string()?
+    };
+    cibcreate("resources", &xml).await?;
+
+    for constraint in constraints {
+        let xml = {
+            let con = match constraint {
+                ResourceConstraint::Ordering {
+                    id,
+                    first,
+                    then,
+                    kind,
+                } => {
+                    let mut con = Element::new("rsc_order");
+                    match kind {
+                        Some(PacemakerKindOrScore::Kind(kind)) => {
+                            con.set_attr("kind", kind.to_string());
+                        }
+                        Some(PacemakerKindOrScore::Score(score)) => {
+                            con.set_attr("score", score.to_string());
+                        }
+                        None => (),
+                    }
+                    con.set_attr("id", id)
+                        .set_attr("first", first)
+                        .set_attr("then", then);
+                    con
+                }
+                ResourceConstraint::Location {
+                    id,
+                    rsc,
+                    node,
+                    score,
+                } => {
+                    let mut con = Element::new("rsc_location");
+                    con.set_attr("id", id)
+                        .set_attr("rsc", rsc)
+                        .set_attr("node", node)
+                        .set_attr("score", score.to_string());
+                    con
+                }
+                ResourceConstraint::Colocation {
+                    id,
+                    rsc,
+                    with_rsc,
+                    score,
+                } => {
+                    let mut con = Element::new("rsc_colocation");
+                    con.set_attr("id", id)
+                        .set_attr("rsc", rsc)
+                        .set_attr("with_rsc", with_rsc)
+                        .set_attr("score", score.to_string());
+                    con
+                }
+            };
+
+            con.to_string()?
+        };
+        cibcreate("constraints", &xml).await?;
+    }
+
+    Ok(())
+}
+
+pub async fn destroy_resource(label: String) -> Result<(), ImlAgentError> {
+    let path = format!("//primitive[@id={}]", label);
+    Command::new("cibadmin")
+        .args(&["--delete", "--xpath", &path])
+        .checked_output()
+        .await?;
+    Ok(())
 }
 
 async fn systemd_unit_servicestate(name: &str) -> Result<ServiceState, ImlAgentError> {
