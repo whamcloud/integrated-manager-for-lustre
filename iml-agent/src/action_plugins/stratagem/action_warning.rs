@@ -88,6 +88,11 @@ pub fn write_records(
     Ok(())
 }
 
+/// Process FIDs
+/// Task Args:
+/// * report_file - output location of file list
+/// Fid Args:
+/// * pfid list - (optional) Array of LinkEA info (specifically "pfid" - parent fid)
 pub async fn process_fids(
     (fsname_or_mntpath, mut task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
 ) -> Result<Vec<FidError>, ImlAgentError> {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::agent_error::ImlAgentError;
+use crate::{action_plugins::stratagem::util::search_rootpath, agent_error::ImlAgentError};
 use futures::{
     future::{self, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
@@ -20,13 +20,6 @@ pub fn purge_files(device: &str, fids: Vec<String>) -> Result<(), ImlAgentError>
     })?;
 
     llapi.rmfids(fids).map_err(Into::into)
-}
-
-async fn search_rootpath(device: String) -> Result<LlapiFid, ImlAgentError> {
-    spawn_blocking(move || LlapiFid::create(&device).map_err(ImlAgentError::from))
-        .err_into()
-        .await
-        .and_then(std::convert::identity)
 }
 
 async fn rm_fids(llapi: LlapiFid, fids: Vec<String>) -> Result<(), ImlAgentError> {
