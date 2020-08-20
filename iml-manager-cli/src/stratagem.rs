@@ -208,25 +208,15 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 
             display_cmd_state(&command);
         }
-	StratagemCommand::Filesync(data) => {
-	    let r = post("run_stratagem", data).await?;
+        StratagemCommand::Filesync(data) => {
+            let r = post("run_stratagem", data).await?;
+            let CmdWrapper { command } = handle_cmd_resp(r).await?;
+            let stop_spinner = start_spinner(&command.message);
+            let command = wait_for_cmd(command).await?;
 
-	    tracing::error!("fs {:?}", r);
-
-	    let CmdWrapper { command } = handle_cmd_resp(r).await?;
-
-	    tracing::error!("fs {:?}", command);
-	    
-	    let stop_spinner = start_spinner(&command.message);
-
-	    let command = wait_for_cmd(command).await?;
-
-	    tracing::error!("fs {:?}", command);
-	    
-	    stop_spinner(None);
-
-	    display_cmd_state(&command);
-	}
+            stop_spinner(None);
+            display_cmd_state(&command);
+        }
         StratagemCommand::StratagemInterval(x) => match x {
             StratagemInterval::List { display_type } => {
                 let stop_spinner = start_spinner("Finding existing intervals...");
