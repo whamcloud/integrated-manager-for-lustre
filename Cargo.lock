@@ -1863,6 +1863,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-snapshot"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "futures-util",
+ "iml-manager-env",
+ "iml-postgres",
+ "iml-rabbit",
+ "iml-service-queue",
+ "iml-tracing",
+ "iml-wire-types",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "iml-stats"
 version = "0.3.0"
 dependencies = [

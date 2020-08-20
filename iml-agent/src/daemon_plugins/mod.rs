@@ -17,6 +17,7 @@ pub mod journal;
 pub mod ntp;
 pub mod ostpool;
 pub mod postoffice;
+pub mod snapshot;
 pub mod stats;
 
 pub use daemon_plugin::{
