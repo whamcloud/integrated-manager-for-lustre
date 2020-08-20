@@ -25,7 +25,7 @@ pub struct Upserts<T: Changeable>(pub Vec<T>);
 #[derive(Debug)]
 pub struct Deletions<T: Changeable>(pub Vec<T>);
 
-type Changes<'a, T> = (Option<Upserts<&'a T>>, Option<Deletions<&'a T>>);
+pub type Changes<'a, T> = (Option<Upserts<&'a T>>, Option<Deletions<&'a T>>);
 
 pub trait GetChanges<T: Changeable + Identifiable> {
     /// Given new and old items, this method compares them and

@@ -436,6 +436,23 @@
       ]
     }
   },
+  "59d0492df20526a4958725905b821d45f75b520276c53bbf318b19fb5e60ab6a": {
+    "query": "INSERT INTO targets \n                        (state, name, active_host_id, host_ids, uuid, mount_path) \n                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], uuid, mount_path\n                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[])\n                        AS t(state, name, active_host_id, host_ids, uuid, mount_path)\n                        ON CONFLICT (uuid)\n                            DO\n                            UPDATE SET  state          = EXCLUDED.state,\n                                        name           = EXCLUDED.name,\n                                        active_host_id = EXCLUDED.active_host_id,\n                                        host_ids       = EXCLUDED.host_ids,\n                                        mount_path     = EXCLUDED.mount_path",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "5b8f7ab8db2264a517e0de4228e259e02201d0116b9235e59cd4b66df61db22e": {
     "query": "DELETE FROM chroma_core_serverprofilepackage WHERE server_profile_id = $1",
     "describe": {
@@ -753,6 +770,78 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "9472740d062c38f49e290c6173d7b676329a956cf9713bb55ff7ffdc0eeaae7f": {
+    "query": "select fqdn, id from chroma_core_managedhost where not_deleted = 't'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 1,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
+  "9c17bcb36d43a3176bf1bc3893fa8729f636139574013f8fe422a51cd0ddcfde": {
+    "query": "select * from targets",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "state",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "host_ids",
+          "type_info": "Int4Array"
+        },
+        {
+          "ordinal": 4,
+          "name": "uuid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 5,
+          "name": "mount_path",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        true
+      ]
     }
   },
   "9edb0846023aa1a9250204fb686d5b95a95962ce20aab75cec2e906edad8eec7": {

@@ -5,8 +5,9 @@
 use device_types::{devices::Device, mount::Mount};
 use futures::{TryFutureExt, TryStreamExt};
 use im::HashSet;
+use iml_change::GetChanges as _;
 use iml_device::{
-    client_mount_content_id, create_cache,
+    build_device_index, client_mount_content_id, create_cache, create_target_cache, find_targets,
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
@@ -14,7 +15,7 @@ use iml_device::{
     update_client_mounts, update_devices, Cache, ImlDeviceError,
 };
 use iml_manager_env::get_pool_limit;
-use iml_postgres::get_db_pool;
+use iml_postgres::{get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
@@ -34,6 +35,8 @@ async fn main() -> Result<(), ImlDeviceError> {
     let addr = iml_manager_env::get_device_aggregator_addr();
 
     let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
+
+    sqlx::migrate!("../../migrations").run(&pool).await?;
 
     let cache = create_cache(&pool).await?;
 
@@ -99,12 +102,76 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let lustreclientmount_ct_id = client_mount_content_id(&pool).await?;
 
+    let mut mount_cache = HashMap::new();
+
     while let Some((host, (devices, mounts))) = s.try_next().await? {
         update_devices(&pool, &host, &devices).await?;
         update_client_mounts(&pool, lustreclientmount_ct_id, &host, &mounts).await?;
 
-        let mut cache = cache2.lock().await;
-        cache.insert(host, devices);
+        let target_cache = create_target_cache(&pool).await?;
+
+        let mut device_cache = cache2.lock().await;
+        device_cache.insert(host.clone(), devices);
+        mount_cache.insert(host, mounts);
+
+        let index = build_device_index(&device_cache);
+
+        let host_ids: HashMap<Fqdn, i32> =
+            sqlx::query!("select fqdn, id from chroma_core_managedhost where not_deleted = 't'",)
+                .fetch(&pool)
+                .map_ok(|x| (Fqdn(x.fqdn), x.id))
+                .try_collect()
+                .await?;
+
+        let targets = find_targets(&device_cache, &mount_cache, &host_ids, &index);
+
+        let x = targets.get_changes(&target_cache);
+
+        let xs = iml_device::build_updates(x);
+
+        let x = xs.into_iter().fold(
+            (vec![], vec![], vec![], vec![], vec![], vec![]),
+            |mut acc, x| {
+                acc.0.push(x.state);
+                acc.1.push(x.name);
+                acc.2.push(x.active_host_id);
+                acc.3.push(
+                    x.host_ids
+                        .into_iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<String>>()
+                        .join(","),
+                );
+                acc.4.push(x.uuid);
+                acc.5.push(x.mount_path);
+
+                acc
+            },
+        );
+
+        tracing::debug!("x: {:?}", x);
+
+        sqlx::query!(r#"INSERT INTO targets 
+                        (state, name, active_host_id, host_ids, uuid, mount_path) 
+                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], uuid, mount_path
+                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[])
+                        AS t(state, name, active_host_id, host_ids, uuid, mount_path)
+                        ON CONFLICT (uuid)
+                            DO
+                            UPDATE SET  state          = EXCLUDED.state,
+                                        name           = EXCLUDED.name,
+                                        active_host_id = EXCLUDED.active_host_id,
+                                        host_ids       = EXCLUDED.host_ids,
+                                        mount_path     = EXCLUDED.mount_path"#,
+            &x.0,
+            &x.1,
+            &x.2 as &[Option<i32>],
+            &x.3,
+            &x.4,
+            &x.5 as &[Option<String>],
+        )
+        .execute(&pool)
+        .await?;
     }
 
     Ok(())
