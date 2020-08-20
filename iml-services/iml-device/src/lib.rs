@@ -410,7 +410,7 @@ pub fn find_targets<'a>(
         .collect()
 }
 
-#[derive(Debug, Eq, Ord, Clone)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone)]
 pub struct Target {
     pub state: String,
     pub name: String,
@@ -418,18 +418,6 @@ pub struct Target {
     pub host_ids: Vec<i32>,
     pub uuid: String,
     pub mount_path: Option<String>,
-}
-
-impl PartialEq for Target {
-    fn eq(&self, other: &Self) -> bool {
-        self.uuid == other.uuid
-    }
-}
-
-impl PartialOrd for Target {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.uuid.cmp(&other.uuid))
-    }
 }
 
 impl Identifiable for Target {
