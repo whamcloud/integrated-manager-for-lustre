@@ -34,7 +34,7 @@ async fn get_snapshots(
 pub(crate) fn endpoint(
     client_filter: impl Filter<Extract = (Connection,), Error = warp::Rejection> + Clone + Send,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    warp::path("action")
+    warp::path("snapshot")
         .and(warp::get())
         .and(composite_ids())
         .and(client_filter)
