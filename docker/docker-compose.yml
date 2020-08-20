@@ -126,6 +126,17 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - "IML_CA_PATH=/var/lib/chroma/authority.crt"
+  snapshot:
+    image: "imlteam/snapshot:6.2.0-dev"
+    hostname: "snapshot"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-snapshot.dockerfile
+    deploy: *default-deploy
+    environment:
+      - RUST_LOG=info,sqlx::query=warn
+    volumes:
+      - "manager-config:/var/lib/chroma"
   device:
     image: "imlteam/device:6.2.0-dev"
     hostname: "device"

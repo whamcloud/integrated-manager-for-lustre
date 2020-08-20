@@ -828,6 +828,19 @@
       "nullable": []
     }
   },
+  "628b472cfdf32ba54540531b117c31b3787c03b05ddf57e03cdf840c71155bde": {
+    "query": "\n            DELETE FROM snapshot\n            WHERE (filesystem_name, snapshot_name) NOT IN (SELECT * FROM UNNEST ($1::text[], $2::text[]))\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "6981275b14db0bca4de21c63c9e9032f7a2f3271ae7806a972277991241f91da": {
     "query": "\n            DELETE from chroma_core_sfajob\n            WHERE (index, storage_system)\n            IN (\n                SELECT *\n                FROM UNNEST($1::int[], $2::text[])\n            )\n        ",
     "describe": {
@@ -835,6 +848,24 @@
       "parameters": {
         "Left": [
           "Int4Array",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "6d7c1af5cf5e15bc84444013fa6989b6317052dc7f82a198003c690f9c0d3c5f": {
+    "query": "\n            INSERT INTO snapshot (filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment)\n            SELECT * FROM\n            UNNEST (\n                $1::text[],\n                $2::text[],\n                $3::timestamp[],\n                $4::timestamp[],\n                $5::text[],\n                $6::bool[],\n                $7::text[]\n            )\n            ON CONFLICT (filesystem_name, snapshot_name) DO UPDATE\n            SET\n                create_time = excluded.create_time,\n                modify_time = excluded.modify_time,\n                snapshot_fsname = excluded.snapshot_fsname,\n                mounted = excluded.mounted,\n                comment = excluded.comment\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray",
+          "TimestampArray",
+          "TimestampArray",
+          "TextArray",
+          "BoolArray",
           "TextArray"
         ]
       },
