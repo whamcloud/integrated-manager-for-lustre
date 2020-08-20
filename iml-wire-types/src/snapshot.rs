@@ -23,29 +23,27 @@ pub struct List {
     pub detail: bool,
 }
 
-#[derive(serde::Deserialize, Clone, PartialEq, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
 /// Snapshots description
 pub struct Snapshot {
-    /// Filesystem name
-    pub fsname: String,
-    /// Snapshot name
-    pub name: String,
+    pub filesystem_name: String,
+    pub snapshot_name: String,
     /// Snapshot members
     pub details: Vec<Detail>,
 }
 
-#[derive(serde::Deserialize, Clone, PartialEq, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
 pub enum Status {
     Mounted,
     NotMounted,
 }
 
-#[derive(serde::Deserialize, Clone, PartialEq, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
 pub struct Detail {
     /// E. g. MDT0000
-    pub role: Option<String>,
+    pub snapshot_role: Option<String>,
     /// Filesystem id (random string)
-    pub fsname: String,
+    pub snapshot_fsname: String,
     pub modify_time: DateTime<Utc>,
     pub create_time: DateTime<Utc>,
     /// Snapshot status (None means unknown)
