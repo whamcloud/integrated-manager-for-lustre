@@ -5,14 +5,14 @@
 use device_types::{devices::Device, mount::Mount};
 use futures::{TryFutureExt, TryStreamExt};
 use im::HashSet;
+use iml_change::GetChanges as _;
 use iml_device::{
     build_device_index, client_mount_content_id, create_cache, create_target_cache, find_targets,
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
     },
-    update_cache, update_client_mounts, update_devices, update_target_mounts_in_cache, Cache,
-    ImlDeviceError,
+    update_client_mounts, update_devices, Cache, ImlDeviceError,
 };
 use iml_manager_env::get_pool_limit;
 use iml_postgres::{get_db_pool, sqlx};
@@ -103,11 +103,12 @@ async fn main() -> Result<(), ImlDeviceError> {
     let lustreclientmount_ct_id = client_mount_content_id(&pool).await?;
 
     let mut mount_cache = HashMap::new();
-    let mut target_cache = create_target_cache(&pool).await?;
 
     while let Some((host, (devices, mounts))) = s.try_next().await? {
         update_devices(&pool, &host, &devices).await?;
         update_client_mounts(&pool, lustreclientmount_ct_id, &host, &mounts).await?;
+
+        let target_cache = create_target_cache(&pool).await?;
 
         let mut device_cache = cache2.lock().await;
         device_cache.insert(host.clone(), devices);
@@ -123,10 +124,12 @@ async fn main() -> Result<(), ImlDeviceError> {
                 .await?;
 
         let targets = find_targets(&device_cache, &mount_cache, &host_ids, &index);
-        update_cache(&targets, &mut target_cache);
-        update_target_mounts_in_cache(&targets, &mut target_cache);
 
-        let x = target_cache.0.clone().into_iter().fold(
+        let x = targets.get_changes(&target_cache);
+
+        let xs = iml_device::build_updates(x);
+
+        let x = xs.into_iter().fold(
             (vec![], vec![], vec![], vec![], vec![], vec![]),
             |mut acc, x| {
                 acc.0.push(x.state);
