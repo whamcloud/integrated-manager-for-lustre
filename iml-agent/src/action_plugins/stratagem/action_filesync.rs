@@ -5,18 +5,16 @@
 extern crate futures;
 extern crate tokio;
 
-use crate::{
-    agent_error::{ImlAgentError, RequiredError},
-};
+use crate::agent_error::{ImlAgentError, RequiredError};
 use futures::TryFutureExt;
 use iml_wire_types::{FidError, FidItem};
 use liblustreapi::LlapiFid;
+use std::io::Write;
 use std::{collections::HashMap, path::PathBuf};
-use tokio::task::spawn_blocking;
 use tokio::fs;
 use tokio::process::Command;
-use std::io::{Write};
-use tracing::{error, debug};
+use tokio::task::spawn_blocking;
+use tracing::{debug, error};
 
 async fn search_rootpath(device: String) -> Result<LlapiFid, ImlAgentError> {
     spawn_blocking(move || LlapiFid::create(&device).map_err(ImlAgentError::from))
@@ -27,21 +25,18 @@ async fn search_rootpath(device: String) -> Result<LlapiFid, ImlAgentError> {
 
 /// Process FIDs
 pub async fn process_fids(
-    (fsname_or_mntpath,
-     task_args,
-     fid_list): (String, HashMap<String, String>, Vec<FidItem>),
+    (fsname_or_mntpath, task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
 ) -> Result<Vec<FidError>, ImlAgentError> {
     let llapi = search_rootpath(fsname_or_mntpath).await?;
-    let dest_src = task_args.get("remote".into()).ok_or(RequiredError(
-        "Task missing 'remote' argument".to_string(),))?;
+    let dest_src = task_args
+        .get("remote".into())
+        .ok_or(RequiredError("Task missing 'remote' argument".to_string()))?;
 
     let mut tmp_workfile = PathBuf::from(dest_src);
-    fs::create_dir_all(&tmp_workfile)
-	.await
-	.or_else(|e| {
-	    error!("failed to create temp file: {}", e);
-	    return Err(e)
-	})?;
+    fs::create_dir_all(&tmp_workfile).await.or_else(|e| {
+        error!("failed to create temp file: {}", e);
+        return Err(e);
+    })?;
 
     tmp_workfile.push("workfile");
 
@@ -54,16 +49,15 @@ pub async fn process_fids(
      */
 
     for fid in fid_list {
-	let fid_path = llapi.fid2path(&fid.fid)?;
-	let src_file = format!("{}/{}\n", llapi.mntpt(), &fid_path);
-	let dest_file = format!("{}/{}",
-				dest_src, &fid_path);
+        let fid_path = llapi.fid2path(&fid.fid)?;
+        let src_file = format!("{}/{}\n", llapi.mntpt(), &fid_path);
+        let dest_file = format!("{}/{}", dest_src, &fid_path);
 
-	let mut dest_dir = PathBuf::from(&dest_file);
-	dest_dir.pop();
+        let mut dest_dir = PathBuf::from(&dest_file);
+        dest_dir.pop();
 
-	fs::create_dir_all(&dest_dir).await?;
-	workfile.write_all(src_file.as_bytes())?;
+        fs::create_dir_all(&dest_dir).await?;
+        workfile.write_all(src_file.as_bytes())?;
     }
 
     workfile.flush()?;
@@ -75,18 +69,23 @@ pub async fn process_fids(
      * $DEST/lustre/dir1/foo which is ... weird
      */
     let output = Command::new("/usr/lib64/openmpi/bin/mpirun")
-	.arg("--hostfile")
-	.arg("/etc/iml/filesync-hostfile")
-	.arg("--allow-run-as-root")
-	.arg("/usr/local/bin/dcp")
-	.arg("-i")
-	.arg(tmpstr)
-	.arg(format!("{}/", llapi.mntpt()))
-	.arg(format!("{}/", dest_src))
-	.output();
+        .arg("--hostfile")
+        .arg("/etc/iml/filesync-hostfile")
+        .arg("--allow-run-as-root")
+        .arg("/usr/local/bin/dcp")
+        .arg("-i")
+        .arg(tmpstr)
+        .arg(format!("{}/", llapi.mntpt()))
+        .arg(format!("{}/", dest_src))
+        .output();
     let output = output.await?;
 
-    debug!("exited with {} {} {}", output.status, std::str::from_utf8(&output.stdout)?, std::str::from_utf8(&output.stderr)?);
+    debug!(
+        "exited with {} {} {}",
+        output.status,
+        std::str::from_utf8(&output.stdout)?,
+        std::str::from_utf8(&output.stderr)?
+    );
 
     Ok(vec![])
 }

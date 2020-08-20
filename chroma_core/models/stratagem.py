@@ -371,7 +371,7 @@ class RunStratagemStep(Step):
                         "rules": [
                             {
                                 "action": "LAT_SHELL_CMD_FID",
-                                "expression": "{}".format("filesync_expression"),
+                                "expression": "{}".format(filesync_expression),
                                 "argument": "filesync",
                                 "counter_name": "filesync",
                             }
