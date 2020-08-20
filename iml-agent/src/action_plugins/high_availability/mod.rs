@@ -334,7 +334,7 @@ pub async fn stop_resource(resource: String) -> Result<(), ImlAgentError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{process_resource, resource_status, ResourceAgentInfo, ResourceAgentType};
+    use super::{process_resource, resource_status, PacemakerOperations, ResourceAgentInfo, ResourceAgentType};
     use elementtree::Element;
     use std::collections::HashMap;
 
