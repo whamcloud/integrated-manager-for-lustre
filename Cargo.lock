@@ -1513,6 +1513,7 @@ name = "iml-api"
 version = "0.3.0"
 dependencies = [
  "futures",
+ "iml-action-client",
  "iml-job-scheduler-rpc",
  "iml-manager-env",
  "iml-postgres",
