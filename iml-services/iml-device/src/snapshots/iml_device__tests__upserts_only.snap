@@ -1,0 +1,34 @@
+---
+source: iml-services/iml-device/src/lib.rs
+expression: xs
+---
+[
+    Target {
+        state: "mounted",
+        name: "mdt1",
+        active_host_id: Some(
+            1,
+        ),
+        host_ids: [
+            2,
+        ],
+        uuid: "123456",
+        mount_path: Some(
+            "/mnt/mdt1",
+        ),
+    },
+    Target {
+        state: "mounted",
+        name: "ost1",
+        active_host_id: Some(
+            3,
+        ),
+        host_ids: [
+            4,
+        ],
+        uuid: "567890",
+        mount_path: Some(
+            "/mnt/ost1",
+        ),
+    },
+]

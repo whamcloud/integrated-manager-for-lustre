@@ -41,12 +41,12 @@ pub async fn create_cache(pool: &PgPool) -> Result<Cache, ImlDeviceError> {
     Ok(Arc::new(Mutex::new(data)))
 }
 
-pub async fn create_target_cache(pool: &PgPool) -> Result<Targets, ImlDeviceError> {
+pub async fn create_target_cache(pool: &PgPool) -> Result<Vec<Target>, ImlDeviceError> {
     let xs: Vec<Target> = sqlx::query_as!(Target, "select * from targets")
         .fetch_all(pool)
         .await?;
 
-    Ok(Targets(xs))
+    Ok(xs)
 }
 
 pub async fn update_devices(
@@ -334,7 +334,7 @@ pub fn find_targets<'a>(
     mounts: &HashMap<Fqdn, HashSet<Mount>>,
     host_map: &HashMap<Fqdn, i32>,
     device_index: &DeviceIndex<'a>,
-) -> Targets {
+) -> Vec<Target> {
     let xs: Vec<_> = mounts
         .iter()
         .map(|(k, xs)| xs.into_iter().map(move |x| (k, x)))
@@ -398,8 +398,7 @@ pub fn find_targets<'a>(
         })
         .collect();
 
-    let xs = xs
-        .into_iter()
+    xs.into_iter()
         .map(|(fqdn, ids, mntpnt, fs_uuid, target)| Target {
             state: "mounted".into(),
             active_host_id: Some(*fqdn),
@@ -408,9 +407,7 @@ pub fn find_targets<'a>(
             uuid: fs_uuid.into(),
             mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
         })
-        .collect();
-
-    Targets(xs)
+        .collect()
 }
 
 #[derive(Debug, Eq, Ord, PartialOrd, Clone)]
@@ -423,26 +420,6 @@ pub struct Target {
     pub mount_path: Option<String>,
 }
 
-impl Target {
-    pub fn update(&mut self, other: Target) {
-        self.state = other.state;
-        self.name = other.name;
-        self.active_host_id = other.active_host_id;
-        self.host_ids = other.host_ids;
-        self.uuid = other.uuid;
-        self.mount_path = other.mount_path;
-    }
-}
-
-#[derive(Debug)]
-pub struct Targets(pub Vec<Target>);
-
-impl PartialEq for Target {
-    fn eq(&self, other: &Self) -> bool {
-        self.uuid == other.uuid
-    }
-}
-
 impl Identifiable for Target {
     type Id = String;
 
@@ -451,30 +428,37 @@ impl Identifiable for Target {
     }
 }
 
-pub fn update_cache(targets: &Targets, cache: &mut Targets) -> () {
-    for target in targets.0.clone() {
-        if let Some(t) = cache.0.iter_mut().find(|x| *x == &target) {
-            t.update(target);
-        } else {
-            cache.0.push(target);
-        }
+impl Target {
+    pub fn set_unmounted(&mut self) {
+        self.state = "unmounted".into();
+        self.active_host_id = None;
+        self.mount_path = None;
     }
 }
 
-pub fn update_target_mounts_in_cache(targets: &Targets, cache: &mut Targets) -> () {
-    let xs: Vec<Target> = cache.0.clone();
-    let xs2: Vec<Target> = targets.0.clone();
+pub fn build_updates(x: Changes<'_, Target>) -> Vec<Target> {
+    match x {
+        (Some(Upserts(up)), Some(Deletions(del))) => del
+            .into_iter()
+            .cloned()
+            .map(|mut t| {
+                t.set_unmounted();
 
-    let (diff, _) = xs.get_changes(&xs2);
+                t
+            })
+            .chain(up.into_iter().cloned())
+            .collect(),
+        (Some(Upserts(xs)), None) => xs.into_iter().cloned().collect(),
+        (None, Some(Deletions(xs))) => xs
+            .into_iter()
+            .cloned()
+            .map(|mut t| {
+                t.set_unmounted();
 
-    for target in diff.expect("Couldn't get diff").0 {
-        if let Some(t) = cache.0.iter_mut().find(|x| *x == target) {
-            t.state = "unmounted".into();
-            t.active_host_id = None;
-            t.mount_path = None;
-            t.name = target.name.to_string();
-            t.host_ids = target.host_ids.clone();
-        }
+                t
+            })
+            .collect(),
+        (None, None) => vec![],
     }
 }
 
@@ -496,8 +480,8 @@ mod tests {
     }
 
     #[test]
-    fn test_updating_target_cache() {
-        let mut cache: Targets = Targets(vec![
+    fn test_upserts_only() {
+        let ups = vec![
             Target {
                 state: "mounted".into(),
                 name: "mdt1".into(),
@@ -505,33 +489,6 @@ mod tests {
                 host_ids: vec![2],
                 uuid: "123456".into(),
                 mount_path: Some("/mnt/mdt1".into()),
-            },
-            Target {
-                state: "unmounted".into(),
-                name: "mdt2".into(),
-                active_host_id: None,
-                host_ids: vec![1],
-                uuid: "654321".into(),
-                mount_path: None,
-            },
-        ]);
-
-        let targets = Targets(vec![
-            Target {
-                state: "mounted".into(),
-                name: "mdt1".into(),
-                active_host_id: Some(1),
-                host_ids: vec![2],
-                uuid: "123456".into(),
-                mount_path: Some("/mnt/mdt1".into()),
-            },
-            Target {
-                state: "mounted".into(),
-                name: "mdt2".into(),
-                active_host_id: Some(2),
-                host_ids: vec![1],
-                uuid: "654321".into(),
-                mount_path: Some("/mnt/mdt2".into()),
             },
             Target {
                 state: "mounted".into(),
@@ -541,25 +498,29 @@ mod tests {
                 uuid: "567890".into(),
                 mount_path: Some("/mnt/ost1".into()),
             },
-        ]);
+        ];
 
-        update_cache(&targets, &mut cache);
+        let upserts = Upserts(ups.iter().collect());
 
-        let data: String = cache.0.iter().map(|x| format!("{:?}\n", x)).collect();
-        insta::assert_snapshot!(data);
+        let xs = build_updates((Some(upserts), None));
+
+        insta::assert_debug_snapshot!(xs);
     }
 
     #[test]
-    fn test_update_mounts() {
-        let mut cache = Targets(vec![
-            Target {
-                state: "mounted".into(),
-                name: "mdt1".into(),
-                active_host_id: Some(1),
-                host_ids: vec![2],
-                uuid: "123456".into(),
-                mount_path: Some("/mnt/mdt1".into()),
-            },
+    fn test_upserts_and_deletions() {
+        let t = Target {
+            state: "mounted".into(),
+            name: "mdt1".into(),
+            active_host_id: Some(1),
+            host_ids: vec![2],
+            uuid: "123456".into(),
+            mount_path: Some("/mnt/mdt1".into()),
+        };
+
+        let deletions = Deletions(vec![&t]);
+
+        let ups = vec![
             Target {
                 state: "mounted".into(),
                 name: "mdt2".into(),
@@ -576,30 +537,12 @@ mod tests {
                 uuid: "567890".into(),
                 mount_path: Some("/mnt/ost1".into()),
             },
-        ]);
+        ];
 
-        let targets = Targets(vec![
-            Target {
-                state: "mounted".into(),
-                name: "mdt2".into(),
-                active_host_id: Some(2),
-                host_ids: vec![1],
-                uuid: "654321".into(),
-                mount_path: Some("/mnt/mdt2".into()),
-            },
-            Target {
-                state: "mounted".into(),
-                name: "ost1".into(),
-                active_host_id: Some(3),
-                host_ids: vec![4],
-                uuid: "567890".into(),
-                mount_path: Some("/mnt/ost1".into()),
-            },
-        ]);
+        let upserts = Upserts(ups.iter().collect());
 
-        update_target_mounts_in_cache(&targets, &mut cache);
+        let xs = build_updates((Some(upserts), Some(deletions)));
 
-        let data: String = cache.0.iter().map(|x| format!("{:?}\n", x)).collect();
-        insta::assert_snapshot!(data);
+        insta::assert_debug_snapshot!(xs);
     }
 }
