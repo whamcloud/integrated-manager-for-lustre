@@ -11,7 +11,8 @@ use iml_device::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
     },
-    update_client_mounts, update_devices, Cache, ImlDeviceError,
+    update_cache, update_client_mounts, update_devices, update_target_mounts_in_cache, Cache,
+    ImlDeviceError,
 };
 use iml_manager_env::get_pool_limit;
 use iml_postgres::{get_db_pool, sqlx};
@@ -122,8 +123,8 @@ async fn main() -> Result<(), ImlDeviceError> {
                 .await?;
 
         let targets = find_targets(&device_cache, &mount_cache, &host_ids, &index);
-        targets.update_cache(&mut target_cache);
-        targets.update_target_mounts_in_cache(&mut target_cache);
+        update_cache(&targets, &mut target_cache);
+        update_target_mounts_in_cache(&targets, &mut target_cache);
 
         let x = target_cache.0.clone().into_iter().fold(
             (vec![], vec![], vec![], vec![], vec![], vec![]),

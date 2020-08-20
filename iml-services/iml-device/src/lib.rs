@@ -13,6 +13,7 @@ use device_types::{
 };
 use futures::{future::try_join_all, lock::Mutex};
 use im::HashSet;
+use iml_change::*;
 use iml_postgres::sqlx::{self, PgPool};
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
@@ -442,36 +443,37 @@ impl PartialEq for Target {
     }
 }
 
-impl Targets {
-    pub fn update_cache(&self, cache: &mut Targets) -> () {
-        for target in self.0.clone() {
-            if let Some(t) = cache.0.iter_mut().find(|x| *x == &target) {
-                t.update(target);
-            } else {
-                cache.0.push(target);
-            }
+impl Identifiable for Target {
+    type Id = String;
+
+    fn id(&self) -> Self::Id {
+        self.uuid.clone()
+    }
+}
+
+pub fn update_cache(targets: &Targets, cache: &mut Targets) -> () {
+    for target in targets.0.clone() {
+        if let Some(t) = cache.0.iter_mut().find(|x| *x == &target) {
+            t.update(target);
+        } else {
+            cache.0.push(target);
         }
     }
+}
 
-    pub fn update_target_mounts_in_cache(&self, cache: &mut Targets) -> () {
-        let xs: BTreeSet<Target> = cache.0.iter().cloned().collect();
-        let xs2: BTreeSet<Target> = self.0.iter().cloned().collect();
-        let diff: Vec<Target> = xs
-            .difference(&xs2)
-            .cloned()
-            .map(|mut x| {
-                x.state = "unmounted".to_string();
-                x.active_host_id = None;
-                x.mount_path = None;
+pub fn update_target_mounts_in_cache(targets: &Targets, cache: &mut Targets) -> () {
+    let xs: Vec<Target> = cache.0.clone();
+    let xs2: Vec<Target> = targets.0.clone();
 
-                x
-            })
-            .collect();
+    let (diff, _) = xs.get_changes(&xs2);
 
-        for target in diff {
-            if let Some(t) = cache.0.iter_mut().find(|x| **x == target) {
-                t.update(target);
-            }
+    for target in diff.expect("Couldn't get diff").0 {
+        if let Some(t) = cache.0.iter_mut().find(|x| *x == target) {
+            t.state = "unmounted".into();
+            t.active_host_id = None;
+            t.mount_path = None;
+            t.name = target.name.to_string();
+            t.host_ids = target.host_ids.clone();
         }
     }
 }
@@ -541,7 +543,7 @@ mod tests {
             },
         ]);
 
-        targets.update_cache(&mut cache);
+        update_cache(&targets, &mut cache);
 
         let data: String = cache.0.iter().map(|x| format!("{:?}\n", x)).collect();
         insta::assert_snapshot!(data);
@@ -595,7 +597,7 @@ mod tests {
             },
         ]);
 
-        targets.update_target_mounts_in_cache(&mut cache);
+        update_target_mounts_in_cache(&targets, &mut cache);
 
         let data: String = cache.0.iter().map(|x| format!("{:?}\n", x)).collect();
         insta::assert_snapshot!(data);
