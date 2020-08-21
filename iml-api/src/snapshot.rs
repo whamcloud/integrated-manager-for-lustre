@@ -26,14 +26,37 @@ async fn get_snapshots_internal(
     .await?
     .mgs_id;
 
-    let mgs = sqlx::query!(
+    let mgs_uuid = sqlx::query!(
         r#"
-        select * from chroma_core_managedtarget where id=$1
+        select uuid from chroma_core_managedtarget where id=$1
         "#,
         mgs_id
     )
     .fetch_one(&pool)
-    .await?;
+    .await?
+    .uuid;
+
+    let active_mgs_host_id = sqlx::query!(
+        r#"
+        select active_host_id from targets where uuid=$1
+        "#,
+        mgs_uuid
+    )
+    .fetch_one(&pool)
+    .await?
+    .active_host_id;
+
+    let active_mgs_host_fqdn = sqlx::query!(
+        r#"
+        select fqdn from chroma_core_managedhost where id=$1
+        "#,
+        active_mgs_host_id
+    )
+    .fetch_one(&pool)
+    .await?
+    .fqdn;
+
+    tracing::info!("{}", active_mgs_host_fqdn);
 
     Ok(())
 }
