@@ -1539,16 +1539,6 @@
       ]
     }
   },
-  "b8e774ab32b79eb3f2d87b7f373b609831f72f63f716dcbb7917871531466b1a": {
-    "query": "\n        INSERT INTO chroma_core_serverprofile\n        (name, ui_name, ui_description, managed, worker, user_selectable, initial_state, ntp, corosync, corosync2, pacemaker, \"default\")\n        VALUES\n        ('foo', 'foo', 'foo', 'f', 'f', 't', 'bar', 'f', 'f', 'f', 'f', 't')\n        ON CONFLICT DO NOTHING\n    ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": []
-    }
-  },
   "bb7fb337cfeac9a17eefb21a498e76be70c2f395473ba42331f51cc5e6d48679": {
     "query": "\n        INSERT INTO chroma_core_device\n        (fqdn, devices)\n        VALUES ($1, $2)\n        ON CONFLICT (fqdn) DO UPDATE\n        SET devices = EXCLUDED.devices\n    ",
     "describe": {
