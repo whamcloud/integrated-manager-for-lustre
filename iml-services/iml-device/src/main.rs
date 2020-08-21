@@ -156,7 +156,7 @@ async fn main() -> Result<(), ImlDeviceError> {
             (vec![], vec![], vec![], vec![], vec![], vec![], vec![]),
             |mut acc, x| {
                 acc.0.push(x.state);
-                acc.1.push(x.name.clone());
+                acc.1.push(x.name);
                 acc.2.push(x.active_host_id);
                 acc.3.push(
                     x.host_ids

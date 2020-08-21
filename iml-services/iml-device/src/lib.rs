@@ -406,10 +406,7 @@ pub fn find_targets<'a>(
             state: "mounted".into(),
             active_host_id: Some(*fqdn),
             host_ids: ids,
-            filesystems: target_to_fs_map
-                .get(&(target.to_string()))
-                .unwrap_or(&vec![])
-                .clone(),
+            filesystems: target_to_fs_map.get(target).cloned().unwrap_or(vec![]),
             name: target.into(),
             uuid: fs_uuid.into(),
             mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
@@ -470,7 +467,7 @@ pub fn build_updates(x: Changes<'_, Target>) -> Vec<Target> {
     }
 }
 
-fn parse_target_filesystem_data(query_result: Option<Vec<Node>>) -> TargetFsRecord {
+fn parse_filesystem_data(query_result: Option<Vec<Node>>, tag: &str) -> TargetFsRecord {
     let target_to_fs = if let Some(nodes) = query_result {
         nodes
             .into_iter()
@@ -485,16 +482,15 @@ fn parse_target_filesystem_data(query_result: Option<Vec<Node>>) -> TargetFsReco
                     })
                     .map(|mut x| {
                         let filesystems: String = serde_json::from_value(
-                            x.entry("fs".into())
-                                .or_insert(serde_json::json!(""))
-                                .clone(),
+                            x.remove(tag.into())
+                                .unwrap_or_else(|| serde_json::json!("")),
                         )
-                        .expect("Couldn't parse filesystem name.");
+                        .expect(format!("Couldn't parse {} name.", tag).as_str());
+
                         (
                             serde_json::from_value(
-                                x.entry("target".into())
-                                    .or_insert(serde_json::json!(""))
-                                    .clone(),
+                                x.remove("target".into())
+                                    .unwrap_or_else(|| serde_json::json!("")),
                             )
                             .expect("Couldn't parse target."),
                             filesystems.split(",").map(|x| x.to_string()).collect(),
@@ -523,46 +519,7 @@ pub async fn get_target_filesystem_map(
         )
         .await?;
 
-    Ok(parse_target_filesystem_data(query_result))
-}
-
-fn parse_mgs_filesystem_data(query_result: Option<Vec<Node>>) -> TargetFsRecord {
-    if let Some(nodes) = query_result {
-        nodes
-            .into_iter()
-            .filter_map(|x| x.series)
-            .map(|xs| {
-                xs.into_iter()
-                    .map(|x| {
-                        x.columns
-                            .into_iter()
-                            .zip(x.values.into_iter().flatten())
-                            .collect::<HashMap<String, serde_json::Value>>()
-                    })
-                    .map(|mut x| {
-                        let filesystems: String = serde_json::from_value(
-                            x.entry("mgs_fs".into())
-                                .or_insert(serde_json::json!(""))
-                                .clone(),
-                        )
-                        .expect("Couldn't parse filesystem name.");
-                        (
-                            serde_json::from_value(
-                                x.entry("target".into())
-                                    .or_insert(serde_json::json!(""))
-                                    .clone(),
-                            )
-                            .expect("Couldn't parse target."),
-                            filesystems.split(",").map(|x| x.to_string()).collect(),
-                        )
-                    })
-                    .collect::<Vec<(String, Vec<String>)>>()
-            })
-            .flatten()
-            .collect::<TargetFsRecord>()
-    } else {
-        HashMap::new()
-    }
+    Ok(parse_filesystem_data(query_result, "fs"))
 }
 
 pub async fn get_mgs_filesystem_map(
@@ -575,7 +532,7 @@ pub async fn get_mgs_filesystem_map(
         )
         .await?;
 
-    Ok(parse_mgs_filesystem_data(query_result))
+    Ok(parse_filesystem_data(query_result, "mgs_fs"))
 }
 
 #[cfg(test)]
@@ -743,7 +700,7 @@ mod tests {
             ]),
         }]);
 
-        let result = parse_target_filesystem_data(query_result);
+        let result = parse_filesystem_data(query_result, "fs");
         assert_eq!(
             result,
             vec![
@@ -791,7 +748,7 @@ mod tests {
             ]),
         }]);
 
-        let result = parse_mgs_filesystem_data(query_result);
+        let result = parse_filesystem_data(query_result, "mgs_fs");
         assert_eq!(
             result,
             vec![
