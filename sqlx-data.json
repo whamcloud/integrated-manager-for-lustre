@@ -1034,84 +1034,14 @@
       ]
     }
   },
-  "85bb233781ed127b3e9347d357f006dcf9f0ccf5c89475172d1e40fc5f0dfe68": {
-    "query": "\n        select * from chroma_core_managedtarget where id=$1\n        ",
+  "8886d9d78e70b43ca2833883ea78ebf9fd29dabfa4903dbe3bcc982a67f4fc27": {
+    "query": "\n        select fqdn from chroma_core_managedhost where id=$1\n        ",
     "describe": {
       "columns": [
         {
           "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "state_modified_at",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 2,
-          "name": "state",
+          "name": "fqdn",
           "type_info": "Varchar"
-        },
-        {
-          "ordinal": 3,
-          "name": "immutable_state",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 4,
-          "name": "name",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 5,
-          "name": "uuid",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 6,
-          "name": "ha_label",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 7,
-          "name": "inode_size",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 8,
-          "name": "bytes_per_inode",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 9,
-          "name": "inode_count",
-          "type_info": "Int8"
-        },
-        {
-          "ordinal": 10,
-          "name": "reformat",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 11,
-          "name": "not_deleted",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 12,
-          "name": "active_mount_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 13,
-          "name": "content_type_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 14,
-          "name": "volume_id",
-          "type_info": "Int4"
         }
       ],
       "parameters": {
@@ -1120,20 +1050,6 @@
         ]
       },
       "nullable": [
-        false,
-        false,
-        false,
-        false,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        true,
-        true,
         false
       ]
     }
@@ -1349,6 +1265,26 @@
       "nullable": [
         false,
         false
+      ]
+    }
+  },
+  "95a0dde8634f27e37e152c2e872869adfc97f7e78eeaf8c8fba3a7f0f544cfb7": {
+    "query": "\n        select active_host_id from targets where uuid=$1\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        true
       ]
     }
   },
