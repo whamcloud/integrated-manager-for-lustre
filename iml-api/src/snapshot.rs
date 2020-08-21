@@ -23,7 +23,11 @@ async fn get_snapshots_internal(
         args.fsname
     )
     .fetch_one(&pool)
-    .await?
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => error::ImlApiError::FileSystemNotFound(args.fsname.clone()),
+        _ => e.into(),
+    })?
     .mgs_id;
 
     let mgs_uuid = sqlx::query!(
@@ -68,7 +72,12 @@ async fn get_snapshots(
     conn: Connection,
     pool: PgPool,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let snapshots = get_snapshots_internal(args, conn, pool).await?;
+    let snapshots = get_snapshots_internal(args, conn, pool)
+        .await
+        .map_err(|e| match e {
+            error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
+            _ => e.into(),
+        })?;
 
     Ok(warp::reply::json(&snapshots))
 }
