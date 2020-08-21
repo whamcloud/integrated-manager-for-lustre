@@ -7,13 +7,13 @@ use iml_action_client::invoke_rust_agent;
 use iml_postgres::{sqlx, PgPool};
 use iml_rabbit::Connection;
 use iml_wire_types::snapshot;
-use warp::{reply::Json, Filter};
+use warp::Filter;
 
 async fn get_snapshots_internal(
     args: snapshot::List,
     conn: Connection,
     pool: PgPool,
-) -> Result<(), error::ImlApiError> {
+) -> Result<serde_json::Value, error::ImlApiError> {
     drop(conn);
 
     let mgs_id = sqlx::query!(
@@ -58,7 +58,9 @@ async fn get_snapshots_internal(
 
     tracing::info!("{}", active_mgs_host_fqdn);
 
-    Ok(())
+    let snapshots = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_list", args).await?;
+
+    Ok(snapshots)
 }
 
 async fn get_snapshots(
