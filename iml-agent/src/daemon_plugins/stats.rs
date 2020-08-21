@@ -62,7 +62,7 @@ impl DaemonPlugin for Stats {
             match result {
                 Ok((lctl, mgs_fs, lnetctl, meminfo, maybe_cpustats)) => {
                     let mut lctl_output = parse_lctl_output(&lctl.stdout)?;
-                    let mut mgs_fs_output = parse_mgs_fs_output(&mgs_fs.stdout)?;
+                    let mut mgs_fs_output = parse_mgs_fs_output(&mgs_fs.stdout).unwrap_or_default();
 
                     lctl_output.append(&mut mgs_fs_output);
 
