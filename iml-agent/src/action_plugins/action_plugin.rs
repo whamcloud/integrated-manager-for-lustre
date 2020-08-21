@@ -57,6 +57,7 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("ostpool_destroy", ostpool::action_pool_destroy)
         .add_plugin("ostpool_add", ostpool::action_pool_add)
         .add_plugin("ostpool_remove", ostpool::action_pool_remove)
+        .add_plugin("snapshot_list", lustre::snapshot::list)
         .add_plugin("snapshot_create", lustre::snapshot::create)
         .add_plugin("snapshot_destroy", lustre::snapshot::destroy)
         .add_plugin("snapshot_mount", lustre::snapshot::mount)
