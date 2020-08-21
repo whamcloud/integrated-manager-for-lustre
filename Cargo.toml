@@ -14,7 +14,6 @@ members = [
   'iml-manager-cli',
   'iml-manager-client',
   'iml-manager-env',
-  'iml-orm',
   'iml-postgres',
   'iml-rabbit',
   'iml-report',

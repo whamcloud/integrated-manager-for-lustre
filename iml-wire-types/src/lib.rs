@@ -4,6 +4,7 @@
 
 pub mod client;
 pub mod db;
+pub mod sfa;
 pub mod snapshot;
 pub mod warp_drive;
 

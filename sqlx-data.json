@@ -56,6 +56,55 @@
       ]
     }
   },
+  "08fab7405a3d457c6c5774a5dd7bf683f0529ba3c63187de4b632653ecb56a4d": {
+    "query": "\n            DELETE from chroma_core_sfacontroller\n            WHERE (index, storage_system)\n            IN (\n                SELECT *\n                FROM UNNEST($1::int[], $2::text[])\n            )\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "1167f9862155b35e2bb59ba77286ccfc35c7f6113227d8dce116b3def418e2f9": {
+    "query": "\n        INSERT INTO chroma_core_sfastoragesystem\n        (\n            uuid,\n            platform,\n            health_state_reason,\n            health_state,\n            child_health_state\n        )\n        VALUES ($1, $2, $3, $4, $5)\n        ON CONFLICT (uuid) DO UPDATE\n        SET\n            platform = excluded.platform,\n            health_state_reason = excluded.health_state_reason,\n            health_state = excluded.health_state,\n            child_health_state = excluded.child_health_state\n    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text",
+          "Text",
+          "Int2",
+          "Int2"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "12b85bdac2a34efedc73bb817f38fd589a8e2754392d863cf4211e169e935153": {
+    "query": "\n        INSERT INTO chroma_core_sfadiskdrive\n        (\n            index,\n            enclosure_index,\n            failed,\n            slot_number,\n            health_state,\n            health_state_reason,\n            member_index,\n            member_state,\n            storage_system\n        )\n        SELECT * FROM UNNEST(\n            $1::integer[],\n            $2::integer[],\n            $3::bool[],\n            $4::integer[],\n            $5::smallint[],\n            $6::text[],\n            $7::smallint[],\n            $8::smallint[],\n            $9::text[]\n        )\n        ON CONFLICT (index, storage_system) DO UPDATE\n        SET\n            enclosure_index = excluded.enclosure_index,\n            failed = excluded.failed,\n            slot_number = excluded.slot_number,\n            health_state = excluded.health_state,\n            health_state_reason = excluded.health_state_reason,\n            member_index = excluded.member_index,\n            member_state = excluded.member_state\n    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "Int4Array",
+          "BoolArray",
+          "Int4Array",
+          "Int2Array",
+          "TextArray",
+          "Int2Array",
+          "Int2Array",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "131959cfcc0275c8797cb5aa12f0ad15dd6baa2f75c716815607a039defac3a6": {
     "query": "select fqdn from chroma_core_managedhost where id = $1 and not_deleted = 't'",
     "describe": {
@@ -86,6 +135,54 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "1abfa2e9edeb822cb74fe23011a079b9396e9e49474a2e6aeaa2048177af72b5": {
+    "query": "\n        SELECT\n            index,\n            sub_target_index,\n            sub_target_type as \"sub_target_type: _\",\n            job_type as \"job_type: _\",\n            state as \"state: _\",\n            storage_system\n        FROM chroma_core_sfajob\n    ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "index",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "sub_target_index",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 2,
+          "name": "sub_target_type: _",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 3,
+          "name": "job_type: _",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 4,
+          "name": "state: _",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 5,
+          "name": "storage_system",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        true,
+        true,
+        false,
+        false,
+        false
+      ]
     }
   },
   "1bcbed2e431ad27c5f4969dab2089990e14611629b0760f4a7a499f0126347be": {
@@ -122,6 +219,20 @@
           "Bool",
           "Bool",
           "Bool"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "1c2f3195b457e4cb39dc074d9474891d4fa7a48186268158a7870e192f3eb564": {
+    "query": "\n            DELETE from chroma_core_sfapowersupply\n            WHERE (index, storage_system, enclosure_index)\n            IN (\n                SELECT *\n                FROM UNNEST($1::int[], $2::text[], $3::int[])\n            )\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "TextArray",
+          "Int4Array"
         ]
       },
       "nullable": []
@@ -377,6 +488,23 @@
       ]
     }
   },
+  "414a5b7c63ec04ad876c282460de775c0e919c1063c46c7a49704b3ccd87ab3f": {
+    "query": "\n        INSERT INTO chroma_core_sfacontroller\n        (\n            index,\n            enclosure_index,\n            health_state,\n            health_state_reason,\n            child_health_state,\n            storage_system\n        )\n        SELECT * FROM UNNEST(\n            $1::int[],\n            $2::int[],\n            $3::smallint[],\n            $4::text[],\n            $5::smallint[],\n            $6::text[]\n        )\n        ON CONFLICT (index, storage_system) DO UPDATE\n        SET\n            enclosure_index = excluded.enclosure_index,\n            health_state = excluded.health_state,\n            health_state_reason = excluded.health_state_reason,\n            child_health_state = excluded.child_health_state\n    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "Int4Array",
+          "Int2Array",
+          "TextArray",
+          "Int2Array",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "5755ec79ff7be6cdfe0ba5fa9c2cd9c280a99db0c802ce3b795a4f5ebd5a9e35": {
     "query": "\n        DELETE FROM chroma_core_fidtaskqueue \n        WHERE id in ( \n            SELECT id FROM chroma_core_fidtaskqueue WHERE task_id = $1 LIMIT $2 FOR UPDATE SKIP LOCKED \n        ) RETURNING id, fid as \"fid: _\", data, task_id",
     "describe": {
@@ -465,6 +593,23 @@
       "nullable": []
     }
   },
+  "5bdec4fbd7f7d0a23b72c2deb5a96068d3b63690e22a36333e9566ef8ab18486": {
+    "query": "\n        INSERT INTO chroma_core_sfapowersupply\n        (\n            index,\n            enclosure_index,\n            health_state,\n            health_state_reason,\n            position,\n            storage_system\n        )\n        SELECT * FROM UNNEST(\n            $1::integer[],\n            $2::integer[],\n            $3::smallint[],\n            $4::text[],\n            $5::smallint[],\n            $6::text[]\n        )\n        ON CONFLICT (index, storage_system, enclosure_index) DO UPDATE\n        SET\n            health_state = excluded.health_state,\n            health_state_reason = excluded.health_state_reason,\n            position = excluded.position\n    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "Int4Array",
+          "Int2Array",
+          "TextArray",
+          "Int2Array",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "61e498856043c03a2b0ca70544b3973f25ab9154985fd6a2078b46436a42c8f2": {
     "query": "\n                INSERT INTO chroma_core_serverprofile_repolist (serverprofile_id, repo_id)\n                SELECT $1, repo_id\n                FROM UNNEST($2::text[])\n                AS t(repo_id)\n                ON CONFLICT DO NOTHING\n            ",
     "describe": {
@@ -472,6 +617,19 @@
       "parameters": {
         "Left": [
           "Varchar",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "6981275b14db0bca4de21c63c9e9032f7a2f3271ae7806a972277991241f91da": {
+    "query": "\n            DELETE from chroma_core_sfajob\n            WHERE (index, storage_system)\n            IN (\n                SELECT *\n                FROM UNNEST($1::int[], $2::text[])\n            )\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
           "TextArray"
         ]
       },
@@ -760,6 +918,54 @@
       ]
     }
   },
+  "903636cd946e4fb1f28ae3774b58c46f8bb601803e6fdf745669a5c76fdb88fd": {
+    "query": "\n        SELECT \n            index,\n            enclosure_index,\n            health_state as \"health_state: _\",\n            health_state_reason,\n            child_health_state as \"child_health_state: _\",\n            storage_system\n        FROM chroma_core_sfacontroller\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "index",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "enclosure_index",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 2,
+          "name": "health_state: _",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 3,
+          "name": "health_state_reason",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 4,
+          "name": "child_health_state: _",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 5,
+          "name": "storage_system",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "922e7457db1e165807273def66a5ecc6b22be1a849f5e4b06d5149ec00b5e8aa": {
     "query": "\n                DELETE FROM chroma_core_logmessage\n                WHERE id in ( \n                    SELECT id FROM chroma_core_logmessage ORDER BY id LIMIT $1\n                )\n            ",
     "describe": {
@@ -969,6 +1175,78 @@
       "nullable": []
     }
   },
+  "b4865dbd455de729bbadd116bf6bf72108582704f5d559691c3821a54290bb0c": {
+    "query": "\n        SELECT\n            index,\n            element_name,\n            health_state as \"health_state: _\",\n            health_state_reason,\n            child_health_state as \"child_health_state: _\",\n            model,\n            position,\n            enclosure_type as \"enclosure_type: _\",\n            canister_location,\n            storage_system\n        FROM chroma_core_sfaenclosure",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "index",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "element_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "health_state: _",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 3,
+          "name": "health_state_reason",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 4,
+          "name": "child_health_state: _",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 5,
+          "name": "model",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 6,
+          "name": "position",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 7,
+          "name": "enclosure_type: _",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 8,
+          "name": "canister_location",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 9,
+          "name": "storage_system",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "b8e774ab32b79eb3f2d87b7f373b609831f72f63f716dcbb7917871531466b1a": {
     "query": "\n        INSERT INTO chroma_core_serverprofile\n        (name, ui_name, ui_description, managed, worker, user_selectable, initial_state, ntp, corosync, corosync2, pacemaker, \"default\")\n        VALUES\n        ('foo', 'foo', 'foo', 'f', 'f', 't', 'bar', 'f', 'f', 'f', 'f', 't')\n        ON CONFLICT DO NOTHING\n    ",
     "describe": {
@@ -1034,6 +1312,67 @@
           "Int8",
           "Int8",
           "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "c4699fe75876e33df71163c95690a4680f8bee665994cd0b6ebe4a6087aa6d0a": {
+    "query": "\n        SELECT\n            index,\n            enclosure_index,\n            health_state as \"health_state: _\",\n            health_state_reason,\n            position,\n            storage_system\n        FROM chroma_core_sfapowersupply\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "index",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "enclosure_index",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 2,
+          "name": "health_state: _",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 3,
+          "name": "health_state_reason",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 4,
+          "name": "position",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 5,
+          "name": "storage_system",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "c794f65b5ef4d77224667f77df480d76eaee130d7dc4ddde13d9330f5479595d": {
+    "query": "\n            DELETE from chroma_core_sfaenclosure\n            WHERE (index, storage_system)\n            IN (\n                SELECT *\n                FROM UNNEST($1::int[], $2::text[])\n            )\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "TextArray"
         ]
       },
       "nullable": []
@@ -1162,6 +1501,23 @@
       ]
     }
   },
+  "dd39a580b805c4895fab2a9a108f11a4144d97427e7c0fb13c26e5019c348229": {
+    "query": "\n        INSERT INTO chroma_core_sfajob\n        (\n            index,\n            sub_target_index,\n            sub_target_type,\n            job_type,\n            state,\n            storage_system\n        )\n        SELECT * FROM UNNEST(\n            $1::integer[],\n            $2::integer[],\n            $3::smallint[],\n            $4::smallint[],\n            $5::smallint[],\n            $6::text[]\n        )\n        ON CONFLICT (index, storage_system) DO UPDATE\n        SET\n            sub_target_index = excluded.sub_target_index,\n            sub_target_type = excluded.sub_target_type,\n            job_type = excluded.job_type,\n            state = excluded.state\n    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "Int4Array",
+          "Int2Array",
+          "Int2Array",
+          "Int2Array",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "e8f95e79d22bae021629cbfef5291601d0001933bb4628538fde58fdc0a297b9": {
     "query": "\n        select * from chroma_core_task \n        where \n            filesystem_id = $1\n            and state <> 'closed'\n            and fids_total > fids_completed \n            and (running_on_id is Null or running_on_id = $2)",
     "describe": {
@@ -1267,6 +1623,27 @@
       ]
     }
   },
+  "e9138dc17d5e21a863ab1bb897f2f98a6f7a61b0344eeb87a450b7db85fef537": {
+    "query": "\n        INSERT INTO chroma_core_sfaenclosure\n        (\n            index,\n            element_name,\n            health_state,\n            health_state_reason,\n            child_health_state,\n            model,\n            position,\n            enclosure_type,\n            canister_location,\n            storage_system\n        )\n        SELECT * FROM UNNEST(\n            $1::integer[],\n            $2::text[],\n            $3::smallint[],\n            $4::text[],\n            $5::smallint[],\n            $6::text[],\n            $7::smallint[],\n            $8::smallint[],\n            $9::text[],\n            $10::text[]\n        )\n        ON CONFLICT (index, storage_system) DO UPDATE\n        SET\n            child_health_state = excluded.child_health_state,\n            element_name = excluded.element_name,\n            health_state = excluded.health_state,\n            health_state_reason = excluded.health_state_reason,\n            position = excluded.position,\n            enclosure_type = excluded.enclosure_type\n    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "TextArray",
+          "Int2Array",
+          "TextArray",
+          "Int2Array",
+          "TextArray",
+          "Int2Array",
+          "Int2Array",
+          "TextArray",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "ec70b9a5caeadc31f5d1359737cc1c6da64e41db8315a81d81420d3b37b182c5": {
     "query": "\n            UPDATE chroma_core_task\n            SET running_on_id = $1\n                WHERE id = $2\n                AND running_on_id is Null",
     "describe": {
@@ -1275,6 +1652,19 @@
         "Left": [
           "Int4",
           "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "eec700b9428870eec0c867b7663c22c369f5bb4bb2ea0d2e2774d591c4f891ae": {
+    "query": "\n            DELETE from chroma_core_sfadiskdrive\n            WHERE (index, storage_system)\n            IN (\n                SELECT *\n                FROM UNNEST($1::int[], $2::text[])\n            )\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "TextArray"
         ]
       },
       "nullable": []
@@ -1409,6 +1799,72 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "fa7bdf3c5e49361f1afaa6a2075745f0943c461aa87a97854e3004c75c5f6367": {
+    "query": "SELECT \n                index,\n                enclosure_index,\n                failed,\n                slot_number,\n                health_state  as \"health_state: _\",\n                health_state_reason,\n                member_index,\n                member_state as \"member_state: _\",\n                storage_system\n            FROM chroma_core_sfadiskdrive",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "index",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "enclosure_index",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 2,
+          "name": "failed",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 3,
+          "name": "slot_number",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 4,
+          "name": "health_state: _",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 5,
+          "name": "health_state_reason",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 6,
+          "name": "member_index",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 7,
+          "name": "member_state: _",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 8,
+          "name": "storage_system",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false
+      ]
     }
   },
   "fd476db34f4391964ce18a3b50a04cbd6c5f42dafa83a42e980ecb42376a6813": {

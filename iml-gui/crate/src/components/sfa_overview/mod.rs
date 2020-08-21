@@ -14,7 +14,7 @@ use crate::{
 };
 use enclosures::{expansions, ss200nv, ss9012};
 use iml_wire_types::{
-    db::{HealthState, SfaController, SfaDiskDrive, SfaEnclosure, SfaPowerSupply, SfaStorageSystem},
+    sfa::{HealthState, SfaController, SfaDiskDrive, SfaEnclosure, SfaPowerSupply, SfaStorageSystem},
     warp_drive::{ArcCache, ArcRecord, RecordId},
 };
 use seed::{prelude::*, *};
