@@ -10,7 +10,7 @@ use quick_xml::{
     events::{attributes::Attributes, Event},
     Reader,
 };
-use std::{collections::HashMap, convert::TryInto, io};
+use std::{collections::HashMap, convert::TryInto};
 
 static CRM_MON_PATH: &'static str = "/usr/sbin/crm_mon";
 
@@ -38,18 +38,10 @@ fn required_arg<'a>(arg: &str, x: &'a HashMap<&str, String>) -> Result<&'a str, 
 }
 
 fn required_bool(arg: &str, x: &HashMap<&str, String>) -> Result<bool, ImlAgentError> {
-    required_arg(arg, x).and_then(str_to_bool)
-}
+    let x = required_arg(arg, x)?;
+    let x = x.parse()?;
 
-fn str_to_bool(x: &str) -> Result<bool, ImlAgentError> {
-    match x {
-        "true" => Ok(true),
-        "false" => Ok(false),
-        _ => Err(ImlAgentError::Io(io::Error::new(
-            io::ErrorKind::NotFound,
-            "Could not convert to bool",
-        ))),
-    }
+    Ok(x)
 }
 
 fn node_from_map(x: &HashMap<&str, String>) -> Result<Node, ImlAgentError> {

@@ -110,6 +110,8 @@ pub enum ImlAgentError {
     #[error(transparent)]
     OneshotCanceled(#[from] futures::channel::oneshot::Canceled),
     #[error(transparent)]
+    ParseBoolError(#[from] std::str::ParseBoolError),
+    #[error(transparent)]
     ParseIntError(#[from] std::num::ParseIntError),
     #[error(transparent)]
     RequiredError(#[from] RequiredError),
