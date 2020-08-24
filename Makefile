@@ -88,8 +88,8 @@ nuke_db:
 
 migrate_db:
 	psql chroma -c "CREATE EXTENSION IF NOT EXISTS btree_gist;"
-	cargo sqlx migrate run
 	@./manage.py migrate
+	cargo sqlx migrate run
 
 
 nuke_logs:

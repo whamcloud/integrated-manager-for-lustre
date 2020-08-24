@@ -2,7 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use std::{convert::TryFrom, io};
+use std::{
+    convert::TryFrom,
+    fmt::{self, Display},
+    io,
+};
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub enum NodeType {
@@ -26,6 +30,19 @@ impl TryFrom<&str> for NodeType {
                 format!("Invalid node type {}", x),
             )),
         }
+    }
+}
+
+impl Display for NodeType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let x = match self {
+            NodeType::Unknown => "unknown",
+            NodeType::Member => "member",
+            NodeType::Remote => "remote",
+            NodeType::Ping => "ping",
+        };
+
+        write!(f, "{}", x)
     }
 }
 

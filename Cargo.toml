@@ -26,6 +26,7 @@ members = [
   'iml-services/iml-service-queue',
   'iml-services/iml-stats',
   'iml-services/iml-journal',
+  'iml-services/iml-corosync',
   'iml-sfa',
   'iml-system-test-utils',
   'iml-systemd',
