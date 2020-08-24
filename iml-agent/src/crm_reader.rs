@@ -52,7 +52,7 @@ fn str_to_bool(x: &str) -> Result<bool, ImlAgentError> {
     }
 }
 
-fn from_map(x: &HashMap<&str, String>) -> Result<Node, ImlAgentError> {
+fn node_from_map(x: &HashMap<&str, String>) -> Result<Node, ImlAgentError> {
     Ok(Node {
         name: required_arg("name", x)?.to_string(),
         id: required_arg("id", x)?.to_string(),
@@ -97,7 +97,7 @@ fn read_nodes(reader: &mut Reader<&[u8]>) -> Result<Vec<Node>, ImlAgentError> {
             Event::Empty(x) => match x.name() {
                 b"node" => {
                     let x = attrs_to_hashmap(x.attributes(), reader)?;
-                    let x = from_map(&x)?;
+                    let x = node_from_map(&x)?;
 
                     xs.push(x);
                 }
