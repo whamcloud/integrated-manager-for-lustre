@@ -93,7 +93,7 @@ def parse_stratagem_results_to_influx(measurement, fs_name, stratagem_results_js
     return pipe(
         [],
         partial(reduce, lambda out, cur: out + [(cur.get("name"), cur.get("counters"))], group_counters),
-        partial(filter, lambda xs: xs[0] not in ["warn_fids", "purge_fids", "filesync"]),
+        partial(filter, lambda xs: xs[0] not in ["warn_fids", "purge_fids", "filesync", "cloudsync"]),
         partial(map, lambda xs, parse_fns=parse_fns: parse_fns[xs[0]](xs[1])),
         partial(flatten),
     )
