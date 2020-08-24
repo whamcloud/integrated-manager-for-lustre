@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
                 ),
                 ("fqdn", models.CharField(help_text=b"MGS host to create the snapshot on", max_length=256)),
                 ("fsname", models.CharField(help_text=b"Lustre filesystem name", max_length=8)),
-                ("name", models.CharField(help_text=b"Snapshot name", max_length=64)),
+                ("name", models.CharField(help_text=b"Snapshot to create", max_length=64)),
                 (
                     "comment",
                     models.CharField(help_text=b"Optional comment for the snapshot", max_length=1024, null=True),
@@ -54,7 +54,7 @@ class Migration(migrations.Migration):
                 ),
                 ("fqdn", models.CharField(help_text=b"MGS host to destroy the snapshot on", max_length=256)),
                 ("fsname", models.CharField(help_text=b"Lustre filesystem name", max_length=8)),
-                ("name", models.CharField(help_text=b"Snapshot name", max_length=64)),
+                ("name", models.CharField(help_text=b"Snapshot to destroy", max_length=64)),
                 ("force", models.BooleanField(default=False, help_text=b"Destroy the snapshot with force")),
             ],
             options={"ordering": ["id"],},
