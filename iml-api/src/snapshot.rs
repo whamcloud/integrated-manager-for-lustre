@@ -135,9 +135,9 @@ async fn post_snapshot_internal(
 
     tracing::info!("{}", active_mgs_host_fqdn);
 
-    let snapshots = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_create", args).await?;
+    let result = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_create", args).await?;
 
-    Ok(snapshots)
+    Ok(result)
 }
 
 async fn post_snapshot(
@@ -160,15 +160,15 @@ pub(crate) fn endpoint(
     pool_filter: impl Filter<Extract = (PgPool,), Error = std::convert::Infallible> + Clone + Send,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     let get = warp::path!("snapshot")
-        .and(warp::query())
         .and(warp::get())
+        .and(warp::query())
         .and(client_filter.clone())
         .and(pool_filter.clone())
         .and_then(get_snapshots);
 
     let post = warp::path!("snapshot")
-        .and(warp::query())
         .and(warp::post())
+        .and(warp::query())
         .and(client_filter)
         .and(pool_filter)
         .and_then(post_snapshot);
