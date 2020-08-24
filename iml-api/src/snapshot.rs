@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::error;
+use error::ImlApiError;
 use iml_action_client::invoke_rust_agent;
 use iml_postgres::{sqlx, PgPool};
 use iml_wire_types::snapshot;
@@ -58,127 +59,97 @@ async fn active_mgs_host_fqdn(fsname: &str, pool: PgPool) -> Result<String, erro
     Ok(active_mgs_host_fqdn)
 }
 
-async fn get_snapshots_internal(
-    args: snapshot::List,
-    pool: PgPool,
-) -> Result<serde_json::Value, error::ImlApiError> {
-    let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, pool).await?;
-
-    let snapshots = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_list", args).await?;
-
-    Ok(snapshots)
-}
-
 async fn get_snapshots(
     args: snapshot::List,
     pool: PgPool,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let snapshots = get_snapshots_internal(args, pool)
+    let active_mgs_host_fqdn =
+        active_mgs_host_fqdn(&args.fsname, pool)
+            .await
+            .map_err(|e| match e {
+                error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
+                _ => e.into(),
+            })?;
+
+    let results = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_list", args)
         .await
-        .map_err(|e| match e {
-            error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
-            _ => e.into(),
-        })?;
+        .map_err(|e| ImlApiError::from(e))?;
 
-    Ok(warp::reply::json(&snapshots))
-}
-
-async fn create_snapshot_internal(
-    args: snapshot::Create,
-    pool: PgPool,
-) -> Result<serde_json::Value, error::ImlApiError> {
-    let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, pool).await?;
-
-    let result = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_create", args).await?;
-
-    Ok(result)
+    Ok(warp::reply::json(&results))
 }
 
 async fn create_snapshot(
     args: snapshot::Create,
     pool: PgPool,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let results = create_snapshot_internal(args, pool)
+    let active_mgs_host_fqdn =
+        active_mgs_host_fqdn(&args.fsname, pool)
+            .await
+            .map_err(|e| match e {
+                error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
+                _ => e.into(),
+            })?;
+
+    let results = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_create", args)
         .await
-        .map_err(|e| match e {
-            error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
-            _ => e.into(),
-        })?;
+        .map_err(|e| ImlApiError::from(e))?;
 
     Ok(warp::reply::json(&results))
-}
-
-async fn destroy_snapshot_internal(
-    args: snapshot::Destroy,
-    pool: PgPool,
-) -> Result<serde_json::Value, error::ImlApiError> {
-    let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, pool).await?;
-
-    let result = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_destroy", args).await?;
-
-    Ok(result)
 }
 
 async fn destroy_snapshot(
     args: snapshot::Destroy,
     pool: PgPool,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let results = destroy_snapshot_internal(args, pool)
+    let active_mgs_host_fqdn =
+        active_mgs_host_fqdn(&args.fsname, pool)
+            .await
+            .map_err(|e| match e {
+                error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
+                _ => e.into(),
+            })?;
+
+    let results = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_destroy", args)
         .await
-        .map_err(|e| match e {
-            error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
-            _ => e.into(),
-        })?;
+        .map_err(|e| ImlApiError::from(e))?;
 
     Ok(warp::reply::json(&results))
-}
-
-async fn mount_snapshot_internal(
-    args: snapshot::Mount,
-    pool: PgPool,
-) -> Result<serde_json::Value, error::ImlApiError> {
-    let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, pool).await?;
-
-    let result = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_mount", args).await?;
-
-    Ok(result)
 }
 
 async fn mount_snapshot(
     args: snapshot::Mount,
     pool: PgPool,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let results = mount_snapshot_internal(args, pool)
+    let active_mgs_host_fqdn =
+        active_mgs_host_fqdn(&args.fsname, pool)
+            .await
+            .map_err(|e| match e {
+                error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
+                _ => e.into(),
+            })?;
+
+    let results = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_mount", args)
         .await
-        .map_err(|e| match e {
-            error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
-            _ => e.into(),
-        })?;
+        .map_err(|e| ImlApiError::from(e))?;
 
     Ok(warp::reply::json(&results))
-}
-
-async fn unmount_snapshot_internal(
-    args: snapshot::Unmount,
-    pool: PgPool,
-) -> Result<serde_json::Value, error::ImlApiError> {
-    let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, pool).await?;
-
-    let result = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_unmount", args).await?;
-
-    Ok(result)
 }
 
 async fn unmount_snapshot(
     args: snapshot::Unmount,
     pool: PgPool,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let results = unmount_snapshot_internal(args, pool)
+    let active_mgs_host_fqdn =
+        active_mgs_host_fqdn(&args.fsname, pool)
+            .await
+            .map_err(|e| match e {
+                error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
+                _ => e.into(),
+            })?;
+
+    let results = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_unmount", args)
         .await
-        .map_err(|e| match e {
-            error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
-            _ => e.into(),
-        })?;
+        .map_err(|e| ImlApiError::from(e))?;
 
     Ok(warp::reply::json(&results))
 }
