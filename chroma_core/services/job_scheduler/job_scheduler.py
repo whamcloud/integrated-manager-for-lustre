@@ -1904,6 +1904,20 @@ class JobScheduler(object):
 
             run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
 
+        if stratagem_data.get("cloudsync"):
+            task_data = {
+                "filesystem": filesystem,
+                "name": "{}-cloudsync-cloudsync".format(unique_id),
+                "start": django.utils.timezone.now(),
+                "state": "created",
+                "keep_failed": False,
+                "actions": ["stratagem.cloudsync"],
+                "args": {"remote": stratagem_data.get("remote"), "expression": stratagem_data.get("expression"), "policy": stratagem_data.get("policy")},
+            }
+            task = Task.objects.create(**task_data)
+
+            run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
+
         run_stratagem_list += map(
             lambda mdt_id: {
                 "class_name": "RunStratagemJob",
@@ -1912,8 +1926,7 @@ class JobScheduler(object):
                     "uuid": unique_id,
                     "report_duration": stratagem_data.get("report_duration"),
                     "purge_duration": stratagem_data.get("purge_duration"),
-                    "filesync_expression": stratagem_data.get("expression"),
-                    "filesync_duration": stratagem_data.get("filesync_duration", 0),
+                    "search_expression": stratagem_data.get("expression"),
                     "filesystem": filesystem,
                     "depends_on_job_range": range(0, len(run_stratagem_list)),
                 },

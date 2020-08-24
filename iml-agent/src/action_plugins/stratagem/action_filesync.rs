@@ -5,6 +5,7 @@
 extern crate futures;
 extern crate tokio;
 
+use crate::action_plugins::stratagem::util::search_rootpath;
 use crate::agent_error::{ImlAgentError, RequiredError};
 use futures::TryFutureExt;
 use iml_wire_types::{FidError, FidItem};
@@ -16,18 +17,44 @@ use tokio::process::Command;
 use tokio::task::spawn_blocking;
 use tracing::{debug, error};
 
-async fn search_rootpath(device: String) -> Result<LlapiFid, ImlAgentError> {
-    spawn_blocking(move || LlapiFid::create(&device).map_err(ImlAgentError::from))
-        .err_into()
-        .await
-        .and_then(std::convert::identity)
+async fn single_fid(
+    llapi: LlapiFid,
+    task_args: HashMap<String, String>,
+    fid_list: Vec<FidItem>,
+) -> Result<Vec<FidError>, ImlAgentError> {
+    let dest = task_args
+        .get("remote".into())
+        .ok_or(RequiredError("Task missing 'remote' argument".to_string()))?;
+
+    let output = Command::new("mpirun")
+        .arg("--hostfile")
+        .arg("/etc/iml/filesync-hostfile")
+        .arg("--allow-run-as-root")
+        .arg("dcp")
+        .arg(format!(
+            "{}/{}",
+            llapi.mntpt(),
+            llapi.fid2path(&fid_list[0].fid)?
+        ))
+        .arg(format!("{}", dest))
+        .output();
+    let output = output.await?;
+
+    error!(
+        "exited with {} {} {}",
+        output.status,
+        std::str::from_utf8(&output.stdout)?,
+        std::str::from_utf8(&output.stderr)?
+    );
+
+    Ok(vec![])
 }
 
-/// Process FIDs
-pub async fn process_fids(
-    (fsname_or_mntpath, task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
+async fn long_list(
+    llapi: LlapiFid,
+    task_args: HashMap<String, String>,
+    fid_list: Vec<FidItem>,
 ) -> Result<Vec<FidError>, ImlAgentError> {
-    let llapi = search_rootpath(fsname_or_mntpath).await?;
     let dest_src = task_args
         .get("remote".into())
         .ok_or(RequiredError("Task missing 'remote' argument".to_string()))?;
@@ -68,11 +95,11 @@ pub async fn process_fids(
      * otherwise you get /mnt/lustre/dir1/foo getting copied to
      * $DEST/lustre/dir1/foo which is ... weird
      */
-    let output = Command::new("/usr/lib64/openmpi/bin/mpirun")
+    let output = Command::new("mpirun")
         .arg("--hostfile")
         .arg("/etc/iml/filesync-hostfile")
         .arg("--allow-run-as-root")
-        .arg("/usr/local/bin/dcp")
+        .arg("dcp")
         .arg("-i")
         .arg(tmpstr)
         .arg(format!("{}/", llapi.mntpt()))
@@ -80,7 +107,7 @@ pub async fn process_fids(
         .output();
     let output = output.await?;
 
-    debug!(
+    error!(
         "exited with {} {} {}",
         output.status,
         std::str::from_utf8(&output.stdout)?,
@@ -88,4 +115,17 @@ pub async fn process_fids(
     );
 
     Ok(vec![])
+}
+
+/// Process FIDs
+pub async fn process_fids(
+    (fsname_or_mntpath, task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
+) -> Result<Vec<FidError>, ImlAgentError> {
+    let llapi = search_rootpath(fsname_or_mntpath).await?;
+
+    if fid_list.len() == 2 {
+        return single_fid(llapi, task_args, fid_list).await;
+    } else {
+        return long_list(llapi, task_args, fid_list).await;
+    }
 }

@@ -8,7 +8,9 @@ use crate::{
         lpurge, ltuer, lustre,
         ntp::{action_configure, is_ntp_configured},
         ostpool, package, postoffice,
-        stratagem::{action_filesync, action_mirror, action_purge, action_warning, server},
+        stratagem::{
+            action_cloudsync, action_filesync, action_mirror, action_purge, action_warning, server,
+        },
     },
     lustre::lctl,
 };
@@ -31,7 +33,6 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("package_installed", package::installed)
         .add_plugin("package_version", package::version)
         .add_plugin("start_scan_stratagem", server::trigger_scan)
-        .add_plugin("start_scan_stratagem_single", server::trigger_scan_single)
         .add_plugin("stream_fidlists_stratagem", server::stream_fidlists)
         .add_plugin("action_check_ha", high_availability::check_ha)
         .add_plugin("action_check_stonith", check_stonith::check_stonith)
@@ -79,8 +80,8 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("action.mirror.split", action_mirror::process_split_fids)
         .add_plugin("action.stratagem.warning", action_warning::process_fids)
         .add_plugin("action.stratagem.purge", action_purge::process_fids)
-        .add_plugin("action.stratagem.filesync", action_filesync::process_fids);
-
+        .add_plugin("action.stratagem.filesync", action_filesync::process_fids)
+        .add_plugin("action.stratagem.cloudsync", action_cloudsync::process_fids);
     info!("Loaded the following ActionPlugins:");
 
     for ActionName(key) in map.keys() {

@@ -8,7 +8,7 @@ use iml_agent::action_plugins::{
     ntp::{action_configure, is_ntp_configured},
     ostpool, package, postoffice,
     stratagem::{
-        action_filesync, action_purge, action_warning,
+        action_cloudsync, action_filesync, action_purge, action_warning,
         server::{
             generate_cooked_config, stream_fidlists, trigger_scan, Counter, StratagemCounters,
         },
@@ -240,6 +240,21 @@ pub enum StratagemClientCommand {
         #[structopt(short = "d")]
         /// destination path
         target_fs: String,
+
+        #[structopt(flatten)]
+        fidopts: FidInput,
+    },
+
+    #[structopt(name = "cloudsync")]
+    /// Run CloudSync action
+    CloudSync {
+        #[structopt()]
+        /// push or pull
+        action: String,
+
+        #[structopt(short = "d")]
+        /// destination s3 bucket
+        target: String,
 
         #[structopt(flatten)]
         fidopts: FidInput,
@@ -520,6 +535,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 task_args.insert("remote".to_string(), target_fs);
                 if action_filesync::process_fids((device, task_args, fidlist))
+                    .await
+                    .is_err()
+                {
+                    tracing::error!("Filesync failed");
+                    exit(exitcode::IOERR);
+                }
+            }
+            StratagemClientCommand::CloudSync {
+                action,
+                target,
+                fidopts,
+            } => {
+                let device = fidopts.fsname;
+                let mut task_args = std::collections::HashMap::new();
+
+                let fidlist: Vec<FidItem> = fidopts
+                    .fidlist
+                    .into_iter()
+                    .map(|ft| FidItem {
+                        fid: ft.clone(),
+                        data: ft.into(),
+                    })
+                    .collect();
+
+                task_args.insert("remote".to_string(), target);
+                task_args.insert("action".to_string(), action);
+                if action_cloudsync::process_fids((device, task_args, fidlist))
                     .await
                     .is_err()
                 {
