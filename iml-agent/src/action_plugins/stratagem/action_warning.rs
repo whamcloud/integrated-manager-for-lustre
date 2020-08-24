@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
+    action_plugins::stratagem::util::search_rootpath,
     agent_error::{ImlAgentError, RequiredError},
     fidlist,
     http_comms::streaming_client::send,
@@ -31,13 +32,6 @@ async fn fid2path(llapi: LlapiFid, fid: String) -> Option<String> {
             None
         }
     }
-}
-
-async fn search_rootpath(device: String) -> Result<LlapiFid, ImlAgentError> {
-    spawn_blocking(move || LlapiFid::create(&device).map_err(ImlAgentError::from))
-        .err_into()
-        .await
-        .and_then(std::convert::identity)
 }
 
 async fn item2path(
