@@ -9,23 +9,17 @@ use iml_rabbit::Connection;
 use iml_wire_types::snapshot;
 use warp::Filter;
 
-async fn get_snapshots_internal(
-    args: snapshot::List,
-    conn: Connection,
-    pool: PgPool,
-) -> Result<serde_json::Value, error::ImlApiError> {
-    drop(conn);
-
+async fn active_mgs_host_fqdn(fsname: &str, pool: PgPool) -> Result<String, error::ImlApiError> {
     let mgs_id = sqlx::query!(
         r#"
         select mgs_id from chroma_core_managedfilesystem where name=$1
         "#,
-        args.fsname
+        fsname
     )
     .fetch_one(&pool)
     .await
     .map_err(|e| match e {
-        sqlx::Error::RowNotFound => error::ImlApiError::FileSystemNotFound(args.fsname.clone()),
+        sqlx::Error::RowNotFound => error::ImlApiError::FileSystemNotFound(fsname.into()),
         _ => e.into(),
     })?
     .mgs_id;
@@ -61,6 +55,18 @@ async fn get_snapshots_internal(
     .fqdn;
 
     tracing::info!("{}", active_mgs_host_fqdn);
+
+    Ok(active_mgs_host_fqdn)
+}
+
+async fn get_snapshots_internal(
+    args: snapshot::List,
+    conn: Connection,
+    pool: PgPool,
+) -> Result<serde_json::Value, error::ImlApiError> {
+    drop(conn);
+
+    let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, pool).await?;
 
     let snapshots = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_list", args).await?;
 
@@ -89,51 +95,7 @@ async fn create_snapshot_internal(
 ) -> Result<serde_json::Value, error::ImlApiError> {
     drop(conn);
 
-    let mgs_id = sqlx::query!(
-        r#"
-        select mgs_id from chroma_core_managedfilesystem where name=$1
-        "#,
-        args.fsname
-    )
-    .fetch_one(&pool)
-    .await
-    .map_err(|e| match e {
-        sqlx::Error::RowNotFound => error::ImlApiError::FileSystemNotFound(args.fsname.clone()),
-        _ => e.into(),
-    })?
-    .mgs_id;
-
-    let mgs_uuid = sqlx::query!(
-        r#"
-        select uuid from chroma_core_managedtarget where id=$1
-        "#,
-        mgs_id
-    )
-    .fetch_one(&pool)
-    .await?
-    .uuid;
-
-    let active_mgs_host_id = sqlx::query!(
-        r#"
-        select active_host_id from targets where uuid=$1
-        "#,
-        mgs_uuid
-    )
-    .fetch_one(&pool)
-    .await?
-    .active_host_id;
-
-    let active_mgs_host_fqdn = sqlx::query!(
-        r#"
-        select fqdn from chroma_core_managedhost where id=$1
-        "#,
-        active_mgs_host_id
-    )
-    .fetch_one(&pool)
-    .await?
-    .fqdn;
-
-    tracing::info!("{}", active_mgs_host_fqdn);
+    let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, pool).await?;
 
     let result = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_create", args).await?;
 
@@ -162,51 +124,7 @@ async fn destroy_snapshot_internal(
 ) -> Result<serde_json::Value, error::ImlApiError> {
     drop(conn);
 
-    let mgs_id = sqlx::query!(
-        r#"
-        select mgs_id from chroma_core_managedfilesystem where name=$1
-        "#,
-        args.fsname
-    )
-    .fetch_one(&pool)
-    .await
-    .map_err(|e| match e {
-        sqlx::Error::RowNotFound => error::ImlApiError::FileSystemNotFound(args.fsname.clone()),
-        _ => e.into(),
-    })?
-    .mgs_id;
-
-    let mgs_uuid = sqlx::query!(
-        r#"
-        select uuid from chroma_core_managedtarget where id=$1
-        "#,
-        mgs_id
-    )
-    .fetch_one(&pool)
-    .await?
-    .uuid;
-
-    let active_mgs_host_id = sqlx::query!(
-        r#"
-        select active_host_id from targets where uuid=$1
-        "#,
-        mgs_uuid
-    )
-    .fetch_one(&pool)
-    .await?
-    .active_host_id;
-
-    let active_mgs_host_fqdn = sqlx::query!(
-        r#"
-        select fqdn from chroma_core_managedhost where id=$1
-        "#,
-        active_mgs_host_id
-    )
-    .fetch_one(&pool)
-    .await?
-    .fqdn;
-
-    tracing::info!("{}", active_mgs_host_fqdn);
+    let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, pool).await?;
 
     let result = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_destroy", args).await?;
 
