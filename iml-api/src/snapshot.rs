@@ -146,6 +146,64 @@ async fn destroy_snapshot(
     Ok(warp::reply::json(&results))
 }
 
+async fn mount_snapshot_internal(
+    args: snapshot::Mount,
+    conn: Connection,
+    pool: PgPool,
+) -> Result<serde_json::Value, error::ImlApiError> {
+    drop(conn);
+
+    let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, pool).await?;
+
+    let result = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_mount", args).await?;
+
+    Ok(result)
+}
+
+async fn mount_snapshot(
+    args: snapshot::Mount,
+    conn: Connection,
+    pool: PgPool,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    let results = mount_snapshot_internal(args, conn, pool)
+        .await
+        .map_err(|e| match e {
+            error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
+            _ => e.into(),
+        })?;
+
+    Ok(warp::reply::json(&results))
+}
+
+async fn unmount_snapshot_internal(
+    args: snapshot::Unmount,
+    conn: Connection,
+    pool: PgPool,
+) -> Result<serde_json::Value, error::ImlApiError> {
+    drop(conn);
+
+    let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, pool).await?;
+
+    let result = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_unmount", args).await?;
+
+    Ok(result)
+}
+
+async fn unmount_snapshot(
+    args: snapshot::Unmount,
+    conn: Connection,
+    pool: PgPool,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    let results = unmount_snapshot_internal(args, conn, pool)
+        .await
+        .map_err(|e| match e {
+            error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
+            _ => e.into(),
+        })?;
+
+    Ok(warp::reply::json(&results))
+}
+
 pub(crate) fn endpoint(
     client_filter: impl Filter<Extract = (Connection,), Error = warp::Rejection> + Clone + Send,
     pool_filter: impl Filter<Extract = (PgPool,), Error = std::convert::Infallible> + Clone + Send,
@@ -167,9 +225,23 @@ pub(crate) fn endpoint(
     let destroy = warp::path!("snapshot" / "destroy")
         .and(warp::post())
         .and(warp::query())
-        .and(client_filter)
-        .and(pool_filter)
+        .and(client_filter.clone())
+        .and(pool_filter.clone())
         .and_then(destroy_snapshot);
 
-    list.or(create).or(destroy)
+    let mount = warp::path!("snapshot" / "mount")
+        .and(warp::post())
+        .and(warp::query())
+        .and(client_filter.clone())
+        .and(pool_filter.clone())
+        .and_then(mount_snapshot);
+
+    let unmount = warp::path!("snapshot" / "unmount")
+        .and(warp::post())
+        .and(warp::query())
+        .and(client_filter)
+        .and(pool_filter)
+        .and_then(unmount_snapshot);
+
+    list.or(create).or(destroy).or(mount).or(unmount)
 }
