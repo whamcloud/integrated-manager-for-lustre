@@ -289,8 +289,8 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - PROXY_HOST=iml-warp-drive,sqlx::query=warn
-      - RUST_LOG=info
+      - PROXY_HOST=iml-warp-drive
+      - RUST_LOG=info,sqlx::query=warn
   iml-action-runner:
     image: "imlteam/iml-action-runner:6.2.0-dev"
     hostname: "iml-action-runner"
