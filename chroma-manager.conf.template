@@ -204,7 +204,7 @@ server {
         gzip_types application/json;
     }
 
-    location /snapshot {
+    location /api/snapshot {
         proxy_set_header Host $http_host;
         auth_request /auth;
         proxy_set_header X-Forwarded-Proto $scheme;
