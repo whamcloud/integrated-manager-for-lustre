@@ -193,9 +193,13 @@ pub fn get_influxdb_port() -> String {
     get_var("INFLUXDB_PORT")
 }
 
+pub fn get_influxdb_server_fqdn() -> String {
+    get_var("INFLUXDB_SERVER_FQDN")
+}
+
 /// Get the influxdb address from the env or panic
 pub fn get_influxdb_addr() -> SocketAddr {
-    to_socket_addr(&get_server_host(), &get_influxdb_port())
+    to_socket_addr(&get_influxdb_server_fqdn(), &get_influxdb_port())
 }
 
 /// Get the metrics influxdb database name

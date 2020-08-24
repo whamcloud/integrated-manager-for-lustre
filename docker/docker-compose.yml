@@ -136,6 +136,7 @@ services:
     environment:
       - DEVICE_AGGREGATOR_PORT=8008
       - PROXY_HOST=device
+      - INFLUXDB_SERVER_FQDN=influxdb
       - RUST_LOG=info,sqlx::query=warn
     volumes:
       - "manager-config:/var/lib/chroma"
@@ -394,7 +395,8 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - RUST_LOG=info
-      - PROXY_HOST=influxdb
+      - PROXY_HOST=iml-stats
+      - INFLUXDB_SERVER_FQDN=influxdb
   iml-postoffice:
     image: "imlteam/iml-postoffice:6.2.0-dev"
     hostname: "iml-postoffice"
