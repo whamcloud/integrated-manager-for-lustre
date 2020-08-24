@@ -54,7 +54,7 @@ async fn active_mgs_host_fqdn(fsname: &str, pool: PgPool) -> Result<String, erro
     .await?
     .fqdn;
 
-    tracing::info!("{}", active_mgs_host_fqdn);
+    tracing::trace!("{}", active_mgs_host_fqdn);
 
     Ok(active_mgs_host_fqdn)
 }
