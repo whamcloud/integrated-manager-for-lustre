@@ -6,6 +6,7 @@
 
 pub mod action_plugins;
 pub mod agent_error;
+pub mod crm_reader;
 pub mod daemon_plugins;
 pub mod env;
 pub mod fidlist;

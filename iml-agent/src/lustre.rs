@@ -1,3 +1,7 @@
+// Copyright (c) 2020 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 use crate::agent_error::ImlAgentError;
 use futures::TryFutureExt;
 use iml_cmd::{CheckedCommandExt, Command};
