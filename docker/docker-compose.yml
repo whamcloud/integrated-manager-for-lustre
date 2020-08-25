@@ -136,7 +136,7 @@ services:
     environment:
       - DEVICE_AGGREGATOR_PORT=8008
       - PROXY_HOST=device
-      - INFLUXDB_SERVER_FQDN=influxdb
+      - INFLUXDB_HOST=influxdb
       - RUST_LOG=info,sqlx::query=warn
     volumes:
       - "manager-config:/var/lib/chroma"
@@ -230,7 +230,6 @@ services:
     environment:
       - DEVICE_AGGREGATOR_URL=http://device:8008
       - PROXY_HOST=iml-action-runner
-      - INFLUXDB_SERVER_FQDN=influxdb
       - LOG_LEVEL
   lustre-audit:
     image: "imlteam/manager-lustre-audit:6.2.0-dev"
@@ -396,7 +395,7 @@ services:
     environment:
       - RUST_LOG=info
       - PROXY_HOST=iml-stats
-      - INFLUXDB_SERVER_FQDN=influxdb
+      - INFLUXDB_HOST=influxdb
   iml-postoffice:
     image: "imlteam/iml-postoffice:6.2.0-dev"
     hostname: "iml-postoffice"

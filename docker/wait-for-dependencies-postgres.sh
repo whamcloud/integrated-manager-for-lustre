@@ -10,6 +10,7 @@ done
 TMP=$PROXY_HOST
 TMP2=$AMQP_BROKER_HOST
 TMP3=$DB_HOST
+TMP4=$INFLUXDB_HOST
 
 set -a
 source /var/lib/chroma/iml-settings.conf
@@ -26,6 +27,10 @@ fi
 
 if [[ ! -z "$TMP3" ]]; then
   export DB_HOST=$TMP3
+fi
+
+if [[ ! -z "$TMP4" ]]; then
+  export INFLUXDB_HOST=$TMP4
 fi
 
 echo "Starting dependency check"
