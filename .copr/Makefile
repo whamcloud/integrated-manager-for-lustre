@@ -38,24 +38,25 @@ srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/release/rust-iml
 	cargo build --release
-	cp ${TARGET}/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,device,journal,mailbox,ntp,ostpool,postoffice,report,sfa,stats,task-runner,warp-drive} \
-		iml-agent-comms.service \
-		iml-mailbox.service \
-		iml-postoffice.service \
-		iml-ostpool.service \
-		iml-report.service \
-		iml-api.service \
-		iml-rust-stats.service \
-		iml-device.service \
-		iml-task-runner.service \
-		iml-journal.service \
+	cp ${TARGET}/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,corosync,device,journal,mailbox,ntp,ostpool,postoffice,report,sfa,stats,task-runner,warp-drive} \
 		iml-action-runner.service \
+		iml-agent-comms.service \
+		iml-api.service \
+		iml-device.service \
+		iml-journal.service \
+		iml-mailbox.service \
+		iml-ntp.service \
+		iml-ostpool.service \
+		iml-postoffice.service \
+		iml-report.service \
+		iml-rust-corosync.service \
+		iml-rust-stats.service \
+		iml-sfa.service \
+		iml-task-runner.service \
 		iml-action-runner.socket \
 		iml-agent/systemd-units/* \
 		iml-warp-drive/systemd-units/* \
 		iml-report.conf \
-		iml-ntp.service \
-		iml-sfa.service \
 		${TMPDIR}/release/rust-iml
 	cp ${TARGET}/release/iml ${TMPDIR}/release/rust-iml
 	cp ${TARGET}/release/iml-config ${TMPDIR}/release/rust-iml

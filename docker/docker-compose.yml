@@ -139,6 +139,17 @@ services:
       - RUST_LOG=info,sqlx::query=warn
     volumes:
       - "manager-config:/var/lib/chroma"
+  iml-corosync:
+    image: "imlteam/corosync:6.2.0-dev"
+    hostname: "iml-corosync"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-corosync.dockerfile
+    deploy: *default-deploy
+    environment:
+      - RUST_LOG=info,sqlx::query=warn
+    volumes:
+      - "manager-config:/var/lib/chroma"
   ntp:
     image: "imlteam/ntp:6.2.0-dev"
     hostname: "iml-ntp"
@@ -164,7 +175,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - RUST_LOG=info
+      - RUST_LOG=info,sqlx::query=warn
       - SFA_ENDPOINTS_1
   corosync:
     image: "imlteam/manager-corosync:6.2.0-dev"

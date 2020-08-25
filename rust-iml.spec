@@ -28,39 +28,41 @@ ExclusiveArch: x86_64
 %install
 mkdir -p %{buildroot}%{_bindir}
 cp iml %{buildroot}%{_bindir}
-cp iml-config %{buildroot}%{_bindir}
+cp iml-action-runner %{buildroot}%{_bindir}
 cp iml-agent %{buildroot}%{_bindir}
+cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-agent-daemon %{buildroot}%{_bindir}
 cp iml-api %{buildroot}%{_bindir}
-cp iml-ostpool %{buildroot}%{_bindir}
+cp iml-config %{buildroot}%{_bindir}
+cp iml-corosync %{buildroot}%{_bindir}
 cp iml-device %{buildroot}%{_bindir}
 cp iml-journal %{buildroot}%{_bindir}
-cp iml-stats %{buildroot}%{_bindir}
-cp iml-agent-comms %{buildroot}%{_bindir}
-cp iml-action-runner %{buildroot}%{_bindir}
-cp iml-task-runner %{buildroot}%{_bindir}
-cp iml-warp-drive %{buildroot}%{_bindir}
 cp iml-mailbox %{buildroot}%{_bindir}
 cp iml-ntp %{buildroot}%{_bindir}
+cp iml-ostpool %{buildroot}%{_bindir}
 cp iml-postoffice %{buildroot}%{_bindir}
 cp iml-report %{buildroot}%{_bindir}
 cp iml-sfa %{buildroot}%{_bindir}
+cp iml-stats %{buildroot}%{_bindir}
+cp iml-task-runner %{buildroot}%{_bindir}
+cp iml-warp-drive %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
+cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
+cp iml-agent-comms.service %{buildroot}%{_unitdir}
 cp iml-api.service %{buildroot}%{_unitdir}
+cp iml-rust-corosync.service %{buildroot}%{_unitdir}
 cp iml-device.service %{buildroot}%{_unitdir}
 cp iml-journal.service %{buildroot}%{_unitdir}
-cp iml-ostpool.service %{buildroot}%{_unitdir}
-cp iml-rust-stats.service %{buildroot}%{_unitdir}
-cp iml-agent-comms.service %{buildroot}%{_unitdir}
-cp iml-task-runner.service %{buildroot}%{_unitdir}
-cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
-cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
-cp iml-warp-drive.service %{buildroot}%{_unitdir}
 cp iml-mailbox.service %{buildroot}%{_unitdir}
 cp iml-ntp.service %{buildroot}%{_unitdir}
+cp iml-ostpool.service %{buildroot}%{_unitdir}
 cp iml-postoffice.service %{buildroot}%{_unitdir}
 cp iml-report.service %{buildroot}%{_unitdir}
+cp iml-rust-stats.service %{buildroot}%{_unitdir}
 cp iml-sfa.service %{buildroot}%{_unitdir}
+cp iml-task-runner.service %{buildroot}%{_unitdir}
+cp iml-warp-drive.service %{buildroot}%{_unitdir}
+cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_tmpfilesdir}
 cp iml-report.conf %{buildroot}%{_tmpfilesdir}
 cp tmpfiles.conf %{buildroot}%{_tmpfilesdir}/iml-agent.conf
@@ -428,6 +430,28 @@ Requires: rust-iml-agent-comms
 %files journal
 %{_bindir}/iml-journal
 %attr(0644,root,root)%{_unitdir}/iml-journal.service
+
+%package corosync
+Summary: Consumer of corosync updates
+License: MIT
+Group: System Environment/Libraries
+Requires: rust-iml-agent-comms
+
+%description corosync
+%{summary}
+
+%post corosync
+%systemd_post iml-rust-corosync.service
+
+%preun corosync
+%systemd_preun iml-rust-corosync.service
+
+%postun corosync
+%systemd_postun_with_restart iml-rust-corosync.service
+
+%files corosync
+%{_bindir}/iml-corosync
+%attr(0644,root,root)%{_unitdir}/iml-rust-corosync.service
 
 %changelog
 * Wed Sep 18 2019 Will Johnson <wjohnson@whamcloud.com> - 0.2.0-1 
