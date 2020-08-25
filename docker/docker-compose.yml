@@ -441,6 +441,7 @@ services:
       - EXA_VERSION
       - INFLUXDB_IML_STATS_LONG_DURATION
       - LOG_LEVEL
+      - INFLUXDB_SERVER_FQDN
     deploy:
       restart_policy:
         condition: on-failure
