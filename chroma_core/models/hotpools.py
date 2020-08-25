@@ -699,7 +699,6 @@ class StartLpurgeJob(StateChangeJob):
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 10
 
-    requires_confirmation = False
     state_verb = "Start Lpurge"
 
     class Meta:
