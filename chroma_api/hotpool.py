@@ -8,30 +8,14 @@ from tastypie import fields
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.chroma_model_resource import ChromaModelResource
 from chroma_api.host import HostResource
-from chroma_core.models.hotpools import HotpoolConfiguration, HotpoolV2Configuration
-
-KIND_TO_KLASS = {"V2": HotpoolV2Configuration}
-KLASS_TO_KIND = dict([(v, k) for k, v in KIND_TO_KLASS.items()])
-KIND_TO_MODEL_NAME = dict([(k, v.__name__.lower()) for k, v in KIND_TO_KLASS.items()])
+from chroma_core.models.hotpools import HotpoolConfiguration, LamigoConfiguration, LpurgeConfiguration
 
 
 class HotpoolResource(ChromaModelResource):
-    kind = fields.CharField(help_text="Hotpool Version, one of %s" % KIND_TO_KLASS.keys())
-    related_uri = fields.CharField()
-
-    def content_type_id_to_kind(self, ct_id):
-        if not hasattr(self, "CONTENT_TYPE_ID_TO_KIND"):
-            self.CONTENT_TYPE_ID_TO_KIND = dict(
-                [(ContentType.objects.get_for_model(v).id, k) for k, v in KIND_TO_KLASS.items()]
-            )
-
-        return self.CONTENT_TYPE_ID_TO_KIND[ct_id]
-
-    def dehydrate_kind(self, bundle):
-        return self.content_type_id_to_kind(bundle.obj.content_type_id)
+    filesystem = fields.ToOneField("chroma_api.filesystem.FilesystemResource", "filesystem")
 
     class Meta:
-        queryset = HotpoolConfiguration.objects.select_related("hotpoolv2configuration").all()
+        queryset = HotpoolConfiguration.objects.all()
         resource_name = "hotpool"
         authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
