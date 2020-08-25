@@ -31,7 +31,8 @@ fn parse_entries(ldev_config: String) -> BTreeSet<LdevEntry> {
     ldev_config
         .lines()
         .filter(|x| x.trim().chars().take(1).next() != Some('#'))
-        .map(LdevEntry::from).collect()
+        .map(LdevEntry::from)
+        .collect()
 }
 
 fn convert(entries: &[LdevEntry]) -> String {
@@ -256,7 +257,8 @@ mod tests {
 #zeno5 zeno1 zeno-OST0004 zfs:lustre-zeno5/ost1
 #zeno6 zeno2 zeno-OST0005 zfs:lustre-zeno6/ost1
 #zeno7 zeno3 zeno-OST0006 zfs:lustre-zeno7/ost1
-#zeno8 zeno4 zeno-OST0007 zfs:lustre-zeno8/ost1"#.into();
+#zeno8 zeno4 zeno-OST0007 zfs:lustre-zeno8/ost1"#
+            .into();
 
         let data: BTreeSet<LdevEntry> = parse_entries(content);
 
@@ -276,7 +278,8 @@ zeno4 zeno8 zeno-OST0003 zfs:lustre-zeno4/ost1
 zeno5 zeno1 zeno-OST0004 zfs:lustre-zeno5/ost1
 zeno6 zeno2 zeno-OST0005 zfs:lustre-zeno6/ost1
 zeno7 zeno3 zeno-OST0006 zfs:lustre-zeno7/ost1
-zeno8 zeno4 zeno-OST0007 zfs:lustre-zeno8/ost1"#.into();
+zeno8 zeno4 zeno-OST0007 zfs:lustre-zeno8/ost1"#
+            .into();
 
         let data: BTreeSet<LdevEntry> = parse_entries(content);
 

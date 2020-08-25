@@ -31,6 +31,7 @@ class ConfigureLDevStep(Step):
         ldev_entries = self.invoke_rust_local_action_expect_result("create_ldev_conf")
         self.invoke_rust_agent(fqdn, "create_ldev_conf", ldev_entries)
 
+
 class ConfigureLDevJob(Job):
     verb = "Configure LDev"
 

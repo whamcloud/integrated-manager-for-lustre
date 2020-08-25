@@ -2026,6 +2026,30 @@
       "nullable": []
     }
   },
+  "f5ae42f231abe242d0644e530d7070971e0f80ab0abfc4bcbe677d7f0cbbda67": {
+    "query": "select id, fqdn from chroma_core_managedhost",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
   "fa7bdf3c5e49361f1afaa6a2075745f0943c461aa87a97854e3004c75c5f6367": {
     "query": "SELECT \n                index,\n                enclosure_index,\n                failed,\n                slot_number,\n                health_state  as \"health_state: _\",\n                health_state_reason,\n                member_index,\n                member_state as \"member_state: _\",\n                storage_system\n            FROM chroma_core_sfadiskdrive",
     "describe": {

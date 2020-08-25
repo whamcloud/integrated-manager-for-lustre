@@ -9,18 +9,26 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('chroma_core', '0025_createsnapshotjob_destroysnapshotjob'),
+        ("chroma_core", "0025_createsnapshotjob_destroysnapshotjob"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ConfigureLDevJob',
+            name="ConfigureLDevJob",
             fields=[
-                ('job_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='chroma_core.Job')),
+                (
+                    "job_ptr",
+                    models.OneToOneField(
+                        auto_created=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        parent_link=True,
+                        primary_key=True,
+                        serialize=False,
+                        to="chroma_core.Job",
+                    ),
+                ),
             ],
-            options={
-                'ordering': ['id'],
-            },
-            bases=('chroma_core.job',),
+            options={"ordering": ["id"],},
+            bases=("chroma_core.job",),
         ),
     ]
