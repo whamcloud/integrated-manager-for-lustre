@@ -6,6 +6,7 @@ use crate::{
     agent_error::{ImlAgentError, RequiredError},
     fidlist,
     http_comms::streaming_client::send,
+    lustre::search_rootpath,
 };
 use futures::{
     channel::mpsc, future::join_all, sink::SinkExt, stream, StreamExt, TryFutureExt, TryStreamExt,
@@ -31,13 +32,6 @@ async fn fid2path(llapi: LlapiFid, fid: String) -> Option<String> {
             None
         }
     }
-}
-
-async fn search_rootpath(device: String) -> Result<LlapiFid, ImlAgentError> {
-    spawn_blocking(move || LlapiFid::create(&device).map_err(ImlAgentError::from))
-        .err_into()
-        .await
-        .and_then(std::convert::identity)
 }
 
 async fn item2path(

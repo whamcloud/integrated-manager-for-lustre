@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{action_plugins::stratagem::util::search_rootpath, agent_error::ImlAgentError};
+use crate::{agent_error::ImlAgentError, lustre::search_rootpath};
 use futures::future::join_all;
 use iml_cmd::{CheckedCommandExt, CmdError, Command};
 use iml_wire_types::{FidError, FidItem};
