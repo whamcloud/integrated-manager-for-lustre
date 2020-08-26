@@ -35,6 +35,7 @@ struct CorosyncNode {
 #[derive(juniper::GraphQLObject)]
 /// A Lustre Target
 struct Target {
+    /// The target's state. One of "mounted" or "unmounted"
     state: String,
     /// The target name
     name: String,
@@ -46,7 +47,7 @@ struct Target {
     /// it does not represent any HA configuration.
     host_ids: Vec<i32>,
     /// The list of `filesystem.name`s this target belongs to.
-    /// Only an `MGS` may have more than one target.
+    /// Only an `MGS` may have more than one filesystem.
     filesystems: Vec<String>,
     /// Then underlying device UUID
     uuid: String,
