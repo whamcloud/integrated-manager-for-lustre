@@ -1,0 +1,5 @@
+Printing ring status.
+Local node ID 1
+RING ID 0
+	id	= 10.73.10.11
+	status	= ring 0 active with no faults

@@ -1,0 +1,134 @@
+<?xml version="1.0"?>
+<crm_mon version="1.1.21">
+    <summary>
+        <stack type="corosync" />
+        <current_dc present="true" version="1.1.21-4.el7-f14e36fd43" name="oss2.local" id="2" with_quorum="true" />
+        <last_update time="Fri Aug 28 16:17:35 2020" />
+        <last_change time="Fri Aug 28 16:17:18 2020" user="root" client="crm_resource" origin="oss1.local" />
+        <nodes_configured number="2" expected_votes="unknown" />
+        <resources_configured number="11" disabled="0" blocked="0" />
+        <cluster_options stonith-enabled="true" symmetric-cluster="true" no-quorum-policy="stop" maintenance-mode="false" />
+    </summary>
+    <nodes>
+        <node name="oss1.local" id="1" online="true" standby="false" standby_onfail="false" maintenance="false" pending="false" unclean="false" shutdown="false" expected_up="true" is_dc="false" resources_running="5" type="member" />
+        <node name="oss2.local" id="2" online="true" standby="false" standby_onfail="false" maintenance="false" pending="false" unclean="false" shutdown="false" expected_up="true" is_dc="true" resources_running="5" type="member" />
+    </nodes>
+    <resources>
+        <resource id="vboxfence" resource_agent="stonith:fence_vbox" role="Stopped" active="false" orphaned="false" blocked="false" managed="true" failed="false" failure_ignored="false" nodes_running_on="0" />
+        <resource id="ost0" resource_agent="ocf::lustre:Lustre" role="Started" active="true" orphaned="false" blocked="false" managed="true" failed="false" failure_ignored="false" nodes_running_on="1" >
+            <node name="oss1.local" id="1" cached="false"/>
+        </resource>
+        <resource id="ost1" resource_agent="ocf::lustre:Lustre" role="Started" active="true" orphaned="false" blocked="false" managed="true" failed="false" failure_ignored="false" nodes_running_on="1" >
+            <node name="oss2.local" id="2" cached="false"/>
+        </resource>
+        <resource id="ost2" resource_agent="ocf::lustre:Lustre" role="Started" active="true" orphaned="false" blocked="false" managed="true" failed="false" failure_ignored="false" nodes_running_on="1" >
+            <node name="oss2.local" id="2" cached="false"/>
+        </resource>
+        <resource id="ost3" resource_agent="ocf::lustre:Lustre" role="Started" active="true" orphaned="false" blocked="false" managed="true" failed="false" failure_ignored="false" nodes_running_on="1" >
+            <node name="oss1.local" id="1" cached="false"/>
+        </resource>
+        <resource id="ost4" resource_agent="ocf::lustre:Lustre" role="Started" active="true" orphaned="false" blocked="false" managed="true" failed="false" failure_ignored="false" nodes_running_on="1" >
+            <node name="oss2.local" id="2" cached="false"/>
+        </resource>
+        <resource id="ost5" resource_agent="ocf::lustre:Lustre" role="Started" active="true" orphaned="false" blocked="false" managed="true" failed="false" failure_ignored="false" nodes_running_on="1" >
+            <node name="oss1.local" id="1" cached="false"/>
+        </resource>
+        <resource id="ost6" resource_agent="ocf::lustre:Lustre" role="Started" active="true" orphaned="false" blocked="false" managed="true" failed="false" failure_ignored="false" nodes_running_on="1" >
+            <node name="oss2.local" id="2" cached="false"/>
+        </resource>
+        <resource id="ost7" resource_agent="ocf::lustre:Lustre" role="Started" active="true" orphaned="false" blocked="false" managed="true" failed="false" failure_ignored="false" nodes_running_on="1" >
+            <node name="oss1.local" id="1" cached="false"/>
+        </resource>
+        <resource id="ost8" resource_agent="ocf::lustre:Lustre" role="Started" target_role="Started" active="true" orphaned="false" blocked="false" managed="true" failed="false" failure_ignored="false" nodes_running_on="1" >
+            <node name="oss1.local" id="1" cached="false"/>
+        </resource>
+        <resource id="ost9" resource_agent="ocf::lustre:Lustre" role="Started" active="true" orphaned="false" blocked="false" managed="true" failed="false" failure_ignored="false" nodes_running_on="1" >
+            <node name="oss2.local" id="2" cached="false"/>
+        </resource>
+    </resources>
+    <node_attributes>
+        <node name="oss1.local">
+        </node>
+        <node name="oss2.local">
+        </node>
+    </node_attributes>
+    <node_history>
+        <node name="oss1.local">
+            <resource_history id="vboxfence" orphan="false" migration-threshold="1000000" fail-count="1000000" last-failure="Tue Aug 25 02:06:38 2020">
+                <operation_history call="34" task="start" last-rc-change="Tue Aug 25 02:06:37 2020" last-run="Tue Aug 25 02:06:37 2020" exec-time="1221ms" queue-time="1ms" rc="1" rc_text="unknown error" />
+                <operation_history call="52" task="stop" last-rc-change="Tue Aug 25 02:07:31 2020" last-run="Tue Aug 25 02:07:31 2020" exec-time="1ms" queue-time="0ms" rc="0" rc_text="ok" />
+            </resource_history>
+            <resource_history id="ost0" orphan="false" migration-threshold="1000000">
+                <operation_history call="58" task="start" last-rc-change="Tue Aug 25 02:07:32 2020" last-run="Tue Aug 25 02:07:32 2020" exec-time="456ms" queue-time="1ms" rc="0" rc_text="ok" />
+                <operation_history call="59" task="monitor" interval="20000ms" last-rc-change="Tue Aug 25 02:07:32 2020" exec-time="24ms" queue-time="1ms" rc="0" rc_text="ok" />
+            </resource_history>
+            <resource_history id="ost1" orphan="false" migration-threshold="1000000">
+                <operation_history call="53" task="monitor" interval="20000ms" last-rc-change="Tue Aug 25 02:07:31 2020" exec-time="29ms" queue-time="0ms" rc="0" rc_text="ok" />
+                <operation_history call="61" task="stop" last-rc-change="Tue Aug 25 02:07:33 2020" last-run="Tue Aug 25 02:07:33 2020" exec-time="242ms" queue-time="0ms" rc="0" rc_text="ok" />
+            </resource_history>
+            <resource_history id="ost3" orphan="false" migration-threshold="1000000">
+                <operation_history call="44" task="start" last-rc-change="Tue Aug 25 02:06:37 2020" last-run="Tue Aug 25 02:06:37 2020" exec-time="54738ms" queue-time="0ms" rc="0" rc_text="ok" />
+                <operation_history call="54" task="monitor" interval="20000ms" last-rc-change="Tue Aug 25 02:07:31 2020" exec-time="27ms" queue-time="0ms" rc="0" rc_text="ok" />
+            </resource_history>
+            <resource_history id="ost5" orphan="false" migration-threshold="1000000">
+                <operation_history call="49" task="start" last-rc-change="Tue Aug 25 02:06:37 2020" last-run="Tue Aug 25 02:06:37 2020" exec-time="54263ms" queue-time="0ms" rc="0" rc_text="ok" />
+                <operation_history call="55" task="monitor" interval="20000ms" last-rc-change="Tue Aug 25 02:07:31 2020" exec-time="28ms" queue-time="0ms" rc="0" rc_text="ok" />
+            </resource_history>
+            <resource_history id="ost7" orphan="false" migration-threshold="1000000">
+                <operation_history call="50" task="start" last-rc-change="Tue Aug 25 02:06:37 2020" last-run="Tue Aug 25 02:06:37 2020" exec-time="54698ms" queue-time="0ms" rc="0" rc_text="ok" />
+                <operation_history call="56" task="monitor" interval="20000ms" last-rc-change="Tue Aug 25 02:07:31 2020" exec-time="29ms" queue-time="0ms" rc="0" rc_text="ok" />
+            </resource_history>
+            <resource_history id="ost8" orphan="false" migration-threshold="1000000">
+                <operation_history call="62" task="start" last-rc-change="Fri Aug 28 16:17:19 2020" last-run="Fri Aug 28 16:17:19 2020" exec-time="521ms" queue-time="0ms" rc="0" rc_text="ok" />
+                <operation_history call="65" task="monitor" interval="20000ms" last-rc-change="Fri Aug 28 16:17:19 2020" exec-time="32ms" queue-time="0ms" rc="0" rc_text="ok" />
+            </resource_history>
+            <resource_history id="ost9" orphan="false" migration-threshold="1000000">
+                <operation_history call="57" task="monitor" interval="20000ms" last-rc-change="Tue Aug 25 02:07:31 2020" exec-time="28ms" queue-time="0ms" rc="0" rc_text="ok" />
+                <operation_history call="64" task="stop" last-rc-change="Fri Aug 28 16:17:19 2020" last-run="Fri Aug 28 16:17:19 2020" exec-time="268ms" queue-time="0ms" rc="0" rc_text="ok" />
+            </resource_history>
+        </node>
+        <node name="oss2.local">
+            <resource_history id="vboxfence" orphan="false" migration-threshold="1000000" fail-count="1000000" last-failure="Tue Aug 25 02:07:33 2020">
+                <operation_history call="56" task="start" last-rc-change="Tue Aug 25 02:07:32 2020" last-run="Tue Aug 25 02:07:32 2020" exec-time="1324ms" queue-time="0ms" rc="1" rc_text="unknown error" />
+                <operation_history call="57" task="stop" last-rc-change="Tue Aug 25 02:07:33 2020" last-run="Tue Aug 25 02:07:33 2020" exec-time="1ms" queue-time="0ms" rc="0" rc_text="ok" />
+            </resource_history>
+            <resource_history id="ost0" orphan="false" migration-threshold="1000000">
+                <operation_history call="51" task="stop" last-rc-change="Tue Aug 25 02:07:32 2020" last-run="Tue Aug 25 02:07:32 2020" exec-time="221ms" queue-time="0ms" rc="0" rc_text="ok" />
+            </resource_history>
+            <resource_history id="ost1" orphan="false" migration-threshold="1000000">
+                <operation_history call="58" task="start" last-rc-change="Tue Aug 25 02:07:33 2020" last-run="Tue Aug 25 02:07:33 2020" exec-time="794ms" queue-time="0ms" rc="0" rc_text="ok" />
+                <operation_history call="59" task="monitor" interval="20000ms" last-rc-change="Tue Aug 25 02:07:34 2020" exec-time="30ms" queue-time="0ms" rc="0" rc_text="ok" />
+            </resource_history>
+            <resource_history id="ost2" orphan="false" migration-threshold="1000000">
+                <operation_history call="48" task="start" last-rc-change="Tue Aug 25 02:06:37 2020" last-run="Tue Aug 25 02:06:37 2020" exec-time="53849ms" queue-time="0ms" rc="0" rc_text="ok" />
+                <operation_history call="52" task="monitor" interval="20000ms" last-rc-change="Tue Aug 25 02:07:32 2020" exec-time="43ms" queue-time="0ms" rc="0" rc_text="ok" />
+            </resource_history>
+            <resource_history id="ost4" orphan="false" migration-threshold="1000000">
+                <operation_history call="47" task="start" last-rc-change="Tue Aug 25 02:06:37 2020" last-run="Tue Aug 25 02:06:37 2020" exec-time="54625ms" queue-time="0ms" rc="0" rc_text="ok" />
+                <operation_history call="53" task="monitor" interval="20000ms" last-rc-change="Tue Aug 25 02:07:32 2020" exec-time="42ms" queue-time="0ms" rc="0" rc_text="ok" />
+            </resource_history>
+            <resource_history id="ost6" orphan="false" migration-threshold="1000000">
+                <operation_history call="49" task="start" last-rc-change="Tue Aug 25 02:06:37 2020" last-run="Tue Aug 25 02:06:37 2020" exec-time="51964ms" queue-time="0ms" rc="0" rc_text="ok" />
+                <operation_history call="54" task="monitor" interval="20000ms" last-rc-change="Tue Aug 25 02:07:32 2020" exec-time="38ms" queue-time="0ms" rc="0" rc_text="ok" />
+            </resource_history>
+            <resource_history id="ost8" orphan="false" migration-threshold="1000000">
+                <operation_history call="55" task="monitor" interval="20000ms" last-rc-change="Tue Aug 25 02:07:32 2020" exec-time="37ms" queue-time="0ms" rc="0" rc_text="ok" />
+                <operation_history call="61" task="stop" last-rc-change="Fri Aug 28 15:24:37 2020" last-run="Fri Aug 28 15:24:37 2020" exec-time="214ms" queue-time="0ms" rc="0" rc_text="ok" />
+            </resource_history>
+            <resource_history id="ost9" orphan="false" migration-threshold="1000000">
+                <operation_history call="62" task="start" last-rc-change="Fri Aug 28 16:17:19 2020" last-run="Fri Aug 28 16:17:19 2020" exec-time="571ms" queue-time="0ms" rc="0" rc_text="ok" />
+                <operation_history call="63" task="monitor" interval="20000ms" last-rc-change="Fri Aug 28 16:17:19 2020" exec-time="32ms" queue-time="0ms" rc="0" rc_text="ok" />
+            </resource_history>
+        </node>
+    </node_history>
+    <failures>
+        <failure op_key="vboxfence_start_0" node="oss1.local" exitstatus="unknown error" exitreason="" exitcode="1" call="34" status="Error" last-rc-change="Tue Aug 25 02:06:37 2020" queued="1" exec="1221" interval="0" task="start" />
+        <failure op_key="vboxfence_start_0" node="oss2.local" exitstatus="unknown error" exitreason="" exitcode="1" call="56" status="Error" last-rc-change="Tue Aug 25 02:07:32 2020" queued="0" exec="1324" interval="0" task="start" />
+    </failures>
+    <fence_history>
+    </fence_history>
+    <tickets>
+    </tickets>
+    <bans>
+    </bans>
+</crm_mon>

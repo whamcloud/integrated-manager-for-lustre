@@ -1,0 +1,27 @@
+ ost0003-fs0a9c (ocf::ddn:lustre-server):       Started ai400-0a9c-vm03
+xml:
+<primitive id="ost0003-fs0a9c" class="ocf" provider="ddn" type="lustre-server">
+    <instance_attributes id="lustre-fs0a9c-ost-instance_attributes">
+        <nvpair name="lustre_resource_type" value="ost" id="lustre-fs0a9c-ost-instance_attributes-lustre_resource_type"/>
+        <nvpair name="manage_directory" value="1" id="lustre-fs0a9c-ost-instance_attributes-manage_directory"/>
+    </instance_attributes>
+    <meta_attributes id="lustre-fs0a9c-ost-meta_attributes">
+        <nvpair name="priority" value="0" id="lustre-fs0a9c-ost-meta_attributes-priority"/>
+    </meta_attributes>
+    <utilization id="lustre-fs0a9c-ost-utilization">
+        <nvpair name="lustre-object" value="1" id="lustre-fs0a9c-ost-utilization-lustre-object"/>
+    </utilization>
+    <operations>
+        <op name="start" interval="0" record-pending="true" timeout="450" id="lustre-fs0a9c-ost-start-0"/>
+        <op name="stop" interval="0" record-pending="true" timeout="300" id="lustre-fs0a9c-ost-stop-0"/>
+        <op name="monitor" interval="30" timeout="300" id="lustre-fs0a9c-ost-monitor-30"/>
+    </operations>
+    <instance_attributes id="ost0003-fs0a9c-instance_attributes">
+        <nvpair name="device" value="/dev/ddn/fs0a9c_ost0003" id="ost0003-fs0a9c-instance_attributes-device"/>
+        <nvpair name="directory" value="/lustre/fs0a9c/ost0003" id="ost0003-fs0a9c-instance_attributes-directory"/>
+    </instance_attributes>
+    <meta_attributes id="ost0003-fs0a9c-meta_attributes">
+        <nvpair name="zone" value="AI400-0a9c" id="ost0003-fs0a9c-meta_attributes-zone"/>
+        <nvpair id="ost0003-fs0a9c-meta_attributes-target-role" name="target-role" value="Started"/>
+    </meta_attributes>
+</primitive>
