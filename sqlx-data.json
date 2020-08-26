@@ -438,6 +438,100 @@
       ]
     }
   },
+  "37cad6dd07db65feea404c212a36558b1dfc95b4564a065326bcdfe24ca79417": {
+    "query": "\n                SELECT * FROM corosync_node n\n                ORDER BY\n                    CASE WHEN $3 = 'asc' THEN (n.id, n.name) END ASC,\n                    CASE WHEN $3 = 'desc' THEN (n.id, n.name) END DESC\n                OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "online",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 3,
+          "name": "standby",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 4,
+          "name": "standby_onfail",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 5,
+          "name": "maintenance",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 6,
+          "name": "pending",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 7,
+          "name": "unclean",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 8,
+          "name": "shutdown",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 9,
+          "name": "expected_up",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 10,
+          "name": "is_dc",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 11,
+          "name": "resources_running",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 12,
+          "name": "type",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "39fc1211724cef9afd733459348bcd3eb6f3af9a89dc1ca470593ea8beb3678c": {
     "query": "\n        SELECT * FROM chroma_core_job\n        WHERE id IN (SELECT job_id from chroma_core_command_jobs\n            WHERE command_id = $1)\n    ",
     "describe": {
