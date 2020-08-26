@@ -186,7 +186,7 @@ class CreateSystemdResourceStep(Step):
     Args:
     * host - fqdn to run on
     * unit - systemd unit name
-    * ha_label - (optional) ha_label of unit (can be derived from u
+    * ha_label - ha_label for unit
     * start - (optional) start timeout
     * stop - (optional) stop timeout
     * monitor - (optional) monitor interval
@@ -199,7 +199,7 @@ class CreateSystemdResourceStep(Step):
     def run(self, kwargs):
         host = kwargs["host"]
         unit = kwargs["unit"]
-        ha_label = kwargs.get("ha_label", "systemd:" + unit)
+        ha_label = kwargs["ha_label"]
         start = kwargs.get("start")
         stop = kwargs.get("stop")
         monitor = kwargs.get("monitor")
@@ -210,6 +210,7 @@ class CreateSystemdResourceStep(Step):
         agent = {
             "agent": {"standard": "systemd", "ocftype": unit},
             "id": ha_label,
+            "args": {},
             "ops": {"start": start, "stop": stop, "monitor": monitor},
         }
         constraint = [{"ORDERING": {"id": unit + "-after-" + r, "first": r, "then": ha_label}} for r in after]

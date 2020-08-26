@@ -2059,6 +2059,8 @@ class JobScheduler(object):
             hotpool = OstPool.objects.get(pk=hotpool_data["hotpool"])
             coldpool = OstPool.objects.get(pk=hotpool_data["coldpool"])
 
+            purges = []
+            amigos = []
             with transaction.atomic():
 
                 # Create HotpoolConfig object
@@ -2115,7 +2117,7 @@ class JobScheduler(object):
                         "configuration": lamigoconf,
                         "mdt": mdt.downcast(),
                     }
-                    lamigo = Lamigo.objects.create(**data)
+                    amigos.append(Lamigo.objects.create(**data))
 
                 # Create LPurge
                 task_data = {
@@ -2144,8 +2146,15 @@ class JobScheduler(object):
                         "configuration": lpurgeconf,
                         "ost": ost.downcast(),
                     }
-                    Lpurge.objects.create(**data)
+                    purges.append(Lpurge.objects.create(**data))
 
+            for lp in purges:
+                ObjectCache.add(Lpurge, lp)
+            for la in amigos:
+                ObjectCache.add(Lamigo, la)
+            ObjectCache.add(HotpoolConfiguration, hpconf)
+
+            with transaction.atomic():
                 command_id = self.CommandPlan.command_run_jobs(job_list, help_text["create_hotpool"],)
 
         self.progress.advance()

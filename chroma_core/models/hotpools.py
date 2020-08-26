@@ -109,7 +109,7 @@ class ConfigureHotpoolJob(StateChangeJob):
                 )
 
             for host in (l[0] for l in fs.get_server_groups()):
-                steps.append((CreateClonedClientStep, {"host": host.fqdn, "mountpoint": mp}))
+                steps.append((CreateClonedClientStep, {"host": host.fqdn, "mountpoint": mp, "fs_name": fs.name,}))
 
         return steps
 
@@ -129,9 +129,10 @@ class CreateClonedClientStep(Step):
 
     def run(self, kwargs):
         host = kwargs["host"]
+        fsname = kwargs["fs_name"]
         mp = kwargs["mountpoint"]
 
-        self.invoke_rust_agent_expect_result(host, "create_cloned_mount", mp)
+        self.invoke_rust_agent_expect_result(host, "ha_create_cloned_client", [fsname, mp])
 
 
 class StartHotpoolJob(StateChangeJob):
@@ -324,7 +325,7 @@ class Lamigo(StatefulObject):
 
     @property
     def ha_label(self):
-        return "systemd:" + self.unit_name
+        return "lamigo-" + self.mdt.name
 
 
 class ConfigureLamigoJob(StateChangeJob):
@@ -372,6 +373,7 @@ class ConfigureLamigoJob(StateChangeJob):
                 {
                     "host": host.fqdn,
                     "unit": self.lamigo.unit_name,
+                    "ha_label": self.lamigo.ha_label,
                     "monitor": "30s",
                     "start": "15m",
                     "after": after,
@@ -567,11 +569,11 @@ class Lpurge(StatefulObject):
 
     @property
     def unit_name(self):
-        return "lpurge@" + self.mdt.name + ".service"
+        return "lpurge@" + self.ost.name + ".service"
 
     @property
     def ha_label(self):
-        return "systemd:" + self.unit_name
+        return "lpurge-" + self.ost.name
 
 
 class ConfigureLpurgeJob(StateChangeJob):
@@ -614,6 +616,7 @@ class ConfigureLpurgeJob(StateChangeJob):
                 {
                     "host": host.fqdn,
                     "unit": self.lpurge.unit_name,
+                    "ha_label": self.lpurge.ha_label,
                     "monitor": "30s",
                     "after": after,
                     "with": [self.lpurge.ost.ha_label],
