@@ -125,6 +125,24 @@
       ]
     }
   },
+  "17bb13a14453986a81a76b4cf246cffe6248a469a5d5de99bf98b7ddf387a616": {
+    "query": "INSERT INTO targets \n                        (state, name, active_host_id, host_ids, filesystems, uuid, mount_path) \n                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], string_to_array(filesystems, ',')::text[], uuid, mount_path\n                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[])\n                        AS t(state, name, active_host_id, host_ids, filesystems, uuid, mount_path)\n                        ON CONFLICT (uuid)\n                            DO\n                            UPDATE SET  state          = EXCLUDED.state,\n                                        name           = EXCLUDED.name,\n                                        active_host_id = EXCLUDED.active_host_id,\n                                        host_ids       = EXCLUDED.host_ids,\n                                        filesystems    = EXCLUDED.filesystems,\n                                        mount_path     = EXCLUDED.mount_path",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "17ed37ab2c915514b18cde4f0a1f3d2bf2eface63c4cb96e18155ab370fe39b6": {
     "query": "DELETE FROM chroma_core_serverprofile_repolist WHERE serverprofile_id = $1",
     "describe": {
@@ -616,23 +634,6 @@
       ]
     }
   },
-  "59d0492df20526a4958725905b821d45f75b520276c53bbf318b19fb5e60ab6a": {
-    "query": "INSERT INTO targets \n                        (state, name, active_host_id, host_ids, uuid, mount_path) \n                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], uuid, mount_path\n                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[])\n                        AS t(state, name, active_host_id, host_ids, uuid, mount_path)\n                        ON CONFLICT (uuid)\n                            DO\n                            UPDATE SET  state          = EXCLUDED.state,\n                                        name           = EXCLUDED.name,\n                                        active_host_id = EXCLUDED.active_host_id,\n                                        host_ids       = EXCLUDED.host_ids,\n                                        mount_path     = EXCLUDED.mount_path",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "TextArray",
-          "Int4Array",
-          "TextArray",
-          "TextArray",
-          "TextArray"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "5b8f7ab8db2264a517e0de4228e259e02201d0116b9235e59cd4b66df61db22e": {
     "query": "DELETE FROM chroma_core_serverprofilepackage WHERE server_profile_id = $1",
     "describe": {
@@ -1080,11 +1081,16 @@
         },
         {
           "ordinal": 4,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 5,
           "name": "uuid",
           "type_info": "Text"
         },
         {
-          "ordinal": 5,
+          "ordinal": 6,
           "name": "mount_path",
           "type_info": "Text"
         }
@@ -1096,6 +1102,7 @@
         false,
         false,
         true,
+        false,
         false,
         false,
         true

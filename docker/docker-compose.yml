@@ -240,7 +240,6 @@ services:
     environment:
       - DEVICE_AGGREGATOR_URL=http://device:8008
       - PROXY_HOST=iml-action-runner
-      - INFLUXDB_SERVER_FQDN=influxdb
       - LOG_LEVEL
   lustre-audit:
     image: "imlteam/manager-lustre-audit:6.2.0-dev"
@@ -405,7 +404,7 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - RUST_LOG=info
-      - PROXY_HOST=influxdb
+      - "PROXY_HOST=iml-stats"
   iml-postoffice:
     image: "imlteam/iml-postoffice:6.2.0-dev"
     hostname: "iml-postoffice"
@@ -450,6 +449,7 @@ services:
       - EXA_VERSION
       - INFLUXDB_IML_STATS_LONG_DURATION
       - LOG_LEVEL
+      - INFLUXDB_SERVER_FQDN=influxdb
     deploy:
       restart_policy:
         condition: on-failure

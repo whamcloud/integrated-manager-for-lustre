@@ -1505,12 +1505,14 @@ dependencies = [
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
+ "influx_db_client",
  "insta",
  "serde",
  "serde_json",
  "thiserror",
  "tokio",
  "tokio-test",
+ "url",
  "warp",
 ]
 
@@ -1793,6 +1795,7 @@ dependencies = [
  "iml-wire-types",
  "influx_db_client",
  "lustre_collector",
+ "serde_json",
  "thiserror",
  "tokio",
  "tracing",
@@ -2195,9 +2198,9 @@ dependencies = [
 
 [[package]]
 name = "lustre_collector"
-version = "0.2.13"
+version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "974ed9dd73f01640602f0e32be38ab86db2f1f37062e75a67516f51728f06489"
+checksum = "9699d43a4e3a6aa7c8c9c73003216e530d0a2db1adf29bf4df5e1a141a37d065"
 dependencies = [
  "clap",
  "combine",
