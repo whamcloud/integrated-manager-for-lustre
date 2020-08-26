@@ -32,6 +32,28 @@ struct CorosyncNode {
     r#type: String,
 }
 
+#[derive(juniper::GraphQLObject)]
+/// A Lustre Target
+struct Target {
+    state: String,
+    /// The target name
+    name: String,
+    /// The `host.id` of the host running this target
+    active_host_id: Option<i32>,
+    /// The list of `hosts.id`s the target can be mounted on.
+    ///
+    /// *Note*. This list represents where the backing storage can be mounted,
+    /// it does not represent any HA configuration.
+    host_ids: Vec<i32>,
+    /// The list of `filesystem.name`s this target belongs to.
+    /// Only an `MGS` may have more than one target.
+    filesystems: Vec<String>,
+    /// Then underlying device UUID
+    uuid: String,
+    /// Where this target is mounted
+    mount_path: Option<String>,
+}
+
 pub(crate) struct QueryRoot;
 
 #[derive(GraphQLEnum)]
@@ -79,6 +101,37 @@ impl QueryRoot {
                 ORDER BY
                     CASE WHEN $3 = 'asc' THEN (n.id, n.name) END ASC,
                     CASE WHEN $3 = 'desc' THEN (n.id, n.name) END DESC
+                OFFSET $1 LIMIT $2"#,
+            offset.unwrap_or(0) as i64,
+            limit.unwrap_or(20) as i64,
+            dir.deref()
+        )
+        .fetch_all(&context.client)
+        .await?;
+
+        Ok(xs)
+    }
+    #[graphql(arguments(
+        limit(description = "paging limit, defaults to 20"),
+        offset(description = "Offset into items, defaults to 0"),
+        dir(description = "Sort direction, defaults to asc")
+    ))]
+    /// Fetch the list of known targets
+    async fn targets(
+        context: &Context,
+        limit: Option<i32>,
+        offset: Option<i32>,
+        dir: Option<SortDir>,
+    ) -> juniper::FieldResult<Vec<Target>> {
+        let dir = dir.unwrap_or_default();
+
+        let xs = sqlx::query_as!(
+            Target,
+            r#"
+                SELECT * from targets t
+                ORDER BY
+                    CASE WHEN $3 = 'asc' THEN t.name END ASC,
+                    CASE WHEN $3 = 'desc' THEN t.name END DESC
                 OFFSET $1 LIMIT $2"#,
             offset.unwrap_or(0) as i64,
             limit.unwrap_or(20) as i64,
