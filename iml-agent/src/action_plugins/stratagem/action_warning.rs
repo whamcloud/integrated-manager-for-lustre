@@ -3,10 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    action_plugins::stratagem::util::search_rootpath,
     agent_error::{ImlAgentError, RequiredError},
     fidlist,
     http_comms::streaming_client::send,
+    lustre::search_rootpath,
 };
 use futures::{
     channel::mpsc, future::join_all, sink::SinkExt, stream, StreamExt, TryFutureExt, TryStreamExt,
