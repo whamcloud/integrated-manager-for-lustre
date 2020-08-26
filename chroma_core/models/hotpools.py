@@ -99,10 +99,10 @@ class ConfigureHotpoolJob(StateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["configure_hotpool_long"]
+        return help_text["configure_hotpool"]
 
     def description(self):
-        return help_text["configure_hotpool_long"]
+        return help_text["configure_hotpool"]
 
     def get_steps(self):
         steps = []
@@ -162,10 +162,10 @@ class StartHotpoolJob(StateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["start_hotpool_long"]
+        return help_text["start_hotpool"]
 
     def description(self):
-        return help_text["start_hotpool_long"]
+        return help_text["start_hotpool"]
 
     def get_deps(self):
         deps = []
@@ -208,10 +208,10 @@ class StopHotpoolJob(StateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["stop_hotpool_long"]
+        return help_text["stop_hotpool"]
 
     def description(self):
-        return help_text["stop_hotpool_long"]
+        return help_text["stop_hotpool"]
 
     def get_steps(self):
         steps = []
@@ -239,10 +239,10 @@ class RemoveHotpoolJob(StateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["stop_hotpool_long"]
+        return help_text["stop_hotpool"]
 
     def description(self):
-        return help_text["stop_hotpool_long"]
+        return help_text["stop_hotpool"]
 
     def get_deps(self):
         deps = []
@@ -375,10 +375,10 @@ class ConfigureLamigoJob(StateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["configure_hotpool_long"]
+        return help_text["configure_hotpool"]
 
     def description(self):
-        return help_text["configure_hotpool_long"]
+        return help_text["configure_hotpool"]
 
     def get_steps(self):
         steps = []
@@ -464,10 +464,10 @@ class StartLamigoJob(StateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["configure_hotpool_long"]
+        return help_text["start_hotpool"]
 
     def description(self):
-        return help_text["configure_hotpool_long"]
+        return help_text["start_hotpool"]
 
     def get_steps(self):
         steps = []
@@ -496,10 +496,10 @@ class StopLamigoJob(StateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["configure_hotpool_long"]
+        return help_text["stop_hotpool"]
 
     def description(self):
-        return help_text["configure_hotpool_long"]
+        return help_text["stop_hotpool"]
 
     def get_steps(self):
         steps = []
@@ -527,10 +527,10 @@ class RemoveLamigoJob(StateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["configure_hotpool_long"]
+        return help_text["destroy_hotpool"]
 
     def description(self):
-        return help_text["configure_hotpool_long"]
+        return help_text["destroy_hotpool"]
 
     def get_steps(self):
         steps = []
@@ -647,10 +647,10 @@ class ConfigureLpurgeJob(StateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["configure_hotpool_long"]
+        return help_text["configure_hotpool"]
 
     def description(self):
-        return help_text["configure_hotpool_long"]
+        return help_text["configure_hotpool"]
 
     def get_steps(self):
         steps = []
@@ -706,10 +706,10 @@ class StartLpurgeJob(StateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["configure_hotpool_long"]
+        return help_text["start_hotpool"]
 
     def description(self):
-        return help_text["configure_hotpool_long"]
+        return help_text["start_hotpool"]
 
     def get_steps(self):
         steps = []
@@ -738,10 +738,10 @@ class StopLpurgeJob(StateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["configure_hotpool_long"]
+        return help_text["stop_hotpool"]
 
     def description(self):
-        return help_text["configure_hotpool_long"]
+        return help_text["stop_hotpool"]
 
     def get_steps(self):
         steps = []
@@ -769,10 +769,10 @@ class RemoveLpurgeJob(StateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["configure_hotpool_long"]
+        return help_text["destroy_hotpool"]
 
     def description(self):
-        return help_text["configure_hotpool_long"]
+        return help_text["destroy_hotpool"]
 
     def get_steps(self):
         steps = []

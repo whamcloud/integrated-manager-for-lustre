@@ -2109,45 +2109,45 @@ class JobScheduler(object):
                 }
                 lamigoconf = LamigoConfiguration.objects.create(**data)
 
-                for mdt in ManagedTarget.objects.filter(managedmdt__filesystem=self):
+                for mdt in ManagedTarget.objects.filter(managedmdt__filesystem=filesystem):
                     data = {
                         "configuration": lamigoconf,
-                        "mdt": mdt,
+                        "mdt": mdt.downcast(),
                     }
 
                     lamigo = Lamigo.objects.create(**data)
                     lamigo.save()
 
-                    # Create LPurge
-                    task_data = {
-                        "filesystem": filesystem,
-                        "name": "{}-{}-purge".format(filesystem.name, hotpool.name),
-                        "start": django.utils.timezone.now(),
-                        "state": "created",
-                        "single_runner": False,
-                        "keep_failed": False,
-                        "actions": ["mirror.purge"],
-                    }
-                    task = Task.objects.create(**task_data)
-                    job_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
+                # Create LPurge
+                task_data = {
+                    "filesystem": filesystem,
+                    "name": "{}-{}-purge".format(filesystem.name, hotpool.name),
+                    "start": django.utils.timezone.now(),
+                    "state": "created",
+                    "single_runner": False,
+                    "keep_failed": False,
+                    "actions": ["mirror.purge"],
+                }
+                task = Task.objects.create(**task_data)
+                job_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
 
+                data = {
+                    "hotpool": hpconf,
+                    "cold": coldpool,
+                    "purge": task,
+                    "freehi": hotpool_data["freehi"],
+                    "freelo": hotpool_data["freelo"],
+                }
+                lpurgeconf = LpurgeConfiguration.objects.create(**data)
+
+                for ost in coldpool.osts.all():
                     data = {
-                        "hotpool": hpconf,
-                        "cold": coldpool,
-                        "purge": task,
-                        "freehi": hotpool_data["freehi"],
-                        "freelo": hotpool_data["freelo"],
+                        "configuration": lpurgeconf,
+                        "ost": ost.downcast(),
                     }
-                    lpurgeconf = LpurgeConfiguration.objects.create(**data)
+                    Lpurge.objects.create(**data)
 
-                    for ost in colpool.osts:
-                        data = {
-                            "configuration": lpurgeconf,
-                            "ost": ost,
-                        }
-                        Lpurge.objects.create(**data)
-
-                        command_id = self.CommandPlan.command_run_jobs(cmds, help_text["create_task"],)
+                command_id = self.CommandPlan.command_run_jobs(job_list, help_text["create_hotpool"],)
 
         self.progress.advance()
         return hpconf.id, command_id
