@@ -8,9 +8,9 @@ import os
 from django.db import models
 from django.db.models import CASCADE, Q
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models.jobs import StatefulObject, Job
+from chroma_core.lib.job import DependOn, DependAll, Step, job_log
+from chroma_core.models.jobs import StatefulObject, StateChangeJob, Job
 from chroma_core.models.utils import (
-    DeletableDowncastableMetaclass,
     DeletableMetaclass,
     StartResourceStep,
     StopResourceStep,
@@ -19,13 +19,13 @@ from chroma_core.models.utils import (
     CreateSystemdResourceStep,
     RemoveResourceStep,
 )
-from chroma_core.models import StateChangeJob, Step
 from chroma_core.models import (
     ManagedFilesystem,
     ManagedMdt,
     OstPool,
     Task,
 )
+from chroma_help.help import help_text
 
 ############################################################
 # Hotpools
@@ -36,7 +36,7 @@ from chroma_core.models import (
 
 
 class HotpoolConfiguration(StatefulObject):
-    __metaclass__ = DeletableDowncastableMetaclass
+    __metaclass__ = DeletableMetaclass
 
     class Meta:
         app_label = "chroma_core"
@@ -61,13 +61,12 @@ class HotpoolConfiguration(StatefulObject):
         return self.ha_label is not None
 
     def get_components(self):
+        # self.version == 2:
+        component_types = [Lamigo, Lpurge]
 
-        if self.version == 2:
-            components = Lamigo.objects.filter(configuration__hotpool=self) + Lpurge.objects.filter(
-                configuration__hotpool=self
-            )
-        else:
-            components = []
+        components = []
+        for ctype in component_types:
+            components.extend([x for x in Lamigo.objects.filter(configuration__hotpool=self)])
 
         return components
 
