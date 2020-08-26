@@ -22,3 +22,4 @@ SUBSYSTEM=="block", PROGRAM=="/lib/udev/scsi_id --whitelisted --replace-whitespa
 SUBSYSTEM=="block", PROGRAM=="/lib/udev/scsi_id --whitelisted --replace-whitespace /dev/$name", RESULT=="1ATA_VBOX_HARDDISK_OST18_00000000000000", SYMLINK+="ost18"
 SUBSYSTEM=="block", PROGRAM=="/lib/udev/scsi_id --whitelisted --replace-whitespace /dev/$name", RESULT=="1ATA_VBOX_HARDDISK_OST19_00000000000000", SYMLINK+="ost19"
 SUBSYSTEM=="block", PROGRAM=="/lib/udev/scsi_id --whitelisted --replace-whitespace /dev/$name", RESULT=="1ATA_VBOX_HARDDISK_OST20_00000000000000", SYMLINK+="ost20"
+SUBSYSTEM=="block", PROGRAM=="/lib/udev/scsi_id --whitelisted --replace-whitespace /dev/$name", RESULT=="1ATA_VBOX_HARDDISK_mgt2_000000000000000", SYMLINK+="mgt2"

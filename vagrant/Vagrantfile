@@ -521,6 +521,12 @@ Vagrant.configure('2') do |config|
 
       provision_mpath oss
 
+      oss.vm.provision "file",
+                       source: "./scripts/update_oss_mpath.py",
+                       destination: "/tmp/update_oss_mpath.py"
+
+      configure_mpath oss
+
       provision_fence_agents oss
 
       cleanup_storage_server oss
@@ -626,7 +632,7 @@ Vagrant.configure('2') do |config|
                          type: 'shell',
                          run: 'never',
                          path: 'scripts/create_ldiskfs_fs_osts.sh',
-                         args: ['a', 'e', 0, 'fs']
+                         args: ['a', 'e', 0, 'fs', '']
 
         oss.vm.provision 'mount-ldiskfs-fs',
                          type: 'shell',
@@ -644,7 +650,7 @@ Vagrant.configure('2') do |config|
                          type: 'shell',
                          run: 'never',
                          path: 'scripts/create_ldiskfs_fs_osts.sh',
-                         args: ['f', 'j', 0, 'fs2']
+                         args: ['f', 'j', 0, 'fs2', '/dev/mapper/mpathu']
 
         oss.vm.provision 'mount-ldiskfs-fs2',
                          type: 'shell',
@@ -662,7 +668,13 @@ Vagrant.configure('2') do |config|
                          type: 'shell',
                          run: 'never',
                          path: 'scripts/create_ldiskfs_fs_osts.sh',
-                         args: ['a', 'e', 0, 'fs']
+                         args: ['a', 'e', 0, 'fs', '']
+
+        oss.vm.provision 'create-ldiskfs-lvm-fs2',
+                         type: 'shell',
+                         run: 'never',
+                         path: 'scripts/create_ldiskfs_fs_osts.sh',
+                         args: ['f', 'j', 0, 'fs', '/dev/mapper/mpathu']
 
         oss.vm.provision 'mount-ldiskfs-lvm-fs',
                          type: 'shell',
@@ -674,6 +686,18 @@ Vagrant.configure('2') do |config|
                           mount -t lustre /dev/mapper/mpathc /mnt/ost2
                           mount -t lustre /dev/mapper/mpathd /mnt/ost3
                           mount -t lustre /dev/mapper/mpathe /mnt/ost4
+                         SHELL
+
+        oss.vm.provision 'mount-ldiskfs-lvm-fs2',
+                         type: 'shell',
+                         run: 'never',
+                         inline: <<-SHELL
+                          mkdir -p /mnt/ost2-{0,1,2,3,4}
+                          mount -t lustre /dev/mapper/mpathf /mnt/ost2-0
+                          mount -t lustre /dev/mapper/mpathg /mnt/ost2-1
+                          mount -t lustre /dev/mapper/mpathh /mnt/ost2-2
+                          mount -t lustre /dev/mapper/mpathi /mnt/ost2-3
+                          mount -t lustre /dev/mapper/mpathj /mnt/ost2-4
                          SHELL
 
         oss.vm.provision 'ha-ldiskfs-lvm-fs-setup',
@@ -758,7 +782,7 @@ Vagrant.configure('2') do |config|
                          type: 'shell',
                          run: 'never',
                          path: 'scripts/create_ldiskfs_fs_osts.sh',
-                         args: ['k', 'o', 5, 'fs']
+                         args: ['k', 'o', 5, 'fs', '']
 
         oss.vm.provision 'mount-ldiskfs-fs',
                          type: 'shell',
@@ -776,7 +800,7 @@ Vagrant.configure('2') do |config|
                          type: 'shell',
                          run: 'never',
                          path: 'scripts/create_ldiskfs_fs_osts.sh',
-                         args: ['p', 't', 5, 'fs2']
+                         args: ['p', 't', 5, 'fs2', '']
 
         oss.vm.provision 'mount-ldiskfs-fs2',
                          type: 'shell',
@@ -794,7 +818,13 @@ Vagrant.configure('2') do |config|
                          type: 'shell',
                          run: 'never',
                          path: 'scripts/create_ldiskfs_fs_osts.sh',
-                         args: ['k', 'o', 5, 'fs']
+                         args: ['k', 'o', 5, 'fs', '']
+
+        oss.vm.provision 'create-ldiskfs-lvm-fs2',
+                         type: 'shell',
+                         run: 'never',
+                         path: 'scripts/create_ldiskfs_fs_osts.sh',
+                         args: ['p', 't', 5, 'fs2', '']
 
         oss.vm.provision 'mount-ldiskfs-lvm-fs',
                          type: 'shell',
@@ -806,6 +836,18 @@ Vagrant.configure('2') do |config|
                              mount -t lustre /dev/mapper/mpathm /mnt/ost7
                              mount -t lustre /dev/mapper/mpathn /mnt/ost8
                              mount -t lustre /dev/mapper/mpatho /mnt/ost9
+                         SHELL
+
+        oss.vm.provision 'mount-ldiskfs-lvm-fs2',
+                         type: 'shell',
+                         run: 'never',
+                         inline: <<-SHELL
+                             mkdir -p /mnt/ost2-{5,6,7,8,9}
+                             mount -t lustre /dev/mapper/mpathp /mnt/ost2-5
+                             mount -t lustre /dev/mapper/mpathq /mnt/ost2-6
+                             mount -t lustre /dev/mapper/mpathr /mnt/ost2-7
+                             mount -t lustre /dev/mapper/mpaths /mnt/ost2-8
+                             mount -t lustre /dev/mapper/mpatht /mnt/ost2-9
                          SHELL
 
       end
@@ -944,6 +986,15 @@ def provision_mpath(config)
     cp /usr/share/doc/device-mapper-multipath-*/multipath.conf /etc/multipath.conf
     systemctl start multipathd.service
     systemctl enable multipathd.service
+  SHELL
+end
+
+def configure_mpath(config)
+  config.vm.provision 'configure-mpath', type: 'shell', inline: <<-SHELL
+    multipath -ll | grep mpath | /tmp/update_oss_mpath.py
+    systemctl stop multipathd
+    multipath -F
+    systemctl start multipathd
   SHELL
 end
 
@@ -1093,7 +1144,7 @@ def create_iscsi_disks(vbox, name)
     %w[mdt1_ 5120],
     %w[mdt2_ 5120],
     %w[mdt3_ 5120],
-  ].concat(osts).each_with_index do |(name, size), i|
+  ].concat(osts).concat([%w[mgt2_ 512]]).each_with_index do |(name, size), i|
     file_to_disk = "#{dir}/#{name}.vdi"
     port = (i + 1).to_s
 
