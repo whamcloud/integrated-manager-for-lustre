@@ -1150,6 +1150,20 @@ class DeleteHostStep(Step):
         if kwargs["force"]:
             host.state = "removed"
 
+        # Cleanup any corosync leftovers
+        from django.db import connection
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                DELETE FROM corosync_cluster c
+                USING corosync_node_managed_host nh
+                WHERE nh.host_id = %s
+                AND cluster_id = c.id
+                """,
+                [host.id],
+            )
+
 
 class CommonRemoveHostJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(None, None, None)

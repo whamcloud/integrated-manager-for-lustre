@@ -4,8 +4,8 @@
 
 use crate::{
     agent_error::ImlAgentError,
-    crm_reader::get_crm_mon,
     daemon_plugins::{DaemonPlugin, Output},
+    high_availability::get_crm_mon,
 };
 use futures::{Future, FutureExt};
 use std::pin::Pin;

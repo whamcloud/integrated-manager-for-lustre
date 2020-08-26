@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::error::ImlApiError;
+use futures::TryStreamExt;
 use iml_postgres::{sqlx, PgPool};
 use iml_wire_types::snapshot::{Detail, List, Snapshot, Status};
 use juniper::{
@@ -20,6 +21,8 @@ struct CorosyncNode {
     name: String,
     /// The id of the node as reported by `crm_mon`
     id: String,
+    /// Id of the cluster this node belongs to
+    cluster_id: i32,
     online: bool,
     standby: bool,
     standby_onfail: bool,
@@ -99,14 +102,29 @@ impl QueryRoot {
         let xs = sqlx::query_as!(
             CorosyncNode,
             r#"
-                SELECT * FROM corosync_node n
+                SELECT
+                (n.id).name AS "name!",
+                (n.id).id AS "id!",
+                cluster_id,
+                online,
+                standby,
+                standby_onfail,
+                maintenance,
+                pending,
+                unclean,
+                shutdown,
+                expected_up,
+                is_dc,
+                resources_running,
+                type
+                FROM corosync_node n
                 ORDER BY
-                    CASE WHEN $3 = 'asc' THEN (n.id, n.name) END ASC,
-                    CASE WHEN $3 = 'desc' THEN (n.id, n.name) END DESC
-                OFFSET $1 LIMIT $2"#,
+                    CASE WHEN $1 = 'asc' THEN n.id END ASC,
+                    CASE WHEN $1 = 'desc' THEN n.id END DESC
+                OFFSET $2 LIMIT $3"#,
+            dir.deref(),
             offset.unwrap_or(0) as i64,
-            limit.unwrap_or(20) as i64,
-            dir.deref()
+            limit.unwrap_or(20) as i64
         )
         .fetch_all(&context.client)
         .await?;
@@ -140,6 +158,37 @@ impl QueryRoot {
             dir.deref()
         )
         .fetch_all(&context.client)
+        .await?;
+
+        Ok(xs)
+    }
+    /// Given a `fs_name`, produce a distinct grouping
+    /// of cluster nodes that make up the filesystem.
+    /// This is useful to find nodes capable of running resources associated
+    /// with the given `fs_name`.
+    #[graphql(arguments(fs_name(description = "The filesystem to search cluster nodes for"),))]
+    async fn get_fs_cluster_hosts(
+        context: &Context,
+        fs_name: String,
+    ) -> juniper::FieldResult<Vec<Vec<i32>>> {
+        let xs = sqlx::query!(
+            r#"
+                SELECT array_agg(distinct rh.host_id) as cluster_nodes from targets t
+                INNER JOIN corosync_target_resource r
+                ON r.mount_point = t.mount_path
+                INNER JOIN corosync_target_resource_managed_host rh
+                ON rh.corosync_resource_id = r.id AND rh.cluster_id = r.cluster_id
+                LEFT OUTER JOIN corosync_resource_bans b 
+                ON b.cluster_id = r.cluster_id AND b.resource = r.id
+                WHERE $1 = ANY(t.filesystems)
+                GROUP BY rh.cluster_id;
+            "#,
+            fs_name
+        )
+        .fetch(&context.client)
+        .map_ok(|x| x.cluster_nodes)
+        .try_filter_map(|x| async { Ok(x) })
+        .try_collect()
         .await?;
 
         Ok(xs)
