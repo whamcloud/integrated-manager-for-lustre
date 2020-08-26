@@ -2046,7 +2046,7 @@ class JobScheduler(object):
         # filesystem - filesystem.id
         # hotpool - ostpool.id
         # coldpool - ostpool.id
-        # extendlayout - lamigo.extend_task.args.striping
+        # extendlayout - lamigo.extend_task.args.striping (optional)
         # minage - lamigo.minage
         # freehi - lpurge.freehi
         # freelo - lpurge.freelo
@@ -2078,9 +2078,11 @@ class JobScheduler(object):
                     "state": "created",
                     "single_runner": False,
                     "keep_failed": False,
-                    "args": {"striping": hotpool_data["extendlayout"]},
+                    "args": {},
                     "actions": ["mirror.extend"],
                 }
+                if "extendlayout" in hotpool_data:
+                    task_data["args"]["striping"] = hotpool_data["extendlayout"]
                 extend_task = Task.objects.create(**task_data)
                 job_list.append({"class_name": "CreateTaskJob", "args": {"task": extend_task}})
 
@@ -2124,7 +2126,6 @@ class JobScheduler(object):
                         "state": "created",
                         "single_runner": False,
                         "keep_failed": False,
-                        "args": {"striping": hotpool_data["extendlayout"]},
                         "actions": ["mirror.purge"],
                     }
                     task = Task.objects.create(**task_data)
