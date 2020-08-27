@@ -82,6 +82,27 @@
       "nullable": []
     }
   },
+  "0faa7372288d5ac62093e0074a44c1694b4e1b5bd33d0cd0ce67dfcfe2e88abb": {
+    "query": "SELECT id FROM chroma_core_ostpool WHERE name=$1 AND filesystem_id=$2 AND not_deleted=True",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "1167f9862155b35e2bb59ba77286ccfc35c7f6113227d8dce116b3def418e2f9": {
     "query": "\n        INSERT INTO chroma_core_sfastoragesystem\n        (\n            uuid,\n            platform,\n            health_state_reason,\n            health_state,\n            child_health_state\n        )\n        VALUES ($1, $2, $3, $4, $5)\n        ON CONFLICT (uuid) DO UPDATE\n        SET\n            platform = excluded.platform,\n            health_state_reason = excluded.health_state_reason,\n            health_state = excluded.health_state,\n            child_health_state = excluded.child_health_state\n    ",
     "describe": {
@@ -231,6 +252,26 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "1833c11b575bc5c9e9779ee7585eba7657791ce9690e11ba4b78674324d9bac2": {
+    "query": "SELECT id FROM chroma_core_managedfilesystem WHERE name=$1 AND not_deleted=True",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
     }
   },
   "1abfa2e9edeb822cb74fe23011a079b9396e9e49474a2e6aeaa2048177af72b5": {
@@ -1024,6 +1065,27 @@
         true,
         true,
         true,
+        false
+      ]
+    }
+  },
+  "3deca7a33ef767634d3d57b50f19637a444b1af93d1ef34d06495a152c3e78be": {
+    "query": "SELECT id FROM chroma_core_ostpool_osts WHERE ostpool_id = $1 AND managedost_id = $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4"
+        ]
+      },
+      "nullable": [
         false
       ]
     }
@@ -2186,6 +2248,26 @@
       ]
     }
   },
+  "87f7e728ccb6df436d5a9defe08de36e6dfca9abfb93dad2dac79baaaf3406e6": {
+    "query": "SELECT managedost_id FROM chroma_core_ostpool_osts WHERE ostpool_id = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "managedost_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "89a7a37f26d89b7def2d6f7273fee79cd4c7fc7070343e4a4197c4080ded5003": {
     "query": "SELECT * FROM chroma_core_task WHERE name = $1",
     "describe": {
@@ -2327,6 +2409,44 @@
       "nullable": [
         false,
         true
+      ]
+    }
+  },
+  "8e5a81ecac9a795f539ff8d102cc9c9aaa60838d7b947374f89c7f39ae8e9388": {
+    "query": "SELECT name FROM chroma_core_ostpool WHERE not_deleted=True AND filesystem_id=$1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "name",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "8ea01c1ef6e38237e5f2b98dd903e69d46dc9961a7ccf68c069b9ba017a2bfd2": {
+    "query": "\n            SELECT id FROM django_content_type \n            WHERE app_label = 'chroma_core' AND model = 'ostpool'\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false
       ]
     }
   },
@@ -2806,6 +2926,19 @@
       ]
     }
   },
+  "aa5332700bbaa5f5f65698ba3aaabb80b5cb22109851f30d2618117db7dcbdb9": {
+    "query": "UPDATE chroma_core_ostpool SET not_deleted = NULL WHERE filesystem_id = $1 AND name = $2",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Text"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "ac70df86a340aefc11b2e55dbfc1ce6720f52d9055bc892c98779daf83ea849f": {
     "query": "\n        INSERT INTO corosync_target_resource (\n            id,\n            cluster_id,\n            resource_agent,\n            role,\n            active,\n            orphaned,\n            managed,\n            failed,\n            failure_ignored,\n            nodes_running_on,\n            active_node,\n            mount_point\n        )\n        SELECT\n            id,\n            $12,\n            resource_agent,\n            role,\n            active,\n            orphaned,\n            managed,\n            failed,\n            failure_ignored,\n            nodes_running_on,\n            active_node::corosync_node_key,\n            mount_point\n        FROM UNNEST(\n                $1::text[],\n                $2::text[],\n                $3::text[],\n                $4::bool[],\n                $5::bool[],\n                $6::bool[],\n                $7::bool[],\n                $8::bool[],\n                $9::int[],\n                $10::text[],\n                $11::text[]\n            )\n            AS t(\n            id,\n            resource_agent,\n            role,\n            active,\n            orphaned,\n            managed,\n            failed,\n            failure_ignored,\n            nodes_running_on,\n            active_node,\n            mount_point\n            )\n            ON CONFLICT (id, cluster_id) DO UPDATE\n            SET\n                resource_agent = excluded.resource_agent,\n                role = excluded.role,\n                active = excluded.active,\n                orphaned = excluded.orphaned,\n                managed = excluded.managed,\n                failed = excluded.failed,\n                failure_ignored = excluded.failure_ignored,\n                nodes_running_on = excluded.nodes_running_on,\n                active_node = excluded.active_node,\n                mount_point = excluded.mount_point\n    ",
     "describe": {
@@ -3173,6 +3306,27 @@
       "nullable": []
     }
   },
+  "bf1cc6d17c5a7a4b915c168b3480282591482111507a08f3d4408a887b266804": {
+    "query": "SELECT managedtarget_ptr_id\n                FROM chroma_core_managedost AS MO\n                INNER JOIN chroma_core_managedtarget AS MT\n                ON MO.managedtarget_ptr_id = MT.id\n                WHERE filesystem_id = $1 AND name = $2 AND not_deleted=True",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "managedtarget_ptr_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "c0976422207fb3d2a45cc9f4cc6182133c51442f462c867708d93260ae6a6e9c": {
     "query": "SELECT fqdn FROM chroma_core_managedhost WHERE id = $1",
     "describe": {
@@ -3185,6 +3339,28 @@
       ],
       "parameters": {
         "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "c0d4ab6af95ea20820f9f3f0fe4b48f26e39646c046778ea2a9d5b03a25ca8e5": {
+    "query": "INSERT INTO chroma_core_ostpool (name, content_type_id, filesystem_id, not_deleted) VALUES ($1, $2, $3, 't') RETURNING id",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Int4",
           "Int4"
         ]
       },
@@ -3253,6 +3429,19 @@
         false,
         false
       ]
+    }
+  },
+  "c638cba651c5043a2e698f631a704aaa8a12940009d9890045a81568b37b83b5": {
+    "query": "DELETE FROM chroma_core_ostpool_osts WHERE ostpool_id = $1 AND managedost_id = $2",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4"
+        ]
+      },
+      "nullable": []
     }
   },
   "c794f65b5ef4d77224667f77df480d76eaee130d7dc4ddde13d9330f5479595d": {
@@ -3899,6 +4088,19 @@
         "Left": [
           "Int4Array",
           "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "f26618901b5c3df912c1915255414f1ed7d12d5aeac7168af8c4f944a8fbbf89": {
+    "query": "INSERT INTO chroma_core_ostpool_osts (ostpool_id, managedost_id) VALUES ($1, $2)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4"
         ]
       },
       "nullable": []

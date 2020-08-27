@@ -1824,6 +1824,7 @@ dependencies = [
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
+ "thiserror",
  "tokio",
  "tracing",
 ]
