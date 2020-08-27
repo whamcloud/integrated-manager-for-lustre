@@ -24,7 +24,7 @@ use std::{
 };
 
 pub type Cache = Arc<Mutex<HashMap<Fqdn, Device>>>;
-pub type TargetFsRecord = HashMap<String, Vec<String>>;
+pub type TargetFsRecord = HashMap<String, Vec<(Fqdn, String)>>;
 
 /// Given a db pool, create a new cache and fill it with initial data.
 /// This will start the device tree with the previous items it left off with.
@@ -406,7 +406,10 @@ pub fn find_targets<'a>(
             state: "mounted".into(),
             active_host_id: Some(*fqdn),
             host_ids: ids,
-            filesystems: target_to_fs_map.get(target).cloned().unwrap_or(vec![]),
+            filesystems: target_to_fs_map
+                .get(target)
+                .map(|xs| xs.iter().map(|(_, fs)| fs.clone()).collect::<Vec<String>>())
+                .unwrap_or(vec![]),
             name: target.into(),
             uuid: fs_uuid.into(),
             mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
@@ -469,7 +472,7 @@ pub fn build_updates(x: Changes<'_, Target>) -> Vec<Target> {
 
 fn parse_filesystem_data(query_result: Option<Vec<Node>>, tag: &str) -> TargetFsRecord {
     let target_to_fs = if let Some(nodes) = query_result {
-        nodes
+        let items = nodes
             .into_iter()
             .filter_map(|x| x.series)
             .map(|xs| {
@@ -487,19 +490,45 @@ fn parse_filesystem_data(query_result: Option<Vec<Node>>, tag: &str) -> TargetFs
                         )
                         .expect(format!("Couldn't parse {} name.", tag).as_str());
 
+                        let host: String = serde_json::from_value(
+                            x.remove("host".into())
+                                .unwrap_or_else(|| serde_json::json!("")),
+                        )
+                        .expect("Couldn't parse host.");
+
                         (
                             serde_json::from_value(
                                 x.remove("target".into())
                                     .unwrap_or_else(|| serde_json::json!("")),
                             )
                             .expect("Couldn't parse target."),
-                            filesystems.split(",").map(|x| x.to_string()).collect(),
+                            filesystems
+                                .split(",")
+                                .map(|x| (Fqdn(host.clone()), x.to_string()))
+                                .collect(),
                         )
                     })
-                    .collect::<Vec<(String, Vec<String>)>>()
+                    .collect::<Vec<(String, Vec<(Fqdn, String)>)>>()
             })
             .flatten()
-            .collect::<TargetFsRecord>()
+            .collect::<Vec<(String, Vec<(Fqdn, String)>)>>();
+
+        items.into_iter().fold(
+            HashMap::new(),
+            |mut acc: HashMap<String, Vec<(Fqdn, String)>>, xs| {
+                let existing = acc.remove(xs.0.as_str());
+
+                let x = if let Some(entry) = existing {
+                    [&entry[..], &xs.1[..]].concat()
+                } else {
+                    xs.1
+                };
+
+                acc.insert(xs.0, x);
+
+                acc
+            },
+        )
     } else {
         HashMap::new()
     };
@@ -514,7 +543,7 @@ pub async fn get_target_filesystem_map(
 ) -> Result<TargetFsRecord, ImlDeviceError> {
     let query_result: Option<Vec<Node>> = influx_client
         .query(
-            "select target,fs,bytes_free from target group by target order by time desc limit 1;",
+            "select host,target,fs,bytes_free from target group by target order by time desc limit 1;",
             Some(Precision::Nanoseconds),
         )
         .await?;
@@ -527,7 +556,7 @@ pub async fn get_mgs_filesystem_map(
 ) -> Result<TargetFsRecord, ImlDeviceError> {
     let query_result: Option<Vec<Node>> = influx_client
         .query(
-            "select target,mgs_fs from target;",
+            "select host,target,mgs_fs from target;",
             Some(Precision::Nanoseconds),
         )
         .await?;
@@ -666,12 +695,14 @@ mod tests {
                     ),
                     columns: vec![
                         "time".into(),
+                        "host".into(),
                         "target".into(),
                         "fs".into(),
                         "bytes_free".into(),
                     ],
                     values: vec![vec![
                         json!(1597166951257510515 as i64),
+                        json!("oss1"),
                         json!("fs-OST0009"),
                         json!("fs"),
                         json!(4913020928 as i64),
@@ -686,12 +717,14 @@ mod tests {
                     ),
                     columns: vec![
                         "time".into(),
+                        "host".into(),
                         "target".into(),
                         "fs".into(),
                         "bytes_free".into(),
                     ],
                     values: vec![vec![
                         json!(1597166951257510515 as i64),
+                        json!("oss1"),
                         json!("fs-OST0008"),
                         json!("fs2"),
                         json!(4913020928 as i64),
@@ -704,8 +737,14 @@ mod tests {
         assert_eq!(
             result,
             vec![
-                ("fs-OST0009".to_string(), vec!["fs".to_string()]),
-                ("fs-OST0008".to_string(), vec!["fs2".to_string()]),
+                (
+                    "fs-OST0009".to_string(),
+                    vec![(Fqdn("oss1".to_string()), "fs".to_string())]
+                ),
+                (
+                    "fs-OST0008".to_string(),
+                    vec![(Fqdn("oss1".to_string()), "fs2".to_string())]
+                ),
             ]
             .into_iter()
             .collect::<TargetFsRecord>(),
@@ -724,9 +763,15 @@ mod tests {
                             .into_iter()
                             .collect::<Map<String, Value>>(),
                     ),
-                    columns: vec!["time".into(), "target".into(), "mgs_fs".into()],
+                    columns: vec![
+                        "time".into(),
+                        "host".into(),
+                        "target".into(),
+                        "mgs_fs".into(),
+                    ],
                     values: vec![vec![
                         json!(1597166951257510515 as i64),
+                        json!("mds1"),
                         json!("MGS"),
                         json!("mgs1fs1,mgs1fs2"),
                     ]],
@@ -738,9 +783,15 @@ mod tests {
                             .into_iter()
                             .collect::<Map<String, Value>>(),
                     ),
-                    columns: vec!["time".into(), "target".into(), "mgs_fs".into()],
+                    columns: vec![
+                        "time".into(),
+                        "host".into(),
+                        "target".into(),
+                        "mgs_fs".into(),
+                    ],
                     values: vec![vec![
                         json!(1597166951257510515 as i64),
+                        json!("mds1"),
                         json!("MGS2"),
                         json!("mgs2fs1,mgs2fs2"),
                     ]],
@@ -754,13 +805,82 @@ mod tests {
             vec![
                 (
                     "MGS".to_string(),
-                    vec!["mgs1fs1".to_string(), "mgs1fs2".to_string()]
+                    vec![
+                        (Fqdn("mds1".to_string()), "mgs1fs1".to_string()),
+                        (Fqdn("mds1".to_string()), "mgs1fs2".to_string())
+                    ]
                 ),
                 (
                     "MGS2".to_string(),
-                    vec!["mgs2fs1".to_string(), "mgs2fs2".to_string()]
+                    vec![
+                        (Fqdn("mds1".to_string()), "mgs2fs1".to_string()),
+                        (Fqdn("mds1".to_string()), "mgs2fs2".to_string())
+                    ]
                 ),
             ]
+            .into_iter()
+            .collect::<TargetFsRecord>(),
+        );
+    }
+
+    #[test]
+    fn test_parse_mgs_filesystem_data_on_separate_hosts() {
+        let query_result = Some(vec![Node {
+            statement_id: Some(0),
+            series: Some(vec![
+                Series {
+                    name: "target".to_string(),
+                    tags: Some(
+                        vec![("target".to_string(), json!("MGS".to_string()))]
+                            .into_iter()
+                            .collect::<Map<String, Value>>(),
+                    ),
+                    columns: vec![
+                        "time".into(),
+                        "host".into(),
+                        "target".into(),
+                        "mgs_fs".into(),
+                    ],
+                    values: vec![vec![
+                        json!(1597166951257510515 as i64),
+                        json!("mds1"),
+                        json!("MGS"),
+                        json!("fs1"),
+                    ]],
+                },
+                Series {
+                    name: "target".to_string(),
+                    tags: Some(
+                        vec![("target".to_string(), json!("MGS2".to_string()))]
+                            .into_iter()
+                            .collect::<Map<String, Value>>(),
+                    ),
+                    columns: vec![
+                        "time".into(),
+                        "host".into(),
+                        "target".into(),
+                        "mgs_fs".into(),
+                    ],
+                    values: vec![vec![
+                        json!(1597166951257510515 as i64),
+                        json!("oss1"),
+                        json!("MGS"),
+                        json!("fs2"),
+                    ]],
+                },
+            ]),
+        }]);
+
+        let result = parse_filesystem_data(query_result, "mgs_fs");
+        assert_eq!(
+            result,
+            vec![(
+                "MGS".to_string(),
+                vec![
+                    (Fqdn("mds1".to_string()), "fs1".to_string()),
+                    (Fqdn("oss1".to_string()), "fs2".to_string())
+                ]
+            ),]
             .into_iter()
             .collect::<TargetFsRecord>(),
         );
