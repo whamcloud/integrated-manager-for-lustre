@@ -18,13 +18,34 @@ use iml_postgres::sqlx::{self, PgPool};
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
 use influx_db_client::{keys::Node, Client, Precision};
+use serde_json::{Map, Value};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     sync::Arc,
 };
 
 pub type Cache = Arc<Mutex<HashMap<Fqdn, Device>>>;
-pub type TargetFsRecord = HashMap<String, Vec<String>>;
+pub type TargetFsRecord = HashMap<String, Vec<(Fqdn, String)>>;
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct FsRecord {
+    host: String,
+    target: String,
+    fs: Option<String>,
+    mgs_fs: Option<String>,
+}
+
+impl FsRecord {
+    fn filesystems(&self) -> String {
+        if let Some(fs) = self.fs.clone() {
+            fs
+        } else if let Some(fs) = self.mgs_fs.clone() {
+            fs
+        } else {
+            "".into()
+        }
+    }
+}
 
 /// Given a db pool, create a new cache and fill it with initial data.
 /// This will start the device tree with the previous items it left off with.
@@ -407,7 +428,20 @@ pub fn find_targets<'a>(
             state: "mounted".into(),
             active_host_id: Some(*fqdn),
             host_ids: ids,
-            filesystems: target_to_fs_map.get(target).cloned().unwrap_or_default(),
+            filesystems: target_to_fs_map
+                .get(target)
+                .map(|xs| {
+                    xs.iter()
+                        .filter(|(host, _)| {
+                            host_map
+                                .get(host)
+                                .unwrap_or_else(|| panic!("Couldn't get host {}", host.0))
+                                == fqdn
+                        })
+                        .map(|(_, fs)| fs.clone())
+                        .collect::<Vec<String>>()
+                })
+                .unwrap_or_default(),
             name: target.into(),
             uuid: fs_uuid.into(),
             mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
@@ -438,7 +472,6 @@ impl Target {
     pub fn set_unmounted(&mut self) {
         self.state = "unmounted".into();
         self.active_host_id = None;
-        self.mount_path = None;
     }
 }
 
@@ -468,37 +501,63 @@ pub fn build_updates(x: Changes<'_, Target>) -> Vec<Target> {
     }
 }
 
-fn parse_filesystem_data(query_result: Option<Vec<Node>>, tag: &str) -> TargetFsRecord {
+struct ColVals(Vec<String>, Vec<Vec<serde_json::Value>>);
+
+impl From<ColVals> for serde_json::Value {
+    fn from(ColVals(cols, vals): ColVals) -> Self {
+        let xs = vals
+            .into_iter()
+            .map(|y| -> Map<String, serde_json::Value> {
+                cols.clone().into_iter().zip(y).collect()
+            })
+            .map(Value::Object)
+            .collect();
+
+        Value::Array(xs)
+    }
+}
+
+fn parse_filesystem_data(query_result: Option<Vec<Node>>) -> TargetFsRecord {
     let target_to_fs = if let Some(nodes) = query_result {
-        nodes
+        let items = nodes
             .into_iter()
             .filter_map(|x| x.series)
-            .map(|xs| {
-                xs.into_iter()
-                    .map(|x| {
-                        x.columns
-                            .into_iter()
-                            .zip(x.values.into_iter().flatten())
-                            .collect::<HashMap<String, serde_json::Value>>()
-                    })
-                    .map(|mut x| {
-                        let filesystems: String = serde_json::from_value(
-                            x.remove(tag).unwrap_or_else(|| serde_json::json!("")),
-                        )
-                        .unwrap_or_else(|_| panic!("Couldn't parse {} name.", tag));
-
-                        (
-                            serde_json::from_value(
-                                x.remove("target").unwrap_or_else(|| serde_json::json!("")),
-                            )
-                            .expect("Couldn't parse target."),
-                            filesystems.split(',').map(|x| x.to_string()).collect(),
-                        )
-                    })
-                    .collect::<Vec<(String, Vec<String>)>>()
-            })
             .flatten()
-            .collect::<TargetFsRecord>()
+            .map(|x| -> serde_json::Value { ColVals(x.columns, x.values).into() })
+            .map(|x| {
+                let fs_record: FsRecord =
+                    serde_json::from_value(x).expect("Couldn't convert to record.");
+
+                let filesystems: String = fs_record.filesystems();
+                let host: String = fs_record.host;
+                let target: String = fs_record.target;
+
+                (
+                    target,
+                    filesystems
+                        .split(',')
+                        .map(|x| (Fqdn(host.clone()), x.to_string()))
+                        .collect(),
+                )
+            })
+            .collect::<Vec<(String, Vec<(Fqdn, String)>)>>();
+
+        items.into_iter().fold(
+            HashMap::new(),
+            |mut acc: HashMap<String, Vec<(Fqdn, String)>>, xs| {
+                let existing = acc.remove(xs.0.as_str());
+
+                let x = if let Some(entry) = existing {
+                    [&entry[..], &xs.1[..]].concat()
+                } else {
+                    xs.1
+                };
+
+                acc.insert(xs.0, x);
+
+                acc
+            },
+        )
     } else {
         HashMap::new()
     };
@@ -513,12 +572,12 @@ pub async fn get_target_filesystem_map(
 ) -> Result<TargetFsRecord, ImlDeviceError> {
     let query_result: Option<Vec<Node>> = influx_client
         .query(
-            "select target,fs,bytes_free from target group by target order by time desc limit 1;",
+            "select host,target,fs,bytes_free from target group by target order by time desc limit 1;",
             Some(Precision::Nanoseconds),
         )
         .await?;
 
-    Ok(parse_filesystem_data(query_result, "fs"))
+    Ok(parse_filesystem_data(query_result))
 }
 
 pub async fn get_mgs_filesystem_map(
@@ -527,12 +586,12 @@ pub async fn get_mgs_filesystem_map(
 ) -> Result<TargetFsRecord, ImlDeviceError> {
     let query_result: Option<Vec<Node>> = influx_client
         .query(
-            "select target,mgs_fs from target;",
+            "select host,target,mgs_fs from target;",
             Some(Precision::Nanoseconds),
         )
         .await?;
 
-    let target_to_fs_map = parse_filesystem_data(query_result, "mgs_fs");
+    let target_to_fs_map = parse_filesystem_data(query_result);
 
     let snapshots: Vec<String> = mounts
         .iter()
@@ -686,56 +745,51 @@ mod tests {
     fn test_parse_target_filesystem_data() {
         let query_result = Some(vec![Node {
             statement_id: Some(0),
-            series: Some(vec![
-                Series {
-                    name: "target".to_string(),
-                    tags: Some(
-                        vec![("target".to_string(), json!("fs-OST0000".to_string()))]
-                            .into_iter()
-                            .collect::<Map<String, Value>>(),
-                    ),
-                    columns: vec![
-                        "time".into(),
-                        "target".into(),
-                        "fs".into(),
-                        "bytes_free".into(),
-                    ],
-                    values: vec![vec![
+            series: Some(vec![Series {
+                name: "target".to_string(),
+                tags: Some(
+                    vec![("target".to_string(), json!("fs-OST0000".to_string()))]
+                        .into_iter()
+                        .collect::<Map<String, Value>>(),
+                ),
+                columns: vec![
+                    "time".into(),
+                    "host".into(),
+                    "target".into(),
+                    "fs".into(),
+                    "bytes_free".into(),
+                ],
+                values: vec![
+                    vec![
                         json!(1597166951257510515 as i64),
+                        json!("oss1"),
                         json!("fs-OST0009"),
                         json!("fs"),
                         json!(4913020928 as i64),
-                    ]],
-                },
-                Series {
-                    name: "target".to_string(),
-                    tags: Some(
-                        vec![("target".to_string(), json!("fs-OST0001".to_string()))]
-                            .into_iter()
-                            .collect::<Map<String, Value>>(),
-                    ),
-                    columns: vec![
-                        "time".into(),
-                        "target".into(),
-                        "fs".into(),
-                        "bytes_free".into(),
                     ],
-                    values: vec![vec![
+                    vec![
                         json!(1597166951257510515 as i64),
+                        json!("oss1"),
                         json!("fs-OST0008"),
                         json!("fs2"),
                         json!(4913020928 as i64),
-                    ]],
-                },
-            ]),
+                    ],
+                ],
+            }]),
         }]);
 
-        let result = parse_filesystem_data(query_result, "fs");
+        let result = parse_filesystem_data(query_result);
         assert_eq!(
             result,
             vec![
-                ("fs-OST0009".to_string(), vec!["fs".to_string()]),
-                ("fs-OST0008".to_string(), vec!["fs2".to_string()]),
+                (
+                    "fs-OST0009".to_string(),
+                    vec![(Fqdn("oss1".to_string()), "fs".to_string())]
+                ),
+                (
+                    "fs-OST0008".to_string(),
+                    vec![(Fqdn("oss1".to_string()), "fs2".to_string())]
+                ),
             ]
             .into_iter()
             .collect::<TargetFsRecord>(),
@@ -746,51 +800,100 @@ mod tests {
     fn test_parse_mgs_filesystem_data() {
         let query_result = Some(vec![Node {
             statement_id: Some(0),
-            series: Some(vec![
-                Series {
-                    name: "target".to_string(),
-                    tags: Some(
-                        vec![("target".to_string(), json!("MGS".to_string()))]
-                            .into_iter()
-                            .collect::<Map<String, Value>>(),
-                    ),
-                    columns: vec!["time".into(), "target".into(), "mgs_fs".into()],
-                    values: vec![vec![
+            series: Some(vec![Series {
+                name: "target".to_string(),
+                tags: Some(
+                    vec![("target".to_string(), json!("MGS".to_string()))]
+                        .into_iter()
+                        .collect::<Map<String, Value>>(),
+                ),
+                columns: vec![
+                    "time".into(),
+                    "host".into(),
+                    "target".into(),
+                    "mgs_fs".into(),
+                ],
+                values: vec![
+                    vec![
                         json!(1597166951257510515 as i64),
+                        json!("mds1"),
                         json!("MGS"),
                         json!("mgs1fs1,mgs1fs2"),
-                    ]],
-                },
-                Series {
-                    name: "target".to_string(),
-                    tags: Some(
-                        vec![("target".to_string(), json!("MGS2".to_string()))]
-                            .into_iter()
-                            .collect::<Map<String, Value>>(),
-                    ),
-                    columns: vec!["time".into(), "target".into(), "mgs_fs".into()],
-                    values: vec![vec![
+                    ],
+                    vec![
                         json!(1597166951257510515 as i64),
+                        json!("mds1"),
                         json!("MGS2"),
                         json!("mgs2fs1,mgs2fs2"),
-                    ]],
-                },
-            ]),
+                    ],
+                ],
+            }]),
         }]);
 
-        let result = parse_filesystem_data(query_result, "mgs_fs");
+        let result = parse_filesystem_data(query_result);
         assert_eq!(
             result,
             vec![
                 (
                     "MGS".to_string(),
-                    vec!["mgs1fs1".to_string(), "mgs1fs2".to_string()]
+                    vec![
+                        (Fqdn("mds1".to_string()), "mgs1fs1".to_string()),
+                        (Fqdn("mds1".to_string()), "mgs1fs2".to_string())
+                    ]
                 ),
                 (
                     "MGS2".to_string(),
-                    vec!["mgs2fs1".to_string(), "mgs2fs2".to_string()]
+                    vec![
+                        (Fqdn("mds1".to_string()), "mgs2fs1".to_string()),
+                        (Fqdn("mds1".to_string()), "mgs2fs2".to_string())
+                    ]
                 ),
             ]
+            .into_iter()
+            .collect::<TargetFsRecord>(),
+        );
+    }
+
+    #[test]
+    fn test_parse_mgs_filesystem_data_on_separate_hosts() {
+        let query_result = Some(vec![Node {
+            statement_id: Some(0),
+            series: Some(vec![Series {
+                name: "target".to_string(),
+                tags: None,
+                columns: vec![
+                    "time".into(),
+                    "host".into(),
+                    "target".into(),
+                    "mgs_fs".into(),
+                ],
+                values: vec![
+                    vec![
+                        json!(1597166951257510515 as i64),
+                        json!("mds1"),
+                        json!("MGS"),
+                        json!("fs1"),
+                    ],
+                    vec![
+                        json!(1597166951257510515 as i64),
+                        json!("oss1"),
+                        json!("MGS"),
+                        json!("fs2"),
+                    ],
+                ],
+            }]),
+        }]);
+
+        let result = parse_filesystem_data(query_result);
+        assert_eq!(
+            result,
+            vec![(
+                "MGS".to_string(),
+                vec![
+                    (Fqdn("mds1".to_string()), "fs1".to_string()),
+                    (Fqdn("oss1".to_string()), "fs2".to_string())
+                ]
+            ),]
             .into_iter()
             .collect::<TargetFsRecord>(),
         );
