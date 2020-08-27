@@ -106,9 +106,10 @@ async fn create_snapshot(
             "fqdn": active_mgs_host_fqdn,
         }
     }]);
-    let command_id: i32 = iml_job_scheduler_rpc::call(&client, "run_jobs", vec![jobs], Some(kwargs))
-        .map_err(ImlApiError::ImlJobSchedulerRpcError)
-        .await?;
+    let command_id: i32 =
+        iml_job_scheduler_rpc::call(&client, "run_jobs", vec![jobs], Some(kwargs))
+            .map_err(ImlApiError::ImlJobSchedulerRpcError)
+            .await?;
 
     Ok(warp::reply::json(&command_id))
 }
