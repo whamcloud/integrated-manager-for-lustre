@@ -119,7 +119,7 @@ pub async fn update_client_mounts(
                 .map(|fs| (fs.to_string(), m.target.0.to_string_lossy().to_string()))
         })
         .fold(HashMap::new(), |mut acc, (fs_name, mountpoint)| {
-            let mountpoints = acc.entry(fs_name).or_insert_with(|| BTreeSet::new());
+            let mountpoints = acc.entry(fs_name).or_insert_with(BTreeSet::new);
 
             mountpoints.insert(mountpoint);
 
@@ -226,7 +226,7 @@ pub fn build_device_index<'a>(x: &'a HashMap<Fqdn, Device>) -> DeviceIndex<'a> {
         .map(|(fqdn, device)| {
             let mut map = DeviceMap(BTreeMap::new());
 
-            build_device_map(device, &mut map, &vec![]);
+            build_device_map(device, &mut map, &[]);
 
             (fqdn, map)
         })
@@ -274,7 +274,7 @@ fn add_shared_storage<'a>(
 
             if let Some((shared_id, shared_parents)) = shared {
                 let parent_ids = shared_parents
-                    .into_iter()
+                    .iter()
                     .filter_map(|xs| xs.last())
                     .collect::<Vec<_>>();
 
@@ -293,7 +293,7 @@ fn add_shared_storage<'a>(
             }
         } else {
             let parent_ids = parents
-                .into_iter()
+                .iter()
                 .filter_map(|xs| xs.last())
                 .collect::<Vec<_>>();
 
@@ -312,10 +312,10 @@ fn add_shared_storage<'a>(
 fn build_device_map(device: &Device, map: &mut DeviceMap, path: &[DeviceId]) {
     let id = match device.get_id() {
         Some(x) => x,
-        None => return (),
+        None => return,
     };
 
-    let paths = map.0.entry(id.clone()).or_insert_with(|| BTreeSet::new());
+    let paths = map.0.entry(id.clone()).or_insert_with(BTreeSet::new);
 
     paths.insert(path.to_vec());
 
@@ -323,7 +323,7 @@ fn build_device_map(device: &Device, map: &mut DeviceMap, path: &[DeviceId]) {
 
     let children = match device.children() {
         Some(x) => x,
-        None => return (),
+        None => return,
     };
 
     children
@@ -345,9 +345,9 @@ pub fn find_targets<'a>(
         .filter(|(_, x)| x.fs_type.0 == "lustre")
         .filter(|(_, x)| !x.source.0.to_string_lossy().contains('@'))
         .filter_map(|(fqdn, x)| {
-            let s = x.opts.0.split(",").find(|x| x.starts_with("svname="))?;
+            let s = x.opts.0.split(',').find(|x| x.starts_with("svname="))?;
 
-            let s = s.split("=").nth(1)?;
+            let s = s.split('=').nth(1)?;
 
             Some((fqdn, &x.target, &x.source, s))
         })
@@ -382,7 +382,7 @@ pub fn find_targets<'a>(
                     tracing::debug!("found device on {}!", &k);
                     let host_id = host_map.get(&k)?;
 
-                    return Some(*host_id);
+                    Some(*host_id)
                 })
                 .collect();
 
@@ -406,7 +406,7 @@ pub fn find_targets<'a>(
             state: "mounted".into(),
             active_host_id: Some(*fqdn),
             host_ids: ids,
-            filesystems: target_to_fs_map.get(target).cloned().unwrap_or(vec![]),
+            filesystems: target_to_fs_map.get(target).cloned().unwrap_or_default(),
             name: target.into(),
             uuid: fs_uuid.into(),
             mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
@@ -482,18 +482,16 @@ fn parse_filesystem_data(query_result: Option<Vec<Node>>, tag: &str) -> TargetFs
                     })
                     .map(|mut x| {
                         let filesystems: String = serde_json::from_value(
-                            x.remove(tag.into())
-                                .unwrap_or_else(|| serde_json::json!("")),
+                            x.remove(tag).unwrap_or_else(|| serde_json::json!("")),
                         )
-                        .expect(format!("Couldn't parse {} name.", tag).as_str());
+                        .unwrap_or_else(|_| panic!("Couldn't parse {} name.", tag));
 
                         (
                             serde_json::from_value(
-                                x.remove("target".into())
-                                    .unwrap_or_else(|| serde_json::json!("")),
+                                x.remove("target").unwrap_or_else(|| serde_json::json!("")),
                             )
                             .expect("Couldn't parse target."),
-                            filesystems.split(",").map(|x| x.to_string()).collect(),
+                            filesystems.split(',').map(|x| x.to_string()).collect(),
                         )
                     })
                     .collect::<Vec<(String, Vec<String>)>>()

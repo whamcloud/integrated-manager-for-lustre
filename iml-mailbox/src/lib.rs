@@ -108,7 +108,7 @@ async fn insert_lines(
     pool: &PgPool,
 ) -> Result<(), MailboxError> {
     let x = lines
-        .into_iter()
+        .iter()
         .fold((vec![], vec![], vec![], vec![]), |mut acc, (fid, value)| {
             acc.0.push(fid.seq);
             acc.1.push(fid.oid);
