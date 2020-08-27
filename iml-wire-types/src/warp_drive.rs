@@ -24,7 +24,7 @@ use std::{
 /// This trait is to bring method `arc_values()` to the collections of
 /// type HashMap<K, Arc<V>> to simplify iterating through the values.
 /// Example:
-/// ```rust,norun
+/// ```rust,no_run
 ///     use std::sync::Arc;
 ///     use im::HashMap;
 ///     use iml_wire_types::warp_drive::ArcValuesExt;
