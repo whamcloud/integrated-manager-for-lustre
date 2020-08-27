@@ -116,6 +116,7 @@ async fn create_snapshot(
 
 async fn destroy_snapshot(
     args: snapshot::Destroy,
+    client: Connection,
     pool: PgPool,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let active_mgs_host_fqdn =
@@ -126,15 +127,29 @@ async fn destroy_snapshot(
                 _ => e.into(),
             })?;
 
-    let results = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_destroy", args)
-        .await
-        .map_err(|e| ImlApiError::from(e))?;
+    let mut kwargs: HashMap<String, String> = HashMap::new();
+    kwargs.insert("message".to_string(), "Destroying snapshot".to_string());
 
-    Ok(warp::reply::json(&results))
+    let jobs = serde_json::json!([{
+        "class_name": "DestroySnapshotJob",
+        "args": {
+            "fsname": args.fsname,
+            "name": args.name,
+            "force": args.force,
+            "fqdn": active_mgs_host_fqdn,
+        }
+    }]);
+    let command_id: i32 =
+        iml_job_scheduler_rpc::call(&client, "run_jobs", vec![jobs], Some(kwargs))
+            .map_err(ImlApiError::ImlJobSchedulerRpcError)
+            .await?;
+
+    Ok(warp::reply::json(&command_id))
 }
 
 async fn mount_snapshot(
     args: snapshot::Mount,
+    client: Connection,
     pool: PgPool,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let active_mgs_host_fqdn =
@@ -145,15 +160,28 @@ async fn mount_snapshot(
                 _ => e.into(),
             })?;
 
-    let results = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_mount", args)
-        .await
-        .map_err(|e| ImlApiError::from(e))?;
+    let mut kwargs: HashMap<String, String> = HashMap::new();
+    kwargs.insert("message".to_string(), "Mounting snapshot".to_string());
 
-    Ok(warp::reply::json(&results))
+    let jobs = serde_json::json!([{
+        "class_name": "MountSnapshotJob",
+        "args": {
+            "fsname": args.fsname,
+            "name": args.name,
+            "fqdn": active_mgs_host_fqdn,
+        }
+    }]);
+    let command_id: i32 =
+        iml_job_scheduler_rpc::call(&client, "run_jobs", vec![jobs], Some(kwargs))
+            .map_err(ImlApiError::ImlJobSchedulerRpcError)
+            .await?;
+
+    Ok(warp::reply::json(&command_id))
 }
 
 async fn unmount_snapshot(
     args: snapshot::Unmount,
+    client: Connection,
     pool: PgPool,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let active_mgs_host_fqdn =
@@ -164,11 +192,23 @@ async fn unmount_snapshot(
                 _ => e.into(),
             })?;
 
-    let results = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_unmount", args)
-        .await
-        .map_err(|e| ImlApiError::from(e))?;
+    let mut kwargs: HashMap<String, String> = HashMap::new();
+    kwargs.insert("message".to_string(), "Unmounting snapshot".to_string());
 
-    Ok(warp::reply::json(&results))
+    let jobs = serde_json::json!([{
+        "class_name": "UnmountSnapshotJob",
+        "args": {
+            "fsname": args.fsname,
+            "name": args.name,
+            "fqdn": active_mgs_host_fqdn,
+        }
+    }]);
+    let command_id: i32 =
+        iml_job_scheduler_rpc::call(&client, "run_jobs", vec![jobs], Some(kwargs))
+            .map_err(ImlApiError::ImlJobSchedulerRpcError)
+            .await?;
+
+    Ok(warp::reply::json(&command_id))
 }
 
 pub(crate) fn endpoint(
@@ -191,18 +231,21 @@ pub(crate) fn endpoint(
     let destroy = warp::path!("snapshot" / "destroy")
         .and(warp::post())
         .and(warp::query())
+        .and(client_filter.clone())
         .and(pool_filter.clone())
         .and_then(destroy_snapshot);
 
     let mount = warp::path!("snapshot" / "mount")
         .and(warp::post())
         .and(warp::query())
+        .and(client_filter.clone())
         .and(pool_filter.clone())
         .and_then(mount_snapshot);
 
     let unmount = warp::path!("snapshot" / "unmount")
         .and(warp::post())
         .and(warp::query())
+        .and(client_filter.clone())
         .and(pool_filter)
         .and_then(unmount_snapshot);
 
