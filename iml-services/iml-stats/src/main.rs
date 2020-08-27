@@ -492,7 +492,7 @@ async fn main() -> Result<(), ImlStatsError> {
             get_influxdb_metrics_db(),
         );
 
-        delete_existing_mgs_fs_records(&xs, &client).await?;
+        //delete_existing_mgs_fs_records(&xs, &client).await?;
 
         let entries: Vec<_> = xs
             .into_iter()
