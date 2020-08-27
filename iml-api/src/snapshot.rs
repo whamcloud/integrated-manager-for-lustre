@@ -86,20 +86,31 @@ async fn create_snapshot(
     client: Connection,
     pool: PgPool,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let mut kwargs = HashMap::new();
-    kwargs.insert("filesystem".to_string(), "1".to_string());
+    let active_mgs_host_fqdn =
+        active_mgs_host_fqdn(&args.fsname, pool)
+            .await
+            .map_err(|e| match e {
+                error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
+                _ => e.into(),
+            })?;
 
-    let job = serde_json::json!({
+    let mut kwargs: HashMap<String, String> = HashMap::new();
+    kwargs.insert("message".to_string(), "Creating snapshot".to_string());
+
+    let jobs = serde_json::json!([{
         "class_name": "CreateSnapshotJob",
-        "args": args,
-        "kwargs": kwargs,
-    });
-    let results: Vec<i32> =
-        iml_job_scheduler_rpc::call(&client, "run_jobs", vec![job], Some(kwargs))
-            .map_err(ImlApiError::ImlJobSchedulerRpcError)
-            .await?;
+        "args": {
+            "fsname": args.fsname,
+            "name": args.name,
+            "comment": args.comment,
+            "fqdn": active_mgs_host_fqdn,
+        }
+    }]);
+    let command_id: i32 = iml_job_scheduler_rpc::call(&client, "run_jobs", vec![jobs], Some(kwargs))
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
 
-    Ok(warp::reply::json(&results))
+    Ok(warp::reply::json(&command_id))
 }
 
 async fn destroy_snapshot(
