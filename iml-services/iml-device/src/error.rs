@@ -4,7 +4,6 @@
 
 use iml_postgres::sqlx;
 use iml_service_queue::service_queue::ImlServiceQueueError;
-use influx_db_client;
 use thiserror::Error;
 use warp::reject;
 

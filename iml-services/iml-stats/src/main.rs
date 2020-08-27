@@ -565,7 +565,7 @@ async fn delete_existing_mgs_fs_records(
                         .collect::<Vec<Vec<serde_json::Value>>>()
                 })
                 .flatten()
-                .filter_map(|xs| xs.first().map(|x| x.clone()))
+                .filter_map(|xs| xs.first().cloned())
                 .collect::<Vec<serde_json::Value>>();
 
             for timestamp in timestamps {

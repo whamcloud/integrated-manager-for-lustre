@@ -1,4 +1,4 @@
-FROM rust:1.44 as builder
+FROM rust:1.46 as builder
 WORKDIR /build
 COPY . .
 RUN rustup target add wasm32-unknown-unknown && \

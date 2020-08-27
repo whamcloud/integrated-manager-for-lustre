@@ -12,7 +12,7 @@ use quick_xml::{
 };
 use std::{collections::HashMap, convert::TryInto};
 
-static CRM_MON_PATH: &'static str = "/usr/sbin/crm_mon";
+static CRM_MON_PATH: &str = "/usr/sbin/crm_mon";
 
 pub async fn get_crm_mon() -> Result<Option<Cluster>, ImlAgentError> {
     if !file_exists(CRM_MON_PATH).await {
@@ -86,15 +86,12 @@ fn read_nodes(reader: &mut Reader<&[u8]>) -> Result<Vec<Node>, ImlAgentError> {
         buf.clear();
 
         match reader.read_event(&mut buf)? {
-            Event::Empty(x) => match x.name() {
-                b"node" => {
-                    let x = attrs_to_hashmap(x.attributes(), reader)?;
-                    let x = node_from_map(&x)?;
+            Event::Empty(x) if x.name() == b"node" => {
+                let x = attrs_to_hashmap(x.attributes(), reader)?;
+                let x = node_from_map(&x)?;
 
-                    xs.push(x);
-                }
-                _ => {}
-            },
+                xs.push(x);
+            }
             Event::End(x) => {
                 if x.name() == b"nodes" {
                     break;
@@ -119,12 +116,9 @@ fn read_crm_output(crm_output: &[u8]) -> Result<Cluster, ImlAgentError> {
 
     loop {
         match reader.read_event(&mut buf)? {
-            Event::Start(ref x) => match x.name() {
-                b"nodes" => {
-                    cluster.nodes = read_nodes(&mut reader)?;
-                }
-                _ => {}
-            },
+            Event::Start(ref x) if x.name() == b"nodes" => {
+                cluster.nodes = read_nodes(&mut reader)?;
+            }
             Event::Eof => break,
             _ => {}
         };

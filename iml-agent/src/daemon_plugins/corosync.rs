@@ -30,7 +30,7 @@ impl DaemonPlugin for Corosync {
         async move {
             let x = get_crm_mon().await?;
 
-            let x = x.map(|x| serde_json::to_value(x)).transpose()?;
+            let x = x.map(serde_json::to_value).transpose()?;
 
             Ok(x)
         }
