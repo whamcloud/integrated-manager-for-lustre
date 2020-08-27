@@ -18,19 +18,16 @@ pub enum ImlServiceQueueError {
 /// Creates a consumer for an iml-service.
 ///
 /// This is expected to be called once during startup.
-pub async fn consume_service_queue<'a>(
+pub async fn consume_service_queue(
     ch: &Channel,
-    name: &'a str,
-) -> Result<
-    impl Stream<Item = Result<PluginMessage, ImlServiceQueueError>> + 'a,
-    ImlServiceQueueError,
-> {
+    name: &str,
+) -> Result<impl Stream<Item = Result<PluginMessage, ImlServiceQueueError>>, ImlServiceQueueError> {
     let q = connect_to_queue(name.to_string(), ch).await?;
 
     let s = basic_consume(
         ch,
         q,
-        name,
+        name.to_string(),
         Some(BasicConsumeOptions {
             no_ack: true,
             ..BasicConsumeOptions::default()

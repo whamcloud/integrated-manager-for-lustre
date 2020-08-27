@@ -126,16 +126,16 @@ fn client_connection_parser(msg: &str) -> Option<(i32, String)> {
     }
 
     // get the client NID out of the string
-    let nid_start = msg.find("@")? + 1;
-    let nid_len = msg[nid_start..].find(" ")?;
+    let nid_start = msg.find('@')? + 1;
+    let nid_len = msg[nid_start..].find(' ')?;
     // and the UUID
     let uuid_start = msg.find(" from ")? + 6;
-    let uuid_len = msg[uuid_start..].find("@")?;
+    let uuid_len = msg[uuid_start..].find('@')?;
     // and of course the target
     let target_end = TARGET_END.find(msg)?.start();
-    let target_start = msg[0..target_end].rfind(" ")? + 1;
+    let target_start = msg[0..target_end].rfind(' ')? + 1;
 
-    let lustre_pid = msg[9..9 + msg[9..].find(":")?].parse::<i32>().ok()?;
+    let lustre_pid = msg[9..9 + msg[9..].find(':')?].parse::<i32>().ok()?;
     let msg = format!(
         "client {} from {} connected to target {}",
         &msg[uuid_start..uuid_start + uuid_len],
@@ -148,9 +148,9 @@ fn client_connection_parser(msg: &str) -> Option<(i32, String)> {
 
 fn server_security_flavor_parser(msg: &str) -> Option<(i32, String)> {
     // get the flavor out of the string
-    let flavor_start = msg.rfind(" ")? + 1;
+    let flavor_start = msg.rfind(' ')? + 1;
     let flavor = &msg[flavor_start..];
-    let lustre_pid = msg[9..9 + msg[9..].find(":")?].parse::<i32>().ok()?;
+    let lustre_pid = msg[9..9 + msg[9..].find(':')?].parse::<i32>().ok()?;
 
     Some((lustre_pid, format!("with security flavor {}", flavor)))
 }
@@ -205,7 +205,7 @@ fn server_security_flavor_handler<'a>(
 fn admin_client_eviction_parser(msg: &str) -> Option<(i32, String)> {
     let uuid = get_item_after(msg, "evicting ")?;
     let x = format!("client {} evicted by the administrator", uuid);
-    let lustre_pid = msg[9..9 + msg[9..].find(":")?].parse::<i32>().ok()?;
+    let lustre_pid = msg[9..9 + msg[9..].find(':')?].parse::<i32>().ok()?;
 
     Some((lustre_pid, x))
 }
@@ -268,7 +268,7 @@ fn client_eviction_handler<'a>(
 
 fn get_item_after<'a>(s: &'a str, after: &str) -> Option<&'a str> {
     let sub = s.find(after)? + after.len();
-    let l = s[sub..].find(" ")?;
+    let l = s[sub..].find(' ')?;
 
     Some(&s[sub..sub + l])
 }

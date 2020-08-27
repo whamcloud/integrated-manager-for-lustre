@@ -39,7 +39,7 @@ async fn item2path(
     fi: FidItem,
     mut tx: mpsc::UnboundedSender<FidError>,
 ) -> Option<String> {
-    let pfids: Vec<fidlist::LinkEA> = serde_json::from_value(fi.data.clone()).unwrap_or(vec![]);
+    let pfids: Vec<fidlist::LinkEA> = serde_json::from_value(fi.data.clone()).unwrap_or_default();
 
     for pfid in pfids.iter() {
         if let Some(path) = fid2path(llapi.clone(), pfid.pfid.clone()).await {
@@ -90,9 +90,9 @@ pub fn write_records(
 pub async fn process_fids(
     (fsname_or_mntpath, mut task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
 ) -> Result<Vec<FidError>, ImlAgentError> {
-    let report_name = task_args.remove("report_name".into()).ok_or(RequiredError(
-        "Task missing 'report_name' argument".to_string(),
-    ))?;
+    let report_name = task_args
+        .remove("report_name")
+        .ok_or_else(|| RequiredError("Task missing 'report_name' argument".to_string()))?;
 
     let llapi = search_rootpath(fsname_or_mntpath).await?;
 
