@@ -561,6 +561,7 @@ pub async fn get_mgs_filesystem_map(
         )
         .await?;
 
+    tracing::debug!("mgs_query_result {:?}", query_result);
     Ok(parse_filesystem_data(query_result, "mgs_fs"))
 }
 
