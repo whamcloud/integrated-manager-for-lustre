@@ -492,7 +492,7 @@ async fn main() -> Result<(), ImlStatsError> {
             get_influxdb_metrics_db(),
         );
 
-        //delete_existing_mgs_fs_records(&xs, &client).await?;
+        delete_existing_mgs_fs_records(&xs, &host, &client).await?;
 
         let entries: Vec<_> = xs
             .into_iter()
@@ -525,6 +525,7 @@ async fn main() -> Result<(), ImlStatsError> {
 
 async fn delete_existing_mgs_fs_records(
     xs: &[Record],
+    host: &Fqdn,
     client: &Client,
 ) -> Result<(), ImlStatsError> {
     let filtered_records = xs
@@ -542,8 +543,9 @@ async fn delete_existing_mgs_fs_records(
         let r = client
             .query(
                 format!(
-                    "SELECT target,mgs_fs FROM target WHERE target='{}'",
-                    x.target.to_string()
+                    "SELECT target,mgs_fs FROM target WHERE target='{}' AND host='{}'",
+                    x.target.to_string(),
+                    &host.0
                 )
                 .as_str(),
                 Some(Precision::Nanoseconds),
