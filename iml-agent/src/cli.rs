@@ -271,6 +271,21 @@ pub enum MountCommand {
     Unmount(client::Unmount),
 }
 
+#[derive(Debug, StructOpt)]
+pub enum HighAvailability {
+    #[structopt(name = "check")]
+    Check,
+
+    #[structopt(name = "list")]
+    List,
+
+    #[structopt(name = "start")]
+    Start { resource: String },
+
+    #[structopt(name = "stop")]
+    Stop { resource: String },
+}
+
 #[derive(StructOpt, Debug)]
 #[structopt(name = "iml-agent", setting = structopt::clap::AppSettings::ColoredHelp)]
 /// The Integrated Manager for Lustre Agent CLI
@@ -295,11 +310,11 @@ pub enum App {
         command: PoolCommand,
     },
 
-    #[structopt(name = "check_ha")]
-    CheckHA,
-
-    #[structopt(name = "ha_list")]
-    HAResources,
+    #[structopt(name = "ha")]
+    HA {
+        #[structopt(subcommand)]
+        command: HighAvailability,
+    },
 
     #[structopt(name = "ntp")]
     NtpClient {
@@ -552,24 +567,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         },
-        App::CheckHA => match high_availability::check_ha(()).await {
-            Ok((cs, pm, pc)) => {
-                let mut table = Table::new();
-                table.add_row(row!["Name", "Config", "Service"]);
-                table.add_row(row!["corosync", cs.config, cs.service]);
-                table.add_row(row!["pacemaker", pm.config, pm.service]);
-                table.add_row(row!["pcsd", pc.config, pc.service]);
-                table.printstd();
-            }
-            Err(e) => eprintln!("{:?}", e),
-        },
-        App::HAResources => match high_availability::get_ha_resource_list(()).await {
-            Ok(v) => {
-                for e in v {
-                    println!("{}", serde_json::to_string(&e).unwrap())
+        App::HA { command } => match command {
+            HighAvailability::Check => match high_availability::check_ha(()).await {
+                Ok((cs, pm, pc)) => {
+                    let mut table = Table::new();
+                    table.add_row(row!["Name", "Config", "Service"]);
+                    table.add_row(row!["corosync", cs.config, cs.service]);
+                    table.add_row(row!["pacemaker", pm.config, pm.service]);
+                    table.add_row(row!["pcsd", pc.config, pc.service]);
+                    table.printstd();
+                }
+                Err(e) => {
+                    eprintln!("{:?}", e);
+                    exit(exitcode::SOFTWARE);
+                }
+            },
+            HighAvailability::List => match high_availability::get_ha_resource_list(()).await {
+                Ok(v) => {
+                    for e in v {
+                        println!("{}", serde_json::to_string(&e).unwrap())
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Failed to list resources: {:?}", e);
+                    exit(exitcode::SOFTWARE);
+                }
+            },
+            HighAvailability::Start { resource } => {
+                if let Err(e) = high_availability::start_resource(resource).await {
+                    eprintln!("{:?}", e);
+                    exit(exitcode::SOFTWARE);
                 }
             }
-            Err(e) => eprintln!("{:?}", e),
+            HighAvailability::Stop { resource } => {
+                if let Err(e) = high_availability::stop_resource(resource).await {
+                    eprintln!("{:?}", e);
+                    exit(exitcode::SOFTWARE);
+                }
+            }
         },
         App::NtpClient { command } => match command {
             NtpClientCommand::Configure { server } => {

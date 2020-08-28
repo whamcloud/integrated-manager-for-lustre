@@ -1536,12 +1536,35 @@ pub enum OrderingKind {
     Serialize,
 }
 
+impl fmt::Display for OrderingKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.pad(&format!("{:?}", self))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum PacemakerScore {
     Infinity,
     Value(i32),
     NegInfinity,
+}
+
+impl fmt::Display for PacemakerScore {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            PacemakerScore::Value(v) => write!(f, "{}", v),
+            PacemakerScore::Infinity => write!(f, "INFINITY"),
+            PacemakerScore::NegInfinity => write!(f, "-INFINITY"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PacemakerKindOrScore {
+    Kind(OrderingKind),
+    Score(PacemakerScore),
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1576,7 +1599,9 @@ pub enum ResourceConstraint {
         id: String,
         first: String,
         then: String,
-        kind: Option<OrderingKind>,
+        // While the documentation only lists Kind the xml schema
+        // (constraints-2.9.rng) shows Kind or Score being valid
+        kind: Option<PacemakerKindOrScore>,
     },
     Location {
         id: String,
