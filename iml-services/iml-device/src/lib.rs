@@ -408,7 +408,17 @@ pub fn find_targets<'a>(
             host_ids: ids,
             filesystems: target_to_fs_map
                 .get(target)
-                .map(|xs| xs.iter().map(|(_, fs)| fs.clone()).collect::<Vec<String>>())
+                .map(|xs| {
+                    xs.iter()
+                        .filter(|(host, _)| {
+                            host_map
+                                .get(host)
+                                .expect(format!("Couldn't get host {}", host.0).as_str())
+                                == fqdn
+                        })
+                        .map(|(_, fs)| fs.clone())
+                        .collect::<Vec<String>>()
+                })
                 .unwrap_or(vec![]),
             name: target.into(),
             uuid: fs_uuid.into(),
