@@ -58,7 +58,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(move || warp::reply::json(&conf))
         .or(action::endpoint(conn_filter.clone()))
         .or(task::endpoint(conn_filter.clone(), db_pool_filter.clone()))
-        .or(snapshot::endpoint(conn_filter.clone(), db_pool_filter.clone()))
+        .or(snapshot::endpoint(
+            conn_filter.clone(),
+            db_pool_filter.clone(),
+        ))
         .or(graphql::endpoint(schema_filter, ctx_filter));
 
     tracing::info!("Starting on {:?}", addr);
