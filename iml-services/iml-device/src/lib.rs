@@ -450,7 +450,6 @@ impl Target {
     pub fn set_unmounted(&mut self) {
         self.state = "unmounted".into();
         self.active_host_id = None;
-        self.mount_path = None;
     }
 }
 
