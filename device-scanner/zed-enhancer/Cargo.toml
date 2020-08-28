@@ -8,8 +8,8 @@ version = "0.1.0"
 [dependencies]
 device-types = {path = "../device-types", version = "0.2.0"}
 futures = "0.3"
-libzfs = {git = "https://github.com/whamcloud/rust-libzfs.git", version = "0.6.16"}
-libzfs-types = {git = "https://github.com/whamcloud/rust-libzfs.git", version = "0.1.2"}
+libzfs = "0.6.16"
+libzfs-types = "0.1.2"
 serde_json = "1.0"
 thiserror = "1.0"
 tokio = {version = "0.2", default-features = false, features = ["net", "io-util", "process", "macros", "rt-core"]}
