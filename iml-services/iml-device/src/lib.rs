@@ -410,7 +410,8 @@ pub fn find_targets<'a>(
                 .get(target)
                 .map(|xs| {
                     xs.iter()
-                        .filter(|(host, _)| {
+                        .filter(|(host, fs)| {
+                            tracing::debug!("Checking target {:?} for host {} should have fs {}", target, host.0, fs);
                             host_map
                                 .get(host)
                                 .expect(format!("Couldn't get host {}", host.0).as_str())
