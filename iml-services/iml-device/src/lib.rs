@@ -111,6 +111,7 @@ pub async fn update_client_mounts(
     let mount_map = mounts
         .into_iter()
         .filter(|m| m.fs_type.0 == "lustre")
+        .filter(|m| m.opts.0.split(',').find(|x| x == &"ro").is_none())
         .filter_map(|m| {
             m.source
                 .0
@@ -338,6 +339,21 @@ pub fn find_targets<'a>(
     device_index: &DeviceIndex<'a>,
     target_to_fs_map: &TargetFsRecord,
 ) -> Vec<Target> {
+    let snapshots: Vec<_> = mounts
+        .iter()
+        .map(|(k, xs)| xs.into_iter().map(move |x| (k, x)))
+        .flatten()
+        .filter(|(_, x)| x.fs_type.0 == "lustre")
+        .filter(|(_, x)| x.opts.0.split(',').find(|x| x == &"nomgs").is_some())
+        .filter_map(|(_, x)| {
+            let s = x.opts.0.split(',').find(|x| x.starts_with("svname="))?;
+
+            let s = s.split('=').nth(1)?;
+
+            Some(s.to_string())
+        })
+        .collect();
+
     let xs: Vec<_> = mounts
         .iter()
         .map(|(k, xs)| xs.into_iter().map(move |x| (k, x)))
@@ -402,14 +418,24 @@ pub fn find_targets<'a>(
         .collect();
 
     xs.into_iter()
-        .map(|(fqdn, ids, mntpnt, fs_uuid, target)| Target {
-            state: "mounted".into(),
-            active_host_id: Some(*fqdn),
-            host_ids: ids,
-            filesystems: target_to_fs_map.get(target).cloned().unwrap_or_default(),
-            name: target.into(),
-            uuid: fs_uuid.into(),
-            mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
+        .map(|(fqdn, ids, mntpnt, fs_uuid, target)| {
+            let filesystems: Vec<String> = target_to_fs_map
+                .get(target)
+                .cloned()
+                .unwrap_or_default()
+                .into_iter()
+                .filter(|x| snapshots.iter().find(|s| s.contains(x)).is_none())
+                .collect();
+
+            Target {
+                state: "mounted".into(),
+                active_host_id: Some(*fqdn),
+                host_ids: ids,
+                filesystems,
+                name: target.into(),
+                uuid: fs_uuid.into(),
+                mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
+            }
         })
         .collect()
 }
