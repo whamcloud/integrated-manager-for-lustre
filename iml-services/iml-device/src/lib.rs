@@ -478,11 +478,19 @@ fn parse_filesystem_data(query_result: Option<Vec<Node>>, tag: &str) -> TargetFs
             .map(|xs| {
                 xs.into_iter()
                     .map(|x| {
-                        x.columns
+                        let columns = x.columns;
+                        x.values
                             .into_iter()
-                            .zip(x.values.into_iter().flatten())
-                            .collect::<HashMap<String, serde_json::Value>>()
+                            .map(|v| {
+                                columns
+                                    .iter()
+                                    .cloned()
+                                    .zip(v.into_iter())
+                                    .collect::<HashMap<String, serde_json::Value>>()
+                            })
+                            .collect::<Vec<HashMap<String, serde_json::Value>>>()
                     })
+                    .flatten()
                     .map(|mut x| {
                         let filesystems: String = serde_json::from_value(
                             x.remove(tag.into())
@@ -686,52 +694,37 @@ mod tests {
     fn test_parse_target_filesystem_data() {
         let query_result = Some(vec![Node {
             statement_id: Some(0),
-            series: Some(vec![
-                Series {
-                    name: "target".to_string(),
-                    tags: Some(
-                        vec![("target".to_string(), json!("fs-OST0000".to_string()))]
-                            .into_iter()
-                            .collect::<Map<String, Value>>(),
-                    ),
-                    columns: vec![
-                        "time".into(),
-                        "host".into(),
-                        "target".into(),
-                        "fs".into(),
-                        "bytes_free".into(),
-                    ],
-                    values: vec![vec![
+            series: Some(vec![Series {
+                name: "target".to_string(),
+                tags: Some(
+                    vec![("target".to_string(), json!("fs-OST0000".to_string()))]
+                        .into_iter()
+                        .collect::<Map<String, Value>>(),
+                ),
+                columns: vec![
+                    "time".into(),
+                    "host".into(),
+                    "target".into(),
+                    "fs".into(),
+                    "bytes_free".into(),
+                ],
+                values: vec![
+                    vec![
                         json!(1597166951257510515 as i64),
                         json!("oss1"),
                         json!("fs-OST0009"),
                         json!("fs"),
                         json!(4913020928 as i64),
-                    ]],
-                },
-                Series {
-                    name: "target".to_string(),
-                    tags: Some(
-                        vec![("target".to_string(), json!("fs-OST0001".to_string()))]
-                            .into_iter()
-                            .collect::<Map<String, Value>>(),
-                    ),
-                    columns: vec![
-                        "time".into(),
-                        "host".into(),
-                        "target".into(),
-                        "fs".into(),
-                        "bytes_free".into(),
                     ],
-                    values: vec![vec![
+                    vec![
                         json!(1597166951257510515 as i64),
                         json!("oss1"),
                         json!("fs-OST0008"),
                         json!("fs2"),
                         json!(4913020928 as i64),
-                    ]],
-                },
-            ]),
+                    ],
+                ],
+            }]),
         }]);
 
         let result = parse_filesystem_data(query_result, "fs");
@@ -756,48 +749,34 @@ mod tests {
     fn test_parse_mgs_filesystem_data() {
         let query_result = Some(vec![Node {
             statement_id: Some(0),
-            series: Some(vec![
-                Series {
-                    name: "target".to_string(),
-                    tags: Some(
-                        vec![("target".to_string(), json!("MGS".to_string()))]
-                            .into_iter()
-                            .collect::<Map<String, Value>>(),
-                    ),
-                    columns: vec![
-                        "time".into(),
-                        "host".into(),
-                        "target".into(),
-                        "mgs_fs".into(),
-                    ],
-                    values: vec![vec![
+            series: Some(vec![Series {
+                name: "target".to_string(),
+                tags: Some(
+                    vec![("target".to_string(), json!("MGS".to_string()))]
+                        .into_iter()
+                        .collect::<Map<String, Value>>(),
+                ),
+                columns: vec![
+                    "time".into(),
+                    "host".into(),
+                    "target".into(),
+                    "mgs_fs".into(),
+                ],
+                values: vec![
+                    vec![
                         json!(1597166951257510515 as i64),
                         json!("mds1"),
                         json!("MGS"),
                         json!("mgs1fs1,mgs1fs2"),
-                    ]],
-                },
-                Series {
-                    name: "target".to_string(),
-                    tags: Some(
-                        vec![("target".to_string(), json!("MGS2".to_string()))]
-                            .into_iter()
-                            .collect::<Map<String, Value>>(),
-                    ),
-                    columns: vec![
-                        "time".into(),
-                        "host".into(),
-                        "target".into(),
-                        "mgs_fs".into(),
                     ],
-                    values: vec![vec![
+                    vec![
                         json!(1597166951257510515 as i64),
                         json!("mds1"),
                         json!("MGS2"),
                         json!("mgs2fs1,mgs2fs2"),
-                    ]],
-                },
-            ]),
+                    ],
+                ],
+            }]),
         }]);
 
         let result = parse_filesystem_data(query_result, "mgs_fs");
@@ -828,48 +807,30 @@ mod tests {
     fn test_parse_mgs_filesystem_data_on_separate_hosts() {
         let query_result = Some(vec![Node {
             statement_id: Some(0),
-            series: Some(vec![
-                Series {
-                    name: "target".to_string(),
-                    tags: Some(
-                        vec![("target".to_string(), json!("MGS".to_string()))]
-                            .into_iter()
-                            .collect::<Map<String, Value>>(),
-                    ),
-                    columns: vec![
-                        "time".into(),
-                        "host".into(),
-                        "target".into(),
-                        "mgs_fs".into(),
-                    ],
-                    values: vec![vec![
+            series: Some(vec![Series {
+                name: "target".to_string(),
+                tags: None,
+                columns: vec![
+                    "time".into(),
+                    "host".into(),
+                    "target".into(),
+                    "mgs_fs".into(),
+                ],
+                values: vec![
+                    vec![
                         json!(1597166951257510515 as i64),
                         json!("mds1"),
                         json!("MGS"),
                         json!("fs1"),
-                    ]],
-                },
-                Series {
-                    name: "target".to_string(),
-                    tags: Some(
-                        vec![("target".to_string(), json!("MGS2".to_string()))]
-                            .into_iter()
-                            .collect::<Map<String, Value>>(),
-                    ),
-                    columns: vec![
-                        "time".into(),
-                        "host".into(),
-                        "target".into(),
-                        "mgs_fs".into(),
                     ],
-                    values: vec![vec![
+                    vec![
                         json!(1597166951257510515 as i64),
                         json!("oss1"),
                         json!("MGS"),
                         json!("fs2"),
-                    ]],
-                },
-            ]),
+                    ],
+                ],
+            }]),
         }]);
 
         let result = parse_filesystem_data(query_result, "mgs_fs");
