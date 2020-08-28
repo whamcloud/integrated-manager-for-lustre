@@ -237,6 +237,10 @@ pub enum StratagemClientCommand {
     #[structopt(name = "filesync")]
     /// Run FileSync action
     FileSync {
+        #[structopt()]
+        /// push or pull
+        action: String,
+
         #[structopt(short = "d")]
         /// destination path
         target_fs: String,
@@ -535,7 +539,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     exit(exitcode::IOERR);
                 }
             }
-            StratagemClientCommand::FileSync { target_fs, fidopts } => {
+            StratagemClientCommand::FileSync {
+                action,
+                target_fs,
+                fidopts,
+            } => {
                 let device = fidopts.fsname;
                 let mut task_args = std::collections::HashMap::new();
 
@@ -549,6 +557,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .collect();
 
                 task_args.insert("remote".to_string(), target_fs);
+                task_args.insert("action".to_string(), action);
                 if action_filesync::process_fids((device, task_args, fidlist))
                     .await
                     .is_err()

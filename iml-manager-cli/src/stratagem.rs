@@ -94,6 +94,9 @@ pub struct StratagemScanData {
 
 #[derive(serde::Serialize, StructOpt, Debug)]
 pub struct StratagemFilesyncData {
+    /// action, either push or pull
+    #[structopt()]
+    action: String,
     /// The name of the filesystem to scan
     #[structopt(short = "f", long = "filesystem")]
     filesystem: String,
@@ -103,9 +106,6 @@ pub struct StratagemFilesyncData {
     /// Match expression
     #[structopt(short = "e", long = "expression")]
     expression: String,
-    /// Policy
-    #[structopt(short = "p", long = "policy")]
-    policy: String,
     #[structopt(skip = true)]
     filesync: bool,
 }
@@ -231,6 +231,8 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
             display_cmd_state(&command);
         }
         StratagemCommand::Filesync(data) => {
+            tracing::error!("run_filesync: {:?}", data);
+
             let r = post("run_stratagem", data).await?;
 
             tracing::error!("run_filesync: {:?}", r);

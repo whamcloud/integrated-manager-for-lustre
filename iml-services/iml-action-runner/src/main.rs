@@ -77,7 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(())
         }
         .map_err(|e: ImlServiceQueueError| {
-            tracing::error!("iml-action-runner: {}", e);
+            tracing::error!("{}", e);
         })
         .map(drop),
     );
