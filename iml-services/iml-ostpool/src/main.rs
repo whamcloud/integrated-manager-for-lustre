@@ -2,8 +2,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::future::try_join_all;
-use futures_util::stream::TryStreamExt;
+#![type_length_limit = "5657938"]
+
+use futures::{future::try_join_all, TryStreamExt};
 use iml_ostpool::{db, error::Error};
 use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::FsPoolMap;

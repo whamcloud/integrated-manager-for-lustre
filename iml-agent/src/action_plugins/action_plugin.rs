@@ -8,7 +8,7 @@ use crate::{
         lpurge, ltuer, lustre,
         ntp::{action_configure, is_ntp_configured},
         ostpool, package, postoffice,
-        stratagem::{action_purge, action_warning, server},
+        stratagem::{action_mirror, action_purge, action_warning, server},
     },
     lustre::lctl,
 };
@@ -75,6 +75,9 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("create_ltuer_conf", ltuer::create_ltuer_conf)
         .add_plugin("create_ldev_conf", ldev::create)
         // Task Actions
+        .add_plugin("action.mirror.extend", action_mirror::process_extend_fids)
+        .add_plugin("action.mirror.resync", action_mirror::process_resync_fids)
+        .add_plugin("action.mirror.split", action_mirror::process_split_fids)
         .add_plugin("action.stratagem.warning", action_warning::process_fids)
         .add_plugin("action.stratagem.purge", action_purge::process_fids);
 

@@ -4,6 +4,8 @@
 
 pub mod client;
 pub mod db;
+pub mod high_availability;
+pub mod sfa;
 pub mod snapshot;
 pub mod warp_drive;
 

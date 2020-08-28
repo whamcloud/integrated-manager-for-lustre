@@ -121,8 +121,8 @@ async fn get_fstab() -> Result<String, ImlAgentError> {
 
 fn filter_mountpoint(mountpoint: &str, contents: &str) -> String {
     contents
-        .split("\n")
-        .filter(|x| match x.split_whitespace().skip(1).next() {
+        .split('\n')
+        .filter(|x| match x.split_whitespace().nth(1) {
             Some(x) => x != mountpoint,
             None => true,
         })
@@ -150,10 +150,10 @@ async fn update_fstab_entry(
 
     let contents = get_fstab()
         .await?
-        .split("\n")
+        .split('\n')
         .chain(std::iter::once(
             format!(
-                "{}\t{}lustre\t\tx-systemd.mount-timeout=20m,{}_netdev",
+                "{}\t{}\tlustre\tx-systemd.mount-timeout=20m,{}_netdev",
                 mountspec, mountpoint, persist,
             )
             .as_str(),

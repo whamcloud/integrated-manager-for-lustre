@@ -46,6 +46,7 @@ class Command(BaseCommand):
             "UPDATE_HANDLER_PROXY_PASS": settings.UPDATE_HANDLER_PROXY_PASS,
             "GRAFANA_PORT": settings.GRAFANA_PORT,
             "GRAFANA_PROXY_PASS": settings.GRAFANA_PROXY_PASS,
+            "INFLUXDB_SERVER_FQDN": settings.INFLUXDB_SERVER_FQDN,
             "INFLUXDB_PROXY_PASS": settings.INFLUXDB_PROXY_PASS,
             "TIMER_PROXY_PASS": settings.TIMER_PROXY_PASS,
             "ALLOW_ANONYMOUS_READ": json.dumps(settings.ALLOW_ANONYMOUS_READ),

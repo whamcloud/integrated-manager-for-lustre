@@ -386,8 +386,8 @@ class DetectScan(object):
                                 log.info("Learned association %d between %s and host %s" % (tm.id, lv["name"], host))
                                 self._learn_event(host, tm)
                                 ObjectCache.add(ManagedTargetMount, tm)
-                        except e:
-                            log.error("Could create target %s on %s: %s" % (target, host, e))
+                        except Exception as e:
+                            log.error("Could not create target {} on {}: {}".format(target, host, e))
 
     def _get_volume_node(self, host, paths):
         volume_nodes = VolumeNode.objects.filter(path__in=paths, host=host)

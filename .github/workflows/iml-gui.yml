@@ -36,7 +36,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --locked --manifest-path iml-gui/crate/Cargo.toml --all-features -- --deny warnings
+          args: --locked --manifest-path iml-gui/crate/Cargo.toml --all-features -- -W warnings
 
   rustfmt:
     name: Format

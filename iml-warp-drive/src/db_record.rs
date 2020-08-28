@@ -2,20 +2,24 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_wire_types::db::{
-    AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
-    CorosyncConfigurationRecord, FsRecord, LnetConfigurationRecord, ManagedHostRecord,
-    ManagedTargetMountRecord, ManagedTargetRecord, OstPoolOstsRecord, OstPoolRecord,
-    PacemakerConfigurationRecord, SfaController, SfaDiskDrive, SfaEnclosure, SfaJob,
-    SfaPowerSupply, SfaStorageSystem, StratagemConfiguration, TableName, VolumeNodeRecord,
-    VolumeRecord, ALERT_STATE_TABLE_NAME, AUTH_GROUP_TABLE_NAME, AUTH_USER_GROUP_TABLE_NAME,
-    AUTH_USER_TABLE_NAME, CONTENT_TYPE_TABLE_NAME, COROSYNC_CONFIGURATION_TABLE_NAME,
-    LNET_CONFIGURATION_TABLE_NAME, MANAGED_FILESYSTEM_TABLE_NAME, MANAGED_HOST_TABLE_NAME,
-    MANAGED_TARGET_MOUNT_TABLE_NAME, MANAGED_TARGET_TABLE_NAME, OSTPOOL_OSTS_TABLE_NAME,
-    OSTPOOL_TABLE_NAME, PACEMAKER_CONFIGURATION_TABLE_NAME, SFA_CONTROLLER_TABLE_NAME,
-    SFA_DISK_DRIVE_TABLE_NAME, SFA_ENCLOSURE_TABLE_NAME, SFA_JOB_TABLE_NAME,
-    SFA_POWER_SUPPLY_TABLE_NAME, SFA_STORAGE_SYSTEM_TABLE_NAME, STRATAGEM_CONFIGURATION_TABLE_NAME,
-    VOLUME_NODE_TABLE_NAME, VOLUME_TABLE_NAME,
+use iml_wire_types::{
+    db::{
+        AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
+        CorosyncConfigurationRecord, FsRecord, LnetConfigurationRecord, ManagedHostRecord,
+        ManagedTargetMountRecord, ManagedTargetRecord, OstPoolOstsRecord, OstPoolRecord,
+        PacemakerConfigurationRecord, StratagemConfiguration, TableName, VolumeNodeRecord,
+        VolumeRecord, ALERT_STATE_TABLE_NAME, AUTH_GROUP_TABLE_NAME, AUTH_USER_GROUP_TABLE_NAME,
+        AUTH_USER_TABLE_NAME, CONTENT_TYPE_TABLE_NAME, COROSYNC_CONFIGURATION_TABLE_NAME,
+        LNET_CONFIGURATION_TABLE_NAME, MANAGED_FILESYSTEM_TABLE_NAME, MANAGED_HOST_TABLE_NAME,
+        MANAGED_TARGET_MOUNT_TABLE_NAME, MANAGED_TARGET_TABLE_NAME, OSTPOOL_OSTS_TABLE_NAME,
+        OSTPOOL_TABLE_NAME, PACEMAKER_CONFIGURATION_TABLE_NAME, STRATAGEM_CONFIGURATION_TABLE_NAME,
+        VOLUME_NODE_TABLE_NAME, VOLUME_TABLE_NAME,
+    },
+    sfa::{
+        SfaController, SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem,
+        SFA_CONTROLLER_TABLE_NAME, SFA_DISK_DRIVE_TABLE_NAME, SFA_ENCLOSURE_TABLE_NAME,
+        SFA_JOB_TABLE_NAME, SFA_POWER_SUPPLY_TABLE_NAME, SFA_STORAGE_SYSTEM_TABLE_NAME,
+    },
 };
 use serde::de::Error;
 use std::convert::TryFrom;

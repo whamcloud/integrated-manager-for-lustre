@@ -19,6 +19,7 @@ _topdir
 **/*.rs.bk
 **/.env
 *~
+*.snap.new
 artifacts
 /base.repo
 /chroma_support.repo

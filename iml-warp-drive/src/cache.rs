@@ -12,10 +12,10 @@ use iml_wire_types::{
         AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
         CorosyncConfigurationRecord, FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord,
         ManagedTargetMountRecord, ManagedTargetRecord, Name, NotDeleted, OstPoolOstsRecord,
-        OstPoolRecord, PacemakerConfigurationRecord, SfaController, SfaDiskDrive, SfaEnclosure,
-        SfaJob, SfaPowerSupply, SfaStorageSystem, StratagemConfiguration, VolumeNodeRecord,
+        OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration, VolumeNodeRecord,
         VolumeRecord,
     },
+    sfa::{SfaController, SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem},
     warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam,
 };

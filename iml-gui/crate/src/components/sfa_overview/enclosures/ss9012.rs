@@ -7,7 +7,7 @@ use crate::{
     extensions::MergeAttrs as _,
     generated::css_classes::C,
 };
-use iml_wire_types::db::{SfaDiskDrive, SfaEnclosure, SfaPowerSupply};
+use iml_wire_types::sfa::{SfaDiskDrive, SfaEnclosure, SfaPowerSupply};
 use seed::{prelude::*, *};
 use std::{
     collections::{BTreeSet, HashMap},

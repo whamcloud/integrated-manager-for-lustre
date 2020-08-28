@@ -6,6 +6,7 @@ use crate::{
     agent_error::{ImlAgentError, RequiredError},
     fidlist,
     http_comms::streaming_client::send,
+    lustre::search_rootpath,
 };
 use futures::{
     channel::mpsc, future::join_all, sink::SinkExt, stream, StreamExt, TryFutureExt, TryStreamExt,
@@ -33,19 +34,12 @@ async fn fid2path(llapi: LlapiFid, fid: String) -> Option<String> {
     }
 }
 
-async fn search_rootpath(device: String) -> Result<LlapiFid, ImlAgentError> {
-    spawn_blocking(move || LlapiFid::create(&device).map_err(ImlAgentError::from))
-        .err_into()
-        .await
-        .and_then(std::convert::identity)
-}
-
 async fn item2path(
     llapi: LlapiFid,
     fi: FidItem,
     mut tx: mpsc::UnboundedSender<FidError>,
 ) -> Option<String> {
-    let pfids: Vec<fidlist::LinkEA> = serde_json::from_value(fi.data.clone()).unwrap_or(vec![]);
+    let pfids: Vec<fidlist::LinkEA> = serde_json::from_value(fi.data.clone()).unwrap_or_default();
 
     for pfid in pfids.iter() {
         if let Some(path) = fid2path(llapi.clone(), pfid.pfid.clone()).await {
@@ -88,12 +82,17 @@ pub fn write_records(
     Ok(())
 }
 
+/// Process FIDs
+/// Task Args:
+/// * report_file - output location of file list
+/// Fid Args:
+/// * pfid list - (optional) Array of LinkEA info (specifically "pfid" - parent fid)
 pub async fn process_fids(
     (fsname_or_mntpath, mut task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
 ) -> Result<Vec<FidError>, ImlAgentError> {
-    let report_name = task_args.remove("report_name".into()).ok_or(RequiredError(
-        "Task missing 'report_name' argument".to_string(),
-    ))?;
+    let report_name = task_args
+        .remove("report_name")
+        .ok_or_else(|| RequiredError("Task missing 'report_name' argument".to_string()))?;
 
     let llapi = search_rootpath(fsname_or_mntpath).await?;
 

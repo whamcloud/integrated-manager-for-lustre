@@ -81,6 +81,7 @@ Requires:       python2-massiviu >= 0.1.0-2
 Requires:       rust-iml-action-runner >= 0.3.0
 Requires:       rust-iml-agent-comms >= 0.3.0
 Requires:       rust-iml-api >= 0.3.0
+Requires:       rust-iml-corosync >= 0.3.0
 Requires:       rust-iml-cli >= 0.3.0
 Requires:       rust-iml-gui >= 0.2.0
 Requires:       rust-iml-mailbox >= 0.3.0
