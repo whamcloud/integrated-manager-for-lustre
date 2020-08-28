@@ -15,7 +15,7 @@ use crate::{
     extensions::MergeAttrs,
     generated::css_classes::C,
 };
-use iml_wire_types::db::SfaDiskDrive;
+use iml_wire_types::sfa::SfaDiskDrive;
 use seed::{prelude::*, *};
 use std::{collections::BTreeSet, iter, sync::Arc};
 

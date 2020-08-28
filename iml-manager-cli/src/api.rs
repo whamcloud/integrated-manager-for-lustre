@@ -68,7 +68,7 @@ pub async fn api_cli(command: ApiCommand) -> Result<(), ImlManagerCliError> {
         Ok(json) => term.write_line(&format!("{}", json)),
         Err(_) => {
             term.write_line(&resp_txt)?;
-            term.write_line(&format!("{}", body))?;
+            term.write_line(&body.to_string())?;
 
             Ok(())
         }

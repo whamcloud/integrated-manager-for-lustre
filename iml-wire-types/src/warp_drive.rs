@@ -6,10 +6,10 @@ use crate::{
     db::{
         AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
         CorosyncConfigurationRecord, Id, LnetConfigurationRecord, ManagedTargetMountRecord,
-        OstPoolOstsRecord, OstPoolRecord, PacemakerConfigurationRecord, SfaController,
-        SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem,
-        StratagemConfiguration, VolumeNodeRecord, VolumeRecord,
+        OstPoolOstsRecord, OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration,
+        VolumeNodeRecord, VolumeRecord,
     },
+    sfa::{SfaController, SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem},
     Alert, CompositeId, EndpointNameSelf, Filesystem, Host, Label, LockChange, Target,
     TargetConfParam, ToCompositeId,
 };
@@ -24,7 +24,7 @@ use std::{
 /// This trait is to bring method `arc_values()` to the collections of
 /// type HashMap<K, Arc<V>> to simplify iterating through the values.
 /// Example:
-/// ```rust,norun
+/// ```rust,no_run
 ///     use std::sync::Arc;
 ///     use im::HashMap;
 ///     use iml_wire_types::warp_drive::ArcValuesExt;

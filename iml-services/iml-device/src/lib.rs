@@ -7,18 +7,24 @@ pub mod linux_plugin_transforms;
 
 pub use error::ImlDeviceError;
 
-use device_types::{devices::Device, mount::Mount};
+use device_types::{
+    devices::{Device, DeviceId},
+    mount::Mount,
+};
 use futures::{future::try_join_all, lock::Mutex};
 use im::HashSet;
+use iml_change::*;
 use iml_postgres::sqlx::{self, PgPool};
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
+use influx_db_client::{keys::Node, Client, Precision};
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap},
     sync::Arc,
 };
 
 pub type Cache = Arc<Mutex<HashMap<Fqdn, Device>>>;
+pub type TargetFsRecord = HashMap<String, Vec<String>>;
 
 /// Given a db pool, create a new cache and fill it with initial data.
 /// This will start the device tree with the previous items it left off with.
@@ -35,6 +41,14 @@ pub async fn create_cache(pool: &PgPool) -> Result<Cache, ImlDeviceError> {
         .collect::<Result<_, _>>()?;
 
     Ok(Arc::new(Mutex::new(data)))
+}
+
+pub async fn create_target_cache(pool: &PgPool) -> Result<Vec<Target>, ImlDeviceError> {
+    let xs: Vec<Target> = sqlx::query_as!(Target, "select * from targets")
+        .fetch_all(pool)
+        .await?;
+
+    Ok(xs)
 }
 
 pub async fn update_devices(
@@ -105,7 +119,7 @@ pub async fn update_client_mounts(
                 .map(|fs| (fs.to_string(), m.target.0.to_string_lossy().to_string()))
         })
         .fold(HashMap::new(), |mut acc, (fs_name, mountpoint)| {
-            let mountpoints = acc.entry(fs_name).or_insert_with(|| BTreeSet::new());
+            let mountpoints = acc.entry(fs_name).or_insert_with(BTreeSet::new);
 
             mountpoints.insert(mountpoint);
 
@@ -164,4 +178,589 @@ pub async fn update_client_mounts(
     tracing::debug!("Updated client mounts: {:?}", updated);
 
     Ok(())
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct DeviceMap(BTreeMap<DeviceId, BTreeSet<Vec<DeviceId>>>);
+
+impl DeviceMap {
+    fn get_shared_parent(&self, id: &DeviceId) -> Option<(&DeviceId, &BTreeSet<Vec<DeviceId>>)> {
+        let item = self.0.get(id)?;
+
+        if id.0.starts_with("lv_") {
+            let vg = item.iter().find_map(|xs| {
+                let x = xs.last()?;
+
+                if x.0.starts_with("vg_") {
+                    Some(x)
+                } else {
+                    None
+                }
+            })?;
+
+            Some((vg, self.0.get(&vg)?))
+        } else if id.0.starts_with("dataset_") {
+            let zpool = item.iter().find_map(|xs| {
+                let x = xs.last()?;
+
+                if x.0.starts_with("zpool_") {
+                    Some(x)
+                } else {
+                    None
+                }
+            })?;
+
+            Some((zpool, self.0.get(&zpool)?))
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct DeviceIndex<'a>(HashMap<&'a Fqdn, DeviceMap>);
+
+pub fn build_device_index<'a>(x: &'a HashMap<Fqdn, Device>) -> DeviceIndex<'a> {
+    let mut device_index: HashMap<&Fqdn, DeviceMap> = x
+        .iter()
+        .map(|(fqdn, device)| {
+            let mut map = DeviceMap(BTreeMap::new());
+
+            build_device_map(device, &mut map, &[]);
+
+            (fqdn, map)
+        })
+        .collect();
+
+    let xs = device_index.iter().fold(vec![], |mut acc, (fqdn, map)| {
+        let others = device_index.iter().filter(|(x, _)| &fqdn != x).collect();
+
+        acc.extend(add_shared_storage(map, others));
+
+        acc
+    });
+
+    for (fqdn, device_id, paths) in xs {
+        let map = match device_index.get_mut(&fqdn) {
+            Some(x) => x,
+            None => continue,
+        };
+
+        map.0.insert(device_id.clone(), paths.clone());
+    }
+
+    DeviceIndex(device_index)
+}
+
+fn add_shared_storage<'a>(
+    map: &'a DeviceMap,
+    other: HashMap<&'a &Fqdn, &DeviceMap>,
+) -> Vec<(Fqdn, DeviceId, BTreeSet<Vec<DeviceId>>)> {
+    let xs: Vec<_> = map
+        .0
+        .iter()
+        .filter(|(device_id, _)| {
+            device_id.0.starts_with("lv_")
+                || device_id.0.starts_with("dataset_")
+                || device_id.0.starts_with("mdraid_")
+        })
+        .collect();
+
+    let mut matches = vec![];
+
+    for (existing_id, parents) in xs {
+        if existing_id.0.starts_with("lv_") || existing_id.0.starts_with("dataset_") {
+            let shared = map.get_shared_parent(existing_id);
+
+            if let Some((shared_id, shared_parents)) = shared {
+                let parent_ids = shared_parents
+                    .iter()
+                    .filter_map(|xs| xs.last())
+                    .collect::<Vec<_>>();
+
+                matches = other
+                    .iter()
+                    .filter(|(_, map)| parent_ids.iter().all(|p| map.0.get(p).is_some()))
+                    .map(|(fqdn, _)| {
+                        vec![
+                            ((**fqdn).clone(), shared_id.clone(), shared_parents.clone()),
+                            ((**fqdn).clone(), existing_id.clone(), parents.clone()),
+                        ]
+                    })
+                    .flatten()
+                    .chain(matches)
+                    .collect();
+            }
+        } else {
+            let parent_ids = parents
+                .iter()
+                .filter_map(|xs| xs.last())
+                .collect::<Vec<_>>();
+
+            matches = other
+                .iter()
+                .filter(|(_, map)| parent_ids.iter().all(|p| map.0.get(p).is_some()))
+                .map(|(fqdn, _)| ((**fqdn).clone(), existing_id.clone(), parents.clone()))
+                .chain(matches)
+                .collect();
+        }
+    }
+
+    matches
+}
+
+fn build_device_map(device: &Device, map: &mut DeviceMap, path: &[DeviceId]) {
+    let id = match device.get_id() {
+        Some(x) => x,
+        None => return,
+    };
+
+    let paths = map.0.entry(id.clone()).or_insert_with(BTreeSet::new);
+
+    paths.insert(path.to_vec());
+
+    let parent_path = [path.to_vec(), vec![id]].concat();
+
+    let children = match device.children() {
+        Some(x) => x,
+        None => return,
+    };
+
+    children
+        .iter()
+        .for_each(|d| build_device_map(d, map, &parent_path));
+}
+
+pub fn find_targets<'a>(
+    x: &'a HashMap<Fqdn, Device>,
+    mounts: &HashMap<Fqdn, HashSet<Mount>>,
+    host_map: &HashMap<Fqdn, i32>,
+    device_index: &DeviceIndex<'a>,
+    target_to_fs_map: &TargetFsRecord,
+) -> Vec<Target> {
+    let xs: Vec<_> = mounts
+        .iter()
+        .map(|(k, xs)| xs.into_iter().map(move |x| (k, x)))
+        .flatten()
+        .filter(|(_, x)| x.fs_type.0 == "lustre")
+        .filter(|(_, x)| !x.source.0.to_string_lossy().contains('@'))
+        .filter_map(|(fqdn, x)| {
+            let s = x.opts.0.split(',').find(|x| x.starts_with("svname="))?;
+
+            let s = s.split('=').nth(1)?;
+
+            Some((fqdn, &x.target, &x.source, s))
+        })
+        .collect();
+
+    let xs: Vec<_> = xs
+        .into_iter()
+        .filter_map(|(fqdn, mntpnt, dev, target)| {
+            let dev_tree = x.get(&fqdn)?;
+
+            let device = dev_tree.find_device_by_devpath(dev)?;
+
+            let dev_id = device.get_id()?;
+
+            let fs_uuid = device.get_fs_uuid()?;
+
+            Some((fqdn, mntpnt, dev_id, fs_uuid, target))
+        })
+        .collect();
+
+    let xs: Vec<_> = xs
+        .into_iter()
+        .filter_map(|(fqdn, mntpnt, dev_id, fs_uuid, target)| {
+            let ys: Vec<_> = device_index
+                .0
+                .iter()
+                .filter(|(k, _)| *k != &fqdn)
+                .filter_map(|(k, x)| {
+                    tracing::debug!("Searching for device {:?} on {}", &x, &k);
+                    x.0.get(&dev_id)?;
+
+                    tracing::debug!("found device on {}!", &k);
+                    let host_id = host_map.get(&k)?;
+
+                    Some(*host_id)
+                })
+                .collect();
+
+            tracing::debug!("ys: {:?}", ys);
+
+            let host_id = host_map.get(&fqdn)?;
+            tracing::debug!("host id: {:?}", host_id);
+
+            Some((
+                host_id,
+                [vec![*host_id], ys].concat(),
+                mntpnt,
+                fs_uuid,
+                target,
+            ))
+        })
+        .collect();
+
+    xs.into_iter()
+        .map(|(fqdn, ids, mntpnt, fs_uuid, target)| Target {
+            state: "mounted".into(),
+            active_host_id: Some(*fqdn),
+            host_ids: ids,
+            filesystems: target_to_fs_map.get(target).cloned().unwrap_or_default(),
+            name: target.into(),
+            uuid: fs_uuid.into(),
+            mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
+        })
+        .collect()
+}
+
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone)]
+pub struct Target {
+    pub state: String,
+    pub name: String,
+    pub active_host_id: Option<i32>,
+    pub host_ids: Vec<i32>,
+    pub filesystems: Vec<String>,
+    pub uuid: String,
+    pub mount_path: Option<String>,
+}
+
+impl Identifiable for Target {
+    type Id = String;
+
+    fn id(&self) -> Self::Id {
+        self.uuid.clone()
+    }
+}
+
+impl Target {
+    pub fn set_unmounted(&mut self) {
+        self.state = "unmounted".into();
+        self.active_host_id = None;
+        self.mount_path = None;
+    }
+}
+
+pub fn build_updates(x: Changes<'_, Target>) -> Vec<Target> {
+    match x {
+        (Some(Upserts(up)), Some(Deletions(del))) => del
+            .into_iter()
+            .cloned()
+            .map(|mut t| {
+                t.set_unmounted();
+
+                t
+            })
+            .chain(up.into_iter().cloned())
+            .collect(),
+        (Some(Upserts(xs)), None) => xs.into_iter().cloned().collect(),
+        (None, Some(Deletions(xs))) => xs
+            .into_iter()
+            .cloned()
+            .map(|mut t| {
+                t.set_unmounted();
+
+                t
+            })
+            .collect(),
+        (None, None) => vec![],
+    }
+}
+
+fn parse_filesystem_data(query_result: Option<Vec<Node>>, tag: &str) -> TargetFsRecord {
+    let target_to_fs = if let Some(nodes) = query_result {
+        nodes
+            .into_iter()
+            .filter_map(|x| x.series)
+            .map(|xs| {
+                xs.into_iter()
+                    .map(|x| {
+                        x.columns
+                            .into_iter()
+                            .zip(x.values.into_iter().flatten())
+                            .collect::<HashMap<String, serde_json::Value>>()
+                    })
+                    .map(|mut x| {
+                        let filesystems: String = serde_json::from_value(
+                            x.remove(tag).unwrap_or_else(|| serde_json::json!("")),
+                        )
+                        .unwrap_or_else(|_| panic!("Couldn't parse {} name.", tag));
+
+                        (
+                            serde_json::from_value(
+                                x.remove("target").unwrap_or_else(|| serde_json::json!("")),
+                            )
+                            .expect("Couldn't parse target."),
+                            filesystems.split(',').map(|x| x.to_string()).collect(),
+                        )
+                    })
+                    .collect::<Vec<(String, Vec<String>)>>()
+            })
+            .flatten()
+            .collect::<TargetFsRecord>()
+    } else {
+        HashMap::new()
+    };
+
+    tracing::debug!("target_to_fs: {:?}", target_to_fs);
+
+    target_to_fs
+}
+
+pub async fn get_target_filesystem_map(
+    influx_client: &Client,
+) -> Result<TargetFsRecord, ImlDeviceError> {
+    let query_result: Option<Vec<Node>> = influx_client
+        .query(
+            "select target,fs,bytes_free from target group by target order by time desc limit 1;",
+            Some(Precision::Nanoseconds),
+        )
+        .await?;
+
+    Ok(parse_filesystem_data(query_result, "fs"))
+}
+
+pub async fn get_mgs_filesystem_map(
+    influx_client: &Client,
+) -> Result<TargetFsRecord, ImlDeviceError> {
+    let query_result: Option<Vec<Node>> = influx_client
+        .query(
+            "select target,mgs_fs from target;",
+            Some(Precision::Nanoseconds),
+        )
+        .await?;
+
+    Ok(parse_filesystem_data(query_result, "mgs_fs"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use device_types::devices::Device;
+    use influx_db_client::keys::Series;
+    use insta::assert_json_snapshot;
+    use serde_json::{json, Map, Value};
+
+    #[test]
+    fn test_index() {
+        let cluster: HashMap<Fqdn, Device> =
+            serde_json::from_slice(include_bytes!("../fixtures/devtrees.json")).unwrap();
+        let index = build_device_index(&cluster);
+
+        insta::with_settings!({sort_maps => true}, {
+            assert_json_snapshot!(index);
+        });
+    }
+
+    #[test]
+    fn test_upserts_only() {
+        let ups = vec![
+            Target {
+                state: "mounted".into(),
+                name: "mdt1".into(),
+                active_host_id: Some(1),
+                host_ids: vec![2],
+                filesystems: vec!["fs1".to_string()],
+                uuid: "123456".into(),
+                mount_path: Some("/mnt/mdt1".into()),
+            },
+            Target {
+                state: "mounted".into(),
+                name: "ost1".into(),
+                active_host_id: Some(3),
+                host_ids: vec![4],
+                filesystems: vec!["fs1".to_string()],
+                uuid: "567890".into(),
+                mount_path: Some("/mnt/ost1".into()),
+            },
+        ];
+
+        let upserts = Upserts(ups.iter().collect());
+
+        let xs = build_updates((Some(upserts), None));
+
+        insta::assert_debug_snapshot!(xs);
+    }
+
+    #[test]
+    fn test_upserts_and_deletions() {
+        let t = Target {
+            state: "mounted".into(),
+            name: "mdt1".into(),
+            active_host_id: Some(1),
+            host_ids: vec![2],
+            filesystems: vec!["fs1".to_string()],
+            uuid: "123456".into(),
+            mount_path: Some("/mnt/mdt1".into()),
+        };
+
+        let deletions = Deletions(vec![&t]);
+
+        let ups = vec![
+            Target {
+                state: "mounted".into(),
+                name: "mdt2".into(),
+                active_host_id: Some(2),
+                host_ids: vec![1],
+                filesystems: vec!["fs1".to_string()],
+                uuid: "654321".into(),
+                mount_path: Some("/mnt/mdt2".into()),
+            },
+            Target {
+                state: "mounted".into(),
+                name: "ost1".into(),
+                active_host_id: Some(3),
+                host_ids: vec![4],
+                filesystems: vec!["fs1".to_string()],
+                uuid: "567890".into(),
+                mount_path: Some("/mnt/ost1".into()),
+            },
+        ];
+
+        let upserts = Upserts(ups.iter().collect());
+
+        let xs = build_updates((Some(upserts), Some(deletions)));
+
+        insta::assert_debug_snapshot!(xs);
+    }
+
+    #[test]
+    fn test_deletions_only() {
+        let t = Target {
+            state: "mounted".into(),
+            name: "mdt1".into(),
+            active_host_id: Some(1),
+            host_ids: vec![2],
+            filesystems: vec!["fs1".into()],
+            uuid: "123456".into(),
+            mount_path: Some("/mnt/mdt1".into()),
+        };
+
+        let deletions = Deletions(vec![&t]);
+
+        let xs = build_updates((None, Some(deletions)));
+
+        insta::assert_debug_snapshot!(xs);
+    }
+
+    #[test]
+    fn test_no_upserts_or_deletions() {
+        let xs = build_updates((None, None));
+
+        assert_eq!(xs, vec![]);
+    }
+
+    #[test]
+    fn test_parse_target_filesystem_data() {
+        let query_result = Some(vec![Node {
+            statement_id: Some(0),
+            series: Some(vec![
+                Series {
+                    name: "target".to_string(),
+                    tags: Some(
+                        vec![("target".to_string(), json!("fs-OST0000".to_string()))]
+                            .into_iter()
+                            .collect::<Map<String, Value>>(),
+                    ),
+                    columns: vec![
+                        "time".into(),
+                        "target".into(),
+                        "fs".into(),
+                        "bytes_free".into(),
+                    ],
+                    values: vec![vec![
+                        json!(1597166951257510515 as i64),
+                        json!("fs-OST0009"),
+                        json!("fs"),
+                        json!(4913020928 as i64),
+                    ]],
+                },
+                Series {
+                    name: "target".to_string(),
+                    tags: Some(
+                        vec![("target".to_string(), json!("fs-OST0001".to_string()))]
+                            .into_iter()
+                            .collect::<Map<String, Value>>(),
+                    ),
+                    columns: vec![
+                        "time".into(),
+                        "target".into(),
+                        "fs".into(),
+                        "bytes_free".into(),
+                    ],
+                    values: vec![vec![
+                        json!(1597166951257510515 as i64),
+                        json!("fs-OST0008"),
+                        json!("fs2"),
+                        json!(4913020928 as i64),
+                    ]],
+                },
+            ]),
+        }]);
+
+        let result = parse_filesystem_data(query_result, "fs");
+        assert_eq!(
+            result,
+            vec![
+                ("fs-OST0009".to_string(), vec!["fs".to_string()]),
+                ("fs-OST0008".to_string(), vec!["fs2".to_string()]),
+            ]
+            .into_iter()
+            .collect::<TargetFsRecord>(),
+        );
+    }
+
+    #[test]
+    fn test_parse_mgs_filesystem_data() {
+        let query_result = Some(vec![Node {
+            statement_id: Some(0),
+            series: Some(vec![
+                Series {
+                    name: "target".to_string(),
+                    tags: Some(
+                        vec![("target".to_string(), json!("MGS".to_string()))]
+                            .into_iter()
+                            .collect::<Map<String, Value>>(),
+                    ),
+                    columns: vec!["time".into(), "target".into(), "mgs_fs".into()],
+                    values: vec![vec![
+                        json!(1597166951257510515 as i64),
+                        json!("MGS"),
+                        json!("mgs1fs1,mgs1fs2"),
+                    ]],
+                },
+                Series {
+                    name: "target".to_string(),
+                    tags: Some(
+                        vec![("target".to_string(), json!("MGS2".to_string()))]
+                            .into_iter()
+                            .collect::<Map<String, Value>>(),
+                    ),
+                    columns: vec!["time".into(), "target".into(), "mgs_fs".into()],
+                    values: vec![vec![
+                        json!(1597166951257510515 as i64),
+                        json!("MGS2"),
+                        json!("mgs2fs1,mgs2fs2"),
+                    ]],
+                },
+            ]),
+        }]);
+
+        let result = parse_filesystem_data(query_result, "mgs_fs");
+        assert_eq!(
+            result,
+            vec![
+                (
+                    "MGS".to_string(),
+                    vec!["mgs1fs1".to_string(), "mgs1fs2".to_string()]
+                ),
+                (
+                    "MGS2".to_string(),
+                    vec!["mgs2fs1".to_string(), "mgs2fs2".to_string()]
+                ),
+            ]
+            .into_iter()
+            .collect::<TargetFsRecord>(),
+        );
+    }
 }

@@ -196,4 +196,8 @@ help_text = {
     "revoke_ticket": "Revoking Ticket",
     "forget_ticket": "Forgetting Ticket",
     "create_task": "Creating Task",
+    "mount_snapshot": "Mounting Snapshot",
+    "unmount_snapshot": "Unmounting Snapshot",
+    "create_snapshot": "Create snapshot with the given name",
+    "destroy_snapshot": "Destroy existing snapshot",
 }

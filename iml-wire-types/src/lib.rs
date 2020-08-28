@@ -4,6 +4,8 @@
 
 pub mod client;
 pub mod db;
+pub mod high_availability;
+pub mod sfa;
 pub mod snapshot;
 pub mod warp_drive;
 
@@ -1523,6 +1525,71 @@ pub struct ResourceAgentInfo {
     pub agent: ResourceAgentType,
     pub id: String,
     pub args: HashMap<String, String>,
+    pub ops: PacemakerOperations,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum OrderingKind {
+    Mandatory,
+    Optional,
+    Serialize,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PacemakerScore {
+    Infinity,
+    Value(i32),
+    NegInfinity,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct PacemakerOperations {
+    // Time to wait for Resource to start
+    pub start: Option<String>,
+    // Time of monitor interval
+    pub monitor: Option<String>,
+    // Time to wait for Resource to stop
+    pub stop: Option<String>,
+}
+
+impl PacemakerOperations {
+    pub fn new(
+        start: impl Into<Option<String>>,
+        monitor: impl Into<Option<String>>,
+        stop: impl Into<Option<String>>,
+    ) -> Self {
+        Self {
+            start: start.into(),
+            monitor: monitor.into(),
+            stop: stop.into(),
+        }
+    }
+}
+
+/// Information about pacemaker resource agents
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ResourceConstraint {
+    Ordering {
+        id: String,
+        first: String,
+        then: String,
+        kind: Option<OrderingKind>,
+    },
+    Location {
+        id: String,
+        rsc: String,
+        node: String,
+        score: PacemakerScore,
+    },
+    Colocation {
+        id: String,
+        rsc: String,
+        with_rsc: String,
+        score: PacemakerScore,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1791,7 +1858,7 @@ pub struct Task {
     pub running_on_id: Option<i32>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct LustreClient {
     pub id: i32,
     pub state_modified_at: DateTime<Utc>,

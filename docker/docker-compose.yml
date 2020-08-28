@@ -136,7 +136,18 @@ services:
     environment:
       - DEVICE_AGGREGATOR_PORT=8008
       - PROXY_HOST=device
-      - RUST_LOG=info
+      - RUST_LOG=info,sqlx::query=warn
+    volumes:
+      - "manager-config:/var/lib/chroma"
+  iml-corosync:
+    image: "imlteam/corosync:6.2.0-dev"
+    hostname: "iml-corosync"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-corosync.dockerfile
+    deploy: *default-deploy
+    environment:
+      - RUST_LOG=info,sqlx::query=warn
     volumes:
       - "manager-config:/var/lib/chroma"
   ntp:
@@ -149,7 +160,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - RUST_LOG=info
+      - RUST_LOG=info,sqlx::query=warn
   sfa:
     image: "imlteam/sfa:6.2.0-dev"
     hostname: "iml-sfa"
@@ -164,7 +175,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - RUST_LOG=info
+      - RUST_LOG=info,sqlx::query=warn
       - SFA_ENDPOINTS_1
   corosync:
     image: "imlteam/manager-corosync:6.2.0-dev"
@@ -229,7 +240,6 @@ services:
     environment:
       - DEVICE_AGGREGATOR_URL=http://device:8008
       - PROXY_HOST=iml-action-runner
-      - INFLUXDB_SERVER_FQDN=influxdb
       - LOG_LEVEL
   lustre-audit:
     image: "imlteam/manager-lustre-audit:6.2.0-dev"
@@ -275,7 +285,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - RUST_LOG=info
+      - RUST_LOG=info,sqlx::query=warn
       - LOG_LEVEL
       - DBLOG_HW
       - DBLOG_LW
@@ -290,7 +300,7 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - PROXY_HOST=iml-warp-drive
-      - RUST_LOG=info
+      - RUST_LOG=info,sqlx::query=warn
   iml-action-runner:
     image: "imlteam/iml-action-runner:6.2.0-dev"
     hostname: "iml-action-runner"
@@ -303,7 +313,7 @@ services:
     environment:
       - PROXY_HOST=iml-action-runner
       - ACTION_RUNNER_PORT=8009
-      - RUST_LOG=info
+      - RUST_LOG=info,sqlx::query=warn
   iml-task-runner:
     image: "imlteam/iml-task-runner:6.2.0-dev"
     hostname: "iml-task-runner"
@@ -314,7 +324,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - RUST_LOG=info
+      - RUST_LOG=info,sqlx::query=warn
       - PROXY_HOST=iml-action-runner
       - ACTION_RUNNER_PORT=8009
   iml-api:
@@ -328,7 +338,7 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - PROXY_HOST=iml-api
-      - RUST_LOG=info
+      - RUST_LOG=info,sqlx::query=warn
       - BRANDING
       - USE_STRATAGEM
       - EXA_VERSION
@@ -356,7 +366,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - RUST_LOG=info
+      - RUST_LOG=info,sqlx::query=warn
   iml-mailbox:
     image: "imlteam/iml-mailbox:6.2.0-dev"
     hostname: "iml-mailbox"
@@ -368,7 +378,7 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - PROXY_HOST=iml-mailbox
-      - RUST_LOG=info
+      - RUST_LOG=info,sqlx::query=warn
   iml-report:
     image: "imlteam/iml-report:6.2.0-dev"
     hostname: "iml-report"
@@ -394,7 +404,7 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - RUST_LOG=info
-      - PROXY_HOST=influxdb
+      - "PROXY_HOST=iml-stats"
   iml-postoffice:
     image: "imlteam/iml-postoffice:6.2.0-dev"
     hostname: "iml-postoffice"
@@ -439,6 +449,7 @@ services:
       - EXA_VERSION
       - INFLUXDB_IML_STATS_LONG_DURATION
       - LOG_LEVEL
+      - INFLUXDB_SERVER_FQDN=influxdb
     deploy:
       restart_policy:
         condition: on-failure

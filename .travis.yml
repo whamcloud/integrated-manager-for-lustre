@@ -45,7 +45,7 @@ jobs:
       name: "Format Check"
       python: "3.6"
       install:
-        - pip install black
+        - pip install black==19.10b0
       script:
         - black --check ./
     - stage: test

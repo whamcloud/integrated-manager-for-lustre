@@ -4,13 +4,13 @@ description = "shared device types used throughout device-scanner and IML"
 edition = "2018"
 license = "MIT"
 name = "device-types"
-version = "0.1.4"
+version = "0.2.0"
 
 [dependencies]
 im = {version = "15.0", features = ["serde"]}
 libzfs-types = {git = "https://github.com/whamcloud/rust-libzfs.git", version = "0.1.2"}
-log = "0.4"
 serde = {version = "1", features = ["derive"]}
+tracing = "0.1"
 
 [dev-dependencies]
 insta = "0.15"

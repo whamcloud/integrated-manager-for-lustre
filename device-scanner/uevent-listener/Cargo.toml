@@ -6,7 +6,7 @@ name = "uevent-listener"
 version = "0.1.0"
 
 [dependencies]
-device-types = {path = "../device-types", version = "0.1.0"}
+device-types = {path = "../device-types", version = "0.2.0"}
 im = {version = "15.0", features = ["serde"]}
 serde_json = "1.0"
 
