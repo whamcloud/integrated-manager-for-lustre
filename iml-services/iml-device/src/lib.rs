@@ -344,7 +344,7 @@ pub fn find_targets<'a>(
         .map(|(k, xs)| xs.into_iter().map(move |x| (k, x)))
         .flatten()
         .filter(|(_, x)| x.fs_type.0 == "lustre")
-        .filter(|(_, x)| x.opts.0.split(',').find(|x| x == &"nomgs").is_some())
+        .filter(|(_, x)| x.opts.0.split(',').any(|x| x == "nomgs"))
         .filter_map(|(_, x)| {
             let s = x.opts.0.split(',').find(|x| x.starts_with("svname="))?;
 
