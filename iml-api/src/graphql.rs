@@ -3,11 +3,13 @@
 // license that can be found in the LICENSE file.
 
 use crate::error::ImlApiError;
+use iml_action_client::invoke_rust_agent;
 use iml_postgres::{sqlx, PgPool};
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
     EmptyMutation, EmptySubscription, GraphQLEnum, RootNode,
 };
+use sqlx::types::chrono::{DateTime, Utc};
 use std::ops::Deref;
 use std::{convert::Infallible, sync::Arc};
 use warp::Filter;
@@ -53,6 +55,48 @@ struct Target {
     uuid: String,
     /// Where this target is mounted
     mount_path: Option<String>,
+}
+
+#[derive(juniper::GraphQLEnum, juniper::serde::Deserialize)]
+enum Status {
+    Mounted,
+    NotMounted,
+}
+
+#[derive(juniper::GraphQLObject, juniper::serde::Deserialize)]
+struct Detail {
+    /// E. g. MDT0000
+    pub role: Option<String>,
+    /// Filesystem id (random string)
+    pub fsname: String,
+    pub modify_time: DateTime<Utc>,
+    pub create_time: DateTime<Utc>,
+    /// Snapshot status (None means unknown)
+    pub status: Option<Status>,
+    /// Optional comment for the snapshot
+    pub comment: Option<String>,
+}
+
+#[derive(juniper::GraphQLObject, juniper::serde::Deserialize)]
+/// A snapshot
+struct Snapshot {
+    /// Filesystem name
+    pub fsname: String,
+    /// Snapshot name
+    pub name: String,
+    /// Snapshot members
+    pub details: Vec<Detail>,
+}
+
+#[derive(juniper::GraphQLInputObject, juniper::serde::Serialize)]
+pub struct List {
+    /// Filesystem name
+    pub fsname: String,
+    /// Name of the snapshot to list
+    pub name: Option<String>,
+
+    /// List details
+    pub detail: bool,
 }
 
 pub(crate) struct QueryRoot;
@@ -143,6 +187,86 @@ impl QueryRoot {
 
         Ok(xs)
     }
+    #[graphql(arguments(
+        limit(description = "paging limit, defaults to 20"),
+        offset(description = "Offset into items, defaults to 0"),
+        dir(description = "Sort direction, defaults to asc"),
+        args(description = "Snapshot listing arguments")
+    ))]
+    /// Fetch the list of snapshots
+    async fn snapshots(
+        context: &Context,
+        limit: Option<i32>,
+        offset: Option<i32>,
+        dir: Option<SortDir>,
+        args: List,
+    ) -> juniper::FieldResult<Vec<Snapshot>> {
+        let dir = dir.unwrap_or_default();
+
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.client)
+            .await
+            .unwrap();
+
+        let results = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_list", args)
+            .await
+            .map_err(|e| ImlApiError::from(e))?;
+
+        let result: Result<Vec<Snapshot>, String> = serde_json::from_value(results)?;
+
+        let result = result.unwrap();
+
+        Ok(result)
+    }
+}
+
+async fn active_mgs_host_fqdn(fsname: &str, pool: &PgPool) -> Result<String, ()> {
+    let mgs_id = sqlx::query!(
+        r#"
+        select mgs_id from chroma_core_managedfilesystem where name=$1
+        "#,
+        fsname
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| ())?
+    .mgs_id;
+
+    let mgs_uuid = sqlx::query!(
+        r#"
+        select uuid from chroma_core_managedtarget where id=$1
+        "#,
+        mgs_id
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| ())?
+    .uuid;
+
+    let active_mgs_host_id = sqlx::query!(
+        r#"
+        select active_host_id from targets where uuid=$1
+        "#,
+        mgs_uuid
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| ())?
+    .active_host_id;
+
+    let active_mgs_host_fqdn = sqlx::query!(
+        r#"
+        select fqdn from chroma_core_managedhost where id=$1
+        "#,
+        active_mgs_host_id
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| ())?
+    .fqdn;
+
+    tracing::trace!("{}", active_mgs_host_fqdn);
+
+    Ok(active_mgs_host_fqdn)
 }
 
 pub(crate) type Schema =
