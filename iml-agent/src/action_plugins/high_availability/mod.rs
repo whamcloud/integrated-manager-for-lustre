@@ -236,8 +236,8 @@ fn xml_add_op<'a>(
     res: &mut Element,
     id: &'a str,
     name: &'a str,
-    timeout: Option<String>,
-    interval: Option<String>,
+    timeout: &Option<String>,
+    interval: &Option<String>,
 ) {
     if timeout.is_none() && interval.is_none() {
         return;
@@ -271,8 +271,74 @@ async fn cibcreate<'a>(scope: &'a str, xml: &'a str) -> Result<(), ImlAgentError
     Ok(())
 }
 
-pub async fn create_resource(
+pub async fn create_single_resource(
     (agent, constraints): (ResourceAgentInfo, Vec<ResourceConstraint>),
+) -> Result<(), ImlAgentError> {
+    create_resource(agent, false, constraints).await
+}
+
+pub async fn create_cloned_resource(
+    (agent, constraints): (ResourceAgentInfo, Vec<ResourceConstraint>),
+) -> Result<(), ImlAgentError> {
+    create_resource(agent, true, constraints).await
+}
+
+fn check_id(cloned: bool, id: &str, res: String) -> String {
+    if cloned && id == res {
+        format!("cl-{}", id)
+    } else {
+        res
+    }
+}
+
+fn resource_xml_string(agent: &ResourceAgentInfo, cloned: bool) -> Result<String, ImlAgentError> {
+    let mut res = Element::new("primitive");
+    res.set_attr("id", &agent.id)
+        .set_attr("class", &agent.agent.standard)
+        .set_attr("type", &agent.agent.ocftype);
+
+    if let Some(provider) = &agent.agent.provider {
+        res.set_attr("provider", provider);
+    }
+
+    if !agent.args.is_empty() {
+        let ia = res.append_new_child("instance_attributes");
+        let iaid = format!("{}-instance_attributes", &agent.id);
+        ia.set_attr("id", &iaid);
+        for (k, v) in agent.args.iter() {
+            xml_add_nvpair(ia, &iaid, k, v);
+        }
+    }
+
+    if agent.ops.is_some() {
+        let ops = res.append_new_child("operations");
+        xml_add_op(ops, &agent.id, "start", &agent.ops.start, &None);
+        xml_add_op(ops, &agent.id, "stop", &agent.ops.stop, &None);
+        xml_add_op(ops, &agent.id, "monitor", &None, &agent.ops.monitor);
+    }
+
+    // add meta_attributes so resource is created in stopped state
+    let ma = res.append_new_child("meta_attributes");
+    let maid = format!("{}-meta_attributes", &agent.id);
+    ma.set_attr("id", &maid);
+    xml_add_nvpair(ma, &maid, "target-role", "Stopped");
+
+    let rc = if cloned {
+        let mut clone = Element::new("clone");
+        let id = format!("cl-{}", &agent.id);
+        clone.set_attr("id", id).append_child(res);
+        clone.to_string()?
+    } else {
+        res.to_string()?
+    };
+
+    Ok(rc)
+}
+
+async fn create_resource(
+    agent: ResourceAgentInfo,
+    cloned: bool,
+    constraints: Vec<ResourceConstraint>,
 ) -> Result<(), ImlAgentError> {
     let ids = resource_list().await?;
 
@@ -280,40 +346,7 @@ pub async fn create_resource(
         return Ok(());
     }
 
-    let xml = {
-        let mut res = Element::new("primitive");
-        res.set_attr("id", &agent.id)
-            .set_attr("class", &agent.agent.standard)
-            .set_attr("type", &agent.agent.ocftype);
-
-        if let Some(provider) = &agent.agent.provider {
-            res.set_attr("provider", provider);
-        }
-
-        if !agent.args.is_empty() {
-            let ia = res.append_new_child("instance_attributes");
-            let iaid = format!("{}-instance_attributes", &agent.id);
-            ia.set_attr("id", &iaid);
-            for (k, v) in agent.args.iter() {
-                xml_add_nvpair(ia, &iaid, k, v);
-            }
-        }
-
-        if agent.ops.is_some() {
-            let ops = res.append_new_child("operations");
-            xml_add_op(ops, &agent.id, "start", agent.ops.start, None);
-            xml_add_op(ops, &agent.id, "stop", agent.ops.stop, None);
-            xml_add_op(ops, &agent.id, "monitor", None, agent.ops.monitor);
-        }
-
-        // add meta_attributes so resource is created in stopped state
-        let ma = res.append_new_child("meta_attributes");
-        let maid = format!("{}-meta_attributes", &agent.id);
-        ma.set_attr("id", &maid);
-        xml_add_nvpair(ma, &maid, "target-role", "Stopped");
-
-        res.to_string()?
-    };
+    let xml = resource_xml_string(&agent, cloned)?;
     cibcreate("resources", &xml).await?;
 
     for constraint in constraints {
@@ -336,8 +369,8 @@ pub async fn create_resource(
                         None => (),
                     }
                     con.set_attr("id", id)
-                        .set_attr("first", first)
-                        .set_attr("then", then);
+                        .set_attr("first", check_id(cloned, &agent.id, first))
+                        .set_attr("then", check_id(cloned, &agent.id, then));
                     con
                 }
                 ResourceConstraint::Location {
@@ -348,7 +381,7 @@ pub async fn create_resource(
                 } => {
                     let mut con = Element::new("rsc_location");
                     con.set_attr("id", id)
-                        .set_attr("rsc", rsc)
+                        .set_attr("rsc", check_id(cloned, &agent.id, rsc))
                         .set_attr("node", node)
                         .set_attr("score", score.to_string());
                     con
@@ -361,8 +394,8 @@ pub async fn create_resource(
                 } => {
                     let mut con = Element::new("rsc_colocation");
                     con.set_attr("id", id)
-                        .set_attr("rsc", rsc)
-                        .set_attr("with_rsc", with_rsc)
+                        .set_attr("rsc", check_id(cloned, &agent.id, rsc))
+                        .set_attr("with_rsc", check_id(cloned, &agent.id, with_rsc))
                         .set_attr("score", score.to_string());
                     con
                 }
@@ -493,8 +526,8 @@ pub async fn stop_resource(resource: String) -> Result<(), ImlAgentError> {
 #[cfg(test)]
 mod tests {
     use super::{
-        process_resource, resource_status, PacemakerOperations, ResourceAgentInfo,
-        ResourceAgentType,
+        process_resource, resource_status, resource_xml_string, PacemakerOperations,
+        ResourceAgentInfo, ResourceAgentType,
     };
     use elementtree::Element;
     use std::collections::HashMap;
@@ -591,5 +624,23 @@ mod tests {
         .collect();
 
         assert_eq!(resource_status(tree), r1);
+    }
+
+    #[test]
+    fn test_resource_create() {
+        let testxml = include_str!("fixtures/create-client-cloned.xml");
+
+        let agent = ResourceAgentInfo {
+            agent: ResourceAgentType {
+                standard: "systemd".into(),
+                provider: None,
+                ocftype: "mnt-lustre.mount".into(),
+            },
+            id: "lustre-client".into(),
+            args: HashMap::new(),
+            ops: PacemakerOperations::new("900s".to_string(), "60s".to_string(), None),
+        };
+
+        assert_eq!(resource_xml_string(&agent, true).unwrap(), testxml.trim())
     }
 }
