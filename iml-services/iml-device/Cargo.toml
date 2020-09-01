@@ -9,6 +9,7 @@ device-types = {path = "../../device-scanner/device-types", version = "0.2"}
 futures = "0.3"
 im = {version = "15.0", features = ["serde"]}
 iml-change = {path = "../../iml-change", version = "0.1"}
+iml-influx = {path = "../../iml-influx", version = "0.1"}
 iml-manager-env = {path = "../../iml-manager-env", version = "0.3"}
 iml-postgres = {path = "../../iml-postgres", version = "0.3"}
 iml-rabbit = {path = "../../iml-rabbit", version = "0.3"}

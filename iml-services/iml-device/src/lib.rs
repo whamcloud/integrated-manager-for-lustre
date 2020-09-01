@@ -14,11 +14,11 @@ use device_types::{
 use futures::{future::try_join_all, lock::Mutex};
 use im::HashSet;
 use iml_change::*;
+use iml_influx::ColVals;
 use iml_postgres::sqlx::{self, PgPool};
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
 use influx_db_client::{keys::Node, Client, Precision};
-use serde_json::{Map, Value};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     sync::Arc,
@@ -501,22 +501,6 @@ pub fn build_updates(x: Changes<'_, Target>) -> Vec<Target> {
     }
 }
 
-struct ColVals(Vec<String>, Vec<Vec<serde_json::Value>>);
-
-impl From<ColVals> for serde_json::Value {
-    fn from(ColVals(cols, vals): ColVals) -> Self {
-        let xs = vals
-            .into_iter()
-            .map(|y| -> Map<String, serde_json::Value> {
-                cols.clone().into_iter().zip(y).collect()
-            })
-            .map(Value::Object)
-            .collect();
-
-        Value::Array(xs)
-    }
-}
-
 fn parse_filesystem_data(query_result: Option<Vec<Node>>) -> TargetFsRecord {
     let target_to_fs = if let Some(nodes) = query_result {
         let items = nodes
@@ -613,10 +597,9 @@ pub async fn get_mgs_filesystem_map(
         .map(|(key, xs)| {
             (
                 key,
-                xs.iter()
-                    .filter(|x| snapshots.iter().find(|s| s.contains(*x)).is_none())
-                    .cloned()
-                    .collect::<Vec<String>>(),
+                xs.into_iter()
+                    .filter(|(_, x)| snapshots.iter().find(|s| s.contains(x)).is_none())
+                    .collect::<Vec<(Fqdn, String)>>(),
             )
         })
         .collect::<TargetFsRecord>();
