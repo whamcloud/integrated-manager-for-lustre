@@ -96,9 +96,9 @@ where
 use dotenv::dotenv;
 
 /// Setup for a test run. This fn hands out a pool
-/// With a single connection and starts a transaction for it.
+/// with a single connection and starts a transaction for it.
 /// The transaction is rolled back when the connection closes
-/// So nothing is written to the database.
+/// so nothing is written to the database.
 #[cfg(feature = "test")]
 pub async fn test_setup() -> Result<PgPool, sqlx::Error> {
     dotenv().ok();
