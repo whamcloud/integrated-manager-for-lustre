@@ -249,7 +249,7 @@ fn xml_add_op(
     let op = res.append_new_child("op");
     op.set_attr("name", name);
     if let Some(value) = interval {
-        op.set_attr("id", format!("{}-{}-timeout-{}", id, name, value))
+        op.set_attr("id", format!("{}-{}-interval-{}", id, name, value))
             .set_attr("interval", value);
     }
     if let Some(value) = timeout {
@@ -314,7 +314,7 @@ pub async fn create_cloned_client(
     let unit = format!(
         "{}.mount",
         mountpoint
-            .trim_start_matches("/")
+            .trim_start_matches('/')
             .replace("-", "--")
             .replace("/", "-")
     );
@@ -330,14 +330,12 @@ pub async fn create_cloned_client(
         ops: PacemakerOperations::new("900s".to_string(), "60s".to_string(), None),
     };
 
-    let mut constraints = vec![
-        ResourceConstraint::Ticket {
-            id: format!("ticket-{}-allocated-client", fsname),
-            rsc: agent.id.clone(),
-            ticket: format!("{}-allocated", fsname),
-            loss_policy: Some(LossPolicy::Stop),
-        }
-    ];
+    let mut constraints = vec![ResourceConstraint::Ticket {
+        id: format!("ticket-{}-allocated-client", fsname),
+        rsc: agent.id.clone(),
+        ticket: format!("{}-allocated", fsname),
+        loss_policy: Some(LossPolicy::Stop),
+    }];
 
     if ids.contains(&"mgs".to_string()) {
         constraints.push(ResourceConstraint::Order {
@@ -350,9 +348,8 @@ pub async fn create_cloned_client(
         });
     }
     let o = cibxpath("query", "//template[@type=\"lustre-server\"]", &["-e"]).await?;
-    // "/cib/configuration/resources/template[@id='lustre-fs0a9c-mdt']"
     for line in o.lines() {
-        if let Some(id) = line.split("'").nth(2) {
+        if let Some(id) = line.split('\'').nth(2) {
             if !id.starts_with(&format!("lustre-{}-", fsname)) {
                 tracing::debug!("Found resource template from different filesystem: {} ", id);
                 continue;
@@ -366,7 +363,7 @@ pub async fn create_cloned_client(
                     then_action: Some(PacemakerActions::Start),
                     kind: Some(PacemakerKindOrScore::Score(PacemakerScore::Value(0))),
                 });
-                continue
+                continue;
             }
         }
         tracing::error!("Could not parse cibxpath query output: {}", line);

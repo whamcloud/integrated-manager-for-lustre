@@ -54,7 +54,10 @@ pub fn create_registry() -> action_plugins::Actions {
             high_availability::create_cloned_resource,
         )
         .add_plugin("ha_resource_destroy", high_availability::destroy_resource)
-        .add_plugin("create_cloned_client", high_availability::create_cloned_client)
+        .add_plugin(
+            "create_cloned_client",
+            high_availability::create_cloned_client,
+        )
         .add_plugin("crm_attribute", high_availability::crm_attribute)
         .add_plugin(
             "change_mcast_port",
