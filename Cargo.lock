@@ -1614,6 +1614,7 @@ name = "iml-influx"
 version = "0.1.0"
 dependencies = [
  "iml-wire-types",
+ "influx_db_client",
  "serde",
  "serde_json",
 ]

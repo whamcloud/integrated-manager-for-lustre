@@ -509,12 +509,15 @@ fn parse_filesystem_data(query_result: Option<Vec<Node>>) -> TargetFsRecord {
             .flatten()
             .map(|x| -> serde_json::Value { ColVals(x.columns, x.values).into() })
             .map(|x| {
-                let fs_record: FsRecord =
+                let fs_record: Vec<FsRecord> =
                     serde_json::from_value(x).expect("Couldn't convert to record.");
-
-                let filesystems: String = fs_record.filesystems();
-                let host: String = fs_record.host;
-                let target: String = fs_record.target;
+                fs_record
+            })
+            .flatten()
+            .map(|x| {
+                let filesystems: String = x.filesystems();
+                let host: String = x.host;
+                let target: String = x.target;
 
                 (
                     target,
@@ -868,6 +871,7 @@ mod tests {
         }]);
 
         let result = parse_filesystem_data(query_result);
+        println!("result: {:?}", result);
         assert_eq!(
             result,
             vec![(
