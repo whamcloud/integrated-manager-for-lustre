@@ -26,22 +26,6 @@ use std::{
 
 pub type Cache = Arc<Mutex<HashMap<Fqdn, Device>>>;
 pub type TargetFsRecord = HashMap<String, Vec<(Fqdn, String)>>;
-pub type InfluxEntry = (Vec<String>, Vec<Value>);
-
-trait ToRecords {
-    fn to_records(&self) -> Value;
-}
-
-impl ToRecords for InfluxEntry {
-    fn to_records(&self) -> Value {
-        self.0
-            .iter()
-            .cloned()
-            .zip(self.1.iter().cloned())
-            .collect::<Map<String, Value>>()
-            .into()
-    }
-}
 
 #[derive(serde::Serialize, serde::Deserialize)]
 struct FsRecord {
@@ -59,17 +43,6 @@ impl FsRecord {
             fs
         } else {
             "".into()
-        }
-    }
-}
-
-impl Default for FsRecord {
-    fn default() -> Self {
-        Self {
-            host: "".into(),
-            target: "".into(),
-            fs: None,
-            mgs_fs: None,
         }
     }
 }
@@ -527,40 +500,45 @@ pub fn build_updates(x: Changes<'_, Target>) -> Vec<Target> {
     }
 }
 
+struct ColVals(Vec<String>, Vec<Vec<serde_json::Value>>);
+
+impl From<ColVals> for serde_json::Value {
+    fn from(ColVals(cols, vals): ColVals) -> Self {
+        let xs = vals
+            .into_iter()
+            .map(|y| -> Map<String, serde_json::Value> {
+                cols.clone().into_iter().zip(y).collect()
+            })
+            .map(Value::Object)
+            .collect();
+
+        Value::Array(xs)
+    }
+}
+
 fn parse_filesystem_data(query_result: Option<Vec<Node>>) -> TargetFsRecord {
     let target_to_fs = if let Some(nodes) = query_result {
         let items = nodes
             .into_iter()
             .filter_map(|x| x.series)
-            .map(|xs| {
-                xs.into_iter()
-                    .map(|x| {
-                        let columns = x.columns;
-                        x.values
-                            .into_iter()
-                            .map(|v| (columns.clone(), v).to_records())
-                            .collect::<Vec<serde_json::Value>>()
-                    })
-                    .flatten()
-                    .map(|x| {
-                        let fs_record: FsRecord =
-                            serde_json::from_value(x).expect("Couldn't convert to record.");
-
-                        let filesystems: String = fs_record.filesystems();
-                        let host: String = fs_record.host;
-                        let target: String = fs_record.target;
-
-                        (
-                            target,
-                            filesystems
-                                .split(',')
-                                .map(|x| (Fqdn(host.clone()), x.to_string()))
-                                .collect(),
-                        )
-                    })
-                    .collect::<Vec<(String, Vec<(Fqdn, String)>)>>()
-            })
             .flatten()
+            .map(|x| -> serde_json::Value { ColVals(x.columns, x.values).into() })
+            .map(|x| {
+                let fs_record: FsRecord =
+                    serde_json::from_value(x).expect("Couldn't convert to record.");
+
+                let filesystems: String = fs_record.filesystems();
+                let host: String = fs_record.host;
+                let target: String = fs_record.target;
+
+                (
+                    target,
+                    filesystems
+                        .split(',')
+                        .map(|x| (Fqdn(host.clone()), x.to_string()))
+                        .collect(),
+                )
+            })
             .collect::<Vec<(String, Vec<(Fqdn, String)>)>>();
 
         items.into_iter().fold(
