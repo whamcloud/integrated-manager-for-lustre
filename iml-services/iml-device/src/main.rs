@@ -134,7 +134,7 @@ async fn main() -> Result<(), ImlDeviceError> {
                 .await?;
 
         let target_to_fs_map = get_target_filesystem_map(&influx_client).await?;
-        let mgs_targets_to_fs_map = get_mgs_filesystem_map(&influx_client).await?;
+        let mgs_targets_to_fs_map = get_mgs_filesystem_map(&influx_client, &mount_cache).await?;
         let target_to_fs_map: TargetFsRecord = target_to_fs_map
             .into_iter()
             .chain(mgs_targets_to_fs_map)
