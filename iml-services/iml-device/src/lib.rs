@@ -111,6 +111,7 @@ pub async fn update_client_mounts(
     let mount_map = mounts
         .into_iter()
         .filter(|m| m.fs_type.0 == "lustre")
+        .filter(|m| m.opts.0.split(',').find(|x| x == &"ro").is_none())
         .filter_map(|m| {
             m.source
                 .0
@@ -522,6 +523,7 @@ pub async fn get_target_filesystem_map(
 
 pub async fn get_mgs_filesystem_map(
     influx_client: &Client,
+    mounts: &HashMap<Fqdn, HashSet<Mount>>,
 ) -> Result<TargetFsRecord, ImlDeviceError> {
     let query_result: Option<Vec<Node>> = influx_client
         .query(
@@ -530,7 +532,37 @@ pub async fn get_mgs_filesystem_map(
         )
         .await?;
 
-    Ok(parse_filesystem_data(query_result, "mgs_fs"))
+    let target_to_fs_map = parse_filesystem_data(query_result, "mgs_fs");
+
+    let snapshots: Vec<String> = mounts
+        .iter()
+        .map(|(k, xs)| xs.into_iter().map(move |x| (k, x)))
+        .flatten()
+        .filter(|(_, x)| x.fs_type.0 == "lustre")
+        .filter(|(_, x)| x.opts.0.split(',').any(|x| x == "nomgs"))
+        .filter_map(|(_, x)| {
+            let s = x.opts.0.split(',').find(|x| x.starts_with("svname="))?;
+
+            let s = s.split('=').nth(1)?;
+
+            Some(s.to_string())
+        })
+        .collect();
+
+    let target_to_fs_map = target_to_fs_map
+        .into_iter()
+        .map(|(key, xs)| {
+            (
+                key,
+                xs.iter()
+                    .filter(|x| snapshots.iter().find(|s| s.contains(*x)).is_none())
+                    .cloned()
+                    .collect::<Vec<String>>(),
+            )
+        })
+        .collect::<TargetFsRecord>();
+
+    Ok(target_to_fs_map)
 }
 
 #[cfg(test)]
