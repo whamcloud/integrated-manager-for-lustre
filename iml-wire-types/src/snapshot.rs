@@ -9,7 +9,7 @@ use chrono::DateTime;
 #[cfg(feature = "cli")]
 use structopt::StructOpt;
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(juniper::GraphQLInputObject, juniper::serde::Deserialize, juniper::serde::Serialize, Debug)]
 #[cfg_attr(feature = "cli", derive(StructOpt))]
 /// Ask agent to list snapshots
 pub struct List {
@@ -23,7 +23,7 @@ pub struct List {
     pub detail: bool,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
+#[derive(juniper::GraphQLObject, juniper::serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
 /// Snapshots description
 pub struct Snapshot {
     pub filesystem_name: String,
@@ -32,13 +32,13 @@ pub struct Snapshot {
     pub details: Vec<Detail>,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
+#[derive(juniper::GraphQLEnum, juniper::serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
 pub enum Status {
     Mounted,
     NotMounted,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
+#[derive(juniper::GraphQLObject, juniper::serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
 pub struct Detail {
     /// E. g. MDT0000
     pub snapshot_role: Option<String>,
@@ -52,7 +52,7 @@ pub struct Detail {
     pub comment: Option<String>,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, Debug)]
 #[cfg_attr(feature = "cli", derive(StructOpt))]
 /// Ask agent to create a snapshot
 pub struct Create {
@@ -66,7 +66,7 @@ pub struct Create {
     pub comment: Option<String>,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, Debug)]
 #[cfg_attr(feature = "cli", derive(StructOpt))]
 /// Ask agent to destroy the snapshot
 pub struct Destroy {
@@ -80,7 +80,7 @@ pub struct Destroy {
     pub force: bool,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, Debug)]
 #[cfg_attr(feature = "cli", derive(StructOpt))]
 /// Ask agent to mount the snapshot
 pub struct Mount {
@@ -90,7 +90,7 @@ pub struct Mount {
     pub name: String,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, Debug)]
 #[cfg_attr(feature = "cli", derive(StructOpt))]
 /// Ask agent to unmount the snapshot
 pub struct Unmount {
