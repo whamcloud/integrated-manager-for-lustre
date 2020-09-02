@@ -208,10 +208,6 @@ impl QueryRoot {
         let results = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_list", args)
             .await
             .map_err(|e| ImlApiError::from(e))?;
-        tracing::info!(
-            "snapshot_list: {}",
-            serde_json::to_string(&results).unwrap()
-        );
 
         let result: Result<Vec<Snapshot>, String> = serde_json::from_value(results)?;
 
