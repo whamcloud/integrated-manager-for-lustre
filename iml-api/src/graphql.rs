@@ -210,6 +210,10 @@ impl QueryRoot {
         let results = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_list", args)
             .await
             .map_err(|e| ImlApiError::from(e))?;
+        tracing::info!(
+            "snapshot_list: {}",
+            serde_json::to_string(&results).unwrap()
+        );
 
         let result: Result<Vec<Snapshot>, String> = serde_json::from_value(results)?;
 
@@ -220,33 +224,12 @@ impl QueryRoot {
 }
 
 async fn active_mgs_host_fqdn(fsname: &str, pool: &PgPool) -> Result<String, ()> {
-    let mgs_id = sqlx::query!(
-        r#"
-        select mgs_id from chroma_core_managedfilesystem where name=$1
-        "#,
-        fsname
-    )
-    .fetch_one(pool)
-    .await
-    .map_err(|e| ())?
-    .mgs_id;
-
-    let mgs_uuid = sqlx::query!(
-        r#"
-        select uuid from chroma_core_managedtarget where id=$1
-        "#,
-        mgs_id
-    )
-    .fetch_one(pool)
-    .await
-    .map_err(|e| ())?
-    .uuid;
-
+    let fsnames = &[fsname.into()][..];
     let active_mgs_host_id = sqlx::query!(
         r#"
-        select active_host_id from targets where uuid=$1
+        select active_host_id from targets where filesystems=$1 and name='MGS'
         "#,
-        mgs_uuid
+        fsnames
     )
     .fetch_one(pool)
     .await
