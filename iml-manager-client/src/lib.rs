@@ -82,6 +82,17 @@ pub fn get_client() -> Result<Client, ImlManagerClientError> {
         .map_err(ImlManagerClientError::Reqwest)
 }
 
+/// Given a path, constructs a url
+pub fn create_url(path: impl ToString) -> Result<Url, ImlManagerClientError> {
+    let path = path.to_string();
+
+    let url = Url::parse(&iml_manager_env::get_manager_url())?
+        .join("/")?
+        .join(path.trim_start_matches('/'))?;
+
+    Ok(url)
+}
+
 /// Given a path, constructs a full API url
 pub fn create_api_url(path: impl ToString) -> Result<Url, ImlManagerClientError> {
     let mut path = path.to_string();

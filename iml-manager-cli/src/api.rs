@@ -26,6 +26,10 @@ pub struct ApiCommand {
 
     path: String,
 
+    /// PATH should not be cooked to start with /api/
+    #[structopt(short, long)]
+    raw: bool,
+
     /// JSON formatted body to send or "-" to read from stdin
     #[structopt(required_ifs(&[("method", "patch"),("method", "post"),("method", "put")]))]
     body: Option<String>,
@@ -34,7 +38,11 @@ pub struct ApiCommand {
 pub async fn api_cli(command: ApiCommand) -> Result<(), ImlManagerCliError> {
     let term = Term::stdout();
     let client = iml_manager_client::get_client()?;
-    let uri = iml_manager_client::create_api_url(command.path)?;
+    let uri = if command.raw {
+        iml_manager_client::create_url(command.path)?
+    } else {
+        iml_manager_client::create_api_url(command.path)?
+    };
 
     let req = match command.method {
         ApiMethod::Delete => client.delete(uri),
