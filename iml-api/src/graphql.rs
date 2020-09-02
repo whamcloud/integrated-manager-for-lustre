@@ -5,11 +5,11 @@
 use crate::error::ImlApiError;
 use iml_action_client::invoke_rust_agent;
 use iml_postgres::{sqlx, PgPool};
+use iml_wire_types::snapshot::{List, Snapshot};
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
     EmptyMutation, EmptySubscription, GraphQLEnum, RootNode,
 };
-use sqlx::types::chrono::{DateTime, Utc};
 use std::ops::Deref;
 use std::{convert::Infallible, sync::Arc};
 use warp::Filter;
@@ -55,48 +55,6 @@ struct Target {
     uuid: String,
     /// Where this target is mounted
     mount_path: Option<String>,
-}
-
-#[derive(juniper::GraphQLEnum, juniper::serde::Deserialize)]
-enum Status {
-    Mounted,
-    NotMounted,
-}
-
-#[derive(juniper::GraphQLObject, juniper::serde::Deserialize)]
-struct Detail {
-    /// E. g. MDT0000
-    pub role: Option<String>,
-    /// Filesystem id (random string)
-    pub fsname: String,
-    pub modify_time: DateTime<Utc>,
-    pub create_time: DateTime<Utc>,
-    /// Snapshot status (None means unknown)
-    pub status: Option<Status>,
-    /// Optional comment for the snapshot
-    pub comment: Option<String>,
-}
-
-#[derive(juniper::GraphQLObject, juniper::serde::Deserialize)]
-/// A snapshot
-struct Snapshot {
-    /// Filesystem name
-    pub fsname: String,
-    /// Snapshot name
-    pub name: String,
-    /// Snapshot members
-    pub details: Vec<Detail>,
-}
-
-#[derive(juniper::GraphQLInputObject, juniper::serde::Serialize)]
-pub struct List {
-    /// Filesystem name
-    pub fsname: String,
-    /// Name of the snapshot to list
-    pub name: Option<String>,
-
-    /// List details
-    pub detail: bool,
 }
 
 pub(crate) struct QueryRoot;
