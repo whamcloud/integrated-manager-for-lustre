@@ -15,25 +15,37 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="MultipleTimeSyncAlert",
             fields=[],
-            options={"proxy": True, "indexes": [],},
+            options={
+                "proxy": True,
+                "indexes": [],
+            },
             bases=("chroma_core.alertstatebase",),
         ),
         migrations.CreateModel(
             name="NoTimeSyncAlert",
             fields=[],
-            options={"proxy": True, "indexes": [],},
+            options={
+                "proxy": True,
+                "indexes": [],
+            },
             bases=("chroma_core.alertstatebase",),
         ),
         migrations.CreateModel(
             name="TimeOutOfSyncAlert",
             fields=[],
-            options={"proxy": True, "indexes": [],},
+            options={
+                "proxy": True,
+                "indexes": [],
+            },
             bases=("chroma_core.alertstatebase",),
         ),
         migrations.CreateModel(
             name="UnknownTimeSyncAlert",
             fields=[],
-            options={"proxy": True, "indexes": [],},
+            options={
+                "proxy": True,
+                "indexes": [],
+            },
             bases=("chroma_core.alertstatebase",),
         ),
     ]

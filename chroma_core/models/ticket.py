@@ -24,7 +24,12 @@ class Ticket(StatefulObject):
         max_length=64, null=True, blank=True, help_text="Label used for HA layer; human readable but unique"
     )
 
-    name = models.CharField(max_length=64, null=False, blank=False, help_text="Name of ticket",)
+    name = models.CharField(
+        max_length=64,
+        null=False,
+        blank=False,
+        help_text="Name of ticket",
+    )
 
     resource_controlled = models.BooleanField(
         default=True, help_text="Ticket is controlled by a resources named in `ha_label`"

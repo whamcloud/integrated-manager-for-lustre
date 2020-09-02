@@ -58,10 +58,10 @@ class BoundCondition(AlertCondition):
 
 class UpperBoundCondition(BoundCondition):
     """A condition that checks a numeric attribute against an upper bound, and
-       raises the alert if it exceeds that bound
-       ::
+    raises the alert if it exceeds that bound
+    ::
 
-        UpperBoundCondition('temperature', error_bound = 85, message = "Maximum operating temperature exceeded")
+     UpperBoundCondition('temperature', error_bound = 85, message = "Maximum operating temperature exceeded")
     """
 
     upper = True
@@ -69,10 +69,10 @@ class UpperBoundCondition(BoundCondition):
 
 class LowerBoundCondition(BoundCondition):
     """A condition that checks a numeric attribute against a lower bound, and
-       raises the alert if it falls below that bound
-       ::
+    raises the alert if it falls below that bound
+    ::
 
-        LowerBoundCondition('rate', error_bound = 10, message = "Rate too low")
+     LowerBoundCondition('rate', error_bound = 10, message = "Rate too low")
     """
 
     upper = False

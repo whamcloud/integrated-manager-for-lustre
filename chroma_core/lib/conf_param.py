@@ -74,12 +74,12 @@ class BooleanParam(EnumParam):
 
 class BytesParam(ParamType):
     """A size in bytes, written with a unit letter at the end in the format supported
-       by lprocfs_write_frac_u64.  e.g. "40m", "20G".  Valid postfixes are [ptgmkPTGMK].
+    by lprocfs_write_frac_u64.  e.g. "40m", "20G".  Valid postfixes are [ptgmkPTGMK].
 
-       If units attribute is non-null, this just stores an integer, i.e. for settings
-       where the unit is built into the name of the setting.  Use BytesParam instead of
-       integerparam so that for presentation it is possible to display "40MB" instead of
-       just displaying "40" and leaving it to the user to notice that the setting ends _mb."""
+    If units attribute is non-null, this just stores an integer, i.e. for settings
+    where the unit is built into the name of the setting.  Use BytesParam instead of
+    integerparam so that for presentation it is possible to display "40MB" instead of
+    just displaying "40" and leaving it to the user to notice that the setting ends _mb."""
 
     def __init__(self, units=None, min_val=None, max_val=None):
         self.min_val = min_val

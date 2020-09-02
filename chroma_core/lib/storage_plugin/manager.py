@@ -51,7 +51,7 @@ class VersionNotFoundError(PluginProgrammingError):
 
 class LoadedResourceClass(object):
     """Convenience store of introspected information about BaseStorageResource
-       subclasses from loaded modules."""
+    subclasses from loaded modules."""
 
     def __init__(self, resource_class, resource_class_id):
         self.resource_class = resource_class
@@ -60,7 +60,7 @@ class LoadedResourceClass(object):
 
 class LoadedPlugin(object):
     """Convenience store of introspected information about loaded
-       plugin modules."""
+    plugin modules."""
 
     def __init__(self, plugin_manager, module, module_name, plugin_class):
         # Populate _resource_classes from all BaseStorageResource in the same module
@@ -185,8 +185,8 @@ class StoragePluginManager(object):
     def get_resource_classes(self, scannable_only=False, show_internal=False):
         """Return a list of StorageResourceClass records
 
-           :param scannable_only: Only report BaseScannableResource subclasses
-           :param show_internal: Include plugins with the internal=True attribute (excluded by default)
+        :param scannable_only: Only report BaseScannableResource subclasses
+        :param show_internal: Include plugins with the internal=True attribute (excluded by default)
         """
         class_records = []
         for k, v in self.loaded_plugins.items():
@@ -283,12 +283,12 @@ class StoragePluginManager(object):
 
     def load_plugin(self, module):
         """Load a BaseStoragePlugin class from a module given a
-           python path like chroma_core.lib.lvm',
-           or simply return it if it was already loaded.  Note that the
-           BaseStoragePlugin within the module will not be instantiated when this
-           returns, caller is responsible for instantiating it.
+        python path like chroma_core.lib.lvm',
+        or simply return it if it was already loaded.  Note that the
+        BaseStoragePlugin within the module will not be instantiated when this
+        returns, caller is responsible for instantiating it.
 
-           @return A subclass of BaseStoragePlugin"""
+        @return A subclass of BaseStoragePlugin"""
 
         if module in self.loaded_plugins:
             raise PluginProgrammingError("Duplicate storage plugin module %s" % module)

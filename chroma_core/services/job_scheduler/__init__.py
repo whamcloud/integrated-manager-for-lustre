@@ -23,9 +23,7 @@ log = log_register(__name__)
 
 
 class QueueHandler(object):
-    """Service ModificationNotificationQueue and call into JobScheduler on message
-
-    """
+    """Service ModificationNotificationQueue and call into JobScheduler on message"""
 
     def __init__(self, job_scheduler):
         self._queue = job_scheduler_notify.NotificationQueue()

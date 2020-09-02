@@ -4,7 +4,7 @@ from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 
 class TestUserResource(ChromaApiTestCase):
     """Test that old_password is checked in PUTs to user, unless the superuser is
-       modifying another user."""
+    modifying another user."""
 
     def test_HYD995_superuser_self(self):
         """Superuser changing his own password -- old_password required"""

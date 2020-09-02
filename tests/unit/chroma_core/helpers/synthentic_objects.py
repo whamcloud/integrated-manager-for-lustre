@@ -162,8 +162,8 @@ def synthetic_lnet_configuration(host, nids):
 
 
 def create_synthetic_device_info(host, mock_server, plugin):
-    """ Creates the data returned from plugins for integration test purposes. Only does lnet data because
-    at present that is all we need. """
+    """Creates the data returned from plugins for integration test purposes. Only does lnet data because
+    at present that is all we need."""
 
     # Default is an empty dict.
     result = {}
@@ -246,8 +246,8 @@ def synthetic_pacemaker_configuration(host):
 
 
 def parse_synthentic_device_info(host_id, data):
-    """ Parses the data returned from plugins for integration test purposes. On does lnet data because
-        at present that is all we need. """
+    """Parses the data returned from plugins for integration test purposes. On does lnet data because
+    at present that is all we need."""
 
     # This creates nid tuples so it can use synthetic_host_create_lnet_configuration to do the
     # actual writes to the database

@@ -48,7 +48,10 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(gather_existing_mounts, apply_existing_mounts_reverse),
-        migrations.RemoveField(model_name="lustreclientmount", name="mountpoint",),
+        migrations.RemoveField(
+            model_name="lustreclientmount",
+            name="mountpoint",
+        ),
         migrations.AddField(
             model_name="lustreclientmount",
             name="mountpoints",

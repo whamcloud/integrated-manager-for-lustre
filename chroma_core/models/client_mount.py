@@ -20,7 +20,12 @@ from chroma_help.help import help_text
 
 class LustreClientMount(DeletableStatefulObject):
     host = models.ForeignKey("ManagedHost", help_text="Mount host", related_name="client_mounts", on_delete=CASCADE)
-    filesystem = models.CharField(max_length=8, help_text="Mounted filesystem", null=False, blank=False,)
+    filesystem = models.CharField(
+        max_length=8,
+        help_text="Mounted filesystem",
+        null=False,
+        blank=False,
+    )
     mountpoints = ArrayField(models.TextField(), default=list, help_text="Filesystem mountpoints on host")
 
     states = ["unmounted", "mounted", "removed"]

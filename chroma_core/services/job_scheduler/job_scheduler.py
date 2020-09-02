@@ -1154,7 +1154,10 @@ class JobScheduler(object):
                         }
                     )
 
-                command_id = self.CommandPlan.command_run_jobs(cmds, help_text["creating_ostpool"],)
+                command_id = self.CommandPlan.command_run_jobs(
+                    cmds,
+                    help_text["creating_ostpool"],
+                )
 
         self.progress.advance()
         return ostpool.id, command_id
@@ -1189,7 +1192,10 @@ class JobScheduler(object):
             cmds = []
             for ost in ostpool.osts.all():
                 cmds.append(
-                    {"class_name": "RemoveOstPoolJob", "args": {"pool": ostpool, "ost": ost},}
+                    {
+                        "class_name": "RemoveOstPoolJob",
+                        "args": {"pool": ostpool, "ost": ost},
+                    }
                 )
 
             cmds.append(
@@ -1963,7 +1969,10 @@ class JobScheduler(object):
 
                 cmds = [{"class_name": "CreateTaskJob", "args": {"task": task}}]
 
-                command_id = self.CommandPlan.command_run_jobs(cmds, help_text["create_task"],)
+                command_id = self.CommandPlan.command_run_jobs(
+                    cmds,
+                    help_text["create_task"],
+                )
 
         self.progress.advance()
         return task.id, command_id
@@ -1976,7 +1985,10 @@ class JobScheduler(object):
             with transaction.atomic():
                 cmds = [{"class_name": "RemoveTaskJob", "args": {"task": task}}]
 
-                command_id = self.CommandPlan.command_run_jobs(cmds, help_text["create_task"],)
+                command_id = self.CommandPlan.command_run_jobs(
+                    cmds,
+                    help_text["create_task"],
+                )
 
         self.progress.advance()
         return task.id, command_id
