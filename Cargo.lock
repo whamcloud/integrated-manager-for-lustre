@@ -1935,7 +1935,6 @@ dependencies = [
  "serde_json",
  "structopt",
  "tokio",
- "tracing",
  "warp",
 ]
 

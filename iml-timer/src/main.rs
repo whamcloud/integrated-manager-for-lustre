@@ -7,6 +7,7 @@ use iml_cmd::{CheckedCommandExt, Command};
 use iml_timer::config::{
     delete_config, get_config, service_file, timer_file, unit_name, write_configs,
 };
+use iml_tracing::tracing;
 use warp::{self, http::StatusCode, Filter};
 
 #[tokio::main]
