@@ -203,9 +203,7 @@ impl QueryRoot {
     ) -> juniper::FieldResult<Vec<Snapshot>> {
         let dir = dir.unwrap_or_default();
 
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.client)
-            .await
-            .unwrap();
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.client).await?;
 
         let results = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_list", args)
             .await
@@ -217,13 +215,16 @@ impl QueryRoot {
 
         let result: Result<Vec<Snapshot>, String> = serde_json::from_value(results)?;
 
-        let result = result.unwrap();
+        let result: Vec<Snapshot> = result?;
 
         Ok(result)
     }
 }
 
-async fn active_mgs_host_fqdn(fsname: &str, pool: &PgPool) -> Result<String, ()> {
+async fn active_mgs_host_fqdn(
+    fsname: &str,
+    pool: &PgPool,
+) -> Result<String, iml_postgres::sqlx::Error> {
     let fsnames = &[fsname.into()][..];
     let active_mgs_host_id = sqlx::query!(
         r#"
@@ -232,8 +233,7 @@ async fn active_mgs_host_fqdn(fsname: &str, pool: &PgPool) -> Result<String, ()>
         fsnames
     )
     .fetch_one(pool)
-    .await
-    .map_err(|e| ())?
+    .await?
     .active_host_id;
 
     let active_mgs_host_fqdn = sqlx::query!(
@@ -243,8 +243,7 @@ async fn active_mgs_host_fqdn(fsname: &str, pool: &PgPool) -> Result<String, ()>
         active_mgs_host_id
     )
     .fetch_one(pool)
-    .await
-    .map_err(|e| ())?
+    .await?
     .fqdn;
 
     tracing::trace!("{}", active_mgs_host_fqdn);
