@@ -517,20 +517,19 @@ pub async fn upsert_cluster_nodes(
 pub async fn upsert_node_managed_host(
     host_id: i32,
     cluster_id: i32,
-    xs: &[String],
+    node_key: CorosyncNodeKey,
     pool: &PgPool,
 ) -> Result<(), ImlCorosyncError> {
     sqlx::query!(
         r#"
             INSERT INTO corosync_node_managed_host (host_id, cluster_id, corosync_node_id)
-            SELECT $1, $2, x::corosync_node_key FROM UNNEST($3::text[])
-            AS x
+            VALUES($1, $2, $3::corosync_node_key)
             ON CONFLICT (host_id, corosync_node_id, cluster_id)
             DO NOTHING
             "#,
         host_id,
         cluster_id,
-        &xs as &[String]
+        node_key.to_string() as String
     )
     .execute(pool)
     .await?;
