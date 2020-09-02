@@ -1966,6 +1966,26 @@
       "nullable": []
     }
   },
+  "eae9efc3cc51e7184af7afbfabcc1347f7ab50ea794c0b80384d7d81f145871b": {
+    "query": "\n        select active_host_id from targets where filesystems=$1 and name='MGS'\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "TextArray"
+        ]
+      },
+      "nullable": [
+        true
+      ]
+    }
+  },
   "ec70b9a5caeadc31f5d1359737cc1c6da64e41db8315a81d81420d3b37b182c5": {
     "query": "\n            UPDATE chroma_core_task\n            SET running_on_id = $1\n                WHERE id = $2\n                AND running_on_id is Null",
     "describe": {
