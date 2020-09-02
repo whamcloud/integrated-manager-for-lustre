@@ -231,20 +231,11 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
             display_cmd_state(&command);
         }
         StratagemCommand::Filesync(data) => {
-            tracing::error!("run_filesync: {:?}", data);
-
             let r = post("run_stratagem", data).await?;
-
-            tracing::error!("run_filesync: {:?}", r);
-
             let CmdWrapper { command } = handle_cmd_resp(r).await?;
-
-            tracing::error!("run_filesync: {:?}", command);
-
             let stop_spinner = start_spinner(&command.message);
             let command = wait_for_cmd(command).await?;
 
-            tracing::error!("wait_done: {:?}", command);
             stop_spinner(None);
             display_cmd_state(&command);
         }
