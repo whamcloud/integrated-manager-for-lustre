@@ -2142,7 +2142,7 @@ dependencies = [
 [[package]]
 name = "juniper"
 version = "0.14.2"
-source = "git+https://github.com/graphql-rust/juniper#2ab00f55d620c51b8732c97c90f8f3349c2e6a0b"
+source = "git+https://github.com/graphql-rust/juniper#0f400c37999476c93a147a071ef3fdefcfd03afe"
 dependencies = [
  "bson",
  "chrono",
@@ -2161,7 +2161,7 @@ dependencies = [
 [[package]]
 name = "juniper_codegen"
 version = "0.14.2"
-source = "git+https://github.com/graphql-rust/juniper#2ab00f55d620c51b8732c97c90f8f3349c2e6a0b"
+source = "git+https://github.com/graphql-rust/juniper#0f400c37999476c93a147a071ef3fdefcfd03afe"
 dependencies = [
  "proc-macro-error",
  "proc-macro2 1.0.19",
@@ -2181,9 +2181,9 @@ dependencies = [
 
 [[package]]
 name = "lapin"
-version = "1.2.2"
+version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f40dd87874c81ef42c3276927dc3903205fff5593b5e1e2c8bb829cd8547eeee"
+checksum = "4a8cb60a56834fe9aca919f0ed6fcf635163510bb9a393107cbee566f170282d"
 dependencies = [
  "amq-protocol",
  "async-task",

@@ -30,13 +30,13 @@ async fn main() -> Result<(), ImlCorosyncError> {
 
     let ch = iml_rabbit::create_channel(&conn).await?;
 
-    let mut s = consume_data::<Cluster>(&ch, "rust_agent_corosync_rx");
+    let mut s = consume_data::<(String, Cluster)>(&ch, "rust_agent_corosync_rx");
 
     let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
 
     sqlx::migrate!("../../migrations").run(&pool).await?;
 
-    while let Some((fqdn, cluster)) = s.try_next().await? {
+    while let Some((fqdn, (local_node_id, cluster))) = s.try_next().await? {
         let host_id = get_host_id_by_fqdn(&fqdn, &pool).await?;
 
         let host_id = match host_id {
@@ -53,6 +53,20 @@ async fn main() -> Result<(), ImlCorosyncError> {
             .iter()
             .map(|x| (x.id.to_string(), x.name.to_string()).into())
             .collect();
+
+        let local_node = cluster.nodes.iter().find(|x| x.id == local_node_id);
+
+        let local_node_key: CorosyncNodeKey = match local_node {
+            Some(x) => (x.id.to_string(), x.name.to_string()).into(),
+            None => {
+                tracing::warn!(
+                    "Could not resolve node id {} to a local node, discarding incoming data",
+                    local_node_id
+                );
+
+                continue;
+            }
+        };
 
         let node_keys_db: Vec<String> = node_keys.iter().map(CorosyncNodeKey::to_string).collect();
 
@@ -87,7 +101,7 @@ async fn main() -> Result<(), ImlCorosyncError> {
 
         upsert_resource_bans(cluster_id, cluster.bans, &pool).await?;
 
-        upsert_node_managed_host(host_id, cluster_id, &node_keys_db, &pool).await?;
+        upsert_node_managed_host(host_id, cluster_id, local_node_key, &pool).await?;
 
         upsert_target_resource_managed_host(host_id, cluster_id, &resource_ids, &pool).await?;
     }

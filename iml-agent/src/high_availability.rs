@@ -34,7 +34,7 @@ fn corosync_cfgtool() -> Command {
     Command::new(COROSYNC_CFGTOOL_PATH)
 }
 
-pub async fn get_local_nodeid() -> Result<Option<u32>, ImlAgentError> {
+pub async fn get_local_nodeid() -> Result<Option<String>, ImlAgentError> {
     if !file_exists(COROSYNC_CFGTOOL_PATH).await {
         return Ok(None);
     }
@@ -44,17 +44,16 @@ pub async fn get_local_nodeid() -> Result<Option<u32>, ImlAgentError> {
     parse_local_nodeid_output(&output.stdout)
 }
 
-fn parse_local_nodeid_output(x: &[u8]) -> Result<Option<u32>, ImlAgentError> {
+fn parse_local_nodeid_output(x: &[u8]) -> Result<Option<String>, ImlAgentError> {
     let x = std::str::from_utf8(x)?;
 
     let prefix = "Local node ID ";
 
     let x = x
         .split_terminator('\n')
-        .find(|x| x.starts_with("Local node ID "))
+        .find(|x| x.starts_with(prefix))
         .and_then(|x| x.strip_prefix(prefix))
-        .map(|x| x.parse::<u32>())
-        .transpose()?;
+        .map(|x| x.to_string());
 
     Ok(x)
 }

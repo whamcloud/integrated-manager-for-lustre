@@ -836,6 +836,46 @@
       ]
     }
   },
+  "590a26c2f79e7fadfff3866f32f726edf0b4c27fe222690cfab2191d97219cc7": {
+    "query": "\n            INSERT INTO corosync_node_managed_host (host_id, cluster_id, corosync_node_id)\n            VALUES($1, $2, $3::corosync_node_key)\n            ON CONFLICT (host_id, corosync_node_id, cluster_id)\n            DO NOTHING\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4",
+          {
+            "Custom": {
+              "name": "corosync_node_key",
+              "kind": {
+                "Composite": [
+                  [
+                    "id",
+                    {
+                      "Custom": {
+                        "name": "non_null_text",
+                        "kind": "Simple"
+                      }
+                    }
+                  ],
+                  [
+                    "name",
+                    {
+                      "Custom": {
+                        "name": "non_null_text",
+                        "kind": "Simple"
+                      }
+                    }
+                  ]
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "nullable": []
+    }
+  },
   "5b8f7ab8db2264a517e0de4228e259e02201d0116b9235e59cd4b66df61db22e": {
     "query": "DELETE FROM chroma_core_serverprofilepackage WHERE server_profile_id = $1",
     "describe": {
@@ -1041,20 +1081,6 @@
         false,
         false
       ]
-    }
-  },
-  "8457e574cb5da20d4b7ad9396b5276c6ff583ec8260ccfdcd1a1cadee138436d": {
-    "query": "\n            INSERT INTO corosync_node_managed_host (host_id, cluster_id, corosync_node_id)\n            SELECT $1, $2, x::corosync_node_key FROM UNNEST($3::text[])\n            AS x\n            ON CONFLICT (host_id, corosync_node_id, cluster_id)\n            DO NOTHING\n            ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Int4",
-          "Int4",
-          "TextArray"
-        ]
-      },
-      "nullable": []
     }
   },
   "84f2782e82dacc806dc6a7427f78160c834db466cb91228309efb51a16674dc2": {
