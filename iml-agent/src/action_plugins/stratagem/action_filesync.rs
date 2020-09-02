@@ -12,7 +12,6 @@ use liblustreapi::LlapiFid;
 use std::{collections::HashMap, path::PathBuf};
 use tokio::fs;
 use tokio::process::Command;
-use tokio::task::spawn_blocking;
 
 async fn archive_fids(
     llapi: LlapiFid,
@@ -29,7 +28,6 @@ async fn archive_fids(
 
         dest_dir.pop();
         fs::create_dir_all(&dest_dir).await?;
-
         let md = fs::metadata(&src_file).await?;
         /* invoking mpifileutils is slow, so only do it for directories
          * and big files, otherwise just use rsync
@@ -50,7 +48,7 @@ async fn archive_fids(
         }
         let output = output.await?;
 
-        /*error!(
+	/*tracing::error!(
             "exited with {} {} {}",
             output.status,
             std::str::from_utf8(&output.stdout)?,

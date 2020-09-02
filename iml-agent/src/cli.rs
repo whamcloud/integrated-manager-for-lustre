@@ -14,6 +14,7 @@ use iml_agent::action_plugins::{
         },
     },
 };
+use iml_agent::lustre::search_rootpath;
 use iml_wire_types::{client, snapshot, FidItem};
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
@@ -245,8 +246,8 @@ pub enum StratagemClientCommand {
         /// destination path
         target_fs: String,
 
-        #[structopt(flatten)]
-        fidopts: FidInput,
+        #[structopt(parse(from_os_str))]
+	files: Vec<PathBuf>,
     },
 
     #[structopt(name = "cloudsync")]
@@ -542,29 +543,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             StratagemClientCommand::FileSync {
                 action,
                 target_fs,
-                fidopts,
+                files,
             } => {
-                let device = fidopts.fsname;
+		let llapi = search_rootpath(files[0].clone().into_os_string().into_string().unwrap()).await?;
                 let mut task_args = std::collections::HashMap::new();
 
-                let fidlist: Vec<FidItem> = fidopts
-                    .fidlist
+/*                let fidlist: Vec<FidItem> = files
                     .into_iter()
-                    .map(|ft| FidItem {
-                        fid: ft.clone(),
-                        data: ft.into(),
-                    })
-                    .collect();
+                    .map(|file| FidItem {
+			fid: llapi.path2fid(&file).ok_or_else(|e| exit(exitcode::IOERR)),
+			data: ().into()
+		    })
+                .collect();*/
+		let (fids, errors): (Vec<_>, Vec<_>) = files
+		    .into_iter()
+		    .map(|file| llapi.path2fid(&file))
+		    .partition(Result::is_ok);
+		let fids: Vec<_> = fids
+		    .into_iter()
+		    .map(Result::unwrap)
+		    .collect();
+		let errors: Vec<_> = errors
+		    .into_iter()
+		    .map(Result::unwrap_err)
+		    .collect();
+		if errors.len() > 0 {
+		    tracing::error!("files not found, ignoring: {:?}", errors);
+		}
+		let fidlist: Vec<FidItem> = fids
+		    .into_iter()
+		    .map(|fid| FidItem {
+			fid: fid.clone(),
+			data: fid.into(),
+		    })
+		    .collect();
 
                 task_args.insert("remote".to_string(), target_fs);
                 task_args.insert("action".to_string(), action);
-                if action_filesync::process_fids((device, task_args, fidlist))
-                    .await
-                    .is_err()
-                {
-                    tracing::error!("Filesync failed");
-                    exit(exitcode::IOERR);
-                }
+		let result = action_filesync::process_fids((llapi.mntpt(), task_args, fidlist)).await;
             }
             StratagemClientCommand::CloudSync {
                 action,
