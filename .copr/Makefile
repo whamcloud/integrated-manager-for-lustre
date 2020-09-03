@@ -38,9 +38,11 @@ srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/release/rust-iml
 	cargo build --release
-	cp ${TARGET}/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,corosync,device,journal,mailbox,ntp,ostpool,postoffice,report,sfa,stats,task-runner,warp-drive} \
+	cp ${TARGET}/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,corosync,device,journal,mailbox,ntp,ostpool,postoffice,report,sfa,snapshot,stats,task-runner,warp-drive} \
 		iml-action-runner.service \
+		iml-action-runner.socket \
 		iml-agent-comms.service \
+		iml-agent/systemd-units/* \
 		iml-api.service \
 		iml-device.service \
 		iml-journal.service \
@@ -48,15 +50,14 @@ srpm:
 		iml-ntp.service \
 		iml-ostpool.service \
 		iml-postoffice.service \
+		iml-report.conf \
 		iml-report.service \
 		iml-rust-corosync.service \
 		iml-rust-stats.service \
 		iml-sfa.service \
+		iml-snapshot.service \
 		iml-task-runner.service \
-		iml-action-runner.socket \
-		iml-agent/systemd-units/* \
 		iml-warp-drive/systemd-units/* \
-		iml-report.conf \
 		${TMPDIR}/release/rust-iml
 	cp ${TARGET}/release/iml ${TMPDIR}/release/rust-iml
 	cp ${TARGET}/release/iml-config ${TMPDIR}/release/rust-iml
@@ -136,7 +137,7 @@ iml-gui-srpm:
 	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
 	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)
 
-device-scanner-srpm: 
+device-scanner-srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/release/iml-device-scanner
 
