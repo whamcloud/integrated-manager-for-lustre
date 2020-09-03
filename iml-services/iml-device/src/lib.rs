@@ -65,7 +65,7 @@ pub async fn create_cache(pool: &PgPool) -> Result<Cache, ImlDeviceError> {
 }
 
 pub async fn create_target_cache(pool: &PgPool) -> Result<Vec<Target>, ImlDeviceError> {
-    let xs: Vec<Target> = sqlx::query_as!(Target, "select * from targets")
+    let xs: Vec<Target> = sqlx::query_as!(Target, "select * from target")
         .fetch_all(pool)
         .await?;
 
