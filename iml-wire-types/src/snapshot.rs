@@ -51,6 +51,7 @@ pub struct Create {
 }
 
 #[derive(serde::Deserialize, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLInputObject))]
 #[cfg_attr(feature = "cli", derive(StructOpt))]
 /// Ask agent to destroy the snapshot
 pub struct Destroy {
@@ -65,6 +66,7 @@ pub struct Destroy {
 }
 
 #[derive(serde::Deserialize, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLInputObject))]
 #[cfg_attr(feature = "cli", derive(StructOpt))]
 /// Ask agent to mount the snapshot
 pub struct Mount {
@@ -75,6 +77,7 @@ pub struct Mount {
 }
 
 #[derive(serde::Deserialize, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLInputObject))]
 #[cfg_attr(feature = "cli", derive(StructOpt))]
 /// Ask agent to unmount the snapshot
 pub struct Unmount {
