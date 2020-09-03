@@ -5,7 +5,7 @@
 from collections import defaultdict
 
 from django.contrib.contenttypes.models import ContentType
-from tastypie import fields
+from tastypie import fields, http
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.chroma_model_resource import ChromaModelResource
@@ -67,7 +67,7 @@ class HotpoolResource(StatefulModelResource):
         excludes = ["not_deleted"]
         ordering = ["name"]
         list_allowed_methods = ["get", "post"]
-        detail_allowed_methods = ["get", "put"]
+        detail_allowed_methods = ["get", "put", "delete"]
         filtering = {"filesystem": ["exact"], "name": ["exact"], "id": ["exact"]}
         validation = HotpoolValidation()
 
@@ -78,5 +78,17 @@ class HotpoolResource(StatefulModelResource):
 
         hotpool_id, command_id = JobSchedulerClient.create_hotpool(bundle.data)
         command = Command.objects.get(pk=command_id)
+
+        raise custom_response(self, request, http.HttpAccepted, {"command": dehydrate_command(command)})
+
+    # DELETE handler
+    def obj_delete(self, bundle, **kwargs):
+        try:
+            obj = self.obj_get(bundle, **kwargs)
+            command_id = JobSchedulerClient.remove_hotpool(obj.id)
+            command = Command.objects.get(pk=command_id)
+
+        except ObjectDoesNotExist:
+            raise NotFound("A model instance matching the provided arguments could not be found.")
 
         raise custom_response(self, request, http.HttpAccepted, {"command": dehydrate_command(command)})

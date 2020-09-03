@@ -66,9 +66,21 @@ class HotpoolConfiguration(StatefulObject):
 
         components = []
         for ctype in component_types:
-            components.extend([x for x in Lamigo.objects.filter(configuration__hotpool=self)])
+            components.extend([x for x in ctype.objects.filter(configuration__hotpool=self)])
 
         return components
+
+    def get_tasks(self):
+        # self.version == 2:
+        component_types = [LamigoConfiguration, LpurgeConfiguration]
+
+        amigo = LamigoConfiguration.objects.get(hotpool=self)
+        tasks = [amigo.extend, amigo.resync]
+
+        purge = LpurgeConfiguration.objects.get(hotpool=self)
+        tasks.append(purge.purge)
+
+        return tasks
 
 
 class ConfigureHotpoolJob(StateChangeJob):
@@ -109,7 +121,16 @@ class ConfigureHotpoolJob(StateChangeJob):
                 )
 
             for host in (l[0] for l in fs.get_server_groups()):
-                steps.append((CreateClonedClientStep, {"host": host.fqdn, "mountpoint": mp, "fs_name": fs.name,}))
+                steps.append(
+                    (
+                        CreateClonedClientStep,
+                        {
+                            "host": host.fqdn,
+                            "mountpoint": mp,
+                            "fs_name": fs.name,
+                        },
+                    )
+                )
 
         return steps
 
@@ -221,7 +242,7 @@ class RemoveHotpoolJob(StateChangeJob):
     display_order = 10
 
     requires_confirmation = False
-    state_verb = "Start Hotpool"
+    state_verb = "Remove Hotpool"
 
     class Meta:
         app_label = "chroma_core"
@@ -243,7 +264,6 @@ class RemoveHotpoolJob(StateChangeJob):
         return DependAll(deps)
 
     def get_steps(self):
-        steps = []
         if self.hotpool_configuration.is_single_resource():
             fs = self.hotpool_configuration.filesystem
             mp = "/lustre/" + fs.name + "/client"
@@ -251,6 +271,41 @@ class RemoveHotpoolJob(StateChangeJob):
                 steps.append((RemoveClonedClientMountStep, {"host": host.fqdn, "mountpoint": mp}))
 
         return steps
+
+    def on_success(self):
+        self.hotpool_configuration.mark_deleted()
+        self.hotpool_configuration.save()
+
+
+class RemoveUnconfiguredHotpoolJob(StateChangeJob):
+    state_transition = StateChangeJob.StateTransition(HotpoolConfiguration, "unconfigured", "removed")
+    stateful_object = "hotpool_configuration"
+    hotpool_configuration = models.ForeignKey(HotpoolConfiguration, on_delete=CASCADE)
+
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 10
+
+    requires_confirmation = False
+    state_verb = "Remove Hotpool"
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["stop_hotpool"]
+
+    def description(self):
+        return help_text["stop_hotpool"]
+
+    def get_deps(self):
+        deps = []
+
+        for comp in self.hotpool_configuration.get_components():
+            deps.append(DependOn(comp, "removed", fix_state="unconfigured"))
+
+        return DependAll(deps)
 
     def on_success(self):
         self.hotpool_configuration.mark_deleted()
@@ -510,6 +565,33 @@ class RemoveLamigoJob(StateChangeJob):
         self.lamigo.save()
 
 
+class RemoveUnconfiguredLamigoJob(StateChangeJob):
+    state_transition = StateChangeJob.StateTransition(Lamigo, "unconfigured", "removed")
+    stateful_object = "lamigo"
+    lamigo = models.ForeignKey("Lamigo", on_delete=CASCADE)
+
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 10
+
+    requires_confirmation = False
+    state_verb = "Remove Lamigo"
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["destroy_hotpool"]
+
+    def description(self):
+        return help_text["destroy_hotpool"]
+
+    def on_success(self):
+        self.lamigo.mark_deleted()
+        self.lamigo.save()
+
+
 ############################################################
 # LPurge
 #
@@ -728,6 +810,33 @@ class RemoveLpurgeJob(StateChangeJob):
         steps.append((UnconfigureResourceStep, {"host": host.fqdn, "ha_label": self.lpurge.ha_label}))
 
         return steps
+
+    def on_success(self):
+        self.lpurge.mark_deleted()
+        self.lpurge.save()
+
+
+class RemoveUnconfiguredLpurgeJob(StateChangeJob):
+    state_transition = StateChangeJob.StateTransition(Lpurge, "unconfigured", "removed")
+    stateful_object = "lpurge"
+    lpurge = models.ForeignKey("Lpurge", on_delete=CASCADE)
+
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 10
+
+    requires_confirmation = False
+    state_verb = "Remove Lpurge"
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["destroy_hotpool"]
+
+    def description(self):
+        return help_text["destroy_hotpool"]
 
     def on_success(self):
         self.lpurge.mark_deleted()
