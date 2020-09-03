@@ -130,7 +130,7 @@ impl QueryRoot {
         let xs = sqlx::query_as!(
             Target,
             r#"
-                SELECT * from targets t
+                SELECT * FROM targets t
                 ORDER BY
                     CASE WHEN $3 = 'asc' THEN t.name END ASC,
                     CASE WHEN $3 = 'desc' THEN t.name END DESC
@@ -163,7 +163,7 @@ impl QueryRoot {
         if args.detail {
             let xs = sqlx::query!(
                 r#"
-                    SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment from snapshot s
+                    SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s
                     WHERE filesystem_name = $4 AND $5::text IS NULL OR snapshot_name = $5
                     ORDER BY
                         CASE WHEN $3 = 'asc' THEN s.snapshot_name END ASC,
@@ -205,7 +205,7 @@ impl QueryRoot {
         } else {
             let xs = sqlx::query!(
                 r#"
-                    SELECT filesystem_name, snapshot_name from snapshot s
+                    SELECT filesystem_name, snapshot_name FROM snapshot s
                     WHERE filesystem_name = $4 AND $5::text IS NULL OR snapshot_name = $5
                     ORDER BY
                         CASE WHEN $3 = 'asc' THEN s.snapshot_name END ASC,
