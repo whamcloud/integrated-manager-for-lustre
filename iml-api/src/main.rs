@@ -36,6 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let pool = iml_rabbit::connect_to_rabbit(2);
+    let rabbit_connection = pool.get().await?;
 
     let conn_filter = create_connection_filter(pool);
 
@@ -50,7 +51,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ));
     let schema_filter = warp::any().map(move || Arc::clone(&schema));
 
-    let ctx = Arc::new(graphql::Context { client: pool2 });
+    let ctx = Arc::new(graphql::Context {
+        pg_pool: pool2,
+        rabbit_connection: rabbit_connection,
+    });
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx));
 
     let routes = warp::path("conf")

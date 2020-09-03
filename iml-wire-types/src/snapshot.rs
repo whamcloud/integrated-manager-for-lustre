@@ -57,6 +57,7 @@ pub struct Detail {
 }
 
 #[derive(serde::Deserialize, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLInputObject))]
 #[cfg_attr(feature = "cli", derive(StructOpt))]
 /// Ask agent to create a snapshot
 pub struct Create {
