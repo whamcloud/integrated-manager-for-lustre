@@ -129,7 +129,7 @@ impl QueryRoot {
         let xs = sqlx::query_as!(
             Target,
             r#"
-                SELECT * from targets t
+                SELECT * from target t
                 ORDER BY
                     CASE WHEN $3 = 'asc' THEN t.name END ASC,
                     CASE WHEN $3 = 'desc' THEN t.name END DESC
