@@ -3,9 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::error::ImlApiError;
-use iml_action_client::invoke_rust_agent;
 use iml_postgres::{sqlx, PgPool};
-use iml_wire_types::snapshot::{List, Snapshot};
+use iml_wire_types::snapshot::{Detail, List, Snapshot, Status};
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
     EmptyMutation, EmptySubscription, GraphQLEnum, RootNode,
@@ -160,49 +159,80 @@ impl QueryRoot {
         args: List,
     ) -> juniper::FieldResult<Vec<Snapshot>> {
         let dir = dir.unwrap_or_default();
+        tracing::info!("args: {:?}", args);
 
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.client).await?;
+        if args.detail {
+            let xs = sqlx::query!(
+                r#"
+                    SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment from snapshot s
+                    WHERE filesystem_name = $4 AND $5::text IS NULL OR snapshot_name = $5
+                    ORDER BY
+                        CASE WHEN $3 = 'asc' THEN s.snapshot_name END ASC,
+                        CASE WHEN $3 = 'desc' THEN s.snapshot_name END DESC
+                    OFFSET $1 LIMIT $2"#,
+                offset.unwrap_or(0) as i64,
+                limit.unwrap_or(20) as i64,
+                dir.deref(),
+                args.fsname,
+                args.name,
+            )
+            .fetch_all(&context.client)
+            .await?;
 
-        let results = invoke_rust_agent(active_mgs_host_fqdn, "snapshot_list", args)
-            .await
-            .map_err(|e| ImlApiError::from(e))?;
+            let snapshots: Vec<_> = xs
+                .into_iter()
+                .map(|x| Snapshot {
+                    snapshot_name: x.snapshot_name,
+                    filesystem_name: x.filesystem_name,
+                    details: vec![Detail {
+                        comment: x.comment,
+                        create_time: x.create_time,
+                        modify_time: x.modify_time,
+                        snapshot_fsname: x.snapshot_fsname,
+                        // FIXME
+                        snapshot_role: None,
+                        status: x.mounted.map(|b| {
+                            if b {
+                                Status::Mounted
+                            } else {
+                                Status::NotMounted
+                            }
+                        }),
+                    }],
+                })
+                .collect();
 
-        let result: Result<Vec<Snapshot>, String> = serde_json::from_value(results)?;
+            Ok(snapshots)
+        } else {
+            let xs = sqlx::query!(
+                r#"
+                    SELECT filesystem_name, snapshot_name from snapshot s
+                    WHERE filesystem_name = $4 AND $5::text IS NULL OR snapshot_name = $5
+                    ORDER BY
+                        CASE WHEN $3 = 'asc' THEN s.snapshot_name END ASC,
+                        CASE WHEN $3 = 'desc' THEN s.snapshot_name END DESC
+                    OFFSET $1 LIMIT $2"#,
+                offset.unwrap_or(0) as i64,
+                limit.unwrap_or(20) as i64,
+                dir.deref(),
+                args.fsname,
+                args.name,
+            )
+            .fetch_all(&context.client)
+            .await?;
 
-        let result: Vec<Snapshot> = result?;
+            let snapshots: Vec<_> = xs
+                .into_iter()
+                .map(|x| Snapshot {
+                    snapshot_name: x.snapshot_name,
+                    filesystem_name: x.filesystem_name,
+                    details: vec![],
+                })
+                .collect();
 
-        Ok(result)
+            Ok(snapshots)
+        }
     }
-}
-
-async fn active_mgs_host_fqdn(
-    fsname: &str,
-    pool: &PgPool,
-) -> Result<String, iml_postgres::sqlx::Error> {
-    let fsnames = &[fsname.into()][..];
-    let active_mgs_host_id = sqlx::query!(
-        r#"
-        select active_host_id from targets where filesystems=$1 and name='MGS'
-        "#,
-        fsnames
-    )
-    .fetch_one(pool)
-    .await?
-    .active_host_id;
-
-    let active_mgs_host_fqdn = sqlx::query!(
-        r#"
-        select fqdn from chroma_core_managedhost where id=$1
-        "#,
-        active_mgs_host_id
-    )
-    .fetch_one(pool)
-    .await?
-    .fqdn;
-
-    tracing::trace!("{}", active_mgs_host_fqdn);
-
-    Ok(active_mgs_host_fqdn)
 }
 
 pub(crate) type Schema =

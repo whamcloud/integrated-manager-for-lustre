@@ -125,6 +125,36 @@
       ]
     }
   },
+  "15c940abe02c6bddb192c4d3f363fc86843e62f33103e80615ee5ae574e3b2e5": {
+    "query": "\n                    SELECT filesystem_name, snapshot_name from snapshot s\n                    WHERE filesystem_name = $4 AND $5::text IS NULL OR snapshot_name = $5\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN s.snapshot_name END ASC,\n                        CASE WHEN $3 = 'desc' THEN s.snapshot_name END DESC\n                    OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "filesystem_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "snapshot_name",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text",
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
   "17bb13a14453986a81a76b4cf246cffe6248a469a5d5de99bf98b7ddf387a616": {
     "query": "INSERT INTO targets \n                        (state, name, active_host_id, host_ids, filesystems, uuid, mount_path) \n                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], string_to_array(filesystems, ',')::text[], uuid, mount_path\n                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[])\n                        AS t(state, name, active_host_id, host_ids, filesystems, uuid, mount_path)\n                        ON CONFLICT (uuid)\n                            DO\n                            UPDATE SET  state          = EXCLUDED.state,\n                                        name           = EXCLUDED.name,\n                                        active_host_id = EXCLUDED.active_host_id,\n                                        host_ids       = EXCLUDED.host_ids,\n                                        filesystems    = EXCLUDED.filesystems,\n                                        mount_path     = EXCLUDED.mount_path",
     "describe": {
@@ -1840,6 +1870,66 @@
       "nullable": []
     }
   },
+  "de4e5567799e2dfd062ae00175f55e84e58be3725b956f5e84255a2474c0ba83": {
+    "query": "\n                    SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment from snapshot s\n                    WHERE filesystem_name = $4 AND $5::text IS NULL OR snapshot_name = $5\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN s.snapshot_name END ASC,\n                        CASE WHEN $3 = 'desc' THEN s.snapshot_name END DESC\n                    OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "filesystem_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "snapshot_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "create_time",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 3,
+          "name": "modify_time",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 4,
+          "name": "snapshot_fsname",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 5,
+          "name": "mounted",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 6,
+          "name": "comment",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text",
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
+      ]
+    }
+  },
   "e8f95e79d22bae021629cbfef5291601d0001933bb4628538fde58fdc0a297b9": {
     "query": "\n        select * from chroma_core_task \n        where \n            filesystem_id = $1\n            and state <> 'closed'\n            and fids_total > fids_completed \n            and (running_on_id is Null or running_on_id = $2)",
     "describe": {
@@ -1964,26 +2054,6 @@
         ]
       },
       "nullable": []
-    }
-  },
-  "eae9efc3cc51e7184af7afbfabcc1347f7ab50ea794c0b80384d7d81f145871b": {
-    "query": "\n        select active_host_id from targets where filesystems=$1 and name='MGS'\n        ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "active_host_id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "TextArray"
-        ]
-      },
-      "nullable": [
-        true
-      ]
     }
   },
   "ec70b9a5caeadc31f5d1359737cc1c6da64e41db8315a81d81420d3b37b182c5": {
