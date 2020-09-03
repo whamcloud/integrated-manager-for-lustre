@@ -14,7 +14,7 @@ class ChromaApi(Api):
 
     def get_resource_uri(self, obj):
         """Resolve the class of ``obj`` to a Resource and
-           call its get_resource_uri function."""
+        call its get_resource_uri function."""
         try:
             return self._cache[obj.__class__].get_resource_uri(obj)
         except KeyError:

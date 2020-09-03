@@ -10,7 +10,9 @@ class SfaStorageSystem(models.Model):
     class Meta:
         app_label = "chroma_core"
 
-    uuid = models.TextField(unique=True,)
+    uuid = models.TextField(
+        unique=True,
+    )
     platform = models.TextField()
     health_state_reason = models.TextField()
     health_state = models.PositiveSmallIntegerField()

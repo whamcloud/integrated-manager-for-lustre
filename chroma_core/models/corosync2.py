@@ -317,7 +317,9 @@ class ChangeMcastPortStep(Step):
 
     def run(self, kwargs):
         self.invoke_rust_agent_expect_result(
-            kwargs["fqdn"], "change_mcast_port", kwargs["mcast_port"],
+            kwargs["fqdn"],
+            "change_mcast_port",
+            kwargs["mcast_port"],
         )
 
 

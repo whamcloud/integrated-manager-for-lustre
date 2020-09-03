@@ -30,7 +30,9 @@ class Migration(migrations.Migration):
                 ),
                 ("old_state", models.CharField(max_length=32)),
             ],
-            options={"abstract": False,},
+            options={
+                "abstract": False,
+            },
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -49,7 +51,9 @@ class Migration(migrations.Migration):
                 ),
                 ("old_state", models.CharField(max_length=32)),
             ],
-            options={"abstract": False,},
+            options={
+                "abstract": False,
+            },
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -77,7 +81,9 @@ class Migration(migrations.Migration):
                 ),
                 ("not_deleted", models.NullBooleanField(default=True)),
             ],
-            options={"ordering": ["id"],},
+            options={
+                "ordering": ["id"],
+            },
         ),
         migrations.CreateModel(
             name="FilesystemTicket",
@@ -98,7 +104,9 @@ class Migration(migrations.Migration):
                     models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.ManagedFilesystem"),
                 ),
             ],
-            options={"ordering": ["id"],},
+            options={
+                "ordering": ["id"],
+            },
             bases=("chroma_core.ticket",),
         ),
         migrations.CreateModel(
@@ -117,7 +125,9 @@ class Migration(migrations.Migration):
                 ),
                 ("mgs", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.ManagedMgs")),
             ],
-            options={"ordering": ["id"],},
+            options={
+                "ordering": ["id"],
+            },
             bases=("chroma_core.ticket",),
         ),
         migrations.AddField(
@@ -154,7 +164,9 @@ class Migration(migrations.Migration):
                 ("old_state", models.CharField(max_length=32)),
                 ("ticket", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.Ticket")),
             ],
-            options={"ordering": ["id"],},
+            options={
+                "ordering": ["id"],
+            },
             bases=("chroma_core.job",),
         ),
     ]

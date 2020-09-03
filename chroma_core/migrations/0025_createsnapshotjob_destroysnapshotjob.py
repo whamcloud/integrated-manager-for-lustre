@@ -35,7 +35,9 @@ class Migration(migrations.Migration):
                     models.CharField(help_text=b"Optional comment for the snapshot", max_length=1024, null=True),
                 ),
             ],
-            options={"ordering": ["id"],},
+            options={
+                "ordering": ["id"],
+            },
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -57,7 +59,9 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(help_text=b"Snapshot to destroy", max_length=64)),
                 ("force", models.BooleanField(default=False, help_text=b"Destroy the snapshot with force")),
             ],
-            options={"ordering": ["id"],},
+            options={
+                "ordering": ["id"],
+            },
             bases=("chroma_core.job",),
         ),
     ]

@@ -214,9 +214,7 @@ class ResponseWaitState(object):
 
 
 class RpcClientResponseHandler(threading.Thread):
-    """Handle responses for a particular named RPC service.
-
-    """
+    """Handle responses for a particular named RPC service."""
 
     def __init__(self, response_routing_key):
         super(RpcClientResponseHandler, self).__init__()
@@ -495,9 +493,7 @@ class RpcClientFactory(object):
 
     @classmethod
     def shutdown_threads(cls):
-        """Join any threads created.  Only necessary if `initialize` was called
-
-        """
+        """Join any threads created.  Only necessary if `initialize` was called"""
         assert not cls._lightweight
         with cls._factory_lock:
             for instance in cls._instances.values():

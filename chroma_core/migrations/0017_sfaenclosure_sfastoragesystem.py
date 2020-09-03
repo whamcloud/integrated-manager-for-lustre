@@ -156,13 +156,27 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AlterUniqueTogether(
-            name="sfapowersupply", unique_together=set([("index", "storage_system", "enclosure_index")]),
+            name="sfapowersupply",
+            unique_together=set([("index", "storage_system", "enclosure_index")]),
         ),
-        migrations.AlterUniqueTogether(name="sfajob", unique_together=set([("index", "storage_system")]),),
-        migrations.AlterUniqueTogether(name="sfaenclosure", unique_together=set([("index", "storage_system")]),),
         migrations.AlterUniqueTogether(
-            name="sfadiskslot", unique_together=set([("enclosure_index", "disk_drive_index", "storage_system")]),
+            name="sfajob",
+            unique_together=set([("index", "storage_system")]),
         ),
-        migrations.AlterUniqueTogether(name="sfadiskdrive", unique_together=set([("index", "storage_system")]),),
-        migrations.AlterUniqueTogether(name="sfacontroller", unique_together=set([("index", "storage_system")]),),
+        migrations.AlterUniqueTogether(
+            name="sfaenclosure",
+            unique_together=set([("index", "storage_system")]),
+        ),
+        migrations.AlterUniqueTogether(
+            name="sfadiskslot",
+            unique_together=set([("enclosure_index", "disk_drive_index", "storage_system")]),
+        ),
+        migrations.AlterUniqueTogether(
+            name="sfadiskdrive",
+            unique_together=set([("index", "storage_system")]),
+        ),
+        migrations.AlterUniqueTogether(
+            name="sfacontroller",
+            unique_together=set([("index", "storage_system")]),
+        ),
     ]

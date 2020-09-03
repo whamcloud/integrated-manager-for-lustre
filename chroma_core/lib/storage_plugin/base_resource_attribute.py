@@ -59,7 +59,7 @@ class BaseResourceAttribute(object):
 
     def human_readable(self, value):
         """Subclasses should format their value for human consumption, e.g.
-           1024 => 1kB"""
+        1024 => 1kB"""
         return value
 
     def encode(self, value):
