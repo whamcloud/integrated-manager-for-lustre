@@ -213,7 +213,7 @@ class CreateSystemdResourceStep(Step):
             "args": {},
             "ops": {"start": start, "stop": stop, "monitor": monitor},
         }
-        constraint = [{"ORDERING": {"id": unit + "-after-" + r, "first": r, "then": ha_label}} for r in after]
+        constraint = [{"ORDER": {"id": unit + "-after-" + r, "first": r, "then": ha_label}} for r in after]
         constraint.extend(
             [
                 {"COLOCATION": {"id": unit + "-with-" + r, "rsc": ha_label, "with_rsc": r, "score": "INFINITY"}}

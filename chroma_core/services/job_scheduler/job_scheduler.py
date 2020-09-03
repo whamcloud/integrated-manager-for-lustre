@@ -2155,7 +2155,25 @@ class JobScheduler(object):
             ObjectCache.add(HotpoolConfiguration, hpconf)
 
             with transaction.atomic():
-                command_id = self.CommandPlan.command_run_jobs(job_list, help_text["create_hotpool"],)
+                command_id = self.CommandPlan.command_run_jobs(job_list, help_text["create_hotpool"])
 
         self.progress.advance()
         return hpconf.id, command_id
+
+    def remove_hotpool(self, hotpool_id):
+
+        with self._lock:
+            hpconf = ObjectCache.get_by_id(HotpoolConfiguration, int(hotpool_id))
+
+            jobs = [{"class_name": "RemoveTaskJob", "args": {"task": task}} for task in hpconf.get_tasks()]
+
+            with transition.atomic():
+                command = self.CommandPlan.command_set_state(
+                    [(ContentType.objects.get_for_model(hpconf).natural_key(), hpconf.id, "removed")],
+                    "Removing Hotpool on filesystem %s" % hpconf.filesystem.name,
+                )
+                self.CommandPlan.add_jobs(jobs, command, {})
+
+        self.progress.advance()
+
+        return command.id
