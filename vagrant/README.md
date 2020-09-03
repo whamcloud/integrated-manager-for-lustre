@@ -113,7 +113,7 @@ From here you can decide what type of setup to run.
 - Monitored ZFS:
 
   ```sh
-  vagrant provision --provision-with=install-zfs-no-iml,configure-lustre-network,create-pools,zfs-params,create-zfs-fs,mount-zfs-fs
+  vagrant provision --provision-with=install-zfs-no-iml,configure-lustre-network,create-pools,create-pools2,zfs-params,create-zfs-fs,create-zfs-fs2,mount-zfs-fs,mount-zfs-fs2
   ```
 
 - Managed Mode:

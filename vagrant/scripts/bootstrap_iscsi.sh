@@ -23,6 +23,9 @@ do
     targetcli /iscsi/iqn.2015-01.com.whamcloud.lu:oss/tpg1/luns/ create /backstores/block/ost${x}
 done
 
+targetcli /backstores/block create mgt2 /dev/mgt2
+targetcli /iscsi/iqn.2015-01.com.whamcloud.lu:oss/tpg1/luns/ create /backstores/block/mgt2
+
 targetcli /iscsi/iqn.2015-01.com.whamcloud.lu:mds/tpg1/portals/ create ${ISCI_IP}
 targetcli /iscsi/iqn.2015-01.com.whamcloud.lu:oss/tpg1/portals/ create ${ISCI_IP}
 targetcli /iscsi/iqn.2015-01.com.whamcloud.lu:mds/tpg1/portals/ create ${ISCI_IP2}
