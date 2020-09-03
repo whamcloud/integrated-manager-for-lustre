@@ -30,19 +30,3 @@ pub async fn search_rootpath(device: String) -> Result<LlapiFid, ImlAgentError> 
         .await
         .and_then(std::convert::identity)
 }
-
-/// List all Lustre Filesystems with MDT0 on this host
-pub(crate) async fn list_fs() -> Result<Vec<String>, ImlAgentError> {
-    lctl(vec!["get_param", "-N", "mdt.*-MDT0000"])
-        .await
-        .map(|o| {
-            o.lines()
-                .filter_map(|line| {
-                    line.split('.')
-                        .nth(1)
-                        .and_then(|mdt| mdt.split("-MDT").next())
-                })
-                .map(|s| s.to_string())
-                .collect()
-        })
-}
