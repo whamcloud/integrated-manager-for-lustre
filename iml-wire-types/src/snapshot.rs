@@ -9,9 +9,8 @@ use chrono::DateTime;
 #[cfg(feature = "cli")]
 use structopt::StructOpt;
 
-#[derive(
-    juniper::GraphQLInputObject, juniper::serde::Deserialize, juniper::serde::Serialize, Debug,
-)]
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLInputObject))]
 #[cfg_attr(feature = "cli", derive(StructOpt))]
 /// Ask agent to list snapshots
 pub struct List {
@@ -25,9 +24,8 @@ pub struct List {
     pub detail: bool,
 }
 
-#[derive(
-    juniper::GraphQLObject, juniper::serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug,
-)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
 /// Snapshots description
 pub struct Snapshot {
     pub filesystem_name: String,
@@ -36,17 +34,15 @@ pub struct Snapshot {
     pub details: Vec<Detail>,
 }
 
-#[derive(
-    juniper::GraphQLEnum, juniper::serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug,
-)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
 pub enum Status {
     Mounted,
     NotMounted,
 }
 
-#[derive(
-    juniper::GraphQLObject, juniper::serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug,
-)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
 pub struct Detail {
     /// E. g. MDT0000
     pub snapshot_role: Option<String>,
