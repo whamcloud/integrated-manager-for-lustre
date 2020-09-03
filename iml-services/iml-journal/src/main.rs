@@ -23,14 +23,12 @@ lazy_static! {
 // Default pool limit if not overridden by POOL_LIMIT
 const DEFAULT_POOL_LIMIT: u32 = 2;
 
-async fn purge_excess(pool: &PgPool, num_rows: i64) -> Result<i64, ImlJournalError> {
+async fn purge_excess(pool: &PgPool, mut num_rows: i64) -> Result<i64, ImlJournalError> {
     if num_rows <= *DBLOG_HW {
         return Ok(num_rows);
     }
 
-    let mut num_remove: i64 = num_rows - *DBLOG_LW;
-
-    while num_remove > 0 {
+    while *DBLOG_LW < num_rows {
         let x = sqlx::query!(
             r#"
                 DELETE FROM chroma_core_logmessage
@@ -38,15 +36,14 @@ async fn purge_excess(pool: &PgPool, num_rows: i64) -> Result<i64, ImlJournalErr
                     SELECT id FROM chroma_core_logmessage ORDER BY id LIMIT $1
                 )
             "#,
-            std::cmp::min(10_000, num_remove)
+            std::cmp::min(10_000, num_rows - *DBLOG_LW)
         )
         .execute(pool)
         .await?
         .rows_affected();
 
-        num_remove -= x as i64;
-
-        tracing::info!("Purged {} rows, {} remain for purging", x, num_remove);
+        num_rows -= x as i64;
+        tracing::info!("Purged {} rows, current known row count is {}", x, num_rows);
     }
 
     Ok(num_rows)
@@ -151,8 +148,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             &x.4,
             &x.5
         )
-            .execute(&pool)
-            .await?;
+        .execute(&pool)
+        .await?;
     }
 
     Ok(())
