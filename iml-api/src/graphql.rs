@@ -159,7 +159,6 @@ impl QueryRoot {
         args: List,
     ) -> juniper::FieldResult<Vec<Snapshot>> {
         let dir = dir.unwrap_or_default();
-        tracing::info!("args: {:?}", args);
 
         if args.detail {
             let xs = sqlx::query!(
