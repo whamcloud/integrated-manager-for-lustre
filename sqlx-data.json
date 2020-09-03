@@ -69,6 +69,26 @@
       "nullable": []
     }
   },
+  "09a8cf1ee0bd146df1a47af82f0a959a020ad3082f3616e784d0c242a1cdb3e9": {
+    "query": "\n            select active_host_id from targets where filesystems=$1 and name='MGS'\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "TextArray"
+        ]
+      },
+      "nullable": [
+        true
+      ]
+    }
+  },
   "1167f9862155b35e2bb59ba77286ccfc35c7f6113227d8dce116b3def418e2f9": {
     "query": "\n        INSERT INTO chroma_core_sfastoragesystem\n        (\n            uuid,\n            platform,\n            health_state_reason,\n            health_state,\n            child_health_state\n        )\n        VALUES ($1, $2, $3, $4, $5)\n        ON CONFLICT (uuid) DO UPDATE\n        SET\n            platform = excluded.platform,\n            health_state_reason = excluded.health_state_reason,\n            health_state = excluded.health_state,\n            child_health_state = excluded.child_health_state\n    ",
     "describe": {
@@ -1062,6 +1082,26 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "80dcc2dd9351d5d9d9729b8761d6cf797f6c2773435e06614147d145caa67de3": {
+    "query": "\n            select fqdn from chroma_core_managedhost where id=$1\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
+      ]
     }
   },
   "82099090aa05b7da19e94f69e680755c22ef1812f11407eaafaf4db520fb9c69": {
