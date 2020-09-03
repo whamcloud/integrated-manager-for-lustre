@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::error::ImlApiError;
+use crate::{command::get_command, error::ImlApiError};
 use futures::TryFutureExt;
 use iml_postgres::{sqlx, PgPool};
 use iml_rabbit::Connection;
@@ -261,15 +261,7 @@ impl QueryRoot {
         .map_err(ImlApiError::ImlJobSchedulerRpcError)
         .await?;
 
-        let command = sqlx::query_as!(
-            Command,
-            r#"
-                        select * from chroma_core_command where id=$1
-                        "#,
-            command_id
-        )
-        .fetch_one(pool)
-        .await?;
+        let command = get_command(&context.pg_pool, command_id).await?;
 
         Ok(command)
     }
