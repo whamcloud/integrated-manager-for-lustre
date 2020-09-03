@@ -7,7 +7,7 @@ use futures::TryFutureExt;
 use iml_postgres::{sqlx, PgPool};
 use iml_rabbit::Connection;
 use iml_wire_types::{
-    snapshot::{Create, Detail, List, Snapshot, Status},
+    snapshot::{Create, Destroy, Detail, List, Mount, Snapshot, Status, Unmount},
     Command,
 };
 use juniper::{
@@ -237,6 +237,7 @@ impl QueryRoot {
             Ok(snapshots)
         }
     }
+    #[graphql(arguments(args(description = "Snapshot creation arguments")))]
     async fn create_snapshot(context: &Context, args: Create) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.pg_pool).await?;
 
@@ -249,6 +250,91 @@ impl QueryRoot {
                 "fsname": args.fsname,
                 "name": args.name,
                 "comment": args.comment,
+                "fqdn": active_mgs_host_fqdn,
+            }
+        }]);
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_connection,
+            "run_jobs",
+            vec![jobs],
+            Some(kwargs),
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        let command = get_command(&context.pg_pool, command_id).await?;
+
+        Ok(command)
+    }
+    #[graphql(arguments(args(description = "Snapshot destruction arguments")))]
+    async fn destroy_snapshot(context: &Context, args: Destroy) -> juniper::FieldResult<Command> {
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.pg_pool).await?;
+
+        let mut kwargs: HashMap<String, String> = HashMap::new();
+        kwargs.insert("message".to_string(), "Destroying snapshot".to_string());
+
+        let jobs = serde_json::json!([{
+            "class_name": "DestroySnapshotJob",
+            "args": {
+                "fsname": args.fsname,
+                "name": args.name,
+                "force": args.force,
+                "fqdn": active_mgs_host_fqdn,
+            }
+        }]);
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_connection,
+            "run_jobs",
+            vec![jobs],
+            Some(kwargs),
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        let command = get_command(&context.pg_pool, command_id).await?;
+
+        Ok(command)
+    }
+    #[graphql(arguments(args(description = "Snapshot mounting arguments")))]
+    async fn mount_snapshot(context: &Context, args: Mount) -> juniper::FieldResult<Command> {
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.pg_pool).await?;
+
+        let mut kwargs: HashMap<String, String> = HashMap::new();
+        kwargs.insert("message".to_string(), "Mounting snapshot".to_string());
+
+        let jobs = serde_json::json!([{
+            "class_name": "MountSnapshotJob",
+            "args": {
+                "fsname": args.fsname,
+                "name": args.name,
+                "fqdn": active_mgs_host_fqdn,
+            }
+        }]);
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_connection,
+            "run_jobs",
+            vec![jobs],
+            Some(kwargs),
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        let command = get_command(&context.pg_pool, command_id).await?;
+
+        Ok(command)
+    }
+    #[graphql(arguments(args(description = "Snapshot unmounting arguments")))]
+    async fn unmount_snapshot(context: &Context, args: Unmount) -> juniper::FieldResult<Command> {
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.pg_pool).await?;
+
+        let mut kwargs: HashMap<String, String> = HashMap::new();
+        kwargs.insert("message".to_string(), "Unmounting snapshot".to_string());
+
+        let jobs = serde_json::json!([{
+            "class_name": "UnmountSnapshotJob",
+            "args": {
+                "fsname": args.fsname,
+                "name": args.name,
                 "fqdn": active_mgs_host_fqdn,
             }
         }]);
@@ -296,103 +382,6 @@ async fn active_mgs_host_fqdn(
 
     Ok(active_mgs_host_fqdn)
 }
-
-// async fn destroy_snapshot(
-//     args: snapshot::Destroy,
-//     client: Connection,
-//     pool: PgPool,
-// ) -> Result<impl warp::Reply, warp::Rejection> {
-//     let active_mgs_host_fqdn =
-//         active_mgs_host_fqdn(&args.fsname, pool)
-//             .await
-//             .map_err(|e| match e {
-//                 error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
-//                 _ => e.into(),
-//             })?;
-
-//     let mut kwargs: HashMap<String, String> = HashMap::new();
-//     kwargs.insert("message".to_string(), "Destroying snapshot".to_string());
-
-//     let jobs = serde_json::json!([{
-//         "class_name": "DestroySnapshotJob",
-//         "args": {
-//             "fsname": args.fsname,
-//             "name": args.name,
-//             "force": args.force,
-//             "fqdn": active_mgs_host_fqdn,
-//         }
-//     }]);
-//     let command_id: i32 =
-//         iml_job_scheduler_rpc::call(&client, "run_jobs", vec![jobs], Some(kwargs))
-//             .map_err(ImlApiError::ImlJobSchedulerRpcError)
-//             .await?;
-
-//     Ok(warp::reply::json(&command_id))
-// }
-
-// async fn mount_snapshot(
-//     args: snapshot::Mount,
-//     client: Connection,
-//     pool: PgPool,
-// ) -> Result<impl warp::Reply, warp::Rejection> {
-//     let active_mgs_host_fqdn =
-//         active_mgs_host_fqdn(&args.fsname, pool)
-//             .await
-//             .map_err(|e| match e {
-//                 error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
-//                 _ => e.into(),
-//             })?;
-
-//     let mut kwargs: HashMap<String, String> = HashMap::new();
-//     kwargs.insert("message".to_string(), "Mounting snapshot".to_string());
-
-//     let jobs = serde_json::json!([{
-//         "class_name": "MountSnapshotJob",
-//         "args": {
-//             "fsname": args.fsname,
-//             "name": args.name,
-//             "fqdn": active_mgs_host_fqdn,
-//         }
-//     }]);
-//     let command_id: i32 =
-//         iml_job_scheduler_rpc::call(&client, "run_jobs", vec![jobs], Some(kwargs))
-//             .map_err(ImlApiError::ImlJobSchedulerRpcError)
-//             .await?;
-
-//     Ok(warp::reply::json(&command_id))
-// }
-
-// async fn unmount_snapshot(
-//     args: snapshot::Unmount,
-//     client: Connection,
-//     pool: PgPool,
-// ) -> Result<impl warp::Reply, warp::Rejection> {
-//     let active_mgs_host_fqdn =
-//         active_mgs_host_fqdn(&args.fsname, pool)
-//             .await
-//             .map_err(|e| match e {
-//                 error::ImlApiError::FileSystemNotFound(_) => warp::reject::not_found(),
-//                 _ => e.into(),
-//             })?;
-
-//     let mut kwargs: HashMap<String, String> = HashMap::new();
-//     kwargs.insert("message".to_string(), "Unmounting snapshot".to_string());
-
-//     let jobs = serde_json::json!([{
-//         "class_name": "UnmountSnapshotJob",
-//         "args": {
-//             "fsname": args.fsname,
-//             "name": args.name,
-//             "fqdn": active_mgs_host_fqdn,
-//         }
-//     }]);
-//     let command_id: i32 =
-//         iml_job_scheduler_rpc::call(&client, "run_jobs", vec![jobs], Some(kwargs))
-//             .map_err(ImlApiError::ImlJobSchedulerRpcError)
-//             .await?;
-
-//     Ok(warp::reply::json(&command_id))
-// }
 
 pub(crate) type Schema =
     RootNode<'static, QueryRoot, EmptyMutation<Context>, EmptySubscription<Context>>;
