@@ -261,8 +261,9 @@ impl QueryRoot {
     async fn create_snapshot(context: &Context, args: Create) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.pg_pool).await?;
 
-        let mut kwargs: HashMap<String, String> = HashMap::new();
-        kwargs.insert("message".to_string(), "Creating snapshot".to_string());
+        let kwargs: HashMap<String, String> = vec![("message".into(), "Creating snapshot".into())]
+            .into_iter()
+            .collect();
 
         let jobs = serde_json::json!([{
             "class_name": "CreateSnapshotJob",
@@ -290,8 +291,10 @@ impl QueryRoot {
     async fn destroy_snapshot(context: &Context, args: Destroy) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.pg_pool).await?;
 
-        let mut kwargs: HashMap<String, String> = HashMap::new();
-        kwargs.insert("message".to_string(), "Destroying snapshot".to_string());
+        let kwargs: HashMap<String, String> =
+            vec![("message".into(), "Destroying snapshot".into())]
+                .into_iter()
+                .collect();
 
         let jobs = serde_json::json!([{
             "class_name": "DestroySnapshotJob",
@@ -319,8 +322,9 @@ impl QueryRoot {
     async fn mount_snapshot(context: &Context, args: Mount) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.pg_pool).await?;
 
-        let mut kwargs: HashMap<String, String> = HashMap::new();
-        kwargs.insert("message".to_string(), "Mounting snapshot".to_string());
+        let kwargs: HashMap<String, String> = vec![("message".into(), "Mounting snapshot".into())]
+            .into_iter()
+            .collect();
 
         let jobs = serde_json::json!([{
             "class_name": "MountSnapshotJob",
@@ -347,8 +351,10 @@ impl QueryRoot {
     async fn unmount_snapshot(context: &Context, args: Unmount) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.pg_pool).await?;
 
-        let mut kwargs: HashMap<String, String> = HashMap::new();
-        kwargs.insert("message".to_string(), "Unmounting snapshot".to_string());
+        let kwargs: HashMap<String, String> =
+            vec![("message".into(), "Unmounting snapshot".into())]
+                .into_iter()
+                .collect();
 
         let jobs = serde_json::json!([{
             "class_name": "UnmountSnapshotJob",
