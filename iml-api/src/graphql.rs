@@ -6,12 +6,13 @@ use crate::error::ImlApiError;
 use futures::TryStreamExt;
 use iml_postgres::{sqlx, PgPool};
 use iml_wire_types::snapshot::{Detail, List, Snapshot, Status};
+use itertools::Itertools;
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
     EmptyMutation, EmptySubscription, GraphQLEnum, RootNode,
 };
 use std::ops::Deref;
-use std::{convert::Infallible, sync::Arc};
+use std::{collections::HashSet, convert::Infallible, sync::Arc};
 use warp::Filter;
 
 #[derive(juniper::GraphQLObject)]
@@ -57,6 +58,21 @@ struct Target {
     uuid: String,
     /// Where this target is mounted
     mount_path: Option<String>,
+}
+
+#[derive(juniper::GraphQLObject)]
+/// A Lustre Target and it's corresponding resource
+struct TargetResource {
+    /// The id of the cluster
+    cluster_id: i32,
+    /// The filesystem associated with this target
+    fs_name: String,
+    /// The name of this target
+    name: String,
+    /// The corosync resource id associated with this target
+    resource_id: String,
+    /// The list of host ids this target could possibly run on
+    cluster_hosts: Vec<i32>,
 }
 
 pub(crate) struct QueryRoot;
@@ -162,6 +178,20 @@ impl QueryRoot {
 
         Ok(xs)
     }
+
+    /// Given a `fs_name`, produce a list of `TargetResource`.
+    /// Each `TargetResource` will list the host ids it's capable of
+    /// running on, taking bans into account.
+    #[graphql(arguments(fs_name(description = "The filesystem to list `TargetResource`s for"),))]
+    async fn get_fs_target_resources(
+        context: &Context,
+        fs_name: String,
+    ) -> juniper::FieldResult<Vec<TargetResource>> {
+        let xs = get_fs_target_resources(&context.client, fs_name).await?;
+
+        Ok(xs)
+    }
+
     /// Given a `fs_name`, produce a distinct grouping
     /// of cluster nodes that make up the filesystem.
     /// This is useful to find nodes capable of running resources associated
@@ -171,25 +201,18 @@ impl QueryRoot {
         context: &Context,
         fs_name: String,
     ) -> juniper::FieldResult<Vec<Vec<i32>>> {
-        let xs = sqlx::query!(
-            r#"
-                SELECT array_agg(distinct rh.host_id) as cluster_nodes from targets t
-                INNER JOIN corosync_target_resource r
-                ON r.mount_point = t.mount_path
-                INNER JOIN corosync_target_resource_managed_host rh
-                ON rh.corosync_resource_id = r.id AND rh.cluster_id = r.cluster_id
-                LEFT OUTER JOIN corosync_resource_bans b 
-                ON b.cluster_id = r.cluster_id AND b.resource = r.id
-                WHERE $1 = ANY(t.filesystems)
-                GROUP BY rh.cluster_id;
-            "#,
-            fs_name
-        )
-        .fetch(&context.client)
-        .map_ok(|x| x.cluster_nodes)
-        .try_filter_map(|x| async { Ok(x) })
-        .try_collect()
-        .await?;
+        let xs = get_fs_target_resources(&context.client, fs_name)
+            .await?
+            .into_iter()
+            .group_by(|x| x.cluster_id);
+
+        let xs = xs.into_iter().fold(vec![], |mut acc, (_, xs)| {
+            let xs: HashSet<i32> = xs.into_iter().map(|x| x.cluster_hosts).flatten().collect();
+
+            acc.push(xs.into_iter().collect());
+
+            acc
+        });
 
         Ok(xs)
     }
@@ -316,4 +339,52 @@ pub(crate) fn endpoint(
         .map(|| warp::reply::html(graphiql_source("graphql", None)));
 
     graphql_route.or(graphiql_route)
+}
+
+async fn get_fs_target_resources(
+    pool: &PgPool,
+    fs_name: String,
+) -> Result<Vec<TargetResource>, ImlApiError> {
+    let banned_resources = sqlx::query!(r#"
+            SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point
+            FROM corosync_resource_bans b
+            INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node
+            AND nh.cluster_id = b.cluster_id
+            INNER JOIN corosync_target_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
+        "#).fetch_all(pool).await?;
+
+    let xs = sqlx::query!(r#"
+            SELECT rh.cluster_id, r.id, t.name, t.mount_path, array_agg(DISTINCT rh.host_id) AS "cluster_hosts!"
+            FROM targets t
+            INNER JOIN corosync_target_resource r ON r.mount_point = t.mount_path
+            INNER JOIN corosync_target_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)
+            WHERE $1 = ANY(t.filesystems)
+            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path
+        "#, &fs_name)
+            .fetch(pool)
+            .map_ok(|mut x| {
+                let xs:HashSet<_> = banned_resources
+                    .iter()
+                    .filter(|y| {
+                        y.cluster_id == x.cluster_id && y.resource == x.id &&  x.mount_path == y.mount_point
+                    })
+                    .map(|y| y.host_id)
+                    .collect();
+
+                x.cluster_hosts.retain(|id| !xs.contains(id));
+
+                x
+            })
+            .map_ok(|x| {
+                TargetResource {
+                    cluster_id: x.cluster_id,
+                    fs_name: fs_name.to_string(),
+                    name: x.name,
+                    resource_id: x.id,
+                    cluster_hosts: x.cluster_hosts
+                }
+            }).try_collect()
+            .await?;
+
+    Ok(xs)
 }
