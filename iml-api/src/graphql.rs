@@ -164,7 +164,7 @@ impl QueryRoot {
             let xs = sqlx::query!(
                 r#"
                     SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s
-                    WHERE filesystem_name = $4 AND $5::text IS NULL OR snapshot_name = $5
+                    WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)
                     ORDER BY
                         CASE WHEN $3 = 'asc' THEN s.create_time END ASC,
                         CASE WHEN $3 = 'desc' THEN s.create_time END DESC
@@ -205,7 +205,7 @@ impl QueryRoot {
             let xs = sqlx::query!(
                 r#"
                     SELECT filesystem_name, snapshot_name FROM snapshot s
-                    WHERE filesystem_name = $4 AND $5::text IS NULL OR snapshot_name = $5
+                    WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)
                     ORDER BY
                         CASE WHEN $3 = 'asc' THEN s.create_time END ASC,
                         CASE WHEN $3 = 'desc' THEN s.create_time END DESC
