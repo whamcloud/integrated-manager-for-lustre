@@ -365,7 +365,7 @@ async fn active_mgs_host_fqdn(
     let fsnames = &[fsname.into()][..];
     let active_mgs_host_id = sqlx::query!(
         r#"
-            select active_host_id from targets where filesystems=$1 and name='MGS'
+            select active_host_id from targets where filesystems @> $1 and name='MGS'
             "#,
         fsnames
     )
