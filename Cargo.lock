@@ -2007,6 +2007,7 @@ dependencies = [
  "im",
  "iml-api-utils",
  "iml-change",
+ "juniper",
  "postgres-types",
  "serde",
  "serde_json",
