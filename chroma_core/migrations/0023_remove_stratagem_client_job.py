@@ -12,7 +12,15 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(model_name="sendstratagemresultstoclientjob", name="filesystem",),
-        migrations.RemoveField(model_name="sendstratagemresultstoclientjob", name="job_ptr",),
-        migrations.DeleteModel(name="SendStratagemResultsToClientJob",),
+        migrations.RemoveField(
+            model_name="sendstratagemresultstoclientjob",
+            name="filesystem",
+        ),
+        migrations.RemoveField(
+            model_name="sendstratagemresultstoclientjob",
+            name="job_ptr",
+        ),
+        migrations.DeleteModel(
+            name="SendStratagemResultsToClientJob",
+        ),
     ]

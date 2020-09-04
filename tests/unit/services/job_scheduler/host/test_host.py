@@ -119,8 +119,16 @@ class TestUpdateNids(NidTestCase):
         self.assertState(self.fs, "stopped")
 
         expected_calls = [
-            call("mgs", "lctl", ["replace_nids", "%s" % self.mdt, "192.168.0.2@tcp0"],),
-            call("mgs", "lctl", ["replace_nids", "%s" % self.ost, "192.168.0.3@tcp0"],),
+            call(
+                "mgs",
+                "lctl",
+                ["replace_nids", "%s" % self.mdt, "192.168.0.2@tcp0"],
+            ),
+            call(
+                "mgs",
+                "lctl",
+                ["replace_nids", "%s" % self.ost, "192.168.0.3@tcp0"],
+            ),
         ]
 
         self.assertEqual(expected_calls, invoke.call_args_list)
@@ -151,7 +159,7 @@ class TestHostAddRemove(JobTestCase):
 
     def test_force_removal(self):
         """Test the mode of removal which should not rely on the host
-           being accessible"""
+        being accessible"""
         host = synthetic_host("myaddress")
 
         synthetic_volume_full(host)

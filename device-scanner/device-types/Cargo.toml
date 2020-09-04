@@ -8,7 +8,7 @@ version = "0.2.0"
 
 [dependencies]
 im = {version = "15.0", features = ["serde"]}
-libzfs-types = {git = "https://github.com/whamcloud/rust-libzfs.git", version = "0.1.2"}
+libzfs-types = "0.1.2"
 serde = {version = "1", features = ["derive"]}
 tracing = "0.1"
 

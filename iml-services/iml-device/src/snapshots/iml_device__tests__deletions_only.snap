@@ -14,6 +14,8 @@ expression: xs
             "fs1",
         ],
         uuid: "123456",
-        mount_path: None,
+        mount_path: Some(
+            "/mnt/mdt1",
+        ),
     },
 ]

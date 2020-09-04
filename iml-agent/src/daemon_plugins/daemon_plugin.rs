@@ -4,7 +4,9 @@
 
 use crate::{
     agent_error::{NoPluginError, Result},
-    daemon_plugins::{action_runner, corosync, device, journal, ntp, ostpool, postoffice, stats},
+    daemon_plugins::{
+        action_runner, corosync, device, journal, ntp, ostpool, postoffice, snapshot, stats,
+    },
 };
 use async_trait::async_trait;
 use futures::{future, Future, FutureExt};
@@ -73,6 +75,7 @@ pub fn plugin_registry() -> DaemonPlugins {
         ("device".into(), mk_callback(device::create)),
         ("journal".into(), mk_callback(journal::create)),
         ("corosync".into(), mk_callback(corosync::create)),
+        ("snapshot".into(), mk_callback(snapshot::create)),
     ]
     .into_iter()
     .collect();

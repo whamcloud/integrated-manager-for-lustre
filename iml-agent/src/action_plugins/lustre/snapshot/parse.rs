@@ -70,12 +70,12 @@ fn parse_date(mut s: String) -> Result<DateTime<Utc>, &'static str> {
 }
 
 fn mk_detail(mut m: HashMap<String, String>) -> Result<Detail, &'static str> {
-    let fsname = m.remove("snapshot_fsname").ok_or("snapshot_fsname")?;
+    let snapshot_fsname = m.remove("snapshot_fsname").ok_or("snapshot_fsname")?;
     let modify_time_s = m.remove("modify_time").ok_or("modify_time")?;
     let create_time_s = m.remove("create_time").ok_or("create_time")?;
     let status_s = m.remove("status").ok_or("status")?;
     let comment = m.remove("comment");
-    let role = m.remove("snapshot_role");
+    let snapshot_role = m.remove("snapshot_role");
 
     let modify_time = parse_date(modify_time_s)?;
     let create_time = parse_date(create_time_s)?;
@@ -85,8 +85,8 @@ fn mk_detail(mut m: HashMap<String, String>) -> Result<Detail, &'static str> {
         _ => None,
     };
     Ok(Detail {
-        role,
-        fsname,
+        snapshot_role,
+        snapshot_fsname,
         modify_time,
         create_time,
         status,
@@ -95,16 +95,16 @@ fn mk_detail(mut m: HashMap<String, String>) -> Result<Detail, &'static str> {
 }
 
 fn mk_snapshot(mut m: HashMap<String, String>) -> Result<Snapshot, &'static str> {
-    let fsname = m.remove("filesystem_name").ok_or("filesystem_name")?;
-    let name = m.remove("snapshot_name").ok_or("snapshot_name")?;
+    let filesystem_name = m.remove("filesystem_name").ok_or("filesystem_name")?;
+    let snapshot_name = m.remove("snapshot_name").ok_or("snapshot_name")?;
     let details = if m.is_empty() {
         vec![]
     } else {
         vec![mk_detail(m)?]
     };
     Ok(Snapshot {
-        fsname,
-        name,
+        filesystem_name,
+        snapshot_name,
         details,
     })
 }
@@ -202,26 +202,26 @@ modify_time: Fri Aug  7 16:43:06 2020
 
         let snaps = vec![
             Snapshot {
-                fsname: "zfsmo".into(),
-                name: "bar".into(),
+                filesystem_name: "zfsmo".into(),
+                snapshot_name: "bar".into(),
                 details: vec![Detail {
                     comment: None,
                     create_time: Utc.ymd(2020, 8, 7).and_hms(16, 43, 06),
-                    fsname: "16c3a547".into(),
+                    snapshot_fsname: "16c3a547".into(),
                     modify_time: Utc.ymd(2020, 8, 7).and_hms(16, 43, 06),
-                    role: None,
+                    snapshot_role: None,
                     status: Some(Status::NotMounted),
                 }],
             },
             Snapshot {
-                fsname: "zfsmo".into(),
-                name: "foo".into(),
+                filesystem_name: "zfsmo".into(),
+                snapshot_name: "foo".into(),
                 details: vec![Detail {
                     comment: Some("hello world".into()),
                     create_time: Utc.ymd(2020, 8, 7).and_hms(16, 29, 30),
-                    fsname: "6f27d503".into(),
+                    snapshot_fsname: "6f27d503".into(),
                     modify_time: Utc.ymd(2020, 8, 7).and_hms(17, 29, 30),
-                    role: None,
+                    snapshot_role: None,
                     status: Some(Status::Mounted),
                 }],
             },
@@ -262,35 +262,35 @@ status: not mount
 
         let snaps = vec![
             Snapshot {
-                fsname: "zfsmo".into(),
-                name: "bar".into(),
+                filesystem_name: "zfsmo".into(),
+                snapshot_name: "bar".into(),
                 details: vec![Detail {
                     comment: None,
                     create_time: Utc.ymd(2020, 8, 7).and_hms(16, 43, 06),
-                    fsname: "16c3a547".into(),
+                    snapshot_fsname: "16c3a547".into(),
                     modify_time: Utc.ymd(2020, 8, 7).and_hms(16, 43, 06),
-                    role: Some("MGS".into()),
+                    snapshot_role: Some("MGS".into()),
                     status: Some(Status::NotMounted),
                 }],
             },
             Snapshot {
-                fsname: "zfsmo".into(),
-                name: "foo".into(),
+                filesystem_name: "zfsmo".into(),
+                snapshot_name: "foo".into(),
                 details: vec![
                     Detail {
                         comment: Some("hello world".into()),
                         create_time: Utc.ymd(2020, 8, 7).and_hms(16, 29, 30),
-                        fsname: "6f27d503".into(),
+                        snapshot_fsname: "6f27d503".into(),
                         modify_time: Utc.ymd(2020, 8, 7).and_hms(16, 29, 30),
-                        role: Some("MGS".into()),
+                        snapshot_role: Some("MGS".into()),
                         status: Some(Status::NotMounted),
                     },
                     Detail {
                         comment: Some("hello world".into()),
                         create_time: Utc.ymd(2020, 8, 7).and_hms(16, 29, 30),
-                        fsname: "6f27d503".into(),
+                        snapshot_fsname: "6f27d503".into(),
                         modify_time: Utc.ymd(2020, 8, 7).and_hms(16, 29, 30),
-                        role: Some("MDT0000".into()),
+                        snapshot_role: Some("MDT0000".into()),
                         status: Some(Status::NotMounted),
                     },
                 ],

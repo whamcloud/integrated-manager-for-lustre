@@ -12,22 +12,66 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.DeleteModel(name="Sample_10",),
-        migrations.DeleteModel(name="Sample_300",),
-        migrations.DeleteModel(name="Sample_3600",),
-        migrations.DeleteModel(name="Sample_60",),
-        migrations.DeleteModel(name="Sample_86400",),
-        migrations.AlterUniqueTogether(name="series", unique_together=set([]),),
-        migrations.RemoveField(model_name="series", name="content_type",),
-        migrations.RemoveField(model_name="simplehistostorebin", name="histo_store_time",),
-        migrations.RemoveField(model_name="simplehistostoretime", name="storage_resource_statistic",),
-        migrations.AlterUniqueTogether(name="storageresourceclassstatistic", unique_together=set([]),),
-        migrations.RemoveField(model_name="storageresourceclassstatistic", name="resource_class",),
-        migrations.AlterUniqueTogether(name="storageresourcestatistic", unique_together=set([]),),
-        migrations.RemoveField(model_name="storageresourcestatistic", name="storage_resource",),
-        migrations.DeleteModel(name="Series",),
-        migrations.DeleteModel(name="SimpleHistoStoreBin",),
-        migrations.DeleteModel(name="SimpleHistoStoreTime",),
-        migrations.DeleteModel(name="StorageResourceClassStatistic",),
-        migrations.DeleteModel(name="StorageResourceStatistic",),
+        migrations.DeleteModel(
+            name="Sample_10",
+        ),
+        migrations.DeleteModel(
+            name="Sample_300",
+        ),
+        migrations.DeleteModel(
+            name="Sample_3600",
+        ),
+        migrations.DeleteModel(
+            name="Sample_60",
+        ),
+        migrations.DeleteModel(
+            name="Sample_86400",
+        ),
+        migrations.AlterUniqueTogether(
+            name="series",
+            unique_together=set([]),
+        ),
+        migrations.RemoveField(
+            model_name="series",
+            name="content_type",
+        ),
+        migrations.RemoveField(
+            model_name="simplehistostorebin",
+            name="histo_store_time",
+        ),
+        migrations.RemoveField(
+            model_name="simplehistostoretime",
+            name="storage_resource_statistic",
+        ),
+        migrations.AlterUniqueTogether(
+            name="storageresourceclassstatistic",
+            unique_together=set([]),
+        ),
+        migrations.RemoveField(
+            model_name="storageresourceclassstatistic",
+            name="resource_class",
+        ),
+        migrations.AlterUniqueTogether(
+            name="storageresourcestatistic",
+            unique_together=set([]),
+        ),
+        migrations.RemoveField(
+            model_name="storageresourcestatistic",
+            name="storage_resource",
+        ),
+        migrations.DeleteModel(
+            name="Series",
+        ),
+        migrations.DeleteModel(
+            name="SimpleHistoStoreBin",
+        ),
+        migrations.DeleteModel(
+            name="SimpleHistoStoreTime",
+        ),
+        migrations.DeleteModel(
+            name="StorageResourceClassStatistic",
+        ),
+        migrations.DeleteModel(
+            name="StorageResourceStatistic",
+        ),
     ]

@@ -25,5 +25,8 @@ class Migration(migrations.Migration):
             field=models.CharField(help_text=b"Mounted filesystem", max_length=8),
         ),
         migrations.RunPython(resolve_fk),
-        migrations.RemoveField(model_name="managedhost", name="client_filesystems",),
+        migrations.RemoveField(
+            model_name="managedhost",
+            name="client_filesystems",
+        ),
     ]

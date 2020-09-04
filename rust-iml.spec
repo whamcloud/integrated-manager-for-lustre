@@ -43,6 +43,7 @@ cp iml-ostpool %{buildroot}%{_bindir}
 cp iml-postoffice %{buildroot}%{_bindir}
 cp iml-report %{buildroot}%{_bindir}
 cp iml-sfa %{buildroot}%{_bindir}
+cp iml-snapshot %{buildroot}%{_bindir}
 cp iml-stats %{buildroot}%{_bindir}
 cp iml-task-runner %{buildroot}%{_bindir}
 cp iml-warp-drive %{buildroot}%{_bindir}
@@ -60,6 +61,7 @@ cp iml-postoffice.service %{buildroot}%{_unitdir}
 cp iml-report.service %{buildroot}%{_unitdir}
 cp iml-rust-stats.service %{buildroot}%{_unitdir}
 cp iml-sfa.service %{buildroot}%{_unitdir}
+cp iml-snapshot.service %{buildroot}%{_unitdir}
 cp iml-task-runner.service %{buildroot}%{_unitdir}
 cp iml-warp-drive.service %{buildroot}%{_unitdir}
 cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
@@ -387,6 +389,28 @@ Group: System Environment/Libraries
 %{_bindir}/iml-sfa
 %attr(0644,root,root)%{_unitdir}/iml-sfa.service
 
+%package snapshot
+Summary: Consumer of snapshot listing
+License: MIT
+Group: System Environment/Libraries
+Requires: rust-iml-agent-comms
+
+%description snapshot
+%{summary}
+
+%post snapshot
+%systemd_post iml-snapshot.service
+
+%preun snapshot
+%systemd_preun iml-snapshot.service
+
+%postun snapshot
+%systemd_postun_with_restart iml-snapshot.service
+
+%files snapshot
+%{_bindir}/iml-snapshot
+%attr(0644,root,root)%{_unitdir}/iml-snapshot.service
+
 %package device
 Summary: Consumer of IML Agent device push queue
 License: MIT
@@ -454,7 +478,7 @@ Requires: rust-iml-agent-comms
 %attr(0644,root,root)%{_unitdir}/iml-rust-corosync.service
 
 %changelog
-* Wed Sep 18 2019 Will Johnson <wjohnson@whamcloud.com> - 0.2.0-1 
+* Wed Sep 18 2019 Will Johnson <wjohnson@whamcloud.com> - 0.2.0-1
 - Add ntp service
 
 * Wed Mar 6 2019 Joe Grund <jgrund@whamcloud.com> - 0.1.0-1

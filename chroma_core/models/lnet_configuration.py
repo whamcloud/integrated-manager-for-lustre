@@ -230,7 +230,10 @@ class ConfigureLNetJob(Job):
         # The get_deps means the lnet is always placed into the unloaded state in preparation for the change in
         # configure the next two steps cause lnet to return to the state it was in
         steps = [
-            (ConfigureLNetStep, {"host_id": host_id, "fqdn": fqdn, "config_changes": json.loads(self.config_changes)},)
+            (
+                ConfigureLNetStep,
+                {"host_id": host_id, "fqdn": fqdn, "config_changes": json.loads(self.config_changes)},
+            )
         ]
 
         if self.lnet_configuration.state != "lnet_unloaded":
@@ -343,7 +346,10 @@ class LoadLNetJob(LNetStateChangeJob):
         host_id = self.lnet_configuration.host.id
 
         return self.lnet_configuration.filter_steps(
-            [(LoadLNetStep, {"fqdn": fqdn}), (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),]
+            [
+                (LoadLNetStep, {"fqdn": fqdn}),
+                (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),
+            ]
         )
 
 
@@ -382,7 +388,10 @@ class StartLNetJob(LNetStateChangeJob):
         fqdn = self.lnet_configuration.host.fqdn
 
         return self.lnet_configuration.filter_steps(
-            [(StartLNetStep, {"fqdn": fqdn}), (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),]
+            [
+                (StartLNetStep, {"fqdn": fqdn}),
+                (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),
+            ]
         )
 
 
@@ -421,7 +430,10 @@ class StopLNetJob(LNetStateChangeJob):
         fqdn = self.lnet_configuration.host.fqdn
 
         return self.lnet_configuration.filter_steps(
-            [(StopLNetStep, {"fqdn": fqdn}), (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),]
+            [
+                (StopLNetStep, {"fqdn": fqdn}),
+                (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),
+            ]
         )
 
 
@@ -460,7 +472,10 @@ class UnloadLNetJob(LNetStateChangeJob):
         fqdn = self.lnet_configuration.host.fqdn
 
         return self.lnet_configuration.filter_steps(
-            [(UnloadLNetStep, {"fqdn": fqdn}), (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),]
+            [
+                (UnloadLNetStep, {"fqdn": fqdn}),
+                (GetLNetStateStep, {"host_id": host_id, "fqdn": fqdn}),
+            ]
         )
 
 
@@ -489,7 +504,7 @@ class GetLNetStateStep(Step):
 
 
 class GetLNetStateJob(Job):
-    """ This is an unused historical class, we can't delete it because old commands may have referenced it
+    """This is an unused historical class, we can't delete it because old commands may have referenced it
     so it will just sit here for ever more. Maybe someone clever can turn it into a useful class and use it
     for something else.
     """
