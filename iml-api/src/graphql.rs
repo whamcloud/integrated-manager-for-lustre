@@ -225,7 +225,8 @@ impl QueryRoot {
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to asc"),
-        args(description = "Snapshot listing arguments")
+        fsname(description = "Filesystem the snapshot taken from"),
+        name(description = "Name of the snapshot"),
     ))]
     /// Fetch the list of snapshots
     async fn snapshots(
@@ -233,7 +234,8 @@ impl QueryRoot {
         limit: Option<i32>,
         offset: Option<i32>,
         dir: Option<SortDir>,
-        args: List,
+        fsname: String,
+        name: Option<String>,
     ) -> juniper::FieldResult<Vec<Snapshot>> {
         let dir = dir.unwrap_or_default();
 
@@ -249,17 +251,26 @@ impl QueryRoot {
                 offset.unwrap_or(0) as i64,
                 limit.unwrap_or(20) as i64,
                 dir.deref(),
-                args.fsname,
-                args.name,
+                fsname,
+                name,
             )
             .fetch_all(&context.pg_pool)
             .await?;
 
         Ok(snapshots)
     }
-    #[graphql(arguments(args(description = "Snapshot creation arguments")))]
-    async fn create_snapshot(context: &Context, args: Create) -> juniper::FieldResult<Command> {
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.pg_pool).await?;
+    #[graphql(arguments(
+        fsname(description = "Filesystem to take snapshot from"),
+        name(description = "Name of the snapshot"),
+        comment(description = "Comment for the snapshot"),
+    ))]
+    async fn create_snapshot(
+        context: &Context,
+        fsname: String,
+        name: String,
+        comment: Option<String>,
+    ) -> juniper::FieldResult<Command> {
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool).await?;
 
         let kwargs: HashMap<String, String> = vec![("message".into(), "Creating snapshot".into())]
             .into_iter()
@@ -268,9 +279,9 @@ impl QueryRoot {
         let jobs = serde_json::json!([{
             "class_name": "CreateSnapshotJob",
             "args": {
-                "fsname": args.fsname,
-                "name": args.name,
-                "comment": args.comment,
+                "fsname": fsname,
+                "name": name,
+                "comment": comment,
                 "fqdn": active_mgs_host_fqdn,
             }
         }]);
@@ -287,9 +298,18 @@ impl QueryRoot {
 
         Ok(command)
     }
-    #[graphql(arguments(args(description = "Snapshot destruction arguments")))]
-    async fn destroy_snapshot(context: &Context, args: Destroy) -> juniper::FieldResult<Command> {
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.pg_pool).await?;
+    #[graphql(arguments(
+        fsname(description = "Filesystem snapshot was taken from"),
+        name(description = "Name of the snapshot"),
+        force(description = "Whether to force the removal"),
+    ))]
+    async fn destroy_snapshot(
+        context: &Context,
+        fsname: String,
+        name: String,
+        force: bool,
+    ) -> juniper::FieldResult<Command> {
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool).await?;
 
         let kwargs: HashMap<String, String> =
             vec![("message".into(), "Destroying snapshot".into())]
@@ -299,9 +319,9 @@ impl QueryRoot {
         let jobs = serde_json::json!([{
             "class_name": "DestroySnapshotJob",
             "args": {
-                "fsname": args.fsname,
-                "name": args.name,
-                "force": args.force,
+                "fsname": fsname,
+                "name": name,
+                "force": force,
                 "fqdn": active_mgs_host_fqdn,
             }
         }]);
@@ -318,9 +338,16 @@ impl QueryRoot {
 
         Ok(command)
     }
-    #[graphql(arguments(args(description = "Snapshot mounting arguments")))]
-    async fn mount_snapshot(context: &Context, args: Mount) -> juniper::FieldResult<Command> {
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.pg_pool).await?;
+    #[graphql(arguments(
+        fsname(description = "Filesystem snapshot was taken from"),
+        name(description = "Name of the snapshot"),
+    ))]
+    async fn mount_snapshot(
+        context: &Context,
+        fsname: String,
+        name: String,
+    ) -> juniper::FieldResult<Command> {
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool).await?;
 
         let kwargs: HashMap<String, String> = vec![("message".into(), "Mounting snapshot".into())]
             .into_iter()
@@ -329,8 +356,8 @@ impl QueryRoot {
         let jobs = serde_json::json!([{
             "class_name": "MountSnapshotJob",
             "args": {
-                "fsname": args.fsname,
-                "name": args.name,
+                "fsname": fsname,
+                "name": name,
                 "fqdn": active_mgs_host_fqdn,
             }
         }]);
@@ -347,9 +374,16 @@ impl QueryRoot {
             .await
             .map_err(|e| e.into())
     }
-    #[graphql(arguments(args(description = "Snapshot unmounting arguments")))]
-    async fn unmount_snapshot(context: &Context, args: Unmount) -> juniper::FieldResult<Command> {
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.pg_pool).await?;
+    #[graphql(arguments(
+        fsname(description = "Filesystem snapshot was taken from"),
+        name(description = "Name of the snapshot"),
+    ))]
+    async fn unmount_snapshot(
+        context: &Context,
+        fsname: String,
+        name: String,
+    ) -> juniper::FieldResult<Command> {
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool).await?;
 
         let kwargs: HashMap<String, String> =
             vec![("message".into(), "Unmounting snapshot".into())]
@@ -359,8 +393,8 @@ impl QueryRoot {
         let jobs = serde_json::json!([{
             "class_name": "UnmountSnapshotJob",
             "args": {
-                "fsname": args.fsname,
-                "name": args.name,
+                "fsname": fsname,
+                "name": name,
                 "fqdn": active_mgs_host_fqdn,
             }
         }]);
