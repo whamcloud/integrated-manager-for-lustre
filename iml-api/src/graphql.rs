@@ -7,7 +7,7 @@ use futures::TryFutureExt;
 use iml_postgres::{sqlx, PgPool};
 use iml_rabbit::Pool;
 use iml_wire_types::{
-    snapshot::{Create, Destroy, Detail, List, Mount, Snapshot, Status, Unmount},
+    snapshot::{Detail, Snapshot, Status},
     Command,
 };
 use juniper::{
@@ -153,7 +153,8 @@ impl QueryRoot {
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to asc"),
-        args(description = "Snapshot listing arguments")
+        fsname(description = "Filesystem the snapshot taken from"),
+        name(description = "Name of the snapshot"),
     ))]
     /// Fetch the list of snapshots
     async fn snapshots(
@@ -161,84 +162,64 @@ impl QueryRoot {
         limit: Option<i32>,
         offset: Option<i32>,
         dir: Option<SortDir>,
-        args: List,
+        fsname: String,
+        name: Option<String>,
     ) -> juniper::FieldResult<Vec<Snapshot>> {
         let dir = dir.unwrap_or_default();
 
-        if args.detail {
-            let xs = sqlx::query!(
-                r#"
-                    SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s
-                    WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)
-                    ORDER BY
-                        CASE WHEN $3 = 'asc' THEN s.create_time END ASC,
-                        CASE WHEN $3 = 'desc' THEN s.create_time END DESC
-                    OFFSET $1 LIMIT $2"#,
-                offset.unwrap_or(0) as i64,
-                limit.unwrap_or(20) as i64,
-                dir.deref(),
-                args.fsname,
-                args.name,
-            )
-            .fetch_all(&context.pg_pool)
-            .await?;
+        let xs = sqlx::query!(
+            r#"
+                SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s
+                WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)
+                ORDER BY
+                    CASE WHEN $3 = 'asc' THEN s.create_time END ASC,
+                    CASE WHEN $3 = 'desc' THEN s.create_time END DESC
+                OFFSET $1 LIMIT $2"#,
+            offset.unwrap_or(0) as i64,
+            limit.unwrap_or(20) as i64,
+            dir.deref(),
+            fsname,
+            name,
+        )
+        .fetch_all(&context.pg_pool)
+        .await?;
 
-            let snapshots: Vec<_> = xs
-                .into_iter()
-                .map(|x| Snapshot {
-                    snapshot_name: x.snapshot_name,
-                    filesystem_name: x.filesystem_name,
-                    details: vec![Detail {
-                        comment: x.comment,
-                        create_time: x.create_time,
-                        modify_time: x.modify_time,
-                        snapshot_fsname: x.snapshot_fsname,
-                        snapshot_role: None,
-                        status: x.mounted.map(|b| {
-                            if b {
-                                Status::Mounted
-                            } else {
-                                Status::NotMounted
-                            }
-                        }),
-                    }],
-                })
-                .collect();
+        let snapshots: Vec<_> = xs
+            .into_iter()
+            .map(|x| Snapshot {
+                snapshot_name: x.snapshot_name,
+                filesystem_name: x.filesystem_name,
+                details: vec![Detail {
+                    comment: x.comment,
+                    create_time: x.create_time,
+                    modify_time: x.modify_time,
+                    snapshot_fsname: x.snapshot_fsname,
+                    snapshot_role: None,
+                    status: x.mounted.map(|b| {
+                        if b {
+                            Status::Mounted
+                        } else {
+                            Status::NotMounted
+                        }
+                    }),
+                }],
+            })
+            .collect();
 
-            Ok(snapshots)
-        } else {
-            let xs = sqlx::query!(
-                r#"
-                    SELECT filesystem_name, snapshot_name FROM snapshot s
-                    WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)
-                    ORDER BY
-                        CASE WHEN $3 = 'asc' THEN s.create_time END ASC,
-                        CASE WHEN $3 = 'desc' THEN s.create_time END DESC
-                    OFFSET $1 LIMIT $2"#,
-                offset.unwrap_or(0) as i64,
-                limit.unwrap_or(20) as i64,
-                dir.deref(),
-                args.fsname,
-                args.name,
-            )
-            .fetch_all(&context.pg_pool)
-            .await?;
-
-            let snapshots: Vec<_> = xs
-                .into_iter()
-                .map(|x| Snapshot {
-                    snapshot_name: x.snapshot_name,
-                    filesystem_name: x.filesystem_name,
-                    details: vec![],
-                })
-                .collect();
-
-            Ok(snapshots)
-        }
+        Ok(snapshots)
     }
-    #[graphql(arguments(args(description = "Snapshot creation arguments")))]
-    async fn create_snapshot(context: &Context, args: Create) -> juniper::FieldResult<Command> {
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.pg_pool).await?;
+    #[graphql(arguments(
+        fsname(description = "Filesystem to take snapshot from"),
+        name(description = "Name of the snapshot"),
+        comment(description = "Comment for the snapshot"),
+    ))]
+    async fn create_snapshot(
+        context: &Context,
+        fsname: String,
+        name: String,
+        comment: Option<String>,
+    ) -> juniper::FieldResult<Command> {
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool).await?;
 
         let kwargs: HashMap<String, String> = vec![("message".into(), "Creating snapshot".into())]
             .into_iter()
@@ -247,9 +228,9 @@ impl QueryRoot {
         let jobs = serde_json::json!([{
             "class_name": "CreateSnapshotJob",
             "args": {
-                "fsname": args.fsname,
-                "name": args.name,
-                "comment": args.comment,
+                "fsname": fsname,
+                "name": name,
+                "comment": comment,
                 "fqdn": active_mgs_host_fqdn,
             }
         }]);
@@ -266,9 +247,18 @@ impl QueryRoot {
 
         Ok(command)
     }
-    #[graphql(arguments(args(description = "Snapshot destruction arguments")))]
-    async fn destroy_snapshot(context: &Context, args: Destroy) -> juniper::FieldResult<Command> {
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.pg_pool).await?;
+    #[graphql(arguments(
+        fsname(description = "Filesystem snapshot was taken from"),
+        name(description = "Name of the snapshot"),
+        force(description = "Whether to force the removal"),
+    ))]
+    async fn destroy_snapshot(
+        context: &Context,
+        fsname: String,
+        name: String,
+        force: bool,
+    ) -> juniper::FieldResult<Command> {
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool).await?;
 
         let kwargs: HashMap<String, String> =
             vec![("message".into(), "Destroying snapshot".into())]
@@ -278,9 +268,9 @@ impl QueryRoot {
         let jobs = serde_json::json!([{
             "class_name": "DestroySnapshotJob",
             "args": {
-                "fsname": args.fsname,
-                "name": args.name,
-                "force": args.force,
+                "fsname": fsname,
+                "name": name,
+                "force": force,
                 "fqdn": active_mgs_host_fqdn,
             }
         }]);
@@ -297,9 +287,16 @@ impl QueryRoot {
 
         Ok(command)
     }
-    #[graphql(arguments(args(description = "Snapshot mounting arguments")))]
-    async fn mount_snapshot(context: &Context, args: Mount) -> juniper::FieldResult<Command> {
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.pg_pool).await?;
+    #[graphql(arguments(
+        fsname(description = "Filesystem snapshot was taken from"),
+        name(description = "Name of the snapshot"),
+    ))]
+    async fn mount_snapshot(
+        context: &Context,
+        fsname: String,
+        name: String,
+    ) -> juniper::FieldResult<Command> {
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool).await?;
 
         let kwargs: HashMap<String, String> = vec![("message".into(), "Mounting snapshot".into())]
             .into_iter()
@@ -308,8 +305,8 @@ impl QueryRoot {
         let jobs = serde_json::json!([{
             "class_name": "MountSnapshotJob",
             "args": {
-                "fsname": args.fsname,
-                "name": args.name,
+                "fsname": fsname,
+                "name": name,
                 "fqdn": active_mgs_host_fqdn,
             }
         }]);
@@ -326,9 +323,16 @@ impl QueryRoot {
             .await
             .map_err(|e| e.into())
     }
-    #[graphql(arguments(args(description = "Snapshot unmounting arguments")))]
-    async fn unmount_snapshot(context: &Context, args: Unmount) -> juniper::FieldResult<Command> {
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&args.fsname, &context.pg_pool).await?;
+    #[graphql(arguments(
+        fsname(description = "Filesystem snapshot was taken from"),
+        name(description = "Name of the snapshot"),
+    ))]
+    async fn unmount_snapshot(
+        context: &Context,
+        fsname: String,
+        name: String,
+    ) -> juniper::FieldResult<Command> {
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool).await?;
 
         let kwargs: HashMap<String, String> =
             vec![("message".into(), "Unmounting snapshot".into())]
@@ -338,8 +342,8 @@ impl QueryRoot {
         let jobs = serde_json::json!([{
             "class_name": "UnmountSnapshotJob",
             "args": {
-                "fsname": args.fsname,
-                "name": args.name,
+                "fsname": fsname,
+                "name": name,
                 "fqdn": active_mgs_host_fqdn,
             }
         }]);
