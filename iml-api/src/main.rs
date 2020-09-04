@@ -35,14 +35,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         monitor_sfa: iml_manager_env::get_sfa_endpoints().is_some(),
     };
 
-    let pool = iml_rabbit::connect_to_rabbit(2);
-    let rabbit_connection = pool.get().await?;
+    let rabbit_pool = iml_rabbit::connect_to_rabbit(2);
+    let rabbit_pool_2 = rabbit_pool.clone();
 
-    let conn_filter = create_connection_filter(pool);
+    let conn_filter = create_connection_filter(rabbit_pool);
 
-    let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
-    let pool2 = pool.clone();
-    let db_pool_filter = warp::any().map(move || pool.clone());
+    let pg_pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
+    let pg_pool_2 = pg_pool.clone();
+    let db_pool_filter = warp::any().map(move || pg_pool.clone());
 
     let schema = Arc::new(graphql::Schema::new(
         graphql::QueryRoot,
@@ -52,8 +52,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let schema_filter = warp::any().map(move || Arc::clone(&schema));
 
     let ctx = Arc::new(graphql::Context {
-        pg_pool: pool2,
-        rabbit_connection,
+        pg_pool: pg_pool_2,
+        rabbit_pool: rabbit_pool_2,
     });
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx));
 
