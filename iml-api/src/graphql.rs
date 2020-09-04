@@ -5,7 +5,7 @@
 use crate::{command::get_command, error::ImlApiError};
 use futures::TryFutureExt;
 use iml_postgres::{sqlx, PgPool};
-use iml_rabbit::Connection;
+use iml_rabbit::Pool;
 use iml_wire_types::{
     snapshot::{Create, Destroy, Detail, List, Mount, Snapshot, Status, Unmount},
     Command,
@@ -329,7 +329,7 @@ impl QueryRoot {
             }
         }]);
         let command_id: i32 = iml_job_scheduler_rpc::call(
-            &context.rabbit_connection,
+            &context.rabbit_pool.get().await?,
             "run_jobs",
             vec![jobs],
             Some(kwargs),
@@ -360,7 +360,7 @@ impl QueryRoot {
             }
         }]);
         let command_id: i32 = iml_job_scheduler_rpc::call(
-            &context.rabbit_connection,
+            &context.rabbit_pool.get().await?,
             "run_jobs",
             vec![jobs],
             Some(kwargs),
@@ -389,7 +389,7 @@ impl QueryRoot {
             }
         }]);
         let command_id: i32 = iml_job_scheduler_rpc::call(
-            &context.rabbit_connection,
+            &context.rabbit_pool.get().await?,
             "run_jobs",
             vec![jobs],
             Some(kwargs),
@@ -419,7 +419,7 @@ impl QueryRoot {
             }
         }]);
         let command_id: i32 = iml_job_scheduler_rpc::call(
-            &context.rabbit_connection,
+            &context.rabbit_pool.get().await?,
             "run_jobs",
             vec![jobs],
             Some(kwargs),
@@ -468,7 +468,7 @@ pub(crate) type Schema =
 
 pub(crate) struct Context {
     pub(crate) pg_pool: PgPool,
-    pub(crate) rabbit_connection: Connection,
+    pub(crate) rabbit_pool: Pool,
 }
 
 pub(crate) async fn graphql(

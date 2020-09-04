@@ -2,8 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-pub use deadpool_lapin::Connection;
-use deadpool_lapin::{Manager, Pool, PoolError};
+pub use deadpool_lapin::{Connection, Pool};
+use deadpool_lapin::{Manager, PoolError};
 #[cfg(feature = "warp-filters")]
 use futures::TryFutureExt;
 use futures::{channel::oneshot, Stream, StreamExt};
