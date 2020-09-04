@@ -445,7 +445,8 @@ class CreateChangelogUserStep(Step):
     database = True
 
     def run(self, kwargs):
-        lamigo = Lamigo.objects.get(id=kwargs["lamigo_id"])
+        lamigo_id = kwargs["lamigo_id"]
+        lamigo = ObjectCache.get_by_id(Lamigo, int(lamigo_id))
         host = kwargs["host"]
         # @@ ideally this should lock lamigo object
         # with lamigo._lock:
@@ -454,15 +455,16 @@ class CreateChangelogUserStep(Step):
                 host, "lctl", ["--device", lamigo.mdt.name, "changelog_register", "-n"]
             )
             lamigo.save()
+            ObjectCache.update(lamigo)
 
 
 class ConfigureLamigoStep(Step):
     idempotent = True
-    database = True
 
     def run(self, kwargs):
         host = kwargs["host"]
-        lamigo = Lamigo.objects.get(id=kwargs["lamigo_id"])
+        lamigo_id = kwargs["lamigo_id"]
+        lamigo = ObjectCache.get_by_id(Lamigo, int(lamigo_id))
 
         self.invoke_rust_agent_expect_result(host, "config_lamigo", lamigo.lamigo_config())
 
@@ -620,7 +622,7 @@ class LpurgeConfiguration(models.Model):
         # C.F. iml-agent::action_plugins::lpurge::Config
         config = {
             "ost": ost.index,
-            "fs": self.filesystem.name,
+            "fs": self.hotpool.filesystem.name,
             "mailbox": self.purge.name,
             "pool": self.cold.name,
             "freehi": self.freehi,
@@ -685,8 +687,8 @@ class ConfigureLpurgeJob(StateChangeJob):
 
         fs = self.lpurge.configuration.hotpool.filesystem
 
-        for host in self.lpurge.ost.managedtargetmount_set.all():
-            steps.append((ConfigureLpurgeStep, {"host": host.fqdn, "lpurge_id": self.lpurge.id}))
+        for mtm in self.lpurge.ost.managedtargetmount_set.all():
+            steps.append((ConfigureLpurgeStep, {"host": mtm.host.fqdn, "lpurge": self.lpurge}))
 
         host = self.lpurge.ost.active_host
         after = [self.lpurge.ost.ha_label]
@@ -711,10 +713,11 @@ class ConfigureLpurgeJob(StateChangeJob):
 
 class ConfigureLpurgeStep(Step):
     idempotent = True
+    database = True
 
     def run(self, kwargs):
         host = kwargs["host"]
-        lpurge = Lpurge.objects.get(id=kwargs["lpurge_id"])
+        lpurge = kwargs["lpurge"]
 
         self.invoke_rust_agent_expect_result(host, "config_lpurge", lpurge.lpurge_config())
 
