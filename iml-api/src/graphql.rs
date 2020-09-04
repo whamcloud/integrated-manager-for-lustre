@@ -343,9 +343,9 @@ impl QueryRoot {
         .map_err(ImlApiError::ImlJobSchedulerRpcError)
         .await?;
 
-        let command = get_command(&context.pg_pool, command_id).await?;
-
-        Ok(command)
+        get_command(&context.pg_pool, command_id)
+            .await
+            .map_err(|e| e.into())
     }
     #[graphql(arguments(args(description = "Snapshot unmounting arguments")))]
     async fn unmount_snapshot(context: &Context, args: Unmount) -> juniper::FieldResult<Command> {
@@ -373,9 +373,9 @@ impl QueryRoot {
         .map_err(ImlApiError::ImlJobSchedulerRpcError)
         .await?;
 
-        let command = get_command(&context.pg_pool, command_id).await?;
-
-        Ok(command)
+        get_command(&context.pg_pool, command_id)
+            .await
+            .map_err(|e| e.into())
     }
 }
 
