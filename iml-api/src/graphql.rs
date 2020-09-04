@@ -166,8 +166,8 @@ impl QueryRoot {
                     SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s
                     WHERE filesystem_name = $4 AND $5::text IS NULL OR snapshot_name = $5
                     ORDER BY
-                        CASE WHEN $3 = 'asc' THEN s.snapshot_name END ASC,
-                        CASE WHEN $3 = 'desc' THEN s.snapshot_name END DESC
+                        CASE WHEN $3 = 'asc' THEN s.create_time END ASC,
+                        CASE WHEN $3 = 'desc' THEN s.create_time END DESC
                     OFFSET $1 LIMIT $2"#,
                 offset.unwrap_or(0) as i64,
                 limit.unwrap_or(20) as i64,
@@ -188,7 +188,6 @@ impl QueryRoot {
                         create_time: x.create_time,
                         modify_time: x.modify_time,
                         snapshot_fsname: x.snapshot_fsname,
-                        // FIXME
                         snapshot_role: None,
                         status: x.mounted.map(|b| {
                             if b {
@@ -208,8 +207,8 @@ impl QueryRoot {
                     SELECT filesystem_name, snapshot_name FROM snapshot s
                     WHERE filesystem_name = $4 AND $5::text IS NULL OR snapshot_name = $5
                     ORDER BY
-                        CASE WHEN $3 = 'asc' THEN s.snapshot_name END ASC,
-                        CASE WHEN $3 = 'desc' THEN s.snapshot_name END DESC
+                        CASE WHEN $3 = 'asc' THEN s.create_time END ASC,
+                        CASE WHEN $3 = 'desc' THEN s.create_time END DESC
                     OFFSET $1 LIMIT $2"#,
                 offset.unwrap_or(0) as i64,
                 limit.unwrap_or(20) as i64,
