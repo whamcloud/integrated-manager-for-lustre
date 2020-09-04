@@ -7,7 +7,7 @@ pub(crate) mod pacemaker;
 
 use crate::agent_error::{ImlAgentError, RequiredError};
 use elementtree::Element;
-use futures::{future::try_join_all, try_join};
+use futures::{future::{TryFutureExt, try_join_all}, try_join};
 use iml_cmd::{CheckedCommandExt, Command};
 use iml_fs::file_exists;
 use iml_wire_types::{
@@ -251,6 +251,9 @@ fn xml_add_op(
     if let Some(value) = interval {
         op.set_attr("id", format!("{}-{}-interval-{}", id, name, value))
             .set_attr("interval", value);
+    } else {
+        // Interval is ALWAYS required
+        op.set_attr("interval", "0");
     }
     if let Some(value) = timeout {
         op.set_attr("id", format!("{}-{}-timeout-{}", id, name, value))
@@ -269,9 +272,10 @@ fn xml_add_nvpair(elem: &mut Element, id: &str, name: &str, value: &str) {
 async fn cibcreate(scope: &str, xml: &str) -> Result<(), ImlAgentError> {
     Command::new("cibadmin")
         .args(&["--create", "--scope", scope, "--xml-text", xml])
-        .checked_output()
-        .await?;
-    Ok(())
+        .checked_status()
+        .inspect_err(|_| tracing::error!("Failed to create {}: {}", scope, xml))
+        .err_into()
+        .await
 }
 
 async fn cibxpath<I, S>(op: &str, xpath: &str, extra: I) -> Result<String, ImlAgentError>
