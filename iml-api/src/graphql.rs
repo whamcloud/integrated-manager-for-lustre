@@ -225,7 +225,7 @@ impl QueryRoot {
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to asc"),
-        fsname(description = "Filesystem the snapshot taken from"),
+        fsname(description = "Filesystem the snapshot was taken from"),
         name(description = "Name of the snapshot"),
     ))]
     /// Fetch the list of snapshots
