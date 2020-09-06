@@ -108,7 +108,9 @@ impl Sessions {
     }
     pub async fn reset_active(&self, name: &PluginName) {
         if let Some(x) = self.0.get(name) {
-            x.write().await.reset_active()
+            x.write().await.reset_active();
+
+            tracing::trace!("Reset active for {:?}", name);
         }
     }
     pub async fn reset_empty(&self, name: &PluginName) {
@@ -210,6 +212,10 @@ impl Session {
             info: Arc::new(AtomicU64::new(0)),
             plugin,
         }
+    }
+    /// Get the deadline of the inner plugin
+    pub fn deadline(&self) -> std::time::Duration {
+        self.plugin.deadline()
     }
     pub fn start(
         &mut self,
