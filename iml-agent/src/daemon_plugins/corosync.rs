@@ -8,7 +8,7 @@ use crate::{
     high_availability::{get_crm_mon, get_local_nodeid},
 };
 use futures::{Future, FutureExt};
-use std::pin::Pin;
+use std::{pin::Pin, time::Duration};
 
 #[derive(Debug)]
 struct Corosync {}
@@ -18,6 +18,9 @@ pub fn create() -> impl DaemonPlugin {
 }
 
 impl DaemonPlugin for Corosync {
+    fn deadline(&self) -> Duration {
+        Duration::from_secs(10)
+    }
     fn start_session(
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<Output, ImlAgentError>> + Send>> {
