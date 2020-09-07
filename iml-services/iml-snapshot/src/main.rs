@@ -33,15 +33,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let snaps = snapshots.into_iter().fold(
             (vec![], vec![], vec![], vec![], vec![], vec![], vec![]),
             |mut acc, s| {
-                let d = &s.details[0];
-
                 acc.0.push(s.filesystem_name);
                 acc.1.push(s.snapshot_name);
-                acc.2.push(d.create_time.naive_utc());
-                acc.3.push(d.modify_time.naive_utc());
-                acc.4.push(d.snapshot_fsname.clone());
-                acc.5.push(d.status == Some(snapshot::Status::Mounted));
-                acc.6.push(d.comment.clone());
+                acc.2.push(s.create_time.naive_utc());
+                acc.3.push(s.modify_time.naive_utc());
+                acc.4.push(s.snapshot_fsname.clone());
+                acc.5.push(s.mounted);
+                acc.6.push(s.comment);
 
                 acc
             },
@@ -84,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             &snaps.2,
             &snaps.3,
             &snaps.4,
-            &snaps.5,
+            &snaps.5 as &[Option<bool>],
             &snaps.6 as &[Option<String>],
         )
         .execute(&pool)

@@ -18,10 +18,6 @@ pub struct List {
     pub fsname: String,
     /// Name of the snapshot to list
     pub name: Option<String>,
-
-    /// List details
-    #[cfg_attr(feature = "cli", structopt(short = "d", long = "detail"))]
-    pub detail: bool,
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
@@ -30,28 +26,11 @@ pub struct List {
 pub struct Snapshot {
     pub filesystem_name: String,
     pub snapshot_name: String,
-    /// Snapshot members
-    pub details: Vec<Detail>,
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
-#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
-pub enum Status {
-    Mounted,
-    NotMounted,
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
-#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
-pub struct Detail {
-    /// E. g. MDT0000
-    pub snapshot_role: Option<String>,
-    /// Filesystem id (random string)
+    /// Snapshot filesystem id (random string)
     pub snapshot_fsname: String,
     pub modify_time: DateTime<Utc>,
     pub create_time: DateTime<Utc>,
-    /// Snapshot status (None means unknown)
-    pub status: Option<Status>,
+    pub mounted: Option<bool>,
     /// Optional comment for the snapshot
     pub comment: Option<String>,
 }

@@ -14,9 +14,6 @@ pub async fn list(l: List) -> Result<Vec<Snapshot>, ImlAgentError> {
         args.push("--name");
         args.push(name);
     }
-    if l.detail {
-        args.push("--detail");
-    }
     let stdout = lctl(args).await?;
     let stdout = stdout.trim();
 
