@@ -99,7 +99,7 @@ nuke_logs:
 	} || true
 
 dev_setup: nuke_db nuke_logs
-	@./manage.py dev_setup || exit $$?
+	@pipenv run ./manage.py dev_setup || exit $$?
 
 service_tests: dev_setup
 	@echo "Running service tests..."
