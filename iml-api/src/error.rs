@@ -23,6 +23,10 @@ pub enum ImlApiError {
     SerdeJsonError(#[from] serde_json::error::Error),
     #[error(transparent)]
     SqlxError(#[from] sqlx::Error),
+    #[error("Filesystem Not Found")]
+    FilesystemNotFound,
+    #[error("Filesystem Not Found")]
+    MgsNotFound,
 }
 
 impl reject::Reject for ImlApiError {}
