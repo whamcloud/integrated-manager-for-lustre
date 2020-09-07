@@ -20,6 +20,7 @@ use iml_wire_types::{
         SFA_CONTROLLER_TABLE_NAME, SFA_DISK_DRIVE_TABLE_NAME, SFA_ENCLOSURE_TABLE_NAME,
         SFA_JOB_TABLE_NAME, SFA_POWER_SUPPLY_TABLE_NAME, SFA_STORAGE_SYSTEM_TABLE_NAME,
     },
+    snapshot::SnapshotRecord,
 };
 use serde::de::Error;
 use std::convert::TryFrom;
@@ -48,6 +49,7 @@ pub enum DbRecord {
     SfaJob(SfaJob),
     SfaPowerSupply(SfaPowerSupply),
     SfaController(SfaController),
+    Snapshot(SnapshotRecord),
     StratagemConfiguration(StratagemConfiguration),
     Volume(VolumeRecord),
     VolumeNode(VolumeNodeRecord),

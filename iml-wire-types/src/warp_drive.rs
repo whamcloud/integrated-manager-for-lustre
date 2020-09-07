@@ -10,6 +10,7 @@ use crate::{
         VolumeNodeRecord, VolumeRecord,
     },
     sfa::{SfaController, SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem},
+    snapshot::SnapshotRecord,
     Alert, CompositeId, EndpointNameSelf, Filesystem, Host, Label, LockChange, Target,
     TargetConfParam, ToCompositeId,
 };
@@ -107,6 +108,7 @@ pub struct Cache {
     pub sfa_power_supply: HashMap<i32, SfaPowerSupply>,
     pub sfa_storage_system: HashMap<i32, SfaStorageSystem>,
     pub sfa_controller: HashMap<i32, SfaController>,
+    pub snapshot: HashMap<i32, SnapshotRecord>,
     pub stratagem_config: HashMap<i32, StratagemConfiguration>,
     pub target: HashMap<i32, Target<TargetConfParam>>,
     pub user: HashMap<i32, AuthUserRecord>,
@@ -135,6 +137,7 @@ pub struct ArcCache {
     pub sfa_job: HashMap<i32, Arc<SfaJob>>,
     pub sfa_power_supply: HashMap<i32, Arc<SfaPowerSupply>>,
     pub sfa_controller: HashMap<i32, Arc<SfaController>>,
+    pub snapshot: HashMap<i32, Arc<SnapshotRecord>>,
     pub stratagem_config: HashMap<i32, Arc<StratagemConfiguration>>,
     pub target: HashMap<i32, Arc<Target<TargetConfParam>>>,
     pub user: HashMap<i32, Arc<AuthUserRecord>>,
@@ -169,6 +172,7 @@ impl Cache {
             RecordId::SfaPowerSupply(id) => self.sfa_power_supply.remove(&id).is_some(),
             RecordId::SfaController(id) => self.sfa_controller.remove(&id).is_some(),
             RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
+            RecordId::Snapshot(id) => self.snapshot.remove(&id).is_some(),
             RecordId::Target(id) => self.target.remove(&id).is_some(),
             RecordId::User(id) => self.user.remove(&id).is_some(),
             RecordId::UserGroup(id) => self.user_group.remove(&id).is_some(),
@@ -230,6 +234,9 @@ impl Cache {
             Record::SfaController(x) => {
                 self.sfa_controller.insert(x.id, x);
             }
+            Record::Snapshot(x) => {
+                self.snapshot.insert(x.id, x);
+            }
             Record::StratagemConfig(x) => {
                 self.stratagem_config.insert(x.id(), x);
             }
@@ -287,6 +294,7 @@ impl ArcCache {
             RecordId::SfaJob(id) => self.sfa_job.remove(&id).is_some(),
             RecordId::SfaPowerSupply(id) => self.sfa_power_supply.remove(&id).is_some(),
             RecordId::SfaController(id) => self.sfa_controller.remove(&id).is_some(),
+            RecordId::Snapshot(id) => self.snapshot.remove(&id).is_some(),
             RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
             RecordId::Target(id) => self.target.remove(&id).is_some(),
             RecordId::User(id) => self.user.remove(&id).is_some(),
@@ -348,6 +356,9 @@ impl ArcCache {
             }
             Record::SfaController(x) => {
                 self.sfa_controller.insert(x.id(), Arc::new(x));
+            }
+            Record::Snapshot(x) => {
+                self.snapshot.insert(x.id, Arc::new(x));
             }
             Record::StratagemConfig(x) => {
                 self.stratagem_config.insert(x.id(), Arc::new(x));
@@ -420,6 +431,7 @@ impl From<&Cache> for ArcCache {
             sfa_job: hashmap_to_arc_hashmap(&cache.sfa_job),
             sfa_power_supply: hashmap_to_arc_hashmap(&cache.sfa_power_supply),
             sfa_controller: hashmap_to_arc_hashmap(&cache.sfa_controller),
+            snapshot: hashmap_to_arc_hashmap(&cache.snapshot),
             stratagem_config: hashmap_to_arc_hashmap(&cache.stratagem_config),
             target: hashmap_to_arc_hashmap(&cache.target),
             user: hashmap_to_arc_hashmap(&cache.user),
@@ -450,6 +462,7 @@ impl From<&ArcCache> for Cache {
             sfa_job: arc_hashmap_to_hashmap(&cache.sfa_job),
             sfa_power_supply: arc_hashmap_to_hashmap(&cache.sfa_power_supply),
             sfa_controller: arc_hashmap_to_hashmap(&cache.sfa_controller),
+            snapshot: arc_hashmap_to_hashmap(&cache.snapshot),
             stratagem_config: arc_hashmap_to_hashmap(&cache.stratagem_config),
             target: arc_hashmap_to_hashmap(&cache.target),
             user: arc_hashmap_to_hashmap(&cache.user),
@@ -481,6 +494,7 @@ pub enum Record {
     SfaJob(SfaJob),
     SfaPowerSupply(SfaPowerSupply),
     SfaController(SfaController),
+    Snapshot(SnapshotRecord),
     StratagemConfig(StratagemConfiguration),
     Target(Target<TargetConfParam>),
     User(AuthUserRecord),
@@ -508,6 +522,7 @@ pub enum ArcRecord {
     SfaJob(Arc<SfaJob>),
     SfaPowerSupply(Arc<SfaPowerSupply>),
     SfaController(Arc<SfaController>),
+    Snapshot(Arc<SnapshotRecord>),
     StratagemConfig(Arc<StratagemConfiguration>),
     Target(Arc<Target<TargetConfParam>>),
     User(Arc<AuthUserRecord>),
@@ -537,6 +552,7 @@ impl From<Record> for ArcRecord {
             Record::SfaPowerSupply(x) => Self::SfaPowerSupply(Arc::new(x)),
             Record::SfaController(x) => Self::SfaController(Arc::new(x)),
             Record::StratagemConfig(x) => Self::StratagemConfig(Arc::new(x)),
+            Record::Snapshot(x) => Self::Snapshot(Arc::new(x)),
             Record::Target(x) => Self::Target(Arc::new(x)),
             Record::User(x) => Self::User(Arc::new(x)),
             Record::UserGroup(x) => Self::UserGroup(Arc::new(x)),
@@ -567,6 +583,7 @@ pub enum RecordId {
     SfaPowerSupply(i32),
     SfaController(i32),
     StratagemConfig(i32),
+    Snapshot(i32),
     Target(i32),
     User(i32),
     UserGroup(i32),
@@ -595,6 +612,7 @@ impl Deref for RecordId {
             | Self::SfaJob(x)
             | Self::SfaPowerSupply(x)
             | Self::SfaController(x)
+            | Self::Snapshot(x)
             | Self::StratagemConfig(x)
             | Self::Target(x)
             | Self::User(x)
