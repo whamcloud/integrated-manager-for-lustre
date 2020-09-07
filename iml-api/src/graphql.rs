@@ -13,7 +13,7 @@ use iml_wire_types::{
 use itertools::Itertools;
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
-    EmptyMutation, EmptySubscription, FieldError, GraphQLEnum, RootNode, Value,
+    EmptySubscription, FieldError, GraphQLEnum, RootNode, Value,
 };
 use std::ops::Deref;
 use std::{
@@ -84,6 +84,7 @@ struct TargetResource {
 }
 
 pub(crate) struct QueryRoot;
+pub(crate) struct MutationRoot;
 
 #[derive(GraphQLEnum)]
 enum SortDir {
@@ -283,6 +284,10 @@ impl QueryRoot {
 
         Ok(snapshots)
     }
+}
+
+#[juniper::graphql_object(Context = Context)]
+impl MutationRoot {
     #[graphql(arguments(
         fsname(description = "Filesystem to take snapshot from"),
         name(description = "Name of the snapshot"),
@@ -498,8 +503,7 @@ async fn active_mgs_host_fqdn(
     }
 }
 
-pub(crate) type Schema =
-    RootNode<'static, QueryRoot, EmptyMutation<Context>, EmptySubscription<Context>>;
+pub(crate) type Schema = RootNode<'static, QueryRoot, MutationRoot, EmptySubscription<Context>>;
 
 pub(crate) struct Context {
     pub(crate) pg_pool: PgPool,
