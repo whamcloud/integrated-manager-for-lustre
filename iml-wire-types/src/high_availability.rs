@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use std::{
+    collections::HashMap,
     convert::TryFrom,
     fmt::{self, Display},
     io,
@@ -63,7 +64,34 @@ pub struct Node {
     pub r#type: NodeType,
 }
 
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct Resource {
+    pub id: String,
+    pub resource_agent: String,
+    pub role: String,
+    pub active: bool,
+    pub orphaned: bool,
+    pub managed: bool,
+    pub failed: bool,
+    pub failure_ignored: bool,
+    pub nodes_running_on: u32,
+    pub active_node_name: Option<String>,
+    pub active_node_id: Option<String>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct Ban {
+    pub id: String,
+    pub resource: String,
+    pub node: String,
+    pub weight: i32,
+    pub master_only: bool,
+}
+
 #[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct Cluster {
     pub nodes: Vec<Node>,
+    pub resources: Vec<Resource>,
+    pub bans: Vec<Ban>,
+    pub resource_mounts: HashMap<String, String>,
 }
