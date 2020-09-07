@@ -1072,6 +1072,26 @@
       ]
     }
   },
+  "786b678891c280d2d3adebecc67f6404527c64199ee4de84e16345b8f3b81d68": {
+    "query": "\n                    select fqdn from chroma_core_managedhost where id=$1 and not_deleted = 't'\n                    ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "7bee1c38d05ac3f8bcf4d48b375c740341121c04d2f5b04ceb1d58ef0a006c08": {
     "query": "\n        SELECT * FROM chroma_core_lustreclientmount\n        WHERE\n            state = 'mounted'\n            AND not_deleted = 't'\n            AND id != ALL($1)\n        LIMIT $2\n        ",
     "describe": {
@@ -1172,26 +1192,6 @@
         ]
       },
       "nullable": []
-    }
-  },
-  "80dcc2dd9351d5d9d9729b8761d6cf797f6c2773435e06614147d145caa67de3": {
-    "query": "\n            select fqdn from chroma_core_managedhost where id=$1\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "fqdn",
-          "type_info": "Varchar"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": [
-        false
-      ]
     }
   },
   "82099090aa05b7da19e94f69e680755c22ef1812f11407eaafaf4db520fb9c69": {
