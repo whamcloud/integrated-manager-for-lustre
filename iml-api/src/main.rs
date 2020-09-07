@@ -46,7 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let schema = Arc::new(graphql::Schema::new(
         graphql::QueryRoot,
-        juniper::EmptyMutation::new(),
+        graphql::MutationRoot,
         juniper::EmptySubscription::new(),
     ));
     let schema_filter = warp::any().map(move || Arc::clone(&schema));
