@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{command::get_command, error::ImlApiError};
-use futures::TryFutureExt;
+use futures::{TryFutureExt, TryStreamExt};
 use iml_postgres::{sqlx, PgPool};
 use iml_rabbit::Pool;
 use iml_wire_types::{
@@ -196,7 +196,7 @@ impl QueryRoot {
         context: &Context,
         fs_name: String,
     ) -> juniper::FieldResult<Vec<TargetResource>> {
-        let xs = get_fs_target_resources(&context.client, fs_name).await?;
+        let xs = get_fs_target_resources(&context.pg_pool, fs_name).await?;
 
         Ok(xs)
     }
@@ -210,7 +210,7 @@ impl QueryRoot {
         context: &Context,
         fs_name: String,
     ) -> juniper::FieldResult<Vec<Vec<i32>>> {
-        let xs = get_fs_target_resources(&context.client, fs_name)
+        let xs = get_fs_target_resources(&context.pg_pool, fs_name)
             .await?
             .into_iter()
             .group_by(|x| x.cluster_id);

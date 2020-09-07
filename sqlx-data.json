@@ -82,26 +82,6 @@
       "nullable": []
     }
   },
-  "09a8cf1ee0bd146df1a47af82f0a959a020ad3082f3616e784d0c242a1cdb3e9": {
-    "query": "\n            select active_host_id from targets where filesystems=$1 and name='MGS'\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "active_host_id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "TextArray"
-        ]
-      },
-      "nullable": [
-        true
-      ]
-    }
-  },
   "1167f9862155b35e2bb59ba77286ccfc35c7f6113227d8dce116b3def418e2f9": {
     "query": "\n        INSERT INTO chroma_core_sfastoragesystem\n        (\n            uuid,\n            platform,\n            health_state_reason,\n            health_state,\n            child_health_state\n        )\n        VALUES ($1, $2, $3, $4, $5)\n        ON CONFLICT (uuid) DO UPDATE\n        SET\n            platform = excluded.platform,\n            health_state_reason = excluded.health_state_reason,\n            health_state = excluded.health_state,\n            child_health_state = excluded.child_health_state\n    ",
     "describe": {
@@ -662,36 +642,6 @@
       "nullable": []
     }
   },
-  "4748eb28d52c1ce8aca1258381999c9393893d5b6a55b7a9adcc6d1fb29314ac": {
-    "query": "\n                    SELECT filesystem_name, snapshot_name FROM snapshot s\n                    WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN s.create_time END ASC,\n                        CASE WHEN $3 = 'desc' THEN s.create_time END DESC\n                    OFFSET $1 LIMIT $2",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "filesystem_name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 1,
-          "name": "snapshot_name",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int8",
-          "Text",
-          "Text",
-          "Text"
-        ]
-      },
-      "nullable": [
-        false,
-        false
-      ]
-    }
-  },
   "4eb28fbaf2c42bbcc852c074ade355c4f29c318def54af2290a05f37e90a3b23": {
     "query": "\n            INSERT INTO corosync_node (\n                id,\n                cluster_id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            )\n            SELECT\n                id::corosync_node_key,\n                $13,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            FROM UNNEST(\n                $1::text[],\n                $2::bool[],\n                $3::bool[],\n                $4::bool[],\n                $5::bool[],\n                $6::bool[],\n                $7::bool[],\n                $8::bool[],\n                $9::bool[],\n                $10::bool[],\n                $11::int[],\n                $12::text[]\n            )\n            AS t(\n                id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            )\n            ON CONFLICT (id, cluster_id) DO UPDATE\n            SET\n                online = excluded.online,\n                standby = excluded.standby,\n                standby_onfail = excluded.standby_onfail,\n                maintenance = excluded.maintenance,\n                pending = excluded.pending,\n                unclean = excluded.unclean,\n                shutdown = excluded.shutdown,\n                expected_up = excluded.expected_up,\n                is_dc = excluded.is_dc,\n                resources_running = excluded.resources_running,\n                type = excluded.type\n        ",
     "describe": {
@@ -769,62 +719,22 @@
       ]
     }
   },
-  "559f8dbd559ead28670594e12dce12aa256f972ad469a67320aa7970640affa8": {
-    "query": "\n                    SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s\n                    WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN s.create_time END ASC,\n                        CASE WHEN $3 = 'desc' THEN s.create_time END DESC\n                    OFFSET $1 LIMIT $2",
+  "552ba77218026a2b80300ef6e297f69fb8c0bf09d5ba26f8dc430bbb5ae28cd9": {
+    "query": "\n            select active_host_id from targets where filesystems @> $1 and name='MGS'\n            ",
     "describe": {
       "columns": [
         {
           "ordinal": 0,
-          "name": "filesystem_name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 1,
-          "name": "snapshot_name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "create_time",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 3,
-          "name": "modify_time",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 4,
-          "name": "snapshot_fsname",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 5,
-          "name": "mounted",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 6,
-          "name": "comment",
-          "type_info": "Text"
+          "name": "active_host_id",
+          "type_info": "Int4"
         }
       ],
       "parameters": {
         "Left": [
-          "Int8",
-          "Int8",
-          "Text",
-          "Text",
-          "Text"
+          "TextArray"
         ]
       },
       "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
         true
       ]
     }
@@ -2279,6 +2189,66 @@
         false,
         false,
         false,
+        true
+      ]
+    }
+  },
+  "e48006d62914f58d2d0d457dc805a774f9d5b117dca58dca6bc3dfcc9044eb4a": {
+    "query": "\n                SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s\n                WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)\n                ORDER BY\n                    CASE WHEN $3 = 'asc' THEN s.create_time END ASC,\n                    CASE WHEN $3 = 'desc' THEN s.create_time END DESC\n                OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "filesystem_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "snapshot_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "create_time",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 3,
+          "name": "modify_time",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 4,
+          "name": "snapshot_fsname",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 5,
+          "name": "mounted",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 6,
+          "name": "comment",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text",
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
         true
       ]
     }
