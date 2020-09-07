@@ -1,5 +1,5 @@
 ---
-source: iml-agent/src/crm_reader.rs
+source: iml-agent/src/high_availability.rs
 expression: cluster
 ---
 Cluster {
@@ -346,4 +346,5 @@ Cluster {
             master_only: false,
         },
     ],
+    resource_mounts: {},
 }

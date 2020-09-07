@@ -12,6 +12,14 @@ class IMLUnitTestCase(TestCase):
     def setUp(self):
         super(IMLUnitTestCase, self).setUp()
 
+        with open("./migrations/20200824170157_corosync.sql", "r") as f:
+            sql = f.read()
+
+        from django.db import connection
+
+        with connection.cursor() as cursor:
+            cursor.execute(sql)
+
         mock.patch("chroma_core.services.job_scheduler.job_scheduler.LockQueue.put").start()
         mock.patch("chroma_core.services.dbutils.exit_if_in_transaction").start()
 

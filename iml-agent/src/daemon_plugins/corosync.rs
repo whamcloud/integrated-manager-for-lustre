@@ -4,8 +4,8 @@
 
 use crate::{
     agent_error::ImlAgentError,
-    crm_reader::get_crm_mon,
     daemon_plugins::{DaemonPlugin, Output},
+    high_availability::{get_crm_mon, get_local_nodeid},
 };
 use futures::{Future, FutureExt};
 use std::pin::Pin;
@@ -28,7 +28,14 @@ impl DaemonPlugin for Corosync {
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Output, ImlAgentError>> + Send>> {
         async move {
-            let x = get_crm_mon().await?;
+            let node_id = get_local_nodeid().await?;
+
+            let cluster = get_crm_mon().await?;
+
+            let x = match (node_id, cluster) {
+                (Some(x), Some(y)) => Some((x, y)),
+                _ => None,
+            };
 
             let x = x.map(serde_json::to_value).transpose()?;
 
