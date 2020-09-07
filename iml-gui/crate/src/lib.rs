@@ -694,6 +694,9 @@ fn handle_record_change(
                 ArcRecord::SfaController(x) => {
                     model.records.sfa_controller.insert(x.id, Arc::clone(&x));
                 }
+                ArcRecord::Snapshot(x) => {
+                    model.records.snapshot.insert(x.id, Arc::clone(&x));
+                }
                 ArcRecord::StratagemConfig(x) => {
                     model.records.stratagem_config.insert(x.id, Arc::clone(&x));
 

@@ -165,14 +165,14 @@ fn can_enable(fs: &Arc<Filesystem>, cache: &ArcCache) -> bool {
 fn handle_stratagem_config_update(config: &mut Config, conf: &Arc<StratagemConfiguration>) {
     config.id = Some(conf.id);
 
-    duration_picker::calculate_value_and_unit(&mut config.scan_duration_picker, conf.interval);
+    duration_picker::calculate_value_and_unit(&mut config.scan_duration_picker, conf.interval as u64);
 
     match conf.report_duration {
         None => {
             config.report_duration_picker.value = None;
         }
         Some(x) => {
-            duration_picker::calculate_value_and_unit(&mut config.report_duration_picker, x);
+            duration_picker::calculate_value_and_unit(&mut config.report_duration_picker, x as u64);
         }
     }
 
@@ -181,13 +181,13 @@ fn handle_stratagem_config_update(config: &mut Config, conf: &Arc<StratagemConfi
             config.purge_duration_picker.value = None;
         }
         Some(x) => {
-            duration_picker::calculate_value_and_unit(&mut config.purge_duration_picker, x);
+            duration_picker::calculate_value_and_unit(&mut config.purge_duration_picker, x as u64);
         }
     }
 
-    if conf.interval == config.target_config.interval
-        && conf.report_duration == config.target_config.report_duration
-        && conf.purge_duration == config.target_config.purge_duration
+    if conf.interval as u64 == config.target_config.interval
+        && conf.report_duration.map(|x| x as u64) == config.target_config.report_duration
+        && conf.purge_duration.map(|x| x as u64) == config.target_config.purge_duration
     {
         config.disabled = false;
     }

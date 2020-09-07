@@ -1,4 +1,5 @@
-CREATE TABLE snapshot (
+CREATE TABLE IF NOT EXISTS snapshot (
+  id serial PRIMARY KEY,
   filesystem_name TEXT NOT NULL,
   snapshot_name TEXT NOT NULL,
   create_time TIMESTAMP WITH TIME ZONE NOT NULL,
