@@ -65,7 +65,6 @@ async fn list() -> Result<Vec<Snapshot>, ()> {
         snapshot::list(List {
             fsname: fs.clone(),
             name: None,
-            detail: false,
         })
         .await
         .map_err(|e| (fs, e))
@@ -81,7 +80,7 @@ async fn list() -> Result<Vec<Snapshot>, ()> {
 
     let snapshot_fsnames = snaps
         .iter()
-        .map(|s| &s.details[0].snapshot_fsname)
+        .map(|s| &s.snapshot_fsname)
         .collect::<BTreeSet<&String>>();
 
     let really_failed_fss = errs

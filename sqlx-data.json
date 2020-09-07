@@ -631,36 +631,6 @@
       "nullable": []
     }
   },
-  "4748eb28d52c1ce8aca1258381999c9393893d5b6a55b7a9adcc6d1fb29314ac": {
-    "query": "\n                    SELECT filesystem_name, snapshot_name FROM snapshot s\n                    WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN s.create_time END ASC,\n                        CASE WHEN $3 = 'desc' THEN s.create_time END DESC\n                    OFFSET $1 LIMIT $2",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "filesystem_name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 1,
-          "name": "snapshot_name",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int8",
-          "Text",
-          "Text",
-          "Text"
-        ]
-      },
-      "nullable": [
-        false,
-        false
-      ]
-    }
-  },
   "48243eeece8f3c8e07580762b3fc8b3581703da49f72d84a43d449342a5765ff": {
     "query": "\n            DELETE FROM corosync_node\n            USING corosync_node_managed_host\n            WHERE id = corosync_node_id AND name = corosync_node_name\n            AND corosync_node_id != ALL($1)\n            AND corosync_node_name != ALL($2)\n            AND host_id = $3\n        ",
     "describe": {
