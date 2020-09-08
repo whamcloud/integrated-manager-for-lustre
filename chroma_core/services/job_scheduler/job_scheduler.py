@@ -64,6 +64,7 @@ from chroma_core.models import (
     Lpurge,
     HotpoolConfiguration,
     ConfigureHotpoolJob,
+    RemoveTaskJob,
 )
 from chroma_core.models import Task, CreateTaskJob
 from chroma_core.services.job_scheduler.dep_cache import DepCache
@@ -2043,7 +2044,14 @@ class JobScheduler(object):
                 }
                 if "extendlayout" in hotpool_data:
                     task_data["args"]["striping"] = hotpool_data["extendlayout"]
-                extend_task = Task.objects.create(**task_data)
+                try:
+                    extend_task = Task.objects.get(name=task_data["name"])
+                    extend_task.filesystem = filesystem
+                    extend_task.start = task_data["start"]
+                    extend_task.state = task_data["state"]
+                    extend_task.args = task_data["args"]
+                except Task.DoesNotExist:
+                    extend_task = Task.objects.create(**task_data)
                 job_list.append({"class_name": "CreateTaskJob", "args": {"task": extend_task}})
 
                 task_data = {
@@ -2056,7 +2064,13 @@ class JobScheduler(object):
                     "args": {},
                     "actions": ["mirror.resync"],
                 }
-                resync_task = Task.objects.create(**task_data)
+                try:
+                    resync_task = Task.objects.get(name=task_data["name"])
+                    resync_task.filesystem = filesystem
+                    resync_task.start = task_data["start"]
+                    resync_task.state = task_data["state"]
+                except Task.DoesNotExist:
+                    resync_task = Task.objects.create(**task_data)
                 job_list.append({"class_name": "CreateTaskJob", "args": {"task": resync_task}})
 
                 data = {
@@ -2086,7 +2100,13 @@ class JobScheduler(object):
                     "keep_failed": False,
                     "actions": ["mirror.purge"],
                 }
-                task = Task.objects.create(**task_data)
+                try:
+                    task = Task.objects.get(name=task_data["name"])
+                    task.filesystem = filesystem
+                    task.start = task_data["start"]
+                    task.state = task_data["state"]
+                except Task.DoesNotExist:
+                    task = Task.objects.create(**task_data)
                 job_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
 
                 data = {
@@ -2122,9 +2142,9 @@ class JobScheduler(object):
         with self._lock:
             hpconf = ObjectCache.get_by_id(HotpoolConfiguration, int(hotpool_id))
 
-            jobs = [{"class_name": "RemoveTaskJob", "args": {"task": task}} for task in hpconf.get_tasks()]
+            jobs = [RemoveTaskJob(task=task) for task in hpconf.get_tasks()]
 
-            with transition.atomic():
+            with transaction.atomic():
                 command = self.CommandPlan.command_set_state(
                     [(ContentType.objects.get_for_model(hpconf).natural_key(), hpconf.id, "removed")],
                     "Removing Hotpool on filesystem %s" % hpconf.filesystem.name,
