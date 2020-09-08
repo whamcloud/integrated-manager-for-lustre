@@ -139,6 +139,8 @@ Vagrant.configure('2') do |config|
 
     provision_fence_agents adm
 
+    provision_clush adm
+
     create_iml_diagnostics adm
 
       adm.vm.synced_folder '../',
@@ -279,6 +281,8 @@ Vagrant.configure('2') do |config|
       provision_mpath mds
 
       provision_fence_agents mds
+
+      provision_clush mds
 
       cleanup_storage_server mds
 
@@ -522,6 +526,8 @@ Vagrant.configure('2') do |config|
       provision_mpath oss
 
       provision_fence_agents oss
+
+      provision_clush oss
 
       cleanup_storage_server oss
 
@@ -847,6 +853,8 @@ Vagrant.configure('2') do |config|
 
       configure_ntp_docker c
 
+      provision_clush c
+
       c.vm.provision 'install-iml-local',
             type: 'shell',
             run: 'never',
@@ -956,6 +964,18 @@ def provision_fence_agents(config)
     yum install -y fence-agents-vbox
     yum -y copr disable managerforlustre/manager-for-lustre-devel
   SHELL
+end
+
+def provision_clush(config)
+  config.vm.provision 'clush', type: 'shell', inline: <<-SHELL
+    yum install -y epel-release
+    yum clean all
+    yum install -y clustershell
+  SHELL
+
+  config.vm.provision "file",
+                       source: "./local.cfg",
+                       destination: "/etc/clustershell/groups.d/local.cfg"
 end
 
 def cleanup_storage_server(config)
