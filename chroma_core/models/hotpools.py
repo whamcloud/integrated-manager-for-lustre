@@ -117,7 +117,7 @@ class ConfigureHotpoolJob(StateChangeJob):
                 # c.f. iml-wire-types::client::Mount
                 # Mount.persist equates to automount
                 steps.append(
-                    (MountStep, {"host": host.fqdn, "auto": False, "spec": filesystem.mount_path(), "point": mp})
+                    (MountStep, {"host": host.fqdn, "auto": False, "spec": fs.mount_path(), "point": mp})
                 )
 
             for host in (l[0] for l in fs.get_server_groups()):
@@ -460,6 +460,7 @@ class CreateChangelogUserStep(Step):
 
 class ConfigureLamigoStep(Step):
     idempotent = True
+    database = True
 
     def run(self, kwargs):
         host = kwargs["host"]
@@ -558,7 +559,7 @@ class RemoveLamigoJob(StateChangeJob):
         steps = []
 
         host = self.lamigo.mdt.active_host
-        steps.append((UnconfigureResourceStep, {"host": host.fqdn, "ha_label": self.lamigo.ha_label}))
+        steps.append((RemoveResourceStep, {"host": host.fqdn, "ha_label": self.lamigo.ha_label}))
 
         return steps
 
@@ -810,7 +811,7 @@ class RemoveLpurgeJob(StateChangeJob):
         steps = []
 
         host = self.lpurge.ost.active_host
-        steps.append((UnconfigureResourceStep, {"host": host.fqdn, "ha_label": self.lpurge.ha_label}))
+        steps.append((RemoveResourceStep, {"host": host.fqdn, "ha_label": self.lpurge.ha_label}))
 
         return steps
 
