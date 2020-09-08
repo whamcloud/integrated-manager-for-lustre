@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS snapshot (
   mounted BOOLEAN NULL,
   comment TEXT NULL,
   UNIQUE (filesystem_name, snapshot_name)
-)
+);
 
 CREATE OR REPLACE FUNCTION table_snapshot_update_notify() RETURNS TRIGGER AS $$
 BEGIN
