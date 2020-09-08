@@ -40,7 +40,7 @@ Daemon plugins live in the `iml-agent/src/daemon_plugins` directory.
 
 Unlike action plugins, daemon plugins are stateful. They send an initial data payload to the manager on startup and then optionally send an update payload every 10 seconds. While action plugins are useful for management actions, daemon-plugins are useful for monitoring the distributed system.
 
-If a daemon plugin exceeds it's deadline of 10 seconds, it's task will be cancelled and rescheduled for the next poll.
+If a daemon plugin exceeds it's default deadline of 1 second, it's task will be cancelled and rescheduled for the next poll. This deadline is configurable on a per-plugin basis.
 
 A Daemon plugin _must_ implement the [`DaemonPlugin`](https://github.com/whamcloud/integrated-manager-for-lustre/blob/666bb150ff53ddf4901db96773b921942eee0ee8/iml-agent/src/daemon_plugins/daemon_plugin.rs#L25-L50) trait. In additon, a `DaemonPlugin` must be statically registered to the daemon-plugin registry in [iml-agent/src/daemon_plugins/daemon_plugin.rs](https://github.com/whamcloud/integrated-manager-for-lustre/blob/666bb150ff53ddf4901db96773b921942eee0ee8/iml-agent/src/daemon_plugins/daemon_plugin.rs).
 
