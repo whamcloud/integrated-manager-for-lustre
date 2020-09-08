@@ -975,7 +975,10 @@ def provision_clush(config)
 
   config.vm.provision "file",
                        source: "./local.cfg",
-                       destination: "/etc/clustershell/groups.d/local.cfg"
+                       destination: "/tmp/local.cfg"
+
+  config.vm.provision "shell",
+                      inline: "mv /tmp/local.cfg /etc/clustershell/groups.d/local.cfg"
 end
 
 def cleanup_storage_server(config)
