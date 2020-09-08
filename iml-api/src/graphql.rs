@@ -170,6 +170,7 @@ impl QueryRoot {
 
         Ok(xs)
     }
+
     #[graphql(arguments(
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
@@ -184,20 +185,61 @@ impl QueryRoot {
     ) -> juniper::FieldResult<Vec<Target>> {
         let dir = dir.unwrap_or_default();
 
-        let xs = sqlx::query_as!(
-            Target,
-            r#"
-                SELECT * from target t
-                ORDER BY
-                    CASE WHEN $3 = 'asc' THEN t.name END ASC,
-                    CASE WHEN $3 = 'desc' THEN t.name END DESC
-                OFFSET $1 LIMIT $2"#,
-            offset.unwrap_or(0) as i64,
-            limit.unwrap_or(20) as i64,
-            dir.deref()
-        )
-        .fetch_all(&context.pg_pool)
-        .await?;
+        let banned_resources = get_bans(&context.pg_pool).await?;
+
+        let xs: Vec<Target> = if banned_resources.is_empty() {
+            let xs: Vec<Target> = sqlx::query_as!(
+                Target,
+                r#"
+                    SELECT * from target t
+                    ORDER BY
+                        CASE WHEN $3 = 'asc' THEN t.name END ASC,
+                        CASE WHEN $3 = 'desc' THEN t.name END DESC
+                    OFFSET $1 LIMIT $2"#,
+                offset.unwrap_or(0) as i64,
+                limit.unwrap_or(20) as i64,
+                dir.deref()
+            )
+            .fetch_all(&context.pg_pool)
+            .await?;
+
+            xs
+        } else {
+            sqlx::query!(r#"
+                SELECT rh.cluster_id, r.id, t.name, t.mount_path, t.state, t.active_host_id, t.host_ids, t.filesystems, t.uuid
+                FROM target t
+                INNER JOIN corosync_target_resource r ON r.mount_point = t.mount_path
+                INNER JOIN corosync_target_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)
+                GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.state, t.active_host_id, t.host_ids, t.filesystems, t.uuid
+            "#)
+                .fetch(&context.pg_pool)
+                .map_ok(|mut x| {
+                    let xs:HashSet<_> = banned_resources
+                        .iter()
+                        .filter(|y| {
+                            y.cluster_id == x.cluster_id && y.resource == x.id &&  x.mount_path == y.mount_point
+                        })
+                        .map(|y | y.host_id)
+                        .collect();
+
+                    x.host_ids.retain(|id| !xs.contains(id));
+
+                    x
+                })
+                .map_ok(|x| {
+                    Target {
+                        state: x.state,
+                        name: x.name,
+                        active_host_id: x.active_host_id,
+                        host_ids: x.host_ids,
+                        filesystems: x.filesystems,
+                        uuid: x.uuid,
+                        mount_path: x.mount_path
+                    }
+                })
+                .try_collect()
+                .await?
+        };
 
         Ok(xs)
     }
@@ -529,7 +571,7 @@ async fn get_fs_target_resources(
     pool: &PgPool,
     fs_name: String,
 ) -> Result<Vec<TargetResource>, ImlApiError> {
-    let banned_resources = get_bans(pool).await?;    
+    let banned_resources = get_bans(pool).await?;
 
     let xs = sqlx::query!(r#"
             SELECT rh.cluster_id, r.id, t.name, t.mount_path, array_agg(DISTINCT rh.host_id) AS "cluster_hosts!"
@@ -567,9 +609,7 @@ async fn get_fs_target_resources(
     Ok(xs)
 }
 
-async fn get_bans(
-    pool: &PgPool,
-) -> Result<Vec<BannedResource>, ImlApiError> {
+async fn get_bans(pool: &PgPool) -> Result<Vec<BannedResource>, ImlApiError> {
     let xs = sqlx::query!(r#"
             SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point
             FROM corosync_resource_bans b
