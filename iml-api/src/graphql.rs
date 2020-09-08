@@ -5,7 +5,7 @@
 use crate::error::ImlApiError;
 use futures::TryStreamExt;
 use iml_postgres::{sqlx, PgPool};
-use iml_wire_types::snapshot::{Detail, List, Snapshot, Status};
+use iml_wire_types::snapshot::{List, Snapshot};
 use itertools::Itertools;
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
@@ -232,8 +232,8 @@ impl QueryRoot {
     ) -> juniper::FieldResult<Vec<Snapshot>> {
         let dir = dir.unwrap_or_default();
 
-        if args.detail {
-            let xs = sqlx::query!(
+        let snapshots = sqlx::query_as!(
+            Snapshot,
                 r#"
                     SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s
                     WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)
@@ -250,58 +250,7 @@ impl QueryRoot {
             .fetch_all(&context.client)
             .await?;
 
-            let snapshots: Vec<_> = xs
-                .into_iter()
-                .map(|x| Snapshot {
-                    snapshot_name: x.snapshot_name,
-                    filesystem_name: x.filesystem_name,
-                    details: vec![Detail {
-                        comment: x.comment,
-                        create_time: x.create_time,
-                        modify_time: x.modify_time,
-                        snapshot_fsname: x.snapshot_fsname,
-                        snapshot_role: None,
-                        status: x.mounted.map(|b| {
-                            if b {
-                                Status::Mounted
-                            } else {
-                                Status::NotMounted
-                            }
-                        }),
-                    }],
-                })
-                .collect();
-
-            Ok(snapshots)
-        } else {
-            let xs = sqlx::query!(
-                r#"
-                    SELECT filesystem_name, snapshot_name FROM snapshot s
-                    WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)
-                    ORDER BY
-                        CASE WHEN $3 = 'asc' THEN s.create_time END ASC,
-                        CASE WHEN $3 = 'desc' THEN s.create_time END DESC
-                    OFFSET $1 LIMIT $2"#,
-                offset.unwrap_or(0) as i64,
-                limit.unwrap_or(20) as i64,
-                dir.deref(),
-                args.fsname,
-                args.name,
-            )
-            .fetch_all(&context.client)
-            .await?;
-
-            let snapshots: Vec<_> = xs
-                .into_iter()
-                .map(|x| Snapshot {
-                    snapshot_name: x.snapshot_name,
-                    filesystem_name: x.filesystem_name,
-                    details: vec![],
-                })
-                .collect();
-
-            Ok(snapshots)
-        }
+        Ok(snapshots)
     }
 }
 
