@@ -170,7 +170,7 @@ impl QueryRoot {
         let xs = sqlx::query_as!(
             Target,
             r#"
-                SELECT * FROM targets t
+                SELECT * from target t
                 ORDER BY
                     CASE WHEN $3 = 'asc' THEN t.name END ASC,
                     CASE WHEN $3 = 'desc' THEN t.name END DESC
@@ -522,7 +522,7 @@ async fn get_fs_target_resources(
 
     let xs = sqlx::query!(r#"
             SELECT rh.cluster_id, r.id, t.name, t.mount_path, array_agg(DISTINCT rh.host_id) AS "cluster_hosts!"
-            FROM targets t
+            FROM target t
             INNER JOIN corosync_target_resource r ON r.mount_point = t.mount_path
             INNER JOIN corosync_target_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)
             WHERE $1 = ANY(t.filesystems)

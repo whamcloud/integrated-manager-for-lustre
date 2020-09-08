@@ -1,4 +1,4 @@
-CREATE TABLE targets (
+CREATE TABLE target (
     state          text NOT NULL,
     name           text NOT NULL,
     active_host_id int NULL,
