@@ -858,6 +858,26 @@
       "nullable": []
     }
   },
+  "45af175923382837733407cab5f3fa02f1a14ea460d607407d742dabda0c14ff": {
+    "query": "\n            SELECT active_host_id from target WHERE filesystems @> $1 and name='MGS'\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "TextArray"
+        ]
+      },
+      "nullable": [
+        true
+      ]
+    }
+  },
   "4eb28fbaf2c42bbcc852c074ade355c4f29c318def54af2290a05f37e90a3b23": {
     "query": "\n            INSERT INTO corosync_node (\n                id,\n                cluster_id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            )\n            SELECT\n                id::corosync_node_key,\n                $13,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            FROM UNNEST(\n                $1::text[],\n                $2::bool[],\n                $3::bool[],\n                $4::bool[],\n                $5::bool[],\n                $6::bool[],\n                $7::bool[],\n                $8::bool[],\n                $9::bool[],\n                $10::bool[],\n                $11::int[],\n                $12::text[]\n            )\n            AS t(\n                id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            )\n            ON CONFLICT (id, cluster_id) DO UPDATE\n            SET\n                online = excluded.online,\n                standby = excluded.standby,\n                standby_onfail = excluded.standby_onfail,\n                maintenance = excluded.maintenance,\n                pending = excluded.pending,\n                unclean = excluded.unclean,\n                shutdown = excluded.shutdown,\n                expected_up = excluded.expected_up,\n                is_dc = excluded.is_dc,\n                resources_running = excluded.resources_running,\n                type = excluded.type\n        ",
     "describe": {
@@ -932,26 +952,6 @@
       },
       "nullable": [
         false
-      ]
-    }
-  },
-  "552ba77218026a2b80300ef6e297f69fb8c0bf09d5ba26f8dc430bbb5ae28cd9": {
-    "query": "\n            select active_host_id from targets where filesystems @> $1 and name='MGS'\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "active_host_id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "TextArray"
-        ]
-      },
-      "nullable": [
-        true
       ]
     }
   },
@@ -1361,26 +1361,6 @@
         ]
       },
       "nullable": []
-    }
-  },
-  "641f50e14815d8ac40fe7500617b12d3ecc461bf026355bf373f2dd0eb5d8ef9": {
-    "query": "\n                select fqdn from chroma_core_managedhost where id=$1 and not_deleted = 't'\n                ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "fqdn",
-          "type_info": "Varchar"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": [
-        false
-      ]
     }
   },
   "681d997bb965a228c0aa75d93d09faefe5412daaf3e7bda3630df319fb9edabb": {
@@ -2100,60 +2080,6 @@
         true,
         false,
         true,
-        true
-      ]
-    }
-  },
-  "9c17bcb36d43a3176bf1bc3893fa8729f636139574013f8fe422a51cd0ddcfde": {
-    "query": "select * from targets",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "state",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 1,
-          "name": "name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "active_host_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 3,
-          "name": "host_ids",
-          "type_info": "Int4Array"
-        },
-        {
-          "ordinal": 4,
-          "name": "filesystems",
-          "type_info": "TextArray"
-        },
-        {
-          "ordinal": 5,
-          "name": "uuid",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 6,
-          "name": "mount_path",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false,
-        true,
-        false,
-        false,
-        false,
         true
       ]
     }
@@ -3526,6 +3452,26 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "f7cb59fe7a6bc5dde5fe7f15025161aa8d6e7ba933bb963fcfe8d9afeee26945": {
+    "query": "\n                SELECT fqdn FROM chroma_core_managedhost WHERE id=$1 and not_deleted = 't'\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
+      ]
     }
   },
   "f8cd2baf66e0d74fea5babd851be21a3badca94a53aee6bac038141cece53646": {

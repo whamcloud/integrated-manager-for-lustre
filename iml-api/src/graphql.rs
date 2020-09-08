@@ -445,8 +445,8 @@ async fn active_mgs_host_fqdn(
     let fsnames = &[fsname.into()][..];
     let maybe_active_mgs_host_id = sqlx::query!(
         r#"
-            select active_host_id from targets where filesystems @> $1 and name='MGS'
-            "#,
+            SELECT active_host_id from target WHERE filesystems @> $1 and name='MGS'
+        "#,
         fsnames
     )
     .fetch_optional(pool)
@@ -458,8 +458,8 @@ async fn active_mgs_host_fqdn(
     if let Some(active_mgs_host_id) = maybe_active_mgs_host_id {
         let active_mgs_host_fqdn = sqlx::query!(
             r#"
-                select fqdn from chroma_core_managedhost where id=$1 and not_deleted = 't'
-                "#,
+                SELECT fqdn FROM chroma_core_managedhost WHERE id=$1 and not_deleted = 't'
+            "#,
             active_mgs_host_id
         )
         .fetch_one(pool)
