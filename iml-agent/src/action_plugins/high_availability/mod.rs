@@ -309,6 +309,55 @@ pub async fn create_single_resource(
     create_resource(agent, false, constraints, true).await
 }
 
+pub async fn destroy_cloned_client(
+    (fsname, _mountpoint): (String, String),
+) -> Result<(), ImlAgentError> {
+    let ids = resource_list().await?;
+
+    let id = format!("cl-{}-client", fsname);
+
+    if !ids.contains(&id) {
+        return Ok(());
+    }
+
+    let mut paths = vec![];
+
+    // Remove constraints added in create_clone_client()
+    if let Ok(o) = cibxpath("query", "//template[@type=\"lustre-server\"]", &["-e"]).await {
+        for line in o.lines() {
+            if let Some(id) = line.split('\'').nth(2) {
+                if !id.starts_with(&format!("lustre-{}-", fsname)) {
+                    tracing::debug!("Found resource template from different filesystem: {} ", id);
+                    continue;
+                }
+                if let Some(serv) = id.split('-').last() {
+                    paths.push(format!(
+                        "//constraints/rsc_order[@id=\"{}-client-after-{}\"]",
+                        fsname, serv
+                    ))
+                }
+            }
+        }
+    }
+    if ids.contains(&fsname) {
+        paths.push(format!(
+            "//constraints/rsc_ticket[@id=\"ticket-{}-allocated-client\"]",
+            fsname,
+        ));
+    }
+    if ids.contains(&"mgs".to_string()) {
+        paths.push(format!(
+            "//constraints/rsc_order[@id=\"{}-client-after-mgs\"]",
+            fsname
+        ));
+    }
+    paths.push(format!("//resources/clone[@id=\"{}\"]", id));
+
+    cibxpath("delete", &paths.join("|"), NO_EXTRA).await?;
+
+    Ok(())
+}
+
 pub async fn create_cloned_client(
     (fsname, mountpoint): (String, String),
 ) -> Result<(), ImlAgentError> {
@@ -337,13 +386,15 @@ pub async fn create_cloned_client(
         ops: PacemakerOperations::new("900s".to_string(), "60s".to_string(), None),
     };
 
-    let mut constraints = vec![ResourceConstraint::Ticket {
-        id: format!("ticket-{}-allocated-client", fsname),
-        rsc: agent.id.clone(),
-        ticket: format!("{}-allocated", fsname),
-        loss_policy: Some(LossPolicy::Stop),
-    }];
-
+    let mut constraints = vec![];
+    if ids.contains(&fsname) {
+        constraints.push(ResourceConstraint::Ticket {
+            id: format!("ticket-{}-allocated-client", fsname),
+            rsc: agent.id.clone(),
+            ticket: format!("{}-allocated", fsname),
+            loss_policy: Some(LossPolicy::Stop),
+        });
+    }
     if ids.contains(&"mgs".to_string()) {
         constraints.push(ResourceConstraint::Order {
             id: format!("{}-client-after-mgs", fsname),
