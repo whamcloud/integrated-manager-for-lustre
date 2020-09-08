@@ -116,9 +116,7 @@ class ConfigureHotpoolJob(StateChangeJob):
             for host in fs.get_servers():
                 # c.f. iml-wire-types::client::Mount
                 # Mount.persist equates to automount
-                steps.append(
-                    (MountStep, {"host": host.fqdn, "auto": False, "spec": fs.mount_path(), "point": mp})
-                )
+                steps.append((MountStep, {"host": host.fqdn, "auto": False, "spec": fs.mount_path(), "point": mp}))
 
             for host in (l[0] for l in fs.get_server_groups()):
                 steps.append(
@@ -153,7 +151,7 @@ class CreateClonedClientStep(Step):
         fsname = kwargs["fs_name"]
         mp = kwargs["mountpoint"]
 
-        self.invoke_rust_agent_expect_result(host, "ha_create_cloned_client", [fsname, mp])
+        self.invoke_rust_agent_expect_result(host, "ha_cloned_client_create", [fsname, mp])
 
 
 class StartHotpoolJob(StateChangeJob):
@@ -284,8 +282,7 @@ class RemoveClonedClientStep(Step):
         fsname = kwargs["fs_name"]
         mp = kwargs["mountpoint"]
 
-        self.invoke_rust_agent_expect_result(host, "ha_delete_cloned_client", [fsname, mp])
-
+        self.invoke_rust_agent_expect_result(host, "ha_cloned_client_destroy", [fsname, mp])
 
 
 class RemoveUnconfiguredHotpoolJob(StateChangeJob):
