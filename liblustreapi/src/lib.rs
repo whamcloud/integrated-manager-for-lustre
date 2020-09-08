@@ -267,26 +267,24 @@ impl Llapi {
     }
 
     pub fn path2fid(&self, _mntpt: &str, path: &PathBuf) -> Result<String, LiblustreError> {
-	let pathptr = CString::new(path.to_str().unwrap())?.into_raw();
-	let mut fid = Fid{ seq: 0, oid: 0, ver: 0,};
-	
+        let pathptr = CString::new(path.to_str().unwrap())?.into_raw();
+        let mut fid = Fid {
+            seq: 0,
+            oid: 0,
+            ver: 0,
+        };
+
         let rc = unsafe {
             let rc = match self.lib.get(b"llapi_path2fid\0") {
                 Ok(f) => {
                     let func: lib::Symbol<
-                        extern "C" fn(
-                            *const libc::c_char,
-                            *mut Fid,
-                        ) -> libc::c_int,
+                        extern "C" fn(*const libc::c_char, *mut Fid) -> libc::c_int,
                     > = f;
-                    func(
-                        pathptr,
-			&mut fid as *mut Fid,
-                    )
+                    func(pathptr, &mut fid as *mut Fid)
                 }
                 Err(_) => 1, // @@
             };
-	    
+
             // Ensure CStrings are freed
             let _ = CString::from_raw(pathptr);
             rc
@@ -295,35 +293,35 @@ impl Llapi {
         if rc != 0 {
             return Err(LiblustreError::os_error(rc.abs()));
         }
-	Ok(fid.to_string())
+        Ok(fid.to_string())
     }
 
     pub fn search_fsname(&self, pathname: &str) -> Result<String, LiblustreError> {
-	let fsc = CString::new(pathname.as_bytes())?;
-	let mut page: Vec<u8> = vec![0; std::mem::size_of::<u8>() * 16];
-	let ptr = page.as_mut_ptr() as *mut libc::c_char;
+        let fsc = CString::new(pathname.as_bytes())?;
+        let mut fsname: Vec<u8> = vec![0; std::mem::size_of::<u8>() * MAXFSNAME + 1];
+        let ptr = fsname.as_mut_ptr() as *mut libc::c_char;
 
-	let rc = unsafe {
-	    match self.lib.get(b"llapi_search_fsname\0") {
-		Ok(f) => {
-		    let func: lib::Symbol<
-			extern "C" fn(*const libc::c_char, *mut libc::c_char) -> libc::c_int,
-			> = f;
-		    func(fsc.as_ptr(), ptr)
-		}
-		Err(_) => 1, // @@
-	    }
-	};
+        let rc = unsafe {
+            match self.lib.get(b"llapi_search_fsname\0") {
+                Ok(f) => {
+                    let func: lib::Symbol<
+                        extern "C" fn(*const libc::c_char, *mut libc::c_char) -> libc::c_int,
+                    > = f;
+                    func(fsc.as_ptr(), ptr)
+                }
+                Err(_) => 1, // @@
+            }
+        };
 
-	if rc != 0 {
-	    tracing::error!("Error: llapi_search_fsname({}) => {}", pathname, rc);
-	    return Err(LiblustreError::os_error(rc.abs()));
-	}
-	buf2string(page)
+        if rc != 0 {
+            tracing::error!("Error: llapi_search_fsname({}) => {}", pathname, rc);
+            return Err(LiblustreError::os_error(rc.abs()));
+        }
+        buf2string(fsname)
     }
-    
+
     pub fn search_rootpath(&self, tmp_fsname: &str) -> Result<String, LiblustreError> {
-	let mut fsname = tmp_fsname.to_string();
+        let mut fsname = tmp_fsname.to_string();
         if fsname.starts_with('/') {
             fsname = Llapi::search_fsname(self, &fsname)?;
         }
@@ -431,7 +429,7 @@ impl LlapiFid {
         self.llapi.fid2path(&self.mntpt, fidstr)
     }
     pub fn path2fid(&self, path: &PathBuf) -> Result<String, LiblustreError> {
-	self.llapi.path2fid(&self.mntpt, path)
+        self.llapi.path2fid(&self.mntpt, path)
     }
     pub fn search_rootpath(&mut self, fsname: &str) -> Result<String, LiblustreError> {
         let s = self.llapi.search_rootpath(fsname)?;
@@ -439,7 +437,7 @@ impl LlapiFid {
         Ok(s)
     }
     pub fn search_fsname(&self, pathname: &str) -> Result<String, LiblustreError> {
-	self.llapi.search_fsname(pathname)
+        self.llapi.search_fsname(pathname)
     }
     pub fn rmfids(&self, fidlist: Vec<String>) -> Result<(), LiblustreError> {
         self.llapi.rmfids(&self.mntpt, fidlist)
