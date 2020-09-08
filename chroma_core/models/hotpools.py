@@ -264,6 +264,7 @@ class RemoveHotpoolJob(StateChangeJob):
         return DependAll(deps)
 
     def get_steps(self):
+        steps = []
         if self.hotpool_configuration.is_single_resource():
             fs = self.hotpool_configuration.filesystem
             mp = "/lustre/" + fs.name + "/client"
@@ -275,6 +276,16 @@ class RemoveHotpoolJob(StateChangeJob):
     def on_success(self):
         self.hotpool_configuration.mark_deleted()
         self.hotpool_configuration.save()
+
+
+class RemoveClonedClientStep(Step):
+    def run(self, kwargs):
+        host = kwargs["host"]
+        fsname = kwargs["fs_name"]
+        mp = kwargs["mountpoint"]
+
+        self.invoke_rust_agent_expect_result(host, "ha_delete_cloned_client", [fsname, mp])
+
 
 
 class RemoveUnconfiguredHotpoolJob(StateChangeJob):
