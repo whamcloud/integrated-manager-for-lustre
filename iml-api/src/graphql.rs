@@ -80,6 +80,23 @@ struct TargetResource {
     cluster_hosts: Vec<i32>,
 }
 
+#[derive(juniper::GraphQLObject)]
+/// A banned resource
+struct BannedResource {
+    /// The banned resource id
+    id: String,
+    /// The banned resource
+    resource: String,
+    /// The banned node
+    node: String,
+    /// The cluster id in which the banned resource lives
+    cluster_id: i32,
+    /// The host id for the banned resource
+    host_id: i32,
+    // The banned resource's mount point
+    mount_point: Option<String>,
+}
+
 pub(crate) struct QueryRoot;
 pub(crate) struct MutationRoot;
 
@@ -512,13 +529,7 @@ async fn get_fs_target_resources(
     pool: &PgPool,
     fs_name: String,
 ) -> Result<Vec<TargetResource>, ImlApiError> {
-    let banned_resources = sqlx::query!(r#"
-            SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point
-            FROM corosync_resource_bans b
-            INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node
-            AND nh.cluster_id = b.cluster_id
-            INNER JOIN corosync_target_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
-        "#).fetch_all(pool).await?;
+    let banned_resources = get_bans(pool).await?;    
 
     let xs = sqlx::query!(r#"
             SELECT rh.cluster_id, r.id, t.name, t.mount_path, array_agg(DISTINCT rh.host_id) AS "cluster_hosts!"
@@ -552,6 +563,33 @@ async fn get_fs_target_resources(
                 }
             }).try_collect()
             .await?;
+
+    Ok(xs)
+}
+
+async fn get_bans(
+    pool: &PgPool,
+) -> Result<Vec<BannedResource>, ImlApiError> {
+    let xs = sqlx::query!(r#"
+            SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point
+            FROM corosync_resource_bans b
+            INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node
+            AND nh.cluster_id = b.cluster_id
+            INNER JOIN corosync_target_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
+        "#)
+        .fetch(pool)
+        .map_ok(|x| {
+            BannedResource {
+                id: x.id,
+                resource: x.resource,
+                node: x.node,
+                cluster_id: x.cluster_id,
+                host_id: x.host_id,
+                mount_point: x.mount_point,
+            }
+        })
+        .try_collect()
+        .await?;
 
     Ok(xs)
 }
