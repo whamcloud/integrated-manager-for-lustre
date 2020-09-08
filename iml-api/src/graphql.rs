@@ -6,10 +6,7 @@ use crate::{command::get_command, error::ImlApiError};
 use futures::{TryFutureExt, TryStreamExt};
 use iml_postgres::{sqlx, PgPool};
 use iml_rabbit::Pool;
-use iml_wire_types::{
-    snapshot::{List, Snapshot},
-    Command,
-};
+use iml_wire_types::{snapshot::Snapshot, Command};
 use itertools::Itertools;
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
@@ -453,13 +450,10 @@ async fn active_mgs_host_fqdn(
         fsnames
     )
     .fetch_optional(pool)
-    .await
-    .and_then(|x| x.active_host_id)?;
+    .await?
+    .and_then(|x| x.active_host_id);
 
-    tracing::trace!(
-        "Maybe active MGS host id row: {:?}",
-        maybe_active_mgs_host_id_row
-    );
+    tracing::trace!("Maybe active MGS host id: {:?}", maybe_active_mgs_host_id);
 
     if let Some(active_mgs_host_id) = maybe_active_mgs_host_id {
         let active_mgs_host_fqdn = sqlx::query!(

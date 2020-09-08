@@ -739,6 +739,66 @@
       ]
     }
   },
+  "559f8dbd559ead28670594e12dce12aa256f972ad469a67320aa7970640affa8": {
+    "query": "\n                    SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s\n                    WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN s.create_time END ASC,\n                        CASE WHEN $3 = 'desc' THEN s.create_time END DESC\n                    OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "filesystem_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "snapshot_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "create_time",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 3,
+          "name": "modify_time",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 4,
+          "name": "snapshot_fsname",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 5,
+          "name": "mounted",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 6,
+          "name": "comment",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text",
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
+      ]
+    }
+  },
   "5755ec79ff7be6cdfe0ba5fa9c2cd9c280a99db0c802ce3b795a4f5ebd5a9e35": {
     "query": "\n        DELETE FROM chroma_core_fidtaskqueue \n        WHERE id in ( \n            SELECT id FROM chroma_core_fidtaskqueue WHERE task_id = $1 LIMIT $2 FOR UPDATE SKIP LOCKED \n        ) RETURNING id, fid as \"fid: _\", data, task_id",
     "describe": {
@@ -893,6 +953,26 @@
       "nullable": []
     }
   },
+  "641f50e14815d8ac40fe7500617b12d3ecc461bf026355bf373f2dd0eb5d8ef9": {
+    "query": "\n                select fqdn from chroma_core_managedhost where id=$1 and not_deleted = 't'\n                ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "6981275b14db0bca4de21c63c9e9032f7a2f3271ae7806a972277991241f91da": {
     "query": "\n            DELETE from chroma_core_sfajob\n            WHERE (index, storage_system)\n            IN (\n                SELECT *\n                FROM UNNEST($1::int[], $2::text[])\n            )\n        ",
     "describe": {
@@ -979,26 +1059,6 @@
         false,
         false,
         true
-      ]
-    }
-  },
-  "786b678891c280d2d3adebecc67f6404527c64199ee4de84e16345b8f3b81d68": {
-    "query": "\n                    select fqdn from chroma_core_managedhost where id=$1 and not_deleted = 't'\n                    ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "fqdn",
-          "type_info": "Varchar"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": [
-        false
       ]
     }
   },
@@ -2189,66 +2249,6 @@
         false,
         false,
         false,
-        true
-      ]
-    }
-  },
-  "e48006d62914f58d2d0d457dc805a774f9d5b117dca58dca6bc3dfcc9044eb4a": {
-    "query": "\n                SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s\n                WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)\n                ORDER BY\n                    CASE WHEN $3 = 'asc' THEN s.create_time END ASC,\n                    CASE WHEN $3 = 'desc' THEN s.create_time END DESC\n                OFFSET $1 LIMIT $2",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "filesystem_name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 1,
-          "name": "snapshot_name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "create_time",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 3,
-          "name": "modify_time",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 4,
-          "name": "snapshot_fsname",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 5,
-          "name": "mounted",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 6,
-          "name": "comment",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int8",
-          "Text",
-          "Text",
-          "Text"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
         true
       ]
     }
