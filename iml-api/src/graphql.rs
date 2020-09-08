@@ -2,17 +2,22 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::error::ImlApiError;
-use futures::TryStreamExt;
+use crate::{command::get_command, error::ImlApiError};
+use futures::{TryFutureExt, TryStreamExt};
 use iml_postgres::{sqlx, PgPool};
-use iml_wire_types::snapshot::{List, Snapshot};
+use iml_rabbit::Pool;
+use iml_wire_types::{snapshot::Snapshot, Command};
 use itertools::Itertools;
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
-    EmptyMutation, EmptySubscription, GraphQLEnum, RootNode,
+    EmptySubscription, FieldError, GraphQLEnum, RootNode, Value,
 };
 use std::ops::Deref;
-use std::{collections::HashSet, convert::Infallible, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    convert::Infallible,
+    sync::Arc,
+};
 use warp::Filter;
 
 #[derive(juniper::GraphQLObject)]
@@ -76,6 +81,7 @@ struct TargetResource {
 }
 
 pub(crate) struct QueryRoot;
+pub(crate) struct MutationRoot;
 
 #[derive(GraphQLEnum)]
 enum SortDir {
@@ -142,7 +148,7 @@ impl QueryRoot {
             offset.unwrap_or(0) as i64,
             limit.unwrap_or(20) as i64
         )
-        .fetch_all(&context.client)
+        .fetch_all(&context.pg_pool)
         .await?;
 
         Ok(xs)
@@ -173,7 +179,7 @@ impl QueryRoot {
             limit.unwrap_or(20) as i64,
             dir.deref()
         )
-        .fetch_all(&context.client)
+        .fetch_all(&context.pg_pool)
         .await?;
 
         Ok(xs)
@@ -187,7 +193,7 @@ impl QueryRoot {
         context: &Context,
         fs_name: String,
     ) -> juniper::FieldResult<Vec<TargetResource>> {
-        let xs = get_fs_target_resources(&context.client, fs_name).await?;
+        let xs = get_fs_target_resources(&context.pg_pool, fs_name).await?;
 
         Ok(xs)
     }
@@ -201,7 +207,7 @@ impl QueryRoot {
         context: &Context,
         fs_name: String,
     ) -> juniper::FieldResult<Vec<Vec<i32>>> {
-        let xs = get_fs_target_resources(&context.client, fs_name)
+        let xs = get_fs_target_resources(&context.pg_pool, fs_name)
             .await?
             .into_iter()
             .group_by(|x| x.cluster_id);
@@ -220,7 +226,8 @@ impl QueryRoot {
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to asc"),
-        args(description = "Snapshot listing arguments")
+        fsname(description = "Filesystem the snapshot was taken from"),
+        name(description = "Name of the snapshot"),
     ))]
     /// Fetch the list of snapshots
     async fn snapshots(
@@ -228,7 +235,8 @@ impl QueryRoot {
         limit: Option<i32>,
         offset: Option<i32>,
         dir: Option<SortDir>,
-        args: List,
+        fsname: String,
+        name: Option<String>,
     ) -> juniper::FieldResult<Vec<Snapshot>> {
         let dir = dir.unwrap_or_default();
 
@@ -244,21 +252,231 @@ impl QueryRoot {
                 offset.unwrap_or(0) as i64,
                 limit.unwrap_or(20) as i64,
                 dir.deref(),
-                args.fsname,
-                args.name,
+                fsname,
+                name,
             )
-            .fetch_all(&context.client)
+            .fetch_all(&context.pg_pool)
             .await?;
 
         Ok(snapshots)
     }
 }
 
-pub(crate) type Schema =
-    RootNode<'static, QueryRoot, EmptyMutation<Context>, EmptySubscription<Context>>;
+#[juniper::graphql_object(Context = Context)]
+impl MutationRoot {
+    #[graphql(arguments(
+        fsname(description = "Filesystem to take snapshot from"),
+        name(description = "Name of the snapshot"),
+        comment(description = "Comment for the snapshot"),
+    ))]
+    async fn create_snapshot(
+        context: &Context,
+        fsname: String,
+        name: String,
+        comment: Option<String>,
+    ) -> juniper::FieldResult<Command> {
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
+            .await?
+            .ok_or(FieldError::new(
+                "Filesystem not found or MGS is not mounted",
+                Value::null(),
+            ))?;
+
+        let kwargs: HashMap<String, String> = vec![("message".into(), "Creating snapshot".into())]
+            .into_iter()
+            .collect();
+
+        let jobs = serde_json::json!([{
+            "class_name": "CreateSnapshotJob",
+            "args": {
+                "fsname": fsname,
+                "name": name,
+                "comment": comment,
+                "fqdn": active_mgs_host_fqdn,
+            }
+        }]);
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_pool.get().await?,
+            "run_jobs",
+            vec![jobs],
+            Some(kwargs),
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        let command = get_command(&context.pg_pool, command_id).await?;
+
+        Ok(command)
+    }
+    #[graphql(arguments(
+        fsname(description = "Filesystem snapshot was taken from"),
+        name(description = "Name of the snapshot"),
+        force(description = "Whether to force the removal"),
+    ))]
+    async fn destroy_snapshot(
+        context: &Context,
+        fsname: String,
+        name: String,
+        force: bool,
+    ) -> juniper::FieldResult<Command> {
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
+            .await?
+            .ok_or(FieldError::new(
+                "Filesystem not found or MGS is not mounted",
+                Value::null(),
+            ))?;
+
+        let kwargs: HashMap<String, String> =
+            vec![("message".into(), "Destroying snapshot".into())]
+                .into_iter()
+                .collect();
+
+        let jobs = serde_json::json!([{
+            "class_name": "DestroySnapshotJob",
+            "args": {
+                "fsname": fsname,
+                "name": name,
+                "force": force,
+                "fqdn": active_mgs_host_fqdn,
+            }
+        }]);
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_pool.get().await?,
+            "run_jobs",
+            vec![jobs],
+            Some(kwargs),
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        let command = get_command(&context.pg_pool, command_id).await?;
+
+        Ok(command)
+    }
+    #[graphql(arguments(
+        fsname(description = "Filesystem snapshot was taken from"),
+        name(description = "Name of the snapshot"),
+    ))]
+    async fn mount_snapshot(
+        context: &Context,
+        fsname: String,
+        name: String,
+    ) -> juniper::FieldResult<Command> {
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
+            .await?
+            .ok_or(FieldError::new(
+                "Filesystem not found or MGS is not mounted",
+                Value::null(),
+            ))?;
+
+        let kwargs: HashMap<String, String> = vec![("message".into(), "Mounting snapshot".into())]
+            .into_iter()
+            .collect();
+
+        let jobs = serde_json::json!([{
+            "class_name": "MountSnapshotJob",
+            "args": {
+                "fsname": fsname,
+                "name": name,
+                "fqdn": active_mgs_host_fqdn,
+            }
+        }]);
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_pool.get().await?,
+            "run_jobs",
+            vec![jobs],
+            Some(kwargs),
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        get_command(&context.pg_pool, command_id)
+            .await
+            .map_err(|e| e.into())
+    }
+    #[graphql(arguments(
+        fsname(description = "Filesystem snapshot was taken from"),
+        name(description = "Name of the snapshot"),
+    ))]
+    async fn unmount_snapshot(
+        context: &Context,
+        fsname: String,
+        name: String,
+    ) -> juniper::FieldResult<Command> {
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
+            .await?
+            .ok_or(FieldError::new(
+                "Filesystem not found or MGS is not mounted",
+                Value::null(),
+            ))?;
+
+        let kwargs: HashMap<String, String> =
+            vec![("message".into(), "Unmounting snapshot".into())]
+                .into_iter()
+                .collect();
+
+        let jobs = serde_json::json!([{
+            "class_name": "UnmountSnapshotJob",
+            "args": {
+                "fsname": fsname,
+                "name": name,
+                "fqdn": active_mgs_host_fqdn,
+            }
+        }]);
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_pool.get().await?,
+            "run_jobs",
+            vec![jobs],
+            Some(kwargs),
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        get_command(&context.pg_pool, command_id)
+            .await
+            .map_err(|e| e.into())
+    }
+}
+
+async fn active_mgs_host_fqdn(
+    fsname: &str,
+    pool: &PgPool,
+) -> Result<Option<String>, iml_postgres::sqlx::Error> {
+    let fsnames = &[fsname.into()][..];
+    let maybe_active_mgs_host_id = sqlx::query!(
+        r#"
+            select active_host_id from targets where filesystems @> $1 and name='MGS'
+            "#,
+        fsnames
+    )
+    .fetch_optional(pool)
+    .await?
+    .and_then(|x| x.active_host_id);
+
+    tracing::trace!("Maybe active MGS host id: {:?}", maybe_active_mgs_host_id);
+
+    if let Some(active_mgs_host_id) = maybe_active_mgs_host_id {
+        let active_mgs_host_fqdn = sqlx::query!(
+            r#"
+                select fqdn from chroma_core_managedhost where id=$1 and not_deleted = 't'
+                "#,
+            active_mgs_host_id
+        )
+        .fetch_one(pool)
+        .await?
+        .fqdn;
+
+        Ok(Some(active_mgs_host_fqdn))
+    } else {
+        Ok(None)
+    }
+}
+
+pub(crate) type Schema = RootNode<'static, QueryRoot, MutationRoot, EmptySubscription<Context>>;
 
 pub(crate) struct Context {
-    pub(crate) client: PgPool,
+    pub(crate) pg_pool: PgPool,
+    pub(crate) rabbit_pool: Pool,
 }
 
 pub(crate) async fn graphql(

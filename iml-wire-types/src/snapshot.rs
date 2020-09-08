@@ -10,7 +10,6 @@ use chrono::DateTime;
 use structopt::StructOpt;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
-#[cfg_attr(feature = "graphql", derive(juniper::GraphQLInputObject))]
 #[cfg_attr(feature = "cli", derive(StructOpt))]
 /// Ask agent to list snapshots
 pub struct List {

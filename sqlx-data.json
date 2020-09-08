@@ -719,6 +719,26 @@
       ]
     }
   },
+  "552ba77218026a2b80300ef6e297f69fb8c0bf09d5ba26f8dc430bbb5ae28cd9": {
+    "query": "\n            select active_host_id from targets where filesystems @> $1 and name='MGS'\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "TextArray"
+        ]
+      },
+      "nullable": [
+        true
+      ]
+    }
+  },
   "559f8dbd559ead28670594e12dce12aa256f972ad469a67320aa7970640affa8": {
     "query": "\n                    SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s\n                    WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN s.create_time END ASC,\n                        CASE WHEN $3 = 'desc' THEN s.create_time END DESC\n                    OFFSET $1 LIMIT $2",
     "describe": {
@@ -931,6 +951,26 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "641f50e14815d8ac40fe7500617b12d3ecc461bf026355bf373f2dd0eb5d8ef9": {
+    "query": "\n                select fqdn from chroma_core_managedhost where id=$1 and not_deleted = 't'\n                ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
+      ]
     }
   },
   "6981275b14db0bca4de21c63c9e9032f7a2f3271ae7806a972277991241f91da": {
