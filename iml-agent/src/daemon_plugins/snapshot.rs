@@ -50,7 +50,8 @@ async fn list() -> Result<Vec<Snapshot>, ()> {
     let fss: Vec<String> = lctl(vec!["get_param", "-N", "mgs.MGS.live.*"])
         .await
         .map_err(|e| {
-            tracing::warn!("listing filesystems failed: {}", e);
+            // XXX debug because of false positives
+            tracing::debug!("listing filesystems failed: {}", e);
         })
         .map(|o| {
             o.lines()
@@ -91,11 +92,10 @@ async fn list() -> Result<Vec<Snapshot>, ()> {
         .collect::<Vec<_>>();
 
     if !really_failed_fss.is_empty() {
-        tracing::warn!("listing failed: {:?}", really_failed_fss);
-        Err(())
-    } else {
-        Ok(snaps)
+        // XXX debug because of false positives
+        tracing::debug!("listing failed: {:?}", really_failed_fss);
     }
+    Ok(snaps)
 }
 
 #[async_trait]
