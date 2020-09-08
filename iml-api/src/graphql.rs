@@ -6,7 +6,10 @@ use crate::{command::get_command, error::ImlApiError};
 use futures::{TryFutureExt, TryStreamExt};
 use iml_postgres::{sqlx, PgPool};
 use iml_rabbit::Pool;
-use iml_wire_types::{snapshot::{List, Snapshot}, Command};
+use iml_wire_types::{
+    snapshot::{List, Snapshot},
+    Command,
+};
 use itertools::Itertools;
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
@@ -443,37 +446,33 @@ async fn active_mgs_host_fqdn(
     pool: &PgPool,
 ) -> Result<Option<String>, iml_postgres::sqlx::Error> {
     let fsnames = &[fsname.into()][..];
-    let maybe_active_mgs_host_id_row = sqlx::query!(
+    let maybe_active_mgs_host_id = sqlx::query!(
         r#"
             select active_host_id from targets where filesystems @> $1 and name='MGS'
             "#,
         fsnames
     )
     .fetch_optional(pool)
-    .await?;
+    .await
+    .and_then(|x| x.active_host_id)?;
 
     tracing::trace!(
         "Maybe active MGS host id row: {:?}",
         maybe_active_mgs_host_id_row
     );
 
-    if let Some(active_mgs_host_id_row) = maybe_active_mgs_host_id_row {
-        let maybe_active_mgs_host_id = active_mgs_host_id_row.active_host_id;
-        if let Some(active_mgs_host_id) = maybe_active_mgs_host_id {
-            let active_mgs_host_fqdn = sqlx::query!(
-                r#"
-                    select fqdn from chroma_core_managedhost where id=$1 and not_deleted = 't'
-                    "#,
-                active_mgs_host_id
-            )
-            .fetch_one(pool)
-            .await?
-            .fqdn;
+    if let Some(active_mgs_host_id) = maybe_active_mgs_host_id {
+        let active_mgs_host_fqdn = sqlx::query!(
+            r#"
+                select fqdn from chroma_core_managedhost where id=$1 and not_deleted = 't'
+                "#,
+            active_mgs_host_id
+        )
+        .fetch_one(pool)
+        .await?
+        .fqdn;
 
-            Ok(Some(active_mgs_host_fqdn))
-        } else {
-            Ok(None)
-        }
+        Ok(Some(active_mgs_host_fqdn))
     } else {
         Ok(None)
     }
