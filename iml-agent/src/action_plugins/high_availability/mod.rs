@@ -354,26 +354,29 @@ pub async fn create_cloned_client(
             kind: Some(PacemakerKindOrScore::Score(PacemakerScore::Value(0))),
         });
     }
-    let o = cibxpath("query", "//template[@type=\"lustre-server\"]", &["-e"]).await?;
-    for line in o.lines() {
-        if let Some(id) = line.split('\'').nth(2) {
-            if !id.starts_with(&format!("lustre-{}-", fsname)) {
-                tracing::debug!("Found resource template from different filesystem: {} ", id);
-                continue;
+    if let Ok(o) = cibxpath("query", "//template[@type=\"lustre-server\"]", &["-e"]).await {
+        for line in o.lines() {
+            if let Some(id) = line.split('\'').nth(2) {
+                if !id.starts_with(&format!("lustre-{}-", fsname)) {
+                    tracing::debug!("Found resource template from different filesystem: {} ", id);
+                    continue;
+                }
+                if let Some(serv) = id.split('-').last() {
+                    constraints.push(ResourceConstraint::Order {
+                        id: format!("{}-client-after-{}", fsname, serv),
+                        first: id.to_string(),
+                        first_action: Some(PacemakerActions::Start),
+                        then: agent.id.clone(),
+                        then_action: Some(PacemakerActions::Start),
+                        kind: Some(PacemakerKindOrScore::Score(PacemakerScore::Value(0))),
+                    });
+                    continue;
+                }
             }
-            if let Some(serv) = id.split('-').last() {
-                constraints.push(ResourceConstraint::Order {
-                    id: format!("{}-client-after-{}", fsname, serv),
-                    first: id.to_string(),
-                    first_action: Some(PacemakerActions::Start),
-                    then: agent.id.clone(),
-                    then_action: Some(PacemakerActions::Start),
-                    kind: Some(PacemakerKindOrScore::Score(PacemakerScore::Value(0))),
-                });
-                continue;
-            }
+            tracing::error!("Could not parse cibxpath query output: {}", line);
         }
-        tracing::error!("Could not parse cibxpath query output: {}", line);
+    } else {
+        tracing::debug!("No lustre-server templates");
     }
 
     create_resource(agent, true, constraints, false).await
