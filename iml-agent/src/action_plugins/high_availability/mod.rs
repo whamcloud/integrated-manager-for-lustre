@@ -306,7 +306,7 @@ pub async fn create_single_resource(
         return Ok(());
     }
 
-    create_resource(agent, false, constraints).await
+    create_resource(agent, false, constraints, true).await
 }
 
 pub async fn create_cloned_client(
@@ -376,7 +376,7 @@ pub async fn create_cloned_client(
         tracing::error!("Could not parse cibxpath query output: {}", line);
     }
 
-    create_resource(agent, true, constraints).await
+    create_resource(agent, true, constraints, false).await
 }
 
 pub async fn create_cloned_resource(
@@ -388,7 +388,7 @@ pub async fn create_cloned_resource(
         return Ok(());
     }
 
-    create_resource(agent, true, constraints).await
+    create_resource(agent, true, constraints, true).await
 }
 
 fn check_id(cloned: bool, id: &str, res: String) -> String {
@@ -447,6 +447,7 @@ async fn create_resource(
     agent: ResourceAgentInfo,
     cloned: bool,
     constraints: Vec<ResourceConstraint>,
+    started: bool,
 ) -> Result<(), ImlAgentError> {
     let xml = resource_xml_string(&agent, cloned)?;
     cibcreate("resources", &xml).await?;
@@ -529,6 +530,22 @@ async fn create_resource(
             con.to_string()?
         };
         cibcreate("constraints", &xml).await?;
+    }
+
+    // The reason the resource is ALWAYS created in the stopped state,
+    // is that we need to add constraints prior to starting so it will
+    // start on the correct node, or wait for other resources to
+    // start.
+    if started {
+        cibxpath(
+            "delete",
+            &format!(
+                "//resources/primitive[@id=\"{}\"]/meta_attributes",
+                &agent.id
+            ),
+            NO_EXTRA,
+        )
+        .await?;
     }
 
     Ok(())
