@@ -47,6 +47,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //     .map(drop),
     // );
 
+    // let fut_fs = get_one::<Filesystem>(vec![("name", &fsname)]);
+    // let query = iml_influx::filesystem::query(&fsname);
+    // let fut_st =
+    //     get_influx::<iml_influx::filesystem::InfluxResponse>("iml_stats", query.as_str());
+
+    // let (fs, influx_resp) =
+    //     wrap_fut("Fetching filesystem...", try_join(fut_fs, fut_st)).await?;
+    // let st = iml_influx::filesystem::Response::from(influx_resp);
+
+    // tracing::debug!("FS: {:?}", fs);
+    // tracing::debug!("ST: {:?}", st);
+
+    // format!("{}", st.clients.unwrap_or(0)),
+
     while let Some((fqdn, snapshots)) = s.try_next().await? {
         tracing::debug!("snapshots from {}: {:?}", fqdn, snapshots);
 
