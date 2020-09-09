@@ -272,7 +272,7 @@ impl QueryRoot {
             .group_by(|x| x.cluster_id);
 
         let xs = xs.into_iter().fold(vec![], |mut acc, (_, xs)| {
-            let xs: HashSet<i32> = xs.into_iter().map(|x| x.cluster_hosts).flatten().collect();
+            let xs: HashSet<i32> = xs.map(|x| x.cluster_hosts).flatten().collect();
 
             acc.push(xs.into_iter().collect());
 
@@ -336,10 +336,9 @@ impl MutationRoot {
     ) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
-            .ok_or(FieldError::new(
-                "Filesystem not found or MGS is not mounted",
-                Value::null(),
-            ))?;
+            .ok_or_else(|| {
+                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+            })?;
 
         let kwargs: HashMap<String, String> = vec![("message".into(), "Creating snapshot".into())]
             .into_iter()
@@ -380,10 +379,9 @@ impl MutationRoot {
     ) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
-            .ok_or(FieldError::new(
-                "Filesystem not found or MGS is not mounted",
-                Value::null(),
-            ))?;
+            .ok_or_else(|| {
+                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+            })?;
 
         let kwargs: HashMap<String, String> =
             vec![("message".into(), "Destroying snapshot".into())]
@@ -423,10 +421,9 @@ impl MutationRoot {
     ) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
-            .ok_or(FieldError::new(
-                "Filesystem not found or MGS is not mounted",
-                Value::null(),
-            ))?;
+            .ok_or_else(|| {
+                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+            })?;
 
         let kwargs: HashMap<String, String> = vec![("message".into(), "Mounting snapshot".into())]
             .into_iter()
@@ -464,10 +461,9 @@ impl MutationRoot {
     ) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
-            .ok_or(FieldError::new(
-                "Filesystem not found or MGS is not mounted",
-                Value::null(),
-            ))?;
+            .ok_or_else(|| {
+                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+            })?;
 
         let kwargs: HashMap<String, String> =
             vec![("message".into(), "Unmounting snapshot".into())]
