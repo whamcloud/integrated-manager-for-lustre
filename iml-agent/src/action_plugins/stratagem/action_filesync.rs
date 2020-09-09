@@ -48,7 +48,7 @@ async fn archive_fids(
         }
         let output = output.await?;
 
-	/*tracing::error!(
+        /*tracing::error!(
             "exited with {} {} {}",
             output.status,
             std::str::from_utf8(&output.stdout)?,
