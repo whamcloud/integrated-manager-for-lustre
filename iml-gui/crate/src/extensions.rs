@@ -52,6 +52,7 @@ pub(crate) trait RequestExt: Sized {
     fn api_call(path: impl ToString) -> Self;
     fn api_query(path: impl ToString, args: impl serde::Serialize) -> Result<Self, serde_urlencoded::ser::Error>;
     fn api_item(path: impl ToString, item: impl ToString) -> Self;
+    fn graphql_query<T: serde::Serialize>(x: &T) -> Self;
     fn with_auth(self: Self) -> Self;
 }
 
@@ -66,6 +67,12 @@ impl RequestExt for fetch::Request {
     }
     fn api_item(path: impl ToString, item: impl ToString) -> Self {
         Self::api_call(format!("{}/{}", path.to_string(), item.to_string()))
+    }
+    fn graphql_query<T: serde::Serialize>(x: &T) -> Self {
+        Self::new("/graphql")
+            .with_auth()
+            .method(fetch::Method::Post)
+            .send_json(x)
     }
     fn with_auth(self) -> Self {
         match csrf_token() {
@@ -102,11 +109,17 @@ impl<T> MergeAttrs for Node<T> {
 
 pub(crate) trait NodeExt<T> {
     fn with_listener(self, event_handler: EventHandler<T>) -> Self;
+    fn with_style(self, key: impl Into<St>, val: impl Into<CSSValue>) -> Self;
 }
 
 impl<T> NodeExt<T> for Node<T> {
     fn with_listener(mut self, event_handler: EventHandler<T>) -> Self {
         self.add_listener(event_handler);
+
+        self
+    }
+    fn with_style(mut self, key: impl Into<St>, val: impl Into<CSSValue>) -> Self {
+        self.add_style(key, val);
 
         self
     }

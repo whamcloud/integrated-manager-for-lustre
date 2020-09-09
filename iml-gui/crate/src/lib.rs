@@ -1028,6 +1028,13 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
                 .map_msg(page::Msg::SfaEnclosure),
         )
         .els(),
+        Page::Snapshots(x) => main_panels(
+            model,
+            page::snapshots::view(x, &model.records)
+                .els()
+                .map_msg(page::Msg::Snapshots),
+        )
+        .els(),
     };
 
     // command modal is the global singleton, therefore is being showed here
