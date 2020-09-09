@@ -4,6 +4,7 @@
 
 //! Data structures for communicating with the agent regarding lustre snapshots.
 
+use crate::db::{Id, TableName};
 use chrono::offset::Utc;
 use chrono::DateTime;
 #[cfg(feature = "cli")]
@@ -33,6 +34,26 @@ pub struct Snapshot {
     /// Optional comment for the snapshot
     pub comment: Option<String>,
 }
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
+pub struct SnapshotRecord {
+    pub id: i32,
+    pub filesystem_name: String,
+    pub snapshot_name: String,
+    pub modify_time: DateTime<Utc>,
+    pub create_time: DateTime<Utc>,
+    pub snapshot_fsname: String,
+    pub mounted: Option<bool>,
+    pub comment: Option<String>,
+}
+
+impl Id for SnapshotRecord {
+    fn id(&self) -> i32 {
+        self.id
+    }
+}
+
+pub const SNAPSHOT_TABLE_NAME: TableName = TableName("snapshot");
 
 #[derive(serde::Deserialize, Debug)]
 #[cfg_attr(feature = "cli", derive(StructOpt))]
