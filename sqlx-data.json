@@ -831,26 +831,6 @@
       "nullable": []
     }
   },
-  "39e5357798c449822b1cb95e20b060e5c95f17fba981aedf4c7fba68e3083580": {
-    "query": "\n            select active_host_id from target where filesystems @> $1 and name='MGS'\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "active_host_id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "TextArray"
-        ]
-      },
-      "nullable": [
-        true
-      ]
-    }
-  },
   "39fc1211724cef9afd733459348bcd3eb6f3af9a89dc1ca470593ea8beb3678c": {
     "query": "\n        SELECT * FROM chroma_core_job\n        WHERE id IN (SELECT job_id from chroma_core_command_jobs\n            WHERE command_id = $1)\n    ",
     "describe": {
@@ -2701,6 +2681,54 @@
         false,
         true,
         true,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "b1e963ddcdd8d96cdf8cf3e948ff691ba13172fbac848d016cecf292358d0dfa": {
+    "query": "\n            SELECT id, cluster_id, resource, node, weight, master_only\n            FROM corosync_resource_bans\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "cluster_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 2,
+          "name": "resource",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "node",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 4,
+          "name": "weight",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 5,
+          "name": "master_only",
+          "type_info": "Bool"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
         false,
         false,
         false

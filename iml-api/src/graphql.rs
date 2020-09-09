@@ -80,21 +80,28 @@ struct TargetResource {
     cluster_hosts: Vec<i32>,
 }
 
-#[derive(juniper::GraphQLObject)]
-/// A banned resource
-struct BannedResource {
-    /// The banned resource id
-    id: String,
-    /// The banned resource
+struct BannedTargetResource {
     resource: String,
-    /// The banned node
-    node: String,
-    /// The cluster id in which the banned resource lives
     cluster_id: i32,
-    /// The host id for the banned resource
     host_id: i32,
-    // The banned resource's mount point
     mount_point: Option<String>,
+}
+
+#[derive(juniper::GraphQLObject)]
+/// A Corosync banned resource
+struct BannedResource {
+    // The resource id
+    id: String,
+    // The id of the cluster in which the resource lives
+    cluster_id: i32,
+    // The resource name
+    resource: String,
+    // The node in which the resource lives
+    node: String,
+    // The assigned weight of the resource
+    weight: i32,
+    // Is master only
+    master_only: bool,
 }
 
 pub(crate) struct QueryRoot;
@@ -185,7 +192,7 @@ impl QueryRoot {
     ) -> juniper::FieldResult<Vec<Target>> {
         let dir = dir.unwrap_or_default();
 
-        let banned_resources = get_bans(&context.pg_pool).await?;
+        let banned_resources = get_banned_targets(&context.pg_pool).await?;
 
         let xs: Vec<Target> = if banned_resources.is_empty() {
             let xs: Vec<Target> = sqlx::query_as!(
@@ -253,6 +260,13 @@ impl QueryRoot {
         fs_name: String,
     ) -> juniper::FieldResult<Vec<TargetResource>> {
         let xs = get_fs_target_resources(&context.pg_pool, fs_name).await?;
+
+        Ok(xs)
+    }
+
+    #[graphql()]
+    async fn get_banned_resources(context: &Context) -> juniper::FieldResult<Vec<BannedResource>> {
+        let xs = get_banned_resources(&context.pg_pool).await?;
 
         Ok(xs)
     }
@@ -567,7 +581,7 @@ async fn get_fs_target_resources(
     pool: &PgPool,
     fs_name: String,
 ) -> Result<Vec<TargetResource>, ImlApiError> {
-    let banned_resources = get_bans(pool).await?;
+    let banned_resources = get_banned_targets(pool).await?;
 
     let xs = sqlx::query!(r#"
             SELECT rh.cluster_id, r.id, t.name, t.mount_path, array_agg(DISTINCT rh.host_id) AS "cluster_hosts!"
@@ -605,7 +619,7 @@ async fn get_fs_target_resources(
     Ok(xs)
 }
 
-async fn get_bans(pool: &PgPool) -> Result<Vec<BannedResource>, ImlApiError> {
+async fn get_banned_targets(pool: &PgPool) -> Result<Vec<BannedTargetResource>, ImlApiError> {
     let xs = sqlx::query!(r#"
             SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point
             FROM corosync_resource_bans b
@@ -615,10 +629,8 @@ async fn get_bans(pool: &PgPool) -> Result<Vec<BannedResource>, ImlApiError> {
         "#)
         .fetch(pool)
         .map_ok(|x| {
-            BannedResource {
-                id: x.id,
+            BannedTargetResource {
                 resource: x.resource,
-                node: x.node,
                 cluster_id: x.cluster_id,
                 host_id: x.host_id,
                 mount_point: x.mount_point,
@@ -626,6 +638,28 @@ async fn get_bans(pool: &PgPool) -> Result<Vec<BannedResource>, ImlApiError> {
         })
         .try_collect()
         .await?;
+
+    Ok(xs)
+}
+
+async fn get_banned_resources(pool: &PgPool) -> Result<Vec<BannedResource>, ImlApiError> {
+    let xs = sqlx::query!(
+        r#"
+            SELECT id, cluster_id, resource, node, weight, master_only
+            FROM corosync_resource_bans
+        "#
+    )
+    .fetch(pool)
+    .map_ok(|x| BannedResource {
+        id: x.id,
+        cluster_id: x.cluster_id,
+        resource: x.resource,
+        node: x.node,
+        weight: x.weight,
+        master_only: x.master_only,
+    })
+    .try_collect()
+    .await?;
 
     Ok(xs)
 }
