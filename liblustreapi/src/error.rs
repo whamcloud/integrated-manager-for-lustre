@@ -3,7 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::LIBLUSTRE;
-use std::{error, ffi::IntoStringError, io, io::Error};
+use std::{error, ffi::IntoStringError, io};
+use thiserror::Error;
 
 /// Error if liblustreapi.so calls fail to load
 #[derive(Debug, Clone)]
@@ -40,12 +41,16 @@ impl LoadError {
 }
 
 /// Encapsulates any errors that may happen while working with `liblustreapi`
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum LiblustreError {
-    Io(std::io::Error),
-    IntoString(IntoStringError),
-    NulError(std::ffi::NulError),
-    Load(LoadError),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error(transparent)]
+    IntoString(#[from] IntoStringError),
+    #[error(transparent)]
+    NulError(#[from] std::ffi::NulError),
+    #[error(transparent)]
+    LibLoadingError(#[from] libloading::Error),
 }
 
 impl LiblustreError {
@@ -64,56 +69,7 @@ impl LiblustreError {
     pub fn os_error(e: i32) -> Self {
         io::Error::from_raw_os_error(e).into()
     }
-    pub fn not_loaded(e: io::Error) -> Self {
-        LoadError::new(format!("{}", e)).into()
-    }
     pub fn no_mntpt() -> Self {
         io::Error::from_raw_os_error(libc::ENXIO).into()
-    }
-}
-
-impl std::fmt::Display for LiblustreError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match *self {
-            LiblustreError::Io(ref err) => write!(f, "{}", err),
-            LiblustreError::IntoString(ref err) => write!(f, "{}", err),
-            LiblustreError::NulError(ref err) => write!(f, "{}", err),
-            LiblustreError::Load(ref err) => write!(f, "{}", err),
-        }
-    }
-}
-
-impl std::error::Error for LiblustreError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match *self {
-            LiblustreError::Io(ref err) => Some(err),
-            LiblustreError::IntoString(ref err) => Some(err),
-            LiblustreError::NulError(ref err) => Some(err),
-            LiblustreError::Load(ref err) => Some(err),
-        }
-    }
-}
-
-impl From<Error> for LiblustreError {
-    fn from(err: Error) -> Self {
-        LiblustreError::Io(err)
-    }
-}
-
-impl From<IntoStringError> for LiblustreError {
-    fn from(err: IntoStringError) -> Self {
-        LiblustreError::IntoString(err)
-    }
-}
-
-impl From<std::ffi::NulError> for LiblustreError {
-    fn from(err: std::ffi::NulError) -> Self {
-        LiblustreError::NulError(err)
-    }
-}
-
-impl From<LoadError> for LiblustreError {
-    fn from(err: LoadError) -> Self {
-        LiblustreError::Load(err)
     }
 }
