@@ -247,7 +247,7 @@ pub enum StratagemClientCommand {
         target_fs: String,
 
         #[structopt(parse(from_os_str))]
-	files: Vec<PathBuf>,
+        files: Vec<PathBuf>,
     },
 
     #[structopt(name = "cloudsync")]
@@ -261,8 +261,8 @@ pub enum StratagemClientCommand {
         /// destination s3 bucket
         target: String,
 
-        #[structopt(flatten)]
-        fidopts: FidInput,
+        #[structopt(parse(from_os_str))]
+        files: Vec<PathBuf>,
     },
 }
 
@@ -545,63 +545,63 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 target_fs,
                 files,
             } => {
-		let llapi = search_rootpath(files[0].clone().into_os_string().into_string().unwrap()).await?;
+                let llapi =
+                    search_rootpath(files[0].clone().into_os_string().into_string().unwrap())
+                        .await?;
                 let mut task_args = std::collections::HashMap::new();
 
-/*                let fidlist: Vec<FidItem> = files
+                let (fids, errors): (Vec<_>, Vec<_>) = files
                     .into_iter()
-                    .map(|file| FidItem {
-			fid: llapi.path2fid(&file).ok_or_else(|e| exit(exitcode::IOERR)),
-			data: ().into()
-		    })
-                .collect();*/
-		let (fids, errors): (Vec<_>, Vec<_>) = files
-		    .into_iter()
-		    .map(|file| llapi.path2fid(&file))
-		    .partition(Result::is_ok);
-		let fids: Vec<_> = fids
-		    .into_iter()
-		    .map(Result::unwrap)
-		    .collect();
-		let errors: Vec<_> = errors
-		    .into_iter()
-		    .map(Result::unwrap_err)
-		    .collect();
-		if errors.len() > 0 {
-		    tracing::error!("files not found, ignoring: {:?}", errors);
-		}
-		let fidlist: Vec<FidItem> = fids
-		    .into_iter()
-		    .map(|fid| FidItem {
-			fid: fid.clone(),
-			data: fid.into(),
-		    })
-		    .collect();
+                    .map(|file| llapi.path2fid(&file))
+                    .partition(Result::is_ok);
+                let fids: Vec<_> = fids.into_iter().map(Result::unwrap).collect();
+                let errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
+                if errors.len() > 0 {
+                    tracing::error!("files not found, ignoring: {:?}", errors);
+                }
+                let fidlist: Vec<FidItem> = fids
+                    .into_iter()
+                    .map(|fid| FidItem {
+                        fid: fid.clone(),
+                        data: fid.into(),
+                    })
+                    .collect();
 
                 task_args.insert("remote".to_string(), target_fs);
                 task_args.insert("action".to_string(), action);
-		let result = action_filesync::process_fids((llapi.mntpt(), task_args, fidlist)).await;
+                let result =
+                    action_filesync::process_fids((llapi.mntpt(), task_args, fidlist)).await;
             }
             StratagemClientCommand::CloudSync {
                 action,
                 target,
-                fidopts,
+                files,
             } => {
-                let device = fidopts.fsname;
                 let mut task_args = std::collections::HashMap::new();
+                let llapi =
+                    search_rootpath(files[0].clone().into_os_string().into_string().unwrap())
+                        .await?;
 
-                let fidlist: Vec<FidItem> = fidopts
-                    .fidlist
+                let (fids, errors): (Vec<_>, Vec<_>) = files
                     .into_iter()
-                    .map(|ft| FidItem {
-                        fid: ft.clone(),
-                        data: ft.into(),
+                    .map(|file| llapi.path2fid(&file))
+                    .partition(Result::is_ok);
+                let fids: Vec<_> = fids.into_iter().map(Result::unwrap).collect();
+                let errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
+                if errors.len() > 0 {
+                    tracing::error!("files not found, ignoring: {:?}", errors);
+                }
+                let fidlist: Vec<FidItem> = fids
+                    .into_iter()
+                    .map(|fid| FidItem {
+                        fid: fid.clone(),
+                        data: fid.into(),
                     })
                     .collect();
 
                 task_args.insert("remote".to_string(), target);
                 task_args.insert("action".to_string(), action);
-                if action_cloudsync::process_fids((device, task_args, fidlist))
+                if action_cloudsync::process_fids((llapi.mntpt(), task_args, fidlist))
                     .await
                     .is_err()
                 {
