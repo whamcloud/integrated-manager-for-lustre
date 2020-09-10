@@ -1888,13 +1888,19 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "futures-util",
+ "iml-influx",
+ "iml-manager-client",
  "iml-manager-env",
  "iml-postgres",
  "iml-rabbit",
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
+ "reqwest",
+ "serde",
+ "thiserror",
  "tokio",
+ "url",
 ]
 
 [[package]]
