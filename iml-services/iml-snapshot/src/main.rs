@@ -85,26 +85,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    // tokio::spawn(
-    //     async move {
-    //         while let Some(m) = s.try_next().await? {
-    //             tracing::debug!("Incoming message from agent: {:?}", m);
-
-    //             let conn = iml_rabbit::get_conn(pool.clone()).await?;
-
-    //             handle_agent_data(conn, m, Arc::clone(&sessions), Arc::clone(&rpcs))
-    //                 .await
-    //                 .unwrap_or_else(drop);
-    //         }
-
-    //         Ok(())
-    //     }
-    //     .map_err(|e: ImlServiceQueueError| {
-    //         tracing::error!("{}", e);
-    //     })
-    //     .map(drop),
-    // );
-
     while let Some((fqdn, snapshots)) = s.try_next().await? {
         tracing::debug!("snapshots from {}: {:?}", fqdn, snapshots);
 
