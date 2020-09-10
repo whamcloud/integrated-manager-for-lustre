@@ -31,10 +31,9 @@ impl Config {
         format!(
             "\
              device={fs}-OST{ost:04x}\n\
-             dryrun=true\n\
              freehi={freehi}\n\
              freelo={freelo}\n\
-             listen_socket={socket}\n\
+             iml_socket={socket}\n\
              max_jobs=0\n\
              pool={fs}.{pool}\n\
              ",
