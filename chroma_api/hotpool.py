@@ -5,6 +5,7 @@
 from collections import defaultdict
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
 from tastypie import fields, http
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
@@ -83,6 +84,7 @@ class HotpoolResource(StatefulModelResource):
 
     # DELETE handler
     def obj_delete(self, bundle, **kwargs):
+        request = bundle.request
         try:
             obj = self.obj_get(bundle, **kwargs)
             command_id = JobSchedulerClient.remove_hotpool(obj.id)

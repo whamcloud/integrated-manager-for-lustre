@@ -17,7 +17,7 @@ from chroma_core.models.utils import (
     MountStep,
     UnmountStep,
     CreateSystemdResourceStep,
-    RemoveResourceStep,
+    RemoveSystemdResourceStep,
 )
 from chroma_core.models import (
     ManagedFilesystem,
@@ -377,12 +377,10 @@ class RemoveUnconfiguredHotpoolJob(StateChangeJob):
 
     def get_deps(self):
         deps = []
+        fs = self.hotpool_configuration.filesystem
 
         for comp in self.hotpool_configuration.get_components():
             deps.append(DependOn(comp, "removed", fix_state="unconfigured"))
-
-        for host in fs.get_servers():
-            steps.append((UnmountStep, {"host": host.fqdn, "mountpoint": mp}))
 
         return DependAll(deps)
 
@@ -571,10 +569,20 @@ class RemoveLamigoJob(StateChangeJob):
         return help_text["destroy_hotpool"]
 
     def get_steps(self):
-        steps = []
-
         host = self.lamigo.mdt.active_host
-        steps.append((RemoveResourceStep, {"host": host.fqdn, "ha_label": self.lamigo.ha_label}))
+        after = [self.lamigo.mdt.ha_label, self.lamigo.configuration.hotpool.ha_label]
+
+        steps = [
+            (
+                RemoveSystemdResourceStep,
+                {
+                    "host": host.fqdn,
+                    "ha_label": self.lamigo.ha_label,
+                    "after": after,
+                    "with": [self.lamigo.mdt.ha_label],
+                },
+            )
+        ]
 
         return steps
 
@@ -758,10 +766,19 @@ class RemoveLpurgeJob(StateChangeJob):
         return help_text["destroy_hotpool"]
 
     def get_steps(self):
-        steps = []
-
         host = self.lpurge.ost.active_host
-        steps.append((RemoveResourceStep, {"host": host.fqdn, "ha_label": self.lpurge.ha_label}))
+        after = [self.lpurge.ost.ha_label, self.lpurge.configuration.hotpool.ha_label]
+        steps = [
+            (
+                RemoveSystemdResourceStep,
+                {
+                    "host": host.fqdn,
+                    "ha_label": self.lpurge.ha_label,
+                    "after": after,
+                    "with": [self.lpurge.ost.ha_label],
+                },
+            )
+        ]
 
         return steps
 
