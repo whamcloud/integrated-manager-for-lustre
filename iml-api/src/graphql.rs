@@ -218,7 +218,14 @@ impl QueryRoot {
                 INNER JOIN corosync_target_resource r ON r.mount_point = t.mount_path
                 INNER JOIN corosync_target_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)
                 GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.state, t.active_host_id, t.host_ids, t.filesystems, t.uuid
-            "#)
+                ORDER BY
+                    CASE WHEN $3 = 'asc' THEN t.name END ASC,
+                    CASE WHEN $3 = 'desc' THEN t.name END DESC
+                OFFSET $1 LIMIT $2"#,
+            offset.unwrap_or(0) as i64,
+            limit.unwrap_or(20) as i64,
+            dir.deref()
+            )
                 .fetch(&context.pg_pool)
                 .map_ok(|mut x| {
                     let xs:HashSet<_> = banned_resources
@@ -643,22 +650,14 @@ async fn get_banned_targets(pool: &PgPool) -> Result<Vec<BannedTargetResource>, 
 }
 
 async fn get_banned_resources(pool: &PgPool) -> Result<Vec<BannedResource>, ImlApiError> {
-    let xs = sqlx::query!(
+    let xs = sqlx::query_as!(
+        BannedResource,
         r#"
             SELECT id, cluster_id, resource, node, weight, master_only
             FROM corosync_resource_bans
         "#
     )
-    .fetch(pool)
-    .map_ok(|x| BannedResource {
-        id: x.id,
-        cluster_id: x.cluster_id,
-        resource: x.resource,
-        node: x.node,
-        weight: x.weight,
-        master_only: x.master_only,
-    })
-    .try_collect()
+    .fetch_all(pool)
     .await?;
 
     Ok(xs)
