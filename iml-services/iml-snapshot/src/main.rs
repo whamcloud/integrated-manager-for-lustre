@@ -8,6 +8,7 @@ use iml_postgres::{get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::snapshot;
+use tokio::time::{interval, Duration};
 
 // Default pool limit if not overridden by POOL_LIMIT
 const DEFAULT_POOL_LIMIT: u32 = 2;
@@ -26,6 +27,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
     sqlx::migrate!("../../migrations").run(&pool).await?;
+
+    tokio::spawn(async move {
+        let mut interval = interval(Duration::from_secs(10));
+
+        use tokio::stream::StreamExt;
+        while let Some(x) = interval.next().await {
+            tracing::info!("Hello every 10s: {:?}", x);
+        }
+        42
+    });
 
     // tokio::spawn(
     //     async move {
