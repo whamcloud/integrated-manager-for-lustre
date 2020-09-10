@@ -181,7 +181,9 @@ impl QueryRoot {
     #[graphql(arguments(
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
-        dir(description = "Sort direction, defaults to asc")
+        dir(description = "Sort direction, defaults to asc"),
+        fs_name(description = "Targets associated with the specified filesystem"),
+        exclude_unmounted(description = "Exclude unmounted targets, defaults to false"),
     ))]
     /// Fetch the list of known targets
     async fn targets(
@@ -189,6 +191,8 @@ impl QueryRoot {
         limit: Option<i32>,
         offset: Option<i32>,
         dir: Option<SortDir>,
+        fs_name: Option<String>,
+        exclude_unmounted: bool,
     ) -> juniper::FieldResult<Vec<Target>> {
         let dir = dir.unwrap_or_default();
 
@@ -205,7 +209,20 @@ impl QueryRoot {
             dir.deref()
         )
         .fetch_all(&context.pg_pool)
-        .await?;
+        .await?
+        .into_iter()
+        .filter(|x| match &fs_name {
+            Some(fs) => x.filesystems.contains(&fs),
+            None => true,
+        })
+        .filter(|x| {
+            if exclude_unmounted {
+                x.state != "unmounted"
+            } else {
+                true
+            }
+        })
+        .collect();
 
         let target_resources = get_fs_target_resources(&context.pg_pool, None).await?;
 
