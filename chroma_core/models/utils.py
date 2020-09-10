@@ -183,6 +183,7 @@ class StopResourceStep(Step):
 class CreateSystemdResourceStep(Step):
     """
     Create systemd based pacemaker resource
+    Created resource will be "Started" after constraints are added
     Args:
     * host - fqdn to run on
     * unit - systemd unit name
@@ -244,7 +245,7 @@ class MountStep(Step):
     Mount and add to fstab
     Args:
     * host - fqdn
-    * point - Mount point
+    * mountpoint - Mount point
     * spec - Mount Spec
     * auto - (optional def: True) auto mount at boot
     """
@@ -254,7 +255,7 @@ class MountStep(Step):
     def run(self, kwargs):
         host = kwargs["host"]
         persist = kwargs.get("auto", True)
-        mp = kwargs["point"]
+        mp = kwargs["mountpoint"]
         spec = kwargs["spec"]
 
         # cf. iml-wire-types::client::Mount
@@ -267,7 +268,7 @@ class UnmountStep(Step):
     Unmount and remove from fstab
     Args:
     * host - fqdn
-    * point - Mount Point
+    * mountpoint - Mount Point
     * spec - (optional) Mount Spec
     """
 
@@ -275,7 +276,7 @@ class UnmountStep(Step):
 
     def run(self, kwargs):
         host = kwargs["host"]
-        mp = kwargs["point"]
+        mp = kwargs["mountpoint"]
         spec = kwargs.get("spec", "")
         # cf. iml-wire-types::client::Unmount
         unmount = {"mountpoint": mp, "mountspec": spec}
