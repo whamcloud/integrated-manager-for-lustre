@@ -2,16 +2,49 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use core::fmt::Debug;
 use futures_util::stream::TryStreamExt;
 use iml_manager_env::get_pool_limit;
 use iml_postgres::{get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::snapshot;
+use reqwest::{Client, Url};
+use serde::de::DeserializeOwned;
 use tokio::time::{interval, Duration};
 
 // Default pool limit if not overridden by POOL_LIMIT
 const DEFAULT_POOL_LIMIT: u32 = 2;
+
+#[derive(Debug, thiserror::Error)]
+enum ThisError {
+    #[error(transparent)]
+    Reqwest(#[from] reqwest::Error),
+    #[error(transparent)]
+    Url(#[from] url::ParseError),
+    #[error(transparent)]
+    Header(#[from] reqwest::header::InvalidHeaderValue),
+}
+
+async fn get_influx<T: DeserializeOwned + Debug>(
+    client: Client,
+    db: &str,
+    q: &str,
+) -> Result<T, ThisError> {
+    let url = Url::parse(&iml_manager_env::get_manager_url())?.join("/influx")?;
+    let resp = client
+        .get(url)
+        .query(&[("db", db), ("q", q)])
+        .send()
+        .await?
+        .error_for_status()?;
+
+    let json = resp.json().await?;
+
+    tracing::debug!("Resp: {:?}", json);
+
+    Ok(json)
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -32,10 +65,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut interval = interval(Duration::from_secs(10));
 
         use tokio::stream::StreamExt;
-        while let Some(x) = interval.next().await {
-            tracing::info!("Hello every 10s: {:?}", x);
+        while let Some(_) = interval.next().await {
+            let client: Client = iml_manager_client::get_client().unwrap();
+
+            // FIXME:
+            let query = iml_influx::filesystem::query("zfsmo");
+            let fut_st = get_influx::<iml_influx::filesystem::InfluxResponse>(
+                client,
+                "iml_stats",
+                query.as_str(),
+            );
+
+            let influx_resp = fut_st.await.unwrap();
+            let st = iml_influx::filesystem::Response::from(influx_resp);
+
+            tracing::debug!("ST: {:?}", st);
+
+            tracing::info!("Clients: {}", st.clients.unwrap_or(0));
         }
-        42
     });
 
     // tokio::spawn(
@@ -57,20 +104,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //     })
     //     .map(drop),
     // );
-
-    // let fut_fs = get_one::<Filesystem>(vec![("name", &fsname)]);
-    // let query = iml_influx::filesystem::query(&fsname);
-    // let fut_st =
-    //     get_influx::<iml_influx::filesystem::InfluxResponse>("iml_stats", query.as_str());
-
-    // let (fs, influx_resp) =
-    //     wrap_fut("Fetching filesystem...", try_join(fut_fs, fut_st)).await?;
-    // let st = iml_influx::filesystem::Response::from(influx_resp);
-
-    // tracing::debug!("FS: {:?}", fs);
-    // tracing::debug!("ST: {:?}", st);
-
-    // format!("{}", st.clients.unwrap_or(0)),
 
     while let Some((fqdn, snapshots)) = s.try_next().await? {
         tracing::debug!("snapshots from {}: {:?}", fqdn, snapshots);
