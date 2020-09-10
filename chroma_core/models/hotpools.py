@@ -421,7 +421,7 @@ class LamigoConfiguration(models.Model):
             "fs": self.hotpool.filesystem.name,
             "user": user,
             "min_age": self.minage,
-            "mount": self.hotpool.mountpoint,
+            "mountpoint": self.hotpool.mountpoint,
             "mailbox_extend": self.extend.name,
             "mailbox_resync": self.resync.name,
             "hot_pool": self.hot.name,

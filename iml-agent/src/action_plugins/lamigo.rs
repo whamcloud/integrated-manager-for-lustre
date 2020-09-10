@@ -14,6 +14,10 @@ pub struct Config {
     fs: String,
 
     #[structopt(long)]
+    /// Local mountpoint of lustre client
+    mountpoint: String,
+
+    #[structopt(long)]
     /// MDT device index that provides changelogs
     mdt: u32,
 
@@ -46,6 +50,7 @@ impl Config {
     fn generate_unit(&self, mailbox_extend: String, mailbox_resync: String) -> String {
         format!(
             "mdt={fs}-MDT{mdt:04x}\n\
+             mount={mountpoint}\n\
              user={user}\n\
              min-age={age}\n\
              src={fast}\n\
@@ -55,6 +60,7 @@ impl Config {
              ",
             fs = self.fs,
             mdt = self.mdt,
+            mountpoint = self.mountpoint,
             user = self.user,
             age = self.min_age,
             fast = self.hot_pool,
@@ -113,6 +119,7 @@ mod lamigo_tests {
             hot_pool: "FAST_POOL".into(),
             cold_pool: "SLOW_POOL".into(),
             min_age: 35353,
+            mountpoint: "/mnt/spfs".into(),
             mailbox_extend: "mailbox-extend".into(),
             mailbox_resync: "mailbox-resync".into(),
         };
@@ -141,6 +148,7 @@ mod lamigo_tests {
             hot_pool: "FAST_POOL".into(),
             cold_pool: "SLOW_POOL".into(),
             min_age: 35353,
+            mountpoint: "/mnt/spfs".into(),
             mailbox_extend: "mailbox-extend".into(),
             mailbox_resync: "mailbox-resync".into(),
         };
