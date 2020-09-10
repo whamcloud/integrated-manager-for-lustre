@@ -192,7 +192,7 @@ impl QueryRoot {
         offset: Option<i32>,
         dir: Option<SortDir>,
         fs_name: Option<String>,
-        exclude_unmounted: bool,
+        exclude_unmounted: Option<bool>,
     ) -> juniper::FieldResult<Vec<Target>> {
         let dir = dir.unwrap_or_default();
 
@@ -215,12 +215,9 @@ impl QueryRoot {
             Some(fs) => x.filesystems.contains(&fs),
             None => true,
         })
-        .filter(|x| {
-            if exclude_unmounted {
-                x.state != "unmounted"
-            } else {
-                true
-            }
+        .filter(|x| match exclude_unmounted {
+            Some(true) => x.state != "unmounted",
+            Some(false) | None => true,
         })
         .collect();
 
