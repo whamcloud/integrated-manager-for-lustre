@@ -32,7 +32,6 @@ from chroma_help.help import help_text
 #
 # Assumptions:
 # * components will be controlled via pacemaker
-# * is_single_resource implies single resources is cloned client mount across servers
 
 
 class HotpoolConfiguration(StatefulObject):
@@ -42,7 +41,7 @@ class HotpoolConfiguration(StatefulObject):
         app_label = "chroma_core"
         ordering = ["id"]
 
-    states = ["unconfigured", "stopped", "started", "removed"]
+    states = ["unconfigured", "configured", "stopped", "started", "removed"]
     initial_state = "unconfigured"
 
     filesystem = models.ForeignKey("ManagedFilesystem", null=False, on_delete=CASCADE)
@@ -57,8 +56,9 @@ class HotpoolConfiguration(StatefulObject):
     def get_label(self):
         return "Hotpool Configuration"
 
-    def is_single_resource(self):
-        return self.ha_label is not None
+    @property
+    def mountpoint(self):
+        return "/lustre/" + self.filesystem.name + "/client"
 
     def get_components(self):
         # self.version == 2:
@@ -84,7 +84,7 @@ class HotpoolConfiguration(StatefulObject):
 
 
 class ConfigureHotpoolJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(HotpoolConfiguration, "unconfigured", "stopped")
+    state_transition = StateChangeJob.StateTransition(HotpoolConfiguration, "unconfigured", "configured")
     stateful_object = "hotpool_configuration"
     hotpool_configuration = models.ForeignKey(HotpoolConfiguration, on_delete=CASCADE)
 
@@ -109,36 +109,27 @@ class ConfigureHotpoolJob(StateChangeJob):
         steps = []
 
         fs = self.hotpool_configuration.filesystem
-        mp = "/lustre/" + fs.name + "/client"
+        mp = self.hotpool_configuration.mountpoint
 
-        if self.hotpool_configuration.is_single_resource():
-            # create cloned client mount
-            for host in fs.get_servers():
-                # c.f. iml-wire-types::client::Mount
-                # Mount.persist equates to automount
-                steps.append((MountStep, {"host": host.fqdn, "auto": False, "spec": fs.mount_path(), "point": mp}))
+        # create cloned client mount
+        for host in fs.get_servers():
+            # c.f. iml-wire-types::client::Mount
+            # Mount.persist equates to automount
+            steps.append((MountStep, {"host": host.fqdn, "auto": False, "spec": fs.mount_path(), "mountpoint": mp}))
 
-            for host in (l[0] for l in fs.get_server_groups()):
-                steps.append(
-                    (
-                        CreateClonedClientStep,
-                        {
-                            "host": host.fqdn,
-                            "mountpoint": mp,
-                            "fs_name": fs.name,
-                        },
-                    )
+        for host in (l[0] for l in fs.get_server_groups()):
+            steps.append(
+                (
+                    CreateClonedClientStep,
+                    {
+                        "host": host.fqdn,
+                        "mountpoint": mp,
+                        "fs_name": fs.name,
+                    },
                 )
+            )
 
         return steps
-
-    def get_deps(self):
-        deps = []
-
-        for comp in self.hotpool_configuration.get_components():
-            deps.append(DependOn(comp, "stopped", fix_state="unconfigured"))
-
-        return DependAll(deps)
 
 
 class CreateClonedClientStep(Step):
@@ -152,6 +143,37 @@ class CreateClonedClientStep(Step):
         mp = kwargs["mountpoint"]
 
         self.invoke_rust_agent_expect_result(host, "ha_cloned_client_create", [fsname, mp])
+
+
+class DeployHotpoolJob(StateChangeJob):
+    state_transition = StateChangeJob.StateTransition(HotpoolConfiguration, "configured", "stopped")
+    stateful_object = "hotpool_configuration"
+    hotpool_configuration = models.ForeignKey(HotpoolConfiguration, on_delete=CASCADE)
+
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 10
+
+    requires_confirmation = False
+    state_verb = "Deploy Hotpool"
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["configure_hotpool"]
+
+    def description(self):
+        return help_text["configure_hotpool"]
+
+    def get_deps(self):
+        deps = []
+
+        for comp in self.hotpool_configuration.get_components():
+            deps.append(DependOn(comp, "configured", fix_state="unconfigured"))
+
+        return DependAll(deps)
 
 
 class StartHotpoolJob(StateChangeJob):
@@ -182,19 +204,16 @@ class StartHotpoolJob(StateChangeJob):
         fs = self.hotpool_configuration.filesystem
         deps.append(DependOn(fs, "available", fix_state="stopped"))
 
-        if not self.hotpool_configuration.is_single_resource():
-            for comp in self.hotpool_configuration.get_components():
-                deps.append(DependOn(comp, "started", fix_state="stopped"))
+        for comp in self.hotpool_configuration.get_components():
+            deps.append(DependOn(comp, "configured"))
 
         return DependAll(deps)
 
     def get_steps(self):
         steps = []
-
-        if self.hotpool_configuration.is_single_resource():
-            for host in (l[0] for l in fs.get_server_groups()):
-                steps.append((StartResourceStep, {"host": host.fqdn, "ha_label": self.hotpool_configuration.ha_label}))
-
+        fs = self.hotpool_configuration.filesystem
+        for host in (l[0] for l in fs.get_server_groups()):
+            steps.append((StartResourceStep, {"host": host.fqdn, "ha_label": self.hotpool_configuration.ha_label}))
             # @@ wait for component starts?
 
         return steps
@@ -209,7 +228,7 @@ class StopHotpoolJob(StateChangeJob):
     display_order = 10
 
     requires_confirmation = False
-    state_verb = "Start Hotpool"
+    state_verb = "Stop Hotpool"
 
     class Meta:
         app_label = "chroma_core"
@@ -224,9 +243,10 @@ class StopHotpoolJob(StateChangeJob):
 
     def get_steps(self):
         steps = []
-        if self.hotpool_configuration.is_single_resource():
-            for host in (l[0] for l in fs.get_server_groups()):
-                steps.append((StopResourceStep, {"host": host.fqdn, "ha_label": self.hotpool_configuration.ha_label}))
+        fs = self.hotpool_configuration.filesystem
+
+        for host in (l[0] for l in fs.get_server_groups()):
+            steps.append((StopResourceStep, {"host": host.fqdn, "ha_label": self.hotpool_configuration.ha_label}))
 
         return steps
 
@@ -263,12 +283,13 @@ class RemoveHotpoolJob(StateChangeJob):
 
     def get_steps(self):
         steps = []
-        if self.hotpool_configuration.is_single_resource():
-            fs = self.hotpool_configuration.filesystem
-            mp = "/lustre/" + fs.name + "/client"
-            for host in (l[0] for l in fs.get_server_groups()):
-                steps.append((RemoveClonedClientMountStep, {"host": host.fqdn, "mountpoint": mp}))
+        fs = self.hotpool_configuration.filesystem
+        mp = self.hotpool_configuration.mountpoint
+        for host in (l[0] for l in fs.get_server_groups()):
+            steps.append((RemoveClonedClientStep, {"host": host.fqdn, "fs_name": fs.name, "mountpoint": mp}))
 
+        for host in fs.get_servers():
+            steps.append((UnmountStep, {"host": host.fqdn, "mountpoint": mp}))
         return steps
 
     def on_success(self):
@@ -282,7 +303,54 @@ class RemoveClonedClientStep(Step):
         fsname = kwargs["fs_name"]
         mp = kwargs["mountpoint"]
 
-        self.invoke_rust_agent_expect_result(host, "ha_cloned_client_destroy", [fsname, mp])
+        self.invoke_rust_agent_expect_result(host, "ha_cloned_client_destroy", fsname)
+
+
+class RemoveConfiguredHotpoolJob(StateChangeJob):
+    state_transition = StateChangeJob.StateTransition(HotpoolConfiguration, "configured", "removed")
+    stateful_object = "hotpool_configuration"
+    hotpool_configuration = models.ForeignKey(HotpoolConfiguration, on_delete=CASCADE)
+
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 10
+
+    requires_confirmation = False
+    state_verb = "Remove Hotpool"
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["stop_hotpool"]
+
+    def description(self):
+        return help_text["stop_hotpool"]
+
+    def get_deps(self):
+        deps = []
+
+        for comp in self.hotpool_configuration.get_components():
+            deps.append(DependOn(comp, "removed", fix_state="configured"))
+
+        return DependAll(deps)
+
+    def get_steps(self):
+        steps = []
+        fs = self.hotpool_configuration.filesystem
+        mp = self.hotpool_configuration.mountpoint
+        for host in (l[0] for l in fs.get_server_groups()):
+            steps.append((RemoveClonedClientStep, {"host": host.fqdn, "fs_name": fs.name, "mountpoint": mp}))
+
+        for host in fs.get_servers():
+            steps.append((UnmountStep, {"host": host.fqdn, "mountpoint": mp}))
+
+        return steps
+
+    def on_success(self):
+        self.hotpool_configuration.mark_deleted()
+        self.hotpool_configuration.save()
 
 
 class RemoveUnconfiguredHotpoolJob(StateChangeJob):
@@ -312,6 +380,9 @@ class RemoveUnconfiguredHotpoolJob(StateChangeJob):
 
         for comp in self.hotpool_configuration.get_components():
             deps.append(DependOn(comp, "removed", fix_state="unconfigured"))
+
+        for host in fs.get_servers():
+            steps.append((UnmountStep, {"host": host.fqdn, "mountpoint": mp}))
 
         return DependAll(deps)
 
@@ -352,6 +423,7 @@ class LamigoConfiguration(models.Model):
             "fs": self.hotpool.filesystem.name,
             "user": user,
             "min_age": self.minage,
+            "mount": self.hotpool.mountpoint,
             "mailbox_extend": self.extend.name,
             "mailbox_resync": self.resync.name,
             "hot_pool": self.hot.name,
@@ -365,7 +437,7 @@ class Lamigo(StatefulObject):
     lamigo instance for a given MDT
     """
 
-    states = ["unconfigured", "stopped", "started", "removed"]
+    states = ["unconfigured", "configured", "removed"]
     initial_state = "unconfigured"
 
     __metaclass__ = DeletableMetaclass
@@ -392,7 +464,7 @@ class Lamigo(StatefulObject):
 
 
 class ConfigureLamigoJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(Lamigo, "unconfigured", "stopped")
+    state_transition = StateChangeJob.StateTransition(Lamigo, "unconfigured", "configured")
     stateful_object = "lamigo"
     lamigo = models.ForeignKey("Lamigo", on_delete=CASCADE)
 
@@ -427,9 +499,7 @@ class ConfigureLamigoJob(StateChangeJob):
             steps.append((ConfigureLamigoStep, {"host": mtm.host.fqdn, "lamigo_id": self.lamigo.id}))
 
         host = self.lamigo.mdt.active_host
-        after = [self.lamigo.mdt.ha_label]
-        if self.lamigo.configuration.hotpool.is_single_resource():
-            after.append(self.lamigo.configuration.hotpool.ha_label)
+        after = [self.lamigo.mdt.ha_label, self.lamigo.configuration.hotpool.ha_label]
         steps.append(
             (
                 CreateSystemdResourceStep,
@@ -478,71 +548,8 @@ class ConfigureLamigoStep(Step):
         self.invoke_rust_agent_expect_result(host, "config_lamigo", lamigo.lamigo_config())
 
 
-class StartLamigoJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(Lamigo, "stopped", "started")
-    stateful_object = "lamigo"
-    lamigo = models.ForeignKey("Lamigo", on_delete=CASCADE)
-
-    display_group = Job.JOB_GROUPS.COMMON
-    display_order = 10
-
-    requires_confirmation = False
-    state_verb = "Start Lamigo"
-
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text["start_hotpool"]
-
-    def description(self):
-        return help_text["start_hotpool"]
-
-    def get_steps(self):
-        steps = []
-
-        if not lamigo.configuration.hotpool.is_single_resource():
-            host = self.lamigo.mdt.active_host
-            steps.append((StartResourceStep, {"host": host.fqdn, "ha_label": self.lamigo.ha_label}))
-
-        return steps
-
-
-class StopLamigoJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(Lamigo, "started", "stopped")
-    stateful_object = "lamigo"
-    lamigo = models.ForeignKey("Lamigo", on_delete=CASCADE)
-
-    display_group = Job.JOB_GROUPS.COMMON
-    display_order = 10
-
-    requires_confirmation = False
-    state_verb = "Stop Lamigo"
-
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text["stop_hotpool"]
-
-    def description(self):
-        return help_text["stop_hotpool"]
-
-    def get_steps(self):
-        steps = []
-
-        host = self.lamigo.mdt.active_host
-        steps.append((StopResourceStep, {"host": host.fqdn, "ha_label": self.lamigo.ha_label}))
-
-        return steps
-
-
 class RemoveLamigoJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(Lamigo, "stopped", "removed")
+    state_transition = StateChangeJob.StateTransition(Lamigo, "configured", "removed")
     stateful_object = "lamigo"
     lamigo = models.ForeignKey("Lamigo", on_delete=CASCADE)
 
@@ -645,7 +652,7 @@ class Lpurge(StatefulObject):
     lpurge instance for a given OST
     """
 
-    states = ["unconfigured", "stopped", "started", "removed"]
+    states = ["unconfigured", "configured", "removed"]
     initial_state = "unconfigured"
 
     __metaclass__ = DeletableMetaclass
@@ -670,7 +677,7 @@ class Lpurge(StatefulObject):
 
 
 class ConfigureLpurgeJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(Lpurge, "unconfigured", "stopped")
+    state_transition = StateChangeJob.StateTransition(Lpurge, "unconfigured", "configured")
     stateful_object = "lpurge"
     lpurge = models.ForeignKey("Lpurge", on_delete=CASCADE)
 
@@ -697,12 +704,10 @@ class ConfigureLpurgeJob(StateChangeJob):
         fs = self.lpurge.configuration.hotpool.filesystem
 
         for mtm in self.lpurge.ost.managedtargetmount_set.all():
-            steps.append((ConfigureLpurgeStep, {"host": mtm.host.fqdn, "lpurge": self.lpurge}))
+            steps.append((ConfigureLpurgeStep, {"host": mtm.host.fqdn, "lpurge_conf": self.lpurge.lpurge_config()}))
 
         host = self.lpurge.ost.active_host
-        after = [self.lpurge.ost.ha_label]
-        if self.lpurge.configuration.hotpool.is_single_resource():
-            after.append(self.lpurge.configuration.hotpool.ha_label)
+        after = [self.lpurge.ost.ha_label, self.lpurge.configuration.hotpool.ha_label]
         steps.append(
             (
                 CreateSystemdResourceStep,
@@ -722,79 +727,16 @@ class ConfigureLpurgeJob(StateChangeJob):
 
 class ConfigureLpurgeStep(Step):
     idempotent = True
-    database = True
 
     def run(self, kwargs):
         host = kwargs["host"]
-        lpurge = kwargs["lpurge"]
+        conf = kwargs["lpurge_conf"]
 
-        self.invoke_rust_agent_expect_result(host, "config_lpurge", lpurge.lpurge_config())
-
-
-class StartLpurgeJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(Lpurge, "stopped", "started")
-    stateful_object = "lpurge"
-    lpurge = models.ForeignKey("Lpurge", on_delete=CASCADE)
-
-    display_group = Job.JOB_GROUPS.COMMON
-    display_order = 10
-
-    state_verb = "Start Lpurge"
-
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text["start_hotpool"]
-
-    def description(self):
-        return help_text["start_hotpool"]
-
-    def get_steps(self):
-        steps = []
-
-        if not lpurge.configuration.hotpool.is_single_resource():
-            host = self.lpurge.ost.active_host
-            steps.append((StartResourceStep, {"host": host.fqdn, "ha_label": self.lpurge.ha_label}))
-
-        return steps
-
-
-class StopLpurgeJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(Lpurge, "started", "stopped")
-    stateful_object = "lpurge"
-    lpurge = models.ForeignKey("Lpurge", on_delete=CASCADE)
-
-    display_group = Job.JOB_GROUPS.COMMON
-    display_order = 10
-
-    requires_confirmation = False
-    state_verb = "Stop Lpurge"
-
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text["stop_hotpool"]
-
-    def description(self):
-        return help_text["stop_hotpool"]
-
-    def get_steps(self):
-        steps = []
-
-        host = self.lpurge.ost.active_host
-        steps.append((StopResourceStep, {"host": host.fqdn, "ha_label": self.lpurge.ha_label}))
-
-        return steps
+        self.invoke_rust_agent_expect_result(host, "config_lpurge", conf)
 
 
 class RemoveLpurgeJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(Lpurge, "stopped", "removed")
+    state_transition = StateChangeJob.StateTransition(Lpurge, "configured", "removed")
     stateful_object = "lpurge"
     lpurge = models.ForeignKey("Lpurge", on_delete=CASCADE)
 
