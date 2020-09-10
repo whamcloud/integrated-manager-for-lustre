@@ -903,6 +903,54 @@
       ]
     }
   },
+  "3a2378b67c524f8238921aa4591651fdd3afcab839f350be4c4684f399054961": {
+    "query": "\n            SELECT rh.cluster_id, r.id, t.name, t.mount_path, t.filesystems, array_agg(DISTINCT rh.host_id) AS \"cluster_hosts!\"\n            FROM target t\n            INNER JOIN corosync_target_resource r ON r.mount_point = t.mount_path\n            INNER JOIN corosync_target_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)\n            WHERE CARDINALITY(t.filesystems) > 0\n            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.filesystems\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "cluster_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "id",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "mount_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 4,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 5,
+          "name": "cluster_hosts!",
+          "type_info": "Int4Array"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        null
+      ]
+    }
+  },
   "3bded6ce17eeea786bb32a1c8b5fe37b40b25391f24e9bd6dd25652381f84bc8": {
     "query": "select * from chroma_core_stratagemconfiguration where not_deleted = 't'",
     "describe": {
@@ -1140,50 +1188,6 @@
         false,
         true,
         true
-      ]
-    }
-  },
-  "5612165c11cd09b2635876457678d803b6b427605b8a3f1af7f8fd0037211656": {
-    "query": "\n            SELECT rh.cluster_id, r.id, t.name, t.mount_path, array_agg(DISTINCT rh.host_id) AS \"cluster_hosts!\"\n            FROM target t\n            INNER JOIN corosync_target_resource r ON r.mount_point = t.mount_path\n            INNER JOIN corosync_target_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)\n            WHERE $1 = ANY(t.filesystems)\n            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path\n        ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "cluster_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "id",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 3,
-          "name": "mount_path",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 4,
-          "name": "cluster_hosts!",
-          "type_info": "Int4Array"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        true,
-        null
       ]
     }
   },

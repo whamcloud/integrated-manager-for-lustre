@@ -264,7 +264,7 @@ impl QueryRoot {
     #[graphql(arguments(fs_name(description = "The filesystem to list `TargetResource`s for"),))]
     async fn get_fs_target_resources(
         context: &Context,
-        fs_name: String,
+        fs_name: Option<String>,
     ) -> juniper::FieldResult<Vec<TargetResource>> {
         let xs = get_fs_target_resources(&context.pg_pool, fs_name).await?;
 
@@ -287,7 +287,7 @@ impl QueryRoot {
         context: &Context,
         fs_name: String,
     ) -> juniper::FieldResult<Vec<Vec<i32>>> {
-        let xs = get_fs_target_resources(&context.pg_pool, fs_name)
+        let xs = get_fs_target_resources(&context.pg_pool, Some(fs_name))
             .await?
             .into_iter()
             .group_by(|x| x.cluster_id);
@@ -586,19 +586,29 @@ pub(crate) fn endpoint(
 
 async fn get_fs_target_resources(
     pool: &PgPool,
-    fs_name: String,
+    fs_name: Option<String>,
 ) -> Result<Vec<TargetResource>, ImlApiError> {
     let banned_resources = get_banned_targets(pool).await?;
 
     let xs = sqlx::query!(r#"
-            SELECT rh.cluster_id, r.id, t.name, t.mount_path, array_agg(DISTINCT rh.host_id) AS "cluster_hosts!"
+            SELECT rh.cluster_id, r.id, t.name, t.mount_path, t.filesystems, array_agg(DISTINCT rh.host_id) AS "cluster_hosts!"
             FROM target t
             INNER JOIN corosync_target_resource r ON r.mount_point = t.mount_path
             INNER JOIN corosync_target_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)
-            WHERE $1 = ANY(t.filesystems)
-            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path
-        "#, &fs_name)
+            WHERE CARDINALITY(t.filesystems) > 0
+            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.filesystems
+        "#)
             .fetch(pool)
+            .try_filter(|x| {
+                let fs_name2 = fs_name.clone();
+                let filesystems = x.filesystems.clone();
+                async move {
+                    match fs_name2 {
+                        None => true,
+                        Some(fs) => filesystems.contains(&fs)
+                    }
+                }
+            })
             .map_ok(|mut x| {
                 let xs:HashSet<_> = banned_resources
                     .iter()
@@ -615,7 +625,7 @@ async fn get_fs_target_resources(
             .map_ok(|x| {
                 TargetResource {
                     cluster_id: x.cluster_id,
-                    fs_name: fs_name.to_string(),
+                    fs_name: fs_name.clone().unwrap_or_else(|| x.filesystems[0].to_string()).to_string(),
                     name: x.name,
                     resource_id: x.id,
                     cluster_hosts: x.cluster_hosts
