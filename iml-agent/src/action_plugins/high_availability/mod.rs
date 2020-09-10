@@ -309,9 +309,7 @@ pub async fn create_single_resource(
     create_resource(agent, false, constraints, true).await
 }
 
-pub async fn destroy_cloned_client(
-    (fsname, _mountpoint): (String, String),
-) -> Result<(), ImlAgentError> {
+pub async fn destroy_cloned_client(fsname: String) -> Result<(), ImlAgentError> {
     let ids = resource_list().await?;
 
     let id = format!("cl-{}-client", fsname);
@@ -353,7 +351,7 @@ pub async fn destroy_cloned_client(
     }
     paths.push(format!("//resources/clone[@id=\"{}\"]", id));
 
-    cibxpath("delete", &paths.join("|"), NO_EXTRA).await?;
+    cibxpath("delete-all", &paths.join("|"), &["--force"]).await?;
 
     Ok(())
 }
@@ -560,7 +558,7 @@ async fn create_resource(
                     let mut con = Element::new("rsc_colocation");
                     con.set_attr("id", id)
                         .set_attr("rsc", check_id(cloned, &agent.id, rsc))
-                        .set_attr("with_rsc", check_id(cloned, &agent.id, with_rsc))
+                        .set_attr("with-rsc", check_id(cloned, &agent.id, with_rsc))
                         .set_attr("score", score.to_string());
                     con
                 }
