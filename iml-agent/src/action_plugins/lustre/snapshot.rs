@@ -33,11 +33,26 @@ fn parse_snapshot_list(input: &str) -> Result<Vec<Snapshot>, easy::Errors<char, 
 }
 
 pub async fn create(c: Create) -> Result<(), ImlAgentError> {
-    let mut args = vec!["snapshot_create", "--fsname", &c.fsname, "--name", &c.name];
+    let use_barrier = match c.use_barrier {
+        true => "on",
+        false => "off",
+    };
+
+    let mut args = vec![
+        "snapshot_create",
+        "--fsname",
+        &c.fsname,
+        "--name",
+        &c.name,
+        "--barrier",
+        use_barrier,
+    ];
+
     if let Some(cmnt) = &c.comment {
         args.push("--comment");
         args.push(cmnt);
     }
+
     lctl(args).await.map(drop)
 }
 

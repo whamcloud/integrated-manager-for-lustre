@@ -265,15 +265,21 @@ impl QueryRoot {
 #[juniper::graphql_object(Context = Context)]
 impl MutationRoot {
     #[graphql(arguments(
-        fsname(description = "Filesystem to take snapshot from"),
+        fsname(description = "Filesystem to snapshot"),
         name(description = "Name of the snapshot"),
-        comment(description = "Comment for the snapshot"),
+        comment(description = "A description for the purpose of the snapshot"),
+        use_barrier(
+            description = "Set write barrier before creating snapshot. The default value is `false`"
+        )
     ))]
+    /// Creates a snapshot of an existing Lustre filesystem. Returns a `Command` to track progress.
+    /// For the `Command` to succeed, the filesystem being snapshoted must be available.
     async fn create_snapshot(
         context: &Context,
         fsname: String,
         name: String,
         comment: Option<String>,
+        use_barrier: Option<bool>,
     ) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
@@ -293,6 +299,7 @@ impl MutationRoot {
                 "name": name,
                 "comment": comment,
                 "fqdn": active_mgs_host_fqdn,
+                "use_barrier": use_barrier.unwrap_or(false),
             }
         }]);
         let command_id: i32 = iml_job_scheduler_rpc::call(

@@ -1804,16 +1804,20 @@ class CreateSnapshotJob(Job):
     fsname = models.CharField(max_length=8, help_text="Lustre filesystem name")
     name = models.CharField(max_length=64, help_text="Snapshot to create")
     comment = models.CharField(max_length=1024, null=True, help_text="Optional comment for the snapshot")
+    use_barrier = models.BooleanField(
+        default=False, help_text="Set write barrier before creating snapshot. The default value is False"
+    )
 
     @classmethod
     def long_description(cls, stateful_object):
         return help_text["create_snapshot"]
 
     def description(self):
-        return "Create snapshot '{}' of '{}'".format(self.name, self.fsname)
+        return "Create snapshot '{}' on '{}'".format(self.name, self.fsname)
 
     def get_steps(self):
-        args = {"host": self.fqdn, "fsname": self.fsname, "name": self.name}
+        args = {"host": self.fqdn, "fsname": self.fsname, "name": self.name, "use_barrier": self.use_barrier}
+
         if self.comment:
             args["comment"] = self.comment
 
@@ -1832,9 +1836,11 @@ class CreateSnapshotJob(Job):
 
 class CreateSnapshotStep(Step):
     def run(self, kwargs):
-        args = {"fsname": kwargs["fsname"], "name": kwargs["name"]}
+        args = {"fsname": kwargs["fsname"], "name": kwargs["name"], "use_barrier": kwargs["use_barrier"]}
+
         if "comment" in kwargs:
             args["comment"] = kwargs["comment"]
+
         self.invoke_rust_agent_expect_result(
             kwargs["host"],
             "snapshot_create",

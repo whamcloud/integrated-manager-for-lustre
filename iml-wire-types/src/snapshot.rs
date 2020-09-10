@@ -63,7 +63,9 @@ pub struct Create {
     pub fsname: String,
     /// Snapshot name
     pub name: String,
-
+    /// Set write barrier before creating snapshot
+    #[cfg_attr(feature = "cli", structopt(short = "b", long = "use_barrier"))]
+    pub use_barrier: bool,
     /// Optional comment for the snapshot
     #[cfg_attr(feature = "cli", structopt(short = "c", long = "comment"))]
     pub comment: Option<String>,
