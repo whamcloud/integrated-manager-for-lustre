@@ -284,6 +284,7 @@ impl QueryRoot {
 
         Ok(xs)
     }
+
     #[graphql(arguments(
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
@@ -321,6 +322,52 @@ impl QueryRoot {
             .await?;
 
         Ok(snapshots)
+    }
+
+    /// Fetch the list of commands
+    #[graphql(arguments(
+        limit(description = "paging limit, defaults to 20"),
+        offset(description = "Offset into items, defaults to 0"),
+        dir(description = "Sort direction, defaults to desc"),
+        is_active(description = "Command status, active means not completed, default is true"),
+        msg(description = "Substring of the command's message"),
+    ))]
+    async fn commands(
+        context: &Context,
+        limit: Option<i32>,
+        offset: Option<i32>,
+        dir: Option<SortDir>,
+        is_active: Option<bool>,
+        msg: Option<String>,
+    ) -> juniper::FieldResult<Vec<Command>> {
+        let dir = dir.unwrap_or_default();
+        let is_completed = !is_active.unwrap_or(true);
+        let commands = sqlx::query_as!(
+            Command,
+                r#"
+                    SELECT
+                        id
+                        complete,
+                        errored,
+                        cancelled,
+                        message,
+                        created_at
+                    FROM chroma_core_command c
+                    WHERE complete = $4 AND ($5::text IS NULL OR c.message LIKE '%' || $5 || '%')
+                    ORDER BY
+                        CASE WHEN $3 = 'asc' THEN c.created_at END ASC,
+                        CASE WHEN $3 = 'desc' THEN c.created_at END DESC
+                    OFFSET $1 LIMIT $2"#,
+                offset.unwrap_or(0) as i64,
+                limit.unwrap_or(20) as i64,
+                dir.deref(),
+                is_completed,
+                msg,
+            )
+            .fetch_all(&context.pg_pool)
+            .await?;
+
+        Ok(commands)
     }
 }
 
