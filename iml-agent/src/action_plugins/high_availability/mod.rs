@@ -603,9 +603,11 @@ async fn create_resource(
     Ok(())
 }
 
-pub async fn destroy_resource(label: String) -> Result<(), ImlAgentError> {
-    let path = format!("//primitive[@id={}]", label);
-    cibxpath("delete", &path, NO_EXTRA).await?;
+/// Destroy resource primitive with label and list of constraint ids
+pub async fn destroy_resource((label, constraints): (String, Vec<String>)) -> Result<(), ImlAgentError> {
+    let mut paths = vec![format!("//resources/primitive[@id={}]", label)];
+    paths.extend(constraints.into_iter().map(|id| format!("//constraints/*[@id=\"{}\"]", id)));
+    cibxpath("delete-all", &paths.join("|"), &["--force"]).await?;
 
     Ok(())
 }
