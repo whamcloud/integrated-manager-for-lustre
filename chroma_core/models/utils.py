@@ -214,14 +214,36 @@ class CreateSystemdResourceStep(Step):
             "args": {},
             "ops": {"start": start, "stop": stop, "monitor": monitor},
         }
-        constraint = [{"ORDER": {"id": ha_label + "-after-" + r, "first": r, "then": ha_label}} for r in after]
-        constraint.extend(
+        constraints = [{"ORDER": {"id": ha_label + "-after-" + r, "first": r, "then": ha_label}} for r in after]
+        constraints.extend(
             [
                 {"COLOCATION": {"id": ha_label + "-with-" + r, "rsc": ha_label, "with_rsc": r, "score": "INFINITY"}}
                 for r in coloc
             ]
         )
-        self.invoke_rust_agent_expect_result(host, "ha_resource_create", [agent, constraint])
+        self.invoke_rust_agent_expect_result(host, "ha_resource_create", [agent, constraints])
+
+
+class RemoveSystemdResourceStep(Step):
+    """
+    Create systemd based pacemaker resource
+    Created resource will be "Started" after constraints are added
+    Args:
+    * host - fqdn to run on
+    * ha_label - ha_label for unit
+    * after - (optional) array of ha_labels to set order contraint to run after
+    * with - (optional) array of ha_labels to set colocation constriant
+    """
+    def run(self, kwargs):
+        host = kwargs["host"]
+        ha_label = kwargs["ha_label"]
+        after = kwargs.get("after", [])
+        coloc = kwargs.get("with", [])
+
+        constraints = [ha_label + "-after-" + r for r in after]
+        constraints.extend([ha_label + "-with-" + r for r in coloc])
+
+        self.invoke_rust_agent_expect_result(host, "ha_resource_destroy", [ha_label, constraints])
 
 
 class RemoveResourceStep(Step):
@@ -237,7 +259,7 @@ class RemoveResourceStep(Step):
     def run(self, kwargs):
         host = kwargs["host"]
         label = kwargs["ha_label"]
-        self.invoke_rust_agent_expect_result(host, "ha_resource_destroy", label)
+        self.invoke_rust_agent_expect_result(host, "ha_resource_destroy", [label, []])
 
 
 class MountStep(Step):
