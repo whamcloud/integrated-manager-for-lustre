@@ -35,7 +35,7 @@ async fn dbg_main() -> Result<(), Box<dyn std::error::Error>> {
         .connect("postgres://chroma@tiv1:8432/chroma")
         .await?;
 
-    let mut num_rows = sqlx::query!("SELECT COUNT(*) FROM chroma_core_command")
+    let num_rows = sqlx::query!("SELECT COUNT(*) FROM chroma_core_command")
         .fetch_one(&pg_pool)
         .await?
         .count
@@ -52,9 +52,9 @@ async fn dbg_main() -> Result<(), Box<dyn std::error::Error>> {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    let addr = iml_manager_env::get_iml_api_addr();
-
     return dbg_main().await;
+
+    let addr = iml_manager_env::get_iml_api_addr();
 
     let conf = Conf {
         allow_anonymous_read: iml_manager_env::get_allow_anonymous_read(),

@@ -19,6 +19,7 @@ use std::{
     sync::Arc,
 };
 use warp::Filter;
+use iml_postgres::sqlx::types::chrono::{DateTime, Utc};
 
 #[derive(juniper::GraphQLObject)]
 /// A Corosync Node found in `crm_mon`
@@ -340,13 +341,24 @@ impl QueryRoot {
         is_active: Option<bool>,
         msg: Option<String>,
     ) -> juniper::FieldResult<Vec<Command>> {
+
+        #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+        #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+        struct TransientCommand {
+            pub cancelled: bool,
+            pub complete: bool,
+            pub created_at: DateTime<Utc>,
+            pub errored: bool,
+            pub id: i32,
+            pub message: String,
+        }
         let dir = dir.unwrap_or_default();
         let is_completed = !is_active.unwrap_or(true);
-        let commands = sqlx::query_as!(
-            Command,
+        let commands: Vec<TransientCommand> = sqlx::query_as!(
+            TransientCommand,
                 r#"
                     SELECT
-                        id
+                        id,
                         complete,
                         errored,
                         cancelled,
@@ -366,7 +378,19 @@ impl QueryRoot {
             )
             .fetch_all(&context.pg_pool)
             .await?;
-
+        let commands = commands.into_iter().map(|t|
+            Command {
+                cancelled: t.cancelled,
+                complete: t.complete,
+                created_at: t.created_at.to_string(),
+                errored: t.errored,
+                id: t.id,
+                jobs: vec![],
+                logs: "".to_string(),
+                message: t.message.clone(),
+                resource_uri: format!("/api/command/{}/", t.id),
+            })
+            .collect::<Vec<_>>();
         Ok(commands)
     }
 }
