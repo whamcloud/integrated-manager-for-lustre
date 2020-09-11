@@ -1,14 +1,13 @@
 [package]
-name = "iml-influx"
-version = "0.1.0"
 authors = ["IML Team <iml@whamcloud.com>"]
 description = "Shared functions and data types related to influx"
 edition = "2018"
+name = "iml-influx"
+version = "0.1.0"
 
 [dependencies]
-iml-wire-types = { path = "../iml-wire-types", version = "0.3" }
-serde = { version = "1", features = ['derive'] }
-serde_json = { version = "1" }
+serde = {version = "1", features = ['derive']}
+serde_json = {version = "1"}
 
 [dev-dependencies]
 influx_db_client = {version = "0.4", default-features = false, features = ["rustls-tls"]}
