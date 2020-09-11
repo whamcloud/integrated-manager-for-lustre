@@ -10,13 +10,13 @@ pub mod create {
               createSnapshot(fsname: $fsname, name: $name, comment: $comment, use_barrier: $use_barrier) {
                 cancelled
                 complete
-                createdAt
+                created_at: createdAt
                 errored
                 id
                 jobs
                 logs
                 message
-                resourceUri
+                resource_uri: resourceUri
               }
             }
         "#;
