@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use core::fmt::Debug;
+use futures::future::{AbortHandle, Abortable};
 use futures_util::stream::TryStreamExt;
 use iml_manager_env::get_pool_limit;
 use iml_postgres::{get_db_pool, sqlx};
@@ -14,6 +15,7 @@ use serde::de::DeserializeOwned;
 use std::{collections::HashMap, sync::Arc};
 use tokio::{
     sync::Mutex,
+    time::delay_for,
     time::{interval, Duration},
 };
 
@@ -52,7 +54,7 @@ async fn get_influx<T: DeserializeOwned + Debug>(
 
 enum State {
     Monitoring(u64),
-    CountingDown(Duration),
+    CountingDown(AbortHandle, Abortable<impl Future<Item = (), Error = std::io::Error>>),
 }
 
 #[tokio::main]
@@ -110,13 +112,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 );
                                 if *prev_clients > 0 && clients == 0 {
                                     tracing::info!("counting down for job");
+                                    let (abort_handle, abort_registration) = AbortHandle::new_pair();
+                                    let future = Abortable::new(delay_for(Duration::from_secs(5 * 60)).and_then(|_| tracing::info!("Firing up the job")
+                                            ), abort_registration);
                                     *prev_state =
-                                        Some(State::CountingDown(Duration::from_secs(5 * 60)));
+                                        Some(State::CountingDown(abort_handle, future));
                                 } else {
                                     *prev_clients = clients;
                                 }
                             }
-                            Some(State::CountingDown(_)) => {
+                            Some(State::CountingDown(_, _)) => {
                                 let clients = st.clients.unwrap_or(0);
                                 tracing::info!(
                                     "Counting down. Snapshot: {}, Was 0 clients, became {} clients",
