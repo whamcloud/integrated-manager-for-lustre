@@ -90,17 +90,17 @@ struct BannedTargetResource {
 #[derive(juniper::GraphQLObject)]
 /// A Corosync banned resource
 struct BannedResource {
-    // The resource id
+    /// The resource id
     id: String,
-    // The id of the cluster in which the resource lives
+    /// The id of the cluster in which the resource lives
     cluster_id: i32,
-    // The resource name
+    /// The resource name
     resource: String,
-    // The node in which the resource lives
+    /// The node in which the resource lives
     node: String,
-    // The assigned weight of the resource
+    /// The assigned weight of the resource
     weight: i32,
-    // Is master only
+    /// Is master only
     master_only: bool,
 }
 
@@ -608,7 +608,7 @@ async fn get_fs_target_resources(
             .map_ok(|x| {
                 TargetResource {
                     cluster_id: x.cluster_id,
-                    fs_name: fs_name.clone().unwrap_or_else(|| x.filesystems[0].to_string()).to_string(),
+                    fs_name: fs_name.as_ref().unwrap_or_else(|| &x.filesystems[0]).to_string(),
                     name: x.name,
                     resource_id: x.id,
                     cluster_hosts: x.cluster_hosts
