@@ -11,7 +11,7 @@ use iml_tracing::tracing;
 use iml_wire_types::snapshot;
 use reqwest::{Client, Url};
 use serde::de::DeserializeOwned;
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use tokio::{
     sync::Mutex,
     time::{interval, Duration},
@@ -65,10 +65,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
     sqlx::migrate!("../../migrations").run(&pool).await?;
 
-    let snapshot_fsnames = Arc::new(Mutex::new(HashSet::new()));
+    let snapshot_client_counts: Arc<Mutex<HashMap<String, Option<u64>>>> =
+        Arc::new(Mutex::new(HashMap::new()));
 
     {
-        let snapshot_fsnames = snapshot_fsnames.clone();
+        let snapshot_client_counts = snapshot_client_counts.clone();
         tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(10));
 
@@ -89,9 +90,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 tracing::debug!("ST: {:?}", st);
 
                 for (fs, st) in st {
-                    if snapshot_fsnames.lock().await.get(&fs).is_some() {
+                    let mut snapshot_client_counts = snapshot_client_counts.lock().await;
+                    snapshot_client_counts.entry(fs.clone()).and_modify(|c| {
                         tracing::info!("snapshot: {}, Clients: {}", fs, st.clients.unwrap_or(0));
-                    }
+                        *c = st.clients;
+                    });
                 }
             }
         });
@@ -101,7 +104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tracing::debug!("snapshots from {}: {:?}", fqdn, snapshots);
 
         let snaps = {
-            let mut snapshot_fsnames = snapshot_fsnames.lock().await;
+            let mut snapshot_fsnames = snapshot_client_counts.lock().await;
 
             snapshot_fsnames.clear();
 
@@ -116,7 +119,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     acc.5.push(s.mounted);
                     acc.6.push(s.comment);
 
-                    snapshot_fsnames.insert(s.snapshot_fsname.clone());
+                    snapshot_fsnames.insert(s.snapshot_fsname.clone(), None);
 
                     acc
                 },
