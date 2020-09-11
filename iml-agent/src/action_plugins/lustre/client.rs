@@ -103,6 +103,8 @@ pub async fn unmount(unmount: Unmount) -> Result<(), ImlAgentError> {
             .err_into()
             .await
             .map(drop)
+    } else {
+        Ok(())
     }
 }
 
