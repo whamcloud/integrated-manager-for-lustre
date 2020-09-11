@@ -4,10 +4,11 @@
 
 pub mod create {
     use crate::Query;
+    use iml_wire_types::Command;
 
-    pub const QUERY: &str = r#"
+    pub static QUERY: &str = r#"
             mutation CreateSnapshot($fsname: String!, $name: String!, $comment: String, $use_barrier: Boolean) {
-              createSnapshot(fsname: $fsname, name: $name, comment: $comment, use_barrier: $use_barrier) {
+              createSnapshot(fsname: $fsname, name: $name, comment: $comment, useBarrier: $use_barrier) {
                 cancelled
                 complete
                 created_at: createdAt
@@ -44,5 +45,11 @@ pub mod create {
                 use_barrier,
             }),
         }
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize)]
+    pub struct Resp {
+        #[serde(rename(deserialize = "createSnapshot"))]
+        pub create_snapshot: Command,
     }
 }

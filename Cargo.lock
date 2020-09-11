@@ -1617,6 +1617,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-graphql-queries"
+version = "0.1.0"
+dependencies = [
+ "iml-wire-types",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "iml-influx"
 version = "0.1.0"
 dependencies = [
