@@ -11,7 +11,11 @@ use iml_tracing::tracing;
 use iml_wire_types::snapshot;
 use reqwest::{Client, Url};
 use serde::de::DeserializeOwned;
-use tokio::time::{interval, Duration};
+use std::{collections::HashSet, sync::Arc};
+use tokio::{
+    sync::Mutex,
+    time::{interval, Duration},
+};
 
 // Default pool limit if not overridden by POOL_LIMIT
 const DEFAULT_POOL_LIMIT: u32 = 2;
@@ -61,48 +65,63 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
     sqlx::migrate!("../../migrations").run(&pool).await?;
 
-    tokio::spawn(async move {
-        let mut interval = interval(Duration::from_secs(10));
+    let snapshot_fsnames = Arc::new(Mutex::new(HashSet::new()));
 
-        use tokio::stream::StreamExt;
-        while let Some(_) = interval.next().await {
-            let client: Client = iml_manager_client::get_client().unwrap();
+    {
+        let snapshot_fsnames = snapshot_fsnames.clone();
+        tokio::spawn(async move {
+            let mut interval = interval(Duration::from_secs(10));
 
-            let query = iml_influx::filesystems::query();
-            let fut_st = get_influx::<iml_influx::filesystems::InfluxResponse>(
-                client,
-                "iml_stats",
-                query.as_str(),
-            );
+            use tokio::stream::StreamExt;
+            while let Some(_) = interval.next().await {
+                let client: Client = iml_manager_client::get_client().unwrap();
 
-            let influx_resp = fut_st.await.unwrap();
-            let st = iml_influx::filesystems::Response::from(influx_resp);
+                let query = iml_influx::filesystems::query();
+                let fut_st = get_influx::<iml_influx::filesystems::InfluxResponse>(
+                    client,
+                    "iml_stats",
+                    query.as_str(),
+                );
 
-            tracing::debug!("ST: {:?}", st);
+                let influx_resp = fut_st.await.unwrap();
+                let st = iml_influx::filesystems::Response::from(influx_resp);
 
-            for (fs, st) in st {
-                tracing::info!("FS: {}, Clients: {}", fs, st.clients.unwrap_or(0));
+                tracing::debug!("ST: {:?}", st);
+
+                for (fs, st) in st {
+                    if snapshot_fsnames.lock().await.get(&fs).is_some() {
+                        tracing::info!("snapshot: {}, Clients: {}", fs, st.clients.unwrap_or(0));
+                    }
+                }
             }
-        }
-    });
+        });
+    }
 
     while let Some((fqdn, snapshots)) = s.try_next().await? {
         tracing::debug!("snapshots from {}: {:?}", fqdn, snapshots);
 
-        let snaps = snapshots.into_iter().fold(
-            (vec![], vec![], vec![], vec![], vec![], vec![], vec![]),
-            |mut acc, s| {
-                acc.0.push(s.filesystem_name);
-                acc.1.push(s.snapshot_name);
-                acc.2.push(s.create_time.naive_utc());
-                acc.3.push(s.modify_time.naive_utc());
-                acc.4.push(s.snapshot_fsname.clone());
-                acc.5.push(s.mounted);
-                acc.6.push(s.comment);
+        let snaps = {
+            let mut snapshot_fsnames = snapshot_fsnames.lock().await;
 
-                acc
-            },
-        );
+            snapshot_fsnames.clear();
+
+            snapshots.into_iter().fold(
+                (vec![], vec![], vec![], vec![], vec![], vec![], vec![]),
+                |mut acc, s| {
+                    acc.0.push(s.filesystem_name);
+                    acc.1.push(s.snapshot_name);
+                    acc.2.push(s.create_time.naive_utc());
+                    acc.3.push(s.modify_time.naive_utc());
+                    acc.4.push(s.snapshot_fsname.clone());
+                    acc.5.push(s.mounted);
+                    acc.6.push(s.comment);
+
+                    snapshot_fsnames.insert(s.snapshot_fsname.clone());
+
+                    acc
+                },
+            )
+        };
 
         sqlx::query!(
             r#"
