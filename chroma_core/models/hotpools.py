@@ -527,9 +527,10 @@ class CreateChangelogUserStep(Step):
         # @@ ideally this should lock lamigo object
         # with lamigo._lock:
         if not lamigo.changelog_user:
-            lamigo.changelog_user = self.invoke_rust_agent_expect_result(
+            user = self.invoke_rust_agent_expect_result(
                 host, "lctl", ["--device", lamigo.mdt.name, "changelog_register", "-n"]
             )
+            lamigo.changelog_user = user.strip()
             lamigo.save()
             ObjectCache.update(lamigo)
 
