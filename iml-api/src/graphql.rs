@@ -254,7 +254,6 @@ impl QueryRoot {
         Ok(xs)
     }
 
-    #[graphql()]
     async fn get_banned_resources(context: &Context) -> juniper::FieldResult<Vec<BannedResource>> {
         let xs = get_banned_resources(&context.pg_pool).await?;
 
