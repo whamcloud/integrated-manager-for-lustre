@@ -50,6 +50,11 @@ async fn get_influx<T: DeserializeOwned + Debug>(
     Ok(json)
 }
 
+enum State {
+    Monitoring(u64, u64),
+    CountingDown(Duration),
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
@@ -65,7 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
     sqlx::migrate!("../../migrations").run(&pool).await?;
 
-    let snapshot_client_counts: Arc<Mutex<HashMap<String, Option<u64>>>> =
+    let snapshot_client_counts: Arc<Mutex<HashMap<String, Option<State>>>> =
         Arc::new(Mutex::new(HashMap::new()));
 
     {
@@ -91,10 +96,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 for (fs, st) in st {
                     let mut snapshot_client_counts = snapshot_client_counts.lock().await;
-                    snapshot_client_counts.entry(fs.clone()).and_modify(|c| {
-                        tracing::info!("snapshot: {}, Clients: {}", fs, st.clients.unwrap_or(0));
-                        *c = st.clients;
-                    });
+                    snapshot_client_counts
+                        .entry(fs.clone())
+                        .and_modify(|prev_state| match prev_state {
+                            Some(State::Monitoring(prev_prev_clients, prev_clients)) => {
+                                let clients = st.clients.unwrap_or(0);
+                                tracing::info!(
+                                    "snapshot: {}, prev_clients: {}, clients: {}",
+                                    fs,
+                                    prev_clients,
+                                    clients
+                                );
+
+                                tracing::info!(
+                                    "was {} clients, became {} clients",
+                                    prev_clients,
+                                    clients
+                                );
+                                if *prev_clients > 0 && clients == 0 {
+                                    tracing::info!("scheduling job");
+                                    *prev_state =
+                                        Some(State::CountingDown(Duration::from_secs(5 * 60)));
+                                } else {
+                                    *prev_prev_clients = *prev_clients;
+                                    *prev_clients = clients;
+                                }
+                            }
+                            Some(State::CountingDown(_)) => {
+                                let clients = st.clients.unwrap_or(0);
+                                tracing::info!("was 0 clients, became {} clients", clients);
+                                if clients > 0 {
+                                    tracing::info!("changing state");
+                                    *prev_state = Some(State::Monitoring(0, clients));
+                                }
+                            }
+                            None => {
+                                *prev_state = Some(State::Monitoring(0, 0));
+                            }
+                        });
                 }
             }
         });
@@ -105,8 +144,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let snaps = {
             let mut snapshot_fsnames = snapshot_client_counts.lock().await;
-
-            snapshot_fsnames.clear();
 
             snapshots.into_iter().fold(
                 (vec![], vec![], vec![], vec![], vec![], vec![], vec![]),
@@ -119,7 +156,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     acc.5.push(s.mounted);
                     acc.6.push(s.comment);
 
-                    snapshot_fsnames.insert(s.snapshot_fsname.clone(), None);
+                    snapshot_fsnames
+                        .entry(s.snapshot_fsname.clone())
+                        .or_insert(None);
+                    // TODO: handle removal
 
                     acc
                 },
