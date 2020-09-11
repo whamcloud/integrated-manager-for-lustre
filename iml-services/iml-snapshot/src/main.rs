@@ -68,20 +68,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         while let Some(_) = interval.next().await {
             let client: Client = iml_manager_client::get_client().unwrap();
 
-            // FIXME:
-            let query = iml_influx::filesystem::query("zfsmo");
-            let fut_st = get_influx::<iml_influx::filesystem::InfluxResponse>(
+            let query = iml_influx::filesystems::query();
+            let fut_st = get_influx::<iml_influx::filesystems::InfluxResponse>(
                 client,
                 "iml_stats",
                 query.as_str(),
             );
 
             let influx_resp = fut_st.await.unwrap();
-            let st = iml_influx::filesystem::Response::from(influx_resp);
+            let st = iml_influx::filesystems::Response::from(influx_resp);
 
             tracing::debug!("ST: {:?}", st);
 
-            tracing::info!("Clients: {}", st.clients.unwrap_or(0));
+            for (fs, st) in st {
+                tracing::info!("FS: {}, Clients: {}", fs, st.clients.unwrap_or(0));
+            }
         }
     });
 
