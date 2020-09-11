@@ -51,7 +51,7 @@ async fn get_influx<T: DeserializeOwned + Debug>(
 }
 
 enum State {
-    Monitoring(u64, u64),
+    Monitoring(u64),
     CountingDown(Duration),
 }
 
@@ -99,39 +99,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     snapshot_client_counts
                         .entry(fs.clone())
                         .and_modify(|prev_state| match prev_state {
-                            Some(State::Monitoring(prev_prev_clients, prev_clients)) => {
+                            Some(State::Monitoring(prev_clients)) => {
                                 let clients = st.clients.unwrap_or(0);
+
                                 tracing::info!(
-                                    "snapshot: {}, prev_clients: {}, clients: {}",
+                                    "Monitoring. Snapshot: {}, was {} clients, became {} clients",
                                     fs,
                                     prev_clients,
                                     clients
                                 );
-
-                                tracing::info!(
-                                    "was {} clients, became {} clients",
-                                    prev_clients,
-                                    clients
-                                );
                                 if *prev_clients > 0 && clients == 0 {
-                                    tracing::info!("scheduling job");
+                                    tracing::info!("counting down for job");
                                     *prev_state =
                                         Some(State::CountingDown(Duration::from_secs(5 * 60)));
                                 } else {
-                                    *prev_prev_clients = *prev_clients;
                                     *prev_clients = clients;
                                 }
                             }
                             Some(State::CountingDown(_)) => {
                                 let clients = st.clients.unwrap_or(0);
-                                tracing::info!("was 0 clients, became {} clients", clients);
+                                tracing::info!(
+                                    "Counting down. Snapshot: {}, Was 0 clients, became {} clients",
+                                    fs,
+                                    clients
+                                );
                                 if clients > 0 {
                                     tracing::info!("changing state");
-                                    *prev_state = Some(State::Monitoring(0, clients));
+                                    *prev_state = Some(State::Monitoring(clients));
                                 }
                             }
                             None => {
-                                *prev_state = Some(State::Monitoring(0, 0));
+                                tracing::info!(
+                                    "Just learnt about this snapshot. Snapshot: {}, became 0 clients",
+                                    fs
+                                );
+
+                                *prev_state = Some(State::Monitoring(0));
                             }
                         });
                 }
