@@ -96,12 +96,14 @@ pub async fn mount_many(xs: Vec<Mount>) -> Result<(), ImlAgentError> {
 pub async fn unmount(unmount: Unmount) -> Result<(), ImlAgentError> {
     delete_fstab_entry(&unmount.mountpoint).await?;
 
-    Command::new("/bin/umount")
-        .arg(unmount.mountpoint)
-        .checked_output()
-        .err_into()
-        .await
-        .map(drop)
+    if is_mounted(&unmount.mountpoint, false).await? {
+        Command::new("/bin/umount")
+            .arg(unmount.mountpoint)
+            .checked_output()
+            .err_into()
+            .await
+            .map(drop)
+    }
 }
 
 pub async fn unmount_many(xs: Vec<Unmount>) -> Result<(), ImlAgentError> {
