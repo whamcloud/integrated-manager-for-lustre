@@ -4,7 +4,9 @@
 
 use console::{style, Term};
 use futures::{Future, FutureExt};
-use iml_wire_types::{Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration};
+use iml_wire_types::{
+    snapshot::Snapshot, Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration,
+};
 use indicatif::ProgressBar;
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
@@ -119,6 +121,34 @@ impl<T> IsEmpty for Vec<T> {
 
 pub trait IntoTable {
     fn into_table(self) -> Table;
+}
+
+impl IntoTable for Vec<Snapshot> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &[
+                "Filesystem",
+                "Snapshot",
+                "Creation Time",
+                "State",
+                "Comment",
+            ],
+            self.into_iter().map(|s| {
+                vec![
+                    s.filesystem_name,
+                    s.snapshot_name,
+                    s.create_time.to_rfc2822(),
+                    match s.mounted {
+                        Some(true) => "mounted",
+                        Some(false) => "unmounted",
+                        None => "--",
+                    }
+                    .to_string(),
+                    s.comment.unwrap_or_else(|| "--".to_string()),
+                ]
+            }),
+        )
+    }
 }
 
 impl IntoTable for Vec<Host> {

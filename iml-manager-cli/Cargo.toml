@@ -16,7 +16,7 @@ iml-influx = {path = "../iml-influx", version = "0.1"}
 iml-manager-client = {path = "../iml-manager-client", version = "0.3"}
 iml-postgres = {path = "../iml-postgres", version = "0.3"}
 iml-tracing = {version = "0.2", path = "../iml-tracing"}
-iml-wire-types = {path = "../iml-wire-types", version = "0.3"}
+iml-wire-types = {path = "../iml-wire-types", version = "0.3", features = ["cli"]}
 indicatif = "0.14"
 lazy_static = "1.4"
 number-formatter = {path = "../number-formatter", version = "0.1"}

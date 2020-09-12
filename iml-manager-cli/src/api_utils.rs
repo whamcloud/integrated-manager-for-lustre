@@ -176,6 +176,17 @@ pub async fn get<T: serde::de::DeserializeOwned + std::fmt::Debug>(
         .map_err(|e| e.into())
 }
 
+pub async fn graphql(
+    query: impl serde::Serialize,
+) -> Result<serde_json::value::Value, ImlManagerCliError> {
+    let client = iml_manager_client::get_client()?;
+
+    let body = serde_json::json!({ "query": query });
+    iml_manager_client::graphql(client, body)
+        .await
+        .map_err(|e| e.into())
+}
+
 /// Wrapper for a `POST` to the Api.
 pub async fn post(
     endpoint: &str,

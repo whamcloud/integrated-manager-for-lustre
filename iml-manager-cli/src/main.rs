@@ -7,9 +7,11 @@ use iml_manager_cli::{
     display_utils::display_error,
     filesystem::{self, filesystem_cli},
     server::{self, server_cli},
+    snapshot::{self, snapshot_cli},
     stratagem::{self, stratagem_cli},
     update_repo_file::{self, update_repo_file_cli},
 };
+
 use std::process::exit;
 use structopt::StructOpt;
 
@@ -35,6 +37,12 @@ pub enum App {
         #[structopt(subcommand)]
         command: filesystem::FilesystemCommand,
     },
+    #[structopt(name = "snapshot")]
+    /// Snapshot operations
+    Snapshot {
+        #[structopt(subcommand)]
+        command: snapshot::SnapshotCommand,
+    },
     #[structopt(name = "update_repo")]
     /// Update Agent repo files
     UpdateRepoFile(update_repo_file::UpdateRepoFileHosts),
@@ -55,11 +63,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::from_path("/var/lib/chroma/iml-settings.conf").expect("Could not load cli env");
 
     let r = match matches {
-        App::Stratagem { command } => stratagem_cli(command).await,
-        App::Server { command } => server_cli(command).await,
-        App::UpdateRepoFile(config) => update_repo_file_cli(config).await,
-        App::Filesystem { command } => filesystem_cli(command).await,
         App::DebugApi(command) => api_cli(command).await,
+        App::Filesystem { command } => filesystem_cli(command).await,
+        App::Server { command } => server_cli(command).await,
+        App::Snapshot { command } => snapshot_cli(command).await,
+        App::Stratagem { command } => stratagem_cli(command).await,
+        App::UpdateRepoFile(config) => update_repo_file_cli(config).await,
     };
 
     if let Err(e) = r {
