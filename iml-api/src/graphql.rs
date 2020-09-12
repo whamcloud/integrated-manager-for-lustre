@@ -281,6 +281,9 @@ impl MutationRoot {
         comment: Option<String>,
         use_barrier: Option<bool>,
     ) -> juniper::FieldResult<Command> {
+        let name = name.trim();
+        validate_snapshot_name(name)?;
+
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
             .ok_or(FieldError::new(
@@ -318,14 +321,19 @@ impl MutationRoot {
     #[graphql(arguments(
         fsname(description = "Filesystem snapshot was taken from"),
         name(description = "Name of the snapshot"),
-        force(description = "Whether to force the removal"),
+        force(description = "Destroy the snapshot by force"),
     ))]
+    /// Destroys an existing snapshot of an existing Lustre filesystem. Returns a `Command` to track progress.
+    /// For the `Command` to succeed, the filesystem must be available.
     async fn destroy_snapshot(
         context: &Context,
         fsname: String,
         name: String,
         force: bool,
     ) -> juniper::FieldResult<Command> {
+        let name = name.trim();
+        validate_snapshot_name(name)?;
+
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
             .ok_or(FieldError::new(
@@ -364,11 +372,16 @@ impl MutationRoot {
         fsname(description = "Filesystem snapshot was taken from"),
         name(description = "Name of the snapshot"),
     ))]
+    /// Mounts an existing snapshot of an existing Lustre filesystem. Returns a `Command` to track progress.
+    /// For the `Command` to succeed, the filesystem must be available.
     async fn mount_snapshot(
         context: &Context,
         fsname: String,
         name: String,
     ) -> juniper::FieldResult<Command> {
+        let name = name.trim();
+        validate_snapshot_name(name)?;
+
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
             .ok_or(FieldError::new(
@@ -405,11 +418,16 @@ impl MutationRoot {
         fsname(description = "Filesystem snapshot was taken from"),
         name(description = "Name of the snapshot"),
     ))]
+    /// Unmounts an existing snapshot of an existing Lustre filesystem. Returns a `Command` to track progress.
+    /// For the `Command` to succeed, the filesystem must be available.
     async fn unmount_snapshot(
         context: &Context,
         fsname: String,
         name: String,
     ) -> juniper::FieldResult<Command> {
+        let name = name.trim();
+        validate_snapshot_name(name)?;
+
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
             .ok_or(FieldError::new(
@@ -561,4 +579,30 @@ async fn get_fs_target_resources(
             .await?;
 
     Ok(xs)
+}
+
+fn validate_snapshot_name(x: &str) -> Result<(), FieldError> {
+    if x.contains(' ') {
+        Err(FieldError::new(
+            "Snapshot name cannot contain spaces",
+            Value::null(),
+        ))
+    } else if x.contains('*') {
+        Err(FieldError::new(
+            "Snapshot name cannot contain * character",
+            Value::null(),
+        ))
+    } else if x.contains('/') {
+        Err(FieldError::new(
+            "Snapshot name cannot contain / character",
+            Value::null(),
+        ))
+    } else if x.contains("&") {
+        Err(FieldError::new(
+            "Snapshot name cannot contain / character",
+            Value::null(),
+        ))
+    } else {
+        Ok(())
+    }
 }
