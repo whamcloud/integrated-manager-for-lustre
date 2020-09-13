@@ -103,6 +103,7 @@ pub(crate) async fn await_next_session(
 pub async fn create_ldev_conf(
     pool: PgPool,
 ) -> Result<HashMap<String, Vec<LdevEntry>>, ActionRunnerError> {
+    tracing::debug!("getting hosts");
     let hosts = sqlx::query!("select id, fqdn from chroma_core_managedhost")
         .fetch_all(&pool)
         .await?
@@ -110,8 +111,10 @@ pub async fn create_ldev_conf(
         .map(|x| (x.id, x.fqdn))
         .collect::<HashMap<i32, String>>();
 
+    tracing::debug!("hosts: {:?}", hosts);
     let fs_to_fqdn_map = db::get_mgs_host_fqdn(&pool).await?;
 
+    tracing::debug!("fs_to_fqdn_map: {:?}", fs_to_fqdn_map);
     // Get devices from the `targets` endpoint
     let client = iml_manager_client::get_client()?;
     let targets: Vec<iml_device::Target> = iml_manager_client::graphql(
