@@ -238,6 +238,13 @@ pub fn get_db_host() -> Option<String> {
     empty_str_to_none(get_var("DB_HOST"))
 }
 
+pub fn get_db_port() -> Option<u16> {
+    env::var("DB_PORT")
+        .ok()
+        .map(|l| l.parse().ok())
+        .flatten()
+}
+
 pub fn get_db_name() -> Option<String> {
     empty_str_to_none(get_var("DB_NAME"))
 }
