@@ -12,47 +12,33 @@ use iml_manager_env::get_pool_limit;
 use iml_postgres::get_db_pool;
 use iml_rabbit::{self, create_connection_filter};
 use iml_wire_types::Conf;
-use iml_postgres::sqlx;
 use std::sync::Arc;
 use warp::Filter;
+use std::env;
 
 // Default pool limit if not overridden by POOL_LIMIT
 const DEFAULT_POOL_LIMIT: u32 = 5;
-
-async fn dbg_main() -> Result<(), Box<dyn std::error::Error>> {
-    let conf = Conf {
-        allow_anonymous_read: true,
-        build: "Not Loaded".to_string(),
-        version: "0".to_string(),
-        exa_version: None,
-        is_release: false,
-        branding: Default::default(),
-        use_stratagem: false,
-        monitor_sfa: false,
-    };
-    let pg_pool = sqlx::postgres::PgPoolOptions::new()
-        .max_connections(1)
-        .connect("postgres://chroma@tiv1:8432/chroma")
-        .await?;
-
-    let num_rows = sqlx::query!("SELECT COUNT(*) FROM chroma_core_command")
-        .fetch_one(&pg_pool)
-        .await?
-        .count
-        .expect("Something impossible, count should not return None");
-
-    println!("{:?}", num_rows);
-    Ok(())
-
-    // let pg_pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
-
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    return dbg_main().await;
+    env::set_var("PROXY_HOST", "localhost");
+    env::set_var("IML_API_PORT", "8080");
+    env::set_var("AMQP_BROKER_URL", "false");
+    env::set_var("DB_HOST", "tiv1");
+    env::set_var("DB_PORT", "8432");
+    env::set_var("DB_USER", "chroma");
+    env::set_var("DB_PASSWORD", "");
+    env::set_var("DB_NAME", "chroma");
+
+    env::set_var("ALLOW_ANONYMOUS_READ", "true");
+    env::set_var("BUILD", "");
+    env::set_var("VERSION", "6.1.0-1");
+    env::set_var("IS_RELEASE", "false");
+    // env::set_var("EXA_VERSION");
+    env::set_var("BRANDING", "Whamcloud");
+    env::set_var("USE_STRATAGEM", "false");
 
     let addr = iml_manager_env::get_iml_api_addr();
 

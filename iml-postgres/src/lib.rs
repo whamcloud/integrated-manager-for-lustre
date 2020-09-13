@@ -30,6 +30,12 @@ pub async fn get_db_pool(pool_size: u32) -> Result<PgPool, sqlx::Error> {
         opts
     };
 
+    opts = if let Some(x) = iml_manager_env::get_db_port() {
+        opts.port(x)
+    } else {
+        opts
+    };
+
     opts = if let Some(x) = iml_manager_env::get_db_name() {
         opts.database(&x)
     } else {

@@ -227,7 +227,7 @@ impl QueryRoot {
     #[graphql(arguments(
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
-        dir(description = "Sort direction, defaults to asc"),
+        dir(description = "Sort direction, defaults to ASC"),
         fsname(description = "Filesystem the snapshot was taken from"),
         name(description = "Name of the snapshot"),
     ))]
@@ -267,7 +267,7 @@ impl QueryRoot {
     #[graphql(arguments(
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
-        dir(description = "Sort direction, defaults to desc"),
+        dir(description = "Sort direction, defaults to ASC"),
         is_active(description = "Command status, active means not completed, default is true"),
         msg(description = "Substring of the command's message"),
     ))]
