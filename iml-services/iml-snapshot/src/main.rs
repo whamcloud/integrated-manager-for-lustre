@@ -215,7 +215,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     tracing::info!("changing state");
                                     *state = Some(State::Monitoring(clients));
                                 } else if Instant::now() >= *when {
-                                    // Run the job
                                     tracing::info!("running the job");
                                     *state = Some(State::Monitoring(0));
 
