@@ -127,6 +127,8 @@ pub async fn graphql<T: DeserializeOwned + Debug>(
         .text()
         .await?;
 
+    tracing::debug!("Data is: {:?}", data);
+
     let json: T = serde_json::from_str(data.as_str())?;
 
     tracing::debug!("Resp: {:?}", json);
