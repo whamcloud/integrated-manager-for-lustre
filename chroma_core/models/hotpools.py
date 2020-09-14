@@ -32,6 +32,8 @@ from chroma_help.help import help_text
 #
 # Assumptions:
 # * components will be controlled via pacemaker
+# * will be dependent on local client mount as "single on/off switch"
+# * Only 1 hotpool setup per filesystem
 
 
 class HotpoolConfiguration(StatefulObject):
@@ -40,6 +42,7 @@ class HotpoolConfiguration(StatefulObject):
     class Meta:
         app_label = "chroma_core"
         ordering = ["id"]
+        unique_together = ("filesystem",)
 
     states = ["unconfigured", "configured", "stopped", "started", "removed"]
     initial_state = "unconfigured"
@@ -171,7 +174,7 @@ class DeployHotpoolJob(StateChangeJob):
         deps = []
 
         for comp in self.hotpool_configuration.get_components():
-            deps.append(DependOn(comp, "configured", fix_state="unconfigured"))
+            deps.append(DependOn(comp, "configured", fix_state="configured"))
 
         return DependAll(deps)
 
@@ -294,7 +297,7 @@ class RemoveHotpoolJob(StateChangeJob):
 
     def on_success(self):
         self.hotpool_configuration.mark_deleted()
-        self.hotpool_configuration.save()
+        super(RemoveHotpoolJob, self).on_success()
 
 
 class RemoveClonedClientStep(Step):
@@ -350,7 +353,7 @@ class RemoveConfiguredHotpoolJob(StateChangeJob):
 
     def on_success(self):
         self.hotpool_configuration.mark_deleted()
-        self.hotpool_configuration.save()
+        super(RemoveConfiguredHotpoolJob, self).on_success()
 
 
 class RemoveUnconfiguredHotpoolJob(StateChangeJob):
@@ -386,7 +389,7 @@ class RemoveUnconfiguredHotpoolJob(StateChangeJob):
 
     def on_success(self):
         self.hotpool_configuration.mark_deleted()
-        self.hotpool_configuration.save()
+        super(RemoveUnconfiguredHotpoolJob, self).on_success()
 
 
 ############################################################
@@ -482,6 +485,13 @@ class ConfigureLamigoJob(StateChangeJob):
 
     def description(self):
         return help_text["configure_hotpool"]
+
+    def get_deps(self):
+        hp = self.lamigo.configuration.hotpool
+
+        deps = [DependOn(hp, "configured", acceptable_states=["stopped", "started"])]
+
+        return DependAll(deps)
 
     def get_steps(self):
         steps = []
@@ -589,7 +599,7 @@ class RemoveLamigoJob(StateChangeJob):
 
     def on_success(self):
         self.lamigo.mark_deleted()
-        self.lamigo.save()
+        super(RemoveLamigoJob, self).on_success()
 
 
 class RemoveUnconfiguredLamigoJob(StateChangeJob):
@@ -616,7 +626,7 @@ class RemoveUnconfiguredLamigoJob(StateChangeJob):
 
     def on_success(self):
         self.lamigo.mark_deleted()
-        self.lamigo.save()
+        super(RemoveUnconfiguredLamigoJob, self).on_success()
 
 
 ############################################################
@@ -707,6 +717,13 @@ class ConfigureLpurgeJob(StateChangeJob):
     def description(self):
         return help_text["configure_hotpool"]
 
+    def get_deps(self):
+        hp = self.lpurge.configuration.hotpool
+
+        deps = [DependOn(hp, "configured", acceptable_states=["stopped", "started"])]
+
+        return DependAll(deps)
+
     def get_steps(self):
         steps = []
 
@@ -785,7 +802,7 @@ class RemoveLpurgeJob(StateChangeJob):
 
     def on_success(self):
         self.lpurge.mark_deleted()
-        self.lpurge.save()
+        super(RemoveLpurgeJob, self).on_success()
 
 
 class RemoveUnconfiguredLpurgeJob(StateChangeJob):
@@ -812,4 +829,4 @@ class RemoveUnconfiguredLpurgeJob(StateChangeJob):
 
     def on_success(self):
         self.lpurge.mark_deleted()
-        self.lpurge.save()
+        super(RemoveUnconfiguredLpurgeJob, self).on_success()
