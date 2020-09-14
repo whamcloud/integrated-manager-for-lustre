@@ -8,6 +8,7 @@ use crate::{
     error::ImlManagerCliError,
 };
 use console::Term;
+use iml_graphql_queries::snapshot as snapshot_queries;
 use iml_wire_types::snapshot;
 use structopt::StructOpt;
 
@@ -31,32 +32,18 @@ pub enum SnapshotCommand {
         /// yaml: return data in yaml format
         #[structopt(short = "d", long = "display", default_value = "tabular")]
         display_type: DisplayType,
-
+        /// The filesystem to list snapshots for
         fsname: String,
     },
 }
 
 async fn list(fsname: String) -> Result<Vec<snapshot::Snapshot>, ImlManagerCliError> {
-    let query = format!(
-        r#"
-{{
-  snapshots(fsname: "{}") {{
-    comment
-    create_time: createTime
-    filesystem_name: filesystemName
-    modify_time: modifyTime
-    mounted
-    snapshot_fsname: snapshotFsname
-    snapshot_name: snapshotName
-  }}
-}}
-            "#,
-        fsname
-    );
-    let resp = graphql(query).await?;
+    let query = snapshot_queries::list::build(fsname, None, None, None, Some(1_000));
 
-    serde_json::from_value(resp.get("data").unwrap().get("snapshots").unwrap().clone())
-        .map_err(|e| e.into())
+    let resp: iml_graphql_queries::Response<snapshot_queries::list::Resp> = graphql(query).await?;
+    let x = Result::from(resp)?.data.snapshots;
+
+    Ok(x)
 }
 
 pub async fn snapshot_cli(command: SnapshotCommand) -> Result<(), ImlManagerCliError> {

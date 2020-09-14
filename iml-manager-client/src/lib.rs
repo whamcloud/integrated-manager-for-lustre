@@ -199,22 +199,26 @@ pub async fn post(
 }
 
 /// Performs a POST request to the GraphQL endpoint
-pub async fn graphql(
+pub async fn graphql<T: DeserializeOwned + Debug>(
     client: Client,
-    query: impl serde::Serialize,
-) -> Result<serde_json::value::Value, ImlManagerClientError> {
+    query: impl serde::Serialize + Debug,
+) -> Result<T, ImlManagerClientError> {
     let url = Url::parse(&iml_manager_env::get_manager_url())?.join("/graphql")?;
 
-    let resp = client
+    tracing::debug!("Sending GraphQL query: {:?}", query);
+
+    let text = client
         .post(url)
         .json(&query)
         .send()
         .await?
-        .error_for_status()?;
+        .error_for_status()?
+        .text()
+        .await?;
 
-    let json = serde_json::from_str(&resp.text().await?)?;
+    tracing::debug!("GraphQL resp: {:?}", text);
 
-    tracing::debug!("GraphQL resp: {:?}", json);
+    let json = serde_json::from_str(&text)?;
 
     Ok(json)
 }

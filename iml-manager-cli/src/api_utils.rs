@@ -176,13 +176,12 @@ pub async fn get<T: serde::de::DeserializeOwned + std::fmt::Debug>(
         .map_err(|e| e.into())
 }
 
-pub async fn graphql(
-    query: impl serde::Serialize,
-) -> Result<serde_json::value::Value, ImlManagerCliError> {
+pub async fn graphql<T: serde::de::DeserializeOwned + std::fmt::Debug>(
+    query: impl serde::Serialize + Debug,
+) -> Result<T, ImlManagerCliError> {
     let client = iml_manager_client::get_client()?;
 
-    let body = serde_json::json!({ "query": query });
-    iml_manager_client::graphql(client, body)
+    iml_manager_client::graphql(client, query)
         .await
         .map_err(|e| e.into())
 }
