@@ -5,14 +5,13 @@
 use core::fmt::Debug;
 use futures_util::stream::TryStreamExt;
 use iml_graphql_queries::snapshot as snapshot_queries;
-use iml_manager_client::get;
+use iml_manager_client::{get, get_influx, graphql};
 use iml_manager_env::get_pool_limit;
 use iml_postgres::{get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::{snapshot, ApiList, Command, EndpointName};
-use reqwest::{Client, Url};
-use serde::de::DeserializeOwned;
+use reqwest::Client;
 use std::iter;
 use std::{collections::HashMap, collections::HashSet, sync::Arc};
 use tokio::{
@@ -37,36 +36,6 @@ enum ThisError {
     ManagerClient(#[from] iml_manager_client::ImlManagerClientError),
     #[error("Just a fail")]
     JustFail(()),
-}
-
-async fn get_influx<T: DeserializeOwned + Debug>(
-    client: Client,
-    db: &str,
-    q: &str,
-) -> Result<T, ThisError> {
-    let url = Url::parse(&iml_manager_env::get_manager_url())?.join("/influx")?;
-    let resp = client
-        .get(url)
-        .query(&[("db", db), ("q", q)])
-        .send()
-        .await?
-        .error_for_status()?;
-
-    let json = resp.json().await?;
-
-    tracing::debug!("Resp: {:?}", json);
-
-    Ok(json)
-}
-
-async fn graphql<T: serde::de::DeserializeOwned + std::fmt::Debug>(
-    query: impl serde::Serialize + Debug,
-) -> Result<T, ThisError> {
-    let client = iml_manager_client::get_client()?;
-
-    iml_manager_client::graphql(client, query)
-        .await
-        .map_err(|e| e.into())
 }
 
 fn cmd_finished(cmd: &Command) -> bool {
@@ -169,6 +138,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             use tokio::stream::StreamExt;
             while let Some(_) = interval.next().await {
                 let client: Client = iml_manager_client::get_client().unwrap();
+                let client2 = client.clone();
 
                 let query = iml_influx::filesystems::query();
                 let fut_st = get_influx::<iml_influx::filesystems::InfluxResponse>(
@@ -224,7 +194,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     );
                                     let resp: iml_graphql_queries::Response<
                                         snapshot_queries::unmount::Resp,
-                                    > = graphql(query).await.unwrap();
+                                    > = graphql(client2.clone(), query).await.unwrap();
                                     let x = Result::from(resp).unwrap().data.unmount_snapshot;
                                     wait_for_cmds_success(&[x]).await.unwrap();
                                 }
