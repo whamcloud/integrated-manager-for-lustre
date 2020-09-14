@@ -117,7 +117,7 @@ pub async fn create_ldev_conf(
     tracing::debug!("fs_to_fqdn_map: {:?}", fs_to_fqdn_map);
     // Get devices from the `targets` endpoint
     let client = iml_manager_client::get_client()?;
-    let targets: Vec<iml_device::Target> = iml_manager_client::graphql(
+    let targets: Vec<Target> = iml_manager_client::graphql(
         client,
         target::query::build(false, None::<String>, None, None, None),
     )
@@ -180,6 +180,18 @@ pub async fn create_ldev_conf(
     tracing::debug!("ldev entries: {:?}", ldev_entries);
 
     Ok(ldev_entries)
+}
+
+#[derive(serde::Deserialize, Debug, Eq, PartialEq, Ord, PartialOrd, Clone)]
+#[serde(rename_all="camelCase")]
+pub struct Target {
+    pub state: String,
+    pub name: String,
+    pub active_host_id: Option<i32>,
+    pub host_ids: Vec<i32>,
+    pub filesystems: Vec<String>,
+    pub uuid: String,
+    pub mount_path: Option<String>,
 }
 
 pub fn insert_action_in_flight(
