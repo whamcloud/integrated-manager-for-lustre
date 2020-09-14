@@ -234,6 +234,7 @@ class RemoveSystemdResourceStep(Step):
     * after - (optional) array of ha_labels to set order contraint to run after
     * with - (optional) array of ha_labels to set colocation constriant
     """
+
     def run(self, kwargs):
         host = kwargs["host"]
         ha_label = kwargs["ha_label"]
