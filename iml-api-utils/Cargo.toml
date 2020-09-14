@@ -1,15 +1,22 @@
 [package]
-name = "iml-api-utils"
-description = "Utilities for working with the IML API"
-version = "0.3.0"
 authors = ["IML Team <iml@whamcloud.com>"]
+description = "Utilities for working with the IML API"
 edition = "2018"
 license = "MIT"
+name = "iml-api-utils"
+version = "0.3.0"
 
 [dependencies]
+futures = "0.3"
+iml-graphql-queries = {path = "../iml-graphql-queries", version = "0.1"}
+iml-manager-client = {path = "../iml-manager-client", version = "0.3"}
+iml-wire-types = {version = "0.3", path = "../iml-wire-types"}
 lazy_static = "1.4.0"
+thiserror = "1.0"
+tokio = {version = "0.2", features = ["macros", "io-std", "io-util", "fs", "rt-threaded"]}
+tracing = "0.1"
 
 [dependencies.regex]
-version = "1.3"
 default-features = false
 features = ["std", "unicode-perl"]
+version = "1.3"
