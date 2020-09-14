@@ -4,16 +4,20 @@
 
 use core::fmt::Debug;
 use futures_util::stream::TryStreamExt;
+use iml_graphql_queries::snapshot as snapshot_queries;
+use iml_manager_client::get;
 use iml_manager_env::get_pool_limit;
 use iml_postgres::{get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
-use iml_wire_types::snapshot;
+use iml_wire_types::{snapshot, ApiList, Command, EndpointName};
 use reqwest::{Client, Url};
 use serde::de::DeserializeOwned;
-use std::{collections::HashMap, sync::Arc};
+use std::iter;
+use std::{collections::HashMap, collections::HashSet, sync::Arc};
 use tokio::{
     sync::Mutex,
+    time::delay_for,
     time::Instant,
     time::{interval, Duration},
 };
@@ -29,6 +33,10 @@ enum ThisError {
     Url(#[from] url::ParseError),
     #[error(transparent)]
     Header(#[from] reqwest::header::InvalidHeaderValue),
+    #[error(transparent)]
+    ManagerClient(#[from] iml_manager_client::ImlManagerClientError),
+    #[error("Just a fail")]
+    JustFail(()),
 }
 
 async fn get_influx<T: DeserializeOwned + Debug>(
@@ -51,6 +59,85 @@ async fn get_influx<T: DeserializeOwned + Debug>(
     Ok(json)
 }
 
+async fn graphql<T: serde::de::DeserializeOwned + std::fmt::Debug>(
+    query: impl serde::Serialize + Debug,
+) -> Result<T, ThisError> {
+    let client = iml_manager_client::get_client()?;
+
+    iml_manager_client::graphql(client, query)
+        .await
+        .map_err(|e| e.into())
+}
+
+fn cmd_finished(cmd: &Command) -> bool {
+    cmd.complete
+}
+
+async fn wait_for_cmds(cmds: &[Command]) -> Result<Vec<Command>, ThisError> {
+    let mut in_progress_commands = HashSet::new();
+
+    for cmd in cmds {
+        in_progress_commands.insert(cmd.id);
+    }
+
+    let mut settled_commands = vec![];
+
+    let fut2 = async {
+        loop {
+            if in_progress_commands.is_empty() {
+                tracing::debug!("All commands complete. Returning");
+                return Ok::<_, ThisError>(());
+            }
+
+            delay_for(Duration::from_millis(1000)).await;
+
+            let query: Vec<_> = in_progress_commands
+                .iter()
+                .map(|x| ["id__in".into(), x.to_string()])
+                .chain(iter::once(["limit".into(), "0".into()]))
+                .collect();
+
+            let client: Client = iml_manager_client::get_client().unwrap();
+
+            let cmds: ApiList<Command> = get(client, Command::endpoint_name(), query).await?;
+
+            for cmd in cmds.objects {
+                if cmd_finished(&cmd) {
+                    in_progress_commands.remove(&cmd.id);
+                    settled_commands.push(cmd);
+                }
+            }
+        }
+    };
+
+    fut2.await?;
+
+    Ok(settled_commands)
+}
+
+/// Waits for command completion and prints progress messages.
+/// This will error on command failure and print failed commands in the error message.
+async fn wait_for_cmds_success(cmds: &[Command]) -> Result<Vec<Command>, ThisError> {
+    let cmds = wait_for_cmds(cmds).await?;
+
+    let (failed, passed): (Vec<_>, Vec<_>) =
+        cmds.into_iter().partition(|x| x.errored || x.cancelled);
+
+    if !failed.is_empty() {
+        Err(ThisError::JustFail(()))
+    } else {
+        Ok(passed)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+struct SnapshotId {
+    filesystem_name: String,
+    snapshot_name: String,
+    snapshot_fsname: String,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 enum State {
     Monitoring(u64),
     CountingDown(Instant),
@@ -71,7 +158,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
     sqlx::migrate!("../../migrations").run(&pool).await?;
 
-    let snapshot_client_counts: Arc<Mutex<HashMap<String, Option<State>>>> =
+    let snapshot_client_counts: Arc<Mutex<HashMap<SnapshotId, Option<State>>>> =
         Arc::new(Mutex::new(HashMap::new()));
 
     {
@@ -94,18 +181,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let st = iml_influx::filesystems::Response::from(influx_resp);
 
                 tracing::debug!("ST: {:?}", st);
+                let mut snapshot_client_counts = snapshot_client_counts.lock().await;
 
-                for (fs, st) in st {
-                    let mut snapshot_client_counts = snapshot_client_counts.lock().await;
-                    snapshot_client_counts
-                        .entry(fs.clone())
-                        .and_modify(|prev_state| match prev_state {
+                for (snapshot_id, state) in snapshot_client_counts.iter_mut() {
+                    if let Some(st) = st.get(&snapshot_id.snapshot_fsname) {
+                        match state {
                             Some(State::Monitoring(prev_clients)) => {
                                 let clients = st.clients.unwrap_or(0);
 
                                 tracing::info!(
                                     "Monitoring. Snapshot: {}, was {} clients, became {} clients",
-                                    fs,
+                                    &snapshot_id.snapshot_fsname,
                                     prev_clients,
                                     clients
                                 );
@@ -113,7 +199,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     tracing::info!("counting down for job");
                                     // let instant = Instant::now() + Duration::from_secs(5 * 60);
                                     let instant = Instant::now() + Duration::from_secs(20);
-                                    *prev_state = Some(State::CountingDown(instant));
+                                    *state = Some(State::CountingDown(instant));
                                 } else {
                                     *prev_clients = clients;
                                 }
@@ -122,26 +208,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let clients = st.clients.unwrap_or(0);
                                 tracing::info!(
                                     "Counting down. Snapshot: {}, Was 0 clients, became {} clients",
-                                    fs,
+                                    &snapshot_id.snapshot_fsname,
                                     clients
                                 );
                                 if clients > 0 {
                                     tracing::info!("changing state");
-                                    *prev_state = Some(State::Monitoring(clients));
+                                    *state = Some(State::Monitoring(clients));
                                 } else if Instant::now() >= *when {
                                     // Run the job
                                     tracing::info!("running the job");
+                                    let query = snapshot_queries::unmount::build(
+                                        &snapshot_id.filesystem_name,
+                                        &snapshot_id.snapshot_name,
+                                    );
+                                    let resp: iml_graphql_queries::Response<
+                                        snapshot_queries::unmount::Resp,
+                                    > = graphql(query).await.unwrap();
+                                    let x = Result::from(resp).unwrap().data.unmount_snapshot;
+                                    wait_for_cmds_success(&[x]).await.unwrap();
                                 }
                             }
                             None => {
                                 tracing::info!(
                                     "Just learnt about this snapshot. Snapshot: {}, became 0 clients",
-                                    fs
+                                    &snapshot_id.snapshot_fsname
                                 );
 
-                                *prev_state = Some(State::Monitoring(0));
+                                *state = Some(State::Monitoring(0));
                             }
-                        });
+                        }
+                    }
                 }
             }
         });
@@ -156,8 +252,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             snapshots.into_iter().fold(
                 (vec![], vec![], vec![], vec![], vec![], vec![], vec![]),
                 |mut acc, s| {
-                    acc.0.push(s.filesystem_name);
-                    acc.1.push(s.snapshot_name);
+                    acc.0.push(s.filesystem_name.clone());
+                    acc.1.push(s.snapshot_name.clone());
                     acc.2.push(s.create_time.naive_utc());
                     acc.3.push(s.modify_time.naive_utc());
                     acc.4.push(s.snapshot_fsname.clone());
@@ -165,7 +261,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     acc.6.push(s.comment);
 
                     snapshot_fsnames
-                        .entry(s.snapshot_fsname.clone())
+                        .entry(SnapshotId {
+                            filesystem_name: s.filesystem_name,
+                            snapshot_name: s.snapshot_name,
+                            snapshot_fsname: s.snapshot_fsname,
+                        })
                         .or_insert(None);
                     // TODO: handle removal
 
