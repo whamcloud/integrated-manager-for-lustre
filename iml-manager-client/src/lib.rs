@@ -129,7 +129,10 @@ pub async fn graphql<T: DeserializeOwned + Debug>(
 
     tracing::debug!("Data is: {:?}", data);
 
-    let json: T = serde_json::from_str(data.as_str())?;
+    let mut json: serde_json::Value = serde_json::from_str(data.as_str())?;
+
+    let v = json["data"]["targets"].take();
+    let json: T = serde_json::from_value(v).expect("serialize graphql");
 
     tracing::debug!("Resp: {:?}", json);
 
