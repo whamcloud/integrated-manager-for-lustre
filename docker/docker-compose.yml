@@ -35,9 +35,9 @@ services:
       <<: *default-deploy
       resources:
         limits:
-          cpus: "2.5"
+          cpus: 2.5
         reservations:
-          cpus: "1.5"
+          cpus: 1.5
     volumes:
       - influxdb:/var/lib/influxdb/
       - "manager-config:/var/lib/chroma"
@@ -84,9 +84,9 @@ services:
       endpoint_mode: dnsrr
       resources:
         limits:
-          cpus: "1"
+          cpus: 1
         reservations:
-          cpus: "0.5"
+          cpus: 0.5
     environment:
       - RABBITMQ_DEFAULT_USER=chroma
       - RABBITMQ_DEFAULT_PASS=chroma123
