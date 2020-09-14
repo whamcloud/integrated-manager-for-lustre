@@ -4,6 +4,7 @@
 
 use crate::{
     api_utils::graphql,
+    api_utils::wait_for_cmds_success,
     display_utils::{DisplayType, IntoDisplayType as _},
     error::ImlManagerCliError,
 };
@@ -61,6 +62,44 @@ pub async fn snapshot_cli(command: SnapshotCommand) -> Result<(), ImlManagerCliE
 
             Ok(())
         }
-        _ => panic!("Not implemented"),
+        SnapshotCommand::Create(x) => {
+            let query =
+                snapshot_queries::create::build(x.fsname, x.name, x.comment, Some(x.use_barrier));
+
+            let resp: iml_graphql_queries::Response<snapshot_queries::create::Resp> =
+                graphql(query).await?;
+            let x = Result::from(resp)?.data.create_snapshot;
+            wait_for_cmds_success(&[x]).await?;
+
+            Ok(())
+        }
+        SnapshotCommand::Destroy(x) => {
+            let query = snapshot_queries::destroy::build(x.fsname, x.name, x.force);
+
+            let resp: iml_graphql_queries::Response<snapshot_queries::destroy::Resp> =
+                graphql(query).await?;
+            let x = Result::from(resp)?.data.destroy_snapshot;
+            wait_for_cmds_success(&[x]).await?;
+
+            Ok(())
+        }
+        SnapshotCommand::Mount(x) => {
+            let query = snapshot_queries::mount::build(x.fsname, x.name);
+            let resp: iml_graphql_queries::Response<snapshot_queries::mount::Resp> =
+                graphql(query).await?;
+            let x = Result::from(resp)?.data.mount_snapshot;
+            wait_for_cmds_success(&[x]).await?;
+
+            Ok(())
+        }
+        SnapshotCommand::Unmount(x) => {
+            let query = snapshot_queries::unmount::build(x.fsname, x.name);
+            let resp: iml_graphql_queries::Response<snapshot_queries::unmount::Resp> =
+                graphql(query).await?;
+            let x = Result::from(resp)?.data.unmount_snapshot;
+            wait_for_cmds_success(&[x]).await?;
+
+            Ok(())
+        }
     }
 }
