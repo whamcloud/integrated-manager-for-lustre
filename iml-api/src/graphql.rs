@@ -6,7 +6,7 @@ use crate::{command::get_command, error::ImlApiError};
 use futures::{TryFutureExt, TryStreamExt};
 use iml_postgres::{sqlx, PgPool};
 use iml_rabbit::Pool;
-use iml_wire_types::{snapshot::Snapshot, Command};
+use iml_wire_types::{snapshot::Snapshot, Command, EndpointName, Job};
 use itertools::Itertools;
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
@@ -19,7 +19,6 @@ use std::{
     sync::Arc,
 };
 use warp::Filter;
-use iml_postgres::sqlx::types::chrono::{DateTime, Utc};
 
 #[derive(juniper::GraphQLObject)]
 /// A Corosync Node found in `crm_mon`
@@ -331,7 +330,7 @@ impl QueryRoot {
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to ASC"),
         is_active(description = "Command status, active means not completed, default is true"),
-        msg(description = "Substring of the command's message"),
+        msg(description = "Substring of the command's message, null or empty matches all"),
     ))]
     async fn commands(
         context: &Context,
@@ -341,56 +340,58 @@ impl QueryRoot {
         is_active: Option<bool>,
         msg: Option<String>,
     ) -> juniper::FieldResult<Vec<Command>> {
-
-        #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-        #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
-        struct TransientCommand {
-            pub cancelled: bool,
-            pub complete: bool,
-            pub created_at: DateTime<Utc>,
-            pub errored: bool,
-            pub id: i32,
-            pub message: String,
-        }
         let dir = dir.unwrap_or_default();
         let is_completed = !is_active.unwrap_or(true);
-        let commands: Vec<TransientCommand> = sqlx::query_as!(
-            TransientCommand,
-                r#"
+        let commands: Vec<Command> = sqlx::query!(
+            r#"
                     SELECT
-                        id,
+                        c.id AS id,
+                        cancelled,
                         complete,
                         errored,
-                        cancelled,
-                        message,
-                        created_at
+                        created_at,
+                        array_agg(cj.job_id)::integer[] AS job_ids,
+                        message
                     FROM chroma_core_command c
-                    WHERE complete = $4 AND ($5::text IS NULL OR c.message LIKE '%' || $5 || '%')
+                    JOIN chroma_core_command_jobs cj ON c.id = cj.command_id
+                    WHERE complete = $4 AND ($5::TEXT IS NULL OR c.message LIKE '%' || $5 || '%')
+                    GROUP BY c.id
                     ORDER BY
-                        CASE WHEN $3 = 'asc' THEN c.created_at END ASC,
-                        CASE WHEN $3 = 'desc' THEN c.created_at END DESC
-                    OFFSET $1 LIMIT $2"#,
-                offset.unwrap_or(0) as i64,
-                limit.unwrap_or(20) as i64,
-                dir.deref(),
-                is_completed,
-                msg,
-            )
-            .fetch_all(&context.pg_pool)
-            .await?;
-        let commands = commands.into_iter().map(|t|
-            Command {
-                cancelled: t.cancelled,
-                complete: t.complete,
-                created_at: t.created_at.to_string(),
-                errored: t.errored,
-                id: t.id,
-                jobs: vec![],
-                logs: "".to_string(),
-                message: t.message.clone(),
-                resource_uri: format!("/api/command/{}/", t.id),
-            })
-            .collect::<Vec<_>>();
+                        CASE WHEN $3 = 'asc' THEN c.id END ASC,
+                        CASE WHEN $3 = 'desc' THEN c.id END DESC
+                    OFFSET $1 LIMIT $2
+                "#,
+            offset.unwrap_or(0) as i64,
+            limit.unwrap_or(20) as i64,
+            dir.deref(),
+            is_completed,
+            msg,
+        )
+        .fetch_all(&context.pg_pool)
+        .map_ok(|xs: Vec<_>| {
+            xs.into_iter()
+                .map(|x| Command {
+                    id: x.id,
+                    cancelled: x.cancelled,
+                    complete: x.complete,
+                    errored: x.errored,
+                    created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
+                    jobs: {
+                        x.job_ids
+                            .unwrap_or_default()
+                            .into_iter()
+                            .map(|job_id: i32| {
+                                format!("/api/{}/{}/", Job::<()>::endpoint_name(), job_id)
+                            })
+                            .collect::<Vec<_>>()
+                    },
+                    logs: "".to_string(),
+                    message: x.message.clone(),
+                    resource_uri: format!("/api/{}/{}/", Command::endpoint_name(), x.id),
+                })
+                .collect::<Vec<_>>()
+        })
+        .await?;
         Ok(commands)
     }
 }
