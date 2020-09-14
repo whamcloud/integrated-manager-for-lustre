@@ -217,6 +217,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 } else if Instant::now() >= *when {
                                     // Run the job
                                     tracing::info!("running the job");
+                                    *state = Some(State::Monitoring(0));
+
                                     let query = snapshot_queries::unmount::build(
                                         &snapshot_id.filesystem_name,
                                         &snapshot_id.snapshot_name,
