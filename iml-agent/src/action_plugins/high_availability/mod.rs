@@ -314,7 +314,7 @@ pub async fn destroy_cloned_client(fsname: String) -> Result<(), ImlAgentError> 
 
     let id = format!("cl-{}-client", fsname);
 
-    if !ids.contains(&id) {
+    if !ids.contains(&format!("{}-client:0", fsname)) {
         return Ok(());
     }
 
@@ -361,7 +361,7 @@ pub async fn create_cloned_client(
 ) -> Result<(), ImlAgentError> {
     let ids = resource_list().await?;
 
-    if ids.contains(&format!("cl-{}-client", fsname)) {
+    if ids.contains(&format!("{}-client:0", fsname)) {
         return Ok(());
     }
 
@@ -428,7 +428,9 @@ pub async fn create_cloned_client(
         tracing::debug!("No lustre-server templates");
     }
 
-    create_resource(agent, true, constraints, false).await
+    create_resource(agent, true, constraints, false).await?;
+
+    wait_resource(&format!("cl-{}-client", fsname), false).await
 }
 
 pub async fn create_cloned_resource(
