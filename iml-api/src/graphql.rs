@@ -80,6 +80,30 @@ struct TargetResource {
     cluster_hosts: Vec<i32>,
 }
 
+struct BannedTargetResource {
+    resource: String,
+    cluster_id: i32,
+    host_id: i32,
+    mount_point: Option<String>,
+}
+
+#[derive(juniper::GraphQLObject)]
+/// A Corosync banned resource
+struct BannedResource {
+    /// The resource id
+    id: String,
+    /// The id of the cluster in which the resource lives
+    cluster_id: i32,
+    /// The resource name
+    resource: String,
+    /// The node in which the resource lives
+    node: String,
+    /// The assigned weight of the resource
+    weight: i32,
+    /// Is master only
+    master_only: bool,
+}
+
 pub(crate) struct QueryRoot;
 pub(crate) struct MutationRoot;
 
@@ -153,10 +177,13 @@ impl QueryRoot {
 
         Ok(xs)
     }
+
     #[graphql(arguments(
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
-        dir(description = "Sort direction, defaults to asc")
+        dir(description = "Sort direction, defaults to asc"),
+        fs_name(description = "Targets associated with the specified filesystem"),
+        exclude_unmounted(description = "Exclude unmounted targets, defaults to false"),
     ))]
     /// Fetch the list of known targets
     async fn targets(
@@ -164,10 +191,12 @@ impl QueryRoot {
         limit: Option<i32>,
         offset: Option<i32>,
         dir: Option<SortDir>,
+        fs_name: Option<String>,
+        exclude_unmounted: Option<bool>,
     ) -> juniper::FieldResult<Vec<Target>> {
         let dir = dir.unwrap_or_default();
 
-        let xs = sqlx::query_as!(
+        let xs: Vec<Target> = sqlx::query_as!(
             Target,
             r#"
                 SELECT * from target t
@@ -180,7 +209,34 @@ impl QueryRoot {
             dir.deref()
         )
         .fetch_all(&context.pg_pool)
-        .await?;
+        .await?
+        .into_iter()
+        .filter(|x| match &fs_name {
+            Some(fs) => x.filesystems.contains(&fs),
+            None => true,
+        })
+        .filter(|x| match exclude_unmounted {
+            Some(true) => x.state != "unmounted",
+            Some(false) | None => true,
+        })
+        .collect();
+
+        let target_resources = get_fs_target_resources(&context.pg_pool, None).await?;
+
+        let xs: Vec<Target> = xs
+            .into_iter()
+            .map(|mut x| {
+                let resource = target_resources
+                    .iter()
+                    .find(|resource| resource.name == x.name);
+
+                if let Some(resource) = resource {
+                    x.host_ids = resource.cluster_hosts.clone();
+                }
+
+                x
+            })
+            .collect();
 
         Ok(xs)
     }
@@ -191,9 +247,15 @@ impl QueryRoot {
     #[graphql(arguments(fs_name(description = "The filesystem to list `TargetResource`s for"),))]
     async fn get_fs_target_resources(
         context: &Context,
-        fs_name: String,
+        fs_name: Option<String>,
     ) -> juniper::FieldResult<Vec<TargetResource>> {
         let xs = get_fs_target_resources(&context.pg_pool, fs_name).await?;
+
+        Ok(xs)
+    }
+
+    async fn get_banned_resources(context: &Context) -> juniper::FieldResult<Vec<BannedResource>> {
+        let xs = get_banned_resources(&context.pg_pool).await?;
 
         Ok(xs)
     }
@@ -207,13 +269,13 @@ impl QueryRoot {
         context: &Context,
         fs_name: String,
     ) -> juniper::FieldResult<Vec<Vec<i32>>> {
-        let xs = get_fs_target_resources(&context.pg_pool, fs_name)
+        let xs = get_fs_target_resources(&context.pg_pool, Some(fs_name))
             .await?
             .into_iter()
             .group_by(|x| x.cluster_id);
 
         let xs = xs.into_iter().fold(vec![], |mut acc, (_, xs)| {
-            let xs: HashSet<i32> = xs.into_iter().map(|x| x.cluster_hosts).flatten().collect();
+            let xs: HashSet<i32> = xs.map(|x| x.cluster_hosts).flatten().collect();
 
             acc.push(xs.into_iter().collect());
 
@@ -283,10 +345,9 @@ impl MutationRoot {
     ) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
-            .ok_or(FieldError::new(
-                "Filesystem not found or MGS is not mounted",
-                Value::null(),
-            ))?;
+            .ok_or_else(|| {
+                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+            })?;
 
         let kwargs: HashMap<String, String> = vec![("message".into(), "Creating snapshot".into())]
             .into_iter()
@@ -328,10 +389,9 @@ impl MutationRoot {
     ) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
-            .ok_or(FieldError::new(
-                "Filesystem not found or MGS is not mounted",
-                Value::null(),
-            ))?;
+            .ok_or_else(|| {
+                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+            })?;
 
         let kwargs: HashMap<String, String> =
             vec![("message".into(), "Destroying snapshot".into())]
@@ -371,10 +431,9 @@ impl MutationRoot {
     ) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
-            .ok_or(FieldError::new(
-                "Filesystem not found or MGS is not mounted",
-                Value::null(),
-            ))?;
+            .ok_or_else(|| {
+                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+            })?;
 
         let kwargs: HashMap<String, String> = vec![("message".into(), "Mounting snapshot".into())]
             .into_iter()
@@ -412,10 +471,9 @@ impl MutationRoot {
     ) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
-            .ok_or(FieldError::new(
-                "Filesystem not found or MGS is not mounted",
-                Value::null(),
-            ))?;
+            .ok_or_else(|| {
+                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+            })?;
 
         let kwargs: HashMap<String, String> =
             vec![("message".into(), "Unmounting snapshot".into())]
@@ -517,25 +575,29 @@ pub(crate) fn endpoint(
 
 async fn get_fs_target_resources(
     pool: &PgPool,
-    fs_name: String,
+    fs_name: Option<String>,
 ) -> Result<Vec<TargetResource>, ImlApiError> {
-    let banned_resources = sqlx::query!(r#"
-            SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point
-            FROM corosync_resource_bans b
-            INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node
-            AND nh.cluster_id = b.cluster_id
-            INNER JOIN corosync_target_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
-        "#).fetch_all(pool).await?;
+    let banned_resources = get_banned_targets(pool).await?;
 
     let xs = sqlx::query!(r#"
-            SELECT rh.cluster_id, r.id, t.name, t.mount_path, array_agg(DISTINCT rh.host_id) AS "cluster_hosts!"
+            SELECT rh.cluster_id, r.id, t.name, t.mount_path, t.filesystems, array_agg(DISTINCT rh.host_id) AS "cluster_hosts!"
             FROM target t
             INNER JOIN corosync_target_resource r ON r.mount_point = t.mount_path
             INNER JOIN corosync_target_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)
-            WHERE $1 = ANY(t.filesystems)
-            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path
-        "#, &fs_name)
+            WHERE CARDINALITY(t.filesystems) > 0
+            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.filesystems
+        "#)
             .fetch(pool)
+            .try_filter(|x| {
+                let fs_name2 = fs_name.clone();
+                let filesystems = x.filesystems.clone();
+                async move {
+                    match fs_name2 {
+                        None => true,
+                        Some(fs) => filesystems.contains(&fs)
+                    }
+                }
+            })
             .map_ok(|mut x| {
                 let xs:HashSet<_> = banned_resources
                     .iter()
@@ -552,13 +614,50 @@ async fn get_fs_target_resources(
             .map_ok(|x| {
                 TargetResource {
                     cluster_id: x.cluster_id,
-                    fs_name: fs_name.to_string(),
+                    fs_name: fs_name.as_ref().unwrap_or_else(|| &x.filesystems[0]).to_string(),
                     name: x.name,
                     resource_id: x.id,
                     cluster_hosts: x.cluster_hosts
                 }
             }).try_collect()
             .await?;
+
+    Ok(xs)
+}
+
+async fn get_banned_targets(pool: &PgPool) -> Result<Vec<BannedTargetResource>, ImlApiError> {
+    let xs = sqlx::query!(r#"
+            SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point
+            FROM corosync_resource_bans b
+            INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node
+            AND nh.cluster_id = b.cluster_id
+            INNER JOIN corosync_target_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
+        "#)
+        .fetch(pool)
+        .map_ok(|x| {
+            BannedTargetResource {
+                resource: x.resource,
+                cluster_id: x.cluster_id,
+                host_id: x.host_id,
+                mount_point: x.mount_point,
+            }
+        })
+        .try_collect()
+        .await?;
+
+    Ok(xs)
+}
+
+async fn get_banned_resources(pool: &PgPool) -> Result<Vec<BannedResource>, ImlApiError> {
+    let xs = sqlx::query_as!(
+        BannedResource,
+        r#"
+            SELECT id, cluster_id, resource, node, weight, master_only
+            FROM corosync_resource_bans
+        "#
+    )
+    .fetch_all(pool)
+    .await?;
 
     Ok(xs)
 }
