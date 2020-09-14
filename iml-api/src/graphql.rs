@@ -599,7 +599,7 @@ fn validate_snapshot_name(x: &str) -> Result<(), FieldError> {
         ))
     } else if x.contains("&") {
         Err(FieldError::new(
-            "Snapshot name cannot contain / character",
+            "Snapshot name cannot contain & character",
             Value::null(),
         ))
     } else {
