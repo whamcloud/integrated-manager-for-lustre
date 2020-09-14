@@ -2691,6 +2691,30 @@
       ]
     }
   },
+  "b70a8df89e1b93a9f73332d8b635d485813a418d99cb6a744e76d5f4df866f39": {
+    "query": "SELECT id, fqdn FROM chroma_core_managedhost WHERE not_deleted=True",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
   "b8e774ab32b79eb3f2d87b7f373b609831f72f63f716dcbb7917871531466b1a": {
     "query": "\n        INSERT INTO chroma_core_serverprofile\n        (name, ui_name, ui_description, managed, worker, user_selectable, initial_state, ntp, corosync, corosync2, pacemaker, \"default\")\n        VALUES\n        ('foo', 'foo', 'foo', 'f', 'f', 't', 'bar', 'f', 'f', 'f', 'f', 't')\n        ON CONFLICT DO NOTHING\n    ",
     "describe": {
@@ -2820,26 +2844,6 @@
         ]
       },
       "nullable": []
-    }
-  },
-  "ca0147326d5b4c913e80aceac3c638fe78fc9e7294f4e4f7215c2b9aa6195a75": {
-    "query": "SELECT fqdn FROM chroma_core_managedhost\n        WHERE id = $1 AND not_deleted = 't'",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "fqdn",
-          "type_info": "Varchar"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": [
-        false
-      ]
     }
   },
   "cd9faf5b3fa09dd6d01b62b3957a7624d1462fb5789a7729f59215982a090ec1": {
@@ -3528,30 +3532,6 @@
         ]
       },
       "nullable": []
-    }
-  },
-  "f5ae42f231abe242d0644e530d7070971e0f80ab0abfc4bcbe677d7f0cbbda67": {
-    "query": "select id, fqdn from chroma_core_managedhost",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "fqdn",
-          "type_info": "Varchar"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false
-      ]
     }
   },
   "f7cb59fe7a6bc5dde5fe7f15025161aa8d6e7ba933bb963fcfe8d9afeee26945": {

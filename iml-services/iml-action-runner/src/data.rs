@@ -104,7 +104,7 @@ pub async fn create_ldev_conf(
     pool: PgPool,
 ) -> Result<HashMap<String, Vec<LdevEntry>>, ActionRunnerError> {
     tracing::debug!("getting hosts");
-    let hosts = sqlx::query!("select id, fqdn from chroma_core_managedhost")
+    let hosts = sqlx::query!("SELECT id, fqdn FROM chroma_core_managedhost WHERE not_deleted=True")
         .fetch_all(&pool)
         .await?
         .into_iter()
