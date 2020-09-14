@@ -5,14 +5,15 @@
 use console::{style, Term};
 use futures::{Future, FutureExt};
 use iml_wire_types::{
-    snapshot::Snapshot, Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration,
+    snapshot::Snapshot, Command, Filesystem, Host, Job, OstPool, ServerProfile, Step,
+    StratagemConfiguration,
 };
 use indicatif::ProgressBar;
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
+use spinners::{Spinner, Spinners};
 use std::{fmt::Display, io, str::FromStr};
 use structopt::StructOpt;
-use spinners::{Spinner, Spinners};
 
 pub fn wrap_fut<T>(msg: &str, fut: impl Future<Output = T>) -> impl Future<Output = T> {
     let pb = ProgressBar::new_spinner();

@@ -1710,7 +1710,7 @@ dependencies = [
  "iml-wire-types",
  "indicatif",
  "insta",
- "itertools 0.9.0",
+ "itertools",
  "lazy_static",
  "number-formatter",
  "prettytable-rs",
