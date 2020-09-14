@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use core::fmt::Debug;
-use futures::future::{AbortHandle, Abortable};
 use futures_util::stream::TryStreamExt;
 use iml_manager_env::get_pool_limit;
 use iml_postgres::{get_db_pool, sqlx};
@@ -15,7 +14,6 @@ use serde::de::DeserializeOwned;
 use std::{collections::HashMap, sync::Arc};
 use tokio::{
     sync::Mutex,
-    time::delay_for,
     time::Instant,
     time::{interval, Duration},
 };
