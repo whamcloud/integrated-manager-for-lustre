@@ -349,10 +349,9 @@ impl MutationRoot {
     ) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
-            .ok_or_else(|| FieldError::new(
-                "Filesystem not found or MGS is not mounted",
-                Value::null(),
-            ))?;
+            .ok_or_else(|| {
+                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+            })?;
 
         let kwargs: HashMap<String, String> = vec![("message".into(), "Creating snapshot".into())]
             .into_iter()
@@ -393,10 +392,9 @@ impl MutationRoot {
     ) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
-            .ok_or_else(|| FieldError::new(
-                "Filesystem not found or MGS is not mounted",
-                Value::null(),
-            ))?;
+            .ok_or_else(|| {
+                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+            })?;
 
         let kwargs: HashMap<String, String> =
             vec![("message".into(), "Destroying snapshot".into())]
@@ -436,10 +434,9 @@ impl MutationRoot {
     ) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
-            .ok_or_else(|| FieldError::new(
-                "Filesystem not found or MGS is not mounted",
-                Value::null(),
-            ))?;
+            .ok_or_else(|| {
+                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+            })?;
 
         let kwargs: HashMap<String, String> = vec![("message".into(), "Mounting snapshot".into())]
             .into_iter()
@@ -477,10 +474,9 @@ impl MutationRoot {
     ) -> juniper::FieldResult<Command> {
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
-            .ok_or_else(|| FieldError::new(
-                "Filesystem not found or MGS is not mounted",
-                Value::null(),
-            ))?;
+            .ok_or_else(|| {
+                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+            })?;
 
         let kwargs: HashMap<String, String> =
             vec![("message".into(), "Unmounting snapshot".into())]
