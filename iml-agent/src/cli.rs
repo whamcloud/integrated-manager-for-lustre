@@ -242,8 +242,8 @@ pub enum StratagemClientCommand {
         /// push or pull
         action: String,
 
-        #[structopt(short = "d")]
-        /// destination path
+        #[structopt(short = "r", long = "remote")]
+        /// remote fs path
         target_fs: String,
 
         #[structopt(parse(from_os_str))]
@@ -569,7 +569,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 task_args.insert("remote".to_string(), target_fs);
                 task_args.insert("action".to_string(), action);
-                let result =
+                let _result =
                     action_filesync::process_fids((llapi.mntpt(), task_args, fidlist)).await;
             }
             StratagemClientCommand::CloudSync {
