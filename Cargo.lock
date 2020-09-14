@@ -1540,8 +1540,15 @@ dependencies = [
 name = "iml-api-utils"
 version = "0.3.0"
 dependencies = [
+ "futures",
+ "iml-graphql-queries",
+ "iml-manager-client",
+ "iml-wire-types",
  "lazy_static",
  "regex",
+ "thiserror",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -2032,9 +2039,10 @@ dependencies = [
  "bytes",
  "chrono",
  "im",
- "iml-api-utils",
  "iml-change",
  "juniper",
+ "lazy_static",
+ "regex",
  "serde",
  "serde_json",
  "serde_repr",
