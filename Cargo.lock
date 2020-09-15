@@ -1559,8 +1559,6 @@ dependencies = [
  "iml-graphql-queries",
  "iml-manager-client",
  "iml-wire-types",
- "lazy_static",
- "regex",
  "thiserror",
  "tokio",
  "tracing",
