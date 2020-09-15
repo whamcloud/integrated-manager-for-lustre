@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use iml_manager_cli::{
-    api::{self, api_cli},
+    api::{self, api_cli, graphql_cli},
     display_utils::display_error,
     filesystem::{self, filesystem_cli},
     server::{self, server_cli},
@@ -50,6 +50,10 @@ pub enum App {
     #[structopt(name = "debugapi", setting = structopt::clap::AppSettings::Hidden)]
     /// Direct API Access (for testing and debug)
     DebugApi(api::ApiCommand),
+
+    #[structopt(name = "debugql", setting = structopt::clap::AppSettings::Hidden)]
+    /// Direct GraphQL Access (for testing and debug)
+    DebugQl(api::GraphQlCommand),
 }
 
 #[tokio::main]
@@ -64,6 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let r = match matches {
         App::DebugApi(command) => api_cli(command).await,
+        App::DebugQl(command) => graphql_cli(command).await,
         App::Filesystem { command } => filesystem_cli(command).await,
         App::Server { command } => server_cli(command).await,
         App::Snapshot { command } => snapshot_cli(command).await,
