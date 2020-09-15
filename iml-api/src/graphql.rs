@@ -4,7 +4,7 @@
 
 use crate::{command::get_command, error::ImlApiError};
 use futures::{TryFutureExt, TryStreamExt};
-use iml_postgres::{sqlx, PgPool};
+use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
 use iml_wire_types::{snapshot::Snapshot, Command};
 use itertools::Itertools;
@@ -15,8 +15,9 @@ use juniper::{
 use std::ops::Deref;
 use std::{
     collections::{HashMap, HashSet},
-    convert::Infallible,
+    convert::{Infallible, TryFrom as _},
     sync::Arc,
+    time::Duration,
 };
 use warp::Filter;
 
@@ -518,6 +519,71 @@ impl MutationRoot {
         get_command(&context.pg_pool, command_id)
             .await
             .map_err(|e| e.into())
+    }
+    async fn configure_snapshot(
+        context: &Context,
+        fsname: String,
+        delete_when: DeleteWhen,
+        use_barrier: Option<bool>,
+        keep_num: Option<i32>,
+    ) -> juniper::FieldResult<String> {
+        sqlx::query!(
+            r#"
+                INSERT INTO snapshot_configuration (
+                    filesystem_name,
+                    use_barrier,
+                    interval,
+                    keep_num,
+                    delete_num,
+                    delete_unit
+                )
+                VALUES ($1, $2, $3, $4, $5, $6::snapshot_delete_unit)
+            "#,
+            fsname,
+            use_barrier.unwrap_or_default(),
+            PgInterval::try_from(Duration::from_secs(100))?,
+            keep_num,
+            delete_when.value,
+            delete_when.unit.to_string() as String
+        )
+        .execute(&context.pg_pool)
+        .await?;
+
+        Ok("complete".to_string())
+    }
+}
+
+#[derive(serde::Deserialize, juniper::GraphQLEnum)]
+enum IntervalUnit {
+    Hours,
+    Days,
+}
+#[derive(juniper::GraphQLInputObject)]
+struct Interval {
+    value: i32,
+    unit: IntervalUnit,
+}
+
+#[derive(juniper::GraphQLInputObject)]
+struct DeleteWhen {
+    value: i32,
+    unit: DeleteUnit,
+}
+
+#[derive(serde::Deserialize, juniper::GraphQLEnum)]
+enum DeleteUnit {
+    Percent,
+    Gibibytes,
+    Tebibytes,
+}
+
+impl ToString for DeleteUnit {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Percent => "percent".to_string(),
+            Self::Gibibytes => "gibibytes".to_string(),
+            Self::Tebibytes => "tebibytes".to_string(),
+        }
     }
 }
 
