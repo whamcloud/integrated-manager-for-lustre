@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{command::get_command, error::ImlApiError};
+use chrono::{DateTime, SecondsFormat, Utc};
 use futures::{TryFutureExt, TryStreamExt};
 use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
@@ -106,7 +107,6 @@ struct BannedResource {
     master_only: bool,
 }
 
-// Don't need this type
 #[derive(juniper::GraphQLObject)]
 /// A Snapshot configuration
 struct SnapshotConfiguration {
@@ -120,6 +120,16 @@ struct SnapshotConfiguration {
     interval: GraphqlDuration,
     /// Number of snapshots to keep
     keep_num: Option<i32>,
+    // Last known run
+    last_run: Option<DateTime<Utc>>,
+}
+
+#[derive(juniper::GraphQLObject)]
+struct SnapshotRetention {
+    id: i32,
+    filesystem_name: String,
+    delete_when: DeleteWhen,
+    last_run: Option<DateTime<Utc>>,
 }
 
 #[derive(juniper::GraphQLObject)]
@@ -162,12 +172,6 @@ impl From<PgInterval> for GraphqlDuration {
     fn from(x: PgInterval) -> Self {
         Duration::from_micros(x.microseconds as u64).into()
     }
-}
-
-#[derive(juniper::GraphQLObject)]
-struct SnapshotRetention {
-    id: i32,
-    delete_when: DeleteWhen,
 }
 
 pub(crate) struct QueryRoot;
@@ -622,10 +626,10 @@ impl MutationRoot {
     }
 
     /// List all snapshot configurations
-    async fn list_snapshot_configurations(context: &Context) -> juniper::FieldResult<String> {
+    async fn list_snapshot_configurations(context: &Context) -> juniper::FieldResult<Vec<SnapshotConfiguration>> {
         let xs: Vec<SnapshotConfiguration> = sqlx::query!(
             r#"
-                SELECT id, filesystem_name, use_barrier, interval, keep_num
+                SELECT id, filesystem_name, use_barrier, interval, keep_num, last_run
                 FROM snapshot_configuration 
             "#
         )
@@ -637,12 +641,13 @@ impl MutationRoot {
                 use_barrier: x.use_barrier,
                 interval: x.interval.into(),
                 keep_num: x.keep_num,
+                last_run: x.last_run.map(|x| DateTime::from(x)),
             }
         })
         .try_collect()
         .await?;
 
-        Ok("complete".to_string())
+        Ok(xs)
     }
 
     /// Update an existing snapshot configuration
@@ -651,7 +656,8 @@ impl MutationRoot {
         fsname(description = "Filesystem name"),
         use_barrier(description = "Enforce a write barrier when creating the snapshot"),
         interval(description = "The interval in which a snapshot should be created"),
-        keep_num(description = "The number of snapshots to create")
+        keep_num(description = "The number of snapshots to create"),
+        last_run(description = "The last known run"),
     ))]
     async fn update_snapshot_configuration(
         context: &Context,
@@ -660,6 +666,7 @@ impl MutationRoot {
         use_barrier: Option<bool>,
         interval: GraphqlDuration,
         keep_num: Option<i32>,
+        last_run: Option<DateTime<Utc>>,
     ) -> juniper::FieldResult<String> {
         sqlx::query!(
             r#"
@@ -668,22 +675,25 @@ impl MutationRoot {
                     filesystem_name,
                     use_barrier,
                     interval,
-                    keep_num
+                    keep_num,
+                    last_run
                 )
-                VALUES ($1, $2, $3, $4, $5)
+                VALUES ($1, $2, $3, $4, $5, $6)
                 ON CONFLICT (id)
                 DO UPDATE
                 SET
                     filesystem_name = excluded.filesystem_name,
                     use_barrier = excluded.use_barrier,
                     interval = excluded.interval,
-                    keep_num = excluded.keep_num
+                    keep_num = excluded.keep_num,
+                    last_run = excluded.last_run
             "#,
             id as f64,
             fsname,
             use_barrier.unwrap_or_default(),
             PgInterval::try_from(interval.into())?,
-            keep_num
+            keep_num,
+            last_run,
         )
         .execute(&context.pg_pool)
         .await?;
@@ -702,6 +712,126 @@ impl MutationRoot {
         sqlx::query!(
             r#"
                 DELETE FROM snapshot_configuration
+                WHERE id=$1
+            "#,
+            id as f64
+        )
+        .execute(&context.pg_pool)
+        .await?;
+
+        Ok("complete".to_string())
+    }
+
+    /// Creates a new snapshot retention configuration in the database
+    #[graphql(arguments(
+        fsname(description = "Filesystem name"),
+        delete_when(description = "When should the oldest snapshots be deleted from the system")
+    ))]
+    async fn configure_snapshot_retention(
+        context: &Context,
+        fsname: String,
+        delete_when: DeleteWhen,
+    ) -> juniper::FieldResult<String> {
+        sqlx::query!(
+            r#"
+                INSERT INTO snapshot_retention (
+                    filesystem_name,
+                    delete_num,
+                    delete_unit
+                )
+                VALUES ($1, $2, $3)
+            "#,
+            fsname,
+            delete_when.value,
+            delete_when.unit as DeleteUnit
+        )
+        .execute(&context.pg_pool)
+        .await?;
+
+        Ok("complete".to_string())
+    }
+
+    /// List all snapshot retention policies
+    async fn list_snapshot_retention_policies(context: &Context) -> juniper::FieldResult<Vec<SnapshotRetention>> {
+        let xs: Vec<SnapshotRetention> = sqlx::query!(
+            r#"
+                SELECT id, filesystem_name, delete_num, delete_unit as "delete_unit:DeleteUnit", last_run
+                FROM snapshot_retention
+            "#
+        )
+        .fetch(&context.pg_pool)
+        .map_ok(|x| {
+            SnapshotRetention {
+                id: x.id,
+                filesystem_name: x.filesystem_name,
+                delete_when: DeleteWhen {
+                    value: x.delete_num,
+                    unit: x.delete_unit,
+                },
+                last_run: x.last_run.map(|x| chrono::DateTime::from(x))
+            }
+        })
+        .try_collect()
+        .await?;
+
+        Ok(xs)
+    }
+
+    /// Update an existing snapshot retention policy
+    #[graphql(arguments(
+        id(description = "The snapshot configuration id"),
+        fsname(description = "Filesystem name"),
+        delete_when(description = "When should the oldest snapshots be deleted from the system"),
+        last_run(description = "The last know run")
+    ))]
+    async fn update_snapshot_retention(
+        context: &Context,
+        id: u64,
+        fsname: String,
+        delete_when: DeleteWhen,
+        last_run: Option<DateTime<Utc>>,
+    ) -> juniper::FieldResult<String> {
+        sqlx::query!(
+            r#"
+                INSERT INTO snapshot_retention (
+                    id,
+                    filesystem_name,
+                    delete_num,
+                    delete_unit,
+                    last_run
+                )
+                VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (id)
+                DO UPDATE
+                SET
+                    filesystem_name = excluded.filesystem_name,
+                    delete_num = excluded.delete_num,
+                    delete_unit = excluded.delete_unit,
+                    last_run = excluded.last_run
+            "#,
+            id as f64,
+            fsname,
+            delete_when.value,
+            delete_when.unit as DeleteUnit,
+            last_run,
+        )
+        .execute(&context.pg_pool)
+        .await?;
+
+        Ok("complete".to_string())
+    }
+
+    /// Remove an existing snapshot retention
+    #[graphql(arguments(
+        id(description = "The snapshot retention policy id"),
+    ))]
+    async fn remove_snapshot_policy(
+        context: &Context,
+        id: u64
+    ) -> juniper::FieldResult<String> {
+        sqlx::query!(
+            r#"
+                DELETE FROM snapshot_retention
                 WHERE id=$1
             "#,
             id as f64
