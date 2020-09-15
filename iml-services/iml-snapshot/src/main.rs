@@ -73,7 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let influx_resp = stats_fut.await.unwrap();
             let stats = iml_influx::filesystems::Response::from(influx_resp);
 
-            tracing::debug!("ST: {:?}", stats);
+            tracing::debug!("Influx stats: {:?}", stats);
             let mut snapshot_client_counts = snapshot_client_counts_2.lock().await;
 
             for (snapshot_id, state) in snapshot_client_counts.iter_mut() {
