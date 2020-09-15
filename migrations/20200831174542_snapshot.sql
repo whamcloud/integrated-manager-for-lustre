@@ -53,6 +53,8 @@ CREATE TYPE snapshot_delete_unit AS ENUM ('percent', 'gibibytes', 'tebibytes');
 
 CREATE TABLE IF NOT EXISTS snapshot_retention (
   id serial PRIMARY KEY,
+  filesystem_name TEXT NOT NULL,
   delete_num INT NOT NULL,
-  delete_unit snapshot_delete_unit NOT NULL
+  delete_unit snapshot_delete_unit NOT NULL,
+  last_run TIMESTAMP WITH TIME ZONE
 )

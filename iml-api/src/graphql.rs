@@ -10,7 +10,8 @@ use iml_wire_types::{snapshot::Snapshot, Command};
 use itertools::Itertools;
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
-    EmptySubscription, FieldError, GraphQLEnum, RootNode, Value,
+    EmptySubscription, FieldError, GraphQLEnum, ParseScalarResult, ParseScalarValue, RootNode,
+    Value,
 };
 use std::ops::Deref;
 use std::{
@@ -105,7 +106,7 @@ struct BannedResource {
     master_only: bool,
 }
 
-//sc.id, sc.filesystem_name, sc.use_barrier, sc.interval, sc.keep_num, sr.delete_num, sr.delete_unit::snapshot_delete_unit
+// Don't need this type
 #[derive(juniper::GraphQLObject)]
 /// A Snapshot configuration
 struct SnapshotConfiguration {
@@ -116,10 +117,50 @@ struct SnapshotConfiguration {
     /// Use a write barrier
     use_barrier: bool,
     /// The interval configuration
-    interval: PgInterval,
+    interval: Duration,
     /// Number of snapshots to keep
     keep_num: Option<i32>,
-    /// Snapshot retention
+}
+
+#[derive(juniper::GraphQLObject)]
+struct GraphqlDuration {
+    value: f64,
+    unit: GraphqlDurationUnit,
+}
+
+#[derive(juniper::GraphQLEnum)]
+enum GraphqlDurationUnit {
+    Minutes,
+    Hours,
+    Days,
+    Weeks,
+}
+
+impl From<GraphqlDuration> for Duration {
+    fn from(x: GraphqlDuration) -> Self {
+        match x.unit {
+            GraphqlDurationUnit::Minutes => Self::from_secs_f64(x.value * 60.0f64),
+            GraphqlDurationUnit::Hours => Self::from_secs_f64(x.value * 60.0f64 * 60.0f64),
+            GraphqlDurationUnit::Days => Self::from_secs_f64(x.value * 60.0f64 * 60.0f64 * 24.0f64),
+            GraphqlDurationUnit::Weeks => {
+                Self::from_secs_f64(x.value * 60.0f64 * 60.0f64 * 24.0f64 * 7.0f64)
+            }
+        }
+    }
+}
+
+impl From<Duration> for GraphqlDuration {
+    fn from(x: Duration) -> Self {
+        Self {
+            value: (x.as_secs() as f64 / 60.0f64).floor(),
+            unit: GraphqlDurationUnit::Minutes,
+        }
+    }
+}
+
+#[derive(juniper::GraphQLObject)]
+struct SnapshotRetention {
+    id: i32,
     delete_when: DeleteWhen,
 }
 
@@ -545,7 +586,7 @@ impl MutationRoot {
         context: &Context,
         fsname: String,
         use_barrier: Option<bool>,
-        interval: u64,  // in seconds
+        interval: GraphqlDuration,
         keep_num: Option<i32>,
         delete_when: DeleteWhen,
     ) -> juniper::FieldResult<String> {
@@ -561,39 +602,20 @@ impl MutationRoot {
             "#,
             fsname,
             use_barrier.unwrap_or_default(),
-            PgInterval::try_from(Duration::from_secs(interval))?,
+            PgInterval::try_from(interval.into())?,
             keep_num,
         )
         .execute(&context.pg_pool)
         .await?;
 
-        sqlx::query!(
-            r#"
-                INSERT INTO snapshot_retention (
-                    delete_num,
-                    delete_unit
-                )
-                VALUES ($1, $2::snapshot_delete_unit)
-            "#,
-            delete_when.value,
-            delete_when.unit.to_string() as String
-        )
-        .execute(&context.pg_pool)
-        .await?;
-
-        // TODO: Register the interval with the timer service.
-
         Ok("complete".to_string())
     }
 
-    async fn list_snapshots(
-        context: &Context,
-    ) -> juniper::FieldResult<String> {
+    async fn list_snapshots(context: &Context) -> juniper::FieldResult<String> {
         let xs: Vec<SnapshotConfiguration> = sqlx::query!(
             r#"
-                SELECT sc.id, sc.filesystem_name, sc.use_barrier, sc.interval, sc.keep_num, sr.delete_num, sr.delete_unit::text
-                FROM snapshot_configuration sc
-                LEFT JOIN snapshot_retention sr ON sc.id = sr.id
+                SELECT id, filesystem_name, use_barrier, interval as 'interval:GraphqlDuration', keep_num
+                FROM snapshot_configuration 
             "#
         )
         .fetch(&context.pg_pool)
@@ -604,10 +626,6 @@ impl MutationRoot {
                 use_barrier: x.use_barrier,
                 interval: x.interval,
                 keep_num: x.keep_num,
-                delete_when: DeleteWhen {
-                    value: x.delete_num,
-                    unit: x.delete_unit.into()
-                }
             }
         })
         .try_collect()
@@ -628,13 +646,14 @@ struct Interval {
     unit: IntervalUnit,
 }
 
-#[derive(juniper::GraphQLInputObject)]
+#[derive(juniper::GraphQLObject)]
 struct DeleteWhen {
     value: i32,
     unit: DeleteUnit,
 }
 
-#[derive(serde::Deserialize, juniper::GraphQLEnum)]
+#[sqlx(rename = "snapshot_delete_unit")]
+#[derive(serde::Deserialize, juniper::GraphQLEnum, Debug, sqlx::Type)]
 enum DeleteUnit {
     Percent,
     Gibibytes,
