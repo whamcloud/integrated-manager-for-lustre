@@ -117,7 +117,7 @@ struct SnapshotConfiguration {
     /// Use a write barrier
     use_barrier: bool,
     /// The interval configuration
-    interval: Duration,
+    interval: GraphqlDuration,
     /// Number of snapshots to keep
     keep_num: Option<i32>,
 }
@@ -155,6 +155,12 @@ impl From<Duration> for GraphqlDuration {
             value: (x.as_secs() as f64 / 60.0f64).floor(),
             unit: GraphqlDurationUnit::Minutes,
         }
+    }
+}
+
+impl From<PgInterval> for GraphqlDuration {
+    fn from(x: PgInterval) -> Self {
+        Duration::from_micros(x.microseconds as u64).into()
     }
 }
 
@@ -581,7 +587,6 @@ impl MutationRoot {
     }
 
     /// Creates a new snapshot interval configuration in the database and registers the interval with the timer.
-    /// The interval is in seconds.
     async fn configure_snapshot(
         context: &Context,
         fsname: String,
@@ -614,7 +619,7 @@ impl MutationRoot {
     async fn list_snapshots(context: &Context) -> juniper::FieldResult<String> {
         let xs: Vec<SnapshotConfiguration> = sqlx::query!(
             r#"
-                SELECT id, filesystem_name, use_barrier, interval as 'interval:GraphqlDuration', keep_num
+                SELECT id, filesystem_name, use_barrier, interval, keep_num
                 FROM snapshot_configuration 
             "#
         )
@@ -624,7 +629,7 @@ impl MutationRoot {
                 id: x.id,
                 filesystem_name: x.filesystem_name,
                 use_barrier: x.use_barrier,
-                interval: x.interval,
+                interval: x.interval.into(),
                 keep_num: x.keep_num,
             }
         })
