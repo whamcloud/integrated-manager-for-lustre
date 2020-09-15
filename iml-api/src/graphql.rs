@@ -616,7 +616,8 @@ impl MutationRoot {
         Ok("complete".to_string())
     }
 
-    async fn list_snapshots(context: &Context) -> juniper::FieldResult<String> {
+    /// List all snapshot configurations
+    async fn list_snapshot_configurations(context: &Context) -> juniper::FieldResult<String> {
         let xs: Vec<SnapshotConfiguration> = sqlx::query!(
             r#"
                 SELECT id, filesystem_name, use_barrier, interval, keep_num
