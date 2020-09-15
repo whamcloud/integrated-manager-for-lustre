@@ -1949,7 +1949,6 @@ dependencies = [
  "serde",
  "thiserror",
  "tokio",
- "url",
 ]
 
 [[package]]
