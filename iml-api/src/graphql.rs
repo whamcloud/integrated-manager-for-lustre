@@ -587,6 +587,12 @@ impl MutationRoot {
     }
 
     /// Creates a new snapshot interval configuration in the database and registers the interval with the timer.
+    #[graphql(arguments(
+        fsname(description = "Filesystem name"),
+        use_barrier(description = "Enforce a write barrier when creating the snapshot"),
+        interval(description = "The interval in which a snapshot should be created"),
+        keep_num(description = "The number of snapshots to create")
+    ))]
     async fn configure_snapshot(
         context: &Context,
         fsname: String,
@@ -639,6 +645,14 @@ impl MutationRoot {
         Ok("complete".to_string())
     }
 
+    /// Update an existing snapshot configuration
+    #[graphql(arguments(
+        id(description = "The snapshot configuration id"),
+        fsname(description = "Filesystem name"),
+        use_barrier(description = "Enforce a write barrier when creating the snapshot"),
+        interval(description = "The interval in which a snapshot should be created"),
+        keep_num(description = "The number of snapshots to create")
+    ))]
     async fn update_snapshot_configuration(
         context: &Context,
         id: u64,
@@ -670,6 +684,27 @@ impl MutationRoot {
             use_barrier.unwrap_or_default(),
             PgInterval::try_from(interval.into())?,
             keep_num
+        )
+        .execute(&context.pg_pool)
+        .await?;
+
+        Ok("complete".to_string())
+    }
+
+    /// remove an existing snapshot configuration
+    #[graphql(arguments(
+        id(description = "The snapshot configuration id"),
+    ))]
+    async fn remove_snapshot_configuration(
+        context: &Context,
+        id: u64
+    ) -> juniper::FieldResult<String> {
+        sqlx::query!(
+            r#"
+                DELETE FROM snapshot_configuration
+                WHERE id=$1
+            "#,
+            id as f64
         )
         .execute(&context.pg_pool)
         .await?;
