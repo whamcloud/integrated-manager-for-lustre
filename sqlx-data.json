@@ -707,26 +707,6 @@
       "nullable": []
     }
   },
-  "39e5357798c449822b1cb95e20b060e5c95f17fba981aedf4c7fba68e3083580": {
-    "query": "\n            select active_host_id from target where filesystems @> $1 and name='MGS'\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "active_host_id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "TextArray"
-        ]
-      },
-      "nullable": [
-        true
-      ]
-    }
-  },
   "39fc1211724cef9afd733459348bcd3eb6f3af9a89dc1ca470593ea8beb3678c": {
     "query": "\n        SELECT * FROM chroma_core_job\n        WHERE id IN (SELECT job_id from chroma_core_command_jobs\n            WHERE command_id = $1)\n    ",
     "describe": {
