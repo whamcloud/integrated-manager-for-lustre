@@ -11,8 +11,6 @@ pub mod snapshot;
 pub mod warp_drive;
 
 use chrono::{DateTime, Utc};
-use lazy_static::lazy_static;
-use regex::Regex;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{
     cmp::{Ord, Ordering},
@@ -566,32 +564,22 @@ pub struct Host {
     pub state_modified_at: String,
 }
 
-/// Given a resource_uri, attempts to parse the id from it
-pub fn extract_id(s: &str) -> Option<&str> {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"^/?api/[^/]+/(\d+)/?$").unwrap();
-    }
-    let x = RE.captures(s)?;
-
-    x.get(1).map(|x| x.as_str())
-}
-
 impl Host {
     /// Get associated LNet configuration id
     pub fn lnet_id(&self) -> Option<i32> {
-        let id = extract_id(&self.lnet_configuration)?;
+        let id = iml_api_utils::extract_id(&self.lnet_configuration)?;
 
         id.parse::<i32>().ok()
     }
     /// Get associated Corosync configuration id
     pub fn corosync_id(&self) -> Option<i32> {
-        let id = extract_id(self.corosync_configuration.as_ref()?)?;
+        let id = iml_api_utils::extract_id(self.corosync_configuration.as_ref()?)?;
 
         id.parse::<i32>().ok()
     }
     /// Get associated Pacemaker configuration id
     pub fn pacemaker_id(&self) -> Option<i32> {
-        let id = extract_id(self.pacemaker_configuration.as_ref()?)?;
+        let id = iml_api_utils::extract_id(self.pacemaker_configuration.as_ref()?)?;
 
         id.parse::<i32>().ok()
     }

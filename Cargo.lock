@@ -1547,6 +1547,14 @@ dependencies = [
 name = "iml-api-utils"
 version = "0.3.0"
 dependencies = [
+ "lazy_static",
+ "regex",
+]
+
+[[package]]
+name = "iml-api-utils-2"
+version = "0.3.0"
+dependencies = [
  "futures",
  "iml-graphql-queries",
  "iml-manager-client",
@@ -1916,7 +1924,7 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "futures-util",
- "iml-api-utils",
+ "iml-api-utils-2",
  "iml-graphql-queries",
  "iml-influx",
  "iml-manager-client",
@@ -2061,6 +2069,7 @@ dependencies = [
  "chrono",
  "humantime 2.0.1",
  "im",
+ "iml-api-utils",
  "iml-change",
  "juniper",
  "lazy_static",
