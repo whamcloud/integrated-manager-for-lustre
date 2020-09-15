@@ -4,7 +4,7 @@
 
 use core::fmt::Debug;
 use futures_util::stream::TryStreamExt;
-use iml_api_utils::wait_for_cmds_success;
+use iml_api_utils::{wait_for_cmds_success, CommandError};
 use iml_graphql_queries::snapshot as snapshot_queries;
 use iml_manager_client::{get_influx, graphql};
 use iml_manager_env::get_pool_limit;
@@ -16,6 +16,7 @@ use reqwest::Client;
 use std::{collections::HashMap, collections::HashSet, sync::Arc};
 use tokio::{
     sync::Mutex,
+    task::JoinHandle,
     time::Instant,
     time::{interval, Duration},
 };
@@ -55,12 +56,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Arc::new(Mutex::new(HashMap::new()));
     let snapshot_client_counts_2 = snapshot_client_counts.clone();
 
-    tokio::spawn(async move {
+    let handle: JoinHandle<Result<(), CommandError>> = tokio::spawn(async move {
+        use tokio::stream::StreamExt;
         let mut interval = interval(Duration::from_secs(10));
 
-        use tokio::stream::StreamExt;
         while let Some(_) = interval.next().await {
-            let client: Client = iml_manager_client::get_client().unwrap();
+            let client: Client = iml_manager_client::get_client()?;
             let client_2 = client.clone();
 
             let query = iml_influx::filesystems::query();
@@ -70,7 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 query.as_str(),
             );
 
-            let influx_resp = stats_fut.await.unwrap();
+            let influx_resp = stats_fut.await?;
             let stats = iml_influx::filesystems::Response::from(influx_resp);
 
             tracing::debug!("Influx stats: {:?}", stats);
@@ -117,9 +118,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 );
                                 let resp: iml_graphql_queries::Response<
                                     snapshot_queries::unmount::Resp,
-                                > = graphql(client_2.clone(), query).await.unwrap();
-                                let command = Result::from(resp).unwrap().data.unmount_snapshot;
-                                wait_for_cmds_success(&[command]).await.unwrap();
+                                > = graphql(client_2.clone(), query).await?;
+                                let command = Result::from(resp)?.data.unmount_snapshot;
+                                wait_for_cmds_success(&[command]).await?;
                             }
                         }
                         None => {
@@ -134,6 +135,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
+        Ok(())
     });
 
     while let Some((fqdn, snapshots)) = s.try_next().await? {
