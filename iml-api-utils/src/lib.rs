@@ -2,14 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{future, FutureExt, TryFutureExt};
 use iml_manager_client::{get, Client};
-use iml_wire_types::{ApiList, AvailableAction, Command, EndpointName, FlatQuery, Host};
+use iml_wire_types::{ApiList, Command, EndpointName};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashSet;
-use std::{collections::HashMap, fmt::Debug, iter, time::Duration};
-use tokio::{task::spawn_blocking, time::delay_for};
+use std::{fmt::Debug, iter, time::Duration};
+use tokio::time::delay_for;
 
 /// Given a resource_uri, attempts to parse the id from it
 pub fn extract_id(s: &str) -> Option<&str> {
@@ -23,14 +22,14 @@ pub fn extract_id(s: &str) -> Option<&str> {
 
 #[derive(Debug, thiserror::Error)]
 pub enum CommandError {
-    #[error(transparent)]
-    ApiError(#[from] String),
+    #[error("API Error")]
+    ApiError(String),
     #[error(transparent)]
     ClientRequestError(#[from] iml_manager_client::ImlManagerClientError),
-    #[error(transparent)]
+    #[error("Does Not Exist")]
     DoesNotExist(&'static str),
     #[error("Command failed")]
-    FailedCommandError(#[from] Vec<Command>),
+    FailedCommandError(Vec<Command>),
     #[error(transparent)]
     FromUtf8Error(#[from] std::string::FromUtf8Error),
     #[error(transparent)]
@@ -43,6 +42,12 @@ pub enum CommandError {
     TokioJoinError(#[from] tokio::task::JoinError),
     #[error(transparent)]
     TokioTimerError(#[from] tokio::time::Error),
+}
+
+impl From<Vec<Command>> for CommandError {
+    fn from(xs: Vec<Command>) -> Self {
+        CommandError::FailedCommandError(xs)
+    }
 }
 
 fn cmd_finished(cmd: &Command) -> bool {
@@ -58,7 +63,7 @@ pub async fn wait_for_cmds(cmds: &[Command]) -> Result<Vec<Command>, CommandErro
 
     let mut settled_commands = vec![];
 
-    let fut2 = async {
+    let fut = async {
         loop {
             if in_progress_commands.is_empty() {
                 tracing::debug!("All commands complete. Returning");
@@ -73,7 +78,7 @@ pub async fn wait_for_cmds(cmds: &[Command]) -> Result<Vec<Command>, CommandErro
                 .chain(iter::once(["limit".into(), "0".into()]))
                 .collect();
 
-            let client: Client = iml_manager_client::get_client().unwrap();
+            let client: Client = iml_manager_client::get_client()?;
 
             let cmds: ApiList<Command> = get(client, Command::endpoint_name(), query).await?;
 
@@ -86,7 +91,7 @@ pub async fn wait_for_cmds(cmds: &[Command]) -> Result<Vec<Command>, CommandErro
         }
     };
 
-    fut2.await?;
+    fut.await?;
 
     Ok(settled_commands)
 }

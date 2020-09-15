@@ -1916,6 +1916,7 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "futures-util",
+ "iml-api-utils",
  "iml-graphql-queries",
  "iml-influx",
  "iml-manager-client",
