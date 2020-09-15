@@ -65,23 +65,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let client2 = client.clone();
 
                 let query = iml_influx::filesystems::query();
-                let fut_st = get_influx::<iml_influx::filesystems::InfluxResponse>(
+                let stats_fut = get_influx::<iml_influx::filesystems::InfluxResponse>(
                     client,
                     "iml_stats",
                     query.as_str(),
                 );
 
-                let influx_resp = fut_st.await.unwrap();
-                let st = iml_influx::filesystems::Response::from(influx_resp);
+                let influx_resp = stats_fut.await.unwrap();
+                let stats = iml_influx::filesystems::Response::from(influx_resp);
 
-                tracing::debug!("ST: {:?}", st);
+                tracing::debug!("ST: {:?}", stats);
                 let mut snapshot_client_counts = snapshot_client_counts.lock().await;
 
                 for (snapshot_id, state) in snapshot_client_counts.iter_mut() {
-                    if let Some(st) = st.get(&snapshot_id.snapshot_fsname) {
+                    if let Some(snapshot_stats) = stats.get(&snapshot_id.snapshot_fsname) {
                         match state {
                             Some(State::Monitoring(prev_clients)) => {
-                                let clients = st.clients.unwrap_or(0);
+                                let clients = snapshot_stats.clients.unwrap_or(0);
 
                                 tracing::info!(
                                     "Monitoring. Snapshot: {}, was {} clients, became {} clients",
@@ -99,7 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 }
                             }
                             Some(State::CountingDown(when)) => {
-                                let clients = st.clients.unwrap_or(0);
+                                let clients = snapshot_stats.clients.unwrap_or(0);
                                 tracing::info!(
                                     "Counting down. Snapshot: {}, Was 0 clients, became {} clients",
                                     &snapshot_id.snapshot_fsname,
@@ -119,8 +119,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     let resp: iml_graphql_queries::Response<
                                         snapshot_queries::unmount::Resp,
                                     > = graphql(client2.clone(), query).await.unwrap();
-                                    let x = Result::from(resp).unwrap().data.unmount_snapshot;
-                                    wait_for_cmds_success(&[x]).await.unwrap();
+                                    let command = Result::from(resp).unwrap().data.unmount_snapshot;
+                                    wait_for_cmds_success(&[command]).await.unwrap();
                                 }
                             }
                             None => {
