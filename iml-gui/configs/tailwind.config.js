@@ -16,6 +16,10 @@ Object.fromEntries =
   });
 
 module.exports = {
+  future: {
+    purgeLayersByDefault: true,
+    removeDeprecatedGapUtilities: true,
+  },
   theme: {
     screens: {
       sm: "569px",
@@ -96,11 +100,11 @@ module.exports = {
         "-670px": "-670px",
         "-820px": "-820px",
         "-1230px": "-1230px",
-        "38": "9.5rem",
-        "72": "18rem",
-        "96": "24rem",
-        "108": "27rem",
-        "132": "33rem",
+        38: "9.5rem",
+        72: "18rem",
+        96: "24rem",
+        108: "27rem",
+        132: "33rem",
         "310px": "310px",
         "790px": "790px",
         "1290px": "1290px",
@@ -114,8 +118,8 @@ module.exports = {
         "6070px": "6070px",
       },
       padding: {
-        "84": "21rem",
-        "96": "24rem",
+        84: "21rem",
+        96: "24rem",
       },
       inset: {
         "1/2": "50%",
@@ -124,17 +128,17 @@ module.exports = {
         "-50vw": "-50vw",
       },
       width: {
-        "36": "9rem",
-        "76": "19rem",
+        36: "9rem",
+        76: "19rem",
         xs: "20rem",
-        "96": "24rem",
-        "100": "25rem",
+        96: "24rem",
+        100: "25rem",
         md: "28rem",
-        "120": "30rem",
-        "132": "33rem",
-        "204": "51rem",
-        "216": "54rem",
-        "236": "59rem",
+        120: "30rem",
+        132: "33rem",
+        204: "51rem",
+        216: "54rem",
+        236: "59rem",
         "70px": "70px",
         "265px": "265px",
         "385px": "385px",
@@ -155,15 +159,15 @@ module.exports = {
       maxWidth: {
         none: "none",
         "8xl": "88rem",
-        "400": "100rem",
+        400: "100rem",
       },
       minWidth: {
-        "6": "1.5rem",
+        6: "1.5rem",
       },
       height: {
         "main-content": "calc(100vh - 6.6rem)",
-        "18": "4.5rem",
-        "72": "18rem",
+        18: "4.5rem",
+        72: "18rem",
         "3px": "3px",
         "300px": "300px",
         "320px": "320px",
@@ -190,11 +194,11 @@ module.exports = {
         "2360px": "2360px",
         "2560px": "2560px",
         "3670px": "3670px",
-        "80": "20rem",
-        "96": "24rem",
+        80: "20rem",
+        96: "24rem",
       },
       minHeight: {
-        "80": "20rem",
+        80: "20rem",
       },
       borderRadius: {
         "28px": "28px",
@@ -207,7 +211,7 @@ module.exports = {
         "330px": "330px",
       },
       borderWidth: {
-        "3": "3px",
+        3: "3px",
       },
       textColor: {
         active: "#3793FF",
@@ -224,13 +228,13 @@ module.exports = {
         "throughput-background": "#5350FB",
       },
       strokeWidth: {
-        "3": "3",
-        "4": "4",
-        "5": "5",
-        "6": "6",
-        "8": "8",
-        "10": "10",
-        "20": "20",
+        3: "3",
+        4: "4",
+        5: "5",
+        6: "6",
+        8: "8",
+        10: "10",
+        20: "20",
       },
       transitionProperty: {
         stroke_dashoffset: "stroke-dashoffset",
@@ -238,18 +242,38 @@ module.exports = {
     },
   },
   variants: {
-    display: ["group-hover", "group-focus", "responsive"],
-    textColor: ["hover", "group-hover", "focus"],
+    backgroundColor: ({ after }) => after(["form-invalid", "disabled"]),
+    borderColor: ({ after }) => after(["checked"]),
     borderWidth: ["responsive", "last", "hover", "focus"],
+    cursor: ({ after }) => after(["form-invalid", "disabled"]),
+    display: ["group-hover", "group-focus", "responsive"],
+    pointerEvents: ({ after }) => after(["form-invalid"]),
+    textColor: ["hover", "group-hover", "focus", "checked"],
   },
   plugins: [
     function ({ addVariant }) {
-      addVariant("group-focus", ({ container, separator }) => {
+      addVariant("group-focus", ({ container }) => {
         container.walkRules((rule) => {
           rule.selector = `.group:focus-within .group-focus\\:${rule.selector.slice(
             1
           )}`;
         });
+      });
+    },
+    function ({ addVariant }) {
+      addVariant("form-invalid", ({ container }) => {
+        container.walkRules((rule) => {
+          rule.selector = `form:invalid .form-invalid\\:${rule.selector.slice(
+            1
+          )}`;
+        });
+      });
+    },
+    function ({ addVariant, e }) {
+      addVariant("invalid", ({ modifySelectors, separator }) => {
+        modifySelectors(
+          ({ className }) => `.${e(`invalid${separator}${className}`)}:invalid`
+        );
       });
     },
   ],
