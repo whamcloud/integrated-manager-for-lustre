@@ -105,6 +105,24 @@ struct BannedResource {
     master_only: bool,
 }
 
+//sc.id, sc.filesystem_name, sc.use_barrier, sc.interval, sc.keep_num, sr.delete_num, sr.delete_unit::snapshot_delete_unit
+#[derive(juniper::GraphQLObject)]
+/// A Snapshot configuration
+struct SnapshotConfiguration {
+    /// The configuration id
+    id: i32,
+    /// The filesystem name
+    filesystem_name: String,
+    /// Use a write barrier
+    use_barrier: bool,
+    /// The interval configuration
+    interval: PgInterval,
+    /// Number of snapshots to keep
+    keep_num: Option<i32>,
+    /// Snapshot retention
+    delete_when: DeleteWhen,
+}
+
 pub(crate) struct QueryRoot;
 pub(crate) struct MutationRoot;
 
@@ -520,12 +538,16 @@ impl MutationRoot {
             .await
             .map_err(|e| e.into())
     }
+
+    /// Creates a new snapshot interval configuration in the database and registers the interval with the timer.
+    /// The interval is in seconds.
     async fn configure_snapshot(
         context: &Context,
         fsname: String,
-        delete_when: DeleteWhen,
         use_barrier: Option<bool>,
+        interval: u64,  // in seconds
         keep_num: Option<i32>,
+        delete_when: DeleteWhen,
     ) -> juniper::FieldResult<String> {
         sqlx::query!(
             r#"
@@ -533,20 +555,62 @@ impl MutationRoot {
                     filesystem_name,
                     use_barrier,
                     interval,
-                    keep_num,
-                    delete_num,
-                    delete_unit
+                    keep_num
                 )
-                VALUES ($1, $2, $3, $4, $5, $6::snapshot_delete_unit)
+                VALUES ($1, $2, $3, $4)
             "#,
             fsname,
             use_barrier.unwrap_or_default(),
-            PgInterval::try_from(Duration::from_secs(100))?,
+            PgInterval::try_from(Duration::from_secs(interval))?,
             keep_num,
+        )
+        .execute(&context.pg_pool)
+        .await?;
+
+        sqlx::query!(
+            r#"
+                INSERT INTO snapshot_retention (
+                    delete_num,
+                    delete_unit
+                )
+                VALUES ($1, $2::snapshot_delete_unit)
+            "#,
             delete_when.value,
             delete_when.unit.to_string() as String
         )
         .execute(&context.pg_pool)
+        .await?;
+
+        // TODO: Register the interval with the timer service.
+
+        Ok("complete".to_string())
+    }
+
+    async fn list_snapshots(
+        context: &Context,
+    ) -> juniper::FieldResult<String> {
+        let xs: Vec<SnapshotConfiguration> = sqlx::query!(
+            r#"
+                SELECT sc.id, sc.filesystem_name, sc.use_barrier, sc.interval, sc.keep_num, sr.delete_num, sr.delete_unit::text
+                FROM snapshot_configuration sc
+                LEFT JOIN snapshot_retention sr ON sc.id = sr.id
+            "#
+        )
+        .fetch(&context.pg_pool)
+        .map_ok(|x| {
+            SnapshotConfiguration {
+                id: x.id,
+                filesystem_name: x.filesystem_name,
+                use_barrier: x.use_barrier,
+                interval: x.interval,
+                keep_num: x.keep_num,
+                delete_when: DeleteWhen {
+                    value: x.delete_num,
+                    unit: x.delete_unit.into()
+                }
+            }
+        })
+        .try_collect()
         .await?;
 
         Ok("complete".to_string())
@@ -583,6 +647,20 @@ impl ToString for DeleteUnit {
             Self::Percent => "percent".to_string(),
             Self::Gibibytes => "gibibytes".to_string(),
             Self::Tebibytes => "tebibytes".to_string(),
+        }
+    }
+}
+
+impl From<Option<String>> for DeleteUnit {
+    fn from(unit: Option<String>) -> Self {
+        if let Some(unit) = unit {
+            match unit.as_str() {
+                "percent" => Self::Percent,
+                "gibibytes" => Self::Gibibytes,
+                "tebibytes" => Self::Tebibytes,
+            }
+        } else {
+            Self::Percent
         }
     }
 }

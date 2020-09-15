@@ -40,15 +40,19 @@ INSERT ON snapshot FOR EACH ROW EXECUTE PROCEDURE table_snapshot_update_notify()
 CREATE TRIGGER snapshot_notify_delete
 AFTER DELETE ON snapshot FOR EACH ROW EXECUTE PROCEDURE table_snapshot_update_notify();
 
-CREATE TYPE snapshot_delete_unit AS ENUM ('percent', 'gibibytes', 'tebibytes');
-
 CREATE TABLE IF NOT EXISTS snapshot_configuration (
   id serial PRIMARY KEY,
   filesystem_name TEXT NOT NULL,
   use_barrier BOOLEAN NOT NULL,
   last_run TIMESTAMP WITH TIME ZONE,
   interval INTERVAL NOT NULL,
-  keep_num INT,
+  keep_num INT
+);
+
+CREATE TYPE snapshot_delete_unit AS ENUM ('percent', 'gibibytes', 'tebibytes');
+
+CREATE TABLE IF NOT EXISTS snapshot_retention (
+  id serial PRIMARY KEY,
   delete_num INT NOT NULL,
   delete_unit snapshot_delete_unit NOT NULL
-);
+)
