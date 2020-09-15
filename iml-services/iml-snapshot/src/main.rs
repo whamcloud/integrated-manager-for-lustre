@@ -58,16 +58,15 @@ async fn tick(
                 Some(State::Monitoring(prev_clients)) => {
                     let clients = snapshot_stats.clients.unwrap_or(0);
 
-                    tracing::info!(
+                    tracing::debug!(
                         "Monitoring. Snapshot: {}, was {} clients, became {} clients",
                         &snapshot_id.snapshot_fsname,
                         prev_clients,
                         clients
                     );
                     if *prev_clients > 0 && clients == 0 {
-                        tracing::info!("counting down for job");
-                        // let instant = Instant::now() + Duration::from_secs(5 * 60);
-                        let instant = Instant::now() + Duration::from_secs(20);
+                        tracing::trace!("counting down for job");
+                        let instant = Instant::now() + Duration::from_secs(5 * 60);
                         *state = Some(State::CountingDown(instant));
                     } else {
                         *prev_clients = clients;
@@ -75,16 +74,16 @@ async fn tick(
                 }
                 Some(State::CountingDown(when)) => {
                     let clients = snapshot_stats.clients.unwrap_or(0);
-                    tracing::info!(
+                    tracing::debug!(
                         "Counting down. Snapshot: {}, Was 0 clients, became {} clients",
                         &snapshot_id.snapshot_fsname,
                         clients
                     );
                     if clients > 0 {
-                        tracing::info!("changing state");
+                        tracing::trace!("changing state");
                         *state = Some(State::Monitoring(clients));
                     } else if Instant::now() >= *when {
-                        tracing::info!("running the job");
+                        tracing::trace!("running the job");
                         *state = Some(State::Monitoring(0));
 
                         let query = snapshot_queries::unmount::build(
@@ -98,7 +97,7 @@ async fn tick(
                     }
                 }
                 None => {
-                    tracing::info!(
+                    tracing::debug!(
                         "Just learnt about this snapshot. Snapshot: {}, became 0 clients",
                         &snapshot_id.snapshot_fsname
                     );
