@@ -13,7 +13,7 @@ use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::snapshot;
 use reqwest::Client;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, collections::HashSet, sync::Arc};
 use tokio::{
     sync::Mutex,
     time::Instant,
@@ -140,7 +140,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tracing::debug!("snapshots from {}: {:?}", fqdn, snapshots);
 
         let snaps = {
-            let mut snapshot_fsnames = snapshot_client_counts.lock().await;
+            let mut snapshot_client_counts = snapshot_client_counts.lock().await;
+            let old_snapshot_ids: HashSet<_> =
+                snapshot_client_counts.keys().map(|s| s.clone()).collect();
+            let new_snapshot_ids: HashSet<_> = snapshots
+                .iter()
+                .map(|s| SnapshotId {
+                    filesystem_name: s.filesystem_name.clone(),
+                    snapshot_name: s.snapshot_name.clone(),
+                    snapshot_fsname: s.snapshot_fsname.clone(),
+                })
+                .collect();
+            let to_remove = old_snapshot_ids.difference(&new_snapshot_ids);
+            for i in to_remove {
+                snapshot_client_counts.remove(i);
+            }
 
             snapshots.into_iter().fold(
                 (vec![], vec![], vec![], vec![], vec![], vec![], vec![]),
@@ -153,14 +167,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     acc.5.push(s.mounted);
                     acc.6.push(s.comment);
 
-                    snapshot_fsnames
+                    snapshot_client_counts
                         .entry(SnapshotId {
                             filesystem_name: s.filesystem_name,
                             snapshot_name: s.snapshot_name,
                             snapshot_fsname: s.snapshot_fsname,
                         })
                         .or_insert(None);
-                    // TODO: handle removal
 
                     acc
                 },
