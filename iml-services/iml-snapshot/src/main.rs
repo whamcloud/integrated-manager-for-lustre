@@ -59,7 +59,7 @@ async fn tick(
                     let clients = snapshot_stats.clients.unwrap_or(0);
 
                     tracing::debug!(
-                        "Monitoring. Snapshot: {}, was {} clients, became {} clients",
+                        "Monitoring. Snapshot {}: {} clients (previously {} clients)",
                         &snapshot_id.snapshot_fsname,
                         prev_clients,
                         clients
@@ -75,7 +75,7 @@ async fn tick(
                 Some(State::CountingDown(when)) => {
                     let clients = snapshot_stats.clients.unwrap_or(0);
                     tracing::debug!(
-                        "Counting down. Snapshot: {}, Was 0 clients, became {} clients",
+                        "Counting down. Snapshot {}: 0 clients (previously {} clients)",
                         &snapshot_id.snapshot_fsname,
                         clients
                     );
@@ -98,7 +98,7 @@ async fn tick(
                 }
                 None => {
                     tracing::debug!(
-                        "Just learnt about this snapshot. Snapshot: {}, became 0 clients",
+                        "Just learnt about this snapshot. Snapshot {}: 0 clients",
                         &snapshot_id.snapshot_fsname
                     );
 
