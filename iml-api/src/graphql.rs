@@ -329,7 +329,7 @@ impl QueryRoot {
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to ASC"),
-        is_active(description = "Command status, active means not completed, default is true"),
+        is_active(description = "Command status, active means not completed, default is false"),
         msg(description = "Substring of the command's message, null or empty matches all"),
     ))]
     async fn commands(
@@ -341,26 +341,26 @@ impl QueryRoot {
         msg: Option<String>,
     ) -> juniper::FieldResult<Vec<Command>> {
         let dir = dir.unwrap_or_default();
-        let is_completed = !is_active.unwrap_or(true);
+        let is_completed = !is_active.unwrap_or(false);
         let commands: Vec<Command> = sqlx::query!(
             r#"
-                    SELECT
-                        c.id AS id,
-                        cancelled,
-                        complete,
-                        errored,
-                        created_at,
-                        array_agg(cj.job_id)::integer[] AS job_ids,
-                        message
-                    FROM chroma_core_command c
-                    JOIN chroma_core_command_jobs cj ON c.id = cj.command_id
-                    WHERE complete = $4 AND ($5::TEXT IS NULL OR c.message LIKE '%' || $5 || '%')
-                    GROUP BY c.id
-                    ORDER BY
-                        CASE WHEN $3 = 'asc' THEN c.id END ASC,
-                        CASE WHEN $3 = 'desc' THEN c.id END DESC
-                    OFFSET $1 LIMIT $2
-                "#,
+                SELECT
+                    c.id AS id,
+                    cancelled,
+                    complete,
+                    errored,
+                    created_at,
+                    array_agg(cj.job_id)::INT[] AS job_ids,
+                    message
+                FROM chroma_core_command c
+                JOIN chroma_core_command_jobs cj ON c.id = cj.command_id
+                WHERE complete = $4
+                  AND ($5::TEXT IS NULL OR c.message ILIKE '%' || $5 || '%')
+                GROUP BY c.id
+                ORDER BY
+                    CASE WHEN $3 = 'asc' THEN c.id END ASC,
+                    CASE WHEN $3 = 'desc' THEN c.id END DESC
+                OFFSET $1 LIMIT $2 "#,
             offset.unwrap_or(0) as i64,
             limit.unwrap_or(20) as i64,
             dir.deref(),
