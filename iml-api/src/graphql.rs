@@ -593,7 +593,6 @@ impl MutationRoot {
         use_barrier: Option<bool>,
         interval: GraphqlDuration,
         keep_num: Option<i32>,
-        delete_when: DeleteWhen,
     ) -> juniper::FieldResult<String> {
         sqlx::query!(
             r#"
@@ -635,6 +634,44 @@ impl MutationRoot {
             }
         })
         .try_collect()
+        .await?;
+
+        Ok("complete".to_string())
+    }
+
+    async fn update_snapshot_configuration(
+        context: &Context,
+        id: u64,
+        fsname: String,
+        use_barrier: Option<bool>,
+        interval: GraphqlDuration,
+        keep_num: Option<i32>,
+    ) -> juniper::FieldResult<String> {
+        sqlx::query!(
+            r#"
+                INSERT INTO snapshot_configuration (
+                    id,
+                    filesystem_name,
+                    use_barrier,
+                    interval,
+                    keep_num
+                )
+                VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (id)
+                DO UPDATE
+                SET
+                    filesystem_name = excluded.filesystem_name,
+                    use_barrier = excluded.use_barrier,
+                    interval = excluded.interval,
+                    keep_num = excluded.keep_num
+            "#,
+            id as f64,
+            fsname,
+            use_barrier.unwrap_or_default(),
+            PgInterval::try_from(interval.into())?,
+            keep_num
+        )
+        .execute(&context.pg_pool)
         .await?;
 
         Ok("complete".to_string())
