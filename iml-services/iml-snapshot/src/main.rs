@@ -4,7 +4,7 @@
 
 use core::fmt::Debug;
 use futures_util::stream::TryStreamExt;
-use iml_api_utils::{wait_for_cmds_success, CommandError};
+use iml_api_utils_2::{wait_for_cmds_success, CommandError};
 use iml_graphql_queries::snapshot as snapshot_queries;
 use iml_manager_client::{get_influx, graphql};
 use iml_manager_env::get_pool_limit;

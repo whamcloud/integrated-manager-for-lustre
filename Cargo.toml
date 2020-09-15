@@ -4,6 +4,7 @@ members = [
   'iml-agent-comms',
   'iml-agent',
   'iml-api-utils',
+  'iml-api-utils-2',
   'iml-api',
   'iml-change',
   'iml-cmd',
