@@ -3,7 +3,7 @@ authors = ["IML Team <iml@whamcloud.com>"]
 description = "Utilities for working with the IML API"
 edition = "2018"
 license = "MIT"
-name = "iml-api-utils-2"
+name = "iml-command-utils"
 version = "0.3.0"
 
 [dependencies]
