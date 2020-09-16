@@ -1552,19 +1552,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "iml-api-utils-2"
-version = "0.3.0"
-dependencies = [
- "futures",
- "iml-graphql-queries",
- "iml-manager-client",
- "iml-wire-types",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "iml-change"
 version = "0.1.0"
 
@@ -1576,6 +1563,19 @@ dependencies = [
  "tokio",
  "tracing",
  "warp",
+]
+
+[[package]]
+name = "iml-command-utils"
+version = "0.3.0"
+dependencies = [
+ "futures",
+ "iml-graphql-queries",
+ "iml-manager-client",
+ "iml-wire-types",
+ "thiserror",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -1922,7 +1922,7 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "futures-util",
- "iml-api-utils-2",
+ "iml-command-utils",
  "iml-graphql-queries",
  "iml-influx",
  "iml-manager-client",
