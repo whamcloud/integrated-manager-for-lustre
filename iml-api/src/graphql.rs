@@ -2,13 +2,18 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{command::get_command, error::ImlApiError};
+use crate::{
+    command::get_command,
+    error::ImlApiError,
+    timer::{configure_snapshot_timer, remove_snapshot_timer},
+};
+use chrono::{DateTime, Utc};
 use futures::{TryFutureExt, TryStreamExt};
 use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
 use iml_wire_types::{
     graphql_duration::GraphQLDuration,
-    snapshot::{DeleteUnit, Snapshot, SnapshotInterval, SnapshotRetention},
+    snapshot::{DeleteUnit, DeleteWhen, Snapshot, SnapshotInterval, SnapshotRetention},
     Command, EndpointName, Job,
 };
 use itertools::Itertools;
@@ -23,6 +28,12 @@ use std::{
     sync::Arc,
 };
 use warp::Filter;
+
+#[derive(juniper::GraphQLInputObject)]
+struct InputDeleteWhen {
+    value: i32,
+    unit: DeleteUnit,
+}
 
 #[derive(juniper::GraphQLObject)]
 /// A Corosync Node found in `crm_mon`
@@ -417,8 +428,7 @@ impl QueryRoot {
     async fn snapshot_retention_policies(
         context: &Context,
     ) -> juniper::FieldResult<Vec<SnapshotRetention>> {
-        let xs: Vec<SnapshotRetention> = sqlx::query_as!(
-            SnapshotRetention,
+        let xs: Vec<SnapshotRetention> = sqlx::query!(
             r#"
                 SELECT
                     id,
@@ -431,10 +441,42 @@ impl QueryRoot {
             "#
         )
         .fetch(&context.pg_pool)
+        .map_ok(|x| SnapshotRetention {
+            id: x.id,
+            filesystem_name: x.filesystem_name,
+            delete_when: DeleteWhen {
+                value: x.delete_num,
+                unit: x.delete_unit,
+            },
+            last_run: x.last_run,
+            keep_num: x.keep_num,
+        })
         .try_collect()
         .await?;
 
         Ok(xs)
+    }
+}
+
+struct SnapshotIntervalName {
+    id: i32,
+    fs_name: String,
+    timestamp: DateTime<Utc>,
+}
+
+fn parse_snapshot_name(name: &str) -> Option<SnapshotIntervalName> {
+    let name_parts: Vec<&str> = name.split("-").collect();
+    if name_parts.len() == 3 {
+        match name_parts[2].parse::<DateTime<Utc>>() {
+            Ok(ts) => Some(SnapshotIntervalName {
+                id: name_parts[0].parse::<i32>().expect("get id from name"),
+                fs_name: name_parts[1].to_string(),
+                timestamp: ts,
+            }),
+            Err(_) => None,
+        }
+    } else {
+        None
     }
 }
 
@@ -461,6 +503,22 @@ impl MutationRoot {
     ) -> juniper::FieldResult<Command> {
         let name = name.trim();
         validate_snapshot_name(name)?;
+
+        let snapshot_interval_name = parse_snapshot_name(name);
+        if let Some(data) = snapshot_interval_name {
+            sqlx::query!(
+                r#"
+                UPDATE snapshot_interval
+                SET last_run=$1
+                WHERE id=$2 AND filesystem_name=$3
+            "#,
+                data.timestamp,
+                data.id,
+                data.fs_name,
+            )
+            .execute(&context.pg_pool)
+            .await?;
+        }
 
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
@@ -651,7 +709,7 @@ impl MutationRoot {
         interval: GraphQLDuration,
         use_barrier: Option<bool>,
     ) -> juniper::FieldResult<bool> {
-        sqlx::query!(
+        let id = sqlx::query!(
             r#"
                 INSERT INTO snapshot_interval (
                     filesystem_name,
@@ -661,13 +719,17 @@ impl MutationRoot {
                 VALUES ($1, $2, $3)
                 ON CONFLICT (filesystem_name, interval)
                 DO NOTHING
+                RETURNING id
             "#,
             fsname,
             use_barrier.unwrap_or_default(),
             PgInterval::try_from(interval.0)?,
         )
-        .execute(&context.pg_pool)
+        .fetch_one(&context.pg_pool)
+        .map_ok(|x| x.id)
         .await?;
+
+        configure_snapshot_timer(id, fsname, interval.0, use_barrier.unwrap_or_default()).await?;
 
         Ok(true)
     }
@@ -678,6 +740,8 @@ impl MutationRoot {
         sqlx::query!("DELETE FROM snapshot_interval WHERE id=$1", id)
             .execute(&context.pg_pool)
             .await?;
+
+        remove_snapshot_timer(id).await?;
 
         Ok(true)
     }
@@ -699,8 +763,7 @@ impl MutationRoot {
     async fn create_snapshot_retention(
         context: &Context,
         fsname: String,
-        delete_num: i32,
-        delete_unit: DeleteUnit,
+        delete_when: InputDeleteWhen,
         keep_num: i32,
     ) -> juniper::FieldResult<bool> {
         sqlx::query!(
@@ -714,8 +777,8 @@ impl MutationRoot {
                 VALUES ($1, $2, $3, $4)
             "#,
             fsname,
-            delete_num,
-            delete_unit as DeleteUnit,
+            delete_when.value,
+            delete_when.unit as DeleteUnit,
             keep_num
         )
         .execute(&context.pg_pool)

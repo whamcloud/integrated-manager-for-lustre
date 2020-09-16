@@ -10,9 +10,10 @@ use tokio::{
     prelude::*,
 };
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ConfigDetails {
     config_id: String,
+    file_prefix: String,
     timer_config: String,
     service_config: String,
 }
@@ -32,28 +33,33 @@ pub struct ConfigFiles {
     pub service_file: ConfigFile,
 }
 
-pub fn unit_name(fid: &str) -> String {
-    format!("iml-stratagem-{}", fid)
+pub fn unit_name(file_prefix: &str, fid: &str) -> String {
+    format!("{}-{}", file_prefix, fid)
 }
 
-pub fn timer_file(fid: &str) -> String {
-    format!("/etc/systemd/system/{}.timer", unit_name(fid))
+pub fn timer_file(file_prefix: &str, fid: &str) -> String {
+    format!("/etc/systemd/system/{}.timer", unit_name(file_prefix, fid))
 }
 
-pub fn service_file(fid: &str) -> String {
-    format!("/etc/systemd/system/{}.service", unit_name(fid))
+pub fn service_file(file_prefix: &str, fid: &str) -> String {
+    format!(
+        "/etc/systemd/system/{}.service",
+        unit_name(file_prefix, fid)
+    )
 }
 
-pub fn get_config(config: ConfigDetails) -> (String, ConfigFiles) {
+pub fn get_config(config: ConfigDetails) -> (String, String, ConfigFiles) {
+    iml_tracing::tracing::debug!("config: {:?}", config);
     (
+        config.file_prefix.clone(),
         config.config_id.clone(),
         ConfigFiles {
             timer_file: ConfigFile {
-                name: timer_file(config.config_id.as_str()),
+                name: timer_file(&config.file_prefix, config.config_id.as_str()),
                 content: config.timer_config,
             },
             service_file: ConfigFile {
-                name: service_file(config.config_id.as_str()),
+                name: service_file(&config.file_prefix, config.config_id.as_str()),
                 content: config.service_config,
             },
         },
@@ -83,21 +89,25 @@ pub async fn write_config_files(configs: ConfigFiles) -> tokio::io::Result<()> {
 }
 
 pub async fn write_configs(
-    (config_id, configs): (String, ConfigFiles),
-) -> Result<String, warp::Rejection> {
+    (file_prefix, config_id, configs): (String, String, ConfigFiles),
+) -> Result<(String, String), warp::Rejection> {
     write_config_files(configs)
         .map_err(TimerError::IoError)
         .map_err(warp::reject::custom)
         .await?;
 
-    Ok(config_id)
+    Ok((file_prefix, config_id))
 }
 
-pub async fn delete_config(config: &str, config_id: String) -> Result<String, warp::Rejection> {
+pub async fn delete_config(
+    config: &str,
+    file_prefix: &str,
+    config_id: &str,
+) -> Result<(String, String), warp::Rejection> {
     remove_file(config)
         .map_err(TimerError::IoError)
         .map_err(warp::reject::custom)
         .await?;
 
-    Ok(config_id)
+    Ok((file_prefix.to_string(), config_id.to_string()))
 }

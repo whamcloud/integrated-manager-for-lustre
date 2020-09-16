@@ -18,7 +18,7 @@ use iml_wire_types::{
         EnclosureType, HealthState, JobState, JobType, MemberState, SfaController, SfaDiskDrive,
         SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem, SubTargetType,
     },
-    snapshot::{DeleteUnit, SnapshotInterval, SnapshotRecord, SnapshotRetention},
+    snapshot::{DeleteUnit, DeleteWhen, SnapshotInterval, SnapshotRecord, SnapshotRetention},
     warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam,
 };
@@ -527,8 +527,7 @@ pub async fn populate_from_db(
         .try_collect()
         .await?;
 
-    cache.snapshot_retention = sqlx::query_as!(
-        SnapshotRetention,
+    cache.snapshot_retention = sqlx::query!(
         r#"
         SELECT
             id,
@@ -541,7 +540,21 @@ pub async fn populate_from_db(
     "#
     )
     .fetch(pool)
-    .map_ok(|x| (x.id, x))
+    .map_ok(|x| {
+        (
+            x.id,
+            SnapshotRetention {
+                id: x.id,
+                filesystem_name: x.filesystem_name,
+                delete_when: DeleteWhen {
+                    value: x.delete_num,
+                    unit: x.delete_unit,
+                },
+                last_run: x.last_run,
+                keep_num: x.keep_num,
+            },
+        )
+    })
     .try_collect()
     .await?;
 

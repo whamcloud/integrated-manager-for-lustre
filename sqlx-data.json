@@ -1045,6 +1045,28 @@
       ]
     }
   },
+  "53f0f1e7ac60e1607cc090828d869d4ef28da0e3b5f38e2157f049e3d55b80e6": {
+    "query": "\n                INSERT INTO snapshot_interval (\n                    filesystem_name,\n                    use_barrier,\n                    interval\n                )\n                VALUES ($1, $2, $3)\n                RETURNING id\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Bool",
+          "Interval"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "559f8dbd559ead28670594e12dce12aa256f972ad469a67320aa7970640affa8": {
     "query": "\n                    SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s\n                    WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN s.create_time END ASC,\n                        CASE WHEN $3 = 'desc' THEN s.create_time END DESC\n                    OFFSET $1 LIMIT $2",
     "describe": {
@@ -1888,6 +1910,24 @@
       ]
     }
   },
+  "887b011aae30d8b3e1dfbe16162e4d3bc004ea07d5eef7a63dac3b3803276932": {
+    "query": "\n                SELECT DISTINCT filesystem_name\n                FROM snapshot_retention\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "filesystem_name",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "89a7a37f26d89b7def2d6f7273fee79cd4c7fc7070343e4a4197c4080ded5003": {
     "query": "SELECT * FROM chroma_core_task WHERE name = $1",
     "describe": {
@@ -1990,6 +2030,20 @@
         false,
         true
       ]
+    }
+  },
+  "8ac87d0e2c016985d993de3824a253423b3aa038a1609a0eecc2562d1b4887aa": {
+    "query": "\n                UPDATE snapshot_interval\n                SET last_run=$1\n                WHERE id=$2 AND filesystem_name=$3\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Timestamptz",
+          "Int4",
+          "Text"
+        ]
+      },
+      "nullable": []
     }
   },
   "8b11d7745ec336638b333bc511166314f63619293bf8b3df15fd1df807e1ee9a": {

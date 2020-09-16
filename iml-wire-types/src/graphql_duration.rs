@@ -2,11 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use humantime;
 #[cfg(feature = "postgres-interop")]
 use sqlx::postgres::types::PgInterval;
-#[cfg(feature = "graphql")]
-use std::convert::TryInto;
-use std::{convert::TryFrom, fmt, time::Duration};
+use std::{convert::TryFrom, convert::TryInto, fmt, time::Duration};
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
 #[serde(try_from = "String", into = "String")]
