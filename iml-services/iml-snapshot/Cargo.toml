@@ -7,7 +7,7 @@ version = "0.1.0"
 [dependencies]
 futures = "0.3"
 futures-util = "0.3"
-iml-api-utils-2 = {path = "../../iml-api-utils-2", version = "0.3"}
+iml-command-utils = {path = "../../iml-command-utils", version = "0.3"}
 iml-graphql-queries = {path = "../../iml-graphql-queries", version = "0.1"}
 iml-influx = {path = "../../iml-influx", version = "0.1"}
 iml-manager-client = {path = "../../iml-manager-client", version = "0.3"}
