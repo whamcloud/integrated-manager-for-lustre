@@ -183,9 +183,13 @@ pub fn get_timer_port() -> String {
     get_var("TIMER_PORT")
 }
 
+pub fn get_timer_fqdn() -> String {
+    get_var("TIMER_SERVER_FQDN")
+}
+
 /// Get the timer address from the env or panic
 pub fn get_timer_addr() -> SocketAddr {
-    to_socket_addr(&get_server_host(), &get_timer_port())
+    to_socket_addr(&get_timer_fqdn(), &get_timer_port())
 }
 
 /// Get the influxdb port from the env or panic

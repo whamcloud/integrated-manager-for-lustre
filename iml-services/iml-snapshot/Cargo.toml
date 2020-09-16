@@ -13,5 +13,7 @@ iml-rabbit = {path = "../../iml-rabbit", version = "0.3"}
 iml-service-queue = {path = "../iml-service-queue", version = "0.3"}
 iml-tracing = {version = "0.2", path = "../../iml-tracing"}
 iml-wire-types = {path = "../../iml-wire-types", version = "0.3"}
+influx_db_client = {version = "0.4", default-features = false, features = ["rustls-tls"]}
+thiserror = "1.0"
 tokio = {version = "0.2", features = ["rt-threaded"]}
-
+url = "2.1.1"

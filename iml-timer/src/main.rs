@@ -21,33 +21,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and(warp::body::json())
         .map(get_config)
         .and_then(write_configs)
-        .and_then(move |config_id: String| async move {
+        .and_then(move |(file_prefix, config_id)| async move {
             Command::new("systemctl")
                 .arg("daemon-reload")
                 .checked_output()
                 .map_err(warp::reject::custom)
                 .await?;
 
-            Ok::<_, warp::Rejection>(config_id)
+            Ok::<_, warp::Rejection>((file_prefix, config_id))
         })
-        .and_then(move |config_id: String| async move {
-            let timer_path = format!("{}.timer", unit_name(config_id.as_str()));
+        .and_then(
+            move |(file_prefix, config_id): (String, String)| async move {
+                let timer_path = format!(
+                    "{}.timer",
+                    unit_name(file_prefix.as_str(), config_id.as_str())
+                );
 
-            Command::new("systemctl")
-                .arg("enable")
-                .arg("--now")
-                .arg(timer_path)
-                .checked_output()
-                .map_err(warp::reject::custom)
-                .await
-        })
+                Command::new("systemctl")
+                    .arg("enable")
+                    .arg("--now")
+                    .arg(timer_path)
+                    .checked_output()
+                    .map_err(warp::reject::custom)
+                    .await
+            },
+        )
         .map(|_| Ok(StatusCode::CREATED));
 
     let unconfigure_route = warp::delete()
         .and(warp::path("unconfigure"))
         .and(warp::path::param::<String>())
-        .and_then(move |config_id: String| async move {
-            let timer_path = format!("{}.timer", unit_name(config_id.as_str()));
+        .and(warp::path::param::<String>())
+        .and_then(move |file_prefix: String, config_id: String| async move {
+            let timer_path = format!(
+                "{}.timer",
+                unit_name(file_prefix.as_str(), config_id.as_str())
+            );
 
             Command::new("systemctl")
                 .arg("disable")
@@ -57,16 +66,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .map_err(warp::reject::custom)
                 .await?;
 
-            Ok::<_, warp::Rejection>(config_id)
+            Ok::<_, warp::Rejection>((file_prefix, config_id))
         })
-        .and_then(move |config_id: String| async move {
-            let timer_path = timer_file(config_id.as_str());
-            delete_config(&timer_path, config_id).await
-        })
-        .and_then(move |config_id: String| async move {
-            let timer_path = service_file(config_id.as_str());
-            delete_config(&timer_path, config_id).await
-        })
+        .and_then(
+            move |(file_prefix, config_id): (String, String)| async move {
+                let timer_path = timer_file(&file_prefix, &config_id);
+                delete_config(&timer_path, &file_prefix, &config_id).await
+            },
+        )
+        .and_then(
+            move |(file_prefix, config_id): (String, String)| async move {
+                let timer_path = service_file(&file_prefix, &config_id);
+                delete_config(&timer_path, &file_prefix, &config_id).await
+            },
+        )
         .and_then(move |_| async move {
             Command::new("systemctl")
                 .arg("daemon-reload")
