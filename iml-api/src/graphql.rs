@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{command::get_command, error::ImlApiError};
+use crate::{command::get_command, error::ImlApiError, timer::configure_snapshot_timer};
 use futures::{TryFutureExt, TryStreamExt};
 use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
@@ -666,7 +666,7 @@ impl MutationRoot {
         interval: GraphQLDuration,
         use_barrier: Option<bool>,
     ) -> juniper::FieldResult<bool> {
-        sqlx::query!(
+        let id = sqlx::query!(
             r#"
                 INSERT INTO snapshot_interval (
                     filesystem_name,
@@ -674,13 +674,17 @@ impl MutationRoot {
                     interval
                 )
                 VALUES ($1, $2, $3)
+                RETURNING id
             "#,
             fsname,
             use_barrier.unwrap_or_default(),
             PgInterval::try_from(interval.0)?,
         )
-        .execute(&context.pg_pool)
+        .fetch_one(&context.pg_pool)
+        .map_ok(|x| x.id)
         .await?;
+
+        configure_snapshot_timer(id, fsname, interval.0).await?;
 
         Ok(true)
     }
