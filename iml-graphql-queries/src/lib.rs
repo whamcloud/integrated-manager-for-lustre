@@ -10,8 +10,8 @@ use std::fmt;
 /// to the graphql server
 #[derive(serde::Serialize, Debug)]
 pub struct Query<T: serde::Serialize> {
-    query: String,
-    variables: Option<T>,
+    pub query: String,
+    pub variables: Option<T>,
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
