@@ -926,6 +926,76 @@
       ]
     }
   },
+  "46a7815b904eddf8c5b3f77e9c9623806ba3e0a0247080ac9900adaad6b3ce11": {
+    "query": "SELECT * FROM snapshot_interval",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "filesystem_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "use_barrier",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 3,
+          "name": "last_run",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 4,
+          "name": "interval",
+          "type_info": "Interval"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false
+      ]
+    }
+  },
+  "48a002a0b7c264295de1e63986cd652c9be95bd375b4d25ceca869ee64f451e2": {
+    "query": "\n                INSERT INTO snapshot_interval (\n                    id,\n                    filesystem_name,\n                    use_barrier,\n                    interval,\n                    last_run\n                )\n                VALUES ($1, $2, $3, $4, $5)\n                ON CONFLICT (id)\n                DO UPDATE\n                SET\n                    filesystem_name = excluded.filesystem_name,\n                    use_barrier = excluded.use_barrier,\n                    interval = excluded.interval,\n                    last_run = excluded.last_run\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Text",
+          "Bool",
+          "Interval",
+          "Timestamptz"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "49121fd11721a5a4d4584e483ab5a9d479c195f0bc32efd3eb4a2347c2ff5888": {
+    "query": "\n                DELETE FROM snapshot_retention\n                WHERE id=$1\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "4eb28fbaf2c42bbcc852c074ade355c4f29c318def54af2290a05f37e90a3b23": {
     "query": "\n            INSERT INTO corosync_node (\n                id,\n                cluster_id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            )\n            SELECT\n                id::corosync_node_key,\n                $13,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            FROM UNNEST(\n                $1::text[],\n                $2::bool[],\n                $3::bool[],\n                $4::bool[],\n                $5::bool[],\n                $6::bool[],\n                $7::bool[],\n                $8::bool[],\n                $9::bool[],\n                $10::bool[],\n                $11::int[],\n                $12::text[]\n            )\n            AS t(\n                id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            )\n            ON CONFLICT (id, cluster_id) DO UPDATE\n            SET\n                online = excluded.online,\n                standby = excluded.standby,\n                standby_onfail = excluded.standby_onfail,\n                maintenance = excluded.maintenance,\n                pending = excluded.pending,\n                unclean = excluded.unclean,\n                shutdown = excluded.shutdown,\n                expected_up = excluded.expected_up,\n                is_dc = excluded.is_dc,\n                resources_running = excluded.resources_running,\n                type = excluded.type\n        ",
     "describe": {
@@ -1820,6 +1890,20 @@
       ]
     }
   },
+  "8908ebc23c19d58d61a7b05512385d7fe3e1702a31f6f9de3d6e071514383c5b": {
+    "query": "\n                INSERT INTO snapshot_interval (\n                    filesystem_name,\n                    use_barrier,\n                    interval\n                )\n                VALUES ($1, $2, $3)\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Bool",
+          "Interval"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "89a7a37f26d89b7def2d6f7273fee79cd4c7fc7070343e4a4197c4080ded5003": {
     "query": "SELECT * FROM chroma_core_task WHERE name = $1",
     "describe": {
@@ -2010,6 +2094,43 @@
       "nullable": []
     }
   },
+  "92c6bb0c53c21ca954b1f1820be6c81a9e24958d2874de937598150a51f0d15b": {
+    "query": "\n                INSERT INTO snapshot_retention (\n                    filesystem_name,\n                    delete_num,\n                    delete_unit\n                )\n                VALUES ($1, $2, $3)\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Int4",
+          {
+            "Custom": {
+              "name": "snapshot_delete_unit",
+              "kind": {
+                "Enum": [
+                  "percent",
+                  "gibibytes",
+                  "tebibytes"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "93e2695978ceecbebff40c31f2f58bf6fd5351869d3b279adc5ad1f7436a25e9": {
+    "query": "DELETE FROM snapshot_interval WHERE id=$1",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "9472740d062c38f49e290c6173d7b676329a956cf9713bb55ff7ffdc0eeaae7f": {
     "query": "select fqdn, id from chroma_core_managedhost where not_deleted = 't'",
     "describe": {
@@ -2086,6 +2207,33 @@
         true,
         true
       ]
+    }
+  },
+  "9b6305af0e42335db4f9b320ebcd8543d4e0b7d69872d4f29ca8f7c6dcfe97e3": {
+    "query": "\n                INSERT INTO snapshot_retention (\n                    id,\n                    filesystem_name,\n                    delete_num,\n                    delete_unit,\n                    last_run\n                )\n                VALUES ($1, $2, $3, $4, $5)\n                ON CONFLICT (id)\n                DO UPDATE\n                SET\n                    filesystem_name = excluded.filesystem_name,\n                    delete_num = excluded.delete_num,\n                    delete_unit = excluded.delete_unit,\n                    last_run = excluded.last_run\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Text",
+          "Int4",
+          {
+            "Custom": {
+              "name": "snapshot_delete_unit",
+              "kind": {
+                "Enum": [
+                  "percent",
+                  "gibibytes",
+                  "tebibytes"
+                ]
+              }
+            }
+          },
+          "Timestamptz"
+        ]
+      },
+      "nullable": []
     }
   },
   "9edb0846023aa1a9250204fb686d5b95a95962ce20aab75cec2e906edad8eec7": {
@@ -2802,6 +2950,65 @@
         false,
         false,
         false
+      ]
+    }
+  },
+  "c75c539a2ccc3227051a44e3b391307df54a1ac61eb5a8fb8cd7870ce0ea26dd": {
+    "query": "\n                SELECT\n                    id,\n                    filesystem_name,\n                    delete_num,\n                    delete_unit as \"delete_unit:DeleteUnit\",\n                    last_run,\n                    keep_num\n                FROM snapshot_retention\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "filesystem_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "delete_num",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "delete_unit:DeleteUnit",
+          "type_info": {
+            "Custom": {
+              "name": "snapshot_delete_unit",
+              "kind": {
+                "Enum": [
+                  "percent",
+                  "gibibytes",
+                  "tebibytes"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "ordinal": 4,
+          "name": "last_run",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 5,
+          "name": "keep_num",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
       ]
     }
   },

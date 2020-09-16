@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{command::get_command, error::ImlApiError};
-use chrono::{DateTime, SecondsFormat, Utc};
+use chrono::{DateTime, Utc};
 use futures::{TryFutureExt, TryStreamExt};
 use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
@@ -11,17 +11,51 @@ use iml_wire_types::{snapshot::Snapshot, Command};
 use itertools::Itertools;
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
-    EmptySubscription, FieldError, GraphQLEnum, ParseScalarResult, ParseScalarValue, RootNode,
-    Value,
+    EmptySubscription, FieldError, GraphQLEnum, RootNode, Value,
 };
-use std::ops::Deref;
 use std::{
     collections::{HashMap, HashSet},
     convert::{Infallible, TryFrom as _},
+    ops::Deref,
     sync::Arc,
     time::Duration,
 };
 use warp::Filter;
+
+struct GraphQLDuration(Duration);
+
+#[juniper::graphql_scalar(
+    name = "Duration",
+    description = "Duration in human-readable form, like '15min 2ms'"
+)]
+impl<S> GraphQLScalar for GraphQLDuration
+where
+    S: juniper::ScalarValue,
+{
+    fn resolve(&self) -> juniper::Value {
+        juniper::Value::scalar(humantime::format_duration(self.0).to_string())
+    }
+
+    fn from_input_value(value: &juniper::InputValue) -> Option<GraphQLDuration> {
+        let x = value
+            .as_string_value()?
+            .parse::<humantime::Duration>()
+            .ok()?
+            .into();
+
+        Some(GraphQLDuration(x))
+    }
+
+    fn from_str<'a>(value: juniper::ScalarToken<'a>) -> juniper::ParseScalarResult<'a, S> {
+        <String as juniper::ParseScalarValue<S>>::from_str(value)
+    }
+}
+
+impl From<PgInterval> for GraphQLDuration {
+    fn from(x: PgInterval) -> Self {
+        GraphQLDuration(Duration::from_micros(x.microseconds as u64))
+    }
+}
 
 #[derive(juniper::GraphQLObject)]
 /// A Corosync Node found in `crm_mon`
@@ -108,8 +142,8 @@ struct BannedResource {
 }
 
 #[derive(juniper::GraphQLObject)]
-/// A Snapshot configuration
-struct SnapshotConfiguration {
+/// A Snapshot interval
+struct SnapshotInterval {
     /// The configuration id
     id: i32,
     /// The filesystem name
@@ -117,9 +151,7 @@ struct SnapshotConfiguration {
     /// Use a write barrier
     use_barrier: bool,
     /// The interval configuration
-    interval: GraphqlDuration,
-    /// Number of snapshots to keep
-    keep_num: Option<i32>,
+    interval: GraphQLDuration,
     // Last known run
     last_run: Option<DateTime<Utc>>,
 }
@@ -130,48 +162,8 @@ struct SnapshotRetention {
     filesystem_name: String,
     delete_when: DeleteWhen,
     last_run: Option<DateTime<Utc>>,
-}
-
-#[derive(juniper::GraphQLObject)]
-struct GraphqlDuration {
-    value: f64,
-    unit: GraphqlDurationUnit,
-}
-
-#[derive(juniper::GraphQLEnum)]
-enum GraphqlDurationUnit {
-    Minutes,
-    Hours,
-    Days,
-    Weeks,
-}
-
-impl From<GraphqlDuration> for Duration {
-    fn from(x: GraphqlDuration) -> Self {
-        match x.unit {
-            GraphqlDurationUnit::Minutes => Self::from_secs_f64(x.value * 60.0f64),
-            GraphqlDurationUnit::Hours => Self::from_secs_f64(x.value * 60.0f64 * 60.0f64),
-            GraphqlDurationUnit::Days => Self::from_secs_f64(x.value * 60.0f64 * 60.0f64 * 24.0f64),
-            GraphqlDurationUnit::Weeks => {
-                Self::from_secs_f64(x.value * 60.0f64 * 60.0f64 * 24.0f64 * 7.0f64)
-            }
-        }
-    }
-}
-
-impl From<Duration> for GraphqlDuration {
-    fn from(x: Duration) -> Self {
-        Self {
-            value: (x.as_secs() as f64 / 60.0f64).floor(),
-            unit: GraphqlDurationUnit::Minutes,
-        }
-    }
-}
-
-impl From<PgInterval> for GraphqlDuration {
-    fn from(x: PgInterval) -> Self {
-        Duration::from_micros(x.microseconds as u64).into()
-    }
+    /// Number of snapshots to keep
+    keep_num: Option<i32>,
 }
 
 pub(crate) struct QueryRoot;
@@ -392,6 +384,56 @@ impl QueryRoot {
 
         Ok(snapshots)
     }
+    /// List all snapshot intervals
+    async fn list_snapshot_intervals(
+        context: &Context,
+    ) -> juniper::FieldResult<Vec<SnapshotInterval>> {
+        let xs: Vec<SnapshotInterval> = sqlx::query!("SELECT * FROM snapshot_interval")
+            .fetch(&context.pg_pool)
+            .map_ok(|x| SnapshotInterval {
+                id: x.id,
+                filesystem_name: x.filesystem_name,
+                use_barrier: x.use_barrier,
+                interval: x.interval.into(),
+                last_run: x.last_run.map(|x| DateTime::from(x)),
+            })
+            .try_collect()
+            .await?;
+
+        Ok(xs)
+    }
+    /// List all snapshot retention policies
+    async fn list_snapshot_retention_policies(
+        context: &Context,
+    ) -> juniper::FieldResult<Vec<SnapshotRetention>> {
+        let xs: Vec<SnapshotRetention> = sqlx::query!(
+            r#"
+                SELECT
+                    id,
+                    filesystem_name,
+                    delete_num,
+                    delete_unit as "delete_unit:DeleteUnit",
+                    last_run,
+                    keep_num
+                FROM snapshot_retention
+            "#
+        )
+        .fetch(&context.pg_pool)
+        .map_ok(|x| SnapshotRetention {
+            id: x.id,
+            filesystem_name: x.filesystem_name,
+            delete_when: DeleteWhen {
+                value: x.delete_num,
+                unit: x.delete_unit,
+            },
+            last_run: x.last_run.map(|x| chrono::DateTime::from(x)),
+            keep_num: x.keep_num,
+        })
+        .try_collect()
+        .await?;
+
+        Ok(xs)
+    }
 }
 
 #[juniper::graphql_object(Context = Context)]
@@ -590,64 +632,39 @@ impl MutationRoot {
             .map_err(|e| e.into())
     }
 
-    /// Creates a new snapshot interval configuration in the database and registers the interval with the timer.
     #[graphql(arguments(
-        fsname(description = "Filesystem name"),
-        use_barrier(description = "Enforce a write barrier when creating the snapshot"),
-        interval(description = "The interval in which a snapshot should be created"),
-        keep_num(description = "The number of snapshots to create")
+        fsname(description = "The filesystem to create snapshots with"),
+        interval(description = "How often a snapshot should be taken"),
+        use_barrier(
+            description = "Set write barrier before creating snapshot. The default value is `false`"
+        ),
     ))]
-    async fn configure_snapshot(
+    /// Creates a new snapshot interval.
+    /// A Snapshot will be taken once the given `interval` expires for the given `fsname`.
+    /// In order for the snapshot to be successful, the filesystem must be available.
+    async fn create_snapshot_interval(
         context: &Context,
         fsname: String,
+        interval: GraphQLDuration,
         use_barrier: Option<bool>,
-        interval: GraphqlDuration,
-        keep_num: Option<i32>,
     ) -> juniper::FieldResult<String> {
         sqlx::query!(
             r#"
-                INSERT INTO snapshot_configuration (
+                INSERT INTO snapshot_interval (
                     filesystem_name,
                     use_barrier,
-                    interval,
-                    keep_num
+                    interval
                 )
-                VALUES ($1, $2, $3, $4)
+                VALUES ($1, $2, $3)
             "#,
             fsname,
             use_barrier.unwrap_or_default(),
-            PgInterval::try_from(interval.into())?,
-            keep_num,
+            PgInterval::try_from(interval.0)?,
         )
         .execute(&context.pg_pool)
         .await?;
 
         Ok("complete".to_string())
-    }
-
-    /// List all snapshot configurations
-    async fn list_snapshot_configurations(context: &Context) -> juniper::FieldResult<Vec<SnapshotConfiguration>> {
-        let xs: Vec<SnapshotConfiguration> = sqlx::query!(
-            r#"
-                SELECT id, filesystem_name, use_barrier, interval, keep_num, last_run
-                FROM snapshot_configuration 
-            "#
-        )
-        .fetch(&context.pg_pool)
-        .map_ok(|x| {
-            SnapshotConfiguration {
-                id: x.id,
-                filesystem_name: x.filesystem_name,
-                use_barrier: x.use_barrier,
-                interval: x.interval.into(),
-                keep_num: x.keep_num,
-                last_run: x.last_run.map(|x| DateTime::from(x)),
-            }
-        })
-        .try_collect()
-        .await?;
-
-        Ok(xs)
     }
 
     /// Update an existing snapshot configuration
@@ -656,43 +673,38 @@ impl MutationRoot {
         fsname(description = "Filesystem name"),
         use_barrier(description = "Enforce a write barrier when creating the snapshot"),
         interval(description = "The interval in which a snapshot should be created"),
-        keep_num(description = "The number of snapshots to create"),
         last_run(description = "The last known run"),
     ))]
-    async fn update_snapshot_configuration(
+    async fn update_snapshot_interval(
         context: &Context,
-        id: u64,
+        id: i32,
         fsname: String,
         use_barrier: Option<bool>,
-        interval: GraphqlDuration,
-        keep_num: Option<i32>,
+        interval: GraphQLDuration,
         last_run: Option<DateTime<Utc>>,
     ) -> juniper::FieldResult<String> {
         sqlx::query!(
             r#"
-                INSERT INTO snapshot_configuration (
+                INSERT INTO snapshot_interval (
                     id,
                     filesystem_name,
                     use_barrier,
                     interval,
-                    keep_num,
                     last_run
                 )
-                VALUES ($1, $2, $3, $4, $5, $6)
+                VALUES ($1, $2, $3, $4, $5)
                 ON CONFLICT (id)
                 DO UPDATE
                 SET
                     filesystem_name = excluded.filesystem_name,
                     use_barrier = excluded.use_barrier,
                     interval = excluded.interval,
-                    keep_num = excluded.keep_num,
                     last_run = excluded.last_run
             "#,
-            id as f64,
+            id,
             fsname,
             use_barrier.unwrap_or_default(),
-            PgInterval::try_from(interval.into())?,
-            keep_num,
+            PgInterval::try_from(interval.0)?,
             last_run,
         )
         .execute(&context.pg_pool)
@@ -701,23 +713,13 @@ impl MutationRoot {
         Ok("complete".to_string())
     }
 
-    /// remove an existing snapshot configuration
-    #[graphql(arguments(
-        id(description = "The snapshot configuration id"),
-    ))]
-    async fn remove_snapshot_configuration(
-        context: &Context,
-        id: u64
-    ) -> juniper::FieldResult<String> {
-        sqlx::query!(
-            r#"
-                DELETE FROM snapshot_configuration
-                WHERE id=$1
-            "#,
-            id as f64
-        )
-        .execute(&context.pg_pool)
-        .await?;
+    /// Remove an existing snapshot interval.
+    /// This will also cancel any outstanding intervals scheduled by this rule.
+    #[graphql(arguments(id(description = "The snapshot interval id"),))]
+    async fn remove_snapshot_interval(context: &Context, id: i32) -> juniper::FieldResult<String> {
+        sqlx::query!("DELETE FROM snapshot_interval WHERE id=$1", id)
+            .execute(&context.pg_pool)
+            .await?;
 
         Ok("complete".to_string())
     }
@@ -730,7 +732,7 @@ impl MutationRoot {
     async fn configure_snapshot_retention(
         context: &Context,
         fsname: String,
-        delete_when: DeleteWhen,
+        delete_when: InputDeleteWhen,
     ) -> juniper::FieldResult<String> {
         sqlx::query!(
             r#"
@@ -751,32 +753,6 @@ impl MutationRoot {
         Ok("complete".to_string())
     }
 
-    /// List all snapshot retention policies
-    async fn list_snapshot_retention_policies(context: &Context) -> juniper::FieldResult<Vec<SnapshotRetention>> {
-        let xs: Vec<SnapshotRetention> = sqlx::query!(
-            r#"
-                SELECT id, filesystem_name, delete_num, delete_unit as "delete_unit:DeleteUnit", last_run
-                FROM snapshot_retention
-            "#
-        )
-        .fetch(&context.pg_pool)
-        .map_ok(|x| {
-            SnapshotRetention {
-                id: x.id,
-                filesystem_name: x.filesystem_name,
-                delete_when: DeleteWhen {
-                    value: x.delete_num,
-                    unit: x.delete_unit,
-                },
-                last_run: x.last_run.map(|x| chrono::DateTime::from(x))
-            }
-        })
-        .try_collect()
-        .await?;
-
-        Ok(xs)
-    }
-
     /// Update an existing snapshot retention policy
     #[graphql(arguments(
         id(description = "The snapshot configuration id"),
@@ -786,9 +762,9 @@ impl MutationRoot {
     ))]
     async fn update_snapshot_retention(
         context: &Context,
-        id: u64,
+        id: i32,
         fsname: String,
-        delete_when: DeleteWhen,
+        delete_when: InputDeleteWhen,
         last_run: Option<DateTime<Utc>>,
     ) -> juniper::FieldResult<String> {
         sqlx::query!(
@@ -809,7 +785,7 @@ impl MutationRoot {
                     delete_unit = excluded.delete_unit,
                     last_run = excluded.last_run
             "#,
-            id as f64,
+            id,
             fsname,
             delete_when.value,
             delete_when.unit as DeleteUnit,
@@ -822,19 +798,14 @@ impl MutationRoot {
     }
 
     /// Remove an existing snapshot retention
-    #[graphql(arguments(
-        id(description = "The snapshot retention policy id"),
-    ))]
-    async fn remove_snapshot_policy(
-        context: &Context,
-        id: u64
-    ) -> juniper::FieldResult<String> {
+    #[graphql(arguments(id(description = "The snapshot retention policy id"),))]
+    async fn remove_snapshot_policy(context: &Context, id: i32) -> juniper::FieldResult<String> {
         sqlx::query!(
             r#"
                 DELETE FROM snapshot_retention
                 WHERE id=$1
             "#,
-            id as f64
+            id
         )
         .execute(&context.pg_pool)
         .await?;
@@ -852,6 +823,12 @@ enum IntervalUnit {
 struct Interval {
     value: i32,
     unit: IntervalUnit,
+}
+
+#[derive(juniper::GraphQLInputObject)]
+struct InputDeleteWhen {
+    value: i32,
+    unit: DeleteUnit,
 }
 
 #[derive(juniper::GraphQLObject)]
@@ -874,20 +851,6 @@ impl ToString for DeleteUnit {
             Self::Percent => "percent".to_string(),
             Self::Gibibytes => "gibibytes".to_string(),
             Self::Tebibytes => "tebibytes".to_string(),
-        }
-    }
-}
-
-impl From<Option<String>> for DeleteUnit {
-    fn from(unit: Option<String>) -> Self {
-        if let Some(unit) = unit {
-            match unit.as_str() {
-                "percent" => Self::Percent,
-                "gibibytes" => Self::Gibibytes,
-                "tebibytes" => Self::Tebibytes,
-            }
-        } else {
-            Self::Percent
         }
     }
 }
