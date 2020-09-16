@@ -6,7 +6,7 @@ use crate::{command::get_command, error::ImlApiError};
 use futures::{TryFutureExt, TryStreamExt};
 use iml_postgres::{sqlx, PgPool};
 use iml_rabbit::Pool;
-use iml_wire_types::{snapshot::Snapshot, Command};
+use iml_wire_types::{snapshot::Snapshot, Command, EndpointName, Job};
 use itertools::Itertools;
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
@@ -284,10 +284,11 @@ impl QueryRoot {
 
         Ok(xs)
     }
+
     #[graphql(arguments(
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
-        dir(description = "Sort direction, defaults to asc"),
+        dir(description = "Sort direction, defaults to ASC"),
         fsname(description = "Filesystem the snapshot was taken from"),
         name(description = "Name of the snapshot"),
     ))]
@@ -321,6 +322,77 @@ impl QueryRoot {
             .await?;
 
         Ok(snapshots)
+    }
+
+    /// Fetch the list of commands
+    #[graphql(arguments(
+        limit(description = "paging limit, defaults to 20"),
+        offset(description = "Offset into items, defaults to 0"),
+        dir(description = "Sort direction, defaults to ASC"),
+        is_active(description = "Command status, active means not completed, default is false"),
+        msg(description = "Substring of the command's message, null or empty matches all"),
+    ))]
+    async fn commands(
+        context: &Context,
+        limit: Option<i32>,
+        offset: Option<i32>,
+        dir: Option<SortDir>,
+        is_active: Option<bool>,
+        msg: Option<String>,
+    ) -> juniper::FieldResult<Vec<Command>> {
+        let dir = dir.unwrap_or_default();
+        let is_completed = !is_active.unwrap_or(false);
+        let commands: Vec<Command> = sqlx::query!(
+            r#"
+                SELECT
+                    c.id AS id,
+                    cancelled,
+                    complete,
+                    errored,
+                    created_at,
+                    array_agg(cj.job_id)::INT[] AS job_ids,
+                    message
+                FROM chroma_core_command c
+                JOIN chroma_core_command_jobs cj ON c.id = cj.command_id
+                WHERE complete = $4
+                  AND ($5::TEXT IS NULL OR c.message ILIKE '%' || $5 || '%')
+                GROUP BY c.id
+                ORDER BY
+                    CASE WHEN $3 = 'asc' THEN c.id END ASC,
+                    CASE WHEN $3 = 'desc' THEN c.id END DESC
+                OFFSET $1 LIMIT $2 "#,
+            offset.unwrap_or(0) as i64,
+            limit.unwrap_or(20) as i64,
+            dir.deref(),
+            is_completed,
+            msg,
+        )
+        .fetch_all(&context.pg_pool)
+        .map_ok(|xs: Vec<_>| {
+            xs.into_iter()
+                .map(|x| Command {
+                    id: x.id,
+                    cancelled: x.cancelled,
+                    complete: x.complete,
+                    errored: x.errored,
+                    created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
+                    jobs: {
+                        x.job_ids
+                            .unwrap_or_default()
+                            .into_iter()
+                            .map(|job_id: i32| {
+                                format!("/api/{}/{}/", Job::<()>::endpoint_name(), job_id)
+                            })
+                            .collect::<Vec<_>>()
+                    },
+                    logs: "".to_string(),
+                    message: x.message.clone(),
+                    resource_uri: format!("/api/{}/{}/", Command::endpoint_name(), x.id),
+                })
+                .collect::<Vec<_>>()
+        })
+        .await?;
+        Ok(commands)
     }
 }
 
