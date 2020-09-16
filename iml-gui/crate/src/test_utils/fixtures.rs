@@ -16,6 +16,8 @@ pub(crate) fn get_cache() -> Cache {
   "sfa_power_supply": {},
   "sfa_controller": {},
   "snapshot": {},
+  "snapshot_interval": {},
+  "snapshot_retention": {},
   "active_alert": {
     "577": {
       "_message": "Updates are ready for server oss1.local",

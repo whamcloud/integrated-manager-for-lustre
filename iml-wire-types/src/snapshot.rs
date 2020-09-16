@@ -4,9 +4,11 @@
 
 //! Data structures for communicating with the agent regarding lustre snapshots.
 
-use crate::db::{Id, TableName};
-use chrono::offset::Utc;
-use chrono::DateTime;
+use crate::{
+    db::{Id, TableName},
+    graphql_duration::GraphQLDuration,
+};
+use chrono::{offset::Utc, DateTime};
 #[cfg(feature = "cli")]
 use structopt::StructOpt;
 
@@ -54,6 +56,76 @@ impl Id for SnapshotRecord {
 }
 
 pub const SNAPSHOT_TABLE_NAME: TableName = TableName("snapshot");
+
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
+/// A Snapshot interval
+pub struct SnapshotInterval {
+    /// The configuration id
+    pub id: i32,
+    /// The filesystem name
+    pub filesystem_name: String,
+    /// Use a write barrier
+    pub use_barrier: bool,
+    /// The interval configuration
+    pub interval: GraphQLDuration,
+    // Last known run
+    pub last_run: Option<DateTime<Utc>>,
+}
+
+impl Id for SnapshotInterval {
+    fn id(&self) -> i32 {
+        self.id
+    }
+}
+
+pub const SNAPSHOT_INTERVAL_TABLE_NAME: TableName = TableName("snapshot_interval");
+
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
+pub struct SnapshotRetention {
+    pub id: i32,
+    pub filesystem_name: String,
+    pub delete_when: DeleteWhen,
+    pub last_run: Option<DateTime<Utc>>,
+    /// Number of snapshots to keep
+    pub keep_num: Option<i32>,
+}
+
+impl Id for SnapshotRetention {
+    fn id(&self) -> i32 {
+        self.id
+    }
+}
+
+pub const SNAPSHOT_RETENTION_TABLE_NAME: TableName = TableName("snapshot_retention");
+
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
+pub struct DeleteWhen {
+    pub value: i32,
+    pub unit: DeleteUnit,
+}
+
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
+#[cfg_attr(feature = "postgres-interop", sqlx(rename = "snapshot_delete_unit"))]
+#[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
+pub enum DeleteUnit {
+    Percent,
+    Gibibytes,
+    Tebibytes,
+}
+
+impl ToString for DeleteUnit {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Percent => "percent".to_string(),
+            Self::Gibibytes => "gibibytes".to_string(),
+            Self::Tebibytes => "tebibytes".to_string(),
+        }
+    }
+}
 
 #[derive(serde::Deserialize, Debug)]
 #[cfg_attr(feature = "cli", derive(StructOpt))]

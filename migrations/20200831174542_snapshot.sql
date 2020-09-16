@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS snapshot (
   UNIQUE (filesystem_name, snapshot_name)
 );
 
-CREATE OR REPLACE FUNCTION table_snapshot_update_notify() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION table_update_notify() RETURNS TRIGGER AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
     PERFORM pg_notify('table_update', '[ "' || TG_OP || '", "' || TG_TABLE_NAME || '", ' || row_to_json(NEW) || ']');
@@ -31,11 +31,64 @@ DROP TRIGGER IF EXISTS snapshot_notify_delete ON snapshot;
 
 CREATE TRIGGER snapshot_notify_update
 AFTER
-UPDATE ON snapshot FOR EACH ROW EXECUTE PROCEDURE table_snapshot_update_notify();
+UPDATE ON snapshot FOR EACH ROW EXECUTE PROCEDURE table_update_notify();
 
 CREATE TRIGGER snapshot_notify_insert
 AFTER
-INSERT ON snapshot FOR EACH ROW EXECUTE PROCEDURE table_snapshot_update_notify();
+INSERT ON snapshot FOR EACH ROW EXECUTE PROCEDURE table_update_notify();
 
 CREATE TRIGGER snapshot_notify_delete
-AFTER DELETE ON snapshot FOR EACH ROW EXECUTE PROCEDURE table_snapshot_update_notify();
+AFTER DELETE ON snapshot FOR EACH ROW EXECUTE PROCEDURE table_update_notify();
+
+CREATE TABLE IF NOT EXISTS snapshot_interval (
+  id serial PRIMARY KEY,
+  filesystem_name TEXT NOT NULL,
+  use_barrier BOOLEAN NOT NULL,
+  last_run TIMESTAMP WITH TIME ZONE,
+  interval INTERVAL NOT NULL
+);
+
+DROP TRIGGER IF EXISTS snapshot_interval_notify_update ON snapshot_interval;
+
+DROP TRIGGER IF EXISTS snapshot_interval_notify_insert ON snapshot_interval;
+
+DROP TRIGGER IF EXISTS snapshot_interval_notify_delete ON snapshot_interval;
+
+CREATE TRIGGER snapshot_interval_notify_update
+AFTER
+UPDATE ON snapshot_interval FOR EACH ROW EXECUTE PROCEDURE table_update_notify();
+
+CREATE TRIGGER snapshot_interval_notify_insert
+AFTER
+INSERT ON snapshot_interval FOR EACH ROW EXECUTE PROCEDURE table_update_notify();
+
+CREATE TRIGGER snapshot_interval_notify_delete
+AFTER DELETE ON snapshot_interval FOR EACH ROW EXECUTE PROCEDURE table_update_notify();
+
+CREATE TYPE snapshot_delete_unit AS ENUM ('percent', 'gibibytes', 'tebibytes');
+
+CREATE TABLE IF NOT EXISTS snapshot_retention (
+  id serial PRIMARY KEY,
+  filesystem_name TEXT NOT NULL,
+  delete_num INT NOT NULL,
+  delete_unit snapshot_delete_unit NOT NULL,
+  keep_num INT,
+  last_run TIMESTAMP WITH TIME ZONE
+);
+
+DROP TRIGGER IF EXISTS snapshot_retention_notify_update ON snapshot_retention;
+
+DROP TRIGGER IF EXISTS snapshot_retention_notify_insert ON snapshot_retention;
+
+DROP TRIGGER IF EXISTS snapshot_retention_notify_delete ON snapshot_retention;
+
+CREATE TRIGGER snapshot_retention_notify_update
+AFTER
+UPDATE ON snapshot_retention FOR EACH ROW EXECUTE PROCEDURE table_update_notify();
+
+CREATE TRIGGER snapshot_retention_notify_insert
+AFTER
+INSERT ON snapshot_retention FOR EACH ROW EXECUTE PROCEDURE table_update_notify();
+
+CREATE TRIGGER snapshot_retention_notify_delete
+AFTER DELETE ON snapshot_retention FOR EACH ROW EXECUTE PROCEDURE table_update_notify();
