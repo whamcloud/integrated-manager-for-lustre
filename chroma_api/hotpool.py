@@ -55,8 +55,8 @@ class HotpoolValidation(Validation):
 
 class HotpoolResource(StatefulModelResource):
     filesystem = fields.ToOneField("chroma_api.filesystem.FilesystemResource", "filesystem")
-    #hotpool = fields.ToOneField("chroma_api.filesystem.OstPoolResource", "hotpool")
-    #coldpool = fields.ToOneField("chroma_api.filesystem.OstPoolResource", "coldpool")
+    # hotpool = fields.ToOneField("chroma_api.filesystem.OstPoolResource", "hotpool")
+    # coldpool = fields.ToOneField("chroma_api.filesystem.OstPoolResource", "coldpool")
 
     # @@ lamigo/lpurge
 
@@ -77,7 +77,7 @@ class HotpoolResource(StatefulModelResource):
     def obj_create(self, bundle, **kwargs):
         request = bundle.request
 
-        hotpool_id, command_id = JobSchedulerClient.create_hotpool(bundle.data)
+        command_id = JobSchedulerClient.create_hotpool(bundle.data)
         command = Command.objects.get(pk=command_id)
 
         raise custom_response(self, request, http.HttpAccepted, {"command": dehydrate_command(command)})

@@ -29,9 +29,7 @@ class Migration(migrations.Migration):
                 ),
                 ("old_state", models.CharField(max_length=32)),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -50,9 +48,7 @@ class Migration(migrations.Migration):
                 ),
                 ("old_state", models.CharField(max_length=32)),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -71,9 +67,7 @@ class Migration(migrations.Migration):
                 ),
                 ("old_state", models.CharField(max_length=32)),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -92,9 +86,7 @@ class Migration(migrations.Migration):
                 ),
                 ("old_state", models.CharField(max_length=32)),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -107,9 +99,7 @@ class Migration(migrations.Migration):
                 (
                     "ha_label",
                     models.CharField(
-                        help_text=b"Set if there is a single resource that will controll entire hotpools configuration",
-                        max_length=64,
-                        null=True,
+                        help_text=b"Single resource that will controll entire hotpool configuration", max_length=64,
                     ),
                 ),
                 ("version", models.PositiveSmallIntegerField(default=2)),
@@ -119,9 +109,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.ManagedFilesystem"),
                 ),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
         ),
         migrations.CreateModel(
             name="Lamigo",
@@ -136,9 +124,7 @@ class Migration(migrations.Migration):
                 ),
                 ("not_deleted", models.NullBooleanField(default=True)),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
         ),
         migrations.CreateModel(
             name="LamigoConfiguration",
@@ -183,9 +169,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
         ),
         migrations.CreateModel(
             name="Lpurge",
@@ -196,9 +180,7 @@ class Migration(migrations.Migration):
                 ("immutable_state", models.BooleanField(default=False)),
                 ("not_deleted", models.NullBooleanField(default=True)),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
         ),
         migrations.CreateModel(
             name="LpurgeConfiguration",
@@ -225,9 +207,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to="chroma_core.Task"),
                 ),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
         ),
         migrations.CreateModel(
             name="RemoveConfiguredHotpoolJob",
@@ -251,9 +231,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -278,9 +256,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -300,9 +276,7 @@ class Migration(migrations.Migration):
                 ("old_state", models.CharField(max_length=32)),
                 ("lamigo", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.Lamigo")),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -322,9 +296,7 @@ class Migration(migrations.Migration):
                 ("old_state", models.CharField(max_length=32)),
                 ("lpurge", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.Lpurge")),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -349,9 +321,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -371,9 +341,7 @@ class Migration(migrations.Migration):
                 ("old_state", models.CharField(max_length=32)),
                 ("lamigo", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.Lamigo")),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -393,9 +361,7 @@ class Migration(migrations.Migration):
                 ("old_state", models.CharField(max_length=32)),
                 ("lpurge", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.Lpurge")),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -420,9 +386,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -447,9 +411,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={
-                "ordering": ["id"],
-            },
+            options={"ordering": ["id"],},
             bases=("chroma_core.job",),
         ),
         migrations.AddField(
@@ -493,7 +455,6 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.HotpoolConfiguration"),
         ),
         migrations.AlterUniqueTogether(
-            name="hotpoolconfiguration",
-            unique_together=set([("filesystem", "not_deleted")]),
+            name="hotpoolconfiguration", unique_together=set([("filesystem", "not_deleted")]),
         ),
     ]

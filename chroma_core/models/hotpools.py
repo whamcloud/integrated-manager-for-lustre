@@ -50,9 +50,9 @@ class HotpoolConfiguration(StatefulObject):
     filesystem = models.ForeignKey("ManagedFilesystem", null=False, on_delete=CASCADE)
     ha_label = models.CharField(
         max_length=64,
-        null=True,
+        null=False,
         blank=False,
-        help_text="Set if there is a single resource that will controll entire hotpools configuration",
+        help_text="Single resource that will controll entire hotpool configuration",
     )
     version = models.PositiveSmallIntegerField(default=2, null=False)
 
@@ -121,16 +121,7 @@ class ConfigureHotpoolJob(StateChangeJob):
             steps.append((MountStep, {"host": host.fqdn, "auto": False, "spec": fs.mount_path(), "mountpoint": mp}))
 
         for host in (l[0] for l in fs.get_server_groups()):
-            steps.append(
-                (
-                    CreateClonedClientStep,
-                    {
-                        "host": host.fqdn,
-                        "mountpoint": mp,
-                        "fs_name": fs.name,
-                    },
-                )
-            )
+            steps.append((CreateClonedClientStep, {"host": host.fqdn, "mountpoint": mp, "fs_name": fs.name,},))
 
         return steps
 

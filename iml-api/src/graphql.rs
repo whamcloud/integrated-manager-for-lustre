@@ -57,6 +57,22 @@ struct CorosyncNode {
 }
 
 #[derive(juniper::GraphQLObject)]
+/// Hotpool Configuration
+struct Hotpool {
+    /// The id of the config
+    id: i32,
+    /// The filesystem associated with this target
+    filesystem_id: i32,
+    /// Current Hotpool State
+    /// Possible Values: unconfigured, configured, stopped, started, removed
+    state: String,
+    /// Label of
+    ha_label: String,
+    /// Version of Hotpool Config
+    version: i32,
+}
+
+#[derive(juniper::GraphQLObject)]
 /// A Lustre Target
 struct Target {
     /// The target's state. One of "mounted" or "unmounted"
@@ -778,6 +794,7 @@ impl MutationRoot {
 
         Ok(true)
     }
+
     /// Removes an existing snapshot interval.
     /// This will also cancel any outstanding intervals scheduled by this rule.
     #[graphql(arguments(id(description = "The snapshot interval id"),))]
@@ -862,6 +879,136 @@ impl MutationRoot {
 
         Ok(true)
     }
+
+    #[graphql(arguments(
+        fsname(description = "Filesystem"),
+        hotpool(description = "Name of Hot ostpool"),
+        coldpool(description = "Name of Cold ostpool"),
+        extendlayout(description = "Options to lfs mirror extend or hot -> cold files"),
+        minage(description = "Minimum age of file before mirroring"),
+        freehi(description = "Percent of free space when lpurge stops"),
+        freelo(description = "Percent of free space when lpurge starts"),
+    ))]
+    async fn create_hotpool(
+        context: &Context,
+        fsname: String,
+        hotpool: String,
+        coldpool: String,
+        extendlayout: Option<String>,
+        minage: i32,
+        freehi: i32,
+        freelo: i32,
+    ) -> juniper::FieldResult<Command> {
+        // Sanity check freehi and freelo
+        if freehi > 99 || freehi <= 0 {
+            return Err(FieldError::new(
+                "Freehi out of range (0, 100)",
+                Value::null(),
+            ));
+        }
+        if freelo > 99 || freelo <= 0 {
+            return Err(FieldError::new(
+                "Freehi out of range (0, 100)",
+                Value::null(),
+            ));
+        }
+        if freehi < freelo {
+            return Err(FieldError::new("Freehi less than freelo", Value::null()));
+        }
+
+        let fsid = sqlx::query!(
+            r#"
+                SELECT id FROM chroma_core_managedfilesystem WHERE name=$1 and not_deleted = 't'
+            "#,
+            fsname,
+        )
+        .fetch_optional(&context.pg_pool)
+        .await?
+        .map(|x| x.id)
+        .ok_or_else(|| FieldError::new("Filesystem not found", Value::null()))?;
+
+        let coldid = poolid(fsid, coldpool, &context.pg_pool)
+            .await?
+            .ok_or_else(|| FieldError::new("Cold OstPool not found", Value::null()))?;
+
+        let hotid = poolid(fsid, hotpool, &context.pg_pool)
+            .await?
+            .ok_or_else(|| FieldError::new("Hot OstPool not found", Value::null()))?;
+
+        let mut hp_data: HashMap<String, String> = vec![
+            ("filesystem".into(), format!("{}", fsid)),
+            ("hotpool".into(), format!("{}", hotid)),
+            ("coldpool".into(), format!("{}", coldid)),
+            ("minage".into(), format!("{}", minage)),
+            ("freehi".into(), format!("{}", freehi)),
+            ("freelo".into(), format!("{}", freelo)),
+        ]
+        .into_iter()
+        .collect();
+
+        if let Some(value) = extendlayout {
+            hp_data.insert("extendlayout".into(), value);
+        }
+
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_pool.get().await?,
+            "create_hotpool",
+            vec![hp_data],
+            None,
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        get_command(&context.pg_pool, command_id)
+            .await
+            .map_err(|e| e.into())
+    }
+    #[graphql(arguments(fsname(description = "Filesystem"),))]
+    async fn destroy_hotpool(context: &Context, fsname: String) -> juniper::FieldResult<Command> {
+        let hpid = sqlx::query!(
+            r#"
+                SELECT hp.id AS id FROM chroma_core_hotpoolconfiguration hp 
+                INNER JOIN chroma_core_managedfilesystem fs ON hp.filesystem_id = fs.id
+                WHERE hp.not_deleted = 't' AND fs.not_deleted = 't' AND fs.name=$1
+            "#,
+            fsname
+        )
+        .fetch_optional(&context.pg_pool)
+        .await?
+        .map(|x| x.id)
+        .ok_or_else(|| FieldError::new("Hotpool Configuration not found", Value::null()))?;
+
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_pool.get().await?,
+            "remove_hotpool",
+            vec![hpid],
+            None,
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        get_command(&context.pg_pool, command_id)
+            .await
+            .map_err(|e| e.into())
+    }
+}
+
+async fn poolid(
+    fsid: i32,
+    poolname: String,
+    pgpool: &PgPool,
+) -> Result<Option<i32>, iml_postgres::sqlx::Error> {
+    let rc = sqlx::query!(
+        r#"
+            SELECT id FROM chroma_core_ostpool WHERE filesystem_id=$1 AND name=$2 AND not_deleted = 't'
+        "#,
+        fsid,
+        poolname,
+    )
+    .fetch_optional(pgpool)
+    .await?
+        .map(|x| x.id);
+    Ok(rc)
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
