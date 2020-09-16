@@ -57,6 +57,36 @@ impl From<PgInterval> for GraphQLDuration {
     }
 }
 
+#[derive(juniper::GraphQLInputObject)]
+struct InputDeleteWhen {
+    value: i32,
+    unit: DeleteUnit,
+}
+
+#[derive(juniper::GraphQLObject)]
+struct DeleteWhen {
+    value: i32,
+    unit: DeleteUnit,
+}
+
+#[sqlx(rename = "snapshot_delete_unit")]
+#[derive(serde::Deserialize, juniper::GraphQLEnum, Debug, sqlx::Type)]
+enum DeleteUnit {
+    Percent,
+    Gibibytes,
+    Tebibytes,
+}
+
+impl ToString for DeleteUnit {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Percent => "percent".to_string(),
+            Self::Gibibytes => "gibibytes".to_string(),
+            Self::Tebibytes => "tebibytes".to_string(),
+        }
+    }
+}
+
 #[derive(juniper::GraphQLObject)]
 /// A Corosync Node found in `crm_mon`
 struct CorosyncNode {
@@ -631,7 +661,6 @@ impl MutationRoot {
             .await
             .map_err(|e| e.into())
     }
-
     #[graphql(arguments(
         fsname(description = "The filesystem to create snapshots with"),
         interval(description = "How often a snapshot should be taken"),
@@ -640,14 +669,14 @@ impl MutationRoot {
         ),
     ))]
     /// Creates a new snapshot interval.
-    /// A Snapshot will be taken once the given `interval` expires for the given `fsname`.
+    /// A recurring snapshot will be taken once the given `interval` expires for the given `fsname`.
     /// In order for the snapshot to be successful, the filesystem must be available.
     async fn create_snapshot_interval(
         context: &Context,
         fsname: String,
         interval: GraphQLDuration,
         use_barrier: Option<bool>,
-    ) -> juniper::FieldResult<String> {
+    ) -> juniper::FieldResult<bool> {
         sqlx::query!(
             r#"
                 INSERT INTO snapshot_interval (
@@ -664,228 +693,59 @@ impl MutationRoot {
         .execute(&context.pg_pool)
         .await?;
 
-        Ok("complete".to_string())
+        Ok(true)
     }
-
-    /// Update an existing snapshot configuration
-    #[graphql(arguments(
-        id(description = "The snapshot configuration id"),
-        fsname(description = "Filesystem name"),
-        use_barrier(description = "Enforce a write barrier when creating the snapshot"),
-        interval(description = "The interval in which a snapshot should be created"),
-        last_run(description = "The last known run"),
-    ))]
-    async fn update_snapshot_interval(
-        context: &Context,
-        id: i32,
-        fsname: String,
-        use_barrier: Option<bool>,
-        interval: GraphQLDuration,
-        last_run: Option<DateTime<Utc>>,
-    ) -> juniper::FieldResult<String> {
-        sqlx::query!(
-            r#"
-                INSERT INTO snapshot_interval (
-                    id,
-                    filesystem_name,
-                    use_barrier,
-                    interval,
-                    last_run
-                )
-                VALUES ($1, $2, $3, $4, $5)
-                ON CONFLICT (id)
-                DO UPDATE
-                SET
-                    filesystem_name = excluded.filesystem_name,
-                    use_barrier = excluded.use_barrier,
-                    interval = excluded.interval,
-                    last_run = excluded.last_run
-            "#,
-            id,
-            fsname,
-            use_barrier.unwrap_or_default(),
-            PgInterval::try_from(interval.0)?,
-            last_run,
-        )
-        .execute(&context.pg_pool)
-        .await?;
-
-        Ok("complete".to_string())
-    }
-
-    /// Remove an existing snapshot interval.
+    /// Removes an existing snapshot interval.
     /// This will also cancel any outstanding intervals scheduled by this rule.
     #[graphql(arguments(id(description = "The snapshot interval id"),))]
-    async fn remove_snapshot_interval(context: &Context, id: i32) -> juniper::FieldResult<String> {
+    async fn remove_snapshot_interval(context: &Context, id: i32) -> juniper::FieldResult<bool> {
         sqlx::query!("DELETE FROM snapshot_interval WHERE id=$1", id)
             .execute(&context.pg_pool)
             .await?;
 
-        Ok("complete".to_string())
+        Ok(true)
     }
-
-    /// Creates a new snapshot retention configuration in the database
     #[graphql(arguments(
         fsname(description = "Filesystem name"),
         delete_when(description = "When should the oldest snapshots be deleted from the system")
     ))]
-    async fn configure_snapshot_retention(
+    /// Creates a new snapshot retention policy for the given `fsname`.
+    /// The filesystem will be checked periodically, and if the policy is met,
+    /// The oldest snapshot will be deleted until the policy no longer holds.
+    async fn create_snapshot_retention(
         context: &Context,
         fsname: String,
         delete_when: InputDeleteWhen,
-    ) -> juniper::FieldResult<String> {
+        keep_num: i32,
+    ) -> juniper::FieldResult<bool> {
         sqlx::query!(
             r#"
                 INSERT INTO snapshot_retention (
-                    filesystem_name,
-                    delete_num,
-                    delete_unit
-                )
-                VALUES ($1, $2, $3)
-            "#,
-            fsname,
-            delete_when.value,
-            delete_when.unit as DeleteUnit
-        )
-        .execute(&context.pg_pool)
-        .await?;
-
-        Ok("complete".to_string())
-    }
-
-    /// Update an existing snapshot retention policy
-    #[graphql(arguments(
-        id(description = "The snapshot configuration id"),
-        fsname(description = "Filesystem name"),
-        delete_when(description = "When should the oldest snapshots be deleted from the system"),
-        last_run(description = "The last know run")
-    ))]
-    async fn update_snapshot_retention(
-        context: &Context,
-        id: i32,
-        fsname: String,
-        delete_when: InputDeleteWhen,
-        last_run: Option<DateTime<Utc>>,
-    ) -> juniper::FieldResult<String> {
-        sqlx::query!(
-            r#"
-                INSERT INTO snapshot_retention (
-                    id,
                     filesystem_name,
                     delete_num,
                     delete_unit,
-                    last_run
+                    keep_num
                 )
-                VALUES ($1, $2, $3, $4, $5)
-                ON CONFLICT (id)
-                DO UPDATE
-                SET
-                    filesystem_name = excluded.filesystem_name,
-                    delete_num = excluded.delete_num,
-                    delete_unit = excluded.delete_unit,
-                    last_run = excluded.last_run
+                VALUES ($1, $2, $3, $4)
             "#,
-            id,
             fsname,
             delete_when.value,
             delete_when.unit as DeleteUnit,
-            last_run,
+            keep_num
         )
         .execute(&context.pg_pool)
         .await?;
 
-        Ok("complete".to_string())
+        Ok(true)
     }
+    /// Remove an existing snapshot retention policy.
+    #[graphql(arguments(id(description = "The snapshot retention policy id")))]
+    async fn remove_snapshot_retention(context: &Context, id: i32) -> juniper::FieldResult<bool> {
+        sqlx::query!("DELETE FROM snapshot_retention WHERE id=$1", id)
+            .execute(&context.pg_pool)
+            .await?;
 
-    /// Remove an existing snapshot retention
-    #[graphql(arguments(id(description = "The snapshot retention policy id"),))]
-    async fn remove_snapshot_policy(context: &Context, id: i32) -> juniper::FieldResult<String> {
-        sqlx::query!(
-            r#"
-                DELETE FROM snapshot_retention
-                WHERE id=$1
-            "#,
-            id
-        )
-        .execute(&context.pg_pool)
-        .await?;
-
-        Ok("complete".to_string())
-    }
-}
-
-#[derive(serde::Deserialize, juniper::GraphQLEnum)]
-enum IntervalUnit {
-    Hours,
-    Days,
-}
-#[derive(juniper::GraphQLInputObject)]
-struct Interval {
-    value: i32,
-    unit: IntervalUnit,
-}
-
-#[derive(juniper::GraphQLInputObject)]
-struct InputDeleteWhen {
-    value: i32,
-    unit: DeleteUnit,
-}
-
-#[derive(juniper::GraphQLObject)]
-struct DeleteWhen {
-    value: i32,
-    unit: DeleteUnit,
-}
-
-#[sqlx(rename = "snapshot_delete_unit")]
-#[derive(serde::Deserialize, juniper::GraphQLEnum, Debug, sqlx::Type)]
-enum DeleteUnit {
-    Percent,
-    Gibibytes,
-    Tebibytes,
-}
-
-impl ToString for DeleteUnit {
-    fn to_string(&self) -> String {
-        match self {
-            Self::Percent => "percent".to_string(),
-            Self::Gibibytes => "gibibytes".to_string(),
-            Self::Tebibytes => "tebibytes".to_string(),
-        }
-    }
-}
-
-async fn active_mgs_host_fqdn(
-    fsname: &str,
-    pool: &PgPool,
-) -> Result<Option<String>, iml_postgres::sqlx::Error> {
-    let fsnames = &[fsname.into()][..];
-    let maybe_active_mgs_host_id = sqlx::query!(
-        r#"
-            SELECT active_host_id from target WHERE filesystems @> $1 and name='MGS'
-        "#,
-        fsnames
-    )
-    .fetch_optional(pool)
-    .await?
-    .and_then(|x| x.active_host_id);
-
-    tracing::trace!("Maybe active MGS host id: {:?}", maybe_active_mgs_host_id);
-
-    if let Some(active_mgs_host_id) = maybe_active_mgs_host_id {
-        let active_mgs_host_fqdn = sqlx::query!(
-            r#"
-                SELECT fqdn FROM chroma_core_managedhost WHERE id=$1 and not_deleted = 't'
-            "#,
-            active_mgs_host_id
-        )
-        .fetch_one(pool)
-        .await?
-        .fqdn;
-
-        Ok(Some(active_mgs_host_fqdn))
-    } else {
-        Ok(None)
+        Ok(true)
     }
 }
 
@@ -1037,5 +897,39 @@ fn validate_snapshot_name(x: &str) -> Result<(), FieldError> {
         ))
     } else {
         Ok(())
+    }
+}
+
+async fn active_mgs_host_fqdn(
+    fsname: &str,
+    pool: &PgPool,
+) -> Result<Option<String>, iml_postgres::sqlx::Error> {
+    let fsnames = &[fsname.into()][..];
+    let maybe_active_mgs_host_id = sqlx::query!(
+        r#"
+            SELECT active_host_id from target WHERE filesystems @> $1 and name='MGS'
+        "#,
+        fsnames
+    )
+    .fetch_optional(pool)
+    .await?
+    .and_then(|x| x.active_host_id);
+
+    tracing::trace!("Maybe active MGS host id: {:?}", maybe_active_mgs_host_id);
+
+    if let Some(active_mgs_host_id) = maybe_active_mgs_host_id {
+        let active_mgs_host_fqdn = sqlx::query!(
+            r#"
+                SELECT fqdn FROM chroma_core_managedhost WHERE id=$1 and not_deleted = 't'
+            "#,
+            active_mgs_host_id
+        )
+        .fetch_one(pool)
+        .await?
+        .fqdn;
+
+        Ok(Some(active_mgs_host_fqdn))
+    } else {
+        Ok(None)
     }
 }
