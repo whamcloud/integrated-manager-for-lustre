@@ -1,6 +1,6 @@
 [package]
 authors = ["IML Team <iml@whamcloud.com>"]
-description = "Utilities for working with the IML API"
+description = "Utilities for working with the IML command API"
 edition = "2018"
 license = "MIT"
 name = "iml-command-utils"
