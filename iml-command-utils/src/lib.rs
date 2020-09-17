@@ -8,6 +8,18 @@ use iml_wire_types::{ApiList, Command, EndpointName as _};
 use std::{collections::HashSet, iter, time::Duration};
 use tokio::time::delay_for;
 
+#[derive(serde::Serialize)]
+pub struct SendJob<T> {
+    pub class_name: String,
+    pub args: T,
+}
+
+#[derive(serde::Serialize)]
+pub struct SendCmd<T> {
+    pub jobs: Vec<SendJob<T>>,
+    pub message: String,
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum CmdUtilError {
     #[error(transparent)]
