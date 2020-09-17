@@ -694,6 +694,9 @@ fn handle_record_change(
                 ArcRecord::SfaController(x) => {
                     model.records.sfa_controller.insert(x.id, Arc::clone(&x));
                 }
+                ArcRecord::Snapshot(x) => {
+                    model.records.snapshot.insert(x.id, Arc::clone(&x));
+                }
                 ArcRecord::StratagemConfig(x) => {
                     model.records.stratagem_config.insert(x.id, Arc::clone(&x));
 
@@ -1023,6 +1026,13 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
             page::sfa_enclosure::view(&model.records, x)
                 .els()
                 .map_msg(page::Msg::SfaEnclosure),
+        )
+        .els(),
+        Page::Snapshots(x) => main_panels(
+            model,
+            page::snapshots::view(x, &model.records)
+                .els()
+                .map_msg(page::Msg::Snapshots),
         )
         .els(),
     };

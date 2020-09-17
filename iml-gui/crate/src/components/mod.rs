@@ -27,6 +27,7 @@ pub(crate) mod date;
 pub(crate) mod datepicker;
 pub(crate) mod duration_picker;
 pub(crate) mod font_awesome;
+pub(crate) mod form;
 pub(crate) mod grafana_chart;
 pub(crate) mod loading;
 pub(crate) mod lock_indicator;

@@ -6,10 +6,10 @@
 
 pub mod action_plugins;
 pub mod agent_error;
-pub mod crm_reader;
 pub mod daemon_plugins;
 pub mod env;
 pub mod fidlist;
+pub mod high_availability;
 pub mod http_comms;
 pub mod lustre;
 pub mod poller;

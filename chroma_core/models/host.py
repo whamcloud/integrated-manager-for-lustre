@@ -210,11 +210,11 @@ class ManagedHost(DeletableStatefulObject):
     @classmethod
     def get_by_nid(cls, nid_string):
         """Resolve a NID string to a ManagedHost (best effort).  Not guaranteed to work:
-         * The NID might not exist for any host
-         * The NID might exist for multiple hosts
+        * The NID might not exist for any host
+        * The NID might exist for multiple hosts
 
-         Note: this function may return deleted hosts (useful behaviour if you're e.g. resolving
-         NID to hostname for historical logs).
+        Note: this function may return deleted hosts (useful behaviour if you're e.g. resolving
+        NID to hostname for historical logs).
         """
 
         from chroma_core.models import Nid
@@ -1150,6 +1150,20 @@ class DeleteHostStep(Step):
         if kwargs["force"]:
             host.state = "removed"
 
+        # Cleanup any corosync leftovers
+        from django.db import connection
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                DELETE FROM corosync_cluster c
+                USING corosync_node_managed_host nh
+                WHERE nh.host_id = %s
+                AND cluster_id = c.id
+                """,
+                [host.id],
+            )
+
 
 class CommonRemoveHostJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(None, None, None)
@@ -1790,16 +1804,20 @@ class CreateSnapshotJob(Job):
     fsname = models.CharField(max_length=8, help_text="Lustre filesystem name")
     name = models.CharField(max_length=64, help_text="Snapshot to create")
     comment = models.CharField(max_length=1024, null=True, help_text="Optional comment for the snapshot")
+    use_barrier = models.BooleanField(
+        default=False, help_text="Set write barrier before creating snapshot. The default value is False"
+    )
 
     @classmethod
     def long_description(cls, stateful_object):
         return help_text["create_snapshot"]
 
     def description(self):
-        return "Create snapshot '{}' of '{}'".format(self.name, self.fsname)
+        return "Create snapshot '{}' on '{}'".format(self.name, self.fsname)
 
     def get_steps(self):
-        args = {"host": self.fqdn, "fsname": self.fsname, "name": self.name}
+        args = {"host": self.fqdn, "fsname": self.fsname, "name": self.name, "use_barrier": self.use_barrier}
+
         if self.comment:
             args["comment"] = self.comment
 
@@ -1818,11 +1836,15 @@ class CreateSnapshotJob(Job):
 
 class CreateSnapshotStep(Step):
     def run(self, kwargs):
-        args = {"fsname": kwargs["fsname"], "name": kwargs["name"]}
+        args = {"fsname": kwargs["fsname"], "name": kwargs["name"], "use_barrier": kwargs["use_barrier"]}
+
         if "comment" in kwargs:
             args["comment"] = kwargs["comment"]
+
         self.invoke_rust_agent_expect_result(
-            kwargs["host"], "snapshot_create", args,
+            kwargs["host"],
+            "snapshot_create",
+            args,
         )
 
 

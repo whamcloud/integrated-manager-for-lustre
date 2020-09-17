@@ -669,6 +669,7 @@ pub struct CmdWrapper {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
 pub struct Command {
     pub cancelled: bool,
     pub complete: bool,

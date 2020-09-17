@@ -142,15 +142,15 @@ class CommandPlan(object):
 
     def get_transition_consequences(self, instance, new_state):
         """For use in the UI, for warning the user when an
-           action is going to have some consequences which
-           affect an object other than the one they are operating
-           on directly.  Because this is UI rather than business
-           logic, we take some shortcuts here:
-            * Don't calculate expected_states, i.e. ignore running
-              jobs and generate output based on the actual committed
-              states of objects
-            * Don't bother sorting for execution order - output an
-              unordered list.
+        action is going to have some consequences which
+        affect an object other than the one they are operating
+        on directly.  Because this is UI rather than business
+        logic, we take some shortcuts here:
+         * Don't calculate expected_states, i.e. ignore running
+           jobs and generate output based on the actual committed
+           states of objects
+         * Don't bother sorting for execution order - output an
+           unordered list.
         """
         from chroma_core.models import StatefulObject
 
@@ -198,10 +198,10 @@ class CommandPlan(object):
 
     def _create_dependencies(self, job, locks, job_deps_map):
         """Examine overlaps between a job's locks and those of
-           earlier jobs which are still pending, and generate wait_for
-           dependencies when we have a write lock and they have a read lock
-           or generate depend_on dependencies when we have a read or write lock and
-           they have a write lock"""
+        earlier jobs which are still pending, and generate wait_for
+        dependencies when we have a write lock and they have a read lock
+        or generate depend_on dependencies when we have a read or write lock and
+        they have a write lock"""
         wait_fors = set()
         for lock in locks:
             if lock.write:
@@ -211,9 +211,14 @@ class CommandPlan(object):
                 prior_write_lock = self._lock_cache.get_latest_write(wl.locked_item, not_job=job)
                 if prior_write_lock:
                     if wl.begin_state and prior_write_lock.end_state:
-                        assert wl.begin_state == prior_write_lock.end_state, (
-                            "%s locks %s in state %s but previous %s leaves it in state %s"
-                            % (job, wl.locked_item, wl.begin_state, prior_write_lock.job, prior_write_lock.end_state)
+                        assert (
+                            wl.begin_state == prior_write_lock.end_state
+                        ), "%s locks %s in state %s but previous %s leaves it in state %s" % (
+                            job,
+                            wl.locked_item,
+                            wl.begin_state,
+                            prior_write_lock.job,
+                            prior_write_lock.end_state,
                         )
                     wait_fors.add(prior_write_lock.job.id)
                     # We will only wait_for read locks after this write lock, as it
@@ -244,7 +249,7 @@ class CommandPlan(object):
 
     def _sort_graph(self, objects, edges):
         """Sort items in a graph by their longest path from a leaf.  Items
-           at the start of the result are the leaves.  Roots come last."""
+        at the start of the result are the leaves.  Roots come last."""
         object_edges = defaultdict(list)
         for e in edges:
             parent, child = e
@@ -459,9 +464,13 @@ class CommandPlan(object):
                     dependency.stateful_object == root_transition.stateful_object
                     and not root_transition.new_state in dependency.acceptable_states
                 ):
-                    assert dependency.fix_state is not None, (
-                        "A reverse dependency must provide a fix_state: %s in state %s depends on %s in state %s"
-                        % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states)
+                    assert (
+                        dependency.fix_state is not None
+                    ), "A reverse dependency must provide a fix_state: %s in state %s depends on %s in state %s" % (
+                        dependent,
+                        dependent_state,
+                        root_transition.stateful_object,
+                        dependency.acceptable_states,
                     )
 
                     if hasattr(dependency.fix_state, "__call__"):

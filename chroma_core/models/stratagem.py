@@ -131,7 +131,7 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
         interval_in_seconds = config.interval / 1000
 
         if runningInDocker():
-            iml_cmd = self.get_run_stratagem_command("/usr/bin/start-stratagem-scan", config, None)
+            iml_cmd = self.get_run_stratagem_command("/usr/bin/iml stratagem scan", config, None)
 
             # Create timer file
             timer_config = """# This file is part of IML

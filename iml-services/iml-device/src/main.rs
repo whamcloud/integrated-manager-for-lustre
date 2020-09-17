@@ -134,7 +134,7 @@ async fn main() -> Result<(), ImlDeviceError> {
                 .await?;
 
         let target_to_fs_map = get_target_filesystem_map(&influx_client).await?;
-        let mgs_targets_to_fs_map = get_mgs_filesystem_map(&influx_client).await?;
+        let mgs_targets_to_fs_map = get_mgs_filesystem_map(&influx_client, &mount_cache).await?;
         let target_to_fs_map: TargetFsRecord = target_to_fs_map
             .into_iter()
             .chain(mgs_targets_to_fs_map)
@@ -175,7 +175,7 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         tracing::debug!("x: {:?}", x);
 
-        sqlx::query!(r#"INSERT INTO targets 
+        sqlx::query!(r#"INSERT INTO target
                         (state, name, active_host_id, host_ids, filesystems, uuid, mount_path) 
                         SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], string_to_array(filesystems, ',')::text[], uuid, mount_path
                         FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[])

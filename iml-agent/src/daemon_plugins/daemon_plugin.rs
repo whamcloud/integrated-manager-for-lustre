@@ -4,12 +4,14 @@
 
 use crate::{
     agent_error::{NoPluginError, Result},
-    daemon_plugins::{action_runner, corosync, device, journal, ntp, ostpool, postoffice, stats},
+    daemon_plugins::{
+        action_runner, corosync, device, journal, ntp, ostpool, postoffice, snapshot, stats,
+    },
 };
 use async_trait::async_trait;
 use futures::{future, Future, FutureExt};
 use iml_wire_types::{AgentResult, PluginName};
-use std::{collections::HashMap, pin::Pin};
+use std::{collections::HashMap, pin::Pin, time::Duration};
 use tracing::info;
 
 pub type OutputValue = serde_json::Value;
@@ -24,6 +26,11 @@ pub type Output = Option<OutputValue>;
 /// to the `plugin_registry` below.
 #[async_trait]
 pub trait DaemonPlugin: std::fmt::Debug + Send + Sync {
+    /// The amount of time this plugin can run in a poll before it
+    /// is considered stale and must be rescheduled
+    fn deadline(&self) -> Duration {
+        Duration::from_secs(1)
+    }
     /// Returns full listing of information upon session esablishment
     fn start_session(&mut self) -> Pin<Box<dyn Future<Output = Result<Output>> + Send>> {
         future::ok(None).boxed()
@@ -73,6 +80,7 @@ pub fn plugin_registry() -> DaemonPlugins {
         ("device".into(), mk_callback(device::create)),
         ("journal".into(), mk_callback(journal::create)),
         ("corosync".into(), mk_callback(corosync::create)),
+        ("snapshot".into(), mk_callback(snapshot::create)),
     ]
     .into_iter()
     .collect();

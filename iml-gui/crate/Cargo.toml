@@ -24,6 +24,7 @@ futures = "0.3"
 gloo-timers = {version = "0.2", features = ["futures"]}
 im = {version = "15", features = ["serde"]}
 iml-api-utils = {path = "../../iml-api-utils", version = "0.3"}
+iml-graphql-queries = {version = "0.1", path = "../../iml-graphql-queries"}
 iml-influx = {path = "../../iml-influx", version = "0.1"}
 iml-wire-types = {path = "../../iml-wire-types", version = "0.3"}
 js-sys = "0.3"
@@ -33,8 +34,8 @@ number-formatter = {path = "../../number-formatter", version = "0.1"}
 seed = "0.6.0"
 serde = {version = "1", features = ['derive']}
 serde_json = "1.0"
-serde_urlencoded = "0.6.1"
-wasm-bindgen = "0.2"
+serde_urlencoded = "0.7.0"
+wasm-bindgen = {version = "0.2", features = ["serde-serialize"]}
 wasm-bindgen-futures = "0.4"
 
 [dependencies.regex]

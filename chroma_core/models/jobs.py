@@ -69,8 +69,8 @@ class StatefulObject(models.Model):
 
     def get_deps(self, state=None):
         """Return static dependencies, e.g. a targetmount in state
-           mounted has a dependency on a host in state lnet_started but
-           can get rid of it by moving to state unmounted"""
+        mounted has a dependency on a host in state lnet_started but
+        can get rid of it by moving to state unmounted"""
         return DependAll()
 
     @staticmethod
@@ -101,8 +101,8 @@ class StatefulObject(models.Model):
     @classmethod
     def _build_maps(cls):
         """Populate route_map and transition_map attributes by introspection of
-           this class and related StateChangeJob classes.  It is legal to call this
-           twice or concurrently.
+        this class and related StateChangeJob classes.  It is legal to call this
+        twice or concurrently.
         """
         if cls.route_map is not None:
             return
@@ -476,7 +476,7 @@ class Job(models.Model):
 
 class StateChangeJob(Job):
     """Subclasses must define a class attribute 'stateful_object'
-       identifying another attribute which returns a StatefulObject"""
+    identifying another attribute which returns a StatefulObject"""
 
     old_state = models.CharField(max_length=MAX_STATE_STRING)
 

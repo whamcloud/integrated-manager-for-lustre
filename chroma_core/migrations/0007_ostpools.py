@@ -30,7 +30,9 @@ class Migration(migrations.Migration):
                 ),
                 ("ost", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.ManagedOst")),
             ],
-            options={"ordering": ["id"],},
+            options={
+                "ordering": ["id"],
+            },
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -48,7 +50,9 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={"ordering": ["id"],},
+            options={
+                "ordering": ["id"],
+            },
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -90,7 +94,9 @@ class Migration(migrations.Migration):
                 ("ost", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.ManagedOst")),
                 ("pool", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.OstPool")),
             ],
-            options={"ordering": ["id"],},
+            options={
+                "ordering": ["id"],
+            },
             bases=("chroma_core.job",),
         ),
         migrations.AddField(
@@ -103,8 +109,14 @@ class Migration(migrations.Migration):
             name="pool",
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.OstPool"),
         ),
-        migrations.AlterModelOptions(name="ostpool", options={"ordering": ["id"]},),
-        migrations.AlterUniqueTogether(name="ostpool", unique_together=set([("name", "filesystem", "not_deleted")]),),
+        migrations.AlterModelOptions(
+            name="ostpool",
+            options={"ordering": ["id"]},
+        ),
+        migrations.AlterUniqueTogether(
+            name="ostpool",
+            unique_together=set([("name", "filesystem", "not_deleted")]),
+        ),
         migrations.CreateModel(
             name="CreateOstPoolJob",
             fields=[
@@ -121,7 +133,9 @@ class Migration(migrations.Migration):
                 ),
                 ("pool", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.OstPool")),
             ],
-            options={"ordering": ["id"],},
+            options={
+                "ordering": ["id"],
+            },
             bases=("chroma_core.job",),
         ),
     ]

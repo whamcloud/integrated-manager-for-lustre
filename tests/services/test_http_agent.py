@@ -230,10 +230,10 @@ class TestHttpAgent(SystemdTestCase, AgentHttpClient):
 
     def test_zombie_get(self):
         """Test that when an agent is hard-killed, or its host restarts (such that
-           an outstanding GET connection is not torn down), then when the agent 'comes back
-           to life' and opens another GET connection, TX messages make it to the new agent
-           rather than going into a black hole on the zombie connection.  This scenario
-           is HYD-2063"""
+        an outstanding GET connection is not torn down), then when the agent 'comes back
+        to life' and opens another GET connection, TX messages make it to the new agent
+        rather than going into a black hole on the zombie connection.  This scenario
+        is HYD-2063"""
 
         # Pretend to be the first agent instance
         zombie_session_id = self._open_session()
@@ -348,8 +348,8 @@ class TestHttpAgent(SystemdTestCase, AgentHttpClient):
 
     def test_timeout(self):
         """Test that when a session is established, then left idle
-            for the timeout period, the http_agent service emits
-            a termination message on the RX channel."""
+        for the timeout period, the http_agent service emits
+        a termination message on the RX channel."""
         session_id = self._open_session()
 
         # No alert to begin with

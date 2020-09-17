@@ -3,23 +3,26 @@
 // license that can be found in the LICENSE file.
 
 use crate::{listen::MessageType, DbRecord};
-use futures::{future, lock::Mutex, Future, FutureExt, Stream, TryFutureExt, TryStreamExt};
-use im::HashMap;
+use futures::{future, lock::Mutex, Future, FutureExt, TryFutureExt, TryStreamExt};
 use iml_manager_client::{get_client, get_retry, Client, ImlManagerClientError};
-use iml_postgres::Client as PgClient;
+use iml_postgres::{sqlx, PgPool};
 use iml_wire_types::{
     db::{
         AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
         CorosyncConfigurationRecord, FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord,
-        ManagedTargetMountRecord, ManagedTargetRecord, Name, NotDeleted, OstPoolOstsRecord,
+        ManagedTargetMountRecord, ManagedTargetRecord, NotDeleted, OstPoolOstsRecord,
         OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration, VolumeNodeRecord,
         VolumeRecord,
     },
-    sfa::{SfaController, SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem},
+    sfa::{
+        EnclosureType, HealthState, JobState, JobType, MemberState, SfaController, SfaDiskDrive,
+        SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem, SubTargetType,
+    },
+    snapshot::SnapshotRecord,
     warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam,
 };
-use std::{fmt::Debug, iter, pin::Pin, sync::Arc};
+use std::{fmt::Debug, pin::Pin, sync::Arc};
 
 pub type SharedCache = Arc<Mutex<Cache>>;
 
@@ -177,6 +180,12 @@ pub async fn db_record_to_change_record(
                 Ok(RecordChange::Update(Record::SfaController(x)))
             }
         },
+        DbRecord::Snapshot(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::Snapshot(x.id))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::Snapshot(x)))
+            }
+        },
         DbRecord::LnetConfiguration(x) => match (msg_type, x) {
             (MessageType::Delete, x) => {
                 Ok(RecordChange::Delete(RecordId::LnetConfiguration(x.id())))
@@ -306,136 +315,250 @@ pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlM
     Ok(())
 }
 
-async fn into_row<T>(
-    s: impl Stream<Item = Result<iml_postgres::Row, iml_postgres::Error>>,
-) -> Result<HashMap<i32, T>, iml_postgres::Error>
-where
-    T: From<iml_postgres::Row> + Name + Id + Clone,
-{
-    s.map_ok(T::from)
-        .map_ok(|record| (record.id(), record))
-        .try_collect::<HashMap<i32, T>>()
-        .await
-}
-
 /// Given a `Cache`, this fn populates it
 /// with data from the DB.
 pub async fn populate_from_db(
     shared_api_cache: SharedCache,
-    client: &mut PgClient,
-) -> Result<(), iml_postgres::Error> {
-    // The following could be more DRY. However, it allows us to avoid locking
-    // the client and enables the use of pipelined requests.
-    let stmts = future::try_join_all(vec![
-        client.prepare(&format!(
-            "select * from {} where not_deleted = 't'",
-            ManagedTargetMountRecord::table_name()
-        )),
-        client.prepare(&format!(
-            "select * from {} where not_deleted = 't'",
-            StratagemConfiguration::table_name()
-        )),
-        client.prepare(&format!(
-            "select * from {} where not_deleted = 't'",
-            LnetConfigurationRecord::table_name()
-        )),
-        client.prepare(&format!(
-            "select * from {} where not_deleted = 't'",
-            VolumeRecord::table_name(),
-        )),
-        client.prepare(&format!(
-            "select * from {} where not_deleted = 't'",
-            VolumeNodeRecord::table_name()
-        )),
-        client.prepare(&format!(
-            "select * from {} where not_deleted = 't'",
-            OstPoolRecord::table_name()
-        )),
-        client.prepare(&format!(
-            "select * from {}",
-            OstPoolOstsRecord::table_name()
-        )),
-        client.prepare(&format!(
-            "select * from {}",
-            ContentTypeRecord::table_name()
-        )),
-        client.prepare(&format!("select * from {}", AuthGroupRecord::table_name())),
-        client.prepare(&format!("select * from {}", AuthUserRecord::table_name())),
-        client.prepare(&format!(
-            "select * from {}",
-            AuthUserGroupRecord::table_name()
-        )),
-        client.prepare(&format!(
-            "select * from {} where not_deleted = 't'",
-            CorosyncConfigurationRecord::table_name()
-        )),
-        client.prepare(&format!(
-            "select * from {} where not_deleted = 't'",
-            PacemakerConfigurationRecord::table_name()
-        )),
-        client.prepare(&format!("select * from {}", SfaStorageSystem::table_name())),
-        client.prepare(&format!("select * from {}", SfaEnclosure::table_name())),
-        client.prepare(&format!("select * from {}", SfaDiskDrive::table_name())),
-        client.prepare(&format!("select * from {}", SfaJob::table_name())),
-        client.prepare(&format!("select * from {}", SfaPowerSupply::table_name())),
-        client.prepare(&format!("select * from {}", SfaController::table_name())),
-    ])
-    .await?;
-
-    tracing::debug!("Built initial db statements");
-
-    let managed_target_mount = into_row(client.query_raw(&stmts[0], iter::empty()).await?).await?;
-    let stratagem_configuration =
-        into_row(client.query_raw(&stmts[1], iter::empty()).await?).await?;
-    let lnet_configuration = into_row(client.query_raw(&stmts[2], iter::empty()).await?).await?;
-    let volume = into_row(client.query_raw(&stmts[3], iter::empty()).await?).await?;
-    let volume_node = into_row(client.query_raw(&stmts[4], iter::empty()).await?).await?;
-
-    let ost_pool = into_row(client.query_raw(&stmts[5], iter::empty()).await?).await?;
-    let ost_pool_osts = into_row(client.query_raw(&stmts[6], iter::empty()).await?).await?;
-    let content_types = into_row(client.query_raw(&stmts[7], iter::empty()).await?).await?;
-    let groups = into_row(client.query_raw(&stmts[8], iter::empty()).await?).await?;
-    let users = into_row(client.query_raw(&stmts[9], iter::empty()).await?).await?;
-
-    let user_groups = into_row(client.query_raw(&stmts[10], iter::empty()).await?).await?;
-    let corosync_configuration =
-        into_row(client.query_raw(&stmts[11], iter::empty()).await?).await?;
-    let pacemaker_configuration =
-        into_row(client.query_raw(&stmts[12], iter::empty()).await?).await?;
-
-    let sfa_storage_system = into_row(client.query_raw(&stmts[13], iter::empty()).await?).await?;
-
-    let sfa_enclosure = into_row(client.query_raw(&stmts[14], iter::empty()).await?).await?;
-
-    let sfa_disk_drive = into_row(client.query_raw(&stmts[15], iter::empty()).await?).await?;
-
-    let sfa_job = into_row(client.query_raw(&stmts[16], iter::empty()).await?).await?;
-
-    let sfa_power_supply = into_row(client.query_raw(&stmts[17], iter::empty()).await?).await?;
-
-    let sfa_controller = into_row(client.query_raw(&stmts[18], iter::empty()).await?).await?;
-
+    pool: &PgPool,
+) -> Result<(), iml_postgres::sqlx::Error> {
     let mut cache = shared_api_cache.lock().await;
 
-    cache.managed_target_mount = managed_target_mount;
-    cache.stratagem_config = stratagem_configuration;
-    cache.lnet_configuration = lnet_configuration;
-    cache.volume = volume;
-    cache.volume_node = volume_node;
-    cache.ost_pool = ost_pool;
-    cache.ost_pool_osts = ost_pool_osts;
-    cache.content_type = content_types;
-    cache.group = groups;
-    cache.user = users;
-    cache.user_group = user_groups;
-    cache.corosync_configuration = corosync_configuration;
-    cache.pacemaker_configuration = pacemaker_configuration;
-    cache.sfa_storage_system = sfa_storage_system;
-    cache.sfa_enclosure = sfa_enclosure;
-    cache.sfa_disk_drive = sfa_disk_drive;
-    cache.sfa_job = sfa_job;
-    cache.sfa_power_supply = sfa_power_supply;
-    cache.sfa_controller = sfa_controller;
+    cache.content_type = sqlx::query_as!(ContentTypeRecord, "select * from django_content_type")
+        .fetch(pool)
+        .map_ok(|x| (x.id(), x))
+        .try_collect()
+        .await?;
+
+    cache.corosync_configuration = sqlx::query_as!(
+        CorosyncConfigurationRecord,
+        "select * from chroma_core_corosyncconfiguration where not_deleted = 't'"
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.group = sqlx::query_as!(AuthGroupRecord, "select * from auth_group")
+        .fetch(pool)
+        .map_ok(|x| (x.id(), x))
+        .try_collect()
+        .await?;
+
+    cache.lnet_configuration = sqlx::query_as!(
+        LnetConfigurationRecord,
+        "select * from chroma_core_lnetconfiguration where not_deleted = 't'"
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.managed_target_mount = sqlx::query_as!(
+        ManagedTargetMountRecord,
+        "select * from chroma_core_managedtargetmount where not_deleted = 't'"
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.ost_pool = sqlx::query_as!(
+        OstPoolRecord,
+        "select * from chroma_core_ostpool where not_deleted = 't'"
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.ost_pool_osts =
+        sqlx::query_as!(OstPoolOstsRecord, "select * from chroma_core_ostpool_osts")
+            .fetch(pool)
+            .map_ok(|x| (x.id(), x))
+            .try_collect()
+            .await?;
+
+    cache.sfa_disk_drive = sqlx::query_as!(
+        SfaDiskDrive,
+        r#"SELECT
+            id,
+            index,
+            enclosure_index,
+            failed,
+            slot_number,
+            health_state as "health_state: HealthState",
+            health_state_reason,
+            member_index,
+            member_state as "member_state: MemberState",
+            storage_system
+        FROM chroma_core_sfadiskdrive
+        "#
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.sfa_enclosure = sqlx::query_as!(
+        SfaEnclosure,
+        r#"SELECT
+            id,
+            index,
+            element_name,
+            health_state as "health_state: HealthState",
+            health_state_reason,
+            child_health_state as "child_health_state: HealthState",
+            model,
+            position,
+            enclosure_type as "enclosure_type: EnclosureType",
+            canister_location,
+            storage_system
+        FROM chroma_core_sfaenclosure
+        "#
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.sfa_job = sqlx::query_as!(
+        SfaJob,
+        r#"SELECT
+            id,
+            index,
+            sub_target_index,
+            sub_target_type as "sub_target_type: SubTargetType",
+            job_type as "job_type: JobType",
+            state as "state: JobState",
+            storage_system
+        FROM chroma_core_sfajob
+        "#
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.sfa_power_supply = sqlx::query_as!(
+        SfaPowerSupply,
+        r#"SELECT
+            id,
+            index,
+            enclosure_index,
+            health_state as "health_state: HealthState",
+            health_state_reason,
+            position,
+            storage_system
+        FROM chroma_core_sfapowersupply
+        "#
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.sfa_storage_system = sqlx::query_as!(
+        SfaStorageSystem,
+        r#"SELECT
+            id,
+            uuid,
+            platform,
+            health_state_reason,
+            health_state as "health_state: HealthState",
+            child_health_state as "child_health_state: HealthState"
+        FROM chroma_core_sfastoragesystem
+        "#
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.sfa_controller = sqlx::query_as!(
+        SfaController,
+        r#"SELECT
+            id,
+            index,
+            enclosure_index,
+            health_state as "health_state: HealthState",
+            health_state_reason,
+            child_health_state as "child_health_state: HealthState",
+            storage_system
+        FROM chroma_core_sfacontroller
+        "#
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.snapshot = sqlx::query_as!(SnapshotRecord, "select * from snapshot")
+        .fetch(pool)
+        .map_ok(|x| (x.id(), x))
+        .try_collect()
+        .await?;
+
+    cache.stratagem_config = sqlx::query_as!(
+        StratagemConfiguration,
+        "select * from chroma_core_stratagemconfiguration where not_deleted = 't'"
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.user = sqlx::query_as!(
+        AuthUserRecord,
+        r#"
+        SELECT 
+            id, 
+            is_superuser,
+            username,
+            first_name,
+            last_name,
+            email,
+            is_staff,
+            is_active 
+        FROM auth_user
+    "#
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.user_group = sqlx::query_as!(AuthUserGroupRecord, "select * from auth_user_groups")
+        .fetch(pool)
+        .map_ok(|x| (x.id(), x))
+        .try_collect()
+        .await?;
+
+    cache.pacemaker_configuration = sqlx::query_as!(
+        PacemakerConfigurationRecord,
+        "select * from chroma_core_pacemakerconfiguration where not_deleted = 't'"
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.volume = sqlx::query_as!(
+        VolumeRecord,
+        "select * from chroma_core_volume where not_deleted = 't'"
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.volume_node = sqlx::query_as!(
+        VolumeNodeRecord,
+        "select * from chroma_core_volumenode where not_deleted = 't'"
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
 
     tracing::debug!("Populated from db");
 

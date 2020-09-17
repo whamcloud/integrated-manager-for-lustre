@@ -2,14 +2,22 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::error::ImlApiError;
+use crate::{command::get_command, error::ImlApiError};
+use futures::{TryFutureExt, TryStreamExt};
 use iml_postgres::{sqlx, PgPool};
+use iml_rabbit::Pool;
+use iml_wire_types::{snapshot::Snapshot, Command, EndpointName, Job};
+use itertools::Itertools;
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
-    EmptyMutation, EmptySubscription, GraphQLEnum, RootNode,
+    EmptySubscription, FieldError, GraphQLEnum, RootNode, Value,
 };
 use std::ops::Deref;
-use std::{convert::Infallible, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    convert::Infallible,
+    sync::Arc,
+};
 use warp::Filter;
 
 #[derive(juniper::GraphQLObject)]
@@ -19,6 +27,8 @@ struct CorosyncNode {
     name: String,
     /// The id of the node as reported by `crm_mon`
     id: String,
+    /// Id of the cluster this node belongs to
+    cluster_id: i32,
     online: bool,
     standby: bool,
     standby_onfail: bool,
@@ -55,7 +65,47 @@ struct Target {
     mount_path: Option<String>,
 }
 
+#[derive(juniper::GraphQLObject)]
+/// A Lustre Target and it's corresponding resource
+struct TargetResource {
+    /// The id of the cluster
+    cluster_id: i32,
+    /// The filesystem associated with this target
+    fs_name: String,
+    /// The name of this target
+    name: String,
+    /// The corosync resource id associated with this target
+    resource_id: String,
+    /// The list of host ids this target could possibly run on
+    cluster_hosts: Vec<i32>,
+}
+
+struct BannedTargetResource {
+    resource: String,
+    cluster_id: i32,
+    host_id: i32,
+    mount_point: Option<String>,
+}
+
+#[derive(juniper::GraphQLObject)]
+/// A Corosync banned resource
+struct BannedResource {
+    /// The resource id
+    id: String,
+    /// The id of the cluster in which the resource lives
+    cluster_id: i32,
+    /// The resource name
+    resource: String,
+    /// The node in which the resource lives
+    node: String,
+    /// The assigned weight of the resource
+    weight: i32,
+    /// Is master only
+    master_only: bool,
+}
+
 pub(crate) struct QueryRoot;
+pub(crate) struct MutationRoot;
 
 #[derive(GraphQLEnum)]
 enum SortDir {
@@ -98,24 +148,42 @@ impl QueryRoot {
         let xs = sqlx::query_as!(
             CorosyncNode,
             r#"
-                SELECT * FROM corosync_node n
+                SELECT
+                (n.id).name AS "name!",
+                (n.id).id AS "id!",
+                cluster_id,
+                online,
+                standby,
+                standby_onfail,
+                maintenance,
+                pending,
+                unclean,
+                shutdown,
+                expected_up,
+                is_dc,
+                resources_running,
+                type
+                FROM corosync_node n
                 ORDER BY
-                    CASE WHEN $3 = 'asc' THEN (n.id, n.name) END ASC,
-                    CASE WHEN $3 = 'desc' THEN (n.id, n.name) END DESC
-                OFFSET $1 LIMIT $2"#,
+                    CASE WHEN $1 = 'asc' THEN n.id END ASC,
+                    CASE WHEN $1 = 'desc' THEN n.id END DESC
+                OFFSET $2 LIMIT $3"#,
+            dir.deref(),
             offset.unwrap_or(0) as i64,
-            limit.unwrap_or(20) as i64,
-            dir.deref()
+            limit.unwrap_or(20) as i64
         )
-        .fetch_all(&context.client)
+        .fetch_all(&context.pg_pool)
         .await?;
 
         Ok(xs)
     }
+
     #[graphql(arguments(
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
-        dir(description = "Sort direction, defaults to asc")
+        dir(description = "Sort direction, defaults to asc"),
+        fs_name(description = "Targets associated with the specified filesystem"),
+        exclude_unmounted(description = "Exclude unmounted targets, defaults to false"),
     ))]
     /// Fetch the list of known targets
     async fn targets(
@@ -123,13 +191,15 @@ impl QueryRoot {
         limit: Option<i32>,
         offset: Option<i32>,
         dir: Option<SortDir>,
+        fs_name: Option<String>,
+        exclude_unmounted: Option<bool>,
     ) -> juniper::FieldResult<Vec<Target>> {
         let dir = dir.unwrap_or_default();
 
-        let xs = sqlx::query_as!(
+        let xs: Vec<Target> = sqlx::query_as!(
             Target,
             r#"
-                SELECT * from targets t
+                SELECT * from target t
                 ORDER BY
                     CASE WHEN $3 = 'asc' THEN t.name END ASC,
                     CASE WHEN $3 = 'desc' THEN t.name END DESC
@@ -138,18 +208,430 @@ impl QueryRoot {
             limit.unwrap_or(20) as i64,
             dir.deref()
         )
-        .fetch_all(&context.client)
-        .await?;
+        .fetch_all(&context.pg_pool)
+        .await?
+        .into_iter()
+        .filter(|x| match &fs_name {
+            Some(fs) => x.filesystems.contains(&fs),
+            None => true,
+        })
+        .filter(|x| match exclude_unmounted {
+            Some(true) => x.state != "unmounted",
+            Some(false) | None => true,
+        })
+        .collect();
+
+        let target_resources = get_fs_target_resources(&context.pg_pool, None).await?;
+
+        let xs: Vec<Target> = xs
+            .into_iter()
+            .map(|mut x| {
+                let resource = target_resources
+                    .iter()
+                    .find(|resource| resource.name == x.name);
+
+                if let Some(resource) = resource {
+                    x.host_ids = resource.cluster_hosts.clone();
+                }
+
+                x
+            })
+            .collect();
 
         Ok(xs)
     }
+
+    /// Given a `fs_name`, produce a list of `TargetResource`.
+    /// Each `TargetResource` will list the host ids it's capable of
+    /// running on, taking bans into account.
+    #[graphql(arguments(fs_name(description = "The filesystem to list `TargetResource`s for"),))]
+    async fn get_fs_target_resources(
+        context: &Context,
+        fs_name: Option<String>,
+    ) -> juniper::FieldResult<Vec<TargetResource>> {
+        let xs = get_fs_target_resources(&context.pg_pool, fs_name).await?;
+
+        Ok(xs)
+    }
+
+    async fn get_banned_resources(context: &Context) -> juniper::FieldResult<Vec<BannedResource>> {
+        let xs = get_banned_resources(&context.pg_pool).await?;
+
+        Ok(xs)
+    }
+
+    /// Given a `fs_name`, produce a distinct grouping
+    /// of cluster nodes that make up the filesystem.
+    /// This is useful to find nodes capable of running resources associated
+    /// with the given `fs_name`.
+    #[graphql(arguments(fs_name(description = "The filesystem to search cluster nodes for"),))]
+    async fn get_fs_cluster_hosts(
+        context: &Context,
+        fs_name: String,
+    ) -> juniper::FieldResult<Vec<Vec<i32>>> {
+        let xs = get_fs_target_resources(&context.pg_pool, Some(fs_name))
+            .await?
+            .into_iter()
+            .group_by(|x| x.cluster_id);
+
+        let xs = xs.into_iter().fold(vec![], |mut acc, (_, xs)| {
+            let xs: HashSet<i32> = xs.map(|x| x.cluster_hosts).flatten().collect();
+
+            acc.push(xs.into_iter().collect());
+
+            acc
+        });
+
+        Ok(xs)
+    }
+
+    #[graphql(arguments(
+        limit(description = "paging limit, defaults to 20"),
+        offset(description = "Offset into items, defaults to 0"),
+        dir(description = "Sort direction, defaults to ASC"),
+        fsname(description = "Filesystem the snapshot was taken from"),
+        name(description = "Name of the snapshot"),
+    ))]
+    /// Fetch the list of snapshots
+    async fn snapshots(
+        context: &Context,
+        limit: Option<i32>,
+        offset: Option<i32>,
+        dir: Option<SortDir>,
+        fsname: String,
+        name: Option<String>,
+    ) -> juniper::FieldResult<Vec<Snapshot>> {
+        let dir = dir.unwrap_or_default();
+
+        let snapshots = sqlx::query_as!(
+            Snapshot,
+                r#"
+                    SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s
+                    WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)
+                    ORDER BY
+                        CASE WHEN $3 = 'asc' THEN s.create_time END ASC,
+                        CASE WHEN $3 = 'desc' THEN s.create_time END DESC
+                    OFFSET $1 LIMIT $2"#,
+                offset.unwrap_or(0) as i64,
+                limit.unwrap_or(20) as i64,
+                dir.deref(),
+                fsname,
+                name,
+            )
+            .fetch_all(&context.pg_pool)
+            .await?;
+
+        Ok(snapshots)
+    }
+
+    /// Fetch the list of commands
+    #[graphql(arguments(
+        limit(description = "paging limit, defaults to 20"),
+        offset(description = "Offset into items, defaults to 0"),
+        dir(description = "Sort direction, defaults to ASC"),
+        is_active(description = "Command status, active means not completed, default is false"),
+        msg(description = "Substring of the command's message, null or empty matches all"),
+    ))]
+    async fn commands(
+        context: &Context,
+        limit: Option<i32>,
+        offset: Option<i32>,
+        dir: Option<SortDir>,
+        is_active: Option<bool>,
+        msg: Option<String>,
+    ) -> juniper::FieldResult<Vec<Command>> {
+        let dir = dir.unwrap_or_default();
+        let is_completed = !is_active.unwrap_or(false);
+        let commands: Vec<Command> = sqlx::query!(
+            r#"
+                SELECT
+                    c.id AS id,
+                    cancelled,
+                    complete,
+                    errored,
+                    created_at,
+                    array_agg(cj.job_id)::INT[] AS job_ids,
+                    message
+                FROM chroma_core_command c
+                JOIN chroma_core_command_jobs cj ON c.id = cj.command_id
+                WHERE complete = $4
+                  AND ($5::TEXT IS NULL OR c.message ILIKE '%' || $5 || '%')
+                GROUP BY c.id
+                ORDER BY
+                    CASE WHEN $3 = 'asc' THEN c.id END ASC,
+                    CASE WHEN $3 = 'desc' THEN c.id END DESC
+                OFFSET $1 LIMIT $2 "#,
+            offset.unwrap_or(0) as i64,
+            limit.unwrap_or(20) as i64,
+            dir.deref(),
+            is_completed,
+            msg,
+        )
+        .fetch_all(&context.pg_pool)
+        .map_ok(|xs: Vec<_>| {
+            xs.into_iter()
+                .map(|x| Command {
+                    id: x.id,
+                    cancelled: x.cancelled,
+                    complete: x.complete,
+                    errored: x.errored,
+                    created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
+                    jobs: {
+                        x.job_ids
+                            .unwrap_or_default()
+                            .into_iter()
+                            .map(|job_id: i32| {
+                                format!("/api/{}/{}/", Job::<()>::endpoint_name(), job_id)
+                            })
+                            .collect::<Vec<_>>()
+                    },
+                    logs: "".to_string(),
+                    message: x.message.clone(),
+                    resource_uri: format!("/api/{}/{}/", Command::endpoint_name(), x.id),
+                })
+                .collect::<Vec<_>>()
+        })
+        .await?;
+        Ok(commands)
+    }
 }
 
-pub(crate) type Schema =
-    RootNode<'static, QueryRoot, EmptyMutation<Context>, EmptySubscription<Context>>;
+#[juniper::graphql_object(Context = Context)]
+impl MutationRoot {
+    #[graphql(arguments(
+        fsname(description = "Filesystem to snapshot"),
+        name(description = "Name of the snapshot"),
+        comment(description = "A description for the purpose of the snapshot"),
+        use_barrier(
+            description = "Set write barrier before creating snapshot. The default value is `false`"
+        )
+    ))]
+    /// Creates a snapshot of an existing Lustre filesystem. Returns a `Command` to track progress.
+    /// For the `Command` to succeed, the filesystem being snapshoted must be available.
+    async fn create_snapshot(
+        context: &Context,
+        fsname: String,
+        name: String,
+        comment: Option<String>,
+        use_barrier: Option<bool>,
+    ) -> juniper::FieldResult<Command> {
+        let name = name.trim();
+        validate_snapshot_name(name)?;
+
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
+            .await?
+            .ok_or_else(|| {
+                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+            })?;
+
+        let kwargs: HashMap<String, String> = vec![("message".into(), "Creating snapshot".into())]
+            .into_iter()
+            .collect();
+
+        let jobs = serde_json::json!([{
+            "class_name": "CreateSnapshotJob",
+            "args": {
+                "fsname": fsname,
+                "name": name,
+                "comment": comment,
+                "fqdn": active_mgs_host_fqdn,
+                "use_barrier": use_barrier.unwrap_or(false),
+            }
+        }]);
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_pool.get().await?,
+            "run_jobs",
+            vec![jobs],
+            Some(kwargs),
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        let command = get_command(&context.pg_pool, command_id).await?;
+
+        Ok(command)
+    }
+    #[graphql(arguments(
+        fsname(description = "Filesystem snapshot was taken from"),
+        name(description = "Name of the snapshot"),
+        force(description = "Destroy the snapshot by force"),
+    ))]
+    /// Destroys an existing snapshot of an existing Lustre filesystem. Returns a `Command` to track progress.
+    /// For the `Command` to succeed, the filesystem must be available.
+    async fn destroy_snapshot(
+        context: &Context,
+        fsname: String,
+        name: String,
+        force: bool,
+    ) -> juniper::FieldResult<Command> {
+        let name = name.trim();
+        validate_snapshot_name(name)?;
+
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
+            .await?
+            .ok_or_else(|| {
+                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+            })?;
+
+        let kwargs: HashMap<String, String> =
+            vec![("message".into(), "Destroying snapshot".into())]
+                .into_iter()
+                .collect();
+
+        let jobs = serde_json::json!([{
+            "class_name": "DestroySnapshotJob",
+            "args": {
+                "fsname": fsname,
+                "name": name,
+                "force": force,
+                "fqdn": active_mgs_host_fqdn,
+            }
+        }]);
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_pool.get().await?,
+            "run_jobs",
+            vec![jobs],
+            Some(kwargs),
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        let command = get_command(&context.pg_pool, command_id).await?;
+
+        Ok(command)
+    }
+    #[graphql(arguments(
+        fsname(description = "Filesystem snapshot was taken from"),
+        name(description = "Name of the snapshot"),
+    ))]
+    /// Mounts an existing snapshot of an existing Lustre filesystem. Returns a `Command` to track progress.
+    /// For the `Command` to succeed, the filesystem must be available.
+    async fn mount_snapshot(
+        context: &Context,
+        fsname: String,
+        name: String,
+    ) -> juniper::FieldResult<Command> {
+        let name = name.trim();
+        validate_snapshot_name(name)?;
+
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
+            .await?
+            .ok_or_else(|| {
+                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+            })?;
+
+        let kwargs: HashMap<String, String> = vec![("message".into(), "Mounting snapshot".into())]
+            .into_iter()
+            .collect();
+
+        let jobs = serde_json::json!([{
+            "class_name": "MountSnapshotJob",
+            "args": {
+                "fsname": fsname,
+                "name": name,
+                "fqdn": active_mgs_host_fqdn,
+            }
+        }]);
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_pool.get().await?,
+            "run_jobs",
+            vec![jobs],
+            Some(kwargs),
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        get_command(&context.pg_pool, command_id)
+            .await
+            .map_err(|e| e.into())
+    }
+    #[graphql(arguments(
+        fsname(description = "Filesystem snapshot was taken from"),
+        name(description = "Name of the snapshot"),
+    ))]
+    /// Unmounts an existing snapshot of an existing Lustre filesystem. Returns a `Command` to track progress.
+    /// For the `Command` to succeed, the filesystem must be available.
+    async fn unmount_snapshot(
+        context: &Context,
+        fsname: String,
+        name: String,
+    ) -> juniper::FieldResult<Command> {
+        let name = name.trim();
+        validate_snapshot_name(name)?;
+
+        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
+            .await?
+            .ok_or_else(|| {
+                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+            })?;
+
+        let kwargs: HashMap<String, String> =
+            vec![("message".into(), "Unmounting snapshot".into())]
+                .into_iter()
+                .collect();
+
+        let jobs = serde_json::json!([{
+            "class_name": "UnmountSnapshotJob",
+            "args": {
+                "fsname": fsname,
+                "name": name,
+                "fqdn": active_mgs_host_fqdn,
+            }
+        }]);
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_pool.get().await?,
+            "run_jobs",
+            vec![jobs],
+            Some(kwargs),
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        get_command(&context.pg_pool, command_id)
+            .await
+            .map_err(|e| e.into())
+    }
+}
+
+async fn active_mgs_host_fqdn(
+    fsname: &str,
+    pool: &PgPool,
+) -> Result<Option<String>, iml_postgres::sqlx::Error> {
+    let fsnames = &[fsname.into()][..];
+    let maybe_active_mgs_host_id = sqlx::query!(
+        r#"
+            SELECT active_host_id from target WHERE filesystems @> $1 and name='MGS'
+        "#,
+        fsnames
+    )
+    .fetch_optional(pool)
+    .await?
+    .and_then(|x| x.active_host_id);
+
+    tracing::trace!("Maybe active MGS host id: {:?}", maybe_active_mgs_host_id);
+
+    if let Some(active_mgs_host_id) = maybe_active_mgs_host_id {
+        let active_mgs_host_fqdn = sqlx::query!(
+            r#"
+                SELECT fqdn FROM chroma_core_managedhost WHERE id=$1 and not_deleted = 't'
+            "#,
+            active_mgs_host_id
+        )
+        .fetch_one(pool)
+        .await?
+        .fqdn;
+
+        Ok(Some(active_mgs_host_fqdn))
+    } else {
+        Ok(None)
+    }
+}
+
+pub(crate) type Schema = RootNode<'static, QueryRoot, MutationRoot, EmptySubscription<Context>>;
 
 pub(crate) struct Context {
-    pub(crate) client: PgPool,
+    pub(crate) pg_pool: PgPool,
+    pub(crate) rabbit_pool: Pool,
 }
 
 pub(crate) async fn graphql(
@@ -179,4 +661,119 @@ pub(crate) fn endpoint(
         .map(|| warp::reply::html(graphiql_source("graphql", None)));
 
     graphql_route.or(graphiql_route)
+}
+
+async fn get_fs_target_resources(
+    pool: &PgPool,
+    fs_name: Option<String>,
+) -> Result<Vec<TargetResource>, ImlApiError> {
+    let banned_resources = get_banned_targets(pool).await?;
+
+    let xs = sqlx::query!(r#"
+            SELECT rh.cluster_id, r.id, t.name, t.mount_path, t.filesystems, array_agg(DISTINCT rh.host_id) AS "cluster_hosts!"
+            FROM target t
+            INNER JOIN corosync_target_resource r ON r.mount_point = t.mount_path
+            INNER JOIN corosync_target_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)
+            WHERE CARDINALITY(t.filesystems) > 0
+            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.filesystems
+        "#)
+            .fetch(pool)
+            .try_filter(|x| {
+                let fs_name2 = fs_name.clone();
+                let filesystems = x.filesystems.clone();
+                async move {
+                    match fs_name2 {
+                        None => true,
+                        Some(fs) => filesystems.contains(&fs)
+                    }
+                }
+            })
+            .map_ok(|mut x| {
+                let xs:HashSet<_> = banned_resources
+                    .iter()
+                    .filter(|y| {
+                        y.cluster_id == x.cluster_id && y.resource == x.id &&  x.mount_path == y.mount_point
+                    })
+                    .map(|y| y.host_id)
+                    .collect();
+
+                x.cluster_hosts.retain(|id| !xs.contains(id));
+
+                x
+            })
+            .map_ok(|x| {
+                TargetResource {
+                    cluster_id: x.cluster_id,
+                    fs_name: fs_name.as_ref().unwrap_or_else(|| &x.filesystems[0]).to_string(),
+                    name: x.name,
+                    resource_id: x.id,
+                    cluster_hosts: x.cluster_hosts
+                }
+            }).try_collect()
+            .await?;
+
+    Ok(xs)
+}
+
+async fn get_banned_targets(pool: &PgPool) -> Result<Vec<BannedTargetResource>, ImlApiError> {
+    let xs = sqlx::query!(r#"
+            SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point
+            FROM corosync_resource_bans b
+            INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node
+            AND nh.cluster_id = b.cluster_id
+            INNER JOIN corosync_target_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
+        "#)
+        .fetch(pool)
+        .map_ok(|x| {
+            BannedTargetResource {
+                resource: x.resource,
+                cluster_id: x.cluster_id,
+                host_id: x.host_id,
+                mount_point: x.mount_point,
+            }
+        })
+        .try_collect()
+        .await?;
+
+    Ok(xs)
+}
+
+async fn get_banned_resources(pool: &PgPool) -> Result<Vec<BannedResource>, ImlApiError> {
+    let xs = sqlx::query_as!(
+        BannedResource,
+        r#"
+            SELECT id, cluster_id, resource, node, weight, master_only
+            FROM corosync_resource_bans
+        "#
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(xs)
+}
+
+fn validate_snapshot_name(x: &str) -> Result<(), FieldError> {
+    if x.contains(' ') {
+        Err(FieldError::new(
+            "Snapshot name cannot contain spaces",
+            Value::null(),
+        ))
+    } else if x.contains('*') {
+        Err(FieldError::new(
+            "Snapshot name cannot contain * character",
+            Value::null(),
+        ))
+    } else if x.contains('/') {
+        Err(FieldError::new(
+            "Snapshot name cannot contain / character",
+            Value::null(),
+        ))
+    } else if x.contains("&") {
+        Err(FieldError::new(
+            "Snapshot name cannot contain & character",
+            Value::null(),
+        ))
+    } else {
+        Ok(())
+    }
 }

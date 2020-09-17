@@ -11,5 +11,6 @@ pub mod nginx;
 pub mod ostpool;
 pub mod profile;
 pub mod server;
+pub mod snapshot;
 pub mod stratagem;
 pub mod update_repo_file;

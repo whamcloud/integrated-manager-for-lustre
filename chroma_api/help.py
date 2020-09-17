@@ -49,10 +49,10 @@ class HelpResource(Resource):
 
     def conf_param_help(self, request, **kwargs):
         """
-         One of 'kind' or 'keys' must be set
+        One of 'kind' or 'keys' must be set
 
-         :param keys: comma separated list of strings
-         :param kind: one of 'OST', 'MDT' or 'FS'"""
+        :param keys: comma separated list of strings
+        :param kind: one of 'OST', 'MDT' or 'FS'"""
         kind = request.GET.get("kind", None)
         keys = request.GET.get("keys", None)
 

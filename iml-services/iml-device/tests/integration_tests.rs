@@ -9,9 +9,8 @@ use device_types::{
     mount::{FsType, Mount, MountOpts, MountPoint},
     DevicePath,
 };
-use dotenv::dotenv;
 use iml_device::update_client_mounts;
-use iml_postgres::{get_db_pool, sqlx};
+use iml_postgres::sqlx;
 use iml_wire_types::Fqdn;
 use insta::assert_json_snapshot;
 use std::error::Error;
@@ -32,9 +31,7 @@ struct ClientMount {
 #[tokio::test]
 #[ignore = "Requires an active and populated DB"]
 async fn test_insert() -> Result<(), Box<dyn Error>> {
-    dotenv().ok();
-
-    let pool = get_db_pool(5).await?;
+    let pool = iml_postgres::test_setup().await?;
 
     sqlx::query!(r#"
         INSERT INTO chroma_core_serverprofile

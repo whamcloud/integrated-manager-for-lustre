@@ -76,11 +76,17 @@ fn nav_manage_dropdown(open: bool) -> Node<Msg> {
                 },
             ],
             li![
+                a![&cls, "Snapshots"],
+                attrs! {
+                    At::Href => Route::Snapshots.to_href(),
+                },
+            ],
+            li![
                 a![&cls, "Users"],
                 attrs! {
                     At::Href => Route::Users.to_href(),
                 },
-            ],
+            ]
         ]
     ]
 }

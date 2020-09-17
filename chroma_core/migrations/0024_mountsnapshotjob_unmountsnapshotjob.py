@@ -31,7 +31,9 @@ class Migration(migrations.Migration):
                 ("fsname", models.CharField(max_length=8)),
                 ("name", models.CharField(max_length=512)),
             ],
-            options={"ordering": ["id"],},
+            options={
+                "ordering": ["id"],
+            },
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -52,7 +54,9 @@ class Migration(migrations.Migration):
                 ("fsname", models.CharField(max_length=8)),
                 ("name", models.CharField(max_length=512)),
             ],
-            options={"ordering": ["id"],},
+            options={
+                "ordering": ["id"],
+            },
             bases=("chroma_core.job",),
         ),
     ]

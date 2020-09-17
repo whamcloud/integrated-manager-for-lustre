@@ -64,6 +64,7 @@ pub enum ImlManagerCliError {
     DoesNotExist(&'static str),
     FailedCommandError(Vec<Command>),
     FromUtf8Error(#[from] std::string::FromUtf8Error),
+    ImlGraphqlQueriesErrors(#[from] iml_graphql_queries::Errors),
     IntParseError(#[from] std::num::ParseIntError),
     IoError(#[from] std::io::Error),
     ParseDurationError(#[from] DurationParseError),
@@ -91,6 +92,7 @@ impl std::fmt::Display for ImlManagerCliError {
                 write!(f, "{}", failed_msg)
             }
             ImlManagerCliError::FromUtf8Error(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::ImlGraphqlQueriesErrors(ref err) => write!(f, "{}", err),
             ImlManagerCliError::IntParseError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::IoError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::ParseDurationError(ref err) => write!(f, "{}", err),

@@ -409,7 +409,7 @@ class TargetResource(ConfParamResource):
 
     def apply_filters(self, request, filters=None, **kwargs):
         """Override this to build a filesystem filter using Q expressions (not
-           possible from build_filters because it only deals with kwargs to filter())"""
+        possible from build_filters because it only deals with kwargs to filter())"""
         objects = super(TargetResource, self).apply_filters(request, filters, **kwargs)
         try:
             try:

@@ -39,8 +39,8 @@ class Dependable(object):
 
     def satisfied(self):
         """Return True or False for whether this and all child
-           dependencies are satisfied (i.e. their required state
-           is set on their object)"""
+        dependencies are satisfied (i.e. their required state
+        is set on their object)"""
         return NotImplementedError
 
 
@@ -49,9 +49,9 @@ class DependOn(Dependable):
         self, stateful_object, preferred_state, acceptable_states=None, unacceptable_states=None, fix_state=None
     ):
         """preferred_state: what we will try to put the dependency into if
-           it is not already in one of acceptable_states.
-           fix_state: what we will try to put the depender into if his
-           dependency can no longer be satisfied."""
+        it is not already in one of acceptable_states.
+        fix_state: what we will try to put the depender into if his
+        dependency can no longer be satisfied."""
 
         assert isinstance(stateful_object, django.db.models.Model)
         assert (unacceptable_states == None) or (acceptable_states == None)
@@ -113,7 +113,7 @@ class MultiDependable(Dependable):
 
 class DependAll(MultiDependable):
     """Stores a list of Dependables, all of which must be in the
-       desired state for this dependency to be true"""
+    desired state for this dependency to be true"""
 
     def satisfied(self):
         for o in self.objects:
@@ -125,7 +125,7 @@ class DependAll(MultiDependable):
 
 class DependAny(MultiDependable):
     """Stores a list of Dependables, one or more of which must be in the
-       desired state for this dependency to be true"""
+    desired state for this dependency to be true"""
 
     def satisfied(self):
         if len(self.objects) == 0:

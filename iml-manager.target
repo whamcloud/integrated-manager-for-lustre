@@ -7,6 +7,9 @@ After=iml-settings-populator.service
 Requires=iml-corosync.service
 After=iml-corosync.service
 
+Requires=iml-snapshot.service
+After=iml-snapshot.service
+
 Requires=iml-gunicorn.service
 After=iml-gunicorn.service
 
@@ -101,17 +104,18 @@ Also=iml-device.service
 Also=iml-gunicorn.service
 Also=iml-http-agent.service
 Also=iml-job-scheduler.service
+Also=iml-journal.service
 Also=iml-lustre-audit.service
 Also=iml-mailbox.service
+Also=iml-ntp.service
 Also=iml-plugin-runner.service
 Also=iml-power-control.service
+Also=iml-rust-corosync.service
 Also=iml-rust-stats.service
 Also=iml-sfa.service
-Also=iml-journal.service
-Also=iml-ntp.service
+Also=iml-snapshot.service
 Also=iml-update-handler.socket
 Also=iml-warp-drive.service
-Also=iml-rust-corosync.service
 Also=influxdb.service
 Also=nginx.service
 Also=postgresql-9.6.service

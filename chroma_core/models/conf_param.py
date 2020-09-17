@@ -131,7 +131,7 @@ class ConfParam(models.Model):
 
     def get_key(self):
         """Subclasses to return the fully qualified key, e.g. a FilesystemConfParam
-           prepends the filesystem name to self.key"""
+        prepends the filesystem name to self.key"""
         return self.key
 
     def object_exists(self):
