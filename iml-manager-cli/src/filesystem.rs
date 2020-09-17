@@ -4,13 +4,16 @@
 
 use crate::{
     api_utils::{get, get_all, get_hosts, get_influx, get_one},
-    display_utils::{usage, wrap_fut, DisplayType, IntoDisplayType as _},
     error::ImlManagerCliError,
     ostpool::{ostpool_cli, OstPoolCommand},
 };
 use console::Term;
 use futures::future::{try_join, try_join_all};
-use iml_command_utils::{create_command, wait_for_cmds_success, SendCmd, SendJob};
+use iml_command_utils::{
+    create_command,
+    display_utils::{usage, wrap_fut, DisplayType, IntoDisplayType as _},
+    wait_for_cmds_success, SendCmd, SendJob,
+};
 use iml_wire_types::{Filesystem, FlatQuery, Mgt, Ost};
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};

@@ -2,10 +2,21 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+pub mod display_utils;
+
+#[cfg(feature = "cli")]
+use futures::{future, FutureExt, TryFutureExt};
 use iml_manager_client::{get, post, Client};
 use iml_wire_types::{ApiList, Command, EndpointName};
+#[cfg(feature = "cli")]
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+#[cfg(feature = "cli")]
+use std::collections::HashMap;
+#[cfg(not(feature = "cli"))]
 use std::collections::HashSet;
 use std::{fmt::Debug, iter, time::Duration};
+#[cfg(feature = "cli")]
+use tokio::task::spawn_blocking;
 use tokio::time::delay_for;
 
 #[derive(serde::Serialize)]
@@ -112,7 +123,7 @@ pub async fn wait_for_cmds(cmds: &[Command]) -> Result<Vec<Command>, CommandErro
     #[cfg(not(feature = "cli"))]
     let mut in_progress_commands = HashSet::new();
     #[cfg(feature = "cli")]
-    let mut cmd_spinners = HashMap::new();
+    let mut in_progress_commands = HashMap::new();
 
     #[cfg(not(feature = "cli"))]
     for cmd in cmds {
@@ -124,28 +135,29 @@ pub async fn wait_for_cmds(cmds: &[Command]) -> Result<Vec<Command>, CommandErro
         pb.set_style(spinner_style.clone());
         pb.set_prefix(&format!("[{}/{}]", idx + 1, num_cmds));
         pb.set_message(&cmd.message);
-        cmd_spinners.insert(cmd.id, pb);
+        in_progress_commands.insert(cmd.id, pb);
     }
 
     let mut settled_commands = vec![];
 
     let fut = async {
         loop {
-            #[cfg(not(feature = "cli"))]
             if in_progress_commands.is_empty() {
                 tracing::debug!("All commands complete. Returning");
                 return Ok::<_, CommandError>(());
             }
-            #[cfg(feature = "cli")]
-            if cmd_spinners.is_empty() {
-                tracing::debug!("All commands complete. Returning");
-                return Ok::<_, ImlManagerCliError>(());
-            }
 
             delay_for(Duration::from_millis(1000)).await;
 
+            #[cfg(not(feature = "cli"))]
             let query: Vec<_> = in_progress_commands
                 .iter()
+                .map(|x| ["id__in".into(), x.to_string()])
+                .chain(iter::once(["limit".into(), "0".into()]))
+                .collect();
+            #[cfg(feature = "cli")]
+            let query: Vec<_> = in_progress_commands
+                .keys()
                 .map(|x| ["id__in".into(), x.to_string()])
                 .chain(iter::once(["limit".into(), "0".into()]))
                 .collect();
@@ -162,11 +174,11 @@ pub async fn wait_for_cmds(cmds: &[Command]) -> Result<Vec<Command>, CommandErro
                 }
                 #[cfg(feature = "cli")]
                 if cmd_finished(&cmd) {
-                    let pb = cmd_spinners.remove(&cmd.id).unwrap();
+                    let pb = in_progress_commands.remove(&cmd.id).unwrap();
                     pb.finish_with_message(&display_utils::format_cmd_state(&cmd));
                     settled_commands.push(cmd);
                 } else {
-                    let pb = cmd_spinners.get(&cmd.id).unwrap();
+                    let pb = in_progress_commands.get(&cmd.id).unwrap();
                     pb.inc(1);
                 }
             }
@@ -180,7 +192,7 @@ pub async fn wait_for_cmds(cmds: &[Command]) -> Result<Vec<Command>, CommandErro
     #[cfg(not(feature = "cli"))]
     fut.await?;
     #[cfg(feature = "cli")]
-    future::try_join(fut.err_into(), fut2).await?;
+    future::try_join(fut, fut2.err_into()).await?;
 
     Ok(settled_commands)
 }
