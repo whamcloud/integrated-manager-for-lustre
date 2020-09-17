@@ -69,7 +69,7 @@ struct Hotpool {
     /// Label of
     ha_label: String,
     /// Version of Hotpool Config
-    version: i32,
+    version: Option<i32>,
 }
 
 #[derive(juniper::GraphQLObject)]
@@ -266,6 +266,41 @@ impl QueryRoot {
                 x
             })
             .collect();
+
+        Ok(xs)
+    }
+
+    #[graphql(arguments(
+        limit(description = "paging limit, defaults to 20"),
+        offset(description = "Offset into items, defaults to 0"),
+        dir(description = "Sort direction, defaults to asc"),
+    ))]
+    /// Fetch the list of known targets
+    async fn hotpools(
+        context: &Context,
+        limit: Option<i32>,
+        offset: Option<i32>,
+        dir: Option<SortDir>,
+    ) -> juniper::FieldResult<Vec<Hotpool>> {
+        let dir = dir.unwrap_or_default();
+
+        let xs: Vec<Hotpool> = sqlx::query_as!(
+            Hotpool,
+            r#"
+                SELECT id, filesystem_id, state, ha_label, version::integer
+                FROM chroma_core_hotpoolconfiguration t
+                ORDER BY
+                    CASE WHEN $3 = 'asc' THEN t.id END ASC,
+                    CASE WHEN $3 = 'desc' THEN t.id END DESC
+                OFFSET $1 LIMIT $2"#,
+            offset.unwrap_or(0) as i64,
+            limit.unwrap_or(20) as i64,
+            dir.deref()
+        )
+        .fetch_all(&context.pg_pool)
+        .await?
+        .into_iter()
+        .collect();
 
         Ok(xs)
     }
@@ -889,6 +924,7 @@ impl MutationRoot {
         freehi(description = "Percent of free space when lpurge stops"),
         freelo(description = "Percent of free space when lpurge starts"),
     ))]
+    /// Create Hotpool setups
     async fn create_hotpool(
         context: &Context,
         fsname: String,
