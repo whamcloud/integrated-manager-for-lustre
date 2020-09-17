@@ -4,11 +4,11 @@
 
 use crate::{
     api_utils::graphql,
-    api_utils::wait_for_cmds_success,
     display_utils::{DisplayType, IntoDisplayType as _},
     error::ImlManagerCliError,
 };
 use console::Term;
+use iml_command_utils::wait_for_cmds_success;
 use iml_graphql_queries::snapshot as snapshot_queries;
 use iml_wire_types::snapshot;
 use structopt::StructOpt;

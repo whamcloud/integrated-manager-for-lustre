@@ -3,9 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{
-        get, get_all, get_hosts, post, put, wait_for_cmds, wait_for_cmds_success, SendCmd, SendJob,
-    },
+    api_utils::{get, get_all, get_hosts, post, put},
     display_utils::{
         display_cancelled, display_error, format_error, format_success, generate_table, wrap_fut,
         DisplayType, IntoDisplayType as _,
@@ -16,6 +14,7 @@ use crate::{
 use console::{style, Term};
 use dialoguer::Confirm;
 use futures::future;
+use iml_command_utils::{wait_for_cmds, wait_for_cmds_success, SendCmd, SendJob};
 use iml_wire_types::{
     ApiList, AvailableAction, CmdWrapper, Command, EndpointName, Host, ProfileTest, ServerProfile,
     TestHostJob, ToCompositeId,
