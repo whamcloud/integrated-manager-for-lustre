@@ -48,6 +48,7 @@ class Command(BaseCommand):
             "GRAFANA_PROXY_PASS": settings.GRAFANA_PROXY_PASS,
             "INFLUXDB_SERVER_FQDN": settings.INFLUXDB_SERVER_FQDN,
             "INFLUXDB_PROXY_PASS": settings.INFLUXDB_PROXY_PASS,
+            "TIMER_PORT": settings.TIMER_PORT,
             "TIMER_PROXY_PASS": settings.TIMER_PROXY_PASS,
             "ALLOW_ANONYMOUS_READ": json.dumps(settings.ALLOW_ANONYMOUS_READ),
             "BUILD": settings.BUILD,
