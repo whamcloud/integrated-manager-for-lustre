@@ -2,13 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{
-    api_utils::graphql,
-    display_utils::{DisplayType, IntoDisplayType as _},
-    error::ImlManagerCliError,
-};
+use crate::{api_utils::graphql, error::ImlManagerCliError};
 use console::Term;
-use iml_command_utils::wait_for_cmds_success;
+use iml_command_utils::{
+    display_utils::{DisplayType, IntoDisplayType as _},
+    wait_for_cmds_success,
+};
 use iml_graphql_queries::snapshot as snapshot_queries;
 use iml_wire_types::snapshot;
 use structopt::StructOpt;
