@@ -241,6 +241,7 @@ dependencies = [
 name = "iml-graphql-queries"
 version = "0.1.0"
 dependencies = [
+ "humantime 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "iml-wire-types 0.3.0",
  "serde 1.0.116 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.57 (registry+https://github.com/rust-lang/crates.io-index)",

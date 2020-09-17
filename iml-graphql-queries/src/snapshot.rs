@@ -237,3 +237,201 @@ pub mod list {
         pub snapshots: Vec<Snapshot>,
     }
 }
+
+pub mod create_interval {
+    use crate::Query;
+    use std::time::Duration;
+
+    pub static QUERY: &str = r#"
+        mutation CreateSnapshotInterval($fsname: String!, $interval: Duration!, $use_barrier: Boolean) {
+            createSnapshotInterval(fsname: $fsname, interval: $interval, useBarrier: $use_barrier)
+        }
+    "#;
+
+    #[derive(Debug, serde::Serialize)]
+    pub struct Vars {
+        fsname: String,
+        interval: String,
+        use_barrier: Option<bool>,
+    }
+
+    pub fn build(
+        fsname: impl ToString,
+        interval: Duration,
+        use_barrier: Option<bool>,
+    ) -> Query<Vars> {
+        Query {
+            query: QUERY.to_string(),
+            variables: Some(Vars {
+                fsname: fsname.to_string(),
+                interval: humantime::format_duration(interval).to_string(),
+                use_barrier,
+            }),
+        }
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize)]
+    pub struct Resp {
+        #[serde(rename(deserialize = "createSnapshotInterval"))]
+        pub create_snapshot_interval: bool,
+    }
+}
+
+pub mod remove_interval {
+    use crate::Query;
+
+    pub static QUERY: &str = r#"
+        mutation RemoveSnapshotInterval($id: Int!) {
+          removeSnapshotInterval(id: $id)
+        }
+    "#;
+
+    #[derive(Debug, serde::Serialize)]
+    pub struct Vars {
+        id: u32,
+    }
+
+    pub fn build(id: u32) -> Query<Vars> {
+        Query {
+            query: QUERY.to_string(),
+            variables: Some(Vars { id }),
+        }
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize)]
+    pub struct Resp {
+        #[serde(rename(deserialize = "removeSnapshotInterval"))]
+        pub remove_snapshot_interval: bool,
+    }
+}
+
+pub mod list_intervals {
+    use crate::Query;
+    use iml_wire_types::snapshot::SnapshotInterval;
+
+    pub static QUERY: &str = r#"
+        query SnapshotIntervals {
+          snapshotIntervals {
+            id
+            filesystemName
+            useBarrier
+            interval
+            lastRun
+          }
+        }
+    "#;
+
+    pub fn build() -> Query<()> {
+        Query {
+            query: QUERY.to_string(),
+            variables: None,
+        }
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize)]
+    pub struct Resp {
+        #[serde(rename(deserialize = "snapshotIntervals"))]
+        pub snapshot_intervals: Vec<SnapshotInterval>,
+    }
+}
+
+pub mod create_retention {
+    use crate::Query;
+    use iml_wire_types::snapshot::DeleteUnit;
+
+    pub static QUERY: &str = r#"
+        mutation CreateSnapshotRetention($fsname: String!, $delete_num: Int!, $delete_unit: DeleteUnit!, $keep_num: Int!) {
+            createSnapshotRetention(fsname: $fsname, deleteNum: $delete_num, deleteUnit: $delete_unit, keepNum: $keep_num)
+        }
+    "#;
+
+    #[derive(Debug, serde::Serialize)]
+    pub struct Vars {
+        fsname: String,
+        delete_num: u32,
+        delete_unit: DeleteUnit,
+        keep_num: u32,
+    }
+
+    pub fn build(
+        fsname: impl ToString,
+        delete_num: u32,
+        delete_unit: DeleteUnit,
+        keep_num: u32,
+    ) -> Query<Vars> {
+        Query {
+            query: QUERY.to_string(),
+            variables: Some(Vars {
+                fsname: fsname.to_string(),
+                delete_num,
+                delete_unit,
+                keep_num,
+            }),
+        }
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize)]
+    pub struct Resp {
+        #[serde(rename(deserialize = "createSnapshotRetention"))]
+        pub create_snapshot_retention: bool,
+    }
+}
+
+pub mod remove_retention {
+    use crate::Query;
+
+    pub static QUERY: &str = r#"
+        mutation RemoveSnapshotRetention($id: Int!) {
+          removeSnapshotRetention(id: $id)
+        }
+    "#;
+
+    #[derive(Debug, serde::Serialize)]
+    pub struct Vars {
+        id: u32,
+    }
+
+    pub fn build(id: u32) -> Query<Vars> {
+        Query {
+            query: QUERY.to_string(),
+            variables: Some(Vars { id }),
+        }
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize)]
+    pub struct Resp {
+        #[serde(rename(deserialize = "removeSnapshotRetention"))]
+        pub remove_snapshot_retention: bool,
+    }
+}
+
+pub mod list_retentions {
+    use crate::Query;
+    use iml_wire_types::snapshot::SnapshotRetention;
+
+    pub static QUERY: &str = r#"
+        query SnapshotRetentionPolicies {
+          snapshotRetentionPolicies {
+            id
+            filesystemName
+            deleteNum
+            deleteUnit
+            lastRun
+            keepNum
+          }
+        }
+    "#;
+
+    pub fn build() -> Query<()> {
+        Query {
+            query: QUERY.to_string(),
+            variables: None,
+        }
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize)]
+    pub struct Resp {
+        #[serde(rename(deserialize = "snapshotRetentionPolicies"))]
+        pub snapshot_retention_policies: Vec<SnapshotRetention>,
+    }
+}

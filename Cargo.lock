@@ -1627,6 +1627,7 @@ dependencies = [
 name = "iml-graphql-queries"
 version = "0.1.0"
 dependencies = [
+ "humantime 2.0.1",
  "iml-wire-types",
  "serde",
  "serde_json",
