@@ -108,8 +108,10 @@ pub struct DeleteWhen {
 }
 
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
-#[cfg_attr(feature = "postgres-interop", sqlx(rename = "snapshot_delete_unit"))]
 #[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
+#[cfg_attr(feature = "postgres-interop", sqlx(rename = "snapshot_delete_unit"))]
+#[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
+#[serde(rename_all = "lowercase")]
 #[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
 pub enum DeleteUnit {
     Percent,
