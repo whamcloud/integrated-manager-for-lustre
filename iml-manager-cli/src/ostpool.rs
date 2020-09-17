@@ -3,12 +3,13 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{delete, get, get_all, get_one, post, put, wait_for_cmds_success},
+    api_utils::{delete, get, get_all, get_one, post, put},
     display_utils::{wrap_fut, DisplayType, IntoDisplayType as _},
     error::ImlManagerCliError,
 };
 use console::{style, Term};
 use futures::future::try_join_all;
+use iml_command_utils::wait_for_cmds_success;
 use iml_wire_types::{
     ApiList, Command, EndpointName, Filesystem, FlatQuery, Ost, OstPool, OstPoolApi,
 };

@@ -62,6 +62,7 @@ pub enum ImlManagerCliError {
     ClientRequestError(#[from] iml_manager_client::ImlManagerClientError),
     CmdUtilError(#[from] iml_command_utils::CmdUtilError),
     CombineEasyError(combine::stream::easy::Errors<char, &'static str, usize>),
+    CommandError(#[from] iml_command_utils::CommandError),
     DoesNotExist(&'static str),
     FailedCommandError(Vec<Command>),
     FromUtf8Error(#[from] std::string::FromUtf8Error),
@@ -85,6 +86,7 @@ impl std::fmt::Display for ImlManagerCliError {
             ImlManagerCliError::ClientRequestError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::CmdUtilError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::CombineEasyError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::CommandError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::DoesNotExist(ref err) => write!(f, "{} does not exist", err),
             ImlManagerCliError::FailedCommandError(ref xs) => {
                 let failed_msg = xs.iter().fold(
