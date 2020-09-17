@@ -4,14 +4,16 @@
 
 use crate::{
     api_utils::{delete, first, get, post, put},
-    display_utils::{display_cmd_state, start_spinner, DisplayType, IntoDisplayType as _},
     error::{
         DurationParseError, ImlManagerCliError, RunStratagemCommandResult,
         RunStratagemValidationError,
     },
 };
 use console::Term;
-use iml_command_utils::wait_for_cmd;
+use iml_command_utils::{
+    display_utils::{display_cmd_state, start_spinner, DisplayType, IntoDisplayType as _},
+    wait_for_cmd,
+};
 use iml_manager_client::ImlManagerClientError;
 use iml_wire_types::{ApiList, CmdWrapper, EndpointName, Filesystem, StratagemConfiguration};
 use structopt::StructOpt;
