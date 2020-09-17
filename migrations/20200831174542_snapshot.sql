@@ -45,7 +45,8 @@ CREATE TABLE IF NOT EXISTS snapshot_interval (
   filesystem_name TEXT NOT NULL,
   use_barrier BOOLEAN NOT NULL,
   last_run TIMESTAMP WITH TIME ZONE,
-  interval INTERVAL NOT NULL
+  interval INTERVAL NOT NULL,
+  UNIQUE (filesystem_name, interval)
 );
 
 DROP TRIGGER IF EXISTS snapshot_interval_notify_update ON snapshot_interval;
@@ -69,7 +70,7 @@ CREATE TYPE snapshot_delete_unit AS ENUM ('percent', 'gibibytes', 'tebibytes');
 
 CREATE TABLE IF NOT EXISTS snapshot_retention (
   id serial PRIMARY KEY,
-  filesystem_name TEXT NOT NULL,
+  filesystem_name TEXT NOT NULL UNIQUE,
   delete_num INT NOT NULL,
   delete_unit snapshot_delete_unit NOT NULL,
   keep_num INT,
