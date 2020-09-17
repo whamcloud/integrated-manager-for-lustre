@@ -69,7 +69,7 @@ struct Hotpool {
     /// Label of
     ha_label: String,
     /// Version of Hotpool Config
-    version: Option<i32>,
+    version: i32,
 }
 
 #[derive(juniper::GraphQLObject)]
@@ -287,7 +287,7 @@ impl QueryRoot {
         let xs: Vec<Hotpool> = sqlx::query_as!(
             Hotpool,
             r#"
-                SELECT id, filesystem_id, state, ha_label, version::integer
+                SELECT id, filesystem_id, state, ha_label, version as "version: i32"
                 FROM chroma_core_hotpoolconfiguration t
                 ORDER BY
                     CASE WHEN $3 = 'asc' THEN t.id END ASC,
