@@ -2070,8 +2070,6 @@ dependencies = [
  "iml-api-utils",
  "iml-change",
  "juniper",
- "lazy_static",
- "regex",
  "serde",
  "serde_json",
  "serde_repr",
