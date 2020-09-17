@@ -1,15 +1,6 @@
-DO $$ BEGIN CREATE DOMAIN non_null_text AS Text NOT NULL;
-
-EXCEPTION
-WHEN duplicate_object THEN NULL;
-
-END $$;
-
-DO $$ BEGIN CREATE TYPE corosync_node_key AS (id non_null_text, NAME non_null_text);
-
-EXCEPTION
-WHEN duplicate_object THEN NULL;
-
+DO $$ BEGIN
+  CREATE TYPE corosync_node_key AS (id non_null_text, NAME non_null_text);
+  EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 CREATE TABLE IF NOT EXISTS corosync_cluster (

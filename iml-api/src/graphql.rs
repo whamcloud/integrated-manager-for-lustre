@@ -8,7 +8,7 @@ use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
 use iml_wire_types::{
     graphql_duration::GraphQLDuration,
-    snapshot::{DeleteUnit, DeleteWhen, Snapshot, SnapshotInterval, SnapshotRetention},
+    snapshot::{DeleteUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     Command, EndpointName, Job,
 };
 use itertools::Itertools;
@@ -23,12 +23,6 @@ use std::{
     sync::Arc,
 };
 use warp::Filter;
-
-#[derive(juniper::GraphQLInputObject)]
-struct InputDeleteWhen {
-    value: i32,
-    unit: DeleteUnit,
-}
 
 #[derive(juniper::GraphQLObject)]
 /// A Corosync Node found in `crm_mon`
@@ -423,7 +417,8 @@ impl QueryRoot {
     async fn snapshot_retention_policies(
         context: &Context,
     ) -> juniper::FieldResult<Vec<SnapshotRetention>> {
-        let xs: Vec<SnapshotRetention> = sqlx::query!(
+        let xs: Vec<SnapshotRetention> = sqlx::query_as!(
+            SnapshotRetention,
             r#"
                 SELECT
                     id,
@@ -436,16 +431,6 @@ impl QueryRoot {
             "#
         )
         .fetch(&context.pg_pool)
-        .map_ok(|x| SnapshotRetention {
-            id: x.id,
-            filesystem_name: x.filesystem_name,
-            delete_when: DeleteWhen {
-                value: x.delete_num,
-                unit: x.delete_unit,
-            },
-            last_run: x.last_run,
-            keep_num: x.keep_num,
-        })
         .try_collect()
         .await?;
 
@@ -696,7 +681,15 @@ impl MutationRoot {
     }
     #[graphql(arguments(
         fsname(description = "Filesystem name"),
-        delete_when(description = "When should the oldest snapshots be deleted from the system")
+        delete_num(
+            description = "The number to be deleted, pairs with `delete_unit` to form a full deletion rule"
+        ),
+        delete_unit(
+            description = "The unit to be deleted, pairs with `delete_num` to form a full deletion rule"
+        ),
+        keep_num(
+            description = "The minimum number of snapshots to keep. Snapshots will not be deleted if the number of existing snapshots is less than or equal to this number"
+        )
     ))]
     /// Creates a new snapshot retention policy for the given `fsname`.
     /// The filesystem will be checked periodically, and if the policy is met,
@@ -704,7 +697,8 @@ impl MutationRoot {
     async fn create_snapshot_retention(
         context: &Context,
         fsname: String,
-        delete_when: InputDeleteWhen,
+        delete_num: i32,
+        delete_unit: DeleteUnit,
         keep_num: i32,
     ) -> juniper::FieldResult<bool> {
         sqlx::query!(
@@ -718,8 +712,8 @@ impl MutationRoot {
                 VALUES ($1, $2, $3, $4)
             "#,
             fsname,
-            delete_when.value,
-            delete_when.unit as DeleteUnit,
+            delete_num,
+            delete_unit as DeleteUnit,
             keep_num
         )
         .execute(&context.pg_pool)

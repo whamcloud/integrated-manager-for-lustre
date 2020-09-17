@@ -1,3 +1,9 @@
+-- Make sure we can create composite types with non-null text
+DO $$ BEGIN
+    CREATE DOMAIN non_null_text AS Text NOT NULL;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 -- Convert an interval to a humantime understandable string
 CREATE OR REPLACE FUNCTION interval_to_seconds(interval) RETURNS text
   AS $$ select EXTRACT(EPOCH FROM $1) ||'s' $$

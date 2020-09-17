@@ -86,7 +86,8 @@ pub const SNAPSHOT_INTERVAL_TABLE_NAME: TableName = TableName("snapshot_interval
 pub struct SnapshotRetention {
     pub id: i32,
     pub filesystem_name: String,
-    pub delete_when: DeleteWhen,
+    pub delete_num: i32,
+    pub delete_unit: DeleteUnit,
     pub last_run: Option<DateTime<Utc>>,
     /// Number of snapshots to keep
     pub keep_num: Option<i32>,
@@ -99,13 +100,6 @@ impl Id for SnapshotRetention {
 }
 
 pub const SNAPSHOT_RETENTION_TABLE_NAME: TableName = TableName("snapshot_retention");
-
-#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
-#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
-pub struct DeleteWhen {
-    pub value: i32,
-    pub unit: DeleteUnit,
-}
 
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
 #[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
