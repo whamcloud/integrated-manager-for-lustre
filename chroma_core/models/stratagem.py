@@ -106,20 +106,12 @@ def service_file(fid):
 
 
 class ConfigureStratagemTimerStep(Step, CommandLine):
-    def calc_duration(self, duration, units):
-        if units is None:
-            return str(duration)
-        elif units in ("s", "seconds"):
-            return "{}s".format(duration / 1000)
-
-    def get_run_stratagem_command(self, cmd, config, units):
+    def get_run_stratagem_command(self, cmd, config):
         iml_cmd = "{} --filesystem {}".format(cmd, config.filesystem.id)
         if config.report_duration is not None and config.report_duration >= 0:
-            duration = self.calc_duration(config.report_duration, units)
-            iml_cmd += " --report {}".format(duration)
+            iml_cmd += " --report {}s".format(config.report_duration / 1000)
         if config.purge_duration is not None and config.purge_duration >= 0:
-            duration = self.calc_duration(config.purge_duration, units)
-            iml_cmd += " --purge {}".format(duration)
+            iml_cmd += " --purge {}s".format(config.purge_duration / 1000)
 
         return iml_cmd
 
@@ -128,13 +120,12 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
         # Create systemd timer
 
         config = kwargs["config"]
+
+        iml_cmd = self.get_run_stratagem_command("/usr/bin/iml stratagem scan", config)
+
         interval_in_seconds = config.interval / 1000
-
-        if runningInDocker():
-            iml_cmd = self.get_run_stratagem_command("/usr/bin/iml stratagem scan", config, None)
-
-            # Create timer file
-            timer_config = """# This file is part of IML
+        # Create timer file
+        timer_config = """# This file is part of IML
 # This file will be overwritten automatically
 
 [Unit]
@@ -149,10 +140,10 @@ Persistent=true
 [Install]
 WantedBy=timers.target
 """.format(
-                config.filesystem.id, interval_in_seconds, interval_in_seconds
-            )
+            config.filesystem.id, interval_in_seconds, interval_in_seconds
+        )
 
-            service_config = """# This file is part of IML
+        service_config = """# This file is part of IML
 # This file will be overwritten automatically
 
 [Unit]
@@ -163,57 +154,18 @@ Type=oneshot
 EnvironmentFile=/var/lib/chroma/iml-settings.conf
 ExecStart={}
 """.format(
-                config.filesystem.id, iml_cmd
-            )
+            config.filesystem.id, iml_cmd
+        )
 
-            post_data = {"config_id": str(config.id), "timer_config": timer_config, "service_config": service_config}
+        post_data = {"config_id": str(config.id), "timer_config": timer_config, "service_config": service_config}
 
-            api_key = os.getenv("API_KEY")
-            api_user = os.getenv("API_USER")
-            s = get_api_session_request(api_user, api_key)
-            result = s.put("{}/timer/configure/".format(SERVER_HTTP_URL), json=post_data, verify=False)
+        api_key = os.getenv("API_KEY")
+        api_user = os.getenv("API_USER")
+        s = get_api_session_request(api_user, api_key)
+        result = s.put("{}/timer/configure/".format(SERVER_HTTP_URL), json=post_data, verify=False)
 
-            if not result.ok:
-                raise RuntimeError(result.reason)
-        else:
-            iml_cmd = self.get_run_stratagem_command("/usr/bin/iml stratagem scan", config, "s")
-
-            with open(timer_file(config.id), "w") as fn:
-                fn.write(
-                    """#  This file is part of IML
-#  This file will be overwritten automatically
-[Unit]
-Description=Start Stratagem run on {}
-
-[Timer]
-OnActiveSec={}
-OnUnitActiveSec={}
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-""".format(
-                        config.filesystem.id, interval_in_seconds, interval_in_seconds
-                    )
-                )
-
-            with open(service_file(config.id), "w") as fn:
-                fn.write(
-                    """#  This file is part of IML
-#  This file will be overwritten automatically
-[Unit]
-Description=Start Stratagem run on {}
-After=iml-manager.target
-
-[Service]
-Type=oneshot
-ExecStart={}
-""".format(
-                        config.filesystem.id, iml_cmd
-                    )
-                )
-            self.try_shell(["systemctl", "daemon-reload"])
-            self.try_shell(["systemctl", "enable", "--now", "{}.timer".format(unit_name(config.id))])
+        if not result.ok:
+            raise RuntimeError(result.reason)
 
 
 class UnconfigureStratagemTimerStep(Step, CommandLine):

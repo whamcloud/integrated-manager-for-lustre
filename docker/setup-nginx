@@ -18,6 +18,7 @@ vars = {
     "IML_API_PROXY_PASS": "http://iml-api:8004",
     "REPORT_PATH": "/var/spool/iml/report",
     "REPORT_PROXY_PASS": "http://iml-report:8893",
+    "TIMER_PROXY_PASS": "http://iml-timer:8892",
     "INCLUDES": "include /etc/nginx/conf.d/iml-timer.extras;",
 }
 

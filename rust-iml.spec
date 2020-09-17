@@ -47,6 +47,7 @@ cp iml-snapshot %{buildroot}%{_bindir}
 cp iml-stats %{buildroot}%{_bindir}
 cp iml-task-runner %{buildroot}%{_bindir}
 cp iml-warp-drive %{buildroot}%{_bindir}
+cp iml-timer %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
 cp iml-agent-comms.service %{buildroot}%{_unitdir}
@@ -64,6 +65,7 @@ cp iml-sfa.service %{buildroot}%{_unitdir}
 cp iml-snapshot.service %{buildroot}%{_unitdir}
 cp iml-task-runner.service %{buildroot}%{_unitdir}
 cp iml-warp-drive.service %{buildroot}%{_unitdir}
+cp iml-timer.service %{buildroot}%{_unitdir}
 cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_tmpfilesdir}
 cp iml-report.conf %{buildroot}%{_tmpfilesdir}
@@ -393,7 +395,7 @@ Group: System Environment/Libraries
 Summary: Consumer of snapshot listing
 License: MIT
 Group: System Environment/Libraries
-Requires: rust-iml-agent-comms
+Requires: rust-iml-agent-comms, rust-iml-timer
 
 %description snapshot
 %{summary}
@@ -477,7 +479,31 @@ Requires: rust-iml-agent-comms
 %{_bindir}/iml-corosync
 %attr(0644,root,root)%{_unitdir}/iml-rust-corosync.service
 
+%package timer
+Summary: Timer service to schedule tasks on specified intervals
+License: MIT
+Group: System Environment/Libraries
+
+%description timer
+%{summary}
+
+%post timer
+%systemd_post iml-timer.service
+
+%preun timer
+%systemd_preun iml-timer.service
+
+%postun timer
+%systemd_postun_with_restart iml-timer.service
+
+%files timer
+%{_bindir}/iml-timer
+%attr(0644,root,root)%{_unitdir}/iml-timer.service
+
 %changelog
+* Thu Sep 17 2020 Will Johnson <wjohnson@whamcloud.com> - 0.3.0-1
+- Add timer service
+
 * Wed Sep 18 2019 Will Johnson <wjohnson@whamcloud.com> - 0.2.0-1
 - Add ntp service
 
