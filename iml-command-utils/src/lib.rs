@@ -42,6 +42,9 @@ fn cmd_finished(cmd: &Command) -> bool {
     cmd.complete
 }
 
+/// Waits for command completion and prints progress messages
+/// This *does not* error on command failure, it only tracks command
+/// completion
 pub async fn wait_for_cmds(cmds: &[Command]) -> Result<Vec<Command>, CommandError> {
     let mut in_progress_commands = HashSet::new();
 
