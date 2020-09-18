@@ -155,9 +155,7 @@ Type=oneshot
 EnvironmentFile=/var/lib/chroma/iml-settings.conf
 ExecStart={}
 """.format(
-            config.filesystem.id, 
-            "After=iml-manager.target" if not runningInDocker() else "", 
-            iml_cmd
+            config.filesystem.id, "After=iml-manager.target" if not runningInDocker() else "", iml_cmd
         )
 
         post_data = {"config_id": str(config.id), "timer_config": timer_config, "service_config": service_config}
