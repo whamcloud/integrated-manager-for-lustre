@@ -5,7 +5,7 @@ name = "iml-command-utils"
 version = "0.3.0"
 
 [dependencies]
-console = "0.11"
+console = {version = "0.11", optional = true}
 futures = "0.3"
 iml-manager-client = {path = "../iml-manager-client", version = "0.3"}
 iml-tracing = {version = "0.2", path = "../iml-tracing"}
