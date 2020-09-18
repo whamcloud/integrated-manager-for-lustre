@@ -1566,6 +1566,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-command-utils"
+version = "0.3.0"
+dependencies = [
+ "futures",
+ "iml-manager-client",
+ "iml-tracing",
+ "iml-wire-types",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "iml-corosync"
 version = "0.3.0"
 dependencies = [
@@ -1708,6 +1720,7 @@ dependencies = [
  "futures",
  "hostlist-parser",
  "iml-api-utils",
+ "iml-command-utils",
  "iml-graphql-queries",
  "iml-influx",
  "iml-manager-client",
@@ -2059,9 +2072,9 @@ dependencies = [
 
 [[package]]
 name = "indicatif"
-version = "0.14.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49a68371cf417889c9d7f98235b7102ea7c54fc59bcbd22f3dea785be9d27e40"
+checksum = "7baab56125e25686df467fe470785512329883aab42696d661247aca2a2896e4"
 dependencies = [
  "console 0.12.0",
  "lazy_static",
@@ -2217,9 +2230,9 @@ dependencies = [
 
 [[package]]
 name = "lapin"
-version = "1.2.4"
+version = "1.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81d3e4d31709ab4340ac6f270d440c59d1e1014890af5d9392ee882bd4ee3e3c"
+checksum = "3cefdb65897723ab87b96a152f3872f8e77fcc0f6c075b61233fab05d14c513a"
 dependencies = [
  "amq-protocol",
  "async-task",
@@ -2861,9 +2874,9 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "pinky-swear"
-version = "4.3.1"
+version = "4.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40e5cf8b99d12fdd41b2be5ee172f74c69526eda68417c6a440c9fa6079f0f2a"
+checksum = "9bf8cda6f8e1500338634e4e3ce90ac59eb7929a1e088b6946c742be1cc44dc1"
 dependencies = [
  "doc-comment",
  "parking_lot",
