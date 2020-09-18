@@ -434,6 +434,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "chrono-humanize"
+version = "0.0.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb2ff48a655fe8d2dae9a39e66af7fd8ff32a879e8c4e27422c25596a8b5e90d"
+dependencies = [
+ "chrono",
+]
+
+[[package]]
 name = "clang-sys"
 version = "0.28.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1701,6 +1710,8 @@ dependencies = [
 name = "iml-manager-cli"
 version = "0.3.0"
 dependencies = [
+ "chrono",
+ "chrono-humanize",
  "combine 4.1.0",
  "console 0.11.3",
  "dialoguer",

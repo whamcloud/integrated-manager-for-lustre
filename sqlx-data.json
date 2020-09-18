@@ -1452,6 +1452,20 @@
       "nullable": []
     }
   },
+  "6a8343d0429f4c17aa4c8014d10cd604ea8e7a45c7a1be50cf8004f9b2cb36f0": {
+    "query": "\n                INSERT INTO snapshot_interval (\n                    filesystem_name,\n                    use_barrier,\n                    interval\n                )\n                VALUES ($1, $2, $3)\n                ON CONFLICT (filesystem_name, interval)\n                DO UPDATE SET use_barrier = EXCLUDED.use_barrier\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Bool",
+          "Interval"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "6d7c1af5cf5e15bc84444013fa6989b6317052dc7f82a198003c690f9c0d3c5f": {
     "query": "\n            INSERT INTO snapshot (filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment)\n            SELECT * FROM\n            UNNEST (\n                $1::text[],\n                $2::text[],\n                $3::timestamp[],\n                $4::timestamp[],\n                $5::text[],\n                $6::bool[],\n                $7::text[]\n            )\n            ON CONFLICT (filesystem_name, snapshot_name) DO UPDATE\n            SET\n                create_time = excluded.create_time,\n                modify_time = excluded.modify_time,\n                snapshot_fsname = excluded.snapshot_fsname,\n                mounted = excluded.mounted,\n                comment = excluded.comment\n            ",
     "describe": {
@@ -1886,20 +1900,6 @@
         true,
         false
       ]
-    }
-  },
-  "8908ebc23c19d58d61a7b05512385d7fe3e1702a31f6f9de3d6e071514383c5b": {
-    "query": "\n                INSERT INTO snapshot_interval (\n                    filesystem_name,\n                    use_barrier,\n                    interval\n                )\n                VALUES ($1, $2, $3)\n            ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Text",
-          "Bool",
-          "Interval"
-        ]
-      },
-      "nullable": []
     }
   },
   "89a7a37f26d89b7def2d6f7273fee79cd4c7fc7070343e4a4197c4080ded5003": {

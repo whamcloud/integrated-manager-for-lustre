@@ -659,6 +659,8 @@ impl MutationRoot {
                     interval
                 )
                 VALUES ($1, $2, $3)
+                ON CONFLICT (filesystem_name, interval)
+                DO UPDATE SET use_barrier = EXCLUDED.use_barrier
             "#,
             fsname,
             use_barrier.unwrap_or_default(),
