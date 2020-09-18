@@ -90,9 +90,9 @@ GRAFANA_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, GRAFANA_PORT)
 
 TIMER_PORT = 8892
 
-TIMER_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, TIMER_PORT)
+TIMER_SERVER_FQDN = os.getenv("TIMER_SERVER_FQDN", PROXY_HOST)
 
-INCLUDES = ""
+TIMER_PROXY_PASS = "http://{}:{}".format(TIMER_SERVER_FQDN, TIMER_PORT)
 
 BRANDING = os.getenv("BRANDING", "Whamcloud")
 
