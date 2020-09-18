@@ -1036,7 +1036,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         .els(),
         Page::Snapshots(x) => main_panels(
             model,
-            page::snapshots::view(x, &model.records)
+            page::snapshot::view(x, &model.records)
                 .els()
                 .map_msg(page::Msg::Snapshots),
         )
