@@ -4,6 +4,7 @@
 
 import logging
 import os
+import requests
 
 from os import path
 from toolz.functoolz import pipe, partial, flip
@@ -23,7 +24,7 @@ from chroma_core.lib.stratagem import (
     aggregate_points,
     submit_aggregated_data,
 )
-from chroma_core.lib.util import CommandLine, runningInDocker, get_api_session_request
+from chroma_core.lib.util import CommandLine, runningInDocker
 
 from chroma_core.models import Job
 from chroma_core.models import StateChangeJob, StateLock, StepResult, LustreClientMount
@@ -160,10 +161,7 @@ ExecStart={}
 
         post_data = {"config_id": str(config.id), "timer_config": timer_config, "service_config": service_config}
 
-        api_key = os.getenv("API_KEY")
-        api_user = os.getenv("API_USER")
-        s = get_api_session_request(api_user, api_key)
-        result = s.put("{}/timer/configure/".format(TIMER_PROXY_PASS), json=post_data, verify=False)
+        result = requests.put("{}/configure/".format(TIMER_PROXY_PASS), json=post_data, verify=False)
 
         if not result.ok:
             raise RuntimeError(result.reason)
@@ -176,10 +174,7 @@ class UnconfigureStratagemTimerStep(Step, CommandLine):
         config = kwargs["config"]
 
         if runningInDocker():
-            api_key = os.getenv("API_KEY")
-            api_user = os.getenv("API_USER")
-            s = get_api_session_request(api_user, api_key)
-            result = s.delete("{}/timer/unconfigure/{}".format(SERVER_HTTP_URL, config.id), verify=False)
+            result = requests.delete("{}/unconfigure/{}".format(TIMER_PROXY_PASS, config.id), verify=False)
 
             if not result.ok:
                 raise RuntimeError(result.reason)
