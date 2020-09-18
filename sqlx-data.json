@@ -1888,20 +1888,6 @@
       ]
     }
   },
-  "8908ebc23c19d58d61a7b05512385d7fe3e1702a31f6f9de3d6e071514383c5b": {
-    "query": "\n                INSERT INTO snapshot_interval (\n                    filesystem_name,\n                    use_barrier,\n                    interval\n                )\n                VALUES ($1, $2, $3)\n            ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Text",
-          "Bool",
-          "Interval"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "89a7a37f26d89b7def2d6f7273fee79cd4c7fc7070343e4a4197c4080ded5003": {
     "query": "SELECT * FROM chroma_core_task WHERE name = $1",
     "describe": {
@@ -3446,6 +3432,20 @@
         true,
         false
       ]
+    }
+  },
+  "e1c4a639c5784c329cb8e8523781e8fb02a12a1ea46b10c9407ff9a92480bd2a": {
+    "query": "\n                INSERT INTO snapshot_interval (\n                    filesystem_name,\n                    use_barrier,\n                    interval\n                )\n                VALUES ($1, $2, $3)\n                ON CONFLICT (filesystem_name, interval)\n                DO NOTHING\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Bool",
+          "Interval"
+        ]
+      },
+      "nullable": []
     }
   },
   "e8f95e79d22bae021629cbfef5291601d0001933bb4628538fde58fdc0a297b9": {

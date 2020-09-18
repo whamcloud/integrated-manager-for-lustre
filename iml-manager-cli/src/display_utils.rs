@@ -2,10 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use chrono_humanize::{Accuracy, HumanTime, Tense};
 use console::{style, Term};
 use futures::{Future, FutureExt};
 use iml_wire_types::{
-    snapshot::Snapshot, Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration,
+    snapshot::{Snapshot, SnapshotInterval},
+    Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration,
 };
 use indicatif::ProgressBar;
 use number_formatter::{format_bytes, format_number};
@@ -145,6 +147,28 @@ impl IntoTable for Vec<Snapshot> {
                     }
                     .to_string(),
                     s.comment.unwrap_or_else(|| "--".to_string()),
+                ]
+            }),
+        )
+    }
+}
+
+impl IntoTable for Vec<SnapshotInterval> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &["Id", "Filesystem", "Interval", "Use Barrier", "Last Run"],
+            self.into_iter().map(|i| {
+                vec![
+                    i.id.to_string(),
+                    i.filesystem_name,
+                    chrono::Duration::from_std(i.interval.0)
+                        .map(HumanTime::from)
+                        .map(|x| x.to_text_en(Accuracy::Precise, Tense::Present))
+                        .unwrap_or("---".into()),
+                    i.use_barrier.to_string(),
+                    i.last_run
+                        .map(|t| t.to_rfc2822())
+                        .unwrap_or_else(|| "--".to_string()),
                 ]
             }),
         )
