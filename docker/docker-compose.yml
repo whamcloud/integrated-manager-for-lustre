@@ -437,6 +437,7 @@ services:
     deploy: *default-deploy
     environment:
       - RUST_LOG=info
+      - PROXY_HOST=iml-timer
     volumes:
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
       - "timer_run:/run"
@@ -461,6 +462,7 @@ services:
       - INFLUXDB_IML_STATS_LONG_DURATION
       - LOG_LEVEL
       - INFLUXDB_SERVER_FQDN=influxdb
+      - TIMER_SERVER_FQDN=iml-timer
     deploy:
       restart_policy:
         condition: on-failure

@@ -7,7 +7,7 @@ import os
 
 from os import path
 from toolz.functoolz import pipe, partial, flip
-from settings import SERVER_HTTP_URL
+from settings import SERVER_HTTP_URL, TIMER_PROXY_PASS
 from django.db import models
 from django.db.models import CASCADE, Q
 from chroma_core.lib.cache import ObjectCache
@@ -165,7 +165,7 @@ ExecStart={}
         api_key = os.getenv("API_KEY")
         api_user = os.getenv("API_USER")
         s = get_api_session_request(api_user, api_key)
-        result = s.put("{}/timer/configure/".format(SERVER_HTTP_URL), json=post_data, verify=False)
+        result = s.put("{}/timer/configure/".format(TIMER_PROXY_PASS), json=post_data, verify=False)
 
         if not result.ok:
             raise RuntimeError(result.reason)
