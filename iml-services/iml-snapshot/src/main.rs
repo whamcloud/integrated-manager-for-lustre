@@ -61,8 +61,8 @@ async fn tick(
                     tracing::debug!(
                         "Monitoring. Snapshot {}: {} clients (previously {} clients)",
                         &snapshot_id.snapshot_fsname,
+                        clients,
                         prev_clients,
-                        clients
                     );
                     if *prev_clients > 0 && clients == 0 {
                         tracing::trace!("counting down for job");
