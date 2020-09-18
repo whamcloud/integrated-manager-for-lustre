@@ -926,6 +926,48 @@
       ]
     }
   },
+  "46a7815b904eddf8c5b3f77e9c9623806ba3e0a0247080ac9900adaad6b3ce11": {
+    "query": "SELECT * FROM snapshot_interval",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "filesystem_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "use_barrier",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 3,
+          "name": "last_run",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 4,
+          "name": "interval",
+          "type_info": "Interval"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false
+      ]
+    }
+  },
   "4eb28fbaf2c42bbcc852c074ade355c4f29c318def54af2290a05f37e90a3b23": {
     "query": "\n            INSERT INTO corosync_node (\n                id,\n                cluster_id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            )\n            SELECT\n                id::corosync_node_key,\n                $13,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            FROM UNNEST(\n                $1::text[],\n                $2::bool[],\n                $3::bool[],\n                $4::bool[],\n                $5::bool[],\n                $6::bool[],\n                $7::bool[],\n                $8::bool[],\n                $9::bool[],\n                $10::bool[],\n                $11::int[],\n                $12::text[]\n            )\n            AS t(\n                id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            )\n            ON CONFLICT (id, cluster_id) DO UPDATE\n            SET\n                online = excluded.online,\n                standby = excluded.standby,\n                standby_onfail = excluded.standby_onfail,\n                maintenance = excluded.maintenance,\n                pending = excluded.pending,\n                unclean = excluded.unclean,\n                shutdown = excluded.shutdown,\n                expected_up = excluded.expected_up,\n                is_dc = excluded.is_dc,\n                resources_running = excluded.resources_running,\n                type = excluded.type\n        ",
     "describe": {
@@ -1428,6 +1470,32 @@
       "nullable": []
     }
   },
+  "6eee04350f715395f806e84340c0ad004b16582d8ff6c461801db8c897edf9c7": {
+    "query": "\n                INSERT INTO snapshot_retention (\n                    filesystem_name,\n                    delete_num,\n                    delete_unit,\n                    keep_num\n                )\n                VALUES ($1, $2, $3, $4)\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Int4",
+          {
+            "Custom": {
+              "name": "snapshot_delete_unit",
+              "kind": {
+                "Enum": [
+                  "percent",
+                  "gibibytes",
+                  "tebibytes"
+                ]
+              }
+            }
+          },
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "7bee1c38d05ac3f8bcf4d48b375c740341121c04d2f5b04ceb1d58ef0a006c08": {
     "query": "\n        SELECT * FROM chroma_core_lustreclientmount\n        WHERE\n            state = 'mounted'\n            AND not_deleted = 't'\n            AND id != ALL($1)\n        LIMIT $2\n        ",
     "describe": {
@@ -1820,6 +1888,20 @@
       ]
     }
   },
+  "8908ebc23c19d58d61a7b05512385d7fe3e1702a31f6f9de3d6e071514383c5b": {
+    "query": "\n                INSERT INTO snapshot_interval (\n                    filesystem_name,\n                    use_barrier,\n                    interval\n                )\n                VALUES ($1, $2, $3)\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Bool",
+          "Interval"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "89a7a37f26d89b7def2d6f7273fee79cd4c7fc7070343e4a4197c4080ded5003": {
     "query": "SELECT * FROM chroma_core_task WHERE name = $1",
     "describe": {
@@ -1998,6 +2080,66 @@
       ]
     }
   },
+  "90cdeeec70b23ba73cae07b3adcee6243c657bc922448cfacf703cf1072f3181": {
+    "query": "\n        SELECT\n            id,\n            is_superuser,\n            username,\n            first_name,\n            last_name,\n            email,\n            is_staff,\n            is_active \n        FROM auth_user\n    ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "is_superuser",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 2,
+          "name": "username",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "first_name",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 4,
+          "name": "last_name",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 5,
+          "name": "email",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 6,
+          "name": "is_staff",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 7,
+          "name": "is_active",
+          "type_info": "Bool"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "922e7457db1e165807273def66a5ecc6b22be1a849f5e4b06d5149ec00b5e8aa": {
     "query": "\n                DELETE FROM chroma_core_logmessage\n                WHERE id in ( \n                    SELECT id FROM chroma_core_logmessage ORDER BY id LIMIT $1\n                )\n            ",
     "describe": {
@@ -2005,6 +2147,18 @@
       "parameters": {
         "Left": [
           "Int8"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "93e2695978ceecbebff40c31f2f58bf6fd5351869d3b279adc5ad1f7436a25e9": {
+    "query": "DELETE FROM snapshot_interval WHERE id=$1",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
         ]
       },
       "nullable": []
@@ -2480,66 +2634,6 @@
       "nullable": []
     }
   },
-  "adec7f8e00d15a6c5209443c43b80c59bcb85ea726dbc88628978571ea91b5ba": {
-    "query": "\n        SELECT \n            id, \n            is_superuser,\n            username,\n            first_name,\n            last_name,\n            email,\n            is_staff,\n            is_active \n        FROM auth_user\n    ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "is_superuser",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 2,
-          "name": "username",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 3,
-          "name": "first_name",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 4,
-          "name": "last_name",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 5,
-          "name": "email",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 6,
-          "name": "is_staff",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 7,
-          "name": "is_active",
-          "type_info": "Bool"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ]
-    }
-  },
   "b04b6d9456e4fbd6b7c97cb633393b8971701303845f99a716f581b6ee0eb481": {
     "query": "SELECT repo_name from chroma_core_repo where repo_name = ANY($1)",
     "describe": {
@@ -2865,6 +2959,65 @@
       ]
     }
   },
+  "c75c539a2ccc3227051a44e3b391307df54a1ac61eb5a8fb8cd7870ce0ea26dd": {
+    "query": "\n                SELECT\n                    id,\n                    filesystem_name,\n                    delete_num,\n                    delete_unit as \"delete_unit:DeleteUnit\",\n                    last_run,\n                    keep_num\n                FROM snapshot_retention\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "filesystem_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "delete_num",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "delete_unit:DeleteUnit",
+          "type_info": {
+            "Custom": {
+              "name": "snapshot_delete_unit",
+              "kind": {
+                "Enum": [
+                  "percent",
+                  "gibibytes",
+                  "tebibytes"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "ordinal": 4,
+          "name": "last_run",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 5,
+          "name": "keep_num",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
+      ]
+    }
+  },
   "c794f65b5ef4d77224667f77df480d76eaee130d7dc4ddde13d9330f5479595d": {
     "query": "\n            DELETE from chroma_core_sfaenclosure\n            WHERE (index, storage_system)\n            IN (\n                SELECT *\n                FROM UNNEST($1::int[], $2::text[])\n            )\n        ",
     "describe": {
@@ -2873,6 +3026,18 @@
         "Left": [
           "Int4Array",
           "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "c92c006232fff5c4ba37894b349d63142824fc0141a156f06114fa113ed36fa7": {
+    "query": "DELETE FROM snapshot_retention WHERE id=$1",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
         ]
       },
       "nullable": []
@@ -3407,6 +3572,65 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "e992bff12ae00cc8a7ee249be24096d3a308a2551f5caf95446da7b462837548": {
+    "query": "\n        SELECT\n            id,\n            filesystem_name,\n            delete_num,\n            delete_unit as \"delete_unit:DeleteUnit\",\n            last_run,\n            keep_num\n        FROM snapshot_retention\n    ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "filesystem_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "delete_num",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "delete_unit:DeleteUnit",
+          "type_info": {
+            "Custom": {
+              "name": "snapshot_delete_unit",
+              "kind": {
+                "Enum": [
+                  "percent",
+                  "gibibytes",
+                  "tebibytes"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "ordinal": 4,
+          "name": "last_run",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 5,
+          "name": "keep_num",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
+      ]
     }
   },
   "ec70b9a5caeadc31f5d1359737cc1c6da64e41db8315a81d81420d3b37b182c5": {

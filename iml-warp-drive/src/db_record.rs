@@ -20,7 +20,10 @@ use iml_wire_types::{
         SFA_CONTROLLER_TABLE_NAME, SFA_DISK_DRIVE_TABLE_NAME, SFA_ENCLOSURE_TABLE_NAME,
         SFA_JOB_TABLE_NAME, SFA_POWER_SUPPLY_TABLE_NAME, SFA_STORAGE_SYSTEM_TABLE_NAME,
     },
-    snapshot::{SnapshotRecord, SNAPSHOT_TABLE_NAME},
+    snapshot::{
+        SnapshotInterval, SnapshotRecord, SnapshotRetention, SNAPSHOT_INTERVAL_TABLE_NAME,
+        SNAPSHOT_RETENTION_TABLE_NAME, SNAPSHOT_TABLE_NAME,
+    },
 };
 use serde::de::Error;
 use std::convert::TryFrom;
@@ -50,6 +53,8 @@ pub enum DbRecord {
     SfaPowerSupply(SfaPowerSupply),
     SfaController(SfaController),
     Snapshot(SnapshotRecord),
+    SnapshotInterval(SnapshotInterval),
+    SnapshotRetention(SnapshotRetention),
     StratagemConfiguration(StratagemConfiguration),
     Volume(VolumeRecord),
     VolumeNode(VolumeNodeRecord),
@@ -89,6 +94,12 @@ impl TryFrom<(TableName<'_>, serde_json::Value)> for DbRecord {
                 serde_json::from_value(x).map(DbRecord::StratagemConfiguration)
             }
             SNAPSHOT_TABLE_NAME => serde_json::from_value(x).map(DbRecord::Snapshot),
+            SNAPSHOT_INTERVAL_TABLE_NAME => {
+                serde_json::from_value(x).map(DbRecord::SnapshotInterval)
+            }
+            SNAPSHOT_RETENTION_TABLE_NAME => {
+                serde_json::from_value(x).map(DbRecord::SnapshotRetention)
+            }
             LNET_CONFIGURATION_TABLE_NAME => {
                 serde_json::from_value(x).map(DbRecord::LnetConfiguration)
             }
