@@ -3,12 +3,9 @@ Description=IML Job Scheduler Service
 PartOf=iml-manager.target
 After=rabbitmq-server.service
 After=postgresql-9.6.service
-After=iml-settings-populator.service
-Requires=iml-settings-populator.service
 
 [Service]
 Type=simple
-EnvironmentFile=/var/lib/chroma/iml-settings.conf
 EnvironmentFile=-/var/lib/chroma/overrides.conf
 ExecStart=/bin/python /usr/share/chroma-manager/manage.py chroma_service --name=job_scheduler job_scheduler
 Restart=on-failure
