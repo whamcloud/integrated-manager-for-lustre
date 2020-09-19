@@ -395,7 +395,7 @@ Group: System Environment/Libraries
 Summary: Consumer of snapshot listing
 License: MIT
 Group: System Environment/Libraries
-Requires: rust-iml-agent-comms, rust-iml-timer
+Requires: rust-iml-agent-comms
 
 %description snapshot
 %{summary}
