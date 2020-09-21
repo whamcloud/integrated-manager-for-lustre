@@ -60,13 +60,10 @@ impl std::error::Error for DurationParseError {}
 pub enum ImlManagerCliError {
     ApiError(String),
     ClientRequestError(#[from] iml_manager_client::ImlManagerClientError),
-    CmdUtilError(#[from] iml_command_utils::CmdUtilError),
     CombineEasyError(combine::stream::easy::Errors<char, &'static str, usize>),
-    CommandError(#[from] iml_command_utils::CommandError),
     DoesNotExist(&'static str),
     FailedCommandError(Vec<Command>),
     FromUtf8Error(#[from] std::string::FromUtf8Error),
-    Infallible(#[from] std::convert::Infallible),
     ImlGraphqlQueriesErrors(#[from] iml_graphql_queries::Errors),
     IntParseError(#[from] std::num::ParseIntError),
     IoError(#[from] std::io::Error),
@@ -84,9 +81,7 @@ impl std::fmt::Display for ImlManagerCliError {
         match *self {
             ImlManagerCliError::ApiError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::ClientRequestError(ref err) => write!(f, "{}", err),
-            ImlManagerCliError::CmdUtilError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::CombineEasyError(ref err) => write!(f, "{}", err),
-            ImlManagerCliError::CommandError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::DoesNotExist(ref err) => write!(f, "{} does not exist", err),
             ImlManagerCliError::FailedCommandError(ref xs) => {
                 let failed_msg = xs.iter().fold(
@@ -98,9 +93,6 @@ impl std::fmt::Display for ImlManagerCliError {
             }
             ImlManagerCliError::FromUtf8Error(ref err) => write!(f, "{}", err),
             ImlManagerCliError::ImlGraphqlQueriesErrors(ref err) => write!(f, "{}", err),
-            ImlManagerCliError::Infallible(_) => {
-                write!(f, "A (supposedly) impossible situation has occurred")
-            }
             ImlManagerCliError::IntParseError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::IoError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::ParseDurationError(ref err) => write!(f, "{}", err),
