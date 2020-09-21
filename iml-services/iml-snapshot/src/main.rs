@@ -4,9 +4,9 @@
 
 use core::fmt::Debug;
 use futures_util::stream::TryStreamExt;
-use iml_command_utils::{wait_for_cmds_success, CommandError};
+use iml_command_utils::{wait_for_cmds_success, CmdUtilError};
 use iml_graphql_queries::snapshot as snapshot_queries;
-use iml_manager_client::{get_influx, graphql};
+use iml_manager_client::{get_influx, graphql, ImlManagerClientError};
 use iml_manager_env::get_pool_limit;
 use iml_postgres::{get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
@@ -14,6 +14,7 @@ use iml_tracing::tracing;
 use iml_wire_types::snapshot;
 use reqwest::Client;
 use std::{collections::HashMap, collections::HashSet, sync::Arc};
+use thiserror::Error;
 use tokio::{
     sync::Mutex,
     time::Instant,
@@ -30,6 +31,18 @@ struct SnapshotId {
     snapshot_fsname: String,
 }
 
+#[derive(Error, Debug)]
+enum Error {
+    #[error(transparent)]
+    CmdUtilError(#[from] CmdUtilError),
+    #[error(transparent)]
+    ReqwestError(#[from] reqwest::Error),
+    #[error(transparent)]
+    ImlManagerClientError(#[from] ImlManagerClientError),
+    #[error(transparent)]
+    ImlGraphqlQueriesError(#[from] iml_graphql_queries::Errors),
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 enum State {
     Monitoring(u64),
@@ -38,7 +51,7 @@ enum State {
 
 async fn tick(
     snapshot_client_counts: Arc<Mutex<HashMap<SnapshotId, Option<State>>>>,
-) -> Result<(), CommandError> {
+) -> Result<(), Error> {
     let client: Client = iml_manager_client::get_client()?;
     let client_2 = client.clone();
 
@@ -93,7 +106,7 @@ async fn tick(
                         let resp: iml_graphql_queries::Response<snapshot_queries::unmount::Resp> =
                             graphql(client_2.clone(), query).await?;
                         let command = Result::from(resp)?.data.unmount_snapshot;
-                        wait_for_cmds_success(&[command]).await?;
+                        wait_for_cmds_success(&[command], None).await?;
                     }
                 }
                 None => {
