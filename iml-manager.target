@@ -91,6 +91,9 @@ After=iml-device.service
 Requires=iml-rust-corosync.service
 After=iml-rust-corosync.service
 
+Requires=iml-timer.service
+After=iml-timer.service
+
 After=network.target
 
 [Install]
@@ -120,3 +123,4 @@ Also=influxdb.service
 Also=nginx.service
 Also=postgresql-9.6.service
 Also=rabbitmq-server.service
+Also=iml-timer.service

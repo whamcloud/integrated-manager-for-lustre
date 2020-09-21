@@ -405,8 +405,6 @@ server {
         proxy_set_header Http-Host $http_host;
         proxy_pass {{UPDATE_HANDLER_PROXY_PASS}};
     }
-
-    {{INCLUDES}}
 }
 
 # We should be able to use `alias` / `root` with `try_files`

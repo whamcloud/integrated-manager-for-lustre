@@ -18,7 +18,6 @@ vars = {
     "IML_API_PROXY_PASS": "http://iml-api:8004",
     "REPORT_PATH": "/var/spool/iml/report",
     "REPORT_PROXY_PASS": "http://iml-report:8893",
-    "INCLUDES": "include /etc/nginx/conf.d/iml-timer.extras;",
 }
 
 conf_template = "./chroma-manager.conf.template"
