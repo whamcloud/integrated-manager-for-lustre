@@ -2,11 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{api_utils::get_hosts, error::ImlManagerCliError};
-use iml_command_utils::{
-    create_command,
+use crate::{
+    api_utils::{create_command, get_hosts, wait_for_cmds_success, SendCmd, SendJob},
     display_utils::{display_cancelled, display_error, wrap_fut},
-    wait_for_cmds_success, SendCmd, SendJob,
+    error::ImlManagerCliError,
 };
 use iml_wire_types::Host;
 use std::collections::BTreeSet;

@@ -2,8 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_command_utils::display_utils::display_error;
-use iml_manager_cli::nginx::{self, nginx_cli};
+use iml_manager_cli::{
+    display_utils::display_error,
+    nginx::{self, nginx_cli},
+};
 use std::process::exit;
 use structopt::StructOpt;
 

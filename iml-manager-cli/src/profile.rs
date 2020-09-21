@@ -2,11 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{api_utils::get_all, error::ImlManagerCliError};
-use console::Term;
-use iml_command_utils::display_utils::{
-    display_success, wrap_fut, DisplayType, IntoDisplayType as _,
+use crate::{
+    api_utils::get_all,
+    display_utils::{display_success, wrap_fut, DisplayType, IntoDisplayType as _},
+    error::ImlManagerCliError,
 };
+use console::Term;
 use iml_postgres::{get_db_pool, sqlx};
 use iml_wire_types::{ApiList, ServerProfile};
 use std::{
