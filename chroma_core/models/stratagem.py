@@ -161,7 +161,7 @@ ExecStart={}
 
         post_data = {"config_id": str(config.id), "timer_config": timer_config, "service_config": service_config}
 
-        result = requests.put("{}/configure/".format(TIMER_PROXY_PASS), json=post_data, verify=False)
+        result = requests.put("{}/configure/".format(TIMER_PROXY_PASS), json=post_data)
 
         if not result.ok:
             raise RuntimeError(result.reason)
@@ -174,7 +174,7 @@ class UnconfigureStratagemTimerStep(Step, CommandLine):
         config = kwargs["config"]
 
         if runningInDocker():
-            result = requests.delete("{}/unconfigure/{}".format(TIMER_PROXY_PASS, config.id), verify=False)
+            result = requests.delete("{}/unconfigure/{}".format(TIMER_PROXY_PASS, config.id))
 
             if not result.ok:
                 raise RuntimeError(result.reason)
