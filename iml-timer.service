@@ -1,7 +1,6 @@
 [Unit]
 Description=IML Timer Service
 PartOf=iml-manager.target
-After=rabbitmq-server.service
 After=iml-settings-populator.service
 Requires=iml-settings-populator.service
 
