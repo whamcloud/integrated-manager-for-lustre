@@ -1864,7 +1864,8 @@ class JobScheduler(object):
         unique_id = uuid.uuid4()
         filesystem = ManagedFilesystem.objects.get(id=fs_id)
         task_list = []
-
+        action = "unknown"
+        
         run_stratagem_list = [{"class_name": "ClearOldStratagemDataJob", "args": {}}]
         if stratagem_data.get("report_duration"):
             task_data = {
@@ -1877,6 +1878,7 @@ class JobScheduler(object):
                 "args": {"report_name": "expiring_fids-{}-{}.txt".format(filesystem.name, unique_id)},
                 "actions": ["stratagem.warning"],
             }
+            action = "warn"
             task = Task.objects.create(**task_data)
             task_list.append(task)
 
@@ -1891,6 +1893,7 @@ class JobScheduler(object):
                 "keep_failed": False,
                 "actions": ["stratagem.purge"],
             }
+            action = "purge"
             task = Task.objects.create(**task_data)
             task_list.append(task)
 
@@ -1906,6 +1909,7 @@ class JobScheduler(object):
                 "actions": ["stratagem.filesync"],
                 "args": {"remote": stratagem_data.get("remote"), "expression": stratagem_data.get("expression"), "action": stratagem_data.get("action")},
             }
+            action = "filesync"
             task = Task.objects.create(**task_data)
 
             run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
@@ -1920,6 +1924,7 @@ class JobScheduler(object):
                 "actions": ["stratagem.cloudsync"],
                 "args": {"remote": stratagem_data.get("remote"), "expression": stratagem_data.get("expression"), "action": stratagem_data.get("action")},
             }
+            action = "cloudsync"
             task = Task.objects.create(**task_data)
 
             run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
@@ -1933,6 +1938,7 @@ class JobScheduler(object):
                     "report_duration": stratagem_data.get("report_duration"),
                     "purge_duration": stratagem_data.get("purge_duration"),
                     "search_expression": stratagem_data.get("expression"),
+                    "action": action,
                     "filesystem": filesystem,
                     "depends_on_job_range": range(0, len(run_stratagem_list)),
                 },
