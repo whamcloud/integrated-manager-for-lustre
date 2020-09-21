@@ -599,11 +599,7 @@ fn handle_record_change(
         warp_drive::RecordChange::Update(record) => {
             let record = ArcRecord::from(record);
 
-            model
-                .page
-                .update_record(record.clone(), &model.records, &mut orders.proxy(Msg::Page));
-
-            match record {
+            match record.clone() {
                 ArcRecord::ActiveAlert(x) => {
                     let msg = x.message.clone();
 
@@ -780,6 +776,10 @@ fn handle_record_change(
                     model.records.pacemaker_configuration.insert(x.id, x);
                 }
             }
+
+            model
+                .page
+                .update_record(record, &model.records, &mut orders.proxy(Msg::Page));
         }
         warp_drive::RecordChange::Delete(record_id) => {
             match record_id {
@@ -1036,7 +1036,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         .els(),
         Page::Snapshots(x) => main_panels(
             model,
-            page::snapshots::view(x, &model.records)
+            page::snapshot::view(x, &model.records)
                 .els()
                 .map_msg(page::Msg::Snapshots),
         )
