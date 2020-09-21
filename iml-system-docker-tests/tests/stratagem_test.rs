@@ -18,6 +18,7 @@ async fn test_docker_stratagem_setup() -> Result<(), TestError> {
         branding: iml_wire_types::Branding::DDN(iml_wire_types::DdnBranding::Exascaler),
         test_type: TestType::Docker,
         ntp_server: NtpServer::HostOnly,
+        use_snapshots: use_snapshots(),
         ..config
     };
 

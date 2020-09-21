@@ -12,32 +12,44 @@ pub async fn run_fs_test(config: Config) -> Result<Config, TestError> {
 
     let snapshot_map = snapshots::get_snapshots().await?;
     let graph = snapshots::create_graph(&snapshot_map["iscsi"]);
-    let active_snapshots = snapshots::get_active_snapshots(&config, &graph);
-    let target_snapshot = active_snapshots.last().expect("target snapshot not found.");
-    println!("target snapshot: {:?}", target_snapshot);
+    
+    let (active_snapshots, target_snapshot) = if config.use_snapshots {
+        let active_snapshots = snapshots::get_active_snapshots(&config, &graph);
+        let target_snapshot = active_snapshots.last().expect("target snapshot not found.");
+        println!("target snapshot: {:?}", target_snapshot);
 
-    if target_snapshot.name != snapshots::SnapshotName::Init {
-        vagrant::halt()
-            .await?
-            .args(&config.all_hosts())
-            .checked_status()
-            .await?;
-
-        for host in config.all_hosts() {
-            let result = vagrant::snapshot_restore(host, target_snapshot.name.to_string().as_str())
+        if target_snapshot.name != snapshots::SnapshotName::Init {
+            vagrant::halt()
                 .await?
+                .args(&config.all_hosts())
                 .checked_status()
-                .await;
+                .await?;
 
-            if result.is_err() {
-                println!(
-                    "Snapshot {} not available on host {}. Skipping.",
-                    target_snapshot.name.to_string(),
-                    host
-                );
+            for host in config.all_hosts() {
+                let result = vagrant::snapshot_restore(host, target_snapshot.name.to_string().as_str())
+                    .await?
+                    .checked_status()
+                    .await;
+
+                if result.is_err() {
+                    println!(
+                        "Snapshot {} not available on host {}. Skipping.",
+                        target_snapshot.name.to_string(),
+                        host
+                    );
+                }
             }
         }
-    }
+
+        (active_snapshots, target_snapshot)
+    } else {
+        let target_snapshot = snapshots::Snapshot {
+            name: snapshots::SnapshotName::Init,
+            available: true,
+        };
+
+        (vec![], target_snapshot)
+    };
 
     let actions = snapshots::get_active_test_path(&config, &graph, &target_snapshot.name);
 

@@ -16,6 +16,7 @@ async fn test_stratagem_setup() -> Result<(), TestError> {
         ],
         branding: iml_wire_types::Branding::DDN(iml_wire_types::DdnBranding::Exascaler),
         use_stratagem: true,
+        use_snapshots: use_snapshots(),
         ..config
     };
 

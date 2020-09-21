@@ -14,6 +14,7 @@ async fn test_ldiskfs_setup() -> Result<(), TestError> {
             ("base_monitored".into(), config.storage_servers()),
             ("base_client".into(), config.client_servers()),
         ],
+        use_snapshots: use_snapshots(),
         ..config
     };
 

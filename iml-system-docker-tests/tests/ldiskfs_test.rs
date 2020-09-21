@@ -15,6 +15,7 @@ async fn test_docker_ldiskfs_setup() -> Result<(), TestError> {
         ],
         test_type: TestType::Docker,
         ntp_server: NtpServer::HostOnly,
+        use_snapshots: use_snapshots(),
         ..config
     };
 

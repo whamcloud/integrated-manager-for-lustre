@@ -209,6 +209,7 @@ pub struct Config {
     pub test_type: TestType,
     pub ntp_server: NtpServer,
     pub fs_type: FsType,
+    pub use_snapshots: bool,
 }
 
 impl Default for Config {
@@ -242,6 +243,7 @@ impl Default for Config {
             test_type: TestType::Rpm,
             ntp_server: NtpServer::Adm,
             fs_type: FsType::LDISKFS,
+            use_snapshots: true,
         }
     }
 }
@@ -427,22 +429,24 @@ pub async fn setup_bare(config: Config) -> Result<Config, TestError> {
         NtpServer::Adm => ssh::configure_ntp_for_adm(&config.storage_server_ips()).await?,
     };
 
-    vagrant::halt()
-        .await?
-        .args(config.all_hosts())
-        .checked_status()
-        .await?;
+    if config.use_snapshots {
+        vagrant::halt()
+            .await?
+            .args(config.all_hosts())
+            .checked_status()
+            .await?;
 
-    for x in config.all_hosts() {
-        vagrant::snapshot_save(
-            x,
-            snapshots::get_snapshot_name_for_state(&config, TestState::Bare)
-                .to_string()
-                .as_str(),
-        )
-        .await?
-        .checked_status()
-        .await?;
+        for x in config.all_hosts() {
+            vagrant::snapshot_save(
+                x,
+                snapshots::get_snapshot_name_for_state(&config, TestState::Bare)
+                    .to_string()
+                    .as_str(),
+            )
+            .await?
+            .checked_status()
+            .await?;
+        }
     }
 
     Ok(config)
@@ -460,22 +464,24 @@ pub async fn configure_iml(config: Config) -> Result<Config, TestError> {
         TestType::Docker => configure_docker_setup(&config).await?,
     };
 
-    vagrant::halt()
-        .await?
-        .args(&vec![config.manager][..])
-        .checked_status()
-        .await?;
+    if config.use_snapshots {
+        vagrant::halt()
+            .await?
+            .args(&vec![config.manager][..])
+            .checked_status()
+            .await?;
 
-    for host in config.all_hosts() {
-        vagrant::snapshot_save(
-            host,
-            snapshots::get_snapshot_name_for_state(&config, TestState::Configured)
-                .to_string()
-                .as_str(),
-        )
-        .await?
-        .checked_status()
-        .await?;
+        for host in config.all_hosts() {
+            vagrant::snapshot_save(
+                host,
+                snapshots::get_snapshot_name_for_state(&config, TestState::Configured)
+                    .to_string()
+                    .as_str(),
+            )
+            .await?
+            .checked_status()
+            .await?;
+        }
     }
 
     vagrant::up()
@@ -513,32 +519,34 @@ pub async fn deploy_servers(config: Config) -> Result<Config, TestError> {
         ssh::enable_debug_on_hosts(&host_ips).await?;
     }
 
-    vagrant::halt()
-        .await?
-        .args(config.all_hosts())
-        .checked_status()
-        .await?;
+    if config.use_snapshots {
+        vagrant::halt()
+            .await?
+            .args(config.all_hosts())
+            .checked_status()
+            .await?;
 
-    for host in config.all_hosts() {
-        vagrant::snapshot_save(
-            host,
-            snapshots::get_snapshot_name_for_state(&config, TestState::ServersDeployed)
-                .to_string()
-                .as_str(),
-        )
-        .await?
-        .checked_status()
-        .await?;
+        for host in config.all_hosts() {
+            vagrant::snapshot_save(
+                host,
+                snapshots::get_snapshot_name_for_state(&config, TestState::ServersDeployed)
+                    .to_string()
+                    .as_str(),
+            )
+            .await?
+            .checked_status()
+            .await?;
+        }
+
+        vagrant::up()
+            .await?
+            .args(config.all_hosts())
+            .checked_status()
+            .await?;
+
+        wait_for_ntp(&config).await?;
+        wait_on_services_ready(&config).await?;
     }
-
-    vagrant::up()
-        .await?
-        .args(config.all_hosts())
-        .checked_status()
-        .await?;
-
-    wait_for_ntp(&config).await?;
-    wait_on_services_ready(&config).await?;
 
     Ok(config)
 }
@@ -612,32 +620,34 @@ pub async fn install_fs(config: Config) -> Result<Config, TestError> {
 
     ssh::install_ldiskfs_zfs_no_iml(&config).await?;
 
-    vagrant::halt()
-        .await?
-        .args(config.all_hosts())
-        .checked_status()
-        .await?;
+    if config.use_snapshots {
+        vagrant::halt()
+            .await?
+            .args(config.all_hosts())
+            .checked_status()
+            .await?;
 
-    for x in config.all_hosts() {
-        vagrant::snapshot_save(
-            x,
-            snapshots::get_snapshot_name_for_state(&config, TestState::LustreRpmsInstalled)
-                .to_string()
-                .as_str(),
-        )
-        .await?
-        .checked_status()
-        .await?;
+        for x in config.all_hosts() {
+            vagrant::snapshot_save(
+                x,
+                snapshots::get_snapshot_name_for_state(&config, TestState::LustreRpmsInstalled)
+                    .to_string()
+                    .as_str(),
+            )
+            .await?
+            .checked_status()
+            .await?;
+        }
+
+        vagrant::up()
+            .await?
+            .args(config.all_hosts())
+            .checked_status()
+            .await?;
+
+        wait_for_ntp(&config).await?;
+        wait_on_services_ready(&config).await?;
     }
-
-    vagrant::up()
-        .await?
-        .args(config.all_hosts())
-        .checked_status()
-        .await?;
-
-    wait_for_ntp(&config).await?;
-    wait_on_services_ready(&config).await?;
 
     Ok(config)
 }
@@ -875,6 +885,13 @@ pub async fn configure_docker_setup(config: &Config) -> Result<(), TestError> {
         .await?;
 
     Ok(())
+}
+
+pub fn use_snapshots() -> bool {
+    match env::var("USE_SNAPSHOTS") {
+        Ok(x) => x.parse().expect("parse USE_SNAPSHOTS"),
+        Err(_) => true,
+    }
 }
 
 #[cfg(test)]

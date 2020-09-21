@@ -16,6 +16,7 @@ async fn test_docker_zfs_setup() -> Result<(), TestError> {
         test_type: TestType::Docker,
         ntp_server: NtpServer::HostOnly,
         fs_type: FsType::ZFS,
+        use_snapshots: use_snapshots(),
         ..config
     };
 

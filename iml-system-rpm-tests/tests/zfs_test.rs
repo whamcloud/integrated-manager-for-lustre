@@ -14,6 +14,7 @@ async fn test_zfs_setup() -> Result<(), TestError> {
             ("base_client".into(), config.client_servers()),
         ],
         fs_type: FsType::ZFS,
+        use_snapshots: use_snapshots(),
         ..config
     };
 
