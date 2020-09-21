@@ -161,6 +161,6 @@ pub fn view(model: &Model, cache: &ArcCache) -> Node<Msg> {
 fn display_interval(x: Duration) -> String {
     chrono::Duration::from_std(x)
         .map(HumanTime::from)
-        .map(|x| x.to_text_en(Accuracy::Rough, Tense::Present))
+        .map(|x| x.to_text_en(Accuracy::Precise, Tense::Present))
         .unwrap_or("---".into())
 }

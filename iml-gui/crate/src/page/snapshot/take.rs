@@ -10,6 +10,7 @@ pub enum Msg {
     Submit,
     NameChange(String),
     CommentChange(String),
+    SetFilesystems(Vec<Arc<Filesystem>>),
     FsNameChanged(String),
     BarrierChanged(String),
     SnapshotCreateResp(fetch::ResponseDataResult<Response<snapshot::create::Resp>>),
@@ -18,10 +19,33 @@ pub enum Msg {
 #[derive(Default, Debug)]
 pub struct Model {
     fs_name: String,
+    filesystems: Vec<Arc<Filesystem>>,
     barrier: bool,
     name: String,
     comment: Option<String>,
     submitting: bool,
+}
+
+impl RecordChange<Msg> for Model {
+    fn update_record(&mut self, _: ArcRecord, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+        orders.send_msg(Msg::SetFilesystems(cache.filesystem.values().cloned().collect()));
+    }
+    fn remove_record(&mut self, _: RecordId, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+        orders.send_msg(Msg::SetFilesystems(cache.filesystem.values().cloned().collect()));
+
+        let present = cache.filesystem.values().any(|x| x.name == self.fs_name);
+
+        if !present {
+            let x = get_fs_names(cache).into_iter().next().unwrap_or_default();
+            orders.send_msg(Msg::FsNameChanged(x));
+        }
+    }
+    fn set_records(&mut self, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+        orders.send_msg(Msg::SetFilesystems(cache.filesystem.values().cloned().collect()));
+
+        let x = get_fs_names(cache).into_iter().next().unwrap_or_default();
+        orders.send_msg(Msg::FsNameChanged(x));
+    }
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -58,6 +82,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 model.submitting = false;
             }
         },
+        Msg::SetFilesystems(x) => {
+            model.filesystems = x;
+        }
         Msg::NameChange(x) => {
             model.name = x;
         }
@@ -81,7 +108,7 @@ pub fn init(cache: &ArcCache, model: &mut Model) {
     }
 }
 
-pub fn view(model: &Model, fs_names: &[&str]) -> Node<Msg> {
+pub fn view(model: &Model) -> Node<Msg> {
     let input_cls = class![
         C.appearance_none,
         C.focus__outline_none,
@@ -113,9 +140,9 @@ pub fn view(model: &Model, fs_names: &[&str]) -> Node<Msg> {
                         id!["fs_name"],
                         &input_cls,
                         class![C.block, C.leading_tight, C.bg_transparent, C.pr_8, C.rounded, C.w_full,],
-                        fs_names.iter().map(|x| {
-                            let mut opt = option![class![C.font_sans], attrs! {At::Value => x}, x];
-                            if *x == model.fs_name.as_str() {
+                        model.filesystems.iter().map(|x| {
+                            let mut opt = option![class![C.font_sans], attrs! {At::Value => x.name}, x.name];
+                            if x.name == model.fs_name.as_str() {
                                 opt.add_attr(At::Selected.to_string(), "selected");
                             }
 
