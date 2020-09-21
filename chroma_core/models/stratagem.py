@@ -322,6 +322,7 @@ class RunStratagemStep(Step):
         report_duration = args["report_duration"]
         purge_duration = args["purge_duration"]
         search_expression = args["search_expression"]
+        action = args["action"]
 
         def calc_warn_duration(report_duration, purge_duration):
             if report_duration is not None and purge_duration is not None:
@@ -331,12 +332,12 @@ class RunStratagemStep(Step):
 
             return "&& != type S_IFDIR < atime - sys_time {}".format(report_duration or 0)
 
-        def get_body(mount_point, report_duration, purge_duration, search_expression):
+        def get_body(mount_point, action, report_duration, purge_duration, search_expression):
             rule_map = {
                 "fids_expiring_soon": report_duration is not None and "warn_fids",
                 "fids_expired": purge_duration is not None and "purge_fids",
-                "filesync": search_expression is not None and "filesync",
-                "cloudsync": search_expression is not None and "cloudsync",
+                "filesync": search_expression is not None and action == "filesync" and "filesync",
+                "cloudsync": search_expression is not None and action == "cloudsync" and "cloudsync",
             }
 
             groups = ["size_distribution", "user_distribution"] + filter(bool, rule_map.values())
@@ -439,7 +440,7 @@ class RunStratagemStep(Step):
         def generate_output_from_results(result):
             return u"\u2713 Scan finished for target {}.\nResults located in {}".format(target_name, result[0])
 
-        body = get_body(path, report_duration, purge_duration, search_expression)
+        body = get_body(path, action, report_duration, purge_duration, search_expression)
         result = self.invoke_rust_agent_expect_result(host, "start_scan_stratagem", body)
 
         self.log(generate_output_from_results(result))
@@ -498,6 +499,7 @@ class RunStratagemJob(Job):
     report_duration = models.BigIntegerField(null=True)
     purge_duration = models.BigIntegerField(null=True)
     search_expression = models.TextField()
+    action = models.TextField()
     fqdn = models.CharField(max_length=255, null=False, default="")
     target_name = models.CharField(max_length=64, null=False, default="")
     filesystem_type = models.CharField(max_length=32, null=False, default="")
@@ -553,6 +555,7 @@ class RunStratagemJob(Job):
                     "report_duration": self.report_duration,
                     "purge_duration": self.purge_duration,
                     "search_expression": self.search_expression,
+                    "action": self.action,
                 },
             ),
             (StreamFidlistStep, {"host": self.fqdn, "uuid": self.uuid, "fs_name": self.filesystem.name}),

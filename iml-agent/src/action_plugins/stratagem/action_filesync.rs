@@ -34,18 +34,17 @@ async fn actually_rsync(work: &Work) -> Result<(), std::io::Error> {
 
     let output = output.await?;
 
-    tracing::error!("done {} {}", work.src_file, output.status);
+    tracing::debug!("done {} {}", work.src_file, output.status);
 
     Ok(())
 }
 
 async fn do_rsync(work_list: &Vec<Work>) -> Result<Vec<FidError>, ImlAgentError> {
     let result = Vec::new();
-    tracing::error!("do_rsync {}", work_list.len());
 
     stream::iter(work_list)
         .map(|xs| Ok::<_, std::io::Error>(xs))
-        .try_for_each_concurrent(50, |fids| {
+        .try_for_each_concurrent(100, |fids| {
             actually_rsync(fids)
                 .or_else(|e| {
                     println!("error: {}", e);
@@ -83,17 +82,14 @@ async fn archive_fids(
 
         dest_dir.pop();
         if dest_dir.is_dir() == false {
-            tracing::error!("creating {:?} for {:?}", dest_dir, src_file);
             fs::create_dir_all(&dest_dir).await?;
-        } else {
-            tracing::error!("skipping {:?} for {:?}", dest_dir, src_file);
         }
+
         let md = fs::metadata(&src_file).await?;
         /* invoking mpifileutils is slow, so only do it for directories
          * and big files, otherwise just use rsync
          */
         if md.is_dir() || (md.len() > 1024 * 1024 * 1024) {
-            tracing::error!("dsync?: {}", src_file);
             let output = Command::new("/usr/lib64/openmpi/bin/mpirun")
                 .arg("--hostfile")
                 .arg("/etc/iml/filesync-hostfile")
@@ -110,21 +106,19 @@ async fn archive_fids(
                 data: fid.data.clone(),
                 errno: output.status.code().unwrap_or(0) as i16,
             });
-            tracing::error!(
+            tracing::debug!(
                 "dsync exited with {} {} {}",
                 output.status,
                 std::str::from_utf8(&output.stdout)?,
                 std::str::from_utf8(&output.stderr)?
             );
         } else {
-            tracing::error!("rsync: {}", rsync_list.len());
             rsync_list.push(Work {
                 src_file: src_file.clone(),
                 dest_file: dest_file.clone(),
             });
 
-            if rsync_list.len() >= 600 {
-                tracing::error!("rsyncing");
+            if rsync_list.len() >= 500 {
                 let mut rsync_res = do_rsync(&rsync_list).await?;
 
                 result.append(&mut rsync_res);
