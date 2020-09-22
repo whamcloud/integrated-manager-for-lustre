@@ -334,6 +334,9 @@ pub mod list_intervals {
     }
 }
 
+/// Graphql query to create a new retention. Note that
+/// Snapshots will automatically be deleted (starting with the oldest)
+/// when free space falls below the defined reserve value and its associated unit.
 pub mod create_retention {
     use crate::Query;
     use iml_wire_types::snapshot::ReserveUnit;
@@ -404,6 +407,9 @@ pub mod remove_retention {
     }
 }
 
+/// Graphql query to list retentions. For each retention, snapshots will automatically
+/// be deleted (starting with the oldest) when free space falls below the defined reserve
+/// value and its associated unit.
 pub mod list_retentions {
     use crate::Query;
     use iml_wire_types::snapshot::SnapshotRetention;

@@ -214,7 +214,7 @@ pub fn view(model: &Model) -> Node<Msg> {
                         label![
                             attrs! {At::For => "reserve_value"},
                             "Reserve",
-                            help_indicator("How much of free space to reserve", Placement::Right)
+                            help_indicator("The threshold in which snapshots will be deleted (starting with the oldest) when free space falls below the defined reserve value and its associated unit.", Placement::Right)
                         ],
                         div![
                             class![C.grid, C.grid_cols_6],
