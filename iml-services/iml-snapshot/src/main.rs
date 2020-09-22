@@ -48,7 +48,7 @@ enum State {
     CountingDown(Instant),
 }
 
-async fn tick(pool: PgPool) -> Result<(), Error> {
+async fn tick(snapshot_client_counts: &mut HashMap<i32, State>, pool: PgPool) -> Result<(), Error> {
     let client: Client = iml_manager_client::get_client()?;
     let client_2 = client.clone();
 
@@ -60,8 +60,6 @@ async fn tick(pool: PgPool) -> Result<(), Error> {
     let stats = iml_influx::filesystems::Response::from(influx_resp);
 
     tracing::debug!("Influx stats: {:?}", stats);
-
-    let mut snapshot_client_counts: HashMap<i32, State> = HashMap::new();
 
     let snapshots =
         sqlx::query!("SELECT id, filesystem_name, snapshot_name, snapshot_fsname FROM snapshot")
@@ -153,9 +151,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tokio::spawn(async move {
         let mut interval = interval(Duration::from_secs(10));
+        let mut snapshot_client_counts: HashMap<i32, State> = HashMap::new();
 
         while let Some(_) = interval.next().await {
-            let tick_result = tick(pool_2.clone()).await;
+            let tick_result = tick(&mut snapshot_client_counts, pool_2.clone()).await;
             if let Err(e) = tick_result {
                 tracing::error!("Error during handling snapshot autounmount: {}", e);
             }
