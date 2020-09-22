@@ -33,8 +33,6 @@ enum Error {
     #[error(transparent)]
     CmdUtilError(#[from] CmdUtilError),
     #[error(transparent)]
-    ReqwestError(#[from] reqwest::Error),
-    #[error(transparent)]
     ImlManagerClientError(#[from] ImlManagerClientError),
     #[error(transparent)]
     ImlGraphqlQueriesError(#[from] iml_graphql_queries::Errors),
