@@ -659,6 +659,8 @@ impl MutationRoot {
                     interval
                 )
                 VALUES ($1, $2, $3)
+                ON CONFLICT (filesystem_name, interval)
+                DO NOTHING
             "#,
             fsname,
             use_barrier.unwrap_or_default(),

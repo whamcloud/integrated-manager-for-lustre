@@ -240,7 +240,6 @@ pub mod list {
 
 pub mod create_interval {
     use crate::Query;
-    use std::time::Duration;
 
     pub static QUERY: &str = r#"
         mutation CreateSnapshotInterval($fsname: String!, $interval: Duration!, $use_barrier: Boolean) {
@@ -257,14 +256,14 @@ pub mod create_interval {
 
     pub fn build(
         fsname: impl ToString,
-        interval: Duration,
+        interval: String,
         use_barrier: Option<bool>,
     ) -> Query<Vars> {
         Query {
             query: QUERY.to_string(),
             variables: Some(Vars {
                 fsname: fsname.to_string(),
-                interval: humantime::format_duration(interval).to_string(),
+                interval,
                 use_barrier,
             }),
         }
@@ -313,10 +312,10 @@ pub mod list_intervals {
         query SnapshotIntervals {
           snapshotIntervals {
             id
-            filesystemName
-            useBarrier
+            filesystem_name: filesystemName
+            use_barrier: useBarrier
             interval
-            lastRun
+            last_run: lastRun
           }
         }
     "#;
