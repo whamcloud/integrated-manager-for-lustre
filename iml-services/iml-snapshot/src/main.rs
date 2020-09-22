@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use core::fmt::Debug;
+use std::fmt::Debug;
 use futures_util::stream::TryStreamExt;
 use iml_command_utils::{wait_for_cmds_success, CmdUtilError};
 use iml_graphql_queries::snapshot as snapshot_queries;
