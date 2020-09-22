@@ -17,7 +17,6 @@ iml-rabbit = {path = "../../iml-rabbit", version = "0.3"}
 iml-service-queue = {path = "../iml-service-queue", version = "0.3"}
 iml-tracing = {version = "0.2", path = "../../iml-tracing"}
 iml-wire-types = {path = "../../iml-wire-types", version = "0.3"}
-reqwest = {version = "0.10", default-features = false, features = ["rustls-tls", "json"]}
 serde = {version = "1", features = ["derive"]}
 thiserror = "1.0"
 tokio = {version = "0.2", features = ["rt-threaded"]}
