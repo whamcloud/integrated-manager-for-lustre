@@ -2,11 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use std::time::Duration;
-
 use super::*;
+use crate::{extensions::RequestExt, font_awesome};
 use chrono_humanize::{Accuracy, HumanTime, Tense};
 use iml_wire_types::snapshot::SnapshotInterval;
+use std::time::Duration;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SortField {
@@ -24,6 +24,8 @@ impl Default for SortField {
 pub enum Msg {
     Page(paging::Msg),
     Sort,
+    Delete(Arc<SnapshotInterval>),
+    SnapshotDeleteIntervalResp(fetch::ResponseDataResult<Response<snapshot::remove_interval::Resp>>),
     SortBy(table::SortBy<SortField>),
 }
 
@@ -77,6 +79,24 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
             model.rows.sort_by(sort_fn);
         }
+        Msg::Delete(x) => {
+            if let Ok(true) = window().confirm_with_message("Are you sure you want to delete this interval?") {
+                let query = snapshot::remove_interval::build(x.id);
+
+                let req = fetch::Request::graphql_query(&query);
+
+                orders.perform_cmd(req.fetch_json_data(|x| Msg::SnapshotDeleteIntervalResp(x)));
+            }
+        }
+        Msg::SnapshotDeleteIntervalResp(x) => match x {
+            Ok(Response::Data(_)) => {}
+            Ok(Response::Errors(e)) => {
+                error!("An error has occurred during Snapshot deletion: ", e);
+            }
+            Err(e) => {
+                error!("An error has occurred during Snapshot deletion: ", e);
+            }
+        },
     };
 }
 
@@ -104,7 +124,7 @@ impl RecordChange<Msg> for Model {
     }
 }
 
-pub fn view(model: &Model, cache: &ArcCache) -> Node<Msg> {
+pub fn view(model: &Model, cache: &ArcCache, session: Option<&Session>) -> Node<Msg> {
     panel::view(
         h3![class![C.py_4, C.font_normal, C.text_lg], "Automated Snapshot Rules"],
         div![
@@ -116,6 +136,7 @@ pub fn view(model: &Model, cache: &ArcCache) -> Node<Msg> {
                         .map_msg(Msg::SortBy),
                     table::th_view(plain!["Use Barrier"]),
                     table::th_view(plain!["Last Run"]),
+                    restrict::view(session, GroupType::FilesystemAdministrators, th![]),
                 ]),
                 tbody![model.rows[model.pager.range()].iter().map(|x| {
                     tr![
@@ -144,6 +165,30 @@ pub fn view(model: &Model, cache: &ArcCache) -> Node<Msg> {
                             .last_run
                             .map(|x| x.format("%m/%d/%Y %H:%M:%S").to_string())
                             .unwrap_or("---".to_string())]),
+                        td![
+                            class![C.flex, C.justify_center, C.p_4, C.px_3],
+                            restrict::view(
+                                session,
+                                GroupType::FilesystemAdministrators,
+                                button![
+                                    class![
+                                        C.bg_blue_500,
+                                        C.duration_300,
+                                        C.flex,
+                                        C.hover__bg_blue_400,
+                                        C.items_center,
+                                        C.px_6,
+                                        C.py_2,
+                                        C.rounded_sm,
+                                        C.text_white,
+                                        C.transition_colors,
+                                    ],
+                                    font_awesome(class![C.w_3, C.h_3, C.inline, C.mr_1], "trash"),
+                                    "Delete",
+                                    simple_ev(Ev::Click, Msg::Delete(Arc::clone(&x)))
+                                ]
+                            )
+                        ]
                     ]
                 })]
             ])

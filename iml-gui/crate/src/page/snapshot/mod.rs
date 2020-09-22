@@ -8,6 +8,7 @@ mod list_interval;
 mod take;
 
 use crate::{
+    components::restrict,
     components::{
         attrs, font_awesome, font_awesome_outline, form, paging, panel, resource_links, table, tooltip, Placement,
     },
@@ -20,7 +21,7 @@ use iml_graphql_queries::{snapshot, Response};
 use iml_wire_types::{
     snapshot::SnapshotRecord,
     warp_drive::{ArcCache, ArcRecord, RecordId},
-    Filesystem,
+    Filesystem, GroupType, Session,
 };
 use seed::{prelude::*, *};
 use std::{cmp::Ordering, ops::Deref, sync::Arc};
@@ -101,7 +102,7 @@ pub fn init(cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, G
     take::init(cache, &mut model.take);
 }
 
-pub fn view(model: &Model, cache: &ArcCache) -> impl View<Msg> {
+pub fn view(model: &Model, cache: &ArcCache, session: Option<&Session>) -> impl View<Msg> {
     let fs_names = get_fs_names(cache);
 
     if fs_names.is_empty() {
@@ -112,13 +113,13 @@ pub fn view(model: &Model, cache: &ArcCache) -> impl View<Msg> {
     div![
         take::view(&model.take).map_msg(Msg::Take).merge_attrs(class![C.my_6]),
         if cache.snapshot_interval.is_empty() {
-            vec![add_interval_btn(false)]
+            vec![add_interval_btn(false, session)]
         } else {
             vec![
-                list_interval::view(&model.list_interval, cache)
+                list_interval::view(&model.list_interval, cache, session)
                     .map_msg(Msg::ListInterval)
                     .merge_attrs(class![C.my_6]),
-                add_interval_btn(true),
+                add_interval_btn(true, session),
             ]
         },
         add_interval::view(&model.add_interval).map_msg(Msg::AddInterval),
@@ -126,27 +127,33 @@ pub fn view(model: &Model, cache: &ArcCache) -> impl View<Msg> {
     ]
 }
 
-fn add_interval_btn(has_intervals: bool) -> Node<Msg> {
-    button![
-        class![
-            C.bg_blue_500,
-            C.duration_300,
-            C.focus__outline_none,
-            C.px_6,
-            C.py_2,
-            C.mb_6,
-            C.rounded_sm,
-            C.text_white,
-            C.transition_colors
+fn add_interval_btn(has_intervals: bool, session: Option<&Session>) -> Node<Msg> {
+    restrict::view(
+        session,
+        GroupType::FilesystemAdministrators,
+        button![
+            class![
+                C.bg_blue_500,
+                C.duration_300,
+                C.flex,
+                C.hover__bg_blue_400,
+                C.items_center,
+                C.mb_6,
+                C.px_6,
+                C.py_2,
+                C.rounded_sm,
+                C.text_white,
+                C.transition_colors
+            ],
+            font_awesome(class![C.h_3, C.w_3, C.mr_1, C.inline], "plus"),
+            if has_intervals {
+                "Add Another Automated Snapshot Rule"
+            } else {
+                "Add Automated Snapshot Rule"
+            },
+            simple_ev(Ev::Click, add_interval::Msg::Open).map_msg(Msg::AddInterval)
         ],
-        font_awesome(class![C.h_3, C.w_3, C.mr_1, C.inline], "plus"),
-        if has_intervals {
-            "Add Another Interval"
-        } else {
-            "Add Interval"
-        },
-        simple_ev(Ev::Click, add_interval::Msg::Open).map_msg(Msg::AddInterval)
-    ]
+    )
 }
 
 fn help_indicator<T>(msg: &str, placement: Placement) -> Node<T> {
