@@ -13,7 +13,7 @@ use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
 use iml_wire_types::{
     graphql_duration::GraphQLDuration,
-    snapshot::{DeleteUnit, Snapshot, SnapshotInterval, SnapshotRetention},
+    snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     Command, EndpointName, Job,
 };
 use itertools::Itertools;
@@ -428,8 +428,8 @@ impl QueryRoot {
                 SELECT
                     id,
                     filesystem_name,
-                    delete_num,
-                    delete_unit as "delete_unit:DeleteUnit",
+                    reserve_value,
+                    reserve_unit as "reserve_unit:ReserveUnit",
                     last_run,
                     keep_num
                 FROM snapshot_retention
@@ -735,14 +735,10 @@ impl MutationRoot {
     }
     #[graphql(arguments(
         fsname(description = "Filesystem name"),
-        delete_num(
-            description = "The number to be deleted, pairs with `delete_unit` to form a full deletion rule"
-        ),
-        delete_unit(
-            description = "The unit to be deleted, pairs with `delete_num` to form a full deletion rule"
-        ),
+        reserve_value(description = "The amount or percent of free space to reserve"),
+        reserve_unit(description = "Unit of measurement of free space to reserve"),
         keep_num(
-            description = "The minimum number of snapshots to keep. Snapshots will not be deleted if the number of existing snapshots is less than or equal to this number"
+            description = "The minimum number of snapshots to keep. This is to avoid deleting all snapshots while pursuiting the reserve goal"
         )
     ))]
     /// Creates a new snapshot retention policy for the given `fsname`.
@@ -751,23 +747,28 @@ impl MutationRoot {
     async fn create_snapshot_retention(
         context: &Context,
         fsname: String,
-        delete_num: i32,
-        delete_unit: DeleteUnit,
+        reserve_value: i32,
+        reserve_unit: ReserveUnit,
         keep_num: i32,
     ) -> juniper::FieldResult<bool> {
         sqlx::query!(
             r#"
                 INSERT INTO snapshot_retention (
                     filesystem_name,
-                    delete_num,
-                    delete_unit,
+                    reserve_value,
+                    reserve_unit,
                     keep_num
                 )
                 VALUES ($1, $2, $3, $4)
+                ON CONFLICT (filesystem_name)
+                DO UPDATE SET
+                reserve_value = EXCLUDED.reserve_value,
+                reserve_unit = EXCLUDED.reserve_unit,
+                keep_num = EXCLUDED.keep_num
             "#,
             fsname,
-            delete_num,
-            delete_unit as DeleteUnit,
+            reserve_value,
+            reserve_unit as ReserveUnit,
             keep_num
         )
         .execute(&context.pg_pool)

@@ -9,6 +9,7 @@ use crate::{
     graphql_duration::GraphQLDuration,
 };
 use chrono::{offset::Utc, DateTime};
+use std::str::FromStr;
 #[cfg(feature = "cli")]
 use structopt::StructOpt;
 
@@ -86,11 +87,12 @@ pub const SNAPSHOT_INTERVAL_TABLE_NAME: TableName = TableName("snapshot_interval
 pub struct SnapshotRetention {
     pub id: i32,
     pub filesystem_name: String,
-    pub delete_num: i32,
-    pub delete_unit: DeleteUnit,
-    pub last_run: Option<DateTime<Utc>>,
-    /// Number of snapshots to keep
+    /// Amount or percent of free space to reserve
+    pub reserve_value: i32,
+    pub reserve_unit: ReserveUnit,
+    /// Minimum number of snapshots to keep
     pub keep_num: Option<i32>,
+    pub last_run: Option<DateTime<Utc>>,
 }
 
 impl Id for SnapshotRetention {
@@ -103,22 +105,28 @@ pub const SNAPSHOT_RETENTION_TABLE_NAME: TableName = TableName("snapshot_retenti
 
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
 #[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
-#[cfg_attr(feature = "postgres-interop", sqlx(rename = "snapshot_delete_unit"))]
+#[cfg_attr(feature = "postgres-interop", sqlx(rename = "snapshot_reserve_unit"))]
 #[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
-#[serde(rename_all = "lowercase")]
 #[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
-pub enum DeleteUnit {
+#[serde(rename_all = "lowercase")]
+pub enum ReserveUnit {
+    #[cfg_attr(feature = "graphql", graphql(name = "percent"))]
     Percent,
+    #[cfg_attr(feature = "graphql", graphql(name = "gibibytes"))]
     Gibibytes,
+    #[cfg_attr(feature = "graphql", graphql(name = "tebibytes"))]
     Tebibytes,
 }
 
-impl ToString for DeleteUnit {
-    fn to_string(&self) -> String {
-        match self {
-            Self::Percent => "percent".to_string(),
-            Self::Gibibytes => "gibibytes".to_string(),
-            Self::Tebibytes => "tebibytes".to_string(),
+impl FromStr for ReserveUnit {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "%" => Ok(Self::Percent),
+            "gib" | "g" => Ok(Self::Gibibytes),
+            "tib" | "t" => Ok(Self::Tebibytes),
+            x => Err(format!("Unexpected '{}'", x)),
         }
     }
 }
