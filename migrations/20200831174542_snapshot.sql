@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS snapshot_interval (
   UNIQUE (filesystem_name, interval)
 );
 
-CREATE OR REPLACE FUNCTION table_update_notify_snapshot_interval() RETURNS TRIGGER 
+CREATE OR REPLACE FUNCTION table_update_notify_snapshot_interval() RETURNS TRIGGER
   AS $$
     BEGIN
       IF TG_OP = 'INSERT' THEN PERFORM pg_notify(
@@ -74,13 +74,13 @@ INSERT ON snapshot_interval FOR EACH ROW EXECUTE PROCEDURE table_update_notify_s
 CREATE TRIGGER snapshot_interval_notify_delete
 AFTER DELETE ON snapshot_interval FOR EACH ROW EXECUTE PROCEDURE table_update_notify_snapshot_interval();
 
-CREATE TYPE snapshot_delete_unit AS ENUM ('percent', 'gibibytes', 'tebibytes');
+CREATE TYPE snapshot_reserve_unit AS ENUM ('percent', 'gibibytes', 'tebibytes');
 
 CREATE TABLE IF NOT EXISTS snapshot_retention (
   id serial PRIMARY KEY,
   filesystem_name TEXT NOT NULL UNIQUE,
-  delete_num INT NOT NULL,
-  delete_unit snapshot_delete_unit NOT NULL,
+  reserve_value INT NOT NULL,
+  reserve_unit snapshot_reserve_unit NOT NULL,
   keep_num INT,
   last_run TIMESTAMP WITH TIME ZONE
 );

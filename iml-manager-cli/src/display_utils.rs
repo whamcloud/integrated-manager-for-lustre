@@ -6,7 +6,7 @@ use chrono_humanize::{Accuracy, HumanTime, Tense};
 use console::{style, Term};
 use futures::{Future, FutureExt};
 use iml_wire_types::{
-    snapshot::{Snapshot, SnapshotInterval},
+    snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration,
 };
 use indicatif::ProgressBar;
@@ -167,6 +167,35 @@ impl IntoTable for Vec<SnapshotInterval> {
                         .unwrap_or("---".into()),
                     i.use_barrier.to_string(),
                     i.last_run
+                        .map(|t| t.to_rfc2822())
+                        .unwrap_or_else(|| "--".to_string()),
+                ]
+            }),
+        )
+    }
+}
+
+impl IntoTable for Vec<SnapshotRetention> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &["Id", "Filesystem", "Reserve", "Max Number", "Last Run"],
+            self.into_iter().map(|r| {
+                vec![
+                    r.id.to_string(),
+                    r.filesystem_name,
+                    format!(
+                        "{} {}",
+                        r.reserve_value,
+                        match r.reserve_unit {
+                            ReserveUnit::Percent => "%",
+                            ReserveUnit::Gibibytes => "GiB",
+                            ReserveUnit::Tebibytes => "TiB",
+                        }
+                    ),
+                    r.keep_num
+                        .map(|n| n.to_string())
+                        .unwrap_or_else(|| "--".to_string()),
+                    r.last_run
                         .map(|t| t.to_rfc2822())
                         .unwrap_or_else(|| "--".to_string()),
                 ]

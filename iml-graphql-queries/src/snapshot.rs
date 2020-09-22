@@ -336,34 +336,34 @@ pub mod list_intervals {
 
 pub mod create_retention {
     use crate::Query;
-    use iml_wire_types::snapshot::DeleteUnit;
+    use iml_wire_types::snapshot::ReserveUnit;
 
     pub static QUERY: &str = r#"
-        mutation CreateSnapshotRetention($fsname: String!, $delete_num: Int!, $delete_unit: DeleteUnit!, $keep_num: Int!) {
-            createSnapshotRetention(fsname: $fsname, deleteNum: $delete_num, deleteUnit: $delete_unit, keepNum: $keep_num)
+        mutation CreateSnapshotRetention($fsname: String!, $reserve_value: Int!, $reserve_unit: ReserveUnit!, $keep_num: Int!) {
+            createSnapshotRetention(fsname: $fsname, reserveValue: $reserve_value, reserveUnit: $reserve_unit, keepNum: $keep_num)
         }
     "#;
 
     #[derive(Debug, serde::Serialize)]
     pub struct Vars {
         fsname: String,
-        delete_num: u32,
-        delete_unit: DeleteUnit,
+        reserve_value: u32,
+        reserve_unit: ReserveUnit,
         keep_num: u32,
     }
 
     pub fn build(
         fsname: impl ToString,
-        delete_num: u32,
-        delete_unit: DeleteUnit,
+        reserve_value: u32,
+        reserve_unit: ReserveUnit,
         keep_num: u32,
     ) -> Query<Vars> {
         Query {
             query: QUERY.to_string(),
             variables: Some(Vars {
                 fsname: fsname.to_string(),
-                delete_num,
-                delete_unit,
+                reserve_value,
+                reserve_unit,
                 keep_num,
             }),
         }
@@ -412,11 +412,11 @@ pub mod list_retentions {
         query SnapshotRetentionPolicies {
           snapshotRetentionPolicies {
             id
-            filesystemName
-            deleteNum
-            deleteUnit
-            lastRun
-            keepNum
+            filesystem_name: filesystemName
+            reserve_value: reserveValue
+            reserve_unit: reserveUnit
+            lat_run: lastRun
+            keep_num: keepNum
           }
         }
     "#;
