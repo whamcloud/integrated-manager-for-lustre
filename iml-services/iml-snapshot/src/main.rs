@@ -2,16 +2,15 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures_util::stream::TryStreamExt;
+use futures::{StreamExt, TryStreamExt};
 use iml_command_utils::{wait_for_cmds_success, CmdUtilError};
 use iml_graphql_queries::snapshot as snapshot_queries;
-use iml_manager_client::{get_influx, graphql, ImlManagerClientError};
+use iml_manager_client::{get_influx, graphql, Client, ImlManagerClientError};
 use iml_manager_env::get_pool_limit;
 use iml_postgres::{get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::snapshot;
-use reqwest::Client;
 use std::{collections::HashMap, collections::HashSet, fmt::Debug, sync::Arc};
 use thiserror::Error;
 use tokio::{
@@ -143,8 +142,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let snapshot_client_counts_2 = snapshot_client_counts.clone();
 
     tokio::spawn(async move {
-        // Avoid conflict with futures_util::StreamExt
-        use tokio::stream::StreamExt;
         let mut interval = interval(Duration::from_secs(10));
 
         while let Some(_) = interval.next().await {
