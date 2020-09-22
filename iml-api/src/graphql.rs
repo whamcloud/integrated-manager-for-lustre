@@ -4,6 +4,7 @@
 
 use crate::{command::get_command, error::ImlApiError};
 use futures::{TryFutureExt, TryStreamExt};
+use iml_postgres::sqlx::types::chrono::{DateTime, Utc};
 use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
 use iml_wire_types::{
@@ -345,7 +346,8 @@ impl QueryRoot {
     ) -> juniper::FieldResult<Vec<Command>> {
         let dir = dir.unwrap_or_default();
         let is_completed = is_active.map(|active| !active);
-        let commands: Vec<Command> = sqlx::query!(
+        let commands: Vec<Command> = sqlx::query_as!(
+            CommandTmpRecord,
             r#"
                 SELECT
                     c.id AS id,
@@ -372,36 +374,16 @@ impl QueryRoot {
             msg,
         )
         .fetch_all(&context.pg_pool)
-        .map_ok(|xs: Vec<_>| {
-            xs.into_iter()
-                .map(|x| Command {
-                    id: x.id,
-                    cancelled: x.cancelled,
-                    complete: x.complete,
-                    errored: x.errored,
-                    created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
-                    jobs: {
-                        x.job_ids
-                            .unwrap_or_default()
-                            .into_iter()
-                            .map(|job_id: i32| {
-                                format!("/api/{}/{}/", Job::<()>::endpoint_name(), job_id)
-                            })
-                            .collect::<Vec<_>>()
-                    },
-                    logs: "".to_string(),
-                    message: x.message.clone(),
-                    resource_uri: format!("/api/{}/{}/", Command::endpoint_name(), x.id),
-                })
-                .collect::<Vec<_>>()
+        .map_ok(|xs: Vec<CommandTmpRecord>| {
+            xs.into_iter().map(to_command).collect::<Vec<Command>>()
         })
         .await?;
         Ok(commands)
     }
 
     /// Fetch the list of commands by ids, the returned
-    /// collection is guaranteed to match the input, if a command not found,
-    /// None is returned for that index.
+    /// collection is guaranteed to match the input.
+    /// If a command not found, `None` is returned for that index.
     #[graphql(arguments(
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
@@ -414,7 +396,8 @@ impl QueryRoot {
         ids: Vec<i32>,
     ) -> juniper::FieldResult<Vec<Option<Command>>> {
         let ids: &[i32] = &ids[..];
-        let unordered_cmds: Vec<Command> = sqlx::query!(
+        let unordered_cmds: Vec<Command> = sqlx::query_as!(
+            CommandTmpRecord,
             r#"
                 SELECT
                     c.id AS id,
@@ -435,28 +418,8 @@ impl QueryRoot {
             ids,
         )
         .fetch_all(&context.pg_pool)
-        .map_ok(|xs: Vec<_>| {
-            xs.into_iter()
-                .map(|x| Command {
-                    id: x.id,
-                    cancelled: x.cancelled,
-                    complete: x.complete,
-                    errored: x.errored,
-                    created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
-                    jobs: {
-                        x.job_ids
-                            .unwrap_or_default()
-                            .into_iter()
-                            .map(|job_id: i32| {
-                                format!("/api/{}/{}/", Job::<()>::endpoint_name(), job_id)
-                            })
-                            .collect::<Vec<_>>()
-                    },
-                    logs: "".to_string(),
-                    message: x.message.clone(),
-                    resource_uri: format!("/api/{}/{}/", Command::endpoint_name(), x.id),
-                })
-                .collect::<Vec<_>>()
+        .map_ok(|xs: Vec<CommandTmpRecord>| {
+            xs.into_iter().map(to_command).collect::<Vec<Command>>()
         })
         .await?;
         let mut hm = unordered_cmds
@@ -805,6 +768,37 @@ impl MutationRoot {
             .await?;
 
         Ok(true)
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+struct CommandTmpRecord {
+    pub cancelled: bool,
+    pub complete: bool,
+    pub created_at: DateTime<Utc>,
+    pub errored: bool,
+    pub id: i32,
+    pub job_ids: Option<Vec<i32>>,
+    pub message: String,
+}
+
+fn to_command(x: CommandTmpRecord) -> Command {
+    Command {
+        id: x.id,
+        cancelled: x.cancelled,
+        complete: x.complete,
+        errored: x.errored,
+        created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
+        jobs: {
+            x.job_ids
+                .unwrap_or_default()
+                .into_iter()
+                .map(|job_id: i32| format!("/api/{}/{}/", Job::<()>::endpoint_name(), job_id))
+                .collect::<Vec<_>>()
+        },
+        logs: "".to_string(),
+        message: x.message.clone(),
+        resource_uri: format!("/api/{}/{}/", Command::endpoint_name(), x.id),
     }
 }
 
