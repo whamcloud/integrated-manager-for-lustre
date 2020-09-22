@@ -158,8 +158,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let snaps = snapshots.into_iter().fold(
             (vec![], vec![], vec![], vec![], vec![], vec![], vec![]),
             |mut acc, s| {
-                acc.0.push(s.filesystem_name.clone());
-                acc.1.push(s.snapshot_name.clone());
+                acc.0.push(s.filesystem_name);
+                acc.1.push(s.snapshot_name);
                 acc.2.push(s.create_time.naive_utc());
                 acc.3.push(s.modify_time.naive_utc());
                 acc.4.push(s.snapshot_fsname.clone());
