@@ -21,13 +21,6 @@ use tokio::{
 // Default pool limit if not overridden by POOL_LIMIT
 const DEFAULT_POOL_LIMIT: u32 = 2;
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
-struct SnapshotId {
-    filesystem_name: String,
-    snapshot_name: String,
-    snapshot_fsname: String,
-}
-
 #[derive(Error, Debug)]
 enum Error {
     #[error(transparent)]
