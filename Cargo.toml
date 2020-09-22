@@ -9,6 +9,7 @@ members = [
   'iml-cmd',
   'iml-fs',
   'iml-graphql-queries',
+  'iml-command-utils',
   'iml-influx',
   'iml-job-scheduler-rpc',
   'iml-mailbox',
