@@ -775,6 +775,28 @@
       ]
     }
   },
+  "3a099c680488372f27c087f941161200360329a21145cf0fa22c81f3ec5ee2ef": {
+    "query": "\n                INSERT INTO snapshot_interval (\n                    filesystem_name,\n                    use_barrier,\n                    interval\n                )\n                VALUES ($1, $2, $3)\n                ON CONFLICT (filesystem_name, interval)\n                DO NOTHING\n                RETURNING id\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Bool",
+          "Interval"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "3a2378b67c524f8238921aa4591651fdd3afcab839f350be4c4684f399054961": {
     "query": "\n            SELECT rh.cluster_id, r.id, t.name, t.mount_path, t.filesystems, array_agg(DISTINCT rh.host_id) AS \"cluster_hosts!\"\n            FROM target t\n            INNER JOIN corosync_target_resource r ON r.mount_point = t.mount_path\n            INNER JOIN corosync_target_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)\n            WHERE CARDINALITY(t.filesystems) > 0\n            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.filesystems\n        ",
     "describe": {
@@ -1038,28 +1060,6 @@
               }
             }
           }
-        ]
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
-  "53f0f1e7ac60e1607cc090828d869d4ef28da0e3b5f38e2157f049e3d55b80e6": {
-    "query": "\n                INSERT INTO snapshot_interval (\n                    filesystem_name,\n                    use_barrier,\n                    interval\n                )\n                VALUES ($1, $2, $3)\n                RETURNING id\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text",
-          "Bool",
-          "Interval"
         ]
       },
       "nullable": [
@@ -3486,20 +3486,6 @@
         true,
         false
       ]
-    }
-  },
-  "e1c4a639c5784c329cb8e8523781e8fb02a12a1ea46b10c9407ff9a92480bd2a": {
-    "query": "\n                INSERT INTO snapshot_interval (\n                    filesystem_name,\n                    use_barrier,\n                    interval\n                )\n                VALUES ($1, $2, $3)\n                ON CONFLICT (filesystem_name, interval)\n                DO NOTHING\n            ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Text",
-          "Bool",
-          "Interval"
-        ]
-      },
-      "nullable": []
     }
   },
   "e8f95e79d22bae021629cbfef5291601d0001933bb4628538fde58fdc0a297b9": {

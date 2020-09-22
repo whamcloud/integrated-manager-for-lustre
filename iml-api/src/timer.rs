@@ -18,7 +18,7 @@ pub async fn configure_snapshot_timer(
     use_barrier: bool,
 ) -> Result<(), ImlApiError> {
     let iml_cmd = format!(
-        r#"/bin/bash -c "/usr/bin/date +\"%%Y-%%m-%%dT%%T%%:z\" | xargs -I % echo \"iml snapshot create {} -c 'automatically created by IML' {} {}-{}-%\"""#,
+        r#"/bin/bash -c "/usr/bin/date +\"%%Y-%%m-%%dT%%TZ\" | xargs -I % echo \"iml snapshot create {} -c 'automatically created by IML' {} {}-{}-%\"""#,
         if use_barrier { "-b" } else { "" },
         fsname,
         config_id,
