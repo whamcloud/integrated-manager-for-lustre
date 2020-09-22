@@ -25,7 +25,6 @@ pub enum IntervalCommand {
         /// yaml: return data in yaml format
         #[structopt(short = "d", long = "display", default_value = "tabular")]
         display_type: DisplayType,
-        // TODO? Optional FS?
     },
     /// Add new snapshot interval
     Add {
@@ -40,7 +39,39 @@ pub enum IntervalCommand {
     },
     /// Remove snapshot intervals
     Remove {
-        /// The ids of the snapshot interval to remove
+        /// The ids of the snapshot intervals to remove
+        #[structopt(required = true, min_values = 1)]
+        ids: Vec<u32>,
+    },
+}
+
+#[derive(Debug, StructOpt)]
+pub enum RetentionCommand {
+    /// List snapshots retention rules
+    List {
+        /// Set the display type
+        ///
+        /// The display type can be one of the following:
+        /// tabular: display content in a table format
+        /// json: return data in json format
+        /// yaml: return data in yaml format
+        #[structopt(short = "d", long = "display", default_value = "tabular")]
+        display_type: DisplayType,
+    },
+    /// Create snapshot retention rule
+    Create {
+        /// Filesystem to create a snapshot retention rule for
+        filesystem: String,
+        /// Free space reserve value
+        reserve_value: u32,
+        /// Free space reserve unit (%, GiB or TiB)
+        reserve_unit: snapshot::ReserveUnit,
+        /// Minimum number of snapshots to keep
+        keep_num: u32,
+    },
+    /// Remove snapshot retention rule
+    Remove {
+        /// The ids of the retention rules to remove
         #[structopt(required = true, min_values = 1)]
         ids: Vec<u32>,
     },
@@ -71,6 +102,8 @@ pub enum SnapshotCommand {
     },
     /// Snapshot intervals operations
     Interval(IntervalCommand),
+    /// Snapshot retention rules operations
+    Retention(RetentionCommand),
 }
 
 async fn interval_cli(cmd: IntervalCommand) -> Result<(), ImlManagerCliError> {
@@ -110,6 +143,52 @@ async fn interval_cli(cmd: IntervalCommand) -> Result<(), ImlManagerCliError> {
                 let query = snapshot_queries::remove_interval::build(id as i32);
 
                 let _resp: iml_graphql_queries::Response<snapshot_queries::remove_interval::Resp> =
+                    graphql(query).await?;
+            }
+            Ok(())
+        }
+    }
+}
+
+async fn retention_cli(cmd: RetentionCommand) -> Result<(), ImlManagerCliError> {
+    match cmd {
+        RetentionCommand::List { display_type } => {
+            let query = snapshot_queries::list_retentions::build();
+
+            let resp: iml_graphql_queries::Response<snapshot_queries::list_retentions::Resp> =
+                graphql(query).await?;
+            let retentions = Result::from(resp)?.data.snapshot_retention_policies;
+
+            let x = retentions.into_display_type(display_type);
+
+            let term = Term::stdout();
+            term.write_line(&x).unwrap();
+
+            Ok(())
+        }
+        RetentionCommand::Create {
+            filesystem,
+            keep_num,
+            reserve_value,
+            reserve_unit,
+        } => {
+            let query = snapshot_queries::create_retention::build(
+                filesystem,
+                reserve_value,
+                reserve_unit,
+                keep_num,
+            );
+
+            let _resp: iml_graphql_queries::Response<snapshot_queries::create_retention::Resp> =
+                graphql(query).await?;
+
+            Ok(())
+        }
+        RetentionCommand::Remove { ids } => {
+            for id in ids {
+                let query = snapshot_queries::remove_retention::build(id);
+
+                let _resp: iml_graphql_queries::Response<snapshot_queries::remove_retention::Resp> =
                     graphql(query).await?;
             }
             Ok(())
@@ -175,5 +254,6 @@ pub async fn snapshot_cli(command: SnapshotCommand) -> Result<(), ImlManagerCliE
             Ok(())
         }
         SnapshotCommand::Interval(cmd) => interval_cli(cmd).await,
+        SnapshotCommand::Retention(cmd) => retention_cli(cmd).await,
     }
 }
