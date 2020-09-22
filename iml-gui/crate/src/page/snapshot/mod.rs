@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+mod add_interval;
 mod list;
 mod list_interval;
 mod take;
@@ -29,6 +30,7 @@ pub struct Model {
     take: take::Model,
     list_interval: list_interval::Model,
     list: list::Model,
+    add_interval: add_interval::Model,
 }
 
 impl RecordChange<Msg> for Model {
@@ -37,19 +39,34 @@ impl RecordChange<Msg> for Model {
             .update_record(record.clone(), cache, &mut orders.proxy(Msg::List));
 
         self.list_interval
-            .update_record(record, cache, &mut orders.proxy(Msg::ListInterval));
+            .update_record(record.clone(), cache, &mut orders.proxy(Msg::ListInterval));
+
+        self.add_interval
+            .update_record(record.clone(), cache, &mut orders.proxy(Msg::AddInterval));
+
+        self.take.update_record(record, cache, &mut orders.proxy(Msg::Take));
     }
     fn remove_record(&mut self, record: RecordId, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
         self.list.remove_record(record, cache, &mut orders.proxy(Msg::List));
 
         self.list_interval
             .remove_record(record, cache, &mut orders.proxy(Msg::ListInterval));
+
+        self.add_interval
+            .remove_record(record, cache, &mut orders.proxy(Msg::AddInterval));
+
+        self.take.remove_record(record, cache, &mut orders.proxy(Msg::Take));
     }
     fn set_records(&mut self, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
         self.list.set_records(cache, &mut orders.proxy(Msg::List));
 
         self.list_interval
             .set_records(cache, &mut orders.proxy(Msg::ListInterval));
+
+        self.add_interval
+            .set_records(cache, &mut orders.proxy(Msg::AddInterval));
+
+        self.take.set_records(cache, &mut orders.proxy(Msg::Take));
     }
 }
 
@@ -58,6 +75,7 @@ pub enum Msg {
     Take(take::Msg),
     ListInterval(list_interval::Msg),
     List(list::Msg),
+    AddInterval(add_interval::Msg),
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -70,6 +88,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::List(msg) => {
             list::update(msg, &mut model.list, &mut orders.proxy(Msg::List));
+        }
+        Msg::AddInterval(msg) => {
+            add_interval::update(msg, &mut model.add_interval, &mut orders.proxy(Msg::AddInterval));
         }
     }
 }
@@ -89,13 +110,42 @@ pub fn view(model: &Model, cache: &ArcCache) -> impl View<Msg> {
     }
 
     div![
-        take::view(&model.take, &fs_names)
-            .map_msg(Msg::Take)
-            .merge_attrs(class![C.my_6]),
-        list_interval::view(&model.list_interval, cache)
-            .map_msg(Msg::ListInterval)
-            .merge_attrs(class![C.my_6]),
+        take::view(&model.take).map_msg(Msg::Take).merge_attrs(class![C.my_6]),
+        if cache.snapshot_interval.is_empty() {
+            vec![add_interval_btn(false)]
+        } else {
+            vec![
+                list_interval::view(&model.list_interval, cache)
+                    .map_msg(Msg::ListInterval)
+                    .merge_attrs(class![C.my_6]),
+                add_interval_btn(true),
+            ]
+        },
+        add_interval::view(&model.add_interval).map_msg(Msg::AddInterval),
         list::view(&model.list, cache).map_msg(Msg::List)
+    ]
+}
+
+fn add_interval_btn(has_intervals: bool) -> Node<Msg> {
+    button![
+        class![
+            C.bg_blue_500,
+            C.duration_300,
+            C.focus__outline_none,
+            C.px_6,
+            C.py_2,
+            C.mb_6,
+            C.rounded_sm,
+            C.text_white,
+            C.transition_colors
+        ],
+        font_awesome(class![C.h_3, C.w_3, C.mr_1, C.inline], "plus"),
+        if has_intervals {
+            "Add Another Interval"
+        } else {
+            "Add Interval"
+        },
+        simple_ev(Ev::Click, add_interval::Msg::Open).map_msg(Msg::AddInterval)
     ]
 }
 
@@ -110,8 +160,8 @@ fn help_indicator<T>(msg: &str, placement: Placement) -> Node<T> {
     ]
 }
 
-fn get_fs_names<'a>(cache: &'a ArcCache) -> Vec<&'a str> {
-    cache.filesystem.values().map(|x| x.name.as_str()).collect()
+fn get_fs_names(cache: &ArcCache) -> Vec<String> {
+    cache.filesystem.values().map(|x| x.name.to_string()).collect()
 }
 
 fn get_fs_by_name<'a>(cache: &'a ArcCache, name: &str) -> Option<&'a Filesystem> {

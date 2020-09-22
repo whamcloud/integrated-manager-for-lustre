@@ -22,6 +22,7 @@ chrono = {version = "0.4", features = ["wasmbind"]}
 chrono-humanize = "0.0.11"
 futures = "0.3"
 gloo-timers = {version = "0.2", features = ["futures"]}
+humantime = "2.0"
 im = {version = "15", features = ["serde"]}
 iml-api-utils = {path = "../../iml-api-utils", version = "0.3"}
 iml-graphql-queries = {version = "0.1", path = "../../iml-graphql-queries"}
