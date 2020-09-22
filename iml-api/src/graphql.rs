@@ -399,13 +399,13 @@ impl QueryRoot {
         Ok(commands)
     }
 
-    /// Fetch the list of commands by ids
+    /// Fetch the list of commands by ids, the returned
+    /// collection is guaranteed to match the input, if a command not found,
+    /// None is returned for that index.
     #[graphql(arguments(
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
-        ids(
-            description = "The list of command ids to fetch, empty ids make no commands to return"
-        ),
+        ids(description = "The list of command ids to fetch, ids may be empty"),
     ))]
     async fn commands_by_ids(
         context: &Context,
