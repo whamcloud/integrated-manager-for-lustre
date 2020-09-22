@@ -334,6 +334,7 @@ impl QueryRoot {
         dir(description = "Sort direction, defaults to ASC"),
         is_active(description = "Command status, active means not completed, default is false"),
         msg(description = "Substring of the command's message, null or empty matches all"),
+        ids(description = "The list of command ids to fetch, default is NULL means no restriction"),
     ))]
     async fn commands(
         context: &Context,
@@ -342,9 +343,11 @@ impl QueryRoot {
         dir: Option<SortDir>,
         is_active: Option<bool>,
         msg: Option<String>,
+        ids: Option<Vec<i32>>,
     ) -> juniper::FieldResult<Vec<Command>> {
         let dir = dir.unwrap_or_default();
         let is_completed = !is_active.unwrap_or(false);
+        let ids: Option<&[i32]> = ids.as_deref();
         let commands: Vec<Command> = sqlx::query!(
             r#"
                 SELECT
@@ -359,16 +362,19 @@ impl QueryRoot {
                 JOIN chroma_core_command_jobs cj ON c.id = cj.command_id
                 WHERE complete = $4
                   AND ($5::TEXT IS NULL OR c.message ILIKE '%' || $5 || '%')
+                  AND ($6::INT[] IS NULL OR c.id = ANY ($6::INT[]))
                 GROUP BY c.id
                 ORDER BY
                     CASE WHEN $3 = 'asc' THEN c.id END ASC,
                     CASE WHEN $3 = 'desc' THEN c.id END DESC
-                OFFSET $1 LIMIT $2 "#,
+                OFFSET $1 LIMIT $2
+            "#,
             offset.unwrap_or(0) as i64,
             limit.unwrap_or(20) as i64,
             dir.deref(),
             is_completed,
             msg,
+            ids,
         )
         .fetch_all(&context.pg_pool)
         .map_ok(|xs: Vec<_>| {
@@ -397,6 +403,7 @@ impl QueryRoot {
         .await?;
         Ok(commands)
     }
+
     /// List all snapshot intervals
     async fn snapshot_intervals(context: &Context) -> juniper::FieldResult<Vec<SnapshotInterval>> {
         let xs: Vec<SnapshotInterval> = sqlx::query!("SELECT * FROM snapshot_interval")
