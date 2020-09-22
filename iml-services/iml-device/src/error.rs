@@ -20,7 +20,7 @@ pub enum ImlDeviceError {
     #[error(transparent)]
     SqlxMigrateError(#[from] sqlx::migrate::MigrateError),
     #[error(transparent)]
-    InfluxDbError(#[from] influx_db_client::error::Error),
+    ImlInfluxError(#[from] iml_influx::Error),
 }
 
 impl reject::Reject for ImlDeviceError {}

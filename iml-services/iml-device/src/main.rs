@@ -15,12 +15,12 @@ use iml_device::{
     },
     update_client_mounts, update_devices, Cache, ImlDeviceError, TargetFsRecord,
 };
+use iml_influx::Client;
 use iml_manager_env::{get_influxdb_addr, get_influxdb_metrics_db, get_pool_limit};
 use iml_postgres::{get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
-use influx_db_client::Client;
 use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
