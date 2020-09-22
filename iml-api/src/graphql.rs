@@ -332,9 +332,8 @@ impl QueryRoot {
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to ASC"),
-        is_active(description = "Command status, active means not completed, default is false"),
+        is_active(description = "Command status, active means not completed, can be omitted"),
         msg(description = "Substring of the command's message, null or empty matches all"),
-        ids(description = "The list of command ids to fetch, default is NULL means no restriction"),
     ))]
     async fn commands(
         context: &Context,
@@ -343,11 +342,9 @@ impl QueryRoot {
         dir: Option<SortDir>,
         is_active: Option<bool>,
         msg: Option<String>,
-        ids: Option<Vec<i32>>,
     ) -> juniper::FieldResult<Vec<Command>> {
         let dir = dir.unwrap_or_default();
-        let is_completed = !is_active.unwrap_or(false);
-        let ids: Option<&[i32]> = ids.as_deref();
+        let is_completed = is_active.map(|active| !active);
         let commands: Vec<Command> = sqlx::query!(
             r#"
                 SELECT
@@ -360,9 +357,8 @@ impl QueryRoot {
                     message
                 FROM chroma_core_command c
                 JOIN chroma_core_command_jobs cj ON c.id = cj.command_id
-                WHERE complete = $4
+                WHERE ($4::BOOL IS NULL OR complete = $4)
                   AND ($5::TEXT IS NULL OR c.message ILIKE '%' || $5 || '%')
-                  AND ($6::INT[] IS NULL OR c.id = ANY ($6::INT[]))
                 GROUP BY c.id
                 ORDER BY
                     CASE WHEN $3 = 'asc' THEN c.id END ASC,
@@ -374,6 +370,68 @@ impl QueryRoot {
             dir.deref(),
             is_completed,
             msg,
+        )
+        .fetch_all(&context.pg_pool)
+        .map_ok(|xs: Vec<_>| {
+            xs.into_iter()
+                .map(|x| Command {
+                    id: x.id,
+                    cancelled: x.cancelled,
+                    complete: x.complete,
+                    errored: x.errored,
+                    created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
+                    jobs: {
+                        x.job_ids
+                            .unwrap_or_default()
+                            .into_iter()
+                            .map(|job_id: i32| {
+                                format!("/api/{}/{}/", Job::<()>::endpoint_name(), job_id)
+                            })
+                            .collect::<Vec<_>>()
+                    },
+                    logs: "".to_string(),
+                    message: x.message.clone(),
+                    resource_uri: format!("/api/{}/{}/", Command::endpoint_name(), x.id),
+                })
+                .collect::<Vec<_>>()
+        })
+        .await?;
+        Ok(commands)
+    }
+
+    /// Fetch the list of commands by ids
+    #[graphql(arguments(
+        limit(description = "paging limit, defaults to 20"),
+        offset(description = "Offset into items, defaults to 0"),
+        ids(
+            description = "The list of command ids to fetch, empty ids make no commands to return"
+        ),
+    ))]
+    async fn commands_by_ids(
+        context: &Context,
+        limit: Option<i32>,
+        offset: Option<i32>,
+        ids: Vec<i32>,
+    ) -> juniper::FieldResult<Vec<Option<Command>>> {
+        let ids: &[i32] = &ids[..];
+        let unordered_cmds: Vec<Command> = sqlx::query!(
+            r#"
+                SELECT
+                    c.id AS id,
+                    cancelled,
+                    complete,
+                    errored,
+                    created_at,
+                    array_agg(cj.job_id)::INT[] AS job_ids,
+                    message
+                FROM chroma_core_command c
+                JOIN chroma_core_command_jobs cj ON c.id = cj.command_id
+                WHERE (c.id = ANY ($3::INT[]))
+                GROUP BY c.id
+                OFFSET $1 LIMIT $2
+            "#,
+            offset.unwrap_or(0) as i64,
+            limit.unwrap_or(20) as i64,
             ids,
         )
         .fetch_all(&context.pg_pool)
@@ -401,6 +459,21 @@ impl QueryRoot {
                 .collect::<Vec<_>>()
         })
         .await?;
+        // convert the commands into the hashmap id -> command
+        let mut hm = unordered_cmds
+            .into_iter()
+            .map(|c| (c.id, c))
+            .collect::<HashMap<i32, Command>>();
+        let commands = ids
+            .iter()
+            .map(|id| {
+                if let Some(c) = hm.remove(id) {
+                    Some(c)
+                } else {
+                    None
+                }
+            })
+            .collect();
         Ok(commands)
     }
 
