@@ -122,8 +122,9 @@ class RemoveTaskJob(AdvertisedJob):
 
     def get_steps(self):
         steps = []
-        for host in self.task.filesystem.get_servers():
-            steps.append((RemoveTaskStep, {"task": self.task.name, "host": host.fqdn}))
+        if self.task.state != "removed":
+            for host in self.task.filesystem.get_servers():
+                steps.append((RemoveTaskStep, {"task": self.task.name, "host": host.fqdn}))
 
         return steps
 
