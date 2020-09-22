@@ -155,22 +155,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     while let Some((fqdn, snapshots)) = s.try_next().await? {
         tracing::debug!("snapshots from {}: {:?}", fqdn, snapshots);
 
-        let snaps = {
-            snapshots.into_iter().fold(
-                (vec![], vec![], vec![], vec![], vec![], vec![], vec![]),
-                |mut acc, s| {
-                    acc.0.push(s.filesystem_name.clone());
-                    acc.1.push(s.snapshot_name.clone());
-                    acc.2.push(s.create_time.naive_utc());
-                    acc.3.push(s.modify_time.naive_utc());
-                    acc.4.push(s.snapshot_fsname.clone());
-                    acc.5.push(s.mounted);
-                    acc.6.push(s.comment);
+        let snaps = snapshots.into_iter().fold(
+            (vec![], vec![], vec![], vec![], vec![], vec![], vec![]),
+            |mut acc, s| {
+                acc.0.push(s.filesystem_name.clone());
+                acc.1.push(s.snapshot_name.clone());
+                acc.2.push(s.create_time.naive_utc());
+                acc.3.push(s.modify_time.naive_utc());
+                acc.4.push(s.snapshot_fsname.clone());
+                acc.5.push(s.mounted);
+                acc.6.push(s.comment);
 
-                    acc
-                },
-            )
-        };
+                acc
+            },
+        );
 
         sqlx::query!(
             r#"
