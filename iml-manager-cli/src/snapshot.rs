@@ -107,7 +107,7 @@ async fn interval_cli(cmd: IntervalCommand) -> Result<(), ImlManagerCliError> {
         }
         IntervalCommand::Remove { ids } => {
             for id in ids {
-                let query = snapshot_queries::remove_interval::build(id);
+                let query = snapshot_queries::remove_interval::build(id as i32);
 
                 let _resp: iml_graphql_queries::Response<snapshot_queries::remove_interval::Resp> =
                     graphql(query).await?;
