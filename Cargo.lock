@@ -1919,7 +1919,6 @@ dependencies = [
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
- "serde",
  "thiserror",
  "tokio",
 ]
