@@ -2,7 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use std::fmt::Debug;
 use futures_util::stream::TryStreamExt;
 use iml_command_utils::{wait_for_cmds_success, CmdUtilError};
 use iml_graphql_queries::snapshot as snapshot_queries;
@@ -13,7 +12,7 @@ use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::snapshot;
 use reqwest::Client;
-use std::{collections::HashMap, collections::HashSet, sync::Arc};
+use std::{collections::HashMap, collections::HashSet, fmt::Debug, sync::Arc};
 use thiserror::Error;
 use tokio::{
     sync::Mutex,
