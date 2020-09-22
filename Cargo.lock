@@ -1925,7 +1925,7 @@ dependencies = [
 
 [[package]]
 name = "iml-snapshot"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "futures",
  "futures-util",
@@ -1939,8 +1939,10 @@ dependencies = [
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
+ "serde",
  "thiserror",
  "tokio",
+ "url",
 ]
 
 [[package]]

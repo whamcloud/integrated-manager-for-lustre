@@ -2,7 +2,7 @@
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 name = "iml-snapshot"
-version = "0.1.0"
+version = "0.3.0"
 
 [dependencies]
 futures = "0.3"
@@ -17,5 +17,7 @@ iml-rabbit = {path = "../../iml-rabbit", version = "0.3"}
 iml-service-queue = {path = "../iml-service-queue", version = "0.3"}
 iml-tracing = {version = "0.2", path = "../../iml-tracing"}
 iml-wire-types = {path = "../../iml-wire-types", version = "0.3"}
+serde = "1.0"
 thiserror = "1.0"
 tokio = {version = "0.2", features = ["rt-threaded"]}
+url = "2.1"
