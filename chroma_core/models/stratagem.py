@@ -159,7 +159,12 @@ ExecStart={}
             config.filesystem.id, "After=iml-manager.target" if not runningInDocker() else "", iml_cmd
         )
 
-        post_data = {"config_id": str(config.id), "file_prefix": "iml-stratagem", "timer_config": timer_config, "service_config": service_config}
+        post_data = {
+            "config_id": str(config.id),
+            "file_prefix": "iml-stratagem",
+            "timer_config": timer_config,
+            "service_config": service_config,
+        }
 
         result = requests.put("{}/configure/".format(TIMER_PROXY_PASS), json=post_data)
 
