@@ -111,9 +111,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
             let interval = format!("{}{}", model.interval_value.trim(), model.interval_unit);
 
-            let interval = interval.parse::<humantime::Duration>().expect("Invalid interval");
-
-            let query = snapshot::create_interval::build(&model.fs_name, interval.into(), Some(model.barrier));
+            let query = snapshot::create_interval::build(&model.fs_name, interval, Some(model.barrier));
 
             let req = fetch::Request::graphql_query(&query);
 
