@@ -7,14 +7,13 @@ use iml_command_utils::{wait_for_cmds_success, CmdUtilError};
 use iml_graphql_queries::snapshot as snapshot_queries;
 use iml_manager_client::{get_influx, graphql, Client, ImlManagerClientError};
 use iml_manager_env::get_pool_limit;
-use iml_postgres::{get_db_pool, sqlx};
+use iml_postgres::{get_db_pool, sqlx, PgPool};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::snapshot;
-use std::{collections::HashMap, collections::HashSet, fmt::Debug, sync::Arc};
+use std::{collections::HashMap, fmt::Debug};
 use thiserror::Error;
 use tokio::{
-    sync::Mutex,
     time::Instant,
     time::{interval, Duration},
 };
@@ -39,6 +38,8 @@ enum Error {
     ImlManagerClientError(#[from] ImlManagerClientError),
     #[error(transparent)]
     ImlGraphqlQueriesError(#[from] iml_graphql_queries::Errors),
+    #[error(transparent)]
+    ImlPostgresError(#[from] iml_postgres::sqlx::Error),
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
@@ -47,9 +48,7 @@ enum State {
     CountingDown(Instant),
 }
 
-async fn tick(
-    snapshot_client_counts: Arc<Mutex<HashMap<SnapshotId, Option<State>>>>,
-) -> Result<(), Error> {
+async fn tick(pool: PgPool) -> Result<(), Error> {
     let client: Client = iml_manager_client::get_client()?;
     let client_2 = client.clone();
 
@@ -61,60 +60,74 @@ async fn tick(
     let stats = iml_influx::filesystems::Response::from(influx_resp);
 
     tracing::debug!("Influx stats: {:?}", stats);
-    let mut snapshot_client_counts = snapshot_client_counts.lock().await;
 
-    for (snapshot_id, state) in snapshot_client_counts.iter_mut() {
-        if let Some(snapshot_stats) = stats.get(&snapshot_id.snapshot_fsname) {
-            match state {
-                Some(State::Monitoring(prev_clients)) => {
-                    let clients = snapshot_stats.clients.unwrap_or(0);
+    let mut snapshot_client_counts: HashMap<i32, State> = HashMap::new();
 
-                    tracing::debug!(
-                        "Monitoring. Snapshot {}: {} clients (previously {} clients)",
-                        &snapshot_id.snapshot_fsname,
-                        clients,
-                        prev_clients,
-                    );
-                    if *prev_clients > 0 && clients == 0 {
-                        tracing::trace!("counting down for job");
-                        let instant = Instant::now() + Duration::from_secs(5 * 60);
-                        *state = Some(State::CountingDown(instant));
-                    } else {
-                        *prev_clients = clients;
-                    }
-                }
-                Some(State::CountingDown(when)) => {
-                    let clients = snapshot_stats.clients.unwrap_or(0);
-                    tracing::debug!(
-                        "Counting down. Snapshot {}: 0 clients (previously {} clients)",
-                        &snapshot_id.snapshot_fsname,
-                        clients
-                    );
-                    if clients > 0 {
-                        tracing::trace!("changing state");
-                        *state = Some(State::Monitoring(clients));
-                    } else if Instant::now() >= *when {
-                        tracing::trace!("running the job");
-                        *state = Some(State::Monitoring(0));
+    let snapshots =
+        sqlx::query!("SELECT id, filesystem_name, snapshot_name, snapshot_fsname FROM snapshot")
+            .fetch_all(&pool)
+            .await?;
+    tracing::debug!("Fetched {} snapshots from DB", snapshots.len());
 
-                        let query = snapshot_queries::unmount::build(
-                            &snapshot_id.filesystem_name,
-                            &snapshot_id.snapshot_name,
+    for snapshot in snapshots {
+        let snapshot_id = snapshot.id;
+        if let Some(snapshot_stats) = stats.get(&snapshot.snapshot_fsname) {
+            let state = snapshot_client_counts.get_mut(&snapshot_id);
+
+            if let Some(state) = state {
+                match state {
+                    State::Monitoring(prev_clients) => {
+                        let clients = snapshot_stats.clients.unwrap_or(0);
+
+                        tracing::debug!(
+                            "Monitoring. Snapshot {}: {} clients (previously {} clients)",
+                            &snapshot.snapshot_fsname,
+                            clients,
+                            prev_clients,
                         );
-                        let resp: iml_graphql_queries::Response<snapshot_queries::unmount::Resp> =
-                            graphql(client_2.clone(), query).await?;
-                        let command = Result::from(resp)?.data.unmount_snapshot;
-                        wait_for_cmds_success(&[command], None).await?;
+                        if *prev_clients > 0 && clients == 0 {
+                            tracing::trace!("counting down for job");
+                            let instant = Instant::now() + Duration::from_secs(5 * 60);
+                            *state = State::CountingDown(instant);
+                        } else {
+                            *prev_clients = clients;
+                        }
+                    }
+                    State::CountingDown(when) => {
+                        let clients = snapshot_stats.clients.unwrap_or(0);
+                        tracing::debug!(
+                            "Counting down. Snapshot {}: 0 clients (previously {} clients)",
+                            &snapshot.snapshot_fsname,
+                            clients
+                        );
+                        if clients > 0 {
+                            tracing::trace!("changing state");
+                            *state = State::Monitoring(clients);
+                        } else if Instant::now() >= *when {
+                            tracing::trace!("running the job");
+                            *state = State::Monitoring(0);
+
+                            let query = snapshot_queries::unmount::build(
+                                &snapshot.filesystem_name,
+                                &snapshot.snapshot_name,
+                            );
+                            let resp: iml_graphql_queries::Response<
+                                snapshot_queries::unmount::Resp,
+                            > = graphql(client_2.clone(), query).await?;
+                            let command = Result::from(resp)?.data.unmount_snapshot;
+                            wait_for_cmds_success(&[command], None).await?;
+                        }
                     }
                 }
-                None => {
-                    tracing::debug!(
-                        "Just learnt about this snapshot. Snapshot {}: 0 clients",
-                        &snapshot_id.snapshot_fsname
-                    );
+            } else {
+                let clients = snapshot_stats.clients.unwrap_or(0);
+                tracing::debug!(
+                    "Just learnt about this snapshot. Snapshot {}: {} clients",
+                    &snapshot.snapshot_fsname,
+                    clients,
+                );
 
-                    *state = Some(State::Monitoring(0));
-                }
+                snapshot_client_counts.insert(snapshot_id, State::Monitoring(clients));
             }
         }
     }
@@ -135,17 +148,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut s = consume_data::<Vec<snapshot::Snapshot>>(&ch, "rust_agent_snapshot_rx");
 
     let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
+    let pool_2 = pool.clone();
     sqlx::migrate!("../../migrations").run(&pool).await?;
-
-    let snapshot_client_counts: Arc<Mutex<HashMap<SnapshotId, Option<State>>>> =
-        Arc::new(Mutex::new(HashMap::new()));
-    let snapshot_client_counts_2 = snapshot_client_counts.clone();
 
     tokio::spawn(async move {
         let mut interval = interval(Duration::from_secs(10));
 
         while let Some(_) = interval.next().await {
-            let tick_result = tick(snapshot_client_counts_2.clone()).await;
+            let tick_result = tick(pool_2.clone()).await;
             if let Err(e) = tick_result {
                 tracing::error!("Error during handling snapshot autounmount: {}", e);
             }
@@ -156,22 +166,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tracing::debug!("snapshots from {}: {:?}", fqdn, snapshots);
 
         let snaps = {
-            let mut snapshot_client_counts = snapshot_client_counts.lock().await;
-            let old_snapshot_ids: HashSet<_> =
-                snapshot_client_counts.keys().map(|s| s.clone()).collect();
-            let new_snapshot_ids: HashSet<_> = snapshots
-                .iter()
-                .map(|s| SnapshotId {
-                    filesystem_name: s.filesystem_name.clone(),
-                    snapshot_name: s.snapshot_name.clone(),
-                    snapshot_fsname: s.snapshot_fsname.clone(),
-                })
-                .collect();
-            let to_remove = old_snapshot_ids.difference(&new_snapshot_ids);
-            for i in to_remove {
-                snapshot_client_counts.remove(i);
-            }
-
             snapshots.into_iter().fold(
                 (vec![], vec![], vec![], vec![], vec![], vec![], vec![]),
                 |mut acc, s| {
@@ -182,14 +176,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     acc.4.push(s.snapshot_fsname.clone());
                     acc.5.push(s.mounted);
                     acc.6.push(s.comment);
-
-                    snapshot_client_counts
-                        .entry(SnapshotId {
-                            filesystem_name: s.filesystem_name,
-                            snapshot_name: s.snapshot_name,
-                            snapshot_fsname: s.snapshot_fsname,
-                        })
-                        .or_insert(None);
 
                     acc
                 },
