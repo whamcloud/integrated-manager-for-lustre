@@ -459,21 +459,15 @@ impl QueryRoot {
                 .collect::<Vec<_>>()
         })
         .await?;
-        // convert the commands into the hashmap id -> command
         let mut hm = unordered_cmds
             .into_iter()
             .map(|c| (c.id, c))
             .collect::<HashMap<i32, Command>>();
         let commands = ids
             .iter()
-            .map(|id| {
-                if let Some(c) = hm.remove(id) {
-                    Some(c)
-                } else {
-                    None
-                }
-            })
-            .collect();
+            .map(|id| hm.remove(id))
+            .collect::<Vec<Option<Command>>>();
+
         Ok(commands)
     }
 
