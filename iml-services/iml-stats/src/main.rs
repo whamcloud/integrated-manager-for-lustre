@@ -2,12 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::stream::TryStreamExt;
+use futures::{stream::TryStreamExt, TryFutureExt};
+use iml_influx::{Client, InfluxClientExt, Point, Points, Precision, Value};
 use iml_manager_env::{get_influxdb_addr, get_influxdb_metrics_db};
 use iml_service_queue::service_queue::consume_data;
 use iml_stats::error::ImlStatsError;
 use iml_wire_types::Fqdn;
-use influx_db_client::{Client, Point, Points, Precision, Value};
 use lustre_collector::{
     HostStats, LNetStats, NodeStats, Record, Target, TargetStats,
     {
@@ -366,17 +366,14 @@ fn handle_target_records(target_stats: TargetStats, host: &Fqdn) -> Option<Vec<P
         TargetStats::FsNames(x) => {
             tracing::debug!("Fs names: {:?}", x);
 
-            let fs_names = x
-                .value
-                .into_iter()
-                .map(|x| x.0)
-                .collect::<Vec<String>>()
-                .join(",");
+            let fs_names = join_fs_names(x.value);
+
             Some(vec![Point::new("target")
                 .add_tag("host", Value::String(host.0.to_string()))
                 .add_tag("kind", Value::String(x.kind.to_string()))
                 .add_tag("target", Value::String(x.target.to_string()))
-                .add_field("mgs_fs", Value::String(fs_names))])
+                .add_tag("mgs_fs", Value::String(fs_names))
+                .add_field("is_mgs_fs", Value::Boolean(true))])
         }
         TargetStats::JobStatsOst(_) => {
             // Not storing jobstats... yet.
@@ -492,10 +489,15 @@ async fn main() -> Result<(), ImlStatsError> {
             get_influxdb_metrics_db(),
         );
 
-        delete_existing_mgs_fs_records(&xs, &host, &client).await?;
+        let mut fs_names = None;
 
         let entries: Vec<_> = xs
             .into_iter()
+            .inspect(|x| {
+                if let Record::Target(TargetStats::FsNames(x)) = x {
+                    fs_names = Some(join_fs_names(x.value.clone()));
+                }
+            })
             .filter_map(|record| match record {
                 Record::Target(target_stats) => handle_target_records(target_stats, &host),
                 Record::Host(host_stats) => handle_host_records(host_stats, &host),
@@ -514,8 +516,14 @@ async fn main() -> Result<(), ImlStatsError> {
                 .write_points(points, Some(Precision::Nanoseconds), None)
                 .await;
 
+            tracing::debug!("Processed insertions for: {:?}", host);
+
             if let Err(e) = r {
                 tracing::error!("Error writing series to influxdb: {}", e);
+            }
+
+            if let Some(fs_names) = fs_names {
+                delete_existing_mgs_fs_records(fs_names, &client).await?;
             }
         }
     }
@@ -523,62 +531,50 @@ async fn main() -> Result<(), ImlStatsError> {
     Ok(())
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+struct MgsFsTime {
+    time: u64,
+}
+
 async fn delete_existing_mgs_fs_records(
-    xs: &[Record],
-    host: &Fqdn,
+    fs_names: String,
     client: &Client,
 ) -> Result<(), ImlStatsError> {
-    let filtered_records = xs
-        .iter()
-        .filter_map(|record| match record {
-            Record::Target(x) => match x {
-                TargetStats::FsNames(x) => Some(x),
-                _ => None,
-            },
-            _ => None,
-        })
-        .collect::<Vec<&TargetStat<Vec<FsName>>>>();
-
-    for x in filtered_records {
-        let r = client
-            .query(
-                format!(
-                    "SELECT target,mgs_fs FROM target WHERE target='{}' AND host='{}'",
-                    x.target.to_string(),
-                    &host.0
-                )
-                .as_str(),
-                Some(Precision::Nanoseconds),
+    let xs: Vec<MgsFsTime> = client
+        .query_into(
+            format!(
+                r#"
+            SELECT mgs_fs,is_mgs_fs
+            FROM target
+            WHERE mgs_fs='{}' AND is_mgs_fs=true
+            ORDER BY time ASC
+            LIMIT 2"#,
+                fs_names
             )
+            .as_str(),
+            Some(Precision::Nanoseconds),
+        )
+        .await?
+        .unwrap_or_default();
+
+    if xs.len() < 2 {
+        return Ok(());
+    }
+
+    if let Some(x) = xs.get(0) {
+        let query = format!(
+            "DELETE FROM target WHERE time < {} AND mgs_fs = '{}' AND kind = '{}'",
+            x.time,
+            fs_names,
+            TargetVariant::MGT
+        );
+
+        tracing::debug!("Running query: {}", query);
+
+        client
+            .query(query.as_str(), Some(Precision::Nanoseconds))
+            .map_err(|e| iml_influx::Error::InfluxDbError(e))
             .await?;
-
-        if let Some(nodes) = r {
-            let timestamps = nodes
-                .into_iter()
-                .filter_map(|x| x.series)
-                .map(|xs| {
-                    xs.into_iter()
-                        .map(|x| {
-                            x.values
-                                .into_iter()
-                                .collect::<Vec<Vec<serde_json::value::Value>>>()
-                        })
-                        .flatten()
-                        .collect::<Vec<Vec<serde_json::Value>>>()
-                })
-                .flatten()
-                .filter_map(|xs| xs.first().cloned())
-                .collect::<Vec<serde_json::Value>>();
-
-            for timestamp in timestamps {
-                client
-                    .query(
-                        format!("DELETE FROM target WHERE time = {}", timestamp).as_str(),
-                        Some(Precision::Nanoseconds),
-                    )
-                    .await?;
-            }
-        }
     }
 
     Ok(())
@@ -588,4 +584,11 @@ fn fs_name(t: &Target) -> &str {
     let s = &*t;
 
     s.split_at(s.rfind('-').unwrap_or(0)).0
+}
+
+fn join_fs_names(xs: Vec<FsName>) -> String {
+    xs.into_iter()
+        .map(|x| x.0)
+        .collect::<Vec<String>>()
+        .join(",")
 }

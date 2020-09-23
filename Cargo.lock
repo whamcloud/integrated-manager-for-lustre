@@ -1627,7 +1627,6 @@ dependencies = [
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
- "influx_db_client",
  "insta",
  "serde",
  "serde_json",
@@ -1942,13 +1941,14 @@ name = "iml-stats"
 version = "0.3.0"
 dependencies = [
  "futures",
+ "iml-influx",
  "iml-manager-env",
  "iml-rabbit",
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
- "influx_db_client",
  "lustre_collector",
+ "serde",
  "serde_json",
  "thiserror",
  "tokio",
