@@ -2,12 +2,69 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use std::collections::HashMap;
-
 pub mod filesystem;
 pub mod filesystems;
 
-use serde_json::{Map, Value};
+#[cfg(feature = "with-db-client")]
+use futures::{future::BoxFuture, FutureExt};
+#[cfg(feature = "with-db-client")]
+pub use influx_db_client::{Client, Point, Points, Precision, Value};
+use serde_json::Map;
+use std::collections::HashMap;
+
+#[cfg(feature = "with-db-client")]
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error(transparent)]
+    InfluxDbError(#[from] influx_db_client::Error),
+    #[error(transparent)]
+    Serde(#[from] serde_json::Error),
+}
+
+#[cfg(feature = "with-db-client")]
+pub trait InfluxClientExt {
+    fn query_into<T: serde::de::DeserializeOwned>(
+        &self,
+        q: &str,
+        epoch: Option<Precision>,
+    ) -> BoxFuture<Result<Option<Vec<T>>, Error>>;
+}
+
+#[cfg(feature = "with-db-client")]
+impl InfluxClientExt for Client {
+    fn query_into<T: serde::de::DeserializeOwned>(
+        &self,
+        q: &str,
+        epoch: Option<Precision>,
+    ) -> BoxFuture<Result<Option<Vec<T>>, Error>> {
+        let q = self.query(q, epoch);
+
+        async move {
+            let r = q.await?;
+
+            let x = if let Some(nodes) = r {
+                let items = nodes
+                    .into_iter()
+                    .filter_map(|x| x.series)
+                    .flatten()
+                    .map(|x| -> serde_json::Value { ColVals(x.columns, x.values).into() })
+                    .map(|x| -> Result<Vec<T>, Error> {
+                        let x = serde_json::from_value(x)?;
+
+                        Ok(x)
+                    })
+                    .collect::<Result<Vec<Vec<T>>, _>>()?;
+
+                Some(Ok(items.into_iter().flatten().collect()))
+            } else {
+                None
+            };
+
+            x.transpose()
+        }
+        .boxed()
+    }
+}
 
 #[derive(serde::Deserialize, Clone, Debug)]
 pub struct InfluxResponse<T> {
@@ -34,10 +91,10 @@ impl From<ColVals> for serde_json::Value {
             .map(|y| -> Map<String, serde_json::Value> {
                 cols.clone().into_iter().zip(y).collect()
             })
-            .map(Value::Object)
+            .map(serde_json::Value::Object)
             .collect();
 
-        Value::Array(xs)
+        serde_json::Value::Array(xs)
     }
 }
 
