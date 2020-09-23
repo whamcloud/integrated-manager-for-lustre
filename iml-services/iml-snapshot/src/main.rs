@@ -66,11 +66,10 @@ async fn tick(snapshot_client_counts: &mut HashMap<i32, State>, pool: PgPool) ->
         };
 
         let state = snapshot_client_counts.get_mut(&snapshot_id);
+        let clients = snapshot_stats.clients.unwrap_or(0);
 
         match state {
             Some(State::Monitoring(prev_clients)) => {
-                let clients = snapshot_stats.clients.unwrap_or(0);
-
                 tracing::debug!(
                     "Monitoring. Snapshot {}: {} clients (previously {} clients)",
                     &snapshot.snapshot_fsname,
@@ -86,7 +85,6 @@ async fn tick(snapshot_client_counts: &mut HashMap<i32, State>, pool: PgPool) ->
                 }
             }
             Some(State::CountingDown(when)) => {
-                let clients = snapshot_stats.clients.unwrap_or(0);
                 tracing::debug!(
                     "Counting down. Snapshot {}: 0 clients (previously {} clients)",
                     &snapshot.snapshot_fsname,
@@ -110,7 +108,6 @@ async fn tick(snapshot_client_counts: &mut HashMap<i32, State>, pool: PgPool) ->
                 }
             }
             None => {
-                let clients = snapshot_stats.clients.unwrap_or(0);
                 tracing::debug!(
                     "Just learnt about this snapshot. Snapshot {}: {} clients",
                     &snapshot.snapshot_fsname,
