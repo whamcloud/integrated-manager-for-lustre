@@ -1934,10 +1934,7 @@ dependencies = [
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
- "influx_db_client",
- "thiserror",
  "tokio",
- "url",
 ]
 
 [[package]]
