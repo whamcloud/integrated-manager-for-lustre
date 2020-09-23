@@ -287,10 +287,10 @@ pub mod remove_interval {
 
     #[derive(Debug, serde::Serialize)]
     pub struct Vars {
-        id: u32,
+        id: i32,
     }
 
-    pub fn build(id: u32) -> Query<Vars> {
+    pub fn build(id: i32) -> Query<Vars> {
         Query {
             query: QUERY.to_string(),
             variables: Some(Vars { id }),

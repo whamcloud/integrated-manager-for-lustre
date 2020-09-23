@@ -37,7 +37,7 @@ impl Default for Model {
             fs_name: "".into(),
             barrier: false,
             interval_value: "".into(),
-            interval_unit: "m".into(),
+            interval_unit: "d".into(),
             modal: modal::Model::default(),
         }
     }
@@ -231,9 +231,9 @@ pub fn view(model: &Model) -> Node<Msg> {
                                     id!["interval_unit"],
                                     &input_cls,
                                     class![C.w_full, C.h_full C.rounded_l_none, C.bg_transparent],
-                                    option![class![C.font_sans], attrs! {At::Value => "m"}, "Minutes"],
                                     option![class![C.font_sans], attrs! {At::Value => "d"}, "Days"],
-                                    option![class![C.font_sans], attrs! {At::Value => "m"}, "Years"],
+                                    option![class![C.font_sans], attrs! {At::Value => "y"}, "Years"],
+                                    option![class![C.font_sans], attrs! {At::Value => "m"}, "Minutes"],
                                     attrs! {
                                         At::Required => true.as_at_value(),
                                     },
