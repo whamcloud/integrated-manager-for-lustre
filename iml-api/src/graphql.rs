@@ -333,7 +333,7 @@ impl QueryRoot {
         limit(description = "paging limit, defaults to 20"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to ASC"),
-        is_active(description = "Command status, active means not completed, can be omitted"),
+        is_active(description = "Command status, active means not completed, default is true"),
         msg(description = "Substring of the command's message, null or empty matches all"),
     ))]
     async fn commands(
@@ -345,7 +345,7 @@ impl QueryRoot {
         msg: Option<String>,
     ) -> juniper::FieldResult<Vec<Command>> {
         let dir = dir.unwrap_or_default();
-        let is_completed = is_active.map(|active| !active);
+        let is_completed = !is_active.unwrap_or(true);
         let commands: Vec<Command> = sqlx::query_as!(
             CommandTmpRecord,
             r#"
