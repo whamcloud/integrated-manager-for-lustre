@@ -1910,24 +1910,6 @@
       ]
     }
   },
-  "887b011aae30d8b3e1dfbe16162e4d3bc004ea07d5eef7a63dac3b3803276932": {
-    "query": "\n                SELECT DISTINCT filesystem_name\n                FROM snapshot_retention\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "filesystem_name",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
   "89a7a37f26d89b7def2d6f7273fee79cd4c7fc7070343e4a4197c4080ded5003": {
     "query": "SELECT * FROM chroma_core_task WHERE name = $1",
     "describe": {
