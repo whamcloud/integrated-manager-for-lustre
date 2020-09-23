@@ -139,7 +139,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     sqlx::migrate!("../../migrations").run(&pool).await?;
 
     tokio::spawn(async move {
-        let mut interval = interval(Duration::from_secs(10));
+        let mut interval = interval(Duration::from_secs(60));
         let mut snapshot_client_counts: HashMap<i32, State> = HashMap::new();
 
         while let Some(_) = interval.next().await {
