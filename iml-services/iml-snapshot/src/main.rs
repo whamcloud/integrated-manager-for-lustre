@@ -60,64 +60,66 @@ async fn tick(snapshot_client_counts: &mut HashMap<i32, State>, pool: PgPool) ->
 
     for snapshot in snapshots {
         let snapshot_id = snapshot.id;
-        if let Some(snapshot_stats) = stats.get(&snapshot.snapshot_fsname) {
-            let state = snapshot_client_counts.get_mut(&snapshot_id);
+        let snapshot_stats = match stats.get(&snapshot.snapshot_fsname) {
+            Some(x) => x,
+            None => continue,
+        };
 
-            if let Some(state) = state {
-                match state {
-                    State::Monitoring(prev_clients) => {
-                        let clients = snapshot_stats.clients.unwrap_or(0);
+        let state = snapshot_client_counts.get_mut(&snapshot_id);
 
-                        tracing::debug!(
-                            "Monitoring. Snapshot {}: {} clients (previously {} clients)",
-                            &snapshot.snapshot_fsname,
-                            clients,
-                            prev_clients,
-                        );
-                        if *prev_clients > 0 && clients == 0 {
-                            tracing::trace!("counting down for job");
-                            let instant = Instant::now() + Duration::from_secs(5 * 60);
-                            *state = State::CountingDown(instant);
-                        } else {
-                            *prev_clients = clients;
-                        }
-                    }
-                    State::CountingDown(when) => {
-                        let clients = snapshot_stats.clients.unwrap_or(0);
-                        tracing::debug!(
-                            "Counting down. Snapshot {}: 0 clients (previously {} clients)",
-                            &snapshot.snapshot_fsname,
-                            clients
-                        );
-                        if clients > 0 {
-                            tracing::trace!("changing state");
-                            *state = State::Monitoring(clients);
-                        } else if Instant::now() >= *when {
-                            tracing::trace!("running the job");
-                            *state = State::Monitoring(0);
+        if let Some(state) = state {
+            match state {
+                State::Monitoring(prev_clients) => {
+                    let clients = snapshot_stats.clients.unwrap_or(0);
 
-                            let query = snapshot_queries::unmount::build(
-                                &snapshot.filesystem_name,
-                                &snapshot.snapshot_name,
-                            );
-                            let resp: iml_graphql_queries::Response<
-                                snapshot_queries::unmount::Resp,
-                            > = graphql(client_2.clone(), query).await?;
-                            let command = Result::from(resp)?.data.unmount_snapshot;
-                            wait_for_cmds_success(&[command], None).await?;
-                        }
+                    tracing::debug!(
+                        "Monitoring. Snapshot {}: {} clients (previously {} clients)",
+                        &snapshot.snapshot_fsname,
+                        clients,
+                        prev_clients,
+                    );
+                    if *prev_clients > 0 && clients == 0 {
+                        tracing::trace!("counting down for job");
+                        let instant = Instant::now() + Duration::from_secs(5 * 60);
+                        *state = State::CountingDown(instant);
+                    } else {
+                        *prev_clients = clients;
                     }
                 }
-            } else {
-                let clients = snapshot_stats.clients.unwrap_or(0);
-                tracing::debug!(
-                    "Just learnt about this snapshot. Snapshot {}: {} clients",
-                    &snapshot.snapshot_fsname,
-                    clients,
-                );
+                State::CountingDown(when) => {
+                    let clients = snapshot_stats.clients.unwrap_or(0);
+                    tracing::debug!(
+                        "Counting down. Snapshot {}: 0 clients (previously {} clients)",
+                        &snapshot.snapshot_fsname,
+                        clients
+                    );
+                    if clients > 0 {
+                        tracing::trace!("changing state");
+                        *state = State::Monitoring(clients);
+                    } else if Instant::now() >= *when {
+                        tracing::trace!("running the job");
+                        *state = State::Monitoring(0);
 
-                snapshot_client_counts.insert(snapshot_id, State::Monitoring(clients));
+                        let query = snapshot_queries::unmount::build(
+                            &snapshot.filesystem_name,
+                            &snapshot.snapshot_name,
+                        );
+                        let resp: iml_graphql_queries::Response<snapshot_queries::unmount::Resp> =
+                            graphql(client_2.clone(), query).await?;
+                        let command = Result::from(resp)?.data.unmount_snapshot;
+                        wait_for_cmds_success(&[command], None).await?;
+                    }
+                }
             }
+        } else {
+            let clients = snapshot_stats.clients.unwrap_or(0);
+            tracing::debug!(
+                "Just learnt about this snapshot. Snapshot {}: {} clients",
+                &snapshot.snapshot_fsname,
+                clients,
+            );
+
+            snapshot_client_counts.insert(snapshot_id, State::Monitoring(clients));
         }
     }
 
