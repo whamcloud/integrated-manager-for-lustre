@@ -12,6 +12,14 @@ use tokio::time::delay_for;
 pub enum CmdUtilError {
     #[error(transparent)]
     ImlManagerClientError(#[from] iml_manager_client::ImlManagerClientError),
+    #[error("Failed commands: {0:?}")]
+    FailedCommandError(Vec<Command>),
+}
+
+impl From<Vec<Command>> for CmdUtilError {
+    fn from(xs: Vec<Command>) -> Self {
+        CmdUtilError::FailedCommandError(xs)
+    }
 }
 
 pub enum Progress {
@@ -58,6 +66,24 @@ pub async fn wait_for_cmds_progress(
                 let _ = tx.unbounded_send(Progress::Update(cmd.id));
             }
         }
+    }
+}
+
+/// Waits for command completion and prints progress messages.
+/// This will error on command failure and print failed commands in the error message.
+pub async fn wait_for_cmds_success(
+    cmds: &[Command],
+    tx: Option<mpsc::UnboundedSender<Progress>>,
+) -> Result<Vec<Command>, CmdUtilError> {
+    let cmds = wait_for_cmds_progress(cmds, tx).await?;
+
+    let (failed, passed): (Vec<_>, Vec<_>) =
+        cmds.into_iter().partition(|x| x.errored || x.cancelled);
+
+    if !failed.is_empty() {
+        Err(failed.into())
+    } else {
+        Ok(passed)
     }
 }
 

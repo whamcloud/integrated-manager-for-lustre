@@ -1927,12 +1927,17 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "futures-util",
+ "iml-command-utils",
+ "iml-graphql-queries",
+ "iml-influx",
+ "iml-manager-client",
  "iml-manager-env",
  "iml-postgres",
  "iml-rabbit",
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
+ "thiserror",
  "tokio",
 ]
 

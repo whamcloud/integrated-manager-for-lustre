@@ -2837,6 +2837,42 @@
       "nullable": []
     }
   },
+  "b90d797530fd50b0596cbdc7bce108066fc5c4e8d8feec13f22143f7e44653e9": {
+    "query": "SELECT id, filesystem_name, snapshot_name, snapshot_fsname FROM snapshot",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "filesystem_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "snapshot_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "snapshot_fsname",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "bb7fb337cfeac9a17eefb21a498e76be70c2f395473ba42331f51cc5e6d48679": {
     "query": "\n        INSERT INTO chroma_core_device\n        (fqdn, devices)\n        VALUES ($1, $2)\n        ON CONFLICT (fqdn) DO UPDATE\n        SET devices = EXCLUDED.devices\n    ",
     "describe": {
