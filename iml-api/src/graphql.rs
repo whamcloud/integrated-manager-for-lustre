@@ -136,7 +136,7 @@ pub(crate) struct QueryRoot;
 #[juniper::graphql_object(Context = Context)]
 impl QueryRoot {
     #[graphql(arguments(
-        limit(description = "paging limit, defaults to 20"),
+        limit(description = "paging limit, defaults to All"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to asc")
     ))]
@@ -184,7 +184,7 @@ impl QueryRoot {
     }
 
     #[graphql(arguments(
-        limit(description = "paging limit, defaults to 20"),
+        limit(description = "paging limit, defaults to All"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to asc"),
         fs_name(description = "Targets associated with the specified filesystem"),
@@ -293,7 +293,7 @@ impl QueryRoot {
     }
 
     #[graphql(arguments(
-        limit(description = "paging limit, defaults to 20"),
+        limit(description = "paging limit, defaults to All"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to ASC"),
         fsname(description = "Filesystem the snapshot was taken from"),
@@ -333,7 +333,7 @@ impl QueryRoot {
 
     /// Fetch the list of commands
     #[graphql(arguments(
-        limit(description = "paging limit, defaults to 20"),
+        limit(description = "paging limit, defaults to All"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to ASC"),
         is_active(description = "Command status, active means not completed, default is false"),
