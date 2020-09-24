@@ -1540,9 +1540,11 @@ dependencies = [
 name = "iml-api"
 version = "0.3.0"
 dependencies = [
+ "chrono",
  "futures",
  "humantime 2.0.1",
  "iml-job-scheduler-rpc",
+ "iml-manager-client",
  "iml-manager-env",
  "iml-postgres",
  "iml-rabbit",

@@ -4,6 +4,7 @@
 
 use futures::channel::oneshot;
 use iml_job_scheduler_rpc::ImlJobSchedulerRpcError;
+use iml_manager_client::ImlManagerClientError;
 use iml_postgres::sqlx;
 use iml_rabbit::{self, ImlRabbitError};
 use thiserror::Error;
@@ -15,6 +16,8 @@ pub enum ImlApiError {
     ImlJobSchedulerRpcError(#[from] ImlJobSchedulerRpcError),
     #[error(transparent)]
     ImlRabbitError(#[from] ImlRabbitError),
+    #[error(transparent)]
+    ImlManagerClientError(#[from] ImlManagerClientError),
     #[error("Not Found")]
     NoneError,
     #[error(transparent)]

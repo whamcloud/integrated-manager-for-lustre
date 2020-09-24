@@ -2,7 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{command::get_command, error::ImlApiError};
+use crate::{
+    command::get_command,
+    error::ImlApiError,
+    timer::{configure_snapshot_timer, remove_snapshot_timer},
+};
+use chrono::{DateTime, Utc};
 use futures::{TryFutureExt, TryStreamExt};
 use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
@@ -438,6 +443,28 @@ impl QueryRoot {
     }
 }
 
+struct SnapshotIntervalName {
+    id: i32,
+    fs_name: String,
+    timestamp: DateTime<Utc>,
+}
+
+fn parse_snapshot_name(name: &str) -> Option<SnapshotIntervalName> {
+    match name.split("-").collect::<Vec<&str>>().as_slice() {
+        [id, fs, ts] => {
+            let ts = ts.parse::<DateTime<Utc>>().ok()?;
+            let id = id.parse::<i32>().ok()?;
+
+            Some(SnapshotIntervalName {
+                id,
+                fs_name: fs.to_string(),
+                timestamp: ts,
+            })
+        }
+        _ => None,
+    }
+}
+
 pub(crate) struct MutationRoot;
 
 #[juniper::graphql_object(Context = Context)]
@@ -461,6 +488,22 @@ impl MutationRoot {
     ) -> juniper::FieldResult<Command> {
         let name = name.trim();
         validate_snapshot_name(name)?;
+
+        let snapshot_interval_name = parse_snapshot_name(name);
+        if let Some(data) = snapshot_interval_name {
+            sqlx::query!(
+                r#"
+                UPDATE snapshot_interval
+                SET last_run=$1
+                WHERE id=$2 AND filesystem_name=$3
+            "#,
+                data.timestamp,
+                data.id,
+                data.fs_name,
+            )
+            .execute(&context.pg_pool)
+            .await?;
+        }
 
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
@@ -651,7 +694,7 @@ impl MutationRoot {
         interval: GraphQLDuration,
         use_barrier: Option<bool>,
     ) -> juniper::FieldResult<bool> {
-        sqlx::query!(
+        let maybe_id = sqlx::query!(
             r#"
                 INSERT INTO snapshot_interval (
                     filesystem_name,
@@ -661,13 +704,20 @@ impl MutationRoot {
                 VALUES ($1, $2, $3)
                 ON CONFLICT (filesystem_name, interval)
                 DO NOTHING
+                RETURNING id
             "#,
             fsname,
             use_barrier.unwrap_or_default(),
             PgInterval::try_from(interval.0)?,
         )
-        .execute(&context.pg_pool)
-        .await?;
+        .fetch_optional(&context.pg_pool)
+        .await?
+        .map(|x| x.id);
+
+        if let Some(id) = maybe_id {
+            configure_snapshot_timer(id, fsname, interval.0, use_barrier.unwrap_or_default())
+                .await?;
+        }
 
         Ok(true)
     }
@@ -678,6 +728,8 @@ impl MutationRoot {
         sqlx::query!("DELETE FROM snapshot_interval WHERE id=$1", id)
             .execute(&context.pg_pool)
             .await?;
+
+        remove_snapshot_timer(id).await?;
 
         Ok(true)
     }
