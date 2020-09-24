@@ -450,7 +450,7 @@ struct SnapshotIntervalName {
 }
 
 fn parse_snapshot_name(name: &str) -> Option<SnapshotIntervalName> {
-    match name.split("-").collect::<Vec<&str>>().as_slice() {
+    match name.trim().splitn(3, "-").collect::<Vec<&str>>().as_slice() {
         [id, fs, ts] => {
             let ts = ts.parse::<DateTime<Utc>>().ok()?;
             let id = id.parse::<i32>().ok()?;
