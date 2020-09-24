@@ -27,7 +27,7 @@ requests_unixsocket==0.1.5
 requests==2.12.5
 setuptools
 tablib==0.9.11
-toolz
+toolz==0.10.0
 tzlocal
 urllib3
 vine==1.3.0
