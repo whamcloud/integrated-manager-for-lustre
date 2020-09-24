@@ -178,9 +178,7 @@ impl QueryRoot {
                 OFFSET $2 LIMIT $3"#,
             dir.deref(),
             offset.unwrap_or(0) as i64,
-            limit
-                .map(|x| x.to_string())
-                .unwrap_or_else(|| "ALL".to_string()) as String
+            limit.map(|x| x as i64),
         )
         .fetch_all(&context.pg_pool)
         .await?;
@@ -215,9 +213,7 @@ impl QueryRoot {
                     CASE WHEN $3 = 'desc' THEN t.name END DESC
                 OFFSET $1 LIMIT $2"#,
             offset.unwrap_or(0) as i64,
-            limit
-                .map(|x| x.to_string())
-                .unwrap_or_else(|| "ALL".to_string()) as String,
+            limit.map(|x| x as i64),
             dir.deref()
         )
         .fetch_all(&context.pg_pool)
@@ -325,7 +321,7 @@ impl QueryRoot {
                         CASE WHEN $3 = 'desc' THEN s.create_time END DESC
                     OFFSET $1 LIMIT $2"#,
                 offset.unwrap_or(0) as i64,
-                limit.map(|x| x.to_string()).unwrap_or_else(|| "ALL".to_string()) as String,
+                limit.map(|x| x as i64),
                 dir.deref(),
                 fsname,
                 name,
@@ -374,9 +370,7 @@ impl QueryRoot {
                     CASE WHEN $3 = 'desc' THEN c.id END DESC
                 OFFSET $1 LIMIT $2 "#,
             offset.unwrap_or(0) as i64,
-            limit
-                .map(|x| x.to_string())
-                .unwrap_or_else(|| "ALL".to_string()) as String,
+            limit.map(|x| x as i64),
             dir.deref(),
             is_completed,
             msg,
