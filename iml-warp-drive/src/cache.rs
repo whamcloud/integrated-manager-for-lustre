@@ -18,7 +18,7 @@ use iml_wire_types::{
         EnclosureType, HealthState, JobState, JobType, MemberState, SfaController, SfaDiskDrive,
         SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem, SubTargetType,
     },
-    snapshot::{DeleteUnit, SnapshotInterval, SnapshotRecord, SnapshotRetention},
+    snapshot::{ReserveUnit, SnapshotInterval, SnapshotRecord, SnapshotRetention},
     warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam,
 };
@@ -533,8 +533,8 @@ pub async fn populate_from_db(
         SELECT
             id,
             filesystem_name,
-            delete_num,
-            delete_unit as "delete_unit:DeleteUnit",
+            reserve_value,
+            reserve_unit as "reserve_unit:ReserveUnit",
             last_run,
             keep_num
         FROM snapshot_retention
@@ -565,7 +565,7 @@ pub async fn populate_from_db(
             last_name,
             email,
             is_staff,
-            is_active 
+            is_active
         FROM auth_user
     "#
     )
