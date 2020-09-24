@@ -141,7 +141,7 @@ pub(crate) struct QueryRoot;
 #[juniper::graphql_object(Context = Context)]
 impl QueryRoot {
     #[graphql(arguments(
-        limit(description = "paging limit, defaults to 20"),
+        limit(description = "optional paging limit, defaults to all rows"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to asc")
     ))]
@@ -178,7 +178,9 @@ impl QueryRoot {
                 OFFSET $2 LIMIT $3"#,
             dir.deref(),
             offset.unwrap_or(0) as i64,
-            limit.unwrap_or(20) as i64
+            limit
+                .map(|x| x.to_string())
+                .unwrap_or_else(|| "ALL".to_string()) as String
         )
         .fetch_all(&context.pg_pool)
         .await?;
@@ -187,7 +189,7 @@ impl QueryRoot {
     }
 
     #[graphql(arguments(
-        limit(description = "paging limit, defaults to 20"),
+        limit(description = "optional paging limit, defaults to all rows"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to asc"),
         fs_name(description = "Targets associated with the specified filesystem"),
@@ -213,7 +215,9 @@ impl QueryRoot {
                     CASE WHEN $3 = 'desc' THEN t.name END DESC
                 OFFSET $1 LIMIT $2"#,
             offset.unwrap_or(0) as i64,
-            limit.unwrap_or(20) as i64,
+            limit
+                .map(|x| x.to_string())
+                .unwrap_or_else(|| "ALL".to_string()) as String,
             dir.deref()
         )
         .fetch_all(&context.pg_pool)
@@ -294,7 +298,7 @@ impl QueryRoot {
     }
 
     #[graphql(arguments(
-        limit(description = "paging limit, defaults to 20"),
+        limit(description = "optional paging limit, defaults to all rows"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to ASC"),
         fsname(description = "Filesystem the snapshot was taken from"),
@@ -321,7 +325,7 @@ impl QueryRoot {
                         CASE WHEN $3 = 'desc' THEN s.create_time END DESC
                     OFFSET $1 LIMIT $2"#,
                 offset.unwrap_or(0) as i64,
-                limit.unwrap_or(20) as i64,
+                limit.map(|x| x.to_string()).unwrap_or_else(|| "ALL".to_string()) as String,
                 dir.deref(),
                 fsname,
                 name,
@@ -334,7 +338,7 @@ impl QueryRoot {
 
     /// Fetch the list of commands
     #[graphql(arguments(
-        limit(description = "paging limit, defaults to 20"),
+        limit(description = "optional paging limit, defaults to all rows"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to ASC"),
         is_active(description = "Command status, active means not completed, default is false"),
@@ -370,7 +374,9 @@ impl QueryRoot {
                     CASE WHEN $3 = 'desc' THEN c.id END DESC
                 OFFSET $1 LIMIT $2 "#,
             offset.unwrap_or(0) as i64,
-            limit.unwrap_or(20) as i64,
+            limit
+                .map(|x| x.to_string())
+                .unwrap_or_else(|| "ALL".to_string()) as String,
             dir.deref(),
             is_completed,
             msg,
