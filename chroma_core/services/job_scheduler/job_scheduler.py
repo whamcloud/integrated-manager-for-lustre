@@ -1865,7 +1865,7 @@ class JobScheduler(object):
         filesystem = ManagedFilesystem.objects.get(id=fs_id)
         task_list = []
         action = "unknown"
-        
+
         run_stratagem_list = [{"class_name": "ClearOldStratagemDataJob", "args": {}}]
         if stratagem_data.get("report_duration"):
             task_data = {
@@ -1907,7 +1907,11 @@ class JobScheduler(object):
                 "state": "created",
                 "keep_failed": False,
                 "actions": ["stratagem.filesync"],
-                "args": {"remote": stratagem_data.get("remote"), "expression": stratagem_data.get("expression"), "action": stratagem_data.get("action")},
+                "args": {
+                    "remote": stratagem_data.get("remote"),
+                    "expression": stratagem_data.get("expression"),
+                    "action": stratagem_data.get("action"),
+                },
             }
             action = "filesync"
             task = Task.objects.create(**task_data)
@@ -1922,7 +1926,11 @@ class JobScheduler(object):
                 "state": "created",
                 "keep_failed": False,
                 "actions": ["stratagem.cloudsync"],
-                "args": {"remote": stratagem_data.get("remote"), "expression": stratagem_data.get("expression"), "action": stratagem_data.get("action")},
+                "args": {
+                    "remote": stratagem_data.get("remote"),
+                    "expression": stratagem_data.get("expression"),
+                    "action": stratagem_data.get("action"),
+                },
             }
             action = "cloudsync"
             task = Task.objects.create(**task_data)
