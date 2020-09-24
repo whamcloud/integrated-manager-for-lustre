@@ -556,7 +556,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .partition(Result::is_ok);
                 let fids: Vec<_> = fids.into_iter().map(Result::unwrap).collect();
                 let errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
-                if errors.len() > 0 {
+                if !errors.is_empty() {
                     tracing::error!("files not found, ignoring: {:?}", errors);
                 }
                 let fidlist: Vec<FidItem> = fids
@@ -588,7 +588,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .partition(Result::is_ok);
                 let fids: Vec<_> = fids.into_iter().map(Result::unwrap).collect();
                 let errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
-                if errors.len() > 0 {
+		if !errors.is_empty() {
                     tracing::error!("files not found, ignoring: {:?}", errors);
                 }
                 let fidlist: Vec<FidItem> = fids

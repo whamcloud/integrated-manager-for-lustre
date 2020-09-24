@@ -8,14 +8,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('chroma_core', '0025_createsnapshotjob_destroysnapshotjob'),
+        ("chroma_core", "0025_createsnapshotjob_destroysnapshotjob"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='runstratagemjob',
-            name='search_expression',
-            field=models.TextField(default=''),
+            model_name="runstratagemjob",
+            name="search_expression",
+            field=models.TextField(default=""),
+            preserve_default=False,
+        ),
+        migrations.AddField(
+            model_name="runstratagemjob",
+            name="action",
+            field=models.TextField(default=""),
             preserve_default=False,
         ),
     ]

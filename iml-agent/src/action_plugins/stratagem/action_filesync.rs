@@ -2,86 +2,77 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-extern crate futures;
-extern crate tokio;
-
-use crate::agent_error::{ImlAgentError, RequiredError};
-use crate::lustre::search_rootpath;
-use futures::{
-    future::{self, TryFutureExt},
-    stream::{self, StreamExt, TryStreamExt},
+use crate::{
+    agent_error::{ImlAgentError, RequiredError},
+    lustre::search_rootpath,
 };
+use futures::{future::try_join_all, future::Future, stream, StreamExt, TryStreamExt};
 use iml_wire_types::{FidError, FidItem};
 use liblustreapi::LlapiFid;
 use std::{collections::HashMap, path::PathBuf};
-use tokio::fs;
-use tokio::process::Command;
+use tokio::{fs, process::Command};
 
 struct Work {
+    fid: FidItem,
     src_file: String,
     dest_file: String,
 }
 
-async fn actually_rsync(work: &Work) -> Result<(), std::io::Error> {
-    tracing::error!("running {}", work.src_file);
-    let output = Command::new("rsync")
-        .arg("-a")
-        .arg("-t")
-        .arg("-X")
-        .arg(&work.src_file)
-        .arg(&work.dest_file)
-        .output();
-
-    let output = output.await?;
-
-    tracing::debug!("done {} {}", work.src_file, output.status);
-
-    Ok(())
-}
-
-async fn do_rsync(work_list: &Vec<Work>) -> Result<Vec<FidError>, ImlAgentError> {
-    let result = Vec::new();
-
+fn do_rsync<'a>(
+    work_list: &'a [Work],
+) -> impl Future<Output = Result<Vec<FidError>, ImlAgentError>> + 'a {
     stream::iter(work_list)
-        .map(|xs| Ok::<_, std::io::Error>(xs))
-        .try_for_each_concurrent(100, |fids| {
-            actually_rsync(fids)
-                .or_else(|e| {
-                    println!("error: {}", e);
-                    future::ok(())
-                })
-                .map_ok(|_| println!("done - actually"))
-        })
-        .await?;
+        .map(|work| async move {
+            let output = Command::new("rsync")
+                .arg("-a")
+                .arg("-t")
+                .arg("-X")
+                .arg(&work.src_file)
+                .arg(&work.dest_file)
+                .output()
+                .await?;
 
-    Ok(result)
+            Ok::<_, ImlAgentError>(FidError {
+                fid: work.fid.fid.clone(),
+                data: work.fid.data.clone(),
+                errno: output.status.code().unwrap_or(0) as i16,
+            })
+        })
+        .chunks(10)
+        .map(Ok)
+        .try_fold(vec![], |mut acc, xs| async {
+            let xs = try_join_all(xs).await?;
+
+            acc.extend(xs);
+
+            Ok::<_, ImlAgentError>(acc)
+        })
 }
 
 async fn archive_fids(
     llapi: LlapiFid,
-    dest_src: &String,
+    dest_src: &str,
     fid_list: Vec<FidItem>,
 ) -> Result<Vec<FidError>, ImlAgentError> {
-    let mut result = Vec::new();
+    let mut result = vec![];
 
-    let mut rsync_list: Vec<Work> = Vec::new();
+    let mut rsync_list: Vec<Work> = vec![];
 
     for fid in fid_list {
-        let res = llapi.fid2path(&fid.fid);
-
-        if res.is_err() {
-            tracing::error!("llapi: failed on fid {}", &fid.fid);
-            continue;
-        }
-
-        let fid_path = res.ok().unwrap();
+        let fid_path = match llapi.fid2path(&fid.fid) {
+            Ok(x) => x,
+            Err(_) => {
+                tracing::error!("llapi: failed on fid {}", &fid.fid);
+                continue;
+            }
+        };
 
         let src_file = format!("{}/{}", llapi.mntpt(), &fid_path);
         let dest_file = format!("{}/{}", &dest_src, &fid_path);
         let mut dest_dir = PathBuf::from(&dest_file);
 
         dest_dir.pop();
-        if dest_dir.is_dir() == false {
+        if !dest_dir.is_dir() {
             fs::create_dir_all(&dest_dir).await?;
         }
 
@@ -98,12 +89,13 @@ async fn archive_fids(
                 .arg("-S")
                 .arg(src_file)
                 .arg(dest_file)
-                .output();
+                .output()
+                .await?;
 
-            let output = output.await?;
+            let FidItem { fid, data } = fid;
             result.push(FidError {
-                fid: fid.fid.clone(),
-                data: fid.data.clone(),
+                fid,
+                data,
                 errno: output.status.code().unwrap_or(0) as i16,
             });
             tracing::debug!(
@@ -114,8 +106,9 @@ async fn archive_fids(
             );
         } else {
             rsync_list.push(Work {
-                src_file: src_file.clone(),
-                dest_file: dest_file.clone(),
+                fid,
+                src_file,
+                dest_file,
             });
 
             if rsync_list.len() >= 500 {
@@ -137,10 +130,10 @@ async fn archive_fids(
 
 async fn restore_fids(
     llapi: LlapiFid,
-    dest_src: &String,
+    dest_src: &str,
     fid_list: Vec<FidItem>,
 ) -> Result<Vec<FidError>, ImlAgentError> {
-    let mut result = Vec::new();
+    let mut result = vec![];
 
     for fid in fid_list {
         let fid_path = llapi.fid2path(&fid.fid)?;
@@ -172,6 +165,7 @@ async fn restore_fids(
 
         let output = output.await?;
 
+        // TODO: handle termination conditions without defaulting to 0
         let res = FidError {
             fid: fid.fid.clone(),
             data: fid.data.clone(),
@@ -179,12 +173,12 @@ async fn restore_fids(
         };
         result.push(res);
 
-        /*error!(
+        tracing::debug!(
             "exited with {} {} {}",
             output.status,
             std::str::from_utf8(&output.stdout)?,
             std::str::from_utf8(&output.stderr)?
-        );*/
+        );
     }
 
     Ok(result)
@@ -197,18 +191,16 @@ pub async fn process_fids(
     let llapi = search_rootpath(fsname_or_mntpath).await?;
 
     let dest_path = task_args
-        .get("remote".into())
-        .ok_or(RequiredError("Task missing 'remote' argument".to_string()))?;
+        .get("remote")
+        .ok_or_else(|| RequiredError("Task missing 'remote' argument".to_string()))?;
 
     let action_name = task_args
-        .get("action".into())
-        .ok_or(RequiredError("Task missing 'action' argument".to_string()))?;
+        .get("action")
+        .ok_or_else(|| RequiredError("Task missing 'action' argument".to_string()))?;
 
-    // fuck it, panic.  I can'd figure out how to return an error from a match
-    // statement, but I can above.
     match action_name.as_str() {
         "push" => archive_fids(llapi.clone(), dest_path, fid_list).await,
         "pull" => restore_fids(llapi.clone(), dest_path, fid_list).await,
-        _ => panic!(),
+	_ => Err(RequiredError("Task.action not push or pull".to_string()).into()),
     }
 }
