@@ -9,7 +9,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("chroma_core", "0025_createsnapshotjob_destroysnapshotjob"),
+        ("chroma_core", "0026_runstratagemjob_search_expression"),
     ]
 
     operations = [

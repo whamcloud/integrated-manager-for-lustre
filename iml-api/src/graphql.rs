@@ -18,7 +18,7 @@ use iml_rabbit::Pool;
 use iml_wire_types::{
     graphql_duration::GraphQLDuration,
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
-    Command, EndpointName, Job, StratagemReport,
+    Command, EndpointName, HotpoolConfiguration, Job, StratagemReport,
 };
 use itertools::Itertools;
 use juniper::{
@@ -56,20 +56,25 @@ struct CorosyncNode {
     r#type: String,
 }
 
-#[derive(juniper::GraphQLObject)]
-/// Hotpool Configuration
-struct Hotpool {
-    /// The id of the config
-    id: i32,
-    /// The filesystem associated with this target
-    filesystem_id: i32,
-    /// Current Hotpool State
-    /// Possible Values: unconfigured, configured, stopped, started, removed
-    state: String,
-    /// Label of
-    ha_label: String,
-    /// Version of Hotpool Config
-    version: i32,
+#[derive(juniper::GraphQLEnum)]
+enum HotpoolState {
+    Unconfigured,
+    Configured,
+    Stopped,
+    Started,
+    Removed,
+}
+
+impl std::fmt::Display for HotpoolState {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::Unconfigured => f.pad(&format!("{}", "unconfigured")),
+            Self::Configured => f.pad(&format!("{}", "configured")),
+            Self::Stopped => f.pad(&format!("{}", "stopped")),
+            Self::Started => f.pad(&format!("{}", "started")),
+            Self::Removed => f.pad(&format!("{}", "removed")),
+        }
+    }
 }
 
 #[derive(juniper::GraphQLObject)]
@@ -281,17 +286,24 @@ impl QueryRoot {
         limit: Option<i32>,
         offset: Option<i32>,
         dir: Option<SortDir>,
-    ) -> juniper::FieldResult<Vec<Hotpool>> {
+    ) -> juniper::FieldResult<Vec<HotpoolConfiguration>> {
         let dir = dir.unwrap_or_default();
 
-        let xs: Vec<Hotpool> = sqlx::query_as!(
-            Hotpool,
+        let xs: Vec<HotpoolConfiguration> = sqlx::query_as!(
+            HotpoolConfiguration,
             r#"
-                SELECT id, filesystem_id, state, ha_label, version as "version: i32"
-                FROM chroma_core_hotpoolconfiguration t
+                SELECT h.id, h.filesystem_id, h.state, h.state_modified_at, h.ha_label,
+                a.hot_id, a.cold_id, a.extend_id, a.resync_id, a.minage, p.purge_id,
+                h.version::integer as "version: i32",
+                p.freehi::integer as "freehi: i32",
+                p.freelo::integer as "freelo: i32"
+                FROM chroma_core_hotpoolconfiguration h 
+                JOIN chroma_core_lamigoconfiguration a ON h.id = a.hotpool_id
+                JOIN chroma_core_lpurgeconfiguration p ON h.id = p.hotpool_id
+                WHERE h.not_deleted = 't'
                 ORDER BY
-                    CASE WHEN $3 = 'asc' THEN t.id END ASC,
-                    CASE WHEN $3 = 'desc' THEN t.id END DESC
+                    CASE WHEN $3 = 'asc' THEN h.id END ASC,
+                    CASE WHEN $3 = 'desc' THEN h.id END DESC
                 OFFSET $1 LIMIT $2"#,
             offset.unwrap_or(0) as i64,
             limit.unwrap_or(20) as i64,
@@ -642,10 +654,11 @@ impl MutationRoot {
         .map_err(ImlApiError::ImlJobSchedulerRpcError)
         .await?;
 
-        let command = get_command(&context.pg_pool, command_id).await?;
-
-        Ok(command)
+        get_command(&context.pg_pool, command_id)
+            .await
+            .map_err(|e| e.into())
     }
+
     #[graphql(arguments(
         fsname(description = "Filesystem snapshot was taken from"),
         name(description = "Name of the snapshot"),
@@ -691,10 +704,11 @@ impl MutationRoot {
         .map_err(ImlApiError::ImlJobSchedulerRpcError)
         .await?;
 
-        let command = get_command(&context.pg_pool, command_id).await?;
-
-        Ok(command)
+        get_command(&context.pg_pool, command_id)
+            .await
+            .map_err(|e| e.into())
     }
+
     #[graphql(arguments(
         fsname(description = "Filesystem snapshot was taken from"),
         name(description = "Name of the snapshot"),
@@ -999,20 +1013,59 @@ impl MutationRoot {
             .await
             .map_err(|e| e.into())
     }
+
+    #[graphql(arguments(
+        fsname(description = "Filesystem name"),
+        state(description = "New state to transition to"),
+    ))]
+    async fn set_hotpool_state(
+        context: &Context,
+        fsname: String,
+        state: HotpoolState,
+    ) -> juniper::FieldResult<Command> {
+        let hpid = hpid(fsname, &context.pg_pool).await?.ok_or_else(|| {
+            FieldError::new(
+                "Hotpool Configuration not found for filesystem",
+                Value::null(),
+            )
+        })?;
+
+        let obj = serde_json::json!([(
+            (
+                "chroma_core".to_string(),
+                "hotpoolconfiguration".to_string()
+            ),
+            hpid,
+            state.to_string()
+        )]);
+        let kwargs: HashMap<String, String> = vec![
+            (
+                "message".into(),
+                format!("Setting Hotpool state to {}", &state),
+            ),
+            ("run".into(), "True".into()),
+        ]
+        .into_iter()
+        .collect();
+
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_pool.get().await?,
+            "set_state",
+            vec![obj],
+            Some(kwargs),
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        get_command(&context.pg_pool, command_id)
+            .await
+            .map_err(|e| e.into())
+    }
     #[graphql(arguments(fsname(description = "Filesystem"),))]
     async fn destroy_hotpool(context: &Context, fsname: String) -> juniper::FieldResult<Command> {
-        let hpid = sqlx::query!(
-            r#"
-                SELECT hp.id AS id FROM chroma_core_hotpoolconfiguration hp 
-                INNER JOIN chroma_core_managedfilesystem fs ON hp.filesystem_id = fs.id
-                WHERE hp.not_deleted = 't' AND fs.not_deleted = 't' AND fs.name=$1
-            "#,
-            fsname
-        )
-        .fetch_optional(&context.pg_pool)
-        .await?
-        .map(|x| x.id)
-        .ok_or_else(|| FieldError::new("Hotpool Configuration not found", Value::null()))?;
+        let hpid = hpid(fsname, &context.pg_pool)
+            .await?
+            .ok_or_else(|| FieldError::new("Hotpool Configuration not found", Value::null()))?;
 
         let command_id: i32 = iml_job_scheduler_rpc::call(
             &context.rabbit_pool.get().await?,
@@ -1027,6 +1080,74 @@ impl MutationRoot {
             .await
             .map_err(|e| e.into())
     }
+    #[graphql(arguments(
+        fsname(description = "The filesystem to create snapshots with"),
+        interval(description = "How often a snapshot should be taken"),
+        use_barrier(
+            description = "Set write barrier before creating snapshot. The default value is `false`"
+        ),
+    ))]
+    /// Creates a new snapshot interval.
+    /// A recurring snapshot will be taken once the given `interval` expires for the given `fsname`.
+    /// In order for the snapshot to be successful, the filesystem must be available.
+    async fn create_snapshot_interval(
+        context: &Context,
+        fsname: String,
+        interval: GraphQLDuration,
+        use_barrier: Option<bool>,
+    ) -> juniper::FieldResult<bool> {
+        let maybe_id = sqlx::query!(
+            r#"
+                INSERT INTO snapshot_interval (
+                    filesystem_name,
+                    use_barrier,
+                    interval
+                )
+                VALUES ($1, $2, $3)
+                ON CONFLICT (filesystem_name, interval)
+                DO NOTHING
+                RETURNING id
+            "#,
+            fsname,
+            use_barrier.unwrap_or_default(),
+            PgInterval::try_from(interval.0)?,
+        )
+        .fetch_optional(&context.pg_pool)
+        .await?
+        .map(|x| x.id);
+
+        if let Some(id) = maybe_id {
+            configure_snapshot_timer(id, fsname, interval.0, use_barrier.unwrap_or_default())
+                .await?;
+        }
+
+        Ok(true)
+    }
+    /// Removes an existing snapshot interval.
+    /// This will also cancel any outstanding intervals scheduled by this rule.
+    #[graphql(arguments(id(description = "The snapshot interval id"),))]
+    async fn remove_snapshot_interval(context: &Context, id: i32) -> juniper::FieldResult<bool> {
+        sqlx::query!("DELETE FROM snapshot_interval WHERE id=$1", id)
+            .execute(&context.pg_pool)
+            .await?;
+
+        remove_snapshot_timer(id).await?;
+}
+
+async fn hpid(fsname: String, pgpool: &PgPool) -> Result<Option<i32>, iml_postgres::sqlx::Error> {
+    let xs = sqlx::query!(
+        r#"
+            SELECT hp.id AS id FROM chroma_core_hotpoolconfiguration hp
+            INNER JOIN chroma_core_managedfilesystem fs ON hp.filesystem_id = fs.id
+            WHERE hp.not_deleted = 't' AND fs.not_deleted = 't' AND fs.name=$1
+        "#,
+        fsname
+    )
+    .fetch_optional(pgpool)
+    .await?
+    .map(|x| x.id);
+
+    Ok(xs)
 }
 
 async fn poolid(
@@ -1117,6 +1238,22 @@ pub(crate) fn endpoint(
         .map(|schema: Arc<Schema>| schema.as_schema_language());
 
     graphql_route.or(graphiql_route).or(graphql_schema_route)
+}
+
+async fn hpid(fsname: String, pgpool: &PgPool) -> Result<Option<i32>, iml_postgres::sqlx::Error> {
+    let xs = sqlx::query!(
+        r#"
+            SELECT hp.id AS id FROM chroma_core_hotpoolconfiguration hp
+            INNER JOIN chroma_core_managedfilesystem fs ON hp.filesystem_id = fs.id
+            WHERE hp.not_deleted = 't' AND fs.not_deleted = 't' AND fs.name=$1
+        "#,
+        fsname
+    )
+    .fetch_optional(pgpool)
+    .await?
+    .map(|x| x.id);
+
+    Ok(xs)
 }
 
 async fn get_fs_target_resources(

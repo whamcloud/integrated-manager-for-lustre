@@ -1284,6 +1284,106 @@
       ]
     }
   },
+  "54957c5214a7c438f6a670614a9c41521b916cc2a266409f0dca17997e00c7d6": {
+    "query": "\n                SELECT h.id, h.filesystem_id, h.state, h.state_modified_at, h.ha_label,\n                a.hot_id, a.cold_id, a.extend_id, a.resync_id, a.minage, p.purge_id,\n                h.version::integer as \"version: i32\",\n                p.freehi::integer as \"freehi: i32\",\n                p.freelo::integer as \"freelo: i32\"\n                FROM chroma_core_hotpoolconfiguration h \n                JOIN chroma_core_lamigoconfiguration a ON h.id = a.hotpool_id\n                JOIN chroma_core_lpurgeconfiguration p ON h.id = p.hotpool_id\n                WHERE h.not_deleted = 't'\n                ORDER BY\n                    CASE WHEN $3 = 'asc' THEN h.id END ASC,\n                    CASE WHEN $3 = 'desc' THEN h.id END DESC\n                OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "filesystem_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 2,
+          "name": "state",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "state_modified_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 4,
+          "name": "ha_label",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 5,
+          "name": "hot_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 6,
+          "name": "cold_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 7,
+          "name": "extend_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 8,
+          "name": "resync_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 9,
+          "name": "minage",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 10,
+          "name": "purge_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 11,
+          "name": "version: i32",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 12,
+          "name": "freehi: i32",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 13,
+          "name": "freelo: i32",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        true,
+        null,
+        null,
+        null
+      ]
+    }
+  },
   "554681d480739b966bb4fafc141ce924e3d4edafbad3cc811dd67b3f3295dabb": {
     "query": "\n        SELECT\n            id,\n            is_superuser,\n            username,\n            first_name,\n            last_name,\n            email,\n            is_staff,\n            is_active\n        FROM auth_user\n    ",
     "describe": {
@@ -1336,52 +1436,6 @@
         false,
         false,
         false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ]
-    }
-  },
-  "51f561ec55fa37953068cab8c9219540e7901df233e2f4f97222c586dbc81f8f": {
-    "query": "\n                SELECT id, filesystem_id, state, ha_label, version as \"version: i32\"\n                FROM chroma_core_hotpoolconfiguration t\n                ORDER BY\n                    CASE WHEN $3 = 'asc' THEN t.id END ASC,\n                    CASE WHEN $3 = 'desc' THEN t.id END DESC\n                OFFSET $1 LIMIT $2",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "filesystem_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 2,
-          "name": "state",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 3,
-          "name": "ha_label",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 4,
-          "name": "version: i32",
-          "type_info": "Int2"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int8",
-          "Text"
-        ]
-      },
-      "nullable": [
         false,
         false,
         false,
@@ -3851,26 +3905,6 @@
       ]
     }
   },
-  "e38dfa19c16344aee9c0a12711feb860181c35f4e7d2bf180bbbbb06d5bfb29f": {
-    "query": "\n                SELECT hp.id AS id FROM chroma_core_hotpoolconfiguration hp \n                INNER JOIN chroma_core_managedfilesystem fs ON hp.filesystem_id = fs.id\n                WHERE hp.not_deleted = 't' AND fs.not_deleted = 't' AND fs.name=$1\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
   "e8f95e79d22bae021629cbfef5291601d0001933bb4628538fde58fdc0a297b9": {
     "query": "\n        select * from chroma_core_task \n        where \n            filesystem_id = $1\n            and state <> 'closed'\n            and fids_total > fids_completed \n            and (running_on_id is Null or running_on_id = $2)",
     "describe": {
@@ -4021,6 +4055,26 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "f33988d6a51d579b0c3954b95eec34afa9eaa1849ec6f561659185b39682eb39": {
+    "query": "\n            SELECT hp.id AS id FROM chroma_core_hotpoolconfiguration hp\n            INNER JOIN chroma_core_managedfilesystem fs ON hp.filesystem_id = fs.id\n            WHERE hp.not_deleted = 't' AND fs.not_deleted = 't' AND fs.name=$1\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
     }
   },
   "f3d07e6786deccc4cf6ffce6d37772de8b5387d2b9f63930e38ed5abdb50df94": {
