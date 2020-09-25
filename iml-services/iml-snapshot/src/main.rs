@@ -168,6 +168,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             },
         );
 
+        let transaction = pool.begin().await?;
+
         sqlx::query!(
             r#"
             DELETE FROM snapshot
@@ -210,6 +212,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .execute(&pool)
         .await?;
+
+        transaction.commit().await?;
     }
 
     Ok(())
