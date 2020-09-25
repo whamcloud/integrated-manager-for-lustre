@@ -121,7 +121,7 @@ impl DaemonPlugin for SnapshotList {
                                 lock.updated = true;
                             }
                         }
-                        delay_for(Duration::from_secs(60)).await;
+                        delay_for(Duration::from_secs(30)).await;
                     }
                 },
                 reader_reg,
