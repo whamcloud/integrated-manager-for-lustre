@@ -2,13 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{
-    agent_error::{ImlAgentError, RequiredError},
-    lustre::search_rootpath,
-};
+use crate::{agent_error::ImlAgentError, lustre::search_rootpath};
 use futures::{future::try_join_all, stream, StreamExt, TryStreamExt};
 use iml_wire_types::{FidError, FidItem};
 use liblustreapi::LlapiFid;
+use structopt::clap::arg_enum;
 use tokio::process::Command;
 
 fn get_unique(input: &str) -> String {
@@ -44,11 +42,7 @@ async fn archive_fids(
                     errno = output.status.code().unwrap_or(0) as i16;
                 }
                 let FidItem { fid, data } = fid;
-                Ok::<_, ImlAgentError>(FidError {
-                    fid,
-                    data,
-                    errno,
-                })
+                Ok::<_, ImlAgentError>(FidError { fid, data, errno })
             }
         })
         .chunks(10)
@@ -92,11 +86,7 @@ async fn restore_fids(
                     errno = output.status.code().unwrap_or(0) as i16;
                 }
                 let FidItem { fid, data } = fid;
-                Ok::<_, ImlAgentError>(FidError {
-                    fid,
-                    data,
-                    errno,
-                })
+                Ok::<_, ImlAgentError>(FidError { fid, data, errno })
             }
         })
         .chunks(10)
@@ -111,27 +101,27 @@ async fn restore_fids(
         .await
 }
 
+arg_enum! {
+    #[derive(Debug, serde::Deserialize, Clone, Copy)]
+    #[serde(rename_all = "lowercase")]
+    pub enum ActionType {
+    Push,
+    Pull,
+    }
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct TaskArgs {
+    pub remote: String,
+    pub action: ActionType,
+}
 /// Process FIDs
 pub async fn process_fids(
-    (fsname_or_mntpath, task_args, fid_list): (
-        std::string::String,
-        std::collections::HashMap<std::string::String, std::string::String>,
-        std::vec::Vec<iml_wire_types::FidItem>,
-    ),
+    (fsname_or_mntpath, task_args, fid_list): (String, TaskArgs, Vec<FidItem>),
 ) -> Result<Vec<FidError>, ImlAgentError> {
     let llapi = search_rootpath(fsname_or_mntpath).await?;
-
-    let target_name = task_args
-        .get("remote")
-        .ok_or_else(|| RequiredError("Task missing 'remote' argument".to_string()))?;
-
-    let action_name = task_args
-        .get("action")
-        .ok_or_else(|| RequiredError("Task missing 'action' argument".to_string()))?;
-
-    match action_name.as_str() {
-        "push" => archive_fids(llapi.clone(), target_name, fid_list).await,
-        "pull" => restore_fids(llapi.clone(), target_name, fid_list).await,
-        _ => Err(RequiredError("Task.action not push or pull".to_string()).into()),
+    match task_args.action {
+        ActionType::Push => archive_fids(llapi.clone(), &task_args.remote, fid_list).await,
+        ActionType::Pull => restore_fids(llapi.clone(), &task_args.remote, fid_list).await,
     }
 }

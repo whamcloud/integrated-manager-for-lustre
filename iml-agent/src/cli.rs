@@ -240,7 +240,7 @@ pub enum StratagemClientCommand {
     FileSync {
         #[structopt()]
         /// push or pull
-        action: String,
+        action: action_filesync::ActionType,
 
         #[structopt(short = "r", long = "remote")]
         /// remote fs path
@@ -255,7 +255,7 @@ pub enum StratagemClientCommand {
     CloudSync {
         #[structopt()]
         /// push or pull
-        action: String,
+        action: action_cloudsync::ActionType,
 
         #[structopt(short = "d")]
         /// destination s3 bucket
@@ -548,7 +548,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let llapi =
                     search_rootpath(files[0].clone().into_os_string().into_string().unwrap())
                         .await?;
-                let mut task_args = std::collections::HashMap::new();
 
                 let (fids, errors): (Vec<_>, Vec<_>) = files
                     .into_iter()
@@ -566,9 +565,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         data: fid.into(),
                     })
                     .collect();
+                let task_args = action_filesync::TaskArgs {
+                    remote: target_fs,
+                    action,
+                };
 
-                task_args.insert("remote".to_string(), target_fs);
-                task_args.insert("action".to_string(), action);
                 let _result =
                     action_filesync::process_fids((llapi.mntpt(), task_args, fidlist)).await;
             }
@@ -577,7 +578,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 target,
                 files,
             } => {
-                let mut task_args = std::collections::HashMap::new();
                 let llapi =
                     search_rootpath(files[0].clone().into_os_string().into_string().unwrap())
                         .await?;
@@ -588,7 +588,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .partition(Result::is_ok);
                 let fids: Vec<_> = fids.into_iter().map(Result::unwrap).collect();
                 let errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
-		if !errors.is_empty() {
+                if !errors.is_empty() {
                     tracing::error!("files not found, ignoring: {:?}", errors);
                 }
                 let fidlist: Vec<FidItem> = fids
@@ -598,9 +598,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         data: fid.into(),
                     })
                     .collect();
+                let task_args = action_cloudsync::TaskArgs {
+                    remote: target,
+                    action,
+                };
 
-                task_args.insert("remote".to_string(), target);
-                task_args.insert("action".to_string(), action);
                 if action_cloudsync::process_fids((llapi.mntpt(), task_args, fidlist))
                     .await
                     .is_err()

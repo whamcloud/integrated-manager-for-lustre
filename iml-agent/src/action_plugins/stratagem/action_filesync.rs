@@ -2,14 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{
-    agent_error::{ImlAgentError, RequiredError},
-    lustre::search_rootpath,
-};
+use crate::{agent_error::ImlAgentError, lustre::search_rootpath};
 use futures::{future::try_join_all, future::Future, stream, StreamExt, TryStreamExt};
 use iml_wire_types::{FidError, FidItem};
 use liblustreapi::LlapiFid;
-use std::{collections::HashMap, path::PathBuf};
+use std::path::PathBuf;
+use structopt::clap::arg_enum;
 use tokio::{fs, process::Command};
 
 struct Work {
@@ -184,23 +182,27 @@ async fn restore_fids(
     Ok(result)
 }
 
+arg_enum! {
+    #[derive(Debug, serde::Deserialize, Clone, Copy)]
+    #[serde(rename_all = "lowercase")]
+    pub enum ActionType {
+    Push,
+    Pull,
+    }
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct TaskArgs {
+    pub remote: String,
+    pub action: ActionType,
+}
 /// Process FIDs
 pub async fn process_fids(
-    (fsname_or_mntpath, task_args, fid_list): (String, HashMap<String, String>, Vec<FidItem>),
+    (fsname_or_mntpath, task_args, fid_list): (String, TaskArgs, Vec<FidItem>),
 ) -> Result<Vec<FidError>, ImlAgentError> {
     let llapi = search_rootpath(fsname_or_mntpath).await?;
-
-    let dest_path = task_args
-        .get("remote")
-        .ok_or_else(|| RequiredError("Task missing 'remote' argument".to_string()))?;
-
-    let action_name = task_args
-        .get("action")
-        .ok_or_else(|| RequiredError("Task missing 'action' argument".to_string()))?;
-
-    match action_name.as_str() {
-        "push" => archive_fids(llapi.clone(), dest_path, fid_list).await,
-        "pull" => restore_fids(llapi.clone(), dest_path, fid_list).await,
-	_ => Err(RequiredError("Task.action not push or pull".to_string()).into()),
+    match task_args.action {
+        ActionType::Push => archive_fids(llapi.clone(), &task_args.remote, fid_list).await,
+        ActionType::Pull => restore_fids(llapi.clone(), &task_args.remote, fid_list).await,
     }
 }

@@ -13,7 +13,7 @@ use crate::{
 use console::Term;
 use iml_manager_client::ImlManagerClientError;
 use iml_wire_types::{ApiList, CmdWrapper, EndpointName, Filesystem, StratagemConfiguration};
-use structopt::StructOpt;
+use structopt::{clap::arg_enum, StructOpt};
 
 #[derive(Debug, StructOpt)]
 pub enum StratagemCommand {
@@ -92,11 +92,29 @@ pub struct StratagemScanData {
     purge_duration: Option<u64>,
 }
 
+arg_enum! {
+    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy)]
+    #[serde(rename_all = "lowercase")]
+    pub enum FilesyncAction {
+    Push,
+    Pull,
+    }
+}
+
+arg_enum! {
+    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy)]
+    #[serde(rename_all = "lowercase")]
+    pub enum CloudsyncAction {
+    Push,
+    Pull,
+    }
+}
+
 #[derive(serde::Serialize, StructOpt, Debug)]
 pub struct StratagemFilesyncData {
     /// action, either push or pull
     #[structopt()]
-    action: String,
+    action: FilesyncAction,
     /// The name of the filesystem to scan
     #[structopt(short = "f", long = "filesystem")]
     filesystem: String,
@@ -114,7 +132,7 @@ pub struct StratagemFilesyncData {
 pub struct StratagemCloudsyncData {
     /// action, either push or pull
     #[structopt()]
-    action: String,
+    action: CloudsyncAction,
     /// The name of the filesystem to scan
     #[structopt(short = "f", long = "filesystem")]
     filesystem: String,
