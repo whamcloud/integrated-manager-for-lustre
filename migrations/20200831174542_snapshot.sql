@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS snapshot_retention (
   filesystem_name TEXT NOT NULL UNIQUE,
   reserve_value INT NOT NULL,
   reserve_unit snapshot_reserve_unit NOT NULL,
-  keep_num INT,
+  keep_num INT NOT NULL,
   last_run TIMESTAMP WITH TIME ZONE
 );
 

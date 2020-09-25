@@ -164,7 +164,7 @@ impl IntoTable for Vec<SnapshotInterval> {
                     chrono::Duration::from_std(i.interval.0)
                         .map(HumanTime::from)
                         .map(|x| x.to_text_en(Accuracy::Precise, Tense::Present))
-                        .unwrap_or("---".into()),
+                        .unwrap_or_else(|_| "--".to_string()),
                     i.use_barrier.to_string(),
                     i.last_run
                         .map(|t| t.to_rfc2822())
@@ -192,9 +192,7 @@ impl IntoTable for Vec<SnapshotRetention> {
                             ReserveUnit::Tebibytes => "TiB",
                         }
                     ),
-                    r.keep_num
-                        .map(|n| n.to_string())
-                        .unwrap_or_else(|| "--".to_string()),
+                    r.keep_num.to_string(),
                     r.last_run
                         .map(|t| t.to_rfc2822())
                         .unwrap_or_else(|| "--".to_string()),

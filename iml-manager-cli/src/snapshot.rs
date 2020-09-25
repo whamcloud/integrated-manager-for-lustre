@@ -41,7 +41,7 @@ pub enum IntervalCommand {
     Remove {
         /// The ids of the snapshot intervals to remove
         #[structopt(required = true, min_values = 1)]
-        ids: Vec<u32>,
+        ids: Vec<i32>,
     },
 }
 
@@ -66,14 +66,14 @@ pub enum RetentionCommand {
         reserve_value: u32,
         /// Free space reserve unit (%, GiB or TiB)
         reserve_unit: snapshot::ReserveUnit,
-        /// Minimum number of snapshots to keep
-        keep_num: u32,
+        /// Minimum number of snapshots to keep (default: 0)
+        keep_num: Option<u32>,
     },
     /// Remove snapshot retention rule
     Remove {
         /// The ids of the retention rules to remove
         #[structopt(required = true, min_values = 1)]
-        ids: Vec<u32>,
+        ids: Vec<i32>,
     },
 }
 
@@ -140,7 +140,7 @@ async fn interval_cli(cmd: IntervalCommand) -> Result<(), ImlManagerCliError> {
         }
         IntervalCommand::Remove { ids } => {
             for id in ids {
-                let query = snapshot_queries::remove_interval::build(id as i32);
+                let query = snapshot_queries::remove_interval::build(id);
 
                 let _resp: iml_graphql_queries::Response<snapshot_queries::remove_interval::Resp> =
                     graphql(query).await?;
