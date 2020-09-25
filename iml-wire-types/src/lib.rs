@@ -465,6 +465,7 @@ pub struct Conf {
     pub is_release: bool,
     pub branding: Branding,
     pub use_stratagem: bool,
+    pub use_snapshots: bool,
     pub monitor_sfa: bool,
 }
 
@@ -478,6 +479,7 @@ impl Default for Conf {
             is_release: false,
             branding: Branding::default(),
             use_stratagem: false,
+            use_snapshots: false,
             monitor_sfa: false,
         }
     }
