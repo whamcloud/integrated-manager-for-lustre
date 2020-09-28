@@ -9,7 +9,6 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use futures::{TryFutureExt, TryStreamExt};
-use iml_postgres::sqlx::types::chrono::{DateTime, Utc};
 use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
 use iml_wire_types::{
