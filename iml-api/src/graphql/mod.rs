@@ -115,6 +115,34 @@ pub struct SendJob<'a, T> {
     pub args: T,
 }
 
+#[derive(GraphQLEnum)]
+enum JobState {
+    Pending,
+    Tasked,
+    Completed,
+    Cancelled,
+}
+
+impl Default for JobState {
+    fn default() -> Self {
+        Self::Completed
+    }
+}
+
+impl Deref for JobState {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        // JobState::Completed in the db state is written as "complete"
+        match self {
+            JobState::Pending => "pending",
+            JobState::Tasked => "tasked",
+            JobState::Completed => "complete",
+            JobState::Cancelled => "cancelled",
+        }
+    }
+}
+
 pub(crate) struct QueryRoot;
 
 #[juniper::graphql_object(Context = Context)]
@@ -439,6 +467,73 @@ impl QueryRoot {
             .collect::<Vec<Option<Command>>>();
 
         Ok(commands)
+    }
+
+    /// Fetch the list of jobs
+    #[graphql(arguments(
+        limit(description = "paging limit, defaults to 20"),
+        offset(description = "Offset into items, defaults to 0"),
+        dir(description = "Sort direction, defaults to ASC"),
+        job_state(description = "Job state, one of {COMPLETE, TASKED, PENDING}, default is COMPLETE"),
+    ))]
+    async fn jobs(
+        context: &Context,
+        limit: Option<i32>,
+        offset: Option<i32>,
+        dir: Option<SortDir>,
+        job_state: Option<JobState>,
+    ) -> juniper::FieldResult<Vec<Job<serde_json::Value>>> {
+        let dir = dir.unwrap_or_default();
+        let jobs: Vec<Job<serde_json::Value>> = sqlx::query!(
+            r#"
+                SELECT
+                    j.id AS id,
+                    state,
+                    errored,
+                    cancelled,
+                    created_at,
+                    modified_at,
+                    wait_for_json,
+                    locks_json,
+                    content_type_id
+                FROM chroma_core_job j
+                WHERE ($4::VARCHAR IS NULL OR state = $4)
+                ORDER BY
+                    CASE WHEN $3 = 'asc' THEN j.created_at END ASC,
+                    CASE WHEN $3 = 'desc' THEN j.modified_at END DESC
+                OFFSET $1 LIMIT $2
+            "#,
+            offset.unwrap_or(0) as i64,
+            limit.unwrap_or(20) as i64,
+            dir.deref(),
+            job_state,
+        )
+        .fetch_all(&context.pg_pool)
+        .map_ok(|xs: Vec<_>| {
+            xs.into_iter()
+                .map(|x| Job {
+                    id: x.id,
+                    class_name: "".to_string(),
+                    cancelled: x.cancelled,
+                    errored: x.errored,
+                    available_transitions: vec![],
+                    modified_at: x.modified_at.format("%Y-%m-%dT%T%.6f").to_string(),
+                    created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
+                    resource_uri: format!("/api/{}/{}/", Job::<()>::endpoint_name(), x.id),
+                    state: x.state,
+                    step_results: Default::default(),
+                    steps: vec![],
+                    wait_for: vec![],
+                    commands: vec![],
+                    description: "".to_string(),
+                    read_locks: vec![],
+                    write_locks: vec![]
+                })
+                .collect::<Vec<_>>()
+        })
+        .await?;
+
+        Ok(jobs)
     }
 
     /// List all snapshot intervals
