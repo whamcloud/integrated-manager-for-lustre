@@ -126,7 +126,7 @@ pub async fn process_retention(
 ) -> Result<HashMap<String, u64>, Error> {
     let filesystems = get_retention_filesystems(pool).await?;
 
-    tracing::error!("Filesystems with retentions: {:?}", filesystems);
+    tracing::debug!("Filesystems with retentions: {:?}", filesystems);
 
     for fs_name in filesystems {
         let stats = get_stats_from_influx(&fs_name, &influx_client).await?;
@@ -141,7 +141,7 @@ pub async fn process_retention(
             let percent_used = (bytes_used as f64 / bytes_total as f64) as f64 * 100.0f64;
             let percent_free = 100.0f64 - percent_used;
 
-            tracing::error!(
+            tracing::debug!(
                 "stats record: {:?} - bytes free: {}",
                 stats_record.get(&fs_name),
                 bytes_free
@@ -151,7 +151,7 @@ pub async fn process_retention(
             if let Some(retention) = retention {
                 let snapshots = get_snapshots(pool, &fs_name).await?;
 
-                tracing::error!(
+                tracing::debug!(
                     "percent_left: {}, reserve value: {}",
                     percent_free,
                     retention.reserve_value
@@ -159,7 +159,6 @@ pub async fn process_retention(
                 let should_delete_snapshot = match retention.reserve_unit {
                     snapshot::ReserveUnit::Percent => percent_free < retention.reserve_value as f64,
                     snapshot::ReserveUnit::Gibibytes => {
-                        // TODO look for crate to convert bytes to gibibytes
                         let gib_free: f64 = bytes_free as f64 / 1_073_741_824_f64;
                         gib_free < retention.reserve_value as f64
                     }
@@ -168,7 +167,7 @@ pub async fn process_retention(
                         teb_free < retention.reserve_value as f64
                     }
                 };
-                tracing::error!("Should delete snapshot?: {}", should_delete_snapshot);
+                tracing::debug!("Should delete snapshot?: {}", should_delete_snapshot);
 
                 if should_delete_snapshot
                     && snapshots.len() > retention.keep_num as usize
@@ -176,9 +175,9 @@ pub async fn process_retention(
                         || stats_record.get(&fs_name) != Some(&bytes_used))
                 {
                     stats_record.insert(fs_name.to_string(), bytes_used);
-                    tracing::error!("About to delete earliest snapshot.");
+                    tracing::debug!("About to delete earliest snapshot.");
                     let snapshot_name = snapshots[0].snapshot_name.to_string();
-                    tracing::error!("Deleting {}", snapshot_name);
+                    tracing::debug!("Deleting {}", snapshot_name);
                     let cmd =
                         destroy_snapshot(client.clone(), &fs_name, snapshot_name.as_ref()).await?;
 
