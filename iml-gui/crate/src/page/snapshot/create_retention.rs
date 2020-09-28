@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    components::{font_awesome, form, modal, Placement},
+    components::{font_awesome, modal, Placement},
     extensions::{MergeAttrs as _, NodeExt as _},
     generated::css_classes::C,
     key_codes,
@@ -14,18 +14,20 @@ use crate::{
     GMsg, RequestExt,
 };
 use iml_graphql_queries::{snapshot, Response};
-use iml_wire_types::{warp_drive::ArcCache, warp_drive::ArcRecord, warp_drive::RecordId, Filesystem};
+use iml_wire_types::{
+    snapshot::ReserveUnit, warp_drive::ArcCache, warp_drive::ArcRecord, warp_drive::RecordId, Filesystem,
+};
 use seed::{prelude::*, *};
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 #[derive(Debug)]
 pub struct Model {
     submitting: bool,
     filesystems: Vec<Arc<Filesystem>>,
     fs_name: String,
-    barrier: bool,
-    interval_value: String,
-    interval_unit: String,
+    reserve_value: u32,
+    reserve_unit: ReserveUnit,
+    keep_num: Option<u32>,
     pub modal: modal::Model,
 }
 
@@ -35,9 +37,9 @@ impl Default for Model {
             submitting: false,
             filesystems: vec![],
             fs_name: "".into(),
-            barrier: false,
-            interval_value: "".into(),
-            interval_unit: "d".into(),
+            reserve_value: 0,
+            reserve_unit: ReserveUnit::Percent,
+            keep_num: None,
             modal: modal::Model::default(),
         }
     }
@@ -71,12 +73,12 @@ pub enum Msg {
     Open,
     Close,
     SetFilesystems(Vec<Arc<Filesystem>>),
-    BarrierChanged(String),
+    KeepNumChanged(String),
     FsNameChanged(String),
-    IntervalValueChanged(String),
-    IntervalUnitChanged(String),
+    ReserveValueChanged(String),
+    ReserveUnitChanged(String),
     Submit,
-    SnapshotCreateIntervalResp(fetch::ResponseDataResult<Response<snapshot::create_interval::Resp>>),
+    SnapshotCreateRetentionResp(fetch::ResponseDataResult<Response<snapshot::create_retention::Resp>>),
     Noop,
 }
 
@@ -97,27 +99,30 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::FsNameChanged(x) => {
             model.fs_name = x;
         }
-        Msg::BarrierChanged(_) => {
-            model.barrier = !model.barrier;
+        Msg::KeepNumChanged(x) => {
+            model.keep_num = x.parse().ok();
         }
-        Msg::IntervalValueChanged(x) => {
-            model.interval_value = x;
+        Msg::ReserveValueChanged(x) => {
+            model.reserve_value = x.parse().unwrap();
         }
-        Msg::IntervalUnitChanged(x) => {
-            model.interval_unit = x;
+        Msg::ReserveUnitChanged(x) => {
+            model.reserve_unit = ReserveUnit::from_str(&x).unwrap();
         }
         Msg::Submit => {
             model.submitting = true;
 
-            let interval = format!("{}{}", model.interval_value.trim(), model.interval_unit);
-
-            let query = snapshot::create_interval::build(&model.fs_name, interval, Some(model.barrier));
+            let query = snapshot::create_retention::build(
+                &model.fs_name,
+                model.reserve_value,
+                model.reserve_unit,
+                model.keep_num,
+            );
 
             let req = fetch::Request::graphql_query(&query);
 
-            orders.perform_cmd(req.fetch_json_data(|x| Msg::SnapshotCreateIntervalResp(x)));
+            orders.perform_cmd(req.fetch_json_data(|x| Msg::SnapshotCreateRetentionResp(x)));
         }
-        Msg::SnapshotCreateIntervalResp(x) => {
+        Msg::SnapshotCreateRetentionResp(x) => {
             model.submitting = false;
             orders.send_msg(Msg::Close);
 
@@ -129,10 +134,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     };
                 }
                 Ok(Response::Errors(e)) => {
-                    error!("An error has occurred during Snapshot Interval creation: ", e);
+                    error!("An error has occurred during policy creation: ", e);
                 }
                 Err(e) => {
-                    error!("An error has occurred during Snapshot Interval creation: ", e);
+                    error!("An error has occurred during policy creation: ", e);
                 }
             }
         }
@@ -156,7 +161,7 @@ pub fn view(model: &Model) -> Node<Msg> {
         modal::content_view(
             Msg::Modal,
             div![
-                modal::title_view(Msg::Modal, span!["Add Automated Snapshot Rule"]),
+                modal::title_view(Msg::Modal, span!["Create Snapshot Retention Policy"]),
                 form![
                     ev(Ev::Submit, move |event| {
                         event.prevent_default();
@@ -164,11 +169,11 @@ pub fn view(model: &Model) -> Node<Msg> {
                     }),
                     div![
                         class![C.grid, C.grid_cols_2, C.gap_4, C.p_4, C.items_center],
-                        label![attrs! {At::For => "interval_fs_name"}, "Filesystem Name"],
+                        label![attrs! {At::For => "retention_fs_name"}, "Filesystem Name"],
                         div![
                             class![C.inline_block, C.relative, C.bg_gray_200],
                             select![
-                                id!["interval_fs_name"],
+                                id!["retention_fs_name"],
                                 &input_cls,
                                 class![
                                     C.block,
@@ -207,37 +212,37 @@ pub fn view(model: &Model) -> Node<Msg> {
                             ],
                         ],
                         label![
-                            attrs! {At::For => "interval_value"},
-                            "Interval",
-                            help_indicator("How often to take snapshot for selected filesystem", Placement::Right)
+                            attrs! {At::For => "reserve_value"},
+                            "Reserve",
+                            help_indicator("How much of free space to reserve", Placement::Right)
                         ],
                         div![
                             class![C.grid, C.grid_cols_6],
                             input![
                                 &input_cls,
                                 class![C.bg_gray_200, C.text_gray_800, C.col_span_4, C.rounded_r_none],
-                                id!["interval_value"],
+                                id!["reserve_value"],
                                 attrs! {
                                     At::Type => "number",
-                                    At::Min => "1",
+                                    At::Min => "0",
                                     At::Placeholder => "Required",
                                     At::Required => true.as_at_value(),
                                 },
-                                input_ev(Ev::Change, Msg::IntervalValueChanged),
+                                input_ev(Ev::Change, Msg::ReserveValueChanged),
                             ],
                             div![
                                 class![C.inline_block, C.relative, C.col_span_2, C.text_white, C.bg_blue_500],
                                 select![
-                                    id!["interval_unit"],
+                                    id!["reserve_unit"],
                                     &input_cls,
                                     class![C.w_full, C.h_full C.rounded_l_none, C.bg_transparent],
-                                    option![class![C.font_sans], attrs! {At::Value => "d"}, "Days"],
-                                    option![class![C.font_sans], attrs! {At::Value => "y"}, "Years"],
-                                    option![class![C.font_sans], attrs! {At::Value => "m"}, "Minutes"],
+                                    option![class![C.font_sans], attrs! {At::Value => "percent"}, "%"],
+                                    option![class![C.font_sans], attrs! {At::Value => "gibibytes"}, "GiB"],
+                                    option![class![C.font_sans], attrs! {At::Value => "tebibytes"}, "TiB"],
                                     attrs! {
                                         At::Required => true.as_at_value(),
                                     },
-                                    input_ev(Ev::Change, Msg::IntervalUnitChanged),
+                                    input_ev(Ev::Change, Msg::ReserveUnitChanged),
                                 ],
                                 div![
                                     class![
@@ -255,16 +260,22 @@ pub fn view(model: &Model) -> Node<Msg> {
                             ],
                         ],
                         label![
-                            attrs! {At::For => "interval_barrier"},
-                            "Use Barrier",
-                            help_indicator("Set write barrier before creating snapshot", Placement::Right)
+                            attrs! {At::For => "keep_num"},
+                            "Minimal Number",
+                            help_indicator("Minimal number of snapshots to keep", Placement::Right)
                         ],
-                        form::toggle()
-                            .merge_attrs(id!["interval_barrier"])
-                            .merge_attrs(attrs! {
-                               At::Checked => model.barrier.as_at_value()
-                            })
-                            .with_listener(input_ev(Ev::Change, Msg::BarrierChanged)),
+                        input![
+                            &input_cls,
+                            class![C.bg_gray_200, C.text_gray_800, C.rounded_r_none],
+                            id!["keep_num"],
+                            attrs! {
+                                At::Type => "number",
+                                At::Min => "0",
+                                At::Placeholder => "Optional (default: 0)",
+                                At::Required => false.as_at_value(),
+                            },
+                            input_ev(Ev::Change, Msg::KeepNumChanged),
+                        ],
                     ],
                     modal::footer_view(vec![
                         button![
@@ -284,7 +295,7 @@ pub fn view(model: &Model) -> Node<Msg> {
                                 C.transition_colors,
                             ],
                             font_awesome(class![C.h_3, C.w_3, C.mr_1, C.inline], "plus"),
-                            "Add Rule",
+                            "Create Policy",
                         ],
                         button![
                             class![

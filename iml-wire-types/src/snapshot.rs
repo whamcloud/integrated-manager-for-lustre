@@ -91,7 +91,7 @@ pub struct SnapshotRetention {
     pub reserve_value: i32,
     pub reserve_unit: ReserveUnit,
     /// Minimum number of snapshots to keep
-    pub keep_num: Option<i32>,
+    pub keep_num: i32,
     pub last_run: Option<DateTime<Utc>>,
 }
 
@@ -107,7 +107,7 @@ pub const SNAPSHOT_RETENTION_TABLE_NAME: TableName = TableName("snapshot_retenti
 #[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
 #[cfg_attr(feature = "postgres-interop", sqlx(rename = "snapshot_reserve_unit"))]
 #[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
-#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, Copy, PartialEq, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum ReserveUnit {
     #[cfg_attr(feature = "graphql", graphql(name = "percent"))]
@@ -123,9 +123,9 @@ impl FromStr for ReserveUnit {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "%" => Ok(Self::Percent),
-            "gib" | "g" => Ok(Self::Gibibytes),
-            "tib" | "t" => Ok(Self::Tebibytes),
+            "%" | "percent" => Ok(Self::Percent),
+            "gib" | "g" | "gibibytes" => Ok(Self::Gibibytes),
+            "tib" | "t" | "tebibytes" => Ok(Self::Tebibytes),
             x => Err(format!("Unexpected '{}'", x)),
         }
     }

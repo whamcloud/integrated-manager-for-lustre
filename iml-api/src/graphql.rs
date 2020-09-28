@@ -749,7 +749,7 @@ impl MutationRoot {
         fsname: String,
         reserve_value: i32,
         reserve_unit: ReserveUnit,
-        keep_num: i32,
+        keep_num: Option<i32>,
     ) -> juniper::FieldResult<bool> {
         sqlx::query!(
             r#"
@@ -769,7 +769,7 @@ impl MutationRoot {
             fsname,
             reserve_value,
             reserve_unit as ReserveUnit,
-            keep_num
+            keep_num.unwrap_or(0)
         )
         .execute(&context.pg_pool)
         .await?;

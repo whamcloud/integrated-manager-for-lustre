@@ -339,7 +339,7 @@ pub mod create_retention {
     use iml_wire_types::snapshot::ReserveUnit;
 
     pub static QUERY: &str = r#"
-        mutation CreateSnapshotRetention($fsname: String!, $reserve_value: Int!, $reserve_unit: ReserveUnit!, $keep_num: Int!) {
+        mutation CreateSnapshotRetention($fsname: String!, $reserve_value: Int!, $reserve_unit: ReserveUnit!, $keep_num: Int) {
             createSnapshotRetention(fsname: $fsname, reserveValue: $reserve_value, reserveUnit: $reserve_unit, keepNum: $keep_num)
         }
     "#;
@@ -349,14 +349,14 @@ pub mod create_retention {
         fsname: String,
         reserve_value: u32,
         reserve_unit: ReserveUnit,
-        keep_num: u32,
+        keep_num: Option<u32>,
     }
 
     pub fn build(
         fsname: impl ToString,
         reserve_value: u32,
         reserve_unit: ReserveUnit,
-        keep_num: u32,
+        keep_num: Option<u32>,
     ) -> Query<Vars> {
         Query {
             query: QUERY.to_string(),
@@ -387,10 +387,10 @@ pub mod remove_retention {
 
     #[derive(Debug, serde::Serialize)]
     pub struct Vars {
-        id: u32,
+        id: i32,
     }
 
-    pub fn build(id: u32) -> Query<Vars> {
+    pub fn build(id: i32) -> Query<Vars> {
         Query {
             query: QUERY.to_string(),
             variables: Some(Vars { id }),
