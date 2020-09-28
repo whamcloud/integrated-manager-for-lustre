@@ -171,8 +171,7 @@ pub async fn process_retention(
 
                 if should_delete_snapshot
                     && snapshots.len() > retention.keep_num as usize
-                    && (stats_record.get(&fs_name).is_none()
-                        || stats_record.get(&fs_name) != Some(&bytes_used))
+                    && stats_record.get(&fs_name) != Some(&bytes_used)
                 {
                     stats_record.insert(fs_name.to_string(), bytes_used);
                     tracing::debug!("About to delete earliest snapshot.");
@@ -207,7 +206,6 @@ pub async fn handle_retention_rules(
                 }
             };
 
-        // TODO change this to 60 seconds. 10 is for debugging.
-        tokio::time::delay_for(tokio::time::Duration::from_secs(30)).await;
+        tokio::time::delay_for(tokio::time::Duration::from_secs(60)).await;
     }
 }
