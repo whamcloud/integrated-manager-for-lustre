@@ -9,6 +9,7 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use futures::{TryFutureExt, TryStreamExt};
+use iml_postgres::sqlx::types::chrono::{DateTime, Utc};
 use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
 use iml_wire_types::{
@@ -337,7 +338,7 @@ impl QueryRoot {
         limit(description = "optional paging limit, defaults to all rows"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to ASC"),
-        is_active(description = "Command status, active means not completed, default is false"),
+        is_active(description = "Command status, active means not completed, default is true"),
         msg(description = "Substring of the command's message, null or empty matches all"),
     ))]
     async fn commands(
@@ -349,8 +350,9 @@ impl QueryRoot {
         msg: Option<String>,
     ) -> juniper::FieldResult<Vec<Command>> {
         let dir = dir.unwrap_or_default();
-        let is_completed = !is_active.unwrap_or(false);
-        let commands: Vec<Command> = sqlx::query!(
+        let is_completed = !is_active.unwrap_or(true);
+        let commands: Vec<Command> = sqlx::query_as!(
+            CommandTmpRecord,
             r#"
                 SELECT
                     c.id AS id,
@@ -362,13 +364,14 @@ impl QueryRoot {
                     message
                 FROM chroma_core_command c
                 JOIN chroma_core_command_jobs cj ON c.id = cj.command_id
-                WHERE complete = $4
+                WHERE ($4::BOOL IS NULL OR complete = $4)
                   AND ($5::TEXT IS NULL OR c.message ILIKE '%' || $5 || '%')
                 GROUP BY c.id
                 ORDER BY
                     CASE WHEN $3 = 'asc' THEN c.id END ASC,
                     CASE WHEN $3 = 'desc' THEN c.id END DESC
-                OFFSET $1 LIMIT $2 "#,
+                OFFSET $1 LIMIT $2
+            "#,
             offset.unwrap_or(0) as i64,
             limit.map(|x| x as i64),
             dir.deref(),
@@ -376,32 +379,66 @@ impl QueryRoot {
             msg,
         )
         .fetch_all(&context.pg_pool)
-        .map_ok(|xs: Vec<_>| {
-            xs.into_iter()
-                .map(|x| Command {
-                    id: x.id,
-                    cancelled: x.cancelled,
-                    complete: x.complete,
-                    errored: x.errored,
-                    created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
-                    jobs: {
-                        x.job_ids
-                            .unwrap_or_default()
-                            .into_iter()
-                            .map(|job_id: i32| {
-                                format!("/api/{}/{}/", Job::<()>::endpoint_name(), job_id)
-                            })
-                            .collect::<Vec<_>>()
-                    },
-                    logs: "".to_string(),
-                    message: x.message.clone(),
-                    resource_uri: format!("/api/{}/{}/", Command::endpoint_name(), x.id),
-                })
-                .collect::<Vec<_>>()
+        .map_ok(|xs: Vec<CommandTmpRecord>| {
+            xs.into_iter().map(to_command).collect::<Vec<Command>>()
         })
         .await?;
         Ok(commands)
     }
+
+    /// Fetch the list of commands by ids, the returned
+    /// collection is guaranteed to match the input.
+    /// If a command not found, `None` is returned for that index.
+    #[graphql(arguments(
+        limit(description = "paging limit, defaults to 20"),
+        offset(description = "Offset into items, defaults to 0"),
+        ids(description = "The list of command ids to fetch, ids may be empty"),
+    ))]
+    async fn commands_by_ids(
+        context: &Context,
+        limit: Option<i32>,
+        offset: Option<i32>,
+        ids: Vec<i32>,
+    ) -> juniper::FieldResult<Vec<Option<Command>>> {
+        let ids: &[i32] = &ids[..];
+        let unordered_cmds: Vec<Command> = sqlx::query_as!(
+            CommandTmpRecord,
+            r#"
+                SELECT
+                    c.id AS id,
+                    cancelled,
+                    complete,
+                    errored,
+                    created_at,
+                    array_agg(cj.job_id)::INT[] AS job_ids,
+                    message
+                FROM chroma_core_command c
+                JOIN chroma_core_command_jobs cj ON c.id = cj.command_id
+                WHERE (c.id = ANY ($3::INT[]))
+                GROUP BY c.id
+                OFFSET $1 LIMIT $2
+            "#,
+            offset.unwrap_or(0) as i64,
+            limit.unwrap_or(20) as i64,
+            ids,
+        )
+        .fetch_all(&context.pg_pool)
+        .map_ok(|xs: Vec<CommandTmpRecord>| {
+            xs.into_iter().map(to_command).collect::<Vec<Command>>()
+        })
+        .await?;
+        let mut hm = unordered_cmds
+            .into_iter()
+            .map(|c| (c.id, c))
+            .collect::<HashMap<i32, Command>>();
+        let commands = ids
+            .iter()
+            .map(|id| hm.remove(id))
+            .collect::<Vec<Option<Command>>>();
+
+        Ok(commands)
+    }
+
     /// List all snapshot intervals
     async fn snapshot_intervals(context: &Context) -> juniper::FieldResult<Vec<SnapshotInterval>> {
         let xs: Vec<SnapshotInterval> = sqlx::query!("SELECT * FROM snapshot_interval")
@@ -784,6 +821,37 @@ impl MutationRoot {
             .await?;
 
         Ok(true)
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+struct CommandTmpRecord {
+    pub cancelled: bool,
+    pub complete: bool,
+    pub created_at: DateTime<Utc>,
+    pub errored: bool,
+    pub id: i32,
+    pub job_ids: Option<Vec<i32>>,
+    pub message: String,
+}
+
+fn to_command(x: CommandTmpRecord) -> Command {
+    Command {
+        id: x.id,
+        cancelled: x.cancelled,
+        complete: x.complete,
+        errored: x.errored,
+        created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
+        jobs: {
+            x.job_ids
+                .unwrap_or_default()
+                .into_iter()
+                .map(|job_id: i32| format!("/api/{}/{}/", Job::<()>::endpoint_name(), job_id))
+                .collect::<Vec<_>>()
+        },
+        logs: "".to_string(),
+        message: x.message.clone(),
+        resource_uri: format!("/api/{}/{}/", Command::endpoint_name(), x.id),
     }
 }
 
