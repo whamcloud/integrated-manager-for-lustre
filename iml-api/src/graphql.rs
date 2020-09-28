@@ -773,7 +773,7 @@ impl MutationRoot {
     #[graphql(arguments(
         fsname(description = "Filesystem name"),
         reserve_value(
-            description = "The point in which snapshots will be removed (starting with the oldest) when free space falls below this value"
+            description = "Delete the oldest snapshot when available space falls below this value"
         ),
         reserve_unit(description = "The unit of measurement associated with the reserve_value"),
         keep_num(

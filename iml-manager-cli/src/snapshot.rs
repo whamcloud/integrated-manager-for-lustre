@@ -62,8 +62,7 @@ pub enum RetentionCommand {
     Create {
         /// Filesystem to create a snapshot retention rule for
         filesystem: String,
-        /// Snapshots will automatically be deleted (starting with the oldest)
-        /// when free space falls below this value and its associated unit.
+        // Delete the oldest snapshot when available space falls below this value
         reserve_value: u32,
         /// The unit of measurement associated with the reserve_value (%, GiB or TiB)
         reserve_unit: snapshot::ReserveUnit,
