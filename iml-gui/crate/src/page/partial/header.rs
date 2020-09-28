@@ -19,7 +19,7 @@ fn menu_icon<T>(icon_name: &str) -> Node<T> {
     )
 }
 
-fn nav_manage_dropdown(open: bool) -> Node<Msg> {
+fn nav_manage_dropdown(open: bool, use_snapshots: bool) -> Node<Msg> {
     if !open {
         return empty![];
     }
@@ -75,12 +75,16 @@ fn nav_manage_dropdown(open: bool) -> Node<Msg> {
                     At::Href => Route::Mgt.to_href(),
                 },
             ],
-            li![
-                a![&cls, "Snapshots"],
-                attrs! {
-                    At::Href => Route::Snapshots.to_href(),
-                },
-            ],
+            if use_snapshots {
+                li![
+                    a![&cls, "Snapshots"],
+                    attrs! {
+                        At::Href => Route::Snapshots.to_href(),
+                    },
+                ]
+            } else {
+                empty![]
+            },
             li![
                 a![&cls, "Users"],
                 attrs! {
@@ -148,7 +152,7 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                         ),
                     ],
                 ],
-                nav_manage_dropdown(model.manage_menu_state.is_open()),
+                nav_manage_dropdown(model.manage_menu_state.is_open(), model.conf.use_snapshots),
             ]
         ),
     ]
