@@ -143,10 +143,10 @@ impl IntoTable for Vec<Snapshot> {
                     match s.mounted {
                         Some(true) => "mounted",
                         Some(false) => "unmounted",
-                        None => "--",
+                        None => "---",
                     }
                     .to_string(),
-                    s.comment.unwrap_or_else(|| "--".to_string()),
+                    s.comment.unwrap_or_else(|| "---".to_string()),
                 ]
             }),
         )
@@ -164,11 +164,11 @@ impl IntoTable for Vec<SnapshotInterval> {
                     chrono::Duration::from_std(i.interval.0)
                         .map(HumanTime::from)
                         .map(|x| x.to_text_en(Accuracy::Precise, Tense::Present))
-                        .unwrap_or_else(|_| "--".to_string()),
+                        .unwrap_or_else(|_| "---".to_string()),
                     i.use_barrier.to_string(),
                     i.last_run
                         .map(|t| t.to_rfc2822())
-                        .unwrap_or_else(|| "--".to_string()),
+                        .unwrap_or_else(|| "---".to_string()),
                 ]
             }),
         )
@@ -195,7 +195,7 @@ impl IntoTable for Vec<SnapshotRetention> {
                     r.keep_num.to_string(),
                     r.last_run
                         .map(|t| t.to_rfc2822())
-                        .unwrap_or_else(|| "--".to_string()),
+                        .unwrap_or_else(|| "---".to_string()),
                 ]
             }),
         )
