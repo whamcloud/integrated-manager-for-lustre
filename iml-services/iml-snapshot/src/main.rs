@@ -168,6 +168,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             },
         );
 
+        let mut transaction = pool.begin().await?;
+
         sqlx::query!(
             r#"
             DELETE FROM snapshot
@@ -176,7 +178,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             &snaps.0,
             &snaps.1,
         )
-        .execute(&pool)
+        .execute(&mut transaction)
         .await?;
 
         sqlx::query!(
@@ -208,8 +210,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             &snaps.5 as &[Option<bool>],
             &snaps.6 as &[Option<String>],
         )
-        .execute(&pool)
+        .execute(&mut transaction)
         .await?;
+
+        transaction.commit().await?;
     }
 
     Ok(())
