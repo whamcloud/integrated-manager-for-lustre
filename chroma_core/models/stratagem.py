@@ -2,6 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+import json
 import logging
 import os
 import requests
@@ -322,7 +323,7 @@ class RunStratagemStep(Step):
         report_duration = args["report_duration"]
         purge_duration = args["purge_duration"]
         search_expression = args["search_expression"]
-        action = args["action"]
+        action = json.loads(args["action"])
 
         def calc_warn_duration(report_duration, purge_duration):
             if report_duration is not None and purge_duration is not None:
@@ -336,8 +337,8 @@ class RunStratagemStep(Step):
             rule_map = {
                 "fids_expiring_soon": report_duration is not None and "warn_fids",
                 "fids_expired": purge_duration is not None and "purge_fids",
-                "filesync": search_expression is not None and action == "filesync" and "filesync",
-                "cloudsync": search_expression is not None and action == "cloudsync" and "cloudsync",
+                "filesync": search_expression is not None and "filesync" in action and "filesync",
+                "cloudsync": search_expression is not None and "cloudsync" in action and "cloudsync",
             }
 
             groups = ["size_distribution", "user_distribution"] + filter(bool, rule_map.values())

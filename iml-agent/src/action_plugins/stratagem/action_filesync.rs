@@ -16,6 +16,8 @@ struct Work {
     dest_file: String,
 }
 
+const LARGEFILE: u64 = 1024 * 1024 * 1024;
+
 fn do_rsync<'a>(
     work_list: &'a [Work],
 ) -> impl Future<Output = Result<Vec<FidError>, ImlAgentError>> + 'a {
@@ -78,7 +80,7 @@ async fn archive_fids(
         /* invoking mpifileutils is slow, so only do it for directories
          * and big files, otherwise just use rsync
          */
-        if md.is_dir() || (md.len() > 1024 * 1024 * 1024) {
+        if md.is_dir() || (md.len() > LARGEFILE) {
             let output = Command::new("/usr/lib64/openmpi/bin/mpirun")
                 .arg("--hostfile")
                 .arg("/etc/iml/filesync-hostfile")
@@ -147,7 +149,7 @@ async fn restore_fids(
          * and big files, otherwise just use rsync
          */
         let output;
-        if md.is_dir() || (md.len() > 1024 * 1024 * 1024) {
+        if md.is_dir() || (md.len() > LARGEFILE) {
             output = Command::new("mpirun")
                 .arg("--hostfile")
                 .arg("/etc/iml/filesync-hostfile")

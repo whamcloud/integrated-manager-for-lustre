@@ -10,7 +10,8 @@ use structopt::clap::arg_enum;
 use tokio::process::Command;
 
 fn get_unique(input: &str) -> String {
-    input.replace('/', "_")
+    let str = input.replace('_', "__");
+    str.replace('/', "_")
 }
 
 async fn archive_fids(
