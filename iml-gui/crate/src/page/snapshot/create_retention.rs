@@ -214,7 +214,10 @@ pub fn view(model: &Model) -> Node<Msg> {
                         label![
                             attrs! {At::For => "reserve_value"},
                             "Reserve",
-                            help_indicator("Delete the oldest snapshot when available space falls below this value.", Placement::Right)
+                            help_indicator(
+                                "Delete the oldest snapshot when available space falls below this value.",
+                                Placement::Right
+                            )
                         ],
                         div![
                             class![C.grid, C.grid_cols_6],
