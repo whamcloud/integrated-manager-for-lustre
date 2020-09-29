@@ -2,7 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, lustre::lctl};
+use crate::{
+    agent_error::ImlAgentError,
+    lustre::{lctl, lctl_retry},
+};
 use combine::{stream::easy, EasyParser};
 use iml_wire_types::snapshot::{Create, Destroy, List, Mount, Snapshot, Unmount};
 
@@ -14,7 +17,7 @@ pub async fn list(l: List) -> Result<Vec<Snapshot>, ImlAgentError> {
         args.push("--name");
         args.push(name);
     }
-    let stdout = lctl(args).await?;
+    let stdout = lctl_retry(args).await?;
     let stdout = stdout.trim();
 
     if stdout.is_empty() {
@@ -53,7 +56,7 @@ pub async fn create(c: Create) -> Result<(), ImlAgentError> {
         args.push(cmnt);
     }
 
-    lctl(args).await.map(drop)
+    lctl_retry(args).await.map(drop)
 }
 
 pub async fn destroy(d: Destroy) -> Result<(), ImlAgentError> {
@@ -61,7 +64,7 @@ pub async fn destroy(d: Destroy) -> Result<(), ImlAgentError> {
     if d.force {
         args.push("--force");
     }
-    lctl(args).await.map(drop)
+    lctl_retry(args).await.map(drop)
 }
 
 pub async fn mount(m: Mount) -> Result<(), ImlAgentError> {
