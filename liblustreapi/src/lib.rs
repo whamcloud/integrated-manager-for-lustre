@@ -300,6 +300,7 @@ impl Llapi {
         if rc != 0 {
             return Err(LiblustreError::os_error(rc.abs()));
         }
+
         Ok(fid.to_string())
     }
 
@@ -325,6 +326,7 @@ impl Llapi {
 
     pub fn search_rootpath(&self, tmp_fsname: &str) -> Result<String, LiblustreError> {
         let mut fsname = tmp_fsname.to_string();
+
         if fsname.starts_with('/') {
             fsname = Llapi::search_fsname(self, &fsname)?;
         }

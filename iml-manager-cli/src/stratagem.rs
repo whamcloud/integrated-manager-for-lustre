@@ -13,7 +13,7 @@ use crate::{
 use console::Term;
 use iml_manager_client::ImlManagerClientError;
 use iml_wire_types::{ApiList, CmdWrapper, EndpointName, Filesystem, StratagemConfiguration};
-use structopt::StructOpt;
+use structopt::{clap::arg_enum, StructOpt};
 
 #[derive(Debug, StructOpt)]
 pub enum StratagemCommand {
@@ -23,6 +23,12 @@ pub enum StratagemCommand {
     /// Configure Stratagem scanning interval
     #[structopt(name = "interval")]
     StratagemInterval(StratagemInterval),
+    /// Kickoff a Stratagem Filesync
+    #[structopt(name = "filesync")]
+    Filesync(StratagemFilesyncData),
+    /// Kickoff a Stratagem Cloudsync
+    #[structopt(name = "cloudsync")]
+    Cloudsync(StratagemCloudsyncData),
 }
 
 #[derive(Debug, StructOpt)]
@@ -84,6 +90,61 @@ pub struct StratagemScanData {
     /// The purge duration
     #[structopt(short = "p", long = "purge", parse(try_from_str = parse_duration))]
     purge_duration: Option<u64>,
+}
+
+arg_enum! {
+    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy)]
+    #[serde(rename_all = "lowercase")]
+    pub enum FilesyncAction {
+    Push,
+    Pull,
+    }
+}
+
+arg_enum! {
+    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy)]
+    #[serde(rename_all = "lowercase")]
+    pub enum CloudsyncAction {
+    Push,
+    Pull,
+    }
+}
+
+#[derive(serde::Serialize, StructOpt, Debug)]
+pub struct StratagemFilesyncData {
+    /// action, either push or pull
+    #[structopt()]
+    action: FilesyncAction,
+    /// The name of the filesystem to scan
+    #[structopt(short = "f", long = "filesystem")]
+    filesystem: String,
+    /// The remote filesystem
+    #[structopt(short = "r", long = "remote")]
+    remote: String,
+    /// Match expression
+    #[structopt(short = "e", long = "expression")]
+    expression: String,
+    #[structopt(skip = true)]
+    filesync: bool,
+}
+
+#[derive(serde::Serialize, StructOpt, Debug)]
+pub struct StratagemCloudsyncData {
+    /// action, either push or pull
+    #[structopt()]
+    action: CloudsyncAction,
+    /// The name of the filesystem to scan
+    #[structopt(short = "f", long = "filesystem")]
+    filesystem: String,
+    /// The s3 instance
+    #[structopt(short = "r", long = "remote")]
+    remote: String,
+    /// Match expression
+    #[structopt(short = "e", long = "expression")]
+    expression: String,
+    policy: String,
+    #[structopt(skip = true)]
+    cloudsync: bool,
 }
 
 fn parse_duration(src: &str) -> Result<u64, ImlManagerCliError> {
@@ -185,6 +246,31 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 
             stop_spinner(None);
 
+            display_cmd_state(&command);
+        }
+        StratagemCommand::Filesync(data) => {
+            let r = post("run_stratagem", data).await?;
+            let CmdWrapper { command } = handle_cmd_resp(r).await?;
+            let stop_spinner = start_spinner(&command.message);
+            let command = wait_for_cmd(command).await?;
+
+            stop_spinner(None);
+            display_cmd_state(&command);
+        }
+        StratagemCommand::Cloudsync(data) => {
+            let r = post("run_stratagem", data).await?;
+
+            tracing::error!("run_cloudsync: {:?}", r);
+
+            let CmdWrapper { command } = handle_cmd_resp(r).await?;
+
+            tracing::error!("run_cloudsync: {:?}", command);
+
+            let stop_spinner = start_spinner(&command.message);
+            let command = wait_for_cmd(command).await?;
+
+            tracing::error!("wait_done: {:?}", command);
+            stop_spinner(None);
             display_cmd_state(&command);
         }
         StratagemCommand::StratagemInterval(x) => match x {
