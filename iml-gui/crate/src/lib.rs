@@ -330,10 +330,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 model.breadcrumbs.clear();
             }
 
-            if model.route == Route::Snapshots && !model.conf.use_snapshots {
-                model.route = Route::NotFound;
-            }
-
             orders.send_msg(Msg::LoadPage);
         }
         Msg::UpdatePageTitle => {
@@ -368,6 +364,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::LoadPage => {
             if model.loading.loaded() && !model.page.is_active(&model.route) {
+                if model.route == Route::Snapshots && !model.conf.use_snapshots {
+                    model.route = Route::NotFound;
+                }
+
                 model.page = (&model.records, &model.conf, &model.route).into();
                 orders.send_msg(Msg::UpdatePageTitle);
                 model.page.init(&model.records, &mut orders.proxy(Msg::Page));
