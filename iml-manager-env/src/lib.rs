@@ -283,6 +283,10 @@ pub fn get_use_stratagem() -> bool {
     string_to_bool(get_var("USE_STRATAGEM"))
 }
 
+pub fn get_use_snapshots() -> bool {
+    string_to_bool(get_var("USE_SNAPSHOTS"))
+}
+
 pub fn get_action_runner_http() -> String {
     ACTION_RUNNER_HTTP.clone()
 }

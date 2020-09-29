@@ -352,6 +352,7 @@ services:
       - RUST_LOG=info,sqlx::query=warn
       - BRANDING
       - USE_STRATAGEM
+      - USE_SNAPSHOTS
       - EXA_VERSION
       - SFA_ENDPOINTS_1
   iml-manager-cli:
@@ -458,6 +459,7 @@ services:
     environment:
       - BRANDING
       - USE_STRATAGEM
+      - USE_SNAPSHOTS
       - EXA_VERSION
       - INFLUXDB_IML_STATS_LONG_DURATION
       - LOG_LEVEL

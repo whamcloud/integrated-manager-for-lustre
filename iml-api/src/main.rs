@@ -33,6 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         is_release: iml_manager_env::get_is_release(),
         branding: iml_manager_env::get_branding().into(),
         use_stratagem: iml_manager_env::get_use_stratagem(),
+        use_snapshots: iml_manager_env::get_use_snapshots(),
         monitor_sfa: iml_manager_env::get_sfa_endpoints().is_some(),
     };
 
