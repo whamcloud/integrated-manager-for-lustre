@@ -454,7 +454,8 @@ impl QueryRoot {
 
         Ok(xs)
     }
-    /// List all snapshot retention policies
+    /// List all snapshot retention policies. Snapshots will automatically be deleted (starting with the oldest)
+    /// when free space falls below the defined reserve value and its associated unit.
     async fn snapshot_retention_policies(
         context: &Context,
     ) -> juniper::FieldResult<Vec<SnapshotRetention>> {
@@ -771,15 +772,17 @@ impl MutationRoot {
     }
     #[graphql(arguments(
         fsname(description = "Filesystem name"),
-        reserve_value(description = "The amount or percent of free space to reserve"),
-        reserve_unit(description = "Unit of measurement of free space to reserve"),
+        reserve_value(
+            description = "Delete the oldest snapshot when available space falls below this value"
+        ),
+        reserve_unit(description = "The unit of measurement associated with the reserve_value"),
         keep_num(
             description = "The minimum number of snapshots to keep. This is to avoid deleting all snapshots while pursuiting the reserve goal"
         )
     ))]
     /// Creates a new snapshot retention policy for the given `fsname`.
-    /// The filesystem will be checked periodically, and if the policy is met,
-    /// The oldest snapshot will be deleted until the policy no longer holds.
+    /// Snapshots will automatically be deleted (starting with the oldest)
+    /// when free space falls below the defined reserve value and its associated unit.
     async fn create_snapshot_retention(
         context: &Context,
         fsname: String,
