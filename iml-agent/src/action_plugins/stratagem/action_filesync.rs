@@ -92,12 +92,14 @@ async fn archive_fids(
                 .output()
                 .await?;
 
-            let FidItem { fid, data } = fid;
-            result.push(FidError {
-                fid,
-                data,
-                errno: output.status.code().unwrap_or(0) as i16,
-            });
+            if output.status.code().unwrap_or(0) != 0 {
+                let FidItem { fid, data } = fid;
+                result.push(FidError {
+                    fid,
+                    data,
+                    errno: output.status.code().unwrap_or(0) as i16,
+                });
+            }
             tracing::debug!(
                 "dsync exited with {} {} {}",
                 output.status,
@@ -165,14 +167,15 @@ async fn restore_fids(
 
         let output = output.await?;
 
-        // TODO: handle termination conditions without defaulting to 0
-        let res = FidError {
-            fid: fid.fid.clone(),
-            data: fid.data.clone(),
-            errno: output.status.code().unwrap_or(0) as i16,
-        };
-        result.push(res);
-
+        if output.status.code().unwrap_or(0) != 0 {
+            // TODO: handle termination conditions without defaulting to 0
+            let res = FidError {
+                fid: fid.fid.clone(),
+                data: fid.data.clone(),
+                errno: output.status.code().unwrap_or(0) as i16,
+            };
+            result.push(res);
+        }
         tracing::debug!(
             "exited with {} {} {}",
             output.status,
