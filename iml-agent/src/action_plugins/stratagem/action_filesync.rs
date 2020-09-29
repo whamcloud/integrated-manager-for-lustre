@@ -35,7 +35,7 @@ fn do_rsync<'a>(
             Ok::<_, ImlAgentError>(FidError {
                 fid: work.fid.fid.clone(),
                 data: work.fid.data.clone(),
-                errno: output.status.code().unwrap_or(0) as i16,
+                errno: output.status.code().unwrap_or(1) as i16,
             })
         })
         .chunks(10)
@@ -92,12 +92,14 @@ async fn archive_fids(
                 .output()
                 .await?;
 
-            let FidItem { fid, data } = fid;
-            result.push(FidError {
-                fid,
-                data,
-                errno: output.status.code().unwrap_or(0) as i16,
-            });
+            if !output.status.success() {
+                let FidItem { fid, data } = fid;
+                result.push(FidError {
+                    fid,
+                    data,
+                    errno: output.status.code().unwrap_or(1) as i16,
+                });
+            }
             tracing::debug!(
                 "dsync exited with {} {} {}",
                 output.status,
@@ -165,14 +167,15 @@ async fn restore_fids(
 
         let output = output.await?;
 
-        // TODO: handle termination conditions without defaulting to 0
-        let res = FidError {
-            fid: fid.fid.clone(),
-            data: fid.data.clone(),
-            errno: output.status.code().unwrap_or(0) as i16,
-        };
-        result.push(res);
-
+        if !output.status.success() {
+            // TODO: handle termination conditions without defaulting to 0
+            let res = FidError {
+                fid: fid.fid.clone(),
+                data: fid.data.clone(),
+                errno: output.status.code().unwrap_or(1) as i16,
+            };
+            result.push(res);
+        }
         tracing::debug!(
             "exited with {} {} {}",
             output.status,
