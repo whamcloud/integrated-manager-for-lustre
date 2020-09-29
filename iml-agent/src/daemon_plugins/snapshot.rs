@@ -20,6 +20,8 @@ use futures::{
     lock::Mutex,
     Future, FutureExt,
 };
+use iml_cmd::CmdError;
+use iml_tracing::tracing;
 use iml_wire_types::snapshot::{List, Snapshot};
 use std::collections::BTreeSet;
 use std::{pin::Pin, sync::Arc, time::Duration};
@@ -50,7 +52,7 @@ async fn list() -> Result<Vec<Snapshot>, ()> {
     let fss: Vec<String> = lctl(vec!["get_param", "-N", "mgs.MGS.live.*"])
         .await
         .map_err(|e| {
-            // XXX debug because of false positives
+            // XXX debug because of false positives. But this is still a failure.
             tracing::debug!("listing filesystems failed: {}", e);
         })
         .map(|o| {
@@ -87,14 +89,31 @@ async fn list() -> Result<Vec<Snapshot>, ()> {
     let really_failed_fss = errs
         .into_iter()
         .map(|x| x.unwrap_err())
-        .filter(|x| !snapshot_fsnames.contains(&x.0))
+        .filter(|x| {
+            tracing::debug!("listing for {} failed: {:?}", x.0, x.1);
+
+            if snapshot_fsnames.contains(&x.0) {
+                tracing::debug!("{} is a snapshot FS", x.0);
+                return false;
+            }
+
+            match &x.1 {
+                ImlAgentError::CmdError(CmdError::Output(o)) => {
+                    // XXX lctl returns 1 no matter what, so have to read its output:
+                    let stderr = String::from_utf8_lossy(&o.stderr);
+                    stderr.find("Miss MDT0 in the config file").is_none()
+                }
+                _ => true,
+            }
+        })
         .collect::<Vec<_>>();
 
-    if !really_failed_fss.is_empty() {
-        // XXX debug because of false positives
-        tracing::debug!("listing failed: {:?}", really_failed_fss);
+    if really_failed_fss.is_empty() {
+        Ok(snaps)
+    } else {
+        tracing::error!("listing failed: {:?}", really_failed_fss);
+        Err(())
     }
-    Ok(snaps)
 }
 
 #[async_trait]
