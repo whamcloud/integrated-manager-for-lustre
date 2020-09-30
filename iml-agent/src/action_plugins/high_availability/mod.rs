@@ -5,12 +5,12 @@
 pub(crate) mod corosync_conf;
 pub(crate) mod pacemaker;
 
-use crate::agent_error::{ImlAgentError, RequiredError};
-use elementtree::Element;
-use futures::{
-    future::{try_join_all, TryFutureExt},
-    try_join,
+use crate::{
+    agent_error::{ImlAgentError, RequiredError},
+    high_availability::{cibcreate, cibxpath, crm_resource, get_crm_mon_output, set_resource_role},
 };
+use elementtree::Element;
+use futures::{future::try_join_all, try_join};
 use iml_cmd::{CheckedCommandExt, Command};
 use iml_fs::file_exists;
 use iml_wire_types::{
@@ -18,8 +18,10 @@ use iml_wire_types::{
     PacemakerOperations, PacemakerScore, ResourceAgentInfo, ResourceAgentType, ResourceConstraint,
     ServiceState,
 };
-use std::{collections::HashMap, ffi::OsStr, time::Duration};
+use std::{collections::HashMap, time::Duration};
 use tokio::time::delay_for;
+
+pub use crate::high_availability::{crm_attribute, pcs};
 
 const NO_EXTRA: Vec<String> = vec![];
 
@@ -71,46 +73,10 @@ fn create(elem: &Element) -> ResourceAgentInfo {
     }
 }
 
-pub(crate) async fn crm_attribute(args: Vec<String>) -> Result<String, ImlAgentError> {
-    let o = Command::new("crm_attribute")
-        .args(args)
-        .checked_output()
-        .await?;
-
-    Ok(String::from_utf8_lossy(&o.stdout).to_string())
-}
-
-pub(crate) async fn crm_resource<I, S>(args: I) -> Result<String, ImlAgentError>
-where
-    I: IntoIterator<Item = S>,
-    S: AsRef<OsStr>,
-{
-    let o = Command::new("crm_resource")
-        .args(args)
-        .checked_output()
-        .await?;
-
-    Ok(String::from_utf8_lossy(&o.stdout).to_string())
-}
-
-pub(crate) async fn pcs(args: Vec<String>) -> Result<String, ImlAgentError> {
-    let o = Command::new("pcs").args(args).checked_output().await?;
-
-    Ok(String::from_utf8_lossy(&o.stdout).to_string())
-}
-
-async fn crm_mon_status() -> Result<Element, ImlAgentError> {
-    let o = Command::new("crm_mon")
-        .args(&["--as-xml", "--inactive"])
-        .checked_output()
-        .await?;
-
-    Ok(Element::from_reader(o.stdout.as_slice())?)
-}
-
-fn resource_status(tree: Element) -> HashMap<String, String> {
+fn resource_status(rawxml: &[u8]) -> Result<HashMap<String, String>, ImlAgentError> {
+    let tree = Element::from_reader(rawxml)?;
     let resources = tree.find("resources").unwrap();
-    resources
+    let x = resources
         .children()
         .filter_map(|e| {
             e.get_attr("id")
@@ -145,21 +111,8 @@ fn resource_status(tree: Element) -> HashMap<String, String> {
         })
         .flatten()
         .map(|(x, y)| (x.to_string(), y.to_string()))
-        .collect()
-}
-
-async fn set_resource_role(resource: &str, running: bool) -> Result<(), ImlAgentError> {
-    let args = &[
-        "--resource",
-        resource,
-        "--set-parameter",
-        "target-role",
-        "--meta",
-        "--parameter-value",
-        if running { "Started" } else { "Stopped" },
-    ];
-    crm_resource(args).await?;
-    Ok(())
+        .collect();
+    Ok(x)
 }
 
 async fn wait_resource(resource: &str, running: bool) -> Result<(), ImlAgentError> {
@@ -167,7 +120,9 @@ async fn wait_resource(resource: &str, running: bool) -> Result<(), ImlAgentErro
     let sec_delay = 2;
     let delay_duration = Duration::new(sec_delay, 0);
     for _ in 0..(sec_to_wait / sec_delay) {
-        let resources = resource_status(crm_mon_status().await?);
+        let output = get_crm_mon_output().await?;
+
+        let resources = resource_status(output.stdout.as_slice())?;
         tracing::debug!(
             "crm mon status (waiting for {}): {:?}",
             resource,
@@ -270,31 +225,6 @@ fn xml_add_nvpair(elem: &mut Element, id: &str, name: &str, value: &str) {
         .set_attr("id", format!("{}-{}", &id, name))
         .set_attr("name", name)
         .set_attr("value", value);
-}
-
-async fn cibcreate(scope: &str, xml: &str) -> Result<(), ImlAgentError> {
-    Command::new("cibadmin")
-        .args(&["--create", "--scope", scope, "--xml-text", xml])
-        .checked_status()
-        .inspect_err(|_| tracing::error!("Failed to create {}: {}", scope, xml))
-        .err_into()
-        .await
-}
-
-async fn cibxpath<I, S>(op: &str, xpath: &str, extra: I) -> Result<String, ImlAgentError>
-where
-    I: IntoIterator<Item = S>,
-    S: AsRef<OsStr>,
-{
-    let o = Command::new("cibadmin")
-        .arg(format!("--{}", op))
-        .arg("--xpath")
-        .arg(xpath)
-        .args(extra)
-        .checked_output()
-        .await?;
-
-    Ok(String::from_utf8_lossy(&o.stdout).to_string())
 }
 
 pub async fn create_single_resource(
@@ -806,8 +736,6 @@ mod tests {
     fn test_resource_status() {
         let testxml = include_bytes!("fixtures/crm-mon-complex.xml");
 
-        let tree = Element::from_reader(testxml as &[u8]).unwrap();
-
         let r1: HashMap<String, String> = vec![
             ("cl-sfa-home-vd", "Started"),
             ("cl-ifspeed-lnet-o2ib0-o2ib0", "Starting"),
@@ -825,7 +753,7 @@ mod tests {
         .map(|(x, y)| (x.to_string(), y.to_string()))
         .collect();
 
-        assert_eq!(resource_status(tree), r1);
+        assert_eq!(resource_status(testxml as &[u8]).unwrap(), r1);
     }
 
     #[test]
