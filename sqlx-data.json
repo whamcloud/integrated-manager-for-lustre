@@ -1788,6 +1788,70 @@
       "nullable": []
     }
   },
+  "6f2283191da608e2b1fc7c2966012cbbc23a1e840c65dc3175a084a086dc68be": {
+    "query": "\n            SELECT * from chroma_core_logmessage t\n            ORDER BY\n                CASE WHEN $3 = 'asc' THEN t.datetime END ASC,\n                CASE WHEN $3 = 'desc' THEN t.datetime END DESC\n            OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "datetime",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 2,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "severity",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 4,
+          "name": "facility",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 5,
+          "name": "tag",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 6,
+          "name": "message",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "message_class",
+          "type_info": "Int2"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "7bee1c38d05ac3f8bcf4d48b375c740341121c04d2f5b04ceb1d58ef0a006c08": {
     "query": "\n        SELECT * FROM chroma_core_lustreclientmount\n        WHERE\n            state = 'mounted'\n            AND not_deleted = 't'\n            AND id != ALL($1)\n        LIMIT $2\n        ",
     "describe": {
