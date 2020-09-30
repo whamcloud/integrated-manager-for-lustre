@@ -1981,3 +1981,13 @@ impl PartialEq for LdevEntry {
         self.label == other.label
     }
 }
+
+#[derive(Debug, Eq, PartialEq)]
+#[repr(i16)]
+pub enum LogMessageClass {
+    Normal = 0,
+    Lustre = 1,
+    LustreError = 2,
+    Copytool = 3,
+    CopytoolError = 4,
+}

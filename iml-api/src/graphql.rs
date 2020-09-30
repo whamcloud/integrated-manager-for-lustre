@@ -151,26 +151,26 @@ struct Substitution {
 
 #[derive(GraphQLEnum)]
 enum MessageClass {
-    Normal,
-    Lustre,
-    LustreError,
-    Copytool,
-    CopytoolError,
+    Normal = 0,
+    Lustre = 1,
+    LustreError = 2,
+    Copytool = 3,
+    CopytoolError = 4,
 }
 
-/// Severities from syslog protocol
-///
-/// | Code | Severity                                 |
-/// |------|------------------------------------------|
-/// | 0    | Emergency: system is unusable            |
-/// | 1    | Alert: action must be taken immediately  |
-/// | 2    | Critical: critical conditions            |
-/// | 3    | Error: error conditions                  |
-/// | 4    | Warning: warning conditions              |
-/// | 5    | Notice: normal but significant condition |
-/// | 6    | Informational: informational messages    |
-/// | 7    | Debug: debug-level messages              |
-///
+impl From<i16> for MessageClass {
+    fn from(value: i16) -> Self {
+        match value {
+            0 => MessageClass::Normal,
+            1 => MessageClass::Lustre,
+            2 => MessageClass::LustreError,
+            3 => MessageClass::Copytool,
+            4 => MessageClass::CopytoolError,
+            _ => panic!("Invalid variant"),
+        }
+    }
+}
+
 #[derive(GraphQLEnum)]
 enum LogSeverity {
     Emergency = 0,
@@ -222,7 +222,7 @@ impl From<LogMessageRecord> for LogMessage {
             facility: record.facility as i32,
             fqdn: record.fqdn,
             message: record.message,
-            message_class: MessageClass::Normal,
+            message_class: MessageClass::from(record.message_class),
             resource_uri: "".into(),
             severity: LogSeverity::from(record.severity),
             substitutions: vec![],
