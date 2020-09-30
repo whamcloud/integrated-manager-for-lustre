@@ -593,13 +593,14 @@ impl QueryRoot {
         limit(description = "optional paging limit, defaults to all rows"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to asc"),
+        message(description = "String that must be contained in message")
     ))]
-    /// Fetch the list of known targets
     async fn logs(
         context: &Context,
         limit: Option<i32>,
         offset: Option<i32>,
         dir: Option<SortDir>,
+        message: Option<String>,
     ) -> juniper::FieldResult<Vec<LogMessage>> {
         let dir = dir.unwrap_or_default();
 
@@ -618,6 +619,12 @@ impl QueryRoot {
         .fetch_all(&context.pg_pool)
         .await?
         .into_iter()
+        .filter(|x| {
+            message
+                .as_ref()
+                .map(|m| x.message.contains(m.as_str()))
+                .unwrap_or(true)
+        })
         .map(|x| x.into())
         .collect();
 
