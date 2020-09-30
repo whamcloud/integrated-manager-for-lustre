@@ -472,7 +472,7 @@ fn resource_xml_string(agent: &ResourceAgentInfo, cloned: bool) -> Result<String
         }
     }
 
-    if agent.ops.is_some() {
+    if agent.ops.is_any_some() {
         let ops = res.append_new_child("operations");
         xml_add_op(ops, &agent.id, "start", &agent.ops.start, &None);
         xml_add_op(ops, &agent.id, "stop", &agent.ops.stop, &None);

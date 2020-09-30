@@ -1591,7 +1591,7 @@ impl PacemakerOperations {
         }
     }
 
-    pub fn is_some(&self) -> bool {
+    pub fn is_any_some(&self) -> bool {
         self.start.is_some() || self.stop.is_some() || self.monitor.is_some()
     }
 }
