@@ -100,7 +100,7 @@ pub fn view(model: &Model, cache: &ArcCache) -> Node<Msg> {
     if model.rows.is_empty() {
         return empty!();
     }
-    
+
     panel::view(
         h3![class![C.py_4, C.font_normal, C.text_lg], "Snapshots"],
         div![
