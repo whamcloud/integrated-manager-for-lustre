@@ -121,7 +121,16 @@ class ConfigureHotpoolJob(StateChangeJob):
             steps.append((MountStep, {"host": host.fqdn, "auto": False, "spec": fs.mount_path(), "mountpoint": mp}))
 
         for host in (l[0] for l in fs.get_server_groups()):
-            steps.append((CreateClonedClientStep, {"host": host.fqdn, "mountpoint": mp, "fs_name": fs.name,},))
+            steps.append(
+                (
+                    CreateClonedClientStep,
+                    {
+                        "host": host.fqdn,
+                        "mountpoint": mp,
+                        "fs_name": fs.name,
+                    },
+                )
+            )
 
         return steps
 
