@@ -12,6 +12,7 @@ use futures::{TryFutureExt, TryStreamExt};
 use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
 use iml_wire_types::{
+    db::LogMessageRecord,
     graphql_duration::GraphQLDuration,
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     Command, EndpointName, Job,
@@ -132,6 +133,80 @@ impl Deref for SortDir {
         match self {
             Self::Asc => "asc",
             Self::Desc => "desc",
+        }
+    }
+}
+
+#[derive(juniper::GraphQLObject)]
+struct Substitution {
+    pub start: String,
+    pub end: String,
+    pub label: String,
+    pub resource_uri: String,
+}
+
+#[derive(GraphQLEnum)]
+enum MessageClass {
+    Normal,
+    Lustre,
+    LustreError,
+    Copytool,
+    CopytoolError,
+}
+
+/// Severities from syslog protocol
+///
+/// | Code | Severity                                 |
+/// |------|------------------------------------------|
+/// | 0    | Emergency: system is unusable            |
+/// | 1    | Alert: action must be taken immediately  |
+/// | 2    | Critical: critical conditions            |
+/// | 3    | Error: error conditions                  |
+/// | 4    | Warning: warning conditions              |
+/// | 5    | Notice: normal but significant condition |
+/// | 6    | Informational: informational messages    |
+/// | 7    | Debug: debug-level messages              |
+///
+#[derive(GraphQLEnum)]
+enum LogSeverity {
+    Emergency = 0,
+    Alert = 1,
+    Critical = 2,
+    Error = 3,
+    Warning = 4,
+    Notice = 5,
+    Informational = 6,
+    Debug = 7,
+}
+
+/// An Log record from /api/log/
+#[derive(juniper::GraphQLObject)]
+struct LogMessage {
+    pub id: i32,
+    pub datetime: chrono::DateTime<Utc>,
+    pub facility: i32,
+    pub fqdn: String,
+    pub message: String,
+    pub message_class: MessageClass,
+    pub resource_uri: String,
+    pub severity: LogSeverity,
+    pub substitutions: Vec<Substitution>,
+    pub tag: String,
+}
+
+impl From<LogMessageRecord> for LogMessage {
+    fn from(record: LogMessageRecord) -> Self {
+        Self {
+            id: record.id,
+            datetime: record.datetime,
+            facility: record.facility as i32,
+            fqdn: record.fqdn,
+            message: record.message,
+            message_class: MessageClass::Normal,
+            resource_uri: "".into(),
+            severity: LogSeverity::Emergency,
+            substitutions: vec![],
+            tag: record.tag,
         }
     }
 }
@@ -475,6 +550,41 @@ impl QueryRoot {
         .fetch(&context.pg_pool)
         .try_collect()
         .await?;
+
+        Ok(xs)
+    }
+
+    #[graphql(arguments(
+        limit(description = "optional paging limit, defaults to all rows"),
+        offset(description = "Offset into items, defaults to 0"),
+        dir(description = "Sort direction, defaults to asc"),
+    ))]
+    /// Fetch the list of known targets
+    async fn logs(
+        context: &Context,
+        limit: Option<i32>,
+        offset: Option<i32>,
+        dir: Option<SortDir>,
+    ) -> juniper::FieldResult<Vec<LogMessage>> {
+        let dir = dir.unwrap_or_default();
+
+        let xs: Vec<LogMessage> = sqlx::query_as!(
+            LogMessageRecord,
+            r#"
+            SELECT * from chroma_core_logmessage t
+            ORDER BY
+                CASE WHEN $3 = 'asc' THEN t.datetime END ASC,
+                CASE WHEN $3 = 'desc' THEN t.datetime END DESC
+            OFFSET $1 LIMIT $2"#,
+            offset.unwrap_or(0) as i64,
+            limit.map(|x| x as i64),
+            dir.deref()
+        )
+        .fetch_all(&context.pg_pool)
+        .await?
+        .into_iter()
+        .map(|x| x.into())
+        .collect();
 
         Ok(xs)
     }
