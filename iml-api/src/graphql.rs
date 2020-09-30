@@ -593,7 +593,9 @@ impl QueryRoot {
         limit(description = "optional paging limit, defaults to all rows"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to asc"),
-        message(description = "String that must be contained in message")
+        message(description = "String that must be contained in message"),
+        fqdn(description = "String that must be contained in FQDN"),
+        tag(description = "String that must be contained in tag"),
     ))]
     async fn logs(
         context: &Context,
@@ -601,6 +603,8 @@ impl QueryRoot {
         offset: Option<i32>,
         dir: Option<SortDir>,
         message: Option<String>,
+        fqdn: Option<String>,
+        tag: Option<String>,
     ) -> juniper::FieldResult<Vec<LogMessage>> {
         let dir = dir.unwrap_or_default();
 
@@ -623,6 +627,16 @@ impl QueryRoot {
             message
                 .as_ref()
                 .map(|m| x.message.contains(m.as_str()))
+                .unwrap_or(true)
+        })
+        .filter(|x| {
+            fqdn.as_ref()
+                .map(|f| x.fqdn.contains(f.as_str()))
+                .unwrap_or(true)
+        })
+        .filter(|x| {
+            tag.as_ref()
+                .map(|t| x.tag.contains(t.as_str()))
                 .unwrap_or(true)
         })
         .map(|x| x.into())
