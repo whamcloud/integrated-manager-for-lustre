@@ -74,6 +74,8 @@ mkdir -p %{buildroot}%{_presetdir}
 cp 00-rust-iml-agent.preset %{buildroot}%{_presetdir}
 mkdir -p %{buildroot}%{_sysconfdir}/iml/
 cp settings.conf %{buildroot}%{_sysconfdir}/iml/iml-agent.conf
+mkdir -p %{buildroot}%{_sysconfdir}/bash_completion.d
+%{buildroot}%{_bindir}/iml shell-completion bash -e iml -o %{buildroot}%{_sysconfdir}/bash_completion.d/iml
 
 %package cli
 Summary: IML manager CLI
@@ -85,6 +87,7 @@ Group: System Environment/Libraries
 
 %files cli
 %{_bindir}/iml
+%{_sysconfdir}/bash_completion.d/iml
 
 %package config-cli
 Summary: IML manager Config CLI
