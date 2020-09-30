@@ -892,3 +892,30 @@ impl ToCompositeId for &CorosyncConfigurationRecord {
         CompositeId(self.content_type_id.unwrap(), self.id)
     }
 }
+
+/// Record from the `chroma_core_logmessage` table
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct LogMessageRecord {
+    pub id: i32,
+    pub datetime: chrono::DateTime<Utc>,
+    pub fqdn: String,
+    pub severity: i16,
+    pub facility: i16,
+    pub tag: String,
+    pub message: String,
+    pub message_class: i16,
+}
+
+pub const LOG_MESSAGE_TABLE_NAME: TableName = TableName("chroma_core_logmessage");
+
+impl Name for LogMessageRecord {
+    fn table_name() -> TableName<'static> {
+        LOG_MESSAGE_TABLE_NAME
+    }
+}
+
+impl Id for LogMessageRecord {
+    fn id(&self) -> i32 {
+        self.id
+    }
+}
