@@ -9,7 +9,7 @@ use iml_postgres::{
     sqlx::{self, PgPool},
 };
 use iml_service_queue::service_queue::ImlServiceQueueError;
-use iml_wire_types::{AlertRecordType, AlertSeverity};
+use iml_wire_types::{AlertRecordType, AlertSeverity, LogMessageClass};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap;
@@ -27,16 +27,6 @@ pub enum ImlJournalError {
     SqlxCoreError(#[from] sqlx::error::Error),
     #[error(transparent)]
     TryFromIntError(#[from] std::num::TryFromIntError),
-}
-
-#[derive(Debug, Eq, PartialEq)]
-#[repr(i16)]
-pub enum LogMessageClass {
-    Normal,
-    Lustre,
-    LustreError,
-    Copytool,
-    CopytoolError,
 }
 
 lazy_static! {
