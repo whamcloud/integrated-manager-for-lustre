@@ -737,7 +737,7 @@ fn tree_volume_collection_view(cache: &ArcCache, model: &Model, parent_address: 
                     let v = cache.volume.values().find(|v| v.id == x.volume_id).unwrap();
 
                     let size = match v.size {
-                        Some(x) => format!(" ({})", number_formatter::format_bytes(x as f64, None)),
+                        Some(x) => format!(" ({})", number_formatter::format_bytes(x, None)),
                         None => "".into(),
                     };
 

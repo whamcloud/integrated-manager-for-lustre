@@ -176,7 +176,7 @@ pub fn view(model: &Model) -> impl View<Msg> {
                             Route::Volume(RouteId::from(v.id))
                         )),
                         table::td_center(plain![match v.size {
-                            Some(x) => number_formatter::format_bytes(x as f64, None),
+                            Some(x) => number_formatter::format_bytes(x, None),
                             None => "---".into(),
                         }]),
                         table::td_center(
