@@ -632,39 +632,105 @@ impl QueryRoot {
             None
         };
 
-        let xs: Vec<LogMessage> = sqlx::query_as!(
-            LogMessageRecord,
-            r#"
-            SELECT * FROM chroma_core_logmessage t
-            WHERE t.message LIKE $4
-            ORDER BY
-                CASE WHEN $3 = 'asc' THEN t.datetime END ASC,
-                CASE WHEN $3 = 'desc' THEN t.datetime END DESC
-            OFFSET $1 LIMIT $2"#,
-            offset.unwrap_or(0) as i64,
-            limit.map(|x| x as i64),
-            dir.deref(),
-            message.unwrap_or("%".into()),
-        )
-        .fetch_all(&context.pg_pool)
-        .await?
-        .into_iter()
-        .filter(|x| {
-            fqdn.as_ref()
-                .map(|f| x.fqdn.contains(f.as_str()))
-                .unwrap_or(true)
-        })
-        .filter(|x| {
-            tag.as_ref()
-                .map(|t| x.tag.contains(t.as_str()))
-                .unwrap_or(true)
-        })
-        .filter(|x| {
-            start_datetime.map(|s| x.datetime >= s).unwrap_or(true)
-                && end_datetime.map(|e| x.datetime < e).unwrap_or(true)
-        })
-        .map(|x| x.into())
-        .collect();
+        let results = match (start_datetime, end_datetime) {
+            (Some(s), Some(e)) => {
+                sqlx::query_as!(
+                    LogMessageRecord,
+                    r#"
+                    SELECT * FROM chroma_core_logmessage t
+                    WHERE t.message LIKE $4
+                      AND t.fqdn LIKE $5
+                      AND t.tag LIKE $6
+                      AND t.datetime >= $7
+                      AND t.datetime < $8
+                    ORDER BY
+                        CASE WHEN $3 = 'asc' THEN t.datetime END ASC,
+                        CASE WHEN $3 = 'desc' THEN t.datetime END DESC
+                    OFFSET $1 LIMIT $2"#,
+                    offset.unwrap_or(0) as i64,
+                    limit.map(|x| x as i64),
+                    dir.deref(),
+                    message.unwrap_or("%".into()),
+                    fqdn.unwrap_or("%".into()),
+                    tag.unwrap_or("%".into()),
+                    s,
+                    e,
+                )
+                .fetch_all(&context.pg_pool)
+                .await?
+            }
+            (Some(s), None) => {
+                sqlx::query_as!(
+                    LogMessageRecord,
+                    r#"
+                    SELECT * FROM chroma_core_logmessage t
+                    WHERE t.message LIKE $4
+                      AND t.fqdn LIKE $5
+                      AND t.tag LIKE $6
+                      AND t.datetime >= $7
+                    ORDER BY
+                        CASE WHEN $3 = 'asc' THEN t.datetime END ASC,
+                        CASE WHEN $3 = 'desc' THEN t.datetime END DESC
+                    OFFSET $1 LIMIT $2"#,
+                    offset.unwrap_or(0) as i64,
+                    limit.map(|x| x as i64),
+                    dir.deref(),
+                    message.unwrap_or("%".into()),
+                    fqdn.unwrap_or("%".into()),
+                    tag.unwrap_or("%".into()),
+                    s,
+                )
+                .fetch_all(&context.pg_pool)
+                .await?
+            }
+            (None, Some(e)) => {
+                sqlx::query_as!(
+                    LogMessageRecord,
+                    r#"
+                    SELECT * FROM chroma_core_logmessage t
+                    WHERE t.message LIKE $4
+                      AND t.fqdn LIKE $5
+                      AND t.tag LIKE $6
+                      AND t.datetime < $7
+                    ORDER BY
+                        CASE WHEN $3 = 'asc' THEN t.datetime END ASC,
+                        CASE WHEN $3 = 'desc' THEN t.datetime END DESC
+                    OFFSET $1 LIMIT $2"#,
+                    offset.unwrap_or(0) as i64,
+                    limit.map(|x| x as i64),
+                    dir.deref(),
+                    message.unwrap_or("%".into()),
+                    fqdn.unwrap_or("%".into()),
+                    tag.unwrap_or("%".into()),
+                    e,
+                )
+                .fetch_all(&context.pg_pool)
+                .await?
+            }
+            (None, None) => {
+                sqlx::query_as!(
+                    LogMessageRecord,
+                    r#"
+                    SELECT * FROM chroma_core_logmessage t
+                    WHERE t.message LIKE $4
+                      AND t.fqdn LIKE $5
+                      AND t.tag LIKE $6
+                    ORDER BY
+                        CASE WHEN $3 = 'asc' THEN t.datetime END ASC,
+                        CASE WHEN $3 = 'desc' THEN t.datetime END DESC
+                    OFFSET $1 LIMIT $2"#,
+                    offset.unwrap_or(0) as i64,
+                    limit.map(|x| x as i64),
+                    dir.deref(),
+                    message.unwrap_or("%".into()),
+                    fqdn.unwrap_or("%".into()),
+                    tag.unwrap_or("%".into()),
+                )
+                .fetch_all(&context.pg_pool)
+                .await?
+            }
+        };
+        let xs: Vec<LogMessage> = results.into_iter().map(|x| x.into()).collect();
 
         Ok(xs)
     }
