@@ -1166,6 +1166,71 @@
       ]
     }
   },
+  "4c6be491069554152d28834960fce5f01fe7a3825cd225fd7e8fbf629e836cfe": {
+    "query": "\n            SELECT * FROM chroma_core_logmessage t\n            WHERE t.message LIKE $4\n            ORDER BY\n                CASE WHEN $3 = 'asc' THEN t.datetime END ASC,\n                CASE WHEN $3 = 'desc' THEN t.datetime END DESC\n            OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "datetime",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 2,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "severity",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 4,
+          "name": "facility",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 5,
+          "name": "tag",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 6,
+          "name": "message",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "message_class",
+          "type_info": "Int2"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "4eb28fbaf2c42bbcc852c074ade355c4f29c318def54af2290a05f37e90a3b23": {
     "query": "\n            INSERT INTO corosync_node (\n                id,\n                cluster_id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            )\n            SELECT\n                id::corosync_node_key,\n                $13,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            FROM UNNEST(\n                $1::text[],\n                $2::bool[],\n                $3::bool[],\n                $4::bool[],\n                $5::bool[],\n                $6::bool[],\n                $7::bool[],\n                $8::bool[],\n                $9::bool[],\n                $10::bool[],\n                $11::int[],\n                $12::text[]\n            )\n            AS t(\n                id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            )\n            ON CONFLICT (id, cluster_id) DO UPDATE\n            SET\n                online = excluded.online,\n                standby = excluded.standby,\n                standby_onfail = excluded.standby_onfail,\n                maintenance = excluded.maintenance,\n                pending = excluded.pending,\n                unclean = excluded.unclean,\n                shutdown = excluded.shutdown,\n                expected_up = excluded.expected_up,\n                is_dc = excluded.is_dc,\n                resources_running = excluded.resources_running,\n                type = excluded.type\n        ",
     "describe": {
@@ -1786,70 +1851,6 @@
         ]
       },
       "nullable": []
-    }
-  },
-  "6f2283191da608e2b1fc7c2966012cbbc23a1e840c65dc3175a084a086dc68be": {
-    "query": "\n            SELECT * from chroma_core_logmessage t\n            ORDER BY\n                CASE WHEN $3 = 'asc' THEN t.datetime END ASC,\n                CASE WHEN $3 = 'desc' THEN t.datetime END DESC\n            OFFSET $1 LIMIT $2",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "datetime",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 2,
-          "name": "fqdn",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 3,
-          "name": "severity",
-          "type_info": "Int2"
-        },
-        {
-          "ordinal": 4,
-          "name": "facility",
-          "type_info": "Int2"
-        },
-        {
-          "ordinal": 5,
-          "name": "tag",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 6,
-          "name": "message",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 7,
-          "name": "message_class",
-          "type_info": "Int2"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int8",
-          "Text"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ]
     }
   },
   "7bee1c38d05ac3f8bcf4d48b375c740341121c04d2f5b04ceb1d58ef0a006c08": {
