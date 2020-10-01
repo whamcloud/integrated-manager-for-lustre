@@ -950,17 +950,15 @@ async fn get_fs_cluster_hosts(
 
         acc
     });
-    let xs = xs.into_iter().map(|idset| {
-        async move {
-            let fqdns = idset
-                .into_iter()
-                .map(|x| async move { fqdn_by_host_id(pool, x).await });
-            join_all(fqdns)
-                .await
-                .into_iter()
-                .filter_map(|x| x.ok())
-                .collect()
-        }
+    let xs = xs.into_iter().map(|idset| async move {
+        let fqdns = idset
+            .into_iter()
+            .map(|x| async move { fqdn_by_host_id(pool, x).await });
+        join_all(fqdns)
+            .await
+            .into_iter()
+            .filter_map(|x| x.ok())
+            .collect()
     });
 
     Ok(join_all(xs).await)
