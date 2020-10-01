@@ -1240,11 +1240,11 @@ pub struct Substitution {
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum MessageClass {
-    Normal,
-    Lustre,
-    LustreError,
-    Copytool,
-    CopytoolError,
+    Normal = 0,
+    Lustre = 1,
+    LustreError = 2,
+    Copytool = 3,
+    CopytoolError = 4,
 }
 
 /// Severities from syslog protocol
