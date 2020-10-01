@@ -1,4 +1,3 @@
-import json
 import os
 import requests
 import settings
@@ -30,5 +29,4 @@ def graphql_query(query):
     path = os.path.join(settings.IML_API_PROXY_PASS, "graphql")
     q = {"query": query}
     res = s.post(url=path, json=q)
-
     return res.json()["data"]

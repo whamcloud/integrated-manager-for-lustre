@@ -13,6 +13,7 @@ ENV DB_PORT 5432
 ENV AMQP_BROKER_HOST rabbit
 ENV SERVER_FQDN nginx
 ENV LOG_PATH .
+ENV IML_API_HOST iml-api
 
 WORKDIR /usr/share/chroma-manager/
 COPY . .

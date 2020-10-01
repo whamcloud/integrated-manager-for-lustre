@@ -112,7 +112,6 @@ class ManagedFilesystem(StatefulObject):
     def get_server_groups(self):
         """Return: Array(Array(ManagedHost)) """
         from chroma_core.lib.graphql import graphql_query
-        from chroma_core.models.host import ManagedHost
 
         query = '{ getFsClusterHosts(fsName: "{}") }'.format(self.name)
 
