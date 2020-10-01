@@ -10,6 +10,8 @@ API_KEY = None
 
 
 def get_api_session_request():
+    global API_USER
+    global API_KEY
     if not API_USER or not API_KEY:
         cursor = connection.cursor()
         cursor.execute("SELECT * from api_key()")
