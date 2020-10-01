@@ -4,7 +4,7 @@
 
 use console::{style, Term};
 use iml_agent::action_plugins::{
-    check_kernel, check_stonith, high_availability, kernel_module, lamigo, lpurge, ltuer, lustre,
+    check_kernel, check_stonith, high_availability, kernel_module, lamigo, lpurge, lustre,
     ntp::{action_configure, is_ntp_configured},
     ostpool, package, postoffice,
     stratagem::{
@@ -370,18 +370,6 @@ pub enum App {
     Mount {
         #[structopt(subcommand)]
         command: MountCommand,
-    },
-
-    #[structopt(name = "create_ltuer_conf")]
-    CreateLtuerConf {
-        #[structopt(name = "MAILBOX_PATH")]
-        mailbox_path: String,
-
-        #[structopt(name = "FS_NAME")]
-        fs_name: String,
-
-        #[structopt(name = "COLD_POOL")]
-        cold_pool: String,
     },
 
     #[structopt(name = "kernel_module")]
@@ -830,16 +818,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 exit(exitcode::SOFTWARE);
             }
         }
-        App::CreateLtuerConf {
-            mailbox_path,
-            fs_name,
-            cold_pool,
-        } => {
-            if let Err(e) = ltuer::create_ltuer_conf((mailbox_path, fs_name, cold_pool)).await {
-                eprintln!("{:?}", e);
-                exit(exitcode::SOFTWARE);
-            }
-        }
         App::KernelModule { command } => {
             if let Err(e) = match command {
                 KernelModuleCommand::Loaded { module } => kernel_module::loaded(module)
@@ -860,7 +838,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         App::LAmigo { c } => {
-            if let Err(e) = lamigo::create_lamigo_service_unit(c).await {
+            if let Err(e) = lamigo::create_lamigo_conf(c).await {
                 eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
             }
