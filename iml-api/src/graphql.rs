@@ -586,8 +586,21 @@ impl QueryRoot {
         message: Option<String>,
         fqdn: Option<String>,
         tag: Option<String>,
+        start_datetime: Option<String>,
+        end_datetime: Option<String>,
     ) -> juniper::FieldResult<Vec<LogMessage>> {
         let dir = dir.unwrap_or_default();
+
+        let start_datetime: Option<chrono::DateTime<Utc>> = if let Some(s) = start_datetime {
+            Some(s.parse()?)
+        } else {
+            None
+        };
+        let end_datetime: Option<chrono::DateTime<Utc>> = if let Some(e) = end_datetime {
+            Some(e.parse()?)
+        } else {
+            None
+        };
 
         let xs: Vec<LogMessage> = sqlx::query_as!(
             LogMessageRecord,
@@ -619,6 +632,10 @@ impl QueryRoot {
             tag.as_ref()
                 .map(|t| x.tag.contains(t.as_str()))
                 .unwrap_or(true)
+        })
+        .filter(|x| {
+            start_datetime.map(|s| x.datetime >= s).unwrap_or(true)
+                && end_datetime.map(|e| x.datetime < e).unwrap_or(true)
         })
         .map(|x| x.into())
         .collect();
