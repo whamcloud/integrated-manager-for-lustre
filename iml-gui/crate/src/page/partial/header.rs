@@ -4,12 +4,12 @@
 
 use crate::{
     auth, breakpoints,
-    components::{breadcrumbs, ddn_logo, ddn_logo_lettering, font_awesome, restrict, whamcloud_logo},
+    components::{breadcrumbs, ddn_logo, ddn_logo_lettering, font_awesome, restrict, whamcloud_logo, ai_200x, ai_400x, ai_7990x, exa5},
     generated::css_classes::C,
     MergeAttrs, Model, Msg, Route, SessionExt,
     Visibility::*,
 };
-use iml_wire_types::{Branding, GroupType};
+use iml_wire_types::{Branding, DdnBranding, GroupType};
 use seed::{prelude::*, *};
 
 fn menu_icon<T>(icon_name: &str) -> Node<T> {
@@ -203,7 +203,13 @@ fn logo_nav_view<T>(branding: Branding) -> Node<T> {
             ddn_logo_full(),
             span![
                 class![C.font_semibold, C.text_2xl, C.tracking_tight, C.ml_2],
-                ddn_brand.to_string()
+                match ddn_brand {
+                    DdnBranding::AI200X => ai_200x(),
+                    DdnBranding::AI400X => ai_400x(),
+                    DdnBranding::AI7990X => ai_7990x(),
+                    DdnBranding::Exascaler => exa5(),
+                    _ => ddn_brand.to_string(),
+                }
             ],
         ),
     };
