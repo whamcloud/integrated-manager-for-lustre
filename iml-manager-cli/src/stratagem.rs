@@ -97,7 +97,6 @@ arg_enum! {
     #[serde(rename_all = "lowercase")]
     pub enum FilesyncAction {
     Push,
-    Pull,
     }
 }
 
@@ -112,7 +111,7 @@ arg_enum! {
 
 #[derive(serde::Serialize, StructOpt, Debug)]
 pub struct StratagemFilesyncData {
-    /// action, either push or pull
+    /// action, 'push' is supported
     #[structopt()]
     action: FilesyncAction,
     /// The name of the filesystem to scan

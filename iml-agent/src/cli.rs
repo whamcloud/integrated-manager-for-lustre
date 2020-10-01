@@ -545,6 +545,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 target_fs,
                 files,
             } => {
+                if action == action_filesync::ActionType::Pull {
+                    tracing::error!("Pull is not available as an option");
+                    exit(exitcode::USAGE);
+                }
                 let llapi =
                     search_rootpath(files[0].clone().into_os_string().into_string().unwrap())
                         .await?;
