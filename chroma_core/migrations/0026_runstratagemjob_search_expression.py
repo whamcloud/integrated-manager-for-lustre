@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="runstratagemjob",
             name="search_expression",
-            field=models.TextField(default=""),
+            field=models.TextField(null=True, default=""),
             preserve_default=False,
         ),
         migrations.AddField(
