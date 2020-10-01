@@ -96,19 +96,20 @@ where
 }
 
 pub fn usage(
-    free: Option<u64>,
+    used: Option<u64>,
     total: Option<u64>,
     formatter: fn(f64, Option<usize>) -> String,
 ) -> String {
-    match (free, total) {
-        (Some(free), Some(total)) => format!(
-            "{} / {}",
-            formatter(total as f64 - free as f64, Some(0)),
-            formatter(total as f64, Some(0))
-        ),
-        (None, Some(total)) => format!("Calculating ... / {}", formatter(total as f64, Some(0))),
-        _ => "Calculating ...".to_string(),
-    }
+    format!(
+        "{} / {}",
+        used.map(|u| formatter(u as f64, Some(0)))
+            .as_deref()
+            .unwrap_or("---"),
+        total
+            .map(|t| formatter(t as f64, Some(0)))
+            .as_deref()
+            .unwrap_or("---")
+    )
 }
 
 pub trait IsEmpty {

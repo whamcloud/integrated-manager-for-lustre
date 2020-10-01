@@ -53,6 +53,10 @@ pub enum FilesystemCommand {
     },
 }
 
+fn option_sub(a: Option<u64>, b: Option<u64>) -> Option<u64> {
+    Some(a?.saturating_sub(b?))
+}
+
 async fn detect_filesystem(hosts: Option<String>) -> Result<(), ImlManagerCliError> {
     let hosts = if let Some(hl) = hosts {
         let hostlist = hostlist_parser::parse(&hl)?;
@@ -158,12 +162,20 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
             let mut table = Table::new();
             table.add_row(Row::from(&["Name".to_string(), fs.label]));
             table.add_row(Row::from(&[
-                "Space".to_string(),
-                usage(st.bytes_free, st.bytes_total, format_bytes),
+                "Space Used/Avail".to_string(),
+                usage(
+                    option_sub(st.bytes_total, st.bytes_free),
+                    st.bytes_avail,
+                    format_bytes,
+                ),
             ]));
             table.add_row(Row::from(&[
-                "Inodes".to_string(),
-                usage(st.files_free, st.files_total, format_number),
+                "Inodes Used/Avail".to_string(),
+                usage(
+                    option_sub(st.files_total, st.files_free),
+                    st.files_total,
+                    format_number,
+                ),
             ]));
             table.add_row(Row::from(&["State".to_string(), fs.state]));
             table.add_row(Row::from(&[
