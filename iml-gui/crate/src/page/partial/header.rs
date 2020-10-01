@@ -4,7 +4,10 @@
 
 use crate::{
     auth, breakpoints,
-    components::{breadcrumbs, ddn_logo, ddn_logo_lettering, font_awesome, restrict, whamcloud_logo, ai_200x, ai_400x, ai_7990x, exa5},
+    components::{
+        ai_200x, ai_400x, ai_7990x, breadcrumbs, ddn_logo, ddn_logo_lettering, exa5, font_awesome, restrict,
+        whamcloud_logo,
+    },
     generated::css_classes::C,
     MergeAttrs, Model, Msg, Route, SessionExt,
     Visibility::*,
@@ -208,7 +211,7 @@ fn logo_nav_view<T>(branding: Branding) -> Node<T> {
                     DdnBranding::AI400X => ai_400x(),
                     DdnBranding::AI7990X => ai_7990x(),
                     DdnBranding::Exascaler => exa5(),
-                    _ => ddn_brand.to_string(),
+                    _ => plain![ddn_brand.to_string()],
                 }
             ],
         ),
