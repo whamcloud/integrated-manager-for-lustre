@@ -366,7 +366,6 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - SERVER_HTTP_URL=gunicorn
       - RUST_LOG=info
   iml-ostpool:
     image: "imlteam/iml-ostpool:6.2.0-dev"
