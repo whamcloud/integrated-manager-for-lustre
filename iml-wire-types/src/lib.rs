@@ -5,6 +5,7 @@
 pub mod client;
 pub mod db;
 pub mod graphql_duration;
+pub mod graphql_map;
 pub mod high_availability;
 pub mod sfa;
 pub mod snapshot;
