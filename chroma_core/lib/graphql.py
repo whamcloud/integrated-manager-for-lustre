@@ -1,23 +1,21 @@
 import os
+import sys
 import requests
 import settings
 from django.db import connection
 
-
-API_USER = None
-API_KEY = None
-
+# this is a pointer to the module object instance itself.
+this = sys.modules[__name__]
+this.API_CRED = None
 
 def get_api_session_request():
-    global API_USER
-    global API_KEY
-    if not API_USER or not API_KEY:
+    if not this.API_CRED:
         cursor = connection.cursor()
         cursor.execute("SELECT * from api_key()")
-        (API_USER, API_KEY) = cursor.fetchone()
+        this.API_CRED = cursor.fetchone()
         cursor.close()
     s = requests.Session()
-    s.headers.update({"AUTHORIZATION": "ApiKey {}:{}".format(API_USER, API_KEY)})
+    s.headers.update({"AUTHORIZATION": "ApiKey {}:{}".format(this.API_CRED[0], this.API_CRED[1])})
     return s
 
 
