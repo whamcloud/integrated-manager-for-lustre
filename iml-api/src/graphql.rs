@@ -8,7 +8,7 @@ use crate::{
     timer::{configure_snapshot_timer, remove_snapshot_timer},
 };
 use chrono::{DateTime, Utc};
-use futures::{TryFutureExt, TryStreamExt};
+use futures::{future::join_all, TryFutureExt, TryStreamExt};
 use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
 use iml_wire_types::{
@@ -276,19 +276,8 @@ impl QueryRoot {
     async fn get_fs_cluster_hosts(
         context: &Context,
         fs_name: String,
-    ) -> juniper::FieldResult<Vec<Vec<i32>>> {
-        let xs = get_fs_target_resources(&context.pg_pool, Some(fs_name))
-            .await?
-            .into_iter()
-            .group_by(|x| x.cluster_id);
-
-        let xs = xs.into_iter().fold(vec![], |mut acc, (_, xs)| {
-            let xs: HashSet<i32> = xs.map(|x| x.cluster_hosts).flatten().collect();
-
-            acc.push(xs.into_iter().collect());
-
-            acc
-        });
+    ) -> juniper::FieldResult<Vec<Vec<String>>> {
+        let xs = get_fs_cluster_hosts(&context.pg_pool, fs_name).await?;
 
         Ok(xs)
     }
@@ -945,6 +934,36 @@ async fn get_fs_target_resources(
     Ok(xs)
 }
 
+async fn get_fs_cluster_hosts(
+    pool: &PgPool,
+    fs_name: String,
+) -> Result<Vec<Vec<String>>, ImlApiError> {
+    let xs = get_fs_target_resources(pool, Some(fs_name))
+        .await?
+        .into_iter()
+        .group_by(|x| x.cluster_id);
+
+    let xs: Vec<Vec<i32>> = xs.into_iter().fold(vec![], |mut acc, (_, xs)| {
+        let xs: HashSet<i32> = xs.map(|x| x.cluster_hosts).flatten().collect();
+
+        acc.push(xs.into_iter().collect());
+
+        acc
+    });
+    let xs = xs.into_iter().map(|idset| async move {
+        let fqdns = idset
+            .into_iter()
+            .map(|x| async move { fqdn_by_host_id(pool, x).await });
+        join_all(fqdns)
+            .await
+            .into_iter()
+            .filter_map(|x| x.ok())
+            .collect()
+    });
+
+    Ok(join_all(xs).await)
+}
+
 async fn get_banned_targets(pool: &PgPool) -> Result<Vec<BannedTargetResource>, ImlApiError> {
     let xs = sqlx::query!(r#"
             SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point
@@ -1026,18 +1045,22 @@ async fn active_mgs_host_fqdn(
     tracing::trace!("Maybe active MGS host id: {:?}", maybe_active_mgs_host_id);
 
     if let Some(active_mgs_host_id) = maybe_active_mgs_host_id {
-        let active_mgs_host_fqdn = sqlx::query!(
-            r#"
-                SELECT fqdn FROM chroma_core_managedhost WHERE id=$1 and not_deleted = 't'
-            "#,
-            active_mgs_host_id
-        )
-        .fetch_one(pool)
-        .await?
-        .fqdn;
+        let active_mgs_host_fqdn = fqdn_by_host_id(pool, active_mgs_host_id).await?;
 
         Ok(Some(active_mgs_host_fqdn))
     } else {
         Ok(None)
     }
+}
+
+async fn fqdn_by_host_id(pool: &PgPool, id: i32) -> Result<String, iml_postgres::sqlx::Error> {
+    let fqdn = sqlx::query!(
+        r#"SELECT fqdn FROM chroma_core_managedhost WHERE id=$1 and not_deleted = 't'"#,
+        id
+    )
+    .fetch_one(pool)
+    .await?
+    .fqdn;
+
+    Ok(fqdn)
 }
