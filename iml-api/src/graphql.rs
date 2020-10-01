@@ -635,24 +635,20 @@ impl QueryRoot {
         let xs: Vec<LogMessage> = sqlx::query_as!(
             LogMessageRecord,
             r#"
-            SELECT * from chroma_core_logmessage t
+            SELECT * FROM chroma_core_logmessage t
+            WHERE t.message LIKE $4
             ORDER BY
                 CASE WHEN $3 = 'asc' THEN t.datetime END ASC,
                 CASE WHEN $3 = 'desc' THEN t.datetime END DESC
             OFFSET $1 LIMIT $2"#,
             offset.unwrap_or(0) as i64,
             limit.map(|x| x as i64),
-            dir.deref()
+            dir.deref(),
+            message.unwrap_or("%".into()),
         )
         .fetch_all(&context.pg_pool)
         .await?
         .into_iter()
-        .filter(|x| {
-            message
-                .as_ref()
-                .map(|m| x.message.contains(m.as_str()))
-                .unwrap_or(true)
-        })
         .filter(|x| {
             fqdn.as_ref()
                 .map(|f| x.fqdn.contains(f.as_str()))
