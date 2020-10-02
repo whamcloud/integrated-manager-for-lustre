@@ -12,7 +12,7 @@ pub fn used_to_color(used: f64) -> &'static str {
     if used.is_nan() {
         C.text_gray_500
     } else {
-        match (used.round() as u64) {
+        match used.round() as u64 {
             75..=100 => C.text_red_500,
             50..=74 => C.text_yellow_500,
             0..=49 => C.text_green_500,
