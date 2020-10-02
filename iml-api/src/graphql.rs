@@ -9,6 +9,7 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use futures::{future::join_all, TryFutureExt, TryStreamExt};
+use iml_manager_env::get_report_path;
 use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
 use iml_wire_types::{
@@ -25,6 +26,7 @@ use std::{
     collections::{HashMap, HashSet},
     convert::{Infallible, TryFrom as _},
     ops::Deref,
+    path::Path,
     sync::Arc,
 };
 use warp::Filter;
@@ -467,6 +469,19 @@ impl QueryRoot {
 
         Ok(xs)
     }
+    /// List Stratagem reports
+    async fn stratagem_reports(
+        _context: &Context,
+    ) -> juniper::FieldResult<Vec<String>> {
+        let paths = tokio::fs::read_dir(get_report_path()).await?;
+
+        let items: Vec<String> = paths
+            .map_ok(|x| x.file_name().into_string().expect("DirEntry to string"))
+            .try_collect()
+            .await?;
+
+        Ok(items)
+    }
 }
 
 struct SnapshotIntervalName {
@@ -810,6 +825,20 @@ impl MutationRoot {
         sqlx::query!("DELETE FROM snapshot_retention WHERE id=$1", id)
             .execute(&context.pg_pool)
             .await?;
+
+        Ok(true)
+    }
+
+    /// Delete a stratagem report
+    #[graphql(arguments(filename(description = "The report filename to delete")))]
+    async fn delete_stratagem_report(
+        _context: &Context,
+        filename: String,
+    ) -> juniper::FieldResult<bool> {
+        let mut path = get_report_path();
+        path.push(filename);
+
+        tokio::fs::remove_file(path).await?;
 
         Ok(true)
     }
