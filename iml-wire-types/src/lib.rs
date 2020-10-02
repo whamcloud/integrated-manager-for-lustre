@@ -1237,7 +1237,7 @@ pub struct Substitution {
     pub resource_uri: String,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum MessageClass {
     Normal = 0,
@@ -1963,14 +1963,4 @@ impl PartialEq for LdevEntry {
     fn eq(&self, other: &Self) -> bool {
         self.label == other.label
     }
-}
-
-#[derive(Debug, Eq, PartialEq)]
-#[repr(i16)]
-pub enum LogMessageClass {
-    Normal = 0,
-    Lustre = 1,
-    LustreError = 2,
-    Copytool = 3,
-    CopytoolError = 4,
 }
