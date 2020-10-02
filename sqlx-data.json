@@ -1788,74 +1788,6 @@
       "nullable": []
     }
   },
-  "74aae5a53b6d845d136b3b7a6aa4dac7f0fc572b1b92fd55b74d6bf4d23428f8": {
-    "query": "\n                    SELECT * FROM chroma_core_logmessage t\n                    WHERE t.message LIKE $4\n                      AND t.fqdn LIKE $5\n                      AND t.tag LIKE $6\n                      AND t.datetime >= $7\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN t.datetime END ASC,\n                        CASE WHEN $3 = 'desc' THEN t.datetime END DESC\n                    OFFSET $1 LIMIT $2",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "datetime",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 2,
-          "name": "fqdn",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 3,
-          "name": "severity",
-          "type_info": "Int2"
-        },
-        {
-          "ordinal": 4,
-          "name": "facility",
-          "type_info": "Int2"
-        },
-        {
-          "ordinal": 5,
-          "name": "tag",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 6,
-          "name": "message",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 7,
-          "name": "message_class",
-          "type_info": "Int2"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int8",
-          "Text",
-          "Text",
-          "Text",
-          "Text",
-          "Timestamptz"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ]
-    }
-  },
   "7bee1c38d05ac3f8bcf4d48b375c740341121c04d2f5b04ceb1d58ef0a006c08": {
     "query": "\n        SELECT * FROM chroma_core_lustreclientmount\n        WHERE\n            state = 'mounted'\n            AND not_deleted = 't'\n            AND id != ALL($1)\n        LIMIT $2\n        ",
     "describe": {
@@ -1996,73 +1928,6 @@
         false,
         false,
         true
-      ]
-    }
-  },
-  "7d42bf3a65210397d4a8939c1f1351a0678385cb43c48ddd0d0fb6bf38e592ae": {
-    "query": "\n                    SELECT * FROM chroma_core_logmessage t\n                    WHERE t.message LIKE $4\n                      AND t.fqdn LIKE $5\n                      AND t.tag LIKE $6\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN t.datetime END ASC,\n                        CASE WHEN $3 = 'desc' THEN t.datetime END DESC\n                    OFFSET $1 LIMIT $2",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "datetime",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 2,
-          "name": "fqdn",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 3,
-          "name": "severity",
-          "type_info": "Int2"
-        },
-        {
-          "ordinal": 4,
-          "name": "facility",
-          "type_info": "Int2"
-        },
-        {
-          "ordinal": 5,
-          "name": "tag",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 6,
-          "name": "message",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 7,
-          "name": "message_class",
-          "type_info": "Int2"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int8",
-          "Text",
-          "Text",
-          "Text",
-          "Text"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
       ]
     }
   },
@@ -2835,6 +2700,77 @@
       ]
     }
   },
+  "a56ac77573fa6888389c9a28566dbcdae9e58ff29616d25be23e61d1506c6645": {
+    "query": "\n                    SELECT * FROM chroma_core_logmessage t\n                    WHERE t.message LIKE $4\n                      AND t.fqdn LIKE $5\n                      AND t.tag LIKE $6\n                      AND t.datetime >= $7\n                      AND t.datetime < $8\n                      AND ARRAY[t.message_class] <@ $9\n                      AND t.severity <= $10\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN t.datetime END ASC,\n                        CASE WHEN $3 = 'desc' THEN t.datetime END DESC\n                    OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "datetime",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 2,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "severity",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 4,
+          "name": "facility",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 5,
+          "name": "tag",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 6,
+          "name": "message",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "message_class",
+          "type_info": "Int2"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text",
+          "Text",
+          "Text",
+          "Text",
+          "Timestamptz",
+          "Timestamptz",
+          "Int2Array",
+          "Int2"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "a758dca692819dfa3fae672685a361c3a2c8767ac72d6d3753057d0326e1d7d0": {
     "query": "\n                SELECT\n                (n.id).name AS \"name!\",\n                (n.id).id AS \"id!\",\n                cluster_id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n                FROM corosync_node n\n                ORDER BY\n                    CASE WHEN $1 = 'asc' THEN n.id END ASC,\n                    CASE WHEN $1 = 'desc' THEN n.id END DESC\n                OFFSET $2 LIMIT $3",
     "describe": {
@@ -3384,46 +3320,8 @@
       ]
     }
   },
-  "c794f65b5ef4d77224667f77df480d76eaee130d7dc4ddde13d9330f5479595d": {
-    "query": "\n            DELETE from chroma_core_sfaenclosure\n            WHERE (index, storage_system)\n            IN (\n                SELECT *\n                FROM UNNEST($1::int[], $2::text[])\n            )\n        ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Int4Array",
-          "TextArray"
-        ]
-      },
-      "nullable": []
-    }
-  },
-  "c92c006232fff5c4ba37894b349d63142824fc0141a156f06114fa113ed36fa7": {
-    "query": "DELETE FROM snapshot_retention WHERE id=$1",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": []
-    }
-  },
-  "cd9faf5b3fa09dd6d01b62b3957a7624d1462fb5789a7729f59215982a090ec1": {
-    "query": "\n            DELETE FROM corosync_target_resource_managed_host\n            WHERE corosync_resource_id != ALL($1)\n            AND host_id = $2\n        ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "Int4"
-        ]
-      },
-      "nullable": []
-    }
-  },
-  "cdd25074f4ae050ba27e611d43d72b06900560f925f10253a367c9864dc86898": {
-    "query": "\n                    SELECT * FROM chroma_core_logmessage t\n                    WHERE t.message LIKE $4\n                      AND t.fqdn LIKE $5\n                      AND t.tag LIKE $6\n                      AND t.datetime < $7\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN t.datetime END ASC,\n                        CASE WHEN $3 = 'desc' THEN t.datetime END DESC\n                    OFFSET $1 LIMIT $2",
+  "c655e3fbf66a61e546670169236742cf0b94f2d987c30f7d68b6c856b80b767d": {
+    "query": "\n                    SELECT * FROM chroma_core_logmessage t\n                    WHERE t.message LIKE $4\n                      AND t.fqdn LIKE $5\n                      AND t.tag LIKE $6\n                      AND ARRAY[t.message_class] <@ $7\n                      AND t.severity <= $8\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN t.datetime END ASC,\n                        CASE WHEN $3 = 'desc' THEN t.datetime END DESC\n                    OFFSET $1 LIMIT $2",
     "describe": {
       "columns": [
         {
@@ -3475,7 +3373,8 @@
           "Text",
           "Text",
           "Text",
-          "Timestamptz"
+          "Int2Array",
+          "Int2"
         ]
       },
       "nullable": [
@@ -3488,6 +3387,44 @@
         false,
         false
       ]
+    }
+  },
+  "c794f65b5ef4d77224667f77df480d76eaee130d7dc4ddde13d9330f5479595d": {
+    "query": "\n            DELETE from chroma_core_sfaenclosure\n            WHERE (index, storage_system)\n            IN (\n                SELECT *\n                FROM UNNEST($1::int[], $2::text[])\n            )\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4Array",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "c92c006232fff5c4ba37894b349d63142824fc0141a156f06114fa113ed36fa7": {
+    "query": "DELETE FROM snapshot_retention WHERE id=$1",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "cd9faf5b3fa09dd6d01b62b3957a7624d1462fb5789a7729f59215982a090ec1": {
+    "query": "\n            DELETE FROM corosync_target_resource_managed_host\n            WHERE corosync_resource_id != ALL($1)\n            AND host_id = $2\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "Int4"
+        ]
+      },
+      "nullable": []
     }
   },
   "d19b1c5df2f3255db472f6c55aaf0fedd6885e0981ec1d4e81304816f0959809": {
@@ -3775,6 +3712,76 @@
       ]
     }
   },
+  "dbd819f222d0076590c1e25881c8ab0c542ff573e23e055a566428cde6893e6a": {
+    "query": "\n                    SELECT * FROM chroma_core_logmessage t\n                    WHERE t.message LIKE $4\n                      AND t.fqdn LIKE $5\n                      AND t.tag LIKE $6\n                      AND t.datetime < $7\n                      AND ARRAY[t.message_class] <@ $8\n                      AND t.severity <= $9\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN t.datetime END ASC,\n                        CASE WHEN $3 = 'desc' THEN t.datetime END DESC\n                    OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "datetime",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 2,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "severity",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 4,
+          "name": "facility",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 5,
+          "name": "tag",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 6,
+          "name": "message",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "message_class",
+          "type_info": "Int2"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text",
+          "Text",
+          "Text",
+          "Text",
+          "Timestamptz",
+          "Int2Array",
+          "Int2"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "dc969e1cf438fc20baccd36a43cf7725bcf95cf758c6f08d5ce88bd4f378a71c": {
     "query": "\n                INSERT INTO snapshot_retention (\n                    filesystem_name,\n                    reserve_value,\n                    reserve_unit,\n                    keep_num\n                )\n                VALUES ($1, $2, $3, $4)\n                ON CONFLICT (filesystem_name)\n                DO UPDATE SET\n                reserve_value = EXCLUDED.reserve_value,\n                reserve_unit = EXCLUDED.reserve_unit,\n                keep_num = EXCLUDED.keep_num\n            ",
     "describe": {
@@ -3904,75 +3911,6 @@
         false,
         true,
         true,
-        false
-      ]
-    }
-  },
-  "e19698a84b29d84c771f2d46c19bfcaf082e10cd73d59d6fb14cae5757dd9632": {
-    "query": "\n                    SELECT * FROM chroma_core_logmessage t\n                    WHERE t.message LIKE $4\n                      AND t.fqdn LIKE $5\n                      AND t.tag LIKE $6\n                      AND t.datetime >= $7\n                      AND t.datetime < $8\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN t.datetime END ASC,\n                        CASE WHEN $3 = 'desc' THEN t.datetime END DESC\n                    OFFSET $1 LIMIT $2",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "datetime",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 2,
-          "name": "fqdn",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 3,
-          "name": "severity",
-          "type_info": "Int2"
-        },
-        {
-          "ordinal": 4,
-          "name": "facility",
-          "type_info": "Int2"
-        },
-        {
-          "ordinal": 5,
-          "name": "tag",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 6,
-          "name": "message",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 7,
-          "name": "message_class",
-          "type_info": "Int2"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int8",
-          "Text",
-          "Text",
-          "Text",
-          "Text",
-          "Timestamptz",
-          "Timestamptz"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
         false
       ]
     }
@@ -4186,6 +4124,76 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "f1c5d48b6b25e1169c69a713607461a1705a3ba1152b8c9db06ecdd047badc41": {
+    "query": "\n                    SELECT * FROM chroma_core_logmessage t\n                    WHERE t.message LIKE $4\n                      AND t.fqdn LIKE $5\n                      AND t.tag LIKE $6\n                      AND t.datetime >= $7\n                      AND ARRAY[t.message_class] <@ $8\n                      AND t.severity <= $9\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN t.datetime END ASC,\n                        CASE WHEN $3 = 'desc' THEN t.datetime END DESC\n                    OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "datetime",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 2,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "severity",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 4,
+          "name": "facility",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 5,
+          "name": "tag",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 6,
+          "name": "message",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "message_class",
+          "type_info": "Int2"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text",
+          "Text",
+          "Text",
+          "Text",
+          "Timestamptz",
+          "Int2Array",
+          "Int2"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
     }
   },
   "f3d07e6786deccc4cf6ffce6d37772de8b5387d2b9f63930e38ed5abdb50df94": {
