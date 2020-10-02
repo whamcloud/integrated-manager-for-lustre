@@ -121,7 +121,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                             bytes_total,
                         });
 
-                        model.percent_used = (bytes_used / (bytes_used + bytes_avail)).ceil();
+                        model.percent_used = (bytes_used / (bytes_used + bytes_avail) * 100.0f64).ceil();
                     }
                 }
                 Err(e) => {

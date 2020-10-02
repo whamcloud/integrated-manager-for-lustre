@@ -441,7 +441,7 @@ pub(crate) fn space_used_view<T>(
             let free = free.into()?;
             let avail = avail.into()?;
             let used = total.saturating_sub(free) as f64;
-            let pct = (used / (used as f64 + avail as f64) as f64).ceil();
+            let pct = (used / (used as f64 + avail as f64) * 100.0f64).ceil();
 
             Some(span![
                 class![C.whitespace_no_wrap],
