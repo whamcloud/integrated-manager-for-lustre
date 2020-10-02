@@ -139,7 +139,8 @@ pub async fn process_retention(
                 bytes_free,
                 bytes_used
             );
-            let percent_used = (bytes_used as f64 / (bytes_used as f64 + bytes_avail as f64)) as f64 * 100.0f64;
+            let percent_used =
+                (bytes_used as f64 / (bytes_used as f64 + bytes_avail as f64)) as f64 * 100.0f64;
             let percent_free = 100.0f64 - percent_used;
 
             tracing::debug!(
