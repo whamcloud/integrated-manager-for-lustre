@@ -207,10 +207,10 @@ fn logo_nav_view<T>(branding: Branding) -> Node<T> {
             span![
                 class![C.font_semibold, C.text_2xl, C.tracking_tight, C.ml_2],
                 match ddn_brand {
-                    DdnBranding::AI200X => ai_200x(),
-                    DdnBranding::AI400X => ai_400x(),
-                    DdnBranding::AI7990X => ai_7990x(),
-                    DdnBranding::Exascaler => exa5(),
+                    DdnBranding::AI200X => ai_200x().merge_attrs(class![C.h_8, C.mr_1]),
+                    DdnBranding::AI400X => ai_400x().merge_attrs(class![C.h_8, C.mr_1]),
+                    DdnBranding::AI7990X => ai_7990x().merge_attrs(class![C.h_8, C.mr_1]),
+                    DdnBranding::Exascaler => exa5().merge_attrs(class![C.h_8, C.mr_1]),
                     _ => plain![ddn_brand.to_string()],
                 }
             ],
