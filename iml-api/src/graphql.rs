@@ -142,13 +142,6 @@ impl Deref for SortDir {
     }
 }
 
-struct Substitution {
-    pub start: String,
-    pub end: String,
-    pub label: String,
-    pub resource_uri: String,
-}
-
 #[derive(GraphQLEnum, sqlx::Type)]
 #[repr(i16)]
 enum MessageClass {
@@ -211,7 +204,6 @@ struct LogMessage {
     pub message: String,
     pub message_class: MessageClass,
     pub severity: LogSeverity,
-    pub substitutions: Vec<Substitution>,
     pub tag: String,
 }
 
@@ -225,7 +217,6 @@ impl From<LogMessageRecord> for LogMessage {
             message: record.message,
             message_class: MessageClass::from(record.message_class),
             severity: LogSeverity::from(record.severity),
-            substitutions: vec![],
             tag: record.tag,
         }
     }
@@ -588,7 +579,7 @@ impl QueryRoot {
 
         Ok(items)
     }
-    
+
     #[graphql(arguments(
         limit(description = "optional paging limit, defaults to all rows"),
         offset(description = "Offset into items, defaults to 0"),
