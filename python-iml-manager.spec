@@ -97,6 +97,7 @@ Requires:       rust-iml-snapshot >= 0.3.0
 Requires:       rust-iml-stats >= 0.3.0
 Requires:       rust-iml-task-runner >= 0.3.0
 Requires:       rust-iml-warp-drive >= 0.3.0
+Requires:       rust-iml-timer >= 0.3.0
 # Other Repos
 Requires:       influxdb
 Requires:       grafana

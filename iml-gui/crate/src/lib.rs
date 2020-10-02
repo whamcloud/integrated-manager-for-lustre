@@ -364,6 +364,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::LoadPage => {
             if model.loading.loaded() && !model.page.is_active(&model.route) {
+                if model.route == Route::Snapshots && !model.conf.use_snapshots {
+                    model.route = Route::NotFound;
+                }
+
                 model.page = (&model.records, &model.conf, &model.route).into();
                 orders.send_msg(Msg::UpdatePageTitle);
                 model.page.init(&model.records, &mut orders.proxy(Msg::Page));
@@ -599,11 +603,7 @@ fn handle_record_change(
         warp_drive::RecordChange::Update(record) => {
             let record = ArcRecord::from(record);
 
-            model
-                .page
-                .update_record(record.clone(), &model.records, &mut orders.proxy(Msg::Page));
-
-            match record {
+            match record.clone() {
                 ArcRecord::ActiveAlert(x) => {
                     let msg = x.message.clone();
 
@@ -697,6 +697,12 @@ fn handle_record_change(
                 ArcRecord::Snapshot(x) => {
                     model.records.snapshot.insert(x.id, Arc::clone(&x));
                 }
+                ArcRecord::SnapshotInterval(x) => {
+                    model.records.snapshot_interval.insert(x.id, Arc::clone(&x));
+                }
+                ArcRecord::SnapshotRetention(x) => {
+                    model.records.snapshot_retention.insert(x.id, Arc::clone(&x));
+                }
                 ArcRecord::StratagemConfig(x) => {
                     model.records.stratagem_config.insert(x.id, Arc::clone(&x));
 
@@ -774,6 +780,10 @@ fn handle_record_change(
                     model.records.pacemaker_configuration.insert(x.id, x);
                 }
             }
+
+            model
+                .page
+                .update_record(record, &model.records, &mut orders.proxy(Msg::Page));
         }
         warp_drive::RecordChange::Delete(record_id) => {
             match record_id {
@@ -1030,7 +1040,7 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         .els(),
         Page::Snapshots(x) => main_panels(
             model,
-            page::snapshots::view(x, &model.records)
+            page::snapshot::view(x, &model.records, model.auth.get_session())
                 .els()
                 .map_msg(page::Msg::Snapshots),
         )

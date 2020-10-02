@@ -2,20 +2,29 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{command::get_command, error::ImlApiError};
-use futures::{TryFutureExt, TryStreamExt};
-use iml_postgres::{sqlx, PgPool};
+use crate::{
+    command::get_command,
+    error::ImlApiError,
+    timer::{configure_snapshot_timer, remove_snapshot_timer},
+};
+use chrono::{DateTime, Utc};
+use futures::{future::join_all, TryFutureExt, TryStreamExt};
+use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
-use iml_wire_types::{snapshot::Snapshot, Command, EndpointName, Job};
+use iml_wire_types::{
+    graphql_duration::GraphQLDuration,
+    snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
+    Command, EndpointName, Job,
+};
 use itertools::Itertools;
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
     EmptySubscription, FieldError, GraphQLEnum, RootNode, Value,
 };
-use std::ops::Deref;
 use std::{
     collections::{HashMap, HashSet},
-    convert::Infallible,
+    convert::{Infallible, TryFrom as _},
+    ops::Deref,
     sync::Arc,
 };
 use warp::Filter;
@@ -104,9 +113,6 @@ struct BannedResource {
     master_only: bool,
 }
 
-pub(crate) struct QueryRoot;
-pub(crate) struct MutationRoot;
-
 #[derive(GraphQLEnum)]
 enum SortDir {
     Asc,
@@ -130,10 +136,12 @@ impl Deref for SortDir {
     }
 }
 
+pub(crate) struct QueryRoot;
+
 #[juniper::graphql_object(Context = Context)]
 impl QueryRoot {
     #[graphql(arguments(
-        limit(description = "paging limit, defaults to 20"),
+        limit(description = "optional paging limit, defaults to all rows"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to asc")
     ))]
@@ -170,7 +178,7 @@ impl QueryRoot {
                 OFFSET $2 LIMIT $3"#,
             dir.deref(),
             offset.unwrap_or(0) as i64,
-            limit.unwrap_or(20) as i64
+            limit.map(|x| x as i64),
         )
         .fetch_all(&context.pg_pool)
         .await?;
@@ -179,7 +187,7 @@ impl QueryRoot {
     }
 
     #[graphql(arguments(
-        limit(description = "paging limit, defaults to 20"),
+        limit(description = "optional paging limit, defaults to all rows"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to asc"),
         fs_name(description = "Targets associated with the specified filesystem"),
@@ -205,7 +213,7 @@ impl QueryRoot {
                     CASE WHEN $3 = 'desc' THEN t.name END DESC
                 OFFSET $1 LIMIT $2"#,
             offset.unwrap_or(0) as i64,
-            limit.unwrap_or(20) as i64,
+            limit.map(|x| x as i64),
             dir.deref()
         )
         .fetch_all(&context.pg_pool)
@@ -268,25 +276,14 @@ impl QueryRoot {
     async fn get_fs_cluster_hosts(
         context: &Context,
         fs_name: String,
-    ) -> juniper::FieldResult<Vec<Vec<i32>>> {
-        let xs = get_fs_target_resources(&context.pg_pool, Some(fs_name))
-            .await?
-            .into_iter()
-            .group_by(|x| x.cluster_id);
-
-        let xs = xs.into_iter().fold(vec![], |mut acc, (_, xs)| {
-            let xs: HashSet<i32> = xs.map(|x| x.cluster_hosts).flatten().collect();
-
-            acc.push(xs.into_iter().collect());
-
-            acc
-        });
+    ) -> juniper::FieldResult<Vec<Vec<String>>> {
+        let xs = get_fs_cluster_hosts(&context.pg_pool, fs_name).await?;
 
         Ok(xs)
     }
 
     #[graphql(arguments(
-        limit(description = "paging limit, defaults to 20"),
+        limit(description = "optional paging limit, defaults to all rows"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to ASC"),
         fsname(description = "Filesystem the snapshot was taken from"),
@@ -313,7 +310,7 @@ impl QueryRoot {
                         CASE WHEN $3 = 'desc' THEN s.create_time END DESC
                     OFFSET $1 LIMIT $2"#,
                 offset.unwrap_or(0) as i64,
-                limit.unwrap_or(20) as i64,
+                limit.map(|x| x as i64),
                 dir.deref(),
                 fsname,
                 name,
@@ -326,10 +323,10 @@ impl QueryRoot {
 
     /// Fetch the list of commands
     #[graphql(arguments(
-        limit(description = "paging limit, defaults to 20"),
+        limit(description = "optional paging limit, defaults to all rows"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to ASC"),
-        is_active(description = "Command status, active means not completed, default is false"),
+        is_active(description = "Command status, active means not completed, default is true"),
         msg(description = "Substring of the command's message, null or empty matches all"),
     ))]
     async fn commands(
@@ -341,8 +338,9 @@ impl QueryRoot {
         msg: Option<String>,
     ) -> juniper::FieldResult<Vec<Command>> {
         let dir = dir.unwrap_or_default();
-        let is_completed = !is_active.unwrap_or(false);
-        let commands: Vec<Command> = sqlx::query!(
+        let is_completed = !is_active.unwrap_or(true);
+        let commands: Vec<Command> = sqlx::query_as!(
+            CommandTmpRecord,
             r#"
                 SELECT
                     c.id AS id,
@@ -354,47 +352,146 @@ impl QueryRoot {
                     message
                 FROM chroma_core_command c
                 JOIN chroma_core_command_jobs cj ON c.id = cj.command_id
-                WHERE complete = $4
+                WHERE ($4::BOOL IS NULL OR complete = $4)
                   AND ($5::TEXT IS NULL OR c.message ILIKE '%' || $5 || '%')
                 GROUP BY c.id
                 ORDER BY
                     CASE WHEN $3 = 'asc' THEN c.id END ASC,
                     CASE WHEN $3 = 'desc' THEN c.id END DESC
-                OFFSET $1 LIMIT $2 "#,
+                OFFSET $1 LIMIT $2
+            "#,
             offset.unwrap_or(0) as i64,
-            limit.unwrap_or(20) as i64,
+            limit.map(|x| x as i64),
             dir.deref(),
             is_completed,
             msg,
         )
         .fetch_all(&context.pg_pool)
-        .map_ok(|xs: Vec<_>| {
-            xs.into_iter()
-                .map(|x| Command {
-                    id: x.id,
-                    cancelled: x.cancelled,
-                    complete: x.complete,
-                    errored: x.errored,
-                    created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
-                    jobs: {
-                        x.job_ids
-                            .unwrap_or_default()
-                            .into_iter()
-                            .map(|job_id: i32| {
-                                format!("/api/{}/{}/", Job::<()>::endpoint_name(), job_id)
-                            })
-                            .collect::<Vec<_>>()
-                    },
-                    logs: "".to_string(),
-                    message: x.message.clone(),
-                    resource_uri: format!("/api/{}/{}/", Command::endpoint_name(), x.id),
-                })
-                .collect::<Vec<_>>()
+        .map_ok(|xs: Vec<CommandTmpRecord>| {
+            xs.into_iter().map(to_command).collect::<Vec<Command>>()
         })
         .await?;
         Ok(commands)
     }
+
+    /// Fetch the list of commands by ids, the returned
+    /// collection is guaranteed to match the input.
+    /// If a command not found, `None` is returned for that index.
+    #[graphql(arguments(
+        limit(description = "paging limit, defaults to 20"),
+        offset(description = "Offset into items, defaults to 0"),
+        ids(description = "The list of command ids to fetch, ids may be empty"),
+    ))]
+    async fn commands_by_ids(
+        context: &Context,
+        limit: Option<i32>,
+        offset: Option<i32>,
+        ids: Vec<i32>,
+    ) -> juniper::FieldResult<Vec<Option<Command>>> {
+        let ids: &[i32] = &ids[..];
+        let unordered_cmds: Vec<Command> = sqlx::query_as!(
+            CommandTmpRecord,
+            r#"
+                SELECT
+                    c.id AS id,
+                    cancelled,
+                    complete,
+                    errored,
+                    created_at,
+                    array_agg(cj.job_id)::INT[] AS job_ids,
+                    message
+                FROM chroma_core_command c
+                JOIN chroma_core_command_jobs cj ON c.id = cj.command_id
+                WHERE (c.id = ANY ($3::INT[]))
+                GROUP BY c.id
+                OFFSET $1 LIMIT $2
+            "#,
+            offset.unwrap_or(0) as i64,
+            limit.unwrap_or(20) as i64,
+            ids,
+        )
+        .fetch_all(&context.pg_pool)
+        .map_ok(|xs: Vec<CommandTmpRecord>| {
+            xs.into_iter().map(to_command).collect::<Vec<Command>>()
+        })
+        .await?;
+        let mut hm = unordered_cmds
+            .into_iter()
+            .map(|c| (c.id, c))
+            .collect::<HashMap<i32, Command>>();
+        let commands = ids
+            .iter()
+            .map(|id| hm.remove(id))
+            .collect::<Vec<Option<Command>>>();
+
+        Ok(commands)
+    }
+
+    /// List all snapshot intervals
+    async fn snapshot_intervals(context: &Context) -> juniper::FieldResult<Vec<SnapshotInterval>> {
+        let xs: Vec<SnapshotInterval> = sqlx::query!("SELECT * FROM snapshot_interval")
+            .fetch(&context.pg_pool)
+            .map_ok(|x| SnapshotInterval {
+                id: x.id,
+                filesystem_name: x.filesystem_name,
+                use_barrier: x.use_barrier,
+                interval: x.interval.into(),
+                last_run: x.last_run,
+            })
+            .try_collect()
+            .await?;
+
+        Ok(xs)
+    }
+    /// List all snapshot retention policies. Snapshots will automatically be deleted (starting with the oldest)
+    /// when free space falls below the defined reserve value and its associated unit.
+    async fn snapshot_retention_policies(
+        context: &Context,
+    ) -> juniper::FieldResult<Vec<SnapshotRetention>> {
+        let xs: Vec<SnapshotRetention> = sqlx::query_as!(
+            SnapshotRetention,
+            r#"
+                SELECT
+                    id,
+                    filesystem_name,
+                    reserve_value,
+                    reserve_unit as "reserve_unit:ReserveUnit",
+                    last_run,
+                    keep_num
+                FROM snapshot_retention
+            "#
+        )
+        .fetch(&context.pg_pool)
+        .try_collect()
+        .await?;
+
+        Ok(xs)
+    }
 }
+
+struct SnapshotIntervalName {
+    id: i32,
+    fs_name: String,
+    timestamp: DateTime<Utc>,
+}
+
+fn parse_snapshot_name(name: &str) -> Option<SnapshotIntervalName> {
+    match name.trim().splitn(3, "-").collect::<Vec<&str>>().as_slice() {
+        [id, fs, ts] => {
+            let ts = ts.parse::<DateTime<Utc>>().ok()?;
+            let id = id.parse::<i32>().ok()?;
+
+            Some(SnapshotIntervalName {
+                id,
+                fs_name: fs.to_string(),
+                timestamp: ts,
+            })
+        }
+        _ => None,
+    }
+}
+
+pub(crate) struct MutationRoot;
 
 #[juniper::graphql_object(Context = Context)]
 impl MutationRoot {
@@ -417,6 +514,22 @@ impl MutationRoot {
     ) -> juniper::FieldResult<Command> {
         let name = name.trim();
         validate_snapshot_name(name)?;
+
+        let snapshot_interval_name = parse_snapshot_name(name);
+        if let Some(data) = snapshot_interval_name {
+            sqlx::query!(
+                r#"
+                UPDATE snapshot_interval
+                SET last_run=$1
+                WHERE id=$2 AND filesystem_name=$3
+            "#,
+                data.timestamp,
+                data.id,
+                data.fs_name,
+            )
+            .execute(&context.pg_pool)
+            .await?;
+        }
 
         let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
             .await?
@@ -591,39 +704,145 @@ impl MutationRoot {
             .await
             .map_err(|e| e.into())
     }
+    #[graphql(arguments(
+        fsname(description = "The filesystem to create snapshots with"),
+        interval(description = "How often a snapshot should be taken"),
+        use_barrier(
+            description = "Set write barrier before creating snapshot. The default value is `false`"
+        ),
+    ))]
+    /// Creates a new snapshot interval.
+    /// A recurring snapshot will be taken once the given `interval` expires for the given `fsname`.
+    /// In order for the snapshot to be successful, the filesystem must be available.
+    async fn create_snapshot_interval(
+        context: &Context,
+        fsname: String,
+        interval: GraphQLDuration,
+        use_barrier: Option<bool>,
+    ) -> juniper::FieldResult<bool> {
+        let maybe_id = sqlx::query!(
+            r#"
+                INSERT INTO snapshot_interval (
+                    filesystem_name,
+                    use_barrier,
+                    interval
+                )
+                VALUES ($1, $2, $3)
+                ON CONFLICT (filesystem_name, interval)
+                DO NOTHING
+                RETURNING id
+            "#,
+            fsname,
+            use_barrier.unwrap_or_default(),
+            PgInterval::try_from(interval.0)?,
+        )
+        .fetch_optional(&context.pg_pool)
+        .await?
+        .map(|x| x.id);
+
+        if let Some(id) = maybe_id {
+            configure_snapshot_timer(id, fsname, interval.0, use_barrier.unwrap_or_default())
+                .await?;
+        }
+
+        Ok(true)
+    }
+    /// Removes an existing snapshot interval.
+    /// This will also cancel any outstanding intervals scheduled by this rule.
+    #[graphql(arguments(id(description = "The snapshot interval id"),))]
+    async fn remove_snapshot_interval(context: &Context, id: i32) -> juniper::FieldResult<bool> {
+        sqlx::query!("DELETE FROM snapshot_interval WHERE id=$1", id)
+            .execute(&context.pg_pool)
+            .await?;
+
+        remove_snapshot_timer(id).await?;
+
+        Ok(true)
+    }
+    #[graphql(arguments(
+        fsname(description = "Filesystem name"),
+        reserve_value(
+            description = "Delete the oldest snapshot when available space falls below this value"
+        ),
+        reserve_unit(description = "The unit of measurement associated with the reserve_value"),
+        keep_num(
+            description = "The minimum number of snapshots to keep. This is to avoid deleting all snapshots while pursuiting the reserve goal"
+        )
+    ))]
+    /// Creates a new snapshot retention policy for the given `fsname`.
+    /// Snapshots will automatically be deleted (starting with the oldest)
+    /// when free space falls below the defined reserve value and its associated unit.
+    async fn create_snapshot_retention(
+        context: &Context,
+        fsname: String,
+        reserve_value: i32,
+        reserve_unit: ReserveUnit,
+        keep_num: Option<i32>,
+    ) -> juniper::FieldResult<bool> {
+        sqlx::query!(
+            r#"
+                INSERT INTO snapshot_retention (
+                    filesystem_name,
+                    reserve_value,
+                    reserve_unit,
+                    keep_num
+                )
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (filesystem_name)
+                DO UPDATE SET
+                reserve_value = EXCLUDED.reserve_value,
+                reserve_unit = EXCLUDED.reserve_unit,
+                keep_num = EXCLUDED.keep_num
+            "#,
+            fsname,
+            reserve_value,
+            reserve_unit as ReserveUnit,
+            keep_num.unwrap_or(0)
+        )
+        .execute(&context.pg_pool)
+        .await?;
+
+        Ok(true)
+    }
+    /// Remove an existing snapshot retention policy.
+    #[graphql(arguments(id(description = "The snapshot retention policy id")))]
+    async fn remove_snapshot_retention(context: &Context, id: i32) -> juniper::FieldResult<bool> {
+        sqlx::query!("DELETE FROM snapshot_retention WHERE id=$1", id)
+            .execute(&context.pg_pool)
+            .await?;
+
+        Ok(true)
+    }
 }
 
-async fn active_mgs_host_fqdn(
-    fsname: &str,
-    pool: &PgPool,
-) -> Result<Option<String>, iml_postgres::sqlx::Error> {
-    let fsnames = &[fsname.into()][..];
-    let maybe_active_mgs_host_id = sqlx::query!(
-        r#"
-            SELECT active_host_id from target WHERE filesystems @> $1 and name='MGS'
-        "#,
-        fsnames
-    )
-    .fetch_optional(pool)
-    .await?
-    .and_then(|x| x.active_host_id);
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+struct CommandTmpRecord {
+    pub cancelled: bool,
+    pub complete: bool,
+    pub created_at: DateTime<Utc>,
+    pub errored: bool,
+    pub id: i32,
+    pub job_ids: Option<Vec<i32>>,
+    pub message: String,
+}
 
-    tracing::trace!("Maybe active MGS host id: {:?}", maybe_active_mgs_host_id);
-
-    if let Some(active_mgs_host_id) = maybe_active_mgs_host_id {
-        let active_mgs_host_fqdn = sqlx::query!(
-            r#"
-                SELECT fqdn FROM chroma_core_managedhost WHERE id=$1 and not_deleted = 't'
-            "#,
-            active_mgs_host_id
-        )
-        .fetch_one(pool)
-        .await?
-        .fqdn;
-
-        Ok(Some(active_mgs_host_fqdn))
-    } else {
-        Ok(None)
+fn to_command(x: CommandTmpRecord) -> Command {
+    Command {
+        id: x.id,
+        cancelled: x.cancelled,
+        complete: x.complete,
+        errored: x.errored,
+        created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
+        jobs: {
+            x.job_ids
+                .unwrap_or_default()
+                .into_iter()
+                .map(|job_id: i32| format!("/api/{}/{}/", Job::<()>::endpoint_name(), job_id))
+                .collect::<Vec<_>>()
+        },
+        logs: "".to_string(),
+        message: x.message.clone(),
+        resource_uri: format!("/api/{}/{}/", Command::endpoint_name(), x.id),
     }
 }
 
@@ -715,6 +934,36 @@ async fn get_fs_target_resources(
     Ok(xs)
 }
 
+async fn get_fs_cluster_hosts(
+    pool: &PgPool,
+    fs_name: String,
+) -> Result<Vec<Vec<String>>, ImlApiError> {
+    let xs = get_fs_target_resources(pool, Some(fs_name))
+        .await?
+        .into_iter()
+        .group_by(|x| x.cluster_id);
+
+    let xs: Vec<Vec<i32>> = xs.into_iter().fold(vec![], |mut acc, (_, xs)| {
+        let xs: HashSet<i32> = xs.map(|x| x.cluster_hosts).flatten().collect();
+
+        acc.push(xs.into_iter().collect());
+
+        acc
+    });
+    let xs = xs.into_iter().map(|idset| async move {
+        let fqdns = idset
+            .into_iter()
+            .map(|x| async move { fqdn_by_host_id(pool, x).await });
+        join_all(fqdns)
+            .await
+            .into_iter()
+            .filter_map(|x| x.ok())
+            .collect()
+    });
+
+    Ok(join_all(xs).await)
+}
+
 async fn get_banned_targets(pool: &PgPool) -> Result<Vec<BannedTargetResource>, ImlApiError> {
     let xs = sqlx::query!(r#"
             SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point
@@ -776,4 +1025,42 @@ fn validate_snapshot_name(x: &str) -> Result<(), FieldError> {
     } else {
         Ok(())
     }
+}
+
+async fn active_mgs_host_fqdn(
+    fsname: &str,
+    pool: &PgPool,
+) -> Result<Option<String>, iml_postgres::sqlx::Error> {
+    let fsnames = &[fsname.into()][..];
+    let maybe_active_mgs_host_id = sqlx::query!(
+        r#"
+            SELECT active_host_id from target WHERE filesystems @> $1 and name='MGS'
+        "#,
+        fsnames
+    )
+    .fetch_optional(pool)
+    .await?
+    .and_then(|x| x.active_host_id);
+
+    tracing::trace!("Maybe active MGS host id: {:?}", maybe_active_mgs_host_id);
+
+    if let Some(active_mgs_host_id) = maybe_active_mgs_host_id {
+        let active_mgs_host_fqdn = fqdn_by_host_id(pool, active_mgs_host_id).await?;
+
+        Ok(Some(active_mgs_host_fqdn))
+    } else {
+        Ok(None)
+    }
+}
+
+async fn fqdn_by_host_id(pool: &PgPool, id: i32) -> Result<String, iml_postgres::sqlx::Error> {
+    let fqdn = sqlx::query!(
+        r#"SELECT fqdn FROM chroma_core_managedhost WHERE id=$1 and not_deleted = 't'"#,
+        id
+    )
+    .fetch_one(pool)
+    .await?
+    .fqdn;
+
+    Ok(fqdn)
 }

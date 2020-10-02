@@ -21,7 +21,7 @@ pub mod server;
 pub mod server_dashboard;
 pub mod servers;
 pub mod sfa_enclosure;
-pub mod snapshots;
+pub mod snapshot;
 pub mod target;
 pub mod target_dashboard;
 pub mod targets;
@@ -78,7 +78,7 @@ pub(crate) enum Page {
     ServerVolumes(volumes::Model),
     Volume(volume::Model),
     SfaEnclosure(sfa_enclosure::Model),
-    Snapshots(snapshots::Model),
+    Snapshots(snapshot::Model),
 }
 
 impl Page {
@@ -231,7 +231,7 @@ impl<'a> From<(&ArcCache, &Conf, &Route<'a>)> for Page {
                 .parse()
                 .map(|id| Self::SfaEnclosure(sfa_enclosure::Model { id }))
                 .unwrap_or_default(),
-            Route::Snapshots => Self::Snapshots(snapshots::Model::default()),
+            Route::Snapshots => Self::Snapshots(snapshot::Model::default()),
         }
     }
 }
@@ -299,7 +299,7 @@ impl Page {
                 volumes::init(cache, m, &mut orders.proxy(Msg::Volumes));
             }
             Self::Snapshots(m) => {
-                snapshots::init(cache, m, &mut orders.proxy(Msg::Snapshots));
+                snapshot::init(cache, m, &mut orders.proxy(Msg::Snapshots));
             }
             _ => {}
         };
@@ -330,7 +330,7 @@ pub enum Msg {
     Volume(volume::Msg),
     Volumes(volumes::Msg),
     SfaEnclosure(sfa_enclosure::Msg),
-    Snapshots(snapshots::Msg),
+    Snapshots(snapshot::Msg),
 }
 
 pub(crate) fn update(msg: Msg, page: &mut Page, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
@@ -396,7 +396,7 @@ pub(crate) fn update(msg: Msg, page: &mut Page, cache: &ArcCache, orders: &mut i
         }
         Msg::Snapshots(msg) => {
             if let Page::Snapshots(m) = page {
-                snapshots::update(msg, m, &mut orders.proxy(Msg::Snapshots))
+                snapshot::update(msg, m, &mut orders.proxy(Msg::Snapshots))
             }
         }
         Msg::About(_)

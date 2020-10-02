@@ -7,6 +7,7 @@ members = [
   'iml-api',
   'iml-change',
   'iml-cmd',
+  'iml-command-utils',
   'iml-fs',
   'iml-graphql-queries',
   'iml-influx',

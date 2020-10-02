@@ -18,7 +18,7 @@ use iml_wire_types::{
         EnclosureType, HealthState, JobState, JobType, MemberState, SfaController, SfaDiskDrive,
         SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem, SubTargetType,
     },
-    snapshot::SnapshotRecord,
+    snapshot::{ReserveUnit, SnapshotInterval, SnapshotRecord, SnapshotRetention},
     warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam,
 };
@@ -184,6 +184,18 @@ pub async fn db_record_to_change_record(
             (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::Snapshot(x.id))),
             (MessageType::Insert, x) | (MessageType::Update, x) => {
                 Ok(RecordChange::Update(Record::Snapshot(x)))
+            }
+        },
+        DbRecord::SnapshotInterval(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::SnapshotInterval(x.id))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::SnapshotInterval(x)))
+            }
+        },
+        DbRecord::SnapshotRetention(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::SnapshotRetention(x.id))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::SnapshotRetention(x)))
             }
         },
         DbRecord::LnetConfiguration(x) => match (msg_type, x) {
@@ -498,6 +510,41 @@ pub async fn populate_from_db(
         .try_collect()
         .await?;
 
+    cache.snapshot_interval = sqlx::query!("SELECT * FROM snapshot_interval")
+        .fetch(pool)
+        .map_ok(|x| {
+            (
+                x.id,
+                SnapshotInterval {
+                    id: x.id,
+                    filesystem_name: x.filesystem_name,
+                    use_barrier: x.use_barrier,
+                    interval: x.interval.into(),
+                    last_run: x.last_run,
+                },
+            )
+        })
+        .try_collect()
+        .await?;
+
+    cache.snapshot_retention = sqlx::query_as!(
+        SnapshotRetention,
+        r#"
+        SELECT
+            id,
+            filesystem_name,
+            reserve_value,
+            reserve_unit as "reserve_unit:ReserveUnit",
+            last_run,
+            keep_num
+        FROM snapshot_retention
+    "#
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id, x))
+    .try_collect()
+    .await?;
+
     cache.stratagem_config = sqlx::query_as!(
         StratagemConfiguration,
         "select * from chroma_core_stratagemconfiguration where not_deleted = 't'"
@@ -510,15 +557,15 @@ pub async fn populate_from_db(
     cache.user = sqlx::query_as!(
         AuthUserRecord,
         r#"
-        SELECT 
-            id, 
+        SELECT
+            id,
             is_superuser,
             username,
             first_name,
             last_name,
             email,
             is_staff,
-            is_active 
+            is_active
         FROM auth_user
     "#
     )

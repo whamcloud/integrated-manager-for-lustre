@@ -1864,6 +1864,7 @@ class JobScheduler(object):
         unique_id = uuid.uuid4()
         filesystem = ManagedFilesystem.objects.get(id=fs_id)
         task_list = []
+        action = {}
 
         run_stratagem_list = [{"class_name": "ClearOldStratagemDataJob", "args": {}}]
         if stratagem_data.get("report_duration"):
@@ -1877,6 +1878,7 @@ class JobScheduler(object):
                 "args": {"report_name": "expiring_fids-{}-{}.txt".format(filesystem.name, unique_id)},
                 "actions": ["stratagem.warning"],
             }
+            action["warn"] = True
             task = Task.objects.create(**task_data)
             task_list.append(task)
 
@@ -1891,8 +1893,47 @@ class JobScheduler(object):
                 "keep_failed": False,
                 "actions": ["stratagem.purge"],
             }
+            action["purge"] = True
             task = Task.objects.create(**task_data)
             task_list.append(task)
+
+            run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
+
+        if stratagem_data.get("filesync"):
+            task_data = {
+                "filesystem": filesystem,
+                "name": "{}-filesync-filesync".format(unique_id),
+                "start": django.utils.timezone.now(),
+                "state": "created",
+                "keep_failed": False,
+                "actions": ["stratagem.filesync"],
+                "args": {
+                    "remote": stratagem_data.get("remote"),
+                    "expression": stratagem_data.get("expression"),
+                    "action": stratagem_data.get("action"),
+                },
+            }
+            action["filesync"] = True
+            task = Task.objects.create(**task_data)
+
+            run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
+
+        if stratagem_data.get("cloudsync"):
+            task_data = {
+                "filesystem": filesystem,
+                "name": "{}-cloudsync-cloudsync".format(unique_id),
+                "start": django.utils.timezone.now(),
+                "state": "created",
+                "keep_failed": False,
+                "actions": ["stratagem.cloudsync"],
+                "args": {
+                    "remote": stratagem_data.get("remote"),
+                    "expression": stratagem_data.get("expression"),
+                    "action": stratagem_data.get("action"),
+                },
+            }
+            action["cloudsync"] = True
+            task = Task.objects.create(**task_data)
 
             run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
 
@@ -1904,6 +1945,8 @@ class JobScheduler(object):
                     "uuid": unique_id,
                     "report_duration": stratagem_data.get("report_duration"),
                     "purge_duration": stratagem_data.get("purge_duration"),
+                    "search_expression": stratagem_data.get("expression"),
+                    "action": json.dumps(action),
                     "filesystem": filesystem,
                     "depends_on_job_range": range(0, len(run_stratagem_list)),
                 },

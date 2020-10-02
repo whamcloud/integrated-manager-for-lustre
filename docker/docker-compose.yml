@@ -352,6 +352,7 @@ services:
       - RUST_LOG=info,sqlx::query=warn
       - BRANDING
       - USE_STRATAGEM
+      - USE_SNAPSHOTS
       - EXA_VERSION
       - SFA_ENDPOINTS_1
   iml-manager-cli:
@@ -365,7 +366,6 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - SERVER_HTTP_URL=gunicorn
       - RUST_LOG=info
   iml-ostpool:
     image: "imlteam/iml-ostpool:6.2.0-dev"
@@ -437,6 +437,7 @@ services:
     deploy: *default-deploy
     environment:
       - RUST_LOG=info
+      - PROXY_HOST=iml-timer
     volumes:
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
       - "timer_run:/run"
@@ -457,10 +458,12 @@ services:
     environment:
       - BRANDING
       - USE_STRATAGEM
+      - USE_SNAPSHOTS
       - EXA_VERSION
       - INFLUXDB_IML_STATS_LONG_DURATION
       - LOG_LEVEL
       - INFLUXDB_SERVER_FQDN=influxdb
+      - TIMER_SERVER_FQDN=iml-timer
     deploy:
       restart_policy:
         condition: on-failure

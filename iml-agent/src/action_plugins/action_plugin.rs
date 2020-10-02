@@ -8,7 +8,9 @@ use crate::{
         lpurge, ltuer, lustre,
         ntp::{action_configure, is_ntp_configured},
         ostpool, package, postoffice,
-        stratagem::{action_mirror, action_purge, action_warning, server},
+        stratagem::{
+            action_cloudsync, action_filesync, action_mirror, action_purge, action_warning, server,
+        },
     },
     lustre::lctl,
 };
@@ -96,8 +98,9 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("action.mirror.resync", action_mirror::process_resync_fids)
         .add_plugin("action.mirror.split", action_mirror::process_split_fids)
         .add_plugin("action.stratagem.warning", action_warning::process_fids)
-        .add_plugin("action.stratagem.purge", action_purge::process_fids);
-
+        .add_plugin("action.stratagem.purge", action_purge::process_fids)
+        .add_plugin("action.stratagem.filesync", action_filesync::process_fids)
+        .add_plugin("action.stratagem.cloudsync", action_cloudsync::process_fids);
     info!("Loaded the following ActionPlugins:");
 
     for ActionName(key) in map.keys() {
