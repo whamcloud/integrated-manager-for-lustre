@@ -8,6 +8,7 @@ from django.db import connection
 this = sys.modules[__name__]
 this.API_CRED = None
 
+
 def get_api_session_request():
     if not this.API_CRED:
         cursor = connection.cursor()
