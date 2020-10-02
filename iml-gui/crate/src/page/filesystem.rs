@@ -461,7 +461,7 @@ fn files_created_view<T>(free: impl Into<Option<u64>>, total: impl Into<Option<u
         .and_then(|total| {
             let free = free.into()?;
             let used = total.saturating_sub(free) as f64;
-            let pct = used / total as f64;
+            let pct = (used / total as f64) * 100.0f64;
 
             Some(span![
                 class![C.whitespace_no_wrap],
