@@ -39,11 +39,12 @@ async fn get_stats_from_influx(
         if nodes.is_empty() {
             return Ok(None);
         } else {
+            let bytes_avail = nodes[0].bytes_avail;
             let bytes_total = nodes[0].bytes_total;
             let bytes_free = nodes[0].bytes_free;
             let bytes_used = bytes_total - bytes_free;
 
-            return Ok(Some((bytes_total, bytes_free, bytes_used)));
+            return Ok(Some((bytes_avail, bytes_free, bytes_used)));
         }
     }
 
@@ -131,14 +132,14 @@ pub async fn process_retention(
     for fs_name in filesystems {
         let stats = get_stats_from_influx(&fs_name, &influx_client).await?;
 
-        if let Some((bytes_total, bytes_free, bytes_used)) = stats {
+        if let Some((bytes_avail, bytes_free, bytes_used)) = stats {
             tracing::debug!(
                 "stats values: {}, {}, {}",
-                bytes_total,
+                bytes_avail,
                 bytes_free,
                 bytes_used
             );
-            let percent_used = (bytes_used as f64 / bytes_total as f64) as f64 * 100.0f64;
+            let percent_used = (bytes_used as f64 / (bytes_used as f64 + bytes_avail as f64)) as f64 * 100.0f64;
             let percent_free = 100.0f64 - percent_used;
 
             tracing::debug!(
