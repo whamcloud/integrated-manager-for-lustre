@@ -593,9 +593,13 @@ impl QueryRoot {
         limit(description = "optional paging limit, defaults to all rows"),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to asc"),
-        message(description = "String that must be contained in message"),
-        fqdn(description = "String that must be contained in FQDN"),
-        tag(description = "String that must be contained in tag"),
+        message(description = "Pattern to search for in message"),
+        fqdn(description = "Pattern to search for in FQDN"),
+        tag(description = "Pattern to search for in tag"),
+        start_datetime(description = "Start of the time period of logs"),
+        end_datetime(description = "End of the time period of logs"),
+        message_class(description = "Array of log message classes"),
+        severity(description = "Upper bound of log severity"),
     ))]
     async fn logs(
         context: &Context,
