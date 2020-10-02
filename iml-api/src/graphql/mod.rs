@@ -156,7 +156,8 @@ struct Substitution {
     pub resource_uri: String,
 }
 
-#[derive(GraphQLEnum)]
+#[derive(GraphQLEnum, sqlx::Type)]
+#[repr(i16)]
 enum MessageClass {
     Normal = 0,
     Lustre = 1,
@@ -178,7 +179,8 @@ impl From<i16> for MessageClass {
     }
 }
 
-#[derive(GraphQLEnum)]
+#[derive(GraphQLEnum, sqlx::Type)]
+#[repr(i16)]
 enum LogSeverity {
     Emergency = 0,
     Alert = 1,
@@ -592,6 +594,8 @@ impl QueryRoot {
         tag: Option<String>,
         start_datetime: Option<String>,
         end_datetime: Option<String>,
+        message_class: Vec<MessageClass>,
+        severity: Option<LogSeverity>,
     ) -> juniper::FieldResult<Vec<LogMessage>> {
         let dir = dir.unwrap_or_default();
 
@@ -605,6 +609,19 @@ impl QueryRoot {
         } else {
             None
         };
+        let message_class: Vec<_> = if !message_class.is_empty() {
+            message_class
+        } else {
+            vec![MessageClass::Normal]
+        }
+        .into_iter()
+        .map(|i| i as i16)
+        .collect();
+        let severity = if let Some(s) = severity {
+            s as i16
+        } else {
+            LogSeverity::Debug as i16
+        };
 
         let results = match (start_datetime, end_datetime) {
             (Some(s), Some(e)) => {
@@ -617,6 +634,8 @@ impl QueryRoot {
                       AND t.tag LIKE $6
                       AND t.datetime >= $7
                       AND t.datetime < $8
+                      AND ARRAY[t.message_class] <@ $9
+                      AND t.severity <= $10
                     ORDER BY
                         CASE WHEN $3 = 'asc' THEN t.datetime END ASC,
                         CASE WHEN $3 = 'desc' THEN t.datetime END DESC
@@ -629,6 +648,8 @@ impl QueryRoot {
                     tag.unwrap_or("%".into()),
                     s,
                     e,
+                    &message_class,
+                    severity,
                 )
                 .fetch_all(&context.pg_pool)
                 .await?
@@ -642,6 +663,8 @@ impl QueryRoot {
                       AND t.fqdn LIKE $5
                       AND t.tag LIKE $6
                       AND t.datetime >= $7
+                      AND ARRAY[t.message_class] <@ $8
+                      AND t.severity <= $9
                     ORDER BY
                         CASE WHEN $3 = 'asc' THEN t.datetime END ASC,
                         CASE WHEN $3 = 'desc' THEN t.datetime END DESC
@@ -653,6 +676,8 @@ impl QueryRoot {
                     fqdn.unwrap_or("%".into()),
                     tag.unwrap_or("%".into()),
                     s,
+                    &message_class,
+                    severity,
                 )
                 .fetch_all(&context.pg_pool)
                 .await?
@@ -666,6 +691,8 @@ impl QueryRoot {
                       AND t.fqdn LIKE $5
                       AND t.tag LIKE $6
                       AND t.datetime < $7
+                      AND ARRAY[t.message_class] <@ $8
+                      AND t.severity <= $9
                     ORDER BY
                         CASE WHEN $3 = 'asc' THEN t.datetime END ASC,
                         CASE WHEN $3 = 'desc' THEN t.datetime END DESC
@@ -677,6 +704,8 @@ impl QueryRoot {
                     fqdn.unwrap_or("%".into()),
                     tag.unwrap_or("%".into()),
                     e,
+                    &message_class,
+                    severity,
                 )
                 .fetch_all(&context.pg_pool)
                 .await?
@@ -689,6 +718,8 @@ impl QueryRoot {
                     WHERE t.message LIKE $4
                       AND t.fqdn LIKE $5
                       AND t.tag LIKE $6
+                      AND ARRAY[t.message_class] <@ $7
+                      AND t.severity <= $8
                     ORDER BY
                         CASE WHEN $3 = 'asc' THEN t.datetime END ASC,
                         CASE WHEN $3 = 'desc' THEN t.datetime END DESC
@@ -699,6 +730,8 @@ impl QueryRoot {
                     message.unwrap_or("%".into()),
                     fqdn.unwrap_or("%".into()),
                     tag.unwrap_or("%".into()),
+                    &message_class,
+                    severity,
                 )
                 .fetch_all(&context.pg_pool)
                 .await?
