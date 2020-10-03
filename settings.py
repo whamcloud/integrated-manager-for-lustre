@@ -100,8 +100,6 @@ EXA_VERSION = os.getenv("EXA_VERSION")
 
 USE_STRATAGEM = os.getenv("USE_STRATAGEM", "false")
 
-USE_SNAPSHOTS = os.getenv("USE_SNAPSHOTS", "false")
-
 ALLOWED_HOSTS = ["*"]
 
 ADMINS = (

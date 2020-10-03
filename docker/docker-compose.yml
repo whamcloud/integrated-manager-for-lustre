@@ -458,7 +458,6 @@ services:
     environment:
       - BRANDING
       - USE_STRATAGEM
-      - USE_SNAPSHOTS
       - EXA_VERSION
       - INFLUXDB_IML_STATS_LONG_DURATION
       - LOG_LEVEL

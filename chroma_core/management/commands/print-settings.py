@@ -80,7 +80,6 @@ class Command(BaseCommand):
             "AMQP_BROKER_URL": settings.BROKER_URL,
             "BRANDING": settings.BRANDING,
             "USE_STRATAGEM": settings.USE_STRATAGEM,
-            "USE_SNAPSHOTS": settings.USE_SNAPSHOTS,
             "DBLOG_HW": settings.DBLOG_HW,
             "DBLOG_LW": settings.DBLOG_LW,
         }
