@@ -5,13 +5,13 @@
 use iml_manager_cli::{
     display_utils::display_error,
     nginx::{self, nginx_cli},
+    selfname,
 };
 use std::process::exit;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "iml-config", setting = structopt::clap::AppSettings::ColoredHelp)]
-/// The IML Config CLI
+#[structopt(name = selfname().unwrap_or_else(|| "iml-config".to_string()), setting = structopt::clap::AppSettings::ColoredHelp)]
 pub enum App {
     #[structopt(name = "nginx")]
     /// Nginx config file generator
