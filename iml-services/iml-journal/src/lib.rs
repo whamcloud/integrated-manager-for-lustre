@@ -299,10 +299,7 @@ mod tests {
                 MessageClass::Normal,
             ),
             ("Lustre: Lustre output here", MessageClass::Lustre),
-            (
-                "LustreError: Lustre output here",
-                MessageClass::LustreError,
-            ),
+            ("LustreError: Lustre output here", MessageClass::LustreError),
             (
                 "[1234567A89] LustreError: Not A Time Stamp",
                 MessageClass::Normal,
