@@ -27,7 +27,10 @@ pub fn view<T>(model: &fs_usage::Model) -> Node<T> {
             ]),
             div![
                 class![C.p_2],
-                p![number_formatter::format_bytes(metrics.bytes_avail, 1)],
+                p![
+                    class![C.text_gray_600],
+                    number_formatter::format_bytes(metrics.bytes_avail, 1)
+                ],
                 p![class![C.text_gray_500, C.text_xs], "(Available)"]
             ]
         ];
