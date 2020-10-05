@@ -11,7 +11,7 @@ use crate::{
         DisplayType, IntoDisplayType as _,
     },
     error::ImlManagerCliError,
-    profile,
+    parse_hosts, profile,
 };
 use console::{style, Term};
 use dialoguer::Confirm;
@@ -59,34 +59,28 @@ pub enum ServerCommand {
     /// List all configured storage servers (default)
     #[structopt(name = "list")]
     List {
-        /// Set the display type
-        ///
-        /// The display type can be one of the following:
-        /// tabular: display content in a table format
-        /// json: return data in json format
-        /// yaml: return data in yaml format
+        /// Display type: json, yaml, table (default)
         #[structopt(short = "d", long = "display", default_value = "tabular")]
         display_type: DisplayType,
     },
-    /// Add new servers to IML
+    /// Add new servers
     #[structopt(name = "add")]
     Add(AddHosts),
-    /// Remove servers from IML
+    /// Remove servers
     #[structopt(name = "remove")]
     Remove {
         /// Hostlist expressions, e. g. mds[1,2].local
         #[structopt(required = true, min_values = 1)]
         hosts: Vec<String>,
     },
-    /// Remove servers from IML DB, but leave agents in place.
-    /// Takes a hostlist expression of servers to remove.
+    /// Remove servers from DB, but leave agents in place.
     #[structopt(name = "force-remove")]
     ForceRemove {
         /// Hostlist expressions, e. g. mds[1,2].local
         #[structopt(required = true, min_values = 1)]
         hosts: Vec<String>,
     },
-    /// Work with Server Profiles
+    /// Work with server profiles
     #[structopt(name = "profile")]
     Profile {
         #[structopt(subcommand)]
@@ -185,19 +179,6 @@ pub struct Objects<T> {
     objects: Vec<T>,
 }
 
-fn parse_hosts(hosts: &[String]) -> Result<BTreeSet<String>, ImlManagerCliError> {
-    let parsed: Vec<BTreeSet<String>> = hosts
-        .iter()
-        .map(|x| hostlist_parser::parse(x))
-        .collect::<Result<_, _>>()?;
-
-    let union = parsed
-        .into_iter()
-        .fold(BTreeSet::new(), |acc, h| acc.union(&h).cloned().collect());
-
-    Ok(union)
-}
-
 /// Given an expanded hostlist and a list of API host objects
 /// returns a tuple of hosts that match a hostlist item, and the remaining hostlist items
 /// that did not match anything.
@@ -273,7 +254,10 @@ where
     I: IntoIterator<Item = &'a Host>,
 {
     for known_host in known_hosts {
-        display_cancelled(format!("Host {} already known to IML. Please remove first if attempting to complete deployment.", known_host.fqdn));
+        display_cancelled(format!(
+            "Host {} already known. Please remove first if attempting to complete deployment.",
+            known_host.fqdn
+        ));
     }
 }
 
@@ -631,7 +615,7 @@ async fn server(command: ServerCommand) -> Result<(), ImlManagerCliError> {
 
             for unknown_name in unknown_names {
                 display_cancelled(format!(
-                    "Host {} unknown to IML; it will not be removed.",
+                    "Host {} in unknown and cannot be removed.",
                     unknown_name
                 ));
             }

@@ -22,12 +22,7 @@ pub enum Cmd {
     /// List all profiles
     #[structopt(name = "list")]
     List {
-        /// Set the display type
-        ///
-        /// The display type can be one of the following:
-        /// tabular: display content in a table format
-        /// json: return data in json format
-        /// yaml: return data in yaml format
+        /// Display type: json, yaml, table (default)
         #[structopt(short = "d", long = "display", default_value = "tabular")]
         display_type: DisplayType,
     },
