@@ -146,8 +146,6 @@ impl Deref for SortDir {
 struct StratagemReport {
     /// The filename of the stratagem report under /var/spool/iml/report
     filename: String,
-    /// When the report was created
-    create_time: DateTime<Utc>,
     /// When the report was last modified
     modify_time: DateTime<Utc>,
     /// The size of the report in bytes
@@ -1129,7 +1127,6 @@ async fn get_stratagem_files(file_path: String) -> juniper::FieldResult<Stratage
 
     Ok(StratagemReport {
         filename: file_path.to_string(),
-        create_time: attr.created()?.into(),
         modify_time: attr.modified()?.into(),
         size: attr.len() as i32,
     })
