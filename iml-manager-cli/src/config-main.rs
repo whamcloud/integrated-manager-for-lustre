@@ -11,7 +11,6 @@ use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "iml-config", setting = structopt::clap::AppSettings::ColoredHelp)]
-/// The IML Config CLI
 pub enum App {
     #[structopt(name = "nginx")]
     /// Nginx config file generator

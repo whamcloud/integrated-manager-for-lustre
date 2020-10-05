@@ -16,9 +16,18 @@ use std::process::exit;
 use structopt::clap::Shell;
 use structopt::StructOpt;
 
+fn basename() -> Option<String> {
+    Some(
+        std::env::current_exe()
+            .ok()?
+            .file_stem()?
+            .to_str()?
+            .to_string(),
+    )
+}
+
 #[derive(Debug, StructOpt)]
-#[structopt(name = "iml", setting = structopt::clap::AppSettings::ColoredHelp)]
-/// The Integrated Manager for Lustre CLI
+#[structopt(name = basename().unwrap_or_else(|| "iml".to_string()), setting = structopt::clap::AppSettings::ColoredHelp)]
 pub enum App {
     #[structopt(name = "stratagem")]
     /// Work with Stratagem server
@@ -44,7 +53,7 @@ pub enum App {
         #[structopt(subcommand)]
         command: snapshot::SnapshotCommand,
     },
-    #[structopt(name = "update_repo")]
+    #[structopt(name = "update-repo")]
     /// Update Agent repo files
     UpdateRepoFile(update_repo_file::UpdateRepoFileHosts),
 
