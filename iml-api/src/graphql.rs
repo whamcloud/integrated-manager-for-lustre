@@ -468,12 +468,13 @@ impl QueryRoot {
 
         Ok(xs)
     }
-    /// List Stratagem reports
+    /// List completed Stratagem reports that currently reside on the manager node.
+    /// Note: All report names must be valid unicode.
     async fn stratagem_reports(_context: &Context) -> juniper::FieldResult<Vec<String>> {
         let paths = tokio::fs::read_dir(get_report_path()).await?;
 
         let items: Vec<String> = paths
-            .map_ok(|x| x.file_name().into_string().expect("DirEntry to string"))
+            .map_ok(|x| x.file_name().to_string_lossy().to_string())
             .try_collect()
             .await?;
 
@@ -832,8 +833,12 @@ impl MutationRoot {
         _context: &Context,
         filename: String,
     ) -> juniper::FieldResult<bool> {
-        let mut path = get_report_path();
-        path.push(filename);
+        let report_base = get_report_path();
+        let path = tokio::fs::canonicalize(report_base.join(filename)).await?;
+
+        if !path.starts_with(report_base) {
+            return Err(FieldError::new("Invalid path", Value::null()));
+        }
 
         tokio::fs::remove_file(path).await?;
 
