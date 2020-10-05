@@ -589,7 +589,7 @@ impl QueryRoot {
         tag: Option<String>,
         start_datetime: Option<String>,
         end_datetime: Option<String>,
-        message_class: Vec<MessageClass>,
+        message_class: Option<Vec<MessageClass>>,
         severity: Option<LogSeverity>,
     ) -> juniper::FieldResult<Vec<LogMessage>> {
         let dir = dir.unwrap_or_default();
@@ -604,8 +604,12 @@ impl QueryRoot {
         } else {
             None
         };
-        let message_class: Vec<_> = if !message_class.is_empty() {
-            message_class
+        let message_class: Vec<_> = if let Some(mc) = message_class {
+            if !mc.is_empty() {
+                mc
+            } else {
+                vec![MessageClass::Normal]
+            }
         } else {
             vec![MessageClass::Normal]
         }
